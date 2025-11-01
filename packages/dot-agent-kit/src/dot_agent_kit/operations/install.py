@@ -7,6 +7,7 @@ import click
 
 from dot_agent_kit.io import add_frontmatter, load_kit_manifest
 from dot_agent_kit.models import ArtifactFrontmatter, ConflictPolicy, InstalledKit
+from dot_agent_kit.operations.hook_install import install_hooks
 from dot_agent_kit.sources import ResolvedKit
 
 
@@ -109,6 +110,15 @@ def install_kit(
             # Track installation
             installed_artifacts.append(str(target.relative_to(project_dir)))
 
+    # Install hooks if the kit has any
+    if manifest.hooks:
+        installed_hook_ids = install_hooks(
+            kit_id=manifest.name,
+            hook_definitions=manifest.hooks,
+            source_dir=resolved.artifacts_base,
+        )
+        click.echo(f"  Installed {len(installed_hook_ids)} hooks", err=True)
+
     return InstalledKit(
         kit_id=manifest.name,
         version=manifest.version,
@@ -116,4 +126,5 @@ def install_kit(
         installed_at=datetime.now().isoformat(),
         artifacts=installed_artifacts,
         conflict_policy=conflict_policy.value,
+        hooks=manifest.hooks,
     )

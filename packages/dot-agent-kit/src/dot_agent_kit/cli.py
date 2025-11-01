@@ -4,6 +4,7 @@ from dot_agent_kit import __version__
 from dot_agent_kit.commands import (
     check,
     check_sync,
+    hook,
     init,
     install,
     list,
@@ -37,6 +38,7 @@ cli.add_command(status.status)
 cli.add_command(search.search)
 cli.add_command(list.list_cmd)
 cli.add_command(list.ls_cmd)
+cli.add_command(hook.hook)
 
 
 if __name__ == "__main__":

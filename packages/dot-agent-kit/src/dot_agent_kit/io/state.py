@@ -2,10 +2,12 @@
 
 from pathlib import Path
 
+import click
 import tomli
 import tomli_w
 
 from dot_agent_kit.models import ConflictPolicy, InstalledKit, ProjectConfig
+from dot_agent_kit.models.hook import HookDefinition
 
 
 def load_project_config(project_dir: Path) -> ProjectConfig | None:
@@ -24,6 +26,9 @@ def load_project_config(project_dir: Path) -> ProjectConfig | None:
     kits: dict[str, InstalledKit] = {}
     if "kits" in data:
         for kit_id, kit_data in data["kits"].items():
+            hooks_data = kit_data.get("hooks", [])
+            hooks = _parse_hooks_from_state(hooks_data)
+
             kits[kit_id] = InstalledKit(
                 kit_id=kit_data["kit_id"],
                 version=kit_data["version"],
@@ -31,6 +36,7 @@ def load_project_config(project_dir: Path) -> ProjectConfig | None:
                 installed_at=kit_data["installed_at"],
                 artifacts=kit_data["artifacts"],
                 conflict_policy=kit_data.get("conflict_policy", "error"),
+                hooks=hooks,
             )
 
     # Parse conflict policy
@@ -56,7 +62,7 @@ def save_project_config(project_dir: Path, config: ProjectConfig) -> None:
     }
 
     for kit_id, kit in config.kits.items():
-        data["kits"][kit_id] = {
+        kit_dict = {
             "kit_id": kit.kit_id,
             "version": kit.version,
             "source": kit.source,
@@ -64,6 +70,11 @@ def save_project_config(project_dir: Path, config: ProjectConfig) -> None:
             "artifacts": kit.artifacts,
             "conflict_policy": kit.conflict_policy,
         }
+
+        if kit.hooks:
+            kit_dict["hooks"] = _serialize_hooks_for_state(kit.hooks)
+
+        data["kits"][kit_id] = kit_dict
 
     with open(config_path, "wb") as f:
         tomli_w.dump(data, f)
@@ -76,3 +87,39 @@ def create_default_config() -> ProjectConfig:
         default_conflict_policy=ConflictPolicy.ERROR,
         kits={},
     )
+
+
+def _parse_hooks_from_state(hooks_data: list[dict[str, object]]) -> list[HookDefinition]:
+    """Parse hooks from dot-agent.toml state.
+
+    Args:
+        hooks_data: List of hook dicts from TOML
+
+    Returns:
+        List of HookDefinition objects
+    """
+    hooks = []
+
+    for i, hook_dict in enumerate(hooks_data):
+        # Use lenient parsing for state files that may be corrupted
+        try:
+            hook = HookDefinition.model_validate(hook_dict)
+            hooks.append(hook)
+        except Exception as e:
+            # Warn about invalid hooks in corrupted state files
+            click.echo(f"Warning: Skipping invalid hook at index {i}: {e}", err=True)
+            continue
+
+    return hooks
+
+
+def _serialize_hooks_for_state(hooks: list[HookDefinition]) -> list[dict[str, object]]:
+    """Serialize hooks for dot-agent.toml.
+
+    Args:
+        hooks: List of HookDefinition objects
+
+    Returns:
+        List of dicts suitable for TOML serialization
+    """
+    return [hook.model_dump() for hook in hooks]

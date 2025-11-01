@@ -1,7 +1,9 @@
 """Configuration models for dot-agent-kit."""
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from enum import Enum
+
+from dot_agent_kit.models.hook import HookDefinition
 
 
 class ConflictPolicy(Enum):
@@ -23,6 +25,7 @@ class InstalledKit:
     installed_at: str
     artifacts: list[str]
     conflict_policy: str = "error"
+    hooks: list[HookDefinition] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

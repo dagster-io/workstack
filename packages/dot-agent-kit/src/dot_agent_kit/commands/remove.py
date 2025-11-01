@@ -1,5 +1,6 @@
 """Remove command for uninstalling kits."""
 
+import shutil
 from pathlib import Path
 
 import click
@@ -67,17 +68,23 @@ def remove(kit_id: str, target: str) -> None:
 
     installed = config.kits[kit_id]
 
-    # Remove artifact files
+    # Remove artifact files and directories (hooks are directories)
     removed_count = 0
     failed_count = 0
 
     for artifact_path in installed.artifacts:
         artifact_file = base_dir / artifact_path
+
         if artifact_file.exists():
-            artifact_file.unlink()
+            if artifact_file.is_dir():
+                # Handle directories (e.g., hook directories)
+                shutil.rmtree(artifact_file)
+            else:
+                # Handle regular files
+                artifact_file.unlink()
             removed_count += 1
         else:
-            # File already removed or doesn't exist
+            # File/directory already removed or doesn't exist
             failed_count += 1
 
     # Remove kit from config

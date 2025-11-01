@@ -8,3 +8,7 @@ kits:
     name: Graphite Kit
     description: Graphite stack management with landing and submission commands
     source: gt
+  - kit_id: example-hooks
+    name: Example Hooks Kit
+    description: Example kit demonstrating hook functionality
+    source: example-hooks

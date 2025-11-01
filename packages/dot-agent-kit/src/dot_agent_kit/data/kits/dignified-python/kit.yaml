@@ -1,0 +1,8 @@
+name: dignified-python
+version: 1.0.0
+description: Workstack Python coding standards skill with automatic suggestion hook
+artifacts:
+  skill:
+    - skills/dignified-python
+  hook:
+    - hooks

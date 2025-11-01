@@ -1,4 +1,4 @@
-"""Check sync command for validating bundled kit artifacts."""
+"""Check command for validating kit artifacts and sync status."""
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -6,6 +6,7 @@ from pathlib import Path
 import click
 
 from dot_agent_kit.io import load_project_config
+from dot_agent_kit.operations import validate_project
 from dot_agent_kit.sources import BundledKitSource
 
 
@@ -73,25 +74,8 @@ def check_artifact_sync(
     )
 
 
-@click.command(name="check-sync")
-@click.option(
-    "--verbose",
-    is_flag=True,
-    help="Show detailed sync status for all artifacts",
-)
-def check_sync(verbose: bool) -> None:
-    """Check if local artifacts are in sync with bundled kit sources.
-
-    This command validates that artifacts in .claude/ match their corresponding
-    bundled sources in the dot-agent-kit package data. It's primarily used in
-    CI to ensure that bundled kit sources are kept in sync during development.
-
-    Exit codes:
-      0 - All artifacts are in sync
-      1 - Some artifacts are out of sync or errors occurred
-    """
-    project_dir = Path.cwd()
-
+def check_sync_status(project_dir: Path, verbose: bool) -> None:
+    """Check if local artifacts are in sync with bundled kit sources."""
     config = load_project_config(project_dir)
     if config is None:
         click.echo("Error: No dot-agent.toml found", err=True)
@@ -160,8 +144,71 @@ def check_sync(verbose: bool) -> None:
     if out_of_sync_count > 0:
         click.echo(f"  ✗ Out of sync: {out_of_sync_count}", err=True)
         click.echo()
-        click.echo("Run 'dot-agent sync' to update local artifacts from bundled sources", err=True)
+        click.echo("Run 'dot-agent kit sync' to update local artifacts from bundled sources", err=True)
         raise SystemExit(1)
     else:
         click.echo()
         click.echo("All bundled kit artifacts are in sync!")
+
+
+def check_artifacts(project_dir: Path, verbose: bool) -> None:
+    """Validate installed kit artifacts."""
+    results = validate_project(project_dir)
+
+    if len(results) == 0:
+        click.echo("No artifacts found to validate")
+        return
+
+    valid_count = sum(1 for r in results if r.is_valid)
+    invalid_count = len(results) - valid_count
+
+    # Show results
+    if verbose or invalid_count > 0:
+        for result in results:
+            status = "✓" if result.is_valid else "✗"
+            rel_path = result.artifact_path.relative_to(project_dir)
+            click.echo(f"{status} {rel_path}")
+
+            if not result.is_valid:
+                for error in result.errors:
+                    click.echo(f"  - {error}", err=True)
+
+    # Summary
+    click.echo()
+    click.echo(f"Validated {len(results)} artifacts:")
+    click.echo(f"  ✓ Valid: {valid_count}")
+
+    if invalid_count > 0:
+        click.echo(f"  ✗ Invalid: {invalid_count}", err=True)
+        raise SystemExit(1)
+    else:
+        click.echo("All artifacts are valid!")
+
+
+@click.command()
+@click.option(
+    "--sync",
+    is_flag=True,
+    help="Check if local artifacts are in sync with bundled sources",
+)
+@click.option(
+    "--verbose",
+    is_flag=True,
+    help="Show detailed validation information",
+)
+def check(sync: bool, verbose: bool) -> None:
+    """Validate installed kit artifacts and check sync status.
+
+    By default, validates that artifacts exist and are properly formatted.
+    Use --sync to check if local artifacts match their bundled sources.
+
+    Exit codes:
+      0 - All artifacts are valid/in sync
+      1 - Some artifacts are invalid/out of sync or errors occurred
+    """
+    project_dir = Path.cwd()
+
+    if sync:
+        check_sync_status(project_dir, verbose)
+    else:
+        check_artifacts(project_dir, verbose)

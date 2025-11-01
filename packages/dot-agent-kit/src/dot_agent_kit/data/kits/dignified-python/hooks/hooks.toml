@@ -1,0 +1,10 @@
+kit_id = "dignified-python"
+kit_version = "1.0.0"
+
+[[hooks]]
+name = "suggest-dignified-python"
+lifecycle = "PreToolUse"
+matcher = "Edit|Write"
+script = "suggest_dignified.py"
+enabled = true
+description = "Suggest loading dignified-python skill when editing Python files"

@@ -158,10 +158,10 @@ kit_version = "1.0.0"
 [[hooks]]
 name = "validate-bash"
 lifecycle = "PreToolUse"
-matcher = "Bash.*rm -rf"
+matcher = "Bash"
 script = "validate_bash.py"
 enabled = true
-description = "Prevent dangerous Bash commands"
+description = "Validate Bash commands before execution"
 
 [[hooks]]
 name = "log-writes"
@@ -176,7 +176,7 @@ description = "Log all file writes"
 
 - `name` (required): Unique hook name within the kit
 - `lifecycle` (required): One of PreToolUse, PostToolUse, PreUserMessage, PostUserMessage
-- `matcher` (required): Regex pattern matching context JSON (empty string = always match)
+- `matcher` (required): Regex pattern matching tool_name field (empty string = always match)
 - `script` (required): Python script filename (must exist in hooks/ directory)
 - `enabled` (optional): Default enabled state (default: true)
 - `description` (optional): Human-readable description
@@ -246,7 +246,7 @@ cat test_context.json | python3 hooks/my_hook.py
 
 ## Matcher Patterns
 
-Matchers are regex patterns applied to the JSON-serialized context.
+Matchers are regex patterns applied to the `tool_name` field from the context, consistent with Claude Code's native hook behavior.
 
 ### Common Patterns
 
@@ -254,25 +254,26 @@ Matchers are regex patterns applied to the JSON-serialized context.
 # Match any Bash tool use
 matcher = "Bash"
 
-# Match specific commands
-matcher = "rm -rf"
+# Match Edit or Write tools
+matcher = "Edit|Write"
 
-# Match Write tool with specific paths
-matcher = "Write.*config\\.json"
+# Match Read tool
+matcher = "Read"
 
 # Always run (empty matcher)
 matcher = ""
 
-# Complex pattern
-matcher = "(Bash.*dangerous)|(Write.*secret)"
+# Complex pattern - multiple tools
+matcher = "(Bash|Edit|Write)"
 ```
 
 ### Tips
 
-- Context is serialized as JSON string before matching
-- Use `.*` for wildcards
-- Escape special regex characters (`\.`, `\*`, etc.)
-- Test patterns with regex tools before deploying
+- Matcher is applied to the `tool_name` field only (e.g., "Edit", "Write", "Bash", "Read")
+- Use `|` for multiple tool names: `"Edit|Write"`
+- Use `.*` for wildcards if needed
+- Empty matcher `""` matches all tools
+- Hook scripts receive full context via stdin and can filter by file paths, commands, etc.
 
 ## Local (Non-Kit) Hooks
 
@@ -404,9 +405,9 @@ DOT_AGENT_HOOK_DEBUG=true claude-code
 [[hooks]]
 name = "pre-commit-check"
 lifecycle = "PreToolUse"
-matcher = "Bash.*git commit"
+matcher = "Bash"
 script = "pre_commit.py"
-description = "Run checks before git commit"
+description = "Run checks before git commit (script filters for 'git commit' commands)"
 ```
 
 ### File Write Logger

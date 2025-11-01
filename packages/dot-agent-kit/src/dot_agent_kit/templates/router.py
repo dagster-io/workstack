@@ -79,7 +79,7 @@ def matches_pattern(matcher: str, context: dict) -> bool:
     """Check if a hook matcher matches the current context.
 
     Args:
-        matcher: Regex pattern to match against context
+        matcher: Regex pattern to match against tool_name field
         context: Context dictionary from Claude Code
 
     Returns:
@@ -88,12 +88,12 @@ def matches_pattern(matcher: str, context: dict) -> bool:
     if not matcher:
         return True  # Empty matcher = always match
 
-    # Convert context to JSON string for pattern matching
-    context_str = json.dumps(context)
+    # Match against tool_name field, consistent with Claude Code behavior
+    tool_name = context.get("tool_name", "")
 
     try:
         pattern = re.compile(matcher)
-        return pattern.search(context_str) is not None
+        return pattern.search(tool_name) is not None
     except re.error as e:
         print(f"Warning: Invalid regex pattern '{matcher}': {e}", file=sys.stderr)
         return False

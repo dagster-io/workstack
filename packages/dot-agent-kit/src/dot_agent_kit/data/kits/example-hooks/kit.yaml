@@ -1,7 +1,0 @@
-name: example-hooks
-version: 0.1.0
-description: Example kit demonstrating hook functionality
-license: MIT
-artifacts:
-  hook:
-  - hooks

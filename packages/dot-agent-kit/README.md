@@ -108,3 +108,305 @@ To align with the standard hyphenated naming convention:
    ```
 
 3. **Test installation** to verify paths are correct
+
+## Hook System
+
+Kits can include hooks that execute in response to Claude Code lifecycle events. Hooks enable automated workflows, validation, logging, and custom integrations.
+
+### Architecture Overview
+
+The hook system uses a **router pattern**:
+
+1. **Router Script**: `.claude/.dot-agent/router.py` - Central dispatcher installed during first `dot-agent init`
+2. **Hook Directories**: Each kit gets its own directory:
+   - **Project-level (default)**: `.claude/.dot-agent/hooks/<kit-name>/` - Hooks specific to this project
+   - **User-level (optional)**: `~/.claude/.dot-agent/hooks/<kit-name>/` - Hooks shared across all projects
+3. **Hook Manifests**: `hooks.toml` files define hook configurations
+4. **Settings Registration**: Router is registered ONCE in `.claude/settings.json` during init
+5. **Runtime Discovery**: Router scans hook directories when Claude Code triggers lifecycle events
+
+**Key principle**: Settings.json is modified only once. All subsequent hook management is file-based, avoiding configuration corruption.
+
+### When to Include Hooks in a Kit
+
+Include hooks in your kit when:
+
+1. **The hook depends on skills**: If your hook requires specific skills to function correctly, bundling them together ensures users install all dependencies at once.
+2. **The hook is tightly coupled to other kit artifacts**: For example, a hook that validates commands or agents specific to your kit.
+3. **You want to provide a complete workflow**: Hooks that automate or enhance the usage of other kit artifacts create a better user experience.
+
+**Example**: A testing kit might include both a pytest skill and a hook that automatically runs tests before commits. Installing the kit ensures both components work together seamlessly.
+
+### Creating a Kit with Hooks
+
+#### 1. Add Hook Directory Structure
+
+```
+my-kit/
+├── kit.yaml
+├── agents/
+│   └── ...
+└── hooks/
+    ├── hooks.toml
+    └── my_hook.py
+```
+
+#### 2. Define Hook Artifact in kit.yaml
+
+```yaml
+name: my-kit
+version: 1.0.0
+description: My kit with hooks
+artifacts:
+  agent:
+    - agents/my-kit/my-agent.md
+  hook:
+    - hooks # Points to hooks directory
+```
+
+**Note**: Unlike other artifacts, hooks reference a directory, not individual files.
+
+#### 3. Create hooks.toml Manifest
+
+```toml
+kit_id = "my-kit"
+kit_version = "1.0.0"
+
+[[hooks]]
+name = "validate-bash"
+lifecycle = "PreToolUse"
+matcher = "Bash.*rm -rf"
+script = "validate_bash.py"
+enabled = true
+description = "Prevent dangerous Bash commands"
+
+[[hooks]]
+name = "log-writes"
+lifecycle = "PostToolUse"
+matcher = "Write"
+script = "log_writes.py"
+enabled = false
+description = "Log all file writes (disabled by default)"
+```
+
+**Required fields**:
+
+- `kit_id`: Must match kit name
+- `kit_version`: Must match kit version
+- `name`: Unique hook name within kit
+- `lifecycle`: One of PreToolUse, PostToolUse, PreUserMessage, PostUserMessage
+- `matcher`: Regex pattern (empty string = always match)
+- `script`: Python script filename in hooks/ directory
+
+**Optional fields**:
+
+- `enabled`: Default enabled state (default: true)
+- `description`: Human-readable description
+
+#### 4. Write Hook Scripts
+
+```python
+#!/usr/bin/env python3
+"""Example hook script."""
+
+import json
+import sys
+
+
+def main() -> int:
+    """Main entry point for the hook."""
+    try:
+        # Read context from stdin
+        context = json.loads(sys.stdin.read())
+
+        # Your hook logic
+        tool_name = context.get("tool", "unknown")
+        print(f"[Hook] Executing for tool: {tool_name}", file=sys.stderr)
+
+        # Return 0 for success
+        return 0
+
+    except Exception as e:
+        print(f"[Hook] Error: {e}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+```
+
+**Hook script requirements**:
+
+- Read context JSON from stdin
+- Write output to stdout (displayed to user)
+- Write logs/errors to stderr
+- Return 0 for success, non-zero for failure
+- Handle exceptions gracefully
+- Be fast (<100ms recommended)
+
+### Lifecycle Events
+
+- **PreToolUse**: Before Claude Code uses a tool (Read, Write, Bash, etc.)
+- **PostToolUse**: After tool execution completes
+- **PreUserMessage**: Before processing user input
+- **PostUserMessage**: After responding to user
+
+### Matchers
+
+Matchers are regex patterns applied to the JSON-serialized context:
+
+```toml
+# Match any Bash tool use
+matcher = "Bash"
+
+# Match specific commands
+matcher = "rm -rf"
+
+# Match Write tool with paths
+matcher = "Write.*config\\.json"
+
+# Always run (empty matcher)
+matcher = ""
+```
+
+### Hook Installation Flow
+
+When a user installs a kit with hooks:
+
+1. `dot-agent init my-kit` runs
+2. Router infrastructure setup (first time only):
+   - Creates `.claude/.dot-agent/` directory
+   - Copies `router.py` template
+   - Registers router in `.claude/settings.json` (idempotent)
+3. Kit installation:
+   - Copies `hooks/` directory to `.claude/.dot-agent/hooks/my-kit/` (project-level by default)
+   - Tracks installation in `dot-agent.toml`
+4. Runtime:
+   - Claude Code triggers lifecycle event
+   - Calls router with lifecycle name
+   - Router scans hook directories (both project and user level)
+   - Loads matching `hooks.toml` files
+   - Executes enabled hooks with matching patterns
+
+### Hook Removal
+
+Hooks are automatically removed when the kit is uninstalled:
+
+```bash
+dot-agent remove my-kit
+```
+
+This deletes the entire `.claude/.dot-agent/hooks/my-kit/` directory from your project.
+
+### Testing Hooks Locally
+
+Before distributing your kit:
+
+1. **Create test context**:
+
+   ```json
+   {
+     "tool": "Bash",
+     "command": "ls -la"
+   }
+   ```
+
+2. **Test hook script**:
+
+   ```bash
+   cat test_context.json | python3 hooks/my_hook.py
+   ```
+
+3. **Install locally**:
+
+   ```bash
+   dot-agent init ./my-kit
+   ```
+
+4. **Verify installation**:
+
+   ```bash
+   dot-agent hooks list
+   ```
+
+5. **Test with Claude Code** by triggering the lifecycle event
+
+### Hook Management Commands
+
+Users can manage hooks after installation:
+
+```bash
+# List all hooks
+dot-agent hooks list
+
+# Enable a hook
+dot-agent hooks enable my-kit/my-hook
+
+# Disable a hook
+dot-agent hooks disable my-kit/my-hook
+```
+
+### Best Practices
+
+**Performance**:
+
+- Keep hooks fast (<100ms)
+- Use async operations for I/O
+- Cache expensive computations
+
+**Error Handling**:
+
+- Always catch exceptions
+- Log errors to stderr
+- Return appropriate exit codes
+- Don't crash Claude Code
+
+**Security**:
+
+- Validate context input
+- Don't execute arbitrary code
+- Be careful with file operations
+- Sanitize subprocess inputs
+
+**Maintainability**:
+
+- Use descriptive names and descriptions
+- Document matcher patterns
+- Version hooks with kit
+- Test in isolation
+
+### Example Hooks
+
+See `packages/dot-agent-kit/src/dot_agent_kit/data/kits/example-hooks/` for a complete example kit with hooks.
+
+### Debugging
+
+Add debug output:
+
+```python
+import os
+import sys
+
+DEBUG = os.environ.get("DOT_AGENT_HOOK_DEBUG") == "true"
+
+if DEBUG:
+    print(f"[Debug] Context: {context}", file=sys.stderr)
+```
+
+Run Claude Code with debug enabled:
+
+```bash
+DOT_AGENT_HOOK_DEBUG=true claude-code
+```
+
+### Hook Limitations
+
+- Hooks are observers - they cannot modify tool execution or block operations
+- Hooks cannot modify context for other hooks
+- Hooks share the same Python environment as Claude Code
+- Slow hooks may introduce latency
+- Hook failures don't block Claude Code execution
+
+### Documentation
+
+For detailed hook documentation, see [.agent/docs/HOOKS.md](../../.agent/docs/HOOKS.md)

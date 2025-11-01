@@ -1,13 +1,65 @@
 """Kit installation operations."""
 
+import shutil
 from datetime import datetime
 from pathlib import Path
 
 import click
 
-from dot_agent_kit.io import add_frontmatter, load_kit_manifest
+from dot_agent_kit.io import add_frontmatter, get_user_claude_dir, load_kit_manifest
 from dot_agent_kit.models import ArtifactFrontmatter, ConflictPolicy, InstalledKit
 from dot_agent_kit.sources import ResolvedKit
+
+
+def install_hook_artifact(
+    kit_id: str,
+    source_dir: Path,
+    conflict_policy: ConflictPolicy,
+) -> str:
+    """Install hook artifact to ~/.claude/.dot-agent/hooks/<kit-id>/.
+
+    Hooks are special - they're directories copied to a global location,
+    not individual files with frontmatter.
+
+    Args:
+        kit_id: Kit identifier (used for hook directory name)
+        source_dir: Source directory containing hooks/ with hooks.toml and scripts
+        conflict_policy: How to handle conflicts
+
+    Returns:
+        Path to installed hook directory (relative to ~/.claude)
+
+    Raises:
+        FileExistsError: If hook directory exists and policy is ERROR
+    """
+    claude_dir = get_user_claude_dir()
+    dot_agent_hooks = claude_dir / ".dot-agent" / "hooks"
+    target_dir = dot_agent_hooks / kit_id
+
+    # Handle conflicts
+    if target_dir.exists():
+        if conflict_policy == ConflictPolicy.ERROR:
+            raise FileExistsError(
+                f"Hook directory already exists: {target_dir}\nUse --force to overwrite"
+            )
+        elif conflict_policy == ConflictPolicy.SKIP:
+            click.echo(f"  Skipping hooks (exists): {kit_id}", err=True)
+            return str(target_dir.relative_to(claude_dir))
+        elif conflict_policy == ConflictPolicy.OVERWRITE:
+            click.echo(f"  Overwriting hooks: {kit_id}", err=True)
+            shutil.rmtree(target_dir)
+        else:
+            raise ValueError(f"Unsupported policy: {conflict_policy}")
+
+    # Create parent directory if needed
+    dot_agent_hooks.mkdir(parents=True, exist_ok=True)
+
+    # Copy entire hooks directory
+    shutil.copytree(source_dir, target_dir)
+
+    click.echo(f"  Installed hooks: {kit_id}", err=True)
+
+    return str(target_dir.relative_to(claude_dir))
 
 
 def install_kit(
@@ -39,8 +91,25 @@ def install_kit(
         filtered_artifacts if filtered_artifacts is not None else manifest.artifacts
     )
 
-    # Process each artifact type
+    # Handle hooks specially (they go to ~/.claude/.dot-agent/hooks/)
+    if "hook" in artifacts_to_install:
+        hook_paths = artifacts_to_install["hook"]
+        for hook_path in hook_paths:
+            source = resolved.artifacts_base / hook_path
+            if source.exists() and source.is_dir():
+                hook_install_path = install_hook_artifact(
+                    kit_id=manifest.name,
+                    source_dir=source,
+                    conflict_policy=conflict_policy,
+                )
+                installed_artifacts.append(hook_install_path)
+
+    # Process each non-hook artifact type
     for artifact_type, paths in artifacts_to_install.items():
+        # Skip hooks - already handled above
+        if artifact_type == "hook":
+            continue
+
         # Map artifact type to .claude subdirectory
         target_dir = claude_dir / f"{artifact_type}s"  # agents, commands, skills
         if not target_dir.exists():

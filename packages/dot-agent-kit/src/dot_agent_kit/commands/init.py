@@ -1,17 +1,48 @@
 """Init command for installing kits."""
 
+import shutil
 from pathlib import Path
 
 import click
 
 from dot_agent_kit.io import (
     create_default_config,
+    ensure_router_hooks,
+    get_user_claude_dir,
     load_project_config,
     save_project_config,
 )
 from dot_agent_kit.models import ProjectConfig
 from dot_agent_kit.operations.install import install_kit
 from dot_agent_kit.sources import BundledKitSource, KitResolver, StandalonePackageSource
+
+
+def setup_router() -> None:
+    """Setup hook router infrastructure in ~/.claude/.dot-agent/."""
+    claude_dir = get_user_claude_dir()
+    dot_agent_dir = claude_dir / ".dot-agent"
+    hooks_dir = dot_agent_dir / "hooks"
+    router_dest = dot_agent_dir / "router.py"
+    settings_path = claude_dir / "settings.json"
+
+    # Create directories if they don't exist
+    hooks_dir.mkdir(parents=True, exist_ok=True)
+
+    # Copy router template if it doesn't exist
+    if not router_dest.exists():
+        # Find router template in package
+        templates_dir = Path(__file__).parent.parent / "templates"
+        router_template = templates_dir / "router.py"
+
+        if router_template.exists():
+            shutil.copy2(router_template, router_dest)
+            router_dest.chmod(0o755)  # Make executable
+
+    # Register router hooks in settings.json
+    modified = ensure_router_hooks(settings_path, router_dest)
+
+    if modified:
+        click.echo("✓ Router infrastructure setup complete")
 
 
 @click.command()
@@ -24,6 +55,9 @@ from dot_agent_kit.sources import BundledKitSource, KitResolver, StandalonePacka
 def init(package: str, force: bool) -> None:
     """Initialize and install a kit from bundled data or Python package."""
     project_dir = Path.cwd()
+
+    # Setup router infrastructure (idempotent)
+    setup_router()
 
     # Load or create project config
     config = load_project_config(project_dir)

@@ -3,6 +3,32 @@
 
 This demonstrates a simple hook that logs when Bash tool is about to be used.
 Context is provided via stdin as JSON.
+
+Example context structure for PreToolUse lifecycle:
+{
+    "tool": "Bash",
+    "command": "ls -la",
+    "description": "List files in current directory",
+    "timeout": 120000,
+    ...additional tool-specific parameters...
+}
+
+For Write tool:
+{
+    "tool": "Write",
+    "file_path": "/path/to/file.py",
+    "content": "print('hello')",
+    ...
+}
+
+For Read tool:
+{
+    "tool": "Read",
+    "file_path": "/path/to/file.py",
+    "offset": 0,
+    "limit": 100,
+    ...
+}
 """
 
 import json
@@ -13,6 +39,7 @@ def main() -> int:
     """Main entry point for the hook."""
     try:
         # Read context from stdin
+        # The context structure varies by tool type (see examples in docstring above)
         context = json.loads(sys.stdin.read())
 
         # Log the hook execution

@@ -14,15 +14,33 @@ The dot-agent-kit hook system allows kits to execute custom scripts in response 
 
 ### Architecture
 
+Hooks can be installed at two levels:
+
+**Project-level (default):**
+
+```
+project/
+└── .claude/
+    ├── settings.json       # Claude Code settings (router registered here once)
+    └── .dot-agent/
+        ├── router.py       # Hook router script
+        └── hooks/
+            ├── my-kit/
+            │   ├── hooks.toml  # Hook configuration
+            │   └── script.py   # Hook script
+            └── other-kit/
+                └── ...
+```
+
+**User-level (optional, shared across all projects):**
+
 ```
 ~/.claude/
-├── settings.json           # Claude Code settings (router registered here once)
 └── .dot-agent/
-    ├── router.py           # Hook router script
     └── hooks/
         ├── my-kit/
-        │   ├── hooks.toml  # Hook configuration
-        │   └── script.py   # Hook script
+        │   ├── hooks.toml
+        │   └── script.py
         └── other-kit/
             └── ...
 ```
@@ -52,7 +70,7 @@ This will:
 
 1. Setup router infrastructure (if first time)
 2. Install the kit
-3. Copy hooks to `~/.claude/.dot-agent/hooks/example-hooks/`
+3. Copy hooks to `.claude/.dot-agent/hooks/example-hooks/` (project-level by default)
 
 ### Listing Installed Hooks
 
@@ -96,9 +114,19 @@ Hooks are removed when you remove the kit:
 dot-agent remove example-hooks
 ```
 
-This deletes the entire `~/.claude/.dot-agent/hooks/example-hooks/` directory.
+This deletes the entire `.claude/.dot-agent/hooks/example-hooks/` directory from your project.
 
 ## Creating Hooks for Your Kit
+
+### When to Include Hooks in a Kit
+
+Include hooks in your kit when:
+
+1. **The hook depends on skills**: If your hook requires specific skills to function correctly, bundling them together ensures users install all dependencies at once.
+2. **The hook is tightly coupled to other kit artifacts**: For example, a hook that validates commands or agents specific to your kit.
+3. **You want to provide a complete workflow**: Hooks that automate or enhance the usage of other kit artifacts create a better user experience.
+
+**Example**: A testing kit might include both a pytest skill and a hook that automatically runs tests before commits. Installing the kit ensures both components work together seamlessly.
 
 ### 1. Create Hook Directory Structure
 
@@ -248,7 +276,15 @@ matcher = "(Bash.*dangerous)|(Write.*secret)"
 
 ## Local (Non-Kit) Hooks
 
-You can create hooks outside of kits by manually creating directories in `~/.claude/.dot-agent/hooks/`:
+You can create hooks outside of kits by manually creating directories in `.claude/.dot-agent/hooks/` (project-level) or `~/.claude/.dot-agent/hooks/` (user-level):
+
+**Project-level:**
+
+```bash
+mkdir -p .claude/.dot-agent/hooks/my-local-hooks
+```
+
+**User-level:**
 
 ```bash
 mkdir -p ~/.claude/.dot-agent/hooks/my-local-hooks
@@ -265,14 +301,20 @@ Create `hooks.toml` and scripts following the same format. These hooks won't be 
 1. **Check router setup**:
 
    ```bash
-   ls ~/.claude/.dot-agent/router.py
-   cat ~/.claude/settings.json | grep router
+   ls .claude/.dot-agent/router.py
+   cat .claude/settings.json | grep router
    ```
 
 2. **Verify hook installation**:
 
    ```bash
+   # Check project-level hooks
+   ls .claude/.dot-agent/hooks/
+
+   # Check user-level hooks (if applicable)
    ls ~/.claude/.dot-agent/hooks/
+
+   # List all installed hooks
    dot-agent hooks list
    ```
 
@@ -432,4 +474,4 @@ dot-agent init your-kit --force
 ```
 
 **Q: Can I have hooks in both user and project directories?**
-A: Hooks are global (`~/.claude/.dot-agent/hooks/`), not project-specific. All projects share the same hooks.
+A: Yes. By default, hooks are project-specific (installed to `.claude/.dot-agent/hooks/` in your project). You can also install hooks to the user-level directory (`~/.claude/.dot-agent/hooks/`) to share them across all projects.

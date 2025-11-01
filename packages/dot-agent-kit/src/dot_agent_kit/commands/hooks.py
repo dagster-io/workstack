@@ -1,5 +1,7 @@
 """Hook management commands."""
 
+from pathlib import Path
+
 import click
 
 from dot_agent_kit.io import (
@@ -7,6 +9,37 @@ from dot_agent_kit.io import (
     load_hook_manifest,
     update_hook_enabled,
 )
+
+
+def parse_hook_path(hook_path: str, hooks_dir: Path) -> Path:
+    """Parse and validate hook path, returning path to hooks.toml.
+
+    Args:
+        hook_path: Hook path in format "kit-name/hook-name"
+        hooks_dir: Path to hooks directory
+
+    Returns:
+        Path to the kit's hooks.toml file
+
+    Raises:
+        SystemExit: If path format is invalid or kit not found
+    """
+    parts = hook_path.split("/")
+    if len(parts) != 2:
+        click.echo(
+            "Error: Invalid hook path format. Use: kit-name/hook-name",
+            err=True,
+        )
+        raise SystemExit(1)
+
+    kit_name, _hook_name = parts
+    hooks_toml = hooks_dir / kit_name / "hooks.toml"
+
+    if not hooks_toml.exists():
+        click.echo(f"Error: Kit '{kit_name}' not found or has no hooks", err=True)
+        raise SystemExit(1)
+
+    return hooks_toml
 
 
 @click.group()
@@ -40,12 +73,7 @@ def list_hooks() -> None:
         if not hooks_toml.exists():
             continue
 
-        try:
-            manifest = load_hook_manifest(hooks_toml)
-        except (FileNotFoundError, ValueError) as e:
-            click.echo(f"Warning: Failed to load {kit_dir.name}: {e}", err=True)
-            continue
-
+        manifest = load_hook_manifest(hooks_toml)
         click.echo(f"\n{manifest.kit_id} (v{manifest.kit_version})")
 
         for hook in manifest.hooks:
@@ -83,21 +111,8 @@ def enable_hook(hook_path: str) -> None:
     claude_dir = get_user_claude_dir()
     hooks_dir = claude_dir / ".dot-agent" / "hooks"
 
-    # Parse hook path
-    parts = hook_path.split("/")
-    if len(parts) != 2:
-        click.echo(
-            "Error: Invalid hook path format. Use: kit-name/hook-name",
-            err=True,
-        )
-        raise SystemExit(1)
-
-    kit_name, hook_name = parts
-    hooks_toml = hooks_dir / kit_name / "hooks.toml"
-
-    if not hooks_toml.exists():
-        click.echo(f"Error: Kit '{kit_name}' not found or has no hooks", err=True)
-        raise SystemExit(1)
+    hooks_toml = parse_hook_path(hook_path, hooks_dir)
+    hook_name = hook_path.split("/")[1]
 
     try:
         update_hook_enabled(hooks_toml, hook_name, enabled=True)
@@ -120,21 +135,8 @@ def disable_hook(hook_path: str) -> None:
     claude_dir = get_user_claude_dir()
     hooks_dir = claude_dir / ".dot-agent" / "hooks"
 
-    # Parse hook path
-    parts = hook_path.split("/")
-    if len(parts) != 2:
-        click.echo(
-            "Error: Invalid hook path format. Use: kit-name/hook-name",
-            err=True,
-        )
-        raise SystemExit(1)
-
-    kit_name, hook_name = parts
-    hooks_toml = hooks_dir / kit_name / "hooks.toml"
-
-    if not hooks_toml.exists():
-        click.echo(f"Error: Kit '{kit_name}' not found or has no hooks", err=True)
-        raise SystemExit(1)
+    hooks_toml = parse_hook_path(hook_path, hooks_dir)
+    hook_name = hook_path.split("/")[1]
 
     try:
         update_hook_enabled(hooks_toml, hook_name, enabled=False)

@@ -117,13 +117,25 @@ Kits can include hooks that execute in response to Claude Code lifecycle events.
 
 The hook system uses a **router pattern**:
 
-1. **Router Script**: `~/.claude/.dot-agent/router.py` - Central dispatcher installed during first `dot-agent init`
-2. **Hook Directories**: `~/.claude/.dot-agent/hooks/<kit-name>/` - Each kit gets its own directory
+1. **Router Script**: `.claude/.dot-agent/router.py` - Central dispatcher installed during first `dot-agent init`
+2. **Hook Directories**: Each kit gets its own directory:
+   - **Project-level (default)**: `.claude/.dot-agent/hooks/<kit-name>/` - Hooks specific to this project
+   - **User-level (optional)**: `~/.claude/.dot-agent/hooks/<kit-name>/` - Hooks shared across all projects
 3. **Hook Manifests**: `hooks.toml` files define hook configurations
-4. **Settings Registration**: Router is registered ONCE in `~/.claude/settings.json` during init
+4. **Settings Registration**: Router is registered ONCE in `.claude/settings.json` during init
 5. **Runtime Discovery**: Router scans hook directories when Claude Code triggers lifecycle events
 
 **Key principle**: Settings.json is modified only once. All subsequent hook management is file-based, avoiding configuration corruption.
+
+### When to Include Hooks in a Kit
+
+Include hooks in your kit when:
+
+1. **The hook depends on skills**: If your hook requires specific skills to function correctly, bundling them together ensures users install all dependencies at once.
+2. **The hook is tightly coupled to other kit artifacts**: For example, a hook that validates commands or agents specific to your kit.
+3. **You want to provide a complete workflow**: Hooks that automate or enhance the usage of other kit artifacts create a better user experience.
+
+**Example**: A testing kit might include both a pytest skill and a hook that automatically runs tests before commits. Installing the kit ensures both components work together seamlessly.
 
 ### Creating a Kit with Hooks
 
@@ -263,16 +275,16 @@ When a user installs a kit with hooks:
 
 1. `dot-agent init my-kit` runs
 2. Router infrastructure setup (first time only):
-   - Creates `~/.claude/.dot-agent/` directory
+   - Creates `.claude/.dot-agent/` directory
    - Copies `router.py` template
-   - Registers router in `settings.json` (idempotent)
+   - Registers router in `.claude/settings.json` (idempotent)
 3. Kit installation:
-   - Copies `hooks/` directory to `~/.claude/.dot-agent/hooks/my-kit/`
+   - Copies `hooks/` directory to `.claude/.dot-agent/hooks/my-kit/` (project-level by default)
    - Tracks installation in `dot-agent.toml`
 4. Runtime:
    - Claude Code triggers lifecycle event
    - Calls router with lifecycle name
-   - Router scans `hooks/` directories
+   - Router scans hook directories (both project and user level)
    - Loads matching `hooks.toml` files
    - Executes enabled hooks with matching patterns
 
@@ -284,7 +296,7 @@ Hooks are automatically removed when the kit is uninstalled:
 dot-agent remove my-kit
 ```
 
-This deletes the entire `~/.claude/.dot-agent/hooks/my-kit/` directory.
+This deletes the entire `.claude/.dot-agent/hooks/my-kit/` directory from your project.
 
 ### Testing Hooks Locally
 

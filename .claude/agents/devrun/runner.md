@@ -1,8 +1,17 @@
+<!-- dot-agent-kit:
+artifact_path: agents/devrun/runner.md
+artifact_type: agent
+kit_id: devrun
+kit_version: 0.1.0
+-->
+
 ---
+
 name: runner
 description: Execute development CLI tools (pytest, pyright, ruff, prettier, make) and parse results. Automatically loads appropriate skill based on command. Use when running test suites, type checking, linting, formatting, or build commands.
 model: haiku
 color: green
+
 ---
 
 # CLI Tool Runner

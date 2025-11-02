@@ -18,7 +18,7 @@ from dot_agent_kit.operations import (
     get_installation_context,
     install_kit_to_target,
 )
-from dot_agent_kit.sources import KitResolver, StandalonePackageSource
+from dot_agent_kit.sources import BundledKitSource, KitResolver, StandalonePackageSource
 
 
 @click.command()
@@ -95,7 +95,8 @@ def install(kit_spec: str, target: str, force: bool) -> None:
             raise SystemExit(1)
 
     # Resolve kit source
-    resolver = KitResolver(sources=[StandalonePackageSource()])
+    # Try bundled kits first, then standalone packages
+    resolver = KitResolver(sources=[BundledKitSource(), StandalonePackageSource()])
     resolved = resolver.resolve(kit_id)
 
     if resolved is None:

@@ -1,22 +1,27 @@
 {
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "_dot_agent": {
+              "hook_id": "suggest_dignified",
+              "kit_id": "dignified-python"
+            },
+            "command": "python3 \"/Users/schrockn/code/workstacks/workstack/dignified-python-kit/.claude/hooks/dignified-python/suggest_dignified.py\"",
+            "timeout": 30,
+            "type": "command"
+          }
+        ],
+        "matcher": "Edit|Write"
+      }
+    ]
+  },
   "permissions": {
     "allow": [
       "BasH(workstack-dev:*)"
     ],
-    "deny": [],
-    "ask": []
-  },
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 $CLAUDE_PROJECT_DIR/.claude/hooks/suggest-dignified-python.py"
-          }
-        ]
-      }
-    ]
+    "ask": [],
+    "deny": []
   }
 }

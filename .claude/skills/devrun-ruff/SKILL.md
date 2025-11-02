@@ -1,6 +1,15 @@
+<!-- dot-agent-kit:
+artifact_path: skills/devrun-ruff/SKILL.md
+artifact_type: skill
+kit_id: devrun
+kit_version: 0.1.0
+-->
+
 ---
+
 name: devrun-ruff
 description: ruff linter and formatter patterns, command syntax, and output parsing guidance for Python code quality enforcement.
+
 ---
 
 # ruff Skill

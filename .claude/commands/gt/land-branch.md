@@ -1,6 +1,13 @@
+<!-- dot-agent-kit:
+artifact_path: commands/gt/land-branch.md
+artifact_type: command
+kit_id: gt
+kit_version: 0.1.0
+-->
+
 ---
-description: Merge a single PR from a Graphite stack without affecting upstack branches
----
+
+## description: Merge a single PR from a Graphite stack without affecting upstack branches
 
 # Land Branch
 

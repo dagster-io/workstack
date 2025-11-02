@@ -1,0 +1,48 @@
+# Dignified Python Kit - Workstack Python Coding Standards
+#
+# This kit demonstrates how to bundle hooks and skills together for distribution.
+# It provides Python coding standards enforcement through a PreToolUse hook that
+# suggests loading the dignified-python skill when editing Python files.
+
+# Kit metadata
+name = "dignified-python"
+version = "0.1.0"
+description = "Workstack Python coding standards with LBYL patterns, explicit type annotations, and deterministic error handling"
+license = "MIT"
+
+# Artifacts bundled with this kit
+# The artifacts section maps artifact types to their relative paths within the kit
+[artifacts]
+# Skills are loaded into .claude/skills/{skill-name}/
+skill = [
+  "skills/dignified-python/SKILL.md"
+]
+
+# Hooks section - defines inline hook configurations
+# Each hook is installed into .claude/hooks/{kit-name}/ when the kit is installed
+[[hooks]]
+# hook_id: Unique identifier for this hook within the kit
+# This becomes the script filename when installed
+hook_id = "suggest_dignified"
+
+# lifecycle: When this hook executes
+# PreToolUse: Before a tool is executed (allows inspection and suggestions)
+# PostToolUse: After a tool completes (allows validation)
+lifecycle = "PreToolUse"
+
+# matcher: Which tools trigger this hook
+# Supports exact match ("Edit") or pipe-separated alternatives ("Edit|Write")
+# This hook triggers on file editing and writing operations
+matcher = "Edit|Write"
+
+# script: Relative path to the hook script within this kit
+# The script is copied to .claude/hooks/{kit-name}/{hook_id}.py during installation
+script = "hooks/suggest_dignified.py"
+
+# description: Human-readable explanation of what this hook does
+# Shown in hook management commands and error messages
+description = "Suggests loading dignified-python skill when editing Python files (excluding tests/migrations)"
+
+# timeout: Maximum execution time in seconds (default: 30)
+# Hook will be terminated if it exceeds this duration
+timeout = 30

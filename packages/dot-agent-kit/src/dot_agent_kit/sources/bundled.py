@@ -14,8 +14,9 @@ class BundledKitSource(KitSource):
         bundled_path = self._get_bundled_kit_path(source)
         if bundled_path is None:
             return False
-        manifest_path = bundled_path / "kit.yaml"
-        return manifest_path.exists()
+        yaml_manifest = bundled_path / "kit.yaml"
+        toml_manifest = bundled_path / "kit.toml"
+        return yaml_manifest.exists() or toml_manifest.exists()
 
     def resolve(self, source: str) -> ResolvedKit:
         """Resolve kit from bundled data."""
@@ -23,9 +24,16 @@ class BundledKitSource(KitSource):
         if bundled_path is None:
             raise ValueError(f"No bundled kit found: {source}")
 
-        manifest_path = bundled_path / "kit.yaml"
-        if not manifest_path.exists():
-            raise ValueError(f"No kit.yaml found for bundled kit: {source}")
+        # Try both kit.toml and kit.yaml
+        toml_manifest = bundled_path / "kit.toml"
+        yaml_manifest = bundled_path / "kit.yaml"
+
+        if toml_manifest.exists():
+            manifest_path = toml_manifest
+        elif yaml_manifest.exists():
+            manifest_path = yaml_manifest
+        else:
+            raise ValueError(f"No kit manifest found for bundled kit: {source}")
 
         manifest = load_kit_manifest(manifest_path)
 
@@ -51,8 +59,12 @@ class BundledKitSource(KitSource):
 
         bundled_kits = []
         for kit_dir in data_dir.iterdir():
-            if kit_dir.is_dir() and (kit_dir / "kit.yaml").exists():
-                bundled_kits.append(kit_dir.name)
+            if kit_dir.is_dir():
+                # Check for either kit.yaml or kit.toml
+                has_yaml = (kit_dir / "kit.yaml").exists()
+                has_toml = (kit_dir / "kit.toml").exists()
+                if has_yaml or has_toml:
+                    bundled_kits.append(kit_dir.name)
 
         return bundled_kits
 

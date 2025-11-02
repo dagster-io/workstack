@@ -33,7 +33,7 @@ test-dot-agent-kit:
 test: test-workstack-dev test-dot-agent-kit
 
 sync-kit-check:
-	uv run dot-agent check-sync
+	uv run dot-agent kit check
 
 all-ci: lint format-check prettier-check pyright test sync-kit-check
 

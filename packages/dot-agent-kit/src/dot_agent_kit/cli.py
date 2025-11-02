@@ -4,7 +4,8 @@ from dot_agent_kit import __version__
 from dot_agent_kit.commands import status
 from dot_agent_kit.commands.artifact import list as artifact_list
 from dot_agent_kit.commands.hook import hook
-from dot_agent_kit.commands.kit import check, install, list as kit_list, remove, sync, update
+from dot_agent_kit.commands.kit import check, install, remove, sync, update
+from dot_agent_kit.commands.kit import list as kit_list
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 

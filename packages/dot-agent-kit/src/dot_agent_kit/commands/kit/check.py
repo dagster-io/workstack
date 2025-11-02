@@ -144,7 +144,10 @@ def check_sync_status(project_dir: Path, verbose: bool) -> None:
     if out_of_sync_count > 0:
         click.echo(f"  ✗ Out of sync: {out_of_sync_count}", err=True)
         click.echo()
-        click.echo("Run 'dot-agent kit sync' to update local artifacts from bundled sources", err=True)
+        click.echo(
+            "Run 'dot-agent kit sync' to update local artifacts from bundled sources",
+            err=True,
+        )
         raise SystemExit(1)
     else:
         click.echo()

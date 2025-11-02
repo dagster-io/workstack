@@ -1,6 +1,15 @@
+<!-- dot-agent-kit:
+artifact_path: skills/devrun-pyright/SKILL.md
+artifact_type: skill
+kit_id: devrun
+kit_version: 0.1.0
+-->
+
 ---
+
 name: devrun-pyright
 description: pyright type checker patterns, command syntax, and output parsing guidance for Python static type analysis.
+
 ---
 
 # pyright Skill

@@ -1,6 +1,15 @@
+<!-- dot-agent-kit:
+artifact_path: skills/devrun-pytest/SKILL.md
+artifact_type: skill
+kit_id: devrun
+kit_version: 0.1.0
+-->
+
 ---
+
 name: devrun-pytest
 description: pytest testing framework patterns, command syntax, and output parsing guidance for Python test execution.
+
 ---
 
 # pytest Skill

@@ -16,7 +16,7 @@ class FilesystemArtifactRepository(ArtifactRepository):
         """Discover all installed artifacts with their metadata.
 
         Scans the .claude/ directory for all artifacts and enriches them with
-        source information (managed, unmanaged, or local).
+        source information (managed or local).
 
         Args:
             project_dir: Project root directory

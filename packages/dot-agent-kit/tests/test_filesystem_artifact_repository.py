@@ -137,37 +137,6 @@ def test_detects_managed_artifacts(tmp_path: Path) -> None:
     assert artifact.kit_version == "1.0.0"
 
 
-def test_detects_unmanaged_artifacts_with_frontmatter(tmp_path: Path) -> None:
-    """Test that repository correctly identifies unmanaged artifacts with frontmatter."""
-    # Create skill with frontmatter
-    skills_dir = tmp_path / ".claude" / "skills"
-    skill_dir = skills_dir / "unmanaged-skill"
-    skill_dir.mkdir(parents=True)
-    skill_path = skill_dir / "SKILL.md"
-
-    # Write skill without being in config (local artifact)
-    skill_content = """---
-name: unmanaged-skill
-description: An unmanaged skill
----
-
-# Unmanaged Skill"""
-    skill_path.write_text(skill_content, encoding="utf-8")
-
-    # Config doesn't include this skill
-    config = create_default_config()
-
-    repository = FilesystemArtifactRepository()
-    artifacts = repository.discover_all_artifacts(tmp_path, config)
-
-    assert len(artifacts) == 1
-    artifact = artifacts[0]
-    assert artifact.artifact_name == "unmanaged-skill"
-    assert artifact.source == ArtifactSource.LOCAL
-    assert artifact.kit_id is None
-    assert artifact.kit_version is None
-
-
 def test_handles_empty_claude_directory(tmp_path: Path) -> None:
     """Test that repository handles empty .claude directory gracefully."""
     # Create empty .claude directory

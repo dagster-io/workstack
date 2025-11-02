@@ -173,15 +173,6 @@ def test_list_mixed_artifacts(capsys: CaptureFixture[str]) -> None:
                 kit_id="devrun",
                 kit_version="0.1.0",
             ),
-            # Local artifact (not in config)
-            InstalledArtifact(
-                artifact_type="skill",
-                artifact_name="gt-graphite",
-                file_path=Path("skills/gt-graphite/SKILL.md"),
-                source=ArtifactSource.LOCAL,
-                kit_id=None,
-                kit_version=None,
-            ),
             # Local artifacts
             InstalledArtifact(
                 artifact_type="skill",
@@ -206,7 +197,6 @@ def test_list_mixed_artifacts(capsys: CaptureFixture[str]) -> None:
     assert "Skills:" in captured.out
     assert "devrun-make" in captured.out
     assert "[devrun@0.1.0]" in captured.out
-    assert "gt-graphite" in captured.out
     assert "gh" in captured.out
     assert "[local]" in captured.out
 

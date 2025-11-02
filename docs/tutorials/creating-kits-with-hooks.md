@@ -145,7 +145,7 @@ cp .claude/skills/dignified-python/SKILL.md \
    packages/dot-agent-kit/src/dot_agent_kit/data/kits/dignified-python/skills/dignified-python/SKILL.md
 ```
 
-**Important:** Kit artifacts should NOT include frontmatter. The installer adds frontmatter automatically during installation.
+**Note:** Kit artifacts may include user metadata in frontmatter if needed, but the system does not use frontmatter for tracking purposes.
 
 ### Step 4: Create Hook Script
 
@@ -370,17 +370,8 @@ After installation, verify these components:
 Check `.claude/skills/dignified-python/SKILL.md`:
 
 - File exists
-- Contains frontmatter:
-  ```yaml
-  ---
-  __dot_agent:
-    kit_id: dignified-python
-    kit_version: 0.1.0
-    artifact_type: skill
-    artifact_path: skills/dignified-python/SKILL.md
-  ---
-  ```
 - Content matches original skill
+- Any user-defined frontmatter is preserved
 
 #### 2. Hook Installation
 
@@ -496,13 +487,16 @@ Try editing a Python file in your project:
 ls packages/dot-agent-kit/src/dot_agent_kit/data/kits/dignified-python/kit.yaml
 ```
 
-#### Frontmatter Parse Error
+#### Artifact Installation Issues
 
-**Error:** `yaml.scanner.ScannerError: while scanning an alias`
+**Problem:** Artifacts not appearing after installation
 
-**Cause:** Artifact file contains markdown `---` separators that are mistaken for frontmatter
+**Checks:**
 
-**Solution:** This has been fixed in the code. The frontmatter parser now only matches at the start of files.
+1. Verify kit.yaml lists the artifact path correctly
+2. Check that artifact file exists in the kit directory
+3. Ensure destination directory is writable
+4. Use `--force` to overwrite if artifact already exists
 
 #### Hook Not Triggering
 

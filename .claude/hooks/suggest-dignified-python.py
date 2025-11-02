@@ -2,8 +2,8 @@
 """
 Dignified Python Skill Suggestion Hook
 
-Suggests loading the dignified-python skill when editing Python files.
-This provides Claude with workstack's Python coding standards.
+Injects dignified-python skill suggestion on every user prompt.
+This ensures Claude always has access to Python coding standards.
 """
 
 import json
@@ -12,27 +12,45 @@ import sys
 
 def main():
     try:
-        # Read JSON input from stdin
-        data = json.load(sys.stdin)
+        # Read JSON input from stdin (not used, but validates format)
+        json.load(sys.stdin)
 
-        # Extract tool information
-        tool_name = data.get("tool_name", "")
-        tool_input = data.get("tool_input", {})
-        file_path = tool_input.get("file_path", "")
+        # Always output suggestion (runs on every prompt)
+        print("<reminder>")
+        print(
+            "CRITICAL: Load dignified-python skill when editing Python and "
+            "strictly abide by the standards defined in it."
+        )
+        print()
+        print("Core philosophy:")
+        print("  - Explicit, predictable code that fails fast")
+        print("  - LBYL over EAFP - check before acting")
+        print("  - Python 3.13+ syntax only")
+        print("  - Error boundaries at CLI/API level")
+        print()
+        print("Critical rules:")
+        print("  1. Exceptions: LBYL over EAFP 🔴")
+        print(
+            "     - ALWAYS use LBYL (Look Before You Leap) first, before EAFP, "
+            "which should be used only if absolutely necessary "
+            "(only API supported by 3rd party library, for example)"
+        )
+        print("     - Check conditions with if statements before acting")
+        print("     - Only handle exceptions at error boundaries (CLI, third-party APIs)")
+        print("     - Let exceptions bubble up by default")
+        print(
+            "  2. Types: Use list[str], dict[str,int], str|None. "
+            "FORBIDDEN: List, Optional, Union 🔴"
+        )
+        print("  3. Imports: Absolute only. NEVER relative imports 🔴")
+        print("  4. Style: Max 4 indent levels. Extract helpers if deeper")
+        print("  5. Data: Prefer immutable data structures. Default to @dataclass(frozen=True)")
+        print()
+        print("See full skill for details")
+        print("</reminder>")
 
-        # Only trigger for Edit/Write operations on Python files
-        if not (file_path.endswith(".py") and tool_name in ["Edit", "Write"]):
-            sys.exit(0)
-
-        # Skip test files (different patterns acceptable)
-        skip_patterns = ["test_", "_test.py", "conftest.py", "/tests/", "/migrations/"]
-        if any(pattern in file_path.lower() for pattern in skip_patterns):
-            sys.exit(0)
-
-        # Output suggestion to load skill
-        print("Load the dignified-python skill to abide by Python standards")
-
-        # Exit 0 to allow operation to proceed (non-blocking)
+        # Exit 0 to allow prompt to proceed
+        # For UserPromptSubmit, stdout is injected as context for Claude
         sys.exit(0)
 
     except Exception as e:

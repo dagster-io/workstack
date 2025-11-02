@@ -2,28 +2,32 @@
 
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-class HookMetadata(BaseModel, frozen=True):
+class HookMetadata(BaseModel):
     """Metadata tracking the kit and hook identity."""
+
+    model_config = ConfigDict(frozen=True)
 
     kit_id: str = Field(..., min_length=1)
     hook_id: str = Field(..., min_length=1)
 
 
-class HookEntry(BaseModel, frozen=True):
+class HookEntry(BaseModel):
     """Represents a hook entry in settings.json."""
+
+    model_config = ConfigDict(frozen=True, populate_by_name=True)
 
     command: str = Field(..., min_length=1)
     timeout: int = Field(..., gt=0)
     dot_agent: HookMetadata = Field(..., alias="_dot_agent")
 
-    model_config = {"populate_by_name": True}
 
-
-class MatcherGroup(BaseModel, frozen=True):
+class MatcherGroup(BaseModel):
     """Groups hooks under a matcher pattern."""
+
+    model_config = ConfigDict(frozen=True)
 
     matcher: str = Field(..., min_length=1)
     hooks: list[HookEntry]
@@ -35,14 +39,16 @@ class ClaudeSettings(BaseModel):
     Uses extra="allow" to preserve unknown fields when reading and writing.
     """
 
+    model_config = ConfigDict(extra="allow")
+
     permissions: dict[str, Any] | None = None
     hooks: dict[str, list[MatcherGroup]] | None = None
 
-    model_config = {"extra": "allow"}
 
-
-class HookDefinition(BaseModel, frozen=True):
+class HookDefinition(BaseModel):
     """Represents a hook definition in kit.toml manifest."""
+
+    model_config = ConfigDict(frozen=True)
 
     id: str = Field(..., min_length=1)
     lifecycle: str = Field(..., min_length=1)

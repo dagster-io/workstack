@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-from dot_agent_kit.io.frontmatter import parse_frontmatter
 from dot_agent_kit.models.artifact import ArtifactSource, InstalledArtifact
 from dot_agent_kit.models.config import InstalledKit, ProjectConfig
 from dot_agent_kit.repositories.artifact_repository import ArtifactRepository
@@ -131,13 +130,6 @@ class FilesystemArtifactRepository(ArtifactRepository):
             claude_dir = claude_dir.parent
         relative_path = file_path.relative_to(claude_dir)
 
-        # Try to parse frontmatter
-        try:
-            content = file_path.read_text(encoding="utf-8")
-            frontmatter = parse_frontmatter(content)
-        except Exception:
-            frontmatter = None
-
         # Determine source and kit info
         source = ArtifactSource.LOCAL
         kit_id = None
@@ -155,11 +147,7 @@ class FilesystemArtifactRepository(ArtifactRepository):
                 kit_version = kit.version
                 break
 
-        # If not managed but has frontmatter, it's unmanaged
-        if source == ArtifactSource.LOCAL and frontmatter:
-            source = ArtifactSource.UNMANAGED
-            kit_id = frontmatter.kit_id
-            kit_version = frontmatter.kit_version
+        # If not managed, it's a local artifact
 
         return InstalledArtifact(
             artifact_type=artifact_type,

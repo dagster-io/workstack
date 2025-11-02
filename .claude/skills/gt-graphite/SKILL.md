@@ -1,11 +1,6 @@
 ---
 name: graphite
 description: This skill should be used when working with Graphite (gt) for stacked pull requests. Use when users mention gt commands, stack management, PR workflows, or when dealing with dependent branches. Essential for understanding stack navigation, branch relationships, and Graphite's mental model.
-__dot_agent:
-  kit_id: gt
-  kit_version: 0.1.0
-  artifact_type: skill
-  artifact_path: skills/gt-graphite/SKILL.md
 ---
 
 # Graphite

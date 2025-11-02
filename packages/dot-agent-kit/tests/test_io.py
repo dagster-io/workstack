@@ -3,15 +3,13 @@
 from pathlib import Path
 
 from dot_agent_kit.io import (
-    add_frontmatter,
     create_default_config,
     load_kit_manifest,
     load_project_config,
     load_registry,
-    parse_frontmatter,
     save_project_config,
 )
-from dot_agent_kit.models import ArtifactFrontmatter, ConflictPolicy, InstalledKit
+from dot_agent_kit.models import ConflictPolicy, InstalledKit
 
 
 def test_load_save_project_config(tmp_project: Path) -> None:
@@ -103,85 +101,6 @@ def test_load_kit_manifest_minimal(tmp_path: Path) -> None:
     assert manifest.artifacts == {}
     assert manifest.license is None
     assert manifest.homepage is None
-
-
-def test_parse_frontmatter() -> None:
-    """Test extracting frontmatter from markdown."""
-    content = """---
-name: test-agent
-description: A test agent
-__dot_agent:
-  kit_id: test-kit
-  kit_version: 1.0.0
-  artifact_type: agent
-  artifact_path: agents/test.md
----
-
-# Test Agent
-
-This is the agent content.
-"""
-
-    frontmatter = parse_frontmatter(content)
-
-    assert frontmatter is not None
-    assert frontmatter.kit_id == "test-kit"
-    assert frontmatter.kit_version == "1.0.0"
-    assert frontmatter.artifact_type == "agent"
-    assert frontmatter.artifact_path == "agents/test.md"
-
-
-def test_parse_frontmatter_none() -> None:
-    """Test parsing content without frontmatter."""
-    content = "# Test Agent\n\nNo frontmatter here."
-
-    frontmatter = parse_frontmatter(content)
-
-    assert frontmatter is None
-
-
-def test_add_frontmatter() -> None:
-    """Test injecting frontmatter into markdown."""
-    content = "# Test Agent\n\nAgent content."
-
-    frontmatter = ArtifactFrontmatter(
-        kit_id="test-kit",
-        kit_version="1.0.0",
-        artifact_type="agent",
-        artifact_path="agents/test.md",
-    )
-
-    result = add_frontmatter(content, frontmatter)
-
-    assert result.startswith("---\n")
-    assert "__dot_agent:" in result
-    assert "kit_id: test-kit" in result
-    assert "kit_version: 1.0.0" in result
-    assert "artifact_type: agent" in result
-    assert "artifact_path: agents/test.md" in result
-    assert "# Test Agent" in result
-    assert "Agent content." in result
-
-
-def test_add_frontmatter_roundtrip() -> None:
-    """Test frontmatter can be added and parsed back."""
-    original_content = "# Test Agent\n\nAgent content."
-
-    frontmatter_obj = ArtifactFrontmatter(
-        kit_id="test-kit",
-        kit_version="1.0.0",
-        artifact_type="agent",
-        artifact_path="agents/test.md",
-    )
-
-    content_with_fm = add_frontmatter(original_content, frontmatter_obj)
-    parsed_fm = parse_frontmatter(content_with_fm)
-
-    assert parsed_fm is not None
-    assert parsed_fm.kit_id == frontmatter_obj.kit_id
-    assert parsed_fm.kit_version == frontmatter_obj.kit_version
-    assert parsed_fm.artifact_type == frontmatter_obj.artifact_type
-    assert parsed_fm.artifact_path == frontmatter_obj.artifact_path
 
 
 def test_load_registry() -> None:

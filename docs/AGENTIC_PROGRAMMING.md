@@ -169,15 +169,20 @@ Think of the cache in terms of levels, similar to CPU caching. A CLAUDE.md file 
 
 ```
 .agent/
-├── docs/
-│   ├── PATTERNS.md              # Code patterns with examples
-│   ├── EXCEPTION_HANDLING.md    # Detailed exception philosophy
-│   └── QUICK_REFERENCE.md       # Fast lookup tables
-├── tools/
-│   └── graphite.md              # External tool mental models
-├── prompts/
-│   └── code_review_checklist.md # Reusable agent prompts
-└── README.md                    # Directory purpose and index
+├── ARCHITECTURE.md              # Architectural decisions
+├── FEATURE_INDEX.md             # Feature documentation index
+├── MODULE_MAP.md                # Module organization
+├── packages/
+│   └── agentic_programming_guide/
+│       └── ...                  # Package-specific guides
+└── tools/
+    └── graphite.md              # External tool mental models
+
+docs/
+├── PATTERNS.md                  # Code patterns with examples
+├── EXCEPTION_HANDLING.md        # Detailed exception philosophy
+├── QUICK_REFERENCE.md           # Fast lookup tables
+└── TESTING.md                   # Testing patterns and practices
 ```
 
 ### What Belongs in `.agent`
@@ -382,7 +387,7 @@ When "parent branch not found" appears, run `gt sync`...
 
 This document provides enough context for agents to work effectively without searching for documentation or making incorrect assumptions based on Git's branching model. The focus remains on evergreen concepts unlikely to change between minor versions, ensuring documentation longevity.
 
-See `.agent/tools/graphite.md` in this repository for a complete example of tool mental model documentation.
+See `../.agent/tool.github.md` in this repository for an example of tool mental model documentation.
 
 ### Maintenance Considerations
 

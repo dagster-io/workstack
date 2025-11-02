@@ -55,4 +55,4 @@ environment.
 ## See Also
 
 - `tests/commands/CLAUDE.md` - General command testing patterns
-- `.agent/docs/TESTING.md` - Complete testing guide
+- `docs/TESTING.md` - Complete testing guide

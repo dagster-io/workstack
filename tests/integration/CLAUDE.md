@@ -81,4 +81,4 @@ def test_real_filesystem_io(tmp_path: Path) -> None:
 ## See Also
 
 - `tests/CLAUDE.md` - Overall test structure
-- `.agent/docs/TESTING.md` - Complete testing guide
+- `docs/TESTING.md` - Complete testing guide

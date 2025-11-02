@@ -498,14 +498,6 @@ Before path operations:
 
 ## REFERENCES
 
-For more detailed information, consult:
-
-- **CLAUDE.md** - Core coding standards and quick reference table
-- **.agent/docs/EXCEPTION_HANDLING.md** - Complete exception handling guide
-- **.agent/docs/PATTERNS.md** - Comprehensive code examples
-- **.agent/docs/QUICK_REFERENCE.md** - Quick lookup reference
-- **tests/CLAUDE.md** - Testing patterns and practices
-
 ---
 
 ## QUICK DECISION TREE

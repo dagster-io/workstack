@@ -200,4 +200,4 @@ def test_mutation_tracking() -> None:
 
 - [operations/CLAUDE.md](operations/CLAUDE.md) - Operations testing patterns (critical)
 - [../CLAUDE.md](../CLAUDE.md) - Overall test structure
-- [../.agent/docs/TESTING.md](../../.agent/docs/TESTING.md) - Complete testing guide
+- [../docs/TESTING.md](../../docs/TESTING.md) - Complete testing guide

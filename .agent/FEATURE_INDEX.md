@@ -210,7 +210,7 @@ All graphite operations are defined in `src/workstack/core/graphite_ops.py`.
 
 1. **Locate implementation** in this index
 2. **Read [ARCHITECTURE.md](ARCHITECTURE.md)** to understand design
-3. **Check [GLOSSARY.md](GLOSSARY.md)** for terminology
+3. **Check [GLOSSARY.md](../GLOSSARY.md)** for terminology
 4. **Modify code** following patterns in [CLAUDE.md](CLAUDE.md)
 5. **Update corresponding tests**
 
@@ -248,7 +248,7 @@ All graphite operations are defined in `src/workstack/core/graphite_ops.py`.
 
 - **Architecture overview** → [ARCHITECTURE.md](ARCHITECTURE.md)
 - **Module organization** → [.agent/docs/MODULE_MAP.md](.agent/docs/MODULE_MAP.md)
-- **Terminology** → [GLOSSARY.md](GLOSSARY.md)
+- **Terminology** → [GLOSSARY.md](../GLOSSARY.md)
 - **Coding standards** → [CLAUDE.md](CLAUDE.md)
 
 ---
@@ -269,7 +269,7 @@ When adding or modifying features, keep this index current:
 ## Related Documentation
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) - System design and patterns
-- [GLOSSARY.md](GLOSSARY.md) - Terminology reference
+- [GLOSSARY.md](../GLOSSARY.md) - Terminology reference
 - [.agent/docs/MODULE_MAP.md](.agent/docs/MODULE_MAP.md) - Detailed module guide
 - [CLAUDE.md](CLAUDE.md) - Coding standards
 - [README.md](README.md) - User-facing documentation

@@ -36,7 +36,7 @@ Workstack is a CLI tool that manages git worktrees in a centralized location wit
 
 ## Core Concepts
 
-See [GLOSSARY.md](GLOSSARY.md) for detailed term definitions. Key concepts:
+See [GLOSSARY.md](../GLOSSARY.md) for detailed term definitions. Key concepts:
 
 - **Worktree**: Git's native feature for multiple working directories
 - **Workstack**: A _managed_ worktree with additional features (config, env vars)
@@ -278,7 +278,7 @@ User sees error message and traceback
 
 **Key Principle**: LBYL (Look Before You Leap) - Check conditions proactively rather than catching exceptions.
 
-See: [.agent/docs/EXCEPTION_HANDLING.md](.agent/docs/EXCEPTION_HANDLING.md) for complete guide.
+See: [docs/EXCEPTION_HANDLING.md](../docs/EXCEPTION_HANDLING.md) for complete guide.
 
 ---
 
@@ -544,7 +544,7 @@ command = ["uv", "sync"]
 - More predictable behavior
 - Easier to test edge cases
 
-See: [.agent/docs/EXCEPTION_HANDLING.md](.agent/docs/EXCEPTION_HANDLING.md) for complete guide.
+See: [docs/EXCEPTION_HANDLING.md](../docs/EXCEPTION_HANDLING.md) for complete guide.
 
 ### Why no relative imports?
 
@@ -566,7 +566,7 @@ See: [.agent/docs/EXCEPTION_HANDLING.md](.agent/docs/EXCEPTION_HANDLING.md) for 
 - **Understand terminology** → [GLOSSARY.md](GLOSSARY.md)
 - **Find where feature lives** → [FEATURE_INDEX.md](FEATURE_INDEX.md)
 - **See module details** → [docs/MODULE_MAP.md](docs/MODULE_MAP.md)
-- **See code examples** → [docs/PATTERNS.md](docs/PATTERNS.md)
+- **See code examples** → [docs/PATTERNS.md](../docs/PATTERNS.md)
 - **Write tests** → [../tests/CLAUDE.md](../tests/CLAUDE.md)
 
 ---
@@ -575,6 +575,6 @@ See: [.agent/docs/EXCEPTION_HANDLING.md](.agent/docs/EXCEPTION_HANDLING.md) for 
 
 - [GLOSSARY.md](GLOSSARY.md) - Term definitions
 - [FEATURE_INDEX.md](FEATURE_INDEX.md) - Feature → file mapping
-- [.agent/docs/MODULE_MAP.md](.agent/docs/MODULE_MAP.md) - Detailed module guide
+- [.agent/docs/MODULE_MAP.md](docs/MODULE_MAP.md) - Detailed module guide
 - [CLAUDE.md](CLAUDE.md) - Coding standards
 - [README.md](README.md) - User-facing documentation

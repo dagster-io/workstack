@@ -104,4 +104,4 @@ tests/unit/fakes/
 - [fakes/CLAUDE.md](fakes/CLAUDE.md) - Testing fake implementations
 - [../commands/CLAUDE.md](../commands/CLAUDE.md) - CLI command tests (uses fakes)
 - [../core/CLAUDE.md](../core/CLAUDE.md) - Core tests (uses fakes)
-- [../../.agent/docs/TESTING.md](../../.agent/docs/TESTING.md) - Complete testing guide
+- [../../docs/TESTING.md](../../docs/TESTING.md) - Complete testing guide

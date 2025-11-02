@@ -1,7 +1,7 @@
 # Test Structure Documentation
 
 For comprehensive testing patterns and architecture, see:
-**[.agent/docs/TESTING.md](../.agent/docs/TESTING.md)**
+**[docs/TESTING.md](../docs/TESTING.md)**
 
 ## Quick Commands
 
@@ -141,13 +141,13 @@ Business logic tests using fakes. No CLI concerns.
 
 ## Quick Reference
 
-| Need to...                      | See                                                                                                   |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Understand testing architecture | [.agent/docs/TESTING.md](../.agent/docs/TESTING.md)                                                   |
-| Write a new CLI command test    | [.agent/docs/TESTING.md#unit-test-pattern](../.agent/docs/TESTING.md#unit-test-pattern)               |
-| Test real git behavior          | [.agent/docs/TESTING.md#integration-test-pattern](../.agent/docs/TESTING.md#integration-test-pattern) |
-| Test dry-run mode               | [.agent/docs/TESTING.md#dry-run-test-pattern](../.agent/docs/TESTING.md#dry-run-test-pattern)         |
-| Configure fakes                 | [.agent/docs/TESTING.md#dependency-categories](../.agent/docs/TESTING.md#dependency-categories)       |
+| Need to...                      | See                                                                                     |
+| ------------------------------- | --------------------------------------------------------------------------------------- |
+| Understand testing architecture | [docs/TESTING.md](../docs/TESTING.md)                                                   |
+| Write a new CLI command test    | [docs/TESTING.md#unit-test-pattern](../docs/TESTING.md#unit-test-pattern)               |
+| Test real git behavior          | [docs/TESTING.md#integration-test-pattern](../docs/TESTING.md#integration-test-pattern) |
+| Test dry-run mode               | [docs/TESTING.md#dry-run-test-pattern](../docs/TESTING.md#dry-run-test-pattern)         |
+| Configure fakes                 | [docs/TESTING.md#dependency-categories](../docs/TESTING.md#dependency-categories)       |
 
 ## Context Window Strategy
 
@@ -165,4 +165,4 @@ Each subdirectory has targeted CLAUDE.md files with domain-specific patterns:
 4. **Mutation tracking** - Use read-only properties for assertions (e.g., `git_ops.deleted_branches`)
 5. **Three implementations** - Real (production), Dry-Run (safety), Fake (testing)
 
-For complete details, see [.agent/docs/TESTING.md](../.agent/docs/TESTING.md).
+For complete details, see [docs/TESTING.md](../docs/TESTING.md).

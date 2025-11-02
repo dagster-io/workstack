@@ -254,4 +254,4 @@ def test_list_color_coding() -> None:
 
 - [../CLAUDE.md](../CLAUDE.md) - Display command patterns
 - [../../CLAUDE.md](../../CLAUDE.md) - General CLI command patterns
-- [../../../.agent/docs/TESTING.md](../../../../.agent/docs/TESTING.md) - Complete testing guide
+- [../../../docs/TESTING.md](../../../../docs/TESTING.md) - Complete testing guide

@@ -130,14 +130,14 @@ tests/
 
 ## 📖 Detailed Docs
 
-| Need                 | Read                       | Tokens |
-| -------------------- | -------------------------- | ------ |
-| Quick ref + mistakes | CHEATSHEET.md              | 2,000  |
-| Detailed patterns    | docs/PATTERNS.md           | 8,500  |
-| Architecture         | ARCHITECTURE.md            | 4,000  |
-| Terminology          | GLOSSARY.md                | 2,000  |
-| Exception handling   | docs/EXCEPTION_HANDLING.md | 5,000  |
-| Testing              | tests/CLAUDE.md            | 3,000  |
+| Need                 | Read                      | Tokens |
+| -------------------- | ------------------------- | ------ |
+| Quick ref + mistakes | CHEATSHEET.md             | 2,000  |
+| Detailed patterns    | PATTERNS.md               | 8,500  |
+| Architecture         | ../.agent/ARCHITECTURE.md | 4,000  |
+| Terminology          | ../GLOSSARY.md            | 2,000  |
+| Exception handling   | EXCEPTION_HANDLING.md     | 5,000  |
+| Testing              | ../tests/CLAUDE.md        | 3,000  |
 
 ---
 

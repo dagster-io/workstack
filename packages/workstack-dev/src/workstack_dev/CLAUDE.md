@@ -101,6 +101,6 @@ Existing commands that demonstrate these patterns:
 
 **IMPORTANT**: When making meaningful changes to workstack-dev's structure or architecture:
 
-- Update `/.agent/WORKSTACK_DEV.md` to reflect the changes
+- Update `/docs/WORKSTACK_DEV.md` to reflect the changes
 - This file provides architectural overview for the broader project documentation
 - Keep both files in sync to prevent documentation drift

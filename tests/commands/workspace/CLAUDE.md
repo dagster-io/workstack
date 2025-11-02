@@ -182,5 +182,5 @@ assert "Successfully" in result.output or "✓" in result.output
 ## See Also
 
 - [../CLAUDE.md](../CLAUDE.md) - General CLI command patterns
-- [../../.agent/docs/TESTING.md](../../../.agent/docs/TESTING.md) - Complete testing guide
+- [../../docs/TESTING.md](../../../docs/TESTING.md) - Complete testing guide
 - [../../fakes/fake_gitops.py](../../fakes/fake_gitops.py) - FakeGitOps implementation

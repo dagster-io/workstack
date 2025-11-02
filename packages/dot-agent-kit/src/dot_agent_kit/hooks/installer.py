@@ -74,6 +74,7 @@ def install_hooks(
         # Create hook entry
         metadata = HookMetadata(kit_id=kit_id, hook_id=hook_def.id)
         entry = HookEntry(
+            type="command",
             command=command,
             timeout=hook_def.timeout,
             _dot_agent=metadata,

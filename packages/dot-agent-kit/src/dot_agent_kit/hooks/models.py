@@ -19,6 +19,7 @@ class HookEntry(BaseModel):
 
     model_config = ConfigDict(frozen=True, populate_by_name=True)
 
+    type: str = Field(default="command", pattern="^(command|prompt)$")
     command: str = Field(..., min_length=1)
     timeout: int = Field(..., gt=0)
     dot_agent: HookMetadata = Field(..., alias="_dot_agent")

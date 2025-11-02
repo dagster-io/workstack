@@ -5,7 +5,7 @@ from pathlib import Path
 from click.testing import CliRunner
 from pytest import CaptureFixture
 
-from dot_agent_kit.commands.list import _list_artifacts, list_cmd, ls_cmd
+from dot_agent_kit.commands.artifact.list import _list_artifacts, list_cmd, ls_cmd
 from dot_agent_kit.io import create_default_config
 from dot_agent_kit.models import ConflictPolicy, InstalledKit, ProjectConfig
 from dot_agent_kit.models.artifact import ArtifactSource, InstalledArtifact

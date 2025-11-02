@@ -1,14 +1,26 @@
 """Installation target and context models."""
 
-from enum import Enum
 from pathlib import Path
+from typing import Literal, cast
+
+InstallationTarget = Literal["user", "project"]
 
 
-class InstallationTarget(Enum):
-    """Where to install a kit."""
+def validate_installation_target(value: str) -> InstallationTarget:
+    """Validate and return installation target.
 
-    USER = "user"
-    PROJECT = "project"
+    Args:
+        value: String to validate
+
+    Returns:
+        Valid InstallationTarget
+
+    Raises:
+        ValueError: If value is not a valid installation target
+    """
+    if value not in ("user", "project"):
+        raise ValueError(f"Invalid installation target: {value}")
+    return cast(InstallationTarget, value)
 
 
 class InstallationContext:

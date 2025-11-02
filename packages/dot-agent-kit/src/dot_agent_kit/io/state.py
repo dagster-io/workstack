@@ -5,7 +5,11 @@ from pathlib import Path
 import tomli
 import tomli_w
 
-from dot_agent_kit.models import ConflictPolicy, InstalledKit, ProjectConfig
+from dot_agent_kit.models import (
+    InstalledKit,
+    ProjectConfig,
+    validate_conflict_policy,
+)
 
 
 def load_project_config(project_dir: Path) -> ProjectConfig | None:
@@ -35,7 +39,7 @@ def load_project_config(project_dir: Path) -> ProjectConfig | None:
 
     # Parse conflict policy
     policy_str = data.get("default_conflict_policy", "error")
-    policy = ConflictPolicy(policy_str)
+    policy = validate_conflict_policy(policy_str)
 
     return ProjectConfig(
         version=data.get("version", "1"),
@@ -51,7 +55,7 @@ def save_project_config(project_dir: Path, config: ProjectConfig) -> None:
     # Convert ProjectConfig to dict
     data = {
         "version": config.version,
-        "default_conflict_policy": config.default_conflict_policy.value,
+        "default_conflict_policy": config.default_conflict_policy,
         "kits": {},
     }
 
@@ -73,6 +77,6 @@ def create_default_config() -> ProjectConfig:
     """Create default project configuration."""
     return ProjectConfig(
         version="1",
-        default_conflict_policy=ConflictPolicy.ERROR,
+        default_conflict_policy="error",
         kits={},
     )

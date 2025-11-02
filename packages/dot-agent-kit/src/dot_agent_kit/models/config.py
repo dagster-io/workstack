@@ -1,16 +1,26 @@
 """Configuration models for dot-agent-kit."""
 
 from dataclasses import dataclass, replace
-from enum import Enum
+from typing import Literal, cast
+
+ConflictPolicy = Literal["error", "skip", "overwrite", "merge"]
 
 
-class ConflictPolicy(Enum):
-    """How to handle file conflicts during installation."""
+def validate_conflict_policy(value: str) -> ConflictPolicy:
+    """Validate and return conflict policy.
 
-    ERROR = "error"  # Fail on conflicts (default)
-    SKIP = "skip"  # Skip conflicting files
-    OVERWRITE = "overwrite"  # Replace existing files
-    MERGE = "merge"  # Intelligent merging (future)
+    Args:
+        value: String to validate
+
+    Returns:
+        Valid ConflictPolicy
+
+    Raises:
+        ValueError: If value is not a valid conflict policy
+    """
+    if value not in ("error", "skip", "overwrite", "merge"):
+        raise ValueError(f"Invalid conflict policy: {value}")
+    return cast(ConflictPolicy, value)
 
 
 @dataclass(frozen=True)

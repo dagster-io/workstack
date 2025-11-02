@@ -12,12 +12,20 @@ from dot_agent_kit.models import (
 )
 
 
-def test_conflict_policy_enum() -> None:
-    """Test ConflictPolicy enum values."""
-    assert ConflictPolicy.ERROR.value == "error"
-    assert ConflictPolicy.SKIP.value == "skip"
-    assert ConflictPolicy.OVERWRITE.value == "overwrite"
-    assert ConflictPolicy.MERGE.value == "merge"
+def test_conflict_policy_literals() -> None:
+    """Test ConflictPolicy literal type values."""
+    # ConflictPolicy is now a Literal type, test that string values work
+    policy: ConflictPolicy = "error"
+    assert policy == "error"
+
+    policy = "skip"
+    assert policy == "skip"
+
+    policy = "overwrite"
+    assert policy == "overwrite"
+
+    policy = "merge"
+    assert policy == "merge"
 
 
 def test_installed_kit_immutable() -> None:
@@ -59,12 +67,12 @@ def test_project_config_creation() -> None:
 
     config = ProjectConfig(
         version="1",
-        default_conflict_policy=ConflictPolicy.ERROR,
+        default_conflict_policy="error",
         kits={"test-kit": kit},
     )
 
     assert config.version == "1"
-    assert config.default_conflict_policy == ConflictPolicy.ERROR
+    assert config.default_conflict_policy == "error"
     assert "test-kit" in config.kits
     assert config.kits["test-kit"].kit_id == "test-kit"
 
@@ -73,7 +81,7 @@ def test_project_config_immutable() -> None:
     """Test ProjectConfig is frozen (immutable)."""
     config = ProjectConfig(
         version="1",
-        default_conflict_policy=ConflictPolicy.ERROR,
+        default_conflict_policy="error",
         kits={},
     )
 

@@ -11,7 +11,7 @@ from dot_agent_kit.io import (
     create_default_config,
     load_project_config,
 )
-from dot_agent_kit.models.artifact import ArtifactSource, InstalledArtifact
+from dot_agent_kit.models.artifact import InstalledArtifact
 from dot_agent_kit.models.config import ProjectConfig
 from dot_agent_kit.repositories import ArtifactRepository, FilesystemArtifactRepository
 
@@ -35,7 +35,7 @@ def _format_source(artifact: InstalledArtifact) -> str:
     Returns:
         Formatted source string like "[devrun@0.1.0]" or "[local]"
     """
-    if artifact.source == ArtifactSource.LOCAL:
+    if artifact.source == "local":
         return "[local]"
     elif artifact.kit_id and artifact.kit_version:
         return f"[{artifact.kit_id}@{artifact.kit_version}]"

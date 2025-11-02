@@ -1,8 +1,8 @@
 """Artifact metadata models."""
 
 from dataclasses import dataclass
-from enum import Enum
 from pathlib import Path
+from typing import Literal, cast
 
 
 @dataclass(frozen=True)
@@ -15,12 +15,24 @@ class ArtifactFrontmatter:
     artifact_path: str
 
 
-class ArtifactSource(Enum):
-    """Source type of an installed artifact."""
+ArtifactSource = Literal["managed", "unmanaged", "local"]
 
-    MANAGED = "managed"  # Tracked in dot-agent.toml
-    UNMANAGED = "unmanaged"  # From kit but not in config
-    LOCAL = "local"  # Created manually, no kit association
+
+def validate_artifact_source(value: str) -> ArtifactSource:
+    """Validate and return artifact source.
+
+    Args:
+        value: String to validate
+
+    Returns:
+        Valid ArtifactSource
+
+    Raises:
+        ValueError: If value is not a valid artifact source
+    """
+    if value not in ("managed", "unmanaged", "local"):
+        raise ValueError(f"Invalid artifact source: {value}")
+    return cast(ArtifactSource, value)
 
 
 @dataclass(frozen=True)

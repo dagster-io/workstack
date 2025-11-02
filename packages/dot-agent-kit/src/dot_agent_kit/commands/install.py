@@ -67,14 +67,14 @@ def install(kit_spec: str, target: str, force: bool) -> None:
     kit_id = artifact_spec.get_kit_id()
 
     # Determine installation target
-    install_target = InstallationTarget.USER if target == "user" else InstallationTarget.PROJECT
+    install_target: InstallationTarget = "user" if target == "user" else "project"
 
     # Get installation context
     project_dir = Path.cwd()
     context = get_installation_context(install_target, project_dir)
 
     # Load appropriate config
-    if install_target == InstallationTarget.USER:
+    if install_target == "user":
         config = load_user_config()
     else:
         loaded_config = load_project_config(project_dir)
@@ -110,7 +110,7 @@ def install(kit_spec: str, target: str, force: bool) -> None:
     filtered_artifacts = artifact_spec.filter_artifacts(manifest)
 
     # Determine conflict policy
-    conflict_policy = ConflictPolicy.OVERWRITE if force else ConflictPolicy.ERROR
+    conflict_policy: ConflictPolicy = "overwrite" if force else "error"
 
     # Install the kit
     click.echo(f"Installing {kit_id} to {context.get_claude_dir()}...")
@@ -125,7 +125,7 @@ def install(kit_spec: str, target: str, force: bool) -> None:
     # Update config
     updated_config = config.update_kit(installed_kit)
 
-    if install_target == InstallationTarget.USER:
+    if install_target == "user":
         save_user_config(updated_config)
     else:
         save_project_config(project_dir, updated_config)

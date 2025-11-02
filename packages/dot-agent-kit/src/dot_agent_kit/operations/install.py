@@ -13,7 +13,7 @@ from dot_agent_kit.sources import ResolvedKit
 def install_kit(
     resolved: ResolvedKit,
     project_dir: Path,
-    conflict_policy: ConflictPolicy = ConflictPolicy.ERROR,
+    conflict_policy: ConflictPolicy = "error",
     filtered_artifacts: dict[str, list[str]] | None = None,
 ) -> InstalledKit:
     """Install a kit to the project.
@@ -86,14 +86,14 @@ def install_kit(
 
             # Handle conflicts based on policy
             if target.exists():
-                if conflict_policy == ConflictPolicy.ERROR:
+                if conflict_policy == "error":
                     raise FileExistsError(
                         f"Artifact already exists: {target}\nUse --force to overwrite"
                     )
-                elif conflict_policy == ConflictPolicy.SKIP:
+                elif conflict_policy == "skip":
                     click.echo(f"  Skipping (exists): {target.name}", err=True)
                     continue
-                elif conflict_policy == ConflictPolicy.OVERWRITE:
+                elif conflict_policy == "overwrite":
                     click.echo(f"  Overwriting: {target.name}", err=True)
                     # Will overwrite below
                 else:
@@ -115,5 +115,5 @@ def install_kit(
         source=resolved.source,
         installed_at=datetime.now().isoformat(),
         artifacts=installed_artifacts,
-        conflict_policy=conflict_policy.value,
+        conflict_policy=conflict_policy,
     )

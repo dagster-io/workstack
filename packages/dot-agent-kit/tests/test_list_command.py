@@ -7,8 +7,8 @@ from pytest import CaptureFixture
 
 from dot_agent_kit.commands.list import _list_artifacts, list_cmd, ls_cmd
 from dot_agent_kit.io import create_default_config
-from dot_agent_kit.models import ConflictPolicy, InstalledKit, ProjectConfig
-from dot_agent_kit.models.artifact import ArtifactSource, InstalledArtifact
+from dot_agent_kit.models import InstalledKit, ProjectConfig
+from dot_agent_kit.models.artifact import InstalledArtifact
 from tests.fakes.fake_artifact_repository import FakeArtifactRepository
 
 
@@ -37,7 +37,7 @@ def test_list_skills(capsys: CaptureFixture[str]) -> None:
                 artifact_type="skill",
                 artifact_name="devrun-make",
                 file_path=Path("skills/devrun-make/SKILL.md"),
-                source=ArtifactSource.MANAGED,
+                source="managed",
                 kit_id="devrun",
                 kit_version="0.1.0",
             ),
@@ -45,7 +45,7 @@ def test_list_skills(capsys: CaptureFixture[str]) -> None:
                 artifact_type="skill",
                 artifact_name="gh",
                 file_path=Path("skills/gh/SKILL.md"),
-                source=ArtifactSource.LOCAL,
+                source="local",
             ),
         ]
     )
@@ -74,7 +74,7 @@ def test_list_commands(capsys: CaptureFixture[str]) -> None:
                 artifact_type="command",
                 artifact_name="gt:land-branch",
                 file_path=Path("commands/gt/land-branch.md"),
-                source=ArtifactSource.MANAGED,
+                source="managed",
                 kit_id="gt",
                 kit_version="0.1.0",
             ),
@@ -82,7 +82,7 @@ def test_list_commands(capsys: CaptureFixture[str]) -> None:
                 artifact_type="command",
                 artifact_name="codex-review",
                 file_path=Path("commands/codex-review.md"),
-                source=ArtifactSource.LOCAL,
+                source="local",
             ),
         ]
     )
@@ -111,7 +111,7 @@ def test_list_agents(capsys: CaptureFixture[str]) -> None:
                 artifact_type="agent",
                 artifact_name="runner",
                 file_path=Path("agents/devrun/runner.md"),
-                source=ArtifactSource.MANAGED,
+                source="managed",
                 kit_id="devrun",
                 kit_version="0.1.0",
             ),
@@ -119,7 +119,7 @@ def test_list_agents(capsys: CaptureFixture[str]) -> None:
                 artifact_type="agent",
                 artifact_name="spec-creator",
                 file_path=Path("agents/spec-creator.md"),
-                source=ArtifactSource.LOCAL,
+                source="local",
             ),
         ]
     )
@@ -140,7 +140,7 @@ def test_list_mixed_artifacts(capsys: CaptureFixture[str]) -> None:
     """Test list command with mixed artifact types and sources."""
     config = ProjectConfig(
         version="1",
-        default_conflict_policy=ConflictPolicy.ERROR,
+        default_conflict_policy="error",
         kits={
             "devrun": InstalledKit(
                 kit_id="devrun",
@@ -161,7 +161,7 @@ def test_list_mixed_artifacts(capsys: CaptureFixture[str]) -> None:
                 artifact_type="skill",
                 artifact_name="devrun-make",
                 file_path=Path("skills/devrun-make/SKILL.md"),
-                source=ArtifactSource.MANAGED,
+                source="managed",
                 kit_id="devrun",
                 kit_version="0.1.0",
             ),
@@ -169,7 +169,7 @@ def test_list_mixed_artifacts(capsys: CaptureFixture[str]) -> None:
                 artifact_type="agent",
                 artifact_name="runner",
                 file_path=Path("agents/devrun/runner.md"),
-                source=ArtifactSource.MANAGED,
+                source="managed",
                 kit_id="devrun",
                 kit_version="0.1.0",
             ),
@@ -178,7 +178,7 @@ def test_list_mixed_artifacts(capsys: CaptureFixture[str]) -> None:
                 artifact_type="skill",
                 artifact_name="gt-graphite",
                 file_path=Path("skills/gt-graphite/SKILL.md"),
-                source=ArtifactSource.UNMANAGED,
+                source="unmanaged",
                 kit_id="gt",
                 kit_version="0.1.0",
             ),
@@ -187,13 +187,13 @@ def test_list_mixed_artifacts(capsys: CaptureFixture[str]) -> None:
                 artifact_type="skill",
                 artifact_name="gh",
                 file_path=Path("skills/gh/SKILL.md"),
-                source=ArtifactSource.LOCAL,
+                source="local",
             ),
             InstalledArtifact(
                 artifact_type="command",
                 artifact_name="codex-review",
                 file_path=Path("commands/codex-review.md"),
-                source=ArtifactSource.LOCAL,
+                source="local",
             ),
         ]
     )
@@ -232,13 +232,13 @@ def test_list_column_alignment(capsys: CaptureFixture[str]) -> None:
                 artifact_type="skill",
                 artifact_name="short",
                 file_path=Path("skills/short/SKILL.md"),
-                source=ArtifactSource.LOCAL,
+                source="local",
             ),
             InstalledArtifact(
                 artifact_type="skill",
                 artifact_name="very-long-skill-name-here",
                 file_path=Path("skills/very-long-skill-name-here/SKILL.md"),
-                source=ArtifactSource.MANAGED,
+                source="managed",
                 kit_id="long-kit-name",
                 kit_version="1.2.3",
             ),

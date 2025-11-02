@@ -6,7 +6,11 @@ from typing import Any
 import tomli
 import tomli_w
 
-from dot_agent_kit.models import ConflictPolicy, InstalledKit, ProjectConfig
+from dot_agent_kit.models import (
+    InstalledKit,
+    ProjectConfig,
+    validate_conflict_policy,
+)
 
 
 def get_user_claude_dir() -> Path:
@@ -46,7 +50,7 @@ def load_user_config() -> ProjectConfig:
 
     # Parse conflict policy
     policy_str = data.get("default_conflict_policy", "error")
-    policy = ConflictPolicy(policy_str)
+    policy = validate_conflict_policy(policy_str)
 
     return ProjectConfig(
         version=data.get("version", "1"),
@@ -67,7 +71,7 @@ def save_user_config(config: ProjectConfig) -> None:
     # Convert ProjectConfig to dict
     data: dict[str, Any] = {
         "version": config.version,
-        "default_conflict_policy": config.default_conflict_policy.value,
+        "default_conflict_policy": config.default_conflict_policy,
         "kits": {},
     }
 
@@ -89,6 +93,6 @@ def create_default_user_config() -> ProjectConfig:
     """Create default user-level configuration."""
     return ProjectConfig(
         version="1",
-        default_conflict_policy=ConflictPolicy.ERROR,
+        default_conflict_policy="error",
         kits={},
     )

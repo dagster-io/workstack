@@ -3,8 +3,7 @@
 from pathlib import Path
 
 from dot_agent_kit.io import create_default_config
-from dot_agent_kit.models import ConflictPolicy, InstalledKit, ProjectConfig
-from dot_agent_kit.models.artifact import ArtifactSource
+from dot_agent_kit.models import InstalledKit, ProjectConfig
 from dot_agent_kit.repositories.filesystem_artifact_repository import (
     FilesystemArtifactRepository,
 )
@@ -45,7 +44,7 @@ def test_discovers_skill_artifacts(tmp_path: Path) -> None:
     assert skill_names == {"test-skill", "another-skill"}
 
     # All should be LOCAL since no kits in config
-    assert all(a.source == ArtifactSource.LOCAL for a in skill_artifacts)
+    assert all(a.source == "local" for a in skill_artifacts)
 
 
 def test_discovers_command_artifacts(tmp_path: Path) -> None:
@@ -114,7 +113,7 @@ def test_detects_managed_artifacts(tmp_path: Path) -> None:
     # Create config with this skill as managed
     config = ProjectConfig(
         version="1",
-        default_conflict_policy=ConflictPolicy.ERROR,
+        default_conflict_policy="error",
         kits={
             "test-kit": InstalledKit(
                 kit_id="test-kit",
@@ -132,7 +131,7 @@ def test_detects_managed_artifacts(tmp_path: Path) -> None:
     assert len(artifacts) == 1
     artifact = artifacts[0]
     assert artifact.artifact_name == "test-skill"
-    assert artifact.source == ArtifactSource.MANAGED
+    assert artifact.source == "managed"
     assert artifact.kit_id == "test-kit"
     assert artifact.kit_version == "1.0.0"
 
@@ -165,7 +164,7 @@ artifact_path: skills/unmanaged-skill/SKILL.md
     assert len(artifacts) == 1
     artifact = artifacts[0]
     assert artifact.artifact_name == "unmanaged-skill"
-    assert artifact.source == ArtifactSource.UNMANAGED
+    assert artifact.source == "unmanaged"
     assert artifact.kit_id == "some-kit"
     assert artifact.kit_version == "2.0.0"
 
@@ -247,7 +246,7 @@ def test_handles_paths_with_claude_prefix_in_config(tmp_path: Path) -> None:
     # Config with .claude/ prefix in path
     config = ProjectConfig(
         version="1",
-        default_conflict_policy=ConflictPolicy.ERROR,
+        default_conflict_policy="error",
         kits={
             "test-kit": InstalledKit(
                 kit_id="test-kit",
@@ -264,7 +263,7 @@ def test_handles_paths_with_claude_prefix_in_config(tmp_path: Path) -> None:
 
     assert len(artifacts) == 1
     artifact = artifacts[0]
-    assert artifact.source == ArtifactSource.MANAGED
+    assert artifact.source == "managed"
     assert artifact.kit_id == "test-kit"
 
 

@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 
-from dot_agent_kit.models import ConflictPolicy
 from dot_agent_kit.operations.install import install_kit
 from dot_agent_kit.sources import ResolvedKit
 
@@ -93,7 +92,7 @@ def test_install_kit_conflict(tmp_project: Path) -> None:
 
     # Try to install - should fail with ERROR policy
     with pytest.raises(FileExistsError, match="Artifact already exists"):
-        install_kit(resolved, tmp_project, ConflictPolicy.ERROR)
+        install_kit(resolved, tmp_project, "error")
 
 
 def test_install_kit_creates_directories(tmp_project: Path) -> None:
@@ -170,7 +169,7 @@ def test_install_kit_skip_policy(tmp_project: Path) -> None:
     )
 
     # Install with SKIP policy
-    installed = install_kit(resolved, tmp_project, ConflictPolicy.SKIP)
+    installed = install_kit(resolved, tmp_project, "skip")
 
     # Verify original content preserved
     assert existing.read_text(encoding="utf-8") == "Original content"
@@ -214,7 +213,7 @@ def test_install_kit_overwrite_policy(tmp_project: Path) -> None:
     )
 
     # Install with OVERWRITE policy
-    installed = install_kit(resolved, tmp_project, ConflictPolicy.OVERWRITE)
+    installed = install_kit(resolved, tmp_project, "overwrite")
 
     # Verify new content written
     content = existing.read_text(encoding="utf-8")

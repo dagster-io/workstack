@@ -45,11 +45,9 @@ def init(package: str, force: bool) -> None:
         raise SystemExit(1)
 
     # Determine conflict policy
-    from dot_agent_kit.models import ConflictPolicy
-
     conflict_policy = config.default_conflict_policy
     if force:
-        conflict_policy = ConflictPolicy.OVERWRITE
+        conflict_policy = "overwrite"
 
     # Install the kit
     try:

@@ -16,7 +16,7 @@ from dot_agent_kit.sources import ResolvedKit
 def install_kit_to_target(
     resolved: ResolvedKit,
     context: InstallationContext,
-    conflict_policy: ConflictPolicy = ConflictPolicy.ERROR,
+    conflict_policy: ConflictPolicy = "error",
     filtered_artifacts: dict[str, list[str]] | None = None,
 ) -> InstalledKit:
     """Install a kit to either user or project directory.
@@ -30,7 +30,7 @@ def install_kit_to_target(
     Returns:
         InstalledKit with installation metadata
     """
-    if context.target == InstallationTarget.USER:
+    if context.target == "user":
         # Install to user directory (~/.claude)
         user_dir = get_user_claude_dir()
         return install_kit_base(resolved, user_dir, conflict_policy, filtered_artifacts)
@@ -52,7 +52,7 @@ def get_installation_context(
     Returns:
         InstallationContext configured for the target
     """
-    if target == InstallationTarget.USER:
+    if target == "user":
         return InstallationContext(target, Path.home())
     else:
         if project_dir is None:

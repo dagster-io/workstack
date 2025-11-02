@@ -11,7 +11,7 @@ from dot_agent_kit.io import (
     parse_frontmatter,
     save_project_config,
 )
-from dot_agent_kit.models import ArtifactFrontmatter, ConflictPolicy, InstalledKit
+from dot_agent_kit.models import ArtifactFrontmatter, InstalledKit
 
 
 def test_load_save_project_config(tmp_project: Path) -> None:
@@ -31,7 +31,7 @@ def test_load_save_project_config(tmp_project: Path) -> None:
 
     config = ProjectConfig(
         version="1",
-        default_conflict_policy=ConflictPolicy.ERROR,
+        default_conflict_policy="error",
         kits={"test-kit": kit},
     )
 
@@ -41,7 +41,7 @@ def test_load_save_project_config(tmp_project: Path) -> None:
 
     assert loaded_config is not None
     assert loaded_config.version == "1"
-    assert loaded_config.default_conflict_policy == ConflictPolicy.ERROR
+    assert loaded_config.default_conflict_policy == "error"
     assert "test-kit" in loaded_config.kits
     assert loaded_config.kits["test-kit"].kit_id == "test-kit"
     assert loaded_config.kits["test-kit"].version == "1.0.0"
@@ -58,7 +58,7 @@ def test_create_default_config() -> None:
     config = create_default_config()
 
     assert config.version == "1"
-    assert config.default_conflict_policy == ConflictPolicy.ERROR
+    assert config.default_conflict_policy == "error"
     assert len(config.kits) == 0
 
 

@@ -224,7 +224,7 @@ def _create_artifact_from_file(
         frontmatter = None
 
     # Determine source and kit info
-    source = ArtifactSource.LOCAL
+    source: ArtifactSource = "local"
     kit_id = None
     kit_version = None
 
@@ -235,14 +235,14 @@ def _create_artifact_from_file(
         normalized_relative = str(relative_path).replace("\\", "/")
 
         if normalized_relative == normalized_artifact:
-            source = ArtifactSource.MANAGED
+            source = "managed"
             kit_id = kit.kit_id
             kit_version = kit.version
             break
 
     # If not managed but has frontmatter, it's unmanaged
-    if source == ArtifactSource.LOCAL and frontmatter:
-        source = ArtifactSource.UNMANAGED
+    if source == "local" and frontmatter:
+        source = "unmanaged"
         kit_id = frontmatter.kit_id
         kit_version = frontmatter.kit_version
 

@@ -3,6 +3,7 @@ import click
 from dot_agent_kit import __version__
 from dot_agent_kit.commands import status
 from dot_agent_kit.commands.artifact import check, check_sync, list
+from dot_agent_kit.commands.hook import hook_group
 from dot_agent_kit.commands.kit import init, install, remove, search, sync, update
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
@@ -31,6 +32,9 @@ def artifact() -> None:
 
 # Register top-level commands
 cli.add_command(status.status)
+
+# Register hook commands
+cli.add_command(hook_group)
 
 # Register kit commands
 kit.add_command(init.init)

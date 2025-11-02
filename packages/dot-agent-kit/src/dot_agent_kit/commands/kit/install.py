@@ -95,9 +95,9 @@ def install(kit_spec: str, force: bool) -> None:
         filtered_artifacts,
     )
 
-    # Install hooks if present (project-level only)
+    # Install hooks if present
     hooks_count = 0
-    if install_target == InstallationTarget.PROJECT and manifest.hooks:
+    if manifest.hooks:
         hooks_count = install_hooks(
             kit_id=manifest.name,
             hooks=manifest.hooks,

@@ -42,9 +42,9 @@ def remove(kit_id: str) -> None:
 
     installed = config.kits[kit_id]
 
-    # Remove hooks if present (project-level only)
+    # Remove hooks if present
     hooks_removed = 0
-    if target == "project" and installed.hooks:
+    if installed.hooks:
         hooks_removed = remove_hooks(kit_id, project_dir)
 
     # Remove artifact files

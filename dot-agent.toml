@@ -5,8 +5,7 @@ default_conflict_policy = "error"
 kit_id = "devrun"
 version = "0.1.0"
 source = "devrun"
-installed_at = "2025-10-29T20:45:11Z"
-conflict_policy = "error"
+installed_at = "2025-11-02T13:08:12.266043"
 artifacts = [
     ".claude/agents/devrun/runner.md",
     ".claude/skills/devrun-make/SKILL.md",
@@ -15,16 +14,33 @@ artifacts = [
     ".claude/skills/devrun-pytest/SKILL.md",
     ".claude/skills/devrun-ruff/SKILL.md",
 ]
+conflict_policy = "error"
 
 [kits.gt]
 kit_id = "gt"
 version = "0.1.0"
 source = "gt"
-installed_at = "2025-10-30T00:34:40Z"
-conflict_policy = "error"
+installed_at = "2025-11-02T13:08:23.279378"
 artifacts = [
     ".claude/commands/gt/land-branch.md",
     ".claude/commands/gt/submit-branch.md",
     ".claude/skills/gt-graphite/SKILL.md",
-    ".claude/skills/gt-graphite/references/gt-reference.md",
 ]
+conflict_policy = "error"
+
+[kits.dignified-python]
+kit_id = "dignified-python"
+version = "0.1.0"
+source = "dignified-python"
+installed_at = "2025-11-02T15:49:22.796006"
+artifacts = [
+    ".claude/skills/dignified-python/SKILL.md",
+]
+conflict_policy = "error"
+
+[[kits.dignified-python.hooks]]
+id = "suggest-dignified-python"
+lifecycle = "UserPromptSubmit"
+script = "hooks/suggest-dignified-python.py"
+description = "Suggests loading dignified-python skill on every prompt"
+timeout = 30

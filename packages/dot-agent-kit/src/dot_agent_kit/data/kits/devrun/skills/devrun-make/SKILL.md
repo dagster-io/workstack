@@ -1,11 +1,6 @@
 ---
 name: devrun-make
 description: GNU Make build automation patterns, Makefile targets, and output parsing guidance for project build and maintenance tasks.
-__dot_agent:
-  kit_id: devrun
-  kit_version: 0.1.0
-  artifact_type: skill
-  artifact_path: skills/devrun-make/SKILL.md
 ---
 
 # make Skill

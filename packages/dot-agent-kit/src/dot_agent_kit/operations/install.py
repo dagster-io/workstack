@@ -5,8 +5,8 @@ from pathlib import Path
 
 import click
 
-from dot_agent_kit.io import add_frontmatter, load_kit_manifest
-from dot_agent_kit.models import ArtifactFrontmatter, ConflictPolicy, InstalledKit
+from dot_agent_kit.io import load_kit_manifest
+from dot_agent_kit.models import ConflictPolicy, InstalledKit
 from dot_agent_kit.sources import ResolvedKit
 
 
@@ -54,15 +54,6 @@ def install_kit(
 
             content = source.read_text(encoding="utf-8")
 
-            # Add frontmatter
-            frontmatter = ArtifactFrontmatter(
-                kit_id=manifest.name,
-                kit_version=manifest.version,
-                artifact_type=artifact_type,
-                artifact_path=artifact_path,
-            )
-            content_with_fm = add_frontmatter(content, frontmatter)
-
             # Determine target path - preserve nested directory structure
             # Artifact paths are like "agents/test.md" or "agents/subdir/test.md"
             # We need to strip the type prefix to avoid duplication
@@ -100,7 +91,7 @@ def install_kit(
                     raise ValueError(f"Unsupported policy: {conflict_policy}")
 
             # Write artifact
-            target.write_text(content_with_fm, encoding="utf-8")
+            target.write_text(content, encoding="utf-8")
 
             # Log installation with namespace visibility
             relative_path = target.relative_to(claude_dir)

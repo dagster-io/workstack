@@ -3,7 +3,6 @@
 import pytest
 
 from dot_agent_kit.models import (
-    ArtifactFrontmatter,
     ConflictPolicy,
     InstalledKit,
     KitManifest,
@@ -124,34 +123,6 @@ def test_kit_manifest_immutable() -> None:
 
     with pytest.raises(AttributeError):
         manifest.name = "other-kit"  # type: ignore
-
-
-def test_artifact_frontmatter() -> None:
-    """Test ArtifactFrontmatter model."""
-    frontmatter = ArtifactFrontmatter(
-        kit_id="test-kit",
-        kit_version="1.0.0",
-        artifact_type="agent",
-        artifact_path="agents/test.md",
-    )
-
-    assert frontmatter.kit_id == "test-kit"
-    assert frontmatter.kit_version == "1.0.0"
-    assert frontmatter.artifact_type == "agent"
-    assert frontmatter.artifact_path == "agents/test.md"
-
-
-def test_artifact_frontmatter_immutable() -> None:
-    """Test ArtifactFrontmatter is frozen (immutable)."""
-    frontmatter = ArtifactFrontmatter(
-        kit_id="test-kit",
-        kit_version="1.0.0",
-        artifact_type="agent",
-        artifact_path="agents/test.md",
-    )
-
-    with pytest.raises(AttributeError):
-        frontmatter.kit_id = "other-kit"  # type: ignore
 
 
 def test_registry_entry_required_fields() -> None:

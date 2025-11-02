@@ -3,11 +3,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from dot_agent_kit.io import (
-    load_project_config,
-    parse_frontmatter,
-    validate_frontmatter,
-)
+from dot_agent_kit.io import load_project_config
 
 
 @dataclass(frozen=True)
@@ -20,7 +16,7 @@ class ValidationResult:
 
 
 def validate_artifact(artifact_path: Path) -> ValidationResult:
-    """Validate a single artifact file."""
+    """Validate a single artifact file exists."""
     if not artifact_path.exists():
         return ValidationResult(
             artifact_path=artifact_path,
@@ -28,23 +24,20 @@ def validate_artifact(artifact_path: Path) -> ValidationResult:
             errors=["File does not exist"],
         )
 
-    content = artifact_path.read_text(encoding="utf-8")
-    frontmatter = parse_frontmatter(content)
-
-    if frontmatter is None:
+    # Simple validation: just check that the file exists and is readable
+    try:
+        _ = artifact_path.read_text(encoding="utf-8")
+        return ValidationResult(
+            artifact_path=artifact_path,
+            is_valid=True,
+            errors=[],
+        )
+    except Exception as e:
         return ValidationResult(
             artifact_path=artifact_path,
             is_valid=False,
-            errors=["No frontmatter found"],
+            errors=[f"Cannot read file: {e}"],
         )
-
-    errors = validate_frontmatter(frontmatter)
-
-    return ValidationResult(
-        artifact_path=artifact_path,
-        is_valid=len(errors) == 0,
-        errors=errors,
-    )
 
 
 def validate_project(project_dir: Path) -> list[ValidationResult]:
@@ -68,11 +61,10 @@ def validate_project(project_dir: Path) -> list[ValidationResult]:
             normalized = artifact_path.replace(".claude/", "")
             managed_paths.add(normalized)
 
-    # Validate only managed artifacts
+    # Validate all managed artifacts
     for managed_path in managed_paths:
         full_path = claude_dir / managed_path
-        if full_path.exists():
-            result = validate_artifact(full_path)
-            results.append(result)
+        result = validate_artifact(full_path)
+        results.append(result)
 
     return results

@@ -46,7 +46,7 @@ class TestLoadSettings:
             path = Path(tmpdir) / "settings.json"
             data = {
                 "hooks": {
-                    "user-prompt-submit": [
+                    "UserPromptSubmit": [
                         {
                             "matcher": "**",
                             "hooks": [
@@ -66,7 +66,7 @@ class TestLoadSettings:
             path.write_text(json.dumps(data), encoding="utf-8")
             settings = load_settings(path)
             assert settings.hooks is not None
-            assert "user-prompt-submit" in settings.hooks
+            assert "UserPromptSubmit" in settings.hooks
 
 
 class TestSaveSettings:
@@ -126,27 +126,27 @@ class TestAddHookToSettings:
         metadata = HookMetadata(kit_id="test-kit", hook_id="test-hook")
         entry = HookEntry(command="python3 script.py", timeout=30, _dot_agent=metadata)
 
-        new_settings = add_hook_to_settings(settings, "user-prompt-submit", "**", entry)
+        new_settings = add_hook_to_settings(settings, "UserPromptSubmit", "**", entry)
 
         assert new_settings.hooks is not None
-        assert "user-prompt-submit" in new_settings.hooks
-        assert len(new_settings.hooks["user-prompt-submit"]) == 1
-        assert new_settings.hooks["user-prompt-submit"][0].matcher == "**"
+        assert "UserPromptSubmit" in new_settings.hooks
+        assert len(new_settings.hooks["UserPromptSubmit"]) == 1
+        assert new_settings.hooks["UserPromptSubmit"][0].matcher == "**"
 
     def test_add_to_existing_matcher(self) -> None:
         """Test adding hook to existing matcher group."""
         metadata1 = HookMetadata(kit_id="kit1", hook_id="hook1")
         entry1 = HookEntry(command="python3 script1.py", timeout=30, _dot_agent=metadata1)
         group = MatcherGroup(matcher="**", hooks=[entry1])
-        settings = ClaudeSettings(hooks={"user-prompt-submit": [group]})
+        settings = ClaudeSettings(hooks={"UserPromptSubmit": [group]})
 
         metadata2 = HookMetadata(kit_id="kit2", hook_id="hook2")
         entry2 = HookEntry(command="python3 script2.py", timeout=30, _dot_agent=metadata2)
 
-        new_settings = add_hook_to_settings(settings, "user-prompt-submit", "**", entry2)
+        new_settings = add_hook_to_settings(settings, "UserPromptSubmit", "**", entry2)
 
         assert new_settings.hooks is not None
-        hooks = new_settings.hooks["user-prompt-submit"][0].hooks
+        hooks = new_settings.hooks["UserPromptSubmit"][0].hooks
         assert len(hooks) == 2
 
     def test_add_new_matcher_to_lifecycle(self) -> None:
@@ -154,15 +154,15 @@ class TestAddHookToSettings:
         metadata1 = HookMetadata(kit_id="kit1", hook_id="hook1")
         entry1 = HookEntry(command="python3 script1.py", timeout=30, _dot_agent=metadata1)
         group = MatcherGroup(matcher="**", hooks=[entry1])
-        settings = ClaudeSettings(hooks={"user-prompt-submit": [group]})
+        settings = ClaudeSettings(hooks={"UserPromptSubmit": [group]})
 
         metadata2 = HookMetadata(kit_id="kit2", hook_id="hook2")
         entry2 = HookEntry(command="python3 script2.py", timeout=30, _dot_agent=metadata2)
 
-        new_settings = add_hook_to_settings(settings, "user-prompt-submit", "*.py", entry2)
+        new_settings = add_hook_to_settings(settings, "UserPromptSubmit", "*.py", entry2)
 
         assert new_settings.hooks is not None
-        assert len(new_settings.hooks["user-prompt-submit"]) == 2
+        assert len(new_settings.hooks["UserPromptSubmit"]) == 2
 
 
 class TestRemoveHooksByKit:
@@ -180,7 +180,7 @@ class TestRemoveHooksByKit:
         metadata = HookMetadata(kit_id="test-kit", hook_id="hook1")
         entry = HookEntry(command="python3 script.py", timeout=30, _dot_agent=metadata)
         group = MatcherGroup(matcher="**", hooks=[entry])
-        settings = ClaudeSettings(hooks={"user-prompt-submit": [group]})
+        settings = ClaudeSettings(hooks={"UserPromptSubmit": [group]})
 
         new_settings, count = remove_hooks_by_kit(settings, "test-kit")
 
@@ -194,13 +194,13 @@ class TestRemoveHooksByKit:
         metadata2 = HookMetadata(kit_id="kit2", hook_id="hook2")
         entry2 = HookEntry(command="python3 script2.py", timeout=30, _dot_agent=metadata2)
         group = MatcherGroup(matcher="**", hooks=[entry1, entry2])
-        settings = ClaudeSettings(hooks={"user-prompt-submit": [group]})
+        settings = ClaudeSettings(hooks={"UserPromptSubmit": [group]})
 
         new_settings, count = remove_hooks_by_kit(settings, "kit1")
 
         assert count == 1
         assert new_settings.hooks is not None
-        assert len(new_settings.hooks["user-prompt-submit"][0].hooks) == 1
+        assert len(new_settings.hooks["UserPromptSubmit"][0].hooks) == 1
 
 
 class TestGetAllHooks:
@@ -217,13 +217,13 @@ class TestGetAllHooks:
         metadata = HookMetadata(kit_id="test-kit", hook_id="test-hook")
         entry = HookEntry(command="python3 script.py", timeout=30, _dot_agent=metadata)
         group = MatcherGroup(matcher="**", hooks=[entry])
-        settings = ClaudeSettings(hooks={"user-prompt-submit": [group]})
+        settings = ClaudeSettings(hooks={"UserPromptSubmit": [group]})
 
         hooks = get_all_hooks(settings)
 
         assert len(hooks) == 1
         lifecycle, matcher, hook_entry = hooks[0]
-        assert lifecycle == "user-prompt-submit"
+        assert lifecycle == "UserPromptSubmit"
         assert matcher == "**"
         assert hook_entry.command == "python3 script.py"
 

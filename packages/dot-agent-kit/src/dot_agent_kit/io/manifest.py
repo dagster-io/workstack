@@ -20,7 +20,7 @@ def load_kit_manifest(manifest_path: Path) -> KitManifest:
             hook = HookDefinition(
                 id=hook_data["id"],
                 lifecycle=hook_data["lifecycle"],
-                matcher=hook_data["matcher"],
+                matcher=hook_data.get("matcher"),
                 script=hook_data["script"],
                 description=hook_data["description"],
                 timeout=hook_data.get("timeout", 30),

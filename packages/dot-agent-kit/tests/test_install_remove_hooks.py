@@ -81,7 +81,7 @@ def create_kit_with_hooks(
 
 def create_simple_hook(
     hook_id: str = "test-hook",
-    lifecycle: str = "pre",
+    lifecycle: str = "PreToolUse",
     matcher: str = "Bash:*",
     script: str = "scripts/hook.py",
     description: str = "Test hook",
@@ -193,7 +193,7 @@ class TestInstallCommandWithHooks:
 
         hook = create_simple_hook(
             hook_id="my-hook",
-            lifecycle="pre",
+            lifecycle="PreToolUse",
             matcher="Bash:git*",
             script="scripts/check.py",
             description="Check before git",
@@ -220,7 +220,7 @@ class TestInstallCommandWithHooks:
             project_dir,
             "test-kit",
             "my-hook",
-            "pre",
+            "PreToolUse",
             "Bash:git*",
         )
 
@@ -243,19 +243,19 @@ class TestInstallCommandWithHooks:
         hooks = [
             create_simple_hook(
                 hook_id="pre-hook",
-                lifecycle="pre",
+                lifecycle="PreToolUse",
                 matcher="Bash:git*",
                 script="scripts/pre.py",
             ),
             create_simple_hook(
                 hook_id="post-hook",
-                lifecycle="post",
+                lifecycle="PostToolUse",
                 matcher="Bash:*",
                 script="scripts/post.py",
             ),
             create_simple_hook(
                 hook_id="pre-hook-2",
-                lifecycle="pre",
+                lifecycle="PreToolUse",
                 matcher="Edit:*",
                 script="scripts/pre2.py",
             ),
@@ -276,9 +276,9 @@ class TestInstallCommandWithHooks:
         assert "Installed 3 hook(s)" in result.output
 
         # Verify all hooks installed
-        assert_hook_installed(project_dir, "multi-kit", "pre-hook", "pre", "Bash:git*")
-        assert_hook_installed(project_dir, "multi-kit", "post-hook", "post", "Bash:*")
-        assert_hook_installed(project_dir, "multi-kit", "pre-hook-2", "pre", "Edit:*")
+        assert_hook_installed(project_dir, "multi-kit", "pre-hook", "PreToolUse", "Bash:git*")
+        assert_hook_installed(project_dir, "multi-kit", "post-hook", "PostToolUse", "Bash:*")
+        assert_hook_installed(project_dir, "multi-kit", "pre-hook-2", "PreToolUse", "Edit:*")
 
     def test_install_kit_without_hooks(self, cli_runner: CliRunner, tmp_path: Path) -> None:
         """Test installing a kit that has no hooks field."""
@@ -334,7 +334,7 @@ class TestInstallCommandWithHooks:
         assert result.exit_code == 0
         assert "✓ Installed" in result.output
         assert "Installed 1 hook(s)" in result.output
-        assert_hook_installed(project_dir, "project-only-kit", "proj-hook", "pre", "Bash:*")
+        assert_hook_installed(project_dir, "project-only-kit", "proj-hook", "PreToolUse", "Bash:*")
 
     def test_install_kit_with_empty_hooks_list(self, cli_runner: CliRunner, tmp_path: Path) -> None:
         """Test installing a kit with empty hooks list."""
@@ -411,9 +411,9 @@ class TestInstallCommandWithHooks:
         assert "Installed 3 hook(s)" in result.output
 
         # Verify new hooks exist
-        assert_hook_installed(project_dir, "versioned-kit", "hook-3", "pre", "Bash:*")
-        assert_hook_installed(project_dir, "versioned-kit", "hook-4", "pre", "Bash:*")
-        assert_hook_installed(project_dir, "versioned-kit", "hook-5", "pre", "Bash:*")
+        assert_hook_installed(project_dir, "versioned-kit", "hook-3", "PreToolUse", "Bash:*")
+        assert_hook_installed(project_dir, "versioned-kit", "hook-4", "PreToolUse", "Bash:*")
+        assert_hook_installed(project_dir, "versioned-kit", "hook-5", "PreToolUse", "Bash:*")
 
         # Verify old hooks don't exist in settings
         settings_path = project_dir / ".claude" / "settings.json"
@@ -503,8 +503,8 @@ class TestInstallCommandWithHooks:
         assert "Installed 2 hook(s)" in result.output
 
         # Verify good hooks installed
-        assert_hook_installed(project_dir, "partial-kit", "good-hook", "pre", "Bash:*")
-        assert_hook_installed(project_dir, "partial-kit", "good-hook-2", "pre", "Bash:*")
+        assert_hook_installed(project_dir, "partial-kit", "good-hook", "PreToolUse", "Bash:*")
+        assert_hook_installed(project_dir, "partial-kit", "good-hook-2", "PreToolUse", "Bash:*")
 
         # Verify bad hook NOT in settings
         settings_path = project_dir / ".claude" / "settings.json"
@@ -579,8 +579,8 @@ class TestInstallCommandWithHooks:
         assert result.exit_code == 0, f"kit-b install failed: {result.output}"
 
         # Verify both hooks exist
-        assert_hook_installed(project_dir, "kit-a", "hook-a", "pre", "Bash:*")
-        assert_hook_installed(project_dir, "kit-b", "hook-b", "pre", "Bash:*")
+        assert_hook_installed(project_dir, "kit-a", "hook-a", "PreToolUse", "Bash:*")
+        assert_hook_installed(project_dir, "kit-b", "hook-b", "PreToolUse", "Bash:*")
 
 
 class TestRemoveCommandWithHooks:
@@ -607,7 +607,7 @@ class TestRemoveCommandWithHooks:
         assert result.exit_code == 0
 
         # Verify hook installed
-        assert_hook_installed(project_dir, "remove-kit", "remove-me", "pre", "Bash:*")
+        assert_hook_installed(project_dir, "remove-kit", "remove-me", "PreToolUse", "Bash:*")
 
         # Remove kit
         result = invoke_in_project(
@@ -726,8 +726,8 @@ class TestRemoveCommandWithHooks:
         assert result.exit_code == 0
 
         # Verify both installed
-        assert_hook_installed(project_dir, "keep-kit", "keep-hook", "pre", "Bash:*")
-        assert_hook_installed(project_dir, "remove-kit", "remove-hook", "pre", "Bash:*")
+        assert_hook_installed(project_dir, "keep-kit", "keep-hook", "PreToolUse", "Bash:*")
+        assert_hook_installed(project_dir, "remove-kit", "remove-hook", "PreToolUse", "Bash:*")
 
         # Remove kit-b
         result = invoke_in_project(
@@ -740,7 +740,7 @@ class TestRemoveCommandWithHooks:
         assert "Removed 1 hook(s)" in result.output
 
         # Verify keep-kit hook still exists
-        assert_hook_installed(project_dir, "keep-kit", "keep-hook", "pre", "Bash:*")
+        assert_hook_installed(project_dir, "keep-kit", "keep-hook", "PreToolUse", "Bash:*")
 
         # Verify remove-kit hook is gone
         assert_hook_not_installed(project_dir, "remove-kit")

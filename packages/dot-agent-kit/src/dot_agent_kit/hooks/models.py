@@ -1,6 +1,6 @@
 """Pydantic models for Claude Code hooks configuration."""
 
-from typing import Any
+from typing import Any, ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -50,9 +50,23 @@ class HookDefinition(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
+    # Valid Claude Code lifecycle events
+    VALID_LIFECYCLES: ClassVar[set[str]] = {
+        "PreToolUse",
+        "PostToolUse",
+        "PostCustomToolCall",
+        "Notification",
+        "UserPromptSubmit",
+        "Stop",
+        "SubagentStop",
+        "PreCompact",
+        "SessionStart",
+        "SessionEnd",
+    }
+
     id: str = Field(..., min_length=1)
     lifecycle: str = Field(..., min_length=1)
-    matcher: str = Field(..., min_length=1)
+    matcher: str | None = Field(default=None)
     script: str = Field(..., min_length=1)
     description: str = Field(..., min_length=1)
     timeout: int = Field(default=30, gt=0)
@@ -60,17 +74,12 @@ class HookDefinition(BaseModel):
     @field_validator("lifecycle")
     @classmethod
     def validate_lifecycle(cls, v: str) -> str:
-        """Validate lifecycle is non-empty string."""
+        """Validate lifecycle is a valid Claude Code event name."""
         if not v or not v.strip():
             raise ValueError("lifecycle must be a non-empty string")
-        return v
-
-    @field_validator("matcher")
-    @classmethod
-    def validate_matcher(cls, v: str) -> str:
-        """Validate matcher is non-empty string."""
-        if not v or not v.strip():
-            raise ValueError("matcher must be a non-empty string")
+        if v not in cls.VALID_LIFECYCLES:
+            valid_names = ", ".join(sorted(cls.VALID_LIFECYCLES))
+            raise ValueError(f"lifecycle must be one of: {valid_names}. Got: {v}")
         return v
 
     @field_validator("script")

@@ -121,9 +121,9 @@ class TestClaudeSettings:
         metadata = HookMetadata(kit_id="test-kit", hook_id="test-hook")
         entry = HookEntry(command="python3 script.py", timeout=30, _dot_agent=metadata)
         group = MatcherGroup(matcher="**", hooks=[entry])
-        settings = ClaudeSettings(hooks={"user-prompt-submit": [group]})
+        settings = ClaudeSettings(hooks={"UserPromptSubmit": [group]})
         assert settings.hooks is not None
-        assert "user-prompt-submit" in settings.hooks
+        assert "UserPromptSubmit" in settings.hooks
 
     def test_preserves_unknown_fields(self) -> None:
         """Test that unknown fields are preserved."""
@@ -147,21 +147,21 @@ class TestHookDefinition:
         """Test creating valid hook definition."""
         hook = HookDefinition(
             id="test-hook",
-            lifecycle="user-prompt-submit",
+            lifecycle="UserPromptSubmit",
             matcher="**",
             script="hooks/test.py",
             description="Test hook",
             timeout=30,
         )
         assert hook.id == "test-hook"
-        assert hook.lifecycle == "user-prompt-submit"
+        assert hook.lifecycle == "UserPromptSubmit"
         assert hook.timeout == 30
 
     def test_default_timeout(self) -> None:
         """Test default timeout value."""
         hook = HookDefinition(
             id="test-hook",
-            lifecycle="user-prompt-submit",
+            lifecycle="UserPromptSubmit",
             matcher="**",
             script="hooks/test.py",
             description="Test hook",
@@ -172,7 +172,7 @@ class TestHookDefinition:
         """Test that definition is immutable."""
         hook = HookDefinition(
             id="test-hook",
-            lifecycle="user-prompt-submit",
+            lifecycle="UserPromptSubmit",
             matcher="**",
             script="hooks/test.py",
             description="Test hook",
@@ -191,23 +191,33 @@ class TestHookDefinition:
                 description="Test hook",
             )
 
-    def test_rejects_whitespace_only_matcher(self) -> None:
-        """Test that whitespace-only matcher is rejected."""
-        with pytest.raises(ValidationError):
-            HookDefinition(
-                id="test-hook",
-                lifecycle="user-prompt-submit",
-                matcher="   ",
-                script="hooks/test.py",
-                description="Test hook",
-            )
+    def test_optional_matcher(self) -> None:
+        """Test that matcher can be omitted."""
+        hook = HookDefinition(
+            id="test-hook",
+            lifecycle="UserPromptSubmit",
+            script="hooks/test.py",
+            description="Test hook",
+        )
+        assert hook.matcher is None
+
+    def test_explicit_none_matcher(self) -> None:
+        """Test that matcher can be explicitly set to None."""
+        hook = HookDefinition(
+            id="test-hook",
+            lifecycle="UserPromptSubmit",
+            matcher=None,
+            script="hooks/test.py",
+            description="Test hook",
+        )
+        assert hook.matcher is None
 
     def test_rejects_whitespace_only_script(self) -> None:
         """Test that whitespace-only script is rejected."""
         with pytest.raises(ValidationError):
             HookDefinition(
                 id="test-hook",
-                lifecycle="user-prompt-submit",
+                lifecycle="UserPromptSubmit",
                 matcher="**",
                 script="   ",
                 description="Test hook",
@@ -218,7 +228,7 @@ class TestHookDefinition:
         with pytest.raises(ValidationError):
             HookDefinition(
                 id="test-hook",
-                lifecycle="user-prompt-submit",
+                lifecycle="UserPromptSubmit",
                 matcher="**",
                 script="hooks/test.py",
                 description="   ",
@@ -229,7 +239,7 @@ class TestHookDefinition:
         with pytest.raises(ValidationError):
             HookDefinition(
                 id="test-hook",
-                lifecycle="user-prompt-submit",
+                lifecycle="UserPromptSubmit",
                 matcher="**",
                 script="hooks/test.py",
                 description="Test hook",
@@ -241,7 +251,7 @@ class TestHookDefinition:
         with pytest.raises(ValidationError):
             HookDefinition(
                 id="test-hook",
-                lifecycle="user-prompt-submit",
+                lifecycle="UserPromptSubmit",
                 matcher="**",
                 script="hooks/test.py",
                 description="Test hook",

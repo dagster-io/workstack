@@ -3,7 +3,11 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from dot_agent_kit.io import parse_frontmatter, validate_frontmatter
+from dot_agent_kit.io import (
+    load_project_config,
+    parse_frontmatter,
+    validate_frontmatter,
+)
 
 
 @dataclass(frozen=True)
@@ -44,21 +48,31 @@ def validate_artifact(artifact_path: Path) -> ValidationResult:
 
 
 def validate_project(project_dir: Path) -> list[ValidationResult]:
-    """Validate all artifacts in project."""
+    """Validate only managed artifacts (installed from kits) in project."""
     results: list[ValidationResult] = []
 
     claude_dir = project_dir / ".claude"
     if not claude_dir.exists():
         return results
 
-    # Check all artifact directories
-    for artifact_type in ["agents", "commands", "skills"]:
-        artifact_dir = claude_dir / artifact_type
-        if not artifact_dir.exists():
-            continue
+    # Load config to get list of managed artifacts
+    config = load_project_config(project_dir)
+    if not config:
+        return results
 
-        for artifact_file in artifact_dir.glob("*.md"):
-            result = validate_artifact(artifact_file)
+    # Collect all managed artifact paths from all installed kits
+    managed_paths: set[str] = set()
+    for kit in config.kits.values():
+        for artifact_path in kit.artifacts:
+            # Normalize path: remove leading ".claude/" if present
+            normalized = artifact_path.replace(".claude/", "")
+            managed_paths.add(normalized)
+
+    # Validate only managed artifacts
+    for managed_path in managed_paths:
+        full_path = claude_dir / managed_path
+        if full_path.exists():
+            result = validate_artifact(full_path)
             results.append(result)
 
     return results

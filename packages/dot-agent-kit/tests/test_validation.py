@@ -97,35 +97,62 @@ def test_validate_artifact_nonexistent(tmp_path: Path) -> None:
     assert any("does not exist" in e for e in result.errors)
 
 
-def test_validate_project(tmp_project: Path) -> None:
-    """Test validating all artifacts in project."""
+def test_validate_project(tmp_path: Path) -> None:
+    """Test validating only managed artifacts in project."""
+    from dot_agent_kit.io import save_project_config
+    from dot_agent_kit.models import ConflictPolicy, InstalledKit, ProjectConfig
+
     # Create .claude structure with artifacts
-    agents_dir = tmp_project / ".claude/agents"
+    agents_dir = tmp_path / ".claude/agents"
     agents_dir.mkdir(parents=True)
 
-    # Valid artifact
-    valid = agents_dir / "valid.md"
-    valid.write_text(
+    # Managed artifact (valid)
+    managed_valid = agents_dir / "managed-valid.md"
+    managed_valid.write_text(
         "<!-- dot-agent-kit:\n"
         "kit_id: test-kit\n"
         "kit_version: 1.0.0\n"
         "artifact_type: agent\n"
-        "artifact_path: agents/valid.md\n"
+        "artifact_path: agents/managed-valid.md\n"
         "-->\n\n"
-        "# Valid",
+        "# Managed Valid",
         encoding="utf-8",
     )
 
-    # Invalid artifact
-    invalid = agents_dir / "invalid.md"
-    invalid.write_text("# No frontmatter", encoding="utf-8")
+    # Managed artifact (invalid - missing frontmatter)
+    managed_invalid = agents_dir / "managed-invalid.md"
+    managed_invalid.write_text("# No frontmatter", encoding="utf-8")
 
-    results = validate_project(tmp_project)
+    # Unmanaged artifact (should NOT be validated)
+    unmanaged = agents_dir / "unmanaged.md"
+    unmanaged.write_text("# Unmanaged artifact", encoding="utf-8")
+
+    # Create config that marks only two artifacts as managed
+    config = ProjectConfig(
+        version="1.0.0",
+        default_conflict_policy=ConflictPolicy.ERROR,
+        kits={
+            "test-kit": InstalledKit(
+                kit_id="test-kit",
+                version="1.0.0",
+                source="local",
+                installed_at="2024-01-01T00:00:00Z",
+                artifacts=[
+                    "agents/managed-valid.md",
+                    "agents/managed-invalid.md",
+                ],
+            )
+        },
+    )
+    save_project_config(tmp_path, config)
+
+    results = validate_project(tmp_path)
+    # Should only validate 2 managed artifacts, not the unmanaged one
     assert len(results) == 2
     assert sum(r.is_valid for r in results) == 1
 
 
-def test_validate_project_no_claude_dir(tmp_project: Path) -> None:
+def test_validate_project_no_claude_dir(tmp_path: Path) -> None:
     """Test validating project with no .claude directory."""
-    results = validate_project(tmp_project)
+    results = validate_project(tmp_path)
     assert len(results) == 0

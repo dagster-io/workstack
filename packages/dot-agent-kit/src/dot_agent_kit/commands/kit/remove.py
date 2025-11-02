@@ -4,6 +4,7 @@ from pathlib import Path
 
 import click
 
+from dot_agent_kit.hooks.installer import remove_hooks
 from dot_agent_kit.io import (
     load_project_config,
     save_project_config,
@@ -41,6 +42,11 @@ def remove(kit_id: str) -> None:
 
     installed = config.kits[kit_id]
 
+    # Remove hooks if present
+    hooks_removed = 0
+    if installed.hooks:
+        hooks_removed = remove_hooks(kit_id, project_dir)
+
     # Remove artifact files
     removed_count = 0
     failed_count = 0
@@ -68,6 +74,9 @@ def remove(kit_id: str) -> None:
     # Show success message
     click.echo(f"✓ Removed {kit_id} v{installed.version}")
     click.echo(f"  Deleted {removed_count} artifact(s)")
+
+    if hooks_removed > 0:
+        click.echo(f"  Removed {hooks_removed} hook(s)")
 
     if failed_count > 0:
         click.echo(f"  Note: {failed_count} artifact(s) were already removed", err=True)

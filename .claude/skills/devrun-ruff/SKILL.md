@@ -1,6 +1,6 @@
 ---
 name: devrun-ruff
-description: ruff linter and formatter patterns, command syntax, and output parsing guidance for Python code quality enforcement.
+description: This skill should be used when executing ruff commands via the runner agent. Use when parsing linting or formatting results, identifying fixable violations with rule codes, understanding ruff's rule categories (Pyflakes, pycodestyle, isort, etc.), or distinguishing between linting (ruff check) and formatting (ruff format) operations.
 ---
 
 # ruff Skill
@@ -340,11 +340,11 @@ While ruff doesn't have explicit severity levels, rules can be categorized:
 
 ## Integration with runner Agent
 
-The `runner` agent will:
+The runner agent loads this skill to:
 
-1. Load this skill
-2. Execute ruff command via Bash
-3. Use these patterns to parse output
+1. Execute ruff commands via Bash
+2. Parse output using these patterns
+3. Categorize violations by severity and identify auto-fixable issues
 4. Report structured results to parent agent
 
-**Your job**: Provide this knowledge so the runner can correctly interpret ruff output.
+The skill provides specialized knowledge for correctly interpreting ruff output, categorizing violations by severity, and identifying auto-fixable issues.

@@ -1,3 +1,4 @@
+import json
 import re
 import shlex
 import shutil
@@ -330,6 +331,12 @@ def quote_env_value(value: str) -> str:
     hidden=True,
     help="Output shell script for directory change instead of messages.",
 )
+@click.option(
+    "--json",
+    "output_json",
+    is_flag=True,
+    help="Output JSON with worktree information instead of human-readable messages.",
+)
 @click.pass_obj
 def create(
     ctx: WorkstackContext,
@@ -342,6 +349,7 @@ def create(
     from_current_branch: bool,
     from_branch: str | None,
     script: bool,
+    output_json: bool,
 ) -> None:
     """Create a worktree and write a .env file.
 
@@ -356,6 +364,11 @@ def create(
     flags_set = sum([from_current_branch, from_branch is not None, plan_file is not None])
     if flags_set > 1:
         click.echo("Cannot use multiple of: --from-current-branch, --from-branch, --plan")
+        raise SystemExit(1)
+
+    # Validate --json and --script are mutually exclusive
+    if output_json and script:
+        click.echo("Error: Cannot use both --json and --script", err=True)
         raise SystemExit(1)
 
     # Validate --keep-plan requires --plan
@@ -432,8 +445,26 @@ def create(
     wt_path = worktree_path_for(workstacks_dir, name)
 
     if wt_path.exists():
-        click.echo(f"Worktree path already exists: {wt_path}")
-        raise SystemExit(1)
+        if output_json:
+            # For JSON output, emit a status: "exists" response with available info
+            # Get current branch name from the worktree if possible
+            existing_branch = ctx.git_ops.get_current_branch(wt_path)
+            plan_file_path = wt_path / ".PLAN.md"
+            click.echo(
+                json.dumps(
+                    {
+                        "worktree_name": name,
+                        "worktree_path": str(wt_path),
+                        "branch_name": existing_branch,
+                        "plan_file": str(plan_file_path) if plan_file_path.exists() else None,
+                        "status": "exists",
+                    }
+                )
+            )
+            raise SystemExit(1)
+        else:
+            click.echo(f"Worktree path already exists: {wt_path}")
+            raise SystemExit(1)
 
     # Handle from-current-branch logic: switch current worktree first
     to_branch = None
@@ -523,20 +554,23 @@ def create(
     (wt_path / ".env").write_text(env_content, encoding="utf-8")
 
     # Move or copy plan file if provided
+    plan_dest_path = None
     if plan_file:
         plan_dest = wt_path / ".PLAN.md"
+        plan_dest_path = plan_dest
         if keep_plan:
             shutil.copy2(str(plan_file), str(plan_dest))
-            if not script:
+            if not script and not output_json:
                 click.echo(f"Copied plan to {plan_dest}")
         else:
             shutil.move(str(plan_file), str(plan_dest))
-            if not script:
+            if not script and not output_json:
                 click.echo(f"Moved plan to {plan_dest}")
 
-    # Post-create commands
+    # Post-create commands (suppress output if JSON mode)
     if not no_post and cfg.post_create_commands:
-        click.echo("Running post-create commands...")
+        if not output_json:
+            click.echo("Running post-create commands...")
         run_commands_in_worktree(
             commands=cfg.post_create_commands,
             worktree_path=wt_path,
@@ -555,6 +589,19 @@ def create(
             comment=f"cd to {name}",
         )
         click.echo(str(script_path), nl=False)
+    elif output_json:
+        # Output JSON with worktree information
+        click.echo(
+            json.dumps(
+                {
+                    "worktree_name": name,
+                    "worktree_path": str(wt_path),
+                    "branch_name": branch,
+                    "plan_file": str(plan_dest_path) if plan_dest_path else None,
+                    "status": "created",
+                }
+            )
+        )
     else:
         click.echo(f"Created workstack at {wt_path} checked out at branch '{branch}'")
         click.echo(f"\nworkstack switch {name}")

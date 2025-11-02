@@ -1,3 +1,8 @@
+---
+name: dignified-python
+description: This skill should be used when editing Python code in the workstack codebase. Use when writing, reviewing, or refactoring Python to ensure adherence to LBYL exception handling patterns, Python 3.13+ type syntax (list[str], str | None), pathlib operations, ABC-based interfaces, absolute imports, and explicit error boundaries at CLI level. Essential for maintaining workstack's dignified Python standards.
+---
+
 # Dignified Python - Workstack Python Coding Standards
 
 ## Purpose

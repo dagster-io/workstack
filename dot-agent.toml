@@ -13,6 +13,7 @@ artifacts = [
     ".claude/skills/devrun-pytest/SKILL.md",
     ".claude/skills/devrun-ruff/SKILL.md",
 ]
+conflict_policy = "overwrite"
 
 [kits.gt]
 kit_id = "gt"
@@ -24,6 +25,7 @@ artifacts = [
     ".claude/commands/gt/submit-branch.md",
     ".claude/skills/gt-graphite/SKILL.md",
 ]
+conflict_policy = "overwrite"
 
 [kits.dignified-python]
 kit_id = "dignified-python"

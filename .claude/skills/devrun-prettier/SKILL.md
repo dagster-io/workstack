@@ -1,6 +1,6 @@
 ---
 name: devrun-prettier
-description: prettier code formatter patterns, command syntax, and output parsing guidance for multi-language code formatting.
+description: This skill should be used when executing prettier commands via the runner agent. Use when parsing code formatting results, identifying files needing formatting, distinguishing between check and write operations, or handling prettier syntax errors. Supports multiple languages including JS, TS, Markdown, JSON, and YAML.
 ---
 
 # prettier Skill
@@ -311,14 +311,14 @@ When executing via make, parse the underlying prettier output the same way.
 
 ## Integration with runner Agent
 
-The `runner` agent will:
+The runner agent loads this skill to:
 
-1. Load this skill
-2. Execute prettier command (or make target) via Bash
-3. Use these patterns to parse output
+1. Execute prettier commands via Bash
+2. Parse output using these patterns
+3. Distinguish between formatting modes (check, write, list)
 4. Report structured results to parent agent
 
-**Your job**: Provide this knowledge so the runner can correctly interpret prettier output.
+The skill provides specialized knowledge for correctly interpreting prettier output and distinguishing between formatting modes.
 
 ## Example Outputs to Parse
 

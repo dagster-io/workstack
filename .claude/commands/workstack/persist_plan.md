@@ -103,19 +103,30 @@ Suggested action: Check file permissions and available disk space
 
 ### Step 5: Create Worktree with Plan
 
-Execute: `workstack create --plan <worktree-root>/<filename>`
+Execute: `workstack create --plan <worktree-root>/<filename> --json`
 
-Use the absolute path from Step 3 to ensure workstack can find the plan file regardless of current working directory.
+**Parse JSON output:**
 
-Parse the output to extract:
+1. Capture the command output
+2. Parse as JSON to extract fields:
+   - `worktree_name`: Name of the created worktree
+   - `worktree_path`: Full path to worktree directory
+   - `branch_name`: Git branch name
+   - `plan_file`: Path to .PLAN.md file
+   - `status`: Creation status
 
-- Worktree name (from "workstack switch <name>" line)
-- Branch name (from "checked out at branch '<branch>'" line)
-- Construct worktree path: `/Users/schrockn/code/workstacks/workstack/<name>`
+**Handle errors:**
 
-Handle specific errors:
+- **JSON parsing fails**:
 
-- **Worktree exists**:
+  ```
+  ❌ Error: Failed to parse workstack create output
+
+  Details: [error message]
+  Suggested action: Ensure workstack is up to date
+  ```
+
+- **Worktree exists** (status = "exists"):
 
   ```
   ❌ Error: Worktree with this name already exists
@@ -123,13 +134,25 @@ Handle specific errors:
   Suggested action: Use a different plan name or delete existing worktree
   ```
 
-- **Invalid plan**:
+- **Invalid plan**: If command fails:
 
   ```
-  ❌ Error: Plan file format is invalid
+  ❌ Error: Failed to create worktree
 
   Details: [workstack error message]
   ```
+
+**CRITICAL: Claude Code Directory Behavior**
+
+🔴 **Claude Code CANNOT switch directories.** After `workstack create` runs, you will remain in your original directory. This is **NORMAL and EXPECTED**. The JSON output gives you all the information you need about the new worktree.
+
+**Do NOT:**
+
+- ❌ Try to verify with `git branch --show-current` (shows the OLD branch)
+- ❌ Try to `cd` to the new worktree (will just reset back)
+- ❌ Run any commands assuming you're in the new worktree
+
+**Use the JSON output directly** for all worktree information.
 
 ### Step 6: Display Next Steps
 

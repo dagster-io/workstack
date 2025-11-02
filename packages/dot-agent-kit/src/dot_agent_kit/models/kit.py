@@ -1,6 +1,8 @@
 """Kit manifest models."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+from dot_agent_kit.hooks.models import HookDefinition
 
 
 @dataclass(frozen=True)
@@ -13,6 +15,7 @@ class KitManifest:
     artifacts: dict[str, list[str]]  # type -> paths
     license: str | None = None
     homepage: str | None = None
+    hooks: list[HookDefinition] = field(default_factory=list)
 
     def validate_namespace_pattern(self) -> list[str]:
         """Check if artifacts follow recommended hyphenated naming convention.

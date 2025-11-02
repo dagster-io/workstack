@@ -1,9 +1,11 @@
 """Install command for installing kits."""
 
+from dataclasses import replace
 from pathlib import Path
 
 import click
 
+from dot_agent_kit.hooks.installer import install_hooks
 from dot_agent_kit.io import (
     load_kit_manifest,
     load_project_config,
@@ -93,6 +95,18 @@ def install(kit_spec: str, force: bool) -> None:
         filtered_artifacts,
     )
 
+    # Install hooks if present (project-level only)
+    hooks_count = 0
+    if install_target == InstallationTarget.PROJECT and manifest.hooks:
+        hooks_count = install_hooks(
+            kit_id=manifest.name,
+            hooks=manifest.hooks,
+            kit_path=resolved.artifacts_base,
+            project_root=project_dir,
+        )
+        # Update installed kit with hooks
+        installed_kit = replace(installed_kit, hooks=manifest.hooks)
+
     # Update config
     updated_config = config.update_kit(installed_kit)
     save_project_config(project_dir, updated_config)
@@ -107,5 +121,8 @@ def install(kit_spec: str, force: bool) -> None:
         )
     else:
         click.echo(f"✓ Installed {kit_id} v{installed_kit.version} ({artifact_count} artifacts)")
+
+    if hooks_count > 0:
+        click.echo(f"  Installed {hooks_count} hook(s)", err=True)
 
     click.echo(f"  Location: {context.get_claude_dir()}")

@@ -44,9 +44,10 @@ def install_hooks(
         shutil.rmtree(hooks_dir)
     hooks_dir.mkdir(parents=True, exist_ok=True)
 
-    # Load current settings
+    # Load current settings and remove any existing hooks from this kit
     settings_path = project_root / ".claude" / "settings.json"
     settings = load_settings(settings_path)
+    settings, _ = remove_hooks_by_kit(settings, kit_id)
 
     installed_count = 0
 

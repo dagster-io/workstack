@@ -1,6 +1,11 @@
 ---
 name: devrun-pytest
 description: pytest testing framework patterns, command syntax, and output parsing guidance for Python test execution.
+__dot_agent:
+  kit_id: devrun
+  kit_version: 0.1.0
+  artifact_type: skill
+  artifact_path: skills/devrun-pytest/SKILL.md
 ---
 
 # pytest Skill

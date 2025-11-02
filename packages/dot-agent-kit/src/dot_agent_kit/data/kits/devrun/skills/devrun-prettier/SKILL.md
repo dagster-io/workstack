@@ -1,6 +1,11 @@
 ---
 name: devrun-prettier
 description: prettier code formatter patterns, command syntax, and output parsing guidance for multi-language code formatting.
+__dot_agent:
+  kit_id: devrun
+  kit_version: 0.1.0
+  artifact_type: skill
+  artifact_path: skills/devrun-prettier/SKILL.md
 ---
 
 # prettier Skill

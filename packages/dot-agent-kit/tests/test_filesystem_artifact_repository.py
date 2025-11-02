@@ -146,12 +146,15 @@ def test_detects_unmanaged_artifacts_with_frontmatter(tmp_path: Path) -> None:
     skill_path = skill_dir / "SKILL.md"
 
     # Write skill with frontmatter indicating it came from a kit
-    skill_content = """<!-- dot-agent-kit:
-kit_id: some-kit
-kit_version: 2.0.0
-artifact_type: skill
-artifact_path: skills/unmanaged-skill/SKILL.md
--->
+    skill_content = """---
+name: unmanaged-skill
+description: An unmanaged skill
+__dot_agent:
+  kit_id: some-kit
+  kit_version: 2.0.0
+  artifact_type: skill
+  artifact_path: skills/unmanaged-skill/SKILL.md
+---
 
 # Unmanaged Skill"""
     skill_path.write_text(skill_content, encoding="utf-8")

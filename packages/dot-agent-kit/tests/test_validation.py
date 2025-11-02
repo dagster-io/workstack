@@ -63,12 +63,15 @@ def test_validate_artifact_valid(tmp_path: Path) -> None:
     """Test validating a valid artifact."""
     artifact = tmp_path / "test.md"
     artifact.write_text(
-        "<!-- dot-agent-kit:\n"
-        "kit_id: test-kit\n"
-        "kit_version: 1.0.0\n"
-        "artifact_type: agent\n"
-        "artifact_path: agents/test.md\n"
-        "-->\n\n"
+        "---\n"
+        "name: test-agent\n"
+        "description: A test agent\n"
+        "__dot_agent:\n"
+        "  kit_id: test-kit\n"
+        "  kit_version: 1.0.0\n"
+        "  artifact_type: agent\n"
+        "  artifact_path: agents/test.md\n"
+        "---\n\n"
         "# Test Agent",
         encoding="utf-8",
     )
@@ -109,12 +112,15 @@ def test_validate_project(tmp_path: Path) -> None:
     # Managed artifact (valid)
     managed_valid = agents_dir / "managed-valid.md"
     managed_valid.write_text(
-        "<!-- dot-agent-kit:\n"
-        "kit_id: test-kit\n"
-        "kit_version: 1.0.0\n"
-        "artifact_type: agent\n"
-        "artifact_path: agents/managed-valid.md\n"
-        "-->\n\n"
+        "---\n"
+        "name: managed-valid\n"
+        "description: A managed agent\n"
+        "__dot_agent:\n"
+        "  kit_id: test-kit\n"
+        "  kit_version: 1.0.0\n"
+        "  artifact_type: agent\n"
+        "  artifact_path: agents/managed-valid.md\n"
+        "---\n\n"
         "# Managed Valid",
         encoding="utf-8",
     )

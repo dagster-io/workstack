@@ -107,12 +107,15 @@ def test_load_kit_manifest_minimal(tmp_path: Path) -> None:
 
 def test_parse_frontmatter() -> None:
     """Test extracting frontmatter from markdown."""
-    content = """<!-- dot-agent-kit:
-kit_id: test-kit
-kit_version: 1.0.0
-artifact_type: agent
-artifact_path: agents/test.md
--->
+    content = """---
+name: test-agent
+description: A test agent
+__dot_agent:
+  kit_id: test-kit
+  kit_version: 1.0.0
+  artifact_type: agent
+  artifact_path: agents/test.md
+---
 
 # Test Agent
 
@@ -150,7 +153,8 @@ def test_add_frontmatter() -> None:
 
     result = add_frontmatter(content, frontmatter)
 
-    assert "<!-- dot-agent-kit:" in result
+    assert result.startswith("---\n")
+    assert "__dot_agent:" in result
     assert "kit_id: test-kit" in result
     assert "kit_version: 1.0.0" in result
     assert "artifact_type: agent" in result

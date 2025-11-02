@@ -1,11 +1,23 @@
 """Settings.json I/O and hook manipulation operations."""
 
 import json
+import re
 import tempfile
 from pathlib import Path
 from typing import NamedTuple
 
 from dot_agent_kit.hooks.models import ClaudeSettings, HookEntry, MatcherGroup
+
+
+def extract_kit_id_from_command(command: str) -> str | None:
+    """Extract DOT_AGENT_KIT_ID from command string.
+
+    Returns None if kit_id not found in command.
+    """
+    match = re.search(r"DOT_AGENT_KIT_ID=(\S+)", command)
+    if match:
+        return match.group(1)
+    return None
 
 
 class InstalledHook(NamedTuple):
@@ -156,9 +168,7 @@ def remove_hooks_by_kit(
         for group in groups:
             # Filter out hooks from this kit
             remaining_hooks = [
-                hook
-                for hook in group.hooks
-                if not hook.dot_agent or hook.dot_agent.kit_id != kit_id
+                hook for hook in group.hooks if extract_kit_id_from_command(hook.command) != kit_id
             ]
 
             removed_count += len(group.hooks) - len(remaining_hooks)

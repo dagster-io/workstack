@@ -9,7 +9,7 @@ from click.testing import CliRunner
 
 from dot_agent_kit.commands.kit.install import install
 from dot_agent_kit.commands.kit.remove import remove
-from dot_agent_kit.hooks.settings import load_settings
+from dot_agent_kit.hooks.settings import extract_kit_id_from_command, load_settings
 from dot_agent_kit.io import load_project_config
 from dot_agent_kit.sources import KitResolver
 from tests.fakes.fake_local_source import FakeLocalSource
@@ -148,12 +148,15 @@ def assert_hook_installed(
     for matcher_group in settings.hooks[expected_lifecycle]:
         if matcher_group.matcher == expected_matcher:
             for hook_entry in matcher_group.hooks:
-                if hook_entry.dot_agent and (
-                    hook_entry.dot_agent.kit_id == kit_id
-                    and hook_entry.dot_agent.hook_id == hook_id
-                ):
-                    found = True
-                    break
+                entry_kit_id = extract_kit_id_from_command(hook_entry.command)
+                if entry_kit_id == kit_id:
+                    import re
+
+                    hook_id_match = re.search(r"DOT_AGENT_HOOK_ID=(\S+)", hook_entry.command)
+                    entry_hook_id = hook_id_match.group(1) if hook_id_match else None
+                    if entry_hook_id == hook_id:
+                        found = True
+                        break
         if found:
             break
 
@@ -174,9 +177,8 @@ def assert_hook_not_installed(project_root: Path, kit_id: str) -> None:
             for lifecycle_hooks in settings.hooks.values():
                 for matcher_group in lifecycle_hooks:
                     for hook_entry in matcher_group.hooks:
-                        assert not hook_entry.dot_agent or hook_entry.dot_agent.kit_id != kit_id, (
-                            f"Found hook for {kit_id} in settings"
-                        )
+                        entry_kit_id = extract_kit_id_from_command(hook_entry.command)
+                        assert entry_kit_id != kit_id, f"Found hook for {kit_id} in settings"
 
 
 class TestInstallCommandWithHooks:
@@ -423,8 +425,14 @@ class TestInstallCommandWithHooks:
             for lifecycle_hooks in settings.hooks.values():
                 for matcher_group in lifecycle_hooks:
                     for hook_entry in matcher_group.hooks:
-                        if hook_entry.dot_agent and hook_entry.dot_agent.kit_id == "versioned-kit":
-                            all_hook_ids.append(hook_entry.dot_agent.hook_id)
+                        entry_kit_id = extract_kit_id_from_command(hook_entry.command)
+                        if entry_kit_id == "versioned-kit":
+                            import re
+
+                            pattern = r"DOT_AGENT_HOOK_ID=(\S+)"
+                            hook_id_match = re.search(pattern, hook_entry.command)
+                            if hook_id_match:
+                                all_hook_ids.append(hook_id_match.group(1))
 
         assert "hook-1" not in all_hook_ids
         assert "hook-2" not in all_hook_ids
@@ -513,8 +521,7 @@ class TestInstallCommandWithHooks:
             for lifecycle_hooks in settings.hooks.values():
                 for matcher_group in lifecycle_hooks:
                     for hook_entry in matcher_group.hooks:
-                        if hook_entry.dot_agent:
-                            assert hook_entry.dot_agent.hook_id != "bad-hook"
+                        assert "DOT_AGENT_HOOK_ID=bad-hook" not in hook_entry.command
 
     def test_install_preserves_other_kit_hooks(self, cli_runner: CliRunner, tmp_path: Path) -> None:
         """Test that installing a kit preserves hooks from other kits."""

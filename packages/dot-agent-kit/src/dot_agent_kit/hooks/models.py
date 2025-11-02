@@ -5,24 +5,14 @@ from typing import Any, ClassVar
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-class HookMetadata(BaseModel):
-    """Metadata tracking the kit and hook identity."""
-
-    model_config = ConfigDict(frozen=True)
-
-    kit_id: str = Field(..., min_length=1)
-    hook_id: str = Field(..., min_length=1)
-
-
 class HookEntry(BaseModel):
     """Represents a hook entry in settings.json."""
 
-    model_config = ConfigDict(frozen=True, populate_by_name=True)
+    model_config = ConfigDict(frozen=True)
 
     type: str = Field(default="command", pattern="^(command|prompt)$")
     command: str = Field(..., min_length=1)
     timeout: int = Field(default=30, gt=0)
-    dot_agent: HookMetadata | None = Field(default=None, alias="_dot_agent")
 
 
 class MatcherGroup(BaseModel):

@@ -3,7 +3,7 @@
 import shutil
 from pathlib import Path
 
-from dot_agent_kit.hooks.models import HookDefinition, HookEntry, HookMetadata
+from dot_agent_kit.hooks.models import HookDefinition, HookEntry
 from dot_agent_kit.hooks.settings import (
     add_hook_to_settings,
     load_settings,
@@ -71,13 +71,13 @@ def install_hooks(
         relative_hook_path = f".claude/hooks/{kit_id}/{script_filename}"
         command = f'python3 "$CLAUDE_PROJECT_DIR/{relative_hook_path}"'
 
-        # Create hook entry
-        metadata = HookMetadata(kit_id=kit_id, hook_id=hook_def.id)
+        # Encode metadata in command via environment variables
+        env_prefix = f"DOT_AGENT_KIT_ID={kit_id} DOT_AGENT_HOOK_ID={hook_def.id}"
+        command_with_metadata = f"{env_prefix} {command}"
         entry = HookEntry(
             type="command",
-            command=command,
+            command=command_with_metadata,
             timeout=hook_def.timeout,
-            _dot_agent=metadata,
         )
 
         # Use wildcard matcher if none specified

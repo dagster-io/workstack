@@ -7,7 +7,6 @@ from pathlib import Path
 from dot_agent_kit.hooks.models import (
     ClaudeSettings,
     HookEntry,
-    HookMetadata,
     MatcherGroup,
 )
 from dot_agent_kit.hooks.settings import (
@@ -51,12 +50,11 @@ class TestLoadSettings:
                             "matcher": "**",
                             "hooks": [
                                 {
-                                    "command": "python3 script.py",
+                                    "command": (
+                                        "DOT_AGENT_KIT_ID=test-kit "
+                                        "DOT_AGENT_HOOK_ID=test-hook python3 script.py"
+                                    ),
                                     "timeout": 30,
-                                    "_dot_agent": {
-                                        "kit_id": "test-kit",
-                                        "hook_id": "test-hook",
-                                    },
                                 }
                             ],
                         }
@@ -123,8 +121,8 @@ class TestAddHookToSettings:
     def test_add_to_empty_settings(self) -> None:
         """Test adding hook to empty settings."""
         settings = ClaudeSettings()
-        metadata = HookMetadata(kit_id="test-kit", hook_id="test-hook")
-        entry = HookEntry(command="python3 script.py", timeout=30, _dot_agent=metadata)
+        cmd = "DOT_AGENT_KIT_ID=test-kit DOT_AGENT_HOOK_ID=test-hook python3 script.py"
+        entry = HookEntry(command=cmd, timeout=30)
 
         new_settings = add_hook_to_settings(settings, "UserPromptSubmit", "**", entry)
 
@@ -135,13 +133,13 @@ class TestAddHookToSettings:
 
     def test_add_to_existing_matcher(self) -> None:
         """Test adding hook to existing matcher group."""
-        metadata1 = HookMetadata(kit_id="kit1", hook_id="hook1")
-        entry1 = HookEntry(command="python3 script1.py", timeout=30, _dot_agent=metadata1)
+        cmd1 = "DOT_AGENT_KIT_ID=kit1 DOT_AGENT_HOOK_ID=hook1 python3 script1.py"
+        entry1 = HookEntry(command=cmd1, timeout=30)
         group = MatcherGroup(matcher="**", hooks=[entry1])
         settings = ClaudeSettings(hooks={"UserPromptSubmit": [group]})
 
-        metadata2 = HookMetadata(kit_id="kit2", hook_id="hook2")
-        entry2 = HookEntry(command="python3 script2.py", timeout=30, _dot_agent=metadata2)
+        cmd2 = "DOT_AGENT_KIT_ID=kit2 DOT_AGENT_HOOK_ID=hook2 python3 script2.py"
+        entry2 = HookEntry(command=cmd2, timeout=30)
 
         new_settings = add_hook_to_settings(settings, "UserPromptSubmit", "**", entry2)
 
@@ -151,13 +149,13 @@ class TestAddHookToSettings:
 
     def test_add_new_matcher_to_lifecycle(self) -> None:
         """Test adding hook with new matcher to existing lifecycle."""
-        metadata1 = HookMetadata(kit_id="kit1", hook_id="hook1")
-        entry1 = HookEntry(command="python3 script1.py", timeout=30, _dot_agent=metadata1)
+        cmd1 = "DOT_AGENT_KIT_ID=kit1 DOT_AGENT_HOOK_ID=hook1 python3 script1.py"
+        entry1 = HookEntry(command=cmd1, timeout=30)
         group = MatcherGroup(matcher="**", hooks=[entry1])
         settings = ClaudeSettings(hooks={"UserPromptSubmit": [group]})
 
-        metadata2 = HookMetadata(kit_id="kit2", hook_id="hook2")
-        entry2 = HookEntry(command="python3 script2.py", timeout=30, _dot_agent=metadata2)
+        cmd2 = "DOT_AGENT_KIT_ID=kit2 DOT_AGENT_HOOK_ID=hook2 python3 script2.py"
+        entry2 = HookEntry(command=cmd2, timeout=30)
 
         new_settings = add_hook_to_settings(settings, "UserPromptSubmit", "*.py", entry2)
 
@@ -177,8 +175,8 @@ class TestRemoveHooksByKit:
 
     def test_remove_all_hooks_for_kit(self) -> None:
         """Test removing all hooks for a kit."""
-        metadata = HookMetadata(kit_id="test-kit", hook_id="hook1")
-        entry = HookEntry(command="python3 script.py", timeout=30, _dot_agent=metadata)
+        cmd = "DOT_AGENT_KIT_ID=test-kit DOT_AGENT_HOOK_ID=hook1 python3 script.py"
+        entry = HookEntry(command=cmd, timeout=30)
         group = MatcherGroup(matcher="**", hooks=[entry])
         settings = ClaudeSettings(hooks={"UserPromptSubmit": [group]})
 
@@ -189,10 +187,10 @@ class TestRemoveHooksByKit:
 
     def test_remove_partial_hooks(self) -> None:
         """Test removing some hooks but not all."""
-        metadata1 = HookMetadata(kit_id="kit1", hook_id="hook1")
-        entry1 = HookEntry(command="python3 script1.py", timeout=30, _dot_agent=metadata1)
-        metadata2 = HookMetadata(kit_id="kit2", hook_id="hook2")
-        entry2 = HookEntry(command="python3 script2.py", timeout=30, _dot_agent=metadata2)
+        cmd1 = "DOT_AGENT_KIT_ID=kit1 DOT_AGENT_HOOK_ID=hook1 python3 script1.py"
+        cmd2 = "DOT_AGENT_KIT_ID=kit2 DOT_AGENT_HOOK_ID=hook2 python3 script2.py"
+        entry1 = HookEntry(command=cmd1, timeout=30)
+        entry2 = HookEntry(command=cmd2, timeout=30)
         group = MatcherGroup(matcher="**", hooks=[entry1, entry2])
         settings = ClaudeSettings(hooks={"UserPromptSubmit": [group]})
 
@@ -214,8 +212,8 @@ class TestGetAllHooks:
 
     def test_get_all_hooks(self) -> None:
         """Test getting all hooks."""
-        metadata = HookMetadata(kit_id="test-kit", hook_id="test-hook")
-        entry = HookEntry(command="python3 script.py", timeout=30, _dot_agent=metadata)
+        cmd = "DOT_AGENT_KIT_ID=test-kit DOT_AGENT_HOOK_ID=test-hook python3 script.py"
+        entry = HookEntry(command=cmd, timeout=30)
         group = MatcherGroup(matcher="**", hooks=[entry])
         settings = ClaudeSettings(hooks={"UserPromptSubmit": [group]})
 
@@ -225,7 +223,7 @@ class TestGetAllHooks:
         lifecycle, matcher, hook_entry = hooks[0]
         assert lifecycle == "UserPromptSubmit"
         assert matcher == "**"
-        assert hook_entry.command == "python3 script.py"
+        assert "DOT_AGENT_KIT_ID=test-kit" in hook_entry.command
 
 
 class TestMergeMatcherGroups:
@@ -238,8 +236,8 @@ class TestMergeMatcherGroups:
 
     def test_merge_no_duplicates(self) -> None:
         """Test merging when no duplicates exist."""
-        metadata = HookMetadata(kit_id="test-kit", hook_id="test-hook")
-        entry = HookEntry(command="python3 script.py", timeout=30, _dot_agent=metadata)
+        cmd = "DOT_AGENT_KIT_ID=test-kit DOT_AGENT_HOOK_ID=test-hook python3 script.py"
+        entry = HookEntry(command=cmd, timeout=30)
         group1 = MatcherGroup(matcher="**", hooks=[entry])
         group2 = MatcherGroup(matcher="*.py", hooks=[entry])
 
@@ -249,10 +247,10 @@ class TestMergeMatcherGroups:
 
     def test_merge_duplicates(self) -> None:
         """Test merging duplicate matchers."""
-        metadata1 = HookMetadata(kit_id="kit1", hook_id="hook1")
-        entry1 = HookEntry(command="python3 script1.py", timeout=30, _dot_agent=metadata1)
-        metadata2 = HookMetadata(kit_id="kit2", hook_id="hook2")
-        entry2 = HookEntry(command="python3 script2.py", timeout=30, _dot_agent=metadata2)
+        cmd1 = "DOT_AGENT_KIT_ID=kit1 DOT_AGENT_HOOK_ID=hook1 python3 script1.py"
+        cmd2 = "DOT_AGENT_KIT_ID=kit2 DOT_AGENT_HOOK_ID=hook2 python3 script2.py"
+        entry1 = HookEntry(command=cmd1, timeout=30)
+        entry2 = HookEntry(command=cmd2, timeout=30)
 
         group1 = MatcherGroup(matcher="**", hooks=[entry1])
         group2 = MatcherGroup(matcher="**", hooks=[entry2])
@@ -264,8 +262,8 @@ class TestMergeMatcherGroups:
 
     def test_preserves_order(self) -> None:
         """Test that first occurrence order is preserved."""
-        metadata = HookMetadata(kit_id="test-kit", hook_id="test-hook")
-        entry = HookEntry(command="python3 script.py", timeout=30, _dot_agent=metadata)
+        cmd = "DOT_AGENT_KIT_ID=test-kit DOT_AGENT_HOOK_ID=test-hook python3 script.py"
+        entry = HookEntry(command=cmd, timeout=30)
         group1 = MatcherGroup(matcher="*.py", hooks=[entry])
         group2 = MatcherGroup(matcher="**", hooks=[entry])
         group3 = MatcherGroup(matcher="*.py", hooks=[entry])

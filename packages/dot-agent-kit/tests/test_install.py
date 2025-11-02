@@ -51,9 +51,6 @@ def test_install_kit_basic(tmp_project: Path) -> None:
     assert agent_path.exists()
 
     content = agent_path.read_text(encoding="utf-8")
-    assert "__dot_agent:" in content
-    assert "kit_id: test-kit" in content
-    assert "kit_version: 1.0.0" in content
     assert "# Test Agent" in content
 
 
@@ -220,9 +217,6 @@ def test_install_kit_overwrite_policy(tmp_project: Path) -> None:
 
     # Verify new content written
     content = existing.read_text(encoding="utf-8")
-    assert "__dot_agent:" in content
-    assert "kit_id: test-kit" in content
-    assert "kit_version: 1.0.0" in content
     assert "# New Agent" in content
     assert len(installed.artifacts) == 1
 
@@ -305,14 +299,12 @@ def test_install_kit_namespaced_artifacts(tmp_project: Path) -> None:
     # Verify all artifacts were installed
     assert len(installed.artifacts) == 4
 
-    # Verify frontmatter contains correct artifact paths
+    # Verify artifact content
     agent_content = agent_path.read_text(encoding="utf-8")
-    assert "__dot_agent:" in agent_content
-    assert "artifact_path: agents/my-kit/helper.md" in agent_content
+    assert "# Helper Agent" in agent_content
 
     skill_a_content = skill_a_path.read_text(encoding="utf-8")
-    assert "__dot_agent:" in skill_a_content
-    assert "artifact_path: skills/my-kit/tool-a/SKILL.md" in skill_a_content
+    assert "# Tool A Skill" in skill_a_content
 
 
 def test_kit_manifest_namespace_validation() -> None:

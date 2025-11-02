@@ -145,15 +145,10 @@ def test_detects_unmanaged_artifacts_with_frontmatter(tmp_path: Path) -> None:
     skill_dir.mkdir(parents=True)
     skill_path = skill_dir / "SKILL.md"
 
-    # Write skill with frontmatter indicating it came from a kit
+    # Write skill without being in config (local artifact)
     skill_content = """---
 name: unmanaged-skill
 description: An unmanaged skill
-__dot_agent:
-  kit_id: some-kit
-  kit_version: 2.0.0
-  artifact_type: skill
-  artifact_path: skills/unmanaged-skill/SKILL.md
 ---
 
 # Unmanaged Skill"""
@@ -168,9 +163,9 @@ __dot_agent:
     assert len(artifacts) == 1
     artifact = artifacts[0]
     assert artifact.artifact_name == "unmanaged-skill"
-    assert artifact.source == ArtifactSource.UNMANAGED
-    assert artifact.kit_id == "some-kit"
-    assert artifact.kit_version == "2.0.0"
+    assert artifact.source == ArtifactSource.LOCAL
+    assert artifact.kit_id is None
+    assert artifact.kit_version is None
 
 
 def test_handles_empty_claude_directory(tmp_path: Path) -> None:

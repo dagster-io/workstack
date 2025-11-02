@@ -1,60 +1,45 @@
-"""User directory installation operations."""
+"""Project directory installation operations."""
 
 from pathlib import Path
 
-from dot_agent_kit.io import get_user_claude_dir
 from dot_agent_kit.models import (
     ConflictPolicy,
     InstallationContext,
-    InstallationTarget,
     InstalledKit,
 )
 from dot_agent_kit.operations.install import install_kit as install_kit_base
 from dot_agent_kit.sources import ResolvedKit
 
 
-def install_kit_to_target(
+def install_kit_to_project(
     resolved: ResolvedKit,
     context: InstallationContext,
     conflict_policy: ConflictPolicy = ConflictPolicy.ERROR,
     filtered_artifacts: dict[str, list[str]] | None = None,
 ) -> InstalledKit:
-    """Install a kit to either user or project directory.
+    """Install a kit to project directory.
 
     Args:
         resolved: Resolved kit to install
-        context: Installation context (user or project)
+        context: Installation context
         conflict_policy: How to handle file conflicts
         filtered_artifacts: Optional filtered artifacts (from ArtifactSpec.filter_artifacts())
 
     Returns:
         InstalledKit with installation metadata
     """
-    if context.target == InstallationTarget.USER:
-        # Install to user directory (~/.claude)
-        user_dir = get_user_claude_dir()
-        return install_kit_base(resolved, user_dir, conflict_policy, filtered_artifacts)
-    else:
-        # Install to project directory
-        return install_kit_base(resolved, context.base_path, conflict_policy, filtered_artifacts)
+    return install_kit_base(resolved, context.base_path, conflict_policy, filtered_artifacts)
 
 
-def get_installation_context(
-    target: InstallationTarget,
-    project_dir: Path | None = None,
-) -> InstallationContext:
-    """Create installation context for the given target.
+def get_installation_context(project_dir: Path | None = None) -> InstallationContext:
+    """Create installation context for the project.
 
     Args:
-        target: Where to install (user or project)
-        project_dir: Project directory (required for project installs, ignored for user)
+        project_dir: Project directory (defaults to current working directory)
 
     Returns:
-        InstallationContext configured for the target
+        InstallationContext configured for the project
     """
-    if target == InstallationTarget.USER:
-        return InstallationContext(target, Path.home())
-    else:
-        if project_dir is None:
-            project_dir = Path.cwd()
-        return InstallationContext(target, project_dir)
+    if project_dir is None:
+        project_dir = Path.cwd()
+    return InstallationContext(project_dir)

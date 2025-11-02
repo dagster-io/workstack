@@ -1,27 +1,17 @@
-"""Installation target and context models."""
+"""Installation context models."""
 
-from enum import Enum
 from pathlib import Path
-
-
-class InstallationTarget(Enum):
-    """Where to install a kit."""
-
-    USER = "user"
-    PROJECT = "project"
 
 
 class InstallationContext:
     """Context for installation operations."""
 
-    def __init__(self, target: InstallationTarget, base_path: Path):
+    def __init__(self, base_path: Path):
         """Initialize installation context.
 
         Args:
-            target: Where to install (user or project)
-            base_path: Base path for the installation (home dir for user, project dir for project)
+            base_path: Base path for the installation (project directory)
         """
-        self.target = target
         self.base_path = base_path
 
     def get_claude_dir(self) -> Path:

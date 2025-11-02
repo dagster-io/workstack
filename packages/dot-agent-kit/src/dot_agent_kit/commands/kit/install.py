@@ -7,15 +7,13 @@ import click
 from dot_agent_kit.io import (
     load_kit_manifest,
     load_project_config,
-    load_user_config,
     save_project_config,
-    save_user_config,
 )
-from dot_agent_kit.models import ConflictPolicy, InstallationTarget
+from dot_agent_kit.models import ConflictPolicy
 from dot_agent_kit.operations import (
     ArtifactSpec,
     get_installation_context,
-    install_kit_to_target,
+    install_kit_to_project,
 )
 from dot_agent_kit.sources import KitResolver, StandalonePackageSource
 
@@ -23,26 +21,11 @@ from dot_agent_kit.sources import KitResolver, StandalonePackageSource
 @click.command()
 @click.argument("kit-spec")
 @click.option(
-    "--user",
-    "-u",
-    "target",
-    flag_value="user",
-    help="Install to user directory (~/.claude)",
-)
-@click.option(
-    "--project",
-    "-p",
-    "target",
-    flag_value="project",
-    default=True,
-    help="Install to project directory (./.claude) [default]",
-)
-@click.option(
     "--force",
     is_flag=True,
     help="Overwrite existing artifacts",
 )
-def install(kit_spec: str, target: str, force: bool) -> None:
+def install(kit_spec: str, force: bool) -> None:
     """Install a kit or specific artifacts from a kit.
 
     Examples:
@@ -55,35 +38,23 @@ def install(kit_spec: str, target: str, force: bool) -> None:
 
         # Install multiple artifacts to project
         dot-agent install github-workflows:pr-review,auto-merge
-
-        # Install to user directory
-        dot-agent install productivity-kit --user
-
-        # Install specific artifact to user directory
-        dot-agent install code-review:style-checker --user
     """
     # Parse kit spec to extract kit ID and artifact selection
     artifact_spec = ArtifactSpec(kit_spec)
     kit_id = artifact_spec.get_kit_id()
 
-    # Determine installation target
-    install_target = InstallationTarget.USER if target == "user" else InstallationTarget.PROJECT
-
     # Get installation context
     project_dir = Path.cwd()
-    context = get_installation_context(install_target, project_dir)
+    context = get_installation_context(project_dir)
 
-    # Load appropriate config
-    if install_target == InstallationTarget.USER:
-        config = load_user_config()
+    # Load project config
+    loaded_config = load_project_config(project_dir)
+    if loaded_config is None:
+        from dot_agent_kit.io import create_default_config
+
+        config = create_default_config()
     else:
-        loaded_config = load_project_config(project_dir)
-        if loaded_config is None:
-            from dot_agent_kit.io import create_default_config
-
-            config = create_default_config()
-        else:
-            config = loaded_config
+        config = loaded_config
 
     # Check if kit already installed
     if kit_id in config.kits:
@@ -115,7 +86,7 @@ def install(kit_spec: str, target: str, force: bool) -> None:
     # Install the kit
     click.echo(f"Installing {kit_id} to {context.get_claude_dir()}...")
 
-    installed_kit = install_kit_to_target(
+    installed_kit = install_kit_to_project(
         resolved,
         context,
         conflict_policy,
@@ -124,11 +95,7 @@ def install(kit_spec: str, target: str, force: bool) -> None:
 
     # Update config
     updated_config = config.update_kit(installed_kit)
-
-    if install_target == InstallationTarget.USER:
-        save_user_config(updated_config)
-    else:
-        save_project_config(project_dir, updated_config)
+    save_project_config(project_dir, updated_config)
 
     # Show success message
     artifact_count = len(installed_kit.artifacts)

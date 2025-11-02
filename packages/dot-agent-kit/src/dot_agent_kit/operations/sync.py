@@ -24,13 +24,24 @@ class SyncResult:
 def check_for_updates(
     installed: InstalledKit,
     resolver: KitResolver,
+    force: bool = False,
 ) -> tuple[bool, ResolvedKit | None]:
-    """Check if an installed kit has updates available."""
+    """Check if an installed kit has updates available.
+
+    Args:
+        installed: The currently installed kit
+        resolver: Kit resolver to find the source
+        force: If True, always return True (forces reinstall regardless of version)
+    """
     try:
         resolved = resolver.resolve(installed.source)
     except ValueError:
         # Source no longer available
         return False, None
+
+    if force:
+        # Force mode: always consider as having an update
+        return True, resolved
 
     manifest = load_kit_manifest(resolved.manifest_path)
 
@@ -45,13 +56,22 @@ def sync_kit(
     installed: InstalledKit,
     resolved: ResolvedKit,
     project_dir: Path,
+    force: bool = False,
 ) -> SyncResult:
-    """Sync an installed kit with its source."""
+    """Sync an installed kit with its source.
+
+    Args:
+        kit_id: The kit identifier
+        installed: The currently installed kit
+        resolved: The resolved kit from the source
+        project_dir: Project directory path
+        force: If True, reinstall even if versions match
+    """
     old_version = installed.version
     manifest = load_kit_manifest(resolved.manifest_path)
     new_version = manifest.version
 
-    if old_version == new_version:
+    if old_version == new_version and not force:
         return SyncResult(
             kit_id=kit_id,
             old_version=old_version,
@@ -88,12 +108,20 @@ def sync_all_kits(
     config: ProjectConfig,
     project_dir: Path,
     resolver: KitResolver,
+    force: bool = False,
 ) -> list[SyncResult]:
-    """Sync all installed kits."""
+    """Sync all installed kits.
+
+    Args:
+        config: Project configuration
+        project_dir: Project directory path
+        resolver: Kit resolver
+        force: If True, reinstall even if versions match
+    """
     results: list[SyncResult] = []
 
     for kit_id, installed in config.kits.items():
-        has_update, resolved = check_for_updates(installed, resolver)
+        has_update, resolved = check_for_updates(installed, resolver, force=force)
 
         if not has_update or resolved is None:
             results.append(
@@ -108,7 +136,7 @@ def sync_all_kits(
             )
             continue
 
-        result = sync_kit(kit_id, installed, resolved, project_dir)
+        result = sync_kit(kit_id, installed, resolved, project_dir, force=force)
         results.append(result)
 
     return results

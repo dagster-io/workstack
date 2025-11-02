@@ -155,7 +155,11 @@ def remove_hooks_by_kit(
 
         for group in groups:
             # Filter out hooks from this kit
-            remaining_hooks = [hook for hook in group.hooks if hook.dot_agent.kit_id != kit_id]
+            remaining_hooks = [
+                hook
+                for hook in group.hooks
+                if not hook.dot_agent or hook.dot_agent.kit_id != kit_id
+            ]
 
             removed_count += len(group.hooks) - len(remaining_hooks)
 

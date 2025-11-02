@@ -42,7 +42,11 @@ def list_hooks() -> None:
 
     # Display hooks
     for lifecycle, matcher, entry in hooks:
-        hook_spec = f"{entry.dot_agent.kit_id}:{entry.dot_agent.hook_id}"
+        if entry.dot_agent:
+            hook_spec = f"{entry.dot_agent.kit_id}:{entry.dot_agent.hook_id}"
+        else:
+            # Local hook without kit metadata - show command
+            hook_spec = f"local: {entry.command[:50]}"
         click.echo(f"{hook_spec} [{lifecycle} / {matcher}]", err=False)
 
     click.echo(f"Total: {len(hooks)} hook(s)", err=False)
@@ -92,9 +96,10 @@ def show_hook(hook_spec: str) -> None:
     found = None
 
     for lifecycle, matcher, entry in hooks:
-        if entry.dot_agent.kit_id == kit_id and entry.dot_agent.hook_id == hook_id:
-            found = (lifecycle, matcher, entry)
-            break
+        if entry.dot_agent:
+            if entry.dot_agent.kit_id == kit_id and entry.dot_agent.hook_id == hook_id:
+                found = (lifecycle, matcher, entry)
+                break
 
     if not found:
         click.echo(f"Error: Hook '{hook_spec}' not found.", err=True)

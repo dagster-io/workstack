@@ -58,6 +58,7 @@ def test_install_hooks_basic(tmp_project: Path) -> None:
     hook_entry = lifecycle_hooks[0].hooks[0]
     assert hook_entry.command == 'python3 "$CLAUDE_PROJECT_DIR/.claude/hooks/test-kit/hook.py"'
     assert hook_entry.timeout == 30
+    assert hook_entry.dot_agent is not None
     assert hook_entry.dot_agent.kit_id == "test-kit"
     assert hook_entry.dot_agent.hook_id == "test-hook"
 
@@ -181,7 +182,9 @@ def test_install_hooks_missing_script(tmp_project: Path) -> None:
     lifecycle_hooks = settings.hooks["UserPromptSubmit"]
     assert len(lifecycle_hooks) == 1
     assert len(lifecycle_hooks[0].hooks) == 1
-    assert lifecycle_hooks[0].hooks[0].dot_agent.hook_id == "exists"
+    hook_entry = lifecycle_hooks[0].hooks[0]
+    assert hook_entry.dot_agent is not None
+    assert hook_entry.dot_agent.hook_id == "exists"
 
 
 def test_install_hooks_replaces_existing(tmp_project: Path) -> None:
@@ -232,13 +235,16 @@ def test_install_hooks_replaces_existing(tmp_project: Path) -> None:
         # Should not have our kit's hooks
         for group in settings.hooks["UserPromptSubmit"]:
             for hook in group.hooks:
+                assert hook.dot_agent is not None
                 assert hook.dot_agent.kit_id != "test-kit"
 
     # New lifecycle should have the hook
     assert "PostToolUse" in settings.hooks
     result_hooks = settings.hooks["PostToolUse"]
     assert len(result_hooks) == 1
-    assert result_hooks[0].hooks[0].dot_agent.hook_id == "new"
+    hook_entry = result_hooks[0].hooks[0]
+    assert hook_entry.dot_agent is not None
+    assert hook_entry.dot_agent.hook_id == "new"
 
 
 def test_install_hooks_empty_list(tmp_project: Path) -> None:
@@ -268,6 +274,7 @@ def test_install_hooks_empty_list(tmp_project: Path) -> None:
             for lifecycle_groups in settings.hooks.values():
                 for group in lifecycle_groups:
                     for hook in group.hooks:
+                        assert hook.dot_agent is not None
                         assert hook.dot_agent.kit_id != "empty-kit"
 
 
@@ -367,6 +374,7 @@ def test_remove_hooks_basic(tmp_project: Path) -> None:
     if settings.hooks is not None and "UserPromptSubmit" in settings.hooks:
         for group in settings.hooks["UserPromptSubmit"]:
             for hook_entry in group.hooks:
+                assert hook_entry.dot_agent is not None
                 assert hook_entry.dot_agent.kit_id != "test-kit"
 
 
@@ -417,10 +425,16 @@ def test_remove_hooks_preserves_other_kits(tmp_project: Path) -> None:
 
     # Count hooks from each kit
     kit_a_count = sum(
-        1 for group in lifecycle_hooks for hook in group.hooks if hook.dot_agent.kit_id == "kit-a"
+        1
+        for group in lifecycle_hooks
+        for hook in group.hooks
+        if hook.dot_agent and hook.dot_agent.kit_id == "kit-a"
     )
     kit_b_count = sum(
-        1 for group in lifecycle_hooks for hook in group.hooks if hook.dot_agent.kit_id == "kit-b"
+        1
+        for group in lifecycle_hooks
+        for hook in group.hooks
+        if hook.dot_agent and hook.dot_agent.kit_id == "kit-b"
     )
 
     assert kit_a_count == 0
@@ -442,6 +456,7 @@ def test_remove_hooks_nonexistent_kit(tmp_project: Path) -> None:
             for lifecycle_groups in settings.hooks.values():
                 for group in lifecycle_groups:
                     for hook in group.hooks:
+                        assert hook.dot_agent is not None
                         assert hook.dot_agent.kit_id != "nonexistent-kit"
 
 
@@ -498,6 +513,7 @@ def test_hook_entry_metadata_roundtrip(tmp_project: Path) -> None:
     assert settings.hooks is not None
 
     hook_entry = settings.hooks["UserPromptSubmit"][0].hooks[0]
+    assert hook_entry.dot_agent is not None
     assert hook_entry.dot_agent.kit_id == "metadata-kit"
     assert hook_entry.dot_agent.hook_id == "metadata-test"
 
@@ -509,6 +525,7 @@ def test_hook_entry_metadata_roundtrip(tmp_project: Path) -> None:
 
     assert reloaded_settings.hooks is not None
     reloaded_entry = reloaded_settings.hooks["UserPromptSubmit"][0].hooks[0]
+    assert reloaded_entry.dot_agent is not None
     assert reloaded_entry.dot_agent.kit_id == "metadata-kit"
     assert reloaded_entry.dot_agent.hook_id == "metadata-test"
 
@@ -555,6 +572,7 @@ def test_install_hook_without_matcher(tmp_project: Path) -> None:
     assert len(lifecycle_hooks[0].hooks) == 1
 
     hook_entry = lifecycle_hooks[0].hooks[0]
+    assert hook_entry.dot_agent is not None
     assert hook_entry.dot_agent.kit_id == "test-kit"
     assert hook_entry.dot_agent.hook_id == "test-hook"
 

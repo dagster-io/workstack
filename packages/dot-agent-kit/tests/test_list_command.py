@@ -136,6 +136,43 @@ def test_list_agents(capsys: CaptureFixture[str]) -> None:
     assert "agents/spec-creator.md" in captured.out
 
 
+def test_list_hooks(capsys: CaptureFixture[str]) -> None:
+    """Test list command displays hooks properly."""
+    config = create_default_config()
+    project_dir = Path("/tmp/test-project")
+    repository = FakeArtifactRepository()
+
+    repository.set_artifacts(
+        [
+            InstalledArtifact(
+                artifact_type="hook",
+                artifact_name="devrun:suggest-dignified-python",
+                file_path=Path("hooks/devrun/suggest-dignified-python.py"),
+                source=ArtifactSource.MANAGED,
+                kit_id="devrun",
+                kit_version="0.1.0",
+            ),
+            InstalledArtifact(
+                artifact_type="hook",
+                artifact_name="custom-kit:my-hook",
+                file_path=Path("hooks/custom-kit/my-hook.sh"),
+                source=ArtifactSource.LOCAL,
+            ),
+        ]
+    )
+
+    _list_artifacts(config, project_dir, repository)
+
+    captured = capsys.readouterr()
+    assert "Hooks:" in captured.out
+    assert "devrun:suggest-dignified-python" in captured.out
+    assert "[devrun@0.1.0]" in captured.out
+    assert "hooks/devrun/suggest-dignified-python.py" in captured.out
+    assert "custom-kit:my-hook" in captured.out
+    assert "[local]" in captured.out
+    assert "hooks/custom-kit/my-hook.sh" in captured.out
+
+
 def test_list_mixed_artifacts(capsys: CaptureFixture[str]) -> None:
     """Test list command with mixed artifact types and sources."""
     config = ProjectConfig(
@@ -194,6 +231,12 @@ def test_list_mixed_artifacts(capsys: CaptureFixture[str]) -> None:
                 file_path=Path("commands/codex-review.md"),
                 source=ArtifactSource.LOCAL,
             ),
+            InstalledArtifact(
+                artifact_type="hook",
+                artifact_name="test-kit:test-hook",
+                file_path=Path("hooks/test-kit/test-hook.py"),
+                source=ArtifactSource.LOCAL,
+            ),
         ]
     )
 
@@ -216,6 +259,10 @@ def test_list_mixed_artifacts(capsys: CaptureFixture[str]) -> None:
     # Check agents section
     assert "Agents:" in captured.out
     assert "runner" in captured.out
+
+    # Check hooks section
+    assert "Hooks:" in captured.out
+    assert "test-kit:test-hook" in captured.out
 
 
 def test_list_column_alignment(capsys: CaptureFixture[str]) -> None:

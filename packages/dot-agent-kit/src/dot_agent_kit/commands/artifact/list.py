@@ -162,6 +162,7 @@ def _list_artifacts(
     skills: list[InstalledArtifact] = []
     commands: list[InstalledArtifact] = []
     agents: list[InstalledArtifact] = []
+    hooks: list[InstalledArtifact] = []
 
     for artifact in artifacts:
         if artifact.artifact_type == "skill":
@@ -170,6 +171,8 @@ def _list_artifacts(
             commands.append(artifact)
         elif artifact.artifact_type == "agent":
             agents.append(artifact)
+        elif artifact.artifact_type == "hook":
+            hooks.append(artifact)
 
     # Create display data only for skills
     skills_data: list[ArtifactDisplayData] = []
@@ -203,8 +206,8 @@ def _list_artifacts(
         max_folder_len = max(max_folder_len, len(data.folder_path))
         max_counts_len = max(max_counts_len, len(data.file_counts))
 
-    # Calculate widths for commands and agents (file paths)
-    for artifact in commands + agents:
+    # Calculate widths for commands, agents, and hooks (file paths)
+    for artifact in commands + agents + hooks:
         max_path_len = max(max_path_len, len(str(artifact.file_path)))
 
     # Ensure minimum widths
@@ -240,6 +243,16 @@ def _list_artifacts(
             name = agent.artifact_name.ljust(max_name_len)
             source = _format_source(agent)
             file_path = str(agent.file_path).ljust(max_path_len)
+            click.echo(f"  {name} {source.ljust(20)} {file_path}")
+        click.echo()
+
+    # Display hooks
+    if hooks:
+        click.echo("Hooks:")
+        for hook in sorted(hooks, key=lambda a: a.artifact_name):
+            name = hook.artifact_name.ljust(max_name_len)
+            source = _format_source(hook)
+            file_path = str(hook.file_path).ljust(max_path_len)
             click.echo(f"  {name} {source.ljust(20)} {file_path}")
 
 

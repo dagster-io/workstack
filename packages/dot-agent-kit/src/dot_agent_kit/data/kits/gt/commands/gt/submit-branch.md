@@ -13,7 +13,8 @@ Automatically create a git commit with a helpful summary message and submit the 
 2. **Squash commits**: Run `gt squash` to combine all commits in the current branch
 3. **Analyze and update message**: Use git-diff-summarizer agent to analyze all changes and create a comprehensive commit message
 4. **Submit branch**: Run `gt submit --publish` to create/update PR for the current branch
-5. **Report results**: Show the submitted PRs and their URLs
+5. **Update PR metadata**: If PR already exists, sync PR title and body with the new commit message
+6. **Report results**: Show the submitted PRs and their URLs
 
 ## Usage
 
@@ -171,7 +172,47 @@ Flags explained:
 
 **Rationale**: Branch divergence requires user decision about how to resolve (sync, force push, or manual merge). The command should not make this decision automatically
 
-### 5. Show Results
+### 5. Update PR Body and Title (If PR Already Exists)
+
+After `gt submit` completes, check if a PR already exists and update its body and title to match the new commit message:
+
+**Step 5a: Check if PR exists for current branch**
+
+```bash
+gh pr view --json number,title,url
+```
+
+If the command succeeds (exit code 0), a PR exists for this branch.
+
+**Step 5b: Extract title and body from commit message**
+
+Parse the commit message created in Step 3:
+
+- **Title**: First line of the commit message (the brief summary)
+- **Body**: Everything after the first line (including the separator and detailed analysis)
+
+**Step 5c: Update PR title and body**
+
+Use the `gh` CLI to update the PR:
+
+```bash
+gh pr edit --title "$(cat <<'EOF'
+[First line of commit message]
+EOF
+)" --body "$(cat <<'EOF'
+[Everything after first line of commit message]
+EOF
+)"
+```
+
+**Important:**
+
+- Use HEREDOC to preserve formatting in both title and body
+- The PR body should include the separator line and full detailed analysis
+- If `gh pr view` fails (no PR exists), skip this step - the PR will be created by `gt submit`
+- If `gh pr edit` fails, report the error but don't fail the entire command
+
+### 6. Show Results
 
 After submission, provide a clear summary using bullet list formatting:
 
@@ -235,10 +276,14 @@ Analyzing changes with git-diff-summarizer...
 ✓ Updating commit message with full analysis
 
 Submitting branch...
+✓ Branch submitted
+
+Updating PR metadata...
+✓ PR #123 title and body updated to match commit message
 
 ## ✅ Branch Submitted Successfully
 
-- **PR Created**: #123
+- **PR Updated**: #123
 - **URL**: https://github.com/owner/repo/pull/123
 - **Branch**: gt-tree-format
 ```

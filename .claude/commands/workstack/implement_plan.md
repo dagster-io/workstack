@@ -156,14 +156,31 @@ After all phases are complete:
 3. Note any deviations from the plan (with justification)
 4. Provide summary of changes
 
-### Step 8: Output Format
+### Step 8: Run CI Checks
+
+After implementing the plan, verify all code quality checks pass:
+
+1. Run the `/ensure-ci` slash command to execute all CI checks
+2. The command will iteratively fix any issues until all checks pass
+3. This ensures the implementation meets code quality standards
+
+If CI checks reveal issues with the implementation:
+
+- Fix them as part of the implementation process
+- Update todo list to track CI-related fixes
+- Only proceed once all checks pass
+
+**Note**: This step creates a hard dependency on the `/ensure-ci` command, which is specific to the current repository. When this command is packaged as a proper kit for distribution, this approach will need to be reassessed to work with arbitrary projects that may have different CI tooling.
+
+### Step 9: Output Format
 
 Structure your output clearly:
 
 - **Start**: "Executing implementation plan from .PLAN.md"
 - **Each phase**: "Phase X: [brief description]" with code changes
 - **Progress updates**: Regular status reports
-- **End**: "Plan execution complete. [Summary of what was implemented]"
+- **CI verification**: "Running CI checks to verify implementation"
+- **End**: "Plan execution complete. All CI checks passed. [Summary of what was implemented]"
 
 ## Requesting Clarification
 

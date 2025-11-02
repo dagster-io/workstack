@@ -206,7 +206,7 @@ class TestInstallCommandWithHooks:
             cli_runner,
             project_dir,
             install,
-            [str(kit_root), "--project"],
+            [str(kit_root)],
         )
 
         # Verify success
@@ -268,7 +268,7 @@ class TestInstallCommandWithHooks:
             cli_runner,
             project_dir,
             install,
-            [str(kit_root), "--project"],
+            [str(kit_root)],
         )
 
         # Verify
@@ -296,7 +296,7 @@ class TestInstallCommandWithHooks:
             cli_runner,
             project_dir,
             install,
-            [str(kit_root), "--project"],
+            [str(kit_root)],
         )
 
         # Verify
@@ -322,15 +322,15 @@ class TestInstallCommandWithHooks:
         hook = create_simple_hook(hook_id="proj-hook")
         kit_root = create_kit_with_hooks(kits_dir, "project-only-kit", hooks=[hook])
 
-        # Install with --project (hooks should be installed)
+        # Install kit (hooks should be installed)
         result = invoke_in_project(
             cli_runner,
             project_dir,
             install,
-            [str(kit_root), "--project"],
+            [str(kit_root)],
         )
 
-        # Should have hooks for project install
+        # Should have hooks installed
         assert result.exit_code == 0
         assert "✓ Installed" in result.output
         assert "Installed 1 hook(s)" in result.output
@@ -352,7 +352,7 @@ class TestInstallCommandWithHooks:
             cli_runner,
             project_dir,
             install,
-            [str(kit_root), "--project"],
+            [str(kit_root)],
         )
 
         # Verify
@@ -386,7 +386,7 @@ class TestInstallCommandWithHooks:
             cli_runner,
             project_dir,
             install,
-            [str(kit_root_v1), "--project"],
+            [str(kit_root_v1)],
         )
         assert result.exit_code == 0
         assert "Installed 2 hook(s)" in result.output
@@ -405,7 +405,7 @@ class TestInstallCommandWithHooks:
             cli_runner,
             project_dir,
             install,
-            [str(kit_root_v2), "--project", "--force"],
+            [str(kit_root_v2), "--force"],
         )
         assert result.exit_code == 0
         assert "Installed 3 hook(s)" in result.output
@@ -454,7 +454,7 @@ class TestInstallCommandWithHooks:
             cli_runner,
             project_dir,
             install,
-            [str(kit_root), "--project"],
+            [str(kit_root)],
         )
 
         # Verify
@@ -494,7 +494,7 @@ class TestInstallCommandWithHooks:
             cli_runner,
             project_dir,
             install,
-            [str(kit_root), "--project"],
+            [str(kit_root)],
         )
 
         # Should succeed
@@ -531,7 +531,7 @@ class TestInstallCommandWithHooks:
             cli_runner,
             project_dir,
             install,
-            [str(kit_a_root), "--project"],
+            [str(kit_a_root)],
         )
         assert result.exit_code == 0, f"kit-a install failed: {result.output}"
 
@@ -574,7 +574,7 @@ class TestInstallCommandWithHooks:
             cli_runner,
             project_dir,
             install,
-            [str(kit_b_dir), "--project"],
+            [str(kit_b_dir)],
         )
         assert result.exit_code == 0, f"kit-b install failed: {result.output}"
 
@@ -602,7 +602,7 @@ class TestRemoveCommandWithHooks:
             cli_runner,
             project_dir,
             install,
-            [str(kit_root), "--project"],
+            [str(kit_root)],
         )
         assert result.exit_code == 0
 
@@ -614,7 +614,7 @@ class TestRemoveCommandWithHooks:
             cli_runner,
             project_dir,
             remove,
-            ["remove-kit", "--project"],
+            ["remove-kit"],
         )
 
         # Verify success
@@ -640,7 +640,7 @@ class TestRemoveCommandWithHooks:
             cli_runner,
             project_dir,
             install,
-            [str(kit_root), "--project"],
+            [str(kit_root)],
         )
         assert result.exit_code == 0
 
@@ -649,7 +649,7 @@ class TestRemoveCommandWithHooks:
             cli_runner,
             project_dir,
             remove,
-            ["no-hooks-remove-kit", "--project"],
+            ["no-hooks-remove-kit"],
         )
 
         # Verify
@@ -677,7 +677,7 @@ class TestRemoveCommandWithHooks:
             cli_runner,
             project_dir,
             install,
-            [str(kit_root), "--project"],
+            [str(kit_root)],
         )
         assert result.exit_code == 0
         assert "Installed 1 hook(s)" in result.output
@@ -687,7 +687,7 @@ class TestRemoveCommandWithHooks:
             cli_runner,
             project_dir,
             remove,
-            ["proj-kit", "--project"],
+            ["proj-kit"],
         )
 
         # Should succeed with hooks message
@@ -713,7 +713,7 @@ class TestRemoveCommandWithHooks:
             cli_runner,
             project_dir,
             install,
-            [str(kit_a_root), "--project"],
+            [str(kit_a_root)],
         )
         assert result.exit_code == 0
 
@@ -721,7 +721,7 @@ class TestRemoveCommandWithHooks:
             cli_runner,
             project_dir,
             install,
-            [str(kit_b_root), "--project"],
+            [str(kit_b_root)],
         )
         assert result.exit_code == 0
 
@@ -734,7 +734,7 @@ class TestRemoveCommandWithHooks:
             cli_runner,
             project_dir,
             remove,
-            ["remove-kit", "--project"],
+            ["remove-kit"],
         )
         assert result.exit_code == 0
         assert "Removed 1 hook(s)" in result.output
@@ -763,7 +763,7 @@ class TestRemoveCommandWithHooks:
             cli_runner,
             project_dir,
             install,
-            [str(kit_root), "--project"],
+            [str(kit_root)],
         )
         assert result.exit_code == 0
 
@@ -778,7 +778,7 @@ class TestRemoveCommandWithHooks:
             cli_runner,
             project_dir,
             remove,
-            ["manual-kit", "--project"],
+            ["manual-kit"],
         )
 
         # Should succeed without error

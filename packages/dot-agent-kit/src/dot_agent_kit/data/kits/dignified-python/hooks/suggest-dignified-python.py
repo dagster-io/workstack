@@ -12,8 +12,8 @@ import sys
 
 def main():
     try:
-        # Read JSON input from stdin
-        data = json.load(sys.stdin)
+        # Read JSON input from stdin (not used, but validates format)
+        json.load(sys.stdin)
 
         # Always output suggestion (runs on every prompt)
         print("Load the dignified-python skill to abide by Python standards")

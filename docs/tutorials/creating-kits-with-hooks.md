@@ -78,11 +78,11 @@ artifacts: # Artifact declarations
 
 hooks: # Hook definitions (optional)
   - id: hook-identifier # Unique hook ID
-    lifecycle: tool-call # When to trigger
-    matcher: "**/*.py" # File pattern to match
+    lifecycle: PreToolUse # When to trigger (must be valid Claude Code lifecycle)
+    matcher: "**/*.py" # File pattern to match (optional, see notes below)
     script: hooks/script.py # Path to hook script
     description: What it does # Human-readable description
-    timeout: 30 # Execution timeout (seconds)
+    timeout: 30 # Execution timeout (seconds, defaults to 30)
 ```
 
 ### Artifact Types
@@ -130,10 +130,9 @@ artifacts:
 
 hooks:
   - id: suggest-dignified-python
-    lifecycle: tool-call
-    matcher: "**/*.py"
+    lifecycle: UserPromptSubmit
     script: hooks/suggest-dignified-python.py
-    description: Suggests loading dignified-python skill when editing Python files
+    description: Suggests loading dignified-python skill on every prompt
     timeout: 30
 ```
 
@@ -157,7 +156,8 @@ Create `hooks/suggest-dignified-python.py`:
 """
 Dignified Python Skill Suggestion Hook
 
-Suggests loading the dignified-python skill when editing Python files.
+Injects dignified-python skill suggestion on every user prompt.
+This ensures Claude always has access to Python coding standards.
 """
 
 import json
@@ -169,28 +169,15 @@ def main():
         # Read JSON input from stdin
         data = json.load(sys.stdin)
 
-        # Extract tool information
-        tool_name = data.get("tool_name", "")
-        tool_input = data.get("tool_input", {})
-        file_path = tool_input.get("file_path", "")
-
-        # Only trigger for Edit/Write operations on Python files
-        if not (file_path.endswith(".py") and tool_name in ["Edit", "Write"]):
-            sys.exit(0)
-
-        # Skip test files
-        skip_patterns = ["test_", "_test.py", "conftest.py", "/tests/", "/migrations/"]
-        if any(pattern in file_path.lower() for pattern in skip_patterns):
-            sys.exit(0)
-
-        # Output suggestion
+        # Always output suggestion (runs on every prompt)
         print("Load the dignified-python skill to abide by Python standards")
 
-        # Exit 0 to allow operation (non-blocking)
+        # Exit 0 to allow prompt to proceed
+        # For prompt-submit lifecycle, stdout is injected as context for Claude
         sys.exit(0)
 
     except Exception as e:
-        # Don't block workflow on errors
+        # Print error for debugging but don't block workflow
         print(f"dignified-python hook error: {e}", file=sys.stderr)
         sys.exit(0)
 
@@ -223,11 +210,24 @@ packages/dot-agent-kit/src/dot_agent_kit/data/kits/dignified-python
 
 ### Lifecycle Types
 
-Hooks can trigger at different points in the workflow:
+Hooks use Claude Code's official lifecycle event names. The `lifecycle` field **must** be one of these exact values:
 
-#### `tool-call`
+| Lifecycle Event      | When it triggers                             | Matcher used?                                 |
+| -------------------- | -------------------------------------------- | --------------------------------------------- |
+| `PreToolUse`         | Before each tool executes                    | Yes - tool names or file patterns             |
+| `PostToolUse`        | After each tool completes                    | Yes - tool names or file patterns             |
+| `PostCustomToolCall` | After MCP tool completes, before PostToolUse | Yes - MCP tool names                          |
+| `UserPromptSubmit`   | When user submits a prompt                   | No - runs on all prompts                      |
+| `Notification`       | When Claude sends a notification             | No                                            |
+| `Stop`               | When main agent finishes                     | No                                            |
+| `SubagentStop`       | When subagent (Task tool) finishes           | No                                            |
+| `PreCompact`         | Before context compaction                    | Yes - `manual` or `auto`                      |
+| `SessionStart`       | When session starts/resumes                  | Yes - `startup`, `resume`, `clear`, `compact` |
+| `SessionEnd`         | When session ends                            | No                                            |
 
-Executes before each tool call (Edit, Write, Bash, etc.). Receives:
+#### Common Lifecycles
+
+**`PreToolUse`** - Executes before each tool call (Edit, Write, Bash, etc.):
 
 ```json
 {
@@ -240,29 +240,21 @@ Executes before each tool call (Edit, Write, Bash, etc.). Receives:
 }
 ```
 
-**Use cases:**
+**Use cases:** Context-aware skill suggestions, pre-operation validation, file-specific guidance
 
-- Context-aware skill suggestions
-- Pre-operation validation
-- File-specific guidance
-
-#### `user-prompt-submit`
-
-Executes when user submits a message. Receives:
+**`UserPromptSubmit`** - Executes when user submits a message:
 
 ```json
 {
-  "message": "User's message content"
+  "prompt": "User's message content"
 }
 ```
 
-**Use cases:**
-
-- Workflow reminders
-- Context loading suggestions
-- Policy enforcement
+**Use cases:** Workflow reminders, context loading suggestions, policy enforcement
 
 ### Matcher Patterns
+
+The `matcher` field is **optional** in kit.yaml. When omitted, it defaults to `"*"` (wildcard).
 
 Matchers filter when hooks execute:
 
@@ -272,16 +264,20 @@ Matchers filter when hooks execute:
 | `src/**/*.ts` | TypeScript in src   | `src/utils/helper.ts`              |
 | `Edit\|Write` | Specific tools      | Only Edit and Write operations     |
 | `*.{js,jsx}`  | Multiple extensions | JavaScript and JSX files           |
+| `*`           | Match everything    | Wildcard (default if omitted)      |
 
-**For `tool-call` lifecycle:**
+**For tool-based lifecycles (`PreToolUse`, `PostToolUse`):**
 
 - File patterns match against `tool_input.file_path`
 - Tool patterns match against `tool_name`
-- Combine with `\|` for multiple values
+- Combine with `\|` for multiple values (e.g., `Edit|Write`)
+- Matcher field is useful for filtering by file type or tool
 
-**For `user-prompt-submit` lifecycle:**
+**For prompt-based lifecycles (`UserPromptSubmit`, `Notification`, `Stop`, etc.):**
 
-- Matchers are not currently supported (executes on all prompts)
+- Matchers are not used by Claude Code
+- You should omit the `matcher` field for these hooks
+- If included, it defaults to wildcard `*` and is stored but not evaluated
 
 ### Script Requirements
 
@@ -619,10 +615,10 @@ artifacts:
 # Hook definitions (optional)
 hooks:
   - id: suggest-dignified-python # Unique hook identifier
-    lifecycle: tool-call # Trigger point (tool-call or user-prompt-submit)
-    matcher: "**/*.py" # Glob pattern for Python files
+    lifecycle: UserPromptSubmit # Trigger point (valid Claude Code lifecycle event)
+    # matcher omitted - not needed for UserPromptSubmit lifecycle
     script: hooks/suggest-dignified-python.py # Path relative to kit directory
-    description: Suggests loading dignified-python skill when editing Python files
+    description: Suggests loading dignified-python skill on every prompt
     timeout: 30 # Maximum execution time in seconds
 ```
 
@@ -632,10 +628,10 @@ See Step 4 above for the full, annotated `suggest-dignified-python.py` implement
 
 ### Key Design Decisions
 
-1. **Lifecycle: `tool-call`** - Triggers before Edit/Write operations, allowing contextual suggestions
-2. **Matcher: `**/\*.py`\*\* - Broad pattern with in-script filtering for flexibility
+1. **Lifecycle: `UserPromptSubmit`** - Triggers on every user prompt, ensuring coding standards are always available
+2. **No Matcher** - Not needed for UserPromptSubmit lifecycle; runs on all prompts
 3. **Non-Blocking: Exit 0** - Always allows operations to proceed, hook is advisory only
-4. **Test Filtering** - Skips test files since they often have different conventions
+4. **Simple Output** - Always suggests loading the skill without complex filtering
 5. **Error Handling** - Catches all exceptions to prevent blocking workflow
 
 ## Advanced Topics
@@ -646,15 +642,19 @@ You can define multiple hooks with different lifecycles and matchers:
 
 ```yaml
 hooks:
+  # Hook without matcher (runs on all prompts)
   - id: suggest-skill
-    lifecycle: tool-call
-    matcher: "**/*.py"
+    lifecycle: UserPromptSubmit
     script: hooks/suggest-skill.py
+    description: Suggests loading skill on every prompt
     timeout: 30
 
-  - id: check-conventions
-    lifecycle: user-prompt-submit
-    script: hooks/check-conventions.py
+  # Hook with matcher (filters by file pattern)
+  - id: python-file-check
+    lifecycle: PreToolUse
+    matcher: "**/*.py"
+    script: hooks/python-check.py
+    description: Runs checks before editing Python files
     timeout: 30
 ```
 

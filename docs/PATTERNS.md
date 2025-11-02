@@ -1,14 +1,14 @@
 # Code Patterns and Examples
 
-**📍 You are here**: [CLAUDE.md](../../CLAUDE.md) → .agent/docs/PATTERNS.md
+**📍 You are here**: [CLAUDE.md](../CLAUDE.md) → docs/PATTERNS.md
 
 **Purpose**: Detailed examples for patterns referenced in CLAUDE.md coding standards.
 
 **Related docs**:
 
-- [CLAUDE.md](../../CLAUDE.md) - Core coding rules
+- [CLAUDE.md](../CLAUDE.md) - Core coding rules
 - [EXCEPTION_HANDLING.md](EXCEPTION_HANDLING.md) - Exception handling guide
-- [README.md](README.md) - Documentation index
+- [GUIDE.md](GUIDE.md) - Documentation index
 
 ---
 
@@ -216,7 +216,7 @@ class FakeMyOps(MyOps):
 
 See also:
 
-- [../../CLAUDE.md](../../CLAUDE.md) - Core rules for dependency injection
+- [../CLAUDE.md](../CLAUDE.md) - Core rules for dependency injection
 
 ---
 
@@ -523,7 +523,7 @@ def process_cmd(config_file: str) -> None:
 **See also**:
 
 - [EXCEPTION_HANDLING.md](EXCEPTION_HANDLING.md) - Complete exception handling guide
-- [CLAUDE.md](../../CLAUDE.md#exception-handling--critical) - Core exception handling rules
+- [CLAUDE.md](../CLAUDE.md#exception-handling--critical) - Core exception handling rules
 
 ---
 
@@ -759,7 +759,7 @@ def switch(ctx: WorkstackContext, name: str) -> None:
 
 See also:
 
-- [../../CLAUDE.md](../../CLAUDE.md) - CLI development rules
+- [../CLAUDE.md](../CLAUDE.md) - CLI development rules
 
 ---
 
@@ -959,7 +959,7 @@ with database_connection("postgresql://...") as conn:
 
 ## Related Documentation
 
-- [CLAUDE.md](../../CLAUDE.md) - Core coding standards
+- [CLAUDE.md](../CLAUDE.md) - Core coding standards
 - [EXCEPTION_HANDLING.md](EXCEPTION_HANDLING.md) - Complete exception handling guide
-- [README.md](README.md) - Documentation index
-- [../../tests/CLAUDE.md](../../tests/CLAUDE.md) - Testing patterns and practices
+- [GUIDE.md](GUIDE.md) - Documentation index
+- [../tests/CLAUDE.md](../tests/CLAUDE.md) - Testing patterns and practices

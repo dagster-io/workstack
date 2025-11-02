@@ -397,24 +397,24 @@ uv run workstack --help
 
 | Need to...             | Read...                    |
 | ---------------------- | -------------------------- |
-| Understand terminology | GLOSSARY.md                |
-| See architecture       | ARCHITECTURE.md            |
-| Learn coding rules     | CLAUDE.md                  |
-| See code patterns      | docs/PATTERNS.md           |
-| Understand exceptions  | docs/EXCEPTION_HANDLING.md |
-| Learn testing          | tests/CLAUDE.md            |
-| Find a feature         | FEATURE_INDEX.md           |
-| Quick reference        | docs/QUICK_REFERENCE.md    |
+| Understand terminology | ../GLOSSARY.md             |
+| See architecture       | ../.agent/ARCHITECTURE.md  |
+| Learn coding rules     | ../CLAUDE.md               |
+| See code patterns      | PATTERNS.md                |
+| Understand exceptions  | EXCEPTION_HANDLING.md      |
+| Learn testing          | ../tests/CLAUDE.md         |
+| Find a feature         | ../.agent/FEATURE_INDEX.md |
+| Quick reference        | QUICK_REFERENCE.md         |
 
 ---
 
 ## 🎓 Learning Path
 
 1. **Start here** → This cheat sheet
-2. **Understand terms** → GLOSSARY.md
-3. **See big picture** → ARCHITECTURE.md
-4. **Learn patterns** → docs/PATTERNS.md
-5. **Deep dive rules** → CLAUDE.md
+2. **Understand terms** → ../GLOSSARY.md
+3. **See big picture** → ../.agent/ARCHITECTURE.md
+4. **Learn patterns** → PATTERNS.md
+5. **Deep dive rules** → ../CLAUDE.md
 
 ---
 

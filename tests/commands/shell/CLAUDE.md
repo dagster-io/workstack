@@ -252,4 +252,4 @@ def test_command_with_shell_wrapper() -> None:
 
 - [../CLAUDE.md](../CLAUDE.md) - General CLI command patterns
 - [../../fakes/fake_shell_ops.py](../../fakes/fake_shell_ops.py) - FakeShellOps implementation
-- [../../.agent/docs/TESTING.md](../../../.agent/docs/TESTING.md) - Complete testing guide
+- [../../docs/TESTING.md](../../../docs/TESTING.md) - Complete testing guide

@@ -146,6 +146,6 @@ ctx = WorkstackContext(shell_ops=shell_ops)
 
 ## See Also
 
-- [../../.agent/docs/TESTING.md#unit-test-pattern](../../.agent/docs/TESTING.md#unit-test-pattern)
+- [../../docs/TESTING.md#unit-test-pattern](../../docs/TESTING.md#unit-test-pattern)
 - [../CLAUDE.md](../CLAUDE.md) - Overview of test structure
 - [../fakes/](../fakes/) - Available fake implementations

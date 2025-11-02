@@ -37,12 +37,12 @@
 
 ## 📚 Quick Reference
 
-| Need help with...     | See documentation                                                      |
-| --------------------- | ---------------------------------------------------------------------- |
-| **Code examples**     | [.agent/docs/PATTERNS.md](.agent/docs/PATTERNS.md)                     |
-| **Exception details** | [.agent/docs/EXCEPTION_HANDLING.md](.agent/docs/EXCEPTION_HANDLING.md) |
-| **Quick lookup**      | [.agent/docs/QUICK_REFERENCE.md](.agent/docs/QUICK_REFERENCE.md)       |
-| **Writing tests**     | [.agent/docs/TESTING.md](.agent/docs/TESTING.md)                       |
+| Need help with...     | See documentation                                        |
+| --------------------- | -------------------------------------------------------- |
+| **Code examples**     | [docs/PATTERNS.md](docs/PATTERNS.md)                     |
+| **Exception details** | [docs/EXCEPTION_HANDLING.md](docs/EXCEPTION_HANDLING.md) |
+| **Quick lookup**      | [docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md)       |
+| **Writing tests**     | [docs/TESTING.md](docs/TESTING.md)                       |
 
 ---
 
@@ -129,7 +129,7 @@ else:
     value = default
 ```
 
-**Full guide**: [.agent/docs/EXCEPTION_HANDLING.md](.agent/docs/EXCEPTION_HANDLING.md)
+**Full guide**: [docs/EXCEPTION_HANDLING.md](docs/EXCEPTION_HANDLING.md)
 
 ### 2. Type Annotations 🔴 MUST
 
@@ -218,7 +218,7 @@ class MyOps(ABC):  # ✅ Not Protocol
 2. Third-party APIs that force exception handling
 3. Adding context before re-raising
 
-**See**: [.agent/docs/EXCEPTION_HANDLING.md](.agent/docs/EXCEPTION_HANDLING.md)
+**See**: [docs/EXCEPTION_HANDLING.md](docs/EXCEPTION_HANDLING.md)
 
 ### File Operations
 
@@ -275,7 +275,7 @@ def test_new_feature_im_building_today():
     assert result == expected_value
 ```
 
-**See**: [.agent/docs/TESTING.md](.agent/docs/TESTING.md) for comprehensive testing guidance.
+**See**: [docs/TESTING.md](docs/TESTING.md) for comprehensive testing guidance.
 
 ### Planning and Documentation
 
@@ -319,9 +319,9 @@ Time-based estimates have no basis in reality for AI-assisted development and sh
 ## Related Documentation
 
 - [.agent/AGENTIC_PROGRAMMING.md](.agent/AGENTIC_PROGRAMMING.md) - Agentic programming patterns and best practices
-- [.agent/docs/PATTERNS.md](.agent/docs/PATTERNS.md) - Code examples
-- [.agent/docs/EXCEPTION_HANDLING.md](.agent/docs/EXCEPTION_HANDLING.md) - Exception guide
-- [.agent/docs/QUICK_REFERENCE.md](.agent/docs/QUICK_REFERENCE.md) - Quick lookup
+- [docs/PATTERNS.md](docs/PATTERNS.md) - Code examples
+- [docs/EXCEPTION_HANDLING.md](docs/EXCEPTION_HANDLING.md) - Exception guide
+- [docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md) - Quick lookup
 - [tests/CLAUDE.md](tests/CLAUDE.md) - Testing patterns
 - [README.md](README.md) - Project overview
 

@@ -477,7 +477,7 @@ Core documentation for contributors:
 
 - **[CLAUDE.md](CLAUDE.md)** - Coding standards and conventions (required reading)
 - **[tests/CLAUDE.md](tests/CLAUDE.md)** - Testing patterns and practices
-- **[.agent/docs/PUBLISHING.md](.agent/docs/PUBLISHING.md)** - Publishing to PyPI guide
+- **[docs/PUBLISHING.md](docs/PUBLISHING.md)** - Publishing to PyPI guide
 
 #### Workspace Structure
 
@@ -502,11 +502,11 @@ Comprehensive, agent-optimized documentation is available in the `.agent/` direc
 
 - **[Architecture](.agent/ARCHITECTURE.md)** - System design, patterns, and component relationships
 - **[Feature Index](.agent/FEATURE_INDEX.md)** - Complete feature catalog with implementation locations
-- **[Glossary](.agent/GLOSSARY.md)** - Terminology and concept definitions
+- **[Glossary](GLOSSARY.md)** - Terminology and concept definitions
 - **[Module Map](.agent/docs/MODULE_MAP.md)** - Module structure and exports
-- **[Coding Patterns](.agent/docs/PATTERNS.md)** - Detailed implementation patterns with examples
-- **[Exception Handling](.agent/docs/EXCEPTION_HANDLING.md)** - Complete exception handling guide
-- **[workstack-dev CLI](.agent/WORKSTACK_DEV.md)** - Development CLI architecture and design
+- **[Coding Patterns](docs/PATTERNS.md)** - Detailed implementation patterns with examples
+- **[Exception Handling](docs/EXCEPTION_HANDLING.md)** - Complete exception handling guide
+- **[workstack-dev CLI](docs/WORKSTACK_DEV.md)** - Development CLI architecture and design
 
 See [`.agent/README.md`](.agent/README.md) for more details.
 

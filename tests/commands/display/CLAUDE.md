@@ -213,4 +213,4 @@ assert result1.output == result2.output
 
 - [../CLAUDE.md](../CLAUDE.md) - General CLI command patterns
 - [list/CLAUDE.md](list/CLAUDE.md) - List command specific patterns
-- [../../.agent/docs/TESTING.md](../../../.agent/docs/TESTING.md) - Complete testing guide
+- [../../docs/TESTING.md](../../../docs/TESTING.md) - Complete testing guide

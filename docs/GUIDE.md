@@ -10,12 +10,12 @@ Choose your starting point based on your task:
 
 | Your Task                           | Start Here                                                                |
 | ----------------------------------- | ------------------------------------------------------------------------- |
-| **First time working on workstack** | [../../CLAUDE.md](../../CLAUDE.md) - Core coding standards                |
+| **First time working on workstack** | [../CLAUDE.md](../CLAUDE.md) - Core coding standards                      |
 | **Need code examples**              | [PATTERNS.md](PATTERNS.md) - Code patterns and examples                   |
 | **Working with exceptions**         | [EXCEPTION_HANDLING.md](EXCEPTION_HANDLING.md) - Exception handling guide |
-| **Writing tests**                   | [../../tests/CLAUDE.md](../../tests/CLAUDE.md) - Testing patterns         |
+| **Writing tests**                   | [../tests/CLAUDE.md](../tests/CLAUDE.md) - Testing patterns               |
 | **Publishing to PyPI**              | [PUBLISHING.md](PUBLISHING.md) - Publishing guide                         |
-| **Project overview**                | [../../README.md](../../README.md) - Getting started                      |
+| **Project overview**                | [../README.md](../README.md) - Getting started                            |
 
 ---
 
@@ -23,7 +23,7 @@ Choose your starting point based on your task:
 
 ### 📋 Core Standards (Start here)
 
-**[../../CLAUDE.md](../../CLAUDE.md)** - Coding standards and rules
+**[../CLAUDE.md](../CLAUDE.md)** - Coding standards and rules
 
 - Core rules (type annotations, imports, exception handling, etc.)
 - Quick reference table to all other docs
@@ -57,7 +57,7 @@ Choose your starting point based on your task:
 
 ### 🧪 Testing
 
-**[../../tests/CLAUDE.md](../../tests/CLAUDE.md)** - Testing patterns and practices
+**[../tests/CLAUDE.md](../tests/CLAUDE.md)** - Testing patterns and practices
 
 - Unit tests with fakes
 - Integration tests with real implementations
@@ -73,7 +73,7 @@ Choose your starting point based on your task:
 ├─ README.md ................... Project overview
 │
 📂 docs/ (You are here)
-├─ README.md ................... This file - documentation index
+├─ GUIDE.md .................... This file - documentation index
 ├─ PATTERNS.md ................. Code examples and patterns
 └─ EXCEPTION_HANDLING.md ....... Complete exception guide
 │
@@ -90,15 +90,15 @@ Choose your starting point based on your task:
 **1. First-time contributor:**
 
 ```
-CLAUDE.md (core rules)
+../CLAUDE.md (core rules)
   └─> PATTERNS.md (see examples)
-      └─> tests/CLAUDE.md (learn testing)
+      └─> ../tests/CLAUDE.md (learn testing)
 ```
 
 **2. Working with exceptions:**
 
 ```
-CLAUDE.md#exception-handling (rules)
+../CLAUDE.md#exception-handling (rules)
   └─> EXCEPTION_HANDLING.md (complete guide)
       └─> PATTERNS.md (related examples)
 ```
@@ -106,7 +106,7 @@ CLAUDE.md#exception-handling (rules)
 **3. Understanding a pattern:**
 
 ```
-CLAUDE.md (read rule)
+../CLAUDE.md (read rule)
   └─> PATTERNS.md#specific-pattern (see example)
 ```
 
@@ -116,23 +116,23 @@ CLAUDE.md (read rule)
 
 ### Most Referenced Documents
 
-1. [../../CLAUDE.md](../../CLAUDE.md) - Core standards (read first!)
+1. [../CLAUDE.md](../CLAUDE.md) - Core standards (read first!)
 2. [PATTERNS.md](PATTERNS.md) - Code examples
 3. [EXCEPTION_HANDLING.md](EXCEPTION_HANDLING.md) - Exception guide
-4. [../../tests/CLAUDE.md](../../tests/CLAUDE.md) - Testing guide
+4. [../tests/CLAUDE.md](../tests/CLAUDE.md) - Testing guide
 5. [PUBLISHING.md](PUBLISHING.md) - Publishing to PyPI
 
 ### By Topic
 
 **Writing code:**
 
-- [../../CLAUDE.md](../../CLAUDE.md) - Coding standards
+- [../CLAUDE.md](../CLAUDE.md) - Coding standards
 - [PATTERNS.md](PATTERNS.md) - Examples
 - [EXCEPTION_HANDLING.md](EXCEPTION_HANDLING.md) - Exception rules
 
 **Testing:**
 
-- [../../tests/CLAUDE.md](../../tests/CLAUDE.md) - Testing patterns
+- [../tests/CLAUDE.md](../tests/CLAUDE.md) - Testing patterns
 
 **Publishing:**
 
@@ -181,8 +181,8 @@ If you can't find what you need:
 
 1. Check [PATTERNS.md](PATTERNS.md) for code examples
 2. Check [EXCEPTION_HANDLING.md](EXCEPTION_HANDLING.md) for exception handling details
-3. Check [../../tests/CLAUDE.md](../../tests/CLAUDE.md) for testing guidance
-4. Read [../../CLAUDE.md](../../CLAUDE.md) for core rules
+3. Check [../tests/CLAUDE.md](../tests/CLAUDE.md) for testing guidance
+4. Read [../CLAUDE.md](../CLAUDE.md) for core rules
 
 Still stuck? The documentation may need improvement - consider opening an issue or PR.
 
@@ -196,7 +196,7 @@ These documents have been planned but not yet implemented:
 - **guides/ADDING_AN_OPS_INTERFACE.md** - Step-by-step ops interface guide
 - **COMMON_TASKS.md** - FAQ and common tasks
 
-Note: ARCHITECTURE.md, GLOSSARY.md, and FEATURE_INDEX.md now exist in the `.agent/` directory.
+Note: ARCHITECTURE.md and FEATURE_INDEX.md now exist in the `.agent/` directory, and GLOSSARY.md is at the root level.
 
 ---
 

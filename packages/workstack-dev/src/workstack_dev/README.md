@@ -4,7 +4,7 @@ A general-purpose CLI for development tools and scripts used during workstack de
 
 ## Architecture
 
-For detailed architecture documentation, see [.agent/WORKSTACK_DEV.md](../../.agent/WORKSTACK_DEV.md).
+For detailed architecture documentation, see [docs/WORKSTACK_DEV.md](../../../docs/WORKSTACK_DEV.md).
 
 ## Quick Start
 

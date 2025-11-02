@@ -362,4 +362,4 @@ Fakes provide:
 
 - [../CLAUDE.md](../CLAUDE.md) - Core testing patterns
 - [../../fakes/](../../fakes/) - Fake implementations
-- [../../.agent/docs/TESTING.md](../../../.agent/docs/TESTING.md#dependency-categories) - Dependency categories
+- [../../docs/TESTING.md](../../../docs/TESTING.md#dependency-categories) - Dependency categories

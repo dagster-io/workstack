@@ -2,8 +2,6 @@
 
 from pathlib import Path
 
-import pytest
-
 from dot_agent_kit.hooks.installer import install_hooks, remove_hooks
 from dot_agent_kit.hooks.models import HookDefinition
 from dot_agent_kit.hooks.settings import load_settings
@@ -418,16 +416,10 @@ def test_remove_hooks_preserves_other_kits(tmp_project: Path) -> None:
 
     # Count hooks from each kit
     kit_a_count = sum(
-        1
-        for group in lifecycle_hooks
-        for hook in group.hooks
-        if hook.dot_agent.kit_id == "kit-a"
+        1 for group in lifecycle_hooks for hook in group.hooks if hook.dot_agent.kit_id == "kit-a"
     )
     kit_b_count = sum(
-        1
-        for group in lifecycle_hooks
-        for hook in group.hooks
-        if hook.dot_agent.kit_id == "kit-b"
+        1 for group in lifecycle_hooks for hook in group.hooks if hook.dot_agent.kit_id == "kit-b"
     )
 
     assert kit_a_count == 0
@@ -473,9 +465,10 @@ def test_remove_hooks_cleans_empty_lifecycles(tmp_project: Path) -> None:
     # Settings should not have the lifecycle anymore
     settings = load_settings(tmp_project / ".claude" / "settings.json")
     if settings.hooks is not None:
-        assert "user-prompt-submit" not in settings.hooks or len(
-            settings.hooks["user-prompt-submit"]
-        ) == 0
+        assert (
+            "user-prompt-submit" not in settings.hooks
+            or len(settings.hooks["user-prompt-submit"]) == 0
+        )
 
 
 def test_hook_entry_metadata_roundtrip(tmp_project: Path) -> None:

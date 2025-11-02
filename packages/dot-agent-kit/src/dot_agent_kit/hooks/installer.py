@@ -75,7 +75,7 @@ def install_hooks(
         entry = HookEntry(
             command=command,
             timeout=hook_def.timeout,
-            dot_agent=metadata,
+            _dot_agent=metadata,
         )
 
         # Add to settings

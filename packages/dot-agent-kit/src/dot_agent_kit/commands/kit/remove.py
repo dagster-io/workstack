@@ -76,7 +76,7 @@ def remove(kit_id: str) -> None:
     click.echo(f"  Deleted {removed_count} artifact(s)")
 
     if hooks_removed > 0:
-        click.echo(f"  Removed {hooks_removed} hook(s)", err=True)
+        click.echo(f"  Removed {hooks_removed} hook(s)")
 
     if failed_count > 0:
         click.echo(f"  Note: {failed_count} artifact(s) were already removed", err=True)

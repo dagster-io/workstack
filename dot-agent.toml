@@ -41,6 +41,7 @@ conflict_policy = "error"
 [[kits.dignified-python.hooks]]
 id = "suggest-dignified-python"
 lifecycle = "UserPromptSubmit"
+matcher = "**"
 script = "hooks/suggest-dignified-python.py"
 description = "Suggests loading dignified-python skill on every prompt"
 timeout = 30

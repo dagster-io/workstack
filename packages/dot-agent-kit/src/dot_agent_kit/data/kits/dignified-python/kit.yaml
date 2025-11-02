@@ -1,0 +1,14 @@
+name: dignified-python
+version: 0.1.0
+description: Workstack Python coding standards with automatic suggestion hook
+license: MIT
+artifacts:
+  skill:
+    - skills/dignified-python/SKILL.md
+hooks:
+  - id: suggest-dignified-python
+    lifecycle: tool-call
+    matcher: "**/*.py"
+    script: hooks/suggest-dignified-python.py
+    description: Suggests loading dignified-python skill when editing Python files
+    timeout: 30

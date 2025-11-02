@@ -7,13 +7,17 @@
     "ask": []
   },
   "hooks": {
-    "PreToolUse": [
+    "tool-call": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "**/*.py",
         "hooks": [
           {
-            "type": "command",
-            "command": "python3 $CLAUDE_PROJECT_DIR/.claude/hooks/suggest-dignified-python.py"
+            "command": "python3 \"/Users/schrockn/code/workstacks/workstack/dignified-python-kit-on-hook-6/.claude/hooks/dignified-python/suggest-dignified-python.py\"",
+            "timeout": 30,
+            "_dot_agent": {
+              "kit_id": "dignified-python",
+              "hook_id": "suggest-dignified-python"
+            }
           }
         ]
       }

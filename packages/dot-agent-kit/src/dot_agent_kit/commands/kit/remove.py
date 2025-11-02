@@ -5,33 +5,15 @@ from pathlib import Path
 import click
 
 from dot_agent_kit.io import (
-    get_user_claude_dir,
     load_project_config,
-    load_user_config,
     save_project_config,
-    save_user_config,
 )
 from dot_agent_kit.models import ProjectConfig
 
 
 @click.command()
 @click.argument("kit-id")
-@click.option(
-    "--user",
-    "-u",
-    "target",
-    flag_value="user",
-    help="Remove kit from user directory (~/.claude)",
-)
-@click.option(
-    "--project",
-    "-p",
-    "target",
-    flag_value="project",
-    default=True,
-    help="Remove kit from project directory (./.claude) [default]",
-)
-def remove(kit_id: str, target: str) -> None:
+def remove(kit_id: str) -> None:
     """Remove an installed kit.
 
     This removes all artifacts installed by the kit and updates the configuration.
@@ -40,29 +22,21 @@ def remove(kit_id: str, target: str) -> None:
 
         # Remove kit from project directory
         dot-agent remove github-workflows
-
-        # Remove kit from user directory
-        dot-agent remove productivity-kit --user
     """
     project_dir = Path.cwd()
 
-    # Load appropriate config based on target
-    if target == "user":
-        config = load_user_config()
-        base_dir = get_user_claude_dir()
-        location_name = "user directory (~/.claude)"
-    else:
-        loaded_config = load_project_config(project_dir)
-        if loaded_config is None:
-            click.echo("Error: No project configuration found", err=True)
-            raise SystemExit(1)
-        config = loaded_config
-        base_dir = project_dir
-        location_name = "project directory (./.claude)"
+    # Load project config
+    loaded_config = load_project_config(project_dir)
+    if loaded_config is None:
+        click.echo("Error: No project configuration found", err=True)
+        raise SystemExit(1)
+    config = loaded_config
 
-    # Check if kit is installed in the target location
+    # Check if kit is installed
     if kit_id not in config.kits:
-        click.echo(f"Error: Kit '{kit_id}' not installed in {location_name}", err=True)
+        click.echo(
+            f"Error: Kit '{kit_id}' not installed in project directory (./.claude)", err=True
+        )
         raise SystemExit(1)
 
     installed = config.kits[kit_id]
@@ -72,7 +46,7 @@ def remove(kit_id: str, target: str) -> None:
     failed_count = 0
 
     for artifact_path in installed.artifacts:
-        artifact_file = base_dir / artifact_path
+        artifact_file = project_dir / artifact_path
         if artifact_file.exists():
             artifact_file.unlink()
             removed_count += 1
@@ -89,10 +63,7 @@ def remove(kit_id: str, target: str) -> None:
     )
 
     # Save updated config
-    if target == "user":
-        save_user_config(updated_config)
-    else:
-        save_project_config(project_dir, updated_config)
+    save_project_config(project_dir, updated_config)
 
     # Show success message
     click.echo(f"✓ Removed {kit_id} v{installed.version}")

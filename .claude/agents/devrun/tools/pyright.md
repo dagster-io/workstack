@@ -1,11 +1,16 @@
----
-name: devrun-pyright
-description: This skill should be used when executing pyright commands via the runner agent. Use when parsing type checking results, identifying type errors with file locations and line numbers, understanding pyright's error categorization (reportAssignmentType, reportAttributeAccess, etc.), or distinguishing errors from warnings and informations.
----
-
-# pyright Skill
+# pyright Execution and Parsing Guide
 
 Comprehensive guide for executing pyright commands and parsing type checking results.
+
+## Command Detection
+
+Detect pyright in these command patterns:
+
+```bash
+pyright
+uv run pyright
+python -m pyright
+```
 
 ## Command Patterns
 
@@ -54,24 +59,6 @@ pyright src/ tests/
 
 - `--project PATH` - Path to pyrightconfig.json
 - `--skipunannotated` - Skip analysis of unannotated functions
-
-### UV-Wrapped Commands
-
-```bash
-# Use uv for dependency isolation
-uv run pyright
-uv run pyright src/
-uv run pyright --verbose
-```
-
-### Python Module Invocation
-
-```bash
-# Alternative invocation method
-python -m pyright
-python -m pyright src/
-python -m pyright --verbose
-```
 
 ## Output Parsing Patterns
 
@@ -203,7 +190,22 @@ Some errors span multiple lines:
 - First line: Location and main message
 - Following indented lines: Additional context
 
-## Common Scenarios
+## Error Rule Categories
+
+Common pyright error rules:
+
+- `reportGeneralTypeIssues` - General type mismatches
+- `reportAssignmentType` - Type assignment incompatibilities
+- `reportArgumentType` - Function argument type issues
+- `reportReturnType` - Return type mismatches
+- `reportAttributeAccess` - Unknown attribute access
+- `reportMissingImport` - Import resolution failures
+- `reportUnusedImport` - Unused imports
+- `reportUnusedVariable` - Unused variables
+- `reportOptionalMemberAccess` - Accessing members on Optional types
+- `reportOptionalSubscript` - Subscripting Optional types
+
+## Reporting Guidance
 
 ### All Type Checks Pass
 
@@ -220,7 +222,8 @@ Some errors span multiple lines:
 - Location (line:column) for each error
 - Error message and type incompatibility
 - Rule code (reportXYZ)
-  **Omit**: Overly verbose type hierarchy details
+
+**Omit**: Overly verbose type hierarchy details
 
 ### Configuration Issues
 
@@ -240,21 +243,6 @@ Some errors span multiple lines:
 - Which files attempted the imports
 - Suggestion to check dependencies
 
-## Error Rule Categories
-
-Common pyright error rules:
-
-- `reportGeneralTypeIssues` - General type mismatches
-- `reportAssignmentType` - Type assignment incompatibilities
-- `reportArgumentType` - Function argument type issues
-- `reportReturnType` - Return type mismatches
-- `reportAttributeAccess` - Unknown attribute access
-- `reportMissingImport` - Import resolution failures
-- `reportUnusedImport` - Unused imports
-- `reportUnusedVariable` - Unused variables
-- `reportOptionalMemberAccess` - Accessing members on Optional types
-- `reportOptionalSubscript` - Subscripting Optional types
-
 ## Best Practices
 
 1. **Always check exit code** - most reliable success indicator
@@ -265,14 +253,3 @@ Common pyright error rules:
 6. **Provide full error context** - type incompatibility details matter
 7. **Distinguish errors from warnings** - different severity
 8. **Note configuration issues** - but don't fail on missing config
-
-## Integration with runner Agent
-
-The runner agent loads this skill to:
-
-1. Execute pyright commands via Bash
-2. Parse output using these patterns
-3. Group errors by file and provide actionable diagnostics
-4. Report structured results to parent agent
-
-The skill provides specialized knowledge for correctly interpreting pyright output, grouping errors by file, and providing actionable type error diagnostics.

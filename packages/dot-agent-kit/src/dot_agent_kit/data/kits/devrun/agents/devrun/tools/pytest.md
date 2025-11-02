@@ -1,11 +1,16 @@
----
-name: devrun-pytest
-description: This skill should be used when executing pytest commands via the runner agent. Use when parsing test results, identifying test failures with locations and error types, understanding coverage reports, or distinguishing between test failures and collection errors (import failures, syntax errors).
----
-
-# pytest Skill
+# pytest Execution and Parsing Guide
 
 Comprehensive guide for executing pytest commands and parsing test results.
+
+## Command Detection
+
+Detect pytest in these command patterns:
+
+```bash
+pytest
+uv run pytest
+python -m pytest
+```
 
 ## Command Patterns
 
@@ -66,24 +71,6 @@ pytest -k "test_auth"
 - `--maxfail=N` - Stop after N failures
 - `-n NUM` - Run tests in parallel (requires pytest-xdist)
 - `--collect-only` - Show what tests would run without executing
-
-### UV-Wrapped Commands
-
-```bash
-# Use uv for dependency isolation
-uv run pytest
-uv run pytest tests/
-uv run pytest --cov=workstack
-```
-
-### Python Module Invocation
-
-```bash
-# Alternative invocation method
-python -m pytest
-python -m pytest tests/
-python -m pytest -v
-```
 
 ## Output Parsing Patterns
 
@@ -228,7 +215,7 @@ For each `FAILED` line in "short test summary info":
 - Extract percentage per file
 - Get TOTAL coverage percentage
 
-## Common Scenarios
+## Reporting Guidance
 
 ### All Tests Pass
 
@@ -245,7 +232,8 @@ For each `FAILED` line in "short test summary info":
 - File locations and line numbers
 - Error types and key messages
 - Relevant assertion context
-  **Omit**: Full traceback unless complex failure
+
+**Omit**: Full traceback unless complex failure
 
 ### Collection Error
 
@@ -270,14 +258,3 @@ For each `FAILED` line in "short test summary info":
 5. **Provide full context for failures** - test name, location, error type, message
 6. **Distinguish test failures from collection errors** - different remediation
 7. **Report coverage when available** - but don't make it the focus unless requested
-
-## Integration with runner Agent
-
-The runner agent loads this skill to:
-
-1. Execute pytest commands via Bash
-2. Parse output using these patterns
-3. Extract failure details and coverage data
-4. Report structured results to parent agent
-
-The skill provides specialized knowledge for correctly interpreting pytest output, extracting failure details, and parsing coverage data.

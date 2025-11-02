@@ -1,11 +1,16 @@
----
-name: devrun-make
-description: This skill should be used when executing make commands via the runner agent. Use when parsing build automation output, identifying target failures, understanding Makefile execution results, or analyzing multi-target workflows. Essential for distinguishing make errors from underlying command errors.
----
-
-# make Skill
+# make Execution and Parsing Guide
 
 Comprehensive guide for executing make commands and parsing build automation results.
+
+## Command Detection
+
+Detect make in these command patterns:
+
+```bash
+make
+make <target>
+make <target1> <target2>
+```
 
 ## Command Patterns
 
@@ -203,10 +208,10 @@ make clean build # Targets: clean, build
 
 Make executes shell commands. Parse output based on the underlying command:
 
-- **pytest**: Use pytest parsing patterns
-- **pyright**: Use pyright parsing patterns
-- **ruff**: Use ruff parsing patterns
-- **prettier**: Use prettier parsing patterns
+- **pytest**: Use pytest parsing patterns (load pytest.md)
+- **pyright**: Use pyright parsing patterns (load pyright.md)
+- **ruff**: Use ruff parsing patterns (load ruff.md)
+- **prettier**: Use prettier parsing patterns (load prettier.md)
 - **Custom scripts**: Parse as appropriate
 
 ### 4. Identify Failure Point
@@ -239,7 +244,83 @@ pytest tests/
 make: *** [test] Error 1
 ```
 
-## Common Scenarios
+## Target-Specific Patterns
+
+### make all-ci
+
+This target typically runs multiple checks:
+
+```bash
+make all-ci
+# Runs: lint, typecheck, test, format-check, etc.
+```
+
+Parse each sub-command's output and aggregate results.
+
+### make lint
+
+Typically runs ruff or similar:
+
+```bash
+make lint
+ruff check src/
+```
+
+Load ruff.md and use ruff parsing patterns.
+
+### make typecheck
+
+Typically runs pyright or mypy:
+
+```bash
+make typecheck
+pyright src/
+```
+
+Load pyright.md and use pyright parsing patterns.
+
+### make test
+
+Typically runs pytest:
+
+```bash
+make test
+pytest tests/
+```
+
+Load pytest.md and use pytest parsing patterns.
+
+### make prettier / make prettier-check
+
+Runs prettier:
+
+```bash
+make prettier
+prettier --write .
+```
+
+Load prettier.md and use prettier parsing patterns.
+
+## Recursive Tool Detection
+
+When make executes a tool command:
+
+1. Detect the underlying tool from recipe output (pytest, ruff, etc.)
+2. Load that tool's documentation file (.claude/agents/devrun/tools/{tool}.md)
+3. Parse output using tool-specific patterns
+4. Report aggregate result
+
+**Example**:
+
+```
+make test
+  → executes: pytest tests/
+  → load pytest.md documentation
+  → parse pytest output using patterns from pytest.md
+  → report: "Executed 'make test'. All 47 tests passed."
+```
+
+## Reporting Guidance
 
 ### Target Succeeds
 
@@ -277,103 +358,16 @@ When a make command fails, include:
 5. **Root cause assessment** based on error
 6. **Enough context** for parent to fix without re-running
 
-## Target-Specific Patterns
-
-### make all-ci
-
-This target typically runs multiple checks:
-
-```bash
-make all-ci
-# Runs: lint, typecheck, test, format-check, etc.
-```
-
-Parse each sub-command's output and aggregate results.
-
-### make lint
-
-Typically runs ruff or similar:
-
-```bash
-make lint
-ruff check src/
-```
-
-Use ruff parsing patterns.
-
-### make typecheck
-
-Typically runs pyright or mypy:
-
-```bash
-make typecheck
-pyright src/
-```
-
-Use pyright parsing patterns.
-
-### make test
-
-Typically runs pytest:
-
-```bash
-make test
-pytest tests/
-```
-
-Use pytest parsing patterns.
-
-### make prettier / make prettier-check
-
-Runs prettier:
-
-```bash
-make prettier
-prettier --write .
-```
-
-Use prettier parsing patterns.
-
 ## Best Practices
 
 1. **Check exit code first** - distinguishes success from failure
 2. **Identify the target** - essential context
-3. **Parse underlying command output** - use tool-specific patterns
+3. **Parse underlying command output** - use tool-specific patterns by loading tool docs
 4. **Provide complete error context** - parent needs full details
 5. **Distinguish make errors from command errors**
 6. **Keep successes brief** - focus on results
 7. **Detail failures thoroughly** - include all diagnostic info
 8. **Aggregate multi-target results** - summarize overall status
-
-## Integration with runner Agent
-
-The runner agent loads this skill to:
-
-1. Execute make commands via Bash
-2. Parse output using these patterns
-3. Delegate to tool-specific skills for underlying commands (pytest, ruff, etc.)
-4. Report structured results to parent agent
-
-The skill provides specialized knowledge for correctly interpreting make output and delegating to tool-specific skills as needed.
-
-## Recursive Skill Loading
-
-When make executes a tool command:
-
-1. Runner detects the underlying tool (pytest, ruff, etc.)
-2. Runner loads that tool's skill
-3. Runner parses output using tool-specific patterns
-4. Runner reports aggregate result
-
-**Example**:
-
-```
-make test
-  → executes: pytest tests/
-  → runner loads pytest skill
-  → runner parses pytest output
-  → runner reports: "Executed 'make test'. All 47 tests passed."
-```
 
 ## Example Outputs to Parse
 

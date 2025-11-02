@@ -12,6 +12,7 @@
         "matcher": "*",
         "hooks": [
           {
+            "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/dignified-python/suggest-dignified-python.py\"",
             "timeout": 30,
             "_dot_agent": {

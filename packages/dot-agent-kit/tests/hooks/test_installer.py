@@ -557,3 +557,47 @@ def test_install_hook_without_matcher(tmp_project: Path) -> None:
     hook_entry = lifecycle_hooks[0].hooks[0]
     assert hook_entry.dot_agent.kit_id == "test-kit"
     assert hook_entry.dot_agent.hook_id == "test-hook"
+
+
+def test_install_hooks_includes_type_field(tmp_project: Path) -> None:
+    """Test that installed hooks include a 'type' field for Claude Code compatibility.
+
+    Claude Code requires hooks to have a 'type' discriminator field with value
+    'command' or 'prompt'. This test ensures generated hooks are valid.
+    """
+    # Create kit with a hook script
+    kit_path = tmp_project / "kit"
+    kit_path.mkdir()
+    script_path = kit_path / "hook.py"
+    script_path.write_text("# Hook script", encoding="utf-8")
+
+    # Define hook
+    hook_def = HookDefinition(
+        id="test-hook",
+        lifecycle="UserPromptSubmit",
+        matcher="**",
+        script="hook.py",
+        description="Test hook",
+        timeout=30,
+    )
+
+    # Install hooks
+    count = install_hooks(
+        kit_id="test-kit",
+        hooks=[hook_def],
+        kit_path=kit_path,
+        project_root=tmp_project,
+    )
+
+    assert count == 1
+
+    # Load settings and get hook entry
+    settings = load_settings(tmp_project / ".claude" / "settings.json")
+    assert settings.hooks is not None
+    assert "UserPromptSubmit" in settings.hooks
+
+    hook_entry = settings.hooks["UserPromptSubmit"][0].hooks[0]
+
+    # Verify type field exists and has correct value
+    assert hasattr(hook_entry, "type"), "Hook entry must have 'type' field for Claude Code"
+    assert hook_entry.type == "command", "Hook type should be 'command' for shell commands"

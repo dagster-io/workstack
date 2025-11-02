@@ -123,6 +123,6 @@ def install(kit_spec: str, force: bool) -> None:
         click.echo(f"✓ Installed {kit_id} v{installed_kit.version} ({artifact_count} artifacts)")
 
     if hooks_count > 0:
-        click.echo(f"  Installed {hooks_count} hook(s)", err=True)
+        click.echo(f"  Installed {hooks_count} hook(s)")
 
     click.echo(f"  Location: {context.get_claude_dir()}")

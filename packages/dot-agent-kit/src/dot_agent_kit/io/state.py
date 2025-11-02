@@ -5,6 +5,7 @@ from pathlib import Path
 import tomli
 import tomli_w
 
+from dot_agent_kit.hooks.models import HookDefinition
 from dot_agent_kit.models import ConflictPolicy, InstalledKit, ProjectConfig
 
 
@@ -24,6 +25,11 @@ def load_project_config(project_dir: Path) -> ProjectConfig | None:
     kits: dict[str, InstalledKit] = {}
     if "kits" in data:
         for kit_id, kit_data in data["kits"].items():
+            # Parse hooks if present
+            hooks: list[HookDefinition] = []
+            if "hooks" in kit_data:
+                hooks = [HookDefinition.model_validate(h) for h in kit_data["hooks"]]
+
             kits[kit_id] = InstalledKit(
                 kit_id=kit_data["kit_id"],
                 version=kit_data["version"],
@@ -31,6 +37,7 @@ def load_project_config(project_dir: Path) -> ProjectConfig | None:
                 installed_at=kit_data["installed_at"],
                 artifacts=kit_data["artifacts"],
                 conflict_policy=kit_data.get("conflict_policy", "error"),
+                hooks=hooks,
             )
 
     # Parse conflict policy
@@ -56,7 +63,7 @@ def save_project_config(project_dir: Path, config: ProjectConfig) -> None:
     }
 
     for kit_id, kit in config.kits.items():
-        data["kits"][kit_id] = {
+        kit_data = {
             "kit_id": kit.kit_id,
             "version": kit.version,
             "source": kit.source,
@@ -64,6 +71,12 @@ def save_project_config(project_dir: Path, config: ProjectConfig) -> None:
             "artifacts": kit.artifacts,
             "conflict_policy": kit.conflict_policy,
         }
+
+        # Add hooks if present
+        if kit.hooks:
+            kit_data["hooks"] = [h.model_dump(mode="json") for h in kit.hooks]
+
+        data["kits"][kit_id] = kit_data
 
     with open(config_path, "wb") as f:
         tomli_w.dump(data, f)

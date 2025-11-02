@@ -1,21 +1,15 @@
 ---
-description: Save implementation plan from context, create worktree, and execute
+description: Save implementation plan from context and create worktree
 ---
 
-# /workstack:execute_plan
+# /workstack:persist_plan
 
-This command automates the workflow from implementation plan to code execution by:
-
-1. **Detecting** an implementation plan in the recent conversation context
-2. **Persisting** the plan to a markdown file at the current worktree root
-3. **Creating** a workstack worktree with the plan
-4. **Switching** to that worktree directory
-5. **Executing** the plan automatically
+This command finds an implementation plan in the conversation context, saves it to disk, and creates a workstack worktree with that plan.
 
 ## Usage
 
 ```bash
-/workstack:execute_plan
+/workstack:persist_plan
 ```
 
 ## Prerequisites
@@ -31,20 +25,19 @@ When you run this command:
 1. The assistant searches recent conversation for an implementation plan
 2. Extracts and saves the plan as `<feature-name>-plan.md` at current worktree root
 3. Creates a new workstack worktree with: `workstack create --plan <filename>-plan.md`
-4. Changes to the new worktree directory
-5. Automatically starts implementation execution
+4. Displays instructions for switching to the worktree and implementing the plan
 
 ## Expected Outcome
 
-- A new worktree with your implementation plan ready to execute
-- Automatic code generation based on the plan
-- Clear status updates throughout the process
+- A new worktree created with your implementation plan
+- Clear instructions for next steps
+- No automatic execution (requires manual switch and implement command)
 
 ---
 
 ## Agent Instructions
 
-You are executing the `/workstack:execute_plan` command. Follow these steps carefully:
+You are executing the `/workstack:persist_plan` command. Follow these steps carefully:
 
 ### Step 1: Detect Implementation Plan in Context
 
@@ -76,7 +69,7 @@ When a plan is found:
    - Append "-plan.md"
    - Example: "User Authentication System" → `user-authentication-plan.md`
 
-### Step 2.5: Detect Worktree Root
+### Step 3: Detect Worktree Root
 
 Execute: `git rev-parse --show-toplevel`
 
@@ -91,7 +84,7 @@ Details: Not in a git repository or git command failed
 Suggested action: Ensure you are in a valid git worktree
 ```
 
-### Step 3: Save Plan to Disk
+### Step 4: Save Plan to Disk
 
 Use the Write tool to save the plan:
 
@@ -108,11 +101,11 @@ Details: [specific error]
 Suggested action: Check file permissions and available disk space
 ```
 
-### Step 4: Create Worktree with Plan
+### Step 5: Create Worktree with Plan
 
 Execute: `workstack create --plan <worktree-root>/<filename>`
 
-Use the absolute path from Step 2.5 to ensure workstack can find the plan file regardless of current working directory.
+Use the absolute path from Step 3 to ensure workstack can find the plan file regardless of current working directory.
 
 Parse the output to extract:
 
@@ -138,51 +131,29 @@ Handle specific errors:
   Details: [workstack error message]
   ```
 
-### Step 5: Change to Worktree Directory
+### Step 6: Display Next Steps
 
-Execute: `cd <worktree-path>`
-
-Then verify `.PLAN.md` exists in the new directory:
-
-```bash
-test -f .PLAN.md && echo "Plan file verified" || echo "Plan file missing"
-```
-
-If verification fails:
-
-```
-❌ Error: Plan file not found in worktree
-
-Details: Expected .PLAN.md in <worktree-path>
-Suggested action: Check workstack create output for errors
-```
-
-### Step 6: Execute the Implementation Plan
-
-Begin execution of the implementation plan that was copied into the worktree:
-
-- Read the `.PLAN.md` file from the current directory
-- Start implementing the plan according to its instructions
-- Provide progress updates as implementation proceeds
-
-### Step 7: Report Success
-
-After successful execution, provide summary:
+After successful worktree creation, provide clear instructions:
 
 ```markdown
-## ✅ Worktree Created and Plan Execution Started
+✅ Worktree created successfully!
 
 **Plan file**: <filename>
 **Worktree**: <worktree-name>
 **Location**: <worktree-path>
 **Branch**: <branch-name>
 
-The implementation plan is now being executed in the new worktree.
+To switch to the worktree and begin implementation, run:
 
-### Next Steps
+    workstack switch <worktree-name>
+
+Then execute:
+
+    /workstack:implement_plan
+
+### Other Commands
 
 - To return to root repository: `workstack switch root`
-- To submit when done: `/gt:submit-branch`
 - To view worktree status: `workstack ls`
 ```
 
@@ -203,13 +174,11 @@ Common error scenarios to handle:
 - No plan in context
 - Plan file save failures
 - Worktree creation failures
-- Directory change failures
-- Missing .PLAN.md after worktree creation
-- SlashCommand invocation failures
+- Duplicate worktree names
 
 ## Important Notes
 
-- This command is designed for immediate execution after plan generation
-- It does not support loading plans from existing files (future enhancement)
+- This command does NOT switch directories or execute the plan
+- User must manually run `workstack switch` and `/workstack:implement_plan`
 - The worktree name is automatically derived from the plan
 - Always provide clear feedback at each step

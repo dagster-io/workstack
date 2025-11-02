@@ -16,7 +16,38 @@ def main():
         json.load(sys.stdin)
 
         # Always output suggestion (runs on every prompt)
-        print("Load the dignified-python skill to abide by Python standards")
+        print("<reminder>")
+        print(
+            "CRITICAL: Load dignified-python skill when editing Python and "
+            "strictly abide by the standards defined in it."
+        )
+        print()
+        print("Core philosophy:")
+        print("  - Explicit, predictable code that fails fast")
+        print("  - LBYL over EAFP - check before acting")
+        print("  - Python 3.13+ syntax only")
+        print("  - Error boundaries at CLI/API level")
+        print()
+        print("Critical rules:")
+        print("  1. Exceptions: LBYL over EAFP 🔴")
+        print(
+            "     - ALWAYS use LBYL (Look Before You Leap) first, before EAFP, "
+            "which should be used only if absolutely necessary "
+            "(only API supported by 3rd party library, for example)"
+        )
+        print("     - Check conditions with if statements before acting")
+        print("     - Only handle exceptions at error boundaries (CLI, third-party APIs)")
+        print("     - Let exceptions bubble up by default")
+        print(
+            "  2. Types: Use list[str], dict[str,int], str|None. "
+            "FORBIDDEN: List, Optional, Union 🔴"
+        )
+        print("  3. Imports: Absolute only. NEVER relative imports 🔴")
+        print("  4. Style: Max 4 indent levels. Extract helpers if deeper")
+        print("  5. Data: Prefer immutable data structures. Default to @dataclass(frozen=True)")
+        print()
+        print("See full skill for details")
+        print("</reminder>")
 
         # Exit 0 to allow prompt to proceed
         # For UserPromptSubmit, stdout is injected as context for Claude

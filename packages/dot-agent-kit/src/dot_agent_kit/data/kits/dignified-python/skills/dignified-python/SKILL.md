@@ -1,11 +1,3 @@
----
-__dot_agent:
-  kit_id: dignified-python
-  kit_version: 0.1.0
-  artifact_type: skill
-  artifact_path: skills/dignified-python/SKILL.md
----
-
 # Dignified Python - Workstack Python Coding Standards
 
 ## Purpose

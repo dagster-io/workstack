@@ -7,8 +7,7 @@ artifacts:
     - skills/dignified-python/SKILL.md
 hooks:
   - id: suggest-dignified-python
-    lifecycle: tool-call
-    matcher: "**/*.py"
+    lifecycle: prompt-submit
     script: hooks/suggest-dignified-python.py
-    description: Suggests loading dignified-python skill when editing Python files
+    description: Suggests loading dignified-python skill on every prompt
     timeout: 30

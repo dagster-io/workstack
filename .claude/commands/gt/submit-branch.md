@@ -1,6 +1,11 @@
 ---
 description: Create git commit and submit current branch with Graphite
 argument-hint: <description>
+__dot_agent:
+  kit_id: gt
+  kit_version: 0.1.0
+  artifact_type: command
+  artifact_path: commands/gt/submit-branch.md
 ---
 
 # Submit Branch

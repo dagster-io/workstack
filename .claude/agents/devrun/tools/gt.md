@@ -1,42 +1,16 @@
----
-name: devrun-gt
-description: Graphite (gt) command execution patterns, output parsing guidance, and special handling for gt CLI operations.
----
-
-# gt Skill
+# gt (Graphite) Execution and Parsing Guide
 
 Comprehensive guide for executing Graphite (gt) commands and parsing output.
 
-## Python Scripts
+## Command Detection
 
-This skill includes Python scripts using `uv run` for isolated execution:
-
-### count_branch_commits.py
-
-Counts commits in current branch that aren't in parent branch.
-
-**Usage**:
+Detect gt in these command patterns:
 
 ```bash
-uv run .claude/skills/devrun-gt/scripts/count_branch_commits.py [directory]
+gt
+gt <command>
+gt <command> --flags
 ```
-
-**Output**: Single integer (commit count)
-
-**Example**:
-
-```bash
-$ uv run .claude/skills/devrun-gt/scripts/count_branch_commits.py
-3
-```
-
-**Dependencies**: None (uses standard library only)
-
-**How it works**:
-
-1. Uses `gt parent` to get parent branch name
-2. Uses `git rev-list --count parent..HEAD` to count commits
-3. Returns count as single integer
 
 ## Command Patterns
 
@@ -111,12 +85,6 @@ gt log short
 - `gt log` - Full stack visualization
 - `gt log short` - Compact stack visualization
 - `gt status` - File status information
-
-### Integration Commands
-
-**Workstack commands for gt data:**
-
-- `workstack graphite branches` - JSON output of branch metadata
 
 ## Output Parsing Patterns
 
@@ -248,7 +216,7 @@ Used in squash pre-check - single commit means squash not needed
 
 **Before executing `gt squash`:**
 
-1. Count commits: `uv run .claude/skills/devrun-gt/scripts/count_branch_commits.py`
+1. Count commits using git command: `git rev-list --count $(gt parent)..HEAD`
 2. If count equals 1:
    - DO NOT execute squash command
    - Return success with message: "Branch has only 1 commit - squash not required"
@@ -258,6 +226,22 @@ Used in squash pre-check - single commit means squash not needed
    - Parse and return squash results
 
 **Rationale**: Squashing a single commit is a no-op and can confuse users. Skip execution and provide clear feedback.
+
+**Implementation**:
+
+```bash
+# Get commit count
+COMMIT_COUNT=$(git rev-list --count $(gt parent)..HEAD)
+
+# Check if squash is needed
+if [ "$COMMIT_COUNT" -eq 1 ]; then
+    # Skip squash, report not needed
+    echo "Branch has only 1 commit - squash not required"
+else
+    # Execute squash
+    gt squash
+fi
+```
 
 ### gt log short Display Only
 
@@ -337,11 +321,11 @@ Based on command, determine expected output format:
 
 **For `gt squash`:**
 
-- Run commit count check first
+- Run commit count check first using: `git rev-list --count $(gt parent)..HEAD`
 - Skip execution if count = 1
 - Return informative success message
 
-## Common Scenarios
+## Reporting Guidance
 
 ### Get Branch Relationships
 
@@ -372,7 +356,7 @@ Based on command, determine expected output format:
 
 ### Squash with Single Commit
 
-**Pre-check**: `uv run .claude/skills/devrun-gt/scripts/count_branch_commits.py` returns `1`
+**Pre-check**: `git rev-list --count $(gt parent)..HEAD` returns `1`
 
 **Command**: `gt squash` (skipped due to pre-check)
 
@@ -452,7 +436,7 @@ Main agent should retry remaining branches or investigate repository performance
 2. **Set timeout to 60 seconds** - some gt commands can be slow
 3. **Capture stdout and stderr** - both contain useful info
 4. **Check exit codes** - most reliable success indicator
-5. **Run special pre-checks** - gt squash commit count check
+5. **Run special pre-checks** - gt squash commit count check using git command
 
 ### Parsing Guidelines
 
@@ -461,16 +445,3 @@ Main agent should retry remaining branches or investigate repository performance
 3. **Extract URLs carefully** - look for full GitHub PR URL patterns
 4. **Don't parse tree visualizations** - use structured commands instead
 5. **Validate extracted data** - branch names shouldn't have special characters
-
-### Integration with runner Agent
-
-The `runner` agent will:
-
-1. Detect `gt` command from user input
-2. Load this skill for execution guidance
-3. Run special pre-checks (e.g., gt squash)
-4. Execute command via Bash tool
-5. Parse output using these patterns
-6. Report structured results to parent agent
-
-**Your job**: Provide execution patterns and parsing guidance so the runner can correctly interpret gt output.

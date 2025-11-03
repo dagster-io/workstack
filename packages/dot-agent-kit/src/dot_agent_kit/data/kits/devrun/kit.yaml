@@ -1,14 +1,8 @@
 name: devrun
 version: 0.1.0
-description: Unified development tool runner agent with skill-based delegation for
-  pytest, pyright, ruff, prettier, and make
+description: Consolidated development tool runner agent with integrated tool documentation
+  for pytest, pyright, ruff, prettier, make, and gt
 license: MIT
 artifacts:
   agent:
-  - agents/devrun/runner.md
-  skill:
-  - skills/devrun-make/SKILL.md
-  - skills/devrun-prettier/SKILL.md
-  - skills/devrun-pyright/SKILL.md
-  - skills/devrun-pytest/SKILL.md
-  - skills/devrun-ruff/SKILL.md
+  - agents/devrun/devrun.md

@@ -1,11 +1,17 @@
----
-name: devrun-prettier
-description: This skill should be used when executing prettier commands via the runner agent. Use when parsing code formatting results, identifying files needing formatting, distinguishing between check and write operations, or handling prettier syntax errors. Supports multiple languages including JS, TS, Markdown, JSON, and YAML.
----
-
-# prettier Skill
+# prettier Execution and Parsing Guide
 
 Comprehensive guide for executing prettier commands and parsing formatting results.
+
+## Command Detection
+
+Detect prettier in these command patterns:
+
+```bash
+prettier
+uv run prettier
+make prettier
+make prettier-check
+```
 
 ## Command Patterns
 
@@ -73,14 +79,6 @@ prettier --list-different .
 # Project-specific make targets
 make prettier          # Format all files
 make prettier-check    # Check formatting
-```
-
-### UV-Wrapped Commands
-
-```bash
-# Use uv for dependency isolation
-uv run prettier --check .
-uv run prettier --write .
 ```
 
 ## Supported Languages
@@ -247,7 +245,16 @@ Syntax errors have format:
 
 Extract file, error type, location.
 
-## Common Scenarios
+## Make Target Integration
+
+Common make targets in projects:
+
+- `make prettier` - Format all files with --write
+- `make prettier-check` - Check all files without writing
+
+When executing via make, parse the underlying prettier output the same way.
+
+## Reporting Guidance
 
 ### All Files Formatted (Check)
 
@@ -290,15 +297,6 @@ Extract file, error type, location.
 **Summary**: "No files matched pattern"
 **Include**: Pattern that was used
 
-## Make Target Integration
-
-Common make targets in projects:
-
-- `make prettier` - Format all files with --write
-- `make prettier-check` - Check all files without writing
-
-When executing via make, parse the underlying prettier output the same way.
-
 ## Best Practices
 
 1. **Check exit code first** - most reliable indicator
@@ -308,17 +306,6 @@ When executing via make, parse the underlying prettier output the same way.
 5. **List all files needing formatting** when check fails
 6. **Note syntax errors prominently** - blocking issue
 7. **Distinguish "no changes" from "formatted successfully"**
-
-## Integration with runner Agent
-
-The runner agent loads this skill to:
-
-1. Execute prettier commands via Bash
-2. Parse output using these patterns
-3. Distinguish between formatting modes (check, write, list)
-4. Report structured results to parent agent
-
-The skill provides specialized knowledge for correctly interpreting prettier output and distinguishing between formatting modes.
 
 ## Example Outputs to Parse
 

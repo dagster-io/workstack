@@ -1,11 +1,19 @@
----
-name: devrun-ruff
-description: This skill should be used when executing ruff commands via the runner agent. Use when parsing linting or formatting results, identifying fixable violations with rule codes, understanding ruff's rule categories (Pyflakes, pycodestyle, isort, etc.), or distinguishing between linting (ruff check) and formatting (ruff format) operations.
----
-
-# ruff Skill
+# ruff Execution and Parsing Guide
 
 Comprehensive guide for executing ruff commands and parsing linting/formatting results.
+
+## Command Detection
+
+Detect ruff in these command patterns:
+
+```bash
+ruff check
+ruff format
+uv run ruff check
+uv run ruff format
+python -m ruff check
+python -m ruff format
+```
 
 ## Command Patterns
 
@@ -74,23 +82,6 @@ ruff format --diff
 - `--check` - Check if files would be formatted
 - `--diff` - Show diff of formatting changes
 - `--config PATH` - Path to ruff.toml or pyproject.toml
-
-### UV-Wrapped Commands
-
-```bash
-# Use uv for dependency isolation
-uv run ruff check
-uv run ruff check --fix
-uv run ruff format
-```
-
-### Python Module Invocation
-
-```bash
-# Alternative invocation method
-python -m ruff check
-python -m ruff format
-```
 
 ## Output Parsing Patterns
 
@@ -265,7 +256,26 @@ Look for patterns:
 - `X file would be reformatted`
 - `X files reformatted`
 
-## Common Scenarios
+## Violation Severity
+
+While ruff doesn't have explicit severity levels, rules can be categorized:
+
+**High Priority (Fix immediately):**
+
+- F-series (Pyflakes): Logic errors, undefined names
+- B-series (bugbear): Likely bugs
+
+**Medium Priority (Fix soon):**
+
+- E-series (pycodestyle errors): Style violations
+- UP-series (pyupgrade): Outdated syntax
+
+**Low Priority (Fix when convenient):**
+
+- W-series (pycodestyle warnings): Minor style issues
+- I-series (isort): Import organization
+
+## Reporting Guidance
 
 ### All Checks Pass
 
@@ -308,25 +318,6 @@ Look for patterns:
 - Count of reformatted files
 - Count of unchanged files
 
-## Violation Severity
-
-While ruff doesn't have explicit severity levels, rules can be categorized:
-
-**High Priority (Fix immediately):**
-
-- F-series (Pyflakes): Logic errors, undefined names
-- B-series (bugbear): Likely bugs
-
-**Medium Priority (Fix soon):**
-
-- E-series (pycodestyle errors): Style violations
-- UP-series (pyupgrade): Outdated syntax
-
-**Low Priority (Fix when convenient):**
-
-- W-series (pycodestyle warnings): Minor style issues
-- I-series (isort): Import organization
-
 ## Best Practices
 
 1. **Check exit code** - reliable success indicator
@@ -337,14 +328,3 @@ While ruff doesn't have explicit severity levels, rules can be categorized:
 6. **List all violations** when found - with locations and rule codes
 7. **Note auto-fixes** - what was fixed vs what remains
 8. **Include rule codes** - helps identify patterns
-
-## Integration with runner Agent
-
-The runner agent loads this skill to:
-
-1. Execute ruff commands via Bash
-2. Parse output using these patterns
-3. Categorize violations by severity and identify auto-fixable issues
-4. Report structured results to parent agent
-
-The skill provides specialized knowledge for correctly interpreting ruff output, categorizing violations by severity, and identifying auto-fixable issues.

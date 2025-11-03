@@ -388,6 +388,71 @@ def test_new_feature_im_building_today():
 
 **Rule**: Only write tests for actively implemented code. TDD is encouraged.
 
+### 6. Fallback Behavior / Silent Degradation
+
+**NEVER implement silent fallback behavior when primary approach fails.**
+
+This anti-pattern attempts to "gracefully degrade" by trying an alternate approach after the primary method fails, without proper error handling or user notification.
+
+```python
+# ❌ WRONG: Silent fallback to inferior approach
+def process_text(text: str) -> dict[str, Any]:
+    """Process text using LLM."""
+    try:
+        # Primary approach: Use LLM
+        result = llm_client.process(text)
+        return result
+    except Exception:
+        # Silent fallback: Use regex parsing (untested, brittle)
+        return regex_parse_fallback(text)
+
+# ❌ WRONG: Fallback to deprecated API
+def fetch_user_data(user_id: int) -> UserData:
+    try:
+        return new_api_client.get_user(user_id)
+    except Exception:
+        # Silent degradation to legacy endpoint
+        return legacy_api_client.fetch_user(user_id)
+```
+
+**Why this is problematic:**
+
+1. **Untested secondary codepath**: The fallback logic is rarely tested thoroughly and becomes brittle over time
+2. **Silent failure**: Errors go unnoticed, silently degrading behavior and introducing bugs
+3. **Lost visibility**: No logging, monitoring, or alerting that degradation occurred
+4. **User trust**: System behavior becomes unpredictable and unreliable
+5. **False sense of security**: Appears to work but masks underlying issues
+
+**What to do instead:**
+
+```python
+# ✅ CORRECT: Let error bubble to proper boundary
+def process_text(text: str) -> dict[str, Any]:
+    """Process text using LLM.
+
+    Raises:
+        LLMError: If LLM processing fails
+    """
+    # Let exceptions bubble up - handler at error boundary will deal with it
+    return llm_client.process(text)
+
+# ✅ CORRECT: Error boundary handles failure explicitly
+@click.command()
+def process_command(input_file: Path) -> None:
+    """Process input file with LLM."""
+    try:
+        text = input_file.read_text(encoding="utf-8")
+        result = process_text(text)
+        click.echo(f"Processing complete: {result}")
+    except LLMError as e:
+        # Error boundary: Inform user explicitly
+        click.echo(f"Error: LLM processing failed: {e}", err=True)
+        click.echo("Please check your API credentials and try again", err=True)
+        raise SystemExit(1)
+```
+
+**The principle**: Fail fast and explicitly rather than silently degrading behavior.
+
 ---
 
 ## WHEN EXCEPTIONS ARE ACCEPTABLE

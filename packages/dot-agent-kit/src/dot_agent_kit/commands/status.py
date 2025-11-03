@@ -6,20 +6,17 @@ import click
 
 from dot_agent_kit.io import discover_installed_artifacts, load_project_config
 
-
-@click.command()
-@click.option(
+# Reusable option decorator
+verbose_option = click.option(
     "--verbose",
     "-v",
     is_flag=True,
     help="Show detailed installation information",
 )
-def status(verbose: bool) -> None:
-    """Show status of kits and artifacts.
 
-    Displays managed kits (tracked in config) and unmanaged artifacts
-    (present in .claude/ but not tracked).
-    """
+
+def _show_status(verbose: bool) -> None:
+    """Implementation of status display logic."""
     project_dir = Path.cwd()
 
     # Load project config for managed kits
@@ -59,3 +56,21 @@ def status(verbose: bool) -> None:
             click.echo(f"  {kit_id} ({types_str})")
     else:
         click.echo("  (none)")
+
+
+@click.command()
+@verbose_option
+def status(verbose: bool) -> None:
+    """Show status of kits and artifacts (alias: st).
+
+    Displays managed kits (tracked in config) and unmanaged artifacts
+    (present in .claude/ but not tracked).
+    """
+    _show_status(verbose)
+
+
+@click.command(name="st", hidden=True)
+@verbose_option
+def st(verbose: bool) -> None:
+    """Show status of kits and artifacts (alias for status)."""
+    _show_status(verbose)

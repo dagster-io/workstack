@@ -8,19 +8,12 @@ from dot_agent_kit.hooks.installer import remove_hooks
 from dot_agent_kit.io import load_project_config, save_project_config
 from dot_agent_kit.models import ProjectConfig
 
+# Reusable argument decorator
+kit_id_argument = click.argument("kit-id")
 
-@click.command()
-@click.argument("kit-id")
-def remove(kit_id: str) -> None:
-    """Remove an installed kit.
 
-    This removes all artifacts installed by the kit and updates the configuration.
-
-    Examples:
-
-        # Remove kit from project directory
-        dot-agent remove github-workflows
-    """
+def _remove_kit_impl(kit_id: str) -> None:
+    """Implementation of kit removal logic."""
     project_dir = Path.cwd()
 
     # Load project config
@@ -76,3 +69,25 @@ def remove(kit_id: str) -> None:
 
     if failed_count > 0:
         click.echo(f"  Note: {failed_count} artifact(s) were already removed", err=True)
+
+
+@click.command()
+@kit_id_argument
+def remove(kit_id: str) -> None:
+    """Remove an installed kit (alias: rm).
+
+    This removes all artifacts installed by the kit and updates the configuration.
+
+    Examples:
+
+        # Remove kit from project directory
+        dot-agent remove github-workflows
+    """
+    _remove_kit_impl(kit_id)
+
+
+@click.command(name="rm", hidden=True)
+@kit_id_argument
+def rm(kit_id: str) -> None:
+    """Remove an installed kit (alias for remove)."""
+    _remove_kit_impl(kit_id)

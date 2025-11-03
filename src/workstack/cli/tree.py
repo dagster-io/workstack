@@ -211,7 +211,7 @@ def _load_graphite_branch_graph(
         children_of[branch_name] = children
 
         # Record trunk branches
-        if is_trunk or parent is None:
+        if is_trunk:
             trunk_branches.append(branch_name)
 
     return BranchGraph(

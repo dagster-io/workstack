@@ -1,15 +1,15 @@
 ---
-description: Save implementation plan from context and create worktree
+description: Create a workstack worktree from an implementation plan in context
 ---
 
-# /workstack:persist_plan
+# /workstack:create_from_plan
 
 This command finds an implementation plan in the conversation context, saves it to disk, and creates a workstack worktree with that plan.
 
 ## Usage
 
 ```bash
-/workstack:persist_plan
+/workstack:create_from_plan
 ```
 
 ## Prerequisites
@@ -37,7 +37,7 @@ When you run this command:
 
 ## Agent Instructions
 
-You are executing the `/workstack:persist_plan` command. Follow these steps carefully:
+You are executing the `/workstack:create_from_plan` command. Follow these steps carefully:
 
 ### Step 1: Detect Implementation Plan in Context
 
@@ -166,13 +166,19 @@ After successful worktree creation, provide clear instructions:
 **Location**: <worktree-path>
 **Branch**: <branch-name>
 
-To switch to the worktree and begin implementation, run:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 **NEXT STEPS** (Required to begin implementation)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+**1. Switch to the worktree:**
 
     workstack switch <worktree-name>
 
-Then execute:
+**2. Start implementation:**
 
     /workstack:implement_plan
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ### Other Commands
 

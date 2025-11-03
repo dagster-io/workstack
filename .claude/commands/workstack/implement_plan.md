@@ -4,7 +4,7 @@ description: Execute the implementation plan from .PLAN.md in current directory
 
 # /workstack:implement_plan
 
-This command reads and executes the `.PLAN.md` file from the current directory. It is designed to be run after switching to a worktree created by `/workstack:persist_plan`.
+This command reads and executes the `.PLAN.md` file from the current directory. It is designed to be run after switching to a worktree created by `/workstack:create_from_plan`.
 
 ## Usage
 
@@ -52,7 +52,7 @@ If not found:
 This command must be run from a worktree directory that contains a .PLAN.md file.
 
 To create a worktree with a plan:
-1. Run /workstack:persist_plan to save your plan and create a worktree
+1. Run /workstack:create_from_plan to save your plan and create a worktree
 2. Run: workstack switch <worktree-name>
 3. Then run: /workstack:implement_plan
 ```

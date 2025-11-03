@@ -1,6 +1,5 @@
 """Operations for dot-agent-kit."""
 
-from dot_agent_kit.operations.artifact_selection import ArtifactSpec
 from dot_agent_kit.operations.install import install_kit
 from dot_agent_kit.operations.sync import (
     SyncResult,
@@ -19,7 +18,6 @@ from dot_agent_kit.operations.validation import (
 )
 
 __all__ = [
-    "ArtifactSpec",
     "get_installation_context",
     "install_kit",
     "install_kit_to_project",

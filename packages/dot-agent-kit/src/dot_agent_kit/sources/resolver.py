@@ -10,6 +10,7 @@ class ResolvedKit:
     """A kit resolved from a source."""
 
     kit_id: str
+    version: str
     source_type: str
     source: str
     manifest_path: Path

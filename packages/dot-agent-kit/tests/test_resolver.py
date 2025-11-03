@@ -61,6 +61,7 @@ def test_kit_resolver_resolve_from_package(tmp_path: Path) -> None:
 
             return ResolvedKit(
                 kit_id="test-kit",
+                version="1.0.0",
                 source_type="package",
                 source="test-kit",
                 manifest_path=manifest_path,
@@ -96,6 +97,7 @@ def test_kit_resolver_multiple_sources(tmp_path: Path) -> None:
         def resolve(self, source: str) -> ResolvedKit:
             return ResolvedKit(
                 kit_id="first-kit",
+                version="1.0.0",
                 source_type="first",
                 source=source,
                 manifest_path=tmp_path / "first.yaml",
@@ -109,6 +111,7 @@ def test_kit_resolver_multiple_sources(tmp_path: Path) -> None:
         def resolve(self, source: str) -> ResolvedKit:
             return ResolvedKit(
                 kit_id="second-kit",
+                version="1.0.0",
                 source_type="second",
                 source=source,
                 manifest_path=tmp_path / "second.yaml",
@@ -136,6 +139,7 @@ def test_resolved_kit_immutable() -> None:
     """Test ResolvedKit is frozen (immutable)."""
     resolved = ResolvedKit(
         kit_id="test-kit",
+        version="1.0.0",
         source_type="package",
         source="test-source",
         manifest_path=Path("/tmp/kit.yaml"),

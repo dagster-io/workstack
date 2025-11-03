@@ -24,7 +24,22 @@ from dot_agent_kit.sources import BundledKitSource, KitResolver, StandalonePacka
     help="Force reinstall even if versions match",
 )
 def sync(kit_id: str | None, verbose: bool, force: bool) -> None:
-    """Sync installed kits with their sources."""
+    """Sync installed kits with their sources.
+
+    This command updates one or all installed kits to their latest versions.
+    Use 'install' for installing/updating a specific kit, and 'sync' for
+    bulk update operations across all installed kits.
+
+    Examples:
+        # Sync all installed kits
+        dot-agent kit sync
+
+        # Sync a specific kit
+        dot-agent kit sync github-workflows
+
+        # Force sync all kits (reinstall even if up to date)
+        dot-agent kit sync --force
+    """
     project_dir = Path.cwd()
 
     config = load_project_config(project_dir)

@@ -37,6 +37,7 @@ class BundledKitSource(KitSource):
 
         return ResolvedKit(
             kit_id=manifest.name,
+            version=manifest.version,
             source_type="bundled",
             source=source,
             manifest_path=manifest_path,

@@ -1625,9 +1625,7 @@ def test_create_json_and_script_mutually_exclusive() -> None:
             dry_run=False,
         )
 
-        result = runner.invoke(
-            cli, ["create", "test-feature", "--json", "--script"], obj=test_ctx
-        )
+        result = runner.invoke(cli, ["create", "test-feature", "--json", "--script"], obj=test_ctx)
 
         # Should fail with validation error
         assert result.exit_code == 1

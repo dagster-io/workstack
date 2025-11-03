@@ -5,7 +5,7 @@ from pathlib import Path
 from click.testing import CliRunner
 from pytest import CaptureFixture
 
-from dot_agent_kit.commands.artifact.list import _list_artifacts, list_cmd, ls_cmd
+from dot_agent_kit.commands.kit.list import _list_artifacts, list_installed_kits
 from dot_agent_kit.io import create_default_config
 from dot_agent_kit.models import InstalledKit, ProjectConfig
 from dot_agent_kit.models.artifact import ArtifactSource, InstalledArtifact
@@ -308,25 +308,27 @@ def test_list_column_alignment(capsys: CaptureFixture[str]) -> None:
         assert len(set(bracket_positions)) == 1, "Source columns are not aligned"
 
 
-def test_list_command_cli() -> None:
-    """Test list command through CLI interface.
+def test_list_command_cli(tmp_project: Path) -> None:
+    """Test list command with --artifacts flag through CLI interface.
 
     Note: We can't easily inject the fake repository through the CLI,
     so this test verifies basic CLI invocation works without error.
     """
+    import os
+
+    from dot_agent_kit.io import save_project_config
+
+    # Set up a basic project config
+    config = create_default_config()
+    save_project_config(tmp_project, config)
+
     runner = CliRunner()
-    result = runner.invoke(list_cmd)
-    assert result.exit_code == 0
-    # Should run without error and show some output
-
-
-def test_ls_command_cli() -> None:
-    """Test ls command (alias) through CLI interface.
-
-    Note: We can't easily inject the fake repository through the CLI,
-    so this test verifies basic CLI invocation works without error.
-    """
-    runner = CliRunner()
-    result = runner.invoke(ls_cmd)
-    assert result.exit_code == 0
-    # Should run without error and show some output
+    # Run from the tmp_project directory by changing cwd
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(tmp_project)
+        result = runner.invoke(list_installed_kits, ["--artifacts"])
+        assert result.exit_code == 0
+        # Should run without error and show some output
+    finally:
+        os.chdir(original_cwd)

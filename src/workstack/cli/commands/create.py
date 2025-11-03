@@ -276,6 +276,37 @@ def quote_env_value(value: str) -> str:
     return f'"{escaped}"'
 
 
+def _create_json_response(
+    *,
+    worktree_name: str,
+    worktree_path: Path,
+    branch_name: str | None,
+    plan_file_path: Path | None,
+    status: str,
+) -> str:
+    """Generate JSON response for create command.
+
+    Args:
+        worktree_name: Name of the worktree
+        worktree_path: Path to the worktree directory
+        branch_name: Git branch name (may be None if not available)
+        plan_file_path: Path to plan file if exists, None otherwise
+        status: Status string ("created" or "exists")
+
+    Returns:
+        JSON string with worktree information
+    """
+    return json.dumps(
+        {
+            "worktree_name": worktree_name,
+            "worktree_path": str(worktree_path),
+            "branch_name": branch_name,
+            "plan_file": str(plan_file_path) if plan_file_path else None,
+            "status": status,
+        }
+    )
+
+
 @click.command("create")
 @click.argument("name", metavar="NAME", required=False)
 @click.option(
@@ -447,20 +478,16 @@ def create(
     if wt_path.exists():
         if output_json:
             # For JSON output, emit a status: "exists" response with available info
-            # Get current branch name from the worktree if possible
             existing_branch = ctx.git_ops.get_current_branch(wt_path)
             plan_file_path = wt_path / ".PLAN.md"
-            click.echo(
-                json.dumps(
-                    {
-                        "worktree_name": name,
-                        "worktree_path": str(wt_path),
-                        "branch_name": existing_branch,
-                        "plan_file": str(plan_file_path) if plan_file_path.exists() else None,
-                        "status": "exists",
-                    }
-                )
+            json_response = _create_json_response(
+                worktree_name=name,
+                worktree_path=wt_path,
+                branch_name=existing_branch,
+                plan_file_path=plan_file_path if plan_file_path.exists() else None,
+                status="exists",
             )
+            click.echo(json_response)
             raise SystemExit(1)
         else:
             click.echo(f"Worktree path already exists: {wt_path}")
@@ -554,18 +581,18 @@ def create(
     (wt_path / ".env").write_text(env_content, encoding="utf-8")
 
     # Move or copy plan file if provided
-    plan_dest_path = None
+    # Track plan file destination: set to .PLAN.md path only if --plan was provided
+    plan_file_destination: Path | None = None
     if plan_file:
-        plan_dest = wt_path / ".PLAN.md"
-        plan_dest_path = plan_dest
+        plan_file_destination = wt_path / ".PLAN.md"
         if keep_plan:
-            shutil.copy2(str(plan_file), str(plan_dest))
+            shutil.copy2(str(plan_file), str(plan_file_destination))
             if not script and not output_json:
-                click.echo(f"Copied plan to {plan_dest}")
+                click.echo(f"Copied plan to {plan_file_destination}")
         else:
-            shutil.move(str(plan_file), str(plan_dest))
+            shutil.move(str(plan_file), str(plan_file_destination))
             if not script and not output_json:
-                click.echo(f"Moved plan to {plan_dest}")
+                click.echo(f"Moved plan to {plan_file_destination}")
 
     # Post-create commands (suppress output if JSON mode)
     if not no_post and cfg.post_create_commands:
@@ -591,17 +618,14 @@ def create(
         click.echo(str(script_path), nl=False)
     elif output_json:
         # Output JSON with worktree information
-        click.echo(
-            json.dumps(
-                {
-                    "worktree_name": name,
-                    "worktree_path": str(wt_path),
-                    "branch_name": branch,
-                    "plan_file": str(plan_dest_path) if plan_dest_path else None,
-                    "status": "created",
-                }
-            )
+        json_response = _create_json_response(
+            worktree_name=name,
+            worktree_path=wt_path,
+            branch_name=branch,
+            plan_file_path=plan_file_destination,
+            status="created",
         )
+        click.echo(json_response)
     else:
         click.echo(f"Created workstack at {wt_path} checked out at branch '{branch}'")
         click.echo(f"\nworkstack switch {name}")

@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from dot_agent_kit.sources import KitResolver, ResolvedKit, StandalonePackageSource
+from dot_agent_kit.sources.exceptions import ResolverNotConfiguredError
 
 
 def test_standalone_can_resolve() -> None:
@@ -82,7 +83,7 @@ def test_kit_resolver_no_source_found() -> None:
     """Test resolver with no matching source."""
     resolver = KitResolver(sources=[])
 
-    with pytest.raises(ValueError, match="No resolver found"):
+    with pytest.raises(ResolverNotConfiguredError, match="No resolver configured"):
         resolver.resolve("anything")
 
 
@@ -131,7 +132,7 @@ def test_kit_resolver_multiple_sources(tmp_path: Path) -> None:
     assert resolved.source_type == "second"
 
     # Test no matching source
-    with pytest.raises(ValueError, match="No resolver found"):
+    with pytest.raises(ResolverNotConfiguredError, match="No resolver configured"):
         resolver.resolve("unknown-kit")
 
 

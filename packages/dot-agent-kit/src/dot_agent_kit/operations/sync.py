@@ -7,6 +7,12 @@ from dot_agent_kit.io import load_kit_manifest
 from dot_agent_kit.models import InstalledKit, ProjectConfig
 from dot_agent_kit.operations.install import install_kit
 from dot_agent_kit.sources import KitResolver, ResolvedKit
+from dot_agent_kit.sources.exceptions import (
+    KitNotFoundError,
+    KitResolutionError,
+    ResolverNotConfiguredError,
+    SourceAccessError,
+)
 
 
 @dataclass(frozen=True)
@@ -25,30 +31,45 @@ def check_for_updates(
     installed: InstalledKit,
     resolver: KitResolver,
     force: bool = False,
-) -> tuple[bool, ResolvedKit | None]:
+) -> tuple[bool, ResolvedKit | None, str | None]:
     """Check if an installed kit has updates available.
 
     Args:
         installed: The currently installed kit
         resolver: Kit resolver to find the source
         force: If True, always return True (forces reinstall regardless of version)
+
+    Returns:
+        Tuple of (has_update, resolved_kit, error_message)
+        - has_update: True if update available or force is True
+        - resolved_kit: The resolved kit if found, None otherwise
+        - error_message: Descriptive error if resolution failed, None otherwise
     """
     try:
         resolved = resolver.resolve(installed.source)
-    except ValueError:
-        # Source no longer available
-        return False, None
+    except KitNotFoundError as e:
+        # Kit was removed from all sources
+        return False, None, f"Kit no longer available: {e}"
+    except ResolverNotConfiguredError as e:
+        # Resolver configuration changed (e.g., BundledKitSource removed)
+        return False, None, f"Resolver configuration changed: {e}"
+    except SourceAccessError as e:
+        # Network or filesystem access failed
+        return False, None, f"Source access failed: {e}"
+    except KitResolutionError as e:
+        # Other resolution errors
+        return False, None, f"Resolution error: {e}"
 
     if force:
         # Force mode: always consider as having an update
-        return True, resolved
+        return True, resolved, None
 
     manifest = load_kit_manifest(resolved.manifest_path)
 
     # Simple version comparison (should use semver in production)
     has_update = manifest.version != installed.version
 
-    return has_update, resolved
+    return has_update, resolved, None
 
 
 def sync_kit(
@@ -121,7 +142,7 @@ def sync_all_kits(
     results: list[SyncResult] = []
 
     for kit_id, installed in config.kits.items():
-        has_update, resolved = check_for_updates(installed, resolver, force=force)
+        has_update, resolved, error_msg = check_for_updates(installed, resolver, force=force)
 
         if not has_update or resolved is None:
             results.append(

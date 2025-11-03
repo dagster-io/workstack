@@ -1,11 +1,14 @@
 """Install command for installing or updating kits."""
 
+import shutil
+import tempfile
 from dataclasses import replace
 from pathlib import Path
 
 import click
 
 from dot_agent_kit.hooks.installer import install_hooks, remove_hooks
+from dot_agent_kit.hooks.settings import load_settings, save_settings
 from dot_agent_kit.io import (
     create_default_config,
     load_kit_manifest,
@@ -19,6 +22,251 @@ from dot_agent_kit.operations import (
     sync_kit,
 )
 from dot_agent_kit.sources import BundledKitSource, KitResolver, StandalonePackageSource
+
+
+def _handle_update_workflow(
+    kit_id: str,
+    installed: "InstalledKit",
+    resolver: "KitResolver",
+    config: "ProjectConfig",
+    project_dir: Path,
+    force: bool,
+) -> None:
+    """Handle the update workflow for an already installed kit.
+
+    Args:
+        kit_id: Kit identifier
+        installed: Currently installed kit info
+        resolver: Kit resolver instance
+        config: Project configuration
+        project_dir: Project root directory
+        force: Whether to force reinstall
+
+    Raises:
+        SystemExit: If kit not found and force is True
+    """
+    has_update, resolved, error_msg = check_for_updates(installed, resolver, force=force)
+
+    if not has_update or resolved is None:
+        if error_msg:
+            # Resolution failed - provide detailed error
+            click.echo(f"Warning: Failed to check for updates: {error_msg}", err=True)
+        if not force:
+            click.echo(f"Kit '{kit_id}' is already up to date (v{installed.version})")
+            return
+
+        # Force reinstall even if up to date
+        resolved = resolver.resolve(kit_id)
+        if resolved is None:
+            click.echo(f"Error: Kit '{kit_id}' not found", err=True)
+            raise SystemExit(1)
+
+    # Update the kit using sync
+    click.echo(f"Updating {kit_id} to v{resolved.version}...")
+    result = sync_kit(kit_id, installed, resolved, project_dir, force=force)
+
+    if not result.was_updated:
+        click.echo(f"Kit '{kit_id}' was already up to date")
+        return
+
+    # Process successful update
+    _process_update_result(kit_id, result, resolved, config, project_dir)
+
+
+def _process_update_result(
+    kit_id: str,
+    result: "UpdateResult",
+    resolved: "ResolvedKit",
+    config: "ProjectConfig",
+    project_dir: Path,
+) -> None:
+    """Process the result of a successful kit update.
+
+    Args:
+        kit_id: Kit identifier
+        result: Update operation result
+        resolved: Resolved kit information
+        config: Project configuration
+        project_dir: Project root directory
+    """
+    click.echo(f"✓ Updated {kit_id}: {result.old_version} → {result.new_version}")
+    click.echo(f"  Artifacts: {result.artifacts_updated}")
+
+    # Handle hooks atomically
+    manifest = load_kit_manifest(resolved.manifest_path)
+    hooks_count = _perform_atomic_hook_update(
+        kit_id=manifest.name,
+        manifest_hooks=manifest.hooks,
+        kit_path=resolved.artifacts_base,
+        project_dir=project_dir,
+    )
+
+    # Save updated config with new hooks
+    if result.updated_kit is not None:
+        updated_kit = result.updated_kit
+        if manifest.hooks:
+            updated_kit = replace(updated_kit, hooks=manifest.hooks)
+        updated_config = config.update_kit(updated_kit)
+        save_project_config(project_dir, updated_config)
+
+        if hooks_count > 0:
+            click.echo(f"  Installed {hooks_count} hook(s)")
+
+
+def _handle_fresh_install(
+    kit_id: str,
+    resolver: "KitResolver",
+    config: "ProjectConfig",
+    context: "InstallationContext",
+    project_dir: Path,
+    force: bool,
+) -> None:
+    """Handle fresh installation of a kit.
+
+    Args:
+        kit_id: Kit identifier
+        resolver: Kit resolver instance
+        config: Project configuration
+        context: Installation context
+        project_dir: Project root directory
+        force: Whether to force overwrite
+
+    Raises:
+        SystemExit: If kit not found
+    """
+    resolved = resolver.resolve(kit_id)
+    if resolved is None:
+        click.echo(f"Error: Kit '{kit_id}' not found", err=True)
+        raise SystemExit(1)
+
+    # Load manifest
+    manifest = load_kit_manifest(resolved.manifest_path)
+
+    # Install the kit
+    click.echo(f"Installing {kit_id} v{resolved.version} to {context.get_claude_dir()}...")
+    installed_kit = install_kit_to_project(
+        resolved,
+        context,
+        overwrite=force,
+        filtered_artifacts=None,  # Always install all artifacts
+    )
+
+    # Install hooks atomically
+    hooks_count = _perform_atomic_hook_update(
+        kit_id=manifest.name,
+        manifest_hooks=manifest.hooks,
+        kit_path=resolved.artifacts_base,
+        project_dir=project_dir,
+    )
+
+    # Update installed kit with hooks if present
+    if manifest.hooks:
+        installed_kit = replace(installed_kit, hooks=manifest.hooks)
+
+    # Update config
+    updated_config = config.update_kit(installed_kit)
+    save_project_config(project_dir, updated_config)
+
+    # Show success message
+    artifact_count = len(installed_kit.artifacts)
+    click.echo(f"✓ Installed {kit_id} v{installed_kit.version} ({artifact_count} artifacts)")
+
+    if hooks_count > 0:
+        click.echo(f"  Installed {hooks_count} hook(s)")
+
+    click.echo(f"  Location: {context.get_claude_dir()}")
+
+
+def _perform_atomic_hook_update(
+    kit_id: str,
+    manifest_hooks: list | None,
+    kit_path: Path,
+    project_dir: Path,
+) -> int:
+    """Perform atomic hook update with rollback on failure.
+
+    This ensures that if hook installation fails, the old hooks remain intact.
+
+    Args:
+        kit_id: Kit identifier
+        manifest_hooks: List of hook definitions from manifest (can be None)
+        kit_path: Path to kit directory containing hook scripts
+        project_dir: Project root directory
+
+    Returns:
+        Count of installed hooks
+
+    Raises:
+        Exception: Re-raises any exception after attempting rollback
+    """
+    # No hooks to install - just remove old ones
+    if not manifest_hooks:
+        remove_hooks(kit_id, project_dir)
+        return 0
+
+    # Save current state for rollback
+    settings_path = project_dir / ".claude" / "settings.json"
+    hooks_dir = project_dir / ".claude" / "hooks" / kit_id
+
+    # Backup current settings
+    original_settings = None
+    if settings_path.exists():
+        original_settings = load_settings(settings_path)
+
+    # Backup current hooks directory if it exists
+    hooks_backup = None
+    if hooks_dir.exists():
+        with tempfile.TemporaryDirectory() as temp_dir:
+            hooks_backup = Path(temp_dir) / "hooks_backup"
+            shutil.copytree(hooks_dir, hooks_backup)
+
+            try:
+                # Remove old hooks - this modifies settings.json and deletes hooks_dir
+                remove_hooks(kit_id, project_dir)
+
+                # Attempt to install new hooks
+                hooks_count = install_hooks(
+                    kit_id=kit_id,
+                    hooks=manifest_hooks,
+                    kit_path=kit_path,
+                    project_root=project_dir,
+                )
+
+                return hooks_count
+
+            except Exception as e:
+                # Rollback on failure
+                click.echo(f"  Hook installation failed: {e}", err=True)
+                click.echo("  Attempting to restore previous hooks...", err=True)
+
+                # Restore settings if we have a backup
+                if original_settings is not None:
+                    save_settings(settings_path, original_settings)
+
+                # Restore hooks directory if we have a backup
+                if hooks_backup and hooks_backup.exists():
+                    if hooks_dir.exists():
+                        shutil.rmtree(hooks_dir)
+                    shutil.copytree(hooks_backup, hooks_dir)
+                    click.echo("  Previous hooks restored successfully", err=True)
+
+                # Re-raise the original exception
+                raise
+    else:
+        # No existing hooks to backup - simpler flow
+        try:
+            hooks_count = install_hooks(
+                kit_id=kit_id,
+                hooks=manifest_hooks,
+                kit_path=kit_path,
+                project_root=project_dir,
+            )
+            return hooks_count
+        except Exception:
+            # Clean up any partial installation
+            if hooks_dir.exists():
+                shutil.rmtree(hooks_dir)
+            raise
 
 
 @click.command()
@@ -43,116 +291,35 @@ def install(kit_id: str, force: bool) -> None:
         # Force reinstall a kit
         dot-agent kit install github-workflows --force
     """
-
     # Get installation context
     project_dir = Path.cwd()
     context = get_installation_context(project_dir)
 
     # Load project config
     loaded_config = load_project_config(project_dir)
-    if loaded_config is None:
-        config = create_default_config()
-    else:
-        config = loaded_config
+    config = loaded_config if loaded_config is not None else create_default_config()
 
     # Resolve kit source (use both bundled and package sources)
     resolver = KitResolver(sources=[BundledKitSource(), StandalonePackageSource()])
 
-    # Check if kit already installed - if so, update it
+    # Route to appropriate workflow
     if kit_id in config.kits:
-        installed = config.kits[kit_id]
-        has_update, resolved = check_for_updates(installed, resolver, force=force)
-
-        if not has_update or resolved is None:
-            if not force:
-                click.echo(f"Kit '{kit_id}' is already up to date (v{installed.version})")
-                return
-            else:
-                # Force reinstall even if up to date
-                resolved = resolver.resolve(kit_id)
-                if resolved is None:
-                    click.echo(f"Error: Kit '{kit_id}' not found", err=True)
-                    raise SystemExit(1)
-
-        # Update the kit using sync
-        click.echo(f"Updating {kit_id} to v{resolved.version}...")
-        result = sync_kit(kit_id, installed, resolved, project_dir, force=force)
-
-        if result.was_updated:
-            click.echo(f"✓ Updated {kit_id}: {result.old_version} → {result.new_version}")
-            click.echo(f"  Artifacts: {result.artifacts_updated}")
-
-            # Handle hooks: remove old and install new
-            manifest = load_kit_manifest(resolved.manifest_path)
-            hooks_count = 0
-
-            # Remove old hooks
-            remove_hooks(kit_id, project_dir)
-
-            # Install new hooks if present
-            if manifest.hooks:
-                hooks_count = install_hooks(
-                    kit_id=manifest.name,
-                    hooks=manifest.hooks,
-                    kit_path=resolved.artifacts_base,
-                    project_root=project_dir,
-                )
-
-            # Save updated config with new hooks
-            if result.updated_kit is not None:
-                updated_kit = result.updated_kit
-                if manifest.hooks:
-                    updated_kit = replace(updated_kit, hooks=manifest.hooks)
-                updated_config = config.update_kit(updated_kit)
-                save_project_config(project_dir, updated_config)
-
-                if hooks_count > 0:
-                    click.echo(f"  Installed {hooks_count} hook(s)")
-        else:
-            click.echo(f"Kit '{kit_id}' was already up to date")
-
-        return
-
-    # Kit not installed - do fresh install
-    resolved = resolver.resolve(kit_id)
-    if resolved is None:
-        click.echo(f"Error: Kit '{kit_id}' not found", err=True)
-        raise SystemExit(1)
-
-    # Load manifest
-    manifest = load_kit_manifest(resolved.manifest_path)
-
-    # Install the kit (always install complete kit, no artifact selection)
-    click.echo(f"Installing {kit_id} v{resolved.version} to {context.get_claude_dir()}...")
-
-    installed_kit = install_kit_to_project(
-        resolved,
-        context,
-        overwrite=force,  # Use force flag for overwrite
-        filtered_artifacts=None,  # Always install all artifacts
-    )
-
-    # Install hooks if present
-    hooks_count = 0
-    if manifest.hooks:
-        hooks_count = install_hooks(
-            kit_id=manifest.name,
-            hooks=manifest.hooks,
-            kit_path=resolved.artifacts_base,
-            project_root=project_dir,
+        # Kit already installed - update workflow
+        _handle_update_workflow(
+            kit_id=kit_id,
+            installed=config.kits[kit_id],
+            resolver=resolver,
+            config=config,
+            project_dir=project_dir,
+            force=force,
         )
-        # Update installed kit with hooks
-        installed_kit = replace(installed_kit, hooks=manifest.hooks)
-
-    # Update config
-    updated_config = config.update_kit(installed_kit)
-    save_project_config(project_dir, updated_config)
-
-    # Show success message
-    artifact_count = len(installed_kit.artifacts)
-    click.echo(f"✓ Installed {kit_id} v{installed_kit.version} ({artifact_count} artifacts)")
-
-    if hooks_count > 0:
-        click.echo(f"  Installed {hooks_count} hook(s)")
-
-    click.echo(f"  Location: {context.get_claude_dir()}")
+    else:
+        # Kit not installed - fresh install workflow
+        _handle_fresh_install(
+            kit_id=kit_id,
+            resolver=resolver,
+            config=config,
+            context=context,
+            project_dir=project_dir,
+            force=force,
+        )

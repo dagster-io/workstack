@@ -571,3 +571,92 @@ def test_tree_command_shows_three_level_hierarchy_with_correct_indentation() -> 
         # beginning
         assert "   └─ create-agents-symlinks-implementation-plan" in lines[2]
         assert "[@create-agents-symlinks-implementation-plan]" in lines[2]
+
+
+def test_tree_command_shows_trunk_without_worktree() -> None:
+    """Test that trunk branches are shown even when they don't have worktrees.
+
+    This verifies the bug fix: when main (trunk) has no worktree but feature
+    branches do have worktrees, the tree should still display with main as the
+    root showing [no worktree] annotation.
+    """
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        repo_root = cwd / "repo"
+        repo_root.mkdir()
+
+        git_dir = repo_root / ".git"
+        git_dir.mkdir()
+
+        # Cache has main as trunk with two feature children
+        cache_data = {
+            "branches": [
+                [
+                    "main",
+                    {
+                        "validationResult": "TRUNK",
+                        "children": ["feature-a", "feature-b"],
+                    },
+                ],
+                [
+                    "feature-a",
+                    {
+                        "parentBranchName": "main",
+                        "children": [],
+                    },
+                ],
+                [
+                    "feature-b",
+                    {
+                        "parentBranchName": "main",
+                        "children": [],
+                    },
+                ],
+            ]
+        }
+        cache_file = git_dir / ".graphite_cache_persist"
+        cache_file.write_text(json.dumps(cache_data), encoding="utf-8")
+
+        # Only feature branches have worktrees - main does NOT
+        git_ops = FakeGitOps(
+            worktrees={
+                repo_root: [
+                    WorktreeInfo(
+                        path=repo_root / "work" / "feature-a",
+                        branch="feature-a",
+                    ),
+                    WorktreeInfo(
+                        path=repo_root / "work" / "feature-b",
+                        branch="feature-b",
+                    ),
+                ]
+            },
+            git_common_dirs={repo_root: git_dir},
+        )
+
+        global_config_ops = FakeGlobalConfigOps(
+            workstacks_root=cwd / "workstacks", use_graphite=True
+        )
+
+        ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
+
+        # Change to repo directory so discover_repo_context can find .git
+        os.chdir(repo_root)
+
+        result = runner.invoke(cli, ["tree"], obj=ctx)
+
+        assert result.exit_code == 0
+
+        # Verify main appears as root even without worktree
+        assert "main" in result.output
+        assert "[no worktree]" in result.output
+
+        # Verify both feature branches appear as children
+        assert "feature-a" in result.output
+        assert "[@feature-a]" in result.output
+        assert "feature-b" in result.output
+        assert "[@feature-b]" in result.output
+
+        # Verify tree structure is present
+        assert "├─" in result.output or "└─" in result.output

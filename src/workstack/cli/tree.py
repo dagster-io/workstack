@@ -18,18 +18,19 @@ from workstack.core.graphite_ops import read_graphite_json_file
 class TreeNode:
     """A node in the workstack tree.
 
-    Represents a branch that has an active worktree, with its children
-    (dependent branches that also have worktrees).
+    Represents a branch in the tree, which may or may not have an active worktree.
+    Branches without worktrees are included when they are trunk branches or
+    intermediate parents connecting worktree branches to trunks.
 
     Attributes:
         branch_name: Git branch name (e.g., "fix-workstack-s")
-        worktree_name: Worktree directory name (e.g., "root", "fix-plan")
+        worktree_name: Worktree directory name (e.g., "root", "fix-plan"), or None if no worktree
         children: List of child TreeNode objects
         is_current: True if this worktree is the current working directory
     """
 
     branch_name: str
-    worktree_name: str
+    worktree_name: str | None
     children: list["TreeNode"]
     is_current: bool
 
@@ -224,42 +225,63 @@ def _filter_graph_to_active_branches(
     graph: BranchGraph,
     active_branches: set[str],
 ) -> BranchGraph:
-    """Filter branch graph to ONLY include branches with active worktrees.
+    """Filter branch graph to include branches with worktrees and their ancestors.
 
-    This removes branches without worktrees from the graph while preserving
-    the tree structure. Only active branches and their relationships are kept.
+    This keeps:
+    1. All branches with active worktrees
+    2. All trunk branches (even without worktrees) to serve as roots
+    3. All intermediate parent branches needed to connect worktrees to trunks
+
+    Only removes branches that have no worktrees AND no descendants with worktrees.
 
     Args:
         graph: Full branch graph from Graphite cache
         active_branches: Set of branch names that have worktrees
 
     Returns:
-        Filtered BranchGraph containing only active branches
+        Filtered BranchGraph containing active branches and their connecting ancestors
 
     Example:
         Input graph: main -> [feature-a, feature-b -> feature-b-2]
-        Active branches: {main, feature-a}
+        Active branches: {feature-a}  (main has no worktree)
         Output graph: main -> [feature-a]
-        (feature-b and feature-b-2 are removed)
+        (main is kept as trunk, feature-b and feature-b-2 are removed)
     """
+    # Start with branches that have worktrees
+    branches_to_keep: set[str] = set(active_branches)
+
+    # Add all trunk branches (needed as roots even without worktrees)
+    branches_to_keep.update(graph.trunk_branches)
+
+    # Add all intermediate parents to connect active branches to trunks
+    for branch in active_branches:
+        current = branch
+        while current in graph.parent_of:
+            parent = graph.parent_of[current]
+            branches_to_keep.add(parent)
+            current = parent
+
+    # Build filtered graph from branches to keep
     filtered_parent_of: dict[str, str] = {}
     filtered_children_of: dict[str, list[str]] = {}
     filtered_trunk: list[str] = []
 
-    for branch in active_branches:
-        # Keep parent relationship only if branch is active
+    for branch in branches_to_keep:
+        # Keep parent relationship if branch and parent are both kept
         if branch in graph.parent_of:
-            filtered_parent_of[branch] = graph.parent_of[branch]
+            parent = graph.parent_of[branch]
+            if parent in branches_to_keep:
+                filtered_parent_of[branch] = parent
 
-        # Keep only children that are also active
+        # Keep only children that are also kept
         if branch in graph.children_of:
-            active_children = [
-                child for child in graph.children_of[branch] if child in active_branches
+            kept_children = [
+                child for child in graph.children_of[branch] if child in branches_to_keep
             ]
-            if active_children:
-                filtered_children_of[branch] = active_children
+            if kept_children:
+                filtered_children_of[branch] = kept_children
 
-        # Keep trunk status if active
+        # Keep trunk status if this branch is a trunk
         if branch in graph.trunk_branches:
             filtered_trunk.append(branch)
 
@@ -279,8 +301,11 @@ def _build_tree_from_graph(
     Recursively builds tree nodes starting from trunk branches, following
     parent-child relationships to create the full tree structure.
 
+    Handles branches both with and without worktrees (branches without worktrees
+    are included when they are trunks or intermediate parents).
+
     Args:
-        graph: Filtered graph containing only active branches
+        graph: Filtered graph containing branches with worktrees and their ancestors
         mapping: Worktree mapping for annotations
 
     Returns:
@@ -289,8 +314,14 @@ def _build_tree_from_graph(
 
     def build_node(branch: str) -> TreeNode:
         """Recursively build a tree node and its children."""
-        worktree_name = mapping.branch_to_worktree[branch]
-        is_current = worktree_name == mapping.current_worktree
+        # Check if this branch has a worktree (LBYL pattern)
+        if branch in mapping.branch_to_worktree:
+            worktree_name = mapping.branch_to_worktree[branch]
+            is_current = worktree_name == mapping.current_worktree
+        else:
+            # Branch has no worktree (trunk or intermediate parent)
+            worktree_name = None
+            is_current = False
 
         # Recursively build children
         children_branches = graph.children_of.get(branch, [])
@@ -399,13 +430,16 @@ def _format_branch_name(branch: str, is_current: bool) -> str:
         return branch
 
 
-def _format_worktree_annotation(worktree_name: str) -> str:
-    """Format worktree annotation [@name].
+def _format_worktree_annotation(worktree_name: str | None) -> str:
+    """Format worktree annotation [@name] or [no worktree].
 
     Args:
-        worktree_name: Name of the worktree
+        worktree_name: Name of the worktree, or None if branch has no worktree
 
     Returns:
         Dimmed annotation text
     """
-    return click.style(f"[@{worktree_name}]", fg="bright_black")
+    if worktree_name is None:
+        return click.style("[no worktree]", fg="bright_black")
+    else:
+        return click.style(f"[@{worktree_name}]", fg="bright_black")

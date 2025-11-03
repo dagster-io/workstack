@@ -80,6 +80,66 @@ def test_filter_graph_preserves_multi_level_hierarchy() -> None:
     assert filtered.trunk_branches == ["parent"]
 
 
+def test_filter_graph_keeps_trunk_without_worktree() -> None:
+    """Test that trunk branches are kept even when they have no worktrees.
+
+    This is the core fix for the bug: when main (trunk) has no worktree but
+    feature branches do, main should still be kept as a root.
+    """
+    graph = BranchGraph(
+        parent_of={
+            "feature-a": "main",
+            "feature-b": "main",
+        },
+        children_of={
+            "main": ["feature-a", "feature-b"],
+            "feature-a": [],
+            "feature-b": [],
+        },
+        trunk_branches=["main"],
+    )
+
+    # Only feature branches have worktrees - main does NOT
+    active = {"feature-a", "feature-b"}
+
+    filtered = _filter_graph_to_active_branches(graph, active)
+
+    # Main should be kept as trunk even without worktree
+    assert filtered.trunk_branches == ["main"]
+    assert filtered.parent_of == {"feature-a": "main", "feature-b": "main"}
+    assert filtered.children_of == {"main": ["feature-a", "feature-b"]}
+
+
+def test_filter_graph_keeps_intermediate_parents() -> None:
+    """Test that intermediate parents are kept to connect worktrees to trunks.
+
+    When a grandchild has a worktree but its parent doesn't, the parent should
+    still be kept to maintain tree structure.
+    """
+    graph = BranchGraph(
+        parent_of={
+            "parent": "main",
+            "child": "parent",
+        },
+        children_of={
+            "main": ["parent"],
+            "parent": ["child"],
+            "child": [],
+        },
+        trunk_branches=["main"],
+    )
+
+    # Only main and child have worktrees - parent is intermediate
+    active = {"main", "child"}
+
+    filtered = _filter_graph_to_active_branches(graph, active)
+
+    # Parent should be kept to connect child to main
+    assert filtered.trunk_branches == ["main"]
+    assert filtered.parent_of == {"parent": "main", "child": "parent"}
+    assert filtered.children_of == {"main": ["parent"], "parent": ["child"]}
+
+
 # ===========================
 # Tree Building Tests
 # ===========================
@@ -201,6 +261,39 @@ def test_build_tree_handles_multiple_trunk_branches() -> None:
     assert develop_root.children[0].branch_name == "feature-2"
 
 
+def test_build_tree_handles_branches_without_worktrees() -> None:
+    """Test tree building when some branches lack worktrees.
+
+    This verifies the fix: trunk branches and intermediate parents can be
+    included in the graph even if they don't have worktrees.
+    """
+    graph = BranchGraph(
+        parent_of={"feature-a": "main"},
+        children_of={"main": ["feature-a"], "feature-a": []},
+        trunk_branches=["main"],
+    )
+
+    # Only feature-a has a worktree - main does not
+    mapping = WorktreeMapping(
+        branch_to_worktree={"feature-a": "feature-a"},
+        worktree_to_path={"feature-a": Path("/repo/work/feature-a")},
+        current_worktree=None,
+    )
+
+    roots = _build_tree_from_graph(graph, mapping)
+
+    # Should have main as root even without worktree
+    assert len(roots) == 1
+    assert roots[0].branch_name == "main"
+    assert roots[0].worktree_name is None  # No worktree
+    assert roots[0].is_current is False
+
+    # Child should have worktree
+    assert len(roots[0].children) == 1
+    assert roots[0].children[0].branch_name == "feature-a"
+    assert roots[0].children[0].worktree_name == "feature-a"
+
+
 # ===========================
 # Tree Rendering Tests
 # ===========================
@@ -303,3 +396,25 @@ def test_render_tree_with_very_deep_nesting() -> None:
     assert "└─" in output
     # Deep nesting should have vertical lines
     assert "│" in output or "  " in output  # Indentation or vertical lines
+
+
+def test_render_tree_with_no_worktree_annotation() -> None:
+    """Test rendering branches without worktrees shows [no worktree] annotation."""
+    root = TreeNode(
+        branch_name="main",
+        worktree_name=None,  # No worktree
+        children=[
+            TreeNode("feature-a", "feature-a", [], False),
+        ],
+        is_current=False,
+    )
+
+    output = render_tree([root])
+
+    # Main should show [no worktree]
+    assert "main" in output
+    assert "[no worktree]" in output
+
+    # Child should show normal annotation
+    assert "feature-a" in output
+    assert "[@feature-a]" in output

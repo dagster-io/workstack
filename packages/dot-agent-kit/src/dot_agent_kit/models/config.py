@@ -1,18 +1,8 @@
 """Configuration models for dot-agent-kit."""
 
 from dataclasses import dataclass, field, replace
-from enum import Enum
 
 from dot_agent_kit.hooks.models import HookDefinition
-
-
-class ConflictPolicy(Enum):
-    """How to handle file conflicts during installation."""
-
-    ERROR = "error"  # Fail on conflicts (default)
-    SKIP = "skip"  # Skip conflicting files
-    OVERWRITE = "overwrite"  # Replace existing files
-    MERGE = "merge"  # Intelligent merging (future)
 
 
 @dataclass(frozen=True)
@@ -24,7 +14,6 @@ class InstalledKit:
     source: str
     installed_at: str
     artifacts: list[str]
-    conflict_policy: str = "error"
     hooks: list[HookDefinition] = field(default_factory=list)
 
 
@@ -33,7 +22,6 @@ class ProjectConfig:
     """Project configuration from dot-agent.toml."""
 
     version: str
-    default_conflict_policy: ConflictPolicy
     kits: dict[str, InstalledKit]
 
     def update_kit(self, kit: InstalledKit) -> "ProjectConfig":

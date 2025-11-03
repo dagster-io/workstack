@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from dot_agent_kit.io import load_kit_manifest
-from dot_agent_kit.models import ConflictPolicy, InstalledKit, ProjectConfig
+from dot_agent_kit.models import InstalledKit, ProjectConfig
 from dot_agent_kit.operations.install import install_kit
 from dot_agent_kit.sources import KitResolver, ResolvedKit
 
@@ -87,11 +87,11 @@ def sync_kit(
         if full_path.exists():
             full_path.unlink()
 
-    # Install new version with OVERWRITE policy
+    # Install new version with overwrite enabled
     new_installed = install_kit(
         resolved,
         project_dir,
-        conflict_policy=ConflictPolicy.OVERWRITE,
+        overwrite=True,
     )
 
     return SyncResult(

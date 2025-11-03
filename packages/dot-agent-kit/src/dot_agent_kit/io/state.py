@@ -6,7 +6,7 @@ import tomli
 import tomli_w
 
 from dot_agent_kit.hooks.models import HookDefinition
-from dot_agent_kit.models import ConflictPolicy, InstalledKit, ProjectConfig
+from dot_agent_kit.models import InstalledKit, ProjectConfig
 
 
 def load_project_config(project_dir: Path) -> ProjectConfig | None:
@@ -36,17 +36,11 @@ def load_project_config(project_dir: Path) -> ProjectConfig | None:
                 source=kit_data["source"],
                 installed_at=kit_data["installed_at"],
                 artifacts=kit_data["artifacts"],
-                conflict_policy=kit_data.get("conflict_policy", "error"),
                 hooks=hooks,
             )
 
-    # Parse conflict policy
-    policy_str = data.get("default_conflict_policy", "error")
-    policy = ConflictPolicy(policy_str)
-
     return ProjectConfig(
         version=data.get("version", "1"),
-        default_conflict_policy=policy,
         kits=kits,
     )
 
@@ -58,7 +52,6 @@ def save_project_config(project_dir: Path, config: ProjectConfig) -> None:
     # Convert ProjectConfig to dict
     data = {
         "version": config.version,
-        "default_conflict_policy": config.default_conflict_policy.value,
         "kits": {},
     }
 
@@ -69,7 +62,6 @@ def save_project_config(project_dir: Path, config: ProjectConfig) -> None:
             "source": kit.source,
             "installed_at": kit.installed_at,
             "artifacts": kit.artifacts,
-            "conflict_policy": kit.conflict_policy,
         }
 
         # Add hooks if present
@@ -86,6 +78,5 @@ def create_default_config() -> ProjectConfig:
     """Create default project configuration."""
     return ProjectConfig(
         version="1",
-        default_conflict_policy=ConflictPolicy.ERROR,
         kits={},
     )

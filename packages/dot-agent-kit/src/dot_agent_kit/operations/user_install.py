@@ -3,7 +3,6 @@
 from pathlib import Path
 
 from dot_agent_kit.models import (
-    ConflictPolicy,
     InstallationContext,
     InstalledKit,
 )
@@ -14,7 +13,7 @@ from dot_agent_kit.sources import ResolvedKit
 def install_kit_to_project(
     resolved: ResolvedKit,
     context: InstallationContext,
-    conflict_policy: ConflictPolicy = ConflictPolicy.ERROR,
+    overwrite: bool = False,
     filtered_artifacts: dict[str, list[str]] | None = None,
 ) -> InstalledKit:
     """Install a kit to project directory.
@@ -22,13 +21,13 @@ def install_kit_to_project(
     Args:
         resolved: Resolved kit to install
         context: Installation context
-        conflict_policy: How to handle file conflicts
+        overwrite: Whether to overwrite existing files
         filtered_artifacts: Optional filtered artifacts (from ArtifactSpec.filter_artifacts())
 
     Returns:
         InstalledKit with installation metadata
     """
-    return install_kit_base(resolved, context.base_path, conflict_policy, filtered_artifacts)
+    return install_kit_base(resolved, context.base_path, overwrite, filtered_artifacts)
 
 
 def get_installation_context(project_dir: Path | None = None) -> InstallationContext:

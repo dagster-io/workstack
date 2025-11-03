@@ -17,11 +17,11 @@ from dot_agent_kit.sources import BundledKitSource, KitResolver, StandalonePacka
 @click.command()
 @click.argument("package")
 @click.option(
-    "--force",
+    "--overwrite",
     is_flag=True,
     help="Overwrite existing artifacts",
 )
-def init(package: str, force: bool) -> None:
+def init(package: str, overwrite: bool) -> None:
     """Initialize and install a kit from bundled data or Python package."""
     project_dir = Path.cwd()
 
@@ -44,16 +44,9 @@ def init(package: str, force: bool) -> None:
         click.echo(f"Error: Kit '{resolved.kit_id}' is already installed", err=True)
         raise SystemExit(1)
 
-    # Determine conflict policy
-    from dot_agent_kit.models import ConflictPolicy
-
-    conflict_policy = config.default_conflict_policy
-    if force:
-        conflict_policy = ConflictPolicy.OVERWRITE
-
     # Install the kit
     try:
-        installed_kit = install_kit(resolved, project_dir, conflict_policy)
+        installed_kit = install_kit(resolved, project_dir, overwrite)
     except FileExistsError as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1) from e
@@ -62,7 +55,6 @@ def init(package: str, force: bool) -> None:
     new_kits = {**config.kits, resolved.kit_id: installed_kit}
     updated_config = ProjectConfig(
         version=config.version,
-        default_conflict_policy=config.default_conflict_policy,
         kits=new_kits,
     )
 

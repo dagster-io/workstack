@@ -11,7 +11,6 @@ from dot_agent_kit.io import (
     load_project_config,
     save_project_config,
 )
-from dot_agent_kit.models import ConflictPolicy
 from dot_agent_kit.operations import (
     ArtifactSpec,
     get_installation_context,
@@ -23,11 +22,11 @@ from dot_agent_kit.sources import BundledKitSource, KitResolver, StandalonePacka
 @click.command()
 @click.argument("kit-spec")
 @click.option(
-    "--force",
+    "--overwrite",
     is_flag=True,
     help="Overwrite existing artifacts",
 )
-def install(kit_spec: str, force: bool) -> None:
+def install(kit_spec: str, overwrite: bool) -> None:
     """Install a kit or specific artifacts from a kit.
 
     Examples:
@@ -60,10 +59,10 @@ def install(kit_spec: str, force: bool) -> None:
 
     # Check if kit already installed
     if kit_id in config.kits:
-        if not force:
+        if not overwrite:
             click.echo(
                 f"Error: Kit '{kit_id}' is already installed at {context.get_claude_dir()}\n"
-                f"Use --force to overwrite",
+                f"Use --overwrite to overwrite",
                 err=True,
             )
             raise SystemExit(1)
@@ -82,16 +81,13 @@ def install(kit_spec: str, force: bool) -> None:
     # Filter artifacts based on spec
     filtered_artifacts = artifact_spec.filter_artifacts(manifest)
 
-    # Determine conflict policy
-    conflict_policy = ConflictPolicy.OVERWRITE if force else ConflictPolicy.ERROR
-
     # Install the kit
     click.echo(f"Installing {kit_id} to {context.get_claude_dir()}...")
 
     installed_kit = install_kit_to_project(
         resolved,
         context,
-        conflict_policy,
+        overwrite,
         filtered_artifacts,
     )
 

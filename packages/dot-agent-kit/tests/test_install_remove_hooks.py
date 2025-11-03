@@ -405,7 +405,7 @@ class TestInstallCommandWithHooks:
             cli_runner,
             project_dir,
             install,
-            [str(kit_root_v2), "--force"],
+            [str(kit_root_v2), "--overwrite"],
         )
         assert result.exit_code == 0
         assert "Installed 3 hook(s)" in result.output

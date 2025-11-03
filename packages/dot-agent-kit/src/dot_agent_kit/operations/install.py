@@ -6,14 +6,14 @@ from pathlib import Path
 import click
 
 from dot_agent_kit.io import load_kit_manifest
-from dot_agent_kit.models import ConflictPolicy, InstalledKit
+from dot_agent_kit.models import InstalledKit
 from dot_agent_kit.sources import ResolvedKit
 
 
 def install_kit(
     resolved: ResolvedKit,
     project_dir: Path,
-    conflict_policy: ConflictPolicy = ConflictPolicy.ERROR,
+    overwrite: bool = False,
     filtered_artifacts: dict[str, list[str]] | None = None,
 ) -> InstalledKit:
     """Install a kit to the project.
@@ -21,7 +21,7 @@ def install_kit(
     Args:
         resolved: Resolved kit to install
         project_dir: Directory to install to
-        conflict_policy: How to handle file conflicts
+        overwrite: Whether to overwrite existing files
         filtered_artifacts: Optional filtered artifacts dict (type -> paths).
                           If None, installs all artifacts from manifest.
     """
@@ -75,20 +75,14 @@ def install_kit(
             if not target.parent.exists():
                 target.parent.mkdir(parents=True, exist_ok=True)
 
-            # Handle conflicts based on policy
+            # Handle conflicts
             if target.exists():
-                if conflict_policy == ConflictPolicy.ERROR:
+                if not overwrite:
                     raise FileExistsError(
-                        f"Artifact already exists: {target}\nUse --force to overwrite"
+                        f"Artifact already exists: {target}\n"
+                        f"Use --overwrite to replace existing files"
                     )
-                elif conflict_policy == ConflictPolicy.SKIP:
-                    click.echo(f"  Skipping (exists): {target.name}", err=True)
-                    continue
-                elif conflict_policy == ConflictPolicy.OVERWRITE:
-                    click.echo(f"  Overwriting: {target.name}", err=True)
-                    # Will overwrite below
-                else:
-                    raise ValueError(f"Unsupported policy: {conflict_policy}")
+                click.echo(f"  Overwriting: {target.name}", err=True)
 
             # Write artifact
             target.write_text(content, encoding="utf-8")
@@ -106,5 +100,4 @@ def install_kit(
         source=resolved.source,
         installed_at=datetime.now().isoformat(),
         artifacts=installed_artifacts,
-        conflict_policy=conflict_policy.value,
     )

@@ -1,6 +1,6 @@
 ---
 name: devrun-make
-description: GNU Make build automation patterns, Makefile targets, and output parsing guidance for project build and maintenance tasks.
+description: This skill should be used when executing make commands via the runner agent. Use when parsing build automation output, identifying target failures, understanding Makefile execution results, or analyzing multi-target workflows. Essential for distinguishing make errors from underlying command errors.
 ---
 
 # make Skill
@@ -347,15 +347,14 @@ Use prettier parsing patterns.
 
 ## Integration with runner Agent
 
-The `runner` agent will:
+The runner agent loads this skill to:
 
-1. Load this skill
-2. Execute make command via Bash
-3. Use these patterns to parse output
-4. Use tool-specific skills for underlying commands (pytest, ruff, etc.)
-5. Report structured results to parent agent
+1. Execute make commands via Bash
+2. Parse output using these patterns
+3. Delegate to tool-specific skills for underlying commands (pytest, ruff, etc.)
+4. Report structured results to parent agent
 
-**Your job**: Provide this knowledge so the runner can correctly interpret make output and delegate to tool-specific skills as needed.
+The skill provides specialized knowledge for correctly interpreting make output and delegating to tool-specific skills as needed.
 
 ## Recursive Skill Loading
 

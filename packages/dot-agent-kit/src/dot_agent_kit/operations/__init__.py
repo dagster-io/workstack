@@ -3,6 +3,7 @@
 from dot_agent_kit.operations.install import install_kit
 from dot_agent_kit.operations.sync import (
     SyncResult,
+    UpdateCheckResult,
     check_for_updates,
     sync_all_kits,
     sync_kit,
@@ -22,6 +23,7 @@ __all__ = [
     "install_kit",
     "install_kit_to_project",
     "SyncResult",
+    "UpdateCheckResult",
     "check_for_updates",
     "sync_all_kits",
     "sync_kit",

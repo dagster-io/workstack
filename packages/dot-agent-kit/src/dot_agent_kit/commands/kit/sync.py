@@ -60,13 +60,17 @@ def sync(kit_id: str | None, verbose: bool, force: bool) -> None:
             raise SystemExit(1)
 
         installed = config.kits[kit_id]
-        has_update, resolved = check_for_updates(installed, resolver, force=force)
+        check_result = check_for_updates(installed, resolver, force=force)
 
-        if not has_update or resolved is None:
+        if check_result.error_message:
+            click.echo(f"Error: Failed to check for updates: {check_result.error_message}", err=True)
+            raise SystemExit(1)
+
+        if not check_result.has_update or check_result.resolved is None:
             click.echo(f"Kit '{kit_id}' is up to date")
             return
 
-        result = sync_kit(kit_id, installed, resolved, project_dir, force=force)
+        result = sync_kit(kit_id, installed, check_result.resolved, project_dir, force=force)
 
         if result.was_updated:
             click.echo(f"✓ Updated {kit_id}: {result.old_version} → {result.new_version}")

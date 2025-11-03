@@ -15,20 +15,23 @@ from dot_agent_kit.io import (
     load_project_config,
     save_project_config,
 )
+from dot_agent_kit.models import InstalledKit, InstallationContext, ProjectConfig
 from dot_agent_kit.operations import (
+    SyncResult,
+    UpdateCheckResult,
     check_for_updates,
     get_installation_context,
     install_kit_to_project,
     sync_kit,
 )
-from dot_agent_kit.sources import BundledKitSource, KitResolver, StandalonePackageSource
+from dot_agent_kit.sources import BundledKitSource, KitResolver, ResolvedKit, StandalonePackageSource
 
 
 def _handle_update_workflow(
     kit_id: str,
-    installed: "InstalledKit",
-    resolver: "KitResolver",
-    config: "ProjectConfig",
+    installed: InstalledKit,
+    resolver: KitResolver,
+    config: ProjectConfig,
     project_dir: Path,
     force: bool,
 ) -> None:
@@ -43,41 +46,42 @@ def _handle_update_workflow(
         force: Whether to force reinstall
 
     Raises:
-        SystemExit: If kit not found and force is True
+        SystemExit: If resolution fails or kit not found
     """
-    has_update, resolved, error_msg = check_for_updates(installed, resolver, force=force)
+    check_result = check_for_updates(installed, resolver, force=force)
 
-    if not has_update or resolved is None:
-        if error_msg:
-            # Resolution failed - provide detailed error
-            click.echo(f"Warning: Failed to check for updates: {error_msg}", err=True)
-        if not force:
-            click.echo(f"Kit '{kit_id}' is already up to date (v{installed.version})")
-            return
+    # Handle resolution errors - fail loudly rather than assuming up-to-date
+    if check_result.error_message:
+        click.echo(f"Error: Failed to check for updates: {check_result.error_message}", err=True)
+        raise SystemExit(1)
 
-        # Force reinstall even if up to date
-        resolved = resolver.resolve(kit_id)
-        if resolved is None:
-            click.echo(f"Error: Kit '{kit_id}' not found", err=True)
-            raise SystemExit(1)
+    # No update available and not forcing - report and exit
+    if not check_result.has_update:
+        click.echo(f"Kit '{kit_id}' is already up to date (v{installed.version})")
+        return
+
+    # resolved must be non-None at this point (error_message would be set otherwise)
+    if check_result.resolved is None:
+        click.echo(f"Error: Internal error - resolved kit is None", err=True)
+        raise SystemExit(1)
 
     # Update the kit using sync
-    click.echo(f"Updating {kit_id} to v{resolved.version}...")
-    result = sync_kit(kit_id, installed, resolved, project_dir, force=force)
+    click.echo(f"Updating {kit_id} to v{check_result.resolved.version}...")
+    result = sync_kit(kit_id, installed, check_result.resolved, project_dir, force=force)
 
     if not result.was_updated:
         click.echo(f"Kit '{kit_id}' was already up to date")
         return
 
     # Process successful update
-    _process_update_result(kit_id, result, resolved, config, project_dir)
+    _process_update_result(kit_id, result, check_result.resolved, config, project_dir)
 
 
 def _process_update_result(
     kit_id: str,
-    result: "UpdateResult",
-    resolved: "ResolvedKit",
-    config: "ProjectConfig",
+    result: SyncResult,
+    resolved: ResolvedKit,
+    config: ProjectConfig,
     project_dir: Path,
 ) -> None:
     """Process the result of a successful kit update.
@@ -115,9 +119,9 @@ def _process_update_result(
 
 def _handle_fresh_install(
     kit_id: str,
-    resolver: "KitResolver",
-    config: "ProjectConfig",
-    context: "InstallationContext",
+    resolver: KitResolver,
+    config: ProjectConfig,
+    context: InstallationContext,
     project_dir: Path,
     force: bool,
 ) -> None:
@@ -263,7 +267,9 @@ def _perform_atomic_hook_update(
             )
             return hooks_count
         except Exception:
-            # Clean up any partial installation
+            # Clean up any partial installation and restore settings
+            if original_settings is not None:
+                save_settings(settings_path, original_settings)
             if hooks_dir.exists():
                 shutil.rmtree(hooks_dir)
             raise

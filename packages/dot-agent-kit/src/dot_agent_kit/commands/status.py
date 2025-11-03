@@ -22,8 +22,13 @@ def _show_status(verbose: bool) -> None:
     # Load project config for managed kits
     project_config = load_project_config(project_dir)
 
+    if project_config is None:
+        msg = "Error: No dot-agent.toml found. Run 'dot-agent kit init' to create one."
+        click.echo(msg, err=True)
+        raise SystemExit(1)
+
     # Discover artifacts in filesystem
-    discovered = discover_installed_artifacts(project_dir)
+    discovered = discover_installed_artifacts(project_dir, project_config)
 
     # Determine managed vs unmanaged
     managed_kits = set(project_config.kits.keys()) if project_config else set()

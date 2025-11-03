@@ -271,8 +271,8 @@ def _list_kits_impl(artifacts: bool) -> None:
     loaded_config = load_project_config(project_dir)
 
     if loaded_config is None:
-        click.echo("Error: No project configuration found", err=True)
-        click.echo("Run this command from a project directory with a .claude/ folder", err=True)
+        msg = "Error: No dot-agent.toml found. Run 'dot-agent kit init' to create one."
+        click.echo(msg, err=True)
         raise SystemExit(1)
 
     config = loaded_config

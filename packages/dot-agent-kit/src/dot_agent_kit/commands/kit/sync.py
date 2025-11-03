@@ -44,7 +44,8 @@ def sync(kit_id: str | None, verbose: bool, force: bool) -> None:
 
     config = load_project_config(project_dir)
     if config is None:
-        click.echo("Error: No dot-agent.toml found", err=True)
+        msg = "Error: No dot-agent.toml found. Run 'dot-agent kit init' to create one."
+        click.echo(msg, err=True)
         raise SystemExit(1)
 
     if len(config.kits) == 0:

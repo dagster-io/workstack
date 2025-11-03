@@ -19,7 +19,8 @@ def _remove_kit_impl(kit_id: str) -> None:
     # Load project config
     loaded_config = load_project_config(project_dir)
     if loaded_config is None:
-        click.echo("Error: No project configuration found", err=True)
+        msg = "Error: No dot-agent.toml found. Run 'dot-agent kit init' to create one."
+        click.echo(msg, err=True)
         raise SystemExit(1)
     config = loaded_config
 

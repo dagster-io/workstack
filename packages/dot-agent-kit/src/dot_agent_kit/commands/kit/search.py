@@ -1,4 +1,4 @@
-"""Search command for finding kits."""
+"""Search command for finding kits in the registry."""
 
 import click
 

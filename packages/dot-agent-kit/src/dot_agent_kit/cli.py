@@ -2,19 +2,9 @@ import click
 
 from dot_agent_kit import __version__
 from dot_agent_kit.commands import status
-from dot_agent_kit.commands.artifact import check, check_sync, list
+from dot_agent_kit.commands.artifact import artifact_group
 from dot_agent_kit.commands.hook import hook_group
-from dot_agent_kit.commands.kit import (
-    init,
-    install,
-    remove,
-    search,
-    sync,
-    update,
-)
-from dot_agent_kit.commands.kit import (
-    list as list_kit,
-)
+from dot_agent_kit.commands.kit import kit_group
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
@@ -28,38 +18,13 @@ def cli(ctx: click.Context) -> None:
         click.echo(ctx.get_help())
 
 
-@cli.group()
-def kit() -> None:
-    """Manage kits and installations."""
-    pass
-
-
-@cli.group()
-def artifact() -> None:
-    """Manage artifacts."""
-    pass
-
-
 # Register top-level commands
 cli.add_command(status.status)
 
-# Register hook commands
+# Register command groups
+cli.add_command(artifact_group)
 cli.add_command(hook_group)
-
-# Register kit commands
-kit.add_command(init.init)
-kit.add_command(install.install)
-kit.add_command(list_kit.list_installed_kits, name="list")
-kit.add_command(remove.remove)
-kit.add_command(update.update)
-kit.add_command(sync.sync)
-kit.add_command(search.search)
-
-# Register artifact commands
-artifact.add_command(list.list_cmd)
-artifact.add_command(list.ls_cmd)
-artifact.add_command(check.check)
-artifact.add_command(check_sync.check_sync)
+cli.add_command(kit_group)
 
 
 if __name__ == "__main__":

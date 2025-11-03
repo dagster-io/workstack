@@ -1,4 +1,4 @@
-"""List command for displaying installed kits."""
+"""List command for showing installed kits."""
 
 from pathlib import Path
 
@@ -7,7 +7,7 @@ import click
 from dot_agent_kit.io import load_project_config
 
 
-@click.command()
+@click.command(name="list")
 def list_installed_kits() -> None:
     """List all installed kits in the current project."""
     project_dir = Path.cwd()

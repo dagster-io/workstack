@@ -1,4 +1,4 @@
-"""Install command for installing kits."""
+"""Install command for installing kits and artifacts."""
 
 from dataclasses import replace
 from pathlib import Path
@@ -7,6 +7,7 @@ import click
 
 from dot_agent_kit.hooks.installer import install_hooks
 from dot_agent_kit.io import (
+    create_default_config,
     load_kit_manifest,
     load_project_config,
     save_project_config,
@@ -51,8 +52,6 @@ def install(kit_spec: str, overwrite: bool) -> None:
     # Load project config
     loaded_config = load_project_config(project_dir)
     if loaded_config is None:
-        from dot_agent_kit.io import create_default_config
-
         config = create_default_config()
     else:
         config = loaded_config

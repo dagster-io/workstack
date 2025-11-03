@@ -1,4 +1,4 @@
-"""Init command for installing kits."""
+"""Init command for initializing and installing a kit."""
 
 from pathlib import Path
 

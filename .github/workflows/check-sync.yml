@@ -16,5 +16,5 @@ jobs:
         run: pip install uv
       - name: Install dependencies
         run: uv sync
-      - name: Check bundled kit sync status
-        run: uv run --package dot-agent-kit dot-agent artifact check-sync
+      - name: Check artifacts and bundled kit sync status
+        run: uv run --package dot-agent-kit dot-agent check

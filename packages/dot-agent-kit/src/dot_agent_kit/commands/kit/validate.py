@@ -1,4 +1,4 @@
-"""Check command for validating artifacts."""
+"""Validate command for checking artifact integrity."""
 
 from pathlib import Path
 
@@ -13,7 +13,7 @@ from dot_agent_kit.operations import validate_project
     is_flag=True,
     help="Show detailed validation information",
 )
-def check(verbose: bool) -> None:
+def validate(verbose: bool) -> None:
     """Validate installed kit artifacts."""
     project_dir = Path.cwd()
 

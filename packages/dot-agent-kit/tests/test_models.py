@@ -3,20 +3,11 @@
 import pytest
 
 from dot_agent_kit.models import (
-    ConflictPolicy,
     InstalledKit,
     KitManifest,
     ProjectConfig,
     RegistryEntry,
 )
-
-
-def test_conflict_policy_enum() -> None:
-    """Test ConflictPolicy enum values."""
-    assert ConflictPolicy.ERROR.value == "error"
-    assert ConflictPolicy.SKIP.value == "skip"
-    assert ConflictPolicy.OVERWRITE.value == "overwrite"
-    assert ConflictPolicy.MERGE.value == "merge"
 
 
 def test_installed_kit_immutable() -> None:
@@ -33,19 +24,6 @@ def test_installed_kit_immutable() -> None:
         kit.version = "2.0.0"  # type: ignore
 
 
-def test_installed_kit_default_conflict_policy() -> None:
-    """Test InstalledKit has default conflict policy."""
-    kit = InstalledKit(
-        kit_id="test-kit",
-        version="1.0.0",
-        source="test-source",
-        installed_at="2025-01-01T00:00:00",
-        artifacts=[],
-    )
-
-    assert kit.conflict_policy == "error"
-
-
 def test_project_config_creation() -> None:
     """Test ProjectConfig model creation."""
     kit = InstalledKit(
@@ -58,12 +36,10 @@ def test_project_config_creation() -> None:
 
     config = ProjectConfig(
         version="1",
-        default_conflict_policy=ConflictPolicy.ERROR,
         kits={"test-kit": kit},
     )
 
     assert config.version == "1"
-    assert config.default_conflict_policy == ConflictPolicy.ERROR
     assert "test-kit" in config.kits
     assert config.kits["test-kit"].kit_id == "test-kit"
 
@@ -72,7 +48,6 @@ def test_project_config_immutable() -> None:
     """Test ProjectConfig is frozen (immutable)."""
     config = ProjectConfig(
         version="1",
-        default_conflict_policy=ConflictPolicy.ERROR,
         kits={},
     )
 

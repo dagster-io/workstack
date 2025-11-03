@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from dot_agent_kit.io import create_default_config
-from dot_agent_kit.models import ConflictPolicy, InstalledKit, ProjectConfig
+from dot_agent_kit.models import InstalledKit, ProjectConfig
 from dot_agent_kit.models.artifact import ArtifactSource
 from dot_agent_kit.repositories.filesystem_artifact_repository import (
     FilesystemArtifactRepository,
@@ -114,7 +114,6 @@ def test_detects_managed_artifacts(tmp_path: Path) -> None:
     # Create config with this skill as managed
     config = ProjectConfig(
         version="1",
-        default_conflict_policy=ConflictPolicy.ERROR,
         kits={
             "test-kit": InstalledKit(
                 kit_id="test-kit",
@@ -245,7 +244,6 @@ def test_handles_paths_with_claude_prefix_in_config(tmp_path: Path) -> None:
     # Config with .claude/ prefix in path
     config = ProjectConfig(
         version="1",
-        default_conflict_policy=ConflictPolicy.ERROR,
         kits={
             "test-kit": InstalledKit(
                 kit_id="test-kit",

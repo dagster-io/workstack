@@ -7,7 +7,7 @@ from pytest import CaptureFixture
 
 from dot_agent_kit.commands.artifact.list import _list_artifacts, list_cmd, ls_cmd
 from dot_agent_kit.io import create_default_config
-from dot_agent_kit.models import ConflictPolicy, InstalledKit, ProjectConfig
+from dot_agent_kit.models import InstalledKit, ProjectConfig
 from dot_agent_kit.models.artifact import ArtifactSource, InstalledArtifact
 from tests.fakes.fake_artifact_repository import FakeArtifactRepository
 
@@ -140,7 +140,6 @@ def test_list_mixed_artifacts(capsys: CaptureFixture[str]) -> None:
     """Test list command with mixed artifact types and sources."""
     config = ProjectConfig(
         version="1",
-        default_conflict_policy=ConflictPolicy.ERROR,
         kits={
             "devrun": InstalledKit(
                 kit_id="devrun",

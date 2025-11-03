@@ -64,7 +64,6 @@ def remove(kit_id: str) -> None:
     new_kits = {k: v for k, v in config.kits.items() if k != kit_id}
     updated_config = ProjectConfig(
         version=config.version,
-        default_conflict_policy=config.default_conflict_policy,
         kits=new_kits,
     )
 

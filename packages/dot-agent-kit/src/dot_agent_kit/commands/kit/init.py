@@ -18,6 +18,7 @@ from dot_agent_kit.sources import BundledKitSource, KitResolver, StandalonePacka
 @click.argument("package")
 @click.option(
     "--overwrite",
+    "-o",
     is_flag=True,
     help="Overwrite existing artifacts",
 )

@@ -12,6 +12,14 @@ from dot_agent_kit.models.artifact import ArtifactSource, InstalledArtifact
 from dot_agent_kit.models.config import ProjectConfig
 from dot_agent_kit.repositories import ArtifactRepository, FilesystemArtifactRepository
 
+# Reusable option decorator
+artifacts_option = click.option(
+    "--artifacts",
+    "-a",
+    is_flag=True,
+    help="Show artifact-level detail view",
+)
+
 
 @dataclass(frozen=True)
 class ArtifactDisplayData:
@@ -257,14 +265,8 @@ def _list_artifacts(
             click.echo(f"  {name} {source.ljust(20)} {file_path}")
 
 
-@click.command(name="list")
-@click.option(
-    "--artifacts",
-    is_flag=True,
-    help="Show artifact-level detail view",
-)
-def list_installed_kits(artifacts: bool) -> None:
-    """List all installed kits in the current project."""
+def _list_kits_impl(artifacts: bool) -> None:
+    """Implementation of list command logic."""
     project_dir = Path.cwd()
     loaded_config = load_project_config(project_dir)
 
@@ -294,3 +296,17 @@ def list_installed_kits(artifacts: bool) -> None:
             f"{installed_kit.source:<15} {installed_kit.installed_at}"
         )
         click.echo(line)
+
+
+@click.command(name="list")
+@artifacts_option
+def list_installed_kits(artifacts: bool) -> None:
+    """List all installed kits in the current project (alias: ls)."""
+    _list_kits_impl(artifacts)
+
+
+@click.command(name="ls", hidden=True)
+@artifacts_option
+def ls(artifacts: bool) -> None:
+    """List all installed kits in the current project (alias for list)."""
+    _list_kits_impl(artifacts)

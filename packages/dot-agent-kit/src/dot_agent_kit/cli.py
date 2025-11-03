@@ -1,9 +1,10 @@
 import click
 
 from dot_agent_kit import __version__
-from dot_agent_kit.commands import check, status
+from dot_agent_kit.commands import check
 from dot_agent_kit.commands.hook import hook_group
 from dot_agent_kit.commands.kit import kit_group
+from dot_agent_kit.commands.status import st, status
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
@@ -19,7 +20,8 @@ def cli(ctx: click.Context) -> None:
 
 # Register top-level commands
 cli.add_command(check.check)
-cli.add_command(status.status)
+cli.add_command(status)
+cli.add_command(st)
 
 # Register command groups
 cli.add_command(hook_group)

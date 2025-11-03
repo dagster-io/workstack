@@ -70,6 +70,7 @@ def check_artifact_sync(
 @click.command()
 @click.option(
     "--verbose",
+    "-v",
     is_flag=True,
     help="Show detailed validation information",
 )

@@ -4,7 +4,7 @@ version = "1"
 kit_id = "devrun"
 version = "0.1.0"
 source = "devrun"
-installed_at = "2025-11-02T19:31:51.745669"
+installed_at = "2025-11-02T20:30:43.301280"
 artifacts = [
     ".claude/agents/devrun/runner.md",
     ".claude/skills/devrun-make/SKILL.md",
@@ -18,7 +18,7 @@ artifacts = [
 kit_id = "gt"
 version = "0.1.0"
 source = "gt"
-installed_at = "2025-11-02T19:31:51.746899"
+installed_at = "2025-11-02T20:30:43.303878"
 artifacts = [
     ".claude/commands/gt/land-branch.md",
     ".claude/commands/gt/submit-branch.md",
@@ -29,7 +29,14 @@ artifacts = [
 kit_id = "dignified-python"
 version = "0.1.0"
 source = "dignified-python"
-installed_at = "2025-11-02T19:31:51.748177"
+installed_at = "2025-11-02T20:34:46.770142"
 artifacts = [
     ".claude/skills/dignified-python/SKILL.md",
 ]
+
+[[kits.dignified-python.hooks]]
+id = "suggest-dignified-python"
+lifecycle = "UserPromptSubmit"
+script = "hooks/suggest-dignified-python.py"
+description = "Suggests loading dignified-python skill on every prompt"
+timeout = 30

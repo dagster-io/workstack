@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 
+from dot_agent_kit.sources.exceptions import ResolverNotConfiguredError
+
 
 @dataclass(frozen=True)
 class ResolvedKit:
@@ -43,9 +45,17 @@ class KitResolver:
         self.sources = sources
 
     def resolve(self, source: str) -> ResolvedKit:
-        """Resolve a kit from any available source."""
+        """Resolve a kit from any available source.
+
+        Raises:
+            ResolverNotConfiguredError: If no resolver can handle the source
+            KitNotFoundError: If kit not found (should be raised by sources)
+            SourceAccessError: If source cannot be accessed (should be raised by sources)
+        """
         for resolver_source in self.sources:
             if resolver_source.can_resolve(source):
                 return resolver_source.resolve(source)
 
-        raise ValueError(f"No resolver found for: {source}")
+        # No resolver found - provide detailed error
+        available_types = [type(source).__name__ for source in self.sources]
+        raise ResolverNotConfiguredError(source, available_types)

@@ -1,3 +1,5 @@
 """dot-agent-kit: Kit management for Claude Code."""
 
-__version__ = "0.1.20"
+from dot_agent_kit.version import __version__
+
+__all__ = ["__version__"]

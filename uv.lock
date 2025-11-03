@@ -102,7 +102,7 @@ wheels = [
 
 [[package]]
 name = "dot-agent-kit"
-version = "0.1.21"
+version = "0.1.22"
 source = { editable = "packages/dot-agent-kit" }
 dependencies = [
     { name = "click" },
@@ -425,7 +425,7 @@ wheels = [
 
 [[package]]
 name = "workstack"
-version = "0.1.21"
+version = "0.1.22"
 source = { editable = "." }
 dependencies = [
     { name = "click" },

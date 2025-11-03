@@ -32,16 +32,8 @@ conflict_policy = "error"
 kit_id = "dignified-python"
 version = "0.1.0"
 source = "dignified-python"
-installed_at = "2025-11-02T15:49:22.796006"
+installed_at = "2025-11-02T16:15:40.014154"
 artifacts = [
     ".claude/skills/dignified-python/SKILL.md",
 ]
-conflict_policy = "error"
-
-[[kits.dignified-python.hooks]]
-id = "suggest-dignified-python"
-lifecycle = "UserPromptSubmit"
-matcher = "**"
-script = "hooks/suggest-dignified-python.py"
-description = "Suggests loading dignified-python skill on every prompt"
-timeout = 30
+conflict_policy = "overwrite"

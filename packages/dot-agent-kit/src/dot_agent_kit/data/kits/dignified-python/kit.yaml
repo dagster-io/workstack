@@ -1,0 +1,13 @@
+name: dignified-python
+version: 0.1.0
+description: Workstack Python coding standards with automatic suggestion hook
+license: MIT
+artifacts:
+  skill:
+    - skills/dignified-python/SKILL.md
+hooks:
+  - id: suggest-dignified-python
+    lifecycle: UserPromptSubmit
+    script: hooks/suggest-dignified-python.py
+    description: Suggests loading dignified-python skill on every prompt
+    timeout: 30

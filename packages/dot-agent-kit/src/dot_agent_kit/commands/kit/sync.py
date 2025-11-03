@@ -16,7 +16,12 @@ from dot_agent_kit.sources import BundledKitSource, KitResolver, StandalonePacka
     is_flag=True,
     help="Show detailed sync information",
 )
-def sync(kit_id: str | None, verbose: bool) -> None:
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Force reinstall even if versions match",
+)
+def sync(kit_id: str | None, verbose: bool, force: bool) -> None:
     """Sync installed kits with their sources."""
     project_dir = Path.cwd()
 
@@ -38,13 +43,13 @@ def sync(kit_id: str | None, verbose: bool) -> None:
             raise SystemExit(1)
 
         installed = config.kits[kit_id]
-        has_update, resolved = check_for_updates(installed, resolver)
+        has_update, resolved = check_for_updates(installed, resolver, force=force)
 
         if not has_update or resolved is None:
             click.echo(f"Kit '{kit_id}' is up to date")
             return
 
-        result = sync_kit(kit_id, installed, resolved, project_dir)
+        result = sync_kit(kit_id, installed, resolved, project_dir, force=force)
 
         if result.was_updated:
             click.echo(f"✓ Updated {kit_id}: {result.old_version} → {result.new_version}")
@@ -58,7 +63,7 @@ def sync(kit_id: str | None, verbose: bool) -> None:
 
     else:
         # Sync all kits
-        results = sync_all_kits(config, project_dir, resolver)
+        results = sync_all_kits(config, project_dir, resolver, force=force)
 
         updated_count = sum(1 for r in results if r.was_updated)
 

@@ -66,23 +66,28 @@ def install_hooks(
         # Copy script to hooks directory
         shutil.copy2(script_source, script_dest)
 
-        # Build absolute path command
-        absolute_script_path = script_dest.resolve()
-        command = f'python3 "{absolute_script_path}"'
+        # Build command using $CLAUDE_PROJECT_DIR for portability
+        # Path relative to project root
+        relative_hook_path = f".claude/hooks/{kit_id}/{script_filename}"
+        command = f'python3 "$CLAUDE_PROJECT_DIR/{relative_hook_path}"'
 
         # Create hook entry
         metadata = HookMetadata(kit_id=kit_id, hook_id=hook_def.id)
         entry = HookEntry(
+            type="command",
             command=command,
             timeout=hook_def.timeout,
             _dot_agent=metadata,
         )
 
+        # Use wildcard matcher if none specified
+        matcher = hook_def.matcher if hook_def.matcher is not None else "*"
+
         # Add to settings
         settings = add_hook_to_settings(
             settings,
             lifecycle=hook_def.lifecycle,
-            matcher=hook_def.matcher,
+            matcher=matcher,
             entry=entry,
         )
 

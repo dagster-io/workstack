@@ -18,7 +18,7 @@ def test_install_hooks_basic(tmp_project: Path) -> None:
     # Define hook
     hook_def = HookDefinition(
         id="test-hook",
-        lifecycle="user-prompt-submit",
+        lifecycle="UserPromptSubmit",
         matcher="**",
         script="hook.py",
         description="Test hook",
@@ -48,15 +48,15 @@ def test_install_hooks_basic(tmp_project: Path) -> None:
 
     settings = load_settings(settings_path)
     assert settings.hooks is not None
-    assert "user-prompt-submit" in settings.hooks
+    assert "UserPromptSubmit" in settings.hooks
 
-    lifecycle_hooks = settings.hooks["user-prompt-submit"]
+    lifecycle_hooks = settings.hooks["UserPromptSubmit"]
     assert len(lifecycle_hooks) == 1
     assert lifecycle_hooks[0].matcher == "**"
     assert len(lifecycle_hooks[0].hooks) == 1
 
     hook_entry = lifecycle_hooks[0].hooks[0]
-    assert f'python3 "{installed_script.resolve()}"' == hook_entry.command
+    assert hook_entry.command == 'python3 "$CLAUDE_PROJECT_DIR/.claude/hooks/test-kit/hook.py"'
     assert hook_entry.timeout == 30
     assert hook_entry.dot_agent.kit_id == "test-kit"
     assert hook_entry.dot_agent.hook_id == "test-hook"
@@ -76,7 +76,7 @@ def test_install_multiple_hooks(tmp_project: Path) -> None:
     hooks = [
         HookDefinition(
             id="hook-1",
-            lifecycle="user-prompt-submit",
+            lifecycle="UserPromptSubmit",
             matcher="**",
             script="hook1.py",
             description="Hook 1",
@@ -84,7 +84,7 @@ def test_install_multiple_hooks(tmp_project: Path) -> None:
         ),
         HookDefinition(
             id="hook-2",
-            lifecycle="user-prompt-submit",
+            lifecycle="UserPromptSubmit",
             matcher="*.py",
             script="hook2.py",
             description="Hook 2",
@@ -92,7 +92,7 @@ def test_install_multiple_hooks(tmp_project: Path) -> None:
         ),
         HookDefinition(
             id="hook-3",
-            lifecycle="tool-result",
+            lifecycle="PostToolUse",
             matcher="**",
             script="hook3.py",
             description="Hook 3",
@@ -122,13 +122,13 @@ def test_install_multiple_hooks(tmp_project: Path) -> None:
     assert settings.hooks is not None
 
     # Check user-prompt-submit lifecycle has 2 hooks
-    submit_hooks = settings.hooks["user-prompt-submit"]
+    submit_hooks = settings.hooks["UserPromptSubmit"]
     assert len(submit_hooks) == 2  # Two different matchers
     matchers = {group.matcher for group in submit_hooks}
     assert matchers == {"**", "*.py"}
 
-    # Check tool-result lifecycle has 1 hook
-    result_hooks = settings.hooks["tool-result"]
+    # Check PostToolUse lifecycle has 1 hook
+    result_hooks = settings.hooks["PostToolUse"]
     assert len(result_hooks) == 1
     assert result_hooks[0].matcher == "**"
 
@@ -143,7 +143,7 @@ def test_install_hooks_missing_script(tmp_project: Path) -> None:
     hooks = [
         HookDefinition(
             id="exists",
-            lifecycle="user-prompt-submit",
+            lifecycle="UserPromptSubmit",
             matcher="**",
             script="exists.py",
             description="Exists",
@@ -151,7 +151,7 @@ def test_install_hooks_missing_script(tmp_project: Path) -> None:
         ),
         HookDefinition(
             id="missing",
-            lifecycle="user-prompt-submit",
+            lifecycle="UserPromptSubmit",
             matcher="**",
             script="missing.py",
             description="Missing",
@@ -178,7 +178,7 @@ def test_install_hooks_missing_script(tmp_project: Path) -> None:
     # Check settings only has one hook
     settings = load_settings(tmp_project / ".claude" / "settings.json")
     assert settings.hooks is not None
-    lifecycle_hooks = settings.hooks["user-prompt-submit"]
+    lifecycle_hooks = settings.hooks["UserPromptSubmit"]
     assert len(lifecycle_hooks) == 1
     assert len(lifecycle_hooks[0].hooks) == 1
     assert lifecycle_hooks[0].hooks[0].dot_agent.hook_id == "exists"
@@ -193,7 +193,7 @@ def test_install_hooks_replaces_existing(tmp_project: Path) -> None:
     (kit_path / "old.py").write_text("# Old", encoding="utf-8")
     old_hook = HookDefinition(
         id="old",
-        lifecycle="user-prompt-submit",
+        lifecycle="UserPromptSubmit",
         matcher="**",
         script="old.py",
         description="Old",
@@ -209,7 +209,7 @@ def test_install_hooks_replaces_existing(tmp_project: Path) -> None:
     (kit_path / "new.py").write_text("# New", encoding="utf-8")
     new_hook = HookDefinition(
         id="new",
-        lifecycle="tool-result",
+        lifecycle="PostToolUse",
         matcher="*.md",
         script="new.py",
         description="New",
@@ -228,15 +228,15 @@ def test_install_hooks_replaces_existing(tmp_project: Path) -> None:
     assert settings.hooks is not None
 
     # Old lifecycle should be gone (or contain other kits' hooks only)
-    if "user-prompt-submit" in settings.hooks:
+    if "UserPromptSubmit" in settings.hooks:
         # Should not have our kit's hooks
-        for group in settings.hooks["user-prompt-submit"]:
+        for group in settings.hooks["UserPromptSubmit"]:
             for hook in group.hooks:
                 assert hook.dot_agent.kit_id != "test-kit"
 
     # New lifecycle should have the hook
-    assert "tool-result" in settings.hooks
-    result_hooks = settings.hooks["tool-result"]
+    assert "PostToolUse" in settings.hooks
+    result_hooks = settings.hooks["PostToolUse"]
     assert len(result_hooks) == 1
     assert result_hooks[0].hooks[0].dot_agent.hook_id == "new"
 
@@ -283,7 +283,7 @@ def test_install_hooks_creates_directories(tmp_project: Path) -> None:
 
     hook = HookDefinition(
         id="test",
-        lifecycle="user-prompt-submit",
+        lifecycle="UserPromptSubmit",
         matcher="**",
         script="hook.py",
         description="Test",
@@ -310,7 +310,7 @@ def test_install_hooks_flattens_nested_scripts(tmp_project: Path) -> None:
 
     hook = HookDefinition(
         id="nested",
-        lifecycle="user-prompt-submit",
+        lifecycle="UserPromptSubmit",
         matcher="**",
         script="scripts/subdir/nested_hook.py",
         description="Nested",
@@ -325,11 +325,12 @@ def test_install_hooks_flattens_nested_scripts(tmp_project: Path) -> None:
     assert flattened_script.exists()
     assert not (hooks_dir / "scripts").exists()  # No nested structure
 
-    # Command should reference flattened location
+    # Command should reference flattened location using $CLAUDE_PROJECT_DIR
     settings = load_settings(tmp_project / ".claude" / "settings.json")
     assert settings.hooks is not None
-    hook_entry = settings.hooks["user-prompt-submit"][0].hooks[0]
-    assert f'python3 "{flattened_script.resolve()}"' == hook_entry.command
+    hook_entry = settings.hooks["UserPromptSubmit"][0].hooks[0]
+    expected_cmd = 'python3 "$CLAUDE_PROJECT_DIR/.claude/hooks/test-kit/nested_hook.py"'
+    assert hook_entry.command == expected_cmd
 
 
 def test_remove_hooks_basic(tmp_project: Path) -> None:
@@ -341,7 +342,7 @@ def test_remove_hooks_basic(tmp_project: Path) -> None:
 
     hook = HookDefinition(
         id="test",
-        lifecycle="user-prompt-submit",
+        lifecycle="UserPromptSubmit",
         matcher="**",
         script="hook.py",
         description="Test",
@@ -363,8 +364,8 @@ def test_remove_hooks_basic(tmp_project: Path) -> None:
 
     # Settings should not contain the hook
     settings = load_settings(tmp_project / ".claude" / "settings.json")
-    if settings.hooks is not None and "user-prompt-submit" in settings.hooks:
-        for group in settings.hooks["user-prompt-submit"]:
+    if settings.hooks is not None and "UserPromptSubmit" in settings.hooks:
+        for group in settings.hooks["UserPromptSubmit"]:
             for hook_entry in group.hooks:
                 assert hook_entry.dot_agent.kit_id != "test-kit"
 
@@ -380,7 +381,7 @@ def test_remove_hooks_preserves_other_kits(tmp_project: Path) -> None:
 
     hook_a = HookDefinition(
         id="hook-a",
-        lifecycle="user-prompt-submit",
+        lifecycle="UserPromptSubmit",
         matcher="**",
         script="hook_a.py",
         description="A",
@@ -388,7 +389,7 @@ def test_remove_hooks_preserves_other_kits(tmp_project: Path) -> None:
     )
     hook_b = HookDefinition(
         id="hook-b",
-        lifecycle="user-prompt-submit",
+        lifecycle="UserPromptSubmit",
         matcher="**",
         script="hook_b.py",
         description="B",
@@ -412,7 +413,7 @@ def test_remove_hooks_preserves_other_kits(tmp_project: Path) -> None:
     # Settings should only have kit-b
     settings = load_settings(tmp_project / ".claude" / "settings.json")
     assert settings.hooks is not None
-    lifecycle_hooks = settings.hooks["user-prompt-submit"]
+    lifecycle_hooks = settings.hooks["UserPromptSubmit"]
 
     # Count hooks from each kit
     kit_a_count = sum(
@@ -452,7 +453,7 @@ def test_remove_hooks_cleans_empty_lifecycles(tmp_project: Path) -> None:
 
     hook = HookDefinition(
         id="test",
-        lifecycle="user-prompt-submit",
+        lifecycle="UserPromptSubmit",
         matcher="**",
         script="hook.py",
         description="Test",
@@ -466,8 +467,7 @@ def test_remove_hooks_cleans_empty_lifecycles(tmp_project: Path) -> None:
     settings = load_settings(tmp_project / ".claude" / "settings.json")
     if settings.hooks is not None:
         assert (
-            "user-prompt-submit" not in settings.hooks
-            or len(settings.hooks["user-prompt-submit"]) == 0
+            "UserPromptSubmit" not in settings.hooks or len(settings.hooks["UserPromptSubmit"]) == 0
         )
 
 
@@ -479,7 +479,7 @@ def test_hook_entry_metadata_roundtrip(tmp_project: Path) -> None:
 
     hook = HookDefinition(
         id="metadata-test",
-        lifecycle="user-prompt-submit",
+        lifecycle="UserPromptSubmit",
         matcher="**",
         script="hook.py",
         description="Metadata test",
@@ -497,7 +497,7 @@ def test_hook_entry_metadata_roundtrip(tmp_project: Path) -> None:
     settings = load_settings(settings_path)
     assert settings.hooks is not None
 
-    hook_entry = settings.hooks["user-prompt-submit"][0].hooks[0]
+    hook_entry = settings.hooks["UserPromptSubmit"][0].hooks[0]
     assert hook_entry.dot_agent.kit_id == "metadata-kit"
     assert hook_entry.dot_agent.hook_id == "metadata-test"
 
@@ -508,6 +508,96 @@ def test_hook_entry_metadata_roundtrip(tmp_project: Path) -> None:
     reloaded_settings = load_settings(settings_path)
 
     assert reloaded_settings.hooks is not None
-    reloaded_entry = reloaded_settings.hooks["user-prompt-submit"][0].hooks[0]
+    reloaded_entry = reloaded_settings.hooks["UserPromptSubmit"][0].hooks[0]
     assert reloaded_entry.dot_agent.kit_id == "metadata-kit"
     assert reloaded_entry.dot_agent.hook_id == "metadata-test"
+
+
+def test_install_hook_without_matcher(tmp_project: Path) -> None:
+    """Test installing a hook without matcher field uses wildcard default."""
+    # Create kit with a hook script
+    kit_path = tmp_project / "kit"
+    kit_path.mkdir()
+    script_path = kit_path / "hook.py"
+    script_path.write_text("# Hook script", encoding="utf-8")
+
+    # Define hook without matcher
+    hook_def = HookDefinition(
+        id="test-hook",
+        lifecycle="UserPromptSubmit",
+        script="hook.py",
+        description="Test hook without matcher",
+        timeout=30,
+    )
+
+    # Install hooks
+    count = install_hooks(
+        kit_id="test-kit",
+        hooks=[hook_def],
+        kit_path=kit_path,
+        project_root=tmp_project,
+    )
+
+    # Verify installation
+    assert count == 1
+
+    # Check settings.json uses wildcard matcher
+    settings_path = tmp_project / ".claude" / "settings.json"
+    assert settings_path.exists()
+
+    settings = load_settings(settings_path)
+    assert settings.hooks is not None
+    assert "UserPromptSubmit" in settings.hooks
+
+    lifecycle_hooks = settings.hooks["UserPromptSubmit"]
+    assert len(lifecycle_hooks) == 1
+    assert lifecycle_hooks[0].matcher == "*"  # Should default to wildcard
+    assert len(lifecycle_hooks[0].hooks) == 1
+
+    hook_entry = lifecycle_hooks[0].hooks[0]
+    assert hook_entry.dot_agent.kit_id == "test-kit"
+    assert hook_entry.dot_agent.hook_id == "test-hook"
+
+
+def test_install_hooks_includes_type_field(tmp_project: Path) -> None:
+    """Test that installed hooks include a 'type' field for Claude Code compatibility.
+
+    Claude Code requires hooks to have a 'type' discriminator field with value
+    'command' or 'prompt'. This test ensures generated hooks are valid.
+    """
+    # Create kit with a hook script
+    kit_path = tmp_project / "kit"
+    kit_path.mkdir()
+    script_path = kit_path / "hook.py"
+    script_path.write_text("# Hook script", encoding="utf-8")
+
+    # Define hook
+    hook_def = HookDefinition(
+        id="test-hook",
+        lifecycle="UserPromptSubmit",
+        matcher="**",
+        script="hook.py",
+        description="Test hook",
+        timeout=30,
+    )
+
+    # Install hooks
+    count = install_hooks(
+        kit_id="test-kit",
+        hooks=[hook_def],
+        kit_path=kit_path,
+        project_root=tmp_project,
+    )
+
+    assert count == 1
+
+    # Load settings and get hook entry
+    settings = load_settings(tmp_project / ".claude" / "settings.json")
+    assert settings.hooks is not None
+    assert "UserPromptSubmit" in settings.hooks
+
+    hook_entry = settings.hooks["UserPromptSubmit"][0].hooks[0]
+
+    # Verify type field exists and has correct value
+    assert hasattr(hook_entry, "type"), "Hook entry must have 'type' field for Claude Code"
+    assert hook_entry.type == "command", "Hook type should be 'command' for shell commands"

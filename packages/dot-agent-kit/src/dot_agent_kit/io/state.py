@@ -74,7 +74,7 @@ def save_project_config(project_dir: Path, config: ProjectConfig) -> None:
 
         # Add hooks if present
         if kit.hooks:
-            kit_data["hooks"] = [h.model_dump(mode="json") for h in kit.hooks]
+            kit_data["hooks"] = [h.model_dump(mode="json", exclude_none=True) for h in kit.hooks]
 
         data["kits"][kit_id] = kit_data
 

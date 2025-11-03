@@ -1,19 +1,24 @@
 {
   "permissions": {
     "allow": [
-      "BasH(workstack-dev:*)"
+      "Bash(workstack-dev:*)"
     ],
     "deny": [],
     "ask": []
   },
   "hooks": {
-    "PreToolUse": [
+    "UserPromptSubmit": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "*",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 $CLAUDE_PROJECT_DIR/.claude/hooks/suggest-dignified-python.py"
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/dignified-python/suggest-dignified-python.py\"",
+            "timeout": 30,
+            "_dot_agent": {
+              "kit_id": "dignified-python",
+              "hook_id": "suggest-dignified-python"
+            }
           }
         ]
       }

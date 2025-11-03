@@ -12,7 +12,7 @@ from dot_agent_kit.commands.hook import hook_group
 def create_test_hook_entry(
     kit_id: str = "test-kit",
     hook_id: str = "test-hook",
-    lifecycle: str = "pre",
+    lifecycle: str = "PreToolUse",
     matcher: str = "**/*.py",
     command: str = "echo test",
     timeout: int = 30,

@@ -260,6 +260,7 @@ def _list_artifacts(
 @click.command(name="list")
 @click.option(
     "--artifacts",
+    "-a",
     is_flag=True,
     help="Show artifact-level detail view",
 )

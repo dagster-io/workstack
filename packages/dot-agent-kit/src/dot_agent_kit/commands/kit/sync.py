@@ -13,11 +13,13 @@ from dot_agent_kit.sources import BundledKitSource, KitResolver, StandalonePacka
 @click.argument("kit-id", required=False)
 @click.option(
     "--verbose",
+    "-v",
     is_flag=True,
     help="Show detailed sync information",
 )
 @click.option(
     "--force",
+    "-f",
     is_flag=True,
     help="Force reinstall even if versions match",
 )

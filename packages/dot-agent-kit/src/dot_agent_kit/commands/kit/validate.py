@@ -10,6 +10,7 @@ from dot_agent_kit.operations import validate_project
 @click.command()
 @click.option(
     "--verbose",
+    "-v",
     is_flag=True,
     help="Show detailed validation information",
 )

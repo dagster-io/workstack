@@ -1,13 +1,12 @@
 """Tests for resolver error handling with specific exceptions."""
 
 import tempfile
+from datetime import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 
 from dot_agent_kit.models import InstalledKit
-from datetime import datetime
 from dot_agent_kit.operations.sync import check_for_updates
 from dot_agent_kit.sources.exceptions import (
     KitManifestError,

@@ -16,8 +16,7 @@ class KitNotFoundError(KitResolutionError):
         self.kit_id = kit_id
         self.sources_checked = sources_checked
         super().__init__(
-            f"Kit '{kit_id}' not found in any source. "
-            f"Sources checked: {', '.join(sources_checked)}"
+            f"Kit '{kit_id}' not found in any source. Sources checked: {', '.join(sources_checked)}"
         )
 
 

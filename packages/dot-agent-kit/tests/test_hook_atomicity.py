@@ -1,18 +1,15 @@
 """Tests for hook atomicity during installation and updates."""
 
-import json
-import shutil
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
-from click.testing import CliRunner
 
 from dot_agent_kit.commands.kit.install import _perform_atomic_hook_update
-from dot_agent_kit.hooks.installer import install_hooks, remove_hooks
+from dot_agent_kit.hooks.installer import install_hooks
 from dot_agent_kit.hooks.models import HookDefinition
-from dot_agent_kit.hooks.settings import load_settings, save_settings
+from dot_agent_kit.hooks.settings import load_settings
 
 
 def create_test_kit_with_hooks(kit_dir: Path, kit_id: str) -> Path:
@@ -281,6 +278,7 @@ def test_atomic_hook_update_cleans_up_partial_installation_on_failure():
 
         # Mock install_hooks to fail after creating directory
         with patch("dot_agent_kit.commands.kit.install.install_hooks") as mock_install:
+
             def side_effect(*args, **kwargs):
                 # Create the directory to simulate partial installation
                 hooks_dir.mkdir(parents=True, exist_ok=True)

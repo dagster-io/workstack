@@ -15,16 +15,20 @@ from dot_agent_kit.io import (
     load_project_config,
     save_project_config,
 )
-from dot_agent_kit.models import InstalledKit, InstallationContext, ProjectConfig
+from dot_agent_kit.models import InstallationContext, InstalledKit, ProjectConfig
 from dot_agent_kit.operations import (
     SyncResult,
-    UpdateCheckResult,
     check_for_updates,
     get_installation_context,
     install_kit_to_project,
     sync_kit,
 )
-from dot_agent_kit.sources import BundledKitSource, KitResolver, ResolvedKit, StandalonePackageSource
+from dot_agent_kit.sources import (
+    BundledKitSource,
+    KitResolver,
+    ResolvedKit,
+    StandalonePackageSource,
+)
 
 
 def _handle_update_workflow(
@@ -62,7 +66,7 @@ def _handle_update_workflow(
 
     # resolved must be non-None at this point (error_message would be set otherwise)
     if check_result.resolved is None:
-        click.echo(f"Error: Internal error - resolved kit is None", err=True)
+        click.echo("Error: Internal error - resolved kit is None", err=True)
         raise SystemExit(1)
 
     # Update the kit using sync

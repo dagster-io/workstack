@@ -63,7 +63,8 @@ def sync(kit_id: str | None, verbose: bool, force: bool) -> None:
         check_result = check_for_updates(installed, resolver, force=force)
 
         if check_result.error_message:
-            click.echo(f"Error: Failed to check for updates: {check_result.error_message}", err=True)
+            error_msg = f"Error: Failed to check for updates: {check_result.error_message}"
+            click.echo(error_msg, err=True)
             raise SystemExit(1)
 
         if not check_result.has_update or check_result.resolved is None:

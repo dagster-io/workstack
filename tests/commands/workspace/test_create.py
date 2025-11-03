@@ -1,5 +1,6 @@
 """Tests for the create command."""
 
+import json
 from pathlib import Path
 from unittest import mock
 
@@ -1486,3 +1487,253 @@ def test_from_current_branch_no_graphite_main_in_use_uses_detached_head() -> Non
         assert len(git_ops.detached_checkouts) == 1
         assert git_ops.detached_checkouts[0][0] == current_worktree
         assert git_ops.detached_checkouts[0][1] == "standalone-feature"
+
+
+def test_create_with_json_output() -> None:
+    """Test creating a worktree with JSON output."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        git_dir = cwd / ".git"
+        git_dir.mkdir()
+
+        workstacks_root = cwd / "workstacks"
+        workstacks_dir = workstacks_root / cwd.name
+        workstacks_dir.mkdir(parents=True)
+
+        config_toml = workstacks_dir / "config.toml"
+        config_toml.write_text("", encoding="utf-8")
+
+        git_ops = FakeGitOps(
+            git_common_dirs={cwd: git_dir},
+            default_branches={cwd: "main"},
+        )
+        global_config_ops = FakeGlobalConfigOps(
+            exists=True,
+            workstacks_root=workstacks_root,
+            use_graphite=False,
+        )
+
+        test_ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            github_ops=FakeGitHubOps(),
+            graphite_ops=FakeGraphiteOps(),
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
+
+        result = runner.invoke(cli, ["create", "test-feature", "--json"], obj=test_ctx)
+
+        assert result.exit_code == 0, result.output
+
+        # Verify JSON output
+        output_data = json.loads(result.output)
+        assert output_data["worktree_name"] == "test-feature"
+        assert output_data["worktree_path"] == str(workstacks_dir / "test-feature")
+        assert output_data["branch_name"] == "test-feature"
+        assert output_data["plan_file"] is None
+        assert output_data["status"] == "created"
+
+        # Verify worktree was actually created
+        wt_path = workstacks_dir / "test-feature"
+        assert wt_path.exists()
+
+
+def test_create_existing_worktree_with_json() -> None:
+    """Test creating a worktree that already exists with JSON output."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        git_dir = cwd / ".git"
+        git_dir.mkdir()
+
+        workstacks_root = cwd / "workstacks"
+        workstacks_dir = workstacks_root / cwd.name
+        workstacks_dir.mkdir(parents=True)
+
+        config_toml = workstacks_dir / "config.toml"
+        config_toml.write_text("", encoding="utf-8")
+
+        # Create existing worktree
+        existing_wt = workstacks_dir / "existing-feature"
+        existing_wt.mkdir()
+
+        git_ops = FakeGitOps(
+            git_common_dirs={cwd: git_dir},
+            default_branches={cwd: "main"},
+            current_branches={existing_wt: "existing-branch"},
+        )
+        global_config_ops = FakeGlobalConfigOps(
+            exists=True,
+            workstacks_root=workstacks_root,
+            use_graphite=False,
+        )
+
+        test_ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            github_ops=FakeGitHubOps(),
+            graphite_ops=FakeGraphiteOps(),
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
+
+        result = runner.invoke(cli, ["create", "existing-feature", "--json"], obj=test_ctx)
+
+        assert result.exit_code == 1, result.output
+
+        # Verify JSON error output
+        output_data = json.loads(result.output)
+        assert output_data["worktree_name"] == "existing-feature"
+        assert output_data["worktree_path"] == str(existing_wt)
+        assert output_data["branch_name"] == "existing-branch"
+        assert output_data["status"] == "exists"
+
+
+def test_create_json_and_script_mutually_exclusive() -> None:
+    """Test that --json and --script flags are mutually exclusive."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        git_dir = cwd / ".git"
+        git_dir.mkdir()
+
+        workstacks_root = cwd / "workstacks"
+        workstacks_dir = workstacks_root / cwd.name
+        workstacks_dir.mkdir(parents=True)
+
+        config_toml = workstacks_dir / "config.toml"
+        config_toml.write_text("", encoding="utf-8")
+
+        git_ops = FakeGitOps(
+            git_common_dirs={cwd: git_dir},
+            default_branches={cwd: "main"},
+        )
+        global_config_ops = FakeGlobalConfigOps(
+            exists=True,
+            workstacks_root=workstacks_root,
+            use_graphite=False,
+        )
+
+        test_ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            github_ops=FakeGitHubOps(),
+            graphite_ops=FakeGraphiteOps(),
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
+
+        result = runner.invoke(
+            cli, ["create", "test-feature", "--json", "--script"], obj=test_ctx
+        )
+
+        # Should fail with validation error
+        assert result.exit_code == 1
+        assert "Cannot use both --json and --script" in result.output
+
+
+def test_create_with_json_and_plan_file() -> None:
+    """Test creating a worktree with JSON output and plan file."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        git_dir = cwd / ".git"
+        git_dir.mkdir()
+
+        workstacks_root = cwd / "workstacks"
+        workstacks_dir = workstacks_root / cwd.name
+        workstacks_dir.mkdir(parents=True)
+
+        config_toml = workstacks_dir / "config.toml"
+        config_toml.write_text("", encoding="utf-8")
+
+        # Create a plan file - name will be derived from filename
+        plan_file = cwd / "test-feature-plan.md"
+        plan_file.write_text("# Implementation Plan\n\nTest plan content", encoding="utf-8")
+
+        git_ops = FakeGitOps(
+            git_common_dirs={cwd: git_dir},
+            default_branches={cwd: "main"},
+        )
+        global_config_ops = FakeGlobalConfigOps(
+            exists=True,
+            workstacks_root=workstacks_root,
+            use_graphite=False,
+        )
+
+        test_ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            github_ops=FakeGitHubOps(),
+            graphite_ops=FakeGraphiteOps(),
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
+
+        # Don't provide NAME - it's derived from plan filename
+        result = runner.invoke(
+            cli,
+            ["create", "--json", "--plan", str(plan_file)],
+            obj=test_ctx,
+        )
+
+        assert result.exit_code == 0, result.output
+
+        # Verify JSON output includes plan file
+        output_data = json.loads(result.output)
+        # Name is derived from "test-feature-plan.md" -> "test-feature"
+        assert output_data["worktree_name"] == "test-feature"
+        wt_path = workstacks_dir / "test-feature"
+        expected_plan_path = wt_path / ".PLAN.md"
+        assert output_data["plan_file"] == str(expected_plan_path)
+        assert output_data["status"] == "created"
+
+        # Verify plan file was moved
+        assert expected_plan_path.exists()
+        assert not plan_file.exists()  # Original should be moved, not copied
+
+
+def test_create_with_json_no_plan() -> None:
+    """Test that JSON output has null plan_file when no plan is provided."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        git_dir = cwd / ".git"
+        git_dir.mkdir()
+
+        workstacks_root = cwd / "workstacks"
+        workstacks_dir = workstacks_root / cwd.name
+        workstacks_dir.mkdir(parents=True)
+
+        config_toml = workstacks_dir / "config.toml"
+        config_toml.write_text("", encoding="utf-8")
+
+        git_ops = FakeGitOps(
+            git_common_dirs={cwd: git_dir},
+            default_branches={cwd: "main"},
+        )
+        global_config_ops = FakeGlobalConfigOps(
+            exists=True,
+            workstacks_root=workstacks_root,
+            use_graphite=False,
+        )
+
+        test_ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            github_ops=FakeGitHubOps(),
+            graphite_ops=FakeGraphiteOps(),
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
+
+        result = runner.invoke(cli, ["create", "test-feature", "--json"], obj=test_ctx)
+
+        assert result.exit_code == 0, result.output
+
+        # Verify JSON output has null plan_file
+        output_data = json.loads(result.output)
+        assert output_data["plan_file"] is None
+        assert output_data["status"] == "created"

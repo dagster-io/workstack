@@ -1,6 +1,6 @@
 ---
 name: devrun-pyright
-description: pyright type checker patterns, command syntax, and output parsing guidance for Python static type analysis.
+description: This skill should be used when executing pyright commands via the runner agent. Use when parsing type checking results, identifying type errors with file locations and line numbers, understanding pyright's error categorization (reportAssignmentType, reportAttributeAccess, etc.), or distinguishing errors from warnings and informations.
 ---
 
 # pyright Skill
@@ -268,11 +268,11 @@ Common pyright error rules:
 
 ## Integration with runner Agent
 
-The `runner` agent will:
+The runner agent loads this skill to:
 
-1. Load this skill
-2. Execute pyright command via Bash
-3. Use these patterns to parse output
+1. Execute pyright commands via Bash
+2. Parse output using these patterns
+3. Group errors by file and provide actionable diagnostics
 4. Report structured results to parent agent
 
-**Your job**: Provide this knowledge so the runner can correctly interpret pyright output.
+The skill provides specialized knowledge for correctly interpreting pyright output, grouping errors by file, and providing actionable type error diagnostics.

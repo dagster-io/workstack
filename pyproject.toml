@@ -40,7 +40,7 @@ build-backend = "hatchling.build"
 target-version = "py313"
 line-length = 100
 src = ["src"]
-exclude = [".claude/skills/"]
+# exclude = [".claude/skills/"]
 
 [tool.ruff.lint]
 select = [

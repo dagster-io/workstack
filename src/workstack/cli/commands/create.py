@@ -1,3 +1,4 @@
+import json
 import re
 import shlex
 import shutil
@@ -275,6 +276,37 @@ def quote_env_value(value: str) -> str:
     return f'"{escaped}"'
 
 
+def _create_json_response(
+    *,
+    worktree_name: str,
+    worktree_path: Path,
+    branch_name: str | None,
+    plan_file_path: Path | None,
+    status: str,
+) -> str:
+    """Generate JSON response for create command.
+
+    Args:
+        worktree_name: Name of the worktree
+        worktree_path: Path to the worktree directory
+        branch_name: Git branch name (may be None if not available)
+        plan_file_path: Path to plan file if exists, None otherwise
+        status: Status string ("created" or "exists")
+
+    Returns:
+        JSON string with worktree information
+    """
+    return json.dumps(
+        {
+            "worktree_name": worktree_name,
+            "worktree_path": str(worktree_path),
+            "branch_name": branch_name,
+            "plan_file": str(plan_file_path) if plan_file_path else None,
+            "status": status,
+        }
+    )
+
+
 @click.command("create")
 @click.argument("name", metavar="NAME", required=False)
 @click.option(
@@ -330,6 +362,12 @@ def quote_env_value(value: str) -> str:
     hidden=True,
     help="Output shell script for directory change instead of messages.",
 )
+@click.option(
+    "--json",
+    "output_json",
+    is_flag=True,
+    help="Output JSON with worktree information instead of human-readable messages.",
+)
 @click.pass_obj
 def create(
     ctx: WorkstackContext,
@@ -342,6 +380,7 @@ def create(
     from_current_branch: bool,
     from_branch: str | None,
     script: bool,
+    output_json: bool,
 ) -> None:
     """Create a worktree and write a .env file.
 
@@ -356,6 +395,11 @@ def create(
     flags_set = sum([from_current_branch, from_branch is not None, plan_file is not None])
     if flags_set > 1:
         click.echo("Cannot use multiple of: --from-current-branch, --from-branch, --plan")
+        raise SystemExit(1)
+
+    # Validate --json and --script are mutually exclusive
+    if output_json and script:
+        click.echo("Error: Cannot use both --json and --script", err=True)
         raise SystemExit(1)
 
     # Validate --keep-plan requires --plan
@@ -432,8 +476,22 @@ def create(
     wt_path = worktree_path_for(workstacks_dir, name)
 
     if wt_path.exists():
-        click.echo(f"Worktree path already exists: {wt_path}")
-        raise SystemExit(1)
+        if output_json:
+            # For JSON output, emit a status: "exists" response with available info
+            existing_branch = ctx.git_ops.get_current_branch(wt_path)
+            plan_file_path = wt_path / ".PLAN.md"
+            json_response = _create_json_response(
+                worktree_name=name,
+                worktree_path=wt_path,
+                branch_name=existing_branch,
+                plan_file_path=plan_file_path if plan_file_path.exists() else None,
+                status="exists",
+            )
+            click.echo(json_response)
+            raise SystemExit(1)
+        else:
+            click.echo(f"Worktree path already exists: {wt_path}")
+            raise SystemExit(1)
 
     # Handle from-current-branch logic: switch current worktree first
     to_branch = None
@@ -523,20 +581,23 @@ def create(
     (wt_path / ".env").write_text(env_content, encoding="utf-8")
 
     # Move or copy plan file if provided
+    # Track plan file destination: set to .PLAN.md path only if --plan was provided
+    plan_file_destination: Path | None = None
     if plan_file:
-        plan_dest = wt_path / ".PLAN.md"
+        plan_file_destination = wt_path / ".PLAN.md"
         if keep_plan:
-            shutil.copy2(str(plan_file), str(plan_dest))
-            if not script:
-                click.echo(f"Copied plan to {plan_dest}")
+            shutil.copy2(str(plan_file), str(plan_file_destination))
+            if not script and not output_json:
+                click.echo(f"Copied plan to {plan_file_destination}")
         else:
-            shutil.move(str(plan_file), str(plan_dest))
-            if not script:
-                click.echo(f"Moved plan to {plan_dest}")
+            shutil.move(str(plan_file), str(plan_file_destination))
+            if not script and not output_json:
+                click.echo(f"Moved plan to {plan_file_destination}")
 
-    # Post-create commands
+    # Post-create commands (suppress output if JSON mode)
     if not no_post and cfg.post_create_commands:
-        click.echo("Running post-create commands...")
+        if not output_json:
+            click.echo("Running post-create commands...")
         run_commands_in_worktree(
             commands=cfg.post_create_commands,
             worktree_path=wt_path,
@@ -555,6 +616,16 @@ def create(
             comment=f"cd to {name}",
         )
         click.echo(str(script_path), nl=False)
+    elif output_json:
+        # Output JSON with worktree information
+        json_response = _create_json_response(
+            worktree_name=name,
+            worktree_path=wt_path,
+            branch_name=branch,
+            plan_file_path=plan_file_destination,
+            status="created",
+        )
+        click.echo(json_response)
     else:
         click.echo(f"Created workstack at {wt_path} checked out at branch '{branch}'")
         click.echo(f"\nworkstack switch {name}")

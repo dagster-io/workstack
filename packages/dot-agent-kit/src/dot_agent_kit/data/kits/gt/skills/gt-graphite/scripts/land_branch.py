@@ -48,7 +48,6 @@ Examples:
     $ uv run land_branch.py
     {"success": true, "pr_number": 123, ...}
 """
-
 import json
 import subprocess
 import sys

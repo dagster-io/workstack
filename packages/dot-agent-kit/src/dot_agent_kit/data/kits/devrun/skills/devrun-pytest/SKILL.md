@@ -1,6 +1,6 @@
 ---
 name: devrun-pytest
-description: pytest testing framework patterns, command syntax, and output parsing guidance for Python test execution.
+description: This skill should be used when executing pytest commands via the runner agent. Use when parsing test results, identifying test failures with locations and error types, understanding coverage reports, or distinguishing between test failures and collection errors (import failures, syntax errors).
 ---
 
 # pytest Skill
@@ -273,11 +273,11 @@ For each `FAILED` line in "short test summary info":
 
 ## Integration with runner Agent
 
-The `runner` agent will:
+The runner agent loads this skill to:
 
-1. Load this skill
-2. Execute pytest command via Bash
-3. Use these patterns to parse output
+1. Execute pytest commands via Bash
+2. Parse output using these patterns
+3. Extract failure details and coverage data
 4. Report structured results to parent agent
 
-**Your job**: Provide this knowledge so the runner can correctly interpret pytest output.
+The skill provides specialized knowledge for correctly interpreting pytest output, extracting failure details, and parsing coverage data.

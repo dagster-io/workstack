@@ -188,10 +188,23 @@ class TestHookListCommand:
         assert result.exit_code == 1
         assert "Error loading settings.json" in result.output
 
+    def test_local_hook_without_dot_agent(self, cli_runner: CliRunner, tmp_path: Path) -> None:
+        """Test list command with local hook (no _dot_agent field)."""
+        # Local hook without _dot_agent field - this is valid
+        local_hook = {"command": "echo test", "timeout": 30}
+        settings = create_test_settings({"pre": [{"matcher": "**/*.py", "hooks": [local_hook]}]})
+        write_settings_json(tmp_path, settings)
+
+        result = invoke_in_dir(cli_runner, tmp_path, hook_group, ["list"])
+
+        assert result.exit_code == 0
+        assert "local:" in result.output
+        assert "Total: 1 hook(s)" in result.output
+
     def test_invalid_schema(self, cli_runner: CliRunner, tmp_path: Path) -> None:
         """Test list command with invalid Pydantic schema."""
-        # Missing required _dot_agent field
-        invalid_hook = {"command": "echo test", "timeout": 30}
+        # Invalid hook: missing required command field
+        invalid_hook = {"timeout": 30}
         settings = create_test_settings({"pre": [{"matcher": "**/*.py", "hooks": [invalid_hook]}]})
         write_settings_json(tmp_path, settings)
 
@@ -367,8 +380,8 @@ class TestHookValidateCommand:
 
     def test_validate_missing_required_field(self, cli_runner: CliRunner, tmp_path: Path) -> None:
         """Test validate command with missing required field."""
-        # Missing _dot_agent field
-        invalid_hook = {"command": "echo test", "timeout": 30}
+        # Missing required command field
+        invalid_hook = {"timeout": 30}
         settings = create_test_settings({"pre": [{"matcher": "**/*.py", "hooks": [invalid_hook]}]})
         write_settings_json(tmp_path, settings)
 
@@ -464,8 +477,8 @@ class TestHookCommandsIntegration:
 
     def test_error_diagnosis_workflow(self, cli_runner: CliRunner, tmp_path: Path) -> None:
         """Test using validate to diagnose configuration errors."""
-        # Create invalid configuration
-        invalid_hook = {"command": "echo test"}  # Missing timeout and _dot_agent
+        # Create invalid configuration - missing required command field
+        invalid_hook = {"timeout": 30}
         settings = create_test_settings({"pre": [{"matcher": "**/*.py", "hooks": [invalid_hook]}]})
         write_settings_json(tmp_path, settings)
 

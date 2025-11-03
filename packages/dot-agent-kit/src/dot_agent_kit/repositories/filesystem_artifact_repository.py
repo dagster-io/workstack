@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from dot_agent_kit.hooks.settings import get_all_hooks, load_settings
 from dot_agent_kit.models.artifact import ArtifactSource, InstalledArtifact
 from dot_agent_kit.models.config import InstalledKit, ProjectConfig
 from dot_agent_kit.repositories.artifact_repository import ArtifactRepository
@@ -98,6 +99,77 @@ class FilesystemArtifactRepository(ArtifactRepository):
                         )
                         if artifact:
                             artifacts.append(artifact)
+
+        # Scan hooks from settings.json
+        settings_path = claude_dir / "settings.json"
+        if settings_path.exists():
+            settings = load_settings(settings_path)
+            hooks = get_all_hooks(settings)
+
+            for _lifecycle, _matcher, entry in hooks:
+                # Extract script path from command
+                # Command format: "python3 $CLAUDE_PROJECT_DIR/.claude/hooks/kit-id/script.py"
+                # We want the relative path: hooks/kit-id/script.py
+                command = entry.command
+
+                # Try to extract the script path from the command
+                script_path = None
+                if ".claude/hooks/" in command:
+                    # Extract path after .claude/
+                    parts = command.split(".claude/")
+                    if len(parts) > 1:
+                        # Get the path part and extract just the file path
+                        path_part = parts[1].split()[0]  # Take first token
+                        script_path = Path(path_part)
+
+                # Determine hook name, source, and metadata
+                if entry.dot_agent:
+                    # Managed hook with kit metadata
+                    hook_name = f"{entry.dot_agent.kit_id}:{entry.dot_agent.hook_id}"
+                    kit_id = entry.dot_agent.kit_id
+                    source = ArtifactSource.LOCAL
+                    kit_version = None
+
+                    # If we couldn't extract a path, create a placeholder
+                    if not script_path:
+                        script_path = Path("hooks") / entry.dot_agent.kit_id / "hook"
+
+                    hook_path_str = str(script_path).replace("\\", "/")
+
+                    # Check if this hook's script is in managed artifacts
+                    for artifact_path, kit in managed_artifacts.items():
+                        normalized_artifact = artifact_path.replace(".claude/", "").replace(
+                            "\\", "/"
+                        )
+                        matches_path = normalized_artifact == hook_path_str
+                        matches_kit = kit.kit_id == entry.dot_agent.kit_id
+                        if matches_path or matches_kit:
+                            source = ArtifactSource.MANAGED
+                            kit_version = kit.version
+                            break
+                else:
+                    # Local hook without kit metadata
+                    if script_path:
+                        # Use script filename as hook name
+                        hook_name = script_path.stem
+                    else:
+                        # Use command as fallback (truncate if too long)
+                        hook_name = command[:50] if len(command) > 50 else command
+                        script_path = Path("hooks") / "local-hook"
+
+                    kit_id = None
+                    kit_version = None
+                    source = ArtifactSource.LOCAL
+
+                artifact = InstalledArtifact(
+                    artifact_type="hook",
+                    artifact_name=hook_name,
+                    file_path=script_path,
+                    source=source,
+                    kit_id=kit_id,
+                    kit_version=kit_version,
+                )
+                artifacts.append(artifact)
 
         return artifacts
 

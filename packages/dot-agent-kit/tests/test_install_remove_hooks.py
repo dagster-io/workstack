@@ -148,7 +148,7 @@ def assert_hook_installed(
     for matcher_group in settings.hooks[expected_lifecycle]:
         if matcher_group.matcher == expected_matcher:
             for hook_entry in matcher_group.hooks:
-                if (
+                if hook_entry.dot_agent and (
                     hook_entry.dot_agent.kit_id == kit_id
                     and hook_entry.dot_agent.hook_id == hook_id
                 ):
@@ -174,7 +174,7 @@ def assert_hook_not_installed(project_root: Path, kit_id: str) -> None:
             for lifecycle_hooks in settings.hooks.values():
                 for matcher_group in lifecycle_hooks:
                     for hook_entry in matcher_group.hooks:
-                        assert hook_entry.dot_agent.kit_id != kit_id, (
+                        assert not hook_entry.dot_agent or hook_entry.dot_agent.kit_id != kit_id, (
                             f"Found hook for {kit_id} in settings"
                         )
 
@@ -423,7 +423,7 @@ class TestInstallCommandWithHooks:
             for lifecycle_hooks in settings.hooks.values():
                 for matcher_group in lifecycle_hooks:
                     for hook_entry in matcher_group.hooks:
-                        if hook_entry.dot_agent.kit_id == "versioned-kit":
+                        if hook_entry.dot_agent and hook_entry.dot_agent.kit_id == "versioned-kit":
                             all_hook_ids.append(hook_entry.dot_agent.hook_id)
 
         assert "hook-1" not in all_hook_ids
@@ -513,7 +513,8 @@ class TestInstallCommandWithHooks:
             for lifecycle_hooks in settings.hooks.values():
                 for matcher_group in lifecycle_hooks:
                     for hook_entry in matcher_group.hooks:
-                        assert hook_entry.dot_agent.hook_id != "bad-hook"
+                        if hook_entry.dot_agent:
+                            assert hook_entry.dot_agent.hook_id != "bad-hook"
 
     def test_install_preserves_other_kit_hooks(self, cli_runner: CliRunner, tmp_path: Path) -> None:
         """Test that installing a kit preserves hooks from other kits."""

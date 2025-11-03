@@ -51,6 +51,7 @@ class TestHookEntry:
         )
         assert entry.command == 'python3 "/path/to/script.py"'
         assert entry.timeout == 30
+        assert entry.dot_agent is not None
         assert entry.dot_agent.kit_id == "test-kit"
 
     def test_aliased_field_parsing(self) -> None:
@@ -61,6 +62,7 @@ class TestHookEntry:
             "_dot_agent": {"kit_id": "test-kit", "hook_id": "test-hook"},
         }
         entry = HookEntry.model_validate(data)
+        assert entry.dot_agent is not None
         assert entry.dot_agent.kit_id == "test-kit"
 
     def test_immutability(self) -> None:

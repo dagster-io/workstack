@@ -21,8 +21,8 @@ class HookEntry(BaseModel):
 
     type: str = Field(default="command", pattern="^(command|prompt)$")
     command: str = Field(..., min_length=1)
-    timeout: int = Field(..., gt=0)
-    dot_agent: HookMetadata = Field(..., alias="_dot_agent")
+    timeout: int = Field(default=30, gt=0)
+    dot_agent: HookMetadata | None = Field(default=None, alias="_dot_agent")
 
 
 class MatcherGroup(BaseModel):

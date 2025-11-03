@@ -37,6 +37,7 @@ class FakeLocalSource(KitSource):
 
         return ResolvedKit(
             kit_id=manifest.name,
+            version=manifest.version,
             source_type="local",
             source=str(path),
             manifest_path=manifest_path,

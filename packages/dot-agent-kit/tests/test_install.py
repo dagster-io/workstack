@@ -32,6 +32,7 @@ def test_install_kit_basic(tmp_project: Path) -> None:
     # Mock resolution
     resolved = ResolvedKit(
         kit_id="test-kit",
+        version="1.0.0",
         source_type="package",
         source="test-kit",
         manifest_path=manifest,
@@ -83,6 +84,7 @@ def test_install_kit_conflict(tmp_project: Path) -> None:
 
     resolved = ResolvedKit(
         kit_id="test-kit",
+        version="1.0.0",
         source_type="package",
         source="test-kit",
         manifest_path=manifest,
@@ -117,6 +119,7 @@ def test_install_kit_creates_directories(tmp_project: Path) -> None:
 
     resolved = ResolvedKit(
         kit_id="test-kit",
+        version="1.0.0",
         source_type="package",
         source="test-kit",
         manifest_path=manifest,
@@ -161,6 +164,7 @@ def test_install_kit_overwrite_policy(tmp_project: Path) -> None:
 
     resolved = ResolvedKit(
         kit_id="test-kit",
+        version="1.0.0",
         source_type="package",
         source="test-kit",
         manifest_path=manifest,
@@ -220,6 +224,7 @@ def test_install_kit_namespaced_artifacts(tmp_project: Path) -> None:
     # Mock resolution
     resolved = ResolvedKit(
         kit_id="my-kit",
+        version="1.0.0",
         source_type="bundled",
         source="my-kit",
         manifest_path=manifest,

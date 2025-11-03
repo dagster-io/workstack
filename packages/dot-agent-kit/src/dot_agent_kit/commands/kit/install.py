@@ -1,11 +1,11 @@
-"""Install command for installing kits and artifacts."""
+"""Install command for installing or updating kits."""
 
 from dataclasses import replace
 from pathlib import Path
 
 import click
 
-from dot_agent_kit.hooks.installer import install_hooks
+from dot_agent_kit.hooks.installer import install_hooks, remove_hooks
 from dot_agent_kit.io import (
     create_default_config,
     load_kit_manifest,
@@ -13,38 +13,36 @@ from dot_agent_kit.io import (
     save_project_config,
 )
 from dot_agent_kit.operations import (
-    ArtifactSpec,
+    check_for_updates,
     get_installation_context,
     install_kit_to_project,
+    sync_kit,
 )
 from dot_agent_kit.sources import BundledKitSource, KitResolver, StandalonePackageSource
 
 
 @click.command()
-@click.argument("kit-spec")
+@click.argument("kit-id")
 @click.option(
-    "--overwrite",
-    "-o",
+    "--force",
+    "-f",
     is_flag=True,
-    help="Overwrite existing artifacts",
+    help="Force reinstall even if already up to date",
 )
-def install(kit_spec: str, overwrite: bool) -> None:
-    """Install a kit or specific artifacts from a kit.
+def install(kit_id: str, force: bool) -> None:
+    """Install a kit or update it if already installed.
+
+    This command is idempotent - it will install the kit if not present,
+    or update it to the latest version if already installed.
 
     Examples:
 
-        # Install entire kit to project
-        dot-agent install github-workflows
+        # Install or update a kit
+        dot-agent kit install github-workflows
 
-        # Install specific artifact to project
-        dot-agent install github-workflows:pr-review
-
-        # Install multiple artifacts to project
-        dot-agent install github-workflows:pr-review,auto-merge
+        # Force reinstall a kit
+        dot-agent kit install github-workflows --force
     """
-    # Parse kit spec to extract kit ID and artifact selection
-    artifact_spec = ArtifactSpec(kit_spec)
-    kit_id = artifact_spec.get_kit_id()
 
     # Get installation context
     project_dir = Path.cwd()
@@ -57,38 +55,81 @@ def install(kit_spec: str, overwrite: bool) -> None:
     else:
         config = loaded_config
 
-    # Check if kit already installed
-    if kit_id in config.kits:
-        if not overwrite:
-            click.echo(
-                f"Error: Kit '{kit_id}' is already installed at {context.get_claude_dir()}\n"
-                f"Use --overwrite to overwrite",
-                err=True,
-            )
-            raise SystemExit(1)
-
-    # Resolve kit source
+    # Resolve kit source (use both bundled and package sources)
     resolver = KitResolver(sources=[BundledKitSource(), StandalonePackageSource()])
-    resolved = resolver.resolve(kit_id)
 
+    # Check if kit already installed - if so, update it
+    if kit_id in config.kits:
+        installed = config.kits[kit_id]
+        has_update, resolved = check_for_updates(installed, resolver, force=force)
+
+        if not has_update or resolved is None:
+            if not force:
+                click.echo(f"Kit '{kit_id}' is already up to date (v{installed.version})")
+                return
+            else:
+                # Force reinstall even if up to date
+                resolved = resolver.resolve(kit_id)
+                if resolved is None:
+                    click.echo(f"Error: Kit '{kit_id}' not found", err=True)
+                    raise SystemExit(1)
+
+        # Update the kit using sync
+        click.echo(f"Updating {kit_id} to v{resolved.version}...")
+        result = sync_kit(kit_id, installed, resolved, project_dir, force=force)
+
+        if result.was_updated:
+            click.echo(f"✓ Updated {kit_id}: {result.old_version} → {result.new_version}")
+            click.echo(f"  Artifacts: {result.artifacts_updated}")
+
+            # Handle hooks: remove old and install new
+            manifest = load_kit_manifest(resolved.manifest_path)
+            hooks_count = 0
+
+            # Remove old hooks
+            remove_hooks(kit_id, project_dir)
+
+            # Install new hooks if present
+            if manifest.hooks:
+                hooks_count = install_hooks(
+                    kit_id=manifest.name,
+                    hooks=manifest.hooks,
+                    kit_path=resolved.artifacts_base,
+                    project_root=project_dir,
+                )
+
+            # Save updated config with new hooks
+            if result.updated_kit is not None:
+                updated_kit = result.updated_kit
+                if manifest.hooks:
+                    updated_kit = replace(updated_kit, hooks=manifest.hooks)
+                updated_config = config.update_kit(updated_kit)
+                save_project_config(project_dir, updated_config)
+
+                if hooks_count > 0:
+                    click.echo(f"  Installed {hooks_count} hook(s)")
+        else:
+            click.echo(f"Kit '{kit_id}' was already up to date")
+
+        return
+
+    # Kit not installed - do fresh install
+    resolved = resolver.resolve(kit_id)
     if resolved is None:
         click.echo(f"Error: Kit '{kit_id}' not found", err=True)
         raise SystemExit(1)
 
-    # Load manifest to filter artifacts
+    # Load manifest
     manifest = load_kit_manifest(resolved.manifest_path)
 
-    # Filter artifacts based on spec
-    filtered_artifacts = artifact_spec.filter_artifacts(manifest)
-
-    # Install the kit
-    click.echo(f"Installing {kit_id} to {context.get_claude_dir()}...")
+    # Install the kit (always install complete kit, no artifact selection)
+    click.echo(f"Installing {kit_id} v{resolved.version} to {context.get_claude_dir()}...")
 
     installed_kit = install_kit_to_project(
         resolved,
         context,
-        overwrite,
-        filtered_artifacts,
+        overwrite=force,  # Use force flag for overwrite
+        filtered_artifacts=None,  # Always install all artifacts
     )
 
     # Install hooks if present
@@ -109,14 +150,7 @@ def install(kit_spec: str, overwrite: bool) -> None:
 
     # Show success message
     artifact_count = len(installed_kit.artifacts)
-    artifact_names = artifact_spec.get_artifact_names()
-
-    if artifact_names:
-        click.echo(
-            f"✓ Installed {len(artifact_names)} artifact(s) from {kit_id} v{installed_kit.version}"
-        )
-    else:
-        click.echo(f"✓ Installed {kit_id} v{installed_kit.version} ({artifact_count} artifacts)")
+    click.echo(f"✓ Installed {kit_id} v{installed_kit.version} ({artifact_count} artifacts)")
 
     if hooks_count > 0:
         click.echo(f"  Installed {hooks_count} hook(s)")

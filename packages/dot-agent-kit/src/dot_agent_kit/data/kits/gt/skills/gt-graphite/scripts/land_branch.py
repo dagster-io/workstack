@@ -48,6 +48,7 @@ Examples:
     $ uv run land_branch.py
     {"success": true, "pr_number": 123, ...}
 """
+
 import json
 import subprocess
 import sys
@@ -253,12 +254,22 @@ def land_branch() -> LandBranchSuccess | LandBranchError:
         message = f"Successfully merged PR #{pr_number} for branch {branch_name}"
     elif len(children) == 1:
         if child_branch:
-            message = f"Successfully merged PR #{pr_number} for branch {branch_name}\nNavigated to child branch: {child_branch}"
+            message = (
+                f"Successfully merged PR #{pr_number} for branch {branch_name}\n"
+                f"Navigated to child branch: {child_branch}"
+            )
         else:
-            message = f"Successfully merged PR #{pr_number} for branch {branch_name}\nFailed to navigate to child: {children[0]}"
+            message = (
+                f"Successfully merged PR #{pr_number} for branch {branch_name}\n"
+                f"Failed to navigate to child: {children[0]}"
+            )
     else:
         children_list = ", ".join(children)
-        message = f"Successfully merged PR #{pr_number} for branch {branch_name}\nMultiple children detected: {children_list}\nRun 'gt up' to navigate to a child branch"
+        message = (
+            f"Successfully merged PR #{pr_number} for branch {branch_name}\n"
+            f"Multiple children detected: {children_list}\n"
+            f"Run 'gt up' to navigate to a child branch"
+        )
 
     return LandBranchSuccess(
         success=True,

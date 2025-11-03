@@ -45,6 +45,7 @@ def main():
         print("  3. Imports: Absolute only. NEVER relative imports 🔴")
         print("  4. Style: Max 4 indent levels. Extract helpers if deeper")
         print("  5. Data: Prefer immutable data structures. Default to @dataclass(frozen=True)")
+        print("  6. NO fallback behavior: Fail fast, don't silently degrade 🔴")
         print()
         print("See full skill for details")
         print("</reminder>")

@@ -7,7 +7,7 @@ import click
 from pydantic import ValidationError
 
 from dot_agent_kit.hooks.models import ClaudeSettings
-from dot_agent_kit.hooks.settings import get_all_hooks, load_settings
+from dot_agent_kit.hooks.settings import extract_kit_id_from_command, get_all_hooks, load_settings
 
 
 @click.group(name="hook")
@@ -42,8 +42,14 @@ def list_hooks() -> None:
 
     # Display hooks
     for lifecycle, matcher, entry in hooks:
-        if entry.dot_agent:
-            hook_spec = f"{entry.dot_agent.kit_id}:{entry.dot_agent.hook_id}"
+        kit_id = extract_kit_id_from_command(entry.command)
+        if kit_id:
+            # Extract hook_id from command as well
+            import re
+
+            hook_id_match = re.search(r"DOT_AGENT_HOOK_ID=(\S+)", entry.command)
+            hook_id = hook_id_match.group(1) if hook_id_match else "unknown"
+            hook_spec = f"{kit_id}:{hook_id}"
         else:
             # Local hook without kit metadata - show command
             hook_spec = f"local: {entry.command[:50]}"
@@ -96,8 +102,13 @@ def show_hook(hook_spec: str) -> None:
     found = None
 
     for lifecycle, matcher, entry in hooks:
-        if entry.dot_agent:
-            if entry.dot_agent.kit_id == kit_id and entry.dot_agent.hook_id == hook_id:
+        entry_kit_id = extract_kit_id_from_command(entry.command)
+        if entry_kit_id:
+            import re
+
+            hook_id_match = re.search(r"DOT_AGENT_HOOK_ID=(\S+)", entry.command)
+            entry_hook_id = hook_id_match.group(1) if hook_id_match else None
+            if entry_kit_id == kit_id and entry_hook_id == hook_id:
                 found = (lifecycle, matcher, entry)
                 break
 

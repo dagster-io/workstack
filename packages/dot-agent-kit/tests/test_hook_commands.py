@@ -18,10 +18,11 @@ def create_test_hook_entry(
     timeout: int = 30,
 ) -> dict:
     """Factory for creating test hook entry dictionaries."""
+    # Encode metadata in command via environment variables
+    command_with_metadata = f"DOT_AGENT_KIT_ID={kit_id} DOT_AGENT_HOOK_ID={hook_id} {command}"
     return {
-        "command": command,
+        "command": command_with_metadata,
         "timeout": timeout,
-        "_dot_agent": {"kit_id": kit_id, "hook_id": hook_id},
     }
 
 
@@ -235,7 +236,8 @@ class TestHookShowCommand:
         assert "Lifecycle: pre" in result.output
         assert "Matcher: **/*.py" in result.output
         assert "Timeout: 45s" in result.output
-        assert "Command: echo hello world" in result.output
+        expected_cmd = "DOT_AGENT_KIT_ID=my-kit DOT_AGENT_HOOK_ID=my-hook echo hello world"
+        assert f"Command: {expected_cmd}" in result.output
 
     def test_show_hook_in_post_lifecycle(self, cli_runner: CliRunner, tmp_path: Path) -> None:
         """Test show command for hook in post lifecycle."""
@@ -464,7 +466,8 @@ class TestHookCommandsIntegration:
         assert result.exit_code == 0
         assert "Hook: kit1:hook1" in result.output
         assert "Lifecycle: pre" in result.output
-        assert "Command: echo first" in result.output
+        expected_cmd1 = "DOT_AGENT_KIT_ID=kit1 DOT_AGENT_HOOK_ID=hook1 echo first"
+        assert f"Command: {expected_cmd1}" in result.output
         assert "Timeout: 30s" in result.output
 
         # 4. Show second hook
@@ -472,7 +475,8 @@ class TestHookCommandsIntegration:
         assert result.exit_code == 0
         assert "Hook: kit2:hook2" in result.output
         assert "Lifecycle: post" in result.output
-        assert "Command: echo second" in result.output
+        expected_cmd2 = "DOT_AGENT_KIT_ID=kit2 DOT_AGENT_HOOK_ID=hook2 echo second"
+        assert f"Command: {expected_cmd2}" in result.output
         assert "Timeout: 60s" in result.output
 
     def test_error_diagnosis_workflow(self, cli_runner: CliRunner, tmp_path: Path) -> None:

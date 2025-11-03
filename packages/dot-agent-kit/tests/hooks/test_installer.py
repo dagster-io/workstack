@@ -56,11 +56,12 @@ def test_install_hooks_basic(tmp_project: Path) -> None:
     assert len(lifecycle_hooks[0].hooks) == 1
 
     hook_entry = lifecycle_hooks[0].hooks[0]
-    assert hook_entry.command == 'python3 "$CLAUDE_PROJECT_DIR/.claude/hooks/test-kit/hook.py"'
+    expected_cmd = (
+        "DOT_AGENT_KIT_ID=test-kit DOT_AGENT_HOOK_ID=test-hook "
+        'python3 "$CLAUDE_PROJECT_DIR/.claude/hooks/test-kit/hook.py"'
+    )
+    assert hook_entry.command == expected_cmd
     assert hook_entry.timeout == 30
-    assert hook_entry.dot_agent is not None
-    assert hook_entry.dot_agent.kit_id == "test-kit"
-    assert hook_entry.dot_agent.hook_id == "test-hook"
 
 
 def test_install_multiple_hooks(tmp_project: Path) -> None:
@@ -183,8 +184,7 @@ def test_install_hooks_missing_script(tmp_project: Path) -> None:
     assert len(lifecycle_hooks) == 1
     assert len(lifecycle_hooks[0].hooks) == 1
     hook_entry = lifecycle_hooks[0].hooks[0]
-    assert hook_entry.dot_agent is not None
-    assert hook_entry.dot_agent.hook_id == "exists"
+    assert "DOT_AGENT_HOOK_ID=exists" in hook_entry.command
 
 
 def test_install_hooks_replaces_existing(tmp_project: Path) -> None:
@@ -235,16 +235,14 @@ def test_install_hooks_replaces_existing(tmp_project: Path) -> None:
         # Should not have our kit's hooks
         for group in settings.hooks["UserPromptSubmit"]:
             for hook in group.hooks:
-                assert hook.dot_agent is not None
-                assert hook.dot_agent.kit_id != "test-kit"
+                assert "DOT_AGENT_KIT_ID=test-kit" not in hook.command
 
     # New lifecycle should have the hook
     assert "PostToolUse" in settings.hooks
     result_hooks = settings.hooks["PostToolUse"]
     assert len(result_hooks) == 1
     hook_entry = result_hooks[0].hooks[0]
-    assert hook_entry.dot_agent is not None
-    assert hook_entry.dot_agent.hook_id == "new"
+    assert "DOT_AGENT_HOOK_ID=new" in hook_entry.command
 
 
 def test_install_hooks_empty_list(tmp_project: Path) -> None:
@@ -274,8 +272,7 @@ def test_install_hooks_empty_list(tmp_project: Path) -> None:
             for lifecycle_groups in settings.hooks.values():
                 for group in lifecycle_groups:
                     for hook in group.hooks:
-                        assert hook.dot_agent is not None
-                        assert hook.dot_agent.kit_id != "empty-kit"
+                        assert "DOT_AGENT_KIT_ID=empty-kit" not in hook.command
 
 
 def test_install_hooks_creates_directories(tmp_project: Path) -> None:
@@ -336,7 +333,10 @@ def test_install_hooks_flattens_nested_scripts(tmp_project: Path) -> None:
     settings = load_settings(tmp_project / ".claude" / "settings.json")
     assert settings.hooks is not None
     hook_entry = settings.hooks["UserPromptSubmit"][0].hooks[0]
-    expected_cmd = 'python3 "$CLAUDE_PROJECT_DIR/.claude/hooks/test-kit/nested_hook.py"'
+    expected_cmd = (
+        "DOT_AGENT_KIT_ID=test-kit DOT_AGENT_HOOK_ID=nested "
+        'python3 "$CLAUDE_PROJECT_DIR/.claude/hooks/test-kit/nested_hook.py"'
+    )
     assert hook_entry.command == expected_cmd
 
 
@@ -374,8 +374,7 @@ def test_remove_hooks_basic(tmp_project: Path) -> None:
     if settings.hooks is not None and "UserPromptSubmit" in settings.hooks:
         for group in settings.hooks["UserPromptSubmit"]:
             for hook_entry in group.hooks:
-                assert hook_entry.dot_agent is not None
-                assert hook_entry.dot_agent.kit_id != "test-kit"
+                assert "DOT_AGENT_KIT_ID=test-kit" not in hook_entry.command
 
 
 def test_remove_hooks_preserves_other_kits(tmp_project: Path) -> None:
@@ -428,13 +427,13 @@ def test_remove_hooks_preserves_other_kits(tmp_project: Path) -> None:
         1
         for group in lifecycle_hooks
         for hook in group.hooks
-        if hook.dot_agent and hook.dot_agent.kit_id == "kit-a"
+        if "DOT_AGENT_KIT_ID=kit-a" in hook.command
     )
     kit_b_count = sum(
         1
         for group in lifecycle_hooks
         for hook in group.hooks
-        if hook.dot_agent and hook.dot_agent.kit_id == "kit-b"
+        if "DOT_AGENT_KIT_ID=kit-b" in hook.command
     )
 
     assert kit_a_count == 0
@@ -456,8 +455,7 @@ def test_remove_hooks_nonexistent_kit(tmp_project: Path) -> None:
             for lifecycle_groups in settings.hooks.values():
                 for group in lifecycle_groups:
                     for hook in group.hooks:
-                        assert hook.dot_agent is not None
-                        assert hook.dot_agent.kit_id != "nonexistent-kit"
+                        assert "DOT_AGENT_KIT_ID=nonexistent-kit" not in hook.command
 
 
 def test_remove_hooks_cleans_empty_lifecycles(tmp_project: Path) -> None:
@@ -503,19 +501,19 @@ def test_hook_entry_metadata_roundtrip(tmp_project: Path) -> None:
 
     install_hooks("metadata-kit", [hook], kit_path, tmp_project)
 
-    # Read raw JSON to check _dot_agent field
+    # Read raw JSON to check env vars in command
     settings_path = tmp_project / ".claude" / "settings.json"
     raw_json = settings_path.read_text(encoding="utf-8")
-    assert '"_dot_agent"' in raw_json
+    assert "DOT_AGENT_KIT_ID=metadata-kit" in raw_json
+    assert "DOT_AGENT_HOOK_ID=metadata-test" in raw_json
 
     # Load and verify structure
     settings = load_settings(settings_path)
     assert settings.hooks is not None
 
     hook_entry = settings.hooks["UserPromptSubmit"][0].hooks[0]
-    assert hook_entry.dot_agent is not None
-    assert hook_entry.dot_agent.kit_id == "metadata-kit"
-    assert hook_entry.dot_agent.hook_id == "metadata-test"
+    assert "DOT_AGENT_KIT_ID=metadata-kit" in hook_entry.command
+    assert "DOT_AGENT_HOOK_ID=metadata-test" in hook_entry.command
 
     # Re-save and re-load to ensure roundtrip works
     from dot_agent_kit.hooks.settings import save_settings
@@ -525,9 +523,8 @@ def test_hook_entry_metadata_roundtrip(tmp_project: Path) -> None:
 
     assert reloaded_settings.hooks is not None
     reloaded_entry = reloaded_settings.hooks["UserPromptSubmit"][0].hooks[0]
-    assert reloaded_entry.dot_agent is not None
-    assert reloaded_entry.dot_agent.kit_id == "metadata-kit"
-    assert reloaded_entry.dot_agent.hook_id == "metadata-test"
+    assert "DOT_AGENT_KIT_ID=metadata-kit" in reloaded_entry.command
+    assert "DOT_AGENT_HOOK_ID=metadata-test" in reloaded_entry.command
 
 
 def test_install_hook_without_matcher(tmp_project: Path) -> None:
@@ -572,9 +569,8 @@ def test_install_hook_without_matcher(tmp_project: Path) -> None:
     assert len(lifecycle_hooks[0].hooks) == 1
 
     hook_entry = lifecycle_hooks[0].hooks[0]
-    assert hook_entry.dot_agent is not None
-    assert hook_entry.dot_agent.kit_id == "test-kit"
-    assert hook_entry.dot_agent.hook_id == "test-hook"
+    assert "DOT_AGENT_KIT_ID=test-kit" in hook_entry.command
+    assert "DOT_AGENT_HOOK_ID=test-hook" in hook_entry.command
 
 
 def test_install_hooks_includes_type_field(tmp_project: Path) -> None:

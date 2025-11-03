@@ -7,35 +7,8 @@ from dot_agent_kit.hooks.models import (
     ClaudeSettings,
     HookDefinition,
     HookEntry,
-    HookMetadata,
     MatcherGroup,
 )
-
-
-class TestHookMetadata:
-    """Tests for HookMetadata model."""
-
-    def test_create_valid_metadata(self) -> None:
-        """Test creating valid metadata."""
-        metadata = HookMetadata(kit_id="test-kit", hook_id="test-hook")
-        assert metadata.kit_id == "test-kit"
-        assert metadata.hook_id == "test-hook"
-
-    def test_immutability(self) -> None:
-        """Test that metadata is immutable."""
-        metadata = HookMetadata(kit_id="test-kit", hook_id="test-hook")
-        with pytest.raises((AttributeError, ValidationError)):
-            metadata.kit_id = "new-kit"  # type: ignore
-
-    def test_rejects_empty_kit_id(self) -> None:
-        """Test that empty kit_id is rejected."""
-        with pytest.raises(ValidationError):
-            HookMetadata(kit_id="", hook_id="test-hook")
-
-    def test_rejects_empty_hook_id(self) -> None:
-        """Test that empty hook_id is rejected."""
-        with pytest.raises(ValidationError):
-            HookMetadata(kit_id="test-kit", hook_id="")
 
 
 class TestHookEntry:
@@ -43,46 +16,26 @@ class TestHookEntry:
 
     def test_create_valid_entry(self) -> None:
         """Test creating valid hook entry."""
-        metadata = HookMetadata(kit_id="test-kit", hook_id="test-hook")
-        entry = HookEntry(
-            command='python3 "/path/to/script.py"',
-            timeout=30,
-            _dot_agent=metadata,
-        )
-        assert entry.command == 'python3 "/path/to/script.py"'
+        cmd = 'DOT_AGENT_KIT_ID=test-kit DOT_AGENT_HOOK_ID=test-hook python3 "/path/to/script.py"'
+        entry = HookEntry(command=cmd, timeout=30)
+        assert entry.command == cmd
         assert entry.timeout == 30
-        assert entry.dot_agent is not None
-        assert entry.dot_agent.kit_id == "test-kit"
-
-    def test_aliased_field_parsing(self) -> None:
-        """Test that _dot_agent alias works in parsing."""
-        data = {
-            "command": 'python3 "/path/to/script.py"',
-            "timeout": 30,
-            "_dot_agent": {"kit_id": "test-kit", "hook_id": "test-hook"},
-        }
-        entry = HookEntry.model_validate(data)
-        assert entry.dot_agent is not None
-        assert entry.dot_agent.kit_id == "test-kit"
 
     def test_immutability(self) -> None:
         """Test that entry is immutable."""
-        metadata = HookMetadata(kit_id="test-kit", hook_id="test-hook")
-        entry = HookEntry(command="python3 script.py", timeout=30, _dot_agent=metadata)
+        entry = HookEntry(command="python3 script.py", timeout=30)
         with pytest.raises((AttributeError, ValidationError)):
             entry.command = "new command"  # type: ignore
 
     def test_rejects_negative_timeout(self) -> None:
         """Test that negative timeout is rejected."""
-        metadata = HookMetadata(kit_id="test-kit", hook_id="test-hook")
         with pytest.raises(ValidationError):
-            HookEntry(command="python3 script.py", timeout=-1, _dot_agent=metadata)
+            HookEntry(command="python3 script.py", timeout=-1)
 
     def test_rejects_zero_timeout(self) -> None:
         """Test that zero timeout is rejected."""
-        metadata = HookMetadata(kit_id="test-kit", hook_id="test-hook")
         with pytest.raises(ValidationError):
-            HookEntry(command="python3 script.py", timeout=0, _dot_agent=metadata)
+            HookEntry(command="python3 script.py", timeout=0)
 
 
 class TestMatcherGroup:
@@ -90,8 +43,8 @@ class TestMatcherGroup:
 
     def test_create_valid_group(self) -> None:
         """Test creating valid matcher group."""
-        metadata = HookMetadata(kit_id="test-kit", hook_id="test-hook")
-        entry = HookEntry(command="python3 script.py", timeout=30, _dot_agent=metadata)
+        cmd = "DOT_AGENT_KIT_ID=test-kit DOT_AGENT_HOOK_ID=test-hook python3 script.py"
+        entry = HookEntry(command=cmd, timeout=30)
         group = MatcherGroup(matcher="**", hooks=[entry])
         assert group.matcher == "**"
         assert len(group.hooks) == 1
@@ -120,8 +73,8 @@ class TestClaudeSettings:
 
     def test_create_with_hooks(self) -> None:
         """Test creating settings with hooks."""
-        metadata = HookMetadata(kit_id="test-kit", hook_id="test-hook")
-        entry = HookEntry(command="python3 script.py", timeout=30, _dot_agent=metadata)
+        cmd = "DOT_AGENT_KIT_ID=test-kit DOT_AGENT_HOOK_ID=test-hook python3 script.py"
+        entry = HookEntry(command=cmd, timeout=30)
         group = MatcherGroup(matcher="**", hooks=[entry])
         settings = ClaudeSettings(hooks={"UserPromptSubmit": [group]})
         assert settings.hooks is not None

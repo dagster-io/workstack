@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from dot_agent_kit.hooks.settings import get_all_hooks, load_settings
+from dot_agent_kit.hooks.settings import extract_kit_id_from_command, get_all_hooks, load_settings
 from dot_agent_kit.models.artifact import ArtifactSource, InstalledArtifact
 from dot_agent_kit.models.config import InstalledKit, ProjectConfig
 from dot_agent_kit.repositories.artifact_repository import ArtifactRepository
@@ -123,16 +123,21 @@ class FilesystemArtifactRepository(ArtifactRepository):
                         script_path = Path(path_part)
 
                 # Determine hook name, source, and metadata
-                if entry.dot_agent:
+                entry_kit_id = extract_kit_id_from_command(entry.command)
+                if entry_kit_id:
                     # Managed hook with kit metadata
-                    hook_name = f"{entry.dot_agent.kit_id}:{entry.dot_agent.hook_id}"
-                    kit_id = entry.dot_agent.kit_id
+                    import re
+
+                    hook_id_match = re.search(r"DOT_AGENT_HOOK_ID=(\S+)", entry.command)
+                    entry_hook_id = hook_id_match.group(1) if hook_id_match else "unknown"
+                    hook_name = f"{entry_kit_id}:{entry_hook_id}"
+                    kit_id = entry_kit_id
                     source = ArtifactSource.LOCAL
                     kit_version = None
 
                     # If we couldn't extract a path, create a placeholder
                     if not script_path:
-                        script_path = Path("hooks") / entry.dot_agent.kit_id / "hook"
+                        script_path = Path("hooks") / entry_kit_id / "hook"
 
                     hook_path_str = str(script_path).replace("\\", "/")
 
@@ -142,7 +147,7 @@ class FilesystemArtifactRepository(ArtifactRepository):
                             "\\", "/"
                         )
                         matches_path = normalized_artifact == hook_path_str
-                        matches_kit = kit.kit_id == entry.dot_agent.kit_id
+                        matches_kit = kit.kit_id == entry_kit_id
                         if matches_path or matches_kit:
                             source = ArtifactSource.MANAGED
                             kit_version = kit.version

@@ -14,11 +14,12 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/dignified-python/suggest-dignified-python.py\"",
-            "timeout": 30,
-            "_dot_agent": {
-              "kit_id": "dignified-python",
-              "hook_id": "suggest-dignified-python"
-            }
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "DOT_AGENT_KIT_ID=dignified-python DOT_AGENT_HOOK_ID=suggest-dignified-python python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/dignified-python/suggest-dignified-python.py\"",
+            "timeout": 30
           }
         ]
       }

@@ -1,4 +1,4 @@
-"""Sync command for updating kits."""
+"""Sync command for synchronizing installed kits with their sources."""
 
 from pathlib import Path
 

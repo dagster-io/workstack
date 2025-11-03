@@ -1,13 +1,10 @@
-"""Update command for updating installed kits."""
+"""Update command for updating installed kits to latest versions."""
 
 from pathlib import Path
 
 import click
 
-from dot_agent_kit.io import (
-    load_project_config,
-    save_project_config,
-)
+from dot_agent_kit.io import load_project_config, save_project_config
 from dot_agent_kit.operations import check_for_updates, sync_kit
 from dot_agent_kit.sources import KitResolver, StandalonePackageSource
 

@@ -5,10 +5,7 @@ from pathlib import Path
 import click
 
 from dot_agent_kit.hooks.installer import remove_hooks
-from dot_agent_kit.io import (
-    load_project_config,
-    save_project_config,
-)
+from dot_agent_kit.io import load_project_config, save_project_config
 from dot_agent_kit.models import ProjectConfig
 
 

@@ -11,6 +11,25 @@ This skill provides workstack's Python coding standards and patterns. These stan
 
 **Core Philosophy**: Write explicit, predictable code that fails fast at proper boundaries.
 
+### Backwards Compatibility Philosophy
+
+**Default stance: NO backwards compatibility preservation**
+
+Use your judgment to assess whether code is likely part of a public API (e.g., exported at top-level, documented as public). For internal implementation details, refactor freely and migrate callsites immediately.
+
+**Only preserve backwards compatibility when:**
+
+- Code is clearly part of a public API (top-level exports, public documentation)
+- User explicitly requests it
+- Migration cost is prohibitively high (rare)
+
+**Benefits of this approach:**
+
+- Cleaner, more maintainable codebase
+- Faster iteration and improvement
+- No legacy code accumulation
+- Simpler mental models
+
 ---
 
 ## TOP 5 CRITICAL RULES
@@ -458,6 +477,49 @@ def process_command(input_file: Path) -> None:
 
 **The principle**: Fail fast and explicitly rather than silently degrading behavior.
 
+### 7. Preserving Backwards Compatibility Without Need
+
+**NEVER maintain backwards compatibility for internal APIs without explicit requirement.**
+
+```python
+# ❌ WRONG: Preserving old API unnecessarily
+def process_data(data: dict[str, Any], legacy_format: bool = False) -> Result:
+    """Process data with optional legacy format support."""
+    if legacy_format:
+        # Old approach - kept around "just in case"
+        return legacy_process(data)
+    return new_process(data)
+
+# ❌ WRONG: Deprecation warnings for internal code
+def old_function_name():
+    """Deprecated: Use new_function_name instead."""
+    warnings.warn("old_function_name is deprecated", DeprecationWarning)
+    return new_function_name()
+
+# ✅ CORRECT: Break the API and migrate callsites
+def process_data(data: dict[str, Any]) -> Result:
+    """Process data using current approach."""
+    return new_process(data)
+
+# All callsites updated immediately:
+# old_code: result = process_data(data, legacy_format=True)
+# new_code: result = process_data(data)
+```
+
+**Why this is problematic:**
+
+1. **Dead code accumulation**: Legacy paths rarely used but must be maintained
+2. **Testing burden**: Multiple code paths to test and verify
+3. **Complexity**: Conditional logic makes code harder to understand
+4. **False constraints**: Limits refactoring options unnecessarily
+5. **Migration delay**: Postpones inevitable work, accumulating technical debt
+
+**When backwards compatibility IS needed:**
+
+- User explicitly requests: "Keep the old API for now"
+- Public API: Top-level exports with external consumers
+- High migration cost: Hundreds of callsites across the codebase
+
 ---
 
 ## WHEN EXCEPTIONS ARE ACCEPTABLE
@@ -551,6 +613,15 @@ Before path operations:
 - [ ] Did I check `.exists()` before `.is_relative_to()`?
 - [ ] Am I using `pathlib.Path`, not `os.path`?
 
+Before preserving backwards compatibility:
+
+- [ ] Did the user explicitly request backwards compatibility?
+- [ ] Is this a public API with external consumers?
+- [ ] Have I documented why backwards compatibility is needed?
+- [ ] Is the migration cost prohibitively high?
+
+**Default answer should be: Break the API and migrate callsites immediately.**
+
 ---
 
 ## COMMON PATTERNS SUMMARY
@@ -601,5 +672,10 @@ Before path operations:
 6. **Nesting > 4 levels?**
    - → Extract helper functions
    - → Use early returns
+
+7. **Considering backwards compatibility?**
+   - → Is this internal code? → Break and migrate
+   - → Did user explicitly request it? → Only then preserve
+   - → Default: Refactor freely, migrate callsites
 
 **When in doubt**: Check the references above or ask!

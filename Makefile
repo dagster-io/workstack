@@ -45,13 +45,8 @@ clean:
 build: clean
 	uv build --package dot-agent-kit -o dist
 	uv build --package workstack -o dist
-	uv build --package dev-runners-da-kit -o dist
 
 # Publish packages to PyPI
 # Use workstack-dev publish-to-pypi command instead (recommended)
 publish: build
-	@echo "Publishing dot-agent-kit..."
-	uvx uv-publish ./dist/dot_agent_kit-*.whl ./dist/dot_agent_kit-*.tar.gz
-	@echo "Publishing workstack..."
-	uvx uv-publish ./dist/workstack-*.whl ./dist/workstack-*.tar.gz
-	@echo "✓ Packages published successfully"
+	workstack-dev publish-to-pypi

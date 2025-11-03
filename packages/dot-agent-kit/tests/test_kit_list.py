@@ -1,0 +1,106 @@
+"""Tests for kit list command."""
+
+from pathlib import Path
+
+from click.testing import CliRunner
+
+from dot_agent_kit.commands.kit.list import list_installed_kits
+from dot_agent_kit.io import save_project_config
+from dot_agent_kit.models import InstalledKit, ProjectConfig
+
+
+def test_list_installed_kits_with_data() -> None:
+    """Test list command displays installed kits properly."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        project_dir = Path.cwd()
+        config = ProjectConfig(
+            version="1",
+            kits={
+                "devrun": InstalledKit(
+                    kit_id="devrun",
+                    version="0.1.0",
+                    source="bundled",
+                    installed_at="2024-01-01T12:00:00",
+                    artifacts=["skills/devrun-make/SKILL.md"],
+                ),
+                "gh": InstalledKit(
+                    kit_id="gh",
+                    version="1.2.3",
+                    source="package",
+                    installed_at="2024-01-02T15:30:00",
+                    artifacts=["skills/gh/SKILL.md"],
+                ),
+            },
+        )
+        save_project_config(project_dir, config)
+
+        result = runner.invoke(list_installed_kits)
+
+        assert result.exit_code == 0
+        assert "Installed 2 kit(s):" in result.output
+        # Check devrun line
+        assert "devrun" in result.output
+        assert "0.1.0" in result.output
+        assert "bundled" in result.output
+        assert "2024-01-01T12:00:00" in result.output
+        # Check gh line
+        assert "gh" in result.output
+        assert "1.2.3" in result.output
+        assert "package" in result.output
+        assert "2024-01-02T15:30:00" in result.output
+
+
+def test_list_no_kits_installed() -> None:
+    """Test list command when no kits are installed."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        project_dir = Path.cwd()
+        config = ProjectConfig(version="1", kits={})
+        save_project_config(project_dir, config)
+
+        result = runner.invoke(list_installed_kits)
+
+        assert result.exit_code == 0
+        assert "No kits installed" in result.output
+
+
+def test_list_not_in_project_directory() -> None:
+    """Test list command when not in a project directory."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        # Don't create config - simulate being outside project
+        result = runner.invoke(list_installed_kits)
+
+        assert result.exit_code == 1
+        assert "Error: No project configuration found" in result.output
+        assert "Run this command from a project directory" in result.output
+
+
+def test_list_single_kit() -> None:
+    """Test list command with a single installed kit."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        project_dir = Path.cwd()
+        config = ProjectConfig(
+            version="1",
+            kits={
+                "workstack": InstalledKit(
+                    kit_id="workstack",
+                    version="2.0.0",
+                    source="local",
+                    installed_at="2024-03-15T10:00:00",
+                    artifacts=["skills/workstack/SKILL.md", "commands/workstack.md"],
+                ),
+            },
+        )
+        save_project_config(project_dir, config)
+
+        result = runner.invoke(list_installed_kits)
+
+        assert result.exit_code == 0
+        assert "Installed 1 kit(s):" in result.output
+        assert "workstack" in result.output
+        assert "2.0.0" in result.output
+        assert "local" in result.output
+        assert "2024-03-15T10:00:00" in result.output

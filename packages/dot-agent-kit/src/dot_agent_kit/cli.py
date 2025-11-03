@@ -4,7 +4,17 @@ from dot_agent_kit import __version__
 from dot_agent_kit.commands import status
 from dot_agent_kit.commands.artifact import check, check_sync, list
 from dot_agent_kit.commands.hook import hook_group
-from dot_agent_kit.commands.kit import init, install, remove, search, sync, update
+from dot_agent_kit.commands.kit import (
+    init,
+    install,
+    remove,
+    search,
+    sync,
+    update,
+)
+from dot_agent_kit.commands.kit import (
+    list as list_kit,
+)
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
@@ -39,6 +49,7 @@ cli.add_command(hook_group)
 # Register kit commands
 kit.add_command(init.init)
 kit.add_command(install.install)
+kit.add_command(list_kit.list_installed_kits, name="list")
 kit.add_command(remove.remove)
 kit.add_command(update.update)
 kit.add_command(sync.sync)

@@ -206,6 +206,32 @@ def update_version(pyproject_path: Path, old_version: str, new_version: str, dry
     pyproject_path.write_text(updated_content, encoding="utf-8")
 
 
+def update_version_py(
+    version_py_path: Path, old_version: str, new_version: str, dry_run: bool
+) -> bool:
+    """Update __version__ string in version.py if it exists.
+
+    Returns True if version was updated, False if version.py not found.
+    """
+    if not version_py_path.exists():
+        return False
+
+    content = version_py_path.read_text(encoding="utf-8")
+    old_line = f'__version__ = "{old_version}"'
+    new_line = f'__version__ = "{new_version}"'
+
+    if old_line not in content:
+        return False
+
+    if dry_run:
+        click.echo(f"[DRY RUN] Would update {version_py_path.name}: {old_line} -> {new_line}")
+        return True
+
+    updated_content = content.replace(old_line, new_line)
+    version_py_path.write_text(updated_content, encoding="utf-8")
+    return True
+
+
 def validate_version_consistency(packages: list[PackageInfo]) -> str:
     """Ensure all packages have the same version."""
     versions: dict[str, str] = {}
@@ -228,11 +254,20 @@ def synchronize_versions(
     new_version: str,
     dry_run: bool,
 ) -> None:
-    """Update version in all package pyproject.toml files."""
+    """Update version in all package pyproject.toml files and version.py files."""
     for pkg in packages:
+        # Update pyproject.toml
         update_version(pkg.pyproject_path, old_version, new_version, dry_run)
         if not dry_run:
             click.echo(f"  ✓ Updated {pkg.name}: {old_version} → {new_version}")
+
+        # Update version.py if it exists
+        package_name = pkg.name.replace("-", "_")
+        version_py_path = pkg.path / "src" / package_name / "version.py"
+
+        if update_version_py(version_py_path, old_version, new_version, dry_run):
+            if not dry_run:
+                click.echo(f"  ✓ Updated {version_py_path.name} for {pkg.name}")
 
 
 def run_uv_sync(repo_root: Path, dry_run: bool) -> None:
@@ -369,6 +404,13 @@ Co-Authored-By: Claude <noreply@anthropic.com>"""
 
     files_to_add = [str(pkg.pyproject_path.relative_to(repo_root)) for pkg in packages]
     files_to_add.append("uv.lock")
+
+    # Add version.py files if they exist
+    for pkg in packages:
+        package_name = pkg.name.replace("-", "_")
+        version_py_path = pkg.path / "src" / package_name / "version.py"
+        if version_py_path.exists():
+            files_to_add.append(str(version_py_path.relative_to(repo_root)))
 
     if dry_run:
         click.echo(f"[DRY RUN] Would run: git add {' '.join(files_to_add)}")

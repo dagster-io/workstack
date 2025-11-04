@@ -1,11 +1,11 @@
-"""Tests for kit init command."""
+"""Tests for init command."""
 
 import os
 from pathlib import Path
 
 from click.testing import CliRunner
 
-from dot_agent_kit.commands.kit.init import init
+from dot_agent_kit.commands.init import init
 from dot_agent_kit.io import load_project_config
 
 

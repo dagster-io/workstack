@@ -2,7 +2,20 @@
 
 Kit management system for Claude Code.
 
+## Package vs CLI
+
+- **Package name**: `dot-agent-kit` (what you install)
+- **CLI command**: `dot-agent` (what you run)
+
+This naming follows the convention where the package name describes what it provides (a kit management system), while the CLI command is concise for frequent use.
+
 ## Installation
+
+```bash
+uv pip install dot-agent-kit
+```
+
+Or with pip:
 
 ```bash
 pip install dot-agent-kit
@@ -10,8 +23,18 @@ pip install dot-agent-kit
 
 ## Usage
 
+After installation, use the `dot-agent` command:
+
 ```bash
+# Initialize configuration
+dot-agent init
+
+# View available commands
 dot-agent --help
+
+# Manage kits
+dot-agent kit install <kit-name>
+dot-agent kit list
 ```
 
 ## Creating Kits

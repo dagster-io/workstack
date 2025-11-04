@@ -319,7 +319,7 @@ def test_bundled_kit_namespace_enforcement(tmp_path: Path) -> None:
     source = TestBundledSource()
 
     # Should resolve successfully - namespace validation is not enforced
-    resolved = source.resolve("any-kit")
+    resolved = source.resolve("bundled:any-kit")
     assert resolved.kit_id == "any-kit"
 
 
@@ -357,5 +357,5 @@ def test_bundled_kit_valid_namespace_succeeds(tmp_path: Path) -> None:
     source = TestBundledSource()
 
     # Should resolve successfully
-    resolved = source.resolve("good-kit")
+    resolved = source.resolve("bundled:good-kit")
     assert resolved.kit_id == "good-kit"

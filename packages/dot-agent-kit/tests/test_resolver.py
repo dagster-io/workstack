@@ -11,8 +11,8 @@ from dot_agent_kit.sources.exceptions import ResolverNotConfiguredError
 def test_standalone_can_resolve() -> None:
     """Test package detection."""
     source = StandalonePackageSource()
-    assert source.can_resolve("click") is True
-    assert source.can_resolve("nonexistent_package") is False
+    assert source.can_resolve("package:click") is True
+    assert source.can_resolve("package:nonexistent_package") is False
 
 
 def test_standalone_resolve_not_installed() -> None:
@@ -20,7 +20,7 @@ def test_standalone_resolve_not_installed() -> None:
     source = StandalonePackageSource()
 
     with pytest.raises(ValueError, match="Package not installed"):
-        source.resolve("nonexistent_package")
+        source.resolve("package:nonexistent_package")
 
 
 def test_standalone_resolve_no_manifest(tmp_path: Path) -> None:
@@ -31,7 +31,7 @@ def test_standalone_resolve_no_manifest(tmp_path: Path) -> None:
 
     # click doesn't have kit.yaml, so this should fail
     with pytest.raises(ValueError, match="No kit.yaml found"):
-        source.resolve("click")
+        source.resolve("package:click")
 
 
 def test_kit_resolver_resolve_from_package(tmp_path: Path) -> None:

@@ -7,6 +7,28 @@ from pathlib import Path
 from dot_agent_kit.sources.exceptions import ResolverNotConfiguredError
 
 
+def parse_source(source: str) -> tuple[str, str]:
+    """Parse source string into prefix and identifier.
+
+    Args:
+        source: Source string in format "prefix:identifier"
+
+    Returns:
+        Tuple of (prefix, identifier)
+
+    Raises:
+        ValueError: If source doesn't contain ":" separator
+    """
+    if ":" not in source:
+        raise ValueError(
+            f"Invalid source format: '{source}'. "
+            f"Source must be prefixed with type (e.g., 'bundled:{source}' or 'package:{source}')."
+        )
+
+    prefix, identifier = source.split(":", 1)
+    return prefix, identifier
+
+
 @dataclass(frozen=True)
 class ResolvedKit:
     """A kit resolved from a source."""

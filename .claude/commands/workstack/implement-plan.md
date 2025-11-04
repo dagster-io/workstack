@@ -2,14 +2,14 @@
 description: Execute the implementation plan from .PLAN.md in current directory
 ---
 
-# /workstack:implement_plan
+# /workstack:implement-plan
 
-This command reads and executes the `.PLAN.md` file from the current directory. It is designed to be run after switching to a worktree created by `/workstack:create_from_plan`.
+This command reads and executes the `.PLAN.md` file from the current directory. It is designed to be run after switching to a worktree created by `/workstack:create-from-plan`.
 
 ## Usage
 
 ```bash
-/workstack:implement_plan
+/workstack:implement-plan
 ```
 
 ## Prerequisites
@@ -38,7 +38,7 @@ When you run this command:
 
 ## Agent Instructions
 
-You are executing the `/workstack:implement_plan` command. Follow these steps carefully:
+You are executing the `/workstack:implement-plan` command. Follow these steps carefully:
 
 ### Step 1: Verify .PLAN.md Exists
 
@@ -52,9 +52,9 @@ If not found:
 This command must be run from a worktree directory that contains a .PLAN.md file.
 
 To create a worktree with a plan:
-1. Run /workstack:create_from_plan to save your plan and create a worktree
+1. Run /workstack:create-from-plan to save your plan and create a worktree
 2. Run: workstack switch <worktree-name>
-3. Then run: claude --permission-mode acceptEdits "/workstack:implement_plan"
+3. Then run: claude --permission-mode acceptEdits "/workstack:implement-plan"
 ```
 
 ### Step 2: Read the Plan File

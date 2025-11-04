@@ -34,6 +34,7 @@
 | 4+ levels of indentation                    | → Extract helper functions                                                                  |
 | Code in `__init__.py`                       | → Keep empty or docstring-only (except package entry points)                                |
 | Tests for speculative features              | → **FORBIDDEN** - Only test actively implemented code (TDD is fine)                         |
+| Creating `.claude/` artifacts               | → Use `kebab-case` (hyphens) NOT `snake_case` (underscores)                                 |
 
 ## 📚 Quick Reference
 
@@ -193,7 +194,10 @@ class MyOps(ABC):  # ✅ Not Protocol
 - Classes: `PascalCase`
 - Constants: `UPPER_SNAKE_CASE`
 - CLI commands: `kebab-case`
+- Claude artifacts: `kebab-case` (commands, skills, agents in `.claude/`)
 - Brand names: `GitHub` (not Github)
+
+**Claude Artifacts:** All files in `.claude/` (commands, skills, agents, hooks) MUST use `kebab-case`. Use hyphens, NOT underscores. Example: `/my-command` not `/my_command`. Python scripts within artifacts may use `snake_case` (they're code, not artifacts).
 
 ### Design Principles
 

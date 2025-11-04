@@ -2,7 +2,7 @@
 description: Create a workstack worktree from an implementation plan in context (with optional guidance)
 ---
 
-# /workstack:create_from_plan
+# /workstack:create-from-plan
 
 ⚠️ **CRITICAL: This command ONLY sets up the workspace - it does NOT implement code!**
 
@@ -15,7 +15,7 @@ description: Create a workstack worktree from an implementation plan in context 
 
 **What happens AFTER (in separate command):**
 
-- ⏭️ Switch and implement: `workstack switch <name> && claude --permission-mode acceptEdits "/workstack:implement_plan"`
+- ⏭️ Switch and implement: `workstack switch <name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
 
 ## What Happens
 
@@ -33,14 +33,14 @@ When you run this command, these 8 steps occur:
 ## Usage
 
 ```bash
-/workstack:create_from_plan [guidance]
+/workstack:create-from-plan [guidance]
 ```
 
 **Examples:**
 
-- `/workstack:create_from_plan` - Create worktree from plan as-is
-- `/workstack:create_from_plan "Make error handling more robust and add retry logic"` - Apply guidance before creating worktree
-- `/workstack:create_from_plan "Fix: Use LBYL instead of try/except throughout"` - Apply corrections to plan
+- `/workstack:create-from-plan` - Create worktree from plan as-is
+- `/workstack:create-from-plan "Make error handling more robust and add retry logic"` - Apply guidance before creating worktree
+- `/workstack:create-from-plan "Fix: Use LBYL instead of try/except throughout"` - Apply corrections to plan
 
 ## Prerequisites
 
@@ -65,7 +65,7 @@ After command completes, these should be true:
 
 - File exists: `<worktree-root>/<filename>-plan.md`
 - Worktree listed in: `workstack list`
-- Next command ready: `workstack switch <name> && claude --permission-mode acceptEdits "/workstack:implement_plan"`
+- Next command ready: `workstack switch <name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
 
 ## Performance Notes
 
@@ -141,7 +141,7 @@ After command completes, these should be true:
 
 ## Agent Instructions
 
-You are executing the `/workstack:create_from_plan` command. Follow these steps carefully:
+You are executing the `/workstack:create-from-plan` command. Follow these steps carefully:
 
 ### Step 1: Verify Scope and Constraints
 
@@ -171,7 +171,7 @@ Suggested action: [1-3 concrete steps to resolve]
 - Running ANY commands except `git rev-parse` and `workstack create`
 - Implementing ANY part of the plan
 
-This command sets up the workspace. Implementation happens in the worktree via `/workstack:implement_plan`.
+This command sets up the workspace. Implementation happens in the worktree via `/workstack:implement-plan`.
 
 ### Step 2: Detect Implementation Plan in Context
 
@@ -272,7 +272,7 @@ Details: Guidance provided: "[first 100 chars of guidance]"
 
 Suggested action:
   1. First create or present an implementation plan
-  2. Then run: /workstack:create_from_plan "your guidance here"
+  2. Then run: /workstack:create-from-plan "your guidance here"
 ```
 
 **Multi-line guidance limitation:**
@@ -492,7 +492,7 @@ Location: `<worktree-path>`
 
 **Next step:**
 
-`workstack switch <worktree-name> && claude --permission-mode acceptEdits "/workstack:implement_plan"`
+`workstack switch <worktree-name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
 ```
 
 **Note:** The final output the user sees should be the single copy-pasteable command above. No additional text after that command.
@@ -506,6 +506,6 @@ Location: `<worktree-path>`
 - Filename derived from plan title, max 100 chars, prompts user if extraction fails
 - All errors follow consistent template with details and suggested actions
 - This command does NOT switch directories or execute the plan
-- User must manually run `workstack switch` and `/workstack:implement_plan` to begin implementation
+- User must manually run `workstack switch` and `/workstack:implement-plan` to begin implementation
 - The `--permission-mode acceptEdits` flag is included to automatically accept edits during implementation
 - Always provide clear feedback at each step

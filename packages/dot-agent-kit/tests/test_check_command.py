@@ -169,7 +169,7 @@ def test_check_command_valid_artifacts(tmp_path: Path) -> None:
                 "test-kit": InstalledKit(
                     kit_id="test-kit",
                     version="1.0.0",
-                    source="test",
+                    source="github:owner/repo",
                     installed_at="2024-01-01T00:00:00",
                     artifacts=["skills/test/SKILL.md"],
                 ),
@@ -273,7 +273,7 @@ def test_check_command_verbose_flag(tmp_path: Path) -> None:
                 "test-kit": InstalledKit(
                     kit_id="test-kit",
                     version="1.0.0",
-                    source="test",
+                    source="github:owner/repo",
                     installed_at="2024-01-01T00:00:00",
                     artifacts=["skills/test/SKILL.md"],
                 ),

@@ -6,8 +6,10 @@ from pathlib import Path
 import click
 
 from dot_agent_kit.io import load_project_config
+from dot_agent_kit.models.config import InstalledKit
 from dot_agent_kit.operations import validate_project
 from dot_agent_kit.sources import BundledKitSource
+from dot_agent_kit.sources.resolver import parse_source
 
 
 @dataclass(frozen=True)
@@ -17,6 +19,97 @@ class SyncCheckResult:
     artifact_path: Path
     is_in_sync: bool
     reason: str | None = None
+
+
+@dataclass(frozen=True)
+class ConfigValidationResult:
+    """Result of validating configuration fields for one kit."""
+
+    kit_id: str
+    is_valid: bool
+    errors: list[str]
+
+
+def validate_kit_source(kit_id: str, source: str) -> str | None:
+    """Validate source format using LBYL approach.
+
+    Args:
+        kit_id: Kit identifier for error context
+        source: Source string to validate
+
+    Returns:
+        Error message if invalid, None if valid
+    """
+    # LBYL: Check if source contains required ":" separator
+    if ":" not in source:
+        return f"Source must be prefixed with type (e.g., 'bundled:{source}' or 'package:{source}')"
+
+    # Validate using parse_source at error boundary
+    # This is acceptable exception handling at CLI level
+    parse_source(source)
+    return None
+
+
+def validate_kit_fields(kit: InstalledKit) -> list[str]:
+    """Validate all fields of an installed kit using LBYL checks.
+
+    Args:
+        kit: InstalledKit to validate
+
+    Returns:
+        List of error messages (empty if all valid)
+    """
+    errors = []
+
+    # Validate kit_id is non-empty
+    if not kit.kit_id:
+        errors.append("kit_id is empty")
+
+    # Validate version is non-empty
+    if not kit.version:
+        errors.append("version is empty")
+
+    # Validate artifacts list is non-empty
+    if not kit.artifacts:
+        errors.append("artifacts list is empty")
+
+    # Validate source format
+    source_error = validate_kit_source(kit.kit_id, kit.source)
+    if source_error is not None:
+        errors.append(source_error)
+
+    # Validate installed_at is non-empty (basic check)
+    # More sophisticated ISO 8601 parsing could be added if needed
+    if not kit.installed_at:
+        errors.append("installed_at is empty")
+
+    return errors
+
+
+def validate_configuration(
+    config_kits: dict[str, InstalledKit],
+) -> list[ConfigValidationResult]:
+    """Validate all installed kits in configuration.
+
+    Args:
+        config_kits: Dictionary of kit_id to InstalledKit
+
+    Returns:
+        List of validation results for each kit
+    """
+    results = []
+
+    for kit_id, installed_kit in config_kits.items():
+        field_errors = validate_kit_fields(installed_kit)
+
+        result = ConfigValidationResult(
+            kit_id=kit_id,
+            is_valid=len(field_errors) == 0,
+            errors=field_errors,
+        )
+        results.append(result)
+
+    return results
 
 
 def check_artifact_sync(
@@ -80,10 +173,48 @@ def check(verbose: bool) -> None:
 
     # Check if config exists
     config = load_project_config(project_dir)
-    if config is None:
-        click.echo("No dot-agent.toml found - skipping sync check")
+    config_exists = config is not None
 
-    # Part 1: Validate artifacts
+    # Part 1: Validate configuration
+    click.echo("=== Configuration Validation ===")
+
+    config_passed = True
+    if not config_exists:
+        click.echo("No kits installed - skipping configuration validation")
+    else:
+        if len(config.kits) == 0:
+            click.echo("No kits installed - skipping configuration validation")
+            config_passed = True
+        else:
+            validation_results = validate_configuration(config.kits)
+            valid_count = sum(1 for r in validation_results if r.is_valid)
+            invalid_count = len(validation_results) - valid_count
+
+            # Show results
+            if verbose or invalid_count > 0:
+                for result in validation_results:
+                    status = "✓" if result.is_valid else "✗"
+                    click.echo(f"{status} {result.kit_id}")
+
+                    if not result.is_valid:
+                        for error in result.errors:
+                            click.echo(f"  - {error}", err=True)
+
+            # Summary
+            click.echo()
+            click.echo(f"Validated {len(validation_results)} kit configuration(s):")
+            click.echo(f"  ✓ Valid: {valid_count}")
+
+            if invalid_count > 0:
+                click.echo(f"  ✗ Invalid: {invalid_count}", err=True)
+                config_passed = False
+            else:
+                click.echo("All kit configurations are valid!")
+                config_passed = True
+
+    click.echo()
+
+    # Part 2: Validate artifacts
     click.echo("=== Artifact Validation ===")
     validation_results = validate_project(project_dir)
 
@@ -119,14 +250,14 @@ def check(verbose: bool) -> None:
 
     click.echo()
 
-    # Part 2: Check bundled kit sync status
+    # Part 3: Check bundled kit sync status
     click.echo("=== Bundled Kit Sync Status ===")
 
-    if config is None:
-        sync_passed = True
+    sync_passed = True
+    if not config_exists:
+        click.echo("No dot-agent.toml found - skipping sync check")
     elif len(config.kits) == 0:
         click.echo("No kits installed - skipping sync check")
-        sync_passed = True
     else:
         bundled_source = BundledKitSource()
         all_results: list[tuple[str, list]] = []
@@ -197,7 +328,7 @@ def check(verbose: bool) -> None:
     # Overall result
     click.echo()
     click.echo("=" * 40)
-    if validation_passed and sync_passed:
+    if config_passed and validation_passed and sync_passed:
         click.echo("✓ All checks passed!")
     else:
         click.echo("✗ Some checks failed", err=True)

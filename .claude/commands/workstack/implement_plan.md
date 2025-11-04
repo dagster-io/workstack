@@ -54,7 +54,7 @@ This command must be run from a worktree directory that contains a .PLAN.md file
 To create a worktree with a plan:
 1. Run /workstack:create_from_plan to save your plan and create a worktree
 2. Run: workstack switch <worktree-name>
-3. Then run: /workstack:implement_plan
+3. Then run: claude --permission-mode acceptEdits "/workstack:implement_plan"
 ```
 
 ### Step 2: Read the Plan File

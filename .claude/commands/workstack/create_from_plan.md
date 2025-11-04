@@ -66,7 +66,7 @@ After command completes, these should be true:
 
 - File exists: `<worktree-root>/<filename>-plan.md`
 - Worktree listed in: `workstack list`
-- Next command ready: `workstack switch <name> && claude "/workstack:implement_plan"`
+- Next command ready: `workstack switch <name> && claude --permission-mode acceptEdits "/workstack:implement_plan"`
 
 ## Performance Notes
 
@@ -483,7 +483,7 @@ Location: `<worktree-path>`
 
 **Next step:**
 
-`workstack switch <worktree-name> && claude "/workstack:implement_plan"`
+`workstack switch <worktree-name> && claude --permission-mode acceptEdits "/workstack:implement_plan"`
 ```
 
 **Note:** The final output the user sees should be the single copy-pasteable command above. No additional text after that command.
@@ -498,4 +498,5 @@ Location: `<worktree-path>`
 - All errors follow consistent template with details and suggested actions
 - This command does NOT switch directories or execute the plan
 - User must manually run `workstack switch` and `/workstack:implement_plan` to begin implementation
+- The `--permission-mode acceptEdits` flag is included to automatically accept edits during implementation
 - Always provide clear feedback at each step

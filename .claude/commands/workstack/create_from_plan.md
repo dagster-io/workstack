@@ -15,8 +15,7 @@ description: Create a workstack worktree from an implementation plan in context 
 
 **What happens AFTER (in separate command):**
 
-- ⏭️ Switch to worktree: `workstack switch <name>`
-- ⏭️ Implement the plan: `/workstack:implement_plan`
+- ⏭️ Switch and implement: `workstack switch <name> && claude --permission-mode acceptEdits "/workstack:implement_plan"`
 
 ## What Happens
 
@@ -102,7 +101,6 @@ After command completes, these should be true:
 
 - Ensure plan is in last 5-10 messages
 - Plan should have headers like "## Implementation Plan" or numbered steps
-- Must contain at least 2 implementation keywords: "implement", "create", "update", "refactor", "test", "code", "function", "class"
 - Re-paste plan in conversation if needed
 
 ### "Plan file already exists"
@@ -189,7 +187,6 @@ Search the last 5-10 messages in conversation for an implementation plan:
 
 - Minimum 100 characters
 - Contains headers (# or ##) OR numbered lists OR bulleted lists
-- Must include at least 2 implementation keywords: "implement", "create", "update", "refactor", "test", "code", "function", "class"
 - Has title/overview AND implementation steps
 
 **Common plan patterns:**
@@ -207,7 +204,7 @@ Details: Searched last 5-10 messages but found no valid implementation plan
 
 Suggested action:
   1. Ensure plan is in recent conversation (not too far back)
-  2. Plan should have headers and implementation keywords
+  2. Plan should have headers and structure
   3. Re-paste plan in conversation if needed
 ```
 
@@ -215,7 +212,6 @@ Suggested action:
 
 - Must be at least 100 characters
 - Must contain structure (numbered lists, bulleted lists, or multiple headers)
-- Must contain implementation keywords
 - If invalid, show error:
 
 ```
@@ -305,8 +301,21 @@ If no guidance provided: use the original plan as-is
 6. Truncate to 100 characters max (excluding -plan.md suffix)
 7. Ensure at least one alphanumeric character remains
 
-**Fallback for invalid names:**
-If cleanup results in empty string or no alphanumeric chars: use "implementation-plan.md"
+**If extraction fails:**
+
+If cleanup results in empty string or no alphanumeric chars, prompt the user:
+
+```
+❌ Error: Could not extract valid plan name from title
+
+Details: Plan title contains only special characters or is empty
+
+Suggested action:
+  1. Add a clear title to your plan (e.g., # Feature Name)
+  2. Or provide a name: What would you like to name this plan?
+```
+
+Use AskUserQuestion tool to get the plan name from the user if extraction fails.
 
 **Example transformations:**
 
@@ -314,7 +323,7 @@ If cleanup results in empty string or no alphanumeric chars: use "implementation
 - "Fix: Database Connection Issues" → `fix-database-connection-issues-plan.md`
 - "🚀 Awesome Feature!!!" → `awesome-feature-plan.md`
 - Very long title (200 chars) → Truncated to 100 chars + `-plan.md`
-- "###" (only special chars) → `implementation-plan.md`
+- "###" (only special chars) → Prompt user for name
 
 ### Step 5: Detect Worktree Root
 
@@ -492,9 +501,9 @@ Location: `<worktree-path>`
 
 - 🔴 **This command does NOT write code** - only creates workspace with plan
 - Searches last 5-10 messages for implementation plans
-- Plan must be at least 100 characters with structure and implementation keywords
+- Plan must be at least 100 characters with structure
 - Guidance is classified as Correction, Addition, Clarification, or Reordering
-- Filename derived from plan title, max 100 chars, fallback to "implementation-plan.md"
+- Filename derived from plan title, max 100 chars, prompts user if extraction fails
 - All errors follow consistent template with details and suggested actions
 - This command does NOT switch directories or execute the plan
 - User must manually run `workstack switch` and `/workstack:implement_plan` to begin implementation

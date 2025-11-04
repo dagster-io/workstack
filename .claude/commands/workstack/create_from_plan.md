@@ -172,11 +172,11 @@ After successful worktree creation, provide clear instructions:
 
 **1. Switch to the worktree:**
 
-    workstack switch <worktree-name>
+    `workstack switch <worktree-name>`
 
 **2. Start implementation:**
 
-    /workstack:implement_plan
+    `/workstack:implement_plan`
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

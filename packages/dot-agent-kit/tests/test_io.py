@@ -105,5 +105,5 @@ def test_load_registry() -> None:
     registry = load_registry()
 
     assert isinstance(registry, list)
-    assert len(registry) >= 1  # Should have at least dev-runners-da-kit
-    assert any(entry.kit_id == "dev-runners-da-kit" for entry in registry)
+    assert len(registry) >= 1  # Should have at least devrun
+    assert any(entry.kit_id == "devrun" for entry in registry)

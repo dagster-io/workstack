@@ -1,9 +1,13 @@
 version: "1"
 kits:
-  - kit_id: dev-runners-da-kit
-    name: Dev Runners Kit
-    description: Cost-optimized runner agents using Haiku model for pytest, ruff, pyright, and prettier
-    source: dev-runners-da-kit
+  - kit_id: devrun
+    name: devrun
+    description: Consolidated development tool runner agent with integrated tool documentation for pytest, pyright, ruff, prettier, make, and gt
+    source: devrun
+  - kit_id: dignified-python
+    name: dignified-python
+    description: Workstack Python coding standards with automatic suggestion hook
+    source: dignified-python
   - kit_id: gt
     name: Graphite Kit
     description: Graphite stack management with landing and submission commands

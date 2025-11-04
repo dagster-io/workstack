@@ -1,16 +1,32 @@
 ---
-description: Create a workstack worktree from an implementation plan in context (with optional guidance)
+description: Create a workstack worktree from an implementation plan in context (with interactive enhancement for autonomous execution)
 ---
 
 # /workstack:create-from-plan
 
 ⚠️ **CRITICAL: This command ONLY sets up the workspace - it does NOT implement code!**
 
+## Goal
+
+**The primary objective of this command is to create a detailed, thorough implementation plan that enables a downstream agent to execute autonomously with confidence.**
+
+A well-structured plan eliminates ambiguity, reduces back-and-forth clarifications, and allows the implementing agent to work efficiently without human intervention. Every enhancement we make - from asking clarifying questions to structuring phases - serves this goal of autonomous execution.
+
+**Key principles for autonomous-ready plans:**
+
+- **Zero ambiguity**: Every file path, function name, and operation is explicit
+- **Clear success criteria**: Each step has measurable outcomes
+- **Self-contained phases**: Complex work is broken into independently testable chunks
+- **Test-driven**: Every change includes test requirements for validation
+- **Failure handling**: Plans anticipate and address potential issues
+
 **What this command does:**
 
 - ✅ Find plan in conversation
+- ✅ Interactively enhance plan for autonomous execution
 - ✅ Apply optional guidance to plan
-- ✅ Save plan to disk
+- ✅ Structure complex plans into phases (when beneficial)
+- ✅ Save enhanced plan to disk
 - ✅ Create worktree with `workstack create --plan`
 
 **What happens AFTER (in separate command):**
@@ -19,16 +35,17 @@ description: Create a workstack worktree from an implementation plan in context 
 
 ## What Happens
 
-When you run this command, these 8 steps occur:
+When you run this command, these steps occur:
 
 1. **Verify Scope** - Confirm we're in a git repository with workstack available
 2. **Detect Plan** - Search last 5-10 messages for implementation plan
 3. **Apply Guidance** - Merge optional guidance into plan (if provided)
-4. **Generate Filename** - Derive filename from plan title
-5. **Detect Root** - Find worktree root directory
-6. **Save Plan** - Write plan to disk as markdown file
-7. **Create Worktree** - Run `workstack create --plan` command
-8. **Display Next Steps** - Show commands to switch and implement
+4. **Interactive Enhancement** - Analyze plan for gaps, ask clarifying questions, suggest phases
+5. **Generate Filename** - Derive filename from plan title
+6. **Detect Root** - Find worktree root directory
+7. **Save Plan** - Write enhanced plan to disk as markdown file
+8. **Create Worktree** - Run `workstack create --plan` command
+9. **Display Next Steps** - Show commands to switch and implement (with phase info if applicable)
 
 ## Usage
 
@@ -38,9 +55,9 @@ When you run this command, these 8 steps occur:
 
 **Examples:**
 
-- `/workstack:create-from-plan` - Create worktree from plan as-is
-- `/workstack:create-from-plan "Make error handling more robust and add retry logic"` - Apply guidance before creating worktree
-- `/workstack:create-from-plan "Fix: Use LBYL instead of try/except throughout"` - Apply corrections to plan
+- `/workstack:create-from-plan` - Create worktree from plan with interactive enhancement
+- `/workstack:create-from-plan "Make error handling more robust and add retry logic"` - Apply guidance then enhance
+- `/workstack:create-from-plan "Fix: Use LBYL instead of try/except throughout"` - Apply corrections then enhance
 
 ## Prerequisites
 
@@ -49,32 +66,82 @@ When you run this command, these 8 steps occur:
 - The plan should not already be saved to disk at repository root
 - (Optional) Guidance text for final corrections/additions to the plan
 
+## Semantic Understanding & Context Preservation
+
+**Why This Matters:** Planning agents often discover valuable insights that would be expensive for implementing agents to re-derive. Capturing this context saves time and prevents errors.
+
+**What to Capture:**
+
+1. **API/Tool Quirks**
+   - Undocumented behaviors, race conditions, timing issues
+   - Example: "Stripe webhooks can arrive before API response returns"
+   - Include: Why it matters, how to handle, what to watch for
+
+2. **Architectural Insights**
+   - WHY code is structured certain ways (not just how)
+   - Design boundaries and their rationale
+   - Example: "Config split across files due to circular imports"
+
+3. **Domain Logic & Business Rules**
+   - Non-obvious invariants, edge cases, compliance requirements
+   - Example: "Never delete audit records, only mark as archived"
+   - Include: Rationale, validation criteria, edge cases
+
+4. **Complex Reasoning**
+   - Alternatives considered and rejected with reasons
+   - Dependencies between choices
+   - Example: "Can't use async here because parent caller is sync"
+
+5. **Known Pitfalls**
+   - Anti-patterns that seem right but cause problems
+   - Framework-specific gotchas
+   - Example: "Don't use .resolve() before checking .exists()"
+
+**Relevance Filter:** Only include if it:
+
+- Took significant time to discover
+- Would change HOW something is implemented
+- Would likely cause bugs if missed
+- Isn't obvious from reading the code
+
+**How It's Used:** This understanding gets captured in the "Context & Understanding" section of enhanced plans, linked to specific implementation steps.
+
 ## Success Criteria
 
 This command succeeds when ALL of the following are true:
 
+**Plan Extraction & Enhancement:**
 ✅ Implementation plan extracted from conversation context
-✅ Guidance applied (if provided) and merged into plan
+✅ Plan enhanced through user interaction (gaps clarified, phases structured)
+✅ Semantic understanding captured (API quirks, architectural decisions, reasoning trails)
+✅ Known pitfalls documented to prevent common mistakes
+
+**File & Worktree Creation:**
 ✅ Plan saved to `<worktree-root>/<filename>-plan.md`
 ✅ Worktree created with `workstack create --plan`
 ✅ Worktree contains `.PLAN.md` file (moved by workstack)
-✅ User shown command to switch and implement
+✅ Worktree listed in `workstack list`
 
-**Verification:**
-After command completes, these should be true:
+**Plan Quality:**
+✅ Zero ambiguous file/function references
+✅ Each step has clear success criteria and failure handling
+✅ Complex plans structured in phases (200+ lines or 3+ features)
+✅ Tests integrated within implementation steps
 
-- File exists: `<worktree-root>/<filename>-plan.md`
-- Worktree listed in: `workstack list`
-- Next command ready: `workstack switch <name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
+**Ready for Execution:**
+✅ Next command displayed: `workstack switch <name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
+
+**Most importantly:** The enhanced plan is detailed and thorough enough that a downstream agent can execute it autonomously with confidence, without needing to ask clarifying questions or make assumptions.
 
 ## Performance Notes
 
-**Expected execution time:** 10-30 seconds
+**Expected execution time:** 15-60 seconds
 
 **Breakdown:**
 
 - Plan detection: 2-5 seconds (depends on context size)
 - Guidance application: 3-10 seconds (AI processing, if used)
+- Interactive enhancement: 5-30 seconds (depends on clarifications needed)
 - File operations: < 1 second
 - Worktree creation: 2-10 seconds (depends on repository size)
 - JSON parsing: < 1 second
@@ -82,11 +149,12 @@ After command completes, these should be true:
 **Factors affecting speed:**
 
 - Conversation length (for plan detection)
-- Guidance complexity (for AI merging)
+- Number of clarifications needed
+- Plan complexity (affects phase decomposition)
 - Repository size (for worktree creation)
 - Disk I/O speed
 
-**If command takes > 60 seconds:** Something is wrong
+**If command takes > 90 seconds:** Something is wrong
 
 - Check if workstack create is hanging
 - Verify disk space and permissions
@@ -128,14 +196,14 @@ After command completes, these should be true:
 - Check version: `workstack --version`
 - Update: `uv pip install --upgrade workstack`
 
-### Guidance not applied correctly
+### Enhancement suggestions not applied correctly
 
-**Cause:** Ambiguous guidance or AI misinterpretation
+**Cause:** Ambiguous user responses or misinterpretation
 **Solution:**
 
-- Be specific: "Change Step 3 to use pathlib" not "use pathlib"
+- Be specific in responses to clarifying questions
 - Use clear action words: "Fix:", "Add:", "Change:", "Reorder:"
-- Or skip guidance and edit the .PLAN.md file after creation
+- Or skip enhancement and edit the .PLAN.md file after creation
 
 ---
 
@@ -159,10 +227,11 @@ Suggested action: [1-3 concrete steps to resolve]
 **YOUR ONLY TASKS:**
 
 1. Extract implementation plan from conversation
-2. Apply guidance modifications if provided
-3. Save plan to disk as markdown file
-4. Run `workstack create --plan <file>`
-5. Display next steps to user
+2. Interactively enhance plan for autonomous execution
+3. Apply guidance modifications if provided
+4. Save enhanced plan to disk as markdown file
+5. Run `workstack create --plan <file>`
+6. Display next steps to user
 
 **FORBIDDEN ACTIONS:**
 
@@ -172,6 +241,19 @@ Suggested action: [1-3 concrete steps to resolve]
 - Implementing ANY part of the plan
 
 This command sets up the workspace. Implementation happens in the worktree via `/workstack:implement-plan`.
+
+**Note on ExitPlanMode Workflow:**
+
+When this command follows ExitPlanMode, the workflow is:
+
+1. User presents a plan and calls ExitPlanMode
+2. User invokes `/workstack:create-from-plan`
+3. This command extracts, enhances, and saves the plan to disk
+4. Creates worktree with the plan
+5. User runs: `workstack switch <name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
+6. Implementation happens in the new worktree
+
+**Remember:** This command only prepares the workspace - actual code implementation happens after switching to the worktree.
 
 ### Step 2: Detect Implementation Plan in Context
 
@@ -280,9 +362,257 @@ Note: Guidance must be provided as a single-line string in quotes. Multi-line gu
 
 If no guidance provided: use the original plan as-is
 
-**Output:** Final plan content (original or modified) ready for Step 4 processing
+**Output:** Final plan content (original or modified) ready for Step 5 processing
 
-### Step 4: Generate Filename from Plan
+### Step 4: Apply Semantic Understanding
+
+Apply the semantic understanding principles from the "Semantic Understanding & Context Preservation" section above when enhancing the plan. This includes capturing API quirks, architectural insights, domain logic, reasoning trails, and known pitfalls that would be expensive for the implementing agent to rediscover.
+
+### Step 5: Interactive Plan Enhancement
+
+**CRITICAL:** This is where we transform a generic plan into one optimized for autonomous agent execution.
+
+**Remember the goal:** We are creating a detailed, thorough implementation plan that enables a downstream agent to execute autonomously with confidence. Every question we ask and every enhancement we suggest should serve this goal. If the plan already has enough detail for autonomous execution, don't add unnecessary complexity.
+
+#### Code in Plans: Behavioral, Not Literal
+
+**Rule:** Plans describe WHAT to do, not HOW to code it.
+
+**Include in plans:**
+
+- File paths and function names
+- Behavioral requirements
+- Success criteria
+- Error handling approaches
+
+**Only include code snippets for:**
+
+- Security-critical implementations
+- Public API signatures
+- Bug fixes showing exact before/after
+- Database schema changes
+
+**Example:**
+❌ Wrong: `def validate_user(user_id: str | None) -> User: ...`
+✅ Right: "Update validate_user() in src/auth.py to use LBYL pattern, check for None, raise appropriate errors"
+
+#### Phase 1: Analyze Plan for Gaps
+
+Examine the plan for ambiguities that would block autonomous execution:
+
+**Common gaps to identify:**
+
+1. **Vague file references**: "the config file", "update the model", "modify the API"
+   - Need: Exact file paths
+
+2. **Unclear operations**: "improve", "optimize", "refactor", "enhance"
+   - Need: Specific actions and metrics
+
+3. **Missing success criteria**: Steps without clear completion conditions
+   - Need: Testable outcomes
+
+4. **Unspecified dependencies**: External services, APIs, packages mentioned without details
+   - Need: Availability, versions, fallbacks
+
+5. **Large scope indicators**:
+   - 200+ lines of expected changes
+   - 3+ distinct features
+   - Multiple unrelated components
+   - Need: Phase decomposition
+
+6. **Missing reasoning context**: "use the better approach", "handle carefully"
+   - Need: Which approach was chosen and WHY
+   - Need: What "carefully" means specifically
+
+7. **Vague constraints**: "ensure compatibility", "maintain performance"
+   - Need: Specific versions, standards, or metrics
+   - Need: Quantifiable requirements
+
+8. **Hidden complexity**: Steps that seem simple but aren't
+   - Need: Document discovered complexity
+   - Need: Explain non-obvious requirements
+
+#### Phase 2: Ask Clarifying Questions
+
+For each gap identified, ask the user specific questions. Use the AskUserQuestion tool to get answers.
+
+**Question format examples:**
+
+```markdown
+I need to clarify a few details to ensure the plan can be executed autonomously:
+
+**File Locations:**
+The plan mentions "update the user model" - which specific file contains this model?
+
+- Example: `models/user.py` or `src/database/models.py`
+
+**Success Criteria:**
+Phase 2 mentions "improve performance" - what specific metrics should I target?
+
+- Example: "Response time < 200ms" or "Memory usage < 100MB"
+
+**External Dependencies:**
+The plan references "the payments API" - which service is this?
+
+- Example: "Stripe API v2" or "Internal billing service at /api/billing"
+```
+
+**Important:**
+
+- Ask all clarifying questions in one interaction (batch them)
+- Make questions specific and provide examples
+- Allow user to skip questions if they prefer ambiguity
+
+#### Phase 3: Check for Semantic Understanding
+
+After clarifying questions, check if you discovered valuable context during planning (see "Semantic Understanding & Context Preservation" section). If you discovered API quirks, architectural insights, or complex reasoning that would be expensive to rediscover, ask the user if they want to include it in the plan's "Context & Understanding" section.
+
+#### Phase 4: Suggest Phase Decomposition
+
+For complex plans, suggest breaking into phases:
+
+**Decomposition triggers:**
+
+- 3+ distinct features
+- 200+ lines of expected changes
+- Multiple components with different concerns
+- Sequential dependencies between major parts
+
+**IMPORTANT - Testing and validation:**
+
+- Testing and validation are ALWAYS bundled within implementation phases
+- Never create separate phases for "add tests" or "run validation"
+- Each phase is an independently testable commit with its own tests
+- Only decompose when business logic complexity genuinely requires it
+- Tests are part of the deliverable for each phase, not afterthoughts
+
+**Phase structure suggestion:**
+
+```markdown
+This plan would benefit from phase-based implementation. Here's a suggested breakdown:
+
+**Phase 1: Data Layer** [branch: feature-data]
+
+- Create models and migrations
+- Add unit tests
+- Deliverable: Working database schema with tests
+
+**Phase 2: API Endpoints** [branch: feature-api]
+
+- Implement REST endpoints
+- Add integration tests
+- Deliverable: Functional API with test coverage
+
+**Phase 3: Frontend Integration** [branch: feature-ui]
+
+- Update UI components
+- Add e2e tests
+- Deliverable: Complete feature with UI
+
+Each phase will be a separate branch that can be tested independently.
+Would you like to structure the plan this way? (I can adjust the phases if needed)
+```
+
+#### Phase 5: Incorporate Enhancements
+
+Based on user responses:
+
+1. **Update file references** with exact paths
+2. **Replace vague terms** with specific actions
+3. **Add success criteria** to each major step
+4. **Structure into phases** if approved
+5. **Add test requirements** to each phase
+6. **Include `/ensure-ci` validation** checkpoints
+
+#### Plan Templates
+
+**For Single-Phase Plans:**
+
+```markdown
+## Implementation Plan: [Title]
+
+### Objective
+
+[Clear goal statement]
+
+### Context & Understanding
+
+Include semantic understanding captured during planning (see section above)
+
+### Implementation Steps
+
+1. **[Action]**: [What to do] in `[exact/file/path]`
+   - Success: [How to verify]
+   - On failure: [Recovery action]
+
+2. [Continue pattern...]
+
+### Testing
+
+- Tests are integrated within implementation steps
+- Final validation: Run `/ensure-ci`
+```
+
+**For Multi-Phase Plans:**
+
+```markdown
+## Implementation Plan: [Title]
+
+### Context & Understanding
+
+[Semantic understanding sections as above]
+
+### Phase 1: [Name]
+
+**Branch**: feature-1 (base: main)
+**Goal**: [Single objective]
+
+**Steps:**
+
+1. [Action] in [file]
+2. Add tests in [test file]
+3. Validate with `/ensure-ci`
+
+### Phase 2: [Name]
+
+**Branch**: feature-2 (stacks on: feature-1)
+[Continue pattern...]
+```
+
+#### Phase 6: Final Review
+
+Present a final review of potential execution issues (not a quality score):
+
+```markdown
+## Plan Review - Potential Execution Issues
+
+🟡 **Ambiguous reference: "the main configuration"**
+Impact: Agent won't know which file to modify
+Suggested fix: Specify exact path (e.g., `config/settings.py`)
+[Fix Now] [Continue Anyway]
+
+🟡 **No test coverage specified for new endpoints**
+Impact: Can't verify implementation works correctly
+Suggested fix: Add test requirements for each endpoint
+[Add Tests] [Skip]
+
+🔴 **Database migration lacks rollback strategy**
+Impact: Failed migration could leave database in broken state
+Suggested fix: Include rollback procedure or backup strategy
+[Add Rollback] [Accept Risk]
+```
+
+**Key principles:**
+
+- Only flag issues that would genuinely block execution
+- Provide concrete impact statements
+- Let users dismiss warnings
+- Don't use percentages or scores
+- Focus on actionability
+
+**Output:** Final enhanced plan content ready for Step 6 processing
+
+### Step 6: Generate Filename from Plan
 
 **Filename Extraction Algorithm:**
 
@@ -325,7 +655,7 @@ Use AskUserQuestion tool to get the plan name from the user if extraction fails.
 - Very long title (200 chars) → Truncated to 100 chars + `-plan.md`
 - "###" (only special chars) → Prompt user for name
 
-### Step 5: Detect Worktree Root
+### Step 7: Detect Worktree Root
 
 Execute: `git rev-parse --show-toplevel`
 
@@ -344,7 +674,7 @@ Suggested action:
   3. Check if .git directory exists
 ```
 
-### Step 6: Save Plan to Disk
+### Step 8: Save Plan to Disk
 
 **Pre-save validation:**
 
@@ -366,7 +696,7 @@ Suggested action:
 Use the Write tool to save:
 
 - Path: `<worktree-root>/<derived-filename>`
-- Content: Full plan markdown content
+- Content: Full enhanced plan markdown content
 - Verify file creation
 
 **If save fails:**
@@ -382,9 +712,9 @@ Suggested action:
   3. Ensure path is valid: <worktree-root>/<derived-filename>
 ```
 
-### Step 7: Create Worktree with Plan
+### Step 9: Create Worktree with Plan
 
-Execute: `workstack create --plan <worktree-root>/<filename> --json`
+Execute: `workstack create --plan <worktree-root>/<filename> --json --stay`
 
 **Parse JSON output:**
 
@@ -475,13 +805,13 @@ Suggested action:
 
 **Use the JSON output directly** for all worktree information.
 
-### Step 8: Display Next Steps
+### Step 10: Display Next Steps
 
-After successful worktree creation, provide clear instructions.
+After successful worktree creation, provide clear instructions based on plan structure.
 
 **IMPORTANT:** You have NOT implemented any code. Implementation happens after the user switches to the worktree.
 
-Use the following output format:
+**For single-phase plans:**
 
 ```markdown
 ✅ Worktree created: **<worktree-name>**
@@ -492,20 +822,50 @@ Location: `<worktree-path>`
 
 **Next step:**
 
-`workstack switch <worktree-name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
+`workstack switch <worktree_name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
+```
+
+**For multi-phase plans:**
+
+```markdown
+✅ Worktree created: **<worktree-name>**
+
+Plan: `<filename>` (structured in <number> phases)
+Branch: `<branch-name>`
+Location: `<worktree-path>`
+
+**Phases to be implemented:**
+
+- Phase 1: <phase-name> (branch: <branch-name>)
+- Phase 2: <phase-name> (stacks on: <previous-branch>)
+- Phase 3: <phase-name> (stacks on: <previous-branch>)
+
+Each phase will be implemented as a separate branch with CI verification.
+
+**Next step:**
+
+`workstack switch <worktree_name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
 ```
 
 **Note:** The final output the user sees should be the single copy-pasteable command above. No additional text after that command.
 
 ## Important Notes
 
-- 🔴 **This command does NOT write code** - only creates workspace with plan
+- 🎯 **Primary Goal:** Create a detailed, thorough implementation plan that enables autonomous agent execution with confidence
+- 🔴 **This command does NOT write code** - only creates workspace with enhanced plan
 - Searches last 5-10 messages for implementation plans
-- Plan must be at least 100 characters with structure
-- Guidance is classified as Correction, Addition, Clarification, or Reordering
+- Interactively enhances plans through clarifying questions
+- Suggests phase decomposition for complex plans (200+ lines or 3+ features)
+- Each phase gets its own branch with test requirements and CI validation
+- All enhancements are optional - users can dismiss suggestions
 - Filename derived from plan title, max 100 chars, prompts user if extraction fails
 - All errors follow consistent template with details and suggested actions
 - This command does NOT switch directories or execute the plan
 - User must manually run `workstack switch` and `/workstack:implement-plan` to begin implementation
 - The `--permission-mode acceptEdits` flag is included to automatically accept edits during implementation
+- Plans are optimized for autonomous agent execution with zero ambiguity
 - Always provide clear feedback at each step
+
+```
+
+```

@@ -178,39 +178,37 @@ def check(verbose: bool) -> None:
     # Part 1: Validate configuration
     click.echo("=== Configuration Validation ===")
 
-    config_passed = True
-    if not config_exists:
+    # Check if there are kits to validate
+    if not config_exists or len(config.kits) == 0:
         click.echo("No kits installed - skipping configuration validation")
+        config_passed = True
     else:
-        if len(config.kits) == 0:
-            click.echo("No kits installed - skipping configuration validation")
-            config_passed = True
+        # Validate all installed kits
+        validation_results = validate_configuration(config.kits)
+        valid_count = sum(1 for r in validation_results if r.is_valid)
+        invalid_count = len(validation_results) - valid_count
+
+        # Show results
+        if verbose or invalid_count > 0:
+            for result in validation_results:
+                status = "✓" if result.is_valid else "✗"
+                click.echo(f"{status} {result.kit_id}")
+
+                if not result.is_valid:
+                    for error in result.errors:
+                        click.echo(f"  - {error}", err=True)
+
+        # Summary
+        click.echo()
+        click.echo(f"Validated {len(validation_results)} kit configuration(s):")
+        click.echo(f"  ✓ Valid: {valid_count}")
+
+        if invalid_count > 0:
+            click.echo(f"  ✗ Invalid: {invalid_count}", err=True)
+            config_passed = False
         else:
-            validation_results = validate_configuration(config.kits)
-            valid_count = sum(1 for r in validation_results if r.is_valid)
-            invalid_count = len(validation_results) - valid_count
-
-            # Show results
-            if verbose or invalid_count > 0:
-                for result in validation_results:
-                    status = "✓" if result.is_valid else "✗"
-                    click.echo(f"{status} {result.kit_id}")
-
-                    if not result.is_valid:
-                        for error in result.errors:
-                            click.echo(f"  - {error}", err=True)
-
-            # Summary
-            click.echo()
-            click.echo(f"Validated {len(validation_results)} kit configuration(s):")
-            click.echo(f"  ✓ Valid: {valid_count}")
-
-            if invalid_count > 0:
-                click.echo(f"  ✗ Invalid: {invalid_count}", err=True)
-                config_passed = False
-            else:
-                click.echo("All kit configurations are valid!")
-                config_passed = True
+            click.echo("All kit configurations are valid!")
+            config_passed = True
 
     click.echo()
 

@@ -15,14 +15,14 @@ def test_discover_kit_skills_with_matching_prefixes(tmp_project: Path) -> None:
             "devrun": InstalledKit(
                 kit_id="devrun",
                 version="1.0.0",
-                source="bundled:dev-runners-da-kit",
+                source="bundled:devrun",
                 installed_at="2025-01-01T00:00:00",
                 artifacts=[],
             ),
             "gt": InstalledKit(
                 kit_id="gt",
                 version="1.0.0",
-                source="bundled:graphite-da-kit",
+                source="bundled:gt",
                 installed_at="2025-01-01T00:00:00",
                 artifacts=[],
             ),
@@ -63,7 +63,7 @@ def test_discover_unmanaged_skills(tmp_project: Path) -> None:
             "devrun": InstalledKit(
                 kit_id="devrun",
                 version="1.0.0",
-                source="bundled:dev-runners-da-kit",
+                source="bundled:devrun",
                 installed_at="2025-01-01T00:00:00",
                 artifacts=[],
             ),

@@ -770,6 +770,7 @@ def test_sync_script_mode_when_worktree_deleted() -> None:
         # Check for key elements of the activation script
         # Note: shlex.quote will add quotes around paths with spaces
         import shlex
+
         quoted_root = shlex.quote(str(repo_root))
         assert f"cd {quoted_root}" in script_content
         assert "# return to root" in script_content

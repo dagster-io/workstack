@@ -101,13 +101,20 @@ artifacts:
 
 The namespace directory (`my-kit/`) is **organizational only** - it doesn't become part of the invocation name.
 
-**Hyphenated naming convention**: Artifacts should use hyphenated naming that combines the kit name with the artifact purpose (e.g., `skills/devrun-make/SKILL.md` → invoked as "devrun-make"). This is the standard pattern for bundled kits as it keeps the directory structure flat while maintaining clear namespacing. The directory name determines the invocation name.
+**Hyphenated naming convention (kebab-case)**: ALL artifacts MUST use hyphenated naming (kebab-case), NOT underscores. Use hyphens to combine words (e.g., `skills/devrun-make/SKILL.md` → "devrun-make", `commands/my-command.md` → "/my-command"). This is the standard for ALL Claude artifacts - bundled kits and project-local alike.
+
+**DO NOT use underscores** (`_`) in artifact names. Use hyphens (`-`) instead:
+
+- ✅ CORRECT: `my-command.md`, `api-client/SKILL.md`, `test-runner.md`
+- ❌ WRONG: `my_command.md`, `api_client/SKILL.md`, `test_runner.md`
+
+Exception: Python scripts within artifacts may use snake_case (they're code, not artifacts).
 
 ### Namespace Standards for Kit Types
 
 **Bundled kits** (distributed with packages): Should follow hyphenated naming convention (e.g., `skills/kit-name-tool/`) to avoid naming conflicts and maintain clear organization.
 
-**Project-local artifacts** (in `.claude/` not from kits): Can use any naming structure. These are project-specific and not distributed.
+**Project-local artifacts** (in `.claude/` not from kits): MUST also use kebab-case naming. The hyphenated naming standard applies to ALL artifacts, regardless of whether they're bundled or project-local.
 
 ### Adopting Hyphenated Naming
 

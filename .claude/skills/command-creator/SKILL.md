@@ -91,7 +91,10 @@ Ask:
 
 Guidelines:
 
-- Command names should be kebab-case (e.g., `submit-stack`, `ensure-ci`)
+- Command names MUST be kebab-case (hyphens, NOT underscores)
+  - ✅ CORRECT: `submit-stack`, `ensure-ci`, `create-from-plan`
+  - ❌ WRONG: `submit_stack`, `ensure_ci`, `create_from_plan`
+- File names match command names: `my-command.md` → invoked as `/my-command`
 - Description should be concise, action-oriented (appears in `/help` output)
 
 #### B. Arguments

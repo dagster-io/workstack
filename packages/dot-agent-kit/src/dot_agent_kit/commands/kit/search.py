@@ -2,7 +2,8 @@
 
 import click
 
-from dot_agent_kit.io import load_registry
+from dot_agent_kit.io import load_kit_manifest, load_registry
+from dot_agent_kit.sources.bundled import BundledKitSource
 
 
 @click.command()
@@ -55,8 +56,39 @@ def search(query: str | None) -> None:
     else:
         click.echo(f"Available kits ({len(filtered)}):\n")
 
+    bundled_source = BundledKitSource()
+
     for entry in filtered:
-        click.echo(f"  {entry.name}")
-        click.echo(f"  └─ {entry.description}")
-        click.echo(f"     Source: {entry.source}")
+        # Load manifest to get version and artifact counts
+        version_str = ""
+        artifacts_str = ""
+
+        if bundled_source.can_resolve(entry.source):
+            resolved = bundled_source.resolve(entry.source)
+            manifest = load_kit_manifest(resolved.manifest_path)
+
+            version_str = f" (v{manifest.version})"
+
+            # Count artifacts by type
+            artifact_counts = []
+            for artifact_type, paths in manifest.artifacts.items():
+                count = len(paths)
+                if count > 0:
+                    # Use singular or plural form based on count
+                    type_name = artifact_type
+                    if count == 1:
+                        # Singularize: remove trailing 's' if present
+                        if type_name.endswith("s"):
+                            type_name = type_name[:-1]
+                    else:
+                        # Pluralize: add 's' if not already present
+                        if not type_name.endswith("s"):
+                            type_name = type_name + "s"
+                    artifact_counts.append(f"{count} {type_name}")
+
+            if artifact_counts:
+                artifacts_str = f" • {', '.join(artifact_counts)}"
+
+        click.echo(f"  [{entry.kit_id}]{version_str}")
+        click.echo(f"  └─ {entry.name} • {entry.description}{artifacts_str}")
         click.echo()

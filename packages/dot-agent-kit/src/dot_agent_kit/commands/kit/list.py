@@ -8,7 +8,12 @@ import click
 import pathspec
 
 from dot_agent_kit.io import require_project_config
-from dot_agent_kit.models.artifact import ArtifactSource, InstalledArtifact
+from dot_agent_kit.models.artifact import (
+    ARTIFACT_TYPE_PLURALS,
+    ArtifactSource,
+    ArtifactTypePlural,
+    InstalledArtifact,
+)
 from dot_agent_kit.models.config import ProjectConfig
 from dot_agent_kit.repositories import ArtifactRepository, FilesystemArtifactRepository
 
@@ -167,38 +172,55 @@ def _list_artifacts(
     # Find project root for gitignore resolution
     project_root = _find_project_root(project_dir)
 
-    # Group artifacts by type
-    skills: list[InstalledArtifact] = []
-    commands: list[InstalledArtifact] = []
-    agents: list[InstalledArtifact] = []
-    hooks: list[InstalledArtifact] = []
+    # Group artifacts by kit, then by type
+    # Structure: {kit_key: {artifact_type_plural: [artifacts]}}
+    kits_with_artifacts: dict[str, dict[ArtifactTypePlural, list[InstalledArtifact]]] = {}
 
     for artifact in artifacts:
-        if artifact.artifact_type == "skill":
-            skills.append(artifact)
-        elif artifact.artifact_type == "command":
-            commands.append(artifact)
-        elif artifact.artifact_type == "agent":
-            agents.append(artifact)
-        elif artifact.artifact_type == "hook":
-            hooks.append(artifact)
+        # Determine kit key
+        if artifact.source == ArtifactSource.LOCAL:
+            kit_key = "local"
+        elif artifact.kit_id and artifact.kit_version:
+            kit_key = f"{artifact.kit_id}@{artifact.kit_version}"
+        elif artifact.kit_id:
+            kit_key = artifact.kit_id
+        else:
+            kit_key = "unknown"
 
-    # Create display data only for skills
-    skills_data: list[ArtifactDisplayData] = []
-    for skill in skills:
-        folder_path = str(skill.file_path.parent) + "/"
-        # Artifact file_path is relative to .claude/, so prepend .claude/
-        artifact_dir = project_dir / ".claude" / skill.file_path.parent
-        file_counts = _count_files_by_extension(artifact_dir, project_root)
-        source = _format_source(skill)
+        # Initialize kit if not present
+        if kit_key not in kits_with_artifacts:
+            kits_with_artifacts[kit_key] = {
+                "skills": [],
+                "commands": [],
+                "agents": [],
+                "hooks": [],
+            }
 
-        display_data = ArtifactDisplayData(
-            artifact=skill,
-            folder_path=folder_path,
-            file_counts=file_counts,
-            source=source,
-        )
-        skills_data.append(display_data)
+        # Add artifact to appropriate type list
+        # Convert singular type to plural for dictionary key
+        plural_type = ARTIFACT_TYPE_PLURALS[artifact.artifact_type]
+        kits_with_artifacts[kit_key][plural_type].append(artifact)
+
+    # Create display data for all skills across all kits
+    skills_data_by_kit: dict[str, list[ArtifactDisplayData]] = {}
+
+    for kit_key, artifact_types in kits_with_artifacts.items():
+        skills_data_by_kit[kit_key] = []
+
+        for skill in artifact_types["skills"]:
+            folder_path = str(skill.file_path.parent) + "/"
+            # Artifact file_path is relative to .claude/, so prepend .claude/
+            artifact_dir = project_dir / ".claude" / skill.file_path.parent
+            file_counts = _count_files_by_extension(artifact_dir, project_root)
+            source = _format_source(skill)
+
+            display_data = ArtifactDisplayData(
+                artifact=skill,
+                folder_path=folder_path,
+                file_counts=file_counts,
+                source=source,
+            )
+            skills_data_by_kit[kit_key].append(display_data)
 
     # Calculate column widths for alignment
     max_name_len = 0
@@ -211,13 +233,17 @@ def _list_artifacts(
         max_name_len = max(max_name_len, len(artifact.artifact_name))
 
     # Calculate widths for skills
-    for data in skills_data:
-        max_folder_len = max(max_folder_len, len(data.folder_path))
-        max_counts_len = max(max_counts_len, len(data.file_counts))
+    for kit_skills_data in skills_data_by_kit.values():
+        for data in kit_skills_data:
+            max_folder_len = max(max_folder_len, len(data.folder_path))
+            max_counts_len = max(max_counts_len, len(data.file_counts))
 
     # Calculate widths for commands, agents, and hooks (file paths)
-    for artifact in commands + agents + hooks:
-        max_path_len = max(max_path_len, len(str(artifact.file_path)))
+    for artifact_types in kits_with_artifacts.values():
+        for artifact in (
+            artifact_types["commands"] + artifact_types["agents"] + artifact_types["hooks"]
+        ):
+            max_path_len = max(max_path_len, len(str(artifact.file_path)))
 
     # Ensure minimum widths
     max_name_len = max(max_name_len, 20)
@@ -225,44 +251,77 @@ def _list_artifacts(
     max_folder_len = max(max_folder_len, 30)
     max_counts_len = max(max_counts_len, 20)
 
-    # Display skills
-    if skills_data:
-        click.echo("Skills:")
-        for data in sorted(skills_data, key=lambda d: d.artifact.artifact_name):
-            name = data.artifact.artifact_name.ljust(max_name_len)
-            folder_path = data.folder_path.ljust(max_folder_len)
-            file_counts = data.file_counts.ljust(max_counts_len)
-            click.echo(f"  {name} {folder_path} {file_counts} {data.source}")
-        click.echo()
+    # Sort kits: installed kits alphabetically, then local
+    def _sort_kit_key(kit_key: str) -> tuple[int, str]:
+        """Sort key function: local last, others alphabetically."""
+        if kit_key == "local":
+            return (1, kit_key)
+        else:
+            return (0, kit_key)
 
-    # Display commands
-    if commands:
-        click.echo("Commands:")
-        for command in sorted(commands, key=lambda a: a.artifact_name):
-            name = command.artifact_name.ljust(max_name_len)
-            source = _format_source(command)
-            file_path = str(command.file_path).ljust(max_path_len)
-            click.echo(f"  {name} {source.ljust(20)} {file_path}")
-        click.echo()
+    sorted_kit_keys = sorted(kits_with_artifacts.keys(), key=_sort_kit_key)
 
-    # Display agents
-    if agents:
-        click.echo("Agents:")
-        for agent in sorted(agents, key=lambda a: a.artifact_name):
-            name = agent.artifact_name.ljust(max_name_len)
-            source = _format_source(agent)
-            file_path = str(agent.file_path).ljust(max_path_len)
-            click.echo(f"  {name} {source.ljust(20)} {file_path}")
-        click.echo()
+    # Display artifacts grouped by kit
+    for kit_key in sorted_kit_keys:
+        artifact_types = kits_with_artifacts[kit_key]
 
-    # Display hooks
-    if hooks:
-        click.echo("Hooks:")
-        for hook in sorted(hooks, key=lambda a: a.artifact_name):
-            name = hook.artifact_name.ljust(max_name_len)
-            source = _format_source(hook)
-            file_path = str(hook.file_path).ljust(max_path_len)
-            click.echo(f"  {name} {source.ljust(20)} {file_path}")
+        # Check if kit has any artifacts
+        plural_types: list[ArtifactTypePlural] = ["skills", "commands", "agents", "hooks"]
+        has_artifacts = any(len(artifact_types[atype]) > 0 for atype in plural_types)
+
+        if not has_artifacts:
+            continue
+
+        # Display kit header
+        if kit_key == "local":
+            click.echo("[local]:")
+        else:
+            # Extract kit_id and version from key
+            if "@" in kit_key:
+                kit_id, version = kit_key.split("@", 1)
+                click.echo(f"[{kit_id}] (v{version}):")
+            else:
+                click.echo(f"[{kit_key}]:")
+
+        # Display skills for this kit
+        kit_skills_data = skills_data_by_kit.get(kit_key, [])
+        if kit_skills_data:
+            click.echo(f"  Skills ({len(kit_skills_data)}):")
+            for data in sorted(kit_skills_data, key=lambda d: d.artifact.artifact_name):
+                name = data.artifact.artifact_name.ljust(max_name_len)
+                folder_path = data.folder_path.ljust(max_folder_len)
+                file_counts = data.file_counts
+                click.echo(f"    {name} {folder_path} {file_counts}")
+
+        # Display commands for this kit
+        kit_commands = artifact_types["commands"]
+        if kit_commands:
+            click.echo(f"  Commands ({len(kit_commands)}):")
+            for command in sorted(kit_commands, key=lambda a: a.artifact_name):
+                name = command.artifact_name.ljust(max_name_len)
+                file_path = str(command.file_path)
+                click.echo(f"    {name} {file_path}")
+
+        # Display agents for this kit
+        kit_agents = artifact_types["agents"]
+        if kit_agents:
+            click.echo(f"  Agents ({len(kit_agents)}):")
+            for agent in sorted(kit_agents, key=lambda a: a.artifact_name):
+                name = agent.artifact_name.ljust(max_name_len)
+                file_path = str(agent.file_path)
+                click.echo(f"    {name} {file_path}")
+
+        # Display hooks for this kit
+        kit_hooks = artifact_types["hooks"]
+        if kit_hooks:
+            click.echo(f"  Hooks ({len(kit_hooks)}):")
+            for hook in sorted(kit_hooks, key=lambda a: a.artifact_name):
+                name = hook.artifact_name.ljust(max_name_len)
+                file_path = str(hook.file_path)
+                click.echo(f"    {name} {file_path}")
+
+        # Add spacing between kits
+        click.echo()
 
 
 def _list_kits_impl(artifacts: bool) -> None:

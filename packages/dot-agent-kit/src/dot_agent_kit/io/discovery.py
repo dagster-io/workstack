@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from dot_agent_kit.models.artifact import ArtifactSource, InstalledArtifact
+from dot_agent_kit.models.artifact import ArtifactSource, ArtifactType, InstalledArtifact
 from dot_agent_kit.models.config import InstalledKit, ProjectConfig
 
 
@@ -194,7 +194,7 @@ def discover_all_artifacts(project_dir: Path, config: ProjectConfig) -> list[Ins
 
 def _create_artifact_from_file(
     file_path: Path,
-    artifact_type: str,
+    artifact_type: ArtifactType,
     display_name: str,
     managed_artifacts: dict[str, InstalledKit],
     config: ProjectConfig,

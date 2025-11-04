@@ -679,17 +679,24 @@ def test_sync_original_worktree_deleted() -> None:
 
 
 def test_render_return_to_root_script() -> None:
-    """Return-to-root script renders expected shell snippet."""
+    """Return-to-root script now uses activation script with environment setup."""
+    from workstack.cli.activation import render_activation_script
+
     root = Path("/example/repo/root")
-    script = render_cd_script(
-        root,
-        comment="workstack sync - return to root",
-        success_message="✓ Switched to root worktree.",
+    script = render_activation_script(
+        worktree_path=root,
+        comment="return to root",
+        final_message='echo "✓ Switched to root worktree."',
     )
 
-    assert "# workstack sync - return to root" in script
-    assert f"cd '{root}'" in script
+    # Verify the activation script contains expected elements
+    assert "# return to root" in script
+    # shlex.quote only adds quotes when needed, /example/repo/root doesn't need them
+    assert f"cd {root}" in script
     assert 'echo "✓ Switched to root worktree."' in script
+    # Additional elements from activation script
+    assert "unset VIRTUAL_ENV" in script  # Clears previous venv
+    assert ".venv/bin/activate" in script  # Activates venv if exists
 
 
 def test_sync_script_mode_when_worktree_deleted() -> None:
@@ -759,12 +766,14 @@ def test_sync_script_mode_when_worktree_deleted() -> None:
 
         # Verify script content
         script_content = script_path.read_text()
-        expected_script = render_cd_script(
-            repo_root,
-            comment="return to root",
-            success_message="✓ Switched to root worktree.",
-        ).strip()
-        assert expected_script in script_content
+        # The sync command now uses render_activation_script when worktree is deleted
+        # Check for key elements of the activation script
+        # Note: shlex.quote will add quotes around paths with spaces
+        import shlex
+        quoted_root = shlex.quote(str(repo_root))
+        assert f"cd {quoted_root}" in script_content
+        assert "# return to root" in script_content
+        assert 'echo "✓ Switched to root worktree."' in script_content
         assert not wt1.exists()
 
         # Cleanup

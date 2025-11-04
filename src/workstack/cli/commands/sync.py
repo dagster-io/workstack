@@ -4,6 +4,7 @@ from pathlib import Path
 
 import click
 
+from workstack.cli.activation import render_activation_script
 from workstack.cli.commands.remove import _remove_worktree
 from workstack.cli.core import discover_repo_context, ensure_workstacks_dir, worktree_path_for
 from workstack.cli.shell_utils import render_cd_script, write_script_to_temp
@@ -254,10 +255,10 @@ def sync_cmd(ctx: WorkstackContext, force: bool, dry_run: bool, script: bool) ->
                 script_mode=script,
             )
             if script:
-                script_content = render_cd_script(
-                    repo.root,
+                script_content = render_activation_script(
+                    worktree_path=repo.root,
                     comment="return to root",
-                    success_message="✓ Switched to root worktree.",
+                    final_message='echo "✓ Switched to root worktree."',
                 )
                 script_output_path = write_script_to_temp(
                     script_content,

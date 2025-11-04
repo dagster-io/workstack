@@ -52,9 +52,10 @@ class FilesystemArtifactRepository(ArtifactRepository):
 
         # Map of artifact paths to installed kits for tracking managed status
         managed_artifacts: dict[str, InstalledKit] = {}
-        for kit in config.kits.values():
-            for artifact_path in kit.artifacts:
-                managed_artifacts[artifact_path] = kit
+        if config and config.kits:
+            for kit in config.kits.values():
+                for artifact_path in kit.artifacts:
+                    managed_artifacts[artifact_path] = kit
 
         # Scan skills directory
         skills_dir = claude_dir / "skills"

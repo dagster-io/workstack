@@ -4,8 +4,9 @@ from pathlib import Path
 
 import click
 
+from workstack.cli.activation import render_activation_script
 from workstack.cli.core import discover_repo_context
-from workstack.cli.shell_utils import render_cd_script, write_script_to_temp
+from workstack.cli.shell_utils import write_script_to_temp
 from workstack.core.context import WorkstackContext
 
 
@@ -31,10 +32,10 @@ def generate_recovery_script(ctx: WorkstackContext) -> Path | None:
     except (FileNotFoundError, ValueError):
         return None
 
-    script_content = render_cd_script(
-        repo.root,
+    script_content = render_activation_script(
+        worktree_path=repo.root,
         comment="workstack passthrough recovery script",
-        success_message="✓ Workstack detected a removed directory and returned to repo root.",
+        final_message='echo "✓ Workstack detected a removed directory and returned to repo root."',
     )
 
     script_path = write_script_to_temp(

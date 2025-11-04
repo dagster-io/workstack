@@ -78,6 +78,11 @@ def check(verbose: bool) -> None:
     """Validate installed artifacts and check bundled kit sync status."""
     project_dir = Path.cwd()
 
+    # Check if config exists
+    config = load_project_config(project_dir)
+    if config is None:
+        click.echo("No dot-agent.toml found - skipping sync check")
+
     # Part 1: Validate artifacts
     click.echo("=== Artifact Validation ===")
     validation_results = validate_project(project_dir)
@@ -116,10 +121,8 @@ def check(verbose: bool) -> None:
 
     # Part 2: Check bundled kit sync status
     click.echo("=== Bundled Kit Sync Status ===")
-    config = load_project_config(project_dir)
 
     if config is None:
-        click.echo("No dot-agent.toml found - skipping sync check")
         sync_passed = True
     elif len(config.kits) == 0:
         click.echo("No kits installed - skipping sync check")

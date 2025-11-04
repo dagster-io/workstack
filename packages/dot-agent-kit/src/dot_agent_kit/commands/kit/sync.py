@@ -4,7 +4,7 @@ from pathlib import Path
 
 import click
 
-from dot_agent_kit.io import load_project_config, save_project_config
+from dot_agent_kit.io import require_project_config, save_project_config
 from dot_agent_kit.operations import check_for_updates, sync_all_kits, sync_kit
 from dot_agent_kit.sources import BundledKitSource, KitResolver, StandalonePackageSource
 
@@ -42,10 +42,7 @@ def sync(kit_id: str | None, verbose: bool, force: bool) -> None:
     """
     project_dir = Path.cwd()
 
-    config = load_project_config(project_dir)
-    if config is None:
-        click.echo("Error: No dot-agent.toml found", err=True)
-        raise SystemExit(1)
+    config = require_project_config(project_dir)
 
     if len(config.kits) == 0:
         click.echo("No kits installed")

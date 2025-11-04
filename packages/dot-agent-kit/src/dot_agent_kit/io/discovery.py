@@ -6,7 +6,9 @@ from dot_agent_kit.models.artifact import ArtifactSource, InstalledArtifact
 from dot_agent_kit.models.config import InstalledKit, ProjectConfig
 
 
-def discover_installed_artifacts(project_dir: Path) -> dict[str, set[str]]:
+def discover_installed_artifacts(
+    project_dir: Path, config: ProjectConfig | None = None
+) -> dict[str, set[str]]:
     """Discover artifacts present in .claude/ directory.
 
     Scans the .claude/ directory structure to identify which kits have
@@ -14,6 +16,7 @@ def discover_installed_artifacts(project_dir: Path) -> dict[str, set[str]]:
 
     Args:
         project_dir: Project root directory
+        config: Optional project configuration for kit prefix detection
 
     Returns:
         Dictionary mapping kit_id to set of artifact types found.
@@ -44,7 +47,7 @@ def discover_installed_artifacts(project_dir: Path) -> dict[str, set[str]]:
                 if skill_file.exists():
                     # Extract kit from skill name prefix
                     # Examples: "devrun-make" -> "devrun", "gt-graphite" -> "gt"
-                    kit_id = _extract_kit_from_skill_name(item.name)
+                    kit_id = _extract_kit_from_skill_name(item.name, config)
                     if kit_id:
                         if kit_id not in discovered:
                             discovered[kit_id] = set()
@@ -67,7 +70,7 @@ def discover_installed_artifacts(project_dir: Path) -> dict[str, set[str]]:
     return discovered
 
 
-def _extract_kit_from_skill_name(skill_name: str) -> str | None:
+def _extract_kit_from_skill_name(skill_name: str, config: ProjectConfig | None) -> str | None:
     """Extract kit ID from skill name.
 
     Skills are named with kit prefix, like:
@@ -80,19 +83,21 @@ def _extract_kit_from_skill_name(skill_name: str) -> str | None:
 
     Args:
         skill_name: Full skill directory name
+        config: Optional project configuration for kit prefix detection
 
     Returns:
         Kit ID - either extracted prefix or full skill name
     """
-    # Known kit prefixes (bundled kits)
-    known_prefixes = ["devrun", "gt"]
+    # Use configured kit IDs as prefixes if config is provided
+    if config is not None:
+        kit_prefixes = list(config.kits.keys())
 
-    # Check if skill starts with known prefix
-    for prefix in known_prefixes:
-        if skill_name.startswith(f"{prefix}-"):
-            return prefix
+        # Check if skill starts with a configured kit prefix
+        for prefix in kit_prefixes:
+            if skill_name.startswith(f"{prefix}-"):
+                return prefix
 
-    # For skills without known prefix, treat as standalone "kit"
+    # For skills without matching prefix, treat as standalone "kit"
     # This handles skills like "gh", "workstack", "skill-creator", etc.
     return skill_name
 

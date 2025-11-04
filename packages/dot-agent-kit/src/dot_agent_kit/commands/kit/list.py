@@ -7,7 +7,7 @@ from pathlib import Path
 import click
 import pathspec
 
-from dot_agent_kit.io import load_project_config
+from dot_agent_kit.io import require_project_config
 from dot_agent_kit.models.artifact import ArtifactSource, InstalledArtifact
 from dot_agent_kit.models.config import ProjectConfig
 from dot_agent_kit.repositories import ArtifactRepository, FilesystemArtifactRepository
@@ -268,14 +268,7 @@ def _list_artifacts(
 def _list_kits_impl(artifacts: bool) -> None:
     """Implementation of list command logic."""
     project_dir = Path.cwd()
-    loaded_config = load_project_config(project_dir)
-
-    if loaded_config is None:
-        click.echo("Error: No project configuration found", err=True)
-        click.echo("Run this command from a project directory with a .claude/ folder", err=True)
-        raise SystemExit(1)
-
-    config = loaded_config
+    config = require_project_config(project_dir)
 
     if len(config.kits) == 0:
         click.echo("No kits installed")

@@ -5,7 +5,7 @@ from pathlib import Path
 import click
 
 from dot_agent_kit.hooks.installer import remove_hooks
-from dot_agent_kit.io import load_project_config, save_project_config
+from dot_agent_kit.io import require_project_config, save_project_config
 from dot_agent_kit.models import ProjectConfig
 
 # Reusable argument decorator
@@ -17,11 +17,7 @@ def _remove_kit_impl(kit_id: str) -> None:
     project_dir = Path.cwd()
 
     # Load project config
-    loaded_config = load_project_config(project_dir)
-    if loaded_config is None:
-        click.echo("Error: No project configuration found", err=True)
-        raise SystemExit(1)
-    config = loaded_config
+    config = require_project_config(project_dir)
 
     # Check if kit is installed
     if kit_id not in config.kits:

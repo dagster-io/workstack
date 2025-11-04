@@ -10,6 +10,7 @@ from dot_agent_kit.io.registry import load_registry
 from dot_agent_kit.io.state import (
     create_default_config,
     load_project_config,
+    require_project_config,
     save_project_config,
 )
 
@@ -21,5 +22,6 @@ __all__ = [
     "load_project_config",
     "load_registry",
     "parse_user_metadata",
+    "require_project_config",
     "save_project_config",
 ]

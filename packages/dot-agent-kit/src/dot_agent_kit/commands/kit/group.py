@@ -2,7 +2,7 @@
 
 import click
 
-from dot_agent_kit.commands.kit import install, search, sync
+from dot_agent_kit.commands.kit import init, install, search, sync
 from dot_agent_kit.commands.kit.list import list_installed_kits, ls
 from dot_agent_kit.commands.kit.remove import remove, rm
 
@@ -12,6 +12,7 @@ def kit_group() -> None:
     """Manage kits - install, update, sync, and search.
 
     Common commands:
+      init       Initialize dot-agent.toml configuration
       install    Install or update a specific kit
       list/ls    List installed kits
       remove/rm  Remove installed kits
@@ -21,6 +22,7 @@ def kit_group() -> None:
 
 
 # Register all kit commands
+kit_group.add_command(init.init)
 kit_group.add_command(install.install)
 kit_group.add_command(list_installed_kits)
 kit_group.add_command(ls)

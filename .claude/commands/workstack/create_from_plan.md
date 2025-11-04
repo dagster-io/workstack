@@ -1,5 +1,5 @@
 ---
-description: Create a workstack worktree from an implementation plan in context
+description: Create a workstack worktree from an implementation plan in context (with optional guidance)
 ---
 
 # /workstack:create_from_plan
@@ -9,23 +9,33 @@ This command finds an implementation plan in the conversation context, saves it 
 ## Usage
 
 ```bash
-/workstack:create_from_plan
+/workstack:create_from_plan [guidance]
 ```
+
+**Examples:**
+
+- `/workstack:create_from_plan` - Create worktree from plan as-is
+- `/workstack:create_from_plan "Make error handling more robust and add retry logic"` - Apply guidance before creating worktree
+- `/workstack:create_from_plan "Fix: Use LBYL instead of try/except throughout"` - Apply corrections to plan
 
 ## Prerequisites
 
 - An implementation plan must exist in recent conversation context
 - Current working directory must be in the workstack repository
 - The plan should not already be saved to disk
+- (Optional) Guidance text for final corrections/additions to the plan
 
 ## What Happens
 
 When you run this command:
 
 1. The assistant searches recent conversation for an implementation plan
-2. Extracts and saves the plan as `<feature-name>-plan.md` at current worktree root
-3. Creates a new workstack worktree with: `workstack create --plan <filename>-plan.md`
-4. Displays instructions for switching to the worktree and implementing the plan
+2. If guidance provided, AI intelligently merges it into the plan (corrections, additions, clarifications)
+3. Extracts and saves the (possibly modified) plan as `<feature-name>-plan.md` at current worktree root
+4. Creates a new workstack worktree with: `workstack create --plan <filename>-plan.md`
+5. Displays instructions for switching to the worktree and implementing the plan
+
+**Note:** This command does NOT implement code - it only creates the workspace with the plan.
 
 ## Expected Outcome
 
@@ -35,9 +45,49 @@ When you run this command:
 
 ---
 
+## 🔴 CRITICAL: This Command Does NOT Implement Code
+
+**This command's ONLY job:**
+
+1. Find the plan in context
+2. (Optional) Apply guidance to modify the plan
+3. Save plan to disk
+4. Create worktree with `workstack create --plan`
+
+**DO NOT:**
+
+- ❌ Write ANY code files (.py, .ts, .js, etc.)
+- ❌ Make ANY edits to existing code
+- ❌ Run tests, linters, or formatters
+- ❌ Execute any part of the implementation
+- ❌ Create anything except the plan file
+
+**The implementation happens later** when the user runs `/workstack:implement_plan` after switching to the worktree.
+
+---
+
 ## Agent Instructions
 
 You are executing the `/workstack:create_from_plan` command. Follow these steps carefully:
+
+### Step 0: READ THIS FIRST - Scope Limitation 🔴
+
+**YOUR ONLY TASKS:**
+
+1. Extract implementation plan from conversation
+2. Apply guidance modifications if provided
+3. Save plan to disk as markdown file
+4. Run `workstack create --plan <file>`
+5. Display next steps to user
+
+**FORBIDDEN ACTIONS:**
+
+- Writing ANY code files (.py, .ts, .js, etc.)
+- Making ANY edits to existing codebase
+- Running ANY commands except `git rev-parse` and `workstack create`
+- Implementing ANY part of the plan
+
+This command sets up the workspace. Implementation happens in the worktree via `/workstack:implement_plan`.
 
 ### Step 1: Detect Implementation Plan in Context
 
@@ -55,11 +105,31 @@ If no plan is found:
 Please ensure an implementation plan has been presented recently in the conversation.
 ```
 
-### Step 2: Extract and Process Plan Content
+### Step 1.5: Apply Guidance to Plan (if provided)
 
-When a plan is found:
+**Check for guidance argument:**
 
-1. Extract the full markdown content of the plan
+If guidance text is provided as an argument to this command:
+
+1. Read the extracted plan from Step 1
+2. Read the guidance text (corrections, additions, clarifications, priority changes, etc.)
+3. Use AI reasoning to intelligently merge the guidance into the plan:
+   - Update relevant sections based on guidance
+   - Add new sections if guidance introduces new requirements
+   - Correct errors or approaches if guidance identifies issues
+   - Adjust priorities or ordering if guidance suggests changes
+   - Integrate guidance naturally into the plan structure (not just appended)
+4. Produce the modified plan content
+
+If no guidance provided: use the original plan as-is from Step 1
+
+**Output:** Final plan content (original or modified) ready for Step 2 processing
+
+### Step 2: Extract and Process Plan Content (with Guidance Applied)
+
+At this point, you have the final plan content (original or modified by guidance from Step 1.5):
+
+1. The plan content is ready (already includes any guidance modifications)
 2. Preserve all formatting, headers, and structure
 3. Derive a filename from the plan title or overview section:
    - Extract the main feature/component name
@@ -156,35 +226,25 @@ Execute: `workstack create --plan <worktree-root>/<filename> --json`
 
 ### Step 6: Display Next Steps
 
-After successful worktree creation, provide clear instructions:
+After successful worktree creation, provide clear instructions.
+
+**IMPORTANT:** You have NOT implemented any code. Implementation happens after the user switches to the worktree.
+
+Use the following output format:
 
 ```markdown
-✅ Worktree created successfully!
+✅ Worktree created: **<worktree-name>**
 
-**Plan file**: <filename>
-**Worktree**: <worktree-name>
-**Location**: <worktree-path>
-**Branch**: <branch-name>
+Plan: `<filename>`
+Branch: `<branch-name>`
+Location: `<worktree-path>`
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🚀 **NEXT STEPS** (Required to begin implementation)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+**Next step:**
 
-**1. Switch to the worktree:**
-
-    `workstack switch <worktree-name>`
-
-**2. Start implementation:**
-
-    `/workstack:implement_plan`
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-### Other Commands
-
-- To return to root repository: `workstack switch root`
-- To view worktree status: `workstack ls`
+`workstack switch <worktree-name> && claude "/workstack:implement_plan"`
 ```
+
+**Note:** The final output the user sees should be the single copy-pasteable command above. No additional text after that command.
 
 ## Error Handling Summary
 
@@ -207,7 +267,10 @@ Common error scenarios to handle:
 
 ## Important Notes
 
+- 🔴 **This command does NOT write code** - only creates workspace with plan
 - This command does NOT switch directories or execute the plan
-- User must manually run `workstack switch` and `/workstack:implement_plan`
+- This command does NOT run tests, linters, formatters, or any implementation tasks
+- User must manually run `workstack switch` and `/workstack:implement_plan` to begin implementation
 - The worktree name is automatically derived from the plan
+- Optional guidance parameter allows final corrections/additions before persisting plan
 - Always provide clear feedback at each step

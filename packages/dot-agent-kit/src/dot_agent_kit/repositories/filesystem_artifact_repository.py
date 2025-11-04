@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from dot_agent_kit.hooks.settings import extract_kit_id_from_command, get_all_hooks, load_settings
-from dot_agent_kit.models.artifact import ArtifactSource, InstalledArtifact
+from dot_agent_kit.models.artifact import ArtifactSource, ArtifactType, InstalledArtifact
 from dot_agent_kit.models.config import InstalledKit, ProjectConfig
 from dot_agent_kit.repositories.artifact_repository import ArtifactRepository
 
@@ -181,7 +181,7 @@ class FilesystemArtifactRepository(ArtifactRepository):
     def _create_artifact_from_file(
         self,
         file_path: Path,
-        artifact_type: str,
+        artifact_type: ArtifactType,
         display_name: str,
         managed_artifacts: dict[str, InstalledKit],
         config: ProjectConfig,

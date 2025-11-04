@@ -60,7 +60,7 @@ def require_project_config(project_dir: Path) -> ProjectConfig:
     """
     config = load_project_config(project_dir)
     if config is None:
-        msg = "Error: No dot-agent.toml found. Run 'dot-agent kit init' to create one."
+        msg = "Error: No dot-agent.toml found. Run 'dot-agent init' to create one."
         click.echo(msg, err=True)
         raise SystemExit(1)
     return config

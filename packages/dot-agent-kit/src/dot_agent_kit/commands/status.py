@@ -57,6 +57,9 @@ def _show_status(verbose: bool) -> None:
     else:
         click.echo("  (none)")
 
+    click.echo()
+    click.echo("Use 'dot-agent artifact list' for detailed artifact inspection")
+
 
 @click.command()
 @verbose_option

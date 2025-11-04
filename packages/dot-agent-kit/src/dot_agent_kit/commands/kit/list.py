@@ -353,7 +353,14 @@ def _list_kits_impl(artifacts: bool) -> None:
 @click.command(name="list")
 @artifacts_option
 def list_installed_kits(artifacts: bool) -> None:
-    """List all installed kits in the current project (alias: ls)."""
+    """List all installed kits in the current project (alias: ls).
+
+    Shows managed kits tracked in dot-agent.toml. Use --artifacts flag to
+    see artifact-level details.
+
+    For comprehensive artifact inspection across user and project levels,
+    use 'dot-agent artifact list' instead.
+    """
     _list_kits_impl(artifacts)
 
 

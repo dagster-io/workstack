@@ -3,7 +3,7 @@ version = "1"
 [kits.devrun]
 kit_id = "devrun"
 version = "0.1.0"
-source = "devrun"
+source = "bundled:devrun"
 installed_at = "2025-11-02T21:18:07.306910"
 artifacts = [
     ".claude/agents/devrun/devrun.md",
@@ -13,7 +13,7 @@ conflict_policy = "overwrite"
 [kits.gt]
 kit_id = "gt"
 version = "0.1.0"
-source = "gt"
+source = "bundled:gt"
 installed_at = "2025-11-02T21:18:07.309200"
 artifacts = [
     ".claude/commands/gt/land-branch.md",
@@ -25,7 +25,7 @@ conflict_policy = "overwrite"
 [kits.dignified-python]
 kit_id = "dignified-python"
 version = "0.1.0"
-source = "dignified-python"
+source = "bundled:dignified-python"
 installed_at = "2025-11-02T21:18:07.310952"
 artifacts = [
     ".claude/skills/dignified-python/SKILL.md",

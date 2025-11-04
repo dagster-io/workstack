@@ -2,6 +2,7 @@ import click
 
 from dot_agent_kit.commands import check
 from dot_agent_kit.commands.hook import hook_group
+from dot_agent_kit.commands.init import init
 from dot_agent_kit.commands.kit import kit_group
 from dot_agent_kit.commands.status import st, status
 from dot_agent_kit.version import __version__
@@ -20,6 +21,7 @@ def cli(ctx: click.Context) -> None:
 
 # Register top-level commands
 cli.add_command(check.check)
+cli.add_command(init)
 cli.add_command(status)
 cli.add_command(st)
 

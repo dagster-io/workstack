@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from dot_agent_kit.io import load_kit_manifest
-from dot_agent_kit.sources.resolver import KitSource, ResolvedKit
+from dot_agent_kit.sources.resolver import KitSource, ResolvedKit, parse_source
 
 
 class BundledKitSource(KitSource):
@@ -11,7 +11,15 @@ class BundledKitSource(KitSource):
 
     def can_resolve(self, source: str) -> bool:
         """Check if source is a bundled kit."""
-        bundled_path = self._get_bundled_kit_path(source)
+        # Must have "bundled:" prefix
+        if ":" not in source:
+            return False
+
+        prefix, identifier = parse_source(source)
+        if prefix != "bundled":
+            return False
+
+        bundled_path = self._get_bundled_kit_path(identifier)
         if bundled_path is None:
             return False
         manifest_path = bundled_path / "kit.yaml"
@@ -19,13 +27,17 @@ class BundledKitSource(KitSource):
 
     def resolve(self, source: str) -> ResolvedKit:
         """Resolve kit from bundled data."""
-        bundled_path = self._get_bundled_kit_path(source)
+        prefix, identifier = parse_source(source)
+        if prefix != "bundled":
+            raise ValueError(f"BundledKitSource requires 'bundled:' prefix, got: {source}")
+
+        bundled_path = self._get_bundled_kit_path(identifier)
         if bundled_path is None:
-            raise ValueError(f"No bundled kit found: {source}")
+            raise ValueError(f"No bundled kit found: {identifier}")
 
         manifest_path = bundled_path / "kit.yaml"
         if not manifest_path.exists():
-            raise ValueError(f"No kit.yaml found for bundled kit: {source}")
+            raise ValueError(f"No kit.yaml found for bundled kit: {identifier}")
 
         manifest = load_kit_manifest(manifest_path)
 

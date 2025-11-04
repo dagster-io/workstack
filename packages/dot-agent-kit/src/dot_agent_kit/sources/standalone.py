@@ -1,7 +1,7 @@
 """Standalone package source resolver."""
 
 from dot_agent_kit.io import load_kit_manifest
-from dot_agent_kit.sources.resolver import KitSource, ResolvedKit
+from dot_agent_kit.sources.resolver import KitSource, ResolvedKit, parse_source
 from dot_agent_kit.utils import find_kit_manifest, get_package_path, is_package_installed
 
 
@@ -10,21 +10,32 @@ class StandalonePackageSource(KitSource):
 
     def can_resolve(self, source: str) -> bool:
         """Check if source is an installed Python package."""
-        # For now, treat all sources as potential package names
-        return is_package_installed(source)
+        # Must have "package:" prefix
+        if ":" not in source:
+            return False
+
+        prefix, identifier = parse_source(source)
+        if prefix != "package":
+            return False
+
+        return is_package_installed(identifier)
 
     def resolve(self, source: str) -> ResolvedKit:
         """Resolve kit from Python package."""
-        if not self.can_resolve(source):
-            raise ValueError(f"Package not installed: {source}")
+        prefix, identifier = parse_source(source)
+        if prefix != "package":
+            raise ValueError(f"StandalonePackageSource requires 'package:' prefix, got: {source}")
 
-        package_path = get_package_path(source)
+        if not is_package_installed(identifier):
+            raise ValueError(f"Package not installed: {identifier}")
+
+        package_path = get_package_path(identifier)
         if package_path is None:
-            raise ValueError(f"Cannot find package path: {source}")
+            raise ValueError(f"Cannot find package path: {identifier}")
 
         manifest_path = find_kit_manifest(package_path)
         if manifest_path is None:
-            raise ValueError(f"No kit.yaml found in package: {source}")
+            raise ValueError(f"No kit.yaml found in package: {identifier}")
 
         manifest = load_kit_manifest(manifest_path)
 

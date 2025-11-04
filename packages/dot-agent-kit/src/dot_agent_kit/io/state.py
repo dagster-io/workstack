@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import click
 import tomli
 import tomli_w
 
@@ -43,6 +44,26 @@ def load_project_config(project_dir: Path) -> ProjectConfig | None:
         version=data.get("version", "1"),
         kits=kits,
     )
+
+
+def require_project_config(project_dir: Path) -> ProjectConfig:
+    """Load dot-agent.toml and exit with error if not found.
+
+    This is a convenience wrapper around load_project_config that enforces
+    the config must exist, displaying a helpful error message if not.
+
+    Returns:
+        ProjectConfig if found
+
+    Raises:
+        SystemExit: If dot-agent.toml not found
+    """
+    config = load_project_config(project_dir)
+    if config is None:
+        msg = "Error: No dot-agent.toml found. Run 'dot-agent kit init' to create one."
+        click.echo(msg, err=True)
+        raise SystemExit(1)
+    return config
 
 
 def save_project_config(project_dir: Path, config: ProjectConfig) -> None:

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import click
 
-from dot_agent_kit.io import discover_installed_artifacts, load_project_config
+from dot_agent_kit.io import discover_installed_artifacts, require_project_config
 
 # Reusable option decorator
 verbose_option = click.option(
@@ -20,12 +20,7 @@ def _show_status(verbose: bool) -> None:
     project_dir = Path.cwd()
 
     # Load project config for managed kits
-    project_config = load_project_config(project_dir)
-
-    if project_config is None:
-        msg = "Error: No dot-agent.toml found. Run 'dot-agent kit init' to create one."
-        click.echo(msg, err=True)
-        raise SystemExit(1)
+    project_config = require_project_config(project_dir)
 
     # Discover artifacts in filesystem
     discovered = discover_installed_artifacts(project_dir, project_config)

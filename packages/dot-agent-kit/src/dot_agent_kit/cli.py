@@ -1,6 +1,7 @@
 import click
 
 from dot_agent_kit.commands import check
+from dot_agent_kit.commands.artifact import artifact
 from dot_agent_kit.commands.hook import hook_group
 from dot_agent_kit.commands.init import init
 from dot_agent_kit.commands.kit import kit_group
@@ -26,6 +27,7 @@ cli.add_command(status)
 cli.add_command(st)
 
 # Register command groups
+cli.add_command(artifact)
 cli.add_command(hook_group)
 cli.add_command(kit_group)
 

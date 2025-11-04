@@ -118,82 +118,9 @@ class FilesystemArtifactRepository(ArtifactRepository):
                         if artifact:
                             artifacts.append(artifact)
 
-        # Scan hooks from settings.json
-        settings_path = claude_dir / "settings.json"
-        if settings_path.exists():
-            settings = load_settings(settings_path)
-            hooks = get_all_hooks(settings)
-
-            for _lifecycle, _matcher, entry in hooks:
-                # Extract script path from command
-                # Command format: "python3 $CLAUDE_PROJECT_DIR/.claude/hooks/kit-id/script.py"
-                # We want the relative path: hooks/kit-id/script.py
-                command = entry.command
-
-                # Try to extract the script path from the command
-                script_path = None
-                if ".claude/hooks/" in command:
-                    # Extract path after .claude/
-                    parts = command.split(".claude/")
-                    if len(parts) > 1:
-                        # Get the path part and extract just the file path
-                        path_part = parts[1].split()[0]  # Take first token
-                        script_path = Path(path_part)
-
-                # Determine hook name, source, and metadata
-                entry_kit_id = extract_kit_id_from_command(entry.command)
-                if entry_kit_id:
-                    # Managed hook with kit metadata
-                    import re
-
-                    hook_id_match = re.search(r"DOT_AGENT_HOOK_ID=(\S+)", entry.command)
-                    entry_hook_id = hook_id_match.group(1) if hook_id_match else "unknown"
-                    hook_name = f"{entry_kit_id}:{entry_hook_id}"
-                    kit_id = entry_kit_id
-                    source = ArtifactSource.LOCAL
-                    kit_version = None
-
-                    # If we couldn't extract a path, create a placeholder
-                    if not script_path:
-                        script_path = Path("hooks") / entry_kit_id / "hook"
-
-                    hook_path_str = str(script_path).replace("\\", "/")
-
-                    # Check if this hook's script is in managed artifacts
-                    for artifact_path, kit in managed_artifacts.items():
-                        normalized_artifact = artifact_path.replace(".claude/", "").replace(
-                            "\\", "/"
-                        )
-                        matches_path = normalized_artifact == hook_path_str
-                        matches_kit = kit.kit_id == entry_kit_id
-                        if matches_path or matches_kit:
-                            source = ArtifactSource.MANAGED
-                            kit_version = kit.version
-                            break
-                else:
-                    # Local hook without kit metadata
-                    if script_path:
-                        # Use script filename as hook name
-                        hook_name = script_path.stem
-                    else:
-                        # Use command as fallback (truncate if too long)
-                        hook_name = command[:50] if len(command) > 50 else command
-                        script_path = Path("hooks") / "local-hook"
-
-                    kit_id = None
-                    kit_version = None
-                    source = ArtifactSource.LOCAL
-
-                artifact = InstalledArtifact(
-                    artifact_type="hook",
-                    artifact_name=hook_name,
-                    file_path=script_path,
-                    source=source,
-                    kit_id=kit_id,
-                    kit_version=kit_version,
-                    level=self._level,
-                )
-                artifacts.append(artifact)
+        # Discover hooks from settings files and filesystem
+        hook_artifacts = self._discover_hooks(claude_dir, managed_artifacts)
+        artifacts.extend(hook_artifacts)
 
         return artifacts
 
@@ -256,3 +183,194 @@ class FilesystemArtifactRepository(ArtifactRepository):
             kit_version=kit_version,
             level=level,
         )
+
+    def _discover_hooks(
+        self, claude_dir: Path, managed_artifacts: dict[str, InstalledKit]
+    ) -> list[InstalledArtifact]:
+        """Discover hooks from settings files and filesystem.
+
+        Args:
+            claude_dir: Path to .claude directory
+            managed_artifacts: Map of artifact paths to installed kits
+
+        Returns:
+            List of hook artifacts from all sources
+        """
+        # Parse hooks from both settings files
+        settings_hooks = self._parse_settings_hooks(claude_dir, "settings.json", managed_artifacts)
+        local_settings_hooks = self._parse_settings_hooks(
+            claude_dir, "settings.local.json", managed_artifacts
+        )
+
+        # Scan filesystem for orphaned hooks
+        orphaned_hooks = self._scan_orphaned_hooks(
+            claude_dir, settings_hooks + local_settings_hooks
+        )
+
+        # Combine all hooks
+        return settings_hooks + local_settings_hooks + orphaned_hooks
+
+    def _parse_settings_hooks(
+        self,
+        claude_dir: Path,
+        settings_filename: str,
+        managed_artifacts: dict[str, InstalledKit],
+    ) -> list[InstalledArtifact]:
+        """Parse hooks from a specific settings file.
+
+        Args:
+            claude_dir: Path to .claude directory
+            settings_filename: Name of settings file (e.g., "settings.json")
+            managed_artifacts: Map of artifact paths to installed kits
+
+        Returns:
+            List of hook artifacts from this settings file
+        """
+        settings_path = claude_dir / settings_filename
+        if not settings_path.exists():
+            return []
+
+        settings = load_settings(settings_path)
+        hooks = get_all_hooks(settings)
+
+        artifacts: list[InstalledArtifact] = []
+
+        for lifecycle, matcher, entry in hooks:
+            # Extract script path from command
+            command = entry.command
+            script_path = self._extract_script_path(command)
+
+            # Extract hook metadata
+            hook_name, kit_id, source, kit_version = self._extract_hook_metadata(
+                entry, script_path, managed_artifacts
+            )
+
+            # Create artifact with enhanced metadata
+            artifact = InstalledArtifact(
+                artifact_type="hook",
+                artifact_name=hook_name,
+                file_path=script_path,
+                source=source,
+                kit_id=kit_id,
+                kit_version=kit_version,
+                level=self._level,
+                settings_source=settings_filename,
+                lifecycle=lifecycle,
+                matcher=matcher,
+                timeout=entry.timeout,
+            )
+            artifacts.append(artifact)
+
+        return artifacts
+
+    def _extract_script_path(self, command: str) -> Path:
+        """Extract script path from hook command.
+
+        Args:
+            command: Hook command string
+
+        Returns:
+            Path object representing the script path relative to .claude/
+        """
+        if ".claude/hooks/" in command:
+            parts = command.split(".claude/")
+            if len(parts) > 1:
+                path_part = parts[1].split()[0]  # Take first token
+                return Path(path_part)
+
+        # Fallback for commands without recognizable path
+        return Path("hooks") / "unknown-hook"
+
+    def _extract_hook_metadata(
+        self,
+        entry,
+        script_path: Path,
+        managed_artifacts: dict[str, InstalledKit],
+    ) -> tuple[str, str | None, ArtifactSource, str | None]:
+        """Extract hook metadata from hook entry.
+
+        Args:
+            entry: HookEntry from settings
+            script_path: Path to hook script
+            managed_artifacts: Map of artifact paths to installed kits
+
+        Returns:
+            Tuple of (hook_name, kit_id, source, kit_version)
+        """
+        import re
+
+        entry_kit_id = extract_kit_id_from_command(entry.command)
+
+        if entry_kit_id:
+            # Hook with kit metadata
+            hook_id_match = re.search(r"DOT_AGENT_HOOK_ID=(\S+)", entry.command)
+            entry_hook_id = hook_id_match.group(1) if hook_id_match else "unknown"
+            hook_name = f"{entry_kit_id}:{entry_hook_id}"
+            kit_id = entry_kit_id
+            source = ArtifactSource.LOCAL
+            kit_version = None
+
+            # Check if this hook is managed
+            hook_path_str = str(script_path).replace("\\", "/")
+            for artifact_path, kit in managed_artifacts.items():
+                normalized_artifact = artifact_path.replace(".claude/", "").replace("\\", "/")
+                matches_path = normalized_artifact == hook_path_str
+                matches_kit = kit.kit_id == entry_kit_id
+                if matches_path or matches_kit:
+                    source = ArtifactSource.MANAGED
+                    kit_version = kit.version
+                    break
+
+            return hook_name, kit_id, source, kit_version
+
+        # Local hook without kit metadata
+        hook_name = script_path.stem if script_path.stem != "unknown-hook" else entry.command[:50]
+        return hook_name, None, ArtifactSource.LOCAL, None
+
+    def _scan_orphaned_hooks(
+        self, claude_dir: Path, referenced_hooks: list[InstalledArtifact]
+    ) -> list[InstalledArtifact]:
+        """Scan filesystem for hooks not referenced in any settings file.
+
+        Args:
+            claude_dir: Path to .claude directory
+            referenced_hooks: List of hooks found in settings files
+
+        Returns:
+            List of orphaned hook artifacts
+        """
+        hooks_dir = claude_dir / "hooks"
+        if not hooks_dir.exists():
+            return []
+
+        # Collect all script paths referenced in settings
+        referenced_paths = {str(hook.file_path) for hook in referenced_hooks}
+
+        orphaned: list[InstalledArtifact] = []
+
+        # Scan all .py files in hooks directory
+        for script_file in hooks_dir.rglob("*.py"):
+            if not script_file.is_file():
+                continue
+
+            # Get relative path from claude_dir
+            relative_path = script_file.relative_to(claude_dir)
+            path_str = str(relative_path).replace("\\", "/")
+
+            # Check if this script is referenced in settings
+            if path_str not in referenced_paths:
+                # This is an orphaned hook
+                hook_name = f"{script_file.parent.name}:{script_file.stem}"
+                artifact = InstalledArtifact(
+                    artifact_type="hook",
+                    artifact_name=hook_name,
+                    file_path=relative_path,
+                    source=ArtifactSource.LOCAL,
+                    kit_id=None,
+                    kit_version=None,
+                    level=self._level,
+                    settings_source="orphaned",
+                )
+                orphaned.append(artifact)
+
+        return orphaned

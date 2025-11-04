@@ -337,3 +337,231 @@ def test_artifacts_include_level(tmp_path: Path) -> None:
 
     assert len(artifacts) == 1
     assert artifacts[0].level == ArtifactLevel.USER
+
+
+def test_discovers_hooks_from_settings_json(tmp_path: Path) -> None:
+    """Test that repository discovers hooks from settings.json."""
+    import json
+
+    # Create settings.json with a hook
+    claude_dir = tmp_path / ".claude"
+    claude_dir.mkdir()
+
+    settings_data = {
+        "hooks": {
+            "user-prompt-submit": [
+                {
+                    "matcher": "**",
+                    "hooks": [
+                        {
+                            "command": "python3 .claude/hooks/test-hook/run.py",
+                            "timeout": 30,
+                        }
+                    ],
+                }
+            ]
+        }
+    }
+
+    settings_path = claude_dir / "settings.json"
+    settings_path.write_text(json.dumps(settings_data), encoding="utf-8")
+
+    # Create the actual hook script
+    hook_script = claude_dir / "hooks" / "test-hook" / "run.py"
+    hook_script.parent.mkdir(parents=True)
+    hook_script.write_text("# Test hook", encoding="utf-8")
+
+    repository = FilesystemArtifactRepository()
+    config = create_default_config()
+    artifacts = repository.discover_all_artifacts(tmp_path, config)
+
+    # Should find exactly 1 hook
+    hook_artifacts = [a for a in artifacts if a.artifact_type == "hook"]
+    assert len(hook_artifacts) == 1
+
+    hook = hook_artifacts[0]
+    assert hook.settings_source == "settings.json"
+    assert hook.lifecycle == "user-prompt-submit"
+    assert hook.matcher == "**"
+    assert hook.timeout == 30
+
+
+def test_discovers_hooks_from_settings_local_json(tmp_path: Path) -> None:
+    """Test that repository discovers hooks from settings.local.json."""
+    import json
+
+    # Create settings.local.json with a hook
+    claude_dir = tmp_path / ".claude"
+    claude_dir.mkdir()
+
+    local_settings_data = {
+        "hooks": {
+            "pre-tool-use": [
+                {
+                    "matcher": "**.py",
+                    "hooks": [
+                        {
+                            "command": "python3 .claude/hooks/local-hook/check.py",
+                            "timeout": 60,
+                        }
+                    ],
+                }
+            ]
+        }
+    }
+
+    local_settings_path = claude_dir / "settings.local.json"
+    local_settings_path.write_text(json.dumps(local_settings_data), encoding="utf-8")
+
+    # Create the actual hook script
+    hook_script = claude_dir / "hooks" / "local-hook" / "check.py"
+    hook_script.parent.mkdir(parents=True)
+    hook_script.write_text("# Local hook", encoding="utf-8")
+
+    repository = FilesystemArtifactRepository()
+    config = create_default_config()
+    artifacts = repository.discover_all_artifacts(tmp_path, config)
+
+    # Should find exactly 1 hook
+    hook_artifacts = [a for a in artifacts if a.artifact_type == "hook"]
+    assert len(hook_artifacts) == 1
+
+    hook = hook_artifacts[0]
+    assert hook.settings_source == "settings.local.json"
+    assert hook.lifecycle == "pre-tool-use"
+    assert hook.matcher == "**.py"
+    assert hook.timeout == 60
+
+
+def test_discovers_hooks_from_both_settings_files(tmp_path: Path) -> None:
+    """Test that repository discovers hooks from both settings files."""
+    import json
+
+    claude_dir = tmp_path / ".claude"
+    claude_dir.mkdir()
+
+    # Create settings.json with one hook
+    settings_data = {
+        "hooks": {
+            "user-prompt-submit": [
+                {
+                    "matcher": "**",
+                    "hooks": [{"command": "python3 .claude/hooks/hook1/run.py"}],
+                }
+            ]
+        }
+    }
+    (claude_dir / "settings.json").write_text(json.dumps(settings_data), encoding="utf-8")
+
+    # Create settings.local.json with another hook
+    local_settings_data = {
+        "hooks": {
+            "pre-tool-use": [
+                {
+                    "matcher": "**.py",
+                    "hooks": [{"command": "python3 .claude/hooks/hook2/check.py"}],
+                }
+            ]
+        }
+    }
+    settings_file = claude_dir / "settings.local.json"
+    settings_file.write_text(json.dumps(local_settings_data), encoding="utf-8")
+
+    # Create hook scripts
+    hook1 = claude_dir / "hooks" / "hook1" / "run.py"
+    hook1.parent.mkdir(parents=True)
+    hook1.write_text("# Hook 1", encoding="utf-8")
+
+    hook2 = claude_dir / "hooks" / "hook2" / "check.py"
+    hook2.parent.mkdir(parents=True)
+    hook2.write_text("# Hook 2", encoding="utf-8")
+
+    repository = FilesystemArtifactRepository()
+    config = create_default_config()
+    artifacts = repository.discover_all_artifacts(tmp_path, config)
+
+    # Should find 2 hooks
+    hook_artifacts = [a for a in artifacts if a.artifact_type == "hook"]
+    assert len(hook_artifacts) == 2
+
+    # Check that both sources are represented
+    sources = {hook.settings_source for hook in hook_artifacts}
+    assert sources == {"settings.json", "settings.local.json"}
+
+
+def test_discovers_orphaned_hooks(tmp_path: Path) -> None:
+    """Test that repository identifies hooks not referenced in settings."""
+    claude_dir = tmp_path / ".claude"
+    claude_dir.mkdir()
+
+    # Create hook scripts without any settings references
+    orphaned_hook1 = claude_dir / "hooks" / "old-kit" / "forgotten.py"
+    orphaned_hook1.parent.mkdir(parents=True)
+    orphaned_hook1.write_text("# Orphaned hook 1", encoding="utf-8")
+
+    orphaned_hook2 = claude_dir / "hooks" / "experimental" / "test.py"
+    orphaned_hook2.parent.mkdir(parents=True)
+    orphaned_hook2.write_text("# Orphaned hook 2", encoding="utf-8")
+
+    repository = FilesystemArtifactRepository()
+    config = create_default_config()
+    artifacts = repository.discover_all_artifacts(tmp_path, config)
+
+    # Should find 2 orphaned hooks
+    hook_artifacts = [a for a in artifacts if a.artifact_type == "hook"]
+    assert len(hook_artifacts) == 2
+
+    # All should be marked as orphaned
+    for hook in hook_artifacts:
+        assert hook.settings_source == "orphaned"
+        assert hook.source == ArtifactSource.LOCAL
+
+
+def test_orphaned_detection_excludes_referenced_hooks(tmp_path: Path) -> None:
+    """Test that orphaned detection doesn't include hooks in settings."""
+    import json
+
+    claude_dir = tmp_path / ".claude"
+    claude_dir.mkdir()
+
+    # Create settings.json referencing one hook
+    settings_data = {
+        "hooks": {
+            "user-prompt-submit": [
+                {
+                    "matcher": "**",
+                    "hooks": [{"command": "python3 .claude/hooks/referenced/hook.py"}],
+                }
+            ]
+        }
+    }
+    (claude_dir / "settings.json").write_text(json.dumps(settings_data), encoding="utf-8")
+
+    # Create referenced hook
+    referenced_hook = claude_dir / "hooks" / "referenced" / "hook.py"
+    referenced_hook.parent.mkdir(parents=True)
+    referenced_hook.write_text("# Referenced hook", encoding="utf-8")
+
+    # Create orphaned hook
+    orphaned_hook = claude_dir / "hooks" / "orphaned" / "hook.py"
+    orphaned_hook.parent.mkdir(parents=True)
+    orphaned_hook.write_text("# Orphaned hook", encoding="utf-8")
+
+    repository = FilesystemArtifactRepository()
+    config = create_default_config()
+    artifacts = repository.discover_all_artifacts(tmp_path, config)
+
+    hook_artifacts = [a for a in artifacts if a.artifact_type == "hook"]
+    assert len(hook_artifacts) == 2
+
+    # Check that one is from settings and one is orphaned
+    sources = {hook.settings_source for hook in hook_artifacts}
+    assert sources == {"settings.json", "orphaned"}
+
+    # The referenced hook should have lifecycle metadata
+    referenced = [h for h in hook_artifacts if h.settings_source == "settings.json"][0]
+    assert referenced.lifecycle == "user-prompt-submit"
+
+    # The orphaned hook should not have lifecycle metadata
+    orphaned = [h for h in hook_artifacts if h.settings_source == "orphaned"][0]
+    assert orphaned.lifecycle is None

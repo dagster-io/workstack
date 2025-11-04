@@ -3,13 +3,31 @@
 from pathlib import Path
 
 from dot_agent_kit.hooks.settings import extract_kit_id_from_command, get_all_hooks, load_settings
-from dot_agent_kit.models.artifact import ArtifactSource, ArtifactType, InstalledArtifact
+from dot_agent_kit.models.artifact import ArtifactLevel, ArtifactSource, ArtifactType, InstalledArtifact
 from dot_agent_kit.models.config import InstalledKit, ProjectConfig
 from dot_agent_kit.repositories.artifact_repository import ArtifactRepository
 
 
 class FilesystemArtifactRepository(ArtifactRepository):
     """Discovers artifacts from filesystem .claude/ directory."""
+
+    def __init__(self, level: ArtifactLevel | None = None) -> None:
+        """Initialize repository with optional artifact level.
+
+        Args:
+            level: The artifact level (USER or PROJECT). If None, defaults to PROJECT.
+        """
+        self._level = level if level is not None else ArtifactLevel.PROJECT
+
+    @classmethod
+    def for_user(cls) -> "FilesystemArtifactRepository":
+        """Create a repository for user-level artifacts (~/.claude/)."""
+        return cls(level=ArtifactLevel.USER)
+
+    @classmethod
+    def for_project(cls) -> "FilesystemArtifactRepository":
+        """Create a repository for project-level artifacts (./.claude/)."""
+        return cls(level=ArtifactLevel.PROJECT)
 
     def discover_all_artifacts(
         self, project_dir: Path, config: ProjectConfig
@@ -50,7 +68,7 @@ class FilesystemArtifactRepository(ArtifactRepository):
                     continue
 
                 artifact = self._create_artifact_from_file(
-                    skill_file, "skill", skill_dir.name, managed_artifacts, config
+                    skill_file, "skill", skill_dir.name, managed_artifacts, config, self._level
                 )
                 if artifact:
                     artifacts.append(artifact)
@@ -63,7 +81,7 @@ class FilesystemArtifactRepository(ArtifactRepository):
                     # Direct command file: commands/command-name.md
                     name = item.stem
                     artifact = self._create_artifact_from_file(
-                        item, "command", name, managed_artifacts, config
+                        item, "command", name, managed_artifacts, config, self._level
                     )
                     if artifact:
                         artifacts.append(artifact)
@@ -73,7 +91,7 @@ class FilesystemArtifactRepository(ArtifactRepository):
                         # Format as "kit:command-name"
                         name = f"{item.name}:{cmd_file.stem}"
                         artifact = self._create_artifact_from_file(
-                            cmd_file, "command", name, managed_artifacts, config
+                            cmd_file, "command", name, managed_artifacts, config, self._level
                         )
                         if artifact:
                             artifacts.append(artifact)
@@ -86,7 +104,7 @@ class FilesystemArtifactRepository(ArtifactRepository):
                     # Direct agent file: agents/agent-name.md
                     name = item.stem
                     artifact = self._create_artifact_from_file(
-                        item, "agent", name, managed_artifacts, config
+                        item, "agent", name, managed_artifacts, config, self._level
                     )
                     if artifact:
                         artifacts.append(artifact)
@@ -95,7 +113,7 @@ class FilesystemArtifactRepository(ArtifactRepository):
                     for agent_file in item.glob("*.md"):
                         name = agent_file.stem
                         artifact = self._create_artifact_from_file(
-                            agent_file, "agent", name, managed_artifacts, config
+                            agent_file, "agent", name, managed_artifacts, config, self._level
                         )
                         if artifact:
                             artifacts.append(artifact)
@@ -173,6 +191,7 @@ class FilesystemArtifactRepository(ArtifactRepository):
                     source=source,
                     kit_id=kit_id,
                     kit_version=kit_version,
+                    level=self._level,
                 )
                 artifacts.append(artifact)
 
@@ -185,6 +204,7 @@ class FilesystemArtifactRepository(ArtifactRepository):
         display_name: str,
         managed_artifacts: dict[str, InstalledKit],
         config: ProjectConfig,
+        level: ArtifactLevel,
     ) -> InstalledArtifact | None:
         """Create an InstalledArtifact from a file.
 
@@ -194,6 +214,7 @@ class FilesystemArtifactRepository(ArtifactRepository):
             display_name: Display name for the artifact
             managed_artifacts: Map of artifact paths to installed kits
             config: Project configuration
+            level: The artifact level (USER or PROJECT)
 
         Returns:
             InstalledArtifact or None if file doesn't exist
@@ -233,4 +254,5 @@ class FilesystemArtifactRepository(ArtifactRepository):
             source=source,
             kit_id=kit_id,
             kit_version=kit_version,
+            level=level,
         )

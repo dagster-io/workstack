@@ -4,7 +4,7 @@ from pathlib import Path
 
 from dot_agent_kit.io import create_default_config
 from dot_agent_kit.models import InstalledKit, ProjectConfig
-from dot_agent_kit.models.artifact import ArtifactSource
+from dot_agent_kit.models.artifact import ArtifactLevel, ArtifactSource
 from dot_agent_kit.repositories.filesystem_artifact_repository import (
     FilesystemArtifactRepository,
 )
@@ -283,3 +283,57 @@ def test_ignores_non_md_files(tmp_path: Path) -> None:
     assert len(artifacts) == 1
     assert artifacts[0].artifact_name == "command"
     assert artifacts[0].file_path == Path("commands/command.md")
+
+
+def test_artifact_level_enum() -> None:
+    """Test that ArtifactLevel enum works correctly."""
+    # Test USER level
+    user_level = ArtifactLevel.USER
+    assert user_level.value == "user"
+    user_path = user_level.get_path()
+    assert user_path == Path.home() / ".claude"
+
+    # Test PROJECT level
+    project_level = ArtifactLevel.PROJECT
+    assert project_level.value == "project"
+    project_path = project_level.get_path()
+    assert project_path == Path.cwd() / ".claude"
+
+
+def test_factory_methods() -> None:
+    """Test that factory methods create repositories with correct levels."""
+    # Test for_user factory
+    user_repo = FilesystemArtifactRepository.for_user()
+    assert user_repo._level == ArtifactLevel.USER
+
+    # Test for_project factory
+    project_repo = FilesystemArtifactRepository.for_project()
+    assert project_repo._level == ArtifactLevel.PROJECT
+
+    # Test default constructor
+    default_repo = FilesystemArtifactRepository()
+    assert default_repo._level == ArtifactLevel.PROJECT
+
+
+def test_artifacts_include_level(tmp_path: Path) -> None:
+    """Test that discovered artifacts include their level."""
+    # Create a skill
+    skills_dir = tmp_path / ".claude" / "skills"
+    skill_dir = skills_dir / "test-skill"
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text("# Test Skill", encoding="utf-8")
+
+    # Test with PROJECT level
+    project_repo = FilesystemArtifactRepository.for_project()
+    config = create_default_config()
+    artifacts = project_repo.discover_all_artifacts(tmp_path, config)
+
+    assert len(artifacts) == 1
+    assert artifacts[0].level == ArtifactLevel.PROJECT
+
+    # Test with USER level
+    user_repo = FilesystemArtifactRepository.for_user()
+    artifacts = user_repo.discover_all_artifacts(tmp_path, config)
+
+    assert len(artifacts) == 1
+    assert artifacts[0].level == ArtifactLevel.USER

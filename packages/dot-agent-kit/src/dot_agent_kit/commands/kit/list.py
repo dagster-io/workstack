@@ -323,6 +323,8 @@ def _list_artifacts(
         # Add spacing between kits
         click.echo()
 
+    click.echo("Use 'dot-agent artifact list' to see installed artifacts from kits")
+
 
 def _list_kits_impl(artifacts: bool) -> None:
     """Implementation of list command logic."""

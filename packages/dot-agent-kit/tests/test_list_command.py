@@ -8,7 +8,11 @@ from pytest import CaptureFixture
 from dot_agent_kit.commands.kit.list import _list_artifacts, list_installed_kits
 from dot_agent_kit.io import create_default_config
 from dot_agent_kit.models import InstalledKit, ProjectConfig
-from dot_agent_kit.models.artifact import ArtifactSource, InstalledArtifact
+from dot_agent_kit.models.artifact import (
+    ArtifactLevel,
+    ArtifactSource,
+    InstalledArtifact,
+)
 from tests.fakes.fake_artifact_repository import FakeArtifactRepository
 
 
@@ -38,6 +42,7 @@ def test_list_skills(capsys: CaptureFixture[str]) -> None:
                 artifact_name="devrun-make",
                 file_path=Path("skills/devrun-make/SKILL.md"),
                 source=ArtifactSource.MANAGED,
+                level=ArtifactLevel.PROJECT,
                 kit_id="devrun",
                 kit_version="0.1.0",
             ),
@@ -46,6 +51,7 @@ def test_list_skills(capsys: CaptureFixture[str]) -> None:
                 artifact_name="gh",
                 file_path=Path("skills/gh/SKILL.md"),
                 source=ArtifactSource.LOCAL,
+                level=ArtifactLevel.PROJECT,
             ),
         ]
     )
@@ -76,6 +82,7 @@ def test_list_commands(capsys: CaptureFixture[str]) -> None:
                 artifact_name="gt:land-branch",
                 file_path=Path("commands/gt/land-branch.md"),
                 source=ArtifactSource.MANAGED,
+                level=ArtifactLevel.PROJECT,
                 kit_id="gt",
                 kit_version="0.1.0",
             ),
@@ -84,6 +91,7 @@ def test_list_commands(capsys: CaptureFixture[str]) -> None:
                 artifact_name="codex-review",
                 file_path=Path("commands/codex-review.md"),
                 source=ArtifactSource.LOCAL,
+                level=ArtifactLevel.PROJECT,
             ),
         ]
     )
@@ -114,6 +122,7 @@ def test_list_agents(capsys: CaptureFixture[str]) -> None:
                 artifact_name="runner",
                 file_path=Path("agents/devrun/runner.md"),
                 source=ArtifactSource.MANAGED,
+                level=ArtifactLevel.PROJECT,
                 kit_id="devrun",
                 kit_version="0.1.0",
             ),
@@ -122,6 +131,7 @@ def test_list_agents(capsys: CaptureFixture[str]) -> None:
                 artifact_name="spec-creator",
                 file_path=Path("agents/spec-creator.md"),
                 source=ArtifactSource.LOCAL,
+                level=ArtifactLevel.PROJECT,
             ),
         ]
     )
@@ -152,6 +162,7 @@ def test_list_hooks(capsys: CaptureFixture[str]) -> None:
                 artifact_name="devrun:suggest-dignified-python",
                 file_path=Path("hooks/devrun/suggest-dignified-python.py"),
                 source=ArtifactSource.MANAGED,
+                level=ArtifactLevel.PROJECT,
                 kit_id="devrun",
                 kit_version="0.1.0",
             ),
@@ -160,6 +171,7 @@ def test_list_hooks(capsys: CaptureFixture[str]) -> None:
                 artifact_name="custom-kit:my-hook",
                 file_path=Path("hooks/custom-kit/my-hook.sh"),
                 source=ArtifactSource.LOCAL,
+                level=ArtifactLevel.PROJECT,
             ),
         ]
     )
@@ -202,6 +214,7 @@ def test_list_mixed_artifacts(capsys: CaptureFixture[str]) -> None:
                 artifact_name="devrun-make",
                 file_path=Path("skills/devrun-make/SKILL.md"),
                 source=ArtifactSource.MANAGED,
+                level=ArtifactLevel.PROJECT,
                 kit_id="devrun",
                 kit_version="0.1.0",
             ),
@@ -210,6 +223,7 @@ def test_list_mixed_artifacts(capsys: CaptureFixture[str]) -> None:
                 artifact_name="runner",
                 file_path=Path("agents/devrun/runner.md"),
                 source=ArtifactSource.MANAGED,
+                level=ArtifactLevel.PROJECT,
                 kit_id="devrun",
                 kit_version="0.1.0",
             ),
@@ -219,6 +233,7 @@ def test_list_mixed_artifacts(capsys: CaptureFixture[str]) -> None:
                 artifact_name="gt-graphite",
                 file_path=Path("skills/gt-graphite/SKILL.md"),
                 source=ArtifactSource.LOCAL,
+                level=ArtifactLevel.PROJECT,
                 kit_id=None,
                 kit_version=None,
             ),
@@ -228,18 +243,21 @@ def test_list_mixed_artifacts(capsys: CaptureFixture[str]) -> None:
                 artifact_name="gh",
                 file_path=Path("skills/gh/SKILL.md"),
                 source=ArtifactSource.LOCAL,
+                level=ArtifactLevel.PROJECT,
             ),
             InstalledArtifact(
                 artifact_type="command",
                 artifact_name="codex-review",
                 file_path=Path("commands/codex-review.md"),
                 source=ArtifactSource.LOCAL,
+                level=ArtifactLevel.PROJECT,
             ),
             InstalledArtifact(
                 artifact_type="hook",
                 artifact_name="test-kit:test-hook",
                 file_path=Path("hooks/test-kit/test-hook.py"),
                 source=ArtifactSource.LOCAL,
+                level=ArtifactLevel.PROJECT,
             ),
         ]
     )
@@ -276,12 +294,14 @@ def test_list_column_alignment(capsys: CaptureFixture[str]) -> None:
                 artifact_name="short",
                 file_path=Path("skills/short/SKILL.md"),
                 source=ArtifactSource.LOCAL,
+                level=ArtifactLevel.PROJECT,
             ),
             InstalledArtifact(
                 artifact_type="skill",
                 artifact_name="very-long-skill-name-here",
                 file_path=Path("skills/very-long-skill-name-here/SKILL.md"),
                 source=ArtifactSource.MANAGED,
+                level=ArtifactLevel.PROJECT,
                 kit_id="long-kit-name",
                 kit_version="1.2.3",
             ),

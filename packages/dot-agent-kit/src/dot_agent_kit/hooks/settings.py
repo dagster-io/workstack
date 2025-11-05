@@ -248,3 +248,62 @@ def merge_matcher_groups(groups: list[MatcherGroup]) -> list[MatcherGroup]:
     return [
         MatcherGroup(matcher=matcher, hooks=seen_matchers[matcher]) for matcher in matcher_order
     ]
+
+
+def load_settings_with_source(settings_path: Path, source_name: str) -> tuple[ClaudeSettings, str]:
+    """Load settings from a single file and track its source.
+
+    Args:
+        settings_path: Path to settings file
+        source_name: Name of the source file (e.g., "settings.json")
+
+    Returns:
+        Tuple of (Settings object, source_name)
+
+    Note:
+        Returns empty ClaudeSettings if file doesn't exist.
+    """
+    if not settings_path.exists():
+        return ClaudeSettings(), source_name
+
+    content = settings_path.read_text(encoding="utf-8")
+    data = json.loads(content)
+    return ClaudeSettings.model_validate(data), source_name
+
+
+def discover_hooks_with_source(base_path: Path) -> list[tuple[InstalledHook, str]]:
+    """Discover hooks from settings files and track their source.
+
+    Args:
+        base_path: Base directory containing settings files
+
+    Returns:
+        List of tuples (InstalledHook, source_name) where source_name is
+        "settings.json" or "settings.local.json"
+
+    Note:
+        Returns empty list if directory doesn't exist.
+        Checks both settings.json and settings.local.json.
+    """
+    if not base_path.exists():
+        return []
+
+    results: list[tuple[InstalledHook, str]] = []
+
+    # Check settings.json
+    settings_json = base_path / "settings.json"
+    if settings_json.exists():
+        settings, source = load_settings_with_source(settings_json, "settings.json")
+        hooks = get_all_hooks(settings)
+        for hook in hooks:
+            results.append((hook, source))
+
+    # Check settings.local.json
+    settings_local = base_path / "settings.local.json"
+    if settings_local.exists():
+        settings, source = load_settings_with_source(settings_local, "settings.local.json")
+        hooks = get_all_hooks(settings)
+        for hook in hooks:
+            results.append((hook, source))
+
+    return results

@@ -13,6 +13,13 @@ class ArtifactSource(Enum):
     LOCAL = "local"  # Created manually, no kit association
 
 
+class ArtifactLevel(Enum):
+    """Installation level of an artifact."""
+
+    USER = "user"  # Installed in ~/.claude/
+    PROJECT = "project"  # Installed in ./.claude/
+
+
 # Artifact type literals
 ArtifactType = Literal["skill", "command", "agent", "hook"]
 ArtifactTypePlural = Literal["skills", "commands", "agents", "hooks"]
@@ -34,5 +41,7 @@ class InstalledArtifact:
     artifact_name: str  # Display name
     file_path: Path  # Actual file location relative to .claude/
     source: ArtifactSource
+    level: ArtifactLevel
     kit_id: str | None = None
     kit_version: str | None = None
+    settings_source: str | None = None  # For hooks: "settings.json" or "settings.local.json"

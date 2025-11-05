@@ -1,0 +1,81 @@
+"""Artifact list command implementation."""
+
+from pathlib import Path
+
+import click
+
+from dot_agent_kit.commands.artifact.formatting import format_compact_list, format_verbose_list
+from dot_agent_kit.io.state import load_project_config
+from dot_agent_kit.models.artifact import ArtifactLevel
+from dot_agent_kit.models.config import ProjectConfig
+from dot_agent_kit.repositories.filesystem_artifact_repository import FilesystemArtifactRepository
+
+
+@click.command(name="list")
+@click.option(
+    "--user",
+    "level_filter",
+    flag_value="user",
+    help="Show only user-level artifacts",
+)
+@click.option(
+    "--project",
+    "level_filter",
+    flag_value="project",
+    help="Show only project-level artifacts",
+)
+@click.option(
+    "--all",
+    "level_filter",
+    flag_value="all",
+    default=True,
+    help="Show all levels (default)",
+)
+@click.option(
+    "--type",
+    "artifact_type",
+    type=click.Choice(["skill", "command", "agent", "hook"]),
+    help="Filter by artifact type",
+)
+@click.option(
+    "-v",
+    "--verbose",
+    is_flag=True,
+    help="Show detailed information",
+)
+def list_artifacts(level_filter: str, artifact_type: str | None, verbose: bool) -> None:
+    """List installed Claude artifacts."""
+    # Get paths
+    user_path = Path.home() / ".claude"
+    project_path = Path.cwd() / ".claude"
+
+    # Load project config
+    project_config = load_project_config(Path.cwd())
+    if project_config is None:
+        project_config = ProjectConfig(version="1", kits={})
+
+    # Discover artifacts
+    repository = FilesystemArtifactRepository()
+    all_artifacts = repository.discover_multi_level(user_path, project_path, project_config)
+
+    # Filter by level
+    if level_filter == "user":
+        all_artifacts = [a for a in all_artifacts if a.level == ArtifactLevel.USER]
+    elif level_filter == "project":
+        all_artifacts = [a for a in all_artifacts if a.level == ArtifactLevel.PROJECT]
+
+    # Filter by type
+    if artifact_type:
+        all_artifacts = [a for a in all_artifacts if a.artifact_type == artifact_type]
+
+    # Display results
+    if not all_artifacts:
+        click.echo("No artifacts found.", err=True)
+        raise SystemExit(1)
+
+    if verbose:
+        output = format_verbose_list(all_artifacts)
+    else:
+        output = format_compact_list(all_artifacts)
+
+    click.echo(output)

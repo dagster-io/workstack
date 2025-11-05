@@ -1735,3 +1735,192 @@ def test_create_with_json_no_plan() -> None:
         output_data = json.loads(result.output)
         assert output_data["plan_file"] is None
         assert output_data["status"] == "created"
+
+
+def test_create_with_stay_prevents_script_generation() -> None:
+    """Test that --stay flag prevents script generation."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        git_dir = cwd / ".git"
+        git_dir.mkdir()
+
+        workstacks_root = cwd / "workstacks"
+        workstacks_dir = workstacks_root / cwd.name
+        workstacks_dir.mkdir(parents=True)
+
+        config_toml = workstacks_dir / "config.toml"
+        config_toml.write_text("", encoding="utf-8")
+
+        git_ops = FakeGitOps(
+            git_common_dirs={cwd: git_dir},
+            default_branches={cwd: "main"},
+        )
+        global_config_ops = FakeGlobalConfigOps(
+            exists=True,
+            workstacks_root=workstacks_root,
+            use_graphite=False,
+        )
+
+        test_ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            github_ops=FakeGitHubOps(),
+            graphite_ops=FakeGraphiteOps(),
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
+
+        result = runner.invoke(cli, ["create", "test-feature", "--script", "--stay"], obj=test_ctx)
+
+        assert result.exit_code == 0, result.output
+        # When --stay is used, no script path should be output
+        # The output should not contain /tmp/ paths (script file paths)
+        assert "/tmp/" not in result.output
+        # Should still create the worktree
+        wt_path = workstacks_dir / "test-feature"
+        assert wt_path.exists()
+
+
+def test_create_with_stay_and_json() -> None:
+    """Test that --stay works with --json output mode."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        git_dir = cwd / ".git"
+        git_dir.mkdir()
+
+        workstacks_root = cwd / "workstacks"
+        workstacks_dir = workstacks_root / cwd.name
+        workstacks_dir.mkdir(parents=True)
+
+        config_toml = workstacks_dir / "config.toml"
+        config_toml.write_text("", encoding="utf-8")
+
+        git_ops = FakeGitOps(
+            git_common_dirs={cwd: git_dir},
+            default_branches={cwd: "main"},
+        )
+        global_config_ops = FakeGlobalConfigOps(
+            exists=True,
+            workstacks_root=workstacks_root,
+            use_graphite=False,
+        )
+
+        test_ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            github_ops=FakeGitHubOps(),
+            graphite_ops=FakeGraphiteOps(),
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
+
+        result = runner.invoke(cli, ["create", "test-feature", "--json", "--stay"], obj=test_ctx)
+
+        assert result.exit_code == 0, result.output
+
+        # Verify JSON output is still correct
+        output_data = json.loads(result.output)
+        assert output_data["worktree_name"] == "test-feature"
+        assert output_data["status"] == "created"
+        # Verify worktree was created
+        wt_path = workstacks_dir / "test-feature"
+        assert wt_path.exists()
+
+
+def test_create_with_stay_and_plan() -> None:
+    """Test that --stay works with --plan flag."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        git_dir = cwd / ".git"
+        git_dir.mkdir()
+
+        # Create plan file
+        plan_file = cwd / "test-feature-plan.md"
+        plan_file.write_text("# Test Feature Plan\n", encoding="utf-8")
+
+        workstacks_root = cwd / "workstacks"
+        workstacks_dir = workstacks_root / cwd.name
+        workstacks_dir.mkdir(parents=True)
+
+        config_toml = workstacks_dir / "config.toml"
+        config_toml.write_text("", encoding="utf-8")
+
+        git_ops = FakeGitOps(
+            git_common_dirs={cwd: git_dir},
+            default_branches={cwd: "main"},
+        )
+        global_config_ops = FakeGlobalConfigOps(
+            exists=True,
+            workstacks_root=workstacks_root,
+            use_graphite=False,
+        )
+
+        test_ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            github_ops=FakeGitHubOps(),
+            graphite_ops=FakeGraphiteOps(),
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
+
+        result = runner.invoke(
+            cli, ["create", "--plan", str(plan_file), "--script", "--stay"], obj=test_ctx
+        )
+
+        assert result.exit_code == 0, result.output
+        # Verify worktree was created
+        wt_path = workstacks_dir / "test-feature"
+        assert wt_path.exists()
+        # Plan file should be moved
+        assert (wt_path / ".PLAN.md").exists()
+        assert not plan_file.exists()
+        # No script should be generated
+        assert "/tmp/" not in result.output
+
+
+def test_create_default_behavior_generates_script() -> None:
+    """Test that default behavior (without --stay) still generates script."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        git_dir = cwd / ".git"
+        git_dir.mkdir()
+
+        workstacks_root = cwd / "workstacks"
+        workstacks_dir = workstacks_root / cwd.name
+        workstacks_dir.mkdir(parents=True)
+
+        config_toml = workstacks_dir / "config.toml"
+        config_toml.write_text("", encoding="utf-8")
+
+        git_ops = FakeGitOps(
+            git_common_dirs={cwd: git_dir},
+            default_branches={cwd: "main"},
+        )
+        global_config_ops = FakeGlobalConfigOps(
+            exists=True,
+            workstacks_root=workstacks_root,
+            use_graphite=False,
+        )
+
+        test_ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            github_ops=FakeGitHubOps(),
+            graphite_ops=FakeGraphiteOps(),
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
+
+        result = runner.invoke(cli, ["create", "test-feature", "--script"], obj=test_ctx)
+
+        assert result.exit_code == 0, result.output
+        # Should generate script path in output
+        assert "/tmp/" in result.output or "workstack-" in result.output
+        # Verify worktree was created
+        wt_path = workstacks_dir / "test-feature"
+        assert wt_path.exists()

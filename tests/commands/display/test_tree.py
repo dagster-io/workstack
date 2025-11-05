@@ -571,3 +571,109 @@ def test_tree_command_shows_three_level_hierarchy_with_correct_indentation() -> 
         # beginning
         assert "   └─ create-agents-symlinks-implementation-plan" in lines[2]
         assert "[@create-agents-symlinks-implementation-plan]" in lines[2]
+
+
+def test_tree_root_on_non_trunk_branch() -> None:
+    """Test tree when root worktree is on a non-trunk branch.
+
+    Scenario:
+    - Root is on "cleanup" branch
+    - "cleanup" has parent "main" in Graphite
+    - "main" is trunk but has no worktree
+    - Should show "cleanup" as root of tree (orphaned parent)
+
+    This tests the fix for the bug where tree shows "No worktrees found"
+    when the root worktree is on a non-main branch.
+    """
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        repo_root = cwd / "repo"
+        repo_root.mkdir()
+
+        git_dir = repo_root / ".git"
+        git_dir.mkdir()
+
+        # Cache has cleanup as child of main, but only cleanup has a worktree
+        cache_data = {
+            "branches": [
+                [
+                    "main",
+                    {
+                        "validationResult": "TRUNK",
+                        "children": ["cleanup"],
+                    },
+                ],
+                [
+                    "cleanup",
+                    {
+                        "parentBranchName": "main",
+                        "children": ["feature-a", "feature-b"],
+                    },
+                ],
+                [
+                    "feature-a",
+                    {
+                        "parentBranchName": "cleanup",
+                        "children": [],
+                    },
+                ],
+                [
+                    "feature-b",
+                    {
+                        "parentBranchName": "cleanup",
+                        "children": [],
+                    },
+                ],
+            ]
+        }
+        cache_file = git_dir / ".graphite_cache_persist"
+        cache_file.write_text(json.dumps(cache_data), encoding="utf-8")
+
+        # Root worktree is on "cleanup", not "main"
+        # "main" has NO worktree
+        git_ops = FakeGitOps(
+            worktrees={
+                repo_root: [
+                    WorktreeInfo(path=repo_root, branch="cleanup"),
+                    WorktreeInfo(
+                        path=repo_root / "work" / "feature-a",
+                        branch="feature-a",
+                    ),
+                    WorktreeInfo(
+                        path=repo_root / "work" / "feature-b",
+                        branch="feature-b",
+                    ),
+                ]
+            },
+            git_common_dirs={repo_root: git_dir},
+            current_branches={repo_root: "cleanup"},
+        )
+
+        global_config_ops = FakeGlobalConfigOps(
+            workstacks_root=cwd / "workstacks", use_graphite=True
+        )
+
+        ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
+
+        # Change to repo directory so discover_repo_context can find .git
+        os.chdir(repo_root)
+
+        result = runner.invoke(cli, ["tree"], obj=ctx)
+
+        assert result.exit_code == 0
+
+        # Should show all three worktrees
+        assert "cleanup" in result.output
+        assert "feature-a" in result.output
+        assert "feature-b" in result.output
+
+        # "cleanup" should appear as root (orphaned from main)
+        # "feature-a" and "feature-b" should be children of cleanup
+        assert "[@root]" in result.output  # cleanup is the root worktree
+
+        # Verify tree structure has connectors
+        assert "└─" in result.output or "├─" in result.output
+
+        # Should NOT show "No worktrees found"
+        assert "No worktrees found" not in result.output

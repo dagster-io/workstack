@@ -247,9 +247,15 @@ def _filter_graph_to_active_branches(
     filtered_trunk: list[str] = []
 
     for branch in active_branches:
-        # Keep parent relationship only if branch is active
+        # Keep parent relationship only if parent also has a worktree
         if branch in graph.parent_of:
-            filtered_parent_of[branch] = graph.parent_of[branch]
+            parent = graph.parent_of[branch]
+            if parent in active_branches:
+                # Parent has worktree - keep the relationship
+                filtered_parent_of[branch] = parent
+            else:
+                # Parent has no worktree - promote this branch to trunk
+                filtered_trunk.append(branch)
 
         # Keep only children that are also active
         if branch in graph.children_of:
@@ -259,8 +265,8 @@ def _filter_graph_to_active_branches(
             if active_children:
                 filtered_children_of[branch] = active_children
 
-        # Keep trunk status if active
-        if branch in graph.trunk_branches:
+        # Keep trunk status if active and not already added
+        if branch in graph.trunk_branches and branch not in filtered_trunk:
             filtered_trunk.append(branch)
 
     return BranchGraph(

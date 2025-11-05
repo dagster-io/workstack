@@ -35,7 +35,6 @@ def test_install_kit_basic(tmp_project: Path) -> None:
         kit_id="test-kit",
         version="1.0.0",
         source_type="package",
-        source="test-kit",
         manifest_path=manifest,
         artifacts_base=kit_dir,
     )
@@ -87,7 +86,6 @@ def test_install_kit_conflict(tmp_project: Path) -> None:
         kit_id="test-kit",
         version="1.0.0",
         source_type="package",
-        source="test-kit",
         manifest_path=manifest,
         artifacts_base=kit_dir,
     )
@@ -122,7 +120,6 @@ def test_install_kit_creates_directories(tmp_project: Path) -> None:
         kit_id="test-kit",
         version="1.0.0",
         source_type="package",
-        source="test-kit",
         manifest_path=manifest,
         artifacts_base=kit_dir,
     )
@@ -167,7 +164,6 @@ def test_install_kit_overwrite_policy(tmp_project: Path) -> None:
         kit_id="test-kit",
         version="1.0.0",
         source_type="package",
-        source="test-kit",
         manifest_path=manifest,
         artifacts_base=kit_dir,
     )
@@ -227,7 +223,6 @@ def test_install_kit_namespaced_artifacts(tmp_project: Path) -> None:
         kit_id="my-kit",
         version="1.0.0",
         source_type="bundled",
-        source="my-kit",
         manifest_path=manifest,
         artifacts_base=kit_dir,
     )
@@ -320,7 +315,7 @@ def test_bundled_kit_namespace_enforcement(tmp_path: Path) -> None:
     source = TestBundledSource()
 
     # Should resolve successfully - namespace validation is not enforced
-    resolved = source.resolve("bundled:any-kit")
+    resolved = source.resolve("any-kit")
     assert resolved.kit_id == "any-kit"
 
 
@@ -358,5 +353,5 @@ def test_bundled_kit_valid_namespace_succeeds(tmp_path: Path) -> None:
     source = TestBundledSource()
 
     # Should resolve successfully
-    resolved = source.resolve("bundled:good-kit")
+    resolved = source.resolve("good-kit")
     assert resolved.kit_id == "good-kit"

@@ -117,8 +117,8 @@ def test_detects_managed_artifacts(tmp_path: Path) -> None:
         kits={
             "test-kit": InstalledKit(
                 kit_id="test-kit",
+                source_type="package",
                 version="1.0.0",
-                source="test",
                 installed_at="2024-01-01T00:00:00",
                 artifacts=["skills/test-skill/SKILL.md"],  # Without .claude prefix
             )
@@ -247,8 +247,8 @@ def test_handles_paths_with_claude_prefix_in_config(tmp_path: Path) -> None:
         kits={
             "test-kit": InstalledKit(
                 kit_id="test-kit",
+                source_type="package",
                 version="1.0.0",
-                source="test",
                 installed_at="2024-01-01T00:00:00",
                 artifacts=[".claude/skills/test-skill/SKILL.md"],  # WITH .claude prefix
             )

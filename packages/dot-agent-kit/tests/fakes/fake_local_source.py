@@ -1,8 +1,10 @@
 """Fake local path source for testing."""
 
 from pathlib import Path
+from typing import cast
 
 from dot_agent_kit.io import load_kit_manifest
+from dot_agent_kit.models.types import SourceType
 from dot_agent_kit.sources.resolver import KitSource, ResolvedKit
 
 
@@ -38,8 +40,7 @@ class FakeLocalSource(KitSource):
         return ResolvedKit(
             kit_id=manifest.name,
             version=manifest.version,
-            source_type="local",
-            source=str(path),
+            source_type=cast(SourceType, "local"),
             manifest_path=manifest_path,
             artifacts_base=path,
         )

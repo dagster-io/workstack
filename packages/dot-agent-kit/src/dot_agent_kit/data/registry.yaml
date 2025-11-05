@@ -1,18 +1,18 @@
 version: "1"
 kits:
   - kit_id: devrun
-    name: devrun
+    source_type: bundled
     description: Consolidated development tool runner agent with integrated tool documentation for pytest, pyright, ruff, prettier, make, and gt
-    source: bundled:devrun
+    version: "0.1.0"
   - kit_id: dignified-python
-    name: dignified-python
+    source_type: bundled
     description: Workstack Python coding standards with automatic suggestion hook
-    source: bundled:dignified-python
+    version: "0.1.0"
   - kit_id: gt
-    name: Graphite Kit
+    source_type: bundled
     description: Graphite stack management with landing and submission commands
-    source: bundled:gt
+    version: "0.1.0"
   - kit_id: workstack
-    name: Workstack Kit
+    source_type: bundled
     description: Workstack implementation workflow commands for creating worktrees from plans and executing implementation
-    source: bundled:workstack
+    version: "0.1.0"

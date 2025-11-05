@@ -35,7 +35,7 @@ def _show_status(verbose: bool) -> None:
     if managed_kits and project_config:
         for kit_id in sorted(managed_kits):
             kit = project_config.kits[kit_id]
-            click.echo(f"  {kit_id} v{kit.version} ({kit.source})")
+            click.echo(f"  {kit_id} v{kit.version} ({kit.source_type})")
             if verbose:
                 artifact_types = discovered.get(kit_id, set())
                 if artifact_types:

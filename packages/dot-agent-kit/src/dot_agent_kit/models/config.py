@@ -3,15 +3,16 @@
 from dataclasses import dataclass, field, replace
 
 from dot_agent_kit.hooks.models import HookDefinition
+from dot_agent_kit.models.types import SourceType
 
 
 @dataclass(frozen=True)
 class InstalledKit:
     """Represents an installed kit in dot-agent.toml."""
 
-    kit_id: str
+    kit_id: str  # Globally unique kit identifier
+    source_type: SourceType
     version: str
-    source: str
     installed_at: str
     artifacts: list[str]
     hooks: list[HookDefinition] = field(default_factory=list)

@@ -52,7 +52,7 @@ def check_for_updates(
         UpdateCheckResult with has_update, resolved kit, and error message
     """
     try:
-        resolved = resolver.resolve(installed.source)
+        resolved = resolver.resolve(installed.kit_id)
     except KitNotFoundError as e:
         # Kit was removed from all sources
         return UpdateCheckResult(

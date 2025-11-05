@@ -3,10 +3,12 @@
 import tempfile
 from datetime import datetime
 from pathlib import Path
+from typing import cast
 
 import pytest
 
 from dot_agent_kit.models import InstalledKit
+from dot_agent_kit.models.types import SourceType
 from dot_agent_kit.operations.sync import check_for_updates
 from dot_agent_kit.sources.exceptions import (
     KitManifestError,
@@ -28,8 +30,7 @@ class MockKitSource(KitSource):
         self.resolved_kit = ResolvedKit(
             kit_id="test-kit",
             version="1.0.0",
-            source_type="mock",
-            source="test-source",
+            source_type=cast(SourceType, "mock"),
             manifest_path=Path("/tmp/manifest.yaml"),
             artifacts_base=Path("/tmp/artifacts"),
         )
@@ -122,7 +123,7 @@ def test_check_for_updates_with_kit_not_found_error():
     """Test check_for_updates handles KitNotFoundError gracefully."""
     installed = InstalledKit(
         kit_id="test-kit",
-        source="test-source",
+        source_type="package",
         version="1.0.0",
         installed_at=datetime.now().isoformat(),
         artifacts=[],
@@ -146,7 +147,7 @@ def test_check_for_updates_with_resolver_not_configured_error():
     """Test check_for_updates handles ResolverNotConfiguredError gracefully."""
     installed = InstalledKit(
         kit_id="test-kit",
-        source="old-source-type",
+        source_type="package",
         version="1.0.0",
         installed_at=datetime.now().isoformat(),
         artifacts=[],
@@ -169,7 +170,7 @@ def test_check_for_updates_with_source_access_error():
     """Test check_for_updates handles SourceAccessError gracefully."""
     installed = InstalledKit(
         kit_id="test-kit",
-        source="remote-source",
+        source_type="package",
         version="1.0.0",
         installed_at=datetime.now().isoformat(),
         artifacts=[],
@@ -193,7 +194,7 @@ def test_check_for_updates_with_generic_resolution_error():
     """Test check_for_updates handles generic KitResolutionError gracefully."""
     installed = InstalledKit(
         kit_id="test-kit",
-        source="test-source",
+        source_type="package",
         version="1.0.0",
         installed_at=datetime.now().isoformat(),
         artifacts=[],
@@ -218,7 +219,7 @@ def test_check_for_updates_success_with_update_available():
     """Test check_for_updates succeeds when update is available."""
     installed = InstalledKit(
         kit_id="test-kit",
-        source="test-source",
+        source_type="package",
         version="1.0.0",
         installed_at=datetime.now().isoformat(),
         artifacts=[],
@@ -241,8 +242,7 @@ artifacts:
         source.resolved_kit = ResolvedKit(
             kit_id="test-kit",
             version="2.0.0",
-            source_type="mock",
-            source="test-source",
+            source_type=cast(SourceType, "mock"),
             manifest_path=manifest_path,
             artifacts_base=Path(temp_dir),
         )
@@ -260,7 +260,7 @@ def test_check_for_updates_with_force_flag():
     """Test check_for_updates with force flag always returns update available."""
     installed = InstalledKit(
         kit_id="test-kit",
-        source="test-source",
+        source_type="package",
         version="1.0.0",
         installed_at=datetime.now().isoformat(),
         artifacts=[],
@@ -282,8 +282,7 @@ artifacts:
         source.resolved_kit = ResolvedKit(
             kit_id="test-kit",
             version="1.0.0",  # Same version
-            source_type="mock",
-            source="test-source",
+            source_type=cast(SourceType, "mock"),
             manifest_path=manifest_path,
             artifacts_base=Path(temp_dir),
         )

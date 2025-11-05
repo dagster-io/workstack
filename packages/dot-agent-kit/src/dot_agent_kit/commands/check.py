@@ -7,9 +7,9 @@ import click
 
 from dot_agent_kit.io import load_project_config
 from dot_agent_kit.models.config import InstalledKit
+from dot_agent_kit.models.types import SOURCE_TYPE_BUNDLED, SOURCE_TYPE_PACKAGE
 from dot_agent_kit.operations import validate_project
 from dot_agent_kit.sources import BundledKitSource
-from dot_agent_kit.sources.resolver import parse_source
 
 
 @dataclass(frozen=True)
@@ -30,26 +30,6 @@ class ConfigValidationResult:
     errors: list[str]
 
 
-def validate_kit_source(kit_id: str, source: str) -> str | None:
-    """Validate source format using LBYL approach.
-
-    Args:
-        kit_id: Kit identifier for error context
-        source: Source string to validate
-
-    Returns:
-        Error message if invalid, None if valid
-    """
-    # LBYL: Check if source contains required ":" separator
-    if ":" not in source:
-        return f"Source must be prefixed with type (e.g., 'bundled:{source}' or 'package:{source}')"
-
-    # Validate using parse_source at error boundary
-    # This is acceptable exception handling at CLI level
-    parse_source(source)
-    return None
-
-
 def validate_kit_fields(kit: InstalledKit) -> list[str]:
     """Validate all fields of an installed kit using LBYL checks.
 
@@ -65,6 +45,14 @@ def validate_kit_fields(kit: InstalledKit) -> list[str]:
     if not kit.kit_id:
         errors.append("kit_id is empty")
 
+    # Validate source_type is valid
+    if kit.source_type not in [SOURCE_TYPE_BUNDLED, SOURCE_TYPE_PACKAGE]:
+        msg = (
+            f"Invalid source_type: {kit.source_type}. "
+            f"Must be '{SOURCE_TYPE_BUNDLED}' or '{SOURCE_TYPE_PACKAGE}'"
+        )
+        errors.append(msg)
+
     # Validate version is non-empty
     if not kit.version:
         errors.append("version is empty")
@@ -72,11 +60,6 @@ def validate_kit_fields(kit: InstalledKit) -> list[str]:
     # Validate artifacts list is non-empty
     if not kit.artifacts:
         errors.append("artifacts list is empty")
-
-    # Validate source format
-    source_error = validate_kit_source(kit.kit_id, kit.source)
-    if source_error is not None:
-        errors.append(source_error)
 
     # Validate installed_at is non-empty (basic check)
     # More sophisticated ISO 8601 parsing could be added if needed
@@ -261,14 +244,13 @@ def check(verbose: bool) -> None:
 
         for kit_id_iter, installed in config.kits.items():
             # Only check kits from bundled source
-            if not bundled_source.can_resolve(installed.source):
+            if installed.source_type != SOURCE_TYPE_BUNDLED:
                 continue
 
             # Get bundled kit base path
-            _, identifier = parse_source(installed.source)
-            bundled_path = bundled_source._get_bundled_kit_path(identifier)
+            bundled_path = bundled_source._get_bundled_kit_path(installed.kit_id)
             if bundled_path is None:
-                click.echo(f"Warning: Could not find bundled kit: {installed.source}", err=True)
+                click.echo(f"Warning: Could not find bundled kit: {installed.kit_id}", err=True)
                 continue
 
             # Check each artifact

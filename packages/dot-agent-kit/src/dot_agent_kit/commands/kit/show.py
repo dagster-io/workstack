@@ -41,14 +41,14 @@ def show(kit_id: str) -> None:
 
     # Load kit manifest
     bundled_source = BundledKitSource()
-    if not bundled_source.can_resolve(registry_entry.source):
+    if not bundled_source.can_resolve(registry_entry.kit_id):
         click.echo(
-            f"Error: Cannot resolve kit '{kit_id}' from source: {registry_entry.source}",
+            f"Error: Cannot resolve kit '{kit_id}' from bundled source",
             err=True,
         )
         raise SystemExit(1)
 
-    resolved = bundled_source.resolve(registry_entry.source)
+    resolved = bundled_source.resolve(registry_entry.kit_id)
     manifest = load_kit_manifest(resolved.manifest_path)
 
     # Load installation status

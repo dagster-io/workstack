@@ -1,13 +1,9 @@
 """Standalone package source resolver."""
 
 from dot_agent_kit.io import load_kit_manifest
-from dot_agent_kit.sources.exceptions import (
-    KitManifestError,
-    KitNotFoundError,
-    SourceAccessError,
-    SourceFormatError,
-)
-from dot_agent_kit.sources.resolver import KitSource, ResolvedKit, parse_source
+from dot_agent_kit.models.types import SOURCE_TYPE_PACKAGE
+from dot_agent_kit.sources.exceptions import KitManifestError, KitNotFoundError, SourceAccessError
+from dot_agent_kit.sources.resolver import KitSource, ResolvedKit
 from dot_agent_kit.utils import find_kit_manifest, get_package_path, is_package_installed
 
 
@@ -15,29 +11,18 @@ class StandalonePackageSource(KitSource):
     """Resolve kits from standalone Python packages."""
 
     def can_resolve(self, source: str) -> bool:
-        """Check if source is an installed Python package."""
-        # Must have "package:" prefix
-        if ":" not in source:
-            return False
-
-        prefix, identifier = parse_source(source)
-        if prefix != "package":
-            return False
-
-        return is_package_installed(identifier)
+        """Check if source is an installed Python package by name."""
+        # Try to resolve as a package if not a bundled kit
+        return is_package_installed(source)
 
     def resolve(self, source: str) -> ResolvedKit:
-        """Resolve kit from Python package."""
-        prefix, identifier = parse_source(source)
-        if prefix != "package":
-            raise SourceFormatError(source, "StandalonePackageSource requires 'package:' prefix")
+        """Resolve kit from Python package by name."""
+        if not is_package_installed(source):
+            raise KitNotFoundError(source, ["package"])
 
-        if not is_package_installed(identifier):
-            raise KitNotFoundError(identifier, ["package"])
-
-        package_path = get_package_path(identifier)
+        package_path = get_package_path(source)
         if package_path is None:
-            raise SourceAccessError("package", identifier)
+            raise SourceAccessError("package", source)
 
         manifest_path = find_kit_manifest(package_path)
         if manifest_path is None:
@@ -51,8 +36,7 @@ class StandalonePackageSource(KitSource):
         return ResolvedKit(
             kit_id=manifest.name,
             version=manifest.version,
-            source_type="package",
-            source=source,
+            source_type=SOURCE_TYPE_PACKAGE,
             manifest_path=manifest_path,
             artifacts_base=artifacts_base,
         )

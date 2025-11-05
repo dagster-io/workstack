@@ -5,11 +5,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 
-from dot_agent_kit.sources.exceptions import (
-    InvalidKitIdError,
-    ResolverNotConfiguredError,
-    SourceFormatError,
-)
+from dot_agent_kit.models.types import SourceType
+from dot_agent_kit.sources.exceptions import InvalidKitIdError, ResolverNotConfiguredError
 
 # Kit ID must only contain lowercase letters, numbers, and hyphens
 KIT_ID_PATTERN = re.compile(r"^[a-z0-9-]+$")
@@ -30,37 +27,13 @@ def validate_kit_id(kit_id: str) -> None:
         raise InvalidKitIdError(kit_id)
 
 
-def parse_source(source: str) -> tuple[str, str]:
-    """Parse source string into prefix and identifier.
-
-    Args:
-        source: Source string in format "prefix:identifier"
-
-    Returns:
-        Tuple of (prefix, identifier)
-
-    Raises:
-        SourceFormatError: If source doesn't contain ":" separator
-    """
-    if ":" not in source:
-        raise SourceFormatError(
-            source,
-            "Source must be prefixed with type (e.g., 'bundled:{source}' or 'package:{source}')",
-        )
-
-    prefix, identifier = source.split(":", 1)
-
-    return prefix, identifier
-
-
 @dataclass(frozen=True)
 class ResolvedKit:
     """A kit resolved from a source."""
 
-    kit_id: str
+    kit_id: str  # Globally unique kit identifier
+    source_type: SourceType
     version: str
-    source_type: str
-    source: str
     manifest_path: Path
     artifacts_base: Path
 
@@ -70,12 +43,12 @@ class KitSource(ABC):
 
     @abstractmethod
     def can_resolve(self, source: str) -> bool:
-        """Check if this source can resolve the given identifier."""
+        """Check if this source can resolve the given kit name."""
         pass
 
     @abstractmethod
     def resolve(self, source: str) -> ResolvedKit:
-        """Resolve a kit from the source."""
+        """Resolve a kit from the source by name."""
         pass
 
     @abstractmethod

@@ -14,15 +14,15 @@ def test_discover_kit_skills_with_matching_prefixes(tmp_project: Path) -> None:
         kits={
             "devrun": InstalledKit(
                 kit_id="devrun",
+                source_type="bundled",
                 version="1.0.0",
-                source="bundled:devrun",
                 installed_at="2025-01-01T00:00:00",
                 artifacts=[],
             ),
             "gt": InstalledKit(
                 kit_id="gt",
+                source_type="bundled",
                 version="1.0.0",
-                source="bundled:gt",
                 installed_at="2025-01-01T00:00:00",
                 artifacts=[],
             ),
@@ -62,8 +62,8 @@ def test_discover_unmanaged_skills(tmp_project: Path) -> None:
         kits={
             "devrun": InstalledKit(
                 kit_id="devrun",
+                source_type="bundled",
                 version="1.0.0",
-                source="bundled:devrun",
                 installed_at="2025-01-01T00:00:00",
                 artifacts=[],
             ),
@@ -125,8 +125,8 @@ def test_discover_kit_command_subdirectories(tmp_project: Path) -> None:
         kits={
             "mykit": InstalledKit(
                 kit_id="mykit",
+                source_type="package",
                 version="1.0.0",
-                source="test",
                 installed_at="2025-01-01T00:00:00",
                 artifacts=[],
             ),
@@ -179,8 +179,8 @@ def test_discover_kit_agent_subdirectories(tmp_project: Path) -> None:
         kits={
             "mykit": InstalledKit(
                 kit_id="mykit",
+                source_type="package",
                 version="1.0.0",
-                source="test",
                 installed_at="2025-01-01T00:00:00",
                 artifacts=[],
             ),
@@ -263,8 +263,8 @@ def test_discover_multiple_artifact_types(tmp_project: Path) -> None:
         kits={
             "mykit": InstalledKit(
                 kit_id="mykit",
+                source_type="package",
                 version="1.0.0",
-                source="test",
                 installed_at="2025-01-01T00:00:00",
                 artifacts=[],
             ),

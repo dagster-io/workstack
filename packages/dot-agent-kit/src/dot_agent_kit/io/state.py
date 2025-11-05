@@ -8,6 +8,7 @@ import tomli_w
 
 from dot_agent_kit.hooks.models import HookDefinition
 from dot_agent_kit.models import InstalledKit, ProjectConfig
+from dot_agent_kit.models.types import SOURCE_TYPE_BUNDLED
 
 
 def load_project_config(project_dir: Path) -> ProjectConfig | None:
@@ -25,16 +26,28 @@ def load_project_config(project_dir: Path) -> ProjectConfig | None:
     # Parse kits
     kits: dict[str, InstalledKit] = {}
     if "kits" in data:
-        for kit_id, kit_data in data["kits"].items():
+        for kit_name, kit_data in data["kits"].items():
             # Parse hooks if present
             hooks: list[HookDefinition] = []
             if "hooks" in kit_data:
                 hooks = [HookDefinition.model_validate(h) for h in kit_data["hooks"]]
 
-            kits[kit_id] = InstalledKit(
-                kit_id=kit_data["kit_id"],
+            # Require kit_id field (no fallback)
+            if "kit_id" not in kit_data:
+                msg = f"Kit configuration missing required 'kit_id' field: {kit_name}"
+                raise KeyError(msg)
+            kit_id = kit_data["kit_id"]
+
+            # Require source_type field (no fallback)
+            if "source_type" not in kit_data:
+                msg = f"Kit configuration missing required 'source_type' field: {kit_name}"
+                raise KeyError(msg)
+            source_type = kit_data["source_type"]
+
+            kits[kit_name] = InstalledKit(
+                kit_id=kit_id,
+                source_type=source_type,
                 version=kit_data["version"],
-                source=kit_data["source"],
                 installed_at=kit_data["installed_at"],
                 artifacts=kit_data["artifacts"],
                 hooks=hooks,
@@ -79,8 +92,8 @@ def save_project_config(project_dir: Path, config: ProjectConfig) -> None:
     for kit_id, kit in config.kits.items():
         kit_data = {
             "kit_id": kit.kit_id,
+            "source_type": kit.source_type,
             "version": kit.version,
-            "source": kit.source,
             "installed_at": kit.installed_at,
             "artifacts": kit.artifacts,
         }

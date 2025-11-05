@@ -94,8 +94,8 @@ def install_kit(
 
     return InstalledKit(
         kit_id=manifest.name,
+        source_type=resolved.source_type,
         version=manifest.version,
-        source=resolved.source,
         installed_at=datetime.now().isoformat(),
         artifacts=installed_artifacts,
     )

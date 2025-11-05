@@ -296,10 +296,10 @@ def install(kit_id: str, force: bool) -> None:
     Examples:
 
         # Install or update a kit
-        dot-agent kit install github-workflows
+        dot-agent kit install devrun
 
         # Force reinstall a kit
-        dot-agent kit install github-workflows --force
+        dot-agent kit install devrun --force
     """
     # Get installation context
     project_dir = Path.cwd()

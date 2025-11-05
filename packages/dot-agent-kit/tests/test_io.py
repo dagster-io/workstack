@@ -19,8 +19,8 @@ def test_load_save_project_config(tmp_project: Path) -> None:
     # Add a kit
     kit = InstalledKit(
         kit_id="test-kit",
+        source_type="package",
         version="1.0.0",
-        source="test-source",
         installed_at="2025-01-01T00:00:00",
         artifacts=["artifact1.md"],
     )
@@ -107,3 +107,164 @@ def test_load_registry() -> None:
     assert isinstance(registry, list)
     assert len(registry) >= 1  # Should have at least devrun
     assert any(entry.kit_id == "devrun" for entry in registry)
+
+
+def test_load_project_config_valid_bundled_kit(tmp_project: Path) -> None:
+    """Test loading config with valid bundled kit."""
+    # Write a config with bundled kit
+    config_path = tmp_project / "dot-agent.toml"
+    config_path.write_text(
+        """
+version = "1"
+
+[kits.devrun]
+kit_id = "devrun"
+source_type = "bundled"
+version = "1.0.0"
+installed_at = "2024-01-01T00:00:00"
+artifacts = ["agents/devrun.md"]
+""",
+        encoding="utf-8",
+    )
+
+    config = load_project_config(tmp_project)
+
+    assert config is not None
+    assert "devrun" in config.kits
+    assert config.kits["devrun"].kit_id == "devrun"
+    assert config.kits["devrun"].source_type == "bundled"
+    assert config.kits["devrun"].version == "1.0.0"
+
+
+def test_load_project_config_valid_package_kit(tmp_project: Path) -> None:
+    """Test loading config with valid package kit."""
+    # Write a config with package kit
+    config_path = tmp_project / "dot-agent.toml"
+    config_path.write_text(
+        """
+version = "1"
+
+[kits.my-custom-kit]
+kit_id = "my-custom-kit"
+source_type = "package"
+version = "2.0.0"
+installed_at = "2024-01-01T00:00:00"
+artifacts = ["skills/custom.md"]
+""",
+        encoding="utf-8",
+    )
+
+    config = load_project_config(tmp_project)
+
+    assert config is not None
+    assert "my-custom-kit" in config.kits
+    assert config.kits["my-custom-kit"].kit_id == "my-custom-kit"
+    assert config.kits["my-custom-kit"].source_type == "package"
+    assert config.kits["my-custom-kit"].version == "2.0.0"
+
+
+def test_load_project_config_missing_kit_id(tmp_project: Path) -> None:
+    """Test loading config with missing kit_id field raises KeyError."""
+    # Write a config without kit_id
+    config_path = tmp_project / "dot-agent.toml"
+    config_path.write_text(
+        """
+version = "1"
+
+[kits.test-kit]
+source_type = "bundled"
+version = "1.0.0"
+installed_at = "2024-01-01T00:00:00"
+artifacts = ["agents/test.md"]
+""",
+        encoding="utf-8",
+    )
+
+    import pytest
+
+    with pytest.raises(KeyError) as exc_info:
+        load_project_config(tmp_project)
+
+    assert "kit_id" in str(exc_info.value)
+    assert "test-kit" in str(exc_info.value)
+
+
+def test_load_project_config_missing_source_type(tmp_project: Path) -> None:
+    """Test loading config with missing source_type field raises KeyError."""
+    # Write a config without source_type
+    config_path = tmp_project / "dot-agent.toml"
+    config_path.write_text(
+        """
+version = "1"
+
+[kits.test-kit]
+kit_id = "test-kit"
+version = "1.0.0"
+installed_at = "2024-01-01T00:00:00"
+artifacts = ["agents/test.md"]
+""",
+        encoding="utf-8",
+    )
+
+    import pytest
+
+    with pytest.raises(KeyError) as exc_info:
+        load_project_config(tmp_project)
+
+    assert "source_type" in str(exc_info.value)
+    assert "test-kit" in str(exc_info.value)
+
+
+def test_load_project_config_various_identifier_formats(tmp_project: Path) -> None:
+    """Test loading config with various valid identifier formats."""
+    # Write a config with identifiers using dashes, underscores, numbers
+    config_path = tmp_project / "dot-agent.toml"
+    config_path.write_text(
+        """
+version = "1"
+
+[kits.kit-with-dashes]
+kit_id = "kit-with-dashes"
+source_type = "bundled"
+version = "1.0.0"
+installed_at = "2024-01-01T00:00:00"
+artifacts = ["agents/test.md"]
+
+[kits.kit_with_underscores]
+kit_id = "kit_with_underscores"
+source_type = "package"
+version = "2.0.0"
+installed_at = "2024-01-01T00:00:00"
+artifacts = ["agents/test2.md"]
+
+[kits.kit123]
+kit_id = "kit123"
+source_type = "bundled"
+version = "3.0.0"
+installed_at = "2024-01-01T00:00:00"
+artifacts = ["agents/test3.md"]
+
+[kits.kit-mix_123]
+kit_id = "kit-mix_123"
+source_type = "package"
+version = "4.0.0"
+installed_at = "2024-01-01T00:00:00"
+artifacts = ["agents/test4.md"]
+""",
+        encoding="utf-8",
+    )
+
+    config = load_project_config(tmp_project)
+
+    assert config is not None
+    assert len(config.kits) == 4
+    assert "kit-with-dashes" in config.kits
+    assert "kit_with_underscores" in config.kits
+    assert "kit123" in config.kits
+    assert "kit-mix_123" in config.kits
+
+    # Verify all loaded correctly
+    assert config.kits["kit-with-dashes"].kit_id == "kit-with-dashes"
+    assert config.kits["kit_with_underscores"].kit_id == "kit_with_underscores"
+    assert config.kits["kit123"].kit_id == "kit123"
+    assert config.kits["kit-mix_123"].kit_id == "kit-mix_123"

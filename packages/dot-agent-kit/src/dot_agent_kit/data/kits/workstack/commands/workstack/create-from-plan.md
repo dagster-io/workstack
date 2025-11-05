@@ -752,7 +752,46 @@ Suggested action:
 
 **Use the JSON output directly** for all worktree information.
 
-### Step 10: Display Next Steps
+### Step 10: Analyze Plan for Summary
+
+Analyze the plan content to understand what will be implemented:
+
+**1. Understand the plan structure:**
+
+- Read through the plan to determine if it's organized in phases
+- Multi-phase plans typically have distinct stages that build on each other
+- Single-phase plans focus on one cohesive set of changes
+
+**2. Identify key deliverables:**
+
+Read the plan and understand what it aims to accomplish. Focus on:
+
+- The main goals and objectives stated in the plan
+- What will be built, fixed, or improved
+- The tangible outcomes that will exist after implementation
+- Core functionality or features being added
+
+Summarize the most important 3-5 deliverables in clear, concise language. These should answer "what will this plan achieve?"
+
+**3. Estimate commit count:**
+
+Based on the plan's complexity and structure:
+
+- For multi-phase plans: Consider each phase plus any complex steps within phases
+- For single-phase plans: Look at logical groupings of work that would form cohesive commits
+- Consider how the work naturally divides into reviewable, testable units
+- Provide a reasonable range when the exact count is unclear
+
+**4. Handle unclear plans:**
+
+- If the plan structure makes it difficult to extract clear deliverables, that's okay
+- Focus on what you can understand from the plan
+- Use a fallback message if deliverables truly cannot be determined
+- Always try to provide a commit count estimate based on overall complexity
+
+The goal is to give users a quick preview of what they're about to implement before they switch contexts.
+
+### Step 11: Display Next Steps
 
 After successful worktree creation, provide clear instructions based on plan structure.
 
@@ -762,6 +801,32 @@ After successful worktree creation, provide clear instructions based on plan str
 
 ```markdown
 ✅ Worktree created: **<worktree-name>**
+
+**Plan Summary:**
+
+- <deliverable-1>
+- <deliverable-2>
+- <deliverable-3>
+
+**Projected Commits:** <count> commits
+
+Plan: `<filename>`
+Branch: `<branch-name>`
+Location: `<worktree-path>`
+
+**Next step:**
+
+`workstack switch <worktree_name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
+```
+
+**If deliverable extraction fails (single-phase):**
+
+```markdown
+✅ Worktree created: **<worktree-name>**
+
+**Plan Summary:** Could not extract deliverables from plan structure
+
+**Projected Commits:** <count> commits
 
 Plan: `<filename>`
 Branch: `<branch-name>`
@@ -776,6 +841,40 @@ Location: `<worktree-path>`
 
 ```markdown
 ✅ Worktree created: **<worktree-name>**
+
+**Plan Summary:**
+
+- <deliverable-1>
+- <deliverable-2>
+- <deliverable-3>
+
+**Projected Commits:** <count> commits across <number> phases
+
+Plan: `<filename>` (structured in <number> phases)
+Branch: `<branch-name>`
+Location: `<worktree-path>`
+
+**Phases to be implemented:**
+
+- Phase 1: <phase-name> (branch: <branch-name>)
+- Phase 2: <phase-name> (stacks on: <previous-branch>)
+- Phase 3: <phase-name> (stacks on: <previous-branch>)
+
+Each phase will be implemented as a separate branch with CI verification.
+
+**Next step:**
+
+`workstack switch <worktree_name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
+```
+
+**If deliverable extraction fails (multi-phase):**
+
+```markdown
+✅ Worktree created: **<worktree-name>**
+
+**Plan Summary:** Could not extract deliverables from plan structure
+
+**Projected Commits:** <count> commits across <number> phases
 
 Plan: `<filename>` (structured in <number> phases)
 Branch: `<branch-name>`

@@ -1,9 +1,11 @@
 """Tests for kit source resolution."""
 
 from pathlib import Path
+from typing import cast
 
 import pytest
 
+from dot_agent_kit.models.types import SourceType
 from dot_agent_kit.sources import KitResolver, ResolvedKit, StandalonePackageSource
 from dot_agent_kit.sources.exceptions import (
     KitManifestError,
@@ -101,7 +103,7 @@ def test_kit_resolver_multiple_sources(tmp_path: Path) -> None:
             return ResolvedKit(
                 kit_id="first-kit",
                 version="1.0.0",
-                source_type="first",
+                source_type=cast(SourceType, "first"),
                 manifest_path=tmp_path / "first.yaml",
                 artifacts_base=tmp_path,
             )
@@ -114,7 +116,7 @@ def test_kit_resolver_multiple_sources(tmp_path: Path) -> None:
             return ResolvedKit(
                 kit_id="second-kit",
                 version="1.0.0",
-                source_type="second",
+                source_type=cast(SourceType, "second"),
                 manifest_path=tmp_path / "second.yaml",
                 artifacts_base=tmp_path,
             )

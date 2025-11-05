@@ -1,6 +1,7 @@
 """Tests for check command."""
 
 from pathlib import Path
+from typing import cast
 
 from click.testing import CliRunner
 
@@ -11,6 +12,7 @@ from dot_agent_kit.commands.check import (
 )
 from dot_agent_kit.io import save_project_config
 from dot_agent_kit.models import InstalledKit, ProjectConfig
+from dot_agent_kit.models.types import SourceType
 
 
 def test_check_artifact_sync_both_files_identical(tmp_path: Path) -> None:
@@ -348,7 +350,7 @@ def test_validate_kit_fields_invalid_source_type() -> None:
     """Test validate_kit_fields with invalid source_type."""
     kit = InstalledKit(
         kit_id="test-kit",
-        source_type="invalid",
+        source_type=cast(SourceType, "invalid"),
         version="1.0.0",
         installed_at="2024-01-01T00:00:00",
         artifacts=[".claude/skills/test/SKILL.md"],
@@ -390,7 +392,7 @@ def test_validate_kit_fields_multiple_errors() -> None:
     """Test validate_kit_fields with multiple validation errors."""
     kit = InstalledKit(
         kit_id="",
-        source_type="invalid",
+        source_type=cast(SourceType, "invalid"),
         version="",
         installed_at="",
         artifacts=[],

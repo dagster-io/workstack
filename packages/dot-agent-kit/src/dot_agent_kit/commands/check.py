@@ -47,7 +47,11 @@ def validate_kit_fields(kit: InstalledKit) -> list[str]:
 
     # Validate source_type is valid
     if kit.source_type not in [SOURCE_TYPE_BUNDLED, SOURCE_TYPE_PACKAGE]:
-        errors.append(f"Invalid source_type: {kit.source_type}. Must be '{SOURCE_TYPE_BUNDLED}' or '{SOURCE_TYPE_PACKAGE}'")
+        msg = (
+            f"Invalid source_type: {kit.source_type}. "
+            f"Must be '{SOURCE_TYPE_BUNDLED}' or '{SOURCE_TYPE_PACKAGE}'"
+        )
+        errors.append(msg)
 
     # Validate version is non-empty
     if not kit.version:

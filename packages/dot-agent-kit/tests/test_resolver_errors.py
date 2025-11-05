@@ -3,10 +3,12 @@
 import tempfile
 from datetime import datetime
 from pathlib import Path
+from typing import cast
 
 import pytest
 
 from dot_agent_kit.models import InstalledKit
+from dot_agent_kit.models.types import SourceType
 from dot_agent_kit.operations.sync import check_for_updates
 from dot_agent_kit.sources.exceptions import (
     KitManifestError,
@@ -28,7 +30,7 @@ class MockKitSource(KitSource):
         self.resolved_kit = ResolvedKit(
             kit_id="test-kit",
             version="1.0.0",
-            source_type="mock",
+            source_type=cast(SourceType, "mock"),
             manifest_path=Path("/tmp/manifest.yaml"),
             artifacts_base=Path("/tmp/artifacts"),
         )
@@ -240,7 +242,7 @@ artifacts:
         source.resolved_kit = ResolvedKit(
             kit_id="test-kit",
             version="2.0.0",
-            source_type="mock",
+            source_type=cast(SourceType, "mock"),
             manifest_path=manifest_path,
             artifacts_base=Path(temp_dir),
         )
@@ -280,7 +282,7 @@ artifacts:
         source.resolved_kit = ResolvedKit(
             kit_id="test-kit",
             version="1.0.0",  # Same version
-            source_type="mock",
+            source_type=cast(SourceType, "mock"),
             manifest_path=manifest_path,
             artifacts_base=Path(temp_dir),
         )

@@ -21,8 +21,8 @@ class ArtifactLevel(Enum):
 
 
 # Artifact type literals
-ArtifactType = Literal["skill", "command", "agent", "hook"]
-ArtifactTypePlural = Literal["skills", "commands", "agents", "hooks"]
+ArtifactType = Literal["skill", "command", "agent", "hook", "doc"]
+ArtifactTypePlural = Literal["skills", "commands", "agents", "hooks", "docs"]
 
 # Mapping from singular to plural forms
 ARTIFACT_TYPE_PLURALS: dict[ArtifactType, ArtifactTypePlural] = {
@@ -30,6 +30,7 @@ ARTIFACT_TYPE_PLURALS: dict[ArtifactType, ArtifactTypePlural] = {
     "command": "commands",
     "agent": "agents",
     "hook": "hooks",
+    "doc": "docs",
 }
 
 

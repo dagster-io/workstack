@@ -110,6 +110,52 @@ class FilesystemArtifactRepository(ArtifactRepository):
                         if artifact:
                             artifacts.append(artifact)
 
+        # Scan docs directory (project-level only)
+        docs_dir = claude_dir / "docs"
+        if docs_dir.exists():
+            # Docs are organized by kit: docs/kit-id/**/*.md
+            for kit_dir in docs_dir.iterdir():
+                if not kit_dir.is_dir():
+                    continue
+
+                kit_id_from_dir = kit_dir.name
+
+                # Recursively find all .md files in kit directory
+                for doc_file in kit_dir.rglob("*.md"):
+                    # Artifact name is relative path within kit directory
+                    relative_to_kit = doc_file.relative_to(kit_dir)
+                    display_name = str(relative_to_kit).replace("\\", "/")
+
+                    # Get relative path from .claude/ directory
+                    relative_to_claude = doc_file.relative_to(claude_dir)
+
+                    # Determine source based on kit config
+                    source = ArtifactSource.LOCAL
+                    kit_version = None
+                    if kit_id_from_dir in config.kits:
+                        # Check if this doc is in the kit's artifact list
+                        kit = config.kits[kit_id_from_dir]
+                        normalized_relative = str(relative_to_claude).replace("\\", "/")
+                        for artifact_path in kit.artifacts:
+                            normalized_artifact = artifact_path.replace(".claude/", "").replace(
+                                "\\", "/"
+                            )
+                            if normalized_relative == normalized_artifact:
+                                source = ArtifactSource.MANAGED
+                                kit_version = kit.version
+                                break
+
+                    artifact = InstalledArtifact(
+                        artifact_type="doc",
+                        artifact_name=display_name,
+                        file_path=relative_to_claude,
+                        source=source,
+                        level=ArtifactLevel.PROJECT,
+                        kit_id=kit_id_from_dir,
+                        kit_version=kit_version,
+                    )
+                    artifacts.append(artifact)
+
         # Scan hooks from settings.json
         settings_path = claude_dir / "settings.json"
         if settings_path.exists():
@@ -361,6 +407,53 @@ class FilesystemArtifactRepository(ArtifactRepository):
                         )
                         if artifact:
                             artifacts.append(artifact)
+
+        # Scan docs directory (project-level only)
+        if level == ArtifactLevel.PROJECT:
+            docs_dir = claude_dir / "docs"
+            if docs_dir.exists():
+                # Docs are organized by kit: docs/kit-id/**/*.md
+                for kit_dir in docs_dir.iterdir():
+                    if not kit_dir.is_dir():
+                        continue
+
+                    kit_id_from_dir = kit_dir.name
+
+                    # Recursively find all .md files in kit directory
+                    for doc_file in kit_dir.rglob("*.md"):
+                        # Artifact name is relative path within kit directory
+                        relative_to_kit = doc_file.relative_to(kit_dir)
+                        display_name = str(relative_to_kit).replace("\\", "/")
+
+                        # Get relative path from .claude/ directory
+                        relative_to_claude = doc_file.relative_to(claude_dir)
+
+                        # Determine source based on kit config
+                        source = ArtifactSource.LOCAL
+                        kit_version = None
+                        if kit_id_from_dir in config.kits:
+                            # Check if this doc is in the kit's artifact list
+                            kit = config.kits[kit_id_from_dir]
+                            normalized_relative = str(relative_to_claude).replace("\\", "/")
+                            for artifact_path in kit.artifacts:
+                                normalized_artifact = artifact_path.replace(".claude/", "").replace(
+                                    "\\", "/"
+                                )
+                                if normalized_relative == normalized_artifact:
+                                    source = ArtifactSource.MANAGED
+                                    kit_version = kit.version
+                                    break
+
+                        artifact = InstalledArtifact(
+                            artifact_type="doc",
+                            artifact_name=display_name,
+                            file_path=relative_to_claude,
+                            source=source,
+                            level=level,
+                            kit_id=kit_id_from_dir,
+                            kit_version=kit_version,
+                        )
+                        artifacts.append(artifact)
 
         # Scan hooks with source tracking
         hooks_with_source = discover_hooks_with_source(claude_dir)

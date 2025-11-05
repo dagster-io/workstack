@@ -194,6 +194,7 @@ def _list_artifacts(
                 "commands": [],
                 "agents": [],
                 "hooks": [],
+                "docs": [],
             }
 
         # Add artifact to appropriate type list
@@ -238,10 +239,13 @@ def _list_artifacts(
             max_folder_len = max(max_folder_len, len(data.folder_path))
             max_counts_len = max(max_counts_len, len(data.file_counts))
 
-    # Calculate widths for commands, agents, and hooks (file paths)
+    # Calculate widths for commands, agents, hooks, and docs (file paths)
     for artifact_types in kits_with_artifacts.values():
         for artifact in (
-            artifact_types["commands"] + artifact_types["agents"] + artifact_types["hooks"]
+            artifact_types["commands"]
+            + artifact_types["agents"]
+            + artifact_types["hooks"]
+            + artifact_types["docs"]
         ):
             max_path_len = max(max_path_len, len(str(artifact.file_path)))
 
@@ -266,7 +270,7 @@ def _list_artifacts(
         artifact_types = kits_with_artifacts[kit_key]
 
         # Check if kit has any artifacts
-        plural_types: list[ArtifactTypePlural] = ["skills", "commands", "agents", "hooks"]
+        plural_types: list[ArtifactTypePlural] = ["skills", "commands", "agents", "hooks", "docs"]
         has_artifacts = any(len(artifact_types[atype]) > 0 for atype in plural_types)
 
         if not has_artifacts:
@@ -318,6 +322,15 @@ def _list_artifacts(
             for hook in sorted(kit_hooks, key=lambda a: a.artifact_name):
                 name = hook.artifact_name.ljust(max_name_len)
                 file_path = str(hook.file_path)
+                click.echo(f"    {name} {file_path}")
+
+        # Display docs for this kit
+        kit_docs = artifact_types["docs"]
+        if kit_docs:
+            click.echo(f"  Docs ({len(kit_docs)}):")
+            for doc in sorted(kit_docs, key=lambda a: a.artifact_name):
+                name = doc.artifact_name.ljust(max_name_len)
+                file_path = str(doc.file_path)
                 click.echo(f"    {name} {file_path}")
 
         # Add spacing between kits

@@ -34,7 +34,7 @@ from dot_agent_kit.repositories.filesystem_artifact_repository import Filesystem
 @click.option(
     "--type",
     "artifact_type",
-    type=click.Choice(["skill", "command", "agent", "hook"]),
+    type=click.Choice(["skill", "command", "agent", "hook", "doc"]),
     help="Filter by artifact type",
 )
 @click.option(

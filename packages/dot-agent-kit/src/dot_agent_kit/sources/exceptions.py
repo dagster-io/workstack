@@ -3,8 +3,21 @@
 from pathlib import Path
 
 
-class KitResolutionError(Exception):
-    """Base exception for kit resolution errors."""
+class DotAgentNonIdealStateException(Exception):
+    """Base exception for all non-ideal states in dot-agent-kit.
+
+    This is the root exception for all expected error conditions that should
+    display clean error messages to users without requiring --debug mode.
+    """
+
+    pass
+
+
+class KitResolutionError(DotAgentNonIdealStateException):
+    """Base exception for kit resolution errors.
+
+    Inherits from DotAgentNonIdealStateException to ensure clean error display.
+    """
 
     pass
 
@@ -63,3 +76,68 @@ class KitVersionError(KitResolutionError):
     def __init__(self, kit_id: str, message: str) -> None:
         self.kit_id = kit_id
         super().__init__(f"Version error for kit '{kit_id}': {message}")
+
+
+# New exception types for specific non-ideal states
+
+
+class SourceFormatError(KitResolutionError):
+    """Invalid source format specification."""
+
+    def __init__(self, source: str, expected_format: str | None = None) -> None:
+        self.source = source
+        self.expected_format = expected_format
+        message = f"Invalid source format: '{source}'"
+        if expected_format:
+            message += f". {expected_format}"
+        super().__init__(message)
+
+
+class KitConfigurationError(KitResolutionError):
+    """Kit configuration or manifest issues."""
+
+    def __init__(self, message: str, kit_id: str | None = None) -> None:
+        self.kit_id = kit_id
+        if kit_id:
+            message = f"Configuration error for kit '{kit_id}': {message}"
+        super().__init__(message)
+
+
+class HookConfigurationError(DotAgentNonIdealStateException):
+    """Hook configuration validation errors.
+
+    Inherits directly from DotAgentNonIdealStateException since hooks
+    are separate from kit resolution.
+    """
+
+    def __init__(self, field: str, message: str) -> None:
+        self.field = field
+        super().__init__(f"Hook configuration error in '{field}': {message}")
+
+
+class ArtifactConflictError(DotAgentNonIdealStateException):
+    """Artifact installation conflicts.
+
+    Replaces FileExistsError for artifact conflicts.
+    """
+
+    def __init__(
+        self, artifact_path: Path, suggestion: str = "Use --force to replace existing files"
+    ) -> None:
+        self.artifact_path = artifact_path
+        self.suggestion = suggestion
+        super().__init__(f"Artifact already exists: {artifact_path}\n{suggestion}")
+
+
+class InvalidKitIdError(KitResolutionError):
+    """Invalid kit ID format.
+
+    Kit IDs must only contain lowercase letters, numbers, and hyphens.
+    """
+
+    def __init__(self, kit_id: str) -> None:
+        self.kit_id = kit_id
+        super().__init__(
+            f"Invalid kit ID '{kit_id}': must only contain lowercase letters, numbers, and "
+            f"hyphens (a-z, 0-9, -)"
+        )

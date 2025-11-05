@@ -6,6 +6,7 @@ import pytest
 
 from dot_agent_kit.operations.install import install_kit
 from dot_agent_kit.sources import ResolvedKit
+from dot_agent_kit.sources.exceptions import ArtifactConflictError
 
 
 def test_install_kit_basic(tmp_project: Path) -> None:
@@ -92,7 +93,7 @@ def test_install_kit_conflict(tmp_project: Path) -> None:
     )
 
     # Try to install - should fail with default (overwrite=False)
-    with pytest.raises(FileExistsError, match="Artifact already exists"):
+    with pytest.raises(ArtifactConflictError, match="Artifact already exists"):
         install_kit(resolved, tmp_project, overwrite=False)
 
 

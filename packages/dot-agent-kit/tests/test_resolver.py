@@ -5,7 +5,11 @@ from pathlib import Path
 import pytest
 
 from dot_agent_kit.sources import KitResolver, ResolvedKit, StandalonePackageSource
-from dot_agent_kit.sources.exceptions import ResolverNotConfiguredError
+from dot_agent_kit.sources.exceptions import (
+    KitManifestError,
+    KitNotFoundError,
+    ResolverNotConfiguredError,
+)
 
 
 def test_standalone_can_resolve() -> None:
@@ -19,7 +23,7 @@ def test_standalone_resolve_not_installed() -> None:
     """Test resolving non-existent package."""
     source = StandalonePackageSource()
 
-    with pytest.raises(ValueError, match="Package not installed"):
+    with pytest.raises(KitNotFoundError, match="not found"):
         source.resolve("package:nonexistent_package")
 
 
@@ -30,7 +34,7 @@ def test_standalone_resolve_no_manifest(tmp_path: Path) -> None:
     source = StandalonePackageSource()
 
     # click doesn't have kit.yaml, so this should fail
-    with pytest.raises(ValueError, match="No kit.yaml found"):
+    with pytest.raises(KitManifestError):
         source.resolve("package:click")
 
 

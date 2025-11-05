@@ -8,6 +8,7 @@ import click
 from dot_agent_kit.io import load_kit_manifest
 from dot_agent_kit.models import InstalledKit
 from dot_agent_kit.sources import ResolvedKit
+from dot_agent_kit.sources.exceptions import ArtifactConflictError
 
 
 def install_kit(
@@ -78,9 +79,7 @@ def install_kit(
             # Handle conflicts
             if target.exists():
                 if not overwrite:
-                    raise FileExistsError(
-                        f"Artifact already exists: {target}\nUse --force to replace existing files"
-                    )
+                    raise ArtifactConflictError(target)
                 click.echo(f"  Overwriting: {target.name}", err=True)
 
             # Write artifact

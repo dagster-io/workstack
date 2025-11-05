@@ -108,9 +108,9 @@ def test_load_kit_manifest_with_commands(tmp_path: Path) -> None:
         "version: 1.0.0\n"
         "description: Test kit\n"
         "commands:\n"
-        "  - name: check-lbyl\n"
-        "    path: commands/check_lbyl.py\n"
-        "    description: Check Python code for LBYL violations\n"
+        "  - name: compliance-reminder-hook\n"
+        "    path: commands/compliance_reminder_hook.py\n"
+        "    description: Output dignified-python compliance reminder for UserPromptSubmit hook\n"
         "  - name: validate-exceptions\n"
         "    path: commands/validate_exceptions.py\n"
         "    description: Validate exception handling patterns\n",
@@ -123,9 +123,12 @@ def test_load_kit_manifest_with_commands(tmp_path: Path) -> None:
     assert manifest.version == "1.0.0"
     assert manifest.description == "Test kit"
     assert len(manifest.commands) == 2
-    assert manifest.commands[0].name == "check-lbyl"
-    assert manifest.commands[0].path == "commands/check_lbyl.py"
-    assert manifest.commands[0].description == "Check Python code for LBYL violations"
+    assert manifest.commands[0].name == "compliance-reminder-hook"
+    assert manifest.commands[0].path == "commands/compliance_reminder_hook.py"
+    assert (
+        manifest.commands[0].description
+        == "Output dignified-python compliance reminder for UserPromptSubmit hook"
+    )
     assert manifest.commands[1].name == "validate-exceptions"
     assert manifest.commands[1].path == "commands/validate_exceptions.py"
     assert manifest.commands[1].description == "Validate exception handling patterns"

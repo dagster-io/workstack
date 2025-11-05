@@ -8,11 +8,123 @@ from click.testing import CliRunner
 from dot_agent_kit.commands.check import (
     check,
     check_artifact_sync,
+    compare_artifact_lists,
     validate_kit_fields,
 )
 from dot_agent_kit.io import save_project_config
 from dot_agent_kit.models import InstalledKit, ProjectConfig
 from dot_agent_kit.models.types import SourceType
+
+
+def test_compare_artifact_lists_no_differences() -> None:
+    """Test compare_artifact_lists when artifacts match exactly."""
+    manifest_artifacts = {
+        "command": ["commands/test/foo.md"],
+        "skill": ["skills/test/bar.md"],
+    }
+    installed_artifacts = [
+        ".claude/commands/test/foo.md",
+        ".claude/skills/test/bar.md",
+    ]
+
+    missing, obsolete = compare_artifact_lists(manifest_artifacts, installed_artifacts)
+
+    assert len(missing) == 0
+    assert len(obsolete) == 0
+
+
+def test_compare_artifact_lists_missing_artifacts() -> None:
+    """Test compare_artifact_lists detects missing artifacts."""
+    manifest_artifacts = {
+        "command": ["commands/test/foo.md", "commands/test/bar.md"],
+        "skill": ["skills/test/baz.md"],
+    }
+    installed_artifacts = [
+        ".claude/commands/test/foo.md",
+    ]
+
+    missing, obsolete = compare_artifact_lists(manifest_artifacts, installed_artifacts)
+
+    assert len(missing) == 2
+    assert ".claude/commands/test/bar.md" in missing
+    assert ".claude/skills/test/baz.md" in missing
+    assert len(obsolete) == 0
+
+
+def test_compare_artifact_lists_obsolete_artifacts() -> None:
+    """Test compare_artifact_lists detects obsolete artifacts."""
+    manifest_artifacts = {
+        "command": ["commands/test/foo.md"],
+    }
+    installed_artifacts = [
+        ".claude/commands/test/foo.md",
+        ".claude/commands/test/old.md",
+        ".claude/skills/test/deprecated.md",
+    ]
+
+    missing, obsolete = compare_artifact_lists(manifest_artifacts, installed_artifacts)
+
+    assert len(missing) == 0
+    assert len(obsolete) == 2
+    assert ".claude/commands/test/old.md" in obsolete
+    assert ".claude/skills/test/deprecated.md" in obsolete
+
+
+def test_compare_artifact_lists_both_missing_and_obsolete() -> None:
+    """Test compare_artifact_lists detects both missing and obsolete."""
+    manifest_artifacts = {
+        "command": ["commands/test/foo.md", "commands/test/new.md"],
+    }
+    installed_artifacts = [
+        ".claude/commands/test/foo.md",
+        ".claude/commands/test/old.md",
+    ]
+
+    missing, obsolete = compare_artifact_lists(manifest_artifacts, installed_artifacts)
+
+    assert len(missing) == 1
+    assert ".claude/commands/test/new.md" in missing
+    assert len(obsolete) == 1
+    assert ".claude/commands/test/old.md" in obsolete
+
+
+def test_compare_artifact_lists_empty_manifest() -> None:
+    """Test compare_artifact_lists with empty manifest."""
+    manifest_artifacts: dict[str, list[str]] = {}
+    installed_artifacts = [
+        ".claude/commands/test/foo.md",
+    ]
+
+    missing, obsolete = compare_artifact_lists(manifest_artifacts, installed_artifacts)
+
+    assert len(missing) == 0
+    assert len(obsolete) == 1
+    assert ".claude/commands/test/foo.md" in obsolete
+
+
+def test_compare_artifact_lists_empty_installed() -> None:
+    """Test compare_artifact_lists with no installed artifacts."""
+    manifest_artifacts = {
+        "command": ["commands/test/foo.md"],
+    }
+    installed_artifacts: list[str] = []
+
+    missing, obsolete = compare_artifact_lists(manifest_artifacts, installed_artifacts)
+
+    assert len(missing) == 1
+    assert ".claude/commands/test/foo.md" in missing
+    assert len(obsolete) == 0
+
+
+def test_compare_artifact_lists_both_empty() -> None:
+    """Test compare_artifact_lists with both empty."""
+    manifest_artifacts: dict[str, list[str]] = {}
+    installed_artifacts: list[str] = []
+
+    missing, obsolete = compare_artifact_lists(manifest_artifacts, installed_artifacts)
+
+    assert len(missing) == 0
+    assert len(obsolete) == 0
 
 
 def test_check_artifact_sync_both_files_identical(tmp_path: Path) -> None:
@@ -506,6 +618,7 @@ def test_check_command_bundled_kit_sync_in_sync(tmp_path: Path) -> None:
 
         # Create config with bundled kit
         # Note: We use "bundled:devrun" which is a real bundled kit in the package
+        # Include all artifacts from the devrun kit
         config = ProjectConfig(
             version="1",
             kits={
@@ -514,30 +627,326 @@ def test_check_command_bundled_kit_sync_in_sync(tmp_path: Path) -> None:
                     version="0.1.0",
                     source_type="bundled",
                     installed_at="2024-01-01T00:00:00",
-                    artifacts=["agents/devrun/devrun.md"],
+                    artifacts=[
+                        ".claude/agents/devrun/devrun.md",
+                        ".claude/docs/devrun/tools/gt.md",
+                        ".claude/docs/devrun/tools/make.md",
+                        ".claude/docs/devrun/tools/prettier.md",
+                        ".claude/docs/devrun/tools/pyright.md",
+                        ".claude/docs/devrun/tools/pytest.md",
+                        ".claude/docs/devrun/tools/ruff.md",
+                    ],
                 ),
             },
         )
         save_project_config(project_dir, config)
 
-        # Create local artifact that matches bundled version
+        # Create local artifacts that match bundled version
         # Read bundled artifact content
         from dot_agent_kit.sources import BundledKitSource
 
         bundled_source = BundledKitSource()
         bundled_path = bundled_source._get_bundled_kit_path("devrun")
         if bundled_path is not None:
-            bundled_artifact = bundled_path / "agents" / "devrun" / "devrun.md"
+            # Create all required artifacts
+            for artifact_rel in [
+                "agents/devrun/devrun.md",
+                "docs/devrun/tools/gt.md",
+                "docs/devrun/tools/make.md",
+                "docs/devrun/tools/prettier.md",
+                "docs/devrun/tools/pyright.md",
+                "docs/devrun/tools/pytest.md",
+                "docs/devrun/tools/ruff.md",
+            ]:
+                bundled_artifact = bundled_path / artifact_rel
+                if bundled_artifact.exists():
+                    bundled_content = bundled_artifact.read_text(encoding="utf-8")
+
+                    # Create local artifact with same content
+                    local_artifact = claude_dir / artifact_rel
+                    local_artifact.parent.mkdir(parents=True, exist_ok=True)
+                    local_artifact.write_text(bundled_content, encoding="utf-8")
+
+            result = runner.invoke(check)
+
+            assert result.exit_code == 0
+            assert "All artifacts are in sync" in result.output
+            assert "Warning: Could not find bundled kit" not in result.output
+
+
+def test_check_command_detects_missing_artifacts(tmp_path: Path) -> None:
+    """Test check detects artifacts in manifest but not installed."""
+    runner = CliRunner()
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        project_dir = Path.cwd()
+
+        # Create .claude directory
+        claude_dir = project_dir / ".claude"
+        claude_dir.mkdir()
+
+        # Create config with bundled kit that only has one artifact installed
+        # but the bundled kit has more
+        config = ProjectConfig(
+            version="1",
+            kits={
+                "gt": InstalledKit(
+                    kit_id="gt",
+                    version="0.1.0",
+                    source_type="bundled",
+                    installed_at="2024-01-01T00:00:00",
+                    artifacts=[".claude/commands/gt/land-branch.md"],
+                ),
+            },
+        )
+        save_project_config(project_dir, config)
+
+        # Create local artifact that matches bundled version
+        from dot_agent_kit.sources import BundledKitSource
+
+        bundled_source = BundledKitSource()
+        bundled_path = bundled_source._get_bundled_kit_path("gt")
+        if bundled_path is not None:
+            # Copy only one artifact
+            bundled_artifact = bundled_path / "commands" / "gt" / "land-branch.md"
             if bundled_artifact.exists():
                 bundled_content = bundled_artifact.read_text(encoding="utf-8")
-
-                # Create local artifact with same content
-                local_artifact = claude_dir / "agents" / "devrun" / "devrun.md"
+                local_artifact = claude_dir / "commands" / "gt" / "land-branch.md"
                 local_artifact.parent.mkdir(parents=True)
                 local_artifact.write_text(bundled_content, encoding="utf-8")
 
                 result = runner.invoke(check)
 
-                assert result.exit_code == 0
-                assert "All artifacts are in sync" in result.output
-                assert "Warning: Could not find bundled kit" not in result.output
+                # Should fail because missing artifacts
+                assert result.exit_code == 1
+                assert "Missing artifacts (in manifest but not installed)" in result.output
+                assert ".claude/commands/gt/submit-branch.md" in result.output
+                assert ".claude/skills/gt-graphite/SKILL.md" in result.output
+                assert "Some checks failed" in result.output
+
+
+def test_check_command_detects_obsolete_artifacts(tmp_path: Path) -> None:
+    """Test check detects artifacts installed but removed from manifest."""
+    runner = CliRunner()
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        project_dir = Path.cwd()
+
+        # Create .claude directory
+        claude_dir = project_dir / ".claude"
+        claude_dir.mkdir()
+
+        # Create a mock bundled kit with manifest
+        mock_kit_dir = tmp_path / "mock_bundled_kit"
+        mock_kit_dir.mkdir()
+
+        # Create a minimal manifest
+        manifest_path = mock_kit_dir / "kit.yaml"
+        manifest_path.write_text(
+            """name: test-kit
+version: 1.0.0
+description: Test kit
+artifacts:
+  command:
+    - commands/test/foo.md
+""",
+            encoding="utf-8",
+        )
+
+        # Create the artifact in bundled location
+        bundled_artifact = mock_kit_dir / "commands" / "test" / "foo.md"
+        bundled_artifact.parent.mkdir(parents=True)
+        bundled_artifact.write_text("content", encoding="utf-8")
+
+        # Create config with obsolete artifact (not in manifest)
+        config = ProjectConfig(
+            version="1",
+            kits={
+                "test-kit": InstalledKit(
+                    kit_id="test-kit",
+                    version="1.0.0",
+                    source_type="bundled",
+                    installed_at="2024-01-01T00:00:00",
+                    artifacts=[
+                        ".claude/commands/test/foo.md",
+                        ".claude/commands/test/old-artifact.md",
+                    ],
+                ),
+            },
+        )
+        save_project_config(project_dir, config)
+
+        # Create both local artifacts (one is obsolete)
+        local_artifact1 = claude_dir / "commands" / "test" / "foo.md"
+        local_artifact1.parent.mkdir(parents=True)
+        local_artifact1.write_text("content", encoding="utf-8")
+
+        local_artifact2 = claude_dir / "commands" / "test" / "old-artifact.md"
+        local_artifact2.write_text("obsolete content", encoding="utf-8")
+
+        # Monkey patch BundledKitSource to return our mock kit
+        from dot_agent_kit.sources import BundledKitSource
+
+        original_get_path = BundledKitSource._get_bundled_kit_path
+
+        def mock_get_path(self: BundledKitSource, source: str) -> Path | None:
+            if source == "test-kit":
+                return mock_kit_dir
+            return original_get_path(self, source)
+
+        BundledKitSource._get_bundled_kit_path = mock_get_path
+
+        result = runner.invoke(check)
+
+        # Restore original method
+        BundledKitSource._get_bundled_kit_path = original_get_path
+
+        # Should fail because obsolete artifacts
+        assert result.exit_code == 1
+        assert "Obsolete artifacts (installed but not in manifest)" in result.output
+        assert ".claude/commands/test/old-artifact.md" in result.output
+        assert "Some checks failed" in result.output
+
+
+def test_check_command_missing_and_obsolete_together(tmp_path: Path) -> None:
+    """Test check detects both missing and obsolete artifacts."""
+    runner = CliRunner()
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        project_dir = Path.cwd()
+
+        # Create .claude directory
+        claude_dir = project_dir / ".claude"
+        claude_dir.mkdir()
+
+        # Create a mock bundled kit with manifest
+        mock_kit_dir = tmp_path / "mock_bundled_kit"
+        mock_kit_dir.mkdir()
+
+        # Create a manifest with two artifacts
+        manifest_path = mock_kit_dir / "kit.yaml"
+        manifest_path.write_text(
+            """name: test-kit
+version: 1.0.0
+description: Test kit
+artifacts:
+  command:
+    - commands/test/foo.md
+    - commands/test/bar.md
+""",
+            encoding="utf-8",
+        )
+
+        # Create artifacts in bundled location
+        bundled_foo = mock_kit_dir / "commands" / "test" / "foo.md"
+        bundled_foo.parent.mkdir(parents=True)
+        bundled_foo.write_text("foo content", encoding="utf-8")
+
+        bundled_bar = mock_kit_dir / "commands" / "test" / "bar.md"
+        bundled_bar.write_text("bar content", encoding="utf-8")
+
+        # Create config with one matching artifact and one obsolete
+        # (missing bar.md)
+        config = ProjectConfig(
+            version="1",
+            kits={
+                "test-kit": InstalledKit(
+                    kit_id="test-kit",
+                    version="1.0.0",
+                    source_type="bundled",
+                    installed_at="2024-01-01T00:00:00",
+                    artifacts=[
+                        ".claude/commands/test/foo.md",
+                        ".claude/commands/test/obsolete.md",
+                    ],
+                ),
+            },
+        )
+        save_project_config(project_dir, config)
+
+        # Create local artifacts
+        local_foo = claude_dir / "commands" / "test" / "foo.md"
+        local_foo.parent.mkdir(parents=True)
+        local_foo.write_text("foo content", encoding="utf-8")
+
+        local_obsolete = claude_dir / "commands" / "test" / "obsolete.md"
+        local_obsolete.write_text("obsolete content", encoding="utf-8")
+
+        # Monkey patch BundledKitSource
+        from dot_agent_kit.sources import BundledKitSource
+
+        original_get_path = BundledKitSource._get_bundled_kit_path
+
+        def mock_get_path(self: BundledKitSource, source: str) -> Path | None:
+            if source == "test-kit":
+                return mock_kit_dir
+            return original_get_path(self, source)
+
+        BundledKitSource._get_bundled_kit_path = mock_get_path
+
+        result = runner.invoke(check)
+
+        # Restore original method
+        BundledKitSource._get_bundled_kit_path = original_get_path
+
+        # Should fail with both missing and obsolete
+        assert result.exit_code == 1
+        assert "Missing artifacts (in manifest but not installed)" in result.output
+        assert ".claude/commands/test/bar.md" in result.output
+        assert "Obsolete artifacts (installed but not in manifest)" in result.output
+        assert ".claude/commands/test/obsolete.md" in result.output
+        assert "⚠ Missing: 1" in result.output
+        assert "⚠ Obsolete: 1" in result.output
+        assert "Some checks failed" in result.output
+
+
+def test_check_command_perfect_sync_no_missing_no_obsolete(tmp_path: Path) -> None:
+    """Test check passes when all artifacts match manifest exactly."""
+    runner = CliRunner()
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        project_dir = Path.cwd()
+
+        # Create .claude directory
+        claude_dir = project_dir / ".claude"
+        claude_dir.mkdir()
+
+        # Use real bundled kit (gt) and install all artifacts
+        config = ProjectConfig(
+            version="1",
+            kits={
+                "gt": InstalledKit(
+                    kit_id="gt",
+                    version="0.1.0",
+                    source_type="bundled",
+                    installed_at="2024-01-01T00:00:00",
+                    artifacts=[
+                        ".claude/commands/gt/land-branch.md",
+                        ".claude/commands/gt/submit-branch.md",
+                        ".claude/skills/gt-graphite/SKILL.md",
+                    ],
+                ),
+            },
+        )
+        save_project_config(project_dir, config)
+
+        # Copy all artifacts from bundled kit
+        from dot_agent_kit.sources import BundledKitSource
+
+        bundled_source = BundledKitSource()
+        bundled_path = bundled_source._get_bundled_kit_path("gt")
+        if bundled_path is not None:
+            for artifact_rel in [
+                "commands/gt/land-branch.md",
+                "commands/gt/submit-branch.md",
+                "skills/gt-graphite/SKILL.md",
+            ]:
+                bundled_artifact = bundled_path / artifact_rel
+                if bundled_artifact.exists():
+                    bundled_content = bundled_artifact.read_text(encoding="utf-8")
+                    local_artifact = claude_dir / artifact_rel
+                    local_artifact.parent.mkdir(parents=True, exist_ok=True)
+                    local_artifact.write_text(bundled_content, encoding="utf-8")
+
+            result = runner.invoke(check)
+
+            assert result.exit_code == 0
+            assert "All artifacts are in sync" in result.output
+            assert "Missing artifacts" not in result.output
+            assert "Obsolete artifacts" not in result.output

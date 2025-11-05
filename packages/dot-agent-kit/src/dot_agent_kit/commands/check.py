@@ -6,6 +6,7 @@ from pathlib import Path
 import click
 
 from dot_agent_kit.io import load_project_config
+from dot_agent_kit.io.manifest import load_kit_manifest
 from dot_agent_kit.models.config import InstalledKit
 from dot_agent_kit.models.types import SOURCE_TYPE_BUNDLED, SOURCE_TYPE_PACKAGE
 from dot_agent_kit.operations import validate_project
@@ -93,6 +94,37 @@ def validate_configuration(
         results.append(result)
 
     return results
+
+
+def compare_artifact_lists(
+    manifest_artifacts: dict[str, list[str]],
+    installed_artifacts: list[str],
+) -> tuple[list[str], list[str]]:
+    """Compare manifest artifacts against installed artifacts.
+
+    Args:
+        manifest_artifacts: Dict of artifact type to list of relative paths from manifest
+        installed_artifacts: List of installed artifact paths (relative to project root)
+
+    Returns:
+        Tuple of (missing, obsolete) artifact lists
+    """
+    # Build set of expected paths from manifest
+    manifest_paths = set()
+    for _artifact_type, paths in manifest_artifacts.items():
+        for path in paths:
+            # Transform manifest path to installed path
+            # Manifest: "commands/gt/land-branch.md"
+            # Installed: ".claude/commands/gt/land-branch.md"
+            full_path = f".claude/{path}"
+            manifest_paths.add(full_path)
+
+    installed_paths = set(installed_artifacts)
+
+    missing = sorted(manifest_paths - installed_paths)
+    obsolete = sorted(installed_paths - manifest_paths)
+
+    return missing, obsolete
 
 
 def check_artifact_sync(
@@ -240,7 +272,7 @@ def check(verbose: bool) -> None:
         click.echo("No kits installed - skipping sync check")
     else:
         bundled_source = BundledKitSource()
-        all_results: list[tuple[str, list]] = []
+        all_results: list[tuple[str, list, list[str], list[str]]] = []
 
         for kit_id_iter, installed in config.kits.items():
             # Only check kits from bundled source
@@ -259,7 +291,19 @@ def check(verbose: bool) -> None:
                 result = check_artifact_sync(project_dir, artifact_path, bundled_path)
                 kit_results.append(result)
 
-            all_results.append((kit_id_iter, kit_results))
+            # Load manifest and check for missing/obsolete artifacts
+            missing_artifacts: list[str] = []
+            obsolete_artifacts: list[str] = []
+
+            manifest_path = bundled_path / "kit.yaml"
+            if manifest_path.exists():
+                manifest = load_kit_manifest(manifest_path)
+                missing_artifacts, obsolete_artifacts = compare_artifact_lists(
+                    manifest.artifacts,
+                    installed.artifacts,
+                )
+
+            all_results.append((kit_id_iter, kit_results, missing_artifacts, obsolete_artifacts))
 
         if len(all_results) == 0:
             click.echo("No bundled kits found to check")
@@ -269,16 +313,21 @@ def check(verbose: bool) -> None:
             total_artifacts = 0
             in_sync_count = 0
             out_of_sync_count = 0
+            missing_count = 0
+            obsolete_count = 0
 
-            for kit_id_iter, results in all_results:
+            for kit_id_iter, results, missing, obsolete in all_results:
                 total_artifacts += len(results)
                 kit_in_sync = sum(1 for r in results if r.is_in_sync)
                 kit_out_of_sync = len(results) - kit_in_sync
 
                 in_sync_count += kit_in_sync
                 out_of_sync_count += kit_out_of_sync
+                missing_count += len(missing)
+                obsolete_count += len(obsolete)
 
-                if verbose or kit_out_of_sync > 0:
+                has_issues = kit_out_of_sync > 0 or len(missing) > 0 or len(obsolete) > 0
+                if verbose or has_issues:
                     click.echo(f"\nKit: {kit_id_iter}")
                     for result in results:
                         status = "✓" if result.is_in_sync else "✗"
@@ -288,6 +337,20 @@ def check(verbose: bool) -> None:
                         if not result.is_in_sync and result.reason is not None:
                             click.echo(f"      {result.reason}", err=True)
 
+                    # Show missing artifacts
+                    if len(missing) > 0:
+                        click.echo()
+                        click.echo("  Missing artifacts (in manifest but not installed):")
+                        for missing_path in missing:
+                            click.echo(f"    - {missing_path}", err=True)
+
+                    # Show obsolete artifacts
+                    if len(obsolete) > 0:
+                        click.echo()
+                        click.echo("  Obsolete artifacts (installed but not in manifest):")
+                        for obsolete_path in obsolete:
+                            click.echo(f"    - {obsolete_path}", err=True)
+
             # Summary
             click.echo()
             kit_count = len(all_results)
@@ -296,9 +359,16 @@ def check(verbose: bool) -> None:
 
             if out_of_sync_count > 0:
                 click.echo(f"  ✗ Out of sync: {out_of_sync_count}", err=True)
+
+            if missing_count > 0:
+                click.echo(f"  ⚠ Missing: {missing_count}", err=True)
+
+            if obsolete_count > 0:
+                click.echo(f"  ⚠ Obsolete: {obsolete_count}", err=True)
+
+            if out_of_sync_count > 0 or missing_count > 0 or obsolete_count > 0:
                 click.echo()
-                sync_msg = "Run 'dot-agent kit sync --force' to update local artifacts"
-                click.echo(sync_msg, err=True)
+                click.echo("Run 'dot-agent kit sync --force' to update artifacts", err=True)
                 sync_passed = False
             else:
                 click.echo()

@@ -110,6 +110,40 @@ The namespace directory (`my-kit/`) is **organizational only** - it doesn't beco
 
 Exception: Python scripts within artifacts may use snake_case (they're code, not artifacts).
 
+### Supporting Documentation
+
+**Supporting documentation** for kits (examples, tutorials, references, etc.) should be stored in:
+
+```
+.claude/docs/{kit_id}/
+```
+
+This organizational pattern:
+
+- Keeps non-executable documentation separate from the actual artifacts
+- Prevents documentation files from appearing as commands
+- Provides a clear location for kit-specific documentation
+- Maintains organization when multiple kits are installed
+
+**Example structure:**
+
+```
+.claude/
+├── commands/
+│   └── my-kit/
+│       └── my-command.md      # Executable command
+├── docs/
+│   └── my-kit/
+│       ├── EXAMPLES.md         # Usage examples
+│       ├── TUTORIAL.md         # Tutorial guide
+│       └── REFERENCE.md        # API reference
+└── skills/
+    └── my-kit/
+        └── SKILL.md            # Executable skill
+```
+
+**Important**: Only place actual executable artifacts (commands, skills, agents) in their respective directories. All supporting documentation, examples, tutorials, and non-executable markdown files should go in `.claude/docs/{kit_id}/`.
+
 ### Namespace Standards for Kit Types
 
 **Bundled kits** (distributed with packages): Should follow hyphenated naming convention (e.g., `skills/kit-name-tool/`) to avoid naming conflicts and maintain clear organization.

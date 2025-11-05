@@ -118,15 +118,14 @@ def check_artifact_sync(
     bundled_base: Path,
 ) -> SyncCheckResult:
     """Check if an artifact is in sync with bundled source."""
+    # Normalize artifact path: remove .claude/ prefix if present
+    normalized_path = artifact_rel_path.replace(".claude/", "")
+
     # Artifact path in .claude/
-    local_path = project_dir / artifact_rel_path
+    local_path = project_dir / ".claude" / normalized_path
 
-    # Corresponding bundled path (remove .claude/ prefix if present)
-    artifact_rel = Path(artifact_rel_path)
-    if artifact_rel.parts[0] == ".claude":
-        artifact_rel = Path(*artifact_rel.parts[1:])
-
-    bundled_path = bundled_base / artifact_rel
+    # Corresponding bundled path
+    bundled_path = bundled_base / normalized_path
 
     # Check if both exist
     if not local_path.exists():
@@ -266,7 +265,8 @@ def check(verbose: bool) -> None:
                 continue
 
             # Get bundled kit base path
-            bundled_path = bundled_source._get_bundled_kit_path(installed.source)
+            _, identifier = parse_source(installed.source)
+            bundled_path = bundled_source._get_bundled_kit_path(identifier)
             if bundled_path is None:
                 click.echo(f"Warning: Could not find bundled kit: {installed.source}", err=True)
                 continue
@@ -320,7 +320,7 @@ def check(verbose: bool) -> None:
                 sync_passed = False
             else:
                 click.echo()
-                click.echo("All bundled kit artifacts are in sync!")
+                click.echo("All artifacts are in sync!")
                 sync_passed = True
 
     # Overall result

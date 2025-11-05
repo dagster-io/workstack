@@ -208,17 +208,24 @@ def check_artifact_sync(
 def _extract_hooks_for_kit(
     settings: ClaudeSettings,
     kit_id: str,
+    expected_hooks: list[HookDefinition],
 ) -> list[InstalledHook]:
-    """Extract hooks for specific kit from settings.json.
+    """Extract hooks for specific kit from settings.json with strict validation.
 
     Uses extract_kit_id_from_command() to identify kit ownership.
+    Validates extracted hook IDs against expected format and manifest.
 
     Args:
         settings: Loaded settings object
         kit_id: Kit ID to filter for
+        expected_hooks: List of hook definitions from manifest (for validation)
 
     Returns:
         List of InstalledHook objects for this kit
+
+    Raises:
+        ValueError: If hook ID format is invalid (not matching ^[a-z0-9-]+$)
+        ValueError: If extracted hook ID is not in expected_hooks list
     """
     results: list[InstalledHook] = []
 
@@ -245,6 +252,24 @@ def _extract_hooks_for_kit(
                         )
 
                     hook_id = hook_id_match.group(1)
+
+                    # Validate hook ID format (must be lowercase kebab-case)
+                    format_pattern = r"^[a-z0-9-]+$"
+                    if not re.match(format_pattern, hook_id):
+                        raise ValueError(
+                            f"Invalid hook ID format: '{hook_id}' for kit '{kit_id}'. "
+                            f"Hook IDs must match pattern {format_pattern} "
+                            f"(lowercase letters, numbers, and hyphens only)"
+                        )
+
+                    # Validate hook ID exists in manifest
+                    expected_hook_ids = {hook.id for hook in expected_hooks}
+                    if hook_id not in expected_hook_ids:
+                        expected_ids_str = ", ".join(f"'{id}'" for id in sorted(expected_hook_ids))
+                        raise ValueError(
+                            f"Hook ID '{hook_id}' for kit '{kit_id}' not found in manifest. "
+                            f"Expected hook IDs: [{expected_ids_str}]"
+                        )
 
                     results.append(
                         InstalledHook(
@@ -377,7 +402,25 @@ def validate_hook_configuration(
             continue
 
         # Extract installed hooks for this kit
-        installed_hooks = _extract_hooks_for_kit(settings, kit_id)
+        # If extraction fails (invalid format, hook not in manifest), treat as drift
+        try:
+            installed_hooks = _extract_hooks_for_kit(settings, kit_id, manifest.hooks)
+        except ValueError as e:
+            # Hook extraction failed - create an error drift result
+            results.append(
+                HookDriftResult(
+                    kit_id=kit_id,
+                    issues=[
+                        HookDriftIssue(
+                            severity="error",
+                            message=str(e),
+                            expected=None,
+                            actual=None,
+                        )
+                    ],
+                )
+            )
+            continue
 
         # Detect drift
         drift_result = _detect_hook_drift(kit_id, manifest.hooks, installed_hooks)

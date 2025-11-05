@@ -46,8 +46,20 @@ def test_extract_hooks_for_kit_filters_correctly() -> None:
         }
     )
 
+    # Create expected hooks for dignified-python
+    expected_hooks = [
+        HookDefinition(
+            id="my-hook",
+            lifecycle="UserPromptSubmit",
+            matcher="*",
+            invocation="python3 /path/to/script.py",
+            description="Test hook",
+            timeout=30,
+        )
+    ]
+
     # Extract hooks for dignified-python
-    hooks = _extract_hooks_for_kit(settings, "dignified-python")
+    hooks = _extract_hooks_for_kit(settings, "dignified-python", expected_hooks)
 
     assert len(hooks) == 1
     assert hooks[0].hook_id == "my-hook"
@@ -58,7 +70,10 @@ def test_extract_hooks_for_kit_empty_settings() -> None:
     """Test _extract_hooks_for_kit with empty settings."""
     settings = ClaudeSettings()
 
-    hooks = _extract_hooks_for_kit(settings, "any-kit")
+    # Empty expected hooks is fine when no hooks are installed
+    expected_hooks: list[HookDefinition] = []
+
+    hooks = _extract_hooks_for_kit(settings, "any-kit", expected_hooks)
 
     assert len(hooks) == 0
 
@@ -81,9 +96,215 @@ def test_extract_hooks_for_kit_no_matching_kit() -> None:
         }
     )
 
-    hooks = _extract_hooks_for_kit(settings, "dignified-python")
+    # Empty expected hooks is fine when no hooks match the kit
+    expected_hooks: list[HookDefinition] = []
+
+    hooks = _extract_hooks_for_kit(settings, "dignified-python", expected_hooks)
 
     assert len(hooks) == 0
+
+
+def test_extract_hooks_invalid_format_uppercase() -> None:
+    """Test that _extract_hooks_for_kit rejects hook IDs with uppercase letters."""
+    settings = ClaudeSettings(
+        hooks={
+            "UserPromptSubmit": [
+                MatcherGroup(
+                    matcher="*",
+                    hooks=[
+                        HookEntry(
+                            command=(
+                                "DOT_AGENT_KIT_ID=test-kit "
+                                "DOT_AGENT_HOOK_ID=Invalid-Hook python3 /path/to/script.py"
+                            ),
+                            timeout=30,
+                        ),
+                    ],
+                )
+            ]
+        }
+    )
+
+    expected_hooks = [
+        HookDefinition(
+            id="valid-hook",
+            lifecycle="UserPromptSubmit",
+            matcher="*",
+            invocation="python3 /path/to/script.py",
+            description="Test hook",
+            timeout=30,
+        )
+    ]
+
+    try:
+        _extract_hooks_for_kit(settings, "test-kit", expected_hooks)
+        raise AssertionError("Expected ValueError for uppercase in hook ID")
+    except ValueError as e:
+        assert "Invalid hook ID format" in str(e)
+        assert "Invalid-Hook" in str(e)
+        assert "^[a-z0-9-]+$" in str(e)
+
+
+def test_extract_hooks_invalid_format_spaces() -> None:
+    """Test that _extract_hooks_for_kit rejects hook IDs with spaces."""
+    settings = ClaudeSettings(
+        hooks={
+            "UserPromptSubmit": [
+                MatcherGroup(
+                    matcher="*",
+                    hooks=[
+                        HookEntry(
+                            command=(
+                                "DOT_AGENT_KIT_ID=test-kit "
+                                "DOT_AGENT_HOOK_ID=my hook python3 /path/to/script.py"
+                            ),
+                            timeout=30,
+                        ),
+                    ],
+                )
+            ]
+        }
+    )
+
+    expected_hooks = [
+        HookDefinition(
+            id="valid-hook",
+            lifecycle="UserPromptSubmit",
+            matcher="*",
+            invocation="python3 /path/to/script.py",
+            description="Test hook",
+            timeout=30,
+        )
+    ]
+
+    try:
+        _extract_hooks_for_kit(settings, "test-kit", expected_hooks)
+        raise AssertionError("Expected ValueError for spaces in hook ID")
+    except ValueError as e:
+        # The regex \S+ stops at the space, extracting just "my"
+        # This is then validated against the manifest (not found error)
+        assert "not found in manifest" in str(e) or "Invalid hook ID format" in str(e)
+
+
+def test_extract_hooks_invalid_format_special_chars() -> None:
+    """Test that _extract_hooks_for_kit rejects hook IDs with special characters."""
+    settings = ClaudeSettings(
+        hooks={
+            "UserPromptSubmit": [
+                MatcherGroup(
+                    matcher="*",
+                    hooks=[
+                        HookEntry(
+                            command=(
+                                "DOT_AGENT_KIT_ID=test-kit "
+                                "DOT_AGENT_HOOK_ID=my@hook! python3 /path/to/script.py"
+                            ),
+                            timeout=30,
+                        ),
+                    ],
+                )
+            ]
+        }
+    )
+
+    expected_hooks = [
+        HookDefinition(
+            id="valid-hook",
+            lifecycle="UserPromptSubmit",
+            matcher="*",
+            invocation="python3 /path/to/script.py",
+            description="Test hook",
+            timeout=30,
+        )
+    ]
+
+    try:
+        _extract_hooks_for_kit(settings, "test-kit", expected_hooks)
+        raise AssertionError("Expected ValueError for special characters in hook ID")
+    except ValueError as e:
+        assert "Invalid hook ID format" in str(e)
+        assert "my@hook!" in str(e)
+
+
+def test_extract_hooks_id_not_in_manifest() -> None:
+    """Test that _extract_hooks_for_kit rejects hook IDs not in manifest."""
+    settings = ClaudeSettings(
+        hooks={
+            "UserPromptSubmit": [
+                MatcherGroup(
+                    matcher="*",
+                    hooks=[
+                        HookEntry(
+                            command=(
+                                "DOT_AGENT_KIT_ID=test-kit "
+                                "DOT_AGENT_HOOK_ID=unknown-hook python3 /path/to/script.py"
+                            ),
+                            timeout=30,
+                        ),
+                    ],
+                )
+            ]
+        }
+    )
+
+    expected_hooks = [
+        HookDefinition(
+            id="valid-hook-1",
+            lifecycle="UserPromptSubmit",
+            matcher="*",
+            invocation="python3 /path/to/script.py",
+            description="Test hook 1",
+            timeout=30,
+        ),
+        HookDefinition(
+            id="valid-hook-2",
+            lifecycle="UserPromptSubmit",
+            matcher="*",
+            invocation="python3 /path/to/script.py",
+            description="Test hook 2",
+            timeout=30,
+        ),
+    ]
+
+    try:
+        _extract_hooks_for_kit(settings, "test-kit", expected_hooks)
+        raise AssertionError("Expected ValueError for hook ID not in manifest")
+    except ValueError as e:
+        assert "not found in manifest" in str(e)
+        assert "unknown-hook" in str(e)
+        assert "'valid-hook-1'" in str(e)
+        assert "'valid-hook-2'" in str(e)
+
+
+def test_extract_hooks_empty_manifest_with_hooks() -> None:
+    """Test extracting hooks when expected_hooks is empty list."""
+    settings = ClaudeSettings(
+        hooks={
+            "UserPromptSubmit": [
+                MatcherGroup(
+                    matcher="*",
+                    hooks=[
+                        HookEntry(
+                            command=(
+                                "DOT_AGENT_KIT_ID=test-kit "
+                                "DOT_AGENT_HOOK_ID=some-hook python3 /path/to/script.py"
+                            ),
+                            timeout=30,
+                        ),
+                    ],
+                )
+            ]
+        }
+    )
+
+    expected_hooks: list[HookDefinition] = []
+
+    try:
+        _extract_hooks_for_kit(settings, "test-kit", expected_hooks)
+        raise AssertionError("Expected ValueError when hooks found but none expected")
+    except ValueError as e:
+        assert "not found in manifest" in str(e)
+        assert "some-hook" in str(e)
 
 
 def test_detect_hook_drift_no_drift() -> None:
@@ -519,7 +740,8 @@ hooks:
         assert result.exit_code == 1
         assert "Hook Configuration Validation" in result.output
         assert "Kit: test-kit" in result.output
-        assert "Missing hook" in result.output or "Obsolete hook" in result.output
+        # Extraction fails because old-hook is not in manifest (only new-hook is expected)
+        assert "not found in manifest" in result.output or "Some checks failed" in result.output
         assert "Some checks failed" in result.output
 
 

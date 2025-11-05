@@ -1,7 +1,7 @@
 """Tests for hook ID extraction from settings.json commands."""
 
 from dot_agent_kit.commands.check import _extract_hooks_for_kit
-from dot_agent_kit.hooks.models import ClaudeSettings, HookEntry, MatcherGroup
+from dot_agent_kit.hooks.models import ClaudeSettings, HookDefinition, HookEntry, MatcherGroup
 
 
 def test_extract_hooks_extracts_hook_id_from_command() -> None:
@@ -33,8 +33,20 @@ def test_extract_hooks_extracts_hook_id_from_command() -> None:
         },
     )
 
+    # Define expected hooks for validation
+    expected_hooks = [
+        HookDefinition(
+            id="my-hook",
+            lifecycle="UserPromptSubmit",
+            matcher="*",
+            invocation='python3 "$CLAUDE_PROJECT_DIR/.claude/hooks/my-kit/script.py"',
+            description="Test hook",
+            timeout=30,
+        )
+    ]
+
     # Execute: Extract hooks for "my-kit"
-    extracted_hooks = _extract_hooks_for_kit(settings, "my-kit")
+    extracted_hooks = _extract_hooks_for_kit(settings, "my-kit", expected_hooks)
 
     # Verify: Should extract "my-hook" as hook_id, NOT "my-kit"
     assert len(extracted_hooks) == 1, "Should extract one hook"
@@ -75,7 +87,7 @@ def test_extract_hooks_fails_without_hook_id() -> None:
 
     # Execute & Verify: Should raise ValueError for old format
     try:
-        _extract_hooks_for_kit(settings, "my-kit")
+        _extract_hooks_for_kit(settings, "my-kit", [])
         raise AssertionError("Should have raised ValueError for missing DOT_AGENT_HOOK_ID")
     except ValueError as e:
         assert "DOT_AGENT_HOOK_ID" in str(e), "Error should mention missing DOT_AGENT_HOOK_ID"
@@ -113,8 +125,28 @@ def test_extract_hooks_handles_multiple_hooks_for_same_kit() -> None:
         },
     )
 
+    # Define expected hooks for validation
+    expected_hooks = [
+        HookDefinition(
+            id="hook-1",
+            lifecycle="UserPromptSubmit",
+            matcher="*",
+            invocation='python3 "$CLAUDE_PROJECT_DIR/.claude/hooks/my-kit/h1.py"',
+            description="Hook 1",
+            timeout=30,
+        ),
+        HookDefinition(
+            id="hook-2",
+            lifecycle="UserPromptSubmit",
+            matcher="*",
+            invocation='python3 "$CLAUDE_PROJECT_DIR/.claude/hooks/my-kit/h2.py"',
+            description="Hook 2",
+            timeout=60,
+        ),
+    ]
+
     # Execute: Extract hooks for "my-kit"
-    extracted_hooks = _extract_hooks_for_kit(settings, "my-kit")
+    extracted_hooks = _extract_hooks_for_kit(settings, "my-kit", expected_hooks)
 
     # Verify: Should extract both hooks with correct IDs
     assert len(extracted_hooks) == 2, "Should extract two hooks"
@@ -155,8 +187,20 @@ def test_extract_hooks_ignores_other_kits() -> None:
         },
     )
 
+    # Define expected hooks for validation
+    expected_hooks = [
+        HookDefinition(
+            id="hook-a",
+            lifecycle="UserPromptSubmit",
+            matcher="*",
+            invocation='python3 "$CLAUDE_PROJECT_DIR/.claude/hooks/kit-a/script.py"',
+            description="Hook A",
+            timeout=30,
+        ),
+    ]
+
     # Execute: Extract hooks for "kit-a" only
-    extracted_hooks = _extract_hooks_for_kit(settings, "kit-a")
+    extracted_hooks = _extract_hooks_for_kit(settings, "kit-a", expected_hooks)
 
     # Verify: Should only extract hook-a
     assert len(extracted_hooks) == 1, "Should extract only one hook for kit-a"

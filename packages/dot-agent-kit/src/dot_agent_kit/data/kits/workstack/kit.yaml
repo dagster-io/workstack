@@ -1,0 +1,8 @@
+name: workstack
+version: 0.1.0
+description: Workstack implementation workflow commands for creating worktrees from plans and executing implementation
+license: MIT
+artifacts:
+  command:
+  - commands/workstack/create-from-plan.md
+  - commands/workstack/implement-plan.md

@@ -368,6 +368,11 @@ def _create_json_response(
     is_flag=True,
     help="Output JSON with worktree information instead of human-readable messages.",
 )
+@click.option(
+    "--stay",
+    is_flag=True,
+    help="Stay in current directory instead of switching to new worktree.",
+)
 @click.pass_obj
 def create(
     ctx: WorkstackContext,
@@ -381,6 +386,7 @@ def create(
     from_branch: str | None,
     script: bool,
     output_json: bool,
+    stay: bool,
 ) -> None:
     """Create a worktree and write a .env file.
 
@@ -604,7 +610,7 @@ def create(
             shell=cfg.post_create_shell,
         )
 
-    if script:
+    if script and not stay:
         script_content = render_cd_script(
             wt_path,
             comment="cd to new worktree",

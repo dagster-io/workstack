@@ -13,7 +13,7 @@ import click
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-def cli_error_boundary(func: F) -> F:
+def cli_error_boundary[T: Callable[..., Any]](func: T) -> T:
     """Decorator that catches well-known exceptions and displays clean error messages.
 
     This decorator should be applied to CLI command entry points to provide

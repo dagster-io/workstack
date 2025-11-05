@@ -144,6 +144,7 @@ To align with the standard hyphenated naming convention:
 To add a new bundled kit to the dot-agent-kit registry:
 
 1. **Create the kit structure** in `src/dot_agent_kit/data/kits/{kit-name}/`:
+
    ```
    kits/
    └── my-kit/
@@ -160,6 +161,7 @@ To add a new bundled kit to the dot-agent-kit registry:
    ```
 
 2. **Define kit.yaml** with metadata and artifact paths:
+
    ```yaml
    name: my-kit
    version: 0.1.0
@@ -175,6 +177,7 @@ To add a new bundled kit to the dot-agent-kit registry:
    ```
 
 3. **Register the kit** in `src/dot_agent_kit/data/registry.yaml`:
+
    ```yaml
    - kit_id: my-kit
      name: My Kit
@@ -183,11 +186,13 @@ To add a new bundled kit to the dot-agent-kit registry:
    ```
 
 4. **Test the kit** is discoverable:
+
    ```bash
    dot-agent kit search
    ```
 
 5. **Install and verify the kit**:
+
    ```bash
    # Install using the bundled: prefix
    dot-agent kit install bundled:my-kit
@@ -197,6 +202,7 @@ To add a new bundled kit to the dot-agent-kit registry:
    ```
 
 **Note**: The `source:` field in registry.yaml determines the prefix users must use:
+
 - `source: bundled:my-kit` → install with `dot-agent kit install bundled:my-kit`
 - `source: package:my-kit` → install with `dot-agent kit install package:my-kit`
 

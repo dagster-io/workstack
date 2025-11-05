@@ -79,8 +79,7 @@ def install_kit(
             if target.exists():
                 if not overwrite:
                     raise FileExistsError(
-                        f"Artifact already exists: {target}\n"
-                        f"Use --force to replace existing files"
+                        f"Artifact already exists: {target}\nUse --force to replace existing files"
                     )
                 click.echo(f"  Overwriting: {target.name}", err=True)
 

@@ -8,6 +8,7 @@ import tomli_w
 
 from dot_agent_kit.hooks.models import HookDefinition
 from dot_agent_kit.models import InstalledKit, ProjectConfig
+from dot_agent_kit.models.types import SOURCE_TYPE_BUNDLED
 
 
 def load_project_config(project_dir: Path) -> ProjectConfig | None:
@@ -33,7 +34,7 @@ def load_project_config(project_dir: Path) -> ProjectConfig | None:
 
             kits[kit_name] = InstalledKit(
                 kit_id=kit_data.get("kit_id", kit_name),  # Use kit_name as fallback
-                source_type=kit_data.get("source_type", "bundled"),
+                source_type=kit_data.get("source_type", SOURCE_TYPE_BUNDLED),
                 version=kit_data["version"],
                 installed_at=kit_data["installed_at"],
                 artifacts=kit_data["artifacts"],

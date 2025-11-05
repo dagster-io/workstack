@@ -2,12 +2,14 @@
 
 from dataclasses import dataclass
 
+from dot_agent_kit.models.types import SourceType
+
 
 @dataclass(frozen=True)
 class RegistryEntry:
     """Kit entry in the registry."""
 
     kit_id: str  # Globally unique kit identifier
-    source_type: str  # "bundled" or "package"
+    source_type: SourceType
     description: str
     version: str

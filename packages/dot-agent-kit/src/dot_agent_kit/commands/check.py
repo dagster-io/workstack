@@ -7,6 +7,7 @@ import click
 
 from dot_agent_kit.io import load_project_config
 from dot_agent_kit.models.config import InstalledKit
+from dot_agent_kit.models.types import SOURCE_TYPE_BUNDLED, SOURCE_TYPE_PACKAGE
 from dot_agent_kit.operations import validate_project
 from dot_agent_kit.sources import BundledKitSource
 
@@ -45,8 +46,8 @@ def validate_kit_fields(kit: InstalledKit) -> list[str]:
         errors.append("kit_id is empty")
 
     # Validate source_type is valid
-    if kit.source_type not in ["bundled", "package"]:
-        errors.append(f"Invalid source_type: {kit.source_type}. Must be 'bundled' or 'package'")
+    if kit.source_type not in [SOURCE_TYPE_BUNDLED, SOURCE_TYPE_PACKAGE]:
+        errors.append(f"Invalid source_type: {kit.source_type}. Must be '{SOURCE_TYPE_BUNDLED}' or '{SOURCE_TYPE_PACKAGE}'")
 
     # Validate version is non-empty
     if not kit.version:
@@ -239,7 +240,7 @@ def check(verbose: bool) -> None:
 
         for kit_id_iter, installed in config.kits.items():
             # Only check kits from bundled source
-            if installed.source_type != "bundled":
+            if installed.source_type != SOURCE_TYPE_BUNDLED:
                 continue
 
             # Get bundled kit base path

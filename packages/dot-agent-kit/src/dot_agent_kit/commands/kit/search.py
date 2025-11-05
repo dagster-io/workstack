@@ -3,6 +3,7 @@
 import click
 
 from dot_agent_kit.io import load_kit_manifest, load_registry
+from dot_agent_kit.models.types import SOURCE_TYPE_BUNDLED
 from dot_agent_kit.sources.bundled import BundledKitSource
 
 
@@ -61,7 +62,7 @@ def search(query: str | None) -> None:
         version_str = ""
         artifacts_str = ""
 
-        if entry.source_type == "bundled" and bundled_source.can_resolve(entry.kit_id):
+        if entry.source_type == SOURCE_TYPE_BUNDLED and bundled_source.can_resolve(entry.kit_id):
             resolved = bundled_source.resolve(entry.kit_id)
             manifest = load_kit_manifest(resolved.manifest_path)
 

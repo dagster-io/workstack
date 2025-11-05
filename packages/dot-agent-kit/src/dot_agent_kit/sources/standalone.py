@@ -1,6 +1,7 @@
 """Standalone package source resolver."""
 
 from dot_agent_kit.io import load_kit_manifest
+from dot_agent_kit.models.types import SOURCE_TYPE_PACKAGE
 from dot_agent_kit.sources.exceptions import KitManifestError, KitNotFoundError, SourceAccessError
 from dot_agent_kit.sources.resolver import KitSource, ResolvedKit
 from dot_agent_kit.utils import find_kit_manifest, get_package_path, is_package_installed
@@ -35,7 +36,7 @@ class StandalonePackageSource(KitSource):
         return ResolvedKit(
             kit_id=manifest.name,
             version=manifest.version,
-            source_type="package",
+            source_type=SOURCE_TYPE_PACKAGE,
             manifest_path=manifest_path,
             artifacts_base=artifacts_base,
         )

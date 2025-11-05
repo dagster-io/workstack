@@ -5,11 +5,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 
-from dot_agent_kit.sources.exceptions import (
-    InvalidKitIdError,
-    ResolverNotConfiguredError,
-    SourceFormatError,
-)
+from dot_agent_kit.models.types import SourceType
+from dot_agent_kit.sources.exceptions import InvalidKitIdError, ResolverNotConfiguredError
 
 # Kit ID must only contain lowercase letters, numbers, and hyphens
 KIT_ID_PATTERN = re.compile(r"^[a-z0-9-]+$")
@@ -35,7 +32,7 @@ class ResolvedKit:
     """A kit resolved from a source."""
 
     kit_id: str  # Globally unique kit identifier
-    source_type: str  # "bundled" or "package"
+    source_type: SourceType
     version: str
     manifest_path: Path
     artifacts_base: Path

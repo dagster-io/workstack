@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field, replace
 
 from dot_agent_kit.hooks.models import HookDefinition
+from dot_agent_kit.models.types import SourceType
 
 
 @dataclass(frozen=True)
@@ -10,7 +11,7 @@ class InstalledKit:
     """Represents an installed kit in dot-agent.toml."""
 
     kit_id: str  # Globally unique kit identifier
-    source_type: str  # "bundled" or "package"
+    source_type: SourceType
     version: str
     installed_at: str
     artifacts: list[str]

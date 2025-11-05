@@ -2,7 +2,12 @@
 
 from pathlib import Path
 
-from dot_agent_kit.models.artifact import ArtifactSource, ArtifactType, InstalledArtifact
+from dot_agent_kit.models.artifact import (
+    ArtifactLevel,
+    ArtifactSource,
+    ArtifactType,
+    InstalledArtifact,
+)
 from dot_agent_kit.models.config import InstalledKit, ProjectConfig
 
 
@@ -244,6 +249,7 @@ def _create_artifact_from_file(
         artifact_name=display_name,
         file_path=relative_path,
         source=source,
+        level=ArtifactLevel.PROJECT,
         kit_id=kit_id,
         kit_version=kit_version,
     )

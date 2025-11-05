@@ -51,3 +51,22 @@ class FakeArtifactRepository(ArtifactRepository):
             Copy of the list of configured artifacts
         """
         return self._artifacts.copy()
+
+    def discover_multi_level(
+        self, user_path: Path, project_path: Path, project_config: ProjectConfig
+    ) -> list[InstalledArtifact]:
+        """Return pre-configured artifacts from multiple levels.
+
+        Note: This ignores the path and config parameters
+        and simply returns the artifacts that have been set up via
+        add_artifact() or set_artifacts().
+
+        Args:
+            user_path: Ignored - not used in fake implementation
+            project_path: Ignored - not used in fake implementation
+            project_config: Ignored - not used in fake implementation
+
+        Returns:
+            Copy of the list of configured artifacts
+        """
+        return self._artifacts.copy()

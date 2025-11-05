@@ -24,3 +24,19 @@ class ArtifactRepository(ABC):
             List of all installed artifacts with metadata
         """
         pass
+
+    @abstractmethod
+    def discover_multi_level(
+        self, user_path: Path, project_path: Path, project_config: ProjectConfig
+    ) -> list[InstalledArtifact]:
+        """Discover artifacts from both user and project levels.
+
+        Args:
+            user_path: User-level .claude directory (e.g., ~/.claude)
+            project_path: Project-level .claude directory (e.g., ./.claude)
+            project_config: Project configuration from dot-agent.toml
+
+        Returns:
+            List of artifacts from both levels with level annotation
+        """
+        pass

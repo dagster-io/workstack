@@ -1,8 +1,47 @@
 """Kit manifest models."""
 
+import re
 from dataclasses import dataclass, field
 
 from dot_agent_kit.hooks.models import HookDefinition
+
+
+@dataclass(frozen=True)
+class CommandDefinition:
+    """Command definition in kit manifest."""
+
+    name: str
+    path: str
+    description: str
+
+    def validate(self) -> list[str]:
+        """Validate command definition fields.
+
+        Returns:
+            List of error messages (empty if valid)
+        """
+        errors: list[str] = []
+
+        # Validate name pattern: lowercase letters, numbers, hyphens only
+        if not re.match(r"^[a-z][a-z0-9-]*$", self.name):
+            errors.append(
+                f"Name '{self.name}' must start with lowercase letter "
+                "and contain only lowercase letters, numbers, and hyphens"
+            )
+
+        # Validate path ends with .py
+        if not self.path.endswith(".py"):
+            errors.append(f"Path '{self.path}' must end with .py")
+
+        # Validate no directory traversal
+        if ".." in self.path:
+            errors.append(f"Path '{self.path}' cannot contain '..' (directory traversal)")
+
+        # Validate description is non-empty
+        if not self.description or not self.description.strip():
+            errors.append("Description cannot be empty")
+
+        return errors
 
 
 @dataclass(frozen=True)
@@ -16,6 +55,7 @@ class KitManifest:
     license: str | None = None
     homepage: str | None = None
     hooks: list[HookDefinition] = field(default_factory=list)
+    commands: list[CommandDefinition] = field(default_factory=list)
 
     def validate_namespace_pattern(self) -> list[str]:
         """Check if artifacts follow recommended hyphenated naming convention.

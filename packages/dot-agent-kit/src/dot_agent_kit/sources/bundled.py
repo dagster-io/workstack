@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from dot_agent_kit.io import load_kit_manifest
+from dot_agent_kit.sources.exceptions import KitManifestError, KitNotFoundError, SourceFormatError
 from dot_agent_kit.sources.resolver import KitSource, ResolvedKit, parse_source
 
 
@@ -29,15 +30,15 @@ class BundledKitSource(KitSource):
         """Resolve kit from bundled data."""
         prefix, identifier = parse_source(source)
         if prefix != "bundled":
-            raise ValueError(f"BundledKitSource requires 'bundled:' prefix, got: {source}")
+            raise SourceFormatError(source, "BundledKitSource requires 'bundled:' prefix")
 
         bundled_path = self._get_bundled_kit_path(identifier)
         if bundled_path is None:
-            raise ValueError(f"No bundled kit found: {identifier}")
+            raise KitNotFoundError(identifier, ["bundled"])
 
         manifest_path = bundled_path / "kit.yaml"
         if not manifest_path.exists():
-            raise ValueError(f"No kit.yaml found for bundled kit: {identifier}")
+            raise KitManifestError(manifest_path)
 
         manifest = load_kit_manifest(manifest_path)
 

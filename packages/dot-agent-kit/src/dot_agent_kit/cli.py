@@ -14,9 +14,14 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
 @click.group(invoke_without_command=True, context_settings=CONTEXT_SETTINGS)
 @click.version_option(version=__version__)
+@click.option("--debug", is_flag=True, help="Show full stack traces for errors")
 @click.pass_context
-def cli(ctx: click.Context) -> None:
+def cli(ctx: click.Context, debug: bool) -> None:
     """Manage Claude Code kits."""
+    # Initialize context object and store debug flag
+    ctx.ensure_object(dict)
+    ctx.obj["debug"] = debug
+
     if ctx.invoked_subcommand is None:
         click.echo(ctx.get_help())
 

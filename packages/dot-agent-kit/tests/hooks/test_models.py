@@ -104,7 +104,7 @@ class TestHookDefinition:
             id="test-hook",
             lifecycle="UserPromptSubmit",
             matcher="**",
-            script="hooks/test.py",
+            invocation="dot-agent run test-kit test-hook",
             description="Test hook",
             timeout=30,
         )
@@ -118,7 +118,7 @@ class TestHookDefinition:
             id="test-hook",
             lifecycle="UserPromptSubmit",
             matcher="**",
-            script="hooks/test.py",
+            invocation="dot-agent run test-kit test-hook",
             description="Test hook",
         )
         assert hook.timeout == 30
@@ -129,7 +129,7 @@ class TestHookDefinition:
             id="test-hook",
             lifecycle="UserPromptSubmit",
             matcher="**",
-            script="hooks/test.py",
+            invocation="dot-agent run test-kit test-hook",
             description="Test hook",
         )
         with pytest.raises((AttributeError, ValidationError)):
@@ -142,7 +142,7 @@ class TestHookDefinition:
                 id="test-hook",
                 lifecycle="   ",
                 matcher="**",
-                script="hooks/test.py",
+                invocation="dot-agent run test-kit test-hook",
                 description="Test hook",
             )
 
@@ -151,7 +151,7 @@ class TestHookDefinition:
         hook = HookDefinition(
             id="test-hook",
             lifecycle="UserPromptSubmit",
-            script="hooks/test.py",
+            invocation="dot-agent run test-kit test-hook",
             description="Test hook",
         )
         assert hook.matcher is None
@@ -162,19 +162,19 @@ class TestHookDefinition:
             id="test-hook",
             lifecycle="UserPromptSubmit",
             matcher=None,
-            script="hooks/test.py",
+            invocation="dot-agent run test-kit test-hook",
             description="Test hook",
         )
         assert hook.matcher is None
 
-    def test_rejects_whitespace_only_script(self) -> None:
-        """Test that whitespace-only script is rejected."""
+    def test_rejects_whitespace_only_invocation(self) -> None:
+        """Test that whitespace-only invocation is rejected."""
         with pytest.raises(ValidationError):
             HookDefinition(
                 id="test-hook",
                 lifecycle="UserPromptSubmit",
                 matcher="**",
-                script="   ",
+                invocation="   ",
                 description="Test hook",
             )
 
@@ -185,7 +185,7 @@ class TestHookDefinition:
                 id="test-hook",
                 lifecycle="UserPromptSubmit",
                 matcher="**",
-                script="hooks/test.py",
+                invocation="dot-agent run test-kit test-hook",
                 description="   ",
             )
 
@@ -196,7 +196,7 @@ class TestHookDefinition:
                 id="test-hook",
                 lifecycle="UserPromptSubmit",
                 matcher="**",
-                script="hooks/test.py",
+                invocation="dot-agent run test-kit test-hook",
                 description="Test hook",
                 timeout=-1,
             )
@@ -208,7 +208,7 @@ class TestHookDefinition:
                 id="test-hook",
                 lifecycle="UserPromptSubmit",
                 matcher="**",
-                script="hooks/test.py",
+                invocation="dot-agent run test-kit test-hook",
                 description="Test hook",
                 timeout=0,
             )

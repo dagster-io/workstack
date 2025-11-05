@@ -171,9 +171,8 @@ def _load_single_kit_commands(
         Click group for kit, or None if kit failed to load
     """
     try:
-        # Skip kits without commands
+        # Skip kits without commands (silently - this is expected)
         if not manifest.commands:
-            click.echo(f"Warning: Kit '{manifest.name}' has no commands, skipping\n", err=True)
             return None
 
         # Validate kit directory exists

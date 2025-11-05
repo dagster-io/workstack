@@ -9,3 +9,10 @@ commands:
   - name: compliance-reminder-hook
     path: commands/compliance_reminder_hook.py
     description: Output dignified-python compliance reminder for UserPromptSubmit hook
+hooks:
+  - id: compliance-reminder-hook
+    lifecycle: UserPromptSubmit
+    matcher: "*"
+    invocation: dot-agent run dignified-python compliance-reminder-hook
+    description: Output dignified-python compliance reminder for UserPromptSubmit hook
+    timeout: 30

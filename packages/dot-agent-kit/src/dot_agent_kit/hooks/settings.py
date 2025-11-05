@@ -10,7 +10,7 @@ from dot_agent_kit.hooks.models import ClaudeSettings, HookEntry, MatcherGroup
 
 
 def extract_kit_id_from_command(command: str) -> str | None:
-    """Extract DOT_AGENT_KIT_ID from command string.
+    """Extract kit_id from DOT_AGENT_KIT_ID environment variable in command.
 
     Returns None if kit_id not found in command.
     """

@@ -236,7 +236,6 @@ def _perform_atomic_hook_update(
                 hooks_count = install_hooks(
                     kit_id=kit_id,
                     hooks=manifest_hooks,
-                    kit_path=kit_path,
                     project_root=project_dir,
                 )
 
@@ -266,7 +265,6 @@ def _perform_atomic_hook_update(
             hooks_count = install_hooks(
                 kit_id=kit_id,
                 hooks=manifest_hooks,
-                kit_path=kit_path,
                 project_root=project_dir,
             )
             return hooks_count

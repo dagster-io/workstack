@@ -4,7 +4,7 @@ version = "1"
 kit_id = "devrun"
 source_type = "bundled"
 version = "0.1.0"
-installed_at = "2025-11-05T07:29:48.859745"
+installed_at = "2025-11-05T20:10:00.133985"
 artifacts = [
     ".claude/agents/devrun/devrun.md",
     ".claude/docs/devrun/tools/gt.md",
@@ -19,7 +19,7 @@ artifacts = [
 kit_id = "gt"
 source_type = "bundled"
 version = "0.1.0"
-installed_at = "2025-11-05T07:29:48.861826"
+installed_at = "2025-11-05T20:10:00.136229"
 artifacts = [
     ".claude/commands/gt/land-branch.md",
     ".claude/commands/gt/submit-branch.md",
@@ -30,16 +30,24 @@ artifacts = [
 kit_id = "dignified-python"
 source_type = "bundled"
 version = "0.1.0"
-installed_at = "2025-11-05T07:29:48.864066"
+installed_at = "2025-11-05T20:10:00.139282"
 artifacts = [
     ".claude/skills/dignified-python/SKILL.md",
 ]
+
+[[kits.dignified-python.hooks]]
+id = "compliance-reminder-hook"
+lifecycle = "UserPromptSubmit"
+matcher = "*"
+invocation = "dot-agent run dignified-python compliance-reminder-hook"
+description = "Output dignified-python compliance reminder for UserPromptSubmit hook"
+timeout = 30
 
 [kits.workstack]
 kit_id = "workstack"
 source_type = "bundled"
 version = "0.1.0"
-installed_at = "2025-11-05T07:29:48.865478"
+installed_at = "2025-11-05T20:10:00.140949"
 artifacts = [
     ".claude/commands/workstack/create-from-plan.md",
     ".claude/commands/workstack/implement-plan.md",

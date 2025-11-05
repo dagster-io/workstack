@@ -5,6 +5,7 @@ from pathlib import Path
 
 import click
 
+from dot_agent_kit.hooks.installer import install_hooks
 from dot_agent_kit.io import load_kit_manifest
 from dot_agent_kit.models import InstalledKit
 from dot_agent_kit.sources import ResolvedKit
@@ -92,10 +93,19 @@ def install_kit(
             # Track installation
             installed_artifacts.append(str(target.relative_to(project_dir)))
 
+    # Install hooks if manifest has them
+    if manifest.hooks:
+        install_hooks(
+            kit_id=manifest.name,
+            hooks=manifest.hooks,
+            project_root=project_dir,
+        )
+
     return InstalledKit(
         kit_id=manifest.name,
         source_type=resolved.source_type,
         version=manifest.version,
         installed_at=datetime.now().isoformat(),
         artifacts=installed_artifacts,
+        hooks=manifest.hooks if manifest.hooks else [],
     )

@@ -77,7 +77,7 @@ def test_format_compact_artifact_line() -> None:
 
 
 def test_format_artifact_header() -> None:
-    """Test artifact header formatting."""
+    """Test artifact header formatting without absolute path."""
     artifact = InstalledArtifact(
         artifact_type="skill",
         artifact_name="my-skill",
@@ -96,6 +96,29 @@ def test_format_artifact_header() -> None:
     assert "test-kit" in result
     assert "2.0.0" in result
     assert str(artifact.file_path) in result
+
+
+def test_format_artifact_header_with_absolute_path() -> None:
+    """Test artifact header formatting with absolute path."""
+    artifact = InstalledArtifact(
+        artifact_type="skill",
+        artifact_name="my-skill",
+        file_path=Path("skills/my-skill/SKILL.md"),
+        source=ArtifactSource.MANAGED,
+        level=ArtifactLevel.USER,
+        kit_id="test-kit",
+        kit_version="2.0.0",
+    )
+
+    absolute_path = Path("/home/user/.claude/skills/my-skill/SKILL.md")
+    result = format_artifact_header(artifact, absolute_path)
+    assert "my-skill" in result
+    assert str(absolute_path) in result
+    # Should display absolute path, not the relative path as a separate item
+    # The relative path may appear as part of the absolute path, but should not
+    # be listed as the main Path value when absolute_path is provided
+    assert f"Path: {artifact.file_path}" not in result
+    assert f"Path: {absolute_path}" in result
 
 
 def test_format_hook_metadata_with_settings_json() -> None:

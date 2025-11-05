@@ -25,16 +25,16 @@ def load_project_config(project_dir: Path) -> ProjectConfig | None:
     # Parse kits
     kits: dict[str, InstalledKit] = {}
     if "kits" in data:
-        for kit_id, kit_data in data["kits"].items():
+        for kit_name, kit_data in data["kits"].items():
             # Parse hooks if present
             hooks: list[HookDefinition] = []
             if "hooks" in kit_data:
                 hooks = [HookDefinition.model_validate(h) for h in kit_data["hooks"]]
 
-            kits[kit_id] = InstalledKit(
-                kit_id=kit_data["kit_id"],
+            kits[kit_name] = InstalledKit(
+                kit_id=kit_data.get("kit_id", kit_name),  # Use kit_name as fallback
+                source_type=kit_data.get("source_type", "bundled"),
                 version=kit_data["version"],
-                source=kit_data["source"],
                 installed_at=kit_data["installed_at"],
                 artifacts=kit_data["artifacts"],
                 hooks=hooks,
@@ -79,8 +79,8 @@ def save_project_config(project_dir: Path, config: ProjectConfig) -> None:
     for kit_id, kit in config.kits.items():
         kit_data = {
             "kit_id": kit.kit_id,
+            "source_type": kit.source_type,
             "version": kit.version,
-            "source": kit.source,
             "installed_at": kit.installed_at,
             "artifacts": kit.artifacts,
         }

@@ -19,15 +19,15 @@ def test_list_installed_kits_with_data() -> None:
             kits={
                 "devrun": InstalledKit(
                     kit_id="devrun",
+                    source_type="bundled",
                     version="0.1.0",
-                    source="bundled",
                     installed_at="2024-01-01T12:00:00",
                     artifacts=["skills/devrun-make/SKILL.md"],
                 ),
                 "gh": InstalledKit(
                     kit_id="gh",
+                    source_type="package",
                     version="1.2.3",
-                    source="package",
                     installed_at="2024-01-02T15:30:00",
                     artifacts=["skills/gh/SKILL.md"],
                 ),
@@ -86,8 +86,8 @@ def test_list_single_kit() -> None:
             kits={
                 "workstack": InstalledKit(
                     kit_id="workstack",
+                    source_type="package",
                     version="2.0.0",
-                    source="local",
                     installed_at="2024-03-15T10:00:00",
                     artifacts=["skills/workstack/SKILL.md", "commands/workstack.md"],
                 ),
@@ -101,5 +101,5 @@ def test_list_single_kit() -> None:
         assert "Installed 1 kit(s):" in result.output
         assert "workstack" in result.output
         assert "2.0.0" in result.output
-        assert "local" in result.output
+        assert "package" in result.output
         assert "2024-03-15T10:00:00" in result.output

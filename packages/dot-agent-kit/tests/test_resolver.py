@@ -15,8 +15,8 @@ from dot_agent_kit.sources.exceptions import (
 def test_standalone_can_resolve() -> None:
     """Test package detection."""
     source = StandalonePackageSource()
-    assert source.can_resolve("package:click") is True
-    assert source.can_resolve("package:nonexistent_package") is False
+    assert source.can_resolve("click") is True
+    assert source.can_resolve("nonexistent_package") is False
 
 
 def test_standalone_resolve_not_installed() -> None:
@@ -24,7 +24,7 @@ def test_standalone_resolve_not_installed() -> None:
     source = StandalonePackageSource()
 
     with pytest.raises(KitNotFoundError, match="not found"):
-        source.resolve("package:nonexistent_package")
+        source.resolve("nonexistent_package")
 
 
 def test_standalone_resolve_no_manifest(tmp_path: Path) -> None:
@@ -35,7 +35,7 @@ def test_standalone_resolve_no_manifest(tmp_path: Path) -> None:
 
     # click doesn't have kit.yaml, so this should fail
     with pytest.raises(KitManifestError):
-        source.resolve("package:click")
+        source.resolve("click")
 
 
 def test_kit_resolver_resolve_from_package(tmp_path: Path) -> None:
@@ -68,7 +68,6 @@ def test_kit_resolver_resolve_from_package(tmp_path: Path) -> None:
                 kit_id="test-kit",
                 version="1.0.0",
                 source_type="package",
-                source="test-kit",
                 manifest_path=manifest_path,
                 artifacts_base=kit_dir,
             )
@@ -78,7 +77,6 @@ def test_kit_resolver_resolve_from_package(tmp_path: Path) -> None:
 
     assert resolved.kit_id == "test-kit"
     assert resolved.source_type == "package"
-    assert resolved.source == "test-kit"
     assert resolved.manifest_path == manifest_path
     assert resolved.artifacts_base == kit_dir
 
@@ -104,7 +102,6 @@ def test_kit_resolver_multiple_sources(tmp_path: Path) -> None:
                 kit_id="first-kit",
                 version="1.0.0",
                 source_type="first",
-                source=source,
                 manifest_path=tmp_path / "first.yaml",
                 artifacts_base=tmp_path,
             )
@@ -118,7 +115,6 @@ def test_kit_resolver_multiple_sources(tmp_path: Path) -> None:
                 kit_id="second-kit",
                 version="1.0.0",
                 source_type="second",
-                source=source,
                 manifest_path=tmp_path / "second.yaml",
                 artifacts_base=tmp_path,
             )
@@ -146,7 +142,6 @@ def test_resolved_kit_immutable() -> None:
         kit_id="test-kit",
         version="1.0.0",
         source_type="package",
-        source="test-source",
         manifest_path=Path("/tmp/kit.yaml"),
         artifacts_base=Path("/tmp"),
     )

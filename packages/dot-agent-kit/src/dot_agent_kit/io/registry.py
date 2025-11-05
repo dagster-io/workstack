@@ -21,9 +21,9 @@ def load_registry() -> list[RegistryEntry]:
     return [
         RegistryEntry(
             kit_id=kit["kit_id"],
-            name=kit["name"],
+            source_type=kit["source_type"],
             description=kit["description"],
-            source=kit["source"],
+            version=kit["version"],
         )
         for kit in data["kits"]
     ]

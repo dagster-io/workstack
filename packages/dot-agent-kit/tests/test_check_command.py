@@ -8,7 +8,6 @@ from dot_agent_kit.commands.check import (
     check,
     check_artifact_sync,
     validate_kit_fields,
-    validate_kit_source,
 )
 from dot_agent_kit.io import save_project_config
 from dot_agent_kit.models import InstalledKit, ProjectConfig
@@ -174,7 +173,7 @@ def test_check_command_valid_artifacts(tmp_path: Path) -> None:
                 "test-kit": InstalledKit(
                     kit_id="test-kit",
                     version="1.0.0",
-                    source="github:owner/repo",
+                    source_type="package",
                     installed_at="2024-01-01T00:00:00",
                     artifacts=["skills/test/SKILL.md"],
                 ),
@@ -206,7 +205,7 @@ def test_check_command_invalid_artifacts(tmp_path: Path) -> None:
                 "test-kit": InstalledKit(
                     kit_id="test-kit",
                     version="1.0.0",
-                    source="test",
+                    source_type="package",
                     installed_at="2024-01-01T00:00:00",
                     artifacts=["skills/missing/SKILL.md"],
                 ),
@@ -242,7 +241,7 @@ def test_check_command_no_bundled_kits(tmp_path: Path) -> None:
                 "test-kit": InstalledKit(
                     kit_id="test-kit",
                     version="1.0.0",
-                    source="github:owner/repo",
+                    source_type="package",
                     installed_at="2024-01-01T00:00:00",
                     artifacts=["skills/test/SKILL.md"],
                 ),
@@ -278,7 +277,7 @@ def test_check_command_verbose_flag(tmp_path: Path) -> None:
                 "test-kit": InstalledKit(
                     kit_id="test-kit",
                     version="1.0.0",
-                    source="github:owner/repo",
+                    source_type="package",
                     installed_at="2024-01-01T00:00:00",
                     artifacts=["skills/test/SKILL.md"],
                 ),
@@ -304,46 +303,12 @@ def test_check_command_no_config(tmp_path: Path) -> None:
         assert "All checks passed" in result.output
 
 
-def test_validate_kit_source_valid_bundled() -> None:
-    """Test validate_kit_source with valid bundled source."""
-    error = validate_kit_source("test-kit", "bundled:test-kit")
-    assert error is None
-
-
-def test_validate_kit_source_valid_package() -> None:
-    """Test validate_kit_source with valid package source."""
-    error = validate_kit_source("test-kit", "package:test-kit")
-    assert error is None
-
-
-def test_validate_kit_source_valid_github() -> None:
-    """Test validate_kit_source with valid github source."""
-    error = validate_kit_source("test-kit", "github:owner/repo")
-    assert error is None
-
-
-def test_validate_kit_source_missing_colon() -> None:
-    """Test validate_kit_source with missing colon separator."""
-    error = validate_kit_source("test-kit", "bundled-test-kit")
-    assert error is not None
-    assert "must be prefixed with type" in error
-    assert "bundled:bundled-test-kit" in error
-
-
-def test_validate_kit_source_bare_identifier() -> None:
-    """Test validate_kit_source with bare identifier (no prefix)."""
-    error = validate_kit_source("test-kit", "test-kit")
-    assert error is not None
-    assert "must be prefixed with type" in error
-    assert "bundled:test-kit" in error or "package:test-kit" in error
-
-
 def test_validate_kit_fields_all_valid() -> None:
     """Test validate_kit_fields with all valid fields."""
     kit = InstalledKit(
         kit_id="test-kit",
+        source_type="bundled",
         version="1.0.0",
-        source="bundled:test-kit",
         installed_at="2024-01-01T00:00:00",
         artifacts=[".claude/skills/test/SKILL.md"],
     )
@@ -355,8 +320,8 @@ def test_validate_kit_fields_empty_kit_id() -> None:
     """Test validate_kit_fields with empty kit_id."""
     kit = InstalledKit(
         kit_id="",
+        source_type="bundled",
         version="1.0.0",
-        source="bundled:test-kit",
         installed_at="2024-01-01T00:00:00",
         artifacts=[".claude/skills/test/SKILL.md"],
     )
@@ -369,8 +334,8 @@ def test_validate_kit_fields_empty_version() -> None:
     """Test validate_kit_fields with empty version."""
     kit = InstalledKit(
         kit_id="test-kit",
+        source_type="bundled",
         version="",
-        source="bundled:test-kit",
         installed_at="2024-01-01T00:00:00",
         artifacts=[".claude/skills/test/SKILL.md"],
     )
@@ -379,26 +344,26 @@ def test_validate_kit_fields_empty_version() -> None:
     assert "version is empty" in errors
 
 
-def test_validate_kit_fields_invalid_source() -> None:
-    """Test validate_kit_fields with invalid source format."""
+def test_validate_kit_fields_invalid_source_type() -> None:
+    """Test validate_kit_fields with invalid source_type."""
     kit = InstalledKit(
         kit_id="test-kit",
+        source_type="invalid",
         version="1.0.0",
-        source="test-kit",
         installed_at="2024-01-01T00:00:00",
         artifacts=[".claude/skills/test/SKILL.md"],
     )
     errors = validate_kit_fields(kit)
     assert len(errors) == 1
-    assert "must be prefixed with type" in errors[0]
+    assert "Invalid source_type" in errors[0]
 
 
 def test_validate_kit_fields_empty_artifacts() -> None:
     """Test validate_kit_fields with empty artifacts list."""
     kit = InstalledKit(
         kit_id="test-kit",
+        source_type="bundled",
         version="1.0.0",
-        source="bundled:test-kit",
         installed_at="2024-01-01T00:00:00",
         artifacts=[],
     )
@@ -411,8 +376,8 @@ def test_validate_kit_fields_empty_installed_at() -> None:
     """Test validate_kit_fields with empty installed_at."""
     kit = InstalledKit(
         kit_id="test-kit",
+        source_type="bundled",
         version="1.0.0",
-        source="bundled:test-kit",
         installed_at="",
         artifacts=[".claude/skills/test/SKILL.md"],
     )
@@ -425,8 +390,8 @@ def test_validate_kit_fields_multiple_errors() -> None:
     """Test validate_kit_fields with multiple validation errors."""
     kit = InstalledKit(
         kit_id="",
+        source_type="invalid",
         version="",
-        source="invalid-source",
         installed_at="",
         artifacts=[],
     )
@@ -434,7 +399,7 @@ def test_validate_kit_fields_multiple_errors() -> None:
     assert len(errors) == 5
     assert any("kit_id is empty" in e for e in errors)
     assert any("version is empty" in e for e in errors)
-    assert any("must be prefixed with type" in e for e in errors)
+    assert any("Invalid source_type" in e for e in errors)
     assert any("artifacts list is empty" in e for e in errors)
     assert any("installed_at is empty" in e for e in errors)
 
@@ -457,7 +422,7 @@ def test_check_command_bundled_kit_sync_in_sync(tmp_path: Path) -> None:
                 "devrun": InstalledKit(
                     kit_id="devrun",
                     version="0.1.0",
-                    source="bundled:devrun",
+                    source_type="bundled",
                     installed_at="2024-01-01T00:00:00",
                     artifacts=["agents/devrun/devrun.md"],
                 ),

@@ -3,38 +3,26 @@
 from pathlib import Path
 
 from dot_agent_kit.io import load_kit_manifest
-from dot_agent_kit.sources.exceptions import KitManifestError, KitNotFoundError, SourceFormatError
-from dot_agent_kit.sources.resolver import KitSource, ResolvedKit, parse_source
+from dot_agent_kit.sources.exceptions import KitManifestError, KitNotFoundError
+from dot_agent_kit.sources.resolver import KitSource, ResolvedKit
 
 
 class BundledKitSource(KitSource):
     """Resolve kits from bundled package data."""
 
     def can_resolve(self, source: str) -> bool:
-        """Check if source is a bundled kit."""
-        # Must have "bundled:" prefix
-        if ":" not in source:
-            return False
-
-        prefix, identifier = parse_source(source)
-        if prefix != "bundled":
-            return False
-
-        bundled_path = self._get_bundled_kit_path(identifier)
+        """Check if source is a bundled kit by name."""
+        bundled_path = self._get_bundled_kit_path(source)
         if bundled_path is None:
             return False
         manifest_path = bundled_path / "kit.yaml"
         return manifest_path.exists()
 
     def resolve(self, source: str) -> ResolvedKit:
-        """Resolve kit from bundled data."""
-        prefix, identifier = parse_source(source)
-        if prefix != "bundled":
-            raise SourceFormatError(source, "BundledKitSource requires 'bundled:' prefix")
-
-        bundled_path = self._get_bundled_kit_path(identifier)
+        """Resolve kit from bundled data by name."""
+        bundled_path = self._get_bundled_kit_path(source)
         if bundled_path is None:
-            raise KitNotFoundError(identifier, ["bundled"])
+            raise KitNotFoundError(source, ["bundled"])
 
         manifest_path = bundled_path / "kit.yaml"
         if not manifest_path.exists():
@@ -52,7 +40,6 @@ class BundledKitSource(KitSource):
             kit_id=manifest.name,
             version=manifest.version,
             source_type="bundled",
-            source=source,
             manifest_path=manifest_path,
             artifacts_base=artifacts_base,
         )

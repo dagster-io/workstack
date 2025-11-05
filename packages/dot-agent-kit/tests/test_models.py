@@ -14,8 +14,8 @@ def test_installed_kit_immutable() -> None:
     """Test InstalledKit is frozen (immutable)."""
     kit = InstalledKit(
         kit_id="test-kit",
+        source_type="package",
         version="1.0.0",
-        source="test-source",
         installed_at="2025-01-01T00:00:00",
         artifacts=["artifact1.md"],
     )
@@ -28,8 +28,8 @@ def test_project_config_creation() -> None:
     """Test ProjectConfig model creation."""
     kit = InstalledKit(
         kit_id="test-kit",
+        source_type="package",
         version="1.0.0",
-        source="test-source",
         installed_at="2025-01-01T00:00:00",
         artifacts=[],
     )
@@ -104,24 +104,24 @@ def test_registry_entry_required_fields() -> None:
     """Test RegistryEntry with required fields only."""
     entry = RegistryEntry(
         kit_id="test-kit",
-        name="Test Kit",
+        source_type="bundled",
         description="A test kit",
-        source="test-kit-package",
+        version="1.0.0",
     )
 
     assert entry.kit_id == "test-kit"
-    assert entry.name == "Test Kit"
+    assert entry.source_type == "bundled"
     assert entry.description == "A test kit"
-    assert entry.source == "test-kit-package"
+    assert entry.version == "1.0.0"
 
 
 def test_registry_entry_immutable() -> None:
     """Test RegistryEntry is frozen (immutable)."""
     entry = RegistryEntry(
         kit_id="test-kit",
-        name="Test Kit",
+        source_type="bundled",
         description="A test kit",
-        source="test-kit-package",
+        version="1.0.0",
     )
 
     with pytest.raises(AttributeError):

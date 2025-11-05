@@ -36,9 +36,7 @@ def search(query: str | None) -> None:
         filtered = [
             entry
             for entry in registry
-            if query_lower in entry.name.lower()
-            or query_lower in entry.description.lower()
-            or query_lower in entry.kit_id.lower()
+            if query_lower in entry.kit_id.lower() or query_lower in entry.description.lower()
         ]
     else:
         filtered = registry
@@ -63,8 +61,8 @@ def search(query: str | None) -> None:
         version_str = ""
         artifacts_str = ""
 
-        if bundled_source.can_resolve(entry.source):
-            resolved = bundled_source.resolve(entry.source)
+        if entry.source_type == "bundled" and bundled_source.can_resolve(entry.kit_id):
+            resolved = bundled_source.resolve(entry.kit_id)
             manifest = load_kit_manifest(resolved.manifest_path)
 
             version_str = f" (v{manifest.version})"
@@ -90,5 +88,5 @@ def search(query: str | None) -> None:
                 artifacts_str = f" • {', '.join(artifact_counts)}"
 
         click.echo(f"  [{entry.kit_id}]{version_str}")
-        click.echo(f"  └─ {entry.name} • {entry.description}{artifacts_str}")
+        click.echo(f"  └─ {entry.description}{artifacts_str}")
         click.echo()

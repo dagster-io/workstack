@@ -9,9 +9,9 @@ from dot_agent_kit.hooks.models import HookDefinition
 class InstalledKit:
     """Represents an installed kit in dot-agent.toml."""
 
-    kit_id: str
+    kit_id: str  # Globally unique kit identifier
+    source_type: str  # "bundled" or "package"
     version: str
-    source: str
     installed_at: str
     artifacts: list[str]
     hooks: list[HookDefinition] = field(default_factory=list)

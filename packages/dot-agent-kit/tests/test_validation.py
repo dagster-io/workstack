@@ -50,8 +50,8 @@ def test_validate_project(tmp_path: Path) -> None:
     config = create_default_config()
     kit = InstalledKit(
         kit_id="test-kit",
+        source_type="package",
         version="1.0.0",
-        source="test-source",
         installed_at="2025-01-01T00:00:00",
         artifacts=["skills/test-skill/SKILL.md"],
     )
@@ -77,8 +77,8 @@ def test_validate_project_missing_artifact(tmp_path: Path) -> None:
     config = create_default_config()
     kit = InstalledKit(
         kit_id="test-kit",
+        source_type="package",
         version="1.0.0",
-        source="test-source",
         installed_at="2025-01-01T00:00:00",
         artifacts=["skills/missing-skill/SKILL.md"],
     )

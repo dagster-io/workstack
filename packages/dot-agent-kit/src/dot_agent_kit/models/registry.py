@@ -7,7 +7,7 @@ from dataclasses import dataclass
 class RegistryEntry:
     """Kit entry in the registry."""
 
-    kit_id: str
-    name: str
+    kit_id: str  # Globally unique kit identifier
+    source_type: str  # "bundled" or "package"
     description: str
-    source: str
+    version: str

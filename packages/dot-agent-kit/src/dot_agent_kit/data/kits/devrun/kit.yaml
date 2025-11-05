@@ -6,3 +6,9 @@ license: MIT
 artifacts:
   agent:
   - agents/devrun/devrun.md
+  - agents/devrun/tools/gt.md
+  - agents/devrun/tools/make.md
+  - agents/devrun/tools/prettier.md
+  - agents/devrun/tools/pyright.md
+  - agents/devrun/tools/pytest.md
+  - agents/devrun/tools/ruff.md

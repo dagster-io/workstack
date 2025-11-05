@@ -120,7 +120,7 @@ def format_compact_list(artifacts: list[InstalledArtifact]) -> str:
 
     # Format each group
     lines = []
-    for artifact_type in ["skill", "command", "agent", "hook"]:
+    for artifact_type in ["skill", "command", "agent", "hook", "doc"]:
         if artifact_type not in by_type:
             continue
 

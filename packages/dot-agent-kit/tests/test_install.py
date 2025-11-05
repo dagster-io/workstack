@@ -355,3 +355,120 @@ def test_bundled_kit_valid_namespace_succeeds(tmp_path: Path) -> None:
     # Should resolve successfully
     resolved = source.resolve("good-kit")
     assert resolved.kit_id == "good-kit"
+
+
+def test_install_kit_with_docs(tmp_project: Path) -> None:
+    """Test installation of kit with doc artifacts."""
+    # Create mock kit with docs
+    kit_dir = tmp_project / "mock_kit"
+    kit_dir.mkdir()
+
+    manifest = kit_dir / "kit.yaml"
+    manifest.write_text(
+        "name: test-kit\n"
+        "version: 1.0.0\n"
+        "description: Test kit with docs\n"
+        "artifacts:\n"
+        "  doc:\n"
+        "    - docs/tools/pytest.md\n"
+        "    - docs/tools/pyright.md\n"
+        "    - docs/overview.md\n",
+        encoding="utf-8",
+    )
+
+    # Create doc files with nested structure
+    docs_dir = kit_dir / "docs"
+    tools_dir = docs_dir / "tools"
+    tools_dir.mkdir(parents=True)
+    (tools_dir / "pytest.md").write_text("# Pytest Documentation", encoding="utf-8")
+    (tools_dir / "pyright.md").write_text("# Pyright Documentation", encoding="utf-8")
+    (docs_dir / "overview.md").write_text("# Overview", encoding="utf-8")
+
+    # Mock resolution
+    resolved = ResolvedKit(
+        kit_id="test-kit",
+        version="1.0.0",
+        source_type="package",
+        manifest_path=manifest,
+        artifacts_base=kit_dir,
+    )
+
+    # Install
+    installed = install_kit(resolved, tmp_project)
+
+    # Verify installation metadata
+    assert installed.kit_id == "test-kit"
+    assert installed.version == "1.0.0"
+    assert len(installed.artifacts) == 3
+
+    # Verify doc files are installed in correct structure
+    docs_base = tmp_project / ".claude" / "docs"
+    assert docs_base.exists()
+
+    # Check nested structure is preserved
+    pytest_doc = docs_base / "tools" / "pytest.md"
+    assert pytest_doc.exists()
+    assert "# Pytest Documentation" in pytest_doc.read_text(encoding="utf-8")
+
+    pyright_doc = docs_base / "tools" / "pyright.md"
+    assert pyright_doc.exists()
+    assert "# Pyright Documentation" in pyright_doc.read_text(encoding="utf-8")
+
+    overview_doc = docs_base / "overview.md"
+    assert overview_doc.exists()
+    assert "# Overview" in overview_doc.read_text(encoding="utf-8")
+
+
+def test_install_kit_with_docs_and_agents(tmp_project: Path) -> None:
+    """Test installation of kit with both docs and agents."""
+    # Create mock kit
+    kit_dir = tmp_project / "mock_kit"
+    kit_dir.mkdir()
+
+    manifest = kit_dir / "kit.yaml"
+    manifest.write_text(
+        "name: devrun\n"
+        "version: 0.1.0\n"
+        "description: Kit with agent and docs\n"
+        "artifacts:\n"
+        "  agent:\n"
+        "    - agents/devrun/devrun.md\n"
+        "  doc:\n"
+        "    - docs/tools/make.md\n",
+        encoding="utf-8",
+    )
+
+    # Create agent
+    agents_dir = kit_dir / "agents" / "devrun"
+    agents_dir.mkdir(parents=True)
+    (agents_dir / "devrun.md").write_text("# Devrun Agent", encoding="utf-8")
+
+    # Create doc
+    docs_dir = kit_dir / "docs" / "tools"
+    docs_dir.mkdir(parents=True)
+    (docs_dir / "make.md").write_text("# Make Documentation", encoding="utf-8")
+
+    # Mock resolution
+    resolved = ResolvedKit(
+        kit_id="devrun",
+        version="0.1.0",
+        source_type="package",
+        manifest_path=manifest,
+        artifacts_base=kit_dir,
+    )
+
+    # Install
+    installed = install_kit(resolved, tmp_project)
+
+    # Verify both artifact types
+    assert len(installed.artifacts) == 2
+
+    # Verify agent installed
+    agent_path = tmp_project / ".claude" / "agents" / "devrun" / "devrun.md"
+    assert agent_path.exists()
+    assert "# Devrun Agent" in agent_path.read_text(encoding="utf-8")
+
+    # Verify doc installed
+    doc_path = tmp_project / ".claude" / "docs" / "tools" / "make.md"
+    assert doc_path.exists()
+    assert "# Make Documentation" in doc_path.read_text(encoding="utf-8")

@@ -33,12 +33,12 @@ Identify which tool is being executed from the command:
 Use the Read tool to load the appropriate documentation file:
 
 ```
-.claude/agents/devrun/tools/pytest.md    - for pytest commands
-.claude/agents/devrun/tools/pyright.md   - for pyright commands
-.claude/agents/devrun/tools/ruff.md      - for ruff commands
-.claude/agents/devrun/tools/prettier.md  - for prettier commands
-.claude/agents/devrun/tools/make.md      - for make commands
-.claude/agents/devrun/tools/gt.md        - for gt commands
+.claude/docs/devrun/tools/pytest.md    - for pytest commands
+.claude/docs/devrun/tools/pyright.md   - for pyright commands
+.claude/docs/devrun/tools/ruff.md      - for ruff commands
+.claude/docs/devrun/tools/prettier.md  - for prettier commands
+.claude/docs/devrun/tools/make.md      - for make commands
+.claude/docs/devrun/tools/gt.md        - for gt commands
 ```
 
 The documentation file contains:

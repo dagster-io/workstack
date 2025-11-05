@@ -344,3 +344,84 @@ def test_list_command_cli(tmp_project: Path) -> None:
         # Should run without error and show some output
     finally:
         os.chdir(original_cwd)
+
+
+def test_list_docs(capsys: CaptureFixture[str]) -> None:
+    """Test list command displays docs properly."""
+    config = create_default_config()
+    project_dir = Path("/tmp/test-project")
+    repository = FakeArtifactRepository()
+
+    repository.set_artifacts(
+        [
+            InstalledArtifact(
+                artifact_type="doc",
+                artifact_name="tools/pytest.md",
+                file_path=Path("docs/devrun/tools/pytest.md"),
+                source=ArtifactSource.MANAGED,
+                level=ArtifactLevel.PROJECT,
+                kit_id="devrun",
+                kit_version="0.1.0",
+            ),
+            InstalledArtifact(
+                artifact_type="doc",
+                artifact_name="guide.md",
+                file_path=Path("docs/my-kit/guide.md"),
+                source=ArtifactSource.LOCAL,
+                level=ArtifactLevel.PROJECT,
+                kit_id="my-kit",
+            ),
+        ]
+    )
+
+    _list_artifacts(config, project_dir, repository)
+
+    captured = capsys.readouterr()
+    # Check for kit-grouped format
+    assert "[devrun] (v0.1.0):" in captured.out
+    assert "Docs (1):" in captured.out
+    assert "tools/pytest.md" in captured.out
+    assert "docs/devrun/tools/pytest.md" in captured.out
+    assert "[local]:" in captured.out
+    assert "guide.md" in captured.out
+    assert "docs/my-kit/guide.md" in captured.out
+
+
+def test_list_docs_with_mixed_artifacts(capsys: CaptureFixture[str]) -> None:
+    """Test list command displays docs alongside other artifact types."""
+    config = create_default_config()
+    project_dir = Path("/tmp/test-project")
+    repository = FakeArtifactRepository()
+
+    repository.set_artifacts(
+        [
+            InstalledArtifact(
+                artifact_type="skill",
+                artifact_name="my-skill",
+                file_path=Path("skills/my-skill/SKILL.md"),
+                source=ArtifactSource.MANAGED,
+                level=ArtifactLevel.PROJECT,
+                kit_id="test-kit",
+                kit_version="1.0.0",
+            ),
+            InstalledArtifact(
+                artifact_type="doc",
+                artifact_name="overview.md",
+                file_path=Path("docs/test-kit/overview.md"),
+                source=ArtifactSource.MANAGED,
+                level=ArtifactLevel.PROJECT,
+                kit_id="test-kit",
+                kit_version="1.0.0",
+            ),
+        ]
+    )
+
+    _list_artifacts(config, project_dir, repository)
+
+    captured = capsys.readouterr()
+    # Both should appear under the same kit group
+    assert "[test-kit] (v1.0.0):" in captured.out
+    assert "Skills (1):" in captured.out
+    assert "my-skill" in captured.out
+    assert "Docs (1):" in captured.out
+    assert "overview.md" in captured.out

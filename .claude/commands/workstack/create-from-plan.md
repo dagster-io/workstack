@@ -66,36 +66,72 @@ When you run this command, these steps occur:
 - The plan should not already be saved to disk at repository root
 - (Optional) Guidance text for final corrections/additions to the plan
 
+## Semantic Understanding & Context Preservation
+
+**Why This Matters:** Planning agents often discover valuable insights that would be expensive for implementing agents to re-derive. Capturing this context saves time and prevents errors.
+
+**What to Capture:**
+
+1. **API/Tool Quirks**
+   - Undocumented behaviors, race conditions, timing issues
+   - Example: "Stripe webhooks can arrive before API response returns"
+   - Include: Why it matters, how to handle, what to watch for
+
+2. **Architectural Insights**
+   - WHY code is structured certain ways (not just how)
+   - Design boundaries and their rationale
+   - Example: "Config split across files due to circular imports"
+
+3. **Domain Logic & Business Rules**
+   - Non-obvious invariants, edge cases, compliance requirements
+   - Example: "Never delete audit records, only mark as archived"
+   - Include: Rationale, validation criteria, edge cases
+
+4. **Complex Reasoning**
+   - Alternatives considered and rejected with reasons
+   - Dependencies between choices
+   - Example: "Can't use async here because parent caller is sync"
+
+5. **Known Pitfalls**
+   - Anti-patterns that seem right but cause problems
+   - Framework-specific gotchas
+   - Example: "Don't use .resolve() before checking .exists()"
+
+**Relevance Filter:** Only include if it:
+
+- Took significant time to discover
+- Would change HOW something is implemented
+- Would likely cause bugs if missed
+- Isn't obvious from reading the code
+
+**How It's Used:** This understanding gets captured in the "Context & Understanding" section of enhanced plans, linked to specific implementation steps.
+
 ## Success Criteria
 
 This command succeeds when ALL of the following are true:
 
+**Plan Extraction & Enhancement:**
 ✅ Implementation plan extracted from conversation context
 ✅ Plan enhanced through user interaction (gaps clarified, phases structured)
+✅ Semantic understanding captured (API quirks, architectural decisions, reasoning trails)
+✅ Known pitfalls documented to prevent common mistakes
+
+**File & Worktree Creation:**
 ✅ Plan saved to `<worktree-root>/<filename>-plan.md`
 ✅ Worktree created with `workstack create --plan`
 ✅ Worktree contains `.PLAN.md` file (moved by workstack)
-✅ User shown command to switch and implement
-✅ Plans include "Context & Understanding" section when relevant
-✅ API quirks documented with handling strategies
-✅ Architectural decisions include rationale
-✅ Complex reasoning preserved with alternatives
-✅ Known pitfalls prevent common mistakes
-✅ Semantic cache reduces implementing agent's discovery time
+✅ Worktree listed in `workstack list`
 
-**Most importantly:** The enhanced plan is detailed and thorough enough that a downstream agent can execute it autonomously with confidence, without needing to ask clarifying questions or make assumptions. The semantic understanding captured saves the implementing agent from expensive rediscovery of insights.
+**Plan Quality:**
+✅ Zero ambiguous file/function references
+✅ Each step has clear success criteria and failure handling
+✅ Complex plans structured in phases (200+ lines or 3+ features)
+✅ Tests integrated within implementation steps
+
+**Ready for Execution:**
+✅ Next command displayed: `workstack switch <name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
 
 **Most importantly:** The enhanced plan is detailed and thorough enough that a downstream agent can execute it autonomously with confidence, without needing to ask clarifying questions or make assumptions.
-
-**Verification:**
-After command completes, these should be true:
-
-- File exists: `<worktree-root>/<filename>-plan.md`
-- Worktree listed in: `workstack list`
-- Plan has zero ambiguous file/function references
-- Complex plans are structured in phases
-- Each step has clear success criteria and failure handling
-- Next command ready: `workstack switch <name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
 
 ## Performance Notes
 
@@ -171,115 +207,6 @@ After command completes, these should be true:
 
 ---
 
-## Examples: Capturing Semantic Understanding
-
-### Example 1: API Deep Understanding
-
-**Before (surface level):**
-
-```markdown
-### Implementation Steps
-
-1. Call Stripe API to process payment
-2. Update order status
-3. Send confirmation email
-```
-
-**After (with semantic understanding):**
-
-```markdown
-### Context & Understanding
-
-**API/Tool Quirks Discovered**:
-
-- Stripe API: Webhooks can arrive before API response
-  - Why it matters: Payment status could be updated twice, causing duplicate confirmations
-  - How to handle: Use DB locks when updating payment status (see step 2)
-  - Watch out for: Race conditions between webhook handler and API response handler
-
-### Implementation Steps
-
-1. Call Stripe API to process payment
-2. Update order status with database lock (prevents webhook race condition)
-3. Send confirmation email (check for duplicates first)
-```
-
-### Example 2: Architectural Insight
-
-**Before (surface level):**
-
-```markdown
-### Implementation Steps
-
-1. Add new endpoint to API router
-2. Create handler function
-3. Add tests
-```
-
-**After (with semantic understanding):**
-
-```markdown
-### Context & Understanding
-
-**System Architecture Insights**:
-
-- API uses dependency injection for all external services (DB, cache, etc.)
-- Implication: Cannot directly instantiate services in handlers, must use DI container
-
-**Reasoning Trail**:
-
-- Considered: Direct database connection in handler
-  - Pros: Simpler, fewer abstractions
-  - Cons: Breaks testing isolation, violates architecture
-- Rejected because: All other handlers use DI, would break consistency
-- Chose: Follow existing DI pattern
-  - Tradeoff accepted: More boilerplate, but maintains testability
-
-### Implementation Steps
-
-1. Add new endpoint to API router with DI annotations
-2. Create handler function accepting injected dependencies
-3. Add tests using mock dependencies
-```
-
-### Example 3: Complex Business Logic
-
-**Before (surface level):**
-
-```markdown
-### Implementation Steps
-
-1. Update pricing calculation
-2. Apply discounts
-3. Calculate tax
-```
-
-**After (with semantic understanding):**
-
-```markdown
-### Context & Understanding
-
-**Domain Logic & Constraints**:
-
-- Discount order matters: Volume discounts apply before percentage discounts
-  - Rationale: Prevents gaming the system with stacked discounts
-  - Edge case: Customer has both loyalty discount and bulk order
-  - Validation: Total discount cannot exceed 50% (business rule)
-
-**Known Pitfalls**:
-| Don't Do This | Why It Seems Right | Why It's Wrong | Do This Instead |
-|---|---|---|---|
-| Apply tax to discounted price | Standard calculation | Tax law requires pre-discount price | Calculate tax on full price, then apply discount |
-
-### Implementation Steps
-
-1. Update pricing calculation with original price tracking
-2. Apply discounts in order: volume → percentage → cap at 50%
-3. Calculate tax on original price, then apply to final total
-```
-
----
-
 ## Agent Instructions
 
 You are executing the `/workstack:create-from-plan` command. Follow these steps carefully:
@@ -315,30 +242,18 @@ Suggested action: [1-3 concrete steps to resolve]
 
 This command sets up the workspace. Implementation happens in the worktree via `/workstack:implement-plan`.
 
-**CRITICAL: Understanding the ExitPlanMode → create-from-plan Workflow**
+**Note on ExitPlanMode Workflow:**
 
-If you just used the ExitPlanMode tool, you saw this message:
+When this command follows ExitPlanMode, the workflow is:
 
-> "User has approved your plan. You can now start coding"
+1. User presents a plan and calls ExitPlanMode
+2. User invokes `/workstack:create-from-plan`
+3. This command extracts, enhances, and saves the plan to disk
+4. Creates worktree with the plan
+5. User runs: `workstack switch <name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
+6. Implementation happens in the new worktree
 
-**DO NOT start coding!** In this workflow, that message means:
-
-- ✅ "You can now start creating the worktree with the plan"
-- ❌ NOT "You should implement the code now"
-
-**The typical workflow is:**
-
-1. User asks for a plan in plan mode
-2. You present a plan and call ExitPlanMode
-3. ExitPlanMode returns: "User has approved your plan. You can now start coding"
-4. User immediately invokes `/workstack:create-from-plan`
-5. **This command** extracts the approved plan, enhances it, saves to disk, creates worktree
-6. User manually runs `workstack switch <name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
-7. **That's when** the actual code implementation happens
-
-The ExitPlanMode message is generic and doesn't know about the workstack workflow. When followed by this command, interpret "start coding" as "start the worktree creation workflow," NOT "write code files now."
-
-Your role: Extract the plan → enhance it → save it → create worktree → tell user how to switch and implement.
+**Remember:** This command only prepares the workspace - actual code implementation happens after switching to the worktree.
 
 ### Step 2: Detect Implementation Plan in Context
 
@@ -447,122 +362,39 @@ Note: Guidance must be provided as a single-line string in quotes. Multi-line gu
 
 If no guidance provided: use the original plan as-is
 
-**Output:** Final plan content (original or modified) ready for Step 3.5 processing
+**Output:** Final plan content (original or modified) ready for Step 5 processing
 
-### Context Preservation Principle: The Semantic Cache
+### Step 4: Apply Semantic Understanding
 
-When planning complex implementations, the planning agent often discovers valuable insights that would be expensive for the implementing agent to re-derive:
+Apply the semantic understanding principles from the "Semantic Understanding & Context Preservation" section above when enhancing the plan. This includes capturing API quirks, architectural insights, domain logic, reasoning trails, and known pitfalls that would be expensive for the implementing agent to rediscover.
 
-**What is Semantic Understanding?**
-
-- **NOT just file paths and locations** (those are cheap to find)
-- **NOT just "what to do"** (that's the basic plan)
-- **IS the "why" and "how"** discovered through exploration
-- **IS the non-obvious quirks, constraints, and gotchas**
-
-**Types of Understanding Worth Preserving:**
-
-1. **API/Tool Deep Understanding**
-   - Rate limits, retry strategies, undocumented behaviors
-   - Authentication flows and token management
-   - Race conditions, ordering requirements
-   - Example: "Stripe webhooks can arrive before API response returns"
-
-2. **Architectural Insights**
-   - WHY code is structured certain ways (not just how)
-   - Design boundaries and their rationale
-   - Performance vs. maintainability tradeoffs
-   - Example: "Config is split across files because of circular import issues"
-
-3. **Domain Logic & Business Rules**
-   - Non-obvious invariants that must be maintained
-   - Edge cases that matter and why
-   - Regulatory or compliance requirements
-   - Example: "Never delete audit records, only mark as archived"
-
-4. **Complex Reasoning Chains**
-   - Alternatives considered and explicitly rejected
-   - Multi-step logic that led to decisions
-   - Dependencies between choices
-   - Example: "Can't use async here because parent caller is sync"
-
-5. **Known Pitfalls & Anti-patterns**
-   - Things that seem right but cause problems
-   - Framework-specific gotchas
-   - Performance traps unique to this codebase
-   - Example: "Don't use .resolve() before checking .exists()"
-
-**Relevance Filter - Only Include if:**
-
-- It took >5 minutes to discover/understand
-- It would change HOW something is implemented (not just what)
-- Missing it would likely cause bugs or rework
-- It's non-obvious from reading the code
-
-**How to Capture:**
-
-- Use the "Context & Understanding" section in plan templates
-- Be specific with concrete examples, not abstract descriptions
-- Link each insight to specific implementation steps
-- Include "why it matters" and "how to handle"
-
-### Step 3.5: Interactive Plan Enhancement
+### Step 5: Interactive Plan Enhancement
 
 **CRITICAL:** This is where we transform a generic plan into one optimized for autonomous agent execution.
 
 **Remember the goal:** We are creating a detailed, thorough implementation plan that enables a downstream agent to execute autonomously with confidence. Every question we ask and every enhancement we suggest should serve this goal. If the plan already has enough detail for autonomous execution, don't add unnecessary complexity.
 
-#### Plans Should Describe WHAT, Not Include HOW (Code)
+#### Code in Plans: Behavioral, Not Literal
 
-**Core principle:** Implementation plans should describe behavior, requirements, and architectural decisions - NOT include exact code snippets or implementation details.
+**Rule:** Plans describe WHAT to do, not HOW to code it.
 
-**Why:**
+**Include in plans:**
 
-- Plans describe **intent and behavior**, code implements the details
-- Exact code snippets in plans become stale quickly
-- Code snippets constrain the implementing agent unnecessarily
-- Plans are for humans and agents to understand goals, not copy-paste
+- File paths and function names
+- Behavioral requirements
+- Success criteria
+- Error handling approaches
 
-**Exception - When code snippets ARE appropriate:**
+**Only include code snippets for:**
 
-Only include exact code in plans for high-stakes scenarios where precision is critical:
+- Security-critical implementations
+- Public API signatures
+- Bug fixes showing exact before/after
+- Database schema changes
 
-1. **Security-critical code**: Authentication, authorization, encryption implementations
-2. **Public APIs**: Interface signatures that cannot change without breaking consumers
-3. **Critical interfaces**: Database schema changes, protocol definitions, contract boundaries
-4. **Bug fixes**: When demonstrating the exact before/after change for a subtle bug
-
-**What to include instead:**
-
-- File paths: "Update `src/models/user.py`"
-- Function names: "Modify `validate_credentials()` function"
-- Behavior: "Return 401 when authentication fails, 403 when authorized but forbidden"
-- Requirements: "Use LBYL pattern for path validation"
-- Success criteria: "All existing authentication tests pass, plus new edge cases"
-
-**Example comparison:**
-
-❌ **Too specific (code snippet):**
-
-```
-Add this code to src/auth.py:
-def validate_user(user_id: str | None) -> User:
-    if user_id is None:
-        raise ValueError("user_id cannot be None")
-    if user_id not in user_cache:
-        raise UserNotFoundError(f"User {user_id} not found")
-    return user_cache[user_id]
-```
-
-✅ **Right level of detail (behavioral):**
-
-```
-Update validate_user() in src/auth.py:
-- Use LBYL pattern: check user_id is not None before proceeding
-- Check user exists in cache before accessing
-- Raise ValueError for None, UserNotFoundError for missing users
-- Return User object from cache when found
-```
+**Example:**
+❌ Wrong: `def validate_user(user_id: str | None) -> User: ...`
+✅ Right: "Update validate_user() in src/auth.py to use LBYL pattern, check for None, raise appropriate errors"
 
 #### Phase 1: Analyze Plan for Gaps
 
@@ -583,8 +415,8 @@ Examine the plan for ambiguities that would block autonomous execution:
    - Need: Availability, versions, fallbacks
 
 5. **Large scope indicators**:
-   - More than 200 lines of expected changes
-   - More than 3 distinct features
+   - 200+ lines of expected changes
+   - 3+ distinct features
    - Multiple unrelated components
    - Need: Phase decomposition
 
@@ -631,49 +463,18 @@ The plan references "the payments API" - which service is this?
 - Make questions specific and provide examples
 - Allow user to skip questions if they prefer ambiguity
 
-#### Phase 2.5: Capture Semantic Understanding
+#### Phase 3: Check for Semantic Understanding
 
-After clarifying questions but before suggesting phases, assess whether you discovered valuable context during planning:
+After clarifying questions, check if you discovered valuable context during planning (see "Semantic Understanding & Context Preservation" section). If you discovered API quirks, architectural insights, or complex reasoning that would be expensive to rediscover, ask the user if they want to include it in the plan's "Context & Understanding" section.
 
-**Self-Assessment Questions** (planning agent asks itself):
-
-1. Did I spend significant time understanding an external API or tool?
-2. Did I discover non-obvious architectural patterns or constraints?
-3. Did I reason through multiple approaches before choosing one?
-4. Did I uncover edge cases or gotchas that would surprise someone?
-5. Did I learn something that changes HOW (not just what) to implement?
-
-**If YES to any**, prompt the user:
-
-```markdown
-I discovered important context while planning that would help the implementing agent:
-
-**[Type of Understanding]**: [Brief description]
-
-Specific insights:
-
-- [Concrete example or quirk]
-- Why it matters: [Impact on implementation]
-- How to handle: [Recommended approach]
-
-Should I include this in the 'Context & Understanding' section? This would prevent the implementing agent from having to rediscover these insights.
-```
-
-**Examples of Semantic Understanding to Capture:**
-
-- **API Quirk**: "GitHub API returns 404 for private repos even with valid token - must check permissions separately"
-- **Architecture**: "Can't modify BaseClass directly - all customization through dependency injection"
-- **Business Logic**: "Order status must transition through 'pending' - direct jump to 'completed' breaks audit trail"
-- **Performance**: "Batch size >100 causes OOM on production servers despite working locally"
-
-#### Phase 3: Suggest Phase Decomposition
+#### Phase 4: Suggest Phase Decomposition
 
 For complex plans, suggest breaking into phases:
 
 **Decomposition triggers:**
 
-- Plan has 3+ distinct features
-- Expected changes exceed 200 lines
+- 3+ distinct features
+- 200+ lines of expected changes
 - Multiple components with different concerns
 - Sequential dependencies between major parts
 
@@ -712,7 +513,7 @@ Each phase will be a separate branch that can be tested independently.
 Would you like to structure the plan this way? (I can adjust the phases if needed)
 ```
 
-#### Phase 4: Incorporate Enhancements
+#### Phase 5: Incorporate Enhancements
 
 Based on user responses:
 
@@ -723,265 +524,62 @@ Based on user responses:
 5. **Add test requirements** to each phase
 6. **Include `/ensure-ci` validation** checkpoints
 
-**Enhanced plan format for phases:**
+#### Plan Templates
 
-````markdown
-## Implementation Plan: [Title]
-
-### Execution Mode: Phased Implementation with Graphite Stack
-
-### Context & Understanding
-
-<!-- Semantic cache of expensive-to-derive knowledge -->
-
-**System Architecture Insights**:
-
-- [Key insight about WHY system works this way]
-- Implication: [How this affects implementation]
-
-**API/Tool Quirks Discovered**:
-
-- [Tool/API name]: [Non-obvious behavior]
-  - Why it matters: [Impact on implementation]
-  - How to handle: [Specific approach]
-  - Watch out for: [Common mistake]
-
-**Domain Logic & Constraints**:
-
-- [Business rule or constraint]
-  - Rationale: [Why this exists]
-  - Edge case: [Non-obvious scenario]
-  - Validation: [How to verify correctness]
-
-**Reasoning Trail** (if complex decisions were made):
-
-- Considered: [Alternative approach]
-  - Pros: [Benefits]
-  - Cons: [Drawbacks]
-- Rejected because: [Specific reason]
-- Chose: [Selected approach]
-  - Tradeoff accepted: [What we're giving up]
-
-### Known Pitfalls
-
-<!-- Anti-patterns and mistakes to avoid -->
-
-| Don't Do This  | Why It Seems Right | Why It's Wrong   | Do This Instead    |
-| -------------- | ------------------ | ---------------- | ------------------ |
-| [Anti-pattern] | [Intuitive reason] | [Actual problem] | [Correct approach] |
-
-### Codebase Navigation
-
-<!-- ONLY paths/patterns directly referenced in implementation steps -->
-
-**Files to Modify** (linked to steps below):
-
-- `[path]`: Phase [X] - [What to change]
-
-**Reference Implementations** (for "similar to" mentions):
-
-- `[file:line]`: Phase [Y] - [Pattern to follow]
-
-**Import Paths** (for functions used in plan):
-
-```python
-# Only imports needed for implementation
-from workstack.core.config import [specifics]
-```
-````
-
-### Phase 1: [descriptive-name]
-
-**Branch**: feature-1 (base: main)
-**Objective**: [Single, clear goal]
-**Success Criteria**:
-
-- [Specific, measurable outcome]
-- All tests pass
-- `/ensure-ci` validation passes
-
-**Implementation Steps:**
-
-1. [Specific action] in [exact file path]
-2. Add tests for [specific functionality] in [test file path]
-3. [Additional specific steps...]
-
-**Validation**: Run `/ensure-ci` to verify all tests pass
-
----
-
-### Phase 2: [descriptive-name]
-
-**Branch**: feature-2 (stacks on: feature-1)
-**Objective**: [Single, clear goal]
-[Continue pattern...]
-
-````
-
-**Enhanced plan format for single-phase:**
+**For Single-Phase Plans:**
 
 ```markdown
 ## Implementation Plan: [Title]
 
 ### Objective
 
-[Clear, specific goal statement]
-
-### Success Criteria
-
-- [Measurable outcome 1]
-- [Measurable outcome 2]
-- All tests pass
-- `/ensure-ci` validation passes
+[Clear goal statement]
 
 ### Context & Understanding
-<!-- Semantic cache of expensive-to-derive knowledge -->
 
-**System Architecture Insights**:
-- [Key insight about WHY system works this way]
-- Implication: [How this affects implementation]
-
-**API/Tool Quirks Discovered**:
-- [Tool/API name]: [Non-obvious behavior]
-  - Why it matters: [Impact on implementation]
-  - How to handle: [Specific approach]
-  - Watch out for: [Common mistake]
-
-**Domain Logic & Constraints**:
-- [Business rule or constraint]
-  - Rationale: [Why this exists]
-  - Edge case: [Non-obvious scenario]
-  - Validation: [How to verify correctness]
-
-**Reasoning Trail** (if complex decisions were made):
-- Considered: [Alternative approach]
-  - Pros: [Benefits]
-  - Cons: [Drawbacks]
-- Rejected because: [Specific reason]
-- Chose: [Selected approach]
-  - Tradeoff accepted: [What we're giving up]
-
-### Known Pitfalls
-<!-- Anti-patterns and mistakes to avoid -->
-
-| Don't Do This | Why It Seems Right | Why It's Wrong | Do This Instead |
-|---|---|---|---|
-| [Anti-pattern] | [Intuitive reason] | [Actual problem] | [Correct approach] |
-
-### Codebase Navigation
-<!-- ONLY paths/patterns directly referenced in implementation steps -->
-
-**Files to Modify** (linked to steps below):
-- `[path]`: Step [X] - [What to change]
-
-**Reference Implementations** (for "similar to" mentions):
-- `[file:line]`: Step [Y] - [Pattern to follow]
-
-**Import Paths** (for functions used in plan):
-```python
-# Only imports needed for implementation
-from workstack.core.config import [specifics]
-````
+Include semantic understanding captured during planning (see section above)
 
 ### Implementation Steps
 
-1. **[Action]**: [Specific operation] in `[exact/file/path]`
-   - Success indicator: [How to verify this step worked]
-   - If fails: [Fallback or error handling]
+1. **[Action]**: [What to do] in `[exact/file/path]`
+   - Success: [How to verify]
+   - On failure: [Recovery action]
 
-2. **[Action]**: [Specific operation] in `[exact/file/path]`
-   - Success indicator: [How to verify this step worked]
-   - If fails: [Fallback or error handling]
+2. [Continue pattern...]
 
-[Continue pattern...]
+### Testing
 
-### Testing Requirements
-
-- Unit tests: [Specific test files to create/modify]
-- Integration tests: [If applicable]
-- Validation: Run `/ensure-ci` after implementation
-
-````
-
-#### Phase 4.5: Apply Tiered Disclosure for Complex Topics
-
-For detailed technical explanations that might overwhelm the main flow, use collapsible sections:
-
-**Template for Complex Steps:**
-
-```markdown
-### Implementation Steps
-
-1. **[High-level step description]**
-   - [Key action 1]
-   - [Key action 2]
-
-   <details>
-   <summary>Deep Dive: [Complex Topic]</summary>
-
-   **Why this complexity exists:**
-   [Explanation of underlying issues]
-
-   **Detailed implementation:**
-   ```python
-   # Code examples if helpful
-````
-
-**Edge cases to handle:**
-
-- [Edge case 1]: [How to handle]
-- [Edge case 2]: [How to handle]
-
-**Recovery strategies:**
-
-- If [error X]: [Recovery approach]
-- If [error Y]: [Recovery approach]
-
-   </details>
-
-`````
-
-**Guidelines for Tiered Disclosure:**
-
-- **Main content**: 2-3 lines per step (always visible)
-- **Deep dive**: Unlimited but focused (collapsible)
-- **Use when**: Technical detail exceeds 10 lines
-- **Always include**: "Why this matters" in deep dive
-- **Link to steps**: Reference which implementation step needs this detail
-
-**Example:**
-
-````markdown
-1. **Configure webhook endpoint**
-   - Register endpoint with external service
-   - Set up retry logic for resilience
-
-   <details>
-   <summary>Deep Dive: Webhook Race Conditions</summary>
-
-   **Why this complexity exists:**
-   The webhook can arrive before the API call returns, causing duplicate processing.
-
-   **How to handle:**
-   - Use database locks on payment ID
-   - Check payment status before processing
-   - Implement idempotency keys
-
-   **Code approach:**
-
-   ```python
-   with database.lock(f"payment_{payment_id}"):
-       if payment.status != "pending":
-           return  # Already processed
-       process_payment(payment)
-`````
-
-````
-
-   </details>
+- Tests are integrated within implementation steps
+- Final validation: Run `/ensure-ci`
 ```
 
-#### Phase 5: Final Review
+**For Multi-Phase Plans:**
+
+```markdown
+## Implementation Plan: [Title]
+
+### Context & Understanding
+
+[Semantic understanding sections as above]
+
+### Phase 1: [Name]
+
+**Branch**: feature-1 (base: main)
+**Goal**: [Single objective]
+
+**Steps:**
+
+1. [Action] in [file]
+2. Add tests in [test file]
+3. Validate with `/ensure-ci`
+
+### Phase 2: [Name]
+
+**Branch**: feature-2 (stacks on: feature-1)
+[Continue pattern...]
+```
+
+#### Phase 6: Final Review
 
 Present a final review of potential execution issues (not a quality score):
 
@@ -1012,9 +610,9 @@ Suggested fix: Include rollback procedure or backup strategy
 - Don't use percentages or scores
 - Focus on actionability
 
-**Output:** Final enhanced plan content ready for Step 4 processing
+**Output:** Final enhanced plan content ready for Step 6 processing
 
-### Step 4: Generate Filename from Plan
+### Step 6: Generate Filename from Plan
 
 **Filename Extraction Algorithm:**
 
@@ -1057,7 +655,7 @@ Use AskUserQuestion tool to get the plan name from the user if extraction fails.
 - Very long title (200 chars) → Truncated to 100 chars + `-plan.md`
 - "###" (only special chars) → Prompt user for name
 
-### Step 5: Detect Worktree Root
+### Step 7: Detect Worktree Root
 
 Execute: `git rev-parse --show-toplevel`
 
@@ -1076,7 +674,7 @@ Suggested action:
   3. Check if .git directory exists
 ```
 
-### Step 6: Save Plan to Disk
+### Step 8: Save Plan to Disk
 
 **Pre-save validation:**
 
@@ -1114,7 +712,7 @@ Suggested action:
   3. Ensure path is valid: <worktree-root>/<derived-filename>
 ```
 
-### Step 7: Create Worktree with Plan
+### Step 9: Create Worktree with Plan
 
 Execute: `workstack create --plan <worktree-root>/<filename> --json --stay`
 
@@ -1207,7 +805,7 @@ Suggested action:
 
 **Use the JSON output directly** for all worktree information.
 
-### Step 8: Display Next Steps
+### Step 10: Display Next Steps
 
 After successful worktree creation, provide clear instructions based on plan structure.
 
@@ -1267,4 +865,7 @@ Each phase will be implemented as a separate branch with CI verification.
 - The `--permission-mode acceptEdits` flag is included to automatically accept edits during implementation
 - Plans are optimized for autonomous agent execution with zero ambiguity
 - Always provide clear feedback at each step
-````
+
+```
+
+```

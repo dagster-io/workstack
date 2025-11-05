@@ -8,7 +8,6 @@ import tomli_w
 
 from dot_agent_kit.hooks.models import HookDefinition
 from dot_agent_kit.models import InstalledKit, ProjectConfig
-from dot_agent_kit.models.types import SOURCE_TYPE_BUNDLED
 
 
 def load_project_config(project_dir: Path) -> ProjectConfig | None:

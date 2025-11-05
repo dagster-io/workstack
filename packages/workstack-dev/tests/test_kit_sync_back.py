@@ -71,8 +71,8 @@ def create_dot_agent_toml(project_dir: Path, kit_id: str, artifacts: list[str]) 
 
 [kits.{kit_id}]
 kit_id = "{kit_id}"
+source_type = "bundled"
 version = "0.1.0"
-source = "{kit_id}"
 installed_at = "2025-11-02T00:00:00"
 artifacts = [
     {artifacts_str}

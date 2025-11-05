@@ -429,7 +429,9 @@ def test_validate_kit_fields_source_type_common_typos() -> None:
         )
         errors = validate_kit_fields(kit)
         assert len(errors) == 1, f"Expected error for typo: {typo}"
-        assert "Invalid source_type" in errors[0], f"Expected 'Invalid source_type' for typo: {typo}"
+        assert "Invalid source_type" in errors[0], (
+            f"Expected 'Invalid source_type' for typo: {typo}"
+        )
 
 
 def test_validate_kit_fields_source_type_with_surrounding_whitespace() -> None:

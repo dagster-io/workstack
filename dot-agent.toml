@@ -4,22 +4,22 @@ version = "1"
 kit_id = "devrun"
 source_type = "bundled"
 version = "0.1.0"
-installed_at = "2025-11-05T07:13:08.467333"
+installed_at = "2025-11-05T07:29:48.859745"
 artifacts = [
     ".claude/agents/devrun/devrun.md",
-    ".claude/docs/tools/gt.md",
-    ".claude/docs/tools/make.md",
-    ".claude/docs/tools/prettier.md",
-    ".claude/docs/tools/pyright.md",
-    ".claude/docs/tools/pytest.md",
-    ".claude/docs/tools/ruff.md",
+    ".claude/docs/devrun/tools/gt.md",
+    ".claude/docs/devrun/tools/make.md",
+    ".claude/docs/devrun/tools/prettier.md",
+    ".claude/docs/devrun/tools/pyright.md",
+    ".claude/docs/devrun/tools/pytest.md",
+    ".claude/docs/devrun/tools/ruff.md",
 ]
 
 [kits.gt]
 kit_id = "gt"
 source_type = "bundled"
 version = "0.1.0"
-installed_at = "2025-11-05T07:13:08.469668"
+installed_at = "2025-11-05T07:29:48.861826"
 artifacts = [
     ".claude/commands/gt/land-branch.md",
     ".claude/commands/gt/submit-branch.md",
@@ -30,7 +30,7 @@ artifacts = [
 kit_id = "dignified-python"
 source_type = "bundled"
 version = "0.1.0"
-installed_at = "2025-11-05T07:13:08.471608"
+installed_at = "2025-11-05T07:29:48.864066"
 artifacts = [
     ".claude/skills/dignified-python/SKILL.md",
 ]
@@ -39,7 +39,7 @@ artifacts = [
 kit_id = "workstack"
 source_type = "bundled"
 version = "0.1.0"
-installed_at = "2025-11-05T07:13:08.473049"
+installed_at = "2025-11-05T07:29:48.865478"
 artifacts = [
     ".claude/commands/workstack/create-from-plan.md",
     ".claude/commands/workstack/implement-plan.md",

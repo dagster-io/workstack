@@ -7,9 +7,9 @@ artifacts:
   agent:
   - agents/devrun/devrun.md
   doc:
-  - docs/tools/gt.md
-  - docs/tools/make.md
-  - docs/tools/prettier.md
-  - docs/tools/pyright.md
-  - docs/tools/pytest.md
-  - docs/tools/ruff.md
+  - docs/devrun/tools/gt.md
+  - docs/devrun/tools/make.md
+  - docs/devrun/tools/prettier.md
+  - docs/devrun/tools/pyright.md
+  - docs/devrun/tools/pytest.md
+  - docs/devrun/tools/ruff.md

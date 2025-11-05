@@ -29,15 +29,16 @@ This command extracts a plan from conversation context, saves it to disk, and cr
 
 When you run this command, these steps occur:
 
-1. **Verify Scope** - Confirm we're in a git repository with workstack available
-2. **Detect Plan** - Search conversation for implementation plan
-3. **Apply Guidance** - Merge optional guidance into plan (if provided)
-4. **Interactive Enhancement** - Analyze plan and ask clarifying questions if needed
-5. **Generate Filename** - Derive filename from plan title
-6. **Detect Root** - Find worktree root directory
-7. **Save Plan** - Write enhanced plan to disk as markdown file
-8. **Create Worktree** - Run `workstack create --plan` command
-9. **Display Next Steps** - Show commands to switch and implement
+1. **Exit Plan Mode** - If currently in plan mode, automatically exit it first
+2. **Verify Scope** - Confirm we're in a git repository with workstack available
+3. **Detect Plan** - Search conversation for implementation plan
+4. **Apply Guidance** - Merge optional guidance into plan (if provided)
+5. **Interactive Enhancement** - Analyze plan and ask clarifying questions if needed
+6. **Generate Filename** - Derive filename from plan title
+7. **Detect Root** - Find worktree root directory
+8. **Save Plan** - Write enhanced plan to disk as markdown file
+9. **Create Worktree** - Run `workstack create --plan` command
+10. **Display Next Steps** - Show commands to switch and implement
 
 ## Usage
 
@@ -199,20 +200,79 @@ Suggested action: [1-3 concrete steps to resolve]
 
 This command sets up the workspace. Implementation happens in the worktree via `/workstack:implement-plan`.
 
-**Note on ExitPlanMode Workflow:**
+**Plan Mode Handling:**
 
-When this command follows ExitPlanMode, the workflow is:
+This command automatically exits plan mode if you are currently in it. The workflow is:
 
-1. User presents a plan and calls ExitPlanMode
+1. User presents a plan (optionally in plan mode)
 2. User invokes `/workstack:create-from-plan`
-3. This command extracts, enhances, and saves the plan to disk
-4. Creates worktree with the plan
-5. User runs: `workstack switch <name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
-6. Implementation happens in the new worktree
+3. If in plan mode, this command automatically exits it
+4. Extracts, enhances, and saves the plan to disk
+5. Creates worktree with the plan
+6. User runs: `workstack switch <name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
+7. Implementation happens in the new worktree
 
 **Remember:** This command only prepares the workspace - actual code implementation happens after switching to the worktree.
 
-### Step 2: Detect Implementation Plan in Context
+### Step 1: Exit Plan Mode (If Active)
+
+**Check if currently in plan mode:**
+
+Plan mode is indicated by system context messages or the presence of plan mode indicators. If you detect that you are currently in plan mode:
+
+**Action:** Use the ExitPlanMode tool to exit plan mode BEFORE proceeding with any other steps.
+
+**How to detect plan mode:**
+
+- System messages indicating plan mode is active
+- Conversation context shows planning workflow
+- User came directly from a planning session
+
+**If in plan mode:**
+
+1. Do NOT proceed with any other steps yet
+2. Call ExitPlanMode with the plan content
+3. Wait for plan mode to exit
+4. Then continue to Step 2
+
+**If NOT in plan mode:**
+
+- Skip this step and proceed directly to Step 2
+
+This ensures a clean transition from planning to workspace setup.
+
+### Step 2: Verify Scope and Constraints
+
+**Error Handling Template:**
+All errors must follow this format:
+
+```
+❌ Error: [Brief description in 5-10 words]
+
+Details: [Specific error message, relevant context, or diagnostic info]
+
+Suggested action: [1-3 concrete steps to resolve]
+```
+
+**YOUR ONLY TASKS:**
+
+1. Extract implementation plan from conversation
+2. Interactively enhance plan for autonomous execution
+3. Apply guidance modifications if provided
+4. Save enhanced plan to disk as markdown file
+5. Run `workstack create --plan <file>`
+6. Display next steps to user
+
+**FORBIDDEN ACTIONS:**
+
+- Writing ANY code files (.py, .ts, .js, etc.)
+- Making ANY edits to existing codebase
+- Running ANY commands except `git rev-parse` and `workstack create`
+- Implementing ANY part of the plan
+
+This command sets up the workspace. Implementation happens in the worktree via `/workstack:implement-plan`.
+
+### Step 3: Detect Implementation Plan in Context
 
 Search conversation history for an implementation plan:
 
@@ -264,7 +324,7 @@ Suggested action:
   3. Use headers and lists to structure the plan
 ```
 
-### Step 3: Apply Optional Guidance to Plan
+### Step 4: Apply Optional Guidance to Plan
 
 **Check for guidance argument:**
 
@@ -319,13 +379,13 @@ Note: Guidance must be provided as a single-line string in quotes. Multi-line gu
 
 If no guidance provided: use the original plan as-is
 
-**Output:** Final plan content (original or modified) ready for Step 5 processing
+**Output:** Final plan content (original or modified) ready for Step 6 processing
 
-### Step 4: Apply Semantic Understanding
+### Step 5: Apply Semantic Understanding
 
 Apply the semantic understanding principles from the "Semantic Understanding & Context Preservation" section above when enhancing the plan. This includes capturing API quirks, architectural insights, domain logic, reasoning trails, and known pitfalls that would be expensive for the implementing agent to rediscover.
 
-### Step 5: Interactive Plan Enhancement
+### Step 6: Interactive Plan Enhancement
 
 Analyze the plan for common ambiguities and ask clarifying questions when helpful. Focus on practical improvements that make implementation clearer.
 
@@ -526,7 +586,7 @@ Include semantic understanding captured during planning (see section above)
 [Continue pattern...]
 ```
 
-#### Phase 6: Final Review
+#### Final Review
 
 Present a final review of potential execution issues (not a quality score):
 
@@ -557,9 +617,9 @@ Suggested fix: Include rollback procedure or backup strategy
 - Don't use percentages or scores
 - Focus on actionability
 
-**Output:** Final enhanced plan content ready for Step 6 processing
+**Output:** Final enhanced plan content ready for Step 7 processing
 
-### Step 6: Generate Filename from Plan
+### Step 7: Generate Filename from Plan
 
 **Filename Extraction Algorithm:**
 
@@ -602,7 +662,7 @@ Use AskUserQuestion tool to get the plan name from the user if extraction fails.
 - Very long title (200 chars) → Truncated to 100 chars + `-plan.md`
 - "###" (only special chars) → Prompt user for name
 
-### Step 7: Detect Worktree Root
+### Step 8: Detect Worktree Root
 
 Execute: `git rev-parse --show-toplevel`
 
@@ -621,7 +681,7 @@ Suggested action:
   3. Check if .git directory exists
 ```
 
-### Step 8: Save Plan to Disk
+### Step 9: Save Plan to Disk
 
 **Pre-save validation:**
 
@@ -659,7 +719,7 @@ Suggested action:
   3. Ensure path is valid: <worktree-root>/<derived-filename>
 ```
 
-### Step 9: Create Worktree with Plan
+### Step 10: Create Worktree with Plan
 
 Execute: `workstack create --plan <worktree-root>/<filename> --json --stay`
 
@@ -752,7 +812,7 @@ Suggested action:
 
 **Use the JSON output directly** for all worktree information.
 
-### Step 10: Display Next Steps
+### Step 11: Display Next Steps
 
 After successful worktree creation, provide clear instructions based on plan structure.
 

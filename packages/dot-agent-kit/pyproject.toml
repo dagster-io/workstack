@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-dot-agent = "dot_agent_kit.cli:cli"
+dot-agent = "dot_agent_kit.cli:main"
 
 [build-system]
 requires = ["hatchling"]

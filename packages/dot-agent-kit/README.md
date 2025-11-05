@@ -138,3 +138,66 @@ To align with the standard hyphenated naming convention:
    ```
 
 3. **Test installation** to verify paths are correct
+
+## Adding Bundled Kits
+
+To add a new bundled kit to the dot-agent-kit registry:
+
+1. **Create the kit structure** in `src/dot_agent_kit/data/kits/{kit-name}/`:
+   ```
+   kits/
+   └── my-kit/
+       ├── kit.yaml
+       ├── commands/
+       │   └── my-kit/
+       │       └── my-command.md
+       ├── agents/
+       │   └── my-kit/
+       │       └── my-agent.md
+       └── skills/
+           └── my-kit/
+               └── SKILL.md
+   ```
+
+2. **Define kit.yaml** with metadata and artifact paths:
+   ```yaml
+   name: my-kit
+   version: 0.1.0
+   description: Brief description of what the kit provides
+   license: MIT
+   artifacts:
+     command:
+       - commands/my-kit/my-command.md
+     agent:
+       - agents/my-kit/my-agent.md
+     skill:
+       - skills/my-kit/SKILL.md
+   ```
+
+3. **Register the kit** in `src/dot_agent_kit/data/registry.yaml`:
+   ```yaml
+   - kit_id: my-kit
+     name: My Kit
+     description: Brief description of what the kit provides
+     source: bundled:my-kit
+   ```
+
+4. **Test the kit** is discoverable:
+   ```bash
+   dot-agent kit search
+   ```
+
+5. **Install and verify the kit**:
+   ```bash
+   # Install using the bundled: prefix
+   dot-agent kit install bundled:my-kit
+
+   # Verify installation
+   dot-agent check
+   ```
+
+**Note**: The `source:` field in registry.yaml determines the prefix users must use:
+- `source: bundled:my-kit` → install with `dot-agent kit install bundled:my-kit`
+- `source: package:my-kit` → install with `dot-agent kit install package:my-kit`
+
+The kit will now appear in the available kits list and can be installed by users.

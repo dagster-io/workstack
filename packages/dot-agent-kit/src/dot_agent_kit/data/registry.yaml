@@ -12,3 +12,7 @@ kits:
     name: Graphite Kit
     description: Graphite stack management with landing and submission commands
     source: bundled:gt
+  - kit_id: workstack
+    name: Workstack Kit
+    description: Workstack implementation workflow commands for creating worktrees from plans and executing implementation
+    source: bundled:workstack

@@ -8,17 +8,9 @@ description: Create a workstack worktree from an implementation plan in context 
 
 ## Goal
 
-**The primary objective of this command is to create a detailed, thorough implementation plan that enables a downstream agent to execute autonomously with confidence.**
+**Create a workstack worktree from an implementation plan, optionally enhancing it for clarity.**
 
-A well-structured plan eliminates ambiguity, reduces back-and-forth clarifications, and allows the implementing agent to work efficiently without human intervention. Every enhancement we make - from asking clarifying questions to structuring phases - serves this goal of autonomous execution.
-
-**Key principles for autonomous-ready plans:**
-
-- **Zero ambiguity**: Every file path, function name, and operation is explicit
-- **Clear success criteria**: Each step has measurable outcomes
-- **Self-contained phases**: Complex work is broken into independently testable chunks
-- **Test-driven**: Every change includes test requirements for validation
-- **Failure handling**: Plans anticipate and address potential issues
+This command extracts a plan from conversation context, saves it to disk, and creates a worktree for implementation. For complex or unclear plans, it can interactively enhance them through clarifying questions and phase structuring.
 
 **What this command does:**
 
@@ -38,14 +30,14 @@ A well-structured plan eliminates ambiguity, reduces back-and-forth clarificatio
 When you run this command, these steps occur:
 
 1. **Verify Scope** - Confirm we're in a git repository with workstack available
-2. **Detect Plan** - Search last 5-10 messages for implementation plan
+2. **Detect Plan** - Search conversation for implementation plan
 3. **Apply Guidance** - Merge optional guidance into plan (if provided)
-4. **Interactive Enhancement** - Analyze plan for gaps, ask clarifying questions, suggest phases
+4. **Interactive Enhancement** - Analyze plan and ask clarifying questions if needed
 5. **Generate Filename** - Derive filename from plan title
 6. **Detect Root** - Find worktree root directory
 7. **Save Plan** - Write enhanced plan to disk as markdown file
 8. **Create Worktree** - Run `workstack create --plan` command
-9. **Display Next Steps** - Show commands to switch and implement (with phase info if applicable)
+9. **Display Next Steps** - Show commands to switch and implement
 
 ## Usage
 
@@ -55,13 +47,15 @@ When you run this command, these steps occur:
 
 **Examples:**
 
-- `/workstack:create-from-plan` - Create worktree from plan with interactive enhancement
-- `/workstack:create-from-plan "Make error handling more robust and add retry logic"` - Apply guidance then enhance
-- `/workstack:create-from-plan "Fix: Use LBYL instead of try/except throughout"` - Apply corrections then enhance
+- `/workstack:create-from-plan` - Create worktree from plan
+- `/workstack:create-from-plan "Make error handling more robust and add retry logic"` - Apply guidance to plan
+- `/workstack:create-from-plan "Fix: Use LBYL instead of try/except throughout"` - Apply corrections to plan
+
+**For detailed interaction examples, see [EXAMPLES.md](./EXAMPLES.md)**
 
 ## Prerequisites
 
-- An implementation plan must exist in recent conversation (last 5-10 messages)
+- An implementation plan must exist in conversation
 - Current working directory must be in a workstack repository
 - The plan should not already be saved to disk at repository root
 - (Optional) Guidance text for final corrections/additions to the plan
@@ -110,11 +104,9 @@ When you run this command, these steps occur:
 
 This command succeeds when ALL of the following are true:
 
-**Plan Extraction & Enhancement:**
+**Plan Extraction:**
 ✅ Implementation plan extracted from conversation context
-✅ Plan enhanced through user interaction (gaps clarified, phases structured)
-✅ Semantic understanding captured (API quirks, architectural decisions, reasoning trails)
-✅ Known pitfalls documented to prevent common mistakes
+✅ If guidance provided, it has been applied to the plan
 
 **File & Worktree Creation:**
 ✅ Plan saved to `<worktree-root>/<filename>-plan.md`
@@ -122,52 +114,17 @@ This command succeeds when ALL of the following are true:
 ✅ Worktree contains `.PLAN.md` file (moved by workstack)
 ✅ Worktree listed in `workstack list`
 
-**Plan Quality:**
-✅ Zero ambiguous file/function references
-✅ Each step has clear success criteria and failure handling
-✅ Complex plans structured in phases (200+ lines or 3+ features)
-✅ Tests integrated within implementation steps
-
-**Ready for Execution:**
+**Next Steps:**
 ✅ Next command displayed: `workstack switch <name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
-
-**Most importantly:** The enhanced plan is detailed and thorough enough that a downstream agent can execute it autonomously with confidence, without needing to ask clarifying questions or make assumptions.
-
-## Performance Notes
-
-**Expected execution time:** 15-60 seconds
-
-**Breakdown:**
-
-- Plan detection: 2-5 seconds (depends on context size)
-- Guidance application: 3-10 seconds (AI processing, if used)
-- Interactive enhancement: 5-30 seconds (depends on clarifications needed)
-- File operations: < 1 second
-- Worktree creation: 2-10 seconds (depends on repository size)
-- JSON parsing: < 1 second
-
-**Factors affecting speed:**
-
-- Conversation length (for plan detection)
-- Number of clarifications needed
-- Plan complexity (affects phase decomposition)
-- Repository size (for worktree creation)
-- Disk I/O speed
-
-**If command takes > 90 seconds:** Something is wrong
-
-- Check if workstack create is hanging
-- Verify disk space and permissions
-- Check git repository health: `git fsck`
 
 ## Troubleshooting
 
 ### "No plan found in context"
 
-**Cause:** Plan not in recent conversation or doesn't match detection patterns
+**Cause:** Plan not in conversation or doesn't match detection patterns
 **Solution:**
 
-- Ensure plan is in last 5-10 messages
+- Ensure plan is in conversation history
 - Plan should have headers like "## Implementation Plan" or numbered steps
 - Re-paste plan in conversation if needed
 
@@ -257,7 +214,7 @@ When this command follows ExitPlanMode, the workflow is:
 
 ### Step 2: Detect Implementation Plan in Context
 
-Search the last 5-10 messages in conversation for an implementation plan:
+Search conversation history for an implementation plan:
 
 **Search strategy:**
 
@@ -280,12 +237,12 @@ Search the last 5-10 messages in conversation for an implementation plan:
 **If no plan found:**
 
 ```
-❌ Error: No implementation plan found in recent conversation
+❌ Error: No implementation plan found in conversation
 
-Details: Searched last 5-10 messages but found no valid implementation plan
+Details: Could not find a valid implementation plan in conversation history
 
 Suggested action:
-  1. Ensure plan is in recent conversation (not too far back)
+  1. Ensure plan is in conversation
   2. Plan should have headers and structure
   3. Re-paste plan in conversation if needed
 ```
@@ -370,9 +327,7 @@ Apply the semantic understanding principles from the "Semantic Understanding & C
 
 ### Step 5: Interactive Plan Enhancement
 
-**CRITICAL:** This is where we transform a generic plan into one optimized for autonomous agent execution.
-
-**Remember the goal:** We are creating a detailed, thorough implementation plan that enables a downstream agent to execute autonomously with confidence. Every question we ask and every enhancement we suggest should serve this goal. If the plan already has enough detail for autonomous execution, don't add unnecessary complexity.
+Analyze the plan for common ambiguities and ask clarifying questions when helpful. Focus on practical improvements that make implementation clearer.
 
 #### Code in Plans: Behavioral, Not Literal
 
@@ -396,11 +351,11 @@ Apply the semantic understanding principles from the "Semantic Understanding & C
 ❌ Wrong: `def validate_user(user_id: str | None) -> User: ...`
 ✅ Right: "Update validate_user() in src/auth.py to use LBYL pattern, check for None, raise appropriate errors"
 
-#### Phase 1: Analyze Plan for Gaps
+#### Analyze Plan for Gaps
 
-Examine the plan for ambiguities that would block autonomous execution:
+Examine the plan for common ambiguities:
 
-**Common gaps to identify:**
+**Common gaps to look for:**
 
 1. **Vague file references**: "the config file", "update the model", "modify the API"
    - Need: Exact file paths
@@ -415,10 +370,10 @@ Examine the plan for ambiguities that would block autonomous execution:
    - Need: Availability, versions, fallbacks
 
 5. **Large scope indicators**:
-   - 200+ lines of expected changes
-   - 3+ distinct features
+   - Multiple distinct features
    - Multiple unrelated components
-   - Need: Phase decomposition
+   - Complex interdependencies
+   - Need: Consider phase decomposition
 
 6. **Missing reasoning context**: "use the better approach", "handle carefully"
    - Need: Which approach was chosen and WHY
@@ -432,14 +387,14 @@ Examine the plan for ambiguities that would block autonomous execution:
    - Need: Document discovered complexity
    - Need: Explain non-obvious requirements
 
-#### Phase 2: Ask Clarifying Questions
+#### Ask Clarifying Questions
 
-For each gap identified, ask the user specific questions. Use the AskUserQuestion tool to get answers.
+For gaps identified, ask the user specific questions. Use the AskUserQuestion tool to get answers.
 
 **Question format examples:**
 
 ```markdown
-I need to clarify a few details to ensure the plan can be executed autonomously:
+I need to clarify a few details to improve the plan:
 
 **File Locations:**
 The plan mentions "update the user model" - which specific file contains this model?
@@ -463,20 +418,13 @@ The plan references "the payments API" - which service is this?
 - Make questions specific and provide examples
 - Allow user to skip questions if they prefer ambiguity
 
-#### Phase 3: Check for Semantic Understanding
+#### Check for Semantic Understanding
 
-After clarifying questions, check if you discovered valuable context during planning (see "Semantic Understanding & Context Preservation" section). If you discovered API quirks, architectural insights, or complex reasoning that would be expensive to rediscover, ask the user if they want to include it in the plan's "Context & Understanding" section.
+After clarifying questions, check if you discovered valuable context during planning (see "Semantic Understanding & Context Preservation" section). If relevant, include it in the plan's "Context & Understanding" section.
 
-#### Phase 4: Suggest Phase Decomposition
+#### Suggest Phase Decomposition (When Helpful)
 
-For complex plans, suggest breaking into phases:
-
-**Decomposition triggers:**
-
-- 3+ distinct features
-- 200+ lines of expected changes
-- Multiple components with different concerns
-- Sequential dependencies between major parts
+For complex plans with multiple distinct features or components, suggest breaking into phases:
 
 **IMPORTANT - Testing and validation:**
 
@@ -513,16 +461,15 @@ Each phase will be a separate branch that can be tested independently.
 Would you like to structure the plan this way? (I can adjust the phases if needed)
 ```
 
-#### Phase 5: Incorporate Enhancements
+#### Incorporate Enhancements
 
 Based on user responses:
 
 1. **Update file references** with exact paths
 2. **Replace vague terms** with specific actions
 3. **Add success criteria** to each major step
-4. **Structure into phases** if approved
-5. **Add test requirements** to each phase
-6. **Include `/ensure-ci` validation** checkpoints
+4. **Structure into phases** if helpful
+5. **Include test requirements** where appropriate
 
 #### Plan Templates
 
@@ -851,19 +798,16 @@ Each phase will be implemented as a separate branch with CI verification.
 
 ## Important Notes
 
-- 🎯 **Primary Goal:** Create a detailed, thorough implementation plan that enables autonomous agent execution with confidence
 - 🔴 **This command does NOT write code** - only creates workspace with enhanced plan
-- Searches last 5-10 messages for implementation plans
-- Interactively enhances plans through clarifying questions
-- Suggests phase decomposition for complex plans (200+ lines or 3+ features)
-- Each phase gets its own branch with test requirements and CI validation
+- Searches conversation for implementation plans
+- Enhances plans through clarifying questions when helpful
+- Suggests phase decomposition for complex plans with multiple features
 - All enhancements are optional - users can dismiss suggestions
-- Filename derived from plan title, max 100 chars, prompts user if extraction fails
+- Filename derived from plan title, prompts user if extraction fails
 - All errors follow consistent template with details and suggested actions
 - This command does NOT switch directories or execute the plan
 - User must manually run `workstack switch` and `/workstack:implement-plan` to begin implementation
 - The `--permission-mode acceptEdits` flag is included to automatically accept edits during implementation
-- Plans are optimized for autonomous agent execution with zero ambiguity
 - Always provide clear feedback at each step
 
 ```

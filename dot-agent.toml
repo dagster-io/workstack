@@ -2,8 +2,8 @@ version = "1"
 
 [kits.devrun]
 kit_id = "devrun"
+source_type = "bundled"
 version = "0.1.0"
-source = "bundled:devrun"
 installed_at = "2025-11-02T21:18:07.306910"
 artifacts = [
     ".claude/agents/devrun/devrun.md",
@@ -11,8 +11,8 @@ artifacts = [
 
 [kits.gt]
 kit_id = "gt"
+source_type = "bundled"
 version = "0.1.0"
-source = "bundled:gt"
 installed_at = "2025-11-02T21:18:07.309200"
 artifacts = [
     ".claude/commands/gt/land-branch.md",
@@ -22,8 +22,8 @@ artifacts = [
 
 [kits.dignified-python]
 kit_id = "dignified-python"
+source_type = "bundled"
 version = "0.1.0"
-source = "bundled:dignified-python"
 installed_at = "2025-11-02T21:18:07.310952"
 artifacts = [
     ".claude/skills/dignified-python/SKILL.md",
@@ -31,8 +31,8 @@ artifacts = [
 
 [kits.workstack]
 kit_id = "workstack"
+source_type = "bundled"
 version = "0.1.0"
-source = "bundled:workstack"
 installed_at = "2025-11-05T04:41:33.368133"
 artifacts = [
     ".claude/commands/workstack/create-from-plan.md",

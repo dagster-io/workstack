@@ -437,3 +437,52 @@ def test_validate_kit_fields_multiple_errors() -> None:
     assert any("must be prefixed with type" in e for e in errors)
     assert any("artifacts list is empty" in e for e in errors)
     assert any("installed_at is empty" in e for e in errors)
+
+
+def test_check_command_bundled_kit_sync_in_sync(tmp_path: Path) -> None:
+    """Test check command with bundled kit when artifacts are in sync."""
+    runner = CliRunner()
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        project_dir = Path.cwd()
+
+        # Create .claude directory
+        claude_dir = project_dir / ".claude"
+        claude_dir.mkdir()
+
+        # Create config with bundled kit
+        # Note: We use "bundled:devrun" which is a real bundled kit in the package
+        config = ProjectConfig(
+            version="1",
+            kits={
+                "devrun": InstalledKit(
+                    kit_id="devrun",
+                    version="0.1.0",
+                    source="bundled:devrun",
+                    installed_at="2024-01-01T00:00:00",
+                    artifacts=["agents/devrun/devrun.md"],
+                ),
+            },
+        )
+        save_project_config(project_dir, config)
+
+        # Create local artifact that matches bundled version
+        # Read bundled artifact content
+        from dot_agent_kit.sources import BundledKitSource
+
+        bundled_source = BundledKitSource()
+        bundled_path = bundled_source._get_bundled_kit_path("devrun")
+        if bundled_path is not None:
+            bundled_artifact = bundled_path / "agents" / "devrun" / "devrun.md"
+            if bundled_artifact.exists():
+                bundled_content = bundled_artifact.read_text(encoding="utf-8")
+
+                # Create local artifact with same content
+                local_artifact = claude_dir / "agents" / "devrun" / "devrun.md"
+                local_artifact.parent.mkdir(parents=True)
+                local_artifact.write_text(bundled_content, encoding="utf-8")
+
+                result = runner.invoke(check)
+
+                assert result.exit_code == 0
+                assert "All artifacts are in sync" in result.output
+                assert "Warning: Could not find bundled kit" not in result.output

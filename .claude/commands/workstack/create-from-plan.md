@@ -76,6 +76,14 @@ This command succeeds when ALL of the following are true:
 ✅ Worktree created with `workstack create --plan`
 ✅ Worktree contains `.PLAN.md` file (moved by workstack)
 ✅ User shown command to switch and implement
+✅ Plans include "Context & Understanding" section when relevant
+✅ API quirks documented with handling strategies
+✅ Architectural decisions include rationale
+✅ Complex reasoning preserved with alternatives
+✅ Known pitfalls prevent common mistakes
+✅ Semantic cache reduces implementing agent's discovery time
+
+**Most importantly:** The enhanced plan is detailed and thorough enough that a downstream agent can execute it autonomously with confidence, without needing to ask clarifying questions or make assumptions. The semantic understanding captured saves the implementing agent from expensive rediscovery of insights.
 
 **Most importantly:** The enhanced plan is detailed and thorough enough that a downstream agent can execute it autonomously with confidence, without needing to ask clarifying questions or make assumptions.
 
@@ -160,6 +168,115 @@ After command completes, these should be true:
 - Be specific in responses to clarifying questions
 - Use clear action words: "Fix:", "Add:", "Change:", "Reorder:"
 - Or skip enhancement and edit the .PLAN.md file after creation
+
+---
+
+## Examples: Capturing Semantic Understanding
+
+### Example 1: API Deep Understanding
+
+**Before (surface level):**
+
+```markdown
+### Implementation Steps
+
+1. Call Stripe API to process payment
+2. Update order status
+3. Send confirmation email
+```
+
+**After (with semantic understanding):**
+
+```markdown
+### Context & Understanding
+
+**API/Tool Quirks Discovered**:
+
+- Stripe API: Webhooks can arrive before API response
+  - Why it matters: Payment status could be updated twice, causing duplicate confirmations
+  - How to handle: Use DB locks when updating payment status (see step 2)
+  - Watch out for: Race conditions between webhook handler and API response handler
+
+### Implementation Steps
+
+1. Call Stripe API to process payment
+2. Update order status with database lock (prevents webhook race condition)
+3. Send confirmation email (check for duplicates first)
+```
+
+### Example 2: Architectural Insight
+
+**Before (surface level):**
+
+```markdown
+### Implementation Steps
+
+1. Add new endpoint to API router
+2. Create handler function
+3. Add tests
+```
+
+**After (with semantic understanding):**
+
+```markdown
+### Context & Understanding
+
+**System Architecture Insights**:
+
+- API uses dependency injection for all external services (DB, cache, etc.)
+- Implication: Cannot directly instantiate services in handlers, must use DI container
+
+**Reasoning Trail**:
+
+- Considered: Direct database connection in handler
+  - Pros: Simpler, fewer abstractions
+  - Cons: Breaks testing isolation, violates architecture
+- Rejected because: All other handlers use DI, would break consistency
+- Chose: Follow existing DI pattern
+  - Tradeoff accepted: More boilerplate, but maintains testability
+
+### Implementation Steps
+
+1. Add new endpoint to API router with DI annotations
+2. Create handler function accepting injected dependencies
+3. Add tests using mock dependencies
+```
+
+### Example 3: Complex Business Logic
+
+**Before (surface level):**
+
+```markdown
+### Implementation Steps
+
+1. Update pricing calculation
+2. Apply discounts
+3. Calculate tax
+```
+
+**After (with semantic understanding):**
+
+```markdown
+### Context & Understanding
+
+**Domain Logic & Constraints**:
+
+- Discount order matters: Volume discounts apply before percentage discounts
+  - Rationale: Prevents gaming the system with stacked discounts
+  - Edge case: Customer has both loyalty discount and bulk order
+  - Validation: Total discount cannot exceed 50% (business rule)
+
+**Known Pitfalls**:
+| Don't Do This | Why It Seems Right | Why It's Wrong | Do This Instead |
+|---|---|---|---|
+| Apply tax to discounted price | Standard calculation | Tax law requires pre-discount price | Calculate tax on full price, then apply discount |
+
+### Implementation Steps
+
+1. Update pricing calculation with original price tracking
+2. Apply discounts in order: volume → percentage → cap at 50%
+3. Calculate tax on original price, then apply to final total
+```
 
 ---
 
@@ -332,6 +449,63 @@ If no guidance provided: use the original plan as-is
 
 **Output:** Final plan content (original or modified) ready for Step 3.5 processing
 
+### Context Preservation Principle: The Semantic Cache
+
+When planning complex implementations, the planning agent often discovers valuable insights that would be expensive for the implementing agent to re-derive:
+
+**What is Semantic Understanding?**
+
+- **NOT just file paths and locations** (those are cheap to find)
+- **NOT just "what to do"** (that's the basic plan)
+- **IS the "why" and "how"** discovered through exploration
+- **IS the non-obvious quirks, constraints, and gotchas**
+
+**Types of Understanding Worth Preserving:**
+
+1. **API/Tool Deep Understanding**
+   - Rate limits, retry strategies, undocumented behaviors
+   - Authentication flows and token management
+   - Race conditions, ordering requirements
+   - Example: "Stripe webhooks can arrive before API response returns"
+
+2. **Architectural Insights**
+   - WHY code is structured certain ways (not just how)
+   - Design boundaries and their rationale
+   - Performance vs. maintainability tradeoffs
+   - Example: "Config is split across files because of circular import issues"
+
+3. **Domain Logic & Business Rules**
+   - Non-obvious invariants that must be maintained
+   - Edge cases that matter and why
+   - Regulatory or compliance requirements
+   - Example: "Never delete audit records, only mark as archived"
+
+4. **Complex Reasoning Chains**
+   - Alternatives considered and explicitly rejected
+   - Multi-step logic that led to decisions
+   - Dependencies between choices
+   - Example: "Can't use async here because parent caller is sync"
+
+5. **Known Pitfalls & Anti-patterns**
+   - Things that seem right but cause problems
+   - Framework-specific gotchas
+   - Performance traps unique to this codebase
+   - Example: "Don't use .resolve() before checking .exists()"
+
+**Relevance Filter - Only Include if:**
+
+- It took >5 minutes to discover/understand
+- It would change HOW something is implemented (not just what)
+- Missing it would likely cause bugs or rework
+- It's non-obvious from reading the code
+
+**How to Capture:**
+
+- Use the "Context & Understanding" section in plan templates
+- Be specific with concrete examples, not abstract descriptions
+- Link each insight to specific implementation steps
+- Include "why it matters" and "how to handle"
+
 ### Step 3.5: Interactive Plan Enhancement
 
 **CRITICAL:** This is where we transform a generic plan into one optimized for autonomous agent execution.
@@ -414,6 +588,18 @@ Examine the plan for ambiguities that would block autonomous execution:
    - Multiple unrelated components
    - Need: Phase decomposition
 
+6. **Missing reasoning context**: "use the better approach", "handle carefully"
+   - Need: Which approach was chosen and WHY
+   - Need: What "carefully" means specifically
+
+7. **Vague constraints**: "ensure compatibility", "maintain performance"
+   - Need: Specific versions, standards, or metrics
+   - Need: Quantifiable requirements
+
+8. **Hidden complexity**: Steps that seem simple but aren't
+   - Need: Document discovered complexity
+   - Need: Explain non-obvious requirements
+
 #### Phase 2: Ask Clarifying Questions
 
 For each gap identified, ask the user specific questions. Use the AskUserQuestion tool to get answers.
@@ -444,6 +630,41 @@ The plan references "the payments API" - which service is this?
 - Ask all clarifying questions in one interaction (batch them)
 - Make questions specific and provide examples
 - Allow user to skip questions if they prefer ambiguity
+
+#### Phase 2.5: Capture Semantic Understanding
+
+After clarifying questions but before suggesting phases, assess whether you discovered valuable context during planning:
+
+**Self-Assessment Questions** (planning agent asks itself):
+
+1. Did I spend significant time understanding an external API or tool?
+2. Did I discover non-obvious architectural patterns or constraints?
+3. Did I reason through multiple approaches before choosing one?
+4. Did I uncover edge cases or gotchas that would surprise someone?
+5. Did I learn something that changes HOW (not just what) to implement?
+
+**If YES to any**, prompt the user:
+
+```markdown
+I discovered important context while planning that would help the implementing agent:
+
+**[Type of Understanding]**: [Brief description]
+
+Specific insights:
+
+- [Concrete example or quirk]
+- Why it matters: [Impact on implementation]
+- How to handle: [Recommended approach]
+
+Should I include this in the 'Context & Understanding' section? This would prevent the implementing agent from having to rediscover these insights.
+```
+
+**Examples of Semantic Understanding to Capture:**
+
+- **API Quirk**: "GitHub API returns 404 for private repos even with valid token - must check permissions separately"
+- **Architecture**: "Can't modify BaseClass directly - all customization through dependency injection"
+- **Business Logic**: "Order status must transition through 'pending' - direct jump to 'completed' breaks audit trail"
+- **Performance**: "Batch size >100 causes OOM on production servers despite working locally"
 
 #### Phase 3: Suggest Phase Decomposition
 
@@ -504,10 +725,70 @@ Based on user responses:
 
 **Enhanced plan format for phases:**
 
-```markdown
+````markdown
 ## Implementation Plan: [Title]
 
 ### Execution Mode: Phased Implementation with Graphite Stack
+
+### Context & Understanding
+
+<!-- Semantic cache of expensive-to-derive knowledge -->
+
+**System Architecture Insights**:
+
+- [Key insight about WHY system works this way]
+- Implication: [How this affects implementation]
+
+**API/Tool Quirks Discovered**:
+
+- [Tool/API name]: [Non-obvious behavior]
+  - Why it matters: [Impact on implementation]
+  - How to handle: [Specific approach]
+  - Watch out for: [Common mistake]
+
+**Domain Logic & Constraints**:
+
+- [Business rule or constraint]
+  - Rationale: [Why this exists]
+  - Edge case: [Non-obvious scenario]
+  - Validation: [How to verify correctness]
+
+**Reasoning Trail** (if complex decisions were made):
+
+- Considered: [Alternative approach]
+  - Pros: [Benefits]
+  - Cons: [Drawbacks]
+- Rejected because: [Specific reason]
+- Chose: [Selected approach]
+  - Tradeoff accepted: [What we're giving up]
+
+### Known Pitfalls
+
+<!-- Anti-patterns and mistakes to avoid -->
+
+| Don't Do This  | Why It Seems Right | Why It's Wrong   | Do This Instead    |
+| -------------- | ------------------ | ---------------- | ------------------ |
+| [Anti-pattern] | [Intuitive reason] | [Actual problem] | [Correct approach] |
+
+### Codebase Navigation
+
+<!-- ONLY paths/patterns directly referenced in implementation steps -->
+
+**Files to Modify** (linked to steps below):
+
+- `[path]`: Phase [X] - [What to change]
+
+**Reference Implementations** (for "similar to" mentions):
+
+- `[file:line]`: Phase [Y] - [Pattern to follow]
+
+**Import Paths** (for functions used in plan):
+
+```python
+# Only imports needed for implementation
+from workstack.core.config import [specifics]
+```
+````
 
 ### Phase 1: [descriptive-name]
 
@@ -534,7 +815,8 @@ Based on user responses:
 **Branch**: feature-2 (stacks on: feature-1)
 **Objective**: [Single, clear goal]
 [Continue pattern...]
-```
+
+````
 
 **Enhanced plan format for single-phase:**
 
@@ -551,6 +833,55 @@ Based on user responses:
 - [Measurable outcome 2]
 - All tests pass
 - `/ensure-ci` validation passes
+
+### Context & Understanding
+<!-- Semantic cache of expensive-to-derive knowledge -->
+
+**System Architecture Insights**:
+- [Key insight about WHY system works this way]
+- Implication: [How this affects implementation]
+
+**API/Tool Quirks Discovered**:
+- [Tool/API name]: [Non-obvious behavior]
+  - Why it matters: [Impact on implementation]
+  - How to handle: [Specific approach]
+  - Watch out for: [Common mistake]
+
+**Domain Logic & Constraints**:
+- [Business rule or constraint]
+  - Rationale: [Why this exists]
+  - Edge case: [Non-obvious scenario]
+  - Validation: [How to verify correctness]
+
+**Reasoning Trail** (if complex decisions were made):
+- Considered: [Alternative approach]
+  - Pros: [Benefits]
+  - Cons: [Drawbacks]
+- Rejected because: [Specific reason]
+- Chose: [Selected approach]
+  - Tradeoff accepted: [What we're giving up]
+
+### Known Pitfalls
+<!-- Anti-patterns and mistakes to avoid -->
+
+| Don't Do This | Why It Seems Right | Why It's Wrong | Do This Instead |
+|---|---|---|---|
+| [Anti-pattern] | [Intuitive reason] | [Actual problem] | [Correct approach] |
+
+### Codebase Navigation
+<!-- ONLY paths/patterns directly referenced in implementation steps -->
+
+**Files to Modify** (linked to steps below):
+- `[path]`: Step [X] - [What to change]
+
+**Reference Implementations** (for "similar to" mentions):
+- `[file:line]`: Step [Y] - [Pattern to follow]
+
+**Import Paths** (for functions used in plan):
+```python
+# Only imports needed for implementation
+from workstack.core.config import [specifics]
+````
 
 ### Implementation Steps
 
@@ -569,6 +900,85 @@ Based on user responses:
 - Unit tests: [Specific test files to create/modify]
 - Integration tests: [If applicable]
 - Validation: Run `/ensure-ci` after implementation
+
+````
+
+#### Phase 4.5: Apply Tiered Disclosure for Complex Topics
+
+For detailed technical explanations that might overwhelm the main flow, use collapsible sections:
+
+**Template for Complex Steps:**
+
+```markdown
+### Implementation Steps
+
+1. **[High-level step description]**
+   - [Key action 1]
+   - [Key action 2]
+
+   <details>
+   <summary>Deep Dive: [Complex Topic]</summary>
+
+   **Why this complexity exists:**
+   [Explanation of underlying issues]
+
+   **Detailed implementation:**
+   ```python
+   # Code examples if helpful
+````
+
+**Edge cases to handle:**
+
+- [Edge case 1]: [How to handle]
+- [Edge case 2]: [How to handle]
+
+**Recovery strategies:**
+
+- If [error X]: [Recovery approach]
+- If [error Y]: [Recovery approach]
+
+   </details>
+
+`````
+
+**Guidelines for Tiered Disclosure:**
+
+- **Main content**: 2-3 lines per step (always visible)
+- **Deep dive**: Unlimited but focused (collapsible)
+- **Use when**: Technical detail exceeds 10 lines
+- **Always include**: "Why this matters" in deep dive
+- **Link to steps**: Reference which implementation step needs this detail
+
+**Example:**
+
+````markdown
+1. **Configure webhook endpoint**
+   - Register endpoint with external service
+   - Set up retry logic for resilience
+
+   <details>
+   <summary>Deep Dive: Webhook Race Conditions</summary>
+
+   **Why this complexity exists:**
+   The webhook can arrive before the API call returns, causing duplicate processing.
+
+   **How to handle:**
+   - Use database locks on payment ID
+   - Check payment status before processing
+   - Implement idempotency keys
+
+   **Code approach:**
+
+   ```python
+   with database.lock(f"payment_{payment_id}"):
+       if payment.status != "pending":
+           return  # Already processed
+       process_payment(payment)
+`````
+
+````
+
+   </details>
 ```
 
 #### Phase 5: Final Review
@@ -857,3 +1267,4 @@ Each phase will be implemented as a separate branch with CI verification.
 - The `--permission-mode acceptEdits` flag is included to automatically accept edits during implementation
 - Plans are optimized for autonomous agent execution with zero ambiguity
 - Always provide clear feedback at each step
+````

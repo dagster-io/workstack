@@ -371,7 +371,9 @@ def nested():
     assert kit_group is not None
 
 
-def test_all_commands_fail_to_load_shows_warning(tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
+def test_all_commands_fail_to_load_shows_warning(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
     """Test that warning is shown when all commands fail to load."""
     kit_dir = tmp_path / "test-kit"
     kit_dir.mkdir()
@@ -422,10 +424,11 @@ def test_all_commands_fail_to_load_shows_warning(tmp_path: Path, capsys: pytest.
     assert "all 1 command(s) failed to load" in captured.err
 
 
-def test_kit_discovery_isolates_manifest_parse_errors(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_kit_discovery_isolates_manifest_parse_errors(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Test that manifest parse errors don't prevent other kits from loading."""
     from dot_agent_kit.commands.run.group import _load_kit_commands, run_group
-    from dot_agent_kit.sources.bundled import BundledKitSource
 
     # Create a mock BundledKitSource that returns two kits
     class MockSource:
@@ -495,7 +498,9 @@ commands:
     assert "bad-kit" not in run_group.commands
 
 
-def test_kit_discovery_isolates_add_command_errors(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_kit_discovery_isolates_add_command_errors(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Test that errors from add_command don't prevent other kits from loading."""
     from dot_agent_kit.commands.run.group import _load_kit_commands, run_group
 

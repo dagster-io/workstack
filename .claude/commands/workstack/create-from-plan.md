@@ -338,6 +338,58 @@ If no guidance provided: use the original plan as-is
 
 **Remember the goal:** We are creating a detailed, thorough implementation plan that enables a downstream agent to execute autonomously with confidence. Every question we ask and every enhancement we suggest should serve this goal. If the plan already has enough detail for autonomous execution, don't add unnecessary complexity.
 
+#### Plans Should Describe WHAT, Not Include HOW (Code)
+
+**Core principle:** Implementation plans should describe behavior, requirements, and architectural decisions - NOT include exact code snippets or implementation details.
+
+**Why:**
+
+- Plans describe **intent and behavior**, code implements the details
+- Exact code snippets in plans become stale quickly
+- Code snippets constrain the implementing agent unnecessarily
+- Plans are for humans and agents to understand goals, not copy-paste
+
+**Exception - When code snippets ARE appropriate:**
+
+Only include exact code in plans for high-stakes scenarios where precision is critical:
+
+1. **Security-critical code**: Authentication, authorization, encryption implementations
+2. **Public APIs**: Interface signatures that cannot change without breaking consumers
+3. **Critical interfaces**: Database schema changes, protocol definitions, contract boundaries
+4. **Bug fixes**: When demonstrating the exact before/after change for a subtle bug
+
+**What to include instead:**
+
+- File paths: "Update `src/models/user.py`"
+- Function names: "Modify `validate_credentials()` function"
+- Behavior: "Return 401 when authentication fails, 403 when authorized but forbidden"
+- Requirements: "Use LBYL pattern for path validation"
+- Success criteria: "All existing authentication tests pass, plus new edge cases"
+
+**Example comparison:**
+
+❌ **Too specific (code snippet):**
+
+```
+Add this code to src/auth.py:
+def validate_user(user_id: str | None) -> User:
+    if user_id is None:
+        raise ValueError("user_id cannot be None")
+    if user_id not in user_cache:
+        raise UserNotFoundError(f"User {user_id} not found")
+    return user_cache[user_id]
+```
+
+✅ **Right level of detail (behavioral):**
+
+```
+Update validate_user() in src/auth.py:
+- Use LBYL pattern: check user_id is not None before proceeding
+- Check user exists in cache before accessing
+- Raise ValueError for None, UserNotFoundError for missing users
+- Return User object from cache when found
+```
+
 #### Phase 1: Analyze Plan for Gaps
 
 Examine the plan for ambiguities that would block autonomous execution:
@@ -403,6 +455,14 @@ For complex plans, suggest breaking into phases:
 - Expected changes exceed 200 lines
 - Multiple components with different concerns
 - Sequential dependencies between major parts
+
+**IMPORTANT - Testing and validation:**
+
+- Testing and validation are ALWAYS bundled within implementation phases
+- Never create separate phases for "add tests" or "run validation"
+- Each phase is an independently testable commit with its own tests
+- Only decompose when business logic complexity genuinely requires it
+- Tests are part of the deliverable for each phase, not afterthoughts
 
 **Phase structure suggestion:**
 
@@ -542,6 +602,8 @@ Suggested fix: Include rollback procedure or backup strategy
 - Don't use percentages or scores
 - Focus on actionability
 
+**Output:** Final enhanced plan content ready for Step 4 processing
+
 ### Step 4: Generate Filename from Plan
 
 **Filename Extraction Algorithm:**
@@ -644,7 +706,7 @@ Suggested action:
 
 ### Step 7: Create Worktree with Plan
 
-Execute: `workstack create --plan <worktree-root>/<filename> --json`
+Execute: `workstack create --plan <worktree-root>/<filename> --json --stay`
 
 **Parse JSON output:**
 

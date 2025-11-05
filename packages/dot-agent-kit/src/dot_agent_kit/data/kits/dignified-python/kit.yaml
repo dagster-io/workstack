@@ -11,3 +11,7 @@ hooks:
     script: hooks/suggest-dignified-python.py
     description: Suggests loading dignified-python skill on every prompt
     timeout: 30
+commands:
+  - name: check-lbyl
+    path: commands/check_lbyl.py
+    description: Check Python code for LBYL violations

@@ -100,6 +100,37 @@ def test_load_kit_manifest_minimal(tmp_path: Path) -> None:
     assert manifest.homepage is None
 
 
+def test_load_kit_manifest_with_commands(tmp_path: Path) -> None:
+    """Test kit.yaml with commands section."""
+    manifest_path = tmp_path / "kit.yaml"
+    manifest_path.write_text(
+        "name: test-kit\n"
+        "version: 1.0.0\n"
+        "description: Test kit\n"
+        "commands:\n"
+        "  - name: check-lbyl\n"
+        "    path: commands/check_lbyl.py\n"
+        "    description: Check Python code for LBYL violations\n"
+        "  - name: validate-exceptions\n"
+        "    path: commands/validate_exceptions.py\n"
+        "    description: Validate exception handling patterns\n",
+        encoding="utf-8",
+    )
+
+    manifest = load_kit_manifest(manifest_path)
+
+    assert manifest.name == "test-kit"
+    assert manifest.version == "1.0.0"
+    assert manifest.description == "Test kit"
+    assert len(manifest.commands) == 2
+    assert manifest.commands[0].name == "check-lbyl"
+    assert manifest.commands[0].path == "commands/check_lbyl.py"
+    assert manifest.commands[0].description == "Check Python code for LBYL violations"
+    assert manifest.commands[1].name == "validate-exceptions"
+    assert manifest.commands[1].path == "commands/validate_exceptions.py"
+    assert manifest.commands[1].description == "Validate exception handling patterns"
+
+
 def test_load_registry() -> None:
     """Test loading registry with entries."""
     registry = load_registry()

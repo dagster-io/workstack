@@ -6,6 +6,15 @@ from dot_agent_kit.hooks.models import HookDefinition
 
 
 @dataclass(frozen=True)
+class CommandDefinition:
+    """Command definition in kit manifest."""
+
+    name: str
+    path: str
+    description: str
+
+
+@dataclass(frozen=True)
 class KitManifest:
     """Kit manifest from kit.yaml."""
 
@@ -16,6 +25,7 @@ class KitManifest:
     license: str | None = None
     homepage: str | None = None
     hooks: list[HookDefinition] = field(default_factory=list)
+    commands: list[CommandDefinition] = field(default_factory=list)
 
     def validate_namespace_pattern(self) -> list[str]:
         """Check if artifacts follow recommended hyphenated naming convention.

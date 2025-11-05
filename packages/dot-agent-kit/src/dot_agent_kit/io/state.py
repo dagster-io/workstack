@@ -32,9 +32,21 @@ def load_project_config(project_dir: Path) -> ProjectConfig | None:
             if "hooks" in kit_data:
                 hooks = [HookDefinition.model_validate(h) for h in kit_data["hooks"]]
 
+            # Require kit_id field (no fallback)
+            if "kit_id" not in kit_data:
+                msg = f"Kit configuration missing required 'kit_id' field: {kit_name}"
+                raise KeyError(msg)
+            kit_id = kit_data["kit_id"]
+
+            # Require source_type field (no fallback)
+            if "source_type" not in kit_data:
+                msg = f"Kit configuration missing required 'source_type' field: {kit_name}"
+                raise KeyError(msg)
+            source_type = kit_data["source_type"]
+
             kits[kit_name] = InstalledKit(
-                kit_id=kit_data.get("kit_id", kit_name),  # Use kit_name as fallback
-                source_type=kit_data.get("source_type", SOURCE_TYPE_BUNDLED),
+                kit_id=kit_id,
+                source_type=source_type,
                 version=kit_data["version"],
                 installed_at=kit_data["installed_at"],
                 artifacts=kit_data["artifacts"],

@@ -360,6 +360,92 @@ def test_validate_kit_fields_invalid_source_type() -> None:
     assert "Invalid source_type" in errors[0]
 
 
+def test_validate_kit_fields_source_type_empty_string() -> None:
+    """Test validate_kit_fields with empty string source_type."""
+    kit = InstalledKit(
+        kit_id="test-kit",
+        source_type=cast(SourceType, ""),
+        version="1.0.0",
+        installed_at="2024-01-01T00:00:00",
+        artifacts=[".claude/skills/test/SKILL.md"],
+    )
+    errors = validate_kit_fields(kit)
+    assert len(errors) == 1
+    assert "Invalid source_type" in errors[0]
+
+
+def test_validate_kit_fields_source_type_whitespace() -> None:
+    """Test validate_kit_fields with whitespace-only source_type."""
+    kit = InstalledKit(
+        kit_id="test-kit",
+        source_type=cast(SourceType, "   "),
+        version="1.0.0",
+        installed_at="2024-01-01T00:00:00",
+        artifacts=[".claude/skills/test/SKILL.md"],
+    )
+    errors = validate_kit_fields(kit)
+    assert len(errors) == 1
+    assert "Invalid source_type" in errors[0]
+
+
+def test_validate_kit_fields_source_type_wrong_case() -> None:
+    """Test validate_kit_fields with wrong case source_type."""
+    # Test uppercase
+    kit_upper = InstalledKit(
+        kit_id="test-kit",
+        source_type=cast(SourceType, "BUNDLED"),
+        version="1.0.0",
+        installed_at="2024-01-01T00:00:00",
+        artifacts=[".claude/skills/test/SKILL.md"],
+    )
+    errors_upper = validate_kit_fields(kit_upper)
+    assert len(errors_upper) == 1
+    assert "Invalid source_type" in errors_upper[0]
+
+    # Test capitalized
+    kit_cap = InstalledKit(
+        kit_id="test-kit",
+        source_type=cast(SourceType, "Bundled"),
+        version="1.0.0",
+        installed_at="2024-01-01T00:00:00",
+        artifacts=[".claude/skills/test/SKILL.md"],
+    )
+    errors_cap = validate_kit_fields(kit_cap)
+    assert len(errors_cap) == 1
+    assert "Invalid source_type" in errors_cap[0]
+
+
+def test_validate_kit_fields_source_type_common_typos() -> None:
+    """Test validate_kit_fields with common typos in source_type."""
+    typos = ["bundle", "packages", "pkg", "bundles", "packge"]
+
+    for typo in typos:
+        kit = InstalledKit(
+            kit_id="test-kit",
+            source_type=cast(SourceType, typo),
+            version="1.0.0",
+            installed_at="2024-01-01T00:00:00",
+            artifacts=[".claude/skills/test/SKILL.md"],
+        )
+        errors = validate_kit_fields(kit)
+        assert len(errors) == 1, f"Expected error for typo: {typo}"
+        assert "Invalid source_type" in errors[0], f"Expected 'Invalid source_type' for typo: {typo}"
+
+
+def test_validate_kit_fields_source_type_with_surrounding_whitespace() -> None:
+    """Test validate_kit_fields with valid source_type but surrounding whitespace."""
+    kit = InstalledKit(
+        kit_id="test-kit",
+        source_type=cast(SourceType, " bundled "),
+        version="1.0.0",
+        installed_at="2024-01-01T00:00:00",
+        artifacts=[".claude/skills/test/SKILL.md"],
+    )
+    errors = validate_kit_fields(kit)
+    assert len(errors) == 1
+    assert "Invalid source_type" in errors[0]
+
+
 def test_validate_kit_fields_empty_artifacts() -> None:
     """Test validate_kit_fields with empty artifacts list."""
     kit = InstalledKit(

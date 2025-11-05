@@ -52,8 +52,17 @@ def show_artifact(name: str, artifact_type: str | None) -> None:
         if i > 0:
             click.echo("\n" + "=" * 60 + "\n")
 
+        # Compute absolute path for display
+        if artifact.level.value == "user":
+            base_dir = user_path
+        else:
+            base_dir = project_path
+
+        artifact_path = base_dir / artifact.file_path
+        absolute_path = artifact_path.resolve() if artifact_path.exists() else None
+
         # Display metadata header
-        click.echo(format_artifact_header(artifact))
+        click.echo(format_artifact_header(artifact, absolute_path))
 
         # Add hook-specific metadata
         if artifact.artifact_type == "hook":

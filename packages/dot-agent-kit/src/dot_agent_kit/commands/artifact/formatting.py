@@ -1,5 +1,7 @@
 """Formatting functions for artifact display output."""
 
+from pathlib import Path
+
 import click
 
 from dot_agent_kit.models.artifact import ArtifactLevel, ArtifactSource, InstalledArtifact
@@ -50,11 +52,12 @@ def format_compact_artifact_line(artifact: InstalledArtifact) -> str:
     return f"{level} {name} {source}"
 
 
-def format_artifact_header(artifact: InstalledArtifact) -> str:
+def format_artifact_header(artifact: InstalledArtifact, absolute_path: Path | None = None) -> str:
     """Format metadata header for artifact show command.
 
     Args:
         artifact: Artifact to format header for
+        absolute_path: Optional absolute filesystem path to display
 
     Returns:
         Multi-line formatted header with metadata
@@ -70,7 +73,12 @@ def format_artifact_header(artifact: InstalledArtifact) -> str:
     if artifact.kit_version:
         lines.append(f"Version: {artifact.kit_version}")
 
-    lines.append(f"Path: {artifact.file_path}")
+    # Display absolute path if provided, otherwise use relative path
+    # When absolute path is provided, only display that (not both paths)
+    if absolute_path:
+        lines.append(f"Path: {absolute_path}")
+    else:
+        lines.append(f"Path: {artifact.file_path}")
 
     return "\n".join(lines)
 

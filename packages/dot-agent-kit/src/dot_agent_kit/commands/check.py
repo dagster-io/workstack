@@ -1,12 +1,13 @@
 """Check command for validating artifacts and sync status."""
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
 import click
 
-from dot_agent_kit.hooks.models import ClaudeSettings, HookDefinition
+from dot_agent_kit.hooks.models import ClaudeSettings, HookDefinition, HookEntry
 from dot_agent_kit.hooks.settings import extract_kit_id_from_command, load_settings
 from dot_agent_kit.io import load_project_config
 from dot_agent_kit.io.manifest import load_kit_manifest
@@ -60,6 +61,18 @@ class HookDriftResult:
 
     kit_id: str
     issues: list[HookDriftIssue]
+
+
+@dataclass(frozen=True)
+class HookValidationDetail:
+    """Detailed information about hook validation process."""
+
+    lifecycle: str
+    command: str
+    kit_id: str | None  # None if not a dot-agent managed hook
+    hook_id: str | None  # None if not a dot-agent managed hook or parsing failed
+    action: str  # "found_and_parsed", "skipped_not_dot_agent", "parse_error"
+    error_message: str | None = None
 
 
 def validate_kit_fields(kit: InstalledKit) -> list[str]:
@@ -202,6 +215,55 @@ def check_artifact_sync(
     return SyncCheckResult(
         artifact_path=local_path,
         is_in_sync=True,
+    )
+
+
+def _process_hook_entry(
+    hook_entry: HookEntry,
+    lifecycle: str,
+) -> HookValidationDetail:
+    """Process a single hook entry and return validation details.
+
+    Args:
+        hook_entry: Hook entry from settings.json
+        lifecycle: Lifecycle event name (e.g., "UserPromptSubmit")
+
+    Returns:
+        HookValidationDetail with processing information
+    """
+    # Try to extract kit ID
+    command_kit_id = extract_kit_id_from_command(hook_entry.command)
+
+    if command_kit_id is None:
+        # Not a dot-agent managed hook
+        return HookValidationDetail(
+            lifecycle=lifecycle,
+            command=hook_entry.command,
+            kit_id=None,
+            hook_id=None,
+            action="skipped_not_dot_agent",
+        )
+
+    # Try to extract hook ID
+    hook_id_match = re.search(r"DOT_AGENT_HOOK_ID=(\S+)", hook_entry.command)
+    if hook_id_match:
+        hook_id = hook_id_match.group(1)
+        return HookValidationDetail(
+            lifecycle=lifecycle,
+            command=hook_entry.command,
+            kit_id=command_kit_id,
+            hook_id=hook_id,
+            action="found_and_parsed",
+        )
+
+    # dot-agent hook but missing hook ID
+    return HookValidationDetail(
+        lifecycle=lifecycle,
+        command=hook_entry.command,
+        kit_id=command_kit_id,
+        hook_id=None,
+        action="parse_error",
+        error_message="Missing DOT_AGENT_HOOK_ID environment variable",
     )
 
 
@@ -357,7 +419,7 @@ def _detect_hook_drift(
 def validate_hook_configuration(
     project_dir: Path,
     config: ProjectConfig,
-) -> list[HookDriftResult]:
+) -> tuple[list[HookDriftResult], list[HookValidationDetail]]:
     """Check if installed hooks match kit expectations.
 
     Only validates bundled kits. Skips validation if kit.yaml has no hooks field.
@@ -367,16 +429,27 @@ def validate_hook_configuration(
         config: Loaded project configuration
 
     Returns:
-        List of HookDriftResult objects (empty if no drift)
+        Tuple of (drift_results, validation_details)
+        - drift_results: List of HookDriftResult objects (empty if no drift)
+        - validation_details: List of detailed hook processing information
     """
     results: list[HookDriftResult] = []
+    validation_details: list[HookValidationDetail] = []
 
     # Load settings.json
     settings_path = project_dir / ".claude" / "settings.json"
     if not settings_path.exists():
-        return results
+        return results, validation_details
 
     settings = load_settings(settings_path)
+
+    # First pass: collect all hooks with details (for verbose output)
+    if settings.hooks:
+        for lifecycle, groups in settings.hooks.items():
+            for group in groups:
+                for hook_entry in group.hooks:
+                    detail = _process_hook_entry(hook_entry, lifecycle)
+                    validation_details.append(detail)
 
     bundled_source = BundledKitSource()
 
@@ -428,7 +501,7 @@ def validate_hook_configuration(
         if drift_result is not None:
             results.append(drift_result)
 
-    return results
+    return results, validation_details
 
 
 @click.command()
@@ -447,11 +520,13 @@ def check(verbose: bool) -> None:
     config_exists = config is not None
 
     # Part 1: Validate configuration
-    click.echo("=== Configuration Validation ===")
+    if verbose:
+        click.echo(click.style("🔍 Configuration Validation", fg="white", bold=True))
 
     # Check if there are kits to validate
     if not config_exists or len(config.kits) == 0:
-        click.echo("No kits installed - skipping configuration validation")
+        if verbose:
+            click.echo("No kits installed - skipping configuration validation")
         config_passed = True
     else:
         # Validate all installed kits
@@ -462,71 +537,74 @@ def check(verbose: bool) -> None:
         # Show results
         if verbose or invalid_count > 0:
             for result in validation_results:
-                status = "✓" if result.is_valid else "✗"
-                click.echo(f"{status} {result.kit_id}")
+                if result.is_valid:
+                    status = click.style("✓", fg="green")
+                else:
+                    status = click.style("✗", fg="red")
+                click.echo(f"{status} {click.style(result.kit_id, fg='cyan')}")
 
                 if not result.is_valid:
                     for error in result.errors:
                         click.echo(f"  - {error}", err=True)
 
         # Summary
-        click.echo()
-        click.echo(f"Validated {len(validation_results)} kit configuration(s):")
-        click.echo(f"  ✓ Valid: {valid_count}")
+        if verbose:
+            click.echo()
+            click.echo(f"Validated {len(validation_results)} kit configuration(s):")
+            valid_check = click.style("✓", fg="green")
+            valid_num = click.style(str(valid_count), fg="green")
+            click.echo(f"  {valid_check} Valid: {valid_num}")
+
+            if invalid_count > 0:
+                invalid_check = click.style("✗", fg="red")
+                invalid_num = click.style(str(invalid_count), fg="red")
+                click.echo(f"  {invalid_check} Invalid: {invalid_num}", err=True)
+            else:
+                success_msg = "✨ All kit configurations are valid!"
+                click.echo(click.style(success_msg, fg="green", bold=True))
 
         if invalid_count > 0:
-            click.echo(f"  ✗ Invalid: {invalid_count}", err=True)
             config_passed = False
         else:
-            click.echo("All kit configurations are valid!")
             config_passed = True
 
-    click.echo()
+    if verbose:
+        click.echo()
 
-    # Part 2: Validate artifacts
-    click.echo("=== Artifact Validation ===")
+    # Part 2: Validate artifacts (silent validation, errors will be reported in sync check)
     validation_results = validate_project(project_dir)
 
     if len(validation_results) == 0:
-        click.echo("No artifacts found to validate")
         validation_passed = True
     else:
-        valid_count = sum(1 for r in validation_results if r.is_valid)
-        invalid_count = len(validation_results) - valid_count
+        invalid_count = sum(1 for r in validation_results if not r.is_valid)
 
-        # Show results
-        if verbose or invalid_count > 0:
+        # Only show errors, not the full list
+        if invalid_count > 0:
+            click.echo(click.style("📋 Artifact Validation Errors", fg="white", bold=True))
             for result in validation_results:
-                status = "✓" if result.is_valid else "✗"
-                rel_path = result.artifact_path.relative_to(project_dir)
-                click.echo(f"{status} {rel_path}")
-
                 if not result.is_valid:
+                    status = click.style("✗", fg="red")
+                    rel_path = result.artifact_path.relative_to(project_dir)
+                    click.echo(f"{status} {click.style(str(rel_path), fg='cyan')}")
                     for error in result.errors:
                         click.echo(f"  - {error}", err=True)
-
-        # Summary
-        click.echo()
-        click.echo(f"Validated {len(validation_results)} artifacts:")
-        click.echo(f"  ✓ Valid: {valid_count}")
-
-        if invalid_count > 0:
-            click.echo(f"  ✗ Invalid: {invalid_count}", err=True)
+            click.echo()
             validation_passed = False
         else:
-            click.echo("All artifacts are valid!")
             validation_passed = True
 
-    click.echo()
-
     # Part 3: Check bundled kit sync status
-    click.echo("=== Bundled Kit Sync Status ===")
+    if verbose:
+        click.echo(click.style("🔄 Bundled Kit Sync Status", fg="white", bold=True))
 
     sync_passed = True
     if not config_exists:
-        click.echo("No dot-agent.toml found - skipping sync check")
+        if verbose:
+            click.echo("No dot-agent.toml found - skipping sync check")
     elif len(config.kits) == 0:
-        click.echo("No kits installed - skipping sync check")
+        if verbose:
+            click.echo("No kits installed - skipping sync check")
     else:
         bundled_source = BundledKitSource()
         all_results: list[tuple[str, list, list[str], list[str]]] = []
@@ -563,7 +641,8 @@ def check(verbose: bool) -> None:
             all_results.append((kit_id_iter, kit_results, missing_artifacts, obsolete_artifacts))
 
         if len(all_results) == 0:
-            click.echo("No bundled kits found to check")
+            if verbose:
+                click.echo("No bundled kits found to check")
             sync_passed = True
         else:
             # Display results
@@ -585,14 +664,18 @@ def check(verbose: bool) -> None:
 
                 has_issues = kit_out_of_sync > 0 or len(missing) > 0 or len(obsolete) > 0
                 if verbose or has_issues:
-                    click.echo(f"\nKit: {kit_id_iter}")
+                    click.echo(f"\nKit: {click.style(kit_id_iter, fg='cyan')}")
                     for result in results:
-                        status = "✓" if result.is_in_sync else "✗"
+                        if result.is_in_sync:
+                            status = click.style("✓", fg="green")
+                        else:
+                            status = click.style("✗", fg="red")
                         rel_path = result.artifact_path.relative_to(project_dir)
-                        click.echo(f"  {status} {rel_path}")
+                        click.echo(f"  {status} {click.style(str(rel_path), fg='cyan')}")
 
                         if not result.is_in_sync and result.reason is not None:
-                            click.echo(f"      {result.reason}", err=True)
+                            reason_msg = f"      {result.reason}"
+                            click.echo(click.style(reason_msg, fg="white", dim=True), err=True)
 
                     # Show missing artifacts
                     if len(missing) > 0:
@@ -609,83 +692,154 @@ def check(verbose: bool) -> None:
                             click.echo(f"    - {obsolete_path}", err=True)
 
             # Summary
-            click.echo()
-            kit_count = len(all_results)
-            click.echo(f"Checked {total_artifacts} artifact(s) from {kit_count} bundled kit(s):")
-            click.echo(f"  ✓ In sync: {in_sync_count}")
+            if verbose:
+                click.echo()
+                kit_count = len(all_results)
+                summary = f"Checked {total_artifacts} artifact(s) from {kit_count} bundled kit(s):"
+                click.echo(summary)
+                sync_check = click.style("✓", fg="green")
+                sync_num = click.style(str(in_sync_count), fg="green")
+                click.echo(f"  {sync_check} In sync: {sync_num}")
 
-            if out_of_sync_count > 0:
-                click.echo(f"  ✗ Out of sync: {out_of_sync_count}", err=True)
+                if out_of_sync_count > 0:
+                    out_check = click.style("✗", fg="red")
+                    out_num = click.style(str(out_of_sync_count), fg="red")
+                    click.echo(f"  {out_check} Out of sync: {out_num}", err=True)
 
-            if missing_count > 0:
-                click.echo(f"  ⚠ Missing: {missing_count}", err=True)
+                if missing_count > 0:
+                    miss_check = click.style("⚠", fg="yellow")
+                    miss_num = click.style(str(missing_count), fg="yellow")
+                    click.echo(f"  {miss_check} Missing: {miss_num}", err=True)
 
-            if obsolete_count > 0:
-                click.echo(f"  ⚠ Obsolete: {obsolete_count}", err=True)
+                if obsolete_count > 0:
+                    obs_check = click.style("⚠", fg="yellow")
+                    obs_num = click.style(str(obsolete_count), fg="yellow")
+                    click.echo(f"  {obs_check} Obsolete: {obs_num}", err=True)
 
             if out_of_sync_count > 0 or missing_count > 0 or obsolete_count > 0:
-                click.echo()
-                click.echo("Run 'dot-agent kit sync --force' to update artifacts", err=True)
+                if verbose:
+                    click.echo()
+                    click.echo("Run 'dot-agent kit sync --force' to update artifacts", err=True)
                 sync_passed = False
             else:
-                click.echo()
-                click.echo("All artifacts are in sync!")
+                if verbose:
+                    click.echo()
+                    success_msg = "✨ All artifacts are in sync!"
+                    click.echo(click.style(success_msg, fg="green", bold=True))
                 sync_passed = True
 
-    click.echo()
+    if verbose:
+        click.echo()
 
     # Part 4: Hook configuration validation
-    click.echo("=== Hook Configuration Validation ===")
+    if verbose:
+        click.echo(click.style("🪝 Hook Configuration Validation", fg="white", bold=True))
 
     hook_passed = True
     if not config_exists:
-        click.echo("No dot-agent.toml found - skipping hook validation")
+        if verbose:
+            click.echo("No dot-agent.toml found - skipping hook validation")
     elif len(config.kits) == 0:
-        click.echo("No kits installed - skipping hook validation")
+        if verbose:
+            click.echo("No kits installed - skipping hook validation")
     else:
-        hook_results = validate_hook_configuration(project_dir, config)
+        hook_results, validation_details = validate_hook_configuration(project_dir, config)
+
+        # Display hook information in verbose mode
+        if verbose and len(validation_details) > 0:
+            click.echo()
+
+            for detail in validation_details:
+                lifecycle_display = click.style(f"[{detail.lifecycle}]", fg="blue")
+
+                if detail.action == "found_and_parsed":
+                    status = click.style("✓", fg="green")
+                    msg = (
+                        f"{status} {lifecycle_display} Found dot-agent hook: "
+                        f"kit={click.style(detail.kit_id or '', fg='cyan')}, "
+                        f"hook={click.style(detail.hook_id or '', fg='cyan')}"
+                    )
+                    click.echo(msg)
+                    # Show the actual hook command
+                    click.echo(click.style(f"      Command: {detail.command}", fg="white", dim=True))
+
+                elif detail.action == "skipped_not_dot_agent":
+                    status = click.style("⊘", fg="yellow")
+                    msg = (
+                        f"{status} {lifecycle_display} Skipped: Not a dot-agent managed hook "
+                        f"(no DOT_AGENT_KIT_ID found)"
+                    )
+                    click.echo(msg)
+                    # Show command preview (first 80 chars)
+                    cmd_preview = detail.command[:80] + "..." if len(detail.command) > 80 else detail.command
+                    click.echo(click.style(f"      Command: {cmd_preview}", fg="white", dim=True))
+
+                elif detail.action == "parse_error":
+                    status = click.style("✗", fg="red")
+                    msg = (
+                        f"{status} {lifecycle_display} Parse error for kit "
+                        f"{click.style(detail.kit_id or 'unknown', fg='red')}: {detail.error_message}"
+                    )
+                    click.echo(msg, err=True)
+
+            click.echo()
 
         if len(hook_results) == 0:
-            click.echo("No hook drift detected - all hooks are in sync!")
+            if verbose:
+                success_msg = "✨ No hook drift detected - all hooks are in sync!"
+                click.echo(click.style(success_msg, fg="green", bold=True))
             hook_passed = True
         else:
             # Display drift issues
-            for drift_result in hook_results:
+            if verbose:
+                for drift_result in hook_results:
+                    click.echo()
+                    click.echo(f"Kit: {click.style(drift_result.kit_id, fg='cyan')}")
+
+                    for issue in drift_result.issues:
+                        if issue.severity == "error":
+                            status = click.style("✗", fg="red")
+                        else:
+                            status = click.style("⚠", fg="yellow")
+                        click.echo(f"  {status} {issue.message}", err=True)
+
+                        if issue.expected is not None:
+                            expected_msg = f"      Expected: {issue.expected}"
+                            click.echo(click.style(expected_msg, fg="white", dim=True), err=True)
+                        if issue.actual is not None:
+                            actual_msg = f"      Actual:   {issue.actual}"
+                            click.echo(click.style(actual_msg, fg="white", dim=True), err=True)
+
+                # Summary
                 click.echo()
-                click.echo(f"Kit: {drift_result.kit_id}")
+                kit_count = len(hook_results)
+                error_count = sum(1 for r in hook_results for i in r.issues if i.severity == "error")
+                warning_count = sum(
+                    1 for r in hook_results for i in r.issues if i.severity == "warning"
+                )
 
-                for issue in drift_result.issues:
-                    status = "✗" if issue.severity == "error" else "⚠"
-                    click.echo(f"  {status} {issue.message}", err=True)
+                click.echo(f"Checked hook configuration for {kit_count} kit(s):")
+                if error_count > 0:
+                    error_check = click.style("✗", fg="red")
+                    error_num = click.style(str(error_count), fg="red")
+                    click.echo(f"  {error_check} Errors: {error_num}", err=True)
+                if warning_count > 0:
+                    warn_check = click.style("⚠", fg="yellow")
+                    warn_num = click.style(str(warning_count), fg="yellow")
+                    click.echo(f"  {warn_check} Warnings: {warn_num}", err=True)
 
-                    if issue.expected is not None:
-                        click.echo(f"      Expected: {issue.expected}", err=True)
-                    if issue.actual is not None:
-                        click.echo(f"      Actual:   {issue.actual}", err=True)
-
-            # Summary
-            click.echo()
-            kit_count = len(hook_results)
-            error_count = sum(1 for r in hook_results for i in r.issues if i.severity == "error")
-            warning_count = sum(
-                1 for r in hook_results for i in r.issues if i.severity == "warning"
-            )
-
-            click.echo(f"Checked hook configuration for {kit_count} kit(s):")
-            if error_count > 0:
-                click.echo(f"  ✗ Errors: {error_count}", err=True)
-            if warning_count > 0:
-                click.echo(f"  ⚠ Warnings: {warning_count}", err=True)
-
-            click.echo()
-            click.echo("Run 'dot-agent kit sync --force' to update hook configuration", err=True)
+                click.echo()
+                click.echo("Run 'dot-agent kit sync --force' to update hook configuration", err=True)
             hook_passed = False
 
     # Overall result
-    click.echo()
-    click.echo("=" * 40)
+    if verbose:
+        click.echo()
+        click.echo(click.style("=" * 40, fg="white", dim=True))
+
     if config_passed and validation_passed and sync_passed and hook_passed:
-        click.echo("✓ All checks passed!")
+        click.echo(click.style("✅ All checks passed!", fg="green", bold=True))
     else:
-        click.echo("✗ Some checks failed", err=True)
+        if verbose:
+            click.echo(click.style("❌ Some checks failed", fg="red", bold=True), err=True)
         raise SystemExit(1)

@@ -3,8 +3,6 @@ version: 0.1.0
 description: Graphite stack management with landing and submission commands
 license: MIT
 artifacts:
-  agent:
-  - agents/gt/branch-submitter.md
   command:
   - commands/gt/land-branch.md
   - commands/gt/submit-branch.md

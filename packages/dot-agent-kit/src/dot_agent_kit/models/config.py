@@ -24,6 +24,7 @@ class ProjectConfig:
 
     version: str
     kits: dict[str, InstalledKit]
+    dev_mode: bool = False  # Enable symlink-based kit development
 
     def update_kit(self, kit: InstalledKit) -> "ProjectConfig":
         """Return new config with updated kit (maintaining immutability)."""

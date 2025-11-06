@@ -66,3 +66,6 @@ reportMissingImports = "warning"
 [tool.pytest.ini_options]
 addopts = "-q"
 testpaths = ["tests", "packages/workstack-dev/tests", "packages/dot-agent-kit/tests"]
+
+[tool.dot-agent]
+dev_mode = true

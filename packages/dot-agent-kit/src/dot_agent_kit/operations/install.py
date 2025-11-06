@@ -1,5 +1,6 @@
 """Kit installation operations."""
 
+import shutil
 from datetime import datetime
 from pathlib import Path
 
@@ -8,6 +9,7 @@ import click
 from dot_agent_kit.hooks.installer import install_hooks
 from dot_agent_kit.io import load_kit_manifest
 from dot_agent_kit.models import InstalledKit
+from dot_agent_kit.operations.artifact_operations import create_artifact_operations
 from dot_agent_kit.sources import ResolvedKit
 from dot_agent_kit.sources.exceptions import ArtifactConflictError
 
@@ -36,6 +38,9 @@ def install_kit(
 
     installed_artifacts: list[str] = []
 
+    # Create appropriate installation strategy
+    operations = create_artifact_operations(project_dir, resolved)
+
     # Use filtered artifacts if provided, otherwise use all from manifest
     artifacts_to_install = (
         filtered_artifacts if filtered_artifacts is not None else manifest.artifacts
@@ -54,8 +59,6 @@ def install_kit(
             if not source.exists():
                 continue
 
-            content = source.read_text(encoding="utf-8")
-
             # Determine target path - preserve nested directory structure
             # Artifact paths are like "agents/test.md" or "agents/subdir/test.md"
             # We need to strip the type prefix to avoid duplication
@@ -73,22 +76,24 @@ def install_kit(
                 # Fallback: use the whole path if prefix doesn't match
                 target = target_dir / artifact_rel_path
 
-            # Ensure parent directories exist
-            if not target.parent.exists():
-                target.parent.mkdir(parents=True, exist_ok=True)
-
             # Handle conflicts
             if target.exists():
                 if not overwrite:
                     raise ArtifactConflictError(target)
+                # Remove existing file/symlink
+                if target.is_symlink() or target.is_file():
+                    target.unlink()
+                else:
+                    # Handle directory removal if needed
+                    shutil.rmtree(target)
                 click.echo(f"  Overwriting: {target.name}", err=True)
 
-            # Write artifact
-            target.write_text(content, encoding="utf-8")
+            # Install artifact using strategy
+            mode_indicator = operations.install_artifact(source, target)
 
             # Log installation with namespace visibility
             relative_path = target.relative_to(claude_dir)
-            click.echo(f"  Installed {artifact_type}: {relative_path}", err=True)
+            click.echo(f"  Installed {artifact_type}: {relative_path}{mode_indicator}", err=True)
 
             # Track installation
             installed_artifacts.append(str(target.relative_to(project_dir)))

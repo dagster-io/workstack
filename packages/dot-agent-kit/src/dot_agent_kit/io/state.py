@@ -81,6 +81,36 @@ def _build_hook_validation_error_message(
     return "\n".join(error_lines)
 
 
+def _load_dev_mode_from_pyproject(project_dir: Path) -> bool:
+    """Load dev_mode setting from pyproject.toml [tool.dot-agent] section.
+
+    Args:
+        project_dir: Project root directory
+
+    Returns:
+        True if dev_mode is enabled, False otherwise
+    """
+    pyproject_path = project_dir / "pyproject.toml"
+    if not pyproject_path.exists():
+        return False
+
+    with open(pyproject_path, "rb") as f:
+        data = tomli.load(f)
+
+    # Check for [tool.dot-agent] section
+    if "tool" not in data:
+        return False
+    if "dot-agent" not in data["tool"]:
+        return False
+
+    # Get dev_mode value (default to False)
+    tool_config = data["tool"]["dot-agent"]
+    if "dev_mode" in tool_config:
+        return bool(tool_config["dev_mode"])
+
+    return False
+
+
 def load_project_config(project_dir: Path) -> ProjectConfig | None:
     """Load dot-agent.toml from project directory.
 
@@ -144,9 +174,13 @@ def load_project_config(project_dir: Path) -> ProjectConfig | None:
                 hooks=hooks,
             )
 
+    # Load dev_mode from pyproject.toml if available
+    dev_mode = _load_dev_mode_from_pyproject(project_dir)
+
     return ProjectConfig(
         version=data.get("version", "1"),
         kits=kits,
+        dev_mode=dev_mode,
     )
 
 

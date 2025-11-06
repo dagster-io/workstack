@@ -1,8 +1,3 @@
-#!/usr/bin/env -S uv run
-# /// script
-# requires-python = ">=3.13"
-# dependencies = []
-# ///
 """Land a single PR from Graphite stack without affecting upstack branches.
 
 This script safely lands a single branch from a Graphite stack by:
@@ -12,7 +7,7 @@ This script safely lands a single branch from a Graphite stack by:
 4. Navigating to the child branch if exactly one exists (skips navigation if multiple children)
 
 Usage:
-    uv run land_branch.py
+    dot-agent run gt land-branch
 
 Output:
     JSON object with either success or error information:
@@ -45,15 +40,16 @@ Error Types:
     - merge_failed: PR merge operation failed
 
 Examples:
-    $ uv run land_branch.py
+    $ dot-agent run gt land-branch
     {"success": true, "pr_number": 123, ...}
 """
 
 import json
 import subprocess
-import sys
 from dataclasses import asdict, dataclass
 from typing import Literal
+
+import click
 
 ErrorType = Literal[
     "parent_not_main",
@@ -165,7 +161,7 @@ def navigate_to_child(child_name: str) -> bool:
     return result.returncode == 0
 
 
-def land_branch() -> LandBranchSuccess | LandBranchError:
+def execute_land_branch() -> LandBranchSuccess | LandBranchError:
     """Execute the land-branch workflow. Returns success or error result."""
 
     # Step 1: Get current branch
@@ -280,20 +276,16 @@ def land_branch() -> LandBranchSuccess | LandBranchError:
     )
 
 
-def main() -> int:
-    """Main entry point.
-
-    Returns:
-        Exit code (0 for success, 1 for error)
-    """
+@click.command()
+def land_branch() -> None:
+    """Land a single PR from Graphite stack without affecting upstack branches."""
     try:
-        result = land_branch()
-        print(json.dumps(asdict(result), indent=2))
+        result = execute_land_branch()
+        click.echo(json.dumps(asdict(result), indent=2))
 
         if isinstance(result, LandBranchError):
-            return 1
+            raise SystemExit(1)
 
-        return 0
     except subprocess.CalledProcessError as e:
         error = LandBranchError(
             success=False,
@@ -301,8 +293,8 @@ def main() -> int:
             message=f"Command failed: {e}",
             details={"error": str(e)},
         )
-        print(json.dumps(asdict(error), indent=2), file=sys.stderr)
-        return 1
+        click.echo(json.dumps(asdict(error), indent=2), err=True)
+        raise SystemExit(1) from None
     except Exception as e:
         error = LandBranchError(
             success=False,
@@ -310,9 +302,5 @@ def main() -> int:
             message=f"Unexpected error: {e}",
             details={"error": str(e)},
         )
-        print(json.dumps(asdict(error), indent=2), file=sys.stderr)
-        return 1
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+        click.echo(json.dumps(asdict(error), indent=2), err=True)
+        raise SystemExit(1) from None

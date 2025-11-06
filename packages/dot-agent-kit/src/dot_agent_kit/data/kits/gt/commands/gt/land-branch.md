@@ -29,13 +29,13 @@ When this command is invoked:
 
 ### Step 1: Execute land-branch script
 
-Run the embedded gt-graphite script with JSON output:
+Run the gt kit command with JSON output:
 
 ```bash
-uv run .claude/skills/gt-graphite/scripts/land_branch.py
+dot-agent run gt land-branch
 ```
 
-This script encapsulates all the validation and execution logic in Python, returning a structured JSON result.
+This command encapsulates all the validation and execution logic in Python, returning a structured JSON result.
 
 ### Step 2: Parse and display result
 

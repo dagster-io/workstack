@@ -58,7 +58,7 @@ class HookDefinition(BaseModel):
     id: str = Field(..., min_length=1)
     lifecycle: str = Field(..., min_length=1)
     matcher: str | None = Field(default=None)
-    script: str = Field(..., min_length=1)
+    invocation: str = Field(..., min_length=1)
     description: str = Field(..., min_length=1)
     timeout: int = Field(default=30, gt=0)
 
@@ -73,12 +73,12 @@ class HookDefinition(BaseModel):
             raise ValueError(f"lifecycle must be one of: {valid_names}. Got: {v}")
         return v
 
-    @field_validator("script")
+    @field_validator("invocation")
     @classmethod
-    def validate_script(cls, v: str) -> str:
-        """Validate script is non-empty string."""
+    def validate_invocation(cls, v: str) -> str:
+        """Validate invocation is non-empty string."""
         if not v or not v.strip():
-            raise ValueError("script must be a non-empty string")
+            raise ValueError("invocation must be a non-empty string")
         return v
 
     @field_validator("description")

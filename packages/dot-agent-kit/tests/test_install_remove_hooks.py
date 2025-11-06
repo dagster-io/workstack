@@ -28,7 +28,7 @@ def create_kit_with_hooks(
         kit_id: Kit identifier
         version: Kit version
         hooks: List of hook definitions (each dict should have id, lifecycle, matcher,
-            script, description)
+            invocation, description)
 
     Returns:
         Path to the created kit directory
@@ -60,22 +60,6 @@ def create_kit_with_hooks(
     agents_dir.mkdir(parents=True, exist_ok=True)
     (agents_dir / artifact_name).write_text(f"# Test Agent for {kit_id}", encoding="utf-8")
 
-    # Create hook scripts if provided
-    if hooks:
-        scripts_dir = kit_root / "scripts"
-        scripts_dir.mkdir(parents=True, exist_ok=True)
-
-        for hook in hooks:
-            script_path = hook.get("script", "")
-            if script_path:
-                # Create full path including any subdirectories
-                full_script_path = kit_root / script_path
-                full_script_path.parent.mkdir(parents=True, exist_ok=True)
-                full_script_path.write_text(
-                    f"#!/usr/bin/env python3\nprint('Hook {hook['id']}')",
-                    encoding="utf-8",
-                )
-
     return kit_root
 
 
@@ -83,16 +67,16 @@ def create_simple_hook(
     hook_id: str = "test-hook",
     lifecycle: str = "PreToolUse",
     matcher: str = "Bash:*",
-    script: str = "scripts/hook.py",
     description: str = "Test hook",
     timeout: int = 30,
+    kit_id: str = "test-kit",
 ) -> dict:
     """Create a simple hook definition dict."""
     return {
         "id": hook_id,
         "lifecycle": lifecycle,
         "matcher": matcher,
-        "script": script,
+        "invocation": f"dot-agent run {kit_id} {hook_id}",
         "description": description,
         "timeout": timeout,
     }
@@ -133,10 +117,6 @@ def assert_hook_installed(
     expected_matcher: str,
 ) -> None:
     """Assert that a hook is properly installed."""
-    # Check hook script directory exists
-    hook_dir = project_root / ".claude" / "hooks" / kit_id
-    assert hook_dir.exists(), f"Hook directory not found: {hook_dir}"
-
     # Check settings.json has the hook
     settings_path = project_root / ".claude" / "settings.json"
     settings = load_settings(settings_path)
@@ -165,10 +145,6 @@ def assert_hook_installed(
 
 def assert_hook_not_installed(project_root: Path, kit_id: str) -> None:
     """Assert that no hooks are installed for a kit."""
-    # Check hook directory doesn't exist
-    hook_dir = project_root / ".claude" / "hooks" / kit_id
-    assert not hook_dir.exists(), f"Hook directory should not exist: {hook_dir}"
-
     # Check settings.json has no hooks for this kit
     settings_path = project_root / ".claude" / "settings.json"
     if settings_path.exists():
@@ -197,8 +173,8 @@ class TestInstallCommandWithHooks:
             hook_id="my-hook",
             lifecycle="PreToolUse",
             matcher="Bash:git*",
-            script="scripts/check.py",
             description="Check before git",
+            kit_id="test-kit",
         )
 
         kit_root = create_kit_with_hooks(kits_dir, "test-kit", hooks=[hook])
@@ -247,19 +223,19 @@ class TestInstallCommandWithHooks:
                 hook_id="pre-hook",
                 lifecycle="PreToolUse",
                 matcher="Bash:git*",
-                script="scripts/pre.py",
+                kit_id="multi-kit",
             ),
             create_simple_hook(
                 hook_id="post-hook",
                 lifecycle="PostToolUse",
                 matcher="Bash:*",
-                script="scripts/post.py",
+                kit_id="multi-kit",
             ),
             create_simple_hook(
                 hook_id="pre-hook-2",
                 lifecycle="PreToolUse",
                 matcher="Edit:*",
-                script="scripts/pre2.py",
+                kit_id="multi-kit",
             ),
         ]
 
@@ -321,7 +297,7 @@ class TestInstallCommandWithHooks:
         kits_dir = tmp_path / "kits"
         kits_dir.mkdir()
 
-        hook = create_simple_hook(hook_id="proj-hook")
+        hook = create_simple_hook(hook_id="proj-hook", kit_id="project-only-kit")
         kit_root = create_kit_with_hooks(kits_dir, "project-only-kit", hooks=[hook])
 
         # Install kit (hooks should be installed)
@@ -377,8 +353,8 @@ class TestInstallCommandWithHooks:
 
         # Install v1 with 2 hooks
         hooks_v1 = [
-            create_simple_hook(hook_id="hook-1", script="scripts/h1.py"),
-            create_simple_hook(hook_id="hook-2", script="scripts/h2.py"),
+            create_simple_hook(hook_id="hook-1", kit_id="versioned-kit"),
+            create_simple_hook(hook_id="hook-2", kit_id="versioned-kit"),
         ]
         kit_root_v1 = create_kit_with_hooks(
             kits_dir, "versioned-kit", version="1.0.0", hooks=hooks_v1
@@ -395,9 +371,9 @@ class TestInstallCommandWithHooks:
 
         # Install v2 with 3 different hooks
         hooks_v2 = [
-            create_simple_hook(hook_id="hook-3", script="scripts/h3.py"),
-            create_simple_hook(hook_id="hook-4", script="scripts/h4.py"),
-            create_simple_hook(hook_id="hook-5", script="scripts/h5.py"),
+            create_simple_hook(hook_id="hook-3", kit_id="versioned-kit"),
+            create_simple_hook(hook_id="hook-4", kit_id="versioned-kit"),
+            create_simple_hook(hook_id="hook-5", kit_id="versioned-kit"),
         ]
         kit_root_v2 = create_kit_with_hooks(
             kits_dir, "versioned-kit", version="2.0.0", hooks=hooks_v2
@@ -452,7 +428,7 @@ class TestInstallCommandWithHooks:
 
         hook = create_simple_hook(
             hook_id="nested-hook",
-            script="scripts/deeply/nested/dir/check.py",
+            kit_id="nested-kit",
         )
 
         kit_root = create_kit_with_hooks(kits_dir, "nested-kit", hooks=[hook])
@@ -469,33 +445,25 @@ class TestInstallCommandWithHooks:
         assert result.exit_code == 0
         assert "Installed 1 hook(s)" in result.output
 
-        # Verify script is flattened to just filename
-        hook_dir = project_dir / ".claude" / "hooks" / "nested-kit"
-        assert (hook_dir / "check.py").exists()
-        # Should NOT have nested directories
-        assert not (hook_dir / "scripts").exists()
-        assert not (hook_dir / "deeply").exists()
+        # Verify hook installed in settings (no script files are copied anymore)
+        assert_hook_installed(project_dir, "nested-kit", "nested-hook", "PreToolUse", "Bash:*")
 
     def test_install_hook_with_missing_script(self, cli_runner: CliRunner, tmp_path: Path) -> None:
-        """Test that install continues gracefully if hook script is missing."""
+        """Test that all hooks are installed (no script validation anymore)."""
         project_dir = tmp_path / "project"
         project_dir.mkdir()
 
         kits_dir = tmp_path / "kits"
         kits_dir.mkdir()
 
-        # Create hooks where one has missing script
+        # Create hooks
         hooks = [
-            create_simple_hook(hook_id="good-hook", script="scripts/good.py"),
-            create_simple_hook(hook_id="bad-hook", script="scripts/missing.py"),
-            create_simple_hook(hook_id="good-hook-2", script="scripts/good2.py"),
+            create_simple_hook(hook_id="good-hook", kit_id="partial-kit"),
+            create_simple_hook(hook_id="bad-hook", kit_id="partial-kit"),
+            create_simple_hook(hook_id="good-hook-2", kit_id="partial-kit"),
         ]
 
         kit_root = create_kit_with_hooks(kits_dir, "partial-kit", hooks=hooks)
-
-        # Delete the missing script (it was auto-created)
-        missing_script = kit_root / "scripts" / "missing.py"
-        missing_script.unlink()
 
         # Install
         result = invoke_in_project(
@@ -507,21 +475,13 @@ class TestInstallCommandWithHooks:
 
         # Should succeed
         assert result.exit_code == 0
-        # Should only install 2 hooks (not the missing one)
-        assert "Installed 2 hook(s)" in result.output
+        # Should install all 3 hooks (no script validation)
+        assert "Installed 3 hook(s)" in result.output
 
-        # Verify good hooks installed
+        # Verify all hooks installed
         assert_hook_installed(project_dir, "partial-kit", "good-hook", "PreToolUse", "Bash:*")
+        assert_hook_installed(project_dir, "partial-kit", "bad-hook", "PreToolUse", "Bash:*")
         assert_hook_installed(project_dir, "partial-kit", "good-hook-2", "PreToolUse", "Bash:*")
-
-        # Verify bad hook NOT in settings
-        settings_path = project_dir / ".claude" / "settings.json"
-        settings = load_settings(settings_path)
-        if settings.hooks:
-            for lifecycle_hooks in settings.hooks.values():
-                for matcher_group in lifecycle_hooks:
-                    for hook_entry in matcher_group.hooks:
-                        assert "DOT_AGENT_HOOK_ID=bad-hook" not in hook_entry.command
 
     def test_install_preserves_other_kit_hooks(self, cli_runner: CliRunner, tmp_path: Path) -> None:
         """Test that installing a kit preserves hooks from other kits."""
@@ -532,7 +492,7 @@ class TestInstallCommandWithHooks:
         kits_dir.mkdir()
 
         # Install kit-a
-        hook_a = create_simple_hook(hook_id="hook-a", script="scripts/a.py")
+        hook_a = create_simple_hook(hook_id="hook-a", kit_id="kit-a")
         kit_a_root = create_kit_with_hooks(kits_dir, "kit-a", hooks=[hook_a])
 
         result = invoke_in_project(
@@ -544,7 +504,7 @@ class TestInstallCommandWithHooks:
         assert result.exit_code == 0, f"kit-a install failed: {result.output}"
 
         # Install kit-b (with unique artifact names to avoid conflicts)
-        hook_b = create_simple_hook(hook_id="hook-b", script="scripts/b.py")
+        hook_b = create_simple_hook(hook_id="hook-b", kit_id="kit-b")
 
         # Create kit-b with different artifact name
         kit_b_dir = kits_dir / "kit-b"
@@ -560,7 +520,7 @@ class TestInstallCommandWithHooks:
                     "id": hook_b["id"],
                     "lifecycle": hook_b["lifecycle"],
                     "matcher": hook_b["matcher"],
-                    "script": hook_b["script"],
+                    "invocation": hook_b["invocation"],
                     "description": hook_b["description"],
                     "timeout": hook_b["timeout"],
                 }
@@ -603,7 +563,7 @@ class TestRemoveCommandWithHooks:
         kits_dir.mkdir()
 
         # Install kit with hooks
-        hook = create_simple_hook(hook_id="remove-me")
+        hook = create_simple_hook(hook_id="remove-me", kit_id="remove-kit")
         kit_root = create_kit_with_hooks(kits_dir, "remove-kit", hooks=[hook])
 
         result = invoke_in_project(
@@ -678,7 +638,7 @@ class TestRemoveCommandWithHooks:
         kits_dir.mkdir()
 
         # Install to project with hooks
-        hook = create_simple_hook(hook_id="proj-hook")
+        hook = create_simple_hook(hook_id="proj-hook", kit_id="proj-kit")
         kit_root = create_kit_with_hooks(kits_dir, "proj-kit", hooks=[hook])
 
         result = invoke_in_project(
@@ -711,10 +671,10 @@ class TestRemoveCommandWithHooks:
         kits_dir.mkdir()
 
         # Install two kits with hooks
-        hook_a = create_simple_hook(hook_id="keep-hook", script="scripts/a.py")
+        hook_a = create_simple_hook(hook_id="keep-hook", kit_id="keep-kit")
         kit_a_root = create_kit_with_hooks(kits_dir, "keep-kit", hooks=[hook_a])
 
-        hook_b = create_simple_hook(hook_id="remove-hook", script="scripts/b.py")
+        hook_b = create_simple_hook(hook_id="remove-hook", kit_id="remove-kit")
         kit_b_root = create_kit_with_hooks(kits_dir, "remove-kit", hooks=[hook_b])
 
         result = invoke_in_project(
@@ -764,7 +724,7 @@ class TestRemoveCommandWithHooks:
         kits_dir.mkdir()
 
         # Install kit with hooks
-        hook = create_simple_hook(hook_id="manual-remove")
+        hook = create_simple_hook(hook_id="manual-remove", kit_id="manual-kit")
         kit_root = create_kit_with_hooks(kits_dir, "manual-kit", hooks=[hook])
 
         result = invoke_in_project(
@@ -775,13 +735,7 @@ class TestRemoveCommandWithHooks:
         )
         assert result.exit_code == 0
 
-        # Manually delete hook directory
-        import shutil
-
-        hook_dir = project_dir / ".claude" / "hooks" / "manual-kit"
-        shutil.rmtree(hook_dir)
-
-        # Remove kit (should handle gracefully)
+        # Remove kit (should work normally)
         result = invoke_in_project(
             cli_runner,
             project_dir,
@@ -792,5 +746,5 @@ class TestRemoveCommandWithHooks:
         # Should succeed without error
         assert result.exit_code == 0
         assert "✓ Removed" in result.output
-        # Should still report hook removal from settings
+        # Should report hook removal from settings
         assert "Removed 1 hook(s)" in result.output

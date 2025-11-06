@@ -9,18 +9,12 @@ from dot_agent_kit.hooks.settings import load_settings
 
 def test_install_hooks_basic(tmp_project: Path) -> None:
     """Test installing a single hook to a project."""
-    # Create kit with a hook script
-    kit_path = tmp_project / "kit"
-    kit_path.mkdir()
-    script_path = kit_path / "hook.py"
-    script_path.write_text("# Hook script", encoding="utf-8")
-
     # Define hook
     hook_def = HookDefinition(
         id="test-hook",
         lifecycle="UserPromptSubmit",
         matcher="**",
-        script="hook.py",
+        invocation="dot-agent run test-kit test-hook",
         description="Test hook",
         timeout=30,
     )
@@ -29,18 +23,11 @@ def test_install_hooks_basic(tmp_project: Path) -> None:
     count = install_hooks(
         kit_id="test-kit",
         hooks=[hook_def],
-        kit_path=kit_path,
         project_root=tmp_project,
     )
 
     # Verify installation
     assert count == 1
-
-    # Check script copied
-    installed_script = tmp_project / ".claude" / "hooks" / "test-kit" / "hook.py"
-    assert installed_script.exists()
-    assert installed_script.is_file()
-    assert installed_script.read_text(encoding="utf-8") == "# Hook script"
 
     # Check settings.json updated
     settings_path = tmp_project / ".claude" / "settings.json"
@@ -57,8 +44,7 @@ def test_install_hooks_basic(tmp_project: Path) -> None:
 
     hook_entry = lifecycle_hooks[0].hooks[0]
     expected_cmd = (
-        "DOT_AGENT_KIT_ID=test-kit DOT_AGENT_HOOK_ID=test-hook "
-        'python3 "$CLAUDE_PROJECT_DIR/.claude/hooks/test-kit/hook.py"'
+        "DOT_AGENT_KIT_ID=test-kit DOT_AGENT_HOOK_ID=test-hook dot-agent run test-kit test-hook"
     )
     assert hook_entry.command == expected_cmd
     assert hook_entry.timeout == 30
@@ -66,21 +52,13 @@ def test_install_hooks_basic(tmp_project: Path) -> None:
 
 def test_install_multiple_hooks(tmp_project: Path) -> None:
     """Test installing multiple hooks with different lifecycles."""
-    # Create kit with multiple hook scripts
-    kit_path = tmp_project / "kit"
-    kit_path.mkdir()
-
-    (kit_path / "hook1.py").write_text("# Hook 1", encoding="utf-8")
-    (kit_path / "hook2.py").write_text("# Hook 2", encoding="utf-8")
-    (kit_path / "hook3.py").write_text("# Hook 3", encoding="utf-8")
-
     # Define hooks
     hooks = [
         HookDefinition(
             id="hook-1",
             lifecycle="UserPromptSubmit",
             matcher="**",
-            script="hook1.py",
+            invocation="dot-agent run multi-kit hook-1",
             description="Hook 1",
             timeout=30,
         ),
@@ -88,7 +66,7 @@ def test_install_multiple_hooks(tmp_project: Path) -> None:
             id="hook-2",
             lifecycle="UserPromptSubmit",
             matcher="*.py",
-            script="hook2.py",
+            invocation="dot-agent run multi-kit hook-2",
             description="Hook 2",
             timeout=45,
         ),
@@ -96,7 +74,7 @@ def test_install_multiple_hooks(tmp_project: Path) -> None:
             id="hook-3",
             lifecycle="PostToolUse",
             matcher="**",
-            script="hook3.py",
+            invocation="dot-agent run multi-kit hook-3",
             description="Hook 3",
             timeout=60,
         ),
@@ -106,18 +84,11 @@ def test_install_multiple_hooks(tmp_project: Path) -> None:
     count = install_hooks(
         kit_id="multi-kit",
         hooks=hooks,
-        kit_path=kit_path,
         project_root=tmp_project,
     )
 
     # Verify count
     assert count == 3
-
-    # Check all scripts copied
-    hooks_dir = tmp_project / ".claude" / "hooks" / "multi-kit"
-    assert (hooks_dir / "hook1.py").exists()
-    assert (hooks_dir / "hook2.py").exists()
-    assert (hooks_dir / "hook3.py").exists()
 
     # Check settings structure
     settings = load_settings(tmp_project / ".claude" / "settings.json")
@@ -136,18 +107,13 @@ def test_install_multiple_hooks(tmp_project: Path) -> None:
 
 
 def test_install_hooks_missing_script(tmp_project: Path) -> None:
-    """Test that hooks with missing scripts are skipped gracefully."""
-    # Create kit with only one of two scripts
-    kit_path = tmp_project / "kit"
-    kit_path.mkdir()
-    (kit_path / "exists.py").write_text("# Exists", encoding="utf-8")
-
+    """Test that all hooks are installed (no script validation anymore)."""
     hooks = [
         HookDefinition(
             id="exists",
             lifecycle="UserPromptSubmit",
             matcher="**",
-            script="exists.py",
+            invocation="dot-agent run partial-kit exists",
             description="Exists",
             timeout=30,
         ),
@@ -155,7 +121,7 @@ def test_install_hooks_missing_script(tmp_project: Path) -> None:
             id="missing",
             lifecycle="UserPromptSubmit",
             matcher="**",
-            script="missing.py",
+            invocation="dot-agent run partial-kit missing",
             description="Missing",
             timeout=30,
         ),
@@ -165,66 +131,45 @@ def test_install_hooks_missing_script(tmp_project: Path) -> None:
     count = install_hooks(
         kit_id="partial-kit",
         hooks=hooks,
-        kit_path=kit_path,
         project_root=tmp_project,
     )
 
-    # Only one hook should be installed
-    assert count == 1
+    # Both hooks should be installed (no script validation)
+    assert count == 2
 
-    # Check only existing script copied
-    hooks_dir = tmp_project / ".claude" / "hooks" / "partial-kit"
-    assert (hooks_dir / "exists.py").exists()
-    assert not (hooks_dir / "missing.py").exists()
-
-    # Check settings only has one hook
+    # Check settings has both hooks
     settings = load_settings(tmp_project / ".claude" / "settings.json")
     assert settings.hooks is not None
     lifecycle_hooks = settings.hooks["UserPromptSubmit"]
     assert len(lifecycle_hooks) == 1
-    assert len(lifecycle_hooks[0].hooks) == 1
-    hook_entry = lifecycle_hooks[0].hooks[0]
-    assert "DOT_AGENT_HOOK_ID=exists" in hook_entry.command
+    assert len(lifecycle_hooks[0].hooks) == 2
 
 
 def test_install_hooks_replaces_existing(tmp_project: Path) -> None:
     """Test that reinstalling hooks removes old installation."""
-    kit_path = tmp_project / "kit"
-    kit_path.mkdir()
-
     # First installation
-    (kit_path / "old.py").write_text("# Old", encoding="utf-8")
     old_hook = HookDefinition(
         id="old",
         lifecycle="UserPromptSubmit",
         matcher="**",
-        script="old.py",
+        invocation="dot-agent run test-kit old",
         description="Old",
         timeout=30,
     )
-    install_hooks("test-kit", [old_hook], kit_path, tmp_project)
-
-    # Verify old installation
-    hooks_dir = tmp_project / ".claude" / "hooks" / "test-kit"
-    assert (hooks_dir / "old.py").exists()
+    install_hooks("test-kit", [old_hook], tmp_project)
 
     # Second installation with different hook
-    (kit_path / "new.py").write_text("# New", encoding="utf-8")
     new_hook = HookDefinition(
         id="new",
         lifecycle="PostToolUse",
         matcher="*.md",
-        script="new.py",
+        invocation="dot-agent run test-kit new",
         description="New",
         timeout=45,
     )
-    count = install_hooks("test-kit", [new_hook], kit_path, tmp_project)
+    count = install_hooks("test-kit", [new_hook], tmp_project)
 
     assert count == 1
-
-    # Old script should be removed
-    assert not (hooks_dir / "old.py").exists()
-    assert (hooks_dir / "new.py").exists()
 
     # Settings should only have new hook
     settings = load_settings(tmp_project / ".claude" / "settings.json")
@@ -247,21 +192,13 @@ def test_install_hooks_replaces_existing(tmp_project: Path) -> None:
 
 def test_install_hooks_empty_list(tmp_project: Path) -> None:
     """Test installing with empty hooks list."""
-    kit_path = tmp_project / "kit"
-    kit_path.mkdir()
-
     count = install_hooks(
         kit_id="empty-kit",
         hooks=[],
-        kit_path=kit_path,
         project_root=tmp_project,
     )
 
     assert count == 0
-
-    # No hooks directory should be created
-    hooks_dir = tmp_project / ".claude" / "hooks" / "empty-kit"
-    assert not hooks_dir.exists()
 
     # Settings.json should not be created if it didn't exist
     settings_path = tmp_project / ".claude" / "settings.json"
@@ -281,61 +218,41 @@ def test_install_hooks_creates_directories(tmp_project: Path) -> None:
     claude_dir = tmp_project / ".claude"
     assert not claude_dir.exists()
 
-    kit_path = tmp_project / "kit"
-    kit_path.mkdir()
-    (kit_path / "hook.py").write_text("# Hook", encoding="utf-8")
-
     hook = HookDefinition(
         id="test",
         lifecycle="UserPromptSubmit",
         matcher="**",
-        script="hook.py",
+        invocation="dot-agent run test-kit test",
         description="Test",
         timeout=30,
     )
 
-    install_hooks("test-kit", [hook], kit_path, tmp_project)
+    install_hooks("test-kit", [hook], tmp_project)
 
-    # All directories should be created
+    # .claude directory and settings should be created
     assert claude_dir.exists()
-    assert (claude_dir / "hooks").exists()
-    assert (claude_dir / "hooks" / "test-kit").exists()
     assert (claude_dir / "settings.json").exists()
 
 
 def test_install_hooks_flattens_nested_scripts(tmp_project: Path) -> None:
-    """Test that nested script paths are flattened in installation."""
-    kit_path = tmp_project / "kit"
-    nested_dir = kit_path / "scripts" / "subdir"
-    nested_dir.mkdir(parents=True)
-
-    script_path = nested_dir / "nested_hook.py"
-    script_path.write_text("# Nested hook", encoding="utf-8")
-
+    """Test that invocation commands are used as-is (no script path handling)."""
     hook = HookDefinition(
         id="nested",
         lifecycle="UserPromptSubmit",
         matcher="**",
-        script="scripts/subdir/nested_hook.py",
+        invocation="dot-agent run test-kit nested",
         description="Nested",
         timeout=30,
     )
 
-    install_hooks("test-kit", [hook], kit_path, tmp_project)
+    install_hooks("test-kit", [hook], tmp_project)
 
-    # Script should be at flattened location
-    hooks_dir = tmp_project / ".claude" / "hooks" / "test-kit"
-    flattened_script = hooks_dir / "nested_hook.py"
-    assert flattened_script.exists()
-    assert not (hooks_dir / "scripts").exists()  # No nested structure
-
-    # Command should reference flattened location using $CLAUDE_PROJECT_DIR
+    # Command should use the invocation with metadata
     settings = load_settings(tmp_project / ".claude" / "settings.json")
     assert settings.hooks is not None
     hook_entry = settings.hooks["UserPromptSubmit"][0].hooks[0]
     expected_cmd = (
-        "DOT_AGENT_KIT_ID=test-kit DOT_AGENT_HOOK_ID=nested "
-        'python3 "$CLAUDE_PROJECT_DIR/.claude/hooks/test-kit/nested_hook.py"'
+        "DOT_AGENT_KIT_ID=test-kit DOT_AGENT_HOOK_ID=nested dot-agent run test-kit nested"
     )
     assert hook_entry.command == expected_cmd
 
@@ -343,31 +260,20 @@ def test_install_hooks_flattens_nested_scripts(tmp_project: Path) -> None:
 def test_remove_hooks_basic(tmp_project: Path) -> None:
     """Test removing hooks from a project."""
     # Install hooks first
-    kit_path = tmp_project / "kit"
-    kit_path.mkdir()
-    (kit_path / "hook.py").write_text("# Hook", encoding="utf-8")
-
     hook = HookDefinition(
         id="test",
         lifecycle="UserPromptSubmit",
         matcher="**",
-        script="hook.py",
+        invocation="dot-agent run test-kit test",
         description="Test",
         timeout=30,
     )
-    install_hooks("test-kit", [hook], kit_path, tmp_project)
-
-    # Verify installation
-    hooks_dir = tmp_project / ".claude" / "hooks" / "test-kit"
-    assert hooks_dir.exists()
+    install_hooks("test-kit", [hook], tmp_project)
 
     # Remove hooks
     count = remove_hooks("test-kit", tmp_project)
 
     assert count == 1
-
-    # Directory should be deleted
-    assert not hooks_dir.exists()
 
     # Settings should not contain the hook
     settings = load_settings(tmp_project / ".claude" / "settings.json")
@@ -379,18 +285,12 @@ def test_remove_hooks_basic(tmp_project: Path) -> None:
 
 def test_remove_hooks_preserves_other_kits(tmp_project: Path) -> None:
     """Test that removing one kit's hooks preserves other kits."""
-    kit_path = tmp_project / "kit"
-    kit_path.mkdir()
-
     # Install hooks from two kits
-    (kit_path / "hook_a.py").write_text("# A", encoding="utf-8")
-    (kit_path / "hook_b.py").write_text("# B", encoding="utf-8")
-
     hook_a = HookDefinition(
         id="hook-a",
         lifecycle="UserPromptSubmit",
         matcher="**",
-        script="hook_a.py",
+        invocation="dot-agent run kit-a hook-a",
         description="A",
         timeout=30,
     )
@@ -398,24 +298,18 @@ def test_remove_hooks_preserves_other_kits(tmp_project: Path) -> None:
         id="hook-b",
         lifecycle="UserPromptSubmit",
         matcher="**",
-        script="hook_b.py",
+        invocation="dot-agent run kit-b hook-b",
         description="B",
         timeout=30,
     )
 
-    install_hooks("kit-a", [hook_a], kit_path, tmp_project)
-    install_hooks("kit-b", [hook_b], kit_path, tmp_project)
+    install_hooks("kit-a", [hook_a], tmp_project)
+    install_hooks("kit-b", [hook_b], tmp_project)
 
     # Remove kit-a
     count = remove_hooks("kit-a", tmp_project)
 
     assert count == 1
-
-    # kit-a directory deleted
-    assert not (tmp_project / ".claude" / "hooks" / "kit-a").exists()
-
-    # kit-b directory intact
-    assert (tmp_project / ".claude" / "hooks" / "kit-b").exists()
 
     # Settings should only have kit-b
     settings = load_settings(tmp_project / ".claude" / "settings.json")
@@ -460,20 +354,16 @@ def test_remove_hooks_nonexistent_kit(tmp_project: Path) -> None:
 
 def test_remove_hooks_cleans_empty_lifecycles(tmp_project: Path) -> None:
     """Test that removing the last hook from a lifecycle removes the lifecycle."""
-    kit_path = tmp_project / "kit"
-    kit_path.mkdir()
-    (kit_path / "hook.py").write_text("# Hook", encoding="utf-8")
-
     hook = HookDefinition(
         id="test",
         lifecycle="UserPromptSubmit",
         matcher="**",
-        script="hook.py",
+        invocation="dot-agent run test-kit test",
         description="Test",
         timeout=30,
     )
 
-    install_hooks("test-kit", [hook], kit_path, tmp_project)
+    install_hooks("test-kit", [hook], tmp_project)
     remove_hooks("test-kit", tmp_project)
 
     # Settings should not have the lifecycle anymore
@@ -486,20 +376,16 @@ def test_remove_hooks_cleans_empty_lifecycles(tmp_project: Path) -> None:
 
 def test_hook_entry_metadata_roundtrip(tmp_project: Path) -> None:
     """Test that hook metadata survives JSON serialization roundtrip."""
-    kit_path = tmp_project / "kit"
-    kit_path.mkdir()
-    (kit_path / "hook.py").write_text("# Hook", encoding="utf-8")
-
     hook = HookDefinition(
         id="metadata-test",
         lifecycle="UserPromptSubmit",
         matcher="**",
-        script="hook.py",
+        invocation="dot-agent run metadata-kit metadata-test",
         description="Metadata test",
         timeout=30,
     )
 
-    install_hooks("metadata-kit", [hook], kit_path, tmp_project)
+    install_hooks("metadata-kit", [hook], tmp_project)
 
     # Read raw JSON to check env vars in command
     settings_path = tmp_project / ".claude" / "settings.json"
@@ -529,17 +415,11 @@ def test_hook_entry_metadata_roundtrip(tmp_project: Path) -> None:
 
 def test_install_hook_without_matcher(tmp_project: Path) -> None:
     """Test installing a hook without matcher field uses wildcard default."""
-    # Create kit with a hook script
-    kit_path = tmp_project / "kit"
-    kit_path.mkdir()
-    script_path = kit_path / "hook.py"
-    script_path.write_text("# Hook script", encoding="utf-8")
-
     # Define hook without matcher
     hook_def = HookDefinition(
         id="test-hook",
         lifecycle="UserPromptSubmit",
-        script="hook.py",
+        invocation="dot-agent run test-kit test-hook",
         description="Test hook without matcher",
         timeout=30,
     )
@@ -548,7 +428,6 @@ def test_install_hook_without_matcher(tmp_project: Path) -> None:
     count = install_hooks(
         kit_id="test-kit",
         hooks=[hook_def],
-        kit_path=kit_path,
         project_root=tmp_project,
     )
 
@@ -579,18 +458,12 @@ def test_install_hooks_includes_type_field(tmp_project: Path) -> None:
     Claude Code requires hooks to have a 'type' discriminator field with value
     'command' or 'prompt'. This test ensures generated hooks are valid.
     """
-    # Create kit with a hook script
-    kit_path = tmp_project / "kit"
-    kit_path.mkdir()
-    script_path = kit_path / "hook.py"
-    script_path.write_text("# Hook script", encoding="utf-8")
-
     # Define hook
     hook_def = HookDefinition(
         id="test-hook",
         lifecycle="UserPromptSubmit",
         matcher="**",
-        script="hook.py",
+        invocation="dot-agent run test-kit test-hook",
         description="Test hook",
         timeout=30,
     )
@@ -599,7 +472,6 @@ def test_install_hooks_includes_type_field(tmp_project: Path) -> None:
     count = install_hooks(
         kit_id="test-kit",
         hooks=[hook_def],
-        kit_path=kit_path,
         project_root=tmp_project,
     )
 

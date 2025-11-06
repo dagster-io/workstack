@@ -2,12 +2,15 @@
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 import click
 
+from dot_agent_kit.hooks.models import ClaudeSettings, HookDefinition
+from dot_agent_kit.hooks.settings import extract_kit_id_from_command, load_settings
 from dot_agent_kit.io import load_project_config
 from dot_agent_kit.io.manifest import load_kit_manifest
-from dot_agent_kit.models.config import InstalledKit
+from dot_agent_kit.models.config import InstalledKit, ProjectConfig
 from dot_agent_kit.models.types import SOURCE_TYPE_BUNDLED, SOURCE_TYPE_PACKAGE
 from dot_agent_kit.operations import validate_project
 from dot_agent_kit.sources import BundledKitSource
@@ -29,6 +32,34 @@ class ConfigValidationResult:
     kit_id: str
     is_valid: bool
     errors: list[str]
+
+
+@dataclass(frozen=True)
+class InstalledHook:
+    """A hook extracted from settings.json."""
+
+    hook_id: str  # Extracted from command or environment variable
+    command: str
+    timeout: int
+    lifecycle: str  # "UserPromptSubmit", etc.
+
+
+@dataclass(frozen=True)
+class HookDriftIssue:
+    """A single hook drift issue."""
+
+    severity: Literal["error", "warning"]
+    message: str
+    expected: str | None
+    actual: str | None
+
+
+@dataclass(frozen=True)
+class HookDriftResult:
+    """Result of checking hook drift for one kit."""
+
+    kit_id: str
+    issues: list[HookDriftIssue]
 
 
 def validate_kit_fields(kit: InstalledKit) -> list[str]:
@@ -172,6 +203,189 @@ def check_artifact_sync(
         artifact_path=local_path,
         is_in_sync=True,
     )
+
+
+def _extract_hooks_for_kit(
+    settings: ClaudeSettings,
+    kit_id: str,
+) -> list[InstalledHook]:
+    """Extract hooks for specific kit from settings.json.
+
+    Uses extract_kit_id_from_command() to identify kit ownership.
+
+    Args:
+        settings: Loaded settings object
+        kit_id: Kit ID to filter for
+
+    Returns:
+        List of InstalledHook objects for this kit
+    """
+    results: list[InstalledHook] = []
+
+    if not settings.hooks:
+        return results
+
+    for lifecycle, groups in settings.hooks.items():
+        for group in groups:
+            for hook_entry in group.hooks:
+                # Extract kit ID from command
+                command_kit_id = extract_kit_id_from_command(hook_entry.command)
+
+                if command_kit_id == kit_id:
+                    # Extract hook ID from command
+                    # Format: DOT_AGENT_KIT_ID=kit-name DOT_AGENT_HOOK_ID=hook-id python3 ...
+                    import re
+
+                    hook_id_match = re.search(r"DOT_AGENT_HOOK_ID=(\S+)", hook_entry.command)
+                    if not hook_id_match:
+                        raise ValueError(
+                            f"Hook command for kit '{kit_id}' is missing "
+                            f"DOT_AGENT_HOOK_ID environment variable. "
+                            f"Command: {hook_entry.command}"
+                        )
+
+                    hook_id = hook_id_match.group(1)
+
+                    results.append(
+                        InstalledHook(
+                            hook_id=hook_id,
+                            command=hook_entry.command,
+                            timeout=hook_entry.timeout,
+                            lifecycle=lifecycle,
+                        )
+                    )
+
+    return results
+
+
+def _detect_hook_drift(
+    kit_id: str,
+    expected_hooks: list[HookDefinition],
+    installed_hooks: list[InstalledHook],
+) -> HookDriftResult | None:
+    """Compare expected hooks against installed hooks.
+
+    Args:
+        kit_id: Kit ID being checked
+        expected_hooks: Hooks defined in kit.yaml
+        installed_hooks: Hooks found in settings.json
+
+    Returns:
+        HookDriftResult if drift detected, None if all aligned
+    """
+    issues: list[HookDriftIssue] = []
+
+    # Build lookup maps
+    expected_by_id = {hook.id: hook for hook in expected_hooks}
+    installed_by_id = {hook.hook_id: hook for hook in installed_hooks}
+
+    # Check each expected hook
+    for expected_hook in expected_hooks:
+        if expected_hook.id not in installed_by_id:
+            # Missing hook
+            issues.append(
+                HookDriftIssue(
+                    severity="error",
+                    message=f"Missing hook: '{expected_hook.id}' not found in settings.json",
+                    expected=expected_hook.id,
+                    actual=None,
+                )
+            )
+        else:
+            # Check if command format matches expectations
+            installed = installed_by_id[expected_hook.id]
+
+            # Expected format: "DOT_AGENT_KIT_ID={kit_id} DOT_AGENT_HOOK_ID={hook_id} {invocation}"
+            expected_env_prefix = f"DOT_AGENT_KIT_ID={kit_id} DOT_AGENT_HOOK_ID={expected_hook.id}"
+            expected_command = f"{expected_env_prefix} {expected_hook.invocation}"
+
+            # Check if command matches expected format
+            if installed.command != expected_command:
+                issues.append(
+                    HookDriftIssue(
+                        severity="warning",
+                        message=f"Command mismatch for '{expected_hook.id}'",
+                        expected=expected_command,
+                        actual=installed.command,
+                    )
+                )
+
+    # Check for obsolete hooks
+    for installed_hook in installed_hooks:
+        if installed_hook.hook_id not in expected_by_id:
+            issues.append(
+                HookDriftIssue(
+                    severity="warning",
+                    message=f"Obsolete hook: '{installed_hook.hook_id}' found in settings.json "
+                    f"but not defined in kit.yaml",
+                    expected=None,
+                    actual=installed_hook.hook_id,
+                )
+            )
+
+    if len(issues) == 0:
+        return None
+
+    return HookDriftResult(kit_id=kit_id, issues=issues)
+
+
+def validate_hook_configuration(
+    project_dir: Path,
+    config: ProjectConfig,
+) -> list[HookDriftResult]:
+    """Check if installed hooks match kit expectations.
+
+    Only validates bundled kits. Skips validation if kit.yaml has no hooks field.
+
+    Args:
+        project_dir: Project root directory
+        config: Loaded project configuration
+
+    Returns:
+        List of HookDriftResult objects (empty if no drift)
+    """
+    results: list[HookDriftResult] = []
+
+    # Load settings.json
+    settings_path = project_dir / ".claude" / "settings.json"
+    if not settings_path.exists():
+        return results
+
+    settings = load_settings(settings_path)
+
+    bundled_source = BundledKitSource()
+
+    for kit_id, installed_kit in config.kits.items():
+        # Only check bundled kits
+        if installed_kit.source_type != SOURCE_TYPE_BUNDLED:
+            continue
+
+        # Get bundled kit path
+        bundled_path = bundled_source._get_bundled_kit_path(kit_id)
+        if bundled_path is None:
+            continue
+
+        # Load manifest
+        manifest_path = bundled_path / "kit.yaml"
+        if not manifest_path.exists():
+            continue
+
+        manifest = load_kit_manifest(manifest_path)
+
+        # Skip if no hooks defined in manifest
+        if not manifest.hooks or len(manifest.hooks) == 0:
+            continue
+
+        # Extract installed hooks for this kit
+        installed_hooks = _extract_hooks_for_kit(settings, kit_id)
+
+        # Detect drift
+        drift_result = _detect_hook_drift(kit_id, manifest.hooks, installed_hooks)
+
+        if drift_result is not None:
+            results.append(drift_result)
+
+    return results
 
 
 @click.command()
@@ -375,10 +589,59 @@ def check(verbose: bool) -> None:
                 click.echo("All artifacts are in sync!")
                 sync_passed = True
 
+    click.echo()
+
+    # Part 4: Hook configuration validation
+    click.echo("=== Hook Configuration Validation ===")
+
+    hook_passed = True
+    if not config_exists:
+        click.echo("No dot-agent.toml found - skipping hook validation")
+    elif len(config.kits) == 0:
+        click.echo("No kits installed - skipping hook validation")
+    else:
+        hook_results = validate_hook_configuration(project_dir, config)
+
+        if len(hook_results) == 0:
+            click.echo("No hook drift detected - all hooks are in sync!")
+            hook_passed = True
+        else:
+            # Display drift issues
+            for drift_result in hook_results:
+                click.echo()
+                click.echo(f"Kit: {drift_result.kit_id}")
+
+                for issue in drift_result.issues:
+                    status = "✗" if issue.severity == "error" else "⚠"
+                    click.echo(f"  {status} {issue.message}", err=True)
+
+                    if issue.expected is not None:
+                        click.echo(f"      Expected: {issue.expected}", err=True)
+                    if issue.actual is not None:
+                        click.echo(f"      Actual:   {issue.actual}", err=True)
+
+            # Summary
+            click.echo()
+            kit_count = len(hook_results)
+            error_count = sum(1 for r in hook_results for i in r.issues if i.severity == "error")
+            warning_count = sum(
+                1 for r in hook_results for i in r.issues if i.severity == "warning"
+            )
+
+            click.echo(f"Checked hook configuration for {kit_count} kit(s):")
+            if error_count > 0:
+                click.echo(f"  ✗ Errors: {error_count}", err=True)
+            if warning_count > 0:
+                click.echo(f"  ⚠ Warnings: {warning_count}", err=True)
+
+            click.echo()
+            click.echo("Run 'dot-agent kit sync --force' to update hook configuration", err=True)
+            hook_passed = False
+
     # Overall result
     click.echo()
     click.echo("=" * 40)
-    if config_passed and validation_passed and sync_passed:
+    if config_passed and validation_passed and sync_passed and hook_passed:
         click.echo("✓ All checks passed!")
     else:
         click.echo("✗ Some checks failed", err=True)

@@ -5,9 +5,14 @@ license: MIT
 artifacts:
   skill:
     - skills/dignified-python/SKILL.md
+commands:
+  - name: compliance-reminder-hook
+    path: commands/compliance_reminder_hook.py
+    description: Output dignified-python compliance reminder for UserPromptSubmit hook
 hooks:
-  - id: suggest-dignified-python
+  - id: compliance-reminder-hook
     lifecycle: UserPromptSubmit
-    script: hooks/suggest-dignified-python.py
-    description: Suggests loading dignified-python skill on every prompt
+    matcher: "*"
+    invocation: dot-agent run dignified-python compliance-reminder-hook
+    description: Output dignified-python compliance reminder for UserPromptSubmit hook
     timeout: 30

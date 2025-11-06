@@ -137,7 +137,7 @@ def _display_hooks(manifest) -> None:
         if hook.matcher is not None:
             click.echo(f"  Matcher:     {hook.matcher}")
 
-        click.echo(f"  Script:      {hook.script}")
+        click.echo(f"  Invocation:  {hook.invocation}")
         click.echo(f"  Description: {hook.description}")
         click.echo(f"  Timeout:     {hook.timeout}s")
 

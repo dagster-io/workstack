@@ -68,6 +68,8 @@ def test_build_hook_validation_error_message_with_missing_fields() -> None:
     message = _build_hook_validation_error_message(
         kit_name="test-kit",
         hook_id="test-hook",
+        hook_position=0,
+        total_hooks=1,
         missing_fields=["lifecycle", "invocation", "description"],
         invalid_fields=[],
     )
@@ -90,6 +92,8 @@ def test_build_hook_validation_error_message_with_invalid_fields() -> None:
     message = _build_hook_validation_error_message(
         kit_name="test-kit",
         hook_id="test-hook",
+        hook_position=0,
+        total_hooks=1,
         missing_fields=[],
         invalid_fields=["timeout (int_type)", "lifecycle (literal_error)"],
     )
@@ -109,6 +113,8 @@ def test_build_hook_validation_error_message_with_both() -> None:
     message = _build_hook_validation_error_message(
         kit_name="test-kit",
         hook_id="test-hook",
+        hook_position=0,
+        total_hooks=1,
         missing_fields=["description"],
         invalid_fields=["timeout (int_type)"],
     )
@@ -125,6 +131,8 @@ def test_build_hook_validation_error_message_unknown_hook_id() -> None:
     message = _build_hook_validation_error_message(
         kit_name="test-kit",
         hook_id="unknown",
+        hook_position=0,
+        total_hooks=1,
         missing_fields=["lifecycle"],
         invalid_fields=[],
     )
@@ -139,6 +147,8 @@ def test_build_hook_validation_error_message_format() -> None:
     message = _build_hook_validation_error_message(
         kit_name="test-kit",
         hook_id="test-hook",
+        hook_position=0,
+        total_hooks=1,
         missing_fields=["lifecycle"],
         invalid_fields=[],
     )
@@ -153,3 +163,49 @@ def test_build_hook_validation_error_message_format() -> None:
     assert "1." in message
     assert "2." in message
     assert "3." in message
+
+
+def test_build_hook_validation_error_message_with_position() -> None:
+    """Test that error message includes position information."""
+    message = _build_hook_validation_error_message(
+        kit_name="test-kit",
+        hook_id="test-hook",
+        hook_position=1,
+        total_hooks=3,
+        missing_fields=["lifecycle"],
+        invalid_fields=[],
+    )
+
+    # Should include position information (1-based, so hook_position=1 -> Hook #2)
+    assert "Position: Hook #2 of 3" in message
+    assert "test-hook" in message
+
+
+def test_build_hook_validation_error_message_first_hook() -> None:
+    """Test position display for first hook in list."""
+    message = _build_hook_validation_error_message(
+        kit_name="test-kit",
+        hook_id="first-hook",
+        hook_position=0,
+        total_hooks=5,
+        missing_fields=["description"],
+        invalid_fields=[],
+    )
+
+    # Should show Hook #1 (0-based index 0 -> position 1)
+    assert "Position: Hook #1 of 5" in message
+
+
+def test_build_hook_validation_error_message_last_hook() -> None:
+    """Test position display for last hook in list."""
+    message = _build_hook_validation_error_message(
+        kit_name="test-kit",
+        hook_id="last-hook",
+        hook_position=2,
+        total_hooks=3,
+        missing_fields=["invocation"],
+        invalid_fields=[],
+    )
+
+    # Should show Hook #3 (0-based index 2 -> position 3)
+    assert "Position: Hook #3 of 3" in message

@@ -41,6 +41,8 @@ def _extract_validation_error_details(error: ValidationError) -> tuple[list[str]
 def _build_hook_validation_error_message(
     kit_name: str,
     hook_id: str,
+    hook_position: int,
+    total_hooks: int,
     missing_fields: list[str],
     invalid_fields: list[str],
 ) -> str:
@@ -49,6 +51,8 @@ def _build_hook_validation_error_message(
     Args:
         kit_name: Name of the kit containing the invalid hook
         hook_id: ID of the hook that failed validation (or "unknown")
+        hook_position: 0-based index of the hook in the list
+        total_hooks: Total number of hooks in the kit
         missing_fields: List of missing required field names
         invalid_fields: List of invalid field descriptions
 
@@ -57,6 +61,7 @@ def _build_hook_validation_error_message(
     """
     error_lines = [f"❌ Error: Invalid hook definition in kit '{kit_name}'", ""]
     error_lines.append(f"Details: Hook ID: {hook_id}")
+    error_lines.append(f"  Position: Hook #{hook_position + 1} of {total_hooks}")
 
     if missing_fields:
         error_lines.append(f"  Missing required fields: {', '.join(missing_fields)}")
@@ -95,24 +100,28 @@ def load_project_config(project_dir: Path) -> ProjectConfig | None:
             # Parse hooks if present
             hooks: list[HookDefinition] = []
             if "hooks" in kit_data:
-                try:
-                    hooks = [HookDefinition.model_validate(h) for h in kit_data["hooks"]]
-                except ValidationError as e:
-                    # Error boundary: translate Pydantic validation errors to user-friendly messages
-                    # Get hook ID for context (try first hook since we can't determine which failed)
-                    hook_id = "unknown"
-                    if kit_data["hooks"] and isinstance(kit_data["hooks"][0], dict):
-                        hook_id = kit_data["hooks"][0].get("id", "unknown")
+                for idx, hook_data in enumerate(kit_data["hooks"]):
+                    try:
+                        hooks.append(HookDefinition.model_validate(hook_data))
+                    except ValidationError as e:
+                        # Error boundary: translate Pydantic errors to user-friendly messages
+                        # Extract hook ID from the specific failing hook
+                        if isinstance(hook_data, dict):
+                            hook_id = hook_data.get("id", "unknown")
+                        else:
+                            hook_id = "unknown"
 
-                    # Extract error details and build user-friendly message
-                    missing_fields, invalid_fields = _extract_validation_error_details(e)
-                    msg = _build_hook_validation_error_message(
-                        kit_name=kit_name,
-                        hook_id=hook_id,
-                        missing_fields=missing_fields,
-                        invalid_fields=invalid_fields,
-                    )
-                    raise click.ClickException(msg) from e
+                        # Extract error details and build user-friendly message
+                        missing_fields, invalid_fields = _extract_validation_error_details(e)
+                        msg = _build_hook_validation_error_message(
+                            kit_name=kit_name,
+                            hook_id=hook_id,
+                            hook_position=idx,
+                            total_hooks=len(kit_data["hooks"]),
+                            missing_fields=missing_fields,
+                            invalid_fields=invalid_fields,
+                        )
+                        raise click.ClickException(msg) from e
 
             # Require kit_id field (no fallback)
             if "kit_id" not in kit_data:

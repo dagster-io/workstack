@@ -198,7 +198,6 @@ def test_list_mixed_artifacts(capsys: CaptureFixture[str]) -> None:
                 kit_id="devrun",
                 source_type="bundled",
                 version="0.1.0",
-                installed_at="2024-01-01T00:00:00",
                 artifacts=["skills/devrun-make/SKILL.md", "agents/devrun/runner.md"],
             )
         },

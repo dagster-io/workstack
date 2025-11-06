@@ -16,7 +16,6 @@ def test_installed_kit_immutable() -> None:
         kit_id="test-kit",
         source_type="package",
         version="1.0.0",
-        installed_at="2025-01-01T00:00:00",
         artifacts=["artifact1.md"],
     )
 
@@ -30,7 +29,6 @@ def test_project_config_creation() -> None:
         kit_id="test-kit",
         source_type="package",
         version="1.0.0",
-        installed_at="2025-01-01T00:00:00",
         artifacts=[],
     )
 

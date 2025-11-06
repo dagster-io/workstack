@@ -93,11 +93,6 @@ def validate_kit_fields(kit: InstalledKit) -> list[str]:
     if not kit.artifacts:
         errors.append("artifacts list is empty")
 
-    # Validate installed_at is non-empty (basic check)
-    # More sophisticated ISO 8601 parsing could be added if needed
-    if not kit.installed_at:
-        errors.append("installed_at is empty")
-
     return errors
 
 

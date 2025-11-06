@@ -1,7 +1,6 @@
 """Kit installation operations."""
 
 import shutil
-from datetime import datetime
 from pathlib import Path
 
 import click
@@ -110,7 +109,6 @@ def install_kit(
         kit_id=manifest.name,
         source_type=resolved.source_type,
         version=manifest.version,
-        installed_at=datetime.now().isoformat(),
         artifacts=installed_artifacts,
         hooks=manifest.hooks if manifest.hooks else [],
     )

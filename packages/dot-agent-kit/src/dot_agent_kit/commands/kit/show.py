@@ -154,7 +154,6 @@ def _display_installation_status(manifest, installed_kit) -> None:
     else:
         click.echo(f"Installed:        {installed_kit.version}")
         click.echo(f"Available:        {manifest.version}")
-        click.echo(f"Installed at:     {installed_kit.installed_at}")
 
         # Check for version mismatch
         if installed_kit.version != manifest.version:

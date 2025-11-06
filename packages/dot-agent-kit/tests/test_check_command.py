@@ -288,7 +288,6 @@ def test_check_command_valid_artifacts(tmp_path: Path) -> None:
                     kit_id="test-kit",
                     version="1.0.0",
                     source_type="package",
-                    installed_at="2024-01-01T00:00:00",
                     artifacts=["skills/test/SKILL.md"],
                 ),
             },
@@ -320,7 +319,6 @@ def test_check_command_invalid_artifacts(tmp_path: Path) -> None:
                     kit_id="test-kit",
                     version="1.0.0",
                     source_type="package",
-                    installed_at="2024-01-01T00:00:00",
                     artifacts=["skills/missing/SKILL.md"],
                 ),
             },
@@ -356,7 +354,6 @@ def test_check_command_no_bundled_kits(tmp_path: Path) -> None:
                     kit_id="test-kit",
                     version="1.0.0",
                     source_type="package",
-                    installed_at="2024-01-01T00:00:00",
                     artifacts=["skills/test/SKILL.md"],
                 ),
             },
@@ -392,7 +389,6 @@ def test_check_command_verbose_flag(tmp_path: Path) -> None:
                     kit_id="test-kit",
                     version="1.0.0",
                     source_type="package",
-                    installed_at="2024-01-01T00:00:00",
                     artifacts=["skills/test/SKILL.md"],
                 ),
             },
@@ -423,7 +419,6 @@ def test_validate_kit_fields_all_valid() -> None:
         kit_id="test-kit",
         source_type="bundled",
         version="1.0.0",
-        installed_at="2024-01-01T00:00:00",
         artifacts=[".claude/skills/test/SKILL.md"],
     )
     errors = validate_kit_fields(kit)
@@ -436,7 +431,6 @@ def test_validate_kit_fields_empty_kit_id() -> None:
         kit_id="",
         source_type="bundled",
         version="1.0.0",
-        installed_at="2024-01-01T00:00:00",
         artifacts=[".claude/skills/test/SKILL.md"],
     )
     errors = validate_kit_fields(kit)
@@ -450,7 +444,6 @@ def test_validate_kit_fields_empty_version() -> None:
         kit_id="test-kit",
         source_type="bundled",
         version="",
-        installed_at="2024-01-01T00:00:00",
         artifacts=[".claude/skills/test/SKILL.md"],
     )
     errors = validate_kit_fields(kit)
@@ -464,7 +457,6 @@ def test_validate_kit_fields_invalid_source_type() -> None:
         kit_id="test-kit",
         source_type=cast(SourceType, "invalid"),
         version="1.0.0",
-        installed_at="2024-01-01T00:00:00",
         artifacts=[".claude/skills/test/SKILL.md"],
     )
     errors = validate_kit_fields(kit)
@@ -478,7 +470,6 @@ def test_validate_kit_fields_source_type_empty_string() -> None:
         kit_id="test-kit",
         source_type=cast(SourceType, ""),
         version="1.0.0",
-        installed_at="2024-01-01T00:00:00",
         artifacts=[".claude/skills/test/SKILL.md"],
     )
     errors = validate_kit_fields(kit)
@@ -492,7 +483,6 @@ def test_validate_kit_fields_source_type_whitespace() -> None:
         kit_id="test-kit",
         source_type=cast(SourceType, "   "),
         version="1.0.0",
-        installed_at="2024-01-01T00:00:00",
         artifacts=[".claude/skills/test/SKILL.md"],
     )
     errors = validate_kit_fields(kit)
@@ -507,7 +497,6 @@ def test_validate_kit_fields_source_type_wrong_case() -> None:
         kit_id="test-kit",
         source_type=cast(SourceType, "BUNDLED"),
         version="1.0.0",
-        installed_at="2024-01-01T00:00:00",
         artifacts=[".claude/skills/test/SKILL.md"],
     )
     errors_upper = validate_kit_fields(kit_upper)
@@ -519,7 +508,6 @@ def test_validate_kit_fields_source_type_wrong_case() -> None:
         kit_id="test-kit",
         source_type=cast(SourceType, "Bundled"),
         version="1.0.0",
-        installed_at="2024-01-01T00:00:00",
         artifacts=[".claude/skills/test/SKILL.md"],
     )
     errors_cap = validate_kit_fields(kit_cap)
@@ -536,7 +524,6 @@ def test_validate_kit_fields_source_type_common_typos() -> None:
             kit_id="test-kit",
             source_type=cast(SourceType, typo),
             version="1.0.0",
-            installed_at="2024-01-01T00:00:00",
             artifacts=[".claude/skills/test/SKILL.md"],
         )
         errors = validate_kit_fields(kit)
@@ -552,7 +539,6 @@ def test_validate_kit_fields_source_type_with_surrounding_whitespace() -> None:
         kit_id="test-kit",
         source_type=cast(SourceType, " bundled "),
         version="1.0.0",
-        installed_at="2024-01-01T00:00:00",
         artifacts=[".claude/skills/test/SKILL.md"],
     )
     errors = validate_kit_fields(kit)
@@ -566,26 +552,11 @@ def test_validate_kit_fields_empty_artifacts() -> None:
         kit_id="test-kit",
         source_type="bundled",
         version="1.0.0",
-        installed_at="2024-01-01T00:00:00",
         artifacts=[],
     )
     errors = validate_kit_fields(kit)
     assert len(errors) == 1
     assert "artifacts list is empty" in errors
-
-
-def test_validate_kit_fields_empty_installed_at() -> None:
-    """Test validate_kit_fields with empty installed_at."""
-    kit = InstalledKit(
-        kit_id="test-kit",
-        source_type="bundled",
-        version="1.0.0",
-        installed_at="",
-        artifacts=[".claude/skills/test/SKILL.md"],
-    )
-    errors = validate_kit_fields(kit)
-    assert len(errors) == 1
-    assert "installed_at is empty" in errors
 
 
 def test_validate_kit_fields_multiple_errors() -> None:
@@ -594,16 +565,14 @@ def test_validate_kit_fields_multiple_errors() -> None:
         kit_id="",
         source_type=cast(SourceType, "invalid"),
         version="",
-        installed_at="",
         artifacts=[],
     )
     errors = validate_kit_fields(kit)
-    assert len(errors) == 5
+    assert len(errors) == 4
     assert any("kit_id is empty" in e for e in errors)
     assert any("version is empty" in e for e in errors)
     assert any("Invalid source_type" in e for e in errors)
     assert any("artifacts list is empty" in e for e in errors)
-    assert any("installed_at is empty" in e for e in errors)
 
 
 def test_check_command_bundled_kit_sync_in_sync(tmp_path: Path) -> None:
@@ -626,7 +595,6 @@ def test_check_command_bundled_kit_sync_in_sync(tmp_path: Path) -> None:
                     kit_id="devrun",
                     version="0.1.0",
                     source_type="bundled",
-                    installed_at="2024-01-01T00:00:00",
                     artifacts=[
                         ".claude/agents/devrun/devrun.md",
                         ".claude/docs/devrun/tools/gt.md",
@@ -693,7 +661,6 @@ def test_check_command_detects_missing_artifacts(tmp_path: Path) -> None:
                     kit_id="gt",
                     version="0.1.0",
                     source_type="bundled",
-                    installed_at="2024-01-01T00:00:00",
                     artifacts=[".claude/commands/gt/land-branch.md"],
                 ),
             },
@@ -764,7 +731,6 @@ artifacts:
                     kit_id="test-kit",
                     version="1.0.0",
                     source_type="bundled",
-                    installed_at="2024-01-01T00:00:00",
                     artifacts=[
                         ".claude/commands/test/foo.md",
                         ".claude/commands/test/old-artifact.md",
@@ -851,7 +817,6 @@ artifacts:
                     kit_id="test-kit",
                     version="1.0.0",
                     source_type="bundled",
-                    installed_at="2024-01-01T00:00:00",
                     artifacts=[
                         ".claude/commands/test/foo.md",
                         ".claude/commands/test/obsolete.md",
@@ -915,7 +880,6 @@ def test_check_command_perfect_sync_no_missing_no_obsolete(tmp_path: Path) -> No
                     kit_id="gt",
                     version="0.1.0",
                     source_type="bundled",
-                    installed_at="2024-01-01T00:00:00",
                     artifacts=[
                         ".claude/agents/gt/branch-submitter.md",
                         ".claude/commands/gt/land-branch.md",

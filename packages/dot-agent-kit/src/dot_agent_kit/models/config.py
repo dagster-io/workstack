@@ -13,7 +13,6 @@ class InstalledKit:
     kit_id: str  # Globally unique kit identifier
     source_type: SourceType
     version: str
-    installed_at: str
     artifacts: list[str]
     hooks: list[HookDefinition] = field(default_factory=list)
 

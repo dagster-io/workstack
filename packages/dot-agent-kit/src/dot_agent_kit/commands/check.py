@@ -715,6 +715,17 @@ def check(verbose: bool) -> None:
                     obs_check = click.style("⚠", fg="yellow")
                     obs_num = click.style(str(obsolete_count), fg="yellow")
                     click.echo(f"  {obs_check} Obsolete: {obs_num}", err=True)
+            else:
+                # In non-verbose mode, still print missing/obsolete counts if there are issues
+                if missing_count > 0:
+                    miss_check = click.style("⚠", fg="yellow")
+                    miss_num = click.style(str(missing_count), fg="yellow")
+                    click.echo(f"  {miss_check} Missing: {miss_num}", err=True)
+
+                if obsolete_count > 0:
+                    obs_check = click.style("⚠", fg="yellow")
+                    obs_num = click.style(str(obsolete_count), fg="yellow")
+                    click.echo(f"  {obs_check} Obsolete: {obs_num}", err=True)
 
             if out_of_sync_count > 0 or missing_count > 0 or obsolete_count > 0:
                 if verbose:
@@ -761,7 +772,8 @@ def check(verbose: bool) -> None:
                     )
                     click.echo(msg)
                     # Show the actual hook command
-                    click.echo(click.style(f"      Command: {detail.command}", fg="white", dim=True))
+                    cmd_msg = f"      Command: {detail.command}"
+                    click.echo(click.style(cmd_msg, fg="white", dim=True))
 
                 elif detail.action == "skipped_not_dot_agent":
                     status = click.style("⊘", fg="yellow")
@@ -771,14 +783,19 @@ def check(verbose: bool) -> None:
                     )
                     click.echo(msg)
                     # Show command preview (first 80 chars)
-                    cmd_preview = detail.command[:80] + "..." if len(detail.command) > 80 else detail.command
-                    click.echo(click.style(f"      Command: {cmd_preview}", fg="white", dim=True))
+                    if len(detail.command) > 80:
+                        cmd_preview = detail.command[:80] + "..."
+                    else:
+                        cmd_preview = detail.command
+                    cmd_msg = f"      Command: {cmd_preview}"
+                    click.echo(click.style(cmd_msg, fg="white", dim=True))
 
                 elif detail.action == "parse_error":
                     status = click.style("✗", fg="red")
+                    kit_display = click.style(detail.kit_id or "unknown", fg="red")
                     msg = (
                         f"{status} {lifecycle_display} Parse error for kit "
-                        f"{click.style(detail.kit_id or 'unknown', fg='red')}: {detail.error_message}"
+                        f"{kit_display}: {detail.error_message}"
                     )
                     click.echo(msg, err=True)
 
@@ -813,7 +830,9 @@ def check(verbose: bool) -> None:
                 # Summary
                 click.echo()
                 kit_count = len(hook_results)
-                error_count = sum(1 for r in hook_results for i in r.issues if i.severity == "error")
+                error_count = sum(
+                    1 for r in hook_results for i in r.issues if i.severity == "error"
+                )
                 warning_count = sum(
                     1 for r in hook_results for i in r.issues if i.severity == "warning"
                 )
@@ -829,7 +848,8 @@ def check(verbose: bool) -> None:
                     click.echo(f"  {warn_check} Warnings: {warn_num}", err=True)
 
                 click.echo()
-                click.echo("Run 'dot-agent kit sync --force' to update hook configuration", err=True)
+                sync_msg = "Run 'dot-agent kit sync --force' to update hook configuration"
+                click.echo(sync_msg, err=True)
             hook_passed = False
 
     # Overall result
@@ -840,6 +860,5 @@ def check(verbose: bool) -> None:
     if config_passed and validation_passed and sync_passed and hook_passed:
         click.echo(click.style("✅ All checks passed!", fg="green", bold=True))
     else:
-        if verbose:
-            click.echo(click.style("❌ Some checks failed", fg="red", bold=True), err=True)
+        click.echo(click.style("Some checks failed", fg="red", bold=True), err=True)
         raise SystemExit(1)

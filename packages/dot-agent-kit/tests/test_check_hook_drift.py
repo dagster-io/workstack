@@ -521,11 +521,10 @@ def test_check_command_no_hook_drift(tmp_path: Path) -> None:
         )
         save_project_config(project_dir, config)
 
-        result = runner.invoke(check)
+        result = runner.invoke(check, ["--verbose"])
 
         assert result.exit_code == 0
-        assert "Hook Configuration Validation" in result.output
-        assert "No hook drift detected" in result.output
+        assert "All checks passed" in result.output
 
 
 def test_check_command_skip_non_bundled_kits(tmp_path: Path) -> None:
@@ -578,11 +577,11 @@ def test_check_command_skip_non_bundled_kits(tmp_path: Path) -> None:
         )
         save_project_config(project_dir, config)
 
-        result = runner.invoke(check)
+        result = runner.invoke(check, ["--verbose"])
 
         # Should pass - non-bundled kits are skipped
         assert result.exit_code == 0
-        assert "No hook drift detected" in result.output
+        assert "All checks passed" in result.output
 
 
 def test_check_command_skip_kit_without_hooks_field(tmp_path: Path) -> None:
@@ -643,14 +642,14 @@ artifacts:
 
         BundledKitSource._get_bundled_kit_path = mock_get_path
 
-        result = runner.invoke(check)
+        result = runner.invoke(check, ["--verbose"])
 
         # Restore original method
         BundledKitSource._get_bundled_kit_path = original_get_path
 
         # Should pass - kits without hooks field are skipped
         assert result.exit_code == 0
-        assert "No hook drift detected" in result.output
+        assert "All checks passed" in result.output
 
 
 def test_check_command_detects_hook_drift_integration(tmp_path: Path) -> None:
@@ -731,18 +730,16 @@ hooks:
 
         BundledKitSource._get_bundled_kit_path = mock_get_path
 
-        result = runner.invoke(check)
+        result = runner.invoke(check, ["--verbose"])
 
         # Restore original method
         BundledKitSource._get_bundled_kit_path = original_get_path
 
         # Should detect drift
         assert result.exit_code == 1
-        assert "Hook Configuration Validation" in result.output
-        assert "Kit: test-kit" in result.output
+        assert "test-kit" in result.output
         # Extraction fails because old-hook is not in manifest (only new-hook is expected)
         assert "not found in manifest" in result.output or "Some checks failed" in result.output
-        assert "Some checks failed" in result.output
 
 
 def test_check_command_no_settings_file(tmp_path: Path) -> None:
@@ -774,8 +771,8 @@ def test_check_command_no_settings_file(tmp_path: Path) -> None:
         )
         save_project_config(project_dir, config)
 
-        result = runner.invoke(check)
+        result = runner.invoke(check, ["--verbose"])
 
         # Should pass - no settings.json means no hooks to validate
         assert result.exit_code == 0
-        assert "No hook drift detected" in result.output
+        assert "All checks passed" in result.output

@@ -29,7 +29,7 @@ This command extracts a plan from conversation context, saves it to disk, and cr
 
 When you run this command, these steps occur:
 
-1. **Exit Plan Mode** - If currently in plan mode, automatically exit it first
+1. **Check Plan Mode** - If currently in plan mode, inform user to exit and rerun command, then abort
 2. **Verify Scope** - Confirm we're in a git repository with workstack available
 3. **Detect Plan** - Search conversation for implementation plan
 4. **Apply Guidance** - Merge optional guidance into plan (if provided)
@@ -202,25 +202,23 @@ This command sets up the workspace. Implementation happens in the worktree via `
 
 **Plan Mode Handling:**
 
-This command automatically exits plan mode if you are currently in it. The workflow is:
+This command cannot run while in plan mode. The workflow is:
 
 1. User presents a plan (optionally in plan mode)
 2. User invokes `/workstack:create-from-plan`
-3. If in plan mode, this command automatically exits it
-4. Extracts, enhances, and saves the plan to disk
+3. If in plan mode, command informs user to exit plan mode and rerun, then aborts
+4. If not in plan mode, extracts, enhances, and saves the plan to disk
 5. Creates worktree with the plan
 6. User runs: `workstack switch <name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
 7. Implementation happens in the new worktree
 
 **Remember:** This command only prepares the workspace - actual code implementation happens after switching to the worktree.
 
-### Step 1: Exit Plan Mode (If Active)
+### Step 1: Check Plan Mode and Abort (If Active)
 
 **Check if currently in plan mode:**
 
-Plan mode is indicated by system context messages or the presence of plan mode indicators. If you detect that you are currently in plan mode:
-
-**Action:** Use the ExitPlanMode tool to exit plan mode BEFORE proceeding with any other steps.
+Plan mode is indicated by system context messages or the presence of plan mode indicators.
 
 **How to detect plan mode:**
 
@@ -230,16 +228,24 @@ Plan mode is indicated by system context messages or the presence of plan mode i
 
 **If in plan mode:**
 
-1. Do NOT proceed with any other steps yet
-2. Call ExitPlanMode with the plan content
-3. Wait for plan mode to exit
-4. Then continue to Step 2
+1. Do NOT proceed with any other steps
+2. Display this message to the user:
+
+```
+⚠️ This command cannot run in plan mode.
+
+Please exit plan mode first, then rerun this command:
+
+/workstack:create-from-plan
+```
+
+3. STOP execution immediately - do NOT continue to Step 2
 
 **If NOT in plan mode:**
 
 - Skip this step and proceed directly to Step 2
 
-This ensures a clean transition from planning to workspace setup.
+This ensures the command only runs in execution mode, not planning mode.
 
 ### Step 2: Verify Scope and Constraints
 

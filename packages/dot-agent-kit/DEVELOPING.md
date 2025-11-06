@@ -10,144 +10,126 @@ For creating new kits from scratch, see [README.md](README.md).
 
 ## Quick Reference
 
-| Step | Action                                          | Command                          |
-| ---- | ----------------------------------------------- | -------------------------------- |
-| 1    | Edit `.claude/` files directly in your worktree | _(use your editor)_              |
-| 2    | Test and iterate on changes                     | _(use kit artifacts normally)_   |
-| 3    | Commit your changes                             | `git add .claude/ && git commit` |
-| 4    | Sync changes back to kit source                 | `workstack-dev kit-sync-back`    |
+| Step | Action                                          | Notes                             |
+| ---- | ----------------------------------------------- | --------------------------------- |
+| 1    | Enable dev_mode in pyproject.toml               | One-time setup                    |
+| 2    | Install kits (creates symlinks)                 | `dot-agent kit install --all`     |
+| 3    | Edit `.claude/` files directly in your worktree | Changes immediately affect source |
+| 4    | Test and iterate on changes                     | No sync needed - changes are live |
+| 5    | Commit your changes                             | `git add . && git commit`         |
 
-⚠️ **DO NOT** run `dot-agent kit sync` during active development - it will overwrite your `.claude/` edits!
+✅ **No more sync-back needed!** Edits to `.claude/` immediately affect the source files via symlinks.
 
 ## The Development Workflow
 
-When editing bundled kits in the workstack repository, follow this workflow:
+When editing bundled kits in the workstack repository, follow this symlink-based workflow:
 
-### 1. Edit .claude Files Directly
+### 1. Enable Dev Mode (One-Time Setup)
 
-Edit the kit files in `.claude/` within your worktree. These are the installed artifacts:
+Add the following to your `pyproject.toml` in the workstack repository root:
+
+```toml
+[tool.dot-agent]
+dev_mode = true
+```
+
+This enables symlink-based kit installation for development.
+
+### 2. Install Kits with Symlinks
+
+Run the kit install command to create symlinks:
+
+```bash
+dot-agent kit install --all --overwrite
+```
+
+With `dev_mode = true`, this creates symlinks from `.claude/` to the kit source files in `packages/dot-agent-kit/src/dot_agent_kit/data/kits/`. You'll see output like:
+
+```
+  Using symlinks (dev_mode enabled)
+  Installed skill: gt-graphite -> source
+  Installed agent: devrun -> source
+```
+
+### 3. Edit .claude Files Directly
+
+Edit the kit files in `.claude/` within your worktree. **Because these are symlinks, your edits immediately affect the source files:**
 
 ```bash
 # Example: Edit a skill file
 vim .claude/skills/gt-graphite/SKILL.md
 
-# Example: Edit a hook
-vim .claude/hooks/dignified-python/suggest-dignified-python.py
+# This actually edits:
+# packages/dot-agent-kit/src/dot_agent_kit/data/kits/gt/skills/gt-graphite/SKILL.md
 ```
 
-### 2. Test and Iterate
+### 4. Test and Iterate
 
-Use the artifacts normally to test your changes. Claude Code reads from `.claude/`, so your edits take effect immediately.
+Use the artifacts normally to test your changes. Claude Code reads from `.claude/`, and since these are symlinks, your edits take effect immediately in both locations.
 
-### 3. Commit Your Changes
+### 5. Commit Your Changes
 
-Commit the edited `.claude/` files to git:
+Commit the source files (not `.claude/`, which should be in .gitignore):
 
 ```bash
-git add .claude/
+git add packages/dot-agent-kit/src/dot_agent_kit/data/kits/
 git commit -m "Update gt-graphite skill with new examples"
 ```
 
-**Important**: Commit your `.claude/` changes before running `kit-sync-back`. This ensures you have a git history of your edits before they're copied to the kit source.
+**Important**: The `.claude/` directory should be in your `.gitignore`. Only commit the actual source files in `packages/`.
 
-### 4. Sync Back to Kit Source
+## How Symlinks Work
 
-Run `workstack-dev kit-sync-back` to copy your changes from `.claude/` back to the kit source in `packages/dot-agent-kit/src/dot_agent_kit/data/kits/`:
-
-```bash
-workstack-dev kit-sync-back
-```
-
-This copies your `.claude/` edits back to the authoritative source location so they're included in the next kit distribution.
-
-## kit-sync-back Command Reference
-
-### What It Does
-
-`kit-sync-back` syncs files from `.claude/` back to their source location:
+When `dev_mode` is enabled:
 
 ```
-.claude/skills/gt-graphite/SKILL.md
-  ↓
-packages/dot-agent-kit/src/dot_agent_kit/data/kits/gt/skills/gt-graphite/SKILL.md
+.claude/skills/gt-graphite/SKILL.md  →  packages/dot-agent-kit/src/.../kits/gt/skills/gt-graphite/SKILL.md
+   (symlink in working directory)           (actual source file)
 ```
 
-This includes:
+Editing either path affects the same file. This eliminates the need for sync-back operations.
 
-- Main artifact files (SKILL.md, AGENT.md, command files)
-- Subdirectories (`references/`, `scripts/`)
-- All files in artifact directories
+## Symlink Protection
 
-### Command Options
+The system automatically protects symlinks:
 
-```bash
-workstack-dev kit-sync-back [OPTIONS]
-```
+- **During sync**: `dot-agent kit sync` skips symlinked artifacts and reports:
 
-| Option       | Description                                         |
-| ------------ | --------------------------------------------------- |
-| `--kit TEXT` | Sync only a specific kit (e.g., `--kit gt`)         |
-| `--dry-run`  | Preview what would be synced without making changes |
-| `--verbose`  | Show detailed output for each file                  |
+  ```
+  Skipping symlinked artifacts in dev mode:
+    .claude/skills/gt-graphite
+  ```
 
-### Examples
+- **During install**: Installing with `--overwrite` preserves the symlink behavior
 
-**Sync all kits:**
+## Fallback Behavior
 
-```bash
-workstack-dev kit-sync-back
-```
-
-**Sync only the gt kit:**
-
-```bash
-workstack-dev kit-sync-back --kit gt
-```
-
-**Preview changes without syncing:**
-
-```bash
-workstack-dev kit-sync-back --dry-run
-```
-
-**Sync with detailed output:**
-
-```bash
-workstack-dev kit-sync-back --verbose
-```
-
-## ⚠️ Critical Warning: DO NOT Use `dot-agent kit sync`
-
-**NEVER run `dot-agent kit sync` while actively developing kit files.**
-
-```bash
-# ❌ WRONG - This will OVERWRITE your .claude/ edits!
-dot-agent kit sync
-```
-
-### Why This Matters
-
-- `dot-agent kit sync` copies FROM kit source TO `.claude/`
-- It will overwrite any uncommitted changes you made in `.claude/`
-- You'll lose your work if you haven't run `kit-sync-back` first
-
-### The Correct Direction
+If symlink creation fails (e.g., on Windows without administrator privileges, or unsupported filesystems), the system automatically falls back to copying files:
 
 ```
-During development:
-  .claude/ → packages/  (using kit-sync-back)
-
-During distribution/installation:
-  packages/ → .claude/  (using dot-agent kit sync)
+  Warning: Could not create symlink for gt-graphite (Operation not supported)
+  Falling back to file copy
 ```
 
-### When Is `dot-agent kit sync` Safe?
+In this case, you would need to manually sync changes between `.claude/` and the source.
 
-Only run `dot-agent kit sync` when:
+## Disabling Dev Mode
 
-- You've already run `kit-sync-back` and all changes are in kit source
-- You want to test a fresh installation from kit source
-- You're intentionally discarding `.claude/` changes
+To switch back to copy-based installation:
+
+1. Remove or set `dev_mode = false` in pyproject.toml:
+
+   ```toml
+   [tool.dot-agent]
+   dev_mode = false
+   ```
+
+2. Reinstall kits:
+   ```bash
+   dot-agent kit install --all --overwrite
+   ```
+
+This reverts to copying files instead of creating symlinks.
 
 ## When This Workflow Matters
 

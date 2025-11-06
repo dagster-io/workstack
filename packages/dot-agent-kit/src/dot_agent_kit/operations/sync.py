@@ -4,8 +4,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import NamedTuple
 
+import click
+
 from dot_agent_kit.io import load_kit_manifest
 from dot_agent_kit.models import InstalledKit, ProjectConfig
+from dot_agent_kit.operations.artifact_operations import create_artifact_operations
 from dot_agent_kit.operations.install import install_kit
 from dot_agent_kit.sources import KitResolver, ResolvedKit
 from dot_agent_kit.sources.exceptions import (
@@ -124,11 +127,15 @@ def sync_kit(
             updated_kit=None,
         )
 
-    # Remove old artifacts
-    for artifact_path in installed.artifacts:
-        full_path = project_dir / artifact_path
-        if full_path.exists():
-            full_path.unlink()
+    # Remove old artifacts using appropriate strategy
+    operations = create_artifact_operations(project_dir, resolved)
+    skipped = operations.remove_artifacts(installed.artifacts, project_dir)
+
+    # Report skipped artifacts
+    if skipped:
+        click.echo("  Skipping symlinked artifacts in dev mode:", err=True)
+        for artifact_path in skipped:
+            click.echo(f"    {artifact_path}", err=True)
 
     # Install new version with overwrite enabled
     new_installed = install_kit(

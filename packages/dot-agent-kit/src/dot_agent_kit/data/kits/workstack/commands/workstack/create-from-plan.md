@@ -644,6 +644,10 @@ Suggested fix: Include rollback procedure or backup strategy
 6. Truncate to 100 characters max (excluding -plan.md suffix)
 7. Ensure at least one alphanumeric character remains
 
+**Branch Name Length:**
+
+Branch names are automatically limited to 30 characters maximum. If the derived name exceeds this limit, it will be truncated and any trailing hyphens/slashes will be removed.
+
 **If extraction fails:**
 
 If cleanup results in empty string or no alphanumeric chars, prompt the user:
@@ -662,10 +666,10 @@ Use AskUserQuestion tool to get the plan name from the user if extraction fails.
 
 **Example transformations:**
 
-- "User Authentication System" → `user-authentication-system-plan.md`
-- "Fix: Database Connection Issues" → `fix-database-connection-issues-plan.md`
-- "🚀 Awesome Feature!!!" → `awesome-feature-plan.md`
-- Very long title (200 chars) → Truncated to 100 chars + `-plan.md`
+- "User Authentication System" → `user-authentication-system-plan.md` (branch: `user-authentication-system`)
+- "Fix: Database Connection Issues" → `fix-database-connection-issues-plan.md` (branch: `fix-database-connection-issue` - truncated to 30 chars)
+- "🚀 Awesome Feature!!!" → `awesome-feature-plan.md` (branch: `awesome-feature`)
+- Very long title (200 chars) → Truncated to 100 chars + `-plan.md` (branch truncated to 30 chars)
 - "###" (only special chars) → Prompt user for name
 
 ### Step 8: Detect Worktree Root

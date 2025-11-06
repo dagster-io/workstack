@@ -24,6 +24,7 @@ def sanitize_branch_component(name: str) -> str:
     - Replaces characters outside `[A-Za-z0-9._/-]` with `-`
     - Collapses consecutive `-`
     - Strips leading/trailing `-` and `/`
+    - Truncates to 30 characters maximum
     Returns `"work"` if the result is empty.
     """
 
@@ -31,7 +32,13 @@ def sanitize_branch_component(name: str) -> str:
     replaced = _SAFE_COMPONENT_RE.sub("-", lowered)
     collapsed = re.sub(r"-+", "-", replaced)
     trimmed = collapsed.strip("-/")
-    return trimmed or "work"
+    result = trimmed or "work"
+
+    # Truncate to 30 characters and strip trailing hyphens/slashes
+    if len(result) > 30:
+        result = result[:30].rstrip("-/")
+
+    return result
 
 
 def strip_plan_from_filename(filename: str) -> str:

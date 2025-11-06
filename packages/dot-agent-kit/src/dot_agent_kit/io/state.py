@@ -5,9 +5,75 @@ from pathlib import Path
 import click
 import tomli
 import tomli_w
+from pydantic import ValidationError
 
 from dot_agent_kit.hooks.models import HookDefinition
 from dot_agent_kit.models import InstalledKit, ProjectConfig
+
+
+def _extract_validation_error_details(error: ValidationError) -> tuple[list[str], list[str]]:
+    """Extract missing and invalid field information from Pydantic ValidationError.
+
+    Args:
+        error: Pydantic ValidationError instance
+
+    Returns:
+        Tuple of (missing_fields, invalid_fields) where:
+        - missing_fields: List of field names that are missing
+        - invalid_fields: List of "field_name (error_type)" strings for invalid fields
+    """
+    missing_fields = []
+    invalid_fields = []
+
+    for err in error.errors():
+        error_type = err.get("type", "")
+        field_path = err.get("loc", ())
+        field_name = ".".join(str(p) for p in field_path if isinstance(p, str))
+
+        if error_type == "missing":
+            missing_fields.append(field_name)
+        else:
+            invalid_fields.append(f"{field_name} ({error_type})")
+
+    return missing_fields, invalid_fields
+
+
+def _build_hook_validation_error_message(
+    kit_name: str,
+    hook_id: str,
+    missing_fields: list[str],
+    invalid_fields: list[str],
+) -> str:
+    """Build user-friendly error message for hook validation failures.
+
+    Args:
+        kit_name: Name of the kit containing the invalid hook
+        hook_id: ID of the hook that failed validation (or "unknown")
+        missing_fields: List of missing required field names
+        invalid_fields: List of invalid field descriptions
+
+    Returns:
+        Formatted error message string
+    """
+    error_lines = [f"❌ Error: Invalid hook definition in kit '{kit_name}'", ""]
+    error_lines.append(f"Details: Hook ID: {hook_id}")
+
+    if missing_fields:
+        error_lines.append(f"  Missing required fields: {', '.join(missing_fields)}")
+    if invalid_fields:
+        error_lines.append(f"  Invalid fields: {', '.join(invalid_fields)}")
+
+    error_lines.extend(
+        [
+            "",
+            "Suggested action:",
+            f"  1. Run 'dot-agent kit install {kit_name}' to reinstall with correct configuration",
+            "  2. Or manually edit dot-agent.toml to add missing fields",
+            "  3. Check kit documentation for hook format",
+        ]
+    )
+
+    return "\n".join(error_lines)
 
 
 def load_project_config(project_dir: Path) -> ProjectConfig | None:
@@ -29,7 +95,24 @@ def load_project_config(project_dir: Path) -> ProjectConfig | None:
             # Parse hooks if present
             hooks: list[HookDefinition] = []
             if "hooks" in kit_data:
-                hooks = [HookDefinition.model_validate(h) for h in kit_data["hooks"]]
+                try:
+                    hooks = [HookDefinition.model_validate(h) for h in kit_data["hooks"]]
+                except ValidationError as e:
+                    # Error boundary: translate Pydantic validation errors to user-friendly messages
+                    # Get hook ID for context (try first hook since we can't determine which failed)
+                    hook_id = "unknown"
+                    if kit_data["hooks"] and isinstance(kit_data["hooks"][0], dict):
+                        hook_id = kit_data["hooks"][0].get("id", "unknown")
+
+                    # Extract error details and build user-friendly message
+                    missing_fields, invalid_fields = _extract_validation_error_details(e)
+                    msg = _build_hook_validation_error_message(
+                        kit_name=kit_name,
+                        hook_id=hook_id,
+                        missing_fields=missing_fields,
+                        invalid_fields=invalid_fields,
+                    )
+                    raise click.ClickException(msg) from e
 
             # Require kit_id field (no fallback)
             if "kit_id" not in kit_data:

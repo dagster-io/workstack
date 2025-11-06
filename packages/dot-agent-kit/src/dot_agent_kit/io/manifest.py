@@ -21,7 +21,7 @@ def load_kit_manifest(manifest_path: Path) -> KitManifest:
                 id=hook_data["id"],
                 lifecycle=hook_data["lifecycle"],
                 matcher=hook_data.get("matcher"),
-                script=hook_data["script"],
+                invocation=hook_data["invocation"],
                 description=hook_data["description"],
                 timeout=hook_data.get("timeout", 30),
             )

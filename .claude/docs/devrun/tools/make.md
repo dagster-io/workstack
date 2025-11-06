@@ -2,6 +2,30 @@
 
 Comprehensive guide for executing make commands and parsing build automation results.
 
+## 🚨 CRITICAL: Execution Rules 🚨
+
+When executing make commands:
+
+1. **Execute ONLY the make command requested** - do NOT run additional commands
+2. **Parse the output** - extract errors, file locations, line numbers from the command output
+3. **Report results** - provide structured summary of what the output shows
+4. **DO NOT explore the codebase** - no reading source files, test files, or other files
+5. **DO NOT run additional diagnostic commands** - unless the output is unclear and you need to retry with different flags
+
+**Example WRONG behavior**:
+
+```
+Request: "Execute: make all-ci"
+Agent runs: make all-ci, reads test files, runs pytest -xvs, reads source files, explores directory structure
+```
+
+**Example CORRECT behavior**:
+
+```
+Request: "Execute: make all-ci"
+Agent runs: make all-ci (once), parses output, reports: "Test test_foo failed with AssertionError at tests/test_bar.py:123"
+```
+
 ## Command Detection
 
 Detect make in these command patterns:
@@ -331,10 +355,10 @@ make test
 
 ### Target Fails
 
-**Summary**: "Executed 'make <target>'. <What failed>. ERROR: <Error message>. <Location if available>. <Likely cause>."
+**Summary**: "Executed 'make <target>'. <What failed>. ERROR: <Error message>. <Location if available>."
 
 **Example**:
-"Executed 'make typecheck'. Type checking failed. ERROR: Type 'str' cannot be assigned to type 'int' at src/config.py:42. Likely cause: incorrect return type annotation."
+"Executed 'make typecheck'. Type checking failed. ERROR: Type 'str' cannot be assigned to type 'int' at src/config.py:42."
 
 ### Make Error (No Target)
 
@@ -355,8 +379,8 @@ When a make command fails, include:
 2. **The command** that failed (from recipe)
 3. **Complete error message** from underlying command
 4. **File and line number** if available
-5. **Root cause assessment** based on error
-6. **Enough context** for parent to fix without re-running
+5. **Relevant context** (error type, expected vs actual values, exit code)
+6. **Structured data** for parent agent to assess root cause and apply fixes
 
 ## Best Practices
 

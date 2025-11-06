@@ -43,13 +43,13 @@ def test_atomic_hook_update_success():
                 id="old_hook",
                 lifecycle="PostToolUse",
                 matcher="*",
-                script="hooks/hook1.py",
+                invocation="dot-agent run test-kit old_hook",
                 description="Old hook",
             )
         ]
 
         # Install initial hooks
-        install_hooks("test-kit", old_hooks, kit_root, project_dir)
+        install_hooks("test-kit", old_hooks, project_dir)
 
         # Verify initial hooks installed
         settings = load_settings(project_dir / ".claude" / "settings.json")
@@ -64,14 +64,14 @@ def test_atomic_hook_update_success():
                 id="new_hook1",
                 lifecycle="PostToolUse",
                 matcher="*",
-                script="hooks/hook1.py",
+                invocation="dot-agent run test-kit new_hook1",
                 description="New hook 1",
             ),
             HookDefinition(
                 id="new_hook2",
                 lifecycle="UserPromptSubmit",
                 matcher="*",
-                script="hooks/hook2.py",
+                invocation="dot-agent run test-kit new_hook2",
                 description="New hook 2",
             ),
         ]
@@ -117,33 +117,33 @@ def test_atomic_hook_update_rollback_on_failure():
                 id="existing_hook",
                 lifecycle="PostToolUse",
                 matcher="*",
-                script="hooks/hook1.py",
+                invocation="dot-agent run test-kit existing_hook",
                 description="Existing hook",
             )
         ]
 
         # Install initial hooks
-        install_hooks("test-kit", old_hooks, kit_root, project_dir)
+        install_hooks("test-kit", old_hooks, project_dir)
 
         # Save initial state
         initial_settings = load_settings(project_dir / ".claude" / "settings.json")
         hooks_dir = project_dir / ".claude" / "hooks" / "test-kit"
         initial_hook_files = list(hooks_dir.glob("*")) if hooks_dir.exists() else []
 
-        # Create new hooks with one that will fail (missing script)
+        # Create new hooks
         new_hooks = [
             HookDefinition(
                 id="new_hook1",
                 lifecycle="PostToolUse",
                 matcher="*",
-                script="hooks/hook1.py",
+                invocation="dot-agent run test-kit new_hook1",
                 description="New hook 1",
             ),
             HookDefinition(
                 id="failing_hook",
                 lifecycle="UserPromptSubmit",
                 matcher="*",
-                script="hooks/nonexistent.py",  # This will fail
+                invocation="dot-agent run test-kit failing_hook",
                 description="Failing hook",
             ),
         ]
@@ -184,7 +184,7 @@ def test_atomic_hook_update_with_no_existing_hooks():
                 id="new_hook",
                 lifecycle="PostToolUse",
                 matcher="*",
-                script="hooks/hook1.py",
+                invocation="dot-agent run test-kit new_hook",
                 description="New hook",
             ),
         ]
@@ -218,17 +218,13 @@ def test_atomic_hook_update_removes_hooks_when_none_in_manifest():
                 id="old_hook",
                 lifecycle="PostToolUse",
                 matcher="*",
-                script="hooks/hook1.py",
+                invocation="dot-agent run test-kit old_hook",
                 description="Old hook",
             )
         ]
 
         # Install initial hooks
-        install_hooks("test-kit", old_hooks, kit_root, project_dir)
-
-        # Verify hooks exist
-        hooks_dir = project_dir / ".claude" / "hooks" / "test-kit"
-        assert hooks_dir.exists()
+        install_hooks("test-kit", old_hooks, project_dir)
 
         # Perform atomic update with no hooks
         hooks_count = _perform_atomic_hook_update(
@@ -240,8 +236,7 @@ def test_atomic_hook_update_removes_hooks_when_none_in_manifest():
 
         assert hooks_count == 0
 
-        # Verify hooks removed
-        assert not hooks_dir.exists()
+        # Verify hooks removed from settings
         settings = load_settings(project_dir / ".claude" / "settings.json")
 
         # Check no hooks from this kit remain
@@ -262,30 +257,20 @@ def test_atomic_hook_update_cleans_up_partial_installation_on_failure():
         kit_dir = project_dir / "kit_source"
         kit_root = create_test_kit_with_hooks(kit_dir, "test-kit")
 
-        # No existing hooks
-        hooks_dir = project_dir / ".claude" / "hooks" / "test-kit"
-
         # Create hooks that will fail during installation
         new_hooks = [
             HookDefinition(
                 id="new_hook",
                 lifecycle="PostToolUse",
                 matcher="*",
-                script="hooks/hook1.py",
+                invocation="dot-agent run test-kit new_hook",
                 description="New hook",
             ),
         ]
 
-        # Mock install_hooks to fail after creating directory
+        # Mock install_hooks to fail
         with patch("dot_agent_kit.commands.kit.install.install_hooks") as mock_install:
-
-            def side_effect(*args, **kwargs):
-                # Create the directory to simulate partial installation
-                hooks_dir.mkdir(parents=True, exist_ok=True)
-                (hooks_dir / "partial.py").write_text("partial")
-                raise RuntimeError("Installation failed midway")
-
-            mock_install.side_effect = side_effect
+            mock_install.side_effect = RuntimeError("Installation failed midway")
 
             # Attempt atomic update - should fail and clean up
             with pytest.raises(RuntimeError, match="Installation failed midway"):
@@ -296,5 +281,13 @@ def test_atomic_hook_update_cleans_up_partial_installation_on_failure():
                     project_dir=project_dir,
                 )
 
-        # Verify partial installation was cleaned up
-        assert not hooks_dir.exists()
+        # Verify settings were restored (no partial installation)
+        settings_path = project_dir / ".claude" / "settings.json"
+        if settings_path.exists():
+            settings = load_settings(settings_path)
+            # Should have no hooks from this kit
+            if settings.hooks:
+                for lifecycle_groups in settings.hooks.values():
+                    for group in lifecycle_groups:
+                        for hook in group.hooks:
+                            assert "DOT_AGENT_KIT_ID=test-kit" not in hook.command

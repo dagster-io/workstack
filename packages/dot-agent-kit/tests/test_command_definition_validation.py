@@ -1,11 +1,11 @@
-"""Tests for CommandDefinition validation."""
+"""Tests for KitCliCommandDefinition validation."""
 
-from dot_agent_kit.models.kit import CommandDefinition
+from dot_agent_kit.models.kit import KitCliCommandDefinition
 
 
 def test_validate_valid_definition() -> None:
     """Test validation of a valid command definition."""
-    cmd = CommandDefinition(
+    cmd = KitCliCommandDefinition(
         name="test-command", path="commands/test.py", description="Test command"
     )
 
@@ -15,7 +15,7 @@ def test_validate_valid_definition() -> None:
 
 def test_validate_valid_definition_with_numbers() -> None:
     """Test validation accepts numbers in name."""
-    cmd = CommandDefinition(
+    cmd = KitCliCommandDefinition(
         name="test-command-123", path="commands/test.py", description="Test command"
     )
 
@@ -25,7 +25,7 @@ def test_validate_valid_definition_with_numbers() -> None:
 
 def test_validate_valid_nested_path() -> None:
     """Test validation accepts nested paths."""
-    cmd = CommandDefinition(
+    cmd = KitCliCommandDefinition(
         name="test-command", path="commands/subdir/test.py", description="Test command"
     )
 
@@ -35,7 +35,7 @@ def test_validate_valid_nested_path() -> None:
 
 def test_validate_invalid_name_uppercase() -> None:
     """Test validation rejects uppercase letters in name."""
-    cmd = CommandDefinition(
+    cmd = KitCliCommandDefinition(
         name="Test-Command", path="commands/test.py", description="Test command"
     )
 
@@ -46,7 +46,7 @@ def test_validate_invalid_name_uppercase() -> None:
 
 def test_validate_invalid_name_underscore() -> None:
     """Test validation rejects underscores in name."""
-    cmd = CommandDefinition(
+    cmd = KitCliCommandDefinition(
         name="test_command", path="commands/test.py", description="Test command"
     )
 
@@ -57,7 +57,9 @@ def test_validate_invalid_name_underscore() -> None:
 
 def test_validate_invalid_name_starts_with_number() -> None:
     """Test validation rejects names starting with numbers."""
-    cmd = CommandDefinition(name="123-test", path="commands/test.py", description="Test command")
+    cmd = KitCliCommandDefinition(
+        name="123-test", path="commands/test.py", description="Test command"
+    )
 
     errors = cmd.validate()
     assert len(errors) == 1
@@ -66,7 +68,7 @@ def test_validate_invalid_name_starts_with_number() -> None:
 
 def test_validate_invalid_name_special_chars() -> None:
     """Test validation rejects special characters in name."""
-    cmd = CommandDefinition(
+    cmd = KitCliCommandDefinition(
         name="test@command", path="commands/test.py", description="Test command"
     )
 
@@ -77,7 +79,7 @@ def test_validate_invalid_name_special_chars() -> None:
 
 def test_validate_path_not_python() -> None:
     """Test validation rejects non-.py files."""
-    cmd = CommandDefinition(
+    cmd = KitCliCommandDefinition(
         name="test-command", path="commands/test.txt", description="Test command"
     )
 
@@ -88,7 +90,9 @@ def test_validate_path_not_python() -> None:
 
 def test_validate_path_no_extension() -> None:
     """Test validation rejects paths without extension."""
-    cmd = CommandDefinition(name="test-command", path="commands/test", description="Test command")
+    cmd = KitCliCommandDefinition(
+        name="test-command", path="commands/test", description="Test command"
+    )
 
     errors = cmd.validate()
     assert len(errors) == 1
@@ -97,7 +101,7 @@ def test_validate_path_no_extension() -> None:
 
 def test_validate_path_traversal() -> None:
     """Test validation rejects directory traversal in path."""
-    cmd = CommandDefinition(
+    cmd = KitCliCommandDefinition(
         name="test-command", path="../commands/test.py", description="Test command"
     )
 
@@ -108,7 +112,7 @@ def test_validate_path_traversal() -> None:
 
 def test_validate_path_traversal_middle() -> None:
     """Test validation rejects directory traversal in middle of path."""
-    cmd = CommandDefinition(
+    cmd = KitCliCommandDefinition(
         name="test-command", path="commands/../test.py", description="Test command"
     )
 
@@ -119,7 +123,7 @@ def test_validate_path_traversal_middle() -> None:
 
 def test_validate_empty_description() -> None:
     """Test validation rejects empty description."""
-    cmd = CommandDefinition(name="test-command", path="commands/test.py", description="")
+    cmd = KitCliCommandDefinition(name="test-command", path="commands/test.py", description="")
 
     errors = cmd.validate()
     assert len(errors) == 1
@@ -128,7 +132,7 @@ def test_validate_empty_description() -> None:
 
 def test_validate_whitespace_only_description() -> None:
     """Test validation rejects whitespace-only description."""
-    cmd = CommandDefinition(name="test-command", path="commands/test.py", description="   ")
+    cmd = KitCliCommandDefinition(name="test-command", path="commands/test.py", description="   ")
 
     errors = cmd.validate()
     assert len(errors) == 1
@@ -137,7 +141,7 @@ def test_validate_whitespace_only_description() -> None:
 
 def test_validate_multiple_errors() -> None:
     """Test validation returns multiple errors when multiple issues exist."""
-    cmd = CommandDefinition(name="INVALID_NAME", path="../bad/path.txt", description="")
+    cmd = KitCliCommandDefinition(name="INVALID_NAME", path="../bad/path.txt", description="")
 
     errors = cmd.validate()
     assert len(errors) == 4  # name, path extension, path traversal, description

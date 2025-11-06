@@ -9,19 +9,19 @@ from dot_agent_kit.commands.run.group import (
     LazyKitGroup,
     _load_single_kit_commands,
 )
-from dot_agent_kit.models.kit import CommandDefinition, KitManifest
+from dot_agent_kit.models.kit import KitCliCommandDefinition, KitManifest
 
 
 @pytest.fixture
 def valid_manifest() -> KitManifest:
-    """Create a valid kit manifest with commands."""
+    """Create a valid kit manifest with kit cli commands."""
     return KitManifest(
         name="test-kit",
         version="1.0.0",
         description="Test kit",
         artifacts={},
-        commands=[
-            CommandDefinition(
+        kit_cli_commands=[
+            KitCliCommandDefinition(
                 name="test-command",
                 path="commands/test_command.py",
                 description="A test command",
@@ -32,26 +32,26 @@ def valid_manifest() -> KitManifest:
 
 @pytest.fixture
 def empty_manifest() -> KitManifest:
-    """Create a kit manifest with no commands."""
+    """Create a kit manifest with no kit cli commands."""
     return KitManifest(
         name="empty-kit",
         version="1.0.0",
         description="Empty kit",
         artifacts={},
-        commands=[],
+        kit_cli_commands=[],
     )
 
 
 @pytest.fixture
 def invalid_command_manifest() -> KitManifest:
-    """Create a manifest with invalid command definition."""
+    """Create a manifest with invalid kit cli command definition."""
     return KitManifest(
         name="invalid-kit",
         version="1.0.0",
         description="Invalid kit",
         artifacts={},
-        commands=[
-            CommandDefinition(
+        kit_cli_commands=[
+            KitCliCommandDefinition(
                 name="INVALID_NAME",  # Uppercase not allowed
                 path="commands/test.py",
                 description="Invalid command",
@@ -141,8 +141,8 @@ this is not valid python syntax!!!
         version="1.0.0",
         description="Test kit",
         artifacts={},
-        commands=[
-            CommandDefinition(
+        kit_cli_commands=[
+            KitCliCommandDefinition(
                 name="test-command",
                 path="commands/test_command.py",
                 description="Test command",
@@ -179,8 +179,8 @@ def test_load_kit_with_missing_function(tmp_path: Path) -> None:
         version="1.0.0",
         description="Test kit",
         artifacts={},
-        commands=[
-            CommandDefinition(
+        kit_cli_commands=[
+            KitCliCommandDefinition(
                 name="test-command",
                 path="commands/test_command.py",
                 description="Test command",
@@ -273,8 +273,8 @@ def test_debug_flag_shows_traceback(tmp_path: Path) -> None:
         version="1.0.0",
         description="Test kit",
         artifacts={},
-        commands=[
-            CommandDefinition(
+        kit_cli_commands=[
+            KitCliCommandDefinition(
                 name="INVALID",  # Invalid name
                 path="commands/test.py",
                 description="Test",
@@ -322,8 +322,8 @@ def simple():
         version="1.0.0",
         description="Test kit",
         artifacts={},
-        commands=[
-            CommandDefinition(
+        kit_cli_commands=[
+            KitCliCommandDefinition(
                 name="simple", path="commands/simple.py", description="Simple command"
             )
         ],
@@ -359,8 +359,10 @@ def nested():
         version="1.0.0",
         description="Test kit",
         artifacts={},
-        commands=[
-            CommandDefinition(name="nested", path="a/b/c/nested.py", description="Nested command")
+        kit_cli_commands=[
+            KitCliCommandDefinition(
+                name="nested", path="a/b/c/nested.py", description="Nested command"
+            )
         ],
     )
 
@@ -394,8 +396,8 @@ def test_all_commands_fail_to_load_shows_warning(
         version="1.0.0",
         description="Test kit",
         artifacts={},
-        commands=[
-            CommandDefinition(
+        kit_cli_commands=[
+            KitCliCommandDefinition(
                 name="broken-command",
                 path="commands/broken_command.py",
                 description="Broken command",
@@ -449,7 +451,7 @@ def test_kit_discovery_isolates_manifest_parse_errors(
         """name: good-kit
 version: 1.0.0
 description: Good kit
-commands:
+kit_cli_commands:
   - name: good-command
     path: commands/good.py
     description: Good command
@@ -474,7 +476,7 @@ def good_command():
         """name: bad-kit
 version: 1.0.0
 description: Bad kit
-commands:
+kit_cli_commands:
   - this is not valid YAML syntax!!!
     invalid indentation here
 """,
@@ -519,7 +521,7 @@ def test_kit_discovery_isolates_add_command_errors(
             f"""name: {kit_name}
 version: 1.0.0
 description: Test kit {kit_name}
-commands:
+kit_cli_commands:
   - name: test-command
     path: commands/test.py
     description: Test command

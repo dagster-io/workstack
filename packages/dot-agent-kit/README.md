@@ -39,12 +39,30 @@ dot-agent kit list
 
 ## Creating Kits
 
+### Understanding Command Types
+
+There are two distinct types of commands in the kit system:
+
+1. **Slash commands** - Markdown files (`.md`) invoked in Claude Code with `/command-name`
+   - Defined in `.claude/commands/` directory
+   - Listed in `kit.yaml` under `artifacts.command`
+   - Expand to prompts when invoked
+   - Example: `/gt:submit-branch`
+
+2. **Kit cli commands** - Python executables (`.py`) invoked via CLI with `dot-agent run kit-id command-name`
+   - Defined in kit directories as Python scripts
+   - Listed in `kit.yaml` under `kit_cli_commands`
+   - Execute Python code directly
+   - Example: `dot-agent run gt land-branch`
+
+This distinction is important when creating kits and defining their capabilities in `kit.yaml`.
+
 ### Kit Structure
 
-A kit is a collection of Claude Code artifacts (agents, skills, commands) distributed as a package. Each kit requires:
+A kit is a collection of Claude Code artifacts (agents, skills, slash commands) distributed as a package. Each kit requires:
 
 1. **kit.yaml** - Manifest file with kit metadata and artifact paths
-2. **Artifacts** - The actual agent, skill, and command files
+2. **Artifacts** - The actual agent, skill, and slash command files
 
 ### Namespace Pattern (Required)
 
@@ -89,6 +107,12 @@ artifacts:
   skill:
     - skills/my-kit/tool-a/SKILL.md
     - skills/my-kit/tool-b/SKILL.md
+  command:
+    - commands/my-kit/my-slash-command.md
+kit_cli_commands:
+  - name: my-cli-command
+    path: commands/my_cli_command.py
+    description: Execute Python CLI command
 ```
 
 ### Invocation Names vs File Paths
@@ -97,7 +121,8 @@ artifacts:
 
 - **Agents**: Discovered by filename (e.g., `agents/my-kit/helper.md` → invoked as "helper")
 - **Skills**: Discovered by directory name (e.g., `skills/my-kit/pytest/SKILL.md` → invoked as "pytest")
-- **Commands**: Discovered by filename (e.g., `commands/my-kit/build.md` → invoked as "/build")
+- **Slash commands**: Discovered by filename (e.g., `commands/my-kit/build.md` → invoked as "/build")
+- **Kit cli commands**: Invoked via CLI (e.g., `dot-agent run my-kit build` for command defined in `kit_cli_commands`)
 
 The namespace directory (`my-kit/`) is **organizational only** - it doesn't become part of the invocation name.
 
@@ -203,11 +228,15 @@ To add a new bundled kit to the dot-agent-kit registry:
    license: MIT
    artifacts:
      command:
-       - commands/my-kit/my-command.md
+       - commands/my-kit/my-slash-command.md # Slash command (markdown)
      agent:
        - agents/my-kit/my-agent.md
      skill:
        - skills/my-kit/SKILL.md
+   kit_cli_commands: # Kit CLI commands (Python executables)
+     - name: my-cli-command
+       path: commands/my-kit/my_cli_command.py
+       description: Execute Python CLI command
    ```
 
 3. **Register the kit** in `src/dot_agent_kit/data/registry.yaml`:

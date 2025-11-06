@@ -41,7 +41,6 @@ def _show_status(verbose: bool) -> None:
                 if artifact_types:
                     types_str = ", ".join(sorted(artifact_types))
                     click.echo(f"    Artifacts: {types_str}")
-                click.echo(f"    Installed: {kit.installed_at}")
     else:
         click.echo("  (none)")
 

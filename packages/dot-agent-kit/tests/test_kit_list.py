@@ -21,14 +21,12 @@ def test_list_installed_kits_with_data() -> None:
                     kit_id="devrun",
                     source_type="bundled",
                     version="0.1.0",
-                    installed_at="2024-01-01T12:00:00",
                     artifacts=["skills/devrun-make/SKILL.md"],
                 ),
                 "gh": InstalledKit(
                     kit_id="gh",
                     source_type="package",
                     version="1.2.3",
-                    installed_at="2024-01-02T15:30:00",
                     artifacts=["skills/gh/SKILL.md"],
                 ),
             },
@@ -43,12 +41,10 @@ def test_list_installed_kits_with_data() -> None:
         assert "devrun" in result.output
         assert "0.1.0" in result.output
         assert "bundled" in result.output
-        assert "2024-01-01T12:00:00" in result.output
         # Check gh line
         assert "gh" in result.output
         assert "1.2.3" in result.output
         assert "package" in result.output
-        assert "2024-01-02T15:30:00" in result.output
 
 
 def test_list_no_kits_installed() -> None:
@@ -88,7 +84,6 @@ def test_list_single_kit() -> None:
                     kit_id="workstack",
                     source_type="package",
                     version="2.0.0",
-                    installed_at="2024-03-15T10:00:00",
                     artifacts=["skills/workstack/SKILL.md", "commands/workstack.md"],
                 ),
             },
@@ -102,4 +97,3 @@ def test_list_single_kit() -> None:
         assert "workstack" in result.output
         assert "2.0.0" in result.output
         assert "package" in result.output
-        assert "2024-03-15T10:00:00" in result.output

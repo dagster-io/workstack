@@ -358,10 +358,7 @@ def _list_kits_impl(artifacts: bool) -> None:
     click.echo(f"Installed {len(config.kits)} kit(s):\n")
 
     for kit_id, installed_kit in config.kits.items():
-        line = (
-            f"  {kit_id:<20} {installed_kit.version:<10} "
-            f"{installed_kit.source_type:<10} {installed_kit.installed_at}"
-        )
+        line = f"  {kit_id:<20} {installed_kit.version:<10} {installed_kit.source_type:<10}"
         click.echo(line)
 
 

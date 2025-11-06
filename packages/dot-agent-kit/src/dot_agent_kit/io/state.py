@@ -169,7 +169,6 @@ def load_project_config(project_dir: Path) -> ProjectConfig | None:
                 kit_id=kit_id,
                 source_type=source_type,
                 version=kit_data["version"],
-                installed_at=kit_data["installed_at"],
                 artifacts=kit_data["artifacts"],
                 hooks=hooks,
             )
@@ -219,7 +218,6 @@ def save_project_config(project_dir: Path, config: ProjectConfig) -> None:
             "kit_id": kit.kit_id,
             "source_type": kit.source_type,
             "version": kit.version,
-            "installed_at": kit.installed_at,
             "artifacts": kit.artifacts,
         }
 

@@ -4,7 +4,6 @@ version = "1"
 kit_id = "devrun"
 source_type = "bundled"
 version = "0.1.0"
-installed_at = "2025-11-06T07:44:24.643193"
 artifacts = [
     ".claude/agents/devrun/devrun.md",
     ".claude/docs/devrun/tools/gt.md",
@@ -19,7 +18,6 @@ artifacts = [
 kit_id = "gt"
 source_type = "bundled"
 version = "0.1.0"
-installed_at = "2025-11-06T07:44:24.645680"
 artifacts = [
     ".claude/agents/gt/branch-submitter.md",
     ".claude/commands/gt/land-branch.md",
@@ -31,7 +29,6 @@ artifacts = [
 kit_id = "dignified-python"
 source_type = "bundled"
 version = "0.1.0"
-installed_at = "2025-11-06T07:44:24.649279"
 artifacts = [
     ".claude/skills/dignified-python/SKILL.md",
 ]
@@ -48,7 +45,6 @@ timeout = 30
 kit_id = "workstack"
 source_type = "bundled"
 version = "0.1.0"
-installed_at = "2025-11-06T07:44:24.651027"
 artifacts = [
     ".claude/commands/workstack/create-from-plan.md",
     ".claude/commands/workstack/implement-plan.md",

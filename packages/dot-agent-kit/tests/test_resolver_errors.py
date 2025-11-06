@@ -1,7 +1,6 @@
 """Tests for resolver error handling with specific exceptions."""
 
 import tempfile
-from datetime import datetime
 from pathlib import Path
 from typing import cast
 
@@ -125,7 +124,6 @@ def test_check_for_updates_with_kit_not_found_error():
         kit_id="test-kit",
         source_type="package",
         version="1.0.0",
-        installed_at=datetime.now().isoformat(),
         artifacts=[],
         hooks=[],
     )
@@ -149,7 +147,6 @@ def test_check_for_updates_with_resolver_not_configured_error():
         kit_id="test-kit",
         source_type="package",
         version="1.0.0",
-        installed_at=datetime.now().isoformat(),
         artifacts=[],
         hooks=[],
     )
@@ -172,7 +169,6 @@ def test_check_for_updates_with_source_access_error():
         kit_id="test-kit",
         source_type="package",
         version="1.0.0",
-        installed_at=datetime.now().isoformat(),
         artifacts=[],
         hooks=[],
     )
@@ -196,7 +192,6 @@ def test_check_for_updates_with_generic_resolution_error():
         kit_id="test-kit",
         source_type="package",
         version="1.0.0",
-        installed_at=datetime.now().isoformat(),
         artifacts=[],
         hooks=[],
     )
@@ -221,7 +216,6 @@ def test_check_for_updates_success_with_update_available():
         kit_id="test-kit",
         source_type="package",
         version="1.0.0",
-        installed_at=datetime.now().isoformat(),
         artifacts=[],
         hooks=[],
     )
@@ -262,7 +256,6 @@ def test_check_for_updates_with_force_flag():
         kit_id="test-kit",
         source_type="package",
         version="1.0.0",
-        installed_at=datetime.now().isoformat(),
         artifacts=[],
         hooks=[],
     )

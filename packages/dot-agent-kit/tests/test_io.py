@@ -21,7 +21,6 @@ def test_load_save_project_config(tmp_project: Path) -> None:
         kit_id="test-kit",
         source_type="package",
         version="1.0.0",
-        installed_at="2025-01-01T00:00:00",
         artifacts=["artifact1.md"],
     )
 

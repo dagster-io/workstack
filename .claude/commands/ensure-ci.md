@@ -85,11 +85,28 @@ Task tool with:
 
 #### Sync-Kit Failures
 
-Run dot-agent sync to update local artifacts:
+🔴 **CRITICAL**: The sync-kit check validates that bundled kit files in `.claude/` match their source in `packages/dot-agent-kit/`.
+
+**This only applies to `.claude/` files that come from bundled kits.** Local-only files in `.claude/` (not part of any bundled kit) are not affected by this check.
+
+**If you have edited bundled kit files in `.claude/` directory:**
+
+- Run `workstack-dev kit-sync-back` to sync changes BACK to bundled kits
+- This preserves your edits and updates the source of truth
+
+**If you have NOT edited bundled kit files and are pulling fresh changes:**
+
+- Run `uv run dot-agent sync` to update `.claude/` from bundled kits
 
 ```bash
+# After editing bundled kit files in .claude/ (most common case)
+workstack-dev kit-sync-back
+
+# OR if pulling fresh changes (less common)
 uv run dot-agent sync
 ```
+
+**NEVER run `dot-agent sync` if you have unsaved edits to bundled kit files in `.claude/` - it will overwrite your changes!**
 
 #### Pyright Type Errors
 

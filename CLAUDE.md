@@ -31,6 +31,8 @@
 | Summarizing code changes in a branch        | → Use git-diff-summarizer agent (Task tool) for branch analysis                             |
 | Updating commit message with code changes   | → Use git-diff-summarizer agent (Task tool) to analyze first                                |
 | `gt ...` or user says "gt" or "graphite"    | → Use runner agent (Task tool, devrun subagent) for execution, graphite skill for knowledge |
+| Editing bundled kit files in `.claude/`    | → **CRITICAL**: Use `workstack-dev kit-sync-back` to sync changes back to bundled kits      |
+| `dot-agent sync` on edited bundled kit files | → **FORBIDDEN** - overwrites local changes! Use kit-sync-back instead                     |
 | 4+ levels of indentation                    | → Extract helper functions                                                                  |
 | Code in `__init__.py`                       | → Keep empty or docstring-only (except package entry points)                                |
 | Tests for speculative features              | → **FORBIDDEN** - Only test actively implemented code (TDD is fine)                         |
@@ -107,6 +109,76 @@ File system operations: `ls`, `cat`, `find`, etc.
 Simple shell commands: `echo`, `pwd`, etc.
 
 🔴 **CRITICAL**: Using Bash directly for CLI tools (`make`, `pytest`, `ruff`, `gt`) wastes tokens, pollutes context, and bypasses cost optimization. This is expensive and inefficient.
+
+---
+
+## 🔴 KIT SYNCHRONIZATION (CRITICAL WORKFLOW)
+
+**When editing `.claude/` files that come from bundled kits, NEVER use `dot-agent sync` or it will overwrite your changes!**
+
+### What Files Does This Apply To?
+
+This workflow **only applies** to `.claude/` files that are sourced from bundled kits in `packages/dot-agent-kit/src/dot_agent_kit/resources/`. These are files that get synchronized between the bundled kits and `.claude/`.
+
+**Local-only files** created directly in `.claude/` (not part of any bundled kit) do NOT have this restriction.
+
+### The Problem
+
+Bundled kit files in `.claude/` are sourced from `packages/dot-agent-kit/src/dot_agent_kit/resources/`. Running `dot-agent sync` or `dot-agent kit sync --force` copies FROM bundled kits TO `.claude/`, **destroying any local edits to bundled kit files**.
+
+### The Solution
+
+After editing **bundled kit files** in `.claude/`, sync changes BACK to bundled kits:
+
+```bash
+workstack-dev kit-sync-back
+```
+
+This command:
+
+1. Copies changes FROM `.claude/` TO bundled kits
+2. Preserves your edits
+3. Updates the source of truth (bundled kits)
+
+### Workflow Rules
+
+🔴 **FORBIDDEN**: `dot-agent sync` or `dot-agent kit sync` when you have unsaved edits in **bundled kit files** within `.claude/`
+🔴 **REQUIRED**: `workstack-dev kit-sync-back` after editing any **bundled kit file** in `.claude/`
+🟢 **SAFE**: `dot-agent sync` only when pulling fresh changes from bundled kits (no local edits)
+🟢 **SAFE**: Local-only `.claude/` files (not from bundled kits) can be edited freely without this workflow
+
+### Example Workflow (Bundled Kit Files)
+
+```bash
+# 1. Edit a bundled kit file in .claude/
+vim .claude/agents/devrun/devrun.md
+
+# 2. Sync changes BACK to bundled kits
+workstack-dev kit-sync-back
+
+# 3. Now safe to commit both .claude/ and bundled kit changes
+git add .claude/ packages/dot-agent-kit/
+git commit -m "Update devrun agent"
+```
+
+### Example: Local-Only Files (No Special Workflow)
+
+```bash
+# 1. Create/edit a local-only file in .claude/
+vim .claude/commands/my-custom-command.md
+
+# 2. Just commit directly - no kit-sync-back needed
+git add .claude/commands/my-custom-command.md
+git commit -m "Add custom command"
+```
+
+### CI Checks
+
+The `make all-ci` target includes `sync-kit` check which validates that bundled kit files in `.claude/` match their source in `packages/dot-agent-kit/`. If you see sync-kit failures:
+
+- **If you just edited bundled kit files in .claude/**: Run `workstack-dev kit-sync-back`
+- **If you pulled changes**: Run `dot-agent sync` to update `.claude/` from bundled kits
+- **Note**: Local-only `.claude/` files (not in bundled kits) don't affect this check
 
 ---
 

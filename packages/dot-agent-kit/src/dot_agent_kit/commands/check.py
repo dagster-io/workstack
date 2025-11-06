@@ -625,7 +625,7 @@ def check(verbose: bool) -> None:
 
             if out_of_sync_count > 0 or missing_count > 0 or obsolete_count > 0:
                 click.echo()
-                click.echo("Run 'dot-agent kit sync --force' to update artifacts", err=True)
+                click.echo("Run 'dot-agent kit sync' to update artifacts", err=True)
                 sync_passed = False
             else:
                 click.echo()
@@ -678,7 +678,7 @@ def check(verbose: bool) -> None:
                 click.echo(f"  ⚠ Warnings: {warning_count}", err=True)
 
             click.echo()
-            click.echo("Run 'dot-agent kit sync --force' to update hook configuration", err=True)
+            click.echo("Run 'dot-agent kit sync' to update hook configuration", err=True)
             hook_passed = False
 
     # Overall result

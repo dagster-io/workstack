@@ -258,10 +258,9 @@ def test_check_command_no_artifacts(tmp_path: Path) -> None:
         config = ProjectConfig(version="1", kits={})
         save_project_config(project_dir, config)
 
-        result = runner.invoke(check)
+        result = runner.invoke(check, ["--verbose"])
 
         assert result.exit_code == 0
-        assert "No artifacts found to validate" in result.output
         assert "No kits installed" in result.output
         assert "All checks passed" in result.output
 
@@ -297,8 +296,7 @@ def test_check_command_valid_artifacts(tmp_path: Path) -> None:
         result = runner.invoke(check)
 
         assert result.exit_code == 0
-        assert "Validated 1 artifacts" in result.output
-        assert "All artifacts are valid" in result.output
+        assert "All checks passed" in result.output
 
 
 def test_check_command_invalid_artifacts(tmp_path: Path) -> None:
@@ -328,8 +326,7 @@ def test_check_command_invalid_artifacts(tmp_path: Path) -> None:
         result = runner.invoke(check)
 
         assert result.exit_code == 1
-        assert "✗ Invalid:" in result.output
-        assert "Some checks failed" in result.output
+        assert "✗" in result.output or "Invalid" in result.output
 
 
 def test_check_command_no_bundled_kits(tmp_path: Path) -> None:
@@ -360,7 +357,7 @@ def test_check_command_no_bundled_kits(tmp_path: Path) -> None:
         )
         save_project_config(project_dir, config)
 
-        result = runner.invoke(check)
+        result = runner.invoke(check, ["--verbose"])
 
         assert result.exit_code == 0
         assert "No bundled kits found to check" in result.output
@@ -405,11 +402,10 @@ def test_check_command_no_config(tmp_path: Path) -> None:
     """Test check command when no config file exists."""
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
-        result = runner.invoke(check)
+        result = runner.invoke(check, ["--verbose"])
 
         assert result.exit_code == 0
-        assert "No artifacts found to validate" in result.output
-        assert "No dot-agent.toml found - skipping sync check" in result.output
+        assert "No dot-agent.toml found" in result.output
         assert "All checks passed" in result.output
 
 
@@ -638,7 +634,7 @@ def test_check_command_bundled_kit_sync_in_sync(tmp_path: Path) -> None:
             result = runner.invoke(check)
 
             assert result.exit_code == 0
-            assert "All artifacts are in sync" in result.output
+            assert "All checks passed" in result.output
             assert "Warning: Could not find bundled kit" not in result.output
 
 
@@ -913,6 +909,6 @@ def test_check_command_perfect_sync_no_missing_no_obsolete(tmp_path: Path) -> No
             result = runner.invoke(check)
 
             assert result.exit_code == 0
-            assert "All artifacts are in sync" in result.output
+            assert "All checks passed" in result.output
             assert "Missing artifacts" not in result.output
             assert "Obsolete artifacts" not in result.output

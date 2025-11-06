@@ -6,9 +6,13 @@ from pathlib import Path
 from typing import Literal
 
 import click
+import tomli
 
 from dot_agent_kit.hooks.models import ClaudeSettings, HookDefinition, HookEntry
-from dot_agent_kit.hooks.settings import extract_kit_id_from_command, load_settings
+from dot_agent_kit.hooks.settings import (
+    extract_kit_id_from_command,
+    load_settings,
+)
 from dot_agent_kit.io import load_project_config
 from dot_agent_kit.io.manifest import load_kit_manifest
 from dot_agent_kit.models.config import InstalledKit, ProjectConfig
@@ -73,6 +77,92 @@ class HookValidationDetail:
     hook_id: str | None  # None if not a dot-agent managed hook or parsing failed
     action: str  # "found_and_parsed", "skipped_not_dot_agent", "parse_error"
     error_message: str | None = None
+
+
+@dataclass(frozen=True)
+class UnknownFieldsResult:
+    """Result of checking for unknown fields in configuration."""
+
+    location: str  # e.g., "top-level" or "kits.my-kit"
+    unknown_fields: list[str]
+
+
+def detect_unknown_top_level_fields(data: dict) -> list[str]:
+    """Detect unknown fields at the top level of dot-agent.toml.
+
+    Args:
+        data: Raw TOML data as dictionary
+
+    Returns:
+        Sorted list of unknown field names
+    """
+    expected_fields = {"version", "kits"}
+    actual_fields = set(data.keys())
+    unknown_fields = actual_fields - expected_fields
+    return sorted(unknown_fields)
+
+
+def detect_unknown_kit_fields(kit_data: dict) -> list[str]:
+    """Detect unknown fields in a kit definition.
+
+    Args:
+        kit_data: Raw kit configuration as dictionary
+
+    Returns:
+        Sorted list of unknown field names
+    """
+    expected_fields = {"kit_id", "source_type", "version", "artifacts", "hooks"}
+    actual_fields = set(kit_data.keys())
+    unknown_fields = actual_fields - expected_fields
+    return sorted(unknown_fields)
+
+
+def validate_unknown_fields(
+    project_dir: Path,
+    config: ProjectConfig,
+) -> list[UnknownFieldsResult]:
+    """Validate that no unknown fields exist in dot-agent.toml.
+
+    Args:
+        project_dir: Project root directory
+        config: Loaded project configuration
+
+    Returns:
+        List of UnknownFieldsResult objects (empty if all valid)
+    """
+    results = []
+
+    # Reload raw TOML data
+    toml_path = project_dir / "dot-agent.toml"
+    if not toml_path.exists():
+        return results
+
+    with open(toml_path, "rb") as f:
+        data = tomli.load(f)
+
+    # Check top-level fields
+    top_level_unknown = detect_unknown_top_level_fields(data)
+    if len(top_level_unknown) > 0:
+        results.append(
+            UnknownFieldsResult(
+                location="top-level",
+                unknown_fields=top_level_unknown,
+            )
+        )
+
+    # Check kit-level fields
+    kits_data = data.get("kits", {})
+    for kit_name, kit_data in kits_data.items():
+        kit_unknown = detect_unknown_kit_fields(kit_data)
+        if len(kit_unknown) > 0:
+            results.append(
+                UnknownFieldsResult(
+                    location=f"kits.{kit_name}",
+                    unknown_fields=kit_unknown,
+                )
+            )
+
+    return results
 
 
 def validate_kit_fields(kit: InstalledKit) -> list[str]:
@@ -847,12 +937,59 @@ def check(verbose: bool) -> None:
                 click.echo(sync_msg, err=True)
             hook_passed = False
 
+    if verbose:
+        click.echo()
+
+    # Part 5: Unknown Field Detection
+    if verbose:
+        click.echo(click.style("🔎 Unknown Field Detection", fg="white", bold=True))
+
+    unknown_fields_passed = True
+    if not config_exists:
+        if verbose:
+            click.echo("No dot-agent.toml found - skipping unknown field detection")
+    else:
+        unknown_field_results = validate_unknown_fields(project_dir, config)
+
+        if len(unknown_field_results) == 0:
+            if verbose:
+                success_msg = "✨ No unknown fields detected - configuration is clean!"
+                click.echo(click.style(success_msg, fg="green", bold=True))
+        else:
+            # Display warnings
+            if verbose:
+                click.echo()
+            for result in unknown_field_results:
+                fields_str = ", ".join(result.unknown_fields)
+                warning_icon = click.style("⚠", fg="yellow")
+                location = click.style(result.location, fg="cyan")
+                msg = f"{warning_icon} {location}: {fields_str}"
+                click.echo(msg)
+
+            # Summary
+            if verbose:
+                click.echo()
+                total_unknown = sum(len(r.unknown_fields) for r in unknown_field_results)
+                location_count = len(unknown_field_results)
+                warn_msg = f"Found {total_unknown} unknown field(s) in {location_count} location(s)"
+                click.echo(click.style(warn_msg, fg="yellow"))
+                click.echo()
+                help_msg = "Note: Unknown fields are warnings only and do not fail the check"
+                click.echo(click.style(help_msg, fg="white", dim=True))
+
     # Overall result
     if verbose:
         click.echo()
         click.echo(click.style("=" * 40, fg="white", dim=True))
 
-    if config_passed and validation_passed and sync_passed and hook_passed:
+    all_passed = (
+        config_passed
+        and validation_passed
+        and sync_passed
+        and hook_passed
+        and unknown_fields_passed
+    )
+    if all_passed:
         click.echo(click.style("✅ All checks passed!", fg="green", bold=True))
     else:
         click.echo(click.style("Some checks failed", fg="red", bold=True), err=True)

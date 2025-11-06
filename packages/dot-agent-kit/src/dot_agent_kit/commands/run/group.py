@@ -22,10 +22,10 @@ KITS_MODULE_PREFIX = "dot_agent_kit.data.kits"
 @click.group()
 @click.pass_context
 def run_group(ctx: click.Context) -> None:
-    """Run executable commands from bundled kits.
+    """Run kit cli commands from bundled kits.
 
-    Lists available kits with commands. Use 'dot-agent run <kit_id> --help'
-    to see available commands for a specific kit.
+    Lists available kits with kit cli commands. Use 'dot-agent run <kit_id> --help'
+    to see available kit cli commands for a specific kit.
     """
 
 
@@ -83,7 +83,7 @@ class LazyKitGroup(click.Group):
         # Track successful command loads for validation
         commands_before = len(self.commands)
 
-        for command_def in self._manifest.commands:
+        for command_def in self._manifest.kit_cli_commands:
             # Validate command definition
             validation_errors = command_def.validate()
             if validation_errors:
@@ -151,7 +151,7 @@ class LazyKitGroup(click.Group):
         if commands_loaded == 0:
             warning = (
                 f"Warning: Kit '{self._manifest.name}' loaded 0 commands "
-                f"(all {len(self._manifest.commands)} command(s) failed to load)\n"
+                f"(all {len(self._manifest.kit_cli_commands)} command(s) failed to load)\n"
             )
             click.echo(warning, err=True)
 
@@ -171,8 +171,8 @@ def _load_single_kit_commands(
         Click group for kit, or None if kit failed to load
     """
     try:
-        # Skip kits without commands (silently - this is expected)
-        if not manifest.commands:
+        # Skip kits without kit cli commands (silently - this is expected)
+        if not manifest.kit_cli_commands:
             return None
 
         # Validate kit directory exists

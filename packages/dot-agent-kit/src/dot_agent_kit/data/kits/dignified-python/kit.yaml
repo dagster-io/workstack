@@ -5,7 +5,7 @@ license: MIT
 artifacts:
   skill:
     - skills/dignified-python/SKILL.md
-commands:
+kit_cli_commands:
   - name: compliance-reminder-hook
     path: commands/compliance_reminder_hook.py
     description: Output dignified-python compliance reminder for UserPromptSubmit hook

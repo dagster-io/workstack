@@ -2,7 +2,7 @@ name: gt
 version: 0.1.0
 description: Graphite stack management with landing and submission commands
 license: MIT
-commands:
+kit_cli_commands:
   - name: land-branch
     path: commands/gt/land_branch.py
     description: Land a single PR from Graphite stack without affecting upstack branches

@@ -5,7 +5,7 @@ from pathlib import Path
 import yaml
 
 from dot_agent_kit.hooks.models import HookDefinition
-from dot_agent_kit.models import CommandDefinition, KitManifest
+from dot_agent_kit.models import KitCliCommandDefinition, KitManifest
 
 
 def load_kit_manifest(manifest_path: Path) -> KitManifest:
@@ -27,16 +27,16 @@ def load_kit_manifest(manifest_path: Path) -> KitManifest:
             )
             hooks.append(hook)
 
-    # Parse commands if present
-    commands = []
-    if "commands" in data and data["commands"]:
-        for command_data in data["commands"]:
-            command = CommandDefinition(
+    # Parse kit cli commands if present
+    kit_cli_commands = []
+    if "kit_cli_commands" in data and data["kit_cli_commands"]:
+        for command_data in data["kit_cli_commands"]:
+            command = KitCliCommandDefinition(
                 name=command_data["name"],
                 path=command_data["path"],
                 description=command_data["description"],
             )
-            commands.append(command)
+            kit_cli_commands.append(command)
 
     return KitManifest(
         name=data["name"],
@@ -46,5 +46,5 @@ def load_kit_manifest(manifest_path: Path) -> KitManifest:
         license=data.get("license"),
         homepage=data.get("homepage"),
         hooks=hooks,
-        commands=commands,
+        kit_cli_commands=kit_cli_commands,
     )

@@ -1,7 +1,6 @@
 """Tests for resolver error handling with specific exceptions."""
 
 import tempfile
-from datetime import datetime
 from pathlib import Path
 from typing import cast
 

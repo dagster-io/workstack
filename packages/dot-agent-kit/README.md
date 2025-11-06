@@ -44,12 +44,15 @@ dot-agent kit list
 There are two distinct types of commands in the kit system:
 
 1. **Slash commands** - Markdown files (`.md`) invoked in Claude Code with `/command-name`
-   - Defined in `.claude/commands/` directory
+   - Defined in `.claude/commands/` directory (after installation)
+   - Stored in `commands/` directory within the kit
    - Listed in `kit.yaml` under `artifacts.command`
    - Expand to prompts when invoked
    - Example: `/gt:submit-branch`
 
 2. **Kit cli commands** - Python executables (`.py`) invoked via CLI with `dot-agent run kit-id command-name`
+   - Stored in `kit_cli_commands/` directory within the kit
+   - Listed in `kit.yaml` under `kit_cli_commands`
    - Defined in kit directories as Python scripts
    - Listed in `kit.yaml` under `kit_cli_commands`
    - Execute Python code directly
@@ -111,7 +114,7 @@ artifacts:
     - commands/my-kit/my-slash-command.md
 kit_cli_commands:
   - name: my-cli-command
-    path: commands/my_cli_command.py
+    path: kit_cli_commands/my-kit/my_cli_command.py
     description: Execute Python CLI command
 ```
 
@@ -208,9 +211,12 @@ To add a new bundled kit to the dot-agent-kit registry:
    kits/
    └── my-kit/
        ├── kit.yaml
+       ├── kit_cli_commands/
+       │   └── my-kit/
+       │       └── my_cli_command.py
        ├── commands/
        │   └── my-kit/
-       │       └── my-command.md
+       │       └── my-slash-command.md
        ├── agents/
        │   └── my-kit/
        │       └── my-agent.md
@@ -227,15 +233,15 @@ To add a new bundled kit to the dot-agent-kit registry:
    description: Brief description of what the kit provides
    license: MIT
    artifacts:
-     command:
-       - commands/my-kit/my-slash-command.md # Slash command (markdown)
      agent:
        - agents/my-kit/my-agent.md
      skill:
        - skills/my-kit/SKILL.md
+     command:
+       - commands/my-kit/my-slash-command.md # Slash command (markdown)
    kit_cli_commands: # Kit CLI commands (Python executables)
      - name: my-cli-command
-       path: commands/my-kit/my_cli_command.py
+       path: kit_cli_commands/my-kit/my_cli_command.py
        description: Execute Python CLI command
    ```
 

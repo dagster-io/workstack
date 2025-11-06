@@ -37,6 +37,13 @@ class KitCliCommandDefinition:
         if ".." in self.path:
             errors.append(f"Path '{self.path}' cannot contain '..' (directory traversal)")
 
+        # Validate path starts with kit_cli_commands/
+        if not self.path.startswith("kit_cli_commands/"):
+            errors.append(
+                f"Path '{self.path}' must start with 'kit_cli_commands/' "
+                "(kit CLI commands must be in kit_cli_commands directory)"
+            )
+
         # Validate description is non-empty
         if not self.description or not self.description.strip():
             errors.append("Description cannot be empty")

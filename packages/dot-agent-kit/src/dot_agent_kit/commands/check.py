@@ -192,8 +192,9 @@ def validate_kit_fields(kit: InstalledKit) -> list[str]:
     if not kit.version:
         errors.append("version is empty")
 
-    # Validate artifacts list is non-empty
-    if not kit.artifacts:
+    # Validate artifacts list is non-empty (except for bundled kits which can
+    # define artifacts in their bundled kit.yaml instead of dot-agent.toml)
+    if not kit.artifacts and kit.source_type != SOURCE_TYPE_BUNDLED:
         errors.append("artifacts list is empty")
 
     return errors

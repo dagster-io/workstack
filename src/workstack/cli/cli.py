@@ -2,6 +2,7 @@ import click
 
 from workstack.cli.commands.completion import completion_group
 from workstack.cli.commands.config import config_group
+from workstack.cli.commands.consolidate import consolidate_cmd
 from workstack.cli.commands.create import create
 from workstack.cli.commands.current import current_cmd
 from workstack.cli.commands.down import down_cmd
@@ -37,6 +38,7 @@ def cli(ctx: click.Context) -> None:
 
 # Register all commands
 cli.add_command(completion_group)
+cli.add_command(consolidate_cmd)
 cli.add_command(create)
 cli.add_command(current_cmd)
 cli.add_command(down_cmd)

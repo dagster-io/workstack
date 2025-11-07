@@ -132,6 +132,11 @@ class FakeGitOps(GitOps):
         """Report whether the repository has staged changes."""
         return repo_root in self._repos_with_staged_changes
 
+    def has_uncommitted_changes(self, cwd: Path) -> bool:
+        """Check if a worktree has uncommitted changes."""
+        staged, modified, untracked = self._file_statuses.get(cwd, ([], [], []))
+        return bool(staged or modified or untracked)
+
     def add_worktree(
         self,
         repo_root: Path,

@@ -63,6 +63,21 @@ class GitOps(ABC):
         ...
 
     @abstractmethod
+    def has_uncommitted_changes(self, cwd: Path) -> bool:
+        """Check if a worktree has uncommitted changes.
+
+        Uses git status --porcelain to detect any uncommitted changes.
+        Returns False if git command fails (worktree might be in invalid state).
+
+        Args:
+            cwd: Working directory to check
+
+        Returns:
+            True if there are any uncommitted changes (staged, modified, or untracked)
+        """
+        ...
+
+    @abstractmethod
     def add_worktree(
         self,
         repo_root: Path,
@@ -320,6 +335,19 @@ class RealGitOps(GitOps):
             return result.returncode == 1
         result.check_returncode()
         return False
+
+    def has_uncommitted_changes(self, cwd: Path) -> bool:
+        """Check if a worktree has uncommitted changes."""
+        result = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            return False
+        return bool(result.stdout.strip())
 
     def add_worktree(
         self,
@@ -592,6 +620,10 @@ class DryRunGitOps(GitOps):
     def has_staged_changes(self, repo_root: Path) -> bool:
         """Check for staged changes (read-only, delegates to wrapped)."""
         return self._wrapped.has_staged_changes(repo_root)
+
+    def has_uncommitted_changes(self, cwd: Path) -> bool:
+        """Check for uncommitted changes (read-only, delegates to wrapped)."""
+        return self._wrapped.has_uncommitted_changes(cwd)
 
     def add_worktree(
         self,

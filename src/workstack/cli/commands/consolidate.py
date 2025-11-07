@@ -1,0 +1,146 @@
+"""Consolidate worktrees by removing others containing branches from current stack."""
+
+from pathlib import Path
+
+import click
+
+from workstack.cli.core import discover_repo_context
+from workstack.cli.graphite import get_branch_stack
+from workstack.core.context import WorkstackContext
+
+
+@click.command("consolidate")
+@click.option("-f", "--force", is_flag=True, help="Skip confirmation prompt")
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Show what would be removed without executing",
+)
+@click.pass_obj
+def consolidate_cmd(ctx: WorkstackContext, force: bool, dry_run: bool) -> None:
+    """Remove worktrees containing branches from current Graphite stack.
+
+    This command helps consolidate work by removing other worktrees that contain
+    branches from your current Graphite stack. This is useful before running
+    stack-wide operations like 'gt restack' that require branches to be checked
+    out in only one worktree.
+
+    The command will:
+    1. Get the current branch's Graphite stack
+    2. Find all other worktrees containing branches from that stack
+    3. Check for uncommitted changes in ALL worktrees (including current)
+    4. Remove the identified worktrees (preserving the current one)
+
+    Safety checks:
+    - Aborts if ANY worktree has uncommitted changes
+    - Preserves the current worktree
+    - Shows preview before removal (unless --force)
+
+    Examples:
+
+        \b
+        # Preview what would be removed
+        workstack consolidate --dry-run
+
+        \b
+        # Remove with confirmation prompt
+        workstack consolidate
+
+        \b
+        # Remove without confirmation
+        workstack consolidate --force
+    """
+    # Get current worktree and branch
+    current_worktree = Path.cwd()
+    current_branch = ctx.git_ops.get_current_branch(current_worktree)
+
+    if current_branch is None:
+        click.echo("Error: Current worktree is in detached HEAD state", err=True)
+        click.echo("Checkout a branch before running consolidate", err=True)
+        raise SystemExit(1)
+
+    # Get repository root
+    repo = discover_repo_context(ctx, current_worktree)
+
+    # Get current branch's stack
+    stack_branches = get_branch_stack(ctx, repo.root, current_branch)
+    if stack_branches is None:
+        click.echo(
+            f"Error: Branch '{current_branch}' is not tracked by Graphite",
+            err=True,
+        )
+        click.echo(
+            "Run 'gt repo init' to initialize Graphite, or use 'gt track' to track this branch",
+            err=True,
+        )
+        raise SystemExit(1)
+
+    # Get all worktrees
+    all_worktrees = ctx.git_ops.list_worktrees(repo.root)
+
+    # Check ALL worktrees for uncommitted changes (including current)
+    worktrees_with_changes: list[Path] = []
+    for wt in all_worktrees:
+        if wt.path.exists() and ctx.git_ops.has_uncommitted_changes(wt.path):
+            worktrees_with_changes.append(wt.path)
+
+    if worktrees_with_changes:
+        click.echo(
+            click.style("Error: Uncommitted changes detected in worktrees:", fg="red", bold=True),
+            err=True,
+        )
+        for wt_path in worktrees_with_changes:
+            click.echo(f"  - {wt_path}", err=True)
+        click.echo("\nCommit or stash changes before running consolidate", err=True)
+        raise SystemExit(1)
+
+    # Identify worktrees to remove (branch in stack AND not current worktree)
+    # Resolve current_worktree for comparison
+    current_worktree_resolved = current_worktree.resolve()
+    worktrees_to_remove = [
+        wt
+        for wt in all_worktrees
+        if wt.branch in stack_branches and wt.path.resolve() != current_worktree_resolved
+    ]
+
+    # Display preview
+    if not worktrees_to_remove:
+        click.echo("No other worktrees found containing branches from current stack")
+        click.echo(f"\nCurrent stack branches: {', '.join(stack_branches)}")
+        return
+
+    click.echo(click.style("📋 Current Stack:", bold=True))
+    for branch in stack_branches:
+        branch_marker = " (current)" if branch == current_branch else ""
+        click.echo(f"  - {click.style(branch, fg='cyan')}{branch_marker}")
+
+    click.echo(f"\n{click.style('🗑️  Worktrees to remove:', bold=True)}")
+    for wt in worktrees_to_remove:
+        branch_text = click.style(wt.branch or "detached", fg="yellow")
+        path_text = click.style(str(wt.path), fg="cyan")
+        click.echo(f"  - {branch_text} at {path_text}")
+
+    # Exit if dry-run
+    if dry_run:
+        click.echo(f"\n{click.style('[DRY RUN] No changes made', fg='yellow', bold=True)}")
+        return
+
+    # Get confirmation unless --force
+    if not force:
+        click.echo()
+        if not click.confirm(
+            click.style("Proceed with removal?", fg="yellow", bold=True),
+            default=False,
+        ):
+            click.echo(click.style("⭕ Aborted", fg="red", bold=True))
+            return
+
+    # Remove worktrees
+    click.echo()
+    for wt in worktrees_to_remove:
+        ctx.git_ops.remove_worktree(repo.root, wt.path, force=True)
+        path_text = click.style(str(wt.path), fg="green")
+        click.echo(f"✅ Removed: {path_text}")
+
+    click.echo(f"\n{click.style('✅ Consolidation complete', fg='green', bold=True)}")

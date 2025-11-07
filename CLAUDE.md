@@ -7,6 +7,8 @@
 <!-- AGENT NOTICE: This file is loaded automatically. Read FULLY before writing code. -->
 <!-- Priority sections: BEFORE WRITING CODE (line 6), TOP 5 CRITICAL RULES (line 35) -->
 
+Changeme
+
 ## ⚠️ BEFORE WRITING CODE (AI Assistant Checklist)
 
 **This codebase has strong opinions. Check these patterns BEFORE coding:**

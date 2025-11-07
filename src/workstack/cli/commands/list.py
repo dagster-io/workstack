@@ -3,7 +3,6 @@ from pathlib import Path
 import click
 
 from workstack.cli.core import discover_repo_context, ensure_workstacks_dir
-from workstack.cli.graphite import _load_graphite_cache
 from workstack.core.context import WorkstackContext
 from workstack.core.github_ops import PullRequestInfo
 
@@ -116,9 +115,7 @@ def _filter_stack_for_worktree(
         return result
 
 
-def _is_trunk_branch(
-    ctx: WorkstackContext, repo_root: Path, branch: str, cache_data: dict | None = None
-) -> bool:
+def _is_trunk_branch(ctx: WorkstackContext, repo_root: Path, branch: str) -> bool:
     """Check if a branch is a trunk branch (has no parent in graphite).
 
     Returns False for missing cache files rather than None because this function
@@ -133,32 +130,19 @@ def _is_trunk_branch(
         ctx: Workstack context with git operations
         repo_root: Path to the repository root
         branch: Branch name to check
-        cache_data: Pre-loaded graphite cache data (optional optimization)
-                   If None, cache will be loaded from disk
 
     Returns:
         True if the branch is a trunk branch (no parent), False otherwise
         False is also returned when cache is missing/inaccessible (conservative default)
     """
-    if cache_data is None:
-        git_dir = ctx.git_ops.get_git_common_dir(repo_root)
-        if git_dir is None:
-            return False
+    # Get all branches from GraphiteOps abstraction
+    all_branches = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo_root)
+    if not all_branches:
+        return False
 
-        cache_file = git_dir / ".graphite_cache_persist"
-        if not cache_file.exists():
-            return False
-
-        cache_data = _load_graphite_cache(cache_file)
-
-    branches_data = cache_data.get("branches", [])
-
-    for branch_name, info in branches_data:
-        if branch_name == branch:
-            # Check if this is marked as trunk or has no parent
-            is_trunk = info.get("validationResult") == "TRUNK"
-            has_parent = info.get("parentBranchName") is not None
-            return is_trunk or not has_parent
+    # Check if branch exists and is trunk
+    if branch in all_branches:
+        return all_branches[branch].is_trunk
 
     return False
 
@@ -251,7 +235,6 @@ def _display_branch_stack(
     branch: str,
     all_branches: dict[Path, str | None],
     is_root_worktree: bool,
-    cache_data: dict | None = None,  # If None, cache will be loaded from disk
     prs: dict[str, PullRequestInfo] | None = None,  # If None, no PR info displayed
 ) -> None:
     """Display the graphite stack for a worktree with colorization and PR info.
@@ -266,7 +249,6 @@ def _display_branch_stack(
         worktree_path: Path to the current worktree
         branch: Branch name to display stack for
         all_branches: Mapping of all worktree paths to their checked-out branches
-        cache_data: Pre-loaded graphite cache data (if None, loaded from disk)
         prs: Mapping of branch names to PR information (if None, no PR info displayed)
     """
     stack = ctx.graphite_ops.get_branch_stack(ctx.git_ops, repo_root, branch)
@@ -327,8 +309,7 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
                 current_worktree_path = wt_path_resolved
                 break
 
-    # Load graphite cache once if showing stacks
-    cache_data = None
+    # Validate graphite is enabled if showing stacks
     if show_stacks:
         if not ctx.global_config_ops.get_use_graphite():
             click.echo(
@@ -337,13 +318,6 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
                 err=True,
             )
             raise SystemExit(1)
-
-        # Load cache once for all worktrees
-        git_dir = ctx.git_ops.get_git_common_dir(repo.root)
-        if git_dir is not None:
-            cache_file = git_dir / ".graphite_cache_persist"
-            if cache_file.exists():
-                cache_data = _load_graphite_cache(cache_file)
 
     # Fetch PR information based on config and flags
     prs: dict[str, PullRequestInfo] | None = None
@@ -378,9 +352,7 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
             click.echo(plan_summary)
 
     if show_stacks and root_branch:
-        _display_branch_stack(
-            ctx, repo.root, repo.root, root_branch, branches, True, cache_data, prs
-        )
+        _display_branch_stack(ctx, repo.root, repo.root, root_branch, branches, True, prs)
 
     # Show worktrees
     workstacks_dir = ensure_workstacks_dir(repo)
@@ -417,9 +389,7 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
                 click.echo(plan_summary)
 
         if show_stacks and wt_branch and wt_path:
-            _display_branch_stack(
-                ctx, repo.root, wt_path, wt_branch, branches, False, cache_data, prs
-            )
+            _display_branch_stack(ctx, repo.root, wt_path, wt_branch, branches, False, prs)
 
 
 @click.command("list")

@@ -12,7 +12,6 @@ from workstack.cli.core import (
 )
 from workstack.core.context import WorkstackContext, create_context
 from workstack.core.gitops import GitOps
-from workstack.core.graphite_ops import read_graphite_json_file
 
 
 def _try_git_worktree_remove(git_ops: GitOps, repo_root: Path, wt_path: Path) -> bool:
@@ -66,33 +65,18 @@ def _find_worktree_branch(ctx: WorkstackContext, repo_root: Path, wt_path: Path)
 
 
 def _get_non_trunk_branches(ctx: WorkstackContext, repo_root: Path, stack: list[str]) -> list[str]:
-    """Filter out trunk branches from a stack.
+    """Filter out trunk branches from a stack using GraphiteOps abstraction.
 
     Raises:
-        ValueError: If git directory cannot be found
-        FileNotFoundError: If Graphite cache is missing
-        OSError: If cache cannot be read
-        json.JSONDecodeError: If cache is invalid JSON
+        ValueError: If Graphite cache is missing or cannot be read
     """
-    git_dir = ctx.git_ops.get_git_common_dir(repo_root)
-    if git_dir is None:
-        raise ValueError("Could not find git directory")
+    # Get all branches from GraphiteOps abstraction
+    all_branches = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo_root)
+    if not all_branches:
+        raise ValueError("Graphite cache not available")
 
-    cache_file = git_dir / ".graphite_cache_persist"
-    if not cache_file.exists():
-        raise FileNotFoundError(f"Graphite cache not found: {cache_file}")
-
-    cache_data = read_graphite_json_file(cache_file, "Graphite cache")
-
-    branches_data = cache_data.get("branches", [])
-
-    trunk_branches = {
-        branch_name
-        for branch_name, info in branches_data
-        if info.get("validationResult") == "TRUNK"
-    }
-
-    return [b for b in stack if b not in trunk_branches]
+    # Filter stack to only non-trunk branches
+    return [b for b in stack if b in all_branches and not all_branches[b].is_trunk]
 
 
 def _remove_worktree(

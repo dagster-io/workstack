@@ -227,6 +227,14 @@ class FakeGitOps(GitOps):
                 return wt.path
         return None
 
+    def find_worktree_for_branch(self, repo_root: Path, branch: str) -> Path | None:
+        """Find worktree path for given branch name in fake data."""
+        worktrees = self.list_worktrees(repo_root)
+        for wt in worktrees:
+            if wt.branch == branch:
+                return wt.path
+        return None
+
     def get_branch_head(self, repo_root: Path, branch: str) -> str | None:
         """Get the commit SHA at the head of a branch."""
         return self._branch_heads.get(branch)

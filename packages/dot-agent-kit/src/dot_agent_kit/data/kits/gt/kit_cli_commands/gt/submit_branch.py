@@ -33,7 +33,9 @@ Error Types:
     - no_commits: No commits found in branch
     - squash_failed: Failed to squash commits
     - amend_failed: Failed to amend commit
-    - submit_failed: Failed to submit branch
+    - submit_failed: Failed to submit branch (generic)
+    - submit_merged_parent: Parent branches merged but not in main trunk
+    - submit_diverged: Branch has diverged from remote
     - pr_update_failed: Failed to update PR metadata
 
 Examples:
@@ -48,9 +50,18 @@ Examples:
 import json
 import subprocess
 from dataclasses import asdict, dataclass
-from typing import Literal
+from typing import Literal, NamedTuple
 
 import click
+
+
+class SubmitResult(NamedTuple):
+    """Result from running gt submit command."""
+
+    success: bool
+    stdout: str
+    stderr: str
+
 
 PreAnalysisErrorType = Literal[
     "no_branch",
@@ -62,6 +73,8 @@ PreAnalysisErrorType = Literal[
 PostAnalysisErrorType = Literal[
     "amend_failed",
     "submit_failed",
+    "submit_merged_parent",
+    "submit_diverged",
     "pr_update_failed",
 ]
 
@@ -180,15 +193,23 @@ def amend_commit(message: str) -> bool:
     return result.returncode == 0
 
 
-def run_gt_submit() -> bool:
-    """Run gt submit with publish and restack flags. Returns True on success."""
+def run_gt_submit() -> SubmitResult:
+    """Run gt submit with publish and restack flags.
+
+    Returns:
+        SubmitResult with success flag, stdout, and stderr
+    """
     result = subprocess.run(
         ["gt", "submit", "--publish", "--no-interactive", "--restack"],
         capture_output=True,
         text=True,
         check=False,
     )
-    return result.returncode == 0
+    return SubmitResult(
+        success=result.returncode == 0,
+        stdout=result.stdout,
+        stderr=result.stderr,
+    )
 
 
 def get_pr_info() -> tuple[int, str] | None:
@@ -310,12 +331,48 @@ def execute_post_analysis(
         )
 
     # Step 3: Submit branch
-    if not run_gt_submit():
+    submit_result = run_gt_submit()
+    if not submit_result.success:
+        # Combine stdout and stderr for pattern matching
+        combined_output = submit_result.stdout + submit_result.stderr
+        combined_lower = combined_output.lower()
+
+        # Check for merged parent branches not in main trunk
+        if "merged but the merged commits are not contained" in combined_output:
+            return PostAnalysisError(
+                success=False,
+                error_type="submit_merged_parent",
+                message="Parent branches have been merged but are not in main trunk",
+                details={
+                    "branch_name": branch_name,
+                    "stdout": submit_result.stdout,
+                    "stderr": submit_result.stderr,
+                },
+            )
+
+        # Check for branch divergence (updated remotely or must sync)
+        if "updated remotely" in combined_lower or "must sync" in combined_lower:
+            return PostAnalysisError(
+                success=False,
+                error_type="submit_diverged",
+                message="Branch has diverged from remote - manual sync required",
+                details={
+                    "branch_name": branch_name,
+                    "stdout": submit_result.stdout,
+                    "stderr": submit_result.stderr,
+                },
+            )
+
+        # Generic submit failure
         return PostAnalysisError(
             success=False,
             error_type="submit_failed",
             message="Failed to submit branch with gt submit",
-            details={"branch_name": branch_name},
+            details={
+                "branch_name": branch_name,
+                "stdout": submit_result.stdout,
+                "stderr": submit_result.stderr,
+            },
         )
 
     # Step 4: Check if PR exists

@@ -147,7 +147,55 @@ This workflow is **only necessary for workstack repository developers** editing 
 - You're creating new kits from scratch (see [README.md](README.md))
 - You're editing project-local `.claude/` files that aren't from kits
 
+## Working with Kit CLI Commands
+
+**Kit CLI commands** are Python scripts that handle mechanical git/gh/gt operations in isolated subprocess contexts, outputting structured JSON results. They exist as a **performance and cost-optimization pattern** for Claude Code interactions.
+
+### Why Kit CLI Commands?
+
+Kit CLI commands move mechanical operations out of Claude's main context:
+
+- **Performance**: Deterministic Python code is much faster than LLM-based orchestration
+- **Cost savings**: All git/gh/gt operations run in isolated subprocesses, dramatically reducing token usage
+- **Determinism**: Known workflows execute reliably without AI overhead
+- **JSON output**: Only final structured results enter main Claude context
+
+### When to Use
+
+Create a kit CLI command when:
+
+- Multiple git/gh/gt commands would pollute main context
+- Workflow is repeatable and structured
+- JSON output makes parsing and decision-making cleaner
+
+### Patterns
+
+Two distinct patterns exist:
+
+- **Single-phase**: Straightforward workflows (example: `update_pr.py`)
+- **Two-phase**: Complex workflows with AI analysis between mechanical steps (example: `submit_branch.py`)
+
+### Relationship to Slash Commands
+
+Slash commands invoke kit CLI commands and parse their JSON responses:
+
+1. User runs: `/gt:update-pr`
+2. Slash command invokes: `dot-agent run gt update-pr`
+3. Kit CLI command executes operations, outputs JSON
+4. Slash command parses JSON and reports to user
+
+### Full Documentation
+
+See [docs/KIT_CLI_COMMANDS.md](docs/KIT_CLI_COMMANDS.md) for:
+
+- Complete architecture patterns
+- Code structure and conventions
+- Step-by-step workflow
+- Testing patterns
+- Best practices
+
 ## Related Documentation
 
 - [README.md](README.md) - Kit structure and creation guide
+- [docs/KIT_CLI_COMMANDS.md](docs/KIT_CLI_COMMANDS.md) - Kit CLI command development guide
 - [../../docs/WORKSTACK_DEV.md](../../docs/WORKSTACK_DEV.md) - workstack-dev CLI architecture

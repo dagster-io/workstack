@@ -192,19 +192,18 @@ dot-agent run gt submit-branch post-analysis \
 - `message`: Human-readable status message
 
 **Error handling:**
-If the command fails (exit code 1), parse the error JSON:
+If the command fails (exit code 1), parse the error JSON. The error will include:
+- `error_type`: Category of error (submit_merged_parent, submit_diverged, submit_failed, amend_failed, pr_update_failed)
+- `message`: Human-readable description of what failed
+- `details`: Additional context including stdout, stderr, branch_name, and other relevant information
 
-- If error_type is "submit_failed" and message contains "updated remotely" or "Must sync":
-  - Report that the branch has diverged from remote
-  - Explain that user needs to manually resolve with `gt sync`
-  - Exit the command
-- For other errors, report the error message and exit
+Use this information to provide helpful, context-aware guidance to the user about what went wrong and how to resolve it. Consider the error type, the actual command output, and the user's situation to determine the best course of action.
 
 **Important notes:**
 
 - The PR body should contain the full commit message (all sections: Summary, Files Changed, Key Changes, Critical Notes)
 - Use proper escaping for the commit message when passing as command argument
-- Branch divergence requires user decision - do not attempt automatic resolution
+- Do not attempt automatic resolution of errors - provide user with information and let them decide
 
 ### 4. Show Results
 
@@ -229,30 +228,57 @@ After submission, provide a clear summary using bullet list formatting:
 - **Two-phase workflow**: Pre-analysis (kit CLI) → AI analysis (Claude) → Post-analysis (kit CLI)
 - **ALWAYS use git-diff-summarizer agent** for analyzing changes and creating commit messages
 - **NO Claude footer**: Do not add any attribution or generated-by footer to the final commit message
-- **Error handling**: Parse JSON errors from kit commands and report appropriately
-- **Branch divergence**: Let user manually resolve with `gt sync` - do not attempt automatic resolution
+- **Error handling**: Parse JSON errors from kit commands and provide context-aware guidance to the user
+- **No automatic fixes**: Let user manually resolve errors - provide information and guidance, don't retry automatically
 
 ## Error Handling
 
-### Branch Divergence
+When any step fails, the kit CLI command will return a JSON error with:
+- `error_type`: Categorizes the failure (e.g., submit_merged_parent, submit_diverged, submit_failed)
+- `message`: Human-readable description
+- `details`: Command output (stdout/stderr) and other context
 
-If `gt submit` fails with "Branch has been updated remotely" or "Must sync with remote":
+**Your role:**
+1. Parse the error JSON to understand what failed
+2. Examine the error type and command output (stdout/stderr in details)
+3. Provide clear, helpful guidance based on the specific situation
+4. Do not retry automatically - let the user decide how to proceed
 
-1. **STOP immediately** - do not retry or attempt automatic resolution
-2. Report to the user that the branch has diverged from remote
-3. Show the error message from `gt submit`
-4. Explain that the user needs to manually resolve with `gt sync` or other approach
-5. Exit the command
+**Rationale**: Errors often require user decisions about resolution strategy. Claude should provide intelligent, context-aware guidance rather than following rigid rules for each error type.
 
-**Rationale**: Branch divergence requires user decision about resolution strategy. The command should not make this decision automatically.
+### Specific Error Type Guidance
 
-### Other Errors
+#### `submit_merged_parent` Error
 
-If any other step fails:
+When parent branches have been merged but those commits aren't in the local `main` yet:
 
-- Report the specific command that failed
-- Show the error message
-- Ask the user how to proceed (don't retry automatically)
+```
+**Issue:** Your parent branches were merged, but those commits aren't in your local `main` yet. Graphite won't let you submit until the stack is clean.
+
+**Solution:**
+
+```bash
+# Sync main and restack everything
+gt sync -f
+
+# If you're using workstack
+workstack sync -f
+```
+
+This will:
+1. Pull latest `main` with the merged commits
+2. Rebase your entire stack onto the updated `main`
+3. Clean up any merged branches
+
+**Alternative** (if you just want to update this worktree):
+```bash
+# Just update main in this worktree
+git checkout main && git pull origin main
+gt repo sync
+```
+
+The `-f` flag forces the sync even if there are conflicts or merged branches.
+```
 
 ## Example Output
 

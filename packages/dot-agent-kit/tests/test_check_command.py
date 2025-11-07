@@ -888,6 +888,7 @@ def test_check_command_perfect_sync_no_missing_no_obsolete(tmp_path: Path) -> No
                         ".claude/commands/gt/land-branch.md",
                         ".claude/commands/gt/submit-branch.md",
                         ".claude/skills/gt-graphite/SKILL.md",
+                        ".claude/skills/gt-graphite/references/gt-reference.md",
                     ],
                 ),
             },
@@ -904,6 +905,7 @@ def test_check_command_perfect_sync_no_missing_no_obsolete(tmp_path: Path) -> No
                 "commands/gt/land-branch.md",
                 "commands/gt/submit-branch.md",
                 "skills/gt-graphite/SKILL.md",
+                "skills/gt-graphite/references/gt-reference.md",
             ]:
                 bundled_artifact = bundled_path / artifact_rel
                 if bundled_artifact.exists():

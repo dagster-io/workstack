@@ -16,3 +16,5 @@ activate.sh
 .workstack
 .PLAN.md
 .env
+
+CLAUDE.local.md

@@ -8,7 +8,7 @@ import pytest
 from click.testing import CliRunner
 
 # Import the command module
-from dot_agent_kit.data.kits.gt.commands.gt.submit_branch import (
+from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch import (
     PostAnalysisError,
     PostAnalysisResult,
     PreAnalysisError,

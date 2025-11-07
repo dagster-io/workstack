@@ -543,7 +543,11 @@ def test_validate_kit_fields_source_type_with_surrounding_whitespace() -> None:
 
 
 def test_validate_kit_fields_empty_artifacts() -> None:
-    """Test validate_kit_fields with empty artifacts list."""
+    """Test validate_kit_fields with empty artifacts list.
+
+    Bundled kits can have empty artifacts in dot-agent.toml since their
+    artifacts are defined in the bundled kit.yaml instead.
+    """
     kit = InstalledKit(
         kit_id="test-kit",
         source_type="bundled",
@@ -551,12 +555,16 @@ def test_validate_kit_fields_empty_artifacts() -> None:
         artifacts=[],
     )
     errors = validate_kit_fields(kit)
-    assert len(errors) == 1
-    assert "artifacts list is empty" in errors
+    # Bundled kits are allowed to have empty artifacts in dot-agent.toml
+    assert len(errors) == 0
 
 
 def test_validate_kit_fields_multiple_errors() -> None:
-    """Test validate_kit_fields with multiple validation errors."""
+    """Test validate_kit_fields with multiple validation errors.
+
+    When source_type is invalid (not bundled or package), empty artifacts
+    will still trigger an error.
+    """
     kit = InstalledKit(
         kit_id="",
         source_type=cast(SourceType, "invalid"),

@@ -23,7 +23,7 @@ def valid_manifest() -> KitManifest:
         kit_cli_commands=[
             KitCliCommandDefinition(
                 name="test-command",
-                path="commands/test_command.py",
+                path="kit_cli_commands/test-kit/test_command.py",
                 description="A test command",
             )
         ],
@@ -53,7 +53,7 @@ def invalid_command_manifest() -> KitManifest:
         kit_cli_commands=[
             KitCliCommandDefinition(
                 name="INVALID_NAME",  # Uppercase not allowed
-                path="commands/test.py",
+                path="kit_cli_commands/invalid-kit/test.py",
                 description="Invalid command",
             )
         ],
@@ -64,8 +64,8 @@ def test_load_valid_kit(tmp_path: Path, valid_manifest: KitManifest) -> None:
     """Test loading a valid kit with all commands successfully."""
     kit_dir = tmp_path / "test-kit"
     kit_dir.mkdir()
-    commands_dir = kit_dir / "commands"
-    commands_dir.mkdir()
+    commands_dir = kit_dir / "kit_cli_commands" / "test-kit"
+    commands_dir.mkdir(parents=True)
 
     # Create the command file
     (commands_dir / "test_command.py").write_text(
@@ -124,8 +124,8 @@ def test_load_kit_with_import_error(tmp_path: Path) -> None:
     """Test loading kit when Python import fails."""
     kit_dir = tmp_path / "test-kit"
     kit_dir.mkdir()
-    commands_dir = kit_dir / "commands"
-    commands_dir.mkdir()
+    commands_dir = kit_dir / "kit_cli_commands" / "test-kit"
+    commands_dir.mkdir(parents=True)
 
     # Create a file with a syntax error
     (commands_dir / "test_command.py").write_text(
@@ -144,7 +144,7 @@ this is not valid python syntax!!!
         kit_cli_commands=[
             KitCliCommandDefinition(
                 name="test-command",
-                path="commands/test_command.py",
+                path="kit_cli_commands/test-kit/test_command.py",
                 description="Test command",
             )
         ],
@@ -162,8 +162,8 @@ def test_load_kit_with_missing_function(tmp_path: Path) -> None:
     """Test loading kit when function not found in module."""
     kit_dir = tmp_path / "test-kit"
     kit_dir.mkdir()
-    commands_dir = kit_dir / "commands"
-    commands_dir.mkdir()
+    commands_dir = kit_dir / "kit_cli_commands" / "test-kit"
+    commands_dir.mkdir(parents=True)
 
     # Create file without the expected function
     (commands_dir / "test_command.py").write_text(
@@ -182,7 +182,7 @@ def test_load_kit_with_missing_function(tmp_path: Path) -> None:
         kit_cli_commands=[
             KitCliCommandDefinition(
                 name="test-command",
-                path="commands/test_command.py",
+                path="kit_cli_commands/test-kit/test_command.py",
                 description="Test command",
             )
         ],
@@ -224,8 +224,8 @@ def test_lazy_loading_defers_import(tmp_path: Path, valid_manifest: KitManifest)
     """Test that lazy loading doesn't import commands until accessed."""
     kit_dir = tmp_path / "test-kit"
     kit_dir.mkdir()
-    commands_dir = kit_dir / "commands"
-    commands_dir.mkdir()
+    commands_dir = kit_dir / "kit_cli_commands" / "test-kit"
+    commands_dir.mkdir(parents=True)
 
     # Create the command file
     (commands_dir / "test_command.py").write_text(
@@ -276,7 +276,7 @@ def test_debug_flag_shows_traceback(tmp_path: Path) -> None:
         kit_cli_commands=[
             KitCliCommandDefinition(
                 name="INVALID",  # Invalid name
-                path="commands/test.py",
+                path="kit_cli_commands/test-kit/test.py",
                 description="Test",
             )
         ],
@@ -303,8 +303,8 @@ def test_path_construction_simple(tmp_path: Path) -> None:
     """Test path construction for simple single-level path."""
     kit_dir = tmp_path / "test-kit"
     kit_dir.mkdir()
-    commands_dir = kit_dir / "commands"
-    commands_dir.mkdir()
+    commands_dir = kit_dir / "kit_cli_commands" / "test-kit"
+    commands_dir.mkdir(parents=True)
 
     (commands_dir / "simple.py").write_text(
         """import click
@@ -324,7 +324,9 @@ def simple():
         artifacts={},
         kit_cli_commands=[
             KitCliCommandDefinition(
-                name="simple", path="commands/simple.py", description="Simple command"
+                name="simple",
+                path="kit_cli_commands/test-kit/simple.py",
+                description="Simple command",
             )
         ],
     )
@@ -340,7 +342,7 @@ def test_path_construction_nested(tmp_path: Path) -> None:
     """Test path construction for nested multi-level path."""
     kit_dir = tmp_path / "test-kit"
     kit_dir.mkdir()
-    nested_dir = kit_dir / "a" / "b" / "c"
+    nested_dir = kit_dir / "kit_cli_commands" / "test-kit" / "a" / "b" / "c"
     nested_dir.mkdir(parents=True)
 
     (nested_dir / "nested.py").write_text(
@@ -361,7 +363,9 @@ def nested():
         artifacts={},
         kit_cli_commands=[
             KitCliCommandDefinition(
-                name="nested", path="a/b/c/nested.py", description="Nested command"
+                name="nested",
+                path="kit_cli_commands/test-kit/a/b/c/nested.py",
+                description="Nested command",
             )
         ],
     )
@@ -379,8 +383,8 @@ def test_all_commands_fail_to_load_shows_warning(
     """Test that warning is shown when all commands fail to load."""
     kit_dir = tmp_path / "test-kit"
     kit_dir.mkdir()
-    commands_dir = kit_dir / "commands"
-    commands_dir.mkdir()
+    commands_dir = kit_dir / "kit_cli_commands" / "test-kit"
+    commands_dir.mkdir(parents=True)
 
     # Create file without the expected function
     (commands_dir / "broken_command.py").write_text(
@@ -399,7 +403,7 @@ def test_all_commands_fail_to_load_shows_warning(
         kit_cli_commands=[
             KitCliCommandDefinition(
                 name="broken-command",
-                path="commands/broken_command.py",
+                path="kit_cli_commands/test-kit/broken_command.py",
                 description="Broken command",
             )
         ],
@@ -453,13 +457,13 @@ version: 1.0.0
 description: Good kit
 kit_cli_commands:
   - name: good-command
-    path: commands/good.py
+    path: kit_cli_commands/good-kit/good.py
     description: Good command
 """,
         encoding="utf-8",
     )
-    good_commands_dir = good_kit_dir / "commands"
-    good_commands_dir.mkdir()
+    good_commands_dir = good_kit_dir / "kit_cli_commands" / "good-kit"
+    good_commands_dir.mkdir(parents=True)
     (good_commands_dir / "good.py").write_text(
         """import click
 
@@ -523,13 +527,13 @@ version: 1.0.0
 description: Test kit {kit_name}
 kit_cli_commands:
   - name: test-command
-    path: commands/test.py
+    path: kit_cli_commands/{kit_name}/test.py
     description: Test command
 """,
             encoding="utf-8",
         )
-        commands_dir = kit_dir / "commands"
-        commands_dir.mkdir()
+        commands_dir = kit_dir / "kit_cli_commands" / kit_name
+        commands_dir.mkdir(parents=True)
         (commands_dir / "test.py").write_text(
             """import click
 

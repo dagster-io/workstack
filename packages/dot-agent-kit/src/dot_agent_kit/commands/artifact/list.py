@@ -6,7 +6,7 @@ import click
 
 from dot_agent_kit.commands.artifact.formatting import format_compact_list, format_verbose_list
 from dot_agent_kit.io.state import load_project_config
-from dot_agent_kit.models.artifact import ArtifactLevel
+from dot_agent_kit.models.artifact import ArtifactLevel, ArtifactSource
 from dot_agent_kit.models.config import ProjectConfig
 from dot_agent_kit.repositories.filesystem_artifact_repository import FilesystemArtifactRepository
 
@@ -43,7 +43,12 @@ from dot_agent_kit.repositories.filesystem_artifact_repository import Filesystem
     is_flag=True,
     help="Show detailed information",
 )
-def list_artifacts(level_filter: str, artifact_type: str | None, verbose: bool) -> None:
+@click.option(
+    "--managed",
+    is_flag=True,
+    help="Show only artifacts installed from kits (exclude local artifacts)",
+)
+def list_artifacts(level_filter: str, artifact_type: str | None, verbose: bool, managed: bool) -> None:
     """List installed Claude artifacts."""
     # Get paths
     user_path = Path.home() / ".claude"
@@ -58,24 +63,33 @@ def list_artifacts(level_filter: str, artifact_type: str | None, verbose: bool) 
     repository = FilesystemArtifactRepository()
     all_artifacts = repository.discover_multi_level(user_path, project_path, project_config)
 
+    # Discover bundled kits
+    bundled_kits = repository.discover_bundled_kits(user_path, project_path, project_config)
+
     # Filter by level
     if level_filter == "user":
         all_artifacts = [a for a in all_artifacts if a.level == ArtifactLevel.USER]
+        bundled_kits = {k: v for k, v in bundled_kits.items() if v.level == "user"}
     elif level_filter == "project":
         all_artifacts = [a for a in all_artifacts if a.level == ArtifactLevel.PROJECT]
+        bundled_kits = {k: v for k, v in bundled_kits.items() if v.level == "project"}
 
     # Filter by type
     if artifact_type:
         all_artifacts = [a for a in all_artifacts if a.artifact_type == artifact_type]
 
+    # Filter by source (managed vs local)
+    if managed:
+        all_artifacts = [a for a in all_artifacts if a.source == ArtifactSource.MANAGED]
+
     # Display results
-    if not all_artifacts:
+    if not all_artifacts and not bundled_kits:
         click.echo("No artifacts found.", err=True)
         raise SystemExit(1)
 
     if verbose:
-        output = format_verbose_list(all_artifacts)
+        output = format_verbose_list(all_artifacts, bundled_kits)
     else:
-        output = format_compact_list(all_artifacts)
+        output = format_compact_list(all_artifacts, bundled_kits)
 
     click.echo(output)

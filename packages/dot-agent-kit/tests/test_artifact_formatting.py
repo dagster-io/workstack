@@ -4,6 +4,7 @@ from pathlib import Path
 
 from dot_agent_kit.commands.artifact.formatting import (
     format_artifact_header,
+    format_bundled_kit_item,
     format_compact_artifact_line,
     format_compact_list,
     format_hook_metadata,
@@ -12,6 +13,7 @@ from dot_agent_kit.commands.artifact.formatting import (
     format_verbose_list,
 )
 from dot_agent_kit.models.artifact import ArtifactLevel, ArtifactSource, InstalledArtifact
+from dot_agent_kit.models.bundled_kit import BundledKitInfo
 
 
 def test_format_level_indicator_user() -> None:
@@ -251,3 +253,224 @@ def test_format_verbose_list_with_hooks() -> None:
     assert "test-hook" in result
     assert "settings.local.json" in result
     assert "⚠️" in result  # Warning for local settings
+
+
+def test_format_bundled_kit_item_cli_command() -> None:
+    """Test formatting of bundled kit CLI command."""
+    kit_info = BundledKitInfo(
+        kit_id="gt",
+        version="0.1.0",
+        cli_commands=["land-branch", "submit-branch"],
+        available_docs=[],
+        level="project",
+    )
+
+    result = format_bundled_kit_item("land-branch", kit_info, "cli_command")
+
+    # Should contain command name with kit prefix
+    assert "gt:land-branch" in result
+    # Should contain level marker
+    assert "[P]" in result
+    # Should contain kit version
+    assert "gt@0.1.0" in result
+
+
+def test_format_bundled_kit_item_doc() -> None:
+    """Test formatting of bundled kit doc."""
+    kit_info = BundledKitInfo(
+        kit_id="devrun",
+        version="0.2.0",
+        cli_commands=[],
+        available_docs=["tools/gt.md"],
+        level="user",
+    )
+
+    result = format_bundled_kit_item("tools/gt.md", kit_info, "doc")
+
+    # Should contain doc path
+    assert "tools/gt.md" in result
+    # Should contain level marker for user
+    assert "[U]" in result
+    # Should contain kit version
+    assert "devrun@0.2.0" in result
+
+
+def test_format_compact_list_with_bundled_kits() -> None:
+    """Test compact list with bundled kits shows two sections."""
+    artifacts = [
+        InstalledArtifact(
+            artifact_type="skill",
+            artifact_name="dignified-python",
+            file_path=Path("skills/dignified-python/SKILL.md"),
+            source=ArtifactSource.MANAGED,
+            level=ArtifactLevel.PROJECT,
+            kit_id="dignified-python",
+            kit_version="0.1.0",
+        ),
+    ]
+
+    bundled_kits = {
+        "gt": BundledKitInfo(
+            kit_id="gt",
+            version="0.1.0",
+            cli_commands=["land-branch", "submit-branch"],
+            available_docs=[],
+            level="project",
+        ),
+    }
+
+    result = format_compact_list(artifacts, bundled_kits)
+
+    # Should have Claude Artifacts section
+    assert "Claude Artifacts:" in result
+    assert "dignified-python" in result
+
+    # Should have Installed Items section
+    assert "Installed Items:" in result
+    assert "Kit CLI Commands:" in result
+    assert "gt:land-branch" in result
+    assert "gt:submit-branch" in result
+
+
+def test_format_compact_list_with_empty_bundled_kits() -> None:
+    """Test compact list with empty bundled kits dict."""
+    artifacts = [
+        InstalledArtifact(
+            artifact_type="command",
+            artifact_name="test-cmd",
+            file_path=Path("commands/test-cmd.md"),
+            source=ArtifactSource.LOCAL,
+            level=ArtifactLevel.PROJECT,
+        ),
+    ]
+
+    result = format_compact_list(artifacts, {})
+
+    # Should still work with empty bundled kits
+    assert "test-cmd" in result
+
+
+def test_format_compact_list_two_sections() -> None:
+    """Test compact list properly separates artifacts and kit items."""
+    artifacts = [
+        InstalledArtifact(
+            artifact_type="skill",
+            artifact_name="test-skill",
+            file_path=Path("skills/test-skill/SKILL.md"),
+            source=ArtifactSource.LOCAL,
+            level=ArtifactLevel.USER,
+        ),
+        InstalledArtifact(
+            artifact_type="doc",
+            artifact_name="guide.md",
+            file_path=Path("docs/test-kit/guide.md"),
+            source=ArtifactSource.MANAGED,
+            level=ArtifactLevel.PROJECT,
+            kit_id="test-kit",
+            kit_version="1.0.0",
+        ),
+    ]
+
+    bundled_kits = {
+        "test-kit": BundledKitInfo(
+            kit_id="test-kit",
+            version="1.0.0",
+            cli_commands=["run"],
+            available_docs=["tools/ref.md"],
+            level="project",
+        ),
+    }
+
+    result = format_compact_list(artifacts, bundled_kits)
+
+    # Claude Artifacts should contain skill but not doc
+    claude_section = result.split("Installed Items:")[0]
+    assert "test-skill" in claude_section
+    assert "guide.md" not in claude_section
+
+    # Installed Items should contain doc and kit CLI command
+    installed_section = result.split("Claude Artifacts:")[1]
+    assert "guide.md" in installed_section
+    assert "test-kit:run" in installed_section
+
+
+def test_format_verbose_list_with_bundled_kits() -> None:
+    """Test verbose list with bundled kits shows full metadata."""
+    artifacts = [
+        InstalledArtifact(
+            artifact_type="agent",
+            artifact_name="devrun",
+            file_path=Path("agents/devrun.md"),
+            source=ArtifactSource.MANAGED,
+            level=ArtifactLevel.PROJECT,
+            kit_id="devrun",
+            kit_version="0.1.0",
+        ),
+    ]
+
+    bundled_kits = {
+        "gt": BundledKitInfo(
+            kit_id="gt",
+            version="0.1.0",
+            cli_commands=["land-branch"],
+            available_docs=[],
+            level="project",
+        ),
+    }
+
+    result = format_verbose_list(artifacts, bundled_kits)
+
+    # Should have Claude Artifacts section with metadata
+    assert "Claude Artifacts:" in result
+    assert "devrun" in result
+    assert "agent" in result
+
+    # Should have Installed Items section with kit CLI command metadata
+    assert "Installed Items:" in result
+    assert "gt:land-branch" in result
+    assert "kit_cli_command" in result
+    assert "Kit: gt" in result
+    assert "Version: 0.1.0" in result
+
+
+def test_format_compact_list_level_markers() -> None:
+    """Test that level markers appear correctly for all items."""
+    artifacts = [
+        InstalledArtifact(
+            artifact_type="skill",
+            artifact_name="user-skill",
+            file_path=Path("skills/user-skill/SKILL.md"),
+            source=ArtifactSource.LOCAL,
+            level=ArtifactLevel.USER,
+        ),
+        InstalledArtifact(
+            artifact_type="skill",
+            artifact_name="project-skill",
+            file_path=Path("skills/project-skill/SKILL.md"),
+            source=ArtifactSource.LOCAL,
+            level=ArtifactLevel.PROJECT,
+        ),
+    ]
+
+    bundled_kits = {
+        "user-kit": BundledKitInfo(
+            kit_id="user-kit",
+            version="1.0.0",
+            cli_commands=["user-cmd"],
+            available_docs=[],
+            level="user",
+        ),
+        "project-kit": BundledKitInfo(
+            kit_id="project-kit",
+            version="1.0.0",
+            cli_commands=["proj-cmd"],
+            available_docs=[],
+            level="project",
+        ),
+    }
+
+    result = format_compact_list(artifacts, bundled_kits)
+
+    # Should contain both [U] and [P] markers
+    assert "[U]" in result
+    assert "[P]" in result

@@ -641,12 +641,17 @@ Suggested fix: Include rollback procedure or backup strategy
 3. Replace spaces with hyphens
 4. Remove all special characters except hyphens and alphanumeric
 5. Handle Unicode: Normalize to NFC, remove emojis/special symbols
-6. Truncate to 100 characters max (excluding -plan.md suffix)
-7. Ensure at least one alphanumeric character remains
+6. **Truncate to 30 characters maximum** (to match workstack's branch name limit)
+7. Strip any trailing hyphens or slashes after truncation
+8. Ensure at least one alphanumeric character remains
 
-**Branch Name Length:**
+**Why 30 characters:** Workstack truncates branch names to 30 characters in `sanitize_branch_component()`. By truncating the base name to 30 characters BEFORE adding `-plan.md`, we ensure that the worktree name, branch name, and filename base all match consistently.
 
-Branch names are automatically limited to 30 characters maximum. If the derived name exceeds this limit, it will be truncated and any trailing hyphens/slashes will be removed.
+**Resulting names:**
+
+- Filename: `<truncated-base>-plan.md` (base ≤ 30 chars)
+- Worktree name: `<truncated-base>` (≤ 30 chars, derived from filename by workstack)
+- Branch name: `<truncated-base>` (≤ 30 chars, derived from worktree name by workstack)
 
 **If extraction fails:**
 
@@ -666,10 +671,31 @@ Use AskUserQuestion tool to get the plan name from the user if extraction fails.
 
 **Example transformations:**
 
-- "User Authentication System" → `user-authentication-system-plan.md` (branch: `user-authentication-system`)
-- "Fix: Database Connection Issues" → `fix-database-connection-issues-plan.md` (branch: `fix-database-connection-issue` - truncated to 30 chars)
-- "🚀 Awesome Feature!!!" → `awesome-feature-plan.md` (branch: `awesome-feature`)
-- Very long title (200 chars) → Truncated to 100 chars + `-plan.md` (branch truncated to 30 chars)
+- "User Authentication System" →
+  - Base: `user-authentication-system` (24 chars, no truncation needed)
+  - Filename: `user-authentication-system-plan.md`
+  - Worktree & Branch: `user-authentication-system`
+
+- "Fix: Database Connection Issues" →
+  - Base: `fix-database-connection-issues` (29 chars, no truncation needed)
+  - Filename: `fix-database-connection-issues-plan.md`
+  - Worktree & Branch: `fix-database-connection-issues`
+
+- "Refactor Commands to Use GraphiteOps Abstraction" →
+  - Base: `refactor-commands-to-use-gra` (30 chars, truncated from 48)
+  - Filename: `refactor-commands-to-use-gra-plan.md`
+  - Worktree & Branch: `refactor-commands-to-use-gra`
+
+- "🚀 Awesome Feature!!!" →
+  - Base: `awesome-feature` (15 chars, emojis removed)
+  - Filename: `awesome-feature-plan.md`
+  - Worktree & Branch: `awesome-feature`
+
+- "This Is A Very Long Feature Name That Definitely Exceeds The Thirty Character Limit" →
+  - Base: `this-is-a-very-long-feature-na` (30 chars, truncated from 82)
+  - Filename: `this-is-a-very-long-feature-na-plan.md`
+  - Worktree & Branch: `this-is-a-very-long-feature-na`
+
 - "###" (only special chars) → Prompt user for name
 
 ### Step 8: Detect Worktree Root

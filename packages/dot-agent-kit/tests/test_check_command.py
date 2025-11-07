@@ -665,7 +665,7 @@ def test_check_command_detects_missing_artifacts(tmp_path: Path) -> None:
                     kit_id="gt",
                     version="0.1.0",
                     source_type="bundled",
-                    artifacts=[".claude/commands/gt/land-branch.md"],
+                    artifacts=[".claude/commands/gt/submit-branch.md"],
                 ),
             },
         )
@@ -678,10 +678,10 @@ def test_check_command_detects_missing_artifacts(tmp_path: Path) -> None:
         bundled_path = bundled_source._get_bundled_kit_path("gt")
         if bundled_path is not None:
             # Copy only one artifact
-            bundled_artifact = bundled_path / "commands" / "gt" / "land-branch.md"
+            bundled_artifact = bundled_path / "commands" / "gt" / "submit-branch.md"
             if bundled_artifact.exists():
                 bundled_content = bundled_artifact.read_text(encoding="utf-8")
-                local_artifact = claude_dir / "commands" / "gt" / "land-branch.md"
+                local_artifact = claude_dir / "commands" / "gt" / "submit-branch.md"
                 local_artifact.parent.mkdir(parents=True)
                 local_artifact.write_text(bundled_content, encoding="utf-8")
 
@@ -885,7 +885,6 @@ def test_check_command_perfect_sync_no_missing_no_obsolete(tmp_path: Path) -> No
                     version="0.1.0",
                     source_type="bundled",
                     artifacts=[
-                        ".claude/commands/gt/land-branch.md",
                         ".claude/commands/gt/submit-branch.md",
                         ".claude/commands/gt/update-pr.md",
                         ".claude/commands/gt/view-pr.md",
@@ -904,7 +903,6 @@ def test_check_command_perfect_sync_no_missing_no_obsolete(tmp_path: Path) -> No
         bundled_path = bundled_source._get_bundled_kit_path("gt")
         if bundled_path is not None:
             for artifact_rel in [
-                "commands/gt/land-branch.md",
                 "commands/gt/submit-branch.md",
                 "commands/gt/update-pr.md",
                 "commands/gt/view-pr.md",

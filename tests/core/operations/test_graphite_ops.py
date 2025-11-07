@@ -1,6 +1,10 @@
-"""Tests for FakeGraphiteOps."""
+"""Tests for GraphiteOps helper methods."""
 
+from pathlib import Path
+
+from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
+from workstack.core.branch_metadata import BranchMetadata
 
 
 def test_fake_graphite_ops_initialization() -> None:
@@ -15,3 +19,141 @@ def test_fake_graphite_ops_no_op() -> None:
     # FakeGraphiteOps is a simple stub - just verify it exists
     assert hasattr(ops, "__class__")
     assert ops.__class__.__name__ == "FakeGraphiteOps"
+
+
+def test_get_parent_branch_returns_parent() -> None:
+    """Test get_parent_branch() returns correct parent from branches metadata."""
+    # Arrange: Create branch hierarchy
+    branches = {
+        "main": BranchMetadata(
+            name="main", parent=None, children=["feature-1"], is_trunk=True, commit_sha="abc123"
+        ),
+        "feature-1": BranchMetadata(
+            name="feature-1",
+            parent="main",
+            children=["feature-2"],
+            is_trunk=False,
+            commit_sha="def456",
+        ),
+        "feature-2": BranchMetadata(
+            name="feature-2", parent="feature-1", children=[], is_trunk=False, commit_sha="ghi789"
+        ),
+    }
+    graphite_ops = FakeGraphiteOps(branches=branches)
+    git_ops = FakeGitOps()  # Not actually used by helper methods
+    repo_root = Path("/fake/repo")
+
+    # Act & Assert: Test parent relationships
+    assert graphite_ops.get_parent_branch(git_ops, repo_root, "feature-2") == "feature-1"
+    assert graphite_ops.get_parent_branch(git_ops, repo_root, "feature-1") == "main"
+    assert graphite_ops.get_parent_branch(git_ops, repo_root, "main") is None
+
+
+def test_get_parent_branch_returns_none_for_unknown_branch() -> None:
+    """Test get_parent_branch() returns None if branch not tracked by graphite."""
+    # Arrange
+    branches = {
+        "main": BranchMetadata(
+            name="main", parent=None, children=[], is_trunk=True, commit_sha="abc123"
+        ),
+    }
+    graphite_ops = FakeGraphiteOps(branches=branches)
+    git_ops = FakeGitOps()
+    repo_root = Path("/fake/repo")
+
+    # Act & Assert
+    assert graphite_ops.get_parent_branch(git_ops, repo_root, "unknown-branch") is None
+
+
+def test_get_parent_branch_returns_none_when_no_branches() -> None:
+    """Test get_parent_branch() returns None when no Graphite data available."""
+    # Arrange: No branches configured
+    graphite_ops = FakeGraphiteOps()
+    git_ops = FakeGitOps()
+    repo_root = Path("/fake/repo")
+
+    # Act & Assert
+    assert graphite_ops.get_parent_branch(git_ops, repo_root, "any-branch") is None
+
+
+def test_get_child_branches_returns_children() -> None:
+    """Test get_child_branches() returns correct children from branches metadata."""
+    # Arrange: Create branch hierarchy with multiple children
+    branches = {
+        "main": BranchMetadata(
+            name="main",
+            parent=None,
+            children=["feature-1", "feature-2"],
+            is_trunk=True,
+            commit_sha="abc123",
+        ),
+        "feature-1": BranchMetadata(
+            name="feature-1",
+            parent="main",
+            children=["feature-1-1"],
+            is_trunk=False,
+            commit_sha="def456",
+        ),
+        "feature-2": BranchMetadata(
+            name="feature-2", parent="main", children=[], is_trunk=False, commit_sha="ghi789"
+        ),
+        "feature-1-1": BranchMetadata(
+            name="feature-1-1", parent="feature-1", children=[], is_trunk=False, commit_sha="jkl012"
+        ),
+    }
+    graphite_ops = FakeGraphiteOps(branches=branches)
+    git_ops = FakeGitOps()
+    repo_root = Path("/fake/repo")
+
+    # Act & Assert: Test child relationships
+    assert graphite_ops.get_child_branches(git_ops, repo_root, "main") == ["feature-1", "feature-2"]
+    assert graphite_ops.get_child_branches(git_ops, repo_root, "feature-1") == ["feature-1-1"]
+    assert graphite_ops.get_child_branches(git_ops, repo_root, "feature-2") == []
+    assert graphite_ops.get_child_branches(git_ops, repo_root, "feature-1-1") == []
+
+
+def test_get_child_branches_returns_empty_for_unknown_branch() -> None:
+    """Test get_child_branches() returns empty list if branch not tracked."""
+    # Arrange
+    branches = {
+        "main": BranchMetadata(
+            name="main", parent=None, children=[], is_trunk=True, commit_sha="abc123"
+        ),
+    }
+    graphite_ops = FakeGraphiteOps(branches=branches)
+    git_ops = FakeGitOps()
+    repo_root = Path("/fake/repo")
+
+    # Act & Assert
+    assert graphite_ops.get_child_branches(git_ops, repo_root, "unknown-branch") == []
+
+
+def test_get_child_branches_returns_empty_when_no_branches() -> None:
+    """Test get_child_branches() returns empty list when no Graphite data."""
+    # Arrange: No branches configured
+    graphite_ops = FakeGraphiteOps()
+    git_ops = FakeGitOps()
+    repo_root = Path("/fake/repo")
+
+    # Act & Assert
+    assert graphite_ops.get_child_branches(git_ops, repo_root, "any-branch") == []
+
+
+def test_helper_methods_work_with_stacks_configuration() -> None:
+    """Test that helper methods work when FakeGraphiteOps uses stacks parameter.
+
+    Note: stacks parameter doesn't provide parent/child relationships, so helpers
+    that rely on get_all_branches() should return empty/None with stacks-only config.
+    """
+    # Arrange: Use stacks parameter (simpler configuration)
+    graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
+    git_ops = FakeGitOps()
+    repo_root = Path("/fake/repo")
+
+    # Act & Assert: stacks doesn't populate get_all_branches(), so helpers return empty
+    assert graphite_ops.get_parent_branch(git_ops, repo_root, "feature-2") is None
+    assert graphite_ops.get_child_branches(git_ops, repo_root, "main") == []
+
+    # But get_branch_stack() works with stacks
+    expected_stack = ["main", "feature-1", "feature-2"]
+    assert graphite_ops.get_branch_stack(git_ops, repo_root, "feature-1") == expected_stack

@@ -7,7 +7,7 @@ import click
 
 from workstack.cli.activation import render_activation_script
 from workstack.cli.core import discover_repo_context
-from workstack.cli.graphite import find_worktrees_containing_branch, get_branch_stack
+from workstack.cli.graphite import find_worktrees_containing_branch
 from workstack.cli.shell_utils import write_script_to_temp
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
@@ -76,7 +76,7 @@ def _perform_jump(
 
         # Show stack context
         if not script:
-            stack = get_branch_stack(ctx, repo_root, branch)
+            stack = ctx.graphite_ops.get_branch_stack(ctx.git_ops, repo_root, branch)
             if stack:
                 click.echo(f"Stack: {' -> '.join(stack)}")
             click.echo(f"Checked out '{branch}' in worktree")

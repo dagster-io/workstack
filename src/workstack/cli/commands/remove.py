@@ -10,7 +10,6 @@ from workstack.cli.core import (
     validate_worktree_name_for_removal,
     worktree_path_for,
 )
-from workstack.cli.graphite import get_branch_stack
 from workstack.core.context import WorkstackContext, create_context
 from workstack.core.gitops import GitOps
 from workstack.core.graphite_ops import read_graphite_json_file
@@ -156,7 +155,7 @@ def _remove_worktree(
                 err=True,
             )
         else:
-            stack = get_branch_stack(ctx, repo.root, worktree_branch)
+            stack = ctx.graphite_ops.get_branch_stack(ctx.git_ops, repo.root, worktree_branch)
             if stack is None:
                 click.echo(
                     f"Warning: Branch {worktree_branch} is not tracked by Graphite. "

@@ -5,7 +5,6 @@ from pathlib import Path
 import click
 
 from workstack.cli.core import discover_repo_context
-from workstack.cli.graphite import get_branch_stack
 from workstack.core.context import WorkstackContext
 
 
@@ -64,7 +63,7 @@ def consolidate_cmd(ctx: WorkstackContext, force: bool, dry_run: bool) -> None:
     repo = discover_repo_context(ctx, current_worktree)
 
     # Get current branch's stack
-    stack_branches = get_branch_stack(ctx, repo.root, current_branch)
+    stack_branches = ctx.graphite_ops.get_branch_stack(ctx.git_ops, repo.root, current_branch)
     if stack_branches is None:
         click.echo(
             f"Error: Branch '{current_branch}' is not tracked by Graphite",

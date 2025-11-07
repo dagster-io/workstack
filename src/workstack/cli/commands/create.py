@@ -9,7 +9,6 @@ import click
 
 from workstack.cli.config import LoadedConfig, load_config
 from workstack.cli.core import discover_repo_context, ensure_workstacks_dir, worktree_path_for
-from workstack.cli.graphite import get_parent_branch
 from workstack.cli.shell_utils import render_cd_script, write_script_to_temp
 from workstack.cli.subprocess_utils import run_with_error_reporting
 from workstack.core.context import WorkstackContext
@@ -516,7 +515,9 @@ def create(
 
         # Determine preferred branch to checkout (prioritize Graphite parent)
         parent_branch = (
-            get_parent_branch(ctx, repo.root, current_branch) if current_branch else None
+            ctx.graphite_ops.get_parent_branch(ctx.git_ops, repo.root, current_branch)
+            if current_branch
+            else None
         )
 
         if parent_branch:

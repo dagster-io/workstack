@@ -374,8 +374,8 @@ class TestPostAnalysisExecution:
             assert result.success is False
             assert result.error_type == "amend_failed"
 
-    def test_post_analysis_submit_fails(self, mock_subprocess: Mock) -> None:
-        """Test post-analysis when gt submit fails."""
+    def test_post_analysis_submit_fails_generic(self, mock_subprocess: Mock) -> None:
+        """Test post-analysis when gt submit fails (generic error)."""
         with patch("subprocess.run", mock_subprocess) as mock_run:
             mock_run.side_effect = [
                 # Mock git branch --show-current
@@ -392,12 +392,12 @@ class TestPostAnalysisExecution:
                     stdout="",
                     stderr="",
                 ),
-                # Mock gt submit (fails)
+                # Mock gt submit (fails with generic error)
                 subprocess.CompletedProcess(
                     args=["gt", "submit", "--publish", "--no-interactive", "--restack"],
                     returncode=1,
-                    stdout="",
-                    stderr="Branch has been updated remotely",
+                    stdout="Some output",
+                    stderr="Generic error occurred",
                 ),
             ]
 
@@ -410,6 +410,96 @@ class TestPostAnalysisExecution:
             assert isinstance(result, PostAnalysisError)
             assert result.success is False
             assert result.error_type == "submit_failed"
+            # Verify error details include output
+            assert "stdout" in result.details
+            assert "stderr" in result.details
+            assert result.details["stdout"] == "Some output"
+            assert result.details["stderr"] == "Generic error occurred"
+
+    def test_post_analysis_submit_fails_merged_parent(self, mock_subprocess: Mock) -> None:
+        """Test post-analysis when parent branches have been merged but not in main trunk."""
+        with patch("subprocess.run", mock_subprocess) as mock_run:
+            mock_run.side_effect = [
+                # Mock git branch --show-current
+                subprocess.CompletedProcess(
+                    args=["git", "branch", "--show-current"],
+                    returncode=0,
+                    stdout="feature-branch",
+                    stderr="",
+                ),
+                # Mock git commit --amend
+                subprocess.CompletedProcess(
+                    args=["sh", "-c"],
+                    returncode=0,
+                    stdout="",
+                    stderr="",
+                ),
+                # Mock gt submit (fails with merged parent error)
+                subprocess.CompletedProcess(
+                    args=["gt", "submit", "--publish", "--no-interactive", "--restack"],
+                    returncode=1,
+                    stdout="",
+                    stderr=(
+                        "WARNING: PR for the following branch has already been merged "
+                        "but the merged commits are not contained in the latest trunk branch main."
+                    ),
+                ),
+            ]
+
+            result = execute_post_analysis(
+                commit_message="feat: add feature\n\nDetailed description",
+                pr_title="feat: add feature",
+                pr_body="Detailed description",
+            )
+
+            assert isinstance(result, PostAnalysisError)
+            assert result.success is False
+            assert result.error_type == "submit_merged_parent"
+            assert "Parent branches have been merged" in result.message
+            # Verify error details include output
+            assert "stdout" in result.details
+            assert "stderr" in result.details
+
+    def test_post_analysis_submit_fails_diverged(self, mock_subprocess: Mock) -> None:
+        """Test post-analysis when branch has diverged from remote."""
+        with patch("subprocess.run", mock_subprocess) as mock_run:
+            mock_run.side_effect = [
+                # Mock git branch --show-current
+                subprocess.CompletedProcess(
+                    args=["git", "branch", "--show-current"],
+                    returncode=0,
+                    stdout="feature-branch",
+                    stderr="",
+                ),
+                # Mock git commit --amend
+                subprocess.CompletedProcess(
+                    args=["sh", "-c"],
+                    returncode=0,
+                    stdout="",
+                    stderr="",
+                ),
+                # Mock gt submit (fails with branch divergence)
+                subprocess.CompletedProcess(
+                    args=["gt", "submit", "--publish", "--no-interactive", "--restack"],
+                    returncode=1,
+                    stdout="",
+                    stderr="Branch has been updated remotely. Must sync with remote.",
+                ),
+            ]
+
+            result = execute_post_analysis(
+                commit_message="feat: add feature\n\nDetailed description",
+                pr_title="feat: add feature",
+                pr_body="Detailed description",
+            )
+
+            assert isinstance(result, PostAnalysisError)
+            assert result.success is False
+            assert result.error_type == "submit_diverged"
+            assert "diverged from remote" in result.message
+            # Verify error details include output
+            assert "stdout" in result.details
+            assert "stderr" in result.details
 
     def test_post_analysis_pr_update_fails(self, mock_subprocess: Mock) -> None:
         """Test post-analysis when gh pr edit fails."""

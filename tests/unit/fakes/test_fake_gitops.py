@@ -133,3 +133,53 @@ def test_fake_gitops_worktree_not_found() -> None:
 
     worktrees = git_ops.list_worktrees(repo_root)
     assert len(worktrees) == 0
+
+
+def test_fake_gitops_has_uncommitted_changes_no_changes() -> None:
+    """Test has_uncommitted_changes returns False when no changes."""
+    cwd = Path("/repo")
+    git_ops = FakeGitOps(file_statuses={cwd: ([], [], [])})
+
+    assert not git_ops.has_uncommitted_changes(cwd)
+
+
+def test_fake_gitops_has_uncommitted_changes_staged() -> None:
+    """Test has_uncommitted_changes returns True when staged changes exist."""
+    cwd = Path("/repo")
+    git_ops = FakeGitOps(file_statuses={cwd: (["file.txt"], [], [])})
+
+    assert git_ops.has_uncommitted_changes(cwd)
+
+
+def test_fake_gitops_has_uncommitted_changes_modified() -> None:
+    """Test has_uncommitted_changes returns True when modified changes exist."""
+    cwd = Path("/repo")
+    git_ops = FakeGitOps(file_statuses={cwd: ([], ["file.txt"], [])})
+
+    assert git_ops.has_uncommitted_changes(cwd)
+
+
+def test_fake_gitops_has_uncommitted_changes_untracked() -> None:
+    """Test has_uncommitted_changes returns True when untracked files exist."""
+    cwd = Path("/repo")
+    git_ops = FakeGitOps(file_statuses={cwd: ([], [], ["file.txt"])})
+
+    assert git_ops.has_uncommitted_changes(cwd)
+
+
+def test_fake_gitops_has_uncommitted_changes_all_types() -> None:
+    """Test has_uncommitted_changes with all types of changes."""
+    cwd = Path("/repo")
+    git_ops = FakeGitOps(
+        file_statuses={cwd: (["staged.txt"], ["modified.txt"], ["untracked.txt"])}
+    )
+
+    assert git_ops.has_uncommitted_changes(cwd)
+
+
+def test_fake_gitops_has_uncommitted_changes_unknown_path() -> None:
+    """Test has_uncommitted_changes returns False for unknown path."""
+    cwd = Path("/repo")
+    git_ops = FakeGitOps()
+
+    assert not git_ops.has_uncommitted_changes(cwd)

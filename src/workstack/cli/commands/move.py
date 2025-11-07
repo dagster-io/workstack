@@ -1,6 +1,5 @@
 """Move branches between worktrees with explicit source specification."""
 
-import subprocess
 from pathlib import Path
 
 import click
@@ -22,24 +21,6 @@ def _get_worktree_branch(ctx: WorkstackContext, repo_root: Path, wt_path: Path) 
         if wt.path.resolve() == wt_path_resolved:
             return wt.branch
     return None
-
-
-def _has_uncommitted_changes(cwd: Path) -> bool:
-    """Check if a worktree has uncommitted changes.
-
-    Uses git status --porcelain to detect any uncommitted changes.
-    Returns False if git command fails (worktree might be in invalid state).
-    """
-    result = subprocess.run(
-        ["git", "status", "--porcelain"],
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        return False
-    return bool(result.stdout.strip())
 
 
 def _find_worktree_containing_path(worktrees: list, target_path: Path) -> Path | None:
@@ -201,7 +182,7 @@ def execute_move(
         raise SystemExit(1)
 
     # Check for uncommitted changes in source
-    if _has_uncommitted_changes(source_wt) and not force:
+    if ctx.git_ops.has_uncommitted_changes(source_wt) and not force:
         click.echo(
             f"Error: Uncommitted changes in source worktree '{source_wt.name}'.\n"
             f"Commit, stash, or use --force to override.",
@@ -221,7 +202,7 @@ def execute_move(
 
     if target_exists:
         # Target exists - check for uncommitted changes
-        if _has_uncommitted_changes(target_wt) and not force:
+        if ctx.git_ops.has_uncommitted_changes(target_wt) and not force:
             click.echo(
                 f"Error: Uncommitted changes in target worktree '{target_wt.name}'.\n"
                 f"Commit, stash, or use --force to override.",
@@ -269,7 +250,9 @@ def execute_swap(
         raise SystemExit(1)
 
     # Check for uncommitted changes
-    if _has_uncommitted_changes(source_wt) or _has_uncommitted_changes(target_wt):
+    if ctx.git_ops.has_uncommitted_changes(source_wt) or ctx.git_ops.has_uncommitted_changes(
+        target_wt
+    ):
         if not force:
             click.echo(
                 "Error: Uncommitted changes detected in one or more worktrees.\n"

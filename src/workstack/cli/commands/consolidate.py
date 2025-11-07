@@ -1,6 +1,5 @@
 """Consolidate worktrees by removing others containing branches from current stack."""
 
-import subprocess
 from pathlib import Path
 
 import click
@@ -8,24 +7,6 @@ import click
 from workstack.cli.core import discover_repo_context
 from workstack.cli.graphite import get_branch_stack
 from workstack.core.context import WorkstackContext
-
-
-def _has_uncommitted_changes(cwd: Path) -> bool:
-    """Check if a worktree has uncommitted changes.
-
-    Uses git status --porcelain to detect any uncommitted changes.
-    Returns False if git command fails (worktree might be in invalid state).
-    """
-    result = subprocess.run(
-        ["git", "status", "--porcelain"],
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        return False
-    return bool(result.stdout.strip())
 
 
 @click.command("consolidate")
@@ -101,7 +82,7 @@ def consolidate_cmd(ctx: WorkstackContext, force: bool, dry_run: bool) -> None:
     # Check ALL worktrees for uncommitted changes (including current)
     worktrees_with_changes: list[Path] = []
     for wt in all_worktrees:
-        if wt.path.exists() and _has_uncommitted_changes(wt.path):
+        if wt.path.exists() and ctx.git_ops.has_uncommitted_changes(wt.path):
             worktrees_with_changes.append(wt.path)
 
     if worktrees_with_changes:

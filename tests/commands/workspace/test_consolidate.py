@@ -24,6 +24,8 @@ def _create_test_context(
     worktrees: dict[Path, list[WorktreeInfo]],
     current_branch: str,
     workstacks_root: Path,
+    *,
+    file_statuses: dict[Path, tuple[list[str], list[str], list[str]]] | None = None,
 ) -> WorkstackContext:
     """Helper to create test context for consolidate command tests.
 
@@ -32,6 +34,7 @@ def _create_test_context(
         worktrees: Map of repo_root to list of WorktreeInfo objects
         current_branch: Current branch name
         workstacks_root: Root directory for workstacks
+        file_statuses: Optional mapping of worktree paths to (staged, modified, untracked) files
 
     Returns:
         WorkstackContext configured for testing
@@ -41,6 +44,7 @@ def _create_test_context(
         worktrees=worktrees,
         git_common_dirs={cwd: git_dir},
         current_branches={cwd: current_branch},
+        file_statuses=file_statuses,
     )
 
     return WorkstackContext(
@@ -203,7 +207,14 @@ def test_consolidate_aborts_on_uncommitted_changes() -> None:
             ]
         }
 
-        test_ctx = _create_test_context(cwd, worktrees, "feature-1", workstacks_root)
+        # Configure file_statuses to simulate uncommitted changes in wt1
+        file_statuses = {
+            wt1_path: ([], [], ["uncommitted.txt"]),  # Untracked file
+        }
+
+        test_ctx = _create_test_context(
+            cwd, worktrees, "feature-1", workstacks_root, file_statuses=file_statuses
+        )
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
         assert result.exit_code == 1

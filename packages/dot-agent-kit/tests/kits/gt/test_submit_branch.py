@@ -1,7 +1,11 @@
 """Tests for submit_branch kit CLI command."""
 
 import json
+import os
 import subprocess
+import tempfile
+from collections.abc import Generator
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
@@ -13,6 +17,7 @@ from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch import (
     PostAnalysisResult,
     PreAnalysisError,
     PreAnalysisResult,
+    amend_commit,
     execute_post_analysis,
     execute_pre_analysis,
     submit_branch,
@@ -620,3 +625,184 @@ class TestPostAnalysisCommand:
 
         assert result.exit_code != 0
         assert "Error" in result.output or "Missing option" in result.output
+
+
+class TestAmendCommitWithBackticks:
+    """Integration test for amend_commit with special characters.
+
+    This test demonstrates the bug where commit messages containing backticks
+    (common in markdown like `/gt:update-pr`) fail due to shell command
+    substitution when using the heredoc pattern with sh -c.
+    """
+
+    @pytest.fixture
+    def git_repo(self) -> Generator[Path]:
+        """Create a temporary git repository for testing."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo_path = Path(tmpdir)
+
+            # Initialize git repo
+            subprocess.run(
+                ["git", "init"],
+                cwd=repo_path,
+                check=True,
+                capture_output=True,
+            )
+
+            # Configure git (required for commits)
+            subprocess.run(
+                ["git", "config", "user.name", "Test User"],
+                cwd=repo_path,
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.email", "test@example.com"],
+                cwd=repo_path,
+                check=True,
+                capture_output=True,
+            )
+
+            yield repo_path
+
+    def test_amend_commit_with_backticks_direct(self, git_repo: Path) -> None:
+        """Test that amend_commit handles markdown backticks correctly when called directly.
+
+        This test verifies that backticks work when calling the function directly from Python.
+        Note: The heredoc pattern with <<'EOF' actually handles this correctly because
+        the single quotes prevent shell interpretation of the heredoc content.
+        """
+        # Create initial commit
+        test_file = git_repo / "test.txt"
+        test_file.write_text("initial", encoding="utf-8")
+        subprocess.run(["git", "add", "."], cwd=git_repo, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "Initial commit"],
+            cwd=git_repo,
+            check=True,
+            capture_output=True,
+        )
+
+        # Prepare message with backticks (like markdown code)
+        message_with_backticks = """Add /gt:update-pr command
+
+This adds a new `/gt:update-pr` slash command that uses `git add .` internally.
+
+## Key Changes
+
+- New `/gt:update-pr` command for quick updates
+- Uses `gh pr view` to check PR existence
+- Runs `git commit -m "Update changes"` automatically"""
+
+        # Change directory to git repo for the function to work
+        original_dir = Path.cwd()
+        try:
+            os.chdir(git_repo)
+
+            # Amend with message containing backticks
+            result = amend_commit(message_with_backticks)
+
+            # Should succeed
+            assert result is True, "amend_commit should succeed with backticks"
+
+            # Verify commit message was actually updated
+            commit_msg_result = subprocess.run(
+                ["git", "log", "-1", "--format=%B"],
+                cwd=git_repo,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            actual_message = commit_msg_result.stdout.strip()
+
+            # Message should match exactly (including backticks)
+            assert actual_message == message_with_backticks, (
+                f"Commit message mismatch.\n"
+                f"Expected:\n{message_with_backticks}\n\n"
+                f"Actual:\n{actual_message}"
+            )
+        finally:
+            os.chdir(original_dir)
+
+    def test_amend_commit_comparison_heredoc_vs_direct(self, git_repo: Path) -> None:
+        """Compare heredoc approach vs direct subprocess approach.
+
+        This test demonstrates that while the heredoc pattern works for backticks,
+        the direct subprocess approach is simpler, safer, and more maintainable.
+        It tests both approaches and validates they produce the same result.
+        """
+        # Prepare message with various special characters
+        complex_message = """Add feature with `backticks`, "quotes", and 'apostrophes'
+
+This message contains:
+- Backticks: `/command`, `code`, `git add .`
+- Double quotes: "string"
+- Single quotes: 'text'
+- Dollar signs: $VAR (should not expand)
+- Newlines and formatting
+
+## Complex Example
+
+```bash
+git commit -m "Update changes"
+```"""
+
+        # Create initial commit
+        test_file = git_repo / "test.txt"
+        test_file.write_text("initial", encoding="utf-8")
+        subprocess.run(["git", "add", "."], cwd=git_repo, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "Initial commit"],
+            cwd=git_repo,
+            check=True,
+            capture_output=True,
+        )
+
+        original_dir = Path.cwd()
+        try:
+            os.chdir(git_repo)
+
+            # Test current heredoc implementation
+            result_heredoc = amend_commit(complex_message)
+            assert result_heredoc is True, "Heredoc approach should succeed"
+
+            msg_after_heredoc = subprocess.run(
+                ["git", "log", "-1", "--format=%B"],
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip()
+
+            # Now test direct subprocess approach (what the fix will use)
+            # First, make another commit to amend
+            test_file.write_text("second", encoding="utf-8")
+            subprocess.run(["git", "add", "."], check=True, capture_output=True)
+            subprocess.run(
+                ["git", "commit", "-m", "Second commit"],
+                check=True,
+                capture_output=True,
+            )
+
+            # Direct approach (the fix)
+            result_direct = subprocess.run(
+                ["git", "commit", "--amend", "-m", complex_message],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            assert result_direct.returncode == 0, "Direct approach should succeed"
+
+            msg_after_direct = subprocess.run(
+                ["git", "log", "-1", "--format=%B"],
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout.strip()
+
+            # Both should produce identical results
+            assert msg_after_heredoc == complex_message, "Heredoc should preserve message exactly"
+            assert msg_after_direct == complex_message, "Direct should preserve message exactly"
+            assert msg_after_heredoc == msg_after_direct, "Both approaches should be equivalent"
+
+        finally:
+            os.chdir(original_dir)

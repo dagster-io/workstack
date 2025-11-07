@@ -25,15 +25,44 @@ Streamlines updating an existing PR in a Graphite stack by auto-staging and comm
 
 When this command is invoked:
 
-### 1. Check PR Exists
+### Execute Update PR Command
+
+Run the kit CLI command to handle all update-pr operations:
 
 ```bash
-gh pr view --json number,url
+dot-agent run gt update-pr
 ```
 
-Parse the JSON output to verify the current branch has an associated PR.
+**What this does:**
 
-**Error handling**: If command fails (no PR exists), show error:
+1. Gets current branch and checks for associated PR
+2. Checks for uncommitted changes
+3. If changes exist: stages and commits with message "Update changes"
+4. Runs `gt restack --no-interactive` to restack the branch
+5. Runs `gt submit` to update the PR
+6. Returns JSON with PR info and status
+
+**Parse the JSON output** to get:
+
+- `success`: Boolean indicating success/failure
+- `pr_number`: PR number (if success)
+- `pr_url`: PR URL (if success)
+- `branch_name`: Current branch name
+- `had_changes`: Whether uncommitted changes were committed
+- `message`: Human-readable status message
+
+**Error handling:**
+
+Parse the error JSON and handle by error_type:
+
+- `no_pr`: No PR associated with current branch → Show error with suggestion to use /gt:submit-branch
+- `commit_failed`: Failed to commit changes → Show error and exit
+- `restack_failed`: Conflicts during restack → Show error with manual resolution instructions
+- `submit_failed`: Failed to submit → Show error and exit
+
+### Error Messages
+
+**No PR Error:**
 
 ```
 ❌ No PR associated with current branch
@@ -42,45 +71,7 @@ Create one with:
   /gt:submit-branch
 ```
 
-### 2. Check for Uncommitted Changes
-
-```bash
-git status --porcelain
-```
-
-**If output is empty** (no uncommitted changes):
-
-- Skip to Step 4 (no changes to commit)
-
-**If output is non-empty** (uncommitted changes exist):
-
-- Proceed to Step 3
-
-### 3. Auto-stage and Commit
-
-Stage all changes:
-
-```bash
-git add .
-```
-
-Commit with simple default message:
-
-```bash
-git commit -m "Update changes"
-```
-
-**Error handling**: If commit fails, show error message and exit.
-
-### 4. Restack
-
-Run restack with no-interactive mode:
-
-```bash
-gt restack --no-interactive
-```
-
-**Error handling**: If command fails (exit code ≠ 0), abort with error:
+**Restack Conflict Error:**
 
 ```
 ❌ Conflicts occurred during restack
@@ -89,24 +80,21 @@ Resolve conflicts manually, then run this command again:
   /gt:update-pr
 ```
 
-**Important**: Do NOT attempt to auto-resolve conflicts. User must resolve manually.
+**Other Errors:**
 
-### 5. Submit
+Show the error message from the JSON output and exit.
 
-Submit to update the existing PR:
+### Success Output
 
-```bash
-gt submit
-```
-
-**Error handling**: If command fails, show error message and exit.
-
-### 6. Confirm Success
-
-After successful submission:
+After successful execution, show results:
 
 ```
 ✅ PR updated successfully
+
+- **PR #**: [number]
+- **URL**: [url]
+- **Branch**: [branch_name]
+- **Changes Committed**: [Yes/No based on had_changes]
 ```
 
 ## Example Output
@@ -114,45 +102,37 @@ After successful submission:
 ### Success with Uncommitted Changes
 
 ```
-Checking for PR association...
-✓ PR #235 found
-
-Checking for uncommitted changes...
-✓ Uncommitted changes detected
-
-Staging and committing changes...
-✓ Changes committed with message "Update changes"
-
-Restacking branch...
-✓ Restack complete
-
-Submitting updates...
-✓ Submitted successfully
+Running update-pr command...
+✓ Command completed successfully
 
 ✅ PR updated successfully
+
+- **PR #**: 235
+- **URL**: https://app.graphite.dev/github/pr/dagster-io/workstack/235
+- **Branch**: gt-update-pr-command
+- **Changes Committed**: Yes
 ```
 
 ### Success with No Uncommitted Changes
 
 ```
-Checking for PR association...
-✓ PR #235 found
-
-Checking for uncommitted changes...
-✓ No uncommitted changes
-
-Restacking branch...
-✓ Restack complete
-
-Submitting updates...
-✓ Submitted successfully
+Running update-pr command...
+✓ Command completed successfully
 
 ✅ PR updated successfully
+
+- **PR #**: 235
+- **URL**: https://app.graphite.dev/github/pr/dagster-io/workstack/235
+- **Branch**: gt-update-pr-command
+- **Changes Committed**: No
 ```
 
 ### No PR Error
 
 ```
+Running update-pr command...
+✗ Command failed
+
 ❌ No PR associated with current branch
 
 Create one with:
@@ -162,16 +142,9 @@ Create one with:
 ### Restack Conflict Error
 
 ```
-Checking for PR association...
-✓ PR #235 found
+Running update-pr command...
+✗ Command failed
 
-Checking for uncommitted changes...
-✓ Uncommitted changes detected
-
-Staging and committing changes...
-✓ Changes committed with message "Update changes"
-
-Restacking branch...
 ❌ Conflicts occurred during restack
 
 Resolve conflicts manually, then run this command again:

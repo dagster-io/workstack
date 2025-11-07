@@ -9,6 +9,9 @@ kit_cli_commands:
   - name: submit-branch
     path: kit_cli_commands/gt/submit_branch.py
     description: Create git commit and submit current branch with Graphite (two-phase)
+  - name: update-pr
+    path: kit_cli_commands/gt/update_pr.py
+    description: Update PR by staging changes, committing, restacking, and submitting
 artifacts:
   command:
     - commands/gt/land-branch.md

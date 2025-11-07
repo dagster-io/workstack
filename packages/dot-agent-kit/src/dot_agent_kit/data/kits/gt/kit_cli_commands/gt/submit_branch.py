@@ -170,15 +170,9 @@ def squash_commits() -> bool:
 
 
 def amend_commit(message: str) -> bool:
-    """Amend the current commit with new message using heredoc pattern. Returns True on success."""
-    # Use heredoc pattern for multi-line messages
-    cmd = f"""git commit --amend -m "$(cat <<'EOF'
-{message}
-EOF
-)"
-"""
+    """Amend the current commit with new message. Returns True on success."""
     result = subprocess.run(
-        ["sh", "-c", cmd],
+        ["git", "commit", "--amend", "-m", message],
         capture_output=True,
         text=True,
         check=False,

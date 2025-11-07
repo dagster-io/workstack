@@ -74,15 +74,6 @@ Kit CLI commands follow two distinct patterns based on complexity:
 
 **Canonical example**: [`submit_branch.py`](../src/dot_agent_kit/data/kits/gt/kit_cli_commands/gt/submit_branch.py)
 
-**Structure**:
-
-1. Define separate Result/Error dataclasses for each phase
-2. Implement helper functions (shared across phases)
-3. Implement `execute_pre_analysis()` function
-4. Implement `execute_post_analysis()` function
-5. Add Click group with subcommands for each phase
-6. Output JSON from each phase
-
 **Characteristics**:
 
 - Pre-analysis: Gather context and prepare (squash commits, collect diffs)
@@ -110,103 +101,17 @@ Kit CLI commands follow two distinct patterns based on complexity:
 
 ### Structure Overview
 
-All kit CLI commands follow this organization:
-
-1. **Comprehensive docstring**: Purpose, usage, exit codes, error types, examples
-2. **Type definitions**: Error type literals using `Literal[]`
-3. **Dataclasses**: Separate Result and Error classes with typed fields
-4. **Helper functions**: One per operation, LBYL pattern, return `bool | str | None`
-5. **Execute function**: Orchestrates workflow, returns Result or Error
-6. **Click wrapper**: Command or group with JSON output
-
 See [`update_pr.py`](../src/dot_agent_kit/data/kits/gt/kit_cli_commands/gt/update_pr.py) for single-phase implementation and [`submit_branch.py`](../src/dot_agent_kit/data/kits/gt/kit_cli_commands/gt/submit_branch.py) for two-phase implementation.
-
-### Key Patterns
-
-**Dataclasses**:
-
-- Result: `success: bool` (always True), operation fields, context fields, human-readable `message`
-- Error: `success: bool` (always False), `error_type: ErrorType` literal, `message: str`, `details: dict[str, str]`
-
-See lines 47-66 in `update_pr.py` for examples.
-
-**Helper Functions (LBYL)**:
-
-- One function per operation
-- Use `subprocess.run(..., check=False)` and check returncode explicitly
-- Return simple types: `bool`, `str | None`, `tuple | None`
-- Return `None` or `False` on failure, not exceptions
-
-See lines 69-161 in `update_pr.py` for examples.
-
-**Execute Function**:
-
-- Orchestrates workflow by calling helpers in sequence
-- Checks each result (LBYL)
-- Returns Result on success, Error on failure
-- Builds human-readable messages
-
-See lines 163-234 in `update_pr.py` for single-phase example, lines 221-349 in `submit_branch.py` for two-phase example.
-
-**Click Wrappers**:
-
-- Single command (`@click.command()`) for single-phase
-- Command group (`@click.group()`) with subcommands for two-phase
-- JSON output via `click.echo(json.dumps(asdict(result), indent=2))`
-- Exit with code 1 on error
-
-See lines 237-256 in `update_pr.py` for single-phase, lines 352-417 in `submit_branch.py` for two-phase.
-
-### JSON Output Format
 
 All commands output JSON with `success` field and appropriate data/error fields. See canonical examples for complete structure.
 
 ## Registration
 
-Kit CLI commands must be registered in the kit's `kit.yaml` file:
-
-```yaml
-name: my-kit
-version: 0.1.0
-description: Description of the kit
-license: MIT
-kit_cli_commands:
-  - name: my-command
-    path: kit_cli_commands/my-kit/my_command.py
-    description: Brief description of what this command does
-artifacts:
-  command:
-    - commands/my-kit/my-command.md
-```
-
-**Key points**:
-
-- `name`: Command name (kebab-case)
-- `path`: Relative path from kit root to Python file
-- `description`: Brief description shown in help text
-- Must be in `kit_cli_commands` section (not `artifacts`)
+Kit CLI commands must be registered in the kit's `kit.yaml` file in the `kit_cli_commands` section (not `artifacts`). See existing kit.yaml files for examples.
 
 ## Testing
 
-**Follow the canonical testing pattern in [`test_update_pr.py`](../tests/kits/gt/test_update_pr.py)** - it demonstrates all patterns below.
-
-### Test Organization
-
-Tests should have three classes:
-
-1. **TestHelperFunctions**: Test each helper function (success and failure cases)
-2. **TestExecuteCommand**: Test execute function workflow (success and all error types)
-3. **TestCommandCLI**: Test Click command (JSON output, exit codes)
-
-### Key Testing Patterns
-
-- **Mock subprocess.run**: Use `unittest.mock.patch` and `subprocess.CompletedProcess`
-- **Fixtures**: `runner: CliRunner` and `mock_subprocess: Mock`
-- **Coverage**: Test success path and all error types
-- **JSON validation**: Parse and verify structure in CLI tests
-- **Exit codes**: Verify 0 for success, 1 for errors
-
-See [`test_update_pr.py`](../tests/kits/gt/test_update_pr.py) lines 25-593 for complete examples.
+**Follow the canonical testing pattern in [`test_update_pr.py`](../tests/kits/gt/test_update_pr.py)** - it demonstrates all required patterns.
 
 ## Step-by-Step Workflow
 
@@ -216,16 +121,7 @@ Location: `packages/dot-agent-kit/src/dot_agent_kit/data/kits/<kit-name>/kit_cli
 
 ### 2. Implement Following Canonical Pattern
 
-Study and follow the structure from [`update_pr.py`](../src/dot_agent_kit/data/kits/gt/kit_cli_commands/gt/update_pr.py):
-
-- Comprehensive docstring (lines 1-30)
-- Error type literals (lines 39-44)
-- Result/Error dataclasses (lines 47-66)
-- Helper functions (lines 69-161)
-- Execute function (lines 163-234)
-- Click wrapper (lines 237-256)
-
-For two-phase pattern, see [`submit_branch.py`](../src/dot_agent_kit/data/kits/gt/kit_cli_commands/gt/submit_branch.py) lines 1-417.
+Study and follow the structure from [`update_pr.py`](../src/dot_agent_kit/data/kits/gt/kit_cli_commands/gt/update_pr.py) for single-phase or [`submit_branch.py`](../src/dot_agent_kit/data/kits/gt/kit_cli_commands/gt/submit_branch.py) for two-phase.
 
 ### 3. Register in kit.yaml
 
@@ -255,10 +151,10 @@ uv run dot-agent run <kit> --help
 
 Common helper function patterns are demonstrated in the canonical examples:
 
-- **Git state checks**: `get_current_branch()`, `has_uncommitted_changes()` - see lines 69-112 in `update_pr.py`
-- **GitHub PR operations**: `check_pr_exists()` - see lines 84-97 in `update_pr.py`
-- **Git operations**: `stage_and_commit_changes()`, `restack_branch()`, `submit_updates()` - see lines 115-161 in `update_pr.py`
-- **Graphite operations**: `get_parent_branch()`, `count_commits_in_branch()`, `squash_commits()` - see lines 127-169 in `submit_branch.py`
+- **Git state checks**: `get_current_branch()`, `has_uncommitted_changes()` - see `update_pr.py`
+- **GitHub PR operations**: `check_pr_exists()` - see `update_pr.py`
+- **Git operations**: `stage_and_commit_changes()`, `restack_branch()`, `submit_updates()` - see `update_pr.py`
+- **Graphite operations**: `get_parent_branch()`, `count_commits_in_branch()`, `squash_commits()` - see `submit_branch.py`
 
 All follow the LBYL pattern: check returncode, return simple types, no exceptions.
 

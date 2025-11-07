@@ -193,6 +193,7 @@ dot-agent run gt submit-branch post-analysis \
 
 **Error handling:**
 If the command fails (exit code 1), parse the error JSON. The error will include:
+
 - `error_type`: Category of error (submit_merged_parent, submit_diverged, submit_failed, amend_failed, pr_update_failed)
 - `message`: Human-readable description of what failed
 - `details`: Additional context including stdout, stderr, branch_name, and other relevant information
@@ -234,11 +235,13 @@ After submission, provide a clear summary using bullet list formatting:
 ## Error Handling
 
 When any step fails, the kit CLI command will return a JSON error with:
+
 - `error_type`: Categorizes the failure (e.g., submit_merged_parent, submit_diverged, submit_failed)
 - `message`: Human-readable description
 - `details`: Command output (stdout/stderr) and other context
 
 **Your role:**
+
 1. Parse the error JSON to understand what failed
 2. Examine the error type and command output (stdout/stderr in details)
 3. Provide clear, helpful guidance based on the specific situation
@@ -252,7 +255,7 @@ When any step fails, the kit CLI command will return a JSON error with:
 
 When parent branches have been merged but those commits aren't in the local `main` yet:
 
-```
+````
 **Issue:** Your parent branches were merged, but those commits aren't in your local `main` yet. Graphite won't let you submit until the stack is clean.
 
 **Solution:**
@@ -263,14 +266,16 @@ gt sync -f
 
 # If you're using workstack
 workstack sync -f
-```
+````
 
 This will:
+
 1. Pull latest `main` with the merged commits
 2. Rebase your entire stack onto the updated `main`
 3. Clean up any merged branches
 
 **Alternative** (if you just want to update this worktree):
+
 ```bash
 # Just update main in this worktree
 git checkout main && git pull origin main
@@ -278,11 +283,13 @@ gt repo sync
 ```
 
 The `-f` flag forces the sync even if there are conflicts or merged branches.
+
 ```
 
 ## Example Output
 
 ```
+
 Checking for uncommitted changes...
 ✓ Committed uncommitted changes
 
@@ -306,11 +313,13 @@ Running post-analysis phase...
 - **PR Updated**: #235
 - **URL**: https://app.graphite.dev/github/pr/dagster-io/workstack/235
 - **Branch**: optimize-submit-branch
+
 ```
 
 ### Example Commit Message Structure (Compressed Format)
 
 ```
+
 Add tree visualization to gt branches command
 
 Introduces hierarchical tree display for Graphite branch stacks, improving visualization of branch relationships and stack navigation.
@@ -334,4 +343,7 @@ Replaces flat list format with ASCII tree visualization (├──, └──) f
 ## Critical Notes
 
 - Performance untested with 100+ branch stacks - may need optimization for large repositories
+
+```
+
 ```

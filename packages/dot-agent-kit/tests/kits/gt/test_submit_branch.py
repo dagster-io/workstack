@@ -439,7 +439,10 @@ class TestPostAnalysisExecution:
                     args=["gt", "submit", "--publish", "--no-interactive", "--restack"],
                     returncode=1,
                     stdout="",
-                    stderr="WARNING: PR for the following branch has already been merged but the merged commits are not contained in the latest trunk branch main.",
+                    stderr=(
+                        "WARNING: PR for the following branch has already been merged "
+                        "but the merged commits are not contained in the latest trunk branch main."
+                    ),
                 ),
             ]
 

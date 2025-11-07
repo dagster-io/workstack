@@ -15,3 +15,4 @@ artifacts:
     - commands/gt/submit-branch.md
   skill:
     - skills/gt-graphite/SKILL.md
+    - skills/gt-graphite/references/gt-reference.md

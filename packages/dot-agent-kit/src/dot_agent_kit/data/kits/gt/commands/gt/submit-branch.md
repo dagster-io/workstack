@@ -26,58 +26,68 @@ Automatically create a git commit with a helpful summary message and submit the 
 /submit-branch
 ```
 
-## Graphite Command Execution
+## Two-Phase Workflow
 
-**ALWAYS use the `gt-runner` agent for ALL gt commands in this workflow:**
+This command uses a two-phase kit CLI command to optimize execution:
 
-```
-Task(
-    subagent_type="gt-runner",
-    description="[Short description]",
-    prompt="Execute: gt [command]"
-)
-```
+**Phase 1 (pre-analysis)**: Python kit command handles mechanical git/gt operations
 
-This ensures:
+- Check uncommitted changes
+- Commit if needed
+- Run gt squash
+- Return branch info as JSON
 
-- Consistent execution and error handling
-- Proper output parsing without polluting context
-- Cost-optimized execution with Haiku model
+**Phase 2 (post-analysis)**: Python kit command handles submission and PR metadata
+
+- Amend commit with AI-generated message
+- Submit branch with gt
+- Update PR metadata if exists
+- Return PR info as JSON
+
+**Between phases**: Claude performs AI-driven analysis with git-diff-summarizer agent
+
+This separation ensures:
+
+- Speed: Python handles ~8 git/gh/gt operations faster than Claude
+- Token efficiency: Mechanical operations don't pollute context
+- Testability: Python logic can be unit tested
+- Reusability: Helper functions available for other commands
 
 ## Implementation Steps
 
 When this command is invoked:
 
-### 1. Commit Outstanding Changes
+### 1. Execute Pre-Analysis Phase
 
-Check for uncommitted changes and commit them:
-
-```bash
-git status
-```
-
-If there are uncommitted changes:
+Run the kit CLI command to handle mechanical git operations:
 
 ```bash
-git add .
-git commit -m "WIP: Prepare for submission"
+dot-agent run gt submit-branch pre-analysis
 ```
 
-### 2. Squash All Commits
+**What this does:**
 
-Combine all commits in the current branch into a single commit using gt-runner:
+- Gets current branch and parent branch
+- Checks for uncommitted changes
+- If uncommitted: commits with "WIP: Prepare for submission"
+- Runs `gt squash` to consolidate commits
+- Returns JSON with branch info and status
 
-```
-Task(subagent_type="gt-runner", description="Squash commits", prompt="Execute: gt squash")
-```
+**Parse the JSON output** to get:
 
-This creates a single commit containing all changes from the branch.
+- `branch_name`: Current branch name
+- `parent_branch`: Parent branch name
+- `had_uncommitted_changes`: Whether changes were committed
+- `message`: Human-readable status message
 
-### 3. Analyze Changes and Update Commit Message
+**Error handling:**
+If the command fails (exit code 1), parse the error JSON and report to user. Do not continue.
+
+### 2. Analyze Changes and Craft Commit Message
 
 Use the git-diff-summarizer agent to analyze all changes and create a comprehensive commit message:
 
-**Step 3a: Invoke git-diff-summarizer**
+**Step 2a: Invoke git-diff-summarizer**
 
 ```
 Task(
@@ -99,7 +109,7 @@ COMPRESSION RULES:
 )
 ```
 
-**Step 3b: Extract Analysis from Agent Output**
+**Step 2b: Extract Analysis from Agent Output**
 
 The agent returns a compressed analysis with these sections:
 
@@ -108,7 +118,7 @@ The agent returns a compressed analysis with these sections:
 - Key Changes (max 5 bullets, focusing on what and why)
 - Critical Notes (only if necessary - breaking changes, security issues)
 
-**Step 3c: Craft Brief Top Summary**
+**Step 2c: Craft Brief Top Summary**
 
 Create a concise 2-4 sentence summary paragraph that:
 
@@ -116,7 +126,7 @@ Create a concise 2-4 sentence summary paragraph that:
 - Highlights the key changes briefly
 - Uses clear, professional language
 
-**Step 3d: Construct Commit Message**
+**Step 2d: Construct Commit Message**
 
 Use the compressed output directly from the git-diff-summarizer agent:
 
@@ -128,100 +138,57 @@ Use the compressed output directly from the git-diff-summarizer agent:
 
 The message should be concise (typically 15-30 lines total) with the essential information preserved.
 
-**Step 3e: Amend Commit**
+### 3. Execute Post-Analysis Phase
 
-Update the squashed commit using a HEREDOC to preserve formatting:
+Run the kit CLI command to handle submission and PR metadata:
 
-```bash
-git commit --amend -m "$(cat <<'EOF'
-[Brief summary paragraph]
+**Step 3a: Extract commit message components**
 
-## Summary
-[Agent's compressed summary]
-
-## Files Changed
-[Agent's grouped file changes]
-
-## Key Changes
-[Agent's 3-5 key bullet points]
-
-## Critical Notes
-[Only if provided by agent - breaking changes or warnings]
-EOF
-)"
-```
-
-**Important:**
-
-- **DO NOT include any Claude Code footer or co-authorship attribution**
-- Preserve all markdown formatting from the agent output
-- Ensure proper line breaks between sections
-- The brief summary at top should be manually crafted, not copied from agent
-
-### 4. Submit Branch
-
-Submit the current branch as a PR using gt-runner:
-
-```
-Task(subagent_type="gt-runner", description="Submit branch", prompt="Execute: gt submit --publish --no-interactive --restack")
-```
-
-Flags explained:
-
-- `--publish`: Publish any draft PRs
-- `--no-interactive`: Skip interactive prompts and automatically sync commit message to PR description
-- `--restack`: Restack branches before submitting. If there are conflicts, output the branch names that could not be restacked
-
-**If `gt submit` fails with "updated remotely" or "Must sync" error:**
-
-1. **STOP immediately** - do not retry or attempt to resolve automatically
-2. Report to the user that the branch has diverged from remote
-3. Show the error message from `gt submit`
-4. Exit the command and let the user manually resolve the divergence with `gt sync` or force push
-
-**Rationale**: Branch divergence requires user decision about how to resolve (sync, force push, or manual merge). The command should not make this decision automatically
-
-### 5. Update PR Body and Title (If PR Already Exists)
-
-After `gt submit` completes, check if a PR already exists and update its body and title to match the new commit message:
-
-**Step 5a: Check if PR exists for current branch**
-
-```bash
-gh pr view --json number,title,url
-```
-
-If the command succeeds (exit code 0), a PR exists for this branch.
-
-**Step 5b: Extract title and body from commit message**
-
-Parse the commit message created in Step 3:
+Parse the commit message created in Step 2:
 
 - **Title**: First line of the commit message (the brief summary)
-- **Body**: Everything after the first line (the compressed analysis - same content as commit message)
+- **Body**: Everything after the first line (full commit message including all sections)
 
-**Step 5c: Update PR title and body**
-
-Use the `gh` CLI to update the PR:
+**Step 3b: Call post-analysis command**
 
 ```bash
-gh pr edit --title "$(cat <<'EOF'
-[First line of commit message]
-EOF
-)" --body "$(cat <<'EOF'
-[Everything after first line of commit message]
-EOF
-)"
+dot-agent run gt submit-branch post-analysis \
+  --commit-message "[Full commit message from Step 2]" \
+  --pr-title "[First line of commit message]" \
+  --pr-body "[Full commit message body - everything after first line]"
 ```
 
-**Important:**
+**What this does:**
 
-- Use HEREDOC to preserve formatting in both title and body
-- The PR body should include the compressed analysis (same as commit message body)
-- If `gh pr view` fails (no PR exists), skip this step - the PR will be created by `gt submit`
-- If `gh pr edit` fails, report the error but don't fail the entire command
+- Amends the commit with the AI-generated commit message
+- Runs `gt submit --publish --no-interactive --restack`
+- Checks if PR exists
+- If PR exists: updates title and body with `gh pr edit`
+- Returns JSON with PR number, URL, and status
 
-### 6. Show Results
+**Parse the JSON output** to get:
+
+- `pr_number`: PR number (may be null)
+- `pr_url`: PR URL
+- `branch_name`: Branch name
+- `message`: Human-readable status message
+
+**Error handling:**
+If the command fails (exit code 1), parse the error JSON:
+
+- If error_type is "submit_failed" and message contains "updated remotely" or "Must sync":
+  - Report that the branch has diverged from remote
+  - Explain that user needs to manually resolve with `gt sync`
+  - Exit the command
+- For other errors, report the error message and exit
+
+**Important notes:**
+
+- The PR body should contain the full commit message (all sections: Summary, Files Changed, Key Changes, Critical Notes)
+- Use proper escaping for the commit message when passing as command argument
+- Branch divergence requires user decision - do not attempt automatic resolution
+
+### 4. Show Results
 
 After submission, provide a clear summary using bullet list formatting:
 
@@ -241,11 +208,11 @@ After submission, provide a clear summary using bullet list formatting:
 
 ## Important Notes
 
+- **Two-phase workflow**: Pre-analysis (kit CLI) → AI analysis (Claude) → Post-analysis (kit CLI)
 - **ALWAYS use git-diff-summarizer agent** for analyzing changes and creating commit messages
-- **Commit early**: Stage and commit all changes before squashing
-- **Squash before analyzing**: Run `gt squash` before using git-diff-summarizer so it analyzes the complete branch changes
 - **NO Claude footer**: Do not add any attribution or generated-by footer to the final commit message
-- If there are no changes to commit at the start, report to the user and exit
+- **Error handling**: Parse JSON errors from kit commands and report appropriately
+- **Branch divergence**: Let user manually resolve with `gt sync` - do not attempt automatic resolution
 
 ## Error Handling
 
@@ -272,29 +239,26 @@ If any other step fails:
 ## Example Output
 
 ```
-Checking for uncommitted changes...
-✓ Found changes in 3 files
-✓ Committed as "WIP: Prepare for submission"
-
-Squashing commits...
-✓ 3 commits squashed into 1
+Running pre-analysis phase...
+✓ Pre-analysis complete for branch: optimize-submit-branch
+✓ Committed uncommitted changes and squashed commits
 
 Analyzing changes with git-diff-summarizer...
 ✓ Analysis complete with detailed breakdown
-✓ Crafting brief summary
-✓ Updating commit message with full analysis
 
-Submitting branch...
-✓ Branch submitted
+Crafting commit message...
+✓ Commit message crafted
 
-Updating PR metadata...
-✓ PR #123 title and body updated to match commit message
+Running post-analysis phase...
+✓ Amended commit with AI-generated message
+✓ Submitted branch successfully
+✓ Updated PR #235 title and body to match commit message
 
 ## ✅ Branch Submitted Successfully
 
-- **PR Updated**: #123
-- **URL**: https://github.com/owner/repo/pull/123
-- **Branch**: gt-tree-format
+- **PR Updated**: #235
+- **URL**: https://app.graphite.dev/github/pr/dagster-io/workstack/235
+- **Branch**: optimize-submit-branch
 ```
 
 ### Example Commit Message Structure (Compressed Format)

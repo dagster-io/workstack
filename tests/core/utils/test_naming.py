@@ -17,14 +17,18 @@ from workstack.cli.commands.create import (
         ("@@weird!!name??", "weird-name"),
         # Test truncation to 30 characters
         ("a" * 35, "a" * 30),
-        ("this-is-a-very-long-branch-name-that-exceeds-thirty-characters", "this-is-a-very-long-branch-nam"),
+        (
+            "this-is-a-very-long-branch-name-that-exceeds-thirty-characters",
+            "this-is-a-very-long-branch-nam",
+        ),
         ("exactly-30-characters-long-ok", "exactly-30-characters-long-ok"),
         ("31-characters-long-should-be-ab", "31-characters-long-should-be-a"),  # Truncates to 30
         ("short", "short"),
         # Test truncation with trailing hyphen removal
         ("branch-name-with-dash-at-position-30-", "branch-name-with-dash-at-posit"),
         # Test truncation that ends with hyphen is stripped
-        ("12345678901234567890123456789-extra", "12345678901234567890123456789"),  # Hyphen at position 30 stripped
+        # Hyphen at position 30 stripped
+        ("12345678901234567890123456789-extra", "12345678901234567890123456789"),
     ],
 )
 def test_sanitize_branch_component(value: str, expected: str) -> None:

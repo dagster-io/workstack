@@ -1,6 +1,6 @@
 """Tests for KitCliCommandDefinition and KitManifest validation."""
 
-from dot_agent_kit.models.kit import KitCliCommandDefinition, KitManifest
+from dot_agent_kit.models.kit import KitCliCommandDefinition
 
 
 def test_validate_valid_definition() -> None:

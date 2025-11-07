@@ -1,6 +1,6 @@
 name: gt
 version: 0.1.0
-description: Graphite stack management with landing and submission commands
+description: Graphite stack management with submission and PR update commands
 license: MIT
 kit_cli_commands:
   - name: submit-branch

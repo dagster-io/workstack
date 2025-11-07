@@ -22,6 +22,7 @@ artifacts = [
     ".claude/commands/gt/land-branch.md",
     ".claude/commands/gt/submit-branch.md",
     ".claude/skills/gt-graphite/SKILL.md",
+    ".claude/skills/gt-graphite/references/gt-reference.md",
 ]
 
 [kits.dignified-python]

@@ -28,8 +28,7 @@
 | `pytest` or `uv run pytest`                 | → Use runner agent (Task tool) for running tests                                            |
 | `ruff` or `uv run ruff`                     | → Use runner agent (Task tool) for linting/formatting                                       |
 | Prettier formatting issues                  | → Use `make prettier` (via runner agent with Task tool)                                     |
-| Summarizing code changes in a branch        | → Use git-diff-summarizer agent (Task tool) for branch analysis                             |
-| Updating commit message with code changes   | → Use git-diff-summarizer agent (Task tool) to analyze first                                |
+| Submitting a branch with Graphite           | → Use /gt:submit-branch command (delegates to gt-branch-submitter agent)                    |
 | `gt ...` or user says "gt" or "graphite"    | → Use runner agent (Task tool, devrun subagent) for execution, graphite skill for knowledge |
 | 4+ levels of indentation                    | → Extract helper functions                                                                  |
 | Code in `__init__.py`                       | → Keep empty or docstring-only (except package entry points)                                |
@@ -63,17 +62,17 @@
 
 **ALWAYS use the Task tool with appropriate agent for:**
 
-| Tool Type                                       | Agent                 | Example                                                                 |
-| ----------------------------------------------- | --------------------- | ----------------------------------------------------------------------- |
-| `make`, `pytest`, `pyright`, `ruff`, `prettier` | `runner`              | Task(subagent_type="runner", prompt="Execute: make all-ci")             |
-| `gt` commands (Graphite)                        | `runner`              | Task(subagent_type="runner", prompt="Execute: gt submit")               |
-| Branch/diff analysis                            | `git-diff-summarizer` | Task(subagent_type="git-diff-summarizer", prompt="Analyze all changes") |
+| Tool Type                                       | Agent                 | Example                                                                            |
+| ----------------------------------------------- | --------------------- | ---------------------------------------------------------------------------------- |
+| `make`, `pytest`, `pyright`, `ruff`, `prettier` | `runner`              | Task(subagent_type="runner", prompt="Execute: make all-ci")                        |
+| `gt` commands (Graphite)                        | `runner`              | Task(subagent_type="runner", prompt="Execute: gt submit")                          |
+| Graphite branch submission workflow             | `gt-branch-submitter` | Task(subagent_type="gt-branch-submitter", prompt="Execute submit-branch workflow") |
 
 ### Agent Invocation Pattern
 
 ```python
 Task(
-    subagent_type="runner",  # or "git-diff-summarizer", etc.
+    subagent_type="runner",  # or "gt-branch-submitter", etc.
     description="Brief description of task",
     prompt="Execute: <command>"
 )
@@ -92,12 +91,12 @@ Task(subagent_type="runner", description="Run CI checks", prompt="Execute: make 
 Task(subagent_type="runner", description="Run tests", prompt="Execute: uv run pytest tests/")
 Task(subagent_type="runner", description="Submit branch", prompt="Execute: gt submit --publish")
 
-# ❌ WRONG: Manual git diff parsing
-result = Bash("git diff main...HEAD")
-# ...parse output manually...
+# ❌ WRONG: Manual branch submission
+result = Bash("gt submit --publish")
+# ...manually handle commit messages and PR metadata...
 
-# ✅ CORRECT: Use git-diff-summarizer agent
-Task(subagent_type="git-diff-summarizer", prompt="Analyze all changes in this branch")
+# ✅ CORRECT: Use gt-branch-submitter agent via /gt:submit-branch command
+# The command delegates to the agent automatically
 ```
 
 ### What Can Use Bash Directly?

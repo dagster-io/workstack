@@ -1,10 +1,10 @@
 ---
-description: Open and display the implementation plan from .PLAN.md in current directory
+description: View and display the implementation plan from .PLAN.md in current directory
 ---
 
-# /open-plan
+# /view-plan
 
-This command opens and displays the `.PLAN.md` file from the current directory, providing quick access to your implementation plan.
+This command views and displays the `.PLAN.md` file from the current directory, providing quick access to your implementation plan.
 
 ## What This Command Does
 
@@ -17,7 +17,7 @@ When you run this command, it will:
 ## Usage
 
 ```bash
-/open-plan
+/view-plan
 ```
 
 ## Prerequisites
@@ -36,7 +36,7 @@ When you run this command, it will:
 
 ## Agent Instructions
 
-You are executing the `/open-plan` command. Follow these steps:
+You are executing the `/view-plan` command. Follow these steps:
 
 ### Step 1: Check if .PLAN.md Exists
 

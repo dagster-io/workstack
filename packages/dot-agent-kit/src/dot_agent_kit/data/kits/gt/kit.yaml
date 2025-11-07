@@ -13,6 +13,7 @@ artifacts:
   command:
     - commands/gt/land-branch.md
     - commands/gt/submit-branch.md
+    - commands/gt/view-pr.md
   skill:
     - skills/gt-graphite/SKILL.md
     - skills/gt-graphite/references/gt-reference.md

@@ -27,6 +27,7 @@ Before exploring the codebase or making changes, familiarize yourself with these
 ### When to Consult the Glossary
 
 Check [docs/GLOSSARY.md](docs/GLOSSARY.md) when you need to:
+
 - Understand the difference between MANAGED and LOCAL artifacts
 - Learn about the data models (InstalledArtifact, ArtifactSource, etc.)
 - See examples of common filtering and query patterns

@@ -3,7 +3,9 @@
 ## Core Concepts
 
 ### Artifact
+
 A file that extends Claude Code functionality. Artifacts live in `.claude/` directories and come in five types:
+
 - **Skill**: Specialized knowledge or workflow guidance (`.claude/skills/`)
 - **Command**: Slash command that expands to a prompt (`.claude/commands/`)
 - **Agent**: Autonomous subprocess for complex tasks (`.claude/agents/`)
@@ -11,6 +13,7 @@ A file that extends Claude Code functionality. Artifacts live in `.claude/` dire
 - **Doc**: Reference documentation (`.claude/docs/`)
 
 ### Kit
+
 A packaged collection of related artifacts that can be installed, updated, and removed as a unit. Kits are tracked in `dot-agent.toml` and can include any combination of artifact types.
 
 ### Artifact Source
@@ -18,6 +21,7 @@ A packaged collection of related artifacts that can be installed, updated, and r
 Artifacts have one of two sources:
 
 #### MANAGED
+
 - Installed from a kit
 - Tracked in `dot-agent.toml` under `[kits.<kit-id>].artifacts`
 - Has `kit_id` and `kit_version` metadata
@@ -25,6 +29,7 @@ Artifacts have one of two sources:
 - Example: A skill installed via `dot-agent kit install devrun`
 
 #### LOCAL
+
 - Created manually by the user
 - Not associated with any kit
 - Not tracked in `dot-agent.toml`
@@ -36,11 +41,13 @@ Artifacts have one of two sources:
 Artifacts can be installed at two levels:
 
 #### USER Level
+
 - Global artifacts in `~/.claude/`
 - Available to all projects for the current user
 - Useful for personal preferences and frequently used artifacts
 
 #### PROJECT Level
+
 - Project-specific artifacts in `./.claude/`
 - Only available within the current project
 - Useful for team-shared configurations and project-specific workflows
@@ -48,6 +55,7 @@ Artifacts can be installed at two levels:
 ## Configuration
 
 ### dot-agent.toml
+
 Project configuration file that tracks installed kits and their artifacts. Structure:
 
 ```toml
@@ -62,7 +70,9 @@ artifacts = [
 ```
 
 ### InstalledKit
+
 Data model representing a kit entry in `dot-agent.toml`:
+
 - `kit_id`: Unique identifier for the kit
 - `source_type`: Where the kit came from (bundled, git, etc.)
 - `version`: Semantic version of the kit
@@ -71,6 +81,7 @@ Data model representing a kit entry in `dot-agent.toml`:
 ## Data Models
 
 ### InstalledArtifact
+
 Represents an artifact with full metadata:
 
 ```python
@@ -87,6 +98,7 @@ class InstalledArtifact:
 ```
 
 ### ArtifactSource (Enum)
+
 ```python
 class ArtifactSource(Enum):
     MANAGED = "managed"  # Tracked in dot-agent.toml
@@ -94,6 +106,7 @@ class ArtifactSource(Enum):
 ```
 
 ### ArtifactLevel (Enum)
+
 ```python
 class ArtifactLevel(Enum):
     USER = "user"        # Installed in ~/.claude/
@@ -103,6 +116,7 @@ class ArtifactLevel(Enum):
 ## Common Patterns
 
 ### Checking if an artifact is from a kit
+
 ```python
 if artifact.source == ArtifactSource.MANAGED:
     # This artifact was installed from a kit
@@ -110,12 +124,14 @@ if artifact.source == ArtifactSource.MANAGED:
 ```
 
 ### Filtering artifacts by level
+
 ```python
 user_artifacts = [a for a in artifacts if a.level == ArtifactLevel.USER]
 project_artifacts = [a for a in artifacts if a.level == ArtifactLevel.PROJECT]
 ```
 
 ### Finding all artifacts from a specific kit
+
 ```python
 kit_artifacts = [a for a in artifacts if a.kit_id == "devrun"]
 ```

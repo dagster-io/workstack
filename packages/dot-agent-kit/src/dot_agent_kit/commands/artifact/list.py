@@ -10,7 +10,6 @@ from dot_agent_kit.models.artifact import ArtifactLevel, ArtifactSource
 from dot_agent_kit.models.config import ProjectConfig
 from dot_agent_kit.repositories.filesystem_artifact_repository import FilesystemArtifactRepository
 
-
 # Reusable option decorators
 level_filter_options = [
     click.option(
@@ -55,7 +54,9 @@ managed_option = click.option(
 )
 
 
-def _list_artifacts_impl(level_filter: str, artifact_type: str | None, verbose: bool, managed: bool) -> None:
+def _list_artifacts_impl(
+    level_filter: str, artifact_type: str | None, verbose: bool, managed: bool
+) -> None:
     """Implementation of list command logic."""
     # Get paths
     user_path = Path.home() / ".claude"
@@ -114,7 +115,9 @@ def _apply_options(func):
 
 @click.command(name="list")
 @_apply_options
-def list_artifacts(level_filter: str, artifact_type: str | None, verbose: bool, managed: bool) -> None:
+def list_artifacts(
+    level_filter: str, artifact_type: str | None, verbose: bool, managed: bool
+) -> None:
     """List installed Claude artifacts (alias: ls)."""
     _list_artifacts_impl(level_filter, artifact_type, verbose, managed)
 

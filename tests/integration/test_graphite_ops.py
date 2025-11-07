@@ -143,6 +143,56 @@ def test_graphite_ops_get_all_branches_json_error():
             ops.get_all_branches(mock_git_ops, Path("/test"))
 
 
+def test_graphite_ops_get_all_branches_caches_results():
+    """Test that get_all_branches() caches results for repeated calls."""
+    mock_git_ops = MagicMock()
+    mock_git_ops.get_git_common_dir.return_value = Path("/test/.git")
+
+    # Mock get_branch_head to return commit SHAs with call tracking
+    commit_map = {
+        "main": "abc123",
+        "feature-1": "def456",
+        "feature-1-sub": "ghi789",
+        "feature-2": "jkl012",
+    }
+    mock_git_ops.get_branch_head.side_effect = lambda repo_root, branch_name: commit_map.get(
+        branch_name
+    )
+
+    fixture_data = load_fixture("graphite/graphite_cache_persist.json")
+
+    with (
+        patch.object(Path, "exists", return_value=True) as mock_exists,
+        patch.object(Path, "read_text", return_value=fixture_data) as mock_read_text,
+    ):
+        ops = RealGraphiteOps()
+
+        # First call - should read from file and call git
+        result1 = ops.get_all_branches(mock_git_ops, Path("/test"))
+
+        # Second call - should use cache
+        result2 = ops.get_all_branches(mock_git_ops, Path("/test"))
+
+    # Verify caching: file operations called only once
+    assert mock_exists.call_count == 1, (
+        "exists() should only be called once (cached on second call)"
+    )
+    assert mock_read_text.call_count == 1, (
+        "read_text() should only be called once (cached on second call)"
+    )
+
+    # Verify git operations called once per branch (4 branches in fixture)
+    expected_git_calls = 4
+    assert mock_git_ops.get_branch_head.call_count == expected_git_calls, (
+        f"get_branch_head() should be called {expected_git_calls} times "
+        "(once per branch, cached on second call)"
+    )
+
+    # Verify both calls return same result
+    assert result1 == result2
+    assert len(result1) == 4
+
+
 def test_graphite_url_construction():
     """Test Graphite URL construction."""
     ops = RealGraphiteOps()

@@ -34,8 +34,8 @@ def mock_subprocess() -> Mock:
 class TestPreAnalysisExecution:
     """Tests for pre-analysis phase execution logic."""
 
-    def test_pre_analysis_with_uncommitted_changes(self, mock_subprocess: Mock) -> None:
-        """Test pre-analysis when uncommitted changes exist."""
+    def test_pre_analysis_with_multiple_commits(self, mock_subprocess: Mock) -> None:
+        """Test pre-analysis when multiple commits exist (should squash)."""
         with patch("subprocess.run", mock_subprocess) as mock_run:
             # Mock git branch --show-current
             mock_run.side_effect = [
@@ -52,25 +52,11 @@ class TestPreAnalysisExecution:
                     stdout="main",
                     stderr="",
                 ),
-                # Mock git status --porcelain (has changes)
+                # Mock git rev-list --count (3 commits)
                 subprocess.CompletedProcess(
-                    args=["git", "status", "--porcelain"],
+                    args=["git", "rev-list", "--count", "main..HEAD"],
                     returncode=0,
-                    stdout="M file.py\nA new_file.py",
-                    stderr="",
-                ),
-                # Mock git add .
-                subprocess.CompletedProcess(
-                    args=["git", "add", "."],
-                    returncode=0,
-                    stdout="",
-                    stderr="",
-                ),
-                # Mock git commit
-                subprocess.CompletedProcess(
-                    args=["git", "commit", "-m", "WIP: Prepare for submission"],
-                    returncode=0,
-                    stdout="",
+                    stdout="3",
                     stderr="",
                 ),
                 # Mock gt squash
@@ -88,11 +74,12 @@ class TestPreAnalysisExecution:
             assert result.success is True
             assert result.branch_name == "feature-branch"
             assert result.parent_branch == "main"
-            assert result.had_uncommitted_changes is True
-            assert "Committed uncommitted changes" in result.message
+            assert result.commit_count == 3
+            assert result.squashed is True
+            assert "Squashed 3 commits" in result.message
 
-    def test_pre_analysis_no_uncommitted_changes(self, mock_subprocess: Mock) -> None:
-        """Test pre-analysis when no uncommitted changes exist."""
+    def test_pre_analysis_single_commit(self, mock_subprocess: Mock) -> None:
+        """Test pre-analysis when single commit exists (should not squash)."""
         with patch("subprocess.run", mock_subprocess) as mock_run:
             mock_run.side_effect = [
                 # Mock git branch --show-current
@@ -109,28 +96,23 @@ class TestPreAnalysisExecution:
                     stdout="main",
                     stderr="",
                 ),
-                # Mock git status --porcelain (no changes)
+                # Mock git rev-list --count (1 commit)
                 subprocess.CompletedProcess(
-                    args=["git", "status", "--porcelain"],
+                    args=["git", "rev-list", "--count", "main..HEAD"],
                     returncode=0,
-                    stdout="",
+                    stdout="1",
                     stderr="",
                 ),
-                # Mock gt squash
-                subprocess.CompletedProcess(
-                    args=["gt", "squash"],
-                    returncode=0,
-                    stdout="",
-                    stderr="",
-                ),
+                # No gt squash call for single commit
             ]
 
             result = execute_pre_analysis()
 
             assert isinstance(result, PreAnalysisResult)
             assert result.success is True
-            assert result.had_uncommitted_changes is False
-            assert "Squashed commits" in result.message
+            assert result.commit_count == 1
+            assert result.squashed is False
+            assert "Single commit, no squash needed" in result.message
 
     def test_pre_analysis_no_branch(self, mock_subprocess: Mock) -> None:
         """Test pre-analysis when current branch cannot be determined."""
@@ -174,8 +156,8 @@ class TestPreAnalysisExecution:
             assert result.success is False
             assert result.error_type == "no_parent"
 
-    def test_pre_analysis_commit_fails(self, mock_subprocess: Mock) -> None:
-        """Test pre-analysis when git commit fails."""
+    def test_pre_analysis_no_commits(self, mock_subprocess: Mock) -> None:
+        """Test pre-analysis when no commits exist in branch."""
         with patch("subprocess.run", mock_subprocess) as mock_run:
             mock_run.side_effect = [
                 # Mock git branch --show-current
@@ -192,26 +174,12 @@ class TestPreAnalysisExecution:
                     stdout="main",
                     stderr="",
                 ),
-                # Mock git status --porcelain (has changes)
+                # Mock git rev-list --count (0 commits)
                 subprocess.CompletedProcess(
-                    args=["git", "status", "--porcelain"],
+                    args=["git", "rev-list", "--count", "main..HEAD"],
                     returncode=0,
-                    stdout="M file.py",
+                    stdout="0",
                     stderr="",
-                ),
-                # Mock git add .
-                subprocess.CompletedProcess(
-                    args=["git", "add", "."],
-                    returncode=0,
-                    stdout="",
-                    stderr="",
-                ),
-                # Mock git commit (fails)
-                subprocess.CompletedProcess(
-                    args=["git", "commit", "-m", "WIP: Prepare for submission"],
-                    returncode=1,
-                    stdout="",
-                    stderr="Nothing to commit",
                 ),
             ]
 
@@ -219,7 +187,7 @@ class TestPreAnalysisExecution:
 
             assert isinstance(result, PreAnalysisError)
             assert result.success is False
-            assert result.error_type == "commit_failed"
+            assert result.error_type == "no_commits"
 
     def test_pre_analysis_squash_fails(self, mock_subprocess: Mock) -> None:
         """Test pre-analysis when gt squash fails."""
@@ -239,11 +207,11 @@ class TestPreAnalysisExecution:
                     stdout="main",
                     stderr="",
                 ),
-                # Mock git status --porcelain (no changes)
+                # Mock git rev-list --count (2 commits, should trigger squash)
                 subprocess.CompletedProcess(
-                    args=["git", "status", "--porcelain"],
+                    args=["git", "rev-list", "--count", "main..HEAD"],
                     returncode=0,
-                    stdout="",
+                    stdout="2",
                     stderr="",
                 ),
                 # Mock gt squash (fails)
@@ -518,15 +486,9 @@ class TestPreAnalysisCommand:
                     stderr="",
                 ),
                 subprocess.CompletedProcess(
-                    args=["git", "status", "--porcelain"],
+                    args=["git", "rev-list", "--count", "main..HEAD"],
                     returncode=0,
-                    stdout="",
-                    stderr="",
-                ),
-                subprocess.CompletedProcess(
-                    args=["gt", "squash"],
-                    returncode=0,
-                    stdout="",
+                    stdout="1",
                     stderr="",
                 ),
             ]
@@ -538,6 +500,8 @@ class TestPreAnalysisCommand:
             assert data["success"] is True
             assert data["branch_name"] == "feature-branch"
             assert data["parent_branch"] == "main"
+            assert data["commit_count"] == 1
+            assert data["squashed"] is False
 
     def test_pre_analysis_command_error(self, runner: CliRunner, mock_subprocess: Mock) -> None:
         """Test pre-analysis command returns error JSON and exit code 1 on failure."""

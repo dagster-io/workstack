@@ -5,10 +5,9 @@ leaving only AI-driven analysis in the Claude command layer. It operates in two 
 
 Phase 1 (pre-analysis):
 1. Get current branch and parent branch
-2. Check for uncommitted changes
-3. If uncommitted: commit with "WIP: Prepare for submission"
-4. Run gt squash to consolidate commits
-5. Return branch info for AI analysis
+2. Count commits in branch (compared to parent)
+3. Run gt squash to consolidate commits (only if 2+ commits)
+4. Return branch info for AI analysis
 
 Phase 2 (post-analysis):
 1. Amend commit with AI-generated commit message
@@ -31,7 +30,7 @@ Exit Codes:
 Error Types:
     - no_branch: Could not determine current branch
     - no_parent: Could not determine parent branch
-    - commit_failed: Failed to commit changes
+    - no_commits: No commits found in branch
     - squash_failed: Failed to squash commits
     - amend_failed: Failed to amend commit
     - submit_failed: Failed to submit branch
@@ -56,7 +55,7 @@ import click
 PreAnalysisErrorType = Literal[
     "no_branch",
     "no_parent",
-    "commit_failed",
+    "no_commits",
     "squash_failed",
 ]
 
@@ -74,7 +73,8 @@ class PreAnalysisResult:
     success: bool
     branch_name: str
     parent_branch: str
-    had_uncommitted_changes: bool
+    commit_count: int
+    squashed: bool
     message: str
 
 
@@ -139,43 +139,23 @@ def get_parent_branch() -> str | None:
     return result.stdout.strip()
 
 
-def check_uncommitted_changes() -> bool:
-    """Check if there are uncommitted changes. Returns True if changes exist."""
+def count_commits_in_branch(parent_branch: str) -> int:
+    """Count commits in current branch compared to parent. Returns 0 if command fails."""
     result = subprocess.run(
-        ["git", "status", "--porcelain"],
+        ["git", "rev-list", "--count", f"{parent_branch}..HEAD"],
         capture_output=True,
         text=True,
         check=False,
     )
 
     if result.returncode != 0:
-        return False
+        return 0
 
-    return bool(result.stdout.strip())
+    count_str = result.stdout.strip()
+    if not count_str:
+        return 0
 
-
-def commit_changes(message: str) -> bool:
-    """Stage all changes and commit with provided message. Returns True on success."""
-    # Stage all changes
-    add_result = subprocess.run(
-        ["git", "add", "."],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if add_result.returncode != 0:
-        return False
-
-    # Commit with message
-    commit_result = subprocess.run(
-        ["git", "commit", "-m", message],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    return commit_result.returncode == 0
+    return int(count_str)
 
 
 def squash_commits() -> bool:
@@ -269,48 +249,49 @@ def execute_pre_analysis() -> PreAnalysisResult | PreAnalysisError:
             details={"branch_name": branch_name},
         )
 
-    # Step 3: Check for uncommitted changes
-    had_uncommitted_changes = check_uncommitted_changes()
+    # Step 3: Count commits in branch
+    commit_count = count_commits_in_branch(parent_branch)
 
-    # Step 4: If uncommitted changes exist, commit them
-    if had_uncommitted_changes:
-        if not commit_changes("WIP: Prepare for submission"):
-            return PreAnalysisError(
-                success=False,
-                error_type="commit_failed",
-                message="Failed to commit uncommitted changes",
-                details={
-                    "branch_name": branch_name,
-                    "had_uncommitted_changes": str(had_uncommitted_changes),
-                },
-            )
-
-    # Step 5: Run gt squash
-    if not squash_commits():
+    if commit_count == 0:
         return PreAnalysisError(
             success=False,
-            error_type="squash_failed",
-            message="Failed to squash commits",
-            details={
-                "branch_name": branch_name,
-                "had_uncommitted_changes": str(had_uncommitted_changes),
-            },
+            error_type="no_commits",
+            message=f"No commits found in branch: {branch_name}",
+            details={"branch_name": branch_name, "parent_branch": parent_branch},
         )
 
+    # Step 4: Run gt squash only if 2+ commits
+    squashed = False
+    if commit_count >= 2:
+        if not squash_commits():
+            return PreAnalysisError(
+                success=False,
+                error_type="squash_failed",
+                message="Failed to squash commits",
+                details={
+                    "branch_name": branch_name,
+                    "commit_count": str(commit_count),
+                },
+            )
+        squashed = True
+
     # Build success message
-    if had_uncommitted_changes:
+    if squashed:
         message = (
             f"Pre-analysis complete for branch: {branch_name}\n"
-            f"Committed uncommitted changes and squashed commits"
+            f"Squashed {commit_count} commits into 1"
         )
     else:
-        message = f"Pre-analysis complete for branch: {branch_name}\nSquashed commits"
+        message = (
+            f"Pre-analysis complete for branch: {branch_name}\nSingle commit, no squash needed"
+        )
 
     return PreAnalysisResult(
         success=True,
         branch_name=branch_name,
         parent_branch=parent_branch,
-        had_uncommitted_changes=had_uncommitted_changes,
+        commit_count=commit_count,
+        squashed=squashed,
         message=message,
     )
 

@@ -9,8 +9,8 @@ Automatically create a git commit with a helpful summary message and submit the 
 
 ## What This Command Does
 
-1. **Commit outstanding changes**: Stage and commit any uncommitted changes with a temporary message
-2. **Squash commits**: Run `gt squash` to combine all commits in the current branch
+1. **Check for uncommitted changes**: Check working tree and commit any uncommitted changes (via Claude permissions system)
+2. **Squash commits**: Run `gt squash` to combine all commits in the current branch (only if 2+ commits)
 3. **Analyze and update message**: Use git-diff-summarizer agent to analyze all changes and create a comprehensive commit message
 4. **Submit branch**: Run `gt submit --publish` to create/update PR for the current branch
 5. **Update PR metadata**: If PR already exists, sync PR title and body with the new commit message
@@ -32,9 +32,9 @@ This command uses a two-phase kit CLI command to optimize execution:
 
 **Phase 1 (pre-analysis)**: Python kit command handles mechanical git/gt operations
 
-- Check uncommitted changes
-- Commit if needed
-- Run gt squash
+- Get current branch and parent branch
+- Count commits in branch
+- Run gt squash (only if 2+ commits)
 - Return branch info as JSON
 
 **Phase 2 (post-analysis)**: Python kit command handles submission and PR metadata
@@ -57,6 +57,24 @@ This separation ensures:
 
 When this command is invoked:
 
+### 0. Check for Uncommitted Changes and Commit
+
+**Before running pre-analysis**, check if there are uncommitted changes and commit them:
+
+```bash
+git status --porcelain
+```
+
+**If output is non-empty** (uncommitted changes exist):
+
+```bash
+git add . && git commit -m "WIP: Prepare for submission"
+```
+
+**Important**: This step runs through Claude's Bash tool so it goes through the permissions system. The user will see what files are being committed.
+
+**If no uncommitted changes**, proceed directly to Step 1.
+
 ### 1. Execute Pre-Analysis Phase
 
 Run the kit CLI command to handle mechanical git operations:
@@ -68,16 +86,16 @@ dot-agent run gt submit-branch pre-analysis
 **What this does:**
 
 - Gets current branch and parent branch
-- Checks for uncommitted changes
-- If uncommitted: commits with "WIP: Prepare for submission"
-- Runs `gt squash` to consolidate commits
+- Counts commits in the branch (compared to parent)
+- Runs `gt squash` to consolidate commits (only if 2+ commits exist)
 - Returns JSON with branch info and status
 
 **Parse the JSON output** to get:
 
 - `branch_name`: Current branch name
 - `parent_branch`: Parent branch name
-- `had_uncommitted_changes`: Whether changes were committed
+- `commit_count`: Number of commits in branch
+- `squashed`: Whether squashing occurred (true if 2+ commits, false if 1 commit)
 - `message`: Human-readable status message
 
 **Error handling:**
@@ -239,9 +257,12 @@ If any other step fails:
 ## Example Output
 
 ```
+Checking for uncommitted changes...
+✓ Committed uncommitted changes
+
 Running pre-analysis phase...
 ✓ Pre-analysis complete for branch: optimize-submit-branch
-✓ Committed uncommitted changes and squashed commits
+✓ Squashed 3 commits into 1
 
 Analyzing changes with git-diff-summarizer...
 ✓ Analysis complete with detailed breakdown

@@ -1,8 +1,8 @@
 ---
-description: Open current branch's PR in Graphite web interface
+description: View current branch's PR in Graphite web interface
 ---
 
-# Open PR in Graphite
+# View PR in Graphite
 
 Opens the current branch's pull request in the Graphite web interface using your default browser.
 
@@ -15,7 +15,7 @@ Opens the current branch's pull request in the Graphite web interface using your
 ## Usage
 
 ```bash
-/gt:open-pr
+/gt:view-pr
 ```
 
 ## Implementation

@@ -28,11 +28,11 @@ def consolidate_cmd(ctx: WorkstackContext, force: bool, dry_run: bool) -> None:
     The command will:
     1. Get the current branch's Graphite stack
     2. Find all other worktrees containing branches from that stack
-    3. Check for uncommitted changes in ALL worktrees (including current)
+    3. Check for uncommitted changes in worktrees containing stack branches
     4. Remove the identified worktrees (preserving the current one)
 
     Safety checks:
-    - Aborts if ANY worktree has uncommitted changes
+    - Aborts if any worktree in the stack has uncommitted changes
     - Preserves the current worktree
     - Shows preview before removal (unless --force)
 
@@ -78,9 +78,11 @@ def consolidate_cmd(ctx: WorkstackContext, force: bool, dry_run: bool) -> None:
     # Get all worktrees
     all_worktrees = ctx.git_ops.list_worktrees(repo.root)
 
-    # Check ALL worktrees for uncommitted changes (including current)
+    # Check worktrees in stack for uncommitted changes (including current)
     worktrees_with_changes: list[Path] = []
     for wt in all_worktrees:
+        if wt.branch not in stack_branches:
+            continue
         if wt.path.exists() and ctx.git_ops.has_uncommitted_changes(wt.path):
             worktrees_with_changes.append(wt.path)
 

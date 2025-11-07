@@ -235,6 +235,48 @@ class GraphiteOps(ABC):
         """
         ...
 
+    def get_parent_branch(self, git_ops: GitOps, repo_root: Path, branch: str) -> str | None:
+        """Get parent branch name for a given branch.
+
+        This is a convenience helper that calls get_all_branches() and extracts
+        the parent relationship. All implementations inherit this method.
+
+        Args:
+            git_ops: GitOps instance for accessing git common directory
+            repo_root: Repository root directory
+            branch: Name of the branch to get the parent for
+
+        Returns:
+            Parent branch name, or None if:
+            - Branch is not tracked by graphite
+            - Branch has no parent (is trunk)
+        """
+        all_branches = self.get_all_branches(git_ops, repo_root)
+        if branch not in all_branches:
+            return None
+        return all_branches[branch].parent
+
+    def get_child_branches(self, git_ops: GitOps, repo_root: Path, branch: str) -> list[str]:
+        """Get child branch names for a given branch.
+
+        This is a convenience helper that calls get_all_branches() and extracts
+        the children relationship. All implementations inherit this method.
+
+        Args:
+            git_ops: GitOps instance for accessing git common directory
+            repo_root: Repository root directory
+            branch: Name of the branch to get children for
+
+        Returns:
+            List of child branch names, or empty list if:
+            - Branch is not tracked by graphite
+            - Branch has no children
+        """
+        all_branches = self.get_all_branches(git_ops, repo_root)
+        if branch not in all_branches:
+            return []
+        return all_branches[branch].children
+
 
 class RealGraphiteOps(GraphiteOps):
     """Production implementation using gt CLI.

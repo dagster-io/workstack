@@ -1190,16 +1190,31 @@ def test_from_current_branch_with_main_in_use_prefers_graphite_parent() -> None:
         config_toml.write_text("", encoding="utf-8")
 
         # Set up Graphite stack: main -> feature-1 -> feature-2
-        from tests.test_utils.graphite_helpers import setup_graphite_stack
+        from workstack.core.branch_metadata import BranchMetadata
 
-        setup_graphite_stack(
-            git_dir,
-            {
-                "main": {"parent": None, "children": ["feature-1"], "is_trunk": True},
-                "feature-1": {"parent": "main", "children": ["feature-2"]},
-                "feature-2": {"parent": "feature-1", "children": []},
-            },
-        )
+        graphite_branches = {
+            "main": BranchMetadata(
+                name="main",
+                parent=None,
+                children=["feature-1"],
+                is_trunk=True,
+                commit_sha="abc123",
+            ),
+            "feature-1": BranchMetadata(
+                name="feature-1",
+                parent="main",
+                children=["feature-2"],
+                is_trunk=False,
+                commit_sha="def456",
+            ),
+            "feature-2": BranchMetadata(
+                name="feature-2",
+                parent="feature-1",
+                children=[],
+                is_trunk=False,
+                commit_sha="ghi789",
+            ),
+        }
 
         git_ops = FakeGitOps(
             worktrees={
@@ -1228,7 +1243,7 @@ def test_from_current_branch_with_main_in_use_prefers_graphite_parent() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
+            graphite_ops=FakeGraphiteOps(branches=graphite_branches),
             shell_ops=FakeShellOps(),
             dry_run=False,
         )
@@ -1274,16 +1289,31 @@ def test_from_current_branch_with_parent_in_use_falls_back_to_detached_head() ->
         config_toml.write_text("", encoding="utf-8")
 
         # Set up Graphite stack: main -> feature-1 -> feature-2
-        from tests.test_utils.graphite_helpers import setup_graphite_stack
+        from workstack.core.branch_metadata import BranchMetadata
 
-        setup_graphite_stack(
-            git_dir,
-            {
-                "main": {"parent": None, "children": ["feature-1"], "is_trunk": True},
-                "feature-1": {"parent": "main", "children": ["feature-2"]},
-                "feature-2": {"parent": "feature-1", "children": []},
-            },
-        )
+        graphite_branches = {
+            "main": BranchMetadata(
+                name="main",
+                parent=None,
+                children=["feature-1"],
+                is_trunk=True,
+                commit_sha="abc123",
+            ),
+            "feature-1": BranchMetadata(
+                name="feature-1",
+                parent="main",
+                children=["feature-2"],
+                is_trunk=False,
+                commit_sha="def456",
+            ),
+            "feature-2": BranchMetadata(
+                name="feature-2",
+                parent="feature-1",
+                children=[],
+                is_trunk=False,
+                commit_sha="ghi789",
+            ),
+        }
 
         git_ops = FakeGitOps(
             worktrees={
@@ -1315,7 +1345,7 @@ def test_from_current_branch_with_parent_in_use_falls_back_to_detached_head() ->
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
+            graphite_ops=FakeGraphiteOps(branches=graphite_branches),
             shell_ops=FakeShellOps(),
             dry_run=False,
         )
@@ -1360,14 +1390,17 @@ def test_from_current_branch_without_graphite_falls_back_to_main() -> None:
         config_toml.write_text("", encoding="utf-8")
 
         # Set up minimal Graphite stack (standalone-feature not in it)
-        from tests.test_utils.graphite_helpers import setup_graphite_stack
+        from workstack.core.branch_metadata import BranchMetadata
 
-        setup_graphite_stack(
-            git_dir,
-            {
-                "main": {"parent": None, "children": [], "is_trunk": True},
-            },
-        )
+        graphite_branches = {
+            "main": BranchMetadata(
+                name="main",
+                parent=None,
+                children=[],
+                is_trunk=True,
+                commit_sha="abc123",
+            ),
+        }
 
         git_ops = FakeGitOps(
             worktrees={
@@ -1396,7 +1429,7 @@ def test_from_current_branch_without_graphite_falls_back_to_main() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
+            graphite_ops=FakeGraphiteOps(branches=graphite_branches),
             shell_ops=FakeShellOps(),
             dry_run=False,
         )
@@ -1438,14 +1471,17 @@ def test_from_current_branch_no_graphite_main_in_use_uses_detached_head() -> Non
         config_toml.write_text("", encoding="utf-8")
 
         # Set up minimal Graphite stack (standalone-feature not in it)
-        from tests.test_utils.graphite_helpers import setup_graphite_stack
+        from workstack.core.branch_metadata import BranchMetadata
 
-        setup_graphite_stack(
-            git_dir,
-            {
-                "main": {"parent": None, "children": [], "is_trunk": True},
-            },
-        )
+        graphite_branches = {
+            "main": BranchMetadata(
+                name="main",
+                parent=None,
+                children=[],
+                is_trunk=True,
+                commit_sha="abc123",
+            ),
+        }
 
         git_ops = FakeGitOps(
             worktrees={
@@ -1474,7 +1510,7 @@ def test_from_current_branch_no_graphite_main_in_use_uses_detached_head() -> Non
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
+            graphite_ops=FakeGraphiteOps(branches=graphite_branches),
             shell_ops=FakeShellOps(),
             dry_run=False,
         )

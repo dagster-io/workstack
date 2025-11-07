@@ -10,7 +10,7 @@ from workstack.cli.core import (
     worktree_path_for,
 )
 from workstack.cli.debug import debug_log
-from workstack.cli.graphite import find_worktree_for_branch, get_child_branches, get_parent_branch
+from workstack.cli.graphite import find_worktree_for_branch
 from workstack.cli.shell_utils import write_script_to_temp
 from workstack.core.context import WorkstackContext, create_context
 from workstack.core.gitops import WorktreeInfo
@@ -136,7 +136,7 @@ def _resolve_up_navigation(
         SystemExit: If navigation fails (at top of stack or target has no worktree)
     """
     # Navigate up to child branch
-    children = get_child_branches(ctx, repo.root, current_branch)
+    children = ctx.graphite_ops.get_child_branches(ctx.git_ops, repo.root, current_branch)
     if not children:
         click.echo("Already at the top of the stack (no child branches)", err=True)
         raise SystemExit(1)
@@ -183,7 +183,7 @@ def _resolve_down_navigation(
         SystemExit: If navigation fails (at bottom of stack or target has no worktree)
     """
     # Navigate down to parent branch
-    parent_branch = get_parent_branch(ctx, repo.root, current_branch)
+    parent_branch = ctx.graphite_ops.get_parent_branch(ctx.git_ops, repo.root, current_branch)
     if parent_branch is None:
         # Check if we're already on trunk
         trunk_branch = ctx.git_ops.detect_default_branch(repo.root)

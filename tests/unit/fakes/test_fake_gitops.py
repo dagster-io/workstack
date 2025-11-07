@@ -170,9 +170,7 @@ def test_fake_gitops_has_uncommitted_changes_untracked() -> None:
 def test_fake_gitops_has_uncommitted_changes_all_types() -> None:
     """Test has_uncommitted_changes with all types of changes."""
     cwd = Path("/repo")
-    git_ops = FakeGitOps(
-        file_statuses={cwd: (["staged.txt"], ["modified.txt"], ["untracked.txt"])}
-    )
+    git_ops = FakeGitOps(file_statuses={cwd: (["staged.txt"], ["modified.txt"], ["untracked.txt"])})
 
     assert git_ops.has_uncommitted_changes(cwd)
 

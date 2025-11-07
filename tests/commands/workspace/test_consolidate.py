@@ -4,7 +4,6 @@ This file tests the consolidate command which removes worktrees containing
 branches from the current Graphite stack.
 """
 
-import json
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -24,6 +23,7 @@ def _create_test_context(
     worktrees: dict[Path, list[WorktreeInfo]],
     current_branch: str,
     workstacks_root: Path,
+    graphite_ops: FakeGraphiteOps,
     *,
     file_statuses: dict[Path, tuple[list[str], list[str], list[str]]] | None = None,
 ) -> WorkstackContext:
@@ -34,6 +34,7 @@ def _create_test_context(
         worktrees: Map of repo_root to list of WorktreeInfo objects
         current_branch: Current branch name
         workstacks_root: Root directory for workstacks
+        graphite_ops: FakeGraphiteOps configured with branch stack data
         file_statuses: Optional mapping of worktree paths to (staged, modified, untracked) files
 
     Returns:
@@ -51,7 +52,7 @@ def _create_test_context(
         git_ops=git_ops,
         global_config_ops=FakeGlobalConfigOps(workstacks_root=workstacks_root, use_graphite=True),
         github_ops=FakeGitHubOps(),
-        graphite_ops=FakeGraphiteOps(),
+        graphite_ops=graphite_ops,
         shell_ops=FakeShellOps(),
         dry_run=False,
     )
@@ -63,24 +64,14 @@ def test_consolidate_no_other_worktrees() -> None:
     with runner.isolated_filesystem():
         cwd = Path.cwd()
         workstacks_root = cwd / "workstacks"
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
 
-        # Create graphite cache with stack
-        cache_file = git_dir / ".graphite_cache_persist"
-        cache_content = {
-            "branches": [
-                ["main", {"validationResult": "TRUNK", "children": ["feature-1"]}],
-                ["feature-1", {"parentBranchName": "main", "children": ["feature-2"]}],
-                ["feature-2", {"parentBranchName": "feature-1", "children": []}],
-            ]
-        }
-        cache_file.write_text(json.dumps(cache_content), encoding="utf-8")
+        # Configure graphite with stack (main -> feature-1 -> feature-2)
+        graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
 
         # Current worktree only (on feature-2)
         worktrees = {cwd: [WorktreeInfo(path=cwd, branch="feature-2")]}
 
-        test_ctx = _create_test_context(cwd, worktrees, "feature-2", workstacks_root)
+        test_ctx = _create_test_context(cwd, worktrees, "feature-2", workstacks_root, graphite_ops)
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
@@ -93,19 +84,9 @@ def test_consolidate_removes_other_stack_worktrees() -> None:
     with runner.isolated_filesystem():
         cwd = Path.cwd()
         workstacks_root = cwd / "workstacks"
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
 
-        # Create graphite cache
-        cache_file = git_dir / ".graphite_cache_persist"
-        cache_content = {
-            "branches": [
-                ["main", {"validationResult": "TRUNK", "children": ["feature-1"]}],
-                ["feature-1", {"parentBranchName": "main", "children": ["feature-2"]}],
-                ["feature-2", {"parentBranchName": "feature-1", "children": []}],
-            ]
-        }
-        cache_file.write_text(json.dumps(cache_content), encoding="utf-8")
+        # Configure graphite with stack (main -> feature-1 -> feature-2)
+        graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
 
         # Create worktree directories
         repo_name = cwd.name
@@ -123,7 +104,7 @@ def test_consolidate_removes_other_stack_worktrees() -> None:
             ]
         }
 
-        test_ctx = _create_test_context(cwd, worktrees, "feature-2", workstacks_root)
+        test_ctx = _create_test_context(cwd, worktrees, "feature-2", workstacks_root, graphite_ops)
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
@@ -139,18 +120,9 @@ def test_consolidate_preserves_current_worktree() -> None:
     with runner.isolated_filesystem():
         cwd = Path.cwd()
         workstacks_root = cwd / "workstacks"
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
 
-        # Create graphite cache
-        cache_file = git_dir / ".graphite_cache_persist"
-        cache_content = {
-            "branches": [
-                ["main", {"validationResult": "TRUNK", "children": ["feature-1"]}],
-                ["feature-1", {"parentBranchName": "main", "children": []}],
-            ]
-        }
-        cache_file.write_text(json.dumps(cache_content), encoding="utf-8")
+        # Configure graphite with stack (main -> feature-1)
+        graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create other worktree
         repo_name = cwd.name
@@ -165,7 +137,7 @@ def test_consolidate_preserves_current_worktree() -> None:
             ]
         }
 
-        test_ctx = _create_test_context(cwd, worktrees, "feature-1", workstacks_root)
+        test_ctx = _create_test_context(cwd, worktrees, "feature-1", workstacks_root, graphite_ops)
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
@@ -180,18 +152,9 @@ def test_consolidate_aborts_on_uncommitted_changes() -> None:
     with runner.isolated_filesystem():
         cwd = Path.cwd()
         workstacks_root = cwd / "workstacks"
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
 
-        # Create graphite cache
-        cache_file = git_dir / ".graphite_cache_persist"
-        cache_content = {
-            "branches": [
-                ["main", {"validationResult": "TRUNK", "children": ["feature-1"]}],
-                ["feature-1", {"parentBranchName": "main", "children": []}],
-            ]
-        }
-        cache_file.write_text(json.dumps(cache_content), encoding="utf-8")
+        # Configure graphite with stack (main -> feature-1)
+        graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree with uncommitted changes marker
         repo_name = cwd.name
@@ -213,7 +176,7 @@ def test_consolidate_aborts_on_uncommitted_changes() -> None:
         }
 
         test_ctx = _create_test_context(
-            cwd, worktrees, "feature-1", workstacks_root, file_statuses=file_statuses
+            cwd, worktrees, "feature-1", workstacks_root, graphite_ops, file_statuses=file_statuses
         )
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
@@ -228,18 +191,9 @@ def test_consolidate_dry_run_shows_preview() -> None:
     with runner.isolated_filesystem():
         cwd = Path.cwd()
         workstacks_root = cwd / "workstacks"
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
 
-        # Create graphite cache
-        cache_file = git_dir / ".graphite_cache_persist"
-        cache_content = {
-            "branches": [
-                ["main", {"validationResult": "TRUNK", "children": ["feature-1"]}],
-                ["feature-1", {"parentBranchName": "main", "children": []}],
-            ]
-        }
-        cache_file.write_text(json.dumps(cache_content), encoding="utf-8")
+        # Configure graphite with stack (main -> feature-1)
+        graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree
         repo_name = cwd.name
@@ -253,7 +207,7 @@ def test_consolidate_dry_run_shows_preview() -> None:
             ]
         }
 
-        test_ctx = _create_test_context(cwd, worktrees, "feature-1", workstacks_root)
+        test_ctx = _create_test_context(cwd, worktrees, "feature-1", workstacks_root, graphite_ops)
         result = runner.invoke(cli, ["consolidate", "--dry-run"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
@@ -269,18 +223,9 @@ def test_consolidate_confirmation_prompt() -> None:
     with runner.isolated_filesystem():
         cwd = Path.cwd()
         workstacks_root = cwd / "workstacks"
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
 
-        # Create graphite cache
-        cache_file = git_dir / ".graphite_cache_persist"
-        cache_content = {
-            "branches": [
-                ["main", {"validationResult": "TRUNK", "children": ["feature-1"]}],
-                ["feature-1", {"parentBranchName": "main", "children": []}],
-            ]
-        }
-        cache_file.write_text(json.dumps(cache_content), encoding="utf-8")
+        # Configure graphite with stack (main -> feature-1)
+        graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree
         repo_name = cwd.name
@@ -294,7 +239,7 @@ def test_consolidate_confirmation_prompt() -> None:
             ]
         }
 
-        test_ctx = _create_test_context(cwd, worktrees, "feature-1", workstacks_root)
+        test_ctx = _create_test_context(cwd, worktrees, "feature-1", workstacks_root, graphite_ops)
 
         # Test saying "no" to prompt
         result = runner.invoke(cli, ["consolidate"], input="n\n", obj=test_ctx)
@@ -308,37 +253,33 @@ def test_consolidate_confirmation_prompt() -> None:
 def test_consolidate_detached_head_error() -> None:
     """Test consolidate aborts if current worktree is in detached HEAD state."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
+    cwd = Path("/fake/repo")
+    workstacks_root = cwd / "workstacks"
+    git_dir = cwd / ".git"
 
-        # Current worktree with detached HEAD (None branch)
-        worktrees = {cwd: [WorktreeInfo(path=cwd, branch=None)]}
+    # Current worktree with detached HEAD (None branch)
+    worktrees = {cwd: [WorktreeInfo(path=cwd, branch=None)]}
 
-        # Create context with no current branch
-        git_ops = FakeGitOps(
-            worktrees=worktrees,
-            git_common_dirs={cwd: git_dir},
-            current_branches={cwd: None},
-        )
+    # Create context with no current branch
+    git_ops = FakeGitOps(
+        worktrees=worktrees,
+        git_common_dirs={cwd: git_dir},
+        current_branches={cwd: None},
+    )
 
-        test_ctx = WorkstackContext(
-            git_ops=git_ops,
-            global_config_ops=FakeGlobalConfigOps(
-                workstacks_root=workstacks_root, use_graphite=True
-            ),
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
-            dry_run=False,
-        )
+    test_ctx = WorkstackContext(
+        git_ops=git_ops,
+        global_config_ops=FakeGlobalConfigOps(workstacks_root=workstacks_root, use_graphite=True),
+        github_ops=FakeGitHubOps(),
+        graphite_ops=FakeGraphiteOps(),
+        shell_ops=FakeShellOps(),
+        dry_run=False,
+    )
 
-        result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
+    result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
-        assert result.exit_code == 1
-        assert "detached HEAD state" in result.output
+    assert result.exit_code == 1
+    assert "detached HEAD state" in result.output
 
 
 def test_consolidate_not_tracked_by_graphite() -> None:
@@ -347,22 +288,14 @@ def test_consolidate_not_tracked_by_graphite() -> None:
     with runner.isolated_filesystem():
         cwd = Path.cwd()
         workstacks_root = cwd / "workstacks"
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
 
-        # Create graphite cache WITHOUT the current branch
-        cache_file = git_dir / ".graphite_cache_persist"
-        cache_content = {
-            "branches": [
-                ["main", {"validationResult": "TRUNK", "children": []}],
-            ]
-        }
-        cache_file.write_text(json.dumps(cache_content), encoding="utf-8")
+        # Configure graphite with only main branch (feature-1 is not tracked)
+        graphite_ops = FakeGraphiteOps(stacks={"main": ["main"]})
 
-        # Current branch is "feature-1" but not in cache
+        # Current branch is "feature-1" but not in Graphite
         worktrees = {cwd: [WorktreeInfo(path=cwd, branch="feature-1")]}
 
-        test_ctx = _create_test_context(cwd, worktrees, "feature-1", workstacks_root)
+        test_ctx = _create_test_context(cwd, worktrees, "feature-1", workstacks_root, graphite_ops)
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
         assert result.exit_code == 1
@@ -375,19 +308,10 @@ def test_consolidate_skips_non_stack_worktrees() -> None:
     with runner.isolated_filesystem():
         cwd = Path.cwd()
         workstacks_root = cwd / "workstacks"
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
 
-        # Create graphite cache with two separate stacks
-        cache_file = git_dir / ".graphite_cache_persist"
-        cache_content = {
-            "branches": [
-                ["main", {"validationResult": "TRUNK", "children": ["stack-a", "stack-b"]}],
-                ["stack-a", {"parentBranchName": "main", "children": []}],
-                ["stack-b", {"parentBranchName": "main", "children": []}],
-            ]
-        }
-        cache_file.write_text(json.dumps(cache_content), encoding="utf-8")
+        # Configure graphite with stack-a only (main -> stack-a)
+        # stack-b is a separate branch not in this stack
+        graphite_ops = FakeGraphiteOps(stacks={"stack-a": ["main", "stack-a"]})
 
         # Create worktrees
         repo_name = cwd.name
@@ -405,7 +329,7 @@ def test_consolidate_skips_non_stack_worktrees() -> None:
             ]
         }
 
-        test_ctx = _create_test_context(cwd, worktrees, "stack-a", workstacks_root)
+        test_ctx = _create_test_context(cwd, worktrees, "stack-a", workstacks_root, graphite_ops)
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output

@@ -3,7 +3,7 @@ from pathlib import Path
 import click
 
 from workstack.cli.core import discover_repo_context, ensure_workstacks_dir
-from workstack.cli.graphite import _load_graphite_cache, get_branch_stack
+from workstack.cli.graphite import _load_graphite_cache
 from workstack.core.context import WorkstackContext
 from workstack.core.github_ops import PullRequestInfo
 
@@ -269,7 +269,7 @@ def _display_branch_stack(
         cache_data: Pre-loaded graphite cache data (if None, loaded from disk)
         prs: Mapping of branch names to PR information (if None, no PR info displayed)
     """
-    stack = get_branch_stack(ctx, repo_root, branch)
+    stack = ctx.graphite_ops.get_branch_stack(ctx.git_ops, repo_root, branch)
     if not stack:
         return
 

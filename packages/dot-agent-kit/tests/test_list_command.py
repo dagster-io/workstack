@@ -79,8 +79,8 @@ def test_list_commands(capsys: CaptureFixture[str]) -> None:
         [
             InstalledArtifact(
                 artifact_type="command",
-                artifact_name="gt:submit-branch",
-                file_path=Path("commands/gt/submit-branch.md"),
+                artifact_name="gt:land-branch",
+                file_path=Path("commands/gt/land-branch.md"),
                 source=ArtifactSource.MANAGED,
                 level=ArtifactLevel.PROJECT,
                 kit_id="gt",
@@ -102,8 +102,8 @@ def test_list_commands(capsys: CaptureFixture[str]) -> None:
     # Check for kit-grouped format
     assert "[gt] (v0.1.0):" in captured.out
     assert "Commands (1):" in captured.out
-    assert "gt:submit-branch" in captured.out
-    assert "commands/gt/submit-branch.md" in captured.out
+    assert "gt:land-branch" in captured.out
+    assert "commands/gt/land-branch.md" in captured.out
     assert "[local]:" in captured.out
     assert "codex-review" in captured.out
     assert "commands/codex-review.md" in captured.out

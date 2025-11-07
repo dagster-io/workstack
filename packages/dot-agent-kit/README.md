@@ -56,7 +56,7 @@ There are two distinct types of commands in the kit system:
    - Defined in kit directories as Python scripts
    - Listed in `kit.yaml` under `kit_cli_commands`
    - Execute Python code directly
-   - Example: `dot-agent run gt submit-branch`
+   - Example: `dot-agent run gt land-branch`
 
 This distinction is important when creating kits and defining their capabilities in `kit.yaml`.
 

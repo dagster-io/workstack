@@ -35,6 +35,9 @@ test: test-workstack-dev test-dot-agent-kit
 check:
 	uv run dot-agent check
 
+land:
+	dot-agent run gt land-branch && workstack sync -f
+
 all-ci: lint format-check prettier-check pyright test check
 
 # Clean build artifacts

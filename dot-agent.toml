@@ -19,6 +19,7 @@ kit_id = "gt"
 source_type = "bundled"
 version = "0.1.0"
 artifacts = [
+    ".claude/commands/gt/land-branch.md",
     ".claude/commands/gt/submit-branch.md",
     ".claude/commands/gt/update-pr.md",
     ".claude/commands/gt/view-pr.md",

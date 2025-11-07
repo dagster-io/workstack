@@ -244,8 +244,8 @@ def compare_artifact_lists(
     for _artifact_type, paths in manifest_artifacts.items():
         for path in paths:
             # Transform manifest path to installed path
-            # Manifest: "commands/gt/submit-branch.md"
-            # Installed: ".claude/commands/gt/submit-branch.md"
+            # Manifest: "commands/gt/land-branch.md"
+            # Installed: ".claude/commands/gt/land-branch.md"
             full_path = f".claude/{path}"
             manifest_paths.add(full_path)
 

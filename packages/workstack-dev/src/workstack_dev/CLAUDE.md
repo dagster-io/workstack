@@ -17,14 +17,14 @@ commands/
 
 ```python
 # ✅ CORRECT - Function name matches import expectation
-@click.command(name="branch-status")
-def branch_status_command() -> None:
+@click.command(name="land-branch")
+def land_branch_command() -> None:
     """Command implementation."""
     pass
 
 # ❌ WRONG - Generic name 'command' won't be found by cli.py
-@click.command(name="branch-status")
-def command() -> None:  # pyright will report: "branch_status_command" is unknown import symbol
+@click.command(name="land-branch")
+def command() -> None:  # pyright will report: "land_branch_command" is unknown import symbol
     """Command implementation."""
     pass
 ```
@@ -41,10 +41,10 @@ The `cli.py` module uses **static imports** (not dynamic command discovery) to e
 
 ```python
 # cli.py
-from workstack_dev.commands.branch_status.command import branch_status_command
+from workstack_dev.commands.land_branch.command import land_branch_command
 from workstack_dev.commands.clean_cache.command import clean_cache_command
 
-cli.add_command(branch_status_command)
+cli.add_command(land_branch_command)
 cli.add_command(clean_cache_command)
 ```
 
@@ -90,6 +90,7 @@ def bash() -> None:
 
 Existing commands that demonstrate these patterns:
 
+- `land-branch` - Graphite stack landing workflow with dataclasses and JSON output
 - `branch-commit-count` - Simple command with git subprocess calls
 - `clean-cache` - Command with options (--dry-run, --verbose)
 - `codex-review` - Complex command with file I/O and template processing

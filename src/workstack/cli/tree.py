@@ -11,7 +11,6 @@ from pathlib import Path
 import click
 
 from workstack.core.context import WorkstackContext
-from workstack.core.graphite_ops import read_graphite_json_file
 
 
 @dataclass(frozen=True)
@@ -166,10 +165,10 @@ def _load_graphite_branch_graph(
     ctx: WorkstackContext,
     repo_root: Path,
 ) -> BranchGraph | None:
-    """Load branch graph from Graphite cache.
+    """Load branch graph from Graphite cache using GraphiteOps abstraction.
 
-    Reads .git/.graphite_cache_persist JSON file and extracts parent-child
-    relationships between branches.
+    Calls ctx.graphite_ops.get_all_branches() and transforms BranchMetadata
+    into the BranchGraph structure needed for tree display.
 
     Args:
         ctx: Workstack context with git operations
@@ -178,39 +177,26 @@ def _load_graphite_branch_graph(
     Returns:
         BranchGraph if cache exists and is valid, None otherwise
     """
-    # Get git common directory (handles both main repos and worktrees)
-    git_dir = ctx.git_ops.get_git_common_dir(repo_root)
-    if git_dir is None:
+    # Get all branches from GraphiteOps abstraction
+    all_branches = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo_root)
+    if not all_branches:
         return None
 
-    # Check if Graphite cache file exists and parse
-    cache_file = git_dir / ".graphite_cache_persist"
-    if not cache_file.exists():
-        return None
-
-    cache_data = read_graphite_json_file(cache_file, "Graphite cache")
-
-    branches_data = cache_data.get("branches", [])
-
-    # Build relationship maps
+    # Transform BranchMetadata -> BranchGraph structure
     parent_of: dict[str, str] = {}
     children_of: dict[str, list[str]] = {}
     trunk_branches: list[str] = []
 
-    for branch_name, info in branches_data:
-        parent = info.get("parentBranchName")
-        children = info.get("children", [])
-        is_trunk = info.get("validationResult") == "TRUNK"
-
+    for branch_name, metadata in all_branches.items():
         # Record parent relationship
-        if parent:
-            parent_of[branch_name] = parent
+        if metadata.parent:
+            parent_of[branch_name] = metadata.parent
 
         # Record children
-        children_of[branch_name] = children
+        children_of[branch_name] = metadata.children
 
         # Record trunk branches
-        if is_trunk or parent is None:
+        if metadata.is_trunk:
             trunk_branches.append(branch_name)
 
     return BranchGraph(

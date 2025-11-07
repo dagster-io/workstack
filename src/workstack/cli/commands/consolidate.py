@@ -94,6 +94,12 @@ def consolidate_cmd(ctx: WorkstackContext, force: bool, dry_run: bool) -> None:
         click.echo("\nCommit or stash changes before running consolidate", err=True)
         raise SystemExit(1)
 
+    # Safety check passed - all worktrees are clean
+    click.echo(
+        click.style("✅ Safety check: All worktrees have no uncommitted changes", fg="green")
+    )
+    click.echo()
+
     # Identify worktrees to remove (branch in stack AND not current worktree)
     # Resolve current_worktree for comparison
     current_worktree_resolved = current_worktree.resolve()
@@ -114,11 +120,18 @@ def consolidate_cmd(ctx: WorkstackContext, force: bool, dry_run: bool) -> None:
         branch_marker = " (current)" if branch == current_branch else ""
         click.echo(f"  - {click.style(branch, fg='cyan')}{branch_marker}")
 
-    click.echo(f"\n{click.style('🗑️  Worktrees to remove:', bold=True)}")
+    click.echo(f"\n{click.style('🗑️  Safe to remove (no uncommitted changes):', bold=True)}")
     for wt in worktrees_to_remove:
         branch_text = click.style(wt.branch or "detached", fg="yellow")
         path_text = click.style(str(wt.path), fg="cyan")
         click.echo(f"  - {branch_text} at {path_text}")
+
+    # Inform user about stack restackability
+    click.echo()
+    click.echo(
+        f"ℹ️  Note: Use 'gt restack' on {current_worktree_resolved} to restack. "
+        "All branches are preserved."
+    )
 
     # Exit if dry-run
     if dry_run:
@@ -129,7 +142,7 @@ def consolidate_cmd(ctx: WorkstackContext, force: bool, dry_run: bool) -> None:
     if not force:
         click.echo()
         if not click.confirm(
-            click.style("Proceed with removal?", fg="yellow", bold=True),
+            click.style("All worktrees are clean. Proceed with removal?", fg="yellow", bold=True),
             default=False,
         ):
             click.echo(click.style("⭕ Aborted", fg="red", bold=True))

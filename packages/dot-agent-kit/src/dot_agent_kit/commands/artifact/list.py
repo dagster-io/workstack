@@ -11,45 +11,52 @@ from dot_agent_kit.models.config import ProjectConfig
 from dot_agent_kit.repositories.filesystem_artifact_repository import FilesystemArtifactRepository
 
 
-@click.command(name="list")
-@click.option(
-    "--user",
-    "level_filter",
-    flag_value="user",
-    help="Show only user-level artifacts",
-)
-@click.option(
-    "--project",
-    "level_filter",
-    flag_value="project",
-    help="Show only project-level artifacts",
-)
-@click.option(
-    "--all",
-    "level_filter",
-    flag_value="all",
-    default=True,
-    help="Show all levels (default)",
-)
-@click.option(
+# Reusable option decorators
+level_filter_options = [
+    click.option(
+        "--user",
+        "level_filter",
+        flag_value="user",
+        help="Show only user-level artifacts",
+    ),
+    click.option(
+        "--project",
+        "level_filter",
+        flag_value="project",
+        help="Show only project-level artifacts",
+    ),
+    click.option(
+        "--all",
+        "level_filter",
+        flag_value="all",
+        default=True,
+        help="Show all levels (default)",
+    ),
+]
+
+type_option = click.option(
     "--type",
     "artifact_type",
     type=click.Choice(["skill", "command", "agent", "hook", "doc"]),
     help="Filter by artifact type",
 )
-@click.option(
+
+verbose_option = click.option(
     "-v",
     "--verbose",
     is_flag=True,
     help="Show detailed information",
 )
-@click.option(
+
+managed_option = click.option(
     "--managed",
     is_flag=True,
     help="Show only artifacts installed from kits (exclude local artifacts)",
 )
-def list_artifacts(level_filter: str, artifact_type: str | None, verbose: bool, managed: bool) -> None:
-    """List installed Claude artifacts."""
+
+
+def _list_artifacts_impl(level_filter: str, artifact_type: str | None, verbose: bool, managed: bool) -> None:
+    """Implementation of list command logic."""
     # Get paths
     user_path = Path.home() / ".claude"
     project_path = Path.cwd() / ".claude"
@@ -93,3 +100,27 @@ def list_artifacts(level_filter: str, artifact_type: str | None, verbose: bool, 
         output = format_compact_list(all_artifacts, bundled_kits)
 
     click.echo(output)
+
+
+def _apply_options(func):
+    """Apply all list options to a command function."""
+    for option in reversed(level_filter_options):
+        func = option(func)
+    func = type_option(func)
+    func = verbose_option(func)
+    func = managed_option(func)
+    return func
+
+
+@click.command(name="list")
+@_apply_options
+def list_artifacts(level_filter: str, artifact_type: str | None, verbose: bool, managed: bool) -> None:
+    """List installed Claude artifacts (alias: ls)."""
+    _list_artifacts_impl(level_filter, artifact_type, verbose, managed)
+
+
+@click.command(name="ls", hidden=True)
+@_apply_options
+def ls(level_filter: str, artifact_type: str | None, verbose: bool, managed: bool) -> None:
+    """List installed Claude artifacts (alias for list)."""
+    _list_artifacts_impl(level_filter, artifact_type, verbose, managed)

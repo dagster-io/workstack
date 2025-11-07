@@ -10,9 +10,8 @@ from pydantic import ValidationError
 from dot_agent_kit.hooks.settings import extract_kit_id_from_command, get_all_hooks, load_settings
 
 
-@click.command(name="list")
-def list_hooks() -> None:
-    """List all installed hooks."""
+def _list_hooks_impl() -> None:
+    """Implementation of list command logic."""
     # Load settings from project directory
     settings_path = Path.cwd() / ".claude" / "settings.json"
 
@@ -49,3 +48,15 @@ def list_hooks() -> None:
         click.echo(f"{hook_spec} [{lifecycle} / {matcher}]", err=False)
 
     click.echo(f"Total: {len(hooks)} hook(s)", err=False)
+
+
+@click.command(name="list")
+def list_hooks() -> None:
+    """List all installed hooks (alias: ls)."""
+    _list_hooks_impl()
+
+
+@click.command(name="ls", hidden=True)
+def ls() -> None:
+    """List all installed hooks (alias for list)."""
+    _list_hooks_impl()

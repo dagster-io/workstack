@@ -641,11 +641,22 @@ Suggested fix: Include rollback procedure or backup strategy
 3. Replace spaces with hyphens
 4. Remove all special characters except hyphens and alphanumeric
 5. Handle Unicode: Normalize to NFC, remove emojis/special symbols
-6. **Truncate to 30 characters maximum** (to match workstack's branch name limit)
-7. Strip any trailing hyphens or slashes after truncation
+6. **Intelligently shorten to 30 characters maximum** (to match workstack's branch name limit)
+   - If the name is already ≤30 characters, use it as-is
+   - If the name exceeds 30 characters, use contextual understanding to create a readable shortened version
+   - Strategies to consider (choose based on context):
+     - Break at word boundaries to avoid cutting words mid-character
+     - Remove filler words (to, the, a, an, for, with, etc.) while keeping meaningful terms
+     - Use common abbreviations for technical terms (e.g., "auth" for "authentication", "config" for "configuration", "impl" for "implementation")
+     - Preserve key domain-specific terms that convey the essence of the change
+   - Goal: Maximize readability and meaning preservation within the 30-character constraint
+   - No strict pattern rules: treat all words equally and decide contextually what's most important
+7. Strip any trailing hyphens or slashes after shortening
 8. Ensure at least one alphanumeric character remains
 
-**Why 30 characters:** Workstack truncates branch names to 30 characters in `sanitize_branch_component()`. By truncating the base name to 30 characters BEFORE adding `-plan.md`, we ensure that the worktree name, branch name, and filename base all match consistently.
+**Why 30 characters:** Workstack truncates branch names to 30 characters in `sanitize_branch_component()`. By shortening the base name to 30 characters BEFORE adding `-plan.md`, we ensure that the worktree name, branch name, and filename base all match consistently.
+
+**Agent flexibility:** You have complete flexibility in HOW you shorten names to meet the 30-character constraint. The goal is to produce the most readable and meaningful branch name possible. Use your contextual understanding to decide which words are essential, which can be abbreviated, and which can be removed. There is no single "correct" answer - multiple valid approaches exist for any given long title. Prioritize readability and semantic clarity over strict algorithmic rules.
 
 **Resulting names:**
 
@@ -672,19 +683,21 @@ Use AskUserQuestion tool to get the plan name from the user if extraction fails.
 **Example transformations:**
 
 - "User Authentication System" →
-  - Base: `user-authentication-system` (24 chars, no truncation needed)
+  - Base: `user-authentication-system` (24 chars, no shortening needed)
   - Filename: `user-authentication-system-plan.md`
   - Worktree & Branch: `user-authentication-system`
 
 - "Fix: Database Connection Issues" →
-  - Base: `fix-database-connection-issues` (29 chars, no truncation needed)
+  - Base: `fix-database-connection-issues` (29 chars, no shortening needed)
   - Filename: `fix-database-connection-issues-plan.md`
   - Worktree & Branch: `fix-database-connection-issues`
 
 - "Refactor Commands to Use GraphiteOps Abstraction" →
-  - Base: `refactor-commands-to-use-gra` (30 chars, truncated from 48)
-  - Filename: `refactor-commands-to-use-gra-plan.md`
-  - Worktree & Branch: `refactor-commands-to-use-gra`
+  - Base: `refactor-commands-graphite-ops` (30 chars, intelligently shortened)
+  - Rationale: Removed filler words "to", "use"; kept key terms "refactor", "commands", "graphite", "ops"
+  - Alternative valid approaches: `refactor-cmds-graphite-ops` (26 chars), `refactor-graphiteops-abstr` (26 chars)
+  - Filename: `refactor-commands-graphite-ops-plan.md`
+  - Worktree & Branch: `refactor-commands-graphite-ops`
 
 - "🚀 Awesome Feature!!!" →
   - Base: `awesome-feature` (15 chars, emojis removed)
@@ -692,9 +705,18 @@ Use AskUserQuestion tool to get the plan name from the user if extraction fails.
   - Worktree & Branch: `awesome-feature`
 
 - "This Is A Very Long Feature Name That Definitely Exceeds The Thirty Character Limit" →
-  - Base: `this-is-a-very-long-feature-na` (30 chars, truncated from 82)
-  - Filename: `this-is-a-very-long-feature-na-plan.md`
-  - Worktree & Branch: `this-is-a-very-long-feature-na`
+  - Base: `very-long-feature-name` (22 chars, intelligently shortened)
+  - Rationale: Removed redundant words "this", "is", "a", "that", "definitely", "exceeds", etc.; kept meaningful core
+  - Alternative valid approaches: `long-feature-exceeds-limit` (26 chars), `very-long-feature-exceeds` (25 chars)
+  - Filename: `very-long-feature-name-plan.md`
+  - Worktree & Branch: `very-long-feature-name`
+
+- "Implement User Profile Settings Page with Dark Mode Support" →
+  - Base: `user-profile-settings-dark` (26 chars, intelligently shortened)
+  - Rationale: Kept "user", "profile", "settings", "dark"; removed "implement", "page", "with", "mode", "support"
+  - Alternative valid approaches: `impl-profile-settings-dark` (26 chars), `user-settings-dark-mode` (23 chars)
+  - Filename: `user-profile-settings-dark-plan.md`
+  - Worktree & Branch: `user-profile-settings-dark`
 
 - "###" (only special chars) → Prompt user for name
 

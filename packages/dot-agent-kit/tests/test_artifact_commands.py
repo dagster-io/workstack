@@ -127,6 +127,49 @@ def test_artifact_list_type_filter(
     assert "project-agent" not in result.output
 
 
+def test_artifact_list_managed_filter(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test artifact list with --managed filter."""
+    # Create user and project directories
+    user_claude = tmp_path / "user" / ".claude"
+    project_claude = tmp_path / "project" / ".claude"
+
+    # Create managed artifact (from a kit)
+    managed_skill_dir = project_claude / "skills" / "kit-skill"
+    managed_skill_dir.mkdir(parents=True)
+    (managed_skill_dir / "SKILL.md").write_text("# Kit Skill\n\nManaged skill", encoding="utf-8")
+
+    # Create local artifact (not from a kit)
+    local_skill_dir = project_claude / "skills" / "local-skill"
+    local_skill_dir.mkdir(parents=True)
+    (local_skill_dir / "SKILL.md").write_text("# Local Skill\n\nLocal skill", encoding="utf-8")
+
+    # Create project config with managed artifact tracked
+    project_dir = tmp_path / "project"
+    config_file = project_dir / "dot-agent.toml"
+    config_file.write_text(
+        """
+[kits.test-kit]
+kit_id = "test-kit"
+source_type = "bundled"
+version = "1.0.0"
+artifacts = ["skills/kit-skill/SKILL.md"]
+""",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr("pathlib.Path.home", lambda: user_claude.parent)
+    monkeypatch.setattr("pathlib.Path.cwd", lambda: project_claude.parent)
+
+    runner = CliRunner()
+    result = runner.invoke(artifact_group, ["list", "--managed"])
+
+    assert result.exit_code == 0
+    # Should show only managed artifacts
+    assert "kit-skill" in result.output
+    # Should NOT show local artifacts
+    assert "local-skill" not in result.output
+
+
 def test_artifact_list_verbose(
     setup_test_artifacts: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
 ) -> None:

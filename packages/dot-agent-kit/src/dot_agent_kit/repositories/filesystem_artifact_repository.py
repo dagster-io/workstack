@@ -8,14 +8,17 @@ from dot_agent_kit.hooks.settings import (
     get_all_hooks,
     load_settings,
 )
+from dot_agent_kit.io.manifest import load_kit_manifest
 from dot_agent_kit.models.artifact import (
     ArtifactLevel,
     ArtifactSource,
     ArtifactType,
     InstalledArtifact,
 )
+from dot_agent_kit.models.bundled_kit import BundledKitInfo
 from dot_agent_kit.models.config import InstalledKit, ProjectConfig
 from dot_agent_kit.repositories.artifact_repository import ArtifactRepository
+from dot_agent_kit.sources.bundled import BundledKitSource
 
 
 class FilesystemArtifactRepository(ArtifactRepository):
@@ -577,3 +580,60 @@ class FilesystemArtifactRepository(ArtifactRepository):
             kit_id=kit_id,
             kit_version=kit_version,
         )
+
+    def discover_bundled_kits(
+        self, user_path: Path, project_path: Path, project_config: ProjectConfig
+    ) -> dict[str, BundledKitInfo]:
+        """Discover bundled kits that are installed in project config.
+
+        Only returns bundled kits that are listed in the project's dot-agent.toml
+        configuration file. Shows their CLI commands and available docs.
+
+        Args:
+            user_path: User-level .claude directory (e.g., ~/.claude)
+            project_path: Project-level .claude directory (e.g., ./.claude)
+            project_config: Project configuration from dot-agent.toml
+
+        Returns:
+            Dict mapping kit_id to BundledKitInfo with CLI commands and available docs
+        """
+        bundled_kits: dict[str, BundledKitInfo] = {}
+        bundled_source = BundledKitSource()
+
+        # Only process kits that are in the project config
+        for kit_id, installed_kit in project_config.kits.items():
+            # Skip if not a bundled kit
+            if not bundled_source.can_resolve(kit_id):
+                continue
+
+            # Resolve kit to get manifest path
+            resolved_kit = bundled_source.resolve(kit_id)
+            manifest_path = resolved_kit.manifest_path
+
+            if not manifest_path.exists():
+                continue
+
+            # Load manifest to get CLI commands
+            manifest = load_kit_manifest(manifest_path)
+            cli_commands = [cmd.name for cmd in manifest.kit_cli_commands]
+
+            # Scan for available docs in kit's docs directory
+            kit_base = manifest_path.parent
+            docs_dir = kit_base / "docs"
+            available_docs: list[str] = []
+
+            if docs_dir.exists():
+                for doc_file in docs_dir.rglob("*.md"):
+                    relative_doc = doc_file.relative_to(docs_dir)
+                    available_docs.append(str(relative_doc).replace("\\", "/"))
+
+            # All kits in project config are project-level
+            bundled_kits[kit_id] = BundledKitInfo(
+                kit_id=kit_id,
+                version=installed_kit.version,
+                cli_commands=cli_commands,
+                available_docs=available_docs,
+                level="project",
+            )
+
+        return bundled_kits

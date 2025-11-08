@@ -49,11 +49,13 @@ Examples:
 """
 
 import json
-import subprocess
 from dataclasses import asdict, dataclass
 from typing import Literal, NamedTuple
 
 import click
+
+from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.ops import GtKitOps
+from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops import RealGtKitOps
 
 
 class SubmitResult(NamedTuple):
@@ -124,179 +126,32 @@ class PostAnalysisError:
     details: dict[str, str]
 
 
-def has_uncommitted_changes() -> bool:
-    """Check if there are uncommitted changes. Returns True if changes exist."""
-    result = subprocess.run(
-        ["git", "status", "--porcelain"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if result.returncode != 0:
-        return False
-
-    return len(result.stdout.strip()) > 0
-
-
-def commit_uncommitted_changes() -> bool:
-    """Commit all uncommitted changes with WIP message. Returns True on success."""
-    # Add all changes
-    add_result = subprocess.run(
-        ["git", "add", "."],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if add_result.returncode != 0:
-        return False
-
-    # Commit with WIP message
-    commit_result = subprocess.run(
-        ["git", "commit", "-m", "WIP: Prepare for submission"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    return commit_result.returncode == 0
-
-
-def get_current_branch() -> str | None:
-    """Get the name of the current branch. Returns None if command fails."""
-    result = subprocess.run(
-        ["git", "branch", "--show-current"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if result.returncode != 0:
-        return None
-
-    return result.stdout.strip()
-
-
-def get_parent_branch() -> str | None:
-    """Get the parent branch using gt parent. Returns None if command fails."""
-    result = subprocess.run(
-        ["gt", "parent"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if result.returncode != 0:
-        return None
-
-    return result.stdout.strip()
-
-
-def count_commits_in_branch(parent_branch: str) -> int:
-    """Count commits in current branch compared to parent. Returns 0 if command fails."""
-    result = subprocess.run(
-        ["git", "rev-list", "--count", f"{parent_branch}..HEAD"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if result.returncode != 0:
-        return 0
-
-    count_str = result.stdout.strip()
-    if not count_str:
-        return 0
-
-    return int(count_str)
-
-
-def squash_commits() -> bool:
-    """Run gt squash to consolidate commits. Returns True on success."""
-    result = subprocess.run(
-        ["gt", "squash"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    return result.returncode == 0
-
-
-def amend_commit(message: str) -> bool:
-    """Amend the current commit with new message. Returns True on success."""
-    result = subprocess.run(
-        ["git", "commit", "--amend", "-m", message],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    return result.returncode == 0
-
-
-def run_gt_submit() -> SubmitResult:
-    """Run gt submit with publish and restack flags.
-
-    Returns:
-        SubmitResult with success flag, stdout, and stderr
-    """
-    result = subprocess.run(
-        ["gt", "submit", "--publish", "--no-interactive", "--restack"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    return SubmitResult(
-        success=result.returncode == 0,
-        stdout=result.stdout,
-        stderr=result.stderr,
-    )
-
-
-def get_pr_info() -> tuple[int, str] | None:
-    """Get PR number and URL for current branch. Returns (number, url) or None."""
-    result = subprocess.run(
-        ["gh", "pr", "view", "--json", "number,url"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if result.returncode != 0:
-        return None
-
-    data = json.loads(result.stdout)
-    return (data["number"], data["url"])
-
-
-def update_pr_metadata(title: str, body: str) -> bool:
-    """Update PR title and body using gh pr edit. Returns True on success."""
-    result = subprocess.run(
-        ["gh", "pr", "edit", "--title", title, "--body", body],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    return result.returncode == 0
-
-
-def execute_pre_analysis() -> PreAnalysisResult | PreAnalysisError:
+def execute_pre_analysis(ops: GtKitOps | None = None) -> PreAnalysisResult | PreAnalysisError:
     """Execute the pre-analysis phase. Returns success or error result."""
+    if ops is None:
+        ops = RealGtKitOps()
 
     # Step 0: Check for and commit uncommitted changes
     uncommitted_changes_committed = False
-    if has_uncommitted_changes():
-        if not commit_uncommitted_changes():
+    if ops.git().has_uncommitted_changes():
+        if not ops.git().add_all():
+            return PreAnalysisError(
+                success=False,
+                error_type="squash_failed",
+                message="Failed to stage uncommitted changes",
+                details={"reason": "git add failed"},
+            )
+        if not ops.git().commit("WIP: Prepare for submission"):
             return PreAnalysisError(
                 success=False,
                 error_type="squash_failed",
                 message="Failed to commit uncommitted changes",
-                details={"reason": "git add or git commit failed"},
+                details={"reason": "git commit failed"},
             )
         uncommitted_changes_committed = True
 
     # Step 1: Get current branch
-    branch_name = get_current_branch()
+    branch_name = ops.git().get_current_branch()
 
     if branch_name is None:
         return PreAnalysisError(
@@ -307,7 +162,7 @@ def execute_pre_analysis() -> PreAnalysisResult | PreAnalysisError:
         )
 
     # Step 2: Get parent branch
-    parent_branch = get_parent_branch()
+    parent_branch = ops.graphite().get_parent_branch()
 
     if parent_branch is None:
         return PreAnalysisError(
@@ -318,7 +173,7 @@ def execute_pre_analysis() -> PreAnalysisResult | PreAnalysisError:
         )
 
     # Step 3: Count commits in branch
-    commit_count = count_commits_in_branch(parent_branch)
+    commit_count = ops.git().count_commits_in_branch(parent_branch)
 
     if commit_count == 0:
         return PreAnalysisError(
@@ -331,7 +186,7 @@ def execute_pre_analysis() -> PreAnalysisResult | PreAnalysisError:
     # Step 4: Run gt squash only if 2+ commits
     squashed = False
     if commit_count >= 2:
-        if not squash_commits():
+        if not ops.graphite().squash_commits():
             return PreAnalysisError(
                 success=False,
                 error_type="squash_failed",
@@ -368,17 +223,19 @@ def execute_pre_analysis() -> PreAnalysisResult | PreAnalysisError:
 
 
 def execute_post_analysis(
-    commit_message: str, pr_title: str, pr_body: str
+    commit_message: str, pr_title: str, pr_body: str, ops: GtKitOps | None = None
 ) -> PostAnalysisResult | PostAnalysisError:
     """Execute the post-analysis phase. Returns success or error result."""
+    if ops is None:
+        ops = RealGtKitOps()
 
     # Step 1: Get current branch for context
-    branch_name = get_current_branch()
+    branch_name = ops.git().get_current_branch()
     if branch_name is None:
         branch_name = "unknown"
 
     # Step 2: Amend commit with AI-generated message
-    if not amend_commit(commit_message):
+    if not ops.git().amend_commit(commit_message):
         return PostAnalysisError(
             success=False,
             error_type="amend_failed",
@@ -387,10 +244,10 @@ def execute_post_analysis(
         )
 
     # Step 3: Submit branch
-    submit_result = run_gt_submit()
-    if not submit_result.success:
+    success, stdout, stderr = ops.graphite().submit(publish=True, restack=True)
+    if not success:
         # Combine stdout and stderr for pattern matching
-        combined_output = submit_result.stdout + submit_result.stderr
+        combined_output = stdout + stderr
         combined_lower = combined_output.lower()
 
         # Check for merged parent branches not in main trunk
@@ -401,8 +258,8 @@ def execute_post_analysis(
                 message="Parent branches have been merged but are not in main trunk",
                 details={
                     "branch_name": branch_name,
-                    "stdout": submit_result.stdout,
-                    "stderr": submit_result.stderr,
+                    "stdout": stdout,
+                    "stderr": stderr,
                 },
             )
 
@@ -414,8 +271,8 @@ def execute_post_analysis(
                 message="Branch has diverged from remote - manual sync required",
                 details={
                     "branch_name": branch_name,
-                    "stdout": submit_result.stdout,
-                    "stderr": submit_result.stderr,
+                    "stdout": stdout,
+                    "stderr": stderr,
                 },
             )
 
@@ -426,13 +283,13 @@ def execute_post_analysis(
             message="Failed to submit branch with gt submit",
             details={
                 "branch_name": branch_name,
-                "stdout": submit_result.stdout,
-                "stderr": submit_result.stderr,
+                "stdout": stdout,
+                "stderr": stderr,
             },
         )
 
     # Step 4: Check if PR exists
-    pr_info = get_pr_info()
+    pr_info = ops.github().get_pr_info()
 
     # Step 5: Update PR metadata if PR exists
     pr_number = None
@@ -441,7 +298,7 @@ def execute_post_analysis(
     if pr_info is not None:
         pr_number, pr_url = pr_info
 
-        if not update_pr_metadata(pr_title, pr_body):
+        if not ops.github().update_pr_metadata(pr_title, pr_body):
             return PostAnalysisError(
                 success=False,
                 error_type="pr_update_failed",

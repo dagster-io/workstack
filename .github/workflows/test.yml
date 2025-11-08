@@ -16,5 +16,7 @@ jobs:
         run: pip install uv
       - name: Install dependencies
         run: uv sync
+      - name: Install Graphite CLI
+        run: npm install -g @withgraphite/graphite-cli
       - name: Run tests
         run: make test

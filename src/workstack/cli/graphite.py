@@ -41,7 +41,7 @@ def find_worktrees_containing_branch(
     worktrees: list[WorktreeInfo],
     target_branch: str,
 ) -> list[WorktreeInfo]:
-    """Find all worktrees that have target_branch in their Graphite stack.
+    """Find all worktrees that have target_branch checked out (exact match only).
 
     Args:
         ctx: Workstack context with git operations
@@ -50,16 +50,15 @@ def find_worktrees_containing_branch(
         target_branch: Branch name to search for
 
     Returns:
-        List of WorktreeInfo objects whose stacks contain target_branch.
-        Empty list if no worktrees contain the branch.
+        List of WorktreeInfo objects where target_branch is checked out.
+        Empty list if no worktrees have the branch checked out.
 
     Algorithm:
         1. For each worktree:
            a. Get the worktree's checked-out branch
            b. Skip worktrees with detached HEAD (branch=None)
-           c. Call ctx.graphite_ops.get_branch_stack() to get the full stack
-           d. Check if target_branch is in that stack
-           e. If yes, add worktree to results
+           c. Check if worktree.branch == target_branch (exact string match)
+           d. If yes, add worktree to results
         2. Return all matching worktrees
 
     Example:
@@ -75,14 +74,8 @@ def find_worktrees_containing_branch(
         if wt.branch is None:
             continue
 
-        # Get the stack for this worktree's branch using GraphiteOps abstraction
-        stack = ctx.graphite_ops.get_branch_stack(ctx.git_ops, repo_root, wt.branch)
-        if stack is None:
-            # Graphite cache doesn't exist or branch not tracked
-            continue
-
-        # Check if target_branch is in this stack
-        if target_branch in stack:
+        # Check if target_branch is exactly checked out in this worktree
+        if wt.branch == target_branch:
             matching_worktrees.append(wt)
 
     return matching_worktrees

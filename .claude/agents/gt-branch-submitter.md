@@ -178,43 +178,50 @@ Run the Python kit command to handle submission and PR metadata.
 
 **Step 3a: Extract commit message components**
 
-Parse the commit message created in Step 2:
+Parse the commit message created in Step 2 to extract THREE components:
 
-- **Title**: First line of the commit message (the brief summary)
-- **Body**: Everything after the first line (full commit message including all sections)
+- **Commit Message**: The full commit message (all content from Step 2)
+- **PR Title**: First line of the commit message (the brief summary)
+- **PR Body**: Everything after the first line (remaining sections)
 
 **Step 3b: Call post-analysis command**
 
-Pass the commit message via stdin using `echo` to avoid permission prompts:
+The command requires three separate flags. Pass each component as a command-line argument:
 
 ```bash
-echo "[Full commit message]" | dot-agent run gt submit-branch post-analysis --pr-title "[First line]"
+dot-agent run gt submit-branch post-analysis \
+  --commit-message "[Full commit message]" \
+  --pr-title "[First line only]" \
+  --pr-body "[Everything after first line]"
 ```
 
-**CRITICAL: You MUST use `echo`, NOT `cat` or heredoc syntax.**
-
-❌ **FORBIDDEN** (triggers permission prompts):
+**Example:**
 
 ```bash
-cat <<'COMMIT_MSG' | dot-agent run gt submit-branch post-analysis --pr-title "..."
-[message]
-COMMIT_MSG
-```
+dot-agent run gt submit-branch post-analysis \
+  --commit-message "Add feature X
 
-✅ **REQUIRED** (bypasses permissions):
+This commit adds feature X by implementing Y and Z.
 
-```bash
-echo "full commit message" | dot-agent run gt submit-branch post-analysis --pr-title "title"
+## Files Changed
+- src/foo.py - Added feature logic
+..." \
+  --pr-title "Add feature X" \
+  --pr-body "This commit adds feature X by implementing Y and Z.
+
+## Files Changed
+- src/foo.py - Added feature logic
+..."
 ```
 
 **Important notes:**
 
-- **MUST use `echo`** - this is whitelisted and won't trigger permission prompts
-- **NEVER use `cat` with heredoc** - this triggers permission prompts
-- The PR title is passed as a command-line argument (single line is safe)
-- The PR body will be read from stdin by the command
+- All three flags (`--commit-message`, `--pr-title`, `--pr-body`) are required
+- The commit message should be the complete message from Step 2
+- The PR title is just the first line (brief summary)
+- The PR body is everything after the first line
+- Use proper shell quoting to handle multi-line content
 - Do not attempt automatic resolution of errors
-- Keep all content in context - no temporary files
 
 **What this does:**
 

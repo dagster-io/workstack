@@ -654,7 +654,8 @@ Suggested fix: Include rollback procedure or backup strategy
 3. Replace spaces with hyphens
 4. Remove all special characters except hyphens and alphanumeric
 5. Handle Unicode: Normalize to NFC, remove emojis/special symbols
-6. **Intelligently shorten to 30 characters maximum** (to match workstack's branch name limit)
+6. **MUST truncate to exactly 30 characters maximum** (CRITICAL - to match workstack's branch name limit)
+   - **Hard requirement**: Final base name MUST be ≤ 30 characters
    - If the name is already ≤30 characters, use it as-is
    - If the name exceeds 30 characters, use contextual understanding to create a readable shortened version
    - Strategies to consider (choose based on context):
@@ -664,8 +665,10 @@ Suggested fix: Include rollback procedure or backup strategy
      - Preserve key domain-specific terms that convey the essence of the change
    - Goal: Maximize readability and meaning preservation within the 30-character constraint
    - No strict pattern rules: treat all words equally and decide contextually what's most important
+   - **Fallback**: If intelligent shortening fails, simply truncate to 30 characters and strip trailing hyphens
 7. Strip any trailing hyphens or slashes after shortening
 8. Ensure at least one alphanumeric character remains
+9. **Final validation**: Verify base name length ≤ 30 characters before proceeding
 
 **Why 30 characters:** Workstack truncates branch names to 30 characters in `sanitize_branch_component()`. By shortening the base name to 30 characters BEFORE adding `-plan.md`, we ensure that the worktree name, branch name, and filename base all match consistently.
 
@@ -756,7 +759,25 @@ Suggested action:
 
 **Pre-save validation:**
 
-Check if file already exists at `<worktree-root>/<derived-filename>`:
+1. **Verify filename base length** (CRITICAL):
+   - Extract base name from `<derived-filename>` (remove `-plan.md` suffix)
+   - MUST be ≤ 30 characters
+   - If > 30 characters, this is an implementation bug - the filename generation in Step 7 failed
+
+```
+❌ Error: Internal error - filename base exceeds 30 characters
+
+Details: Generated base name '<base>' is <length> characters (max: 30)
+
+This is a bug in the filename generation algorithm. The base should have been
+truncated to 30 characters in Step 7.
+
+Suggested action:
+  1. Report this as a bug in /workstack:create-from-plan
+  2. Manually truncate the plan title and rerun the command
+```
+
+2. **Check if file already exists** at `<worktree-root>/<derived-filename>`:
 
 ```
 ❌ Error: Plan file already exists

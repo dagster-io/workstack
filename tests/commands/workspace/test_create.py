@@ -1960,3 +1960,49 @@ def test_create_default_behavior_generates_script() -> None:
         # Verify worktree was created
         wt_path = workstacks_dir / "test-feature"
         assert wt_path.exists()
+
+
+def test_create_with_long_name_truncation() -> None:
+    """Test that worktree names exceeding 30 characters are truncated consistently."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        git_dir = cwd / ".git"
+        git_dir.mkdir()
+
+        workstacks_root = cwd / "workstacks"
+        workstacks_dir = workstacks_root / cwd.name
+        workstacks_dir.mkdir(parents=True)
+
+        config_toml = workstacks_dir / "config.toml"
+        config_toml.write_text("", encoding="utf-8")
+
+        git_ops = FakeGitOps(
+            git_common_dirs={cwd: git_dir},
+            default_branches={cwd: "main"},
+        )
+        global_config_ops = FakeGlobalConfigOps(
+            exists=True,
+            workstacks_root=workstacks_root,
+            use_graphite=False,
+        )
+
+        test_ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            github_ops=FakeGitHubOps(),
+            graphite_ops=FakeGraphiteOps(),
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
+
+        # Create with name that exceeds 30 characters
+        long_name = "this-is-a-very-long-worktree-name-that-exceeds-thirty-characters"
+        result = runner.invoke(cli, ["create", long_name], obj=test_ctx)
+
+        assert result.exit_code == 0, result.output
+        # Worktree should be created with truncated name (30 chars max)
+        expected_truncated = "this-is-a-very-long-worktree-n"  # 30 chars
+        wt_path = workstacks_dir / expected_truncated
+        assert wt_path.exists(), f"Expected worktree at {wt_path}, but it doesn't exist"
+        assert len(expected_truncated) == 30, "Truncated name should be exactly 30 chars"

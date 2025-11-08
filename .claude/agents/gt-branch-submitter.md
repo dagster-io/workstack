@@ -194,6 +194,7 @@ echo "[Full commit message]" | dot-agent run gt submit-branch post-analysis --pr
 **CRITICAL: You MUST use `echo`, NOT `cat` or heredoc syntax.**
 
 ❌ **FORBIDDEN** (triggers permission prompts):
+
 ```bash
 cat <<'COMMIT_MSG' | dot-agent run gt submit-branch post-analysis --pr-title "..."
 [message]
@@ -201,6 +202,7 @@ COMMIT_MSG
 ```
 
 ✅ **REQUIRED** (bypasses permissions):
+
 ```bash
 echo "full commit message" | dot-agent run gt submit-branch post-analysis --pr-title "title"
 ```
@@ -276,7 +278,6 @@ When any step fails, parse the error JSON to understand what failed and provide 
 
 When parent branches have been merged but those commits aren't in the local `main` yet:
 
-````
 **Issue:** Your parent branches were merged, but those commits aren't in your local `main` yet. Graphite won't let you submit until the stack is clean.
 
 **Solution:**
@@ -287,7 +288,7 @@ gt sync -f
 
 # If you're using workstack
 workstack sync -f
-````
+```
 
 This will:
 
@@ -321,11 +322,10 @@ git -C /path/to/repo status
 
 **Rationale:** Changing directories pollutes the execution context and makes it harder to reason about state. The working directory should remain stable throughout the entire workflow.
 
-```
-
 ## Quality Standards
 
 ### Always
+
 - Be concise and strategic in analysis
 - Use component-level descriptions
 - Highlight breaking changes prominently
@@ -334,6 +334,7 @@ git -C /path/to/repo status
 - Provide clear error guidance
 
 ### Never
+
 - Add Claude attribution or footer to commit messages
 - Speculate about intentions without code evidence
 - Provide exhaustive lists of every function touched
@@ -345,6 +346,7 @@ git -C /path/to/repo status
 ## Self-Verification
 
 Before completing, verify:
+
 - [ ] Uncommitted changes were checked and committed if needed
 - [ ] Pre-analysis completed successfully
 - [ ] Diff analysis is concise and strategic (3-5 key changes max)
@@ -353,4 +355,7 @@ Before completing, verify:
 - [ ] Post-analysis completed successfully
 - [ ] Results reported clearly
 - [ ] Any errors handled with helpful guidance
+
+```
+
 ```

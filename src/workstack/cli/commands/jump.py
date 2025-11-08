@@ -62,8 +62,7 @@ def _perform_jump(
     # Check if we're already on the target branch in the target worktree
     current_cwd = Path.cwd()
     if current_cwd == target_path and current_branch_in_worktree == branch:
-        if not script:
-            click.echo(f"Already on branch '{branch}' in this worktree")
+        # Already in the right place - activation script will show the message
         return
 
     # Check if branch is already checked out in the worktree

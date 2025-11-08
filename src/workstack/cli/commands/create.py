@@ -522,6 +522,8 @@ def create(
         plan_stem = plan_file.stem  # filename without extension
         cleaned_stem = strip_plan_from_filename(plan_stem)
         base_name = sanitize_worktree_name(cleaned_stem)
+        # Truncate to 30 chars BEFORE date-prefixing to ensure branch/worktree names match
+        base_name = base_name[:30].rstrip("-")
         # Note: We'll apply ensure_unique_worktree_name() after getting workstacks_dir
         name = base_name
 

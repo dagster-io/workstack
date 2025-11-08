@@ -259,14 +259,14 @@ def sync_cmd(
                 )
         else:
             _emit(
-                "✓ Staying in root worktree (original worktree was deleted).",
+                f"✅ {repo.root}",
                 script_mode=script,
             )
             if script:
                 script_content = render_activation_script(
                     worktree_path=repo.root,
                     comment="return to root",
-                    final_message='echo "✓ Switched to root worktree."',
+                    final_message=f'echo "✓ Switched to: root [{repo.root}]"',
                 )
                 script_output_path = write_script_to_temp(
                     script_content,

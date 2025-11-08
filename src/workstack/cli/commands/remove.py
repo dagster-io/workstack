@@ -80,7 +80,12 @@ def _get_non_trunk_branches(ctx: WorkstackContext, repo_root: Path, stack: list[
 
 
 def _remove_worktree(
-    ctx: WorkstackContext, name: str, force: bool, delete_stack: bool, dry_run: bool
+    ctx: WorkstackContext,
+    name: str,
+    force: bool,
+    delete_stack: bool,
+    dry_run: bool,
+    quiet: bool = False,
 ) -> None:
     """Internal function to remove a worktree.
 
@@ -96,6 +101,7 @@ def _remove_worktree(
         force: Skip confirmation prompts
         delete_stack: Delete all branches in the Graphite stack (requires Graphite)
         dry_run: Print what would be done without executing destructive operations
+        quiet: Suppress planning output (still shows final confirmation)
     """
     # Create dry-run context if needed
     if dry_run:
@@ -153,15 +159,16 @@ def _remove_worktree(
                     click.echo("No branches to delete (all branches in stack are trunk branches).")
 
     # Step 2: Display all planned operations
-    if branches_to_delete or True:
-        click.echo(click.style("📋 Planning to perform the following operations:", bold=True))
-        worktree_text = click.style(str(wt_path), fg="cyan")
-        click.echo(f"  1. 🗑️  Remove worktree: {worktree_text}")
-        if branches_to_delete:
-            click.echo("  2. 🌳 Delete branches in stack:")
-            for branch in branches_to_delete:
-                branch_text = click.style(branch, fg="yellow")
-                click.echo(f"     - {branch_text}")
+    if not quiet:  # Only show planning if not in quiet mode
+        if branches_to_delete or True:
+            click.echo(click.style("📋 Planning to perform the following operations:", bold=True))
+            worktree_text = click.style(str(wt_path), fg="cyan")
+            click.echo(f"  1. 🗑️  Remove worktree: {worktree_text}")
+            if branches_to_delete:
+                click.echo("  2. 🌳 Delete branches in stack:")
+                for branch in branches_to_delete:
+                    branch_text = click.style(branch, fg="yellow")
+                    click.echo(f"     - {branch_text}")
 
     # Step 3: Single confirmation prompt (unless --force or --dry-run)
     if not force and not dry_run:

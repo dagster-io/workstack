@@ -205,7 +205,11 @@ def land_branch() -> None:
     """Land a single PR from Graphite stack without affecting upstack branches."""
     try:
         result = execute_land_branch()
-        click.echo(json.dumps(asdict(result), indent=2))
+        # Single line summary instead of formatted JSON
+        if isinstance(result, LandBranchSuccess):
+            click.echo(f"✓ Merged PR #{result.pr_number} ({result.branch_name})")
+        else:
+            click.echo(f"✗ Failed to merge: {result.message}")
 
         if isinstance(result, LandBranchError):
             raise SystemExit(1)

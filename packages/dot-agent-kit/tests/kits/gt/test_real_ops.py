@@ -14,6 +14,7 @@ Test organization:
 import subprocess
 import tempfile
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops import (
     RealGitGtKitOps,
@@ -353,49 +354,149 @@ class TestRealGraphiteGtKitOpsSmoke:
             assert all(isinstance(branch, str) for branch in result)
 
     def test_squash_commits(self) -> None:
-        """Test squash_commits returns bool."""
-        ops = RealGraphiteGtKitOps()
+        """Test squash_commits returns bool and calls correct command."""
+        mock_result = Mock()
+        mock_result.returncode = 0
 
-        # Call the method - may fail if not in gt repo or gt not installed
-        result = ops.squash_commits()
+        with patch(
+            "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            return_value=mock_result,
+        ) as mock_run:
+            ops = RealGraphiteGtKitOps()
+            result = ops.squash_commits()
 
-        # Verify return type matches interface contract
-        assert isinstance(result, bool)
+            # Verify correct command was called
+            mock_run.assert_called_once_with(
+                ["gt", "squash"], capture_output=True, text=True, check=False
+            )
+
+            # Verify return type matches interface contract
+            assert isinstance(result, bool)
+            assert result is True
+
+        # Test failure case
+        mock_result.returncode = 1
+        with patch(
+            "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            return_value=mock_result,
+        ):
+            ops = RealGraphiteGtKitOps()
+            result = ops.squash_commits()
+            assert result is False
 
     def test_submit(self) -> None:
-        """Test submit returns tuple with 3 elements."""
-        ops = RealGraphiteGtKitOps()
+        """Test submit returns tuple with 3 elements and calls correct command."""
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = "PR created successfully"
+        mock_result.stderr = ""
 
-        # Call the method - may fail if not in gt repo or gt not installed
-        result = ops.submit(publish=False, restack=False)
+        with patch(
+            "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            return_value=mock_result,
+        ) as mock_run:
+            ops = RealGraphiteGtKitOps()
+            result = ops.submit(publish=False, restack=False)
 
-        # Verify return type matches interface contract
-        assert isinstance(result, tuple)
-        assert len(result) == 3
-        success, stdout, stderr = result
-        assert isinstance(success, bool)
-        assert isinstance(stdout, str)
-        assert isinstance(stderr, str)
+            # Verify correct command was called
+            mock_run.assert_called_once_with(
+                ["gt", "submit", "--no-interactive"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            # Verify return type matches interface contract
+            assert isinstance(result, tuple)
+            assert len(result) == 3
+            success, stdout, stderr = result
+            assert isinstance(success, bool)
+            assert isinstance(stdout, str)
+            assert isinstance(stderr, str)
+            assert success is True
+            assert stdout == "PR created successfully"
+            assert stderr == ""
+
+        # Test with publish=True, restack=True
+        with patch(
+            "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            return_value=mock_result,
+        ) as mock_run:
+            ops = RealGraphiteGtKitOps()
+            result = ops.submit(publish=True, restack=True)
+
+            # Verify flags are added
+            mock_run.assert_called_once_with(
+                ["gt", "submit", "--no-interactive", "--publish", "--restack"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
 
     def test_restack(self) -> None:
-        """Test restack returns bool."""
-        ops = RealGraphiteGtKitOps()
+        """Test restack returns bool and calls correct command."""
+        mock_result = Mock()
+        mock_result.returncode = 0
 
-        # Call the method - may fail if not in gt repo or gt not installed
-        result = ops.restack()
+        with patch(
+            "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            return_value=mock_result,
+        ) as mock_run:
+            ops = RealGraphiteGtKitOps()
+            result = ops.restack()
 
-        # Verify return type matches interface contract
-        assert isinstance(result, bool)
+            # Verify correct command was called
+            mock_run.assert_called_once_with(
+                ["gt", "restack", "--no-interactive"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            # Verify return type matches interface contract
+            assert isinstance(result, bool)
+            assert result is True
+
+        # Test failure case
+        mock_result.returncode = 1
+        with patch(
+            "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            return_value=mock_result,
+        ):
+            ops = RealGraphiteGtKitOps()
+            result = ops.restack()
+            assert result is False
 
     def test_navigate_to_child(self) -> None:
-        """Test navigate_to_child returns bool."""
-        ops = RealGraphiteGtKitOps()
+        """Test navigate_to_child returns bool and calls correct command."""
+        mock_result = Mock()
+        mock_result.returncode = 0
 
-        # Call the method - may fail if not in gt repo or gt not installed
-        result = ops.navigate_to_child()
+        with patch(
+            "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            return_value=mock_result,
+        ) as mock_run:
+            ops = RealGraphiteGtKitOps()
+            result = ops.navigate_to_child()
 
-        # Verify return type matches interface contract
-        assert isinstance(result, bool)
+            # Verify correct command was called
+            mock_run.assert_called_once_with(
+                ["gt", "up"], capture_output=True, text=True, check=False
+            )
+
+            # Verify return type matches interface contract
+            assert isinstance(result, bool)
+            assert result is True
+
+        # Test failure case
+        mock_result.returncode = 1
+        with patch(
+            "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            return_value=mock_result,
+        ):
+            ops = RealGraphiteGtKitOps()
+            result = ops.navigate_to_child()
+            assert result is False
 
 
 class TestRealGitHubGtKitOpsSmoke:
@@ -436,24 +537,69 @@ class TestRealGitHubGtKitOpsSmoke:
             assert isinstance(pr_state, str)
 
     def test_update_pr_metadata(self) -> None:
-        """Test update_pr_metadata returns bool."""
-        ops = RealGitHubGtKitOps()
+        """Test update_pr_metadata returns bool and calls correct command."""
+        mock_result = Mock()
+        mock_result.returncode = 0
 
-        # Call the method - may fail if not in repo with PR or gh not installed
-        result = ops.update_pr_metadata("Test Title", "Test Body")
+        with patch(
+            "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            return_value=mock_result,
+        ) as mock_run:
+            ops = RealGitHubGtKitOps()
+            result = ops.update_pr_metadata("Test Title", "Test Body")
 
-        # Verify return type matches interface contract
-        assert isinstance(result, bool)
+            # Verify correct command was called
+            mock_run.assert_called_once_with(
+                ["gh", "pr", "edit", "--title", "Test Title", "--body", "Test Body"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            # Verify return type matches interface contract
+            assert isinstance(result, bool)
+            assert result is True
+
+        # Test failure case
+        mock_result.returncode = 1
+        with patch(
+            "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            return_value=mock_result,
+        ):
+            ops = RealGitHubGtKitOps()
+            result = ops.update_pr_metadata("Title", "Body")
+            assert result is False
 
     def test_merge_pr(self) -> None:
-        """Test merge_pr returns bool."""
-        ops = RealGitHubGtKitOps()
+        """Test merge_pr returns bool and calls correct command."""
+        mock_result = Mock()
+        mock_result.returncode = 0
 
-        # Call the method - may fail if not in repo with PR or gh not installed
-        result = ops.merge_pr()
+        with patch(
+            "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            return_value=mock_result,
+        ) as mock_run:
+            ops = RealGitHubGtKitOps()
+            result = ops.merge_pr()
 
-        # Verify return type matches interface contract
-        assert isinstance(result, bool)
+            # Verify correct command was called (squash merge)
+            mock_run.assert_called_once_with(
+                ["gh", "pr", "merge", "-s"], capture_output=True, text=True, check=False
+            )
+
+            # Verify return type matches interface contract
+            assert isinstance(result, bool)
+            assert result is True
+
+        # Test failure case
+        mock_result.returncode = 1
+        with patch(
+            "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            return_value=mock_result,
+        ):
+            ops = RealGitHubGtKitOps()
+            result = ops.merge_pr()
+            assert result is False
 
 
 class TestRealGtKitOpsSmoke:

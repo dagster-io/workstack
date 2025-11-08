@@ -261,8 +261,7 @@ def sync_cmd(
                 )
         else:
             _emit(
-                f"\n✓ Staying in root worktree (original worktree was deleted).\n"
-                f"💡 If you're still in the deleted directory, run: cd {repo.root}",
+                "\n✓ Staying in root worktree (original worktree was deleted).",
                 script_mode=script,
             )
             if script:

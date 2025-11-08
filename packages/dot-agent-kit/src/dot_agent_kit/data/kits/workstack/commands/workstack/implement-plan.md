@@ -64,10 +64,34 @@ Read `.PLAN.md` from the current directory to get the full implementation plan.
 Parse the plan to understand:
 
 - Overall goal and context
+- **Context & Understanding sections** - Extract valuable discoveries and insights:
+  - **API/Tool Quirks**: Undocumented behaviors, timing issues, edge cases
+  - **Architectural Insights**: WHY decisions were made, not just what
+  - **Domain Logic & Business Rules**: Non-obvious requirements and constraints
+  - **Complex Reasoning**: Approaches considered, rejected alternatives and why
+  - **Known Pitfalls**: What looks right but causes problems
 - Individual phases or tasks
+- **Critical warnings** marked with `[CRITICAL:]` tags in implementation steps
+- **Related Context subsections** that link steps to Context & Understanding
 - Dependencies between tasks
 - Success criteria
 - Any special requirements or constraints
+
+**IMPORTANT - Context Consumption:**
+
+The Context & Understanding section contains expensive discoveries made during planning. Ignoring this context may cause:
+
+- Implementing solutions that were already proven not to work
+- Missing security vulnerabilities or race conditions
+- Violating discovered constraints (API limitations, timing requirements)
+- Making mistakes that were explicitly documented as pitfalls
+
+Pay special attention to:
+
+- `[CRITICAL:]` tags in steps - these are must-not-miss warnings
+- "Related Context:" subsections - these explain WHY and link to detailed context
+- "DO NOT" items in Known Pitfalls - these prevent specific bugs
+- Rejected approaches in Complex Reasoning - these explain what doesn't work
 
 ### Step 3: Create TodoWrite Entries
 

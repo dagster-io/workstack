@@ -881,7 +881,10 @@ After successful worktree creation, provide clear instructions based on plan str
 ```markdown
 ✅ Worktree created: **<worktree-name>**
 
-Plan: `<filename>`
+Plan:
+
+<full-plan-markdown-content>
+
 Branch: `<branch-name>`
 Location: `<worktree-path>`
 
@@ -895,22 +898,26 @@ Location: `<worktree-path>`
 ```markdown
 ✅ Worktree created: **<worktree-name>**
 
-Plan: `<filename>` (structured in <number> phases)
+Plan:
+
+<full-plan-markdown-content>
+
 Branch: `<branch-name>`
 Location: `<worktree-path>`
-
-**Phases to be implemented:**
-
-- Phase 1: <phase-name> (branch: <branch-name>)
-- Phase 2: <phase-name> (stacks on: <previous-branch>)
-- Phase 3: <phase-name> (stacks on: <previous-branch>)
-
-Each phase will be implemented as a separate branch with CI verification.
 
 **Next step:**
 
 `workstack switch <worktree_name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
 ```
+
+**Template Variable Clarification:**
+
+- `<full-plan-markdown-content>` refers to the final enhanced plan markdown that was saved in Step 9
+- Output the complete plan text verbatim (all headers, sections, steps)
+- This is the same content that was written to `<worktree-root>/<derived-filename>`
+- The plan content is already in memory from previous steps - no additional file reads required
+- Preserve all markdown formatting (headers, lists, code blocks)
+- Do not truncate or summarize the plan
 
 **Note:** The final output the user sees should be the single copy-pasteable command above. No additional text after that command.
 

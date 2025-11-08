@@ -62,8 +62,7 @@ def _perform_jump(
     # Check if we're already on the target branch in the target worktree
     current_cwd = Path.cwd()
     if current_cwd == target_path and current_branch_in_worktree == branch:
-        if not script:
-            click.echo(f"Already on branch '{branch}' in this worktree")
+        # Already in the right place - activation script will show the message
         return
 
     # Check if branch is already checked out in the worktree
@@ -118,12 +117,8 @@ def _perform_jump(
 def jump_cmd(ctx: WorkstackContext, branch: str, script: bool) -> None:
     """Jump to BRANCH by finding and switching to its worktree.
 
-    This command finds which worktree contains the specified branch
-    in its Graphite stack and switches to it. The branch does not
-    need to be currently checked out - it just needs to exist in
-    the worktree's stack lineage.
-
-    Requires Graphite to be enabled.
+    This command finds which worktree has the specified branch
+    checked out and switches to it.
 
     Examples:
 
@@ -133,15 +128,6 @@ def jump_cmd(ctx: WorkstackContext, branch: str, script: bool) -> None:
 
     If multiple worktrees contain the branch, all options are shown.
     """
-    # Check if Graphite is enabled
-    if not ctx.global_config_ops.get_use_graphite():
-        click.echo(
-            "Error: Jump command requires Graphite. Enable Graphite with:\n"
-            "  workstack config set use_graphite true",
-            err=True,
-        )
-        raise SystemExit(1)
-
     repo = discover_repo_context(ctx, Path.cwd())
 
     # Get all worktrees
@@ -152,9 +138,9 @@ def jump_cmd(ctx: WorkstackContext, branch: str, script: bool) -> None:
 
     # Handle three cases: no match, one match, multiple matches
     if len(matching_worktrees) == 0:
-        # No worktrees contain this branch
+        # No worktrees have this branch checked out
         click.echo(
-            f"Error: Branch '{branch}' not found in any worktree stack.\n"
+            f"Error: Branch '{branch}' is not checked out in any worktree.\n"
             f"To create a worktree with this branch, run:\n"
             f"  workstack create --from-branch {branch}",
             err=True,

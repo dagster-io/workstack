@@ -11,6 +11,8 @@
 
 **This codebase has strong opinions. Check these patterns BEFORE coding:**
 
+**CRITICAL: NEVER search, read, or access `/Users/schrockn/.claude` directory**
+
 | If you're about to write...                 | STOP! Check this instead                                                                    |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | `try:` or `except:`                         | → [Exception Handling](#exception-handling) - Default: let exceptions bubble                |

@@ -205,7 +205,7 @@ def test_graphite_ops_sync_with_mock():
     """Test gt sync with mocked subprocess."""
     with patch("subprocess.run") as mock_run:
         ops = RealGraphiteOps()
-        ops.sync(Path("/test"), force=False)
+        ops.sync(Path("/test"), force=False, quiet=False)
 
         mock_run.assert_called_once()
         call_args = mock_run.call_args
@@ -218,8 +218,30 @@ def test_graphite_ops_sync_with_force():
     """Test gt sync with force flag."""
     with patch("subprocess.run") as mock_run:
         ops = RealGraphiteOps()
-        ops.sync(Path("/test"), force=True)
+        ops.sync(Path("/test"), force=True, quiet=False)
 
         mock_run.assert_called_once()
         call_args = mock_run.call_args
         assert call_args[0][0] == ["gt", "sync", "-f"]
+
+
+def test_graphite_ops_sync_with_quiet():
+    """Test gt sync with quiet flag."""
+    with patch("subprocess.run") as mock_run:
+        ops = RealGraphiteOps()
+        ops.sync(Path("/test"), force=False, quiet=True)
+
+        mock_run.assert_called_once()
+        call_args = mock_run.call_args
+        assert call_args[0][0] == ["gt", "sync", "--quiet"]
+
+
+def test_graphite_ops_sync_with_force_and_quiet():
+    """Test gt sync with both force and quiet flags."""
+    with patch("subprocess.run") as mock_run:
+        ops = RealGraphiteOps()
+        ops.sync(Path("/test"), force=True, quiet=True)
+
+        mock_run.assert_called_once()
+        call_args = mock_run.call_args
+        assert call_args[0][0] == ["gt", "sync", "-f", "--quiet"]

@@ -268,6 +268,6 @@ def test_dryrun_graphite_operations(tmp_path: Path) -> None:
 
     # Test sync prints dry-run message without executing
     # Note: sync is a write operation, so it should be blocked in dry-run mode
-    ctx.graphite_ops.sync(repo, force=False)
+    ctx.graphite_ops.sync(repo, force=False, quiet=False)
     # If sync was actually executed, it would require gt CLI to be installed
     # In dry-run mode, it just prints a message

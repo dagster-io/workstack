@@ -154,7 +154,7 @@ Resolve conflicts manually, then run this command again:
 ## Notes
 
 - Uses simple default commit message: "Update changes"
-- Does NOT use git-diff-summarizer for commit message generation (optimized for speed)
+- Does NOT use AI-generated commit messages (optimized for speed)
 - Aborts immediately on restack conflicts - requires manual resolution
 - Uses `gh` CLI to check PR existence (requires GitHub CLI authentication)
 - Uses `gt` CLI for restack and submit operations

@@ -45,11 +45,13 @@ Examples:
 """
 
 import json
-import subprocess
 from dataclasses import asdict, dataclass
 from typing import Literal
 
 import click
+
+from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.ops import GtKitOps
+from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops import RealGtKitOps
 
 ErrorType = Literal[
     "parent_not_main",
@@ -80,95 +82,18 @@ class LandBranchError:
     details: dict[str, str | int | list[str]]
 
 
-def get_current_branch() -> str:
-    """Get the name of the current branch."""
-    result = subprocess.run(
-        ["git", "branch", "--show-current"],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    return result.stdout.strip()
-
-
-def get_parent_branch() -> str | None:
-    """Get the parent branch using gt parent. Returns None if command fails."""
-    result = subprocess.run(
-        ["gt", "parent"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if result.returncode != 0:
-        return None
-
-    return result.stdout.strip()
-
-
-def get_children_branches() -> list[str]:
-    """Get list of child branches using gt children. Returns empty list if command fails."""
-    result = subprocess.run(
-        ["gt", "children"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if result.returncode != 0:
-        return []
-
-    # gt children outputs one branch per line
-    children = [line.strip() for line in result.stdout.strip().split("\n") if line.strip()]
-    return children
-
-
-def get_pr_info() -> tuple[int, str] | None:
-    """Get PR number and state for current branch. Returns (number, state) or None."""
-    result = subprocess.run(
-        ["gh", "pr", "view", "--json", "state,number"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if result.returncode != 0:
-        return None
-
-    data = json.loads(result.stdout)
-    return (data["number"], data["state"])
-
-
-def merge_pr() -> bool:
-    """Merge the PR using squash merge. Returns True on success."""
-    result = subprocess.run(
-        ["gh", "pr", "merge", "-s"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    return result.returncode == 0
-
-
-def navigate_to_child(child_name: str) -> bool:
-    """Navigate to child branch using gt up. Returns True on success."""
-    result = subprocess.run(
-        ["gt", "up"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    return result.returncode == 0
-
-
-def execute_land_branch() -> LandBranchSuccess | LandBranchError:
+def execute_land_branch(ops: GtKitOps | None = None) -> LandBranchSuccess | LandBranchError:
     """Execute the land-branch workflow. Returns success or error result."""
+    if ops is None:
+        ops = RealGtKitOps()
 
     # Step 1: Get current branch
-    branch_name = get_current_branch()
+    branch_name = ops.git().get_current_branch()
+    if branch_name is None:
+        branch_name = "unknown"
 
     # Step 2: Get parent branch
-    parent = get_parent_branch()
+    parent = ops.graphite().get_parent_branch()
 
     if parent is None:
         return LandBranchError(
@@ -196,7 +121,7 @@ def execute_land_branch() -> LandBranchSuccess | LandBranchError:
         )
 
     # Step 4: Check PR exists and is open
-    pr_info = get_pr_info()
+    pr_info = ops.github().get_pr_state()
     if pr_info is None:
         return LandBranchError(
             success=False,
@@ -224,10 +149,10 @@ def execute_land_branch() -> LandBranchSuccess | LandBranchError:
         )
 
     # Step 5: Get children branches
-    children = get_children_branches()
+    children = ops.graphite().get_children_branches()
 
     # Step 6: Merge the PR
-    if not merge_pr():
+    if not ops.github().merge_pr():
         return LandBranchError(
             success=False,
             error_type="merge_failed",
@@ -241,9 +166,8 @@ def execute_land_branch() -> LandBranchSuccess | LandBranchError:
     # Step 7: Navigate to child if exactly one exists
     child_branch = None
     if len(children) == 1:
-        child_name = children[0]
-        if navigate_to_child(child_name):
-            child_branch = child_name
+        if ops.graphite().navigate_to_child():
+            child_branch = children[0]
 
     # Build success message with navigation info
     if len(children) == 0:
@@ -286,15 +210,6 @@ def land_branch() -> None:
         if isinstance(result, LandBranchError):
             raise SystemExit(1)
 
-    except subprocess.CalledProcessError as e:
-        error = LandBranchError(
-            success=False,
-            error_type="merge_failed",
-            message=f"Command failed: {e}",
-            details={"error": str(e)},
-        )
-        click.echo(json.dumps(asdict(error), indent=2), err=True)
-        raise SystemExit(1) from None
     except Exception as e:
         error = LandBranchError(
             success=False,

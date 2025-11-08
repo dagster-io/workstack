@@ -131,7 +131,8 @@ def sync_cmd(
         cmd.append("-f")
 
     if not dry_run:
-        _emit(f"Running: {' '.join(cmd)}", script_mode=script)
+        if verbose:
+            _emit(f"Running: {' '.join(cmd)}", script_mode=script)
         try:
             ctx.graphite_ops.sync(repo.root, force=force, quiet=not verbose)
         except subprocess.CalledProcessError as e:

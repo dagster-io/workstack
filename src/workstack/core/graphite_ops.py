@@ -14,6 +14,7 @@ import sys
 import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
+from subprocess import DEVNULL
 from typing import Any
 
 from workstack.core.branch_metadata import BranchMetadata
@@ -330,8 +331,8 @@ class RealGraphiteOps(GraphiteOps):
             cmd,
             cwd=repo_root,
             check=True,
-            stdout=sys.stdout,
-            stderr=sys.stderr,
+            stdout=DEVNULL if quiet else sys.stdout,
+            stderr=DEVNULL if quiet else sys.stderr,
         )
 
     def get_prs_from_graphite(self, git_ops: GitOps, repo_root: Path) -> dict[str, PullRequestInfo]:

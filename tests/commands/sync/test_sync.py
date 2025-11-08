@@ -102,7 +102,7 @@ def test_sync_runs_gt_sync_from_root() -> None:
         result = runner.invoke(cli, ["sync"], obj=test_ctx)
 
         assert result.exit_code == 0
-        assert "Running: gt sync" in result.output
+        # Note: "Running: gt sync" message only appears with --verbose flag
 
         # Verify sync was called with correct arguments
         assert len(graphite_ops.sync_calls) == 1
@@ -151,7 +151,7 @@ def test_sync_with_force_flag() -> None:
         result = runner.invoke(cli, ["sync", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0
-        assert "Running: gt sync -f" in result.output
+        # Note: "Running: gt sync -f" message only appears with --verbose flag
 
         # Verify -f was passed
         assert len(graphite_ops.sync_calls) == 1

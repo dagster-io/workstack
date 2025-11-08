@@ -2006,3 +2006,72 @@ def test_create_with_long_name_truncation() -> None:
         wt_path = workstacks_dir / expected_truncated
         assert wt_path.exists(), f"Expected worktree at {wt_path}, but it doesn't exist"
         assert len(expected_truncated) == 30, "Truncated name should be exactly 30 chars"
+
+
+def test_create_with_plan_ensures_uniqueness() -> None:
+    """Test that --plan ensures uniqueness with date prefix and versioning."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        git_dir = cwd / ".git"
+        git_dir.mkdir()
+
+        # Create plan file
+        plan_file = cwd / "my-feature-plan.md"
+        plan_file.write_text("# My Feature Plan\n", encoding="utf-8")
+
+        workstacks_root = cwd / "workstacks"
+        workstacks_dir = workstacks_root / cwd.name
+        workstacks_dir.mkdir(parents=True)
+
+        config_toml = workstacks_dir / "config.toml"
+        config_toml.write_text("", encoding="utf-8")
+
+        git_ops = FakeGitOps(
+            git_common_dirs={cwd: git_dir},
+            default_branches={cwd: "main"},
+        )
+        global_config_ops = FakeGlobalConfigOps(
+            exists=True,
+            workstacks_root=workstacks_root,
+            use_graphite=False,
+        )
+
+        test_ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            github_ops=FakeGitHubOps(),
+            graphite_ops=FakeGraphiteOps(),
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
+
+        # Create first worktree from plan
+        result1 = runner.invoke(cli, ["create", "--plan", str(plan_file)], obj=test_ctx)
+        assert result1.exit_code == 0, result1.output
+
+        # Check that first worktree has date prefix
+        from datetime import datetime
+
+        date_prefix = datetime.now().strftime("%Y-%m-%d")
+        expected_name1 = f"{date_prefix}-my-feature"
+        wt_path1 = workstacks_dir / expected_name1
+        assert wt_path1.exists(), f"Expected first worktree at {wt_path1}"
+        assert (wt_path1 / ".PLAN.md").exists()
+
+        # Recreate plan file for second worktree
+        plan_file.write_text("# My Feature Plan - Round 2\n", encoding="utf-8")
+
+        # Create second worktree from same plan (same day)
+        result2 = runner.invoke(cli, ["create", "--plan", str(plan_file)], obj=test_ctx)
+        assert result2.exit_code == 0, result2.output
+
+        # Check that second worktree has date prefix and -2 suffix
+        expected_name2 = f"{date_prefix}-my-feature-2"
+        wt_path2 = workstacks_dir / expected_name2
+        assert wt_path2.exists(), f"Expected second worktree at {wt_path2}"
+        assert (wt_path2 / ".PLAN.md").exists()
+
+        # Verify both worktrees exist
+        assert wt_path1.exists()
+        assert wt_path2.exists()

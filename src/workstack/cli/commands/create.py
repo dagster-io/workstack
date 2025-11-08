@@ -3,6 +3,7 @@ import re
 import shlex
 import shutil
 from collections.abc import Iterable, Mapping
+from datetime import datetime
 from pathlib import Path
 
 import click
@@ -169,6 +170,60 @@ def sanitize_worktree_name(name: str) -> str:
         result = result[:30].rstrip("-")
 
     return result
+
+
+def extract_trailing_number(name: str) -> tuple[str, int | None]:
+    r"""Extract trailing number from a name.
+
+    Detects trailing numbers in names using regex pattern `^(.+?)-(\d+)$`.
+    Returns tuple of (base_name, number) or (name, None).
+
+    Examples:
+        "my-feature" → ("my-feature", None)
+        "my-feature-2" → ("my-feature", 2)
+        "fix-42" → ("fix", 42)
+    """
+    match = re.match(r"^(.+?)-(\d+)$", name)
+    if match:
+        base_name = match.group(1)
+        number = int(match.group(2))
+        return (base_name, number)
+    return (name, None)
+
+
+def ensure_unique_worktree_name(base_name: str, workstacks_dir: Path) -> str:
+    """Ensure unique worktree name with date prefix and smart versioning.
+
+    Adds date prefix in format YYYY-MM-DD- to the base name.
+    If a worktree with that name exists, increments numeric suffix starting at 2.
+    Uses LBYL pattern: checks path.exists() before operations.
+
+    Args:
+        base_name: Sanitized worktree base name (without date prefix)
+        workstacks_dir: Directory containing worktrees
+
+    Returns:
+        Guaranteed unique worktree name with date prefix
+
+    Examples:
+        First time: "my-feature" → "2025-11-08-my-feature"
+        Duplicate: "my-feature" → "2025-11-08-my-feature-2"
+        Next day: "my-feature" → "2025-11-09-my-feature"
+    """
+    date_prefix = datetime.now().strftime("%Y-%m-%d")
+    candidate_name = f"{date_prefix}-{base_name}"
+
+    # Check if the base candidate exists
+    if not (workstacks_dir / candidate_name).exists():
+        return candidate_name
+
+    # Name exists, find next available number
+    counter = 2
+    while True:
+        versioned_name = f"{candidate_name}-{counter}"
+        if not (workstacks_dir / versioned_name).exists():
+            return versioned_name
+        counter += 1
 
 
 def default_branch_for_worktree(name: str) -> str:
@@ -349,7 +404,9 @@ def _create_json_response(
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
     help=(
         "Path to a plan markdown file. Will derive worktree name from filename "
-        "and move to .PLAN.md in the worktree."
+        "and move to .PLAN.md in the worktree. "
+        "Worktree names are automatically prefixed with the current date (YYYY-MM-DD-) "
+        "and versioned if duplicates exist."
     ),
 )
 @click.option(
@@ -464,7 +521,9 @@ def create(
         # Derive name from plan filename (strip extension)
         plan_stem = plan_file.stem  # filename without extension
         cleaned_stem = strip_plan_from_filename(plan_stem)
-        name = sanitize_worktree_name(cleaned_stem)
+        base_name = sanitize_worktree_name(cleaned_stem)
+        # Note: We'll apply ensure_unique_worktree_name() after getting workstacks_dir
+        name = base_name
 
     # Regular create (no special flags)
     else:
@@ -477,9 +536,13 @@ def create(
     # At this point, name should always be set
     assert name is not None, "name must be set by now"
 
+    # Track if name came from plan file (will need unique naming)
+    is_plan_derived = plan_file is not None
+
     # Sanitize the name to ensure consistency (truncate to 30 chars, normalize)
     # This applies to user-provided names as well as derived names
-    name = sanitize_worktree_name(name)
+    if not is_plan_derived:
+        name = sanitize_worktree_name(name)
 
     # Validate that name is not a reserved word
     if name.lower() == "root":
@@ -499,6 +562,11 @@ def create(
     repo = discover_repo_context(ctx, Path.cwd())
     workstacks_dir = ensure_workstacks_dir(repo)
     cfg = load_config(workstacks_dir)
+
+    # Apply date prefix and uniqueness for plan-derived names
+    if is_plan_derived:
+        name = ensure_unique_worktree_name(name, workstacks_dir)
+
     wt_path = worktree_path_for(workstacks_dir, name)
 
     if wt_path.exists():

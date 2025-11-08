@@ -8,35 +8,60 @@ from workstack.core.github_ops import PullRequestInfo
 
 
 def _format_worktree_line(
-    name: str, branch: str | None, path: str | None, is_root: bool, is_current: bool
+    name: str,
+    branch: str | None,
+    path: str | None,
+    is_root: bool,
+    is_current: bool,
+    max_name_len: int = 0,
+    max_branch_len: int = 0,
 ) -> str:
-    """Format a single worktree line with colorization.
+    """Format a single worktree line with colorization and optional alignment.
 
     Args:
         name: Worktree name to display
         branch: Branch name (if any)
-        path: Filesystem path to display (if provided, shows path instead of branch)
+        path: Filesystem path to display
         is_root: True if this is the root repository worktree
         is_current: True if this is the worktree the user is currently in
+        max_name_len: Maximum name length for alignment (0 = no alignment)
+        max_branch_len: Maximum branch length for alignment (0 = no alignment)
 
     Returns:
-        Formatted line with appropriate colorization
+        Formatted line with appropriate colorization in format: name (branch) [path]
     """
     # Root worktree gets green to distinguish it from regular worktrees
     name_color = "green" if is_root else "cyan"
-    name_part = click.style(name, fg=name_color, bold=True)
 
-    # If path is provided, show path in dim white; otherwise show branch in yellow
+    # Calculate padding for name field
+    name_padding = max_name_len - len(name) if max_name_len > 0 else 0
+    name_with_padding = name + (" " * name_padding)
+    name_part = click.style(name_with_padding, fg=name_color, bold=True)
+
+    # Build parts for display: name (branch) [path]
+    parts = [name_part]
+
+    # Add branch in parentheses (yellow)
+    # If name matches branch, show "=" instead of repeating the branch name
+    if branch:
+        branch_display = "=" if name == branch else branch
+        # Calculate padding for branch field (including parentheses)
+        branch_with_parens = f"({branch_display})"
+        branch_padding = max_branch_len - len(branch_with_parens) if max_branch_len > 0 else 0
+        branch_with_padding = branch_with_parens + (" " * branch_padding)
+        branch_part = click.style(branch_with_padding, fg="yellow")
+        parts.append(branch_part)
+    elif max_branch_len > 0:
+        # Add spacing even if no branch to maintain alignment
+        parts.append(" " * max_branch_len)
+
+    # Add path in brackets (dim white)
     if path:
-        location_part = click.style(f"[{path}]", fg="white", dim=True)
-    elif branch:
-        location_part = click.style(f"[{branch}]", fg="yellow")
-    else:
-        location_part = ""
+        path_part = click.style(f"[{path}]", fg="white", dim=True)
+        parts.append(path_part)
 
     # Build the main line
-    parts = [name_part, location_part]
-    line = " ".join(p for p in parts if p)
+    line = " ".join(parts)
 
     # Add indicator on the right for current worktree
     if is_current:
@@ -309,6 +334,37 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
                 current_worktree_path = wt_path_resolved
                 break
 
+    # Calculate maximum widths for alignment
+    # First, collect all names and branches to display
+    workstacks_dir = ensure_workstacks_dir(repo)
+
+    # Start with root
+    all_names = ["root"]
+    all_branches = []
+
+    root_branch = branches.get(repo.root)
+    if root_branch:
+        branch_display = "=" if "root" == root_branch else root_branch
+        all_branches.append(f"({branch_display})")
+
+    # Add worktree entries
+    if workstacks_dir.exists():
+        entries = sorted(p for p in workstacks_dir.iterdir() if p.is_dir())
+        for p in entries:
+            name = p.name
+            # Check if this directory has a corresponding worktree
+            for branch_path, branch_name in branches.items():
+                if branch_path.resolve() == p.resolve():
+                    all_names.append(name)
+                    if branch_name:
+                        branch_display = "=" if name == branch_name else branch_name
+                        all_branches.append(f"({branch_display})")
+                    break
+
+    # Calculate max widths
+    max_name_len = max(len(name) for name in all_names) if all_names else 0
+    max_branch_len = max(len(branch) for branch in all_branches) if all_branches else 0
+
     # Validate graphite is enabled if showing stacks
     if show_stacks:
         if not ctx.global_config_ops.get_use_graphite():
@@ -337,11 +393,16 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
                 prs = ctx.github_ops.get_prs_for_repo(repo.root, include_checks=False)
 
     # Show root repo first (display as "root" to distinguish from worktrees)
-    root_branch = branches.get(repo.root)
     is_current_root = repo.root.resolve() == current_worktree_path
     click.echo(
         _format_worktree_line(
-            "root", root_branch, path=str(repo.root), is_root=True, is_current=is_current_root
+            "root",
+            root_branch,
+            path=str(repo.root),
+            is_root=True,
+            is_current=is_current_root,
+            max_name_len=max_name_len,
+            max_branch_len=max_branch_len,
         )
     )
 
@@ -355,7 +416,6 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
         _display_branch_stack(ctx, repo.root, repo.root, root_branch, branches, True, prs)
 
     # Show worktrees
-    workstacks_dir = ensure_workstacks_dir(repo)
     if not workstacks_dir.exists():
         return
     entries = sorted(p for p in workstacks_dir.iterdir() if p.is_dir())
@@ -371,6 +431,11 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
                 wt_branch = branch_name
                 break
 
+        # Skip directories that don't have a corresponding git worktree entry
+        # (e.g., leftover empty directories after worktree removal)
+        if wt_path is None:
+            continue
+
         # Add blank line before each worktree (except first) when showing stacks
         if show_stacks and (root_branch or entries.index(p) > 0):
             click.echo()
@@ -378,7 +443,13 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
         is_current_wt = bool(wt_path and wt_path.resolve() == current_worktree_path)
         click.echo(
             _format_worktree_line(
-                name, wt_branch, path=str(p), is_root=False, is_current=is_current_wt
+                name,
+                wt_branch,
+                path=str(p),
+                is_root=False,
+                is_current=is_current_wt,
+                max_name_len=max_name_len,
+                max_branch_len=max_branch_len,
             )
         )
 

@@ -178,22 +178,29 @@ I was unable to resolve the following issue after N attempts:
 
 ## Success Reporting Format
 
-When all checks pass:
+When all checks pass, format the output with **blank lines** between each check for proper CLI rendering:
 
 ```markdown
 ## Finalization Status: SUCCESS
 
 All CI checks passed after N iteration(s):
 
-- Lint: PASSED
-- Format: PASSED
-- Prettier: PASSED
-- Pyright: PASSED
-- Tests: PASSED
-- Sync-Kit: PASSED
+✅ **Lint (ruff check)**: PASSED
+
+✅ **Format (ruff format --check)**: PASSED
+
+✅ **Prettier**: PASSED
+
+✅ **Pyright**: PASSED
+
+✅ **Tests**: PASSED
+
+✅ **Sync-Kit (dot-agent check)**: PASSED
 
 The code is ready for commit/PR.
 ```
+
+**IMPORTANT**: Each check line MUST be separated by a blank line in the markdown output to render properly in the CLI.
 
 ## Important Guidelines
 

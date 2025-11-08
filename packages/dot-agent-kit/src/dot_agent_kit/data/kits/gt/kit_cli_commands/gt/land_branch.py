@@ -207,7 +207,7 @@ def land_branch() -> None:
         result = execute_land_branch()
         # Single line summary instead of formatted JSON
         if isinstance(result, LandBranchSuccess):
-            click.echo(f"✓ Merged PR #{result.pr_number} ({result.branch_name})")
+            click.echo(f"✓ Merged PR #{result.pr_number} [{result.branch_name}]")
         else:
             click.echo(f"✗ Failed to merge: {result.message}")
 

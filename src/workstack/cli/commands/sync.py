@@ -180,7 +180,7 @@ def sync_cmd(
 
     # Step 6: Display and optionally clean
     if not deletable:
-        _emit("\nNo workstacks to clean up.", script_mode=script)
+        _emit("✓ No worktrees to clean up", script_mode=script)
     else:
         for name, branch, state, pr_number in deletable:
             # Display formatted (reuse gc.py formatting)
@@ -190,8 +190,6 @@ def sync_cmd(
             pr_part = click.style(f"PR #{pr_number}", fg="bright_black")
 
             _emit(f"  {name_part} {branch_part} - {state_part} ({pr_part})", script_mode=script)
-
-        _emit("", script_mode=script)  # Blank line
 
         # Confirm unless --force or --dry-run
         if not force and not dry_run:
@@ -222,7 +220,7 @@ def sync_cmd(
                     quiet=True,  # Suppress planning output during sync
                 )
                 # Show clean confirmation after removal completes
-                _emit(f"✓ Removed worktree: {name} (branch: {_branch})", script_mode=script)
+                _emit(f"✓ Removed: {name} [{_branch}]", script_mode=script)
 
         # Step 6.5: Automatically run second gt sync -f to delete branches (when force=True)
         if force and not dry_run and deletable:
@@ -244,7 +242,7 @@ def sync_cmd(
 
         # Check if worktree still exists
         if wt_path.exists():
-            _emit(f"\nReturning to: {current_worktree_name}", script_mode=script)
+            _emit(f"✓ Returning to: {current_worktree_name}", script_mode=script)
             if not script:
                 os.chdir(wt_path)
             else:
@@ -261,7 +259,7 @@ def sync_cmd(
                 )
         else:
             _emit(
-                "\n✓ Staying in root worktree (original worktree was deleted).",
+                "✓ Staying in root worktree (original worktree was deleted).",
                 script_mode=script,
             )
             if script:

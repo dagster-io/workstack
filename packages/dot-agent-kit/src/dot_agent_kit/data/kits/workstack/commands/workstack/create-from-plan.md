@@ -218,13 +218,24 @@ This command cannot run while in plan mode. The workflow is:
 
 **Check if currently in plan mode:**
 
-Plan mode is indicated by system context messages or the presence of plan mode indicators.
+Plan mode is indicated by the presence of an explicit system reminder tag. Do not use any other signals or heuristics.
 
 **How to detect plan mode:**
 
-- System messages indicating plan mode is active
-- Conversation context shows planning workflow
-- User came directly from a planning session
+Check for this **exact system reminder tag** in the conversation:
+
+```
+<system-reminder>
+Plan mode is active. The user indicated that they do not want you to execute yet...
+</system-reminder>
+```
+
+**Detection logic:**
+
+- If this system reminder tag is present → Plan mode is ACTIVE
+- If this system reminder tag is absent → Plan mode is NOT active
+- Do NOT use conversation content, context, or other heuristics to determine plan mode status
+- ONLY the presence of this explicit system tag indicates plan mode
 
 **If in plan mode:**
 

@@ -146,7 +146,11 @@ def sanitize_worktree_name(name: str) -> str:
     - Replaces characters outside `[A-Za-z0-9.-]` with `-`
     - Collapses consecutive `-`
     - Strips leading/trailing `-`
+    - Truncates to 30 characters maximum (matches branch component sanitization)
     Returns `"work"` if the result is empty.
+
+    The 30-character limit ensures worktree names match their corresponding branch
+    names, maintaining consistency across the worktree/branch model.
     """
 
     lowered = name.strip().lower()
@@ -158,7 +162,13 @@ def sanitize_worktree_name(name: str) -> str:
     collapsed = re.sub(r"-+", "-", replaced)
     # Strip leading/trailing hyphens
     trimmed = collapsed.strip("-")
-    return trimmed or "work"
+    result = trimmed or "work"
+
+    # Truncate to 30 characters and strip trailing hyphens
+    if len(result) > 30:
+        result = result[:30].rstrip("-")
+
+    return result
 
 
 def default_branch_for_worktree(name: str) -> str:
@@ -466,6 +476,10 @@ def create(
 
     # At this point, name should always be set
     assert name is not None, "name must be set by now"
+
+    # Sanitize the name to ensure consistency (truncate to 30 chars, normalize)
+    # This applies to user-provided names as well as derived names
+    name = sanitize_worktree_name(name)
 
     # Validate that name is not a reserved word
     if name.lower() == "root":

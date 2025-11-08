@@ -61,12 +61,33 @@ def test_default_branch_for_worktree(value: str, expected: str) -> None:
         ("Add_Auth_Feature", "add-auth-feature"),
         ("My_Cool_Plan", "my-cool-plan"),
         ("FOO_BAR_BAZ", "foo-bar-baz"),
-        ("feature__with___multiple___underscores", "feature-with-multiple-underscores"),
+        ("feature__with___multiple___underscores", "feature-with-multiple-undersco"),
         ("name-with-hyphens", "name-with-hyphens"),
         ("Mixed_Case-Hyphen_Underscore", "mixed-case-hyphen-underscore"),
         ("@@weird!!name??", "weird-name"),
         ("   spaces   ", "spaces"),
         ("---", "work"),
+        # Test truncation to 30 characters
+        ("a" * 35, "a" * 30),
+        (
+            "this-is-a-very-long-worktree-name-that-exceeds-thirty-characters",
+            "this-is-a-very-long-worktree-n",
+        ),
+        ("exactly-30-characters-long-ok", "exactly-30-characters-long-ok"),
+        (
+            "31-characters-long-should-be-ab",
+            "31-characters-long-should-be-a",
+        ),  # Truncates to 30
+        # Test truncation with trailing hyphen removal
+        (
+            "worktree-name-with-dash-at-position-30-",
+            "worktree-name-with-dash-at-pos",
+        ),
+        # Test truncation that ends with hyphen is stripped
+        (
+            "12345678901234567890123456789-extra",
+            "12345678901234567890123456789",
+        ),  # Hyphen at position 30 stripped
     ],
 )
 def test_sanitize_worktree_name(value: str, expected: str) -> None:

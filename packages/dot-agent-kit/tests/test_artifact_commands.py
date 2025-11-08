@@ -229,6 +229,9 @@ def test_artifact_show_single_match(
     assert "skill" in result.output
     # Should show file content
     assert "User skill content" in result.output
+    # Should show absolute path
+    expected_path = (user_claude / "skills" / "user-skill" / "SKILL.md").resolve()
+    assert str(expected_path) in result.output
 
 
 def test_artifact_show_multiple_matches(
@@ -255,6 +258,11 @@ def test_artifact_show_multiple_matches(
     # Should show both artifacts
     assert "User Same Name" in result.output
     assert "Project Same Name" in result.output
+    # Should show absolute paths for both
+    user_path = (user_commands_dir / "same-name.md").resolve()
+    project_path = (project_commands_dir / "same-name.md").resolve()
+    assert str(user_path) in result.output
+    assert str(project_path) in result.output
 
 
 def test_artifact_show_not_found(
@@ -268,68 +276,6 @@ def test_artifact_show_not_found(
 
     runner = CliRunner()
     result = runner.invoke(artifact_group, ["show", "nonexistent"])
-
-    assert result.exit_code == 1
-    assert "No artifact found" in result.output
-
-
-def test_artifact_where_single_match(
-    setup_test_artifacts: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Test artifact where with single matching artifact."""
-    user_claude, project_claude = setup_test_artifacts
-
-    monkeypatch.setattr("pathlib.Path.home", lambda: user_claude.parent)
-    monkeypatch.setattr("pathlib.Path.cwd", lambda: project_claude.parent)
-
-    runner = CliRunner()
-    result = runner.invoke(artifact_group, ["where", "user-skill"])
-
-    assert result.exit_code == 0
-    # Should output only the path (shell-friendly)
-    assert "skills/user-skill/SKILL.md" in result.output
-    # Should be absolute path
-    assert str(user_claude) in result.output or result.output.startswith("/")
-
-
-def test_artifact_where_multiple_matches(
-    setup_test_artifacts: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Test artifact where with multiple matching artifacts."""
-    user_claude, project_claude = setup_test_artifacts
-
-    # Create same-named artifact at both levels
-    user_commands_dir = user_claude / "commands"
-    (user_commands_dir / "same-name.md").write_text("# User Same Name", encoding="utf-8")
-
-    project_commands_dir = project_claude / "commands"
-    project_commands_dir.mkdir(parents=True)
-    (project_commands_dir / "same-name.md").write_text("# Project Same Name", encoding="utf-8")
-
-    monkeypatch.setattr("pathlib.Path.home", lambda: user_claude.parent)
-    monkeypatch.setattr("pathlib.Path.cwd", lambda: project_claude.parent)
-
-    runner = CliRunner()
-    result = runner.invoke(artifact_group, ["where", "same-name"])
-
-    assert result.exit_code == 0
-    # Should show both locations with labels
-    assert "Multiple locations found" in result.output
-    assert "[user]" in result.output
-    assert "[project]" in result.output
-
-
-def test_artifact_where_not_found(
-    setup_test_artifacts: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Test artifact where with no matching artifacts."""
-    user_claude, project_claude = setup_test_artifacts
-
-    monkeypatch.setattr("pathlib.Path.home", lambda: user_claude.parent)
-    monkeypatch.setattr("pathlib.Path.cwd", lambda: project_claude.parent)
-
-    runner = CliRunner()
-    result = runner.invoke(artifact_group, ["where", "nonexistent"])
 
     assert result.exit_code == 1
     assert "No artifact found" in result.output

@@ -13,36 +13,18 @@ import click
 def compliance_reminder_hook() -> None:
     """Output dignified-python compliance reminder for UserPromptSubmit hook."""
     click.echo("<reminder>")
-    click.echo(
-        "CRITICAL: Load dignified-python skill when editing Python and "
-        "strictly abide by the standards defined in it."
-    )
+    click.echo("🔴 DIGNIFIED PYTHON: Load skill when editing Python. STRICT compliance required.")
     click.echo()
-    click.echo("Core philosophy:")
-    click.echo("  - Explicit, predictable code that fails fast")
-    click.echo("  - LBYL over EAFP - check before acting")
-    click.echo("  - Python 3.13+ syntax only")
-    click.echo("  - Error boundaries at CLI/API level")
+    click.echo("LBYL (Look Before You Leap) NOT EAFP (Easier to Ask Forgiveness than Permission)")
+    click.echo("  • Check conditions FIRST: if key in dict, if path.exists(), if hasattr()")
+    click.echo("  • NEVER use try/except for control flow")
     click.echo()
-    click.echo("Critical rules:")
-    click.echo("  1. Exceptions: LBYL over EAFP 🔴")
-    click.echo(
-        "     - ALWAYS use LBYL (Look Before You Leap) first, before EAFP, "
-        "which should be used only if absolutely necessary "
-        "(only API supported by 3rd party library, for example)"
-    )
-    click.echo("     - Check conditions with if statements before acting")
-    click.echo("     - Only handle exceptions at error boundaries (CLI, third-party APIs)")
-    click.echo("     - Let exceptions bubble up by default")
-    click.echo(
-        "  2. Types: Use list[str], dict[str,int], str|None. FORBIDDEN: List, Optional, Union 🔴"
-    )
-    click.echo("  3. Imports: Absolute only. NEVER relative imports 🔴")
-    click.echo("  4. Style: Max 4 indent levels. Extract helpers if deeper")
-    click.echo("  5. Data: Prefer immutable data structures. Default to @dataclass(frozen=True)")
-    click.echo("  6. NO fallback behavior: Fail fast, don't silently degrade 🔴")
-    click.echo()
-    click.echo("See full skill for details")
+    click.echo("FORBIDDEN patterns (will be rejected):")
+    click.echo("  • try/except for control flow → Use if key in dict, if path.exists(), etc.")
+    click.echo("  • List[str], Optional, Union → Use list[str], str|None")
+    click.echo("  • Relative imports (.module) → Use absolute (workstack.module)")
+    click.echo("  • Silent fallbacks → Let exceptions bubble, fail fast")
+    click.echo("  • from __future__ import annotations → Python 3.13+ doesn't need it")
     click.echo("</reminder>")
 
 

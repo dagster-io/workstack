@@ -2053,7 +2053,7 @@ def test_create_with_plan_ensures_uniqueness() -> None:
         # Check that first worktree has date prefix
         from datetime import datetime
 
-        date_prefix = datetime.now().strftime("%Y-%m-%d")
+        date_prefix = datetime.now().strftime("%y-%m-%d")
         expected_name1 = f"{date_prefix}-my-feature"
         wt_path1 = workstacks_dir / expected_name1
         assert wt_path1.exists(), f"Expected first worktree at {wt_path1}"
@@ -2075,3 +2075,92 @@ def test_create_with_plan_ensures_uniqueness() -> None:
         # Verify both worktrees exist
         assert wt_path1.exists()
         assert wt_path2.exists()
+
+
+def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
+    """Test that long plan names produce matching branch/worktree names after truncation.
+
+    This test verifies the fix for the naming mismatch issue where:
+    - LLM previously truncated plan titles to 30 chars BEFORE date prefix
+    - Workstack now truncates to 30 chars AFTER date prefix
+    - Result: worktree name == branch name (both 30 chars)
+    """
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        git_dir = cwd / ".git"
+        git_dir.mkdir()
+
+        # Create plan file with very long name that will exceed 30 chars with date prefix
+        # Example: "25-11-08-" (9 chars) + base name (61 chars) = 70 chars total
+        long_plan_name = "fix-branch-worktree-name-mismatch-in-workstack-plan-workflow-plan.md"
+        plan_file = cwd / long_plan_name
+        plan_file.write_text("# Fix Branch Worktree Name Mismatch\n", encoding="utf-8")
+
+        workstacks_root = cwd / "workstacks"
+        workstacks_dir = workstacks_root / cwd.name
+        workstacks_dir.mkdir(parents=True)
+
+        config_toml = workstacks_dir / "config.toml"
+        config_toml.write_text("", encoding="utf-8")
+
+        git_ops = FakeGitOps(
+            git_common_dirs={cwd: git_dir},
+            default_branches={cwd: "main"},
+        )
+        global_config_ops = FakeGlobalConfigOps(
+            exists=True,
+            workstacks_root=workstacks_root,
+            use_graphite=False,
+        )
+
+        test_ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            github_ops=FakeGitHubOps(),
+            graphite_ops=FakeGraphiteOps(),
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
+
+        # Create worktree from long plan filename
+        result = runner.invoke(cli, ["create", "--plan", str(plan_file)], obj=test_ctx)
+        assert result.exit_code == 0, result.output
+
+        # Get the created worktree (should be only directory in workstacks_dir)
+        worktrees = [d for d in workstacks_dir.iterdir() if d.is_dir()]
+        assert len(worktrees) == 1, f"Expected exactly 1 worktree, found {len(worktrees)}"
+
+        actual_worktree_path = worktrees[0]
+        actual_worktree_name = actual_worktree_path.name
+
+        # Get the branch that was created for this worktree
+        # The git_ops fake tracks created branches
+        assert len(git_ops.created_branches) == 1, (
+            f"Expected exactly 1 branch created, found {len(git_ops.created_branches)}"
+        )
+        actual_branch_name = git_ops.created_branches[0]
+
+        # CRITICAL: Branch name MUST match worktree name
+        assert actual_branch_name == actual_worktree_name, (
+            f"Branch '{actual_branch_name}' != worktree '{actual_worktree_name}'"
+        )
+
+        # Both should be exactly 30 characters (truncated after date prefix)
+        assert len(actual_worktree_name) == 30, (
+            f"Worktree name: expected 30 chars, got {len(actual_worktree_name)}"
+        )
+        assert len(actual_branch_name) == 30, (
+            f"Branch name: expected 30 chars, got {len(actual_branch_name)}"
+        )
+
+        # Both should start with date prefix (YY-MM-DD-)
+        from datetime import datetime
+
+        date_prefix = datetime.now().strftime("%y-%m-%d")
+        assert actual_worktree_name.startswith(date_prefix), (
+            f"Worktree name should start with '{date_prefix}', got: {actual_worktree_name}"
+        )
+        assert actual_branch_name.startswith(date_prefix), (
+            f"Branch name should start with '{date_prefix}', got: {actual_branch_name}"
+        )

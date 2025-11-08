@@ -194,7 +194,7 @@ def extract_trailing_number(name: str) -> tuple[str, int | None]:
 def ensure_unique_worktree_name(base_name: str, workstacks_dir: Path) -> str:
     """Ensure unique worktree name with date prefix and smart versioning.
 
-    Adds date prefix in format YYYY-MM-DD- to the base name.
+    Adds date prefix in format YY-MM-DD- to the base name.
     If a worktree with that name exists, increments numeric suffix starting at 2.
     Uses LBYL pattern: checks path.exists() before operations.
 
@@ -206,11 +206,11 @@ def ensure_unique_worktree_name(base_name: str, workstacks_dir: Path) -> str:
         Guaranteed unique worktree name with date prefix
 
     Examples:
-        First time: "my-feature" → "2025-11-08-my-feature"
-        Duplicate: "my-feature" → "2025-11-08-my-feature-2"
-        Next day: "my-feature" → "2025-11-09-my-feature"
+        First time: "my-feature" → "25-11-08-my-feature"
+        Duplicate: "my-feature" → "25-11-08-my-feature-2"
+        Next day: "my-feature" → "25-11-09-my-feature"
     """
-    date_prefix = datetime.now().strftime("%Y-%m-%d")
+    date_prefix = datetime.now().strftime("%y-%m-%d")
     candidate_name = f"{date_prefix}-{base_name}"
 
     # Check if the base candidate exists
@@ -522,9 +522,7 @@ def create(
         plan_stem = plan_file.stem  # filename without extension
         cleaned_stem = strip_plan_from_filename(plan_stem)
         base_name = sanitize_worktree_name(cleaned_stem)
-        # Truncate to 30 chars BEFORE date-prefixing to ensure branch/worktree names match
-        base_name = base_name[:30].rstrip("-")
-        # Note: We'll apply ensure_unique_worktree_name() after getting workstacks_dir
+        # Note: Apply ensure_unique_worktree_name() and truncation after getting workstacks_dir
         name = base_name
 
     # Regular create (no special flags)
@@ -568,6 +566,9 @@ def create(
     # Apply date prefix and uniqueness for plan-derived names
     if is_plan_derived:
         name = ensure_unique_worktree_name(name, workstacks_dir)
+        # Truncate to 30 chars AFTER date-prefixing to match branch name limit
+        # This ensures worktree name matches branch name (both truncated at 30 chars)
+        name = name[:30].rstrip("-/")
 
     wt_path = worktree_path_for(workstacks_dir, name)
 

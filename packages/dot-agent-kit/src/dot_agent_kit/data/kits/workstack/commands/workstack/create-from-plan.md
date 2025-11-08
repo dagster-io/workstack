@@ -654,32 +654,16 @@ Suggested fix: Include rollback procedure or backup strategy
 3. Replace spaces with hyphens
 4. Remove all special characters except hyphens and alphanumeric
 5. Handle Unicode: Normalize to NFC, remove emojis/special symbols
-6. **MUST truncate to exactly 30 characters maximum** (CRITICAL - to match workstack's branch name limit)
-   - **Hard requirement**: Final base name MUST be ≤ 30 characters BEFORE saving as `-plan.md`
-   - If the name is already ≤30 characters, use it as-is
-   - If the name exceeds 30 characters, use contextual understanding to create a readable shortened version
-   - Strategies to consider (choose based on context):
-     - Break at word boundaries to avoid cutting words mid-character
-     - Remove filler words (to, the, a, an, for, with, etc.) while keeping meaningful terms
-     - Use common abbreviations for technical terms (e.g., "auth" for "authentication", "config" for "configuration", "impl" for "implementation")
-     - Preserve key domain-specific terms that convey the essence of the change
-   - Goal: Maximize readability and meaning preservation within the 30-character constraint
-   - No strict pattern rules: treat all words equally and decide contextually what's most important
-   - **Fallback**: If intelligent shortening fails, simply truncate to 30 characters: `base_name = base_name[:30]`
-7. Strip any trailing hyphens or slashes after shortening: `base_name = base_name.rstrip('-/')`
-8. Ensure at least one alphanumeric character remains
-9. **Final validation**: CRITICAL - Verify `len(base_name) <= 30` before proceeding to Step 8
-   - If validation fails, this is a bug in your truncation logic - fix it before continuing
+6. Strip any trailing hyphens or slashes: `base_name = base_name.rstrip('-/')`
+7. Ensure at least one alphanumeric character remains
 
-**Why 30 characters:** Workstack truncates branch names to 30 characters in `sanitize_branch_component()`. By shortening the base name to 30 characters BEFORE adding `-plan.md`, we ensure that the worktree name, branch name, and filename base all match consistently.
-
-**Agent flexibility:** You have complete flexibility in HOW you shorten names to meet the 30-character constraint. The goal is to produce the most readable and meaningful branch name possible. Use your contextual understanding to decide which words are essential, which can be abbreviated, and which can be removed. There is no single "correct" answer - multiple valid approaches exist for any given long title. Prioritize readability and semantic clarity over strict algorithmic rules.
+**No length restriction:** DO NOT truncate the base name. Workstack will handle truncation after adding the date prefix to ensure worktree and branch names match at exactly 30 characters. Your job is only to convert the title to valid kebab-case format.
 
 **Resulting names:**
 
-- Filename: `<truncated-base>-plan.md` (base ≤ 30 chars)
-- Worktree name: `<truncated-base>` (≤ 30 chars, derived from filename by workstack)
-- Branch name: `<truncated-base>` (≤ 30 chars, derived from worktree name by workstack)
+- Filename: `<kebab-case-base>-plan.md` (any length - no LLM truncation)
+- Worktree name: `YY-MM-DD-<kebab-case-base>` truncated to 30 chars by workstack
+- Branch name: `YY-MM-DD-<kebab-case-base>` truncated to 30 chars by workstack (matches worktree)
 
 **If extraction fails:**
 

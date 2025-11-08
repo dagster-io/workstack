@@ -175,8 +175,8 @@ def test_ensure_unique_worktree_name_first_time(tmp_path: Path) -> None:
 
     result = ensure_unique_worktree_name("my-feature", workstacks_dir)
 
-    # Should have date prefix in format YYYY-MM-DD-
-    date_prefix = datetime.now().strftime("%Y-%m-%d")
+    # Should have date prefix in format YY-MM-DD-
+    date_prefix = datetime.now().strftime("%y-%m-%d")
     assert result == f"{date_prefix}-my-feature"
     assert not (workstacks_dir / result).exists()
 
@@ -186,7 +186,7 @@ def test_ensure_unique_worktree_name_duplicate_same_day(tmp_path: Path) -> None:
     workstacks_dir = tmp_path / "workstacks"
     workstacks_dir.mkdir()
 
-    date_prefix = datetime.now().strftime("%Y-%m-%d")
+    date_prefix = datetime.now().strftime("%y-%m-%d")
     existing_name = f"{date_prefix}-my-feature"
     (workstacks_dir / existing_name).mkdir()
 
@@ -202,7 +202,7 @@ def test_ensure_unique_worktree_name_multiple_duplicates(tmp_path: Path) -> None
     workstacks_dir = tmp_path / "workstacks"
     workstacks_dir.mkdir()
 
-    date_prefix = datetime.now().strftime("%Y-%m-%d")
+    date_prefix = datetime.now().strftime("%y-%m-%d")
     (workstacks_dir / f"{date_prefix}-my-feature").mkdir()
     (workstacks_dir / f"{date_prefix}-my-feature-2").mkdir()
     (workstacks_dir / f"{date_prefix}-my-feature-3").mkdir()
@@ -217,7 +217,7 @@ def test_ensure_unique_worktree_name_with_existing_number(tmp_path: Path) -> Non
     workstacks_dir = tmp_path / "workstacks"
     workstacks_dir.mkdir()
 
-    date_prefix = datetime.now().strftime("%Y-%m-%d")
+    date_prefix = datetime.now().strftime("%y-%m-%d")
     result = ensure_unique_worktree_name("fix-v3", workstacks_dir)
 
     # Base name has number, should preserve it in date-prefixed name

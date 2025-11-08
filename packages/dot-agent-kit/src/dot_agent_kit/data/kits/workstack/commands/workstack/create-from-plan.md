@@ -655,7 +655,7 @@ Suggested fix: Include rollback procedure or backup strategy
 4. Remove all special characters except hyphens and alphanumeric
 5. Handle Unicode: Normalize to NFC, remove emojis/special symbols
 6. **MUST truncate to exactly 30 characters maximum** (CRITICAL - to match workstack's branch name limit)
-   - **Hard requirement**: Final base name MUST be ≤ 30 characters
+   - **Hard requirement**: Final base name MUST be ≤ 30 characters BEFORE saving as `-plan.md`
    - If the name is already ≤30 characters, use it as-is
    - If the name exceeds 30 characters, use contextual understanding to create a readable shortened version
    - Strategies to consider (choose based on context):
@@ -665,10 +665,11 @@ Suggested fix: Include rollback procedure or backup strategy
      - Preserve key domain-specific terms that convey the essence of the change
    - Goal: Maximize readability and meaning preservation within the 30-character constraint
    - No strict pattern rules: treat all words equally and decide contextually what's most important
-   - **Fallback**: If intelligent shortening fails, simply truncate to 30 characters and strip trailing hyphens
-7. Strip any trailing hyphens or slashes after shortening
+   - **Fallback**: If intelligent shortening fails, simply truncate to 30 characters: `base_name = base_name[:30]`
+7. Strip any trailing hyphens or slashes after shortening: `base_name = base_name.rstrip('-/')`
 8. Ensure at least one alphanumeric character remains
-9. **Final validation**: Verify base name length ≤ 30 characters before proceeding
+9. **Final validation**: CRITICAL - Verify `len(base_name) <= 30` before proceeding to Step 8
+   - If validation fails, this is a bug in your truncation logic - fix it before continuing
 
 **Why 30 characters:** Workstack truncates branch names to 30 characters in `sanitize_branch_component()`. By shortening the base name to 30 characters BEFORE adding `-plan.md`, we ensure that the worktree name, branch name, and filename base all match consistently.
 

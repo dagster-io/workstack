@@ -35,7 +35,7 @@ def generate_recovery_script(ctx: WorkstackContext) -> Path | None:
     script_content = render_activation_script(
         worktree_path=repo.root,
         comment="workstack passthrough recovery script",
-        final_message='echo "✓ Workstack detected a removed directory and returned to repo root."',
+        final_message="",
     )
 
     script_path = write_script_to_temp(

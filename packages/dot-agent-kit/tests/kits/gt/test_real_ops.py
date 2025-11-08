@@ -268,6 +268,13 @@ class TestRealGitGtKitOpsSmoke:
                 check=True,
                 capture_output=True,
             )
+            # Ensure branch is named 'main' (git init default can vary)
+            subprocess.run(
+                ["git", "checkout", "-b", "main"],
+                cwd=repo_path,
+                check=True,
+                capture_output=True,
+            )
 
             # Create initial commit on main
             test_file = repo_path / "test.txt"

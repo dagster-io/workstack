@@ -400,9 +400,134 @@ If no guidance provided: use the original plan as-is
 
 **Output:** Final plan content (original or modified) ready for Step 6 processing
 
-### Step 5: Apply Semantic Understanding
+### Step 5: Extract and Preserve Semantic Understanding
 
-Apply the semantic understanding principles from the "Semantic Understanding & Context Preservation" section above when enhancing the plan. This includes capturing API quirks, architectural insights, domain logic, reasoning trails, and known pitfalls that would be expensive for the implementing agent to rediscover.
+Analyze the planning discussion to extract valuable context that implementing agents would find expensive to rediscover. Use the structured template sections to organize discoveries.
+
+**Context Preservation Criteria:**
+Include items that meet ANY of these:
+
+- Took time to discover and aren't obvious from code
+- Would change implementation if known vs. unknown
+- Would cause bugs if missed (especially subtle or delayed bugs)
+- Explain WHY decisions were made, not just WHAT was decided
+
+**For each dimension, systematically check the planning discussion:**
+
+#### 1. API/Tool Quirks
+
+Look for discoveries about external systems, libraries, or tools:
+
+Questions to ask:
+
+- Did we discover undocumented behaviors or edge cases?
+- Are there timing issues, race conditions, or ordering constraints?
+- Did we find version-specific gotchas or compatibility issues?
+- Are there performance characteristics that affect design?
+
+Examples to extract:
+
+- "Stripe webhooks often arrive BEFORE API response returns to client"
+- "PostgreSQL foreign keys must be created in dependency order within same migration"
+- "WebSocket API doesn't guarantee message order for sends <10ms apart"
+- "SQLite doesn't support DROP COLUMN in versions before 3.35"
+
+#### 2. Architectural Insights
+
+Look for WHY behind design decisions:
+
+Questions to ask:
+
+- Why was this architectural pattern chosen over alternatives?
+- What constraints led to this design?
+- How do components interact in non-obvious ways?
+- What's the reasoning behind the sequencing or phasing?
+
+Examples to extract:
+
+- "Zero-downtime deployment requires 4-phase migration to maintain rollback capability"
+- "State machine pattern prevents invalid state transitions from webhook retries"
+- "Webhook handlers MUST be idempotent because Stripe retries for up to 3 days"
+- "Database transactions scoped per-webhook-event, not per-API-call, to prevent partial updates"
+
+#### 3. Domain Logic & Business Rules
+
+Look for non-obvious requirements and rules:
+
+Questions to ask:
+
+- Are there business rules that aren't obvious from code?
+- What edge cases or special conditions apply?
+- Are there compliance, security, or regulatory requirements?
+- What assumptions about user behavior or data affect implementation?
+
+Examples to extract:
+
+- "Failed payments trigger 7-day grace period before service suspension, not immediate cutoff"
+- "Admin users must retain ALL permissions during migration - partial loss creates security incident"
+- "Default permissions for new users during migration must be fail-closed, not empty"
+- "Tax calculation must happen before payment intent creation to ensure correct amounts"
+
+#### 4. Complex Reasoning
+
+Look for alternatives considered and decision rationale:
+
+Questions to ask:
+
+- What approaches were considered but rejected?
+- Why were certain solutions ruled out?
+- What tradeoffs were evaluated?
+- How did we arrive at the chosen approach?
+
+Format as:
+
+- **Rejected**: [Approach]
+  - Reason: [Why it doesn't work]
+  - Also: [Additional concerns]
+- **Chosen**: [Selected approach]
+  - [Why this works better]
+
+Examples to extract:
+
+- "**Rejected**: Synchronous payment confirmation (waiting for webhook in API call)
+  - Reason: Webhooks can take 1-30 seconds, creates timeout issues
+  - Also: Connection failures would lose webhook delivery entirely"
+- "**Rejected**: Database-level locking (SELECT FOR UPDATE)
+  - Reason: Lock held during entire edit session causes head-of-line blocking"
+- "**Chosen**: Optimistic locking with version numbers
+  - Detects conflicts without blocking, better for real-time collaboration"
+
+#### 5. Known Pitfalls
+
+Look for specific gotchas and anti-patterns:
+
+Questions to ask:
+
+- What looks correct but actually causes problems?
+- Are there subtle bugs waiting to happen?
+- What mistakes did we avoid during planning?
+- What would be easy to get wrong during implementation?
+
+Format as "DO NOT [anti-pattern] - [why it breaks]"
+
+Examples to extract:
+
+- "DO NOT use payment_intent.succeeded event alone - fires even for zero-amount test payments. Check amount > 0."
+- "DO NOT store Stripe objects directly in database - schema changes across API versions. Extract needed fields only."
+- "DO NOT assume webhook delivery order - charge.succeeded might arrive before payment_intent.succeeded"
+- "DO NOT use document.updated_at for version checking - clock skew and same-ms races cause false conflicts"
+- "DO NOT migrate superuser permissions first - if migration fails, you've locked out recovery access"
+
+#### Extraction Process
+
+1. **Review the planning conversation** from start to current point
+2. **Identify valuable discoveries** using criteria above
+3. **Organize into appropriate categories** (API Quirks, Insights, Logic, Reasoning, Pitfalls)
+4. **Write specific, actionable items** - not vague generalizations
+5. **Link to implementation steps** - ensure every context item connects to at least one step
+6. **Flag orphaned context** - context without corresponding steps is probably not relevant
+
+**Output:** Enhanced plan with populated Context & Understanding sections, ready for Step 6 interactive enhancement
 
 ### Step 6: Interactive Plan Enhancement
 
@@ -491,11 +616,46 @@ The plan references "the payments API" - which service is this?
 - Example: "Stripe API v2" or "Internal billing service at /api/billing"
 ```
 
+**Reasoning and Context Discovery:**
+
+Beyond file paths and metrics, probe for valuable reasoning and discoveries:
+
+```markdown
+**Discovered Constraints:**
+During planning, did you discover any constraints that aren't obvious from the code?
+
+- Example: "API doesn't support bulk operations, must process items individually"
+- Example: "Database doesn't support transactions across schemas"
+- Answers: [Will be included in Context & Understanding section]
+
+**Surprising Interdependencies:**
+Did you discover any non-obvious connections between components or requirements?
+
+- Example: "Can't change user model without updating 3 other services due to shared schema"
+- Example: "Email sending must complete before payment finalization for audit trail"
+- Answers: [Will be included in Context & Understanding section]
+
+**Known Pitfalls:**
+Did you discover anything that looks correct but actually causes problems?
+
+- Example: "Using .filter().first() looks safe but returns None without error, use .get() instead"
+- Example: "Webhook signature must be verified with raw body, not parsed JSON"
+- Answers: [Will be included in Context & Understanding section]
+
+**Rejected Approaches:**
+Were any approaches considered but rejected? If so, why?
+
+- Example: "Tried caching at API layer but race conditions made it unreliable, moved to database layer"
+- Example: "Considered WebSocket for real-time updates but polling simpler and more reliable for our scale"
+- Answers: [Will be included in Context & Understanding section]
+```
+
 **Important:**
 
 - Ask all clarifying questions in one interaction (batch them)
 - Make questions specific and provide examples
 - Allow user to skip questions if they prefer ambiguity
+- Context questions should focus on discoveries made during planning, not theoretical concerns
 
 #### Check for Semantic Understanding
 
@@ -563,13 +723,77 @@ Based on user responses:
 
 ### Context & Understanding
 
-Include semantic understanding captured during planning (see section above)
+Preserve valuable context discovered during planning. Include items that:
+
+- Took time to discover and aren't obvious from code
+- Would change implementation if known vs. unknown
+- Would cause bugs if missed (especially subtle or delayed bugs)
+
+See EXAMPLES.md for complete examples of excellent context preservation.
+
+#### API/Tool Quirks
+
+[Undocumented behaviors, timing issues, version constraints, edge cases]
+
+Example:
+
+- Stripe webhooks often arrive BEFORE API response returns
+- PostgreSQL foreign keys must be created in dependency order
+
+#### Architectural Insights
+
+[Why design decisions were made, not just what was decided]
+
+Example:
+
+- Zero-downtime deployment requires 4-phase migration to allow rollback
+- State machine pattern prevents invalid state transitions from retries
+
+#### Domain Logic & Business Rules
+
+[Non-obvious requirements, edge cases, compliance rules]
+
+Example:
+
+- Failed payments trigger 7-day grace period, not immediate suspension
+- Admin users must retain all permissions during migration (security)
+
+#### Complex Reasoning
+
+[Alternatives considered and why some were rejected]
+
+Example:
+
+- **Rejected**: Synchronous payment confirmation (waiting for webhook)
+  - Reason: Webhooks take 1-30s, creates timeout issues
+- **Chosen**: Async webhook-driven flow
+  - Handles timing correctly regardless of webhook delay
+
+#### Known Pitfalls
+
+[What looks right but causes problems - specific gotchas]
+
+Example:
+
+- DO NOT use payment_intent.succeeded alone - fires for zero-amount tests
+- DO NOT store Stripe objects directly - schema changes across API versions
 
 ### Implementation Steps
 
+Use hybrid context linking:
+
+- Inline [CRITICAL:] tags for must-not-miss warnings
+- "Related Context:" subsections for detailed explanations
+
 1. **[Action]**: [What to do] in `[exact/file/path]`
+   [CRITICAL: Any security or breaking change warnings]
    - Success: [How to verify]
    - On failure: [Recovery action]
+
+   Related Context:
+   - [Why this approach was chosen]
+   - [What constraints or gotchas apply]
+   - [Link to relevant Context & Understanding sections above]
 
 2. [Continue pattern...]
 
@@ -586,7 +810,33 @@ Include semantic understanding captured during planning (see section above)
 
 ### Context & Understanding
 
-[Semantic understanding sections as above]
+Preserve valuable context discovered during planning. Include items that:
+
+- Took time to discover and aren't obvious from code
+- Would change implementation if known vs. unknown
+- Would cause bugs if missed (especially subtle or delayed bugs)
+
+See EXAMPLES.md for complete examples of excellent context preservation.
+
+#### API/Tool Quirks
+
+[Undocumented behaviors, timing issues, version constraints, edge cases]
+
+#### Architectural Insights
+
+[Why design decisions were made, not just what was decided]
+
+#### Domain Logic & Business Rules
+
+[Non-obvious requirements, edge cases, compliance rules]
+
+#### Complex Reasoning
+
+[Alternatives considered and why some were rejected]
+
+#### Known Pitfalls
+
+[What looks right but causes problems - specific gotchas]
 
 ### Phase 1: [Name]
 
@@ -595,7 +845,21 @@ Include semantic understanding captured during planning (see section above)
 
 **Steps:**
 
-1. [Action] in [file]
+Use hybrid context linking:
+
+- Inline [CRITICAL:] tags for must-not-miss warnings
+- "Related Context:" subsections for detailed explanations
+
+1. **[Action]**: [What to do] in `[exact/file/path]`
+   [CRITICAL: Any security or breaking change warnings]
+   - Success: [How to verify]
+   - On failure: [Recovery action]
+
+   Related Context:
+   - [Why this approach was chosen]
+   - [What constraints or gotchas apply]
+   - [Link to relevant Context & Understanding sections above]
+
 2. Add tests in [test file]
 3. Validate with `/ensure-ci`
 
@@ -604,6 +868,61 @@ Include semantic understanding captured during planning (see section above)
 **Branch**: feature-2 (stacks on: feature-1)
 [Continue pattern...]
 ```
+
+#### Apply Hybrid Context Linking
+
+Before finalizing the plan, ensure context is properly linked to implementation steps:
+
+**Linking Strategy:**
+
+1. **Inline [CRITICAL:] tags** - For must-not-miss warnings in steps
+   - Security vulnerabilities
+   - Breaking changes
+   - Data loss risks
+   - Irreversible operations
+   - Race conditions or timing requirements
+
+   Example:
+
+   ```markdown
+   1. **Create database migration**: Add migration 0001_initial.py
+      [CRITICAL: Run backup BEFORE migration. Irreversible schema change.]
+   ```
+
+2. **"Related Context:" subsections** - For detailed explanations
+   - Link to relevant Context & Understanding sections
+   - Explain WHY this approach was chosen
+   - Document discovered constraints or gotchas
+   - Reference rejected alternatives
+
+   Example:
+
+   ```markdown
+   Related Context:
+
+   - Migration is 4-phase to allow rollback (see Architectural Insights)
+   - Foreign keys must be created in dependency order (see API/Tool Quirks)
+   - See Known Pitfalls for DROP COLUMN version constraint
+   ```
+
+**Validation Checklist:**
+
+Before proceeding, verify:
+
+- [ ] Every complex or critical implementation step has appropriate context
+- [ ] Security-critical operations have inline [CRITICAL:] warnings
+- [ ] Each Context & Understanding item is referenced by at least one step
+- [ ] No orphaned context (context without corresponding steps)
+- [ ] Context items are specific and actionable, not vague generalizations
+
+**Orphaned Context Handling:**
+
+If context items don't map to any implementation step:
+
+- Either: Add implementation steps that use this context
+- Or: Remove the context item (it's probably not relevant)
+
+Context should drive implementation. If context doesn't connect to steps, it's either missing steps or irrelevant.
 
 #### Final Review
 

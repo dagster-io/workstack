@@ -255,9 +255,10 @@ After submission, provide a clear summary:
 
 **Formatting requirements:**
 
-- Use bullet list (`-`) for each item
-- Bold the labels
-- Do NOT use two-space line breaks
+- Use bullet list (`-`) for each item on its own line
+- Bold the labels (e.g., `**PR Created**:`, `**URL**:`, `**Branch**:`)
+- Each bullet must be on a separate line with proper line breaks
+- Do NOT concatenate multiple items on the same line
 
 ## Error Handling
 

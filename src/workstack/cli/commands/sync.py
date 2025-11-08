@@ -122,7 +122,6 @@ def sync_cmd(
 
     # Step 3: Switch to root (only if not already at root)
     if Path.cwd().resolve() != repo.root:
-        _emit(f"Switching to root worktree: {repo.root}", script_mode=script)
         os.chdir(repo.root)
 
     # Step 4: Run `gt sync`
@@ -183,8 +182,6 @@ def sync_cmd(
     if not deletable:
         _emit("\nNo workstacks to clean up.", script_mode=script)
     else:
-        _emit("\nWorkstacks safe to delete:\n", script_mode=script)
-
         for name, branch, state, pr_number in deletable:
             # Display formatted (reuse gc.py formatting)
             name_part = click.style(name, fg="cyan", bold=True)
@@ -215,7 +212,6 @@ def sync_cmd(
                     script_mode=script,
                 )
             else:
-                _emit(f"Removing worktree: {name} (branch: {_branch})", script_mode=script)
                 # Reuse remove logic from remove.py
                 _remove_worktree(
                     ctx,
@@ -223,13 +219,15 @@ def sync_cmd(
                     force=True,  # Already confirmed above
                     delete_stack=False,  # Leave branches for gt sync -f
                     dry_run=False,
+                    quiet=True,  # Suppress planning output during sync
                 )
+                # Show clean confirmation after removal completes
+                _emit(f"✓ Removed worktree: {name} (branch: {_branch})", script_mode=script)
 
         # Step 6.5: Automatically run second gt sync -f to delete branches (when force=True)
         if force and not dry_run and deletable:
-            _emit("\nDeleting merged branches...", script_mode=script)
             ctx.graphite_ops.sync(repo.root, force=True, quiet=not verbose)
-            _emit("✓ Merged branches deleted.", script_mode=script)
+            _emit("✓ Deleted merged branches", script_mode=script)
 
         # Only show manual instruction if force was not used
         if not force:

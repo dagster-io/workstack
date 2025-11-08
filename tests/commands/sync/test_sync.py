@@ -106,9 +106,10 @@ def test_sync_runs_gt_sync_from_root() -> None:
 
         # Verify sync was called with correct arguments
         assert len(graphite_ops.sync_calls) == 1
-        cwd_arg, force_arg = graphite_ops.sync_calls[0]
+        cwd_arg, force_arg, quiet_arg = graphite_ops.sync_calls[0]
         assert cwd_arg == repo_root
         assert force_arg is False
+        assert quiet_arg is True  # Default is quiet mode
 
 
 def test_sync_with_force_flag() -> None:
@@ -154,8 +155,9 @@ def test_sync_with_force_flag() -> None:
 
         # Verify -f was passed
         assert len(graphite_ops.sync_calls) == 1
-        _cwd_arg, force_arg = graphite_ops.sync_calls[0]
+        _cwd_arg, force_arg, quiet_arg = graphite_ops.sync_calls[0]
         assert force_arg is True
+        assert quiet_arg is True  # Default is quiet mode
 
 
 def test_sync_handles_gt_not_installed() -> None:
@@ -904,11 +906,13 @@ def test_sync_force_runs_double_gt_sync() -> None:
         assert result.exit_code == 0
         # Verify sync was called twice
         assert len(graphite_ops.sync_calls) == 2
-        # Both calls should have force=True
-        _cwd1, force1 = graphite_ops.sync_calls[0]
-        _cwd2, force2 = graphite_ops.sync_calls[1]
+        # Both calls should have force=True and quiet=True
+        _cwd1, force1, quiet1 = graphite_ops.sync_calls[0]
+        _cwd2, force2, quiet2 = graphite_ops.sync_calls[1]
         assert force1 is True
+        assert quiet1 is True
         assert force2 is True
+        assert quiet2 is True
         # Verify branch cleanup message appeared
         assert "Deleting merged branches..." in result.output
         assert "✓ Merged branches deleted." in result.output
@@ -966,8 +970,9 @@ def test_sync_without_force_runs_single_gt_sync() -> None:
         assert result.exit_code == 0
         # Verify sync was called only once
         assert len(graphite_ops.sync_calls) == 1
-        _cwd, force = graphite_ops.sync_calls[0]
+        _cwd, force, quiet = graphite_ops.sync_calls[0]
         assert force is False
+        assert quiet is True  # Default is quiet mode
         # Verify manual instruction is still shown
         assert "Next step: Run 'workstack sync -f'" in result.output
 
@@ -1069,8 +1074,148 @@ def test_sync_force_no_deletable_single_sync() -> None:
         assert result.exit_code == 0
         # Verify sync was called only once (initial sync, no cleanup needed)
         assert len(graphite_ops.sync_calls) == 1
-        _cwd, force = graphite_ops.sync_calls[0]
+        _cwd, force, quiet = graphite_ops.sync_calls[0]
         assert force is True
+        assert quiet is True  # Default is quiet mode
         # No cleanup message
         assert "Deleting merged branches..." not in result.output
         assert "No workstacks to clean up." in result.output
+
+
+def test_sync_verbose_flag() -> None:
+    """Test that sync --verbose passes quiet=False to graphite_ops.sync()."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        workstacks_root = cwd / "workstacks"
+
+        repo_root = cwd
+        (repo_root / ".git").mkdir()
+
+        git_ops = FakeGitOps(
+            git_common_dirs={cwd: cwd / ".git"},
+            worktrees={
+                repo_root: [
+                    WorktreeInfo(path=repo_root, branch="main"),
+                ],
+            },
+        )
+
+        global_config_ops = FakeGlobalConfigOps(
+            workstacks_root=workstacks_root,
+            use_graphite=True,
+        )
+
+        graphite_ops = FakeGraphiteOps()
+
+        test_ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            graphite_ops=graphite_ops,
+            github_ops=FakeGitHubOps(),
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
+
+        result = runner.invoke(cli, ["sync", "--verbose"], obj=test_ctx)
+
+        assert result.exit_code == 0
+        assert "Running: gt sync" in result.output
+
+        # Verify quiet=False was passed
+        assert len(graphite_ops.sync_calls) == 1
+        _cwd_arg, force_arg, quiet_arg = graphite_ops.sync_calls[0]
+        assert force_arg is False
+        assert quiet_arg is False  # Verbose mode = not quiet
+
+
+def test_sync_verbose_short_flag() -> None:
+    """Test that sync -v (short form) passes quiet=False to graphite_ops.sync()."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        workstacks_root = cwd / "workstacks"
+
+        repo_root = cwd
+        (repo_root / ".git").mkdir()
+
+        git_ops = FakeGitOps(
+            git_common_dirs={cwd: cwd / ".git"},
+            worktrees={
+                repo_root: [
+                    WorktreeInfo(path=repo_root, branch="main"),
+                ],
+            },
+        )
+
+        global_config_ops = FakeGlobalConfigOps(
+            workstacks_root=workstacks_root,
+            use_graphite=True,
+        )
+
+        graphite_ops = FakeGraphiteOps()
+
+        test_ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            graphite_ops=graphite_ops,
+            github_ops=FakeGitHubOps(),
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
+
+        result = runner.invoke(cli, ["sync", "-v"], obj=test_ctx)
+
+        assert result.exit_code == 0
+
+        # Verify quiet=False was passed
+        assert len(graphite_ops.sync_calls) == 1
+        _cwd_arg, force_arg, quiet_arg = graphite_ops.sync_calls[0]
+        assert force_arg is False
+        assert quiet_arg is False  # Verbose mode = not quiet
+
+
+def test_sync_force_verbose_combination() -> None:
+    """Test that sync -f -v combines both flags correctly."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        workstacks_root = cwd / "workstacks"
+
+        repo_root = cwd
+        (repo_root / ".git").mkdir()
+
+        git_ops = FakeGitOps(
+            git_common_dirs={cwd: cwd / ".git"},
+            worktrees={
+                repo_root: [
+                    WorktreeInfo(path=repo_root, branch="main"),
+                ],
+            },
+        )
+
+        global_config_ops = FakeGlobalConfigOps(
+            workstacks_root=workstacks_root,
+            use_graphite=True,
+        )
+
+        graphite_ops = FakeGraphiteOps()
+
+        test_ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            graphite_ops=graphite_ops,
+            github_ops=FakeGitHubOps(),
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
+
+        result = runner.invoke(cli, ["sync", "-f", "-v"], obj=test_ctx)
+
+        assert result.exit_code == 0
+
+        # Verify both flags were passed correctly
+        assert len(graphite_ops.sync_calls) == 1
+        _cwd_arg, force_arg, quiet_arg = graphite_ops.sync_calls[0]
+        assert force_arg is True
+        assert quiet_arg is False  # Verbose mode = not quiet

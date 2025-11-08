@@ -168,12 +168,13 @@ class GraphiteOps(ABC):
         ...
 
     @abstractmethod
-    def sync(self, repo_root: Path, *, force: bool) -> None:
+    def sync(self, repo_root: Path, *, force: bool, quiet: bool) -> None:
         """Run gt sync to synchronize with remote.
 
         Args:
             repo_root: Repository root directory
             force: If True, pass --force flag to gt sync
+            quiet: If True, pass --quiet flag to gt sync for minimal output
         """
         ...
 
@@ -304,7 +305,7 @@ class RealGraphiteOps(GraphiteOps):
         """
         return f"https://app.graphite.dev/github/pr/{owner}/{repo}/{pr_number}"
 
-    def sync(self, repo_root: Path, *, force: bool) -> None:
+    def sync(self, repo_root: Path, *, force: bool, quiet: bool) -> None:
         """Run gt sync to synchronize with remote.
 
         Output goes directly to sys.stdout/sys.stderr to avoid capture by
@@ -313,10 +314,17 @@ class RealGraphiteOps(GraphiteOps):
 
         Note: Uses try/except as an acceptable error boundary for handling gt CLI
         availability. We cannot reliably check gt installation status a priori.
+
+        Args:
+            repo_root: Repository root directory
+            force: If True, pass --force flag to gt sync
+            quiet: If True, pass --quiet flag to gt sync for minimal output
         """
         cmd = ["gt", "sync"]
         if force:
             cmd.append("-f")
+        if quiet:
+            cmd.append("--quiet")
 
         subprocess.run(
             cmd,
@@ -472,12 +480,14 @@ class DryRunGraphiteOps(GraphiteOps):
 
     # Destructive operations: print dry-run message instead of executing
 
-    def sync(self, repo_root: Path, *, force: bool) -> None:
+    def sync(self, repo_root: Path, *, force: bool, quiet: bool) -> None:
         """Print dry-run message instead of running gt sync."""
         import click
 
         cmd = ["gt", "sync"]
         if force:
             cmd.append("-f")
+        if quiet:
+            cmd.append("--quiet")
 
         click.echo(f"[DRY RUN] Would run: {' '.join(cmd)}")

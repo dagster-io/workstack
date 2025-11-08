@@ -9,6 +9,7 @@ from tests.fakes.gitops import FakeGitOps
 from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
+from tests.test_utils.graphite_helpers import setup_graphite_stack
 from workstack.cli.cli import cli
 from workstack.core.branch_metadata import BranchMetadata
 from workstack.core.context import WorkstackContext

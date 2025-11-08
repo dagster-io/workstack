@@ -218,11 +218,11 @@ This command cannot run while in plan mode. The workflow is:
 
 **Check if currently in plan mode:**
 
-Plan mode is indicated by the presence of an explicit system reminder tag. Do not use any other signals or heuristics.
+Plan mode is indicated by the presence of an explicit system reminder tag in the **CURRENT user message context** (not historical messages).
 
 **How to detect plan mode:**
 
-Check for this **exact system reminder tag** in the conversation:
+Check for this **exact system reminder tag** in the **MOST RECENT system reminders** (those appearing immediately before/with the user's current request):
 
 ```
 <system-reminder>
@@ -232,10 +232,12 @@ Plan mode is active. The user indicated that they do not want you to execute yet
 
 **Detection logic:**
 
-- If this system reminder tag is present → Plan mode is ACTIVE
-- If this system reminder tag is absent → Plan mode is NOT active
+- If this system reminder tag appears in the CURRENT message context → Plan mode is ACTIVE
+- If this system reminder tag is absent from recent context → Plan mode is NOT active
+- **CRITICAL**: Ignore system reminders from earlier in conversation history
+- Only check reminders that appear with or immediately before the current command invocation
 - Do NOT use conversation content, context, or other heuristics to determine plan mode status
-- ONLY the presence of this explicit system tag indicates plan mode
+- ONLY the presence of this explicit system tag in CURRENT context indicates plan mode
 
 **If in plan mode:**
 

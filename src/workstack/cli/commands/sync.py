@@ -69,8 +69,20 @@ def _return_to_original_worktree(
     hidden=True,
     help="Output shell script for directory change instead of messages.",
 )
+@click.option(
+    "--verbose",
+    "-v",
+    is_flag=True,
+    help="Show detailed sync output.",
+)
 @click.pass_obj
-def sync_cmd(ctx: WorkstackContext, force: bool, dry_run: bool, script: bool) -> None:
+def sync_cmd(
+    ctx: WorkstackContext,
+    force: bool,
+    dry_run: bool,
+    script: bool,
+    verbose: bool,
+) -> None:
     """Sync with Graphite and clean up merged worktrees.
 
     This command must be run from a workstack-managed repository.
@@ -121,7 +133,7 @@ def sync_cmd(ctx: WorkstackContext, force: bool, dry_run: bool, script: bool) ->
     if not dry_run:
         _emit(f"Running: {' '.join(cmd)}", script_mode=script)
         try:
-            ctx.graphite_ops.sync(repo.root, force=force)
+            ctx.graphite_ops.sync(repo.root, force=force, quiet=not verbose)
         except subprocess.CalledProcessError as e:
             _emit(
                 f"Error: gt sync failed with exit code {e.returncode}",
@@ -215,7 +227,7 @@ def sync_cmd(ctx: WorkstackContext, force: bool, dry_run: bool, script: bool) ->
         # Step 6.5: Automatically run second gt sync -f to delete branches (when force=True)
         if force and not dry_run and deletable:
             _emit("\nDeleting merged branches...", script_mode=script)
-            ctx.graphite_ops.sync(repo.root, force=True)
+            ctx.graphite_ops.sync(repo.root, force=True, quiet=not verbose)
             _emit("✓ Merged branches deleted.", script_mode=script)
 
         # Only show manual instruction if force was not used

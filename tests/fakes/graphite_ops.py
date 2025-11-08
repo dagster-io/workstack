@@ -36,7 +36,7 @@ class FakeGraphiteOps(GraphiteOps):
             stacks: Mapping of branch name -> stack (list of branches from trunk to leaf)
         """
         self._sync_raises = sync_raises
-        self._sync_calls: list[tuple[Path, bool]] = []
+        self._sync_calls: list[tuple[Path, bool, bool]] = []
         self._pr_info = pr_info if pr_info is not None else {}
         self._branches = branches if branches is not None else {}
         self._stacks = stacks if stacks is not None else {}
@@ -45,12 +45,12 @@ class FakeGraphiteOps(GraphiteOps):
         """Get Graphite PR URL (constructs URL directly)."""
         return f"https://app.graphite.dev/github/pr/{owner}/{repo}/{pr_number}"
 
-    def sync(self, repo_root: Path, *, force: bool) -> None:
+    def sync(self, repo_root: Path, *, force: bool, quiet: bool) -> None:
         """Fake sync operation.
 
         Tracks calls for verification and raises configured exception if set.
         """
-        self._sync_calls.append((repo_root, force))
+        self._sync_calls.append((repo_root, force, quiet))
 
         if self._sync_raises is not None:
             raise self._sync_raises
@@ -108,10 +108,10 @@ class FakeGraphiteOps(GraphiteOps):
         return ancestors + descendants
 
     @property
-    def sync_calls(self) -> list[tuple[Path, bool]]:
+    def sync_calls(self) -> list[tuple[Path, bool, bool]]:
         """Get the list of sync() calls that were made.
 
-        Returns list of (repo_root, force) tuples.
+        Returns list of (repo_root, force, quiet) tuples.
 
         This property is for test assertions only.
         """

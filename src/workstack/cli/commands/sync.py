@@ -43,7 +43,7 @@ def _return_to_original_worktree(
     if not wt_path.exists():
         return
 
-    _emit(f"\nReturning to: {current_worktree_name}", script_mode=script_mode)
+    _emit(f"✓ Returning to: {current_worktree_name}", script_mode=script_mode)
     # Only chdir in non-script mode; script output handles cd in script mode
     if not script_mode:
         os.chdir(wt_path)
@@ -230,7 +230,7 @@ def sync_cmd(
         # Only show manual instruction if force was not used
         if not force:
             _emit(
-                "\nNext step: Run 'workstack sync -f' to automatically delete the merged branches.",
+                "Next step: Run 'workstack sync -f' to automatically delete the merged branches.",
                 script_mode=script,
             )
 

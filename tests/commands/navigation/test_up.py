@@ -364,6 +364,64 @@ def test_up_script_flag() -> None:
         assert str(workstacks_dir / "feature-2") in script_content
 
 
+def test_up_multiple_children_fails_explicitly() -> None:
+    """Test up command fails when branch has multiple children."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        workstacks_dir = cwd / "workstacks" / cwd.name
+        workstacks_dir.mkdir(parents=True)
+        git_dir = cwd / ".git"
+        git_dir.mkdir()
+
+        # Set up stack: main -> feature-1 -> [feature-2a, feature-2b]
+        # feature-1 has TWO children
+        setup_graphite_stack(
+            git_dir,
+            {
+                "main": {"parent": None, "children": ["feature-1"], "is_trunk": True},
+                "feature-1": {"parent": "main", "children": ["feature-2a", "feature-2b"]},
+                "feature-2a": {"parent": "feature-1", "children": []},
+                "feature-2b": {"parent": "feature-1", "children": []},
+            },
+        )
+
+        git_ops = FakeGitOps(
+            worktrees={
+                cwd: [
+                    WorktreeInfo(path=cwd, branch="main"),
+                    WorktreeInfo(path=workstacks_dir / "feature-1", branch="feature-1"),
+                    WorktreeInfo(path=workstacks_dir / "feature-2a", branch="feature-2a"),
+                    WorktreeInfo(path=workstacks_dir / "feature-2b", branch="feature-2b"),
+                ]
+            },
+            current_branches={cwd: "feature-1"},
+            git_common_dirs={cwd: git_dir},
+        )
+
+        global_config_ops = FakeGlobalConfigOps(
+            workstacks_root=cwd / "workstacks",
+            use_graphite=True,
+        )
+
+        test_ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            github_ops=FakeGitHubOps(),
+            graphite_ops=FakeGraphiteOps(),
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
+
+        result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
+
+        assert result.exit_code == 1
+        assert "Error: Branch 'feature-1' has multiple children" in result.stderr
+        assert "'feature-2a'" in result.stderr
+        assert "'feature-2b'" in result.stderr
+        assert "workstack create" in result.stderr
+
+
 def test_up_with_mismatched_worktree_name() -> None:
     """Test up command when worktree directory name differs from branch name.
 

@@ -141,14 +141,18 @@ def _resolve_up_navigation(
         click.echo("Already at the top of the stack (no child branches)", err=True)
         raise SystemExit(1)
 
-    # Use first child (future enhancement: handle multiple children interactively)
-    target_branch = children[0]
+    # Fail explicitly if multiple children exist
     if len(children) > 1:
+        children_list = ", ".join(f"'{child}'" for child in children)
         click.echo(
-            f"Note: Branch '{current_branch}' has multiple children. "
-            f"Selecting first child: '{target_branch}'",
+            f"Error: Branch '{current_branch}' has multiple children: {children_list}.\n"
+            f"Please create worktree for specific child: workstack create <branch-name>",
             err=True,
         )
+        raise SystemExit(1)
+
+    # Use the single child
+    target_branch = children[0]
 
     # Check if target branch has a worktree
     target_wt_path = find_worktree_for_branch(worktrees, target_branch)

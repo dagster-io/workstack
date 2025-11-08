@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
+import click
 from click.testing import CliRunner
 
 from workstack.cli.commands.create import create
@@ -77,8 +78,13 @@ def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellInt
     exit_code = int(result.exit_code)
 
     # If command failed, passthrough to show proper error
+    # Don't forward stderr here - the passthrough execution will show it
     if exit_code != 0:
         return ShellIntegrationResult(passthrough=True, script=None, exit_code=exit_code)
+
+    # Forward stderr messages to user (only for successful commands)
+    if result.stderr:
+        click.echo(result.stderr, err=True, nl=False)
 
     # Output is now a file path, not script content
     script_path = result.output.strip() if result.output else None
@@ -87,6 +93,13 @@ def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellInt
     if script_path:
         script_exists = Path(script_path).exists()
         debug_log(f"Handler: Script exists? {script_exists}")
+
+    # Warn if command succeeded but produced no output
+    if exit_code == 0 and (script_path is None or not script_path):
+        click.echo(
+            f"Note: '{command_name}' completed but produced no output",
+            err=True,
+        )
 
     return ShellIntegrationResult(passthrough=False, script=script_path, exit_code=exit_code)
 

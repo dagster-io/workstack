@@ -337,3 +337,56 @@ def test_consolidate_skips_non_stack_worktrees() -> None:
         assert len(test_ctx.git_ops.removed_worktrees) == 1
         assert wt1_path in test_ctx.git_ops.removed_worktrees
         assert wt2_path not in test_ctx.git_ops.removed_worktrees
+
+
+def test_consolidate_with_uncommitted_changes_in_non_stack_worktree() -> None:
+    """Test consolidate succeeds when non-stack worktrees have uncommitted changes."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        workstacks_root = cwd / "workstacks"
+
+        # Configure graphite with stack (main -> feature-1 -> feature-2)
+        graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
+
+        # Create worktrees
+        repo_name = cwd.name
+        wt1_path = workstacks_root / repo_name / "wt1"
+        wt2_path = workstacks_root / repo_name / "wt2"
+        wt3_path = workstacks_root / repo_name / "wt3"
+        wt1_path.mkdir(parents=True)
+        wt2_path.mkdir(parents=True)
+        wt3_path.mkdir(parents=True)
+
+        # Create a file to simulate uncommitted changes in non-stack worktree
+        (wt3_path / "uncommitted.txt").write_text("changes", encoding="utf-8")
+
+        # Current on feature-2, wt1 on feature-1 (in stack), wt2 on main (in stack),
+        # wt3 on other-branch (NOT in stack, has uncommitted changes)
+        worktrees = {
+            cwd: [
+                WorktreeInfo(path=cwd, branch="feature-2"),
+                WorktreeInfo(path=wt1_path, branch="feature-1"),
+                WorktreeInfo(path=wt2_path, branch="main"),
+                WorktreeInfo(path=wt3_path, branch="other-branch"),
+            ]
+        }
+
+        # Configure file_statuses to simulate uncommitted changes in non-stack worktree
+        file_statuses = {
+            wt3_path: ([], [], ["uncommitted.txt"]),  # Untracked file in non-stack worktree
+        }
+
+        test_ctx = _create_test_context(
+            cwd, worktrees, "feature-2", workstacks_root, graphite_ops, file_statuses=file_statuses
+        )
+        result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
+
+        # Command should succeed despite uncommitted changes in non-stack worktree
+        assert result.exit_code == 0, result.output
+        # Only feature-1 and main worktrees should be removed
+        assert len(test_ctx.git_ops.removed_worktrees) == 2
+        assert wt1_path in test_ctx.git_ops.removed_worktrees
+        assert wt2_path in test_ctx.git_ops.removed_worktrees
+        # other-branch worktree should remain untouched
+        assert wt3_path not in test_ctx.git_ops.removed_worktrees

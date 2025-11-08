@@ -280,6 +280,14 @@ class TestRealGitGtKitOpsSmoke:
                 capture_output=True,
             )
 
+            # Rename default branch to main (git init may create master or other name)
+            subprocess.run(
+                ["git", "branch", "-M", "main"],
+                cwd=repo_path,
+                check=True,
+                capture_output=True,
+            )
+
             # Create branch and add commits
             subprocess.run(
                 ["git", "checkout", "-b", "feature"],

@@ -30,11 +30,13 @@ Examples:
 """
 
 import json
-import subprocess
 from dataclasses import asdict, dataclass
 from typing import Literal
 
 import click
+
+from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.ops import GtKitOps
+from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops import RealGtKitOps
 
 ErrorType = Literal[
     "no_pr",
@@ -66,110 +68,18 @@ class UpdatePRError:
     details: dict[str, str]
 
 
-def get_current_branch() -> str | None:
-    """Get the name of the current branch. Returns None if command fails."""
-    result = subprocess.run(
-        ["git", "branch", "--show-current"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if result.returncode != 0:
-        return None
-
-    return result.stdout.strip()
-
-
-def check_pr_exists() -> tuple[int, str] | None:
-    """Check if current branch has an associated PR. Returns (number, url) or None."""
-    result = subprocess.run(
-        ["gh", "pr", "view", "--json", "number,url"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if result.returncode != 0:
-        return None
-
-    data = json.loads(result.stdout)
-    return (data["number"], data["url"])
-
-
-def has_uncommitted_changes() -> bool:
-    """Check if there are uncommitted changes. Returns True if changes exist."""
-    result = subprocess.run(
-        ["git", "status", "--porcelain"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if result.returncode != 0:
-        return False
-
-    return bool(result.stdout.strip())
-
-
-def stage_and_commit_changes() -> bool:
-    """Stage all changes and commit with default message. Returns True on success."""
-    # Stage all changes
-    result = subprocess.run(
-        ["git", "add", "."],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if result.returncode != 0:
-        return False
-
-    # Commit with default message
-    result = subprocess.run(
-        ["git", "commit", "-m", "Update changes"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    return result.returncode == 0
-
-
-def restack_branch() -> bool:
-    """Run gt restack in no-interactive mode. Returns True on success."""
-    result = subprocess.run(
-        ["gt", "restack", "--no-interactive"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    return result.returncode == 0
-
-
-def submit_updates() -> bool:
-    """Run gt submit to update the PR. Returns True on success."""
-    result = subprocess.run(
-        ["gt", "submit"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    return result.returncode == 0
-
-
-def execute_update_pr() -> UpdatePRResult | UpdatePRError:
+def execute_update_pr(ops: GtKitOps | None = None) -> UpdatePRResult | UpdatePRError:
     """Execute the update-pr workflow. Returns success or error result."""
+    if ops is None:
+        ops = RealGtKitOps()
 
     # Step 1: Get current branch for context
-    branch_name = get_current_branch()
+    branch_name = ops.git().get_current_branch()
     if branch_name is None:
         branch_name = "unknown"
 
     # Step 2: Check PR exists
-    pr_info = check_pr_exists()
+    pr_info = ops.github().get_pr_info()
 
     if pr_info is None:
         return UpdatePRError(
@@ -182,11 +92,18 @@ def execute_update_pr() -> UpdatePRResult | UpdatePRError:
     pr_number, pr_url = pr_info
 
     # Step 3: Check for uncommitted changes
-    had_changes = has_uncommitted_changes()
+    had_changes = ops.git().has_uncommitted_changes()
 
     if had_changes:
         # Step 4: Stage and commit changes
-        if not stage_and_commit_changes():
+        if not ops.git().add_all():
+            return UpdatePRError(
+                success=False,
+                error_type="commit_failed",
+                message="Failed to stage uncommitted changes",
+                details={"branch_name": branch_name},
+            )
+        if not ops.git().commit("Update changes"):
             return UpdatePRError(
                 success=False,
                 error_type="commit_failed",
@@ -195,7 +112,7 @@ def execute_update_pr() -> UpdatePRResult | UpdatePRError:
             )
 
     # Step 5: Restack
-    if not restack_branch():
+    if not ops.graphite().restack():
         return UpdatePRError(
             success=False,
             error_type="restack_failed",
@@ -204,7 +121,8 @@ def execute_update_pr() -> UpdatePRResult | UpdatePRError:
         )
 
     # Step 6: Submit
-    if not submit_updates():
+    success, _, _ = ops.graphite().submit(publish=False, restack=False)
+    if not success:
         return UpdatePRError(
             success=False,
             error_type="submit_failed",

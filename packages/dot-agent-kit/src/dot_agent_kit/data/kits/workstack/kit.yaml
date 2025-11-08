@@ -6,4 +6,3 @@ artifacts:
   command:
     - commands/workstack/create-from-plan.md
     - commands/workstack/implement-plan.md
-    - commands/workstack/view-plan.md

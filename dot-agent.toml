@@ -21,7 +21,6 @@ version = "0.1.0"
 artifacts = [
     ".claude/commands/gt/submit-branch.md",
     ".claude/commands/gt/update-pr.md",
-    ".claude/commands/gt/view-pr.md",
     ".claude/skills/gt-graphite/SKILL.md",
     ".claude/skills/gt-graphite/references/gt-reference.md",
 ]
@@ -49,5 +48,4 @@ version = "0.1.0"
 artifacts = [
     ".claude/commands/workstack/create-from-plan.md",
     ".claude/commands/workstack/implement-plan.md",
-    ".claude/commands/workstack/view-plan.md",
 ]

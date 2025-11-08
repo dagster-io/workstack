@@ -887,7 +887,6 @@ def test_check_command_perfect_sync_no_missing_no_obsolete(tmp_path: Path) -> No
                     artifacts=[
                         ".claude/commands/gt/submit-branch.md",
                         ".claude/commands/gt/update-pr.md",
-                        ".claude/commands/gt/view-pr.md",
                         ".claude/skills/gt-graphite/SKILL.md",
                         ".claude/skills/gt-graphite/references/gt-reference.md",
                     ],
@@ -905,7 +904,6 @@ def test_check_command_perfect_sync_no_missing_no_obsolete(tmp_path: Path) -> No
             for artifact_rel in [
                 "commands/gt/submit-branch.md",
                 "commands/gt/update-pr.md",
-                "commands/gt/view-pr.md",
                 "skills/gt-graphite/SKILL.md",
                 "skills/gt-graphite/references/gt-reference.md",
             ]:

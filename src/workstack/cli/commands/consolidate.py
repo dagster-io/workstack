@@ -8,6 +8,21 @@ from workstack.cli.core import discover_repo_context
 from workstack.core.context import WorkstackContext
 
 
+def _get_non_trunk_branches(ctx: WorkstackContext, repo_root: Path, stack: list[str]) -> list[str]:
+    """Filter out trunk branches from a stack using GraphiteOps abstraction.
+
+    Raises:
+        ValueError: If Graphite cache is missing or cannot be read
+    """
+    # Get all branches from GraphiteOps abstraction
+    all_branches = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo_root)
+    if not all_branches:
+        raise ValueError("Graphite cache not available")
+
+    # Filter stack to only non-trunk branches
+    return [b for b in stack if b in all_branches and not all_branches[b].is_trunk]
+
+
 @click.command("consolidate")
 @click.option("-f", "--force", is_flag=True, help="Skip confirmation prompt")
 @click.option(
@@ -102,13 +117,16 @@ def consolidate_cmd(ctx: WorkstackContext, force: bool, dry_run: bool) -> None:
     )
     click.echo()
 
-    # Identify worktrees to remove (branch in stack AND not current worktree)
+    # Filter out trunk branches from the stack
+    non_trunk_stack_branches = _get_non_trunk_branches(ctx, repo.root, stack_branches)
+
+    # Identify worktrees to remove (branch in stack AND not trunk AND not current worktree)
     # Resolve current_worktree for comparison
     current_worktree_resolved = current_worktree.resolve()
     worktrees_to_remove = [
         wt
         for wt in all_worktrees
-        if wt.branch in stack_branches and wt.path.resolve() != current_worktree_resolved
+        if wt.branch in non_trunk_stack_branches and wt.path.resolve() != current_worktree_resolved
     ]
 
     # Display preview

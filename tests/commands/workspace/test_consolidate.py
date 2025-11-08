@@ -14,6 +14,7 @@ from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.cli import cli
+from workstack.core.branch_metadata import BranchMetadata
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
 
@@ -66,7 +67,32 @@ def test_consolidate_no_other_worktrees() -> None:
         workstacks_root = cwd / "workstacks"
 
         # Configure graphite with stack (main -> feature-1 -> feature-2)
-        graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
+        branches = {
+            "main": BranchMetadata(
+                name="main",
+                parent=None,
+                children=["feature-1"],
+                is_trunk=True,
+                commit_sha="abc123",
+            ),
+            "feature-1": BranchMetadata(
+                name="feature-1",
+                parent="main",
+                children=["feature-2"],
+                is_trunk=False,
+                commit_sha="abc123",
+            ),
+            "feature-2": BranchMetadata(
+                name="feature-2",
+                parent="feature-1",
+                children=[],
+                is_trunk=False,
+                commit_sha="abc123",
+            ),
+        }
+        graphite_ops = FakeGraphiteOps(
+            stacks={"feature-2": ["main", "feature-1", "feature-2"]}, branches=branches
+        )
 
         # Current worktree only (on feature-2)
         worktrees = {cwd: [WorktreeInfo(path=cwd, branch="feature-2")]}
@@ -85,8 +111,43 @@ def test_consolidate_removes_other_stack_worktrees() -> None:
         cwd = Path.cwd()
         workstacks_root = cwd / "workstacks"
 
-        # Configure graphite with stack (main -> feature-1 -> feature-2)
-        graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
+        # Configure graphite with stack (main -> feature-1 -> feature-2 -> feature-3)
+        # and branch metadata marking main as trunk
+        branches = {
+            "main": BranchMetadata(
+                name="main",
+                parent=None,
+                children=["feature-1"],
+                is_trunk=True,
+                commit_sha="abc123",
+            ),
+            "feature-1": BranchMetadata(
+                name="feature-1",
+                parent="main",
+                children=["feature-2"],
+                is_trunk=False,
+                commit_sha="abc123",
+            ),
+            "feature-2": BranchMetadata(
+                name="feature-2",
+                parent="feature-1",
+                children=["feature-3"],
+                is_trunk=False,
+                commit_sha="abc123",
+            ),
+            "feature-3": BranchMetadata(
+                name="feature-3",
+                parent="feature-2",
+                children=[],
+                is_trunk=False,
+                commit_sha="abc123",
+            ),
+        }
+
+        graphite_ops = FakeGraphiteOps(
+            stacks={"feature-3": ["main", "feature-1", "feature-2", "feature-3"]},
+            branches=branches,
+        )
 
         # Create worktree directories
         repo_name = cwd.name
@@ -95,16 +156,16 @@ def test_consolidate_removes_other_stack_worktrees() -> None:
         wt1_path.mkdir(parents=True)
         wt2_path.mkdir(parents=True)
 
-        # Current worktree on feature-2, other worktrees on feature-1 and main
+        # Current worktree on feature-3, other worktrees on feature-1 and feature-2
         worktrees = {
             cwd: [
-                WorktreeInfo(path=cwd, branch="feature-2"),
+                WorktreeInfo(path=cwd, branch="feature-3"),
                 WorktreeInfo(path=wt1_path, branch="feature-1"),
-                WorktreeInfo(path=wt2_path, branch="main"),
+                WorktreeInfo(path=wt2_path, branch="feature-2"),
             ]
         }
 
-        test_ctx = _create_test_context(cwd, worktrees, "feature-2", workstacks_root, graphite_ops)
+        test_ctx = _create_test_context(cwd, worktrees, "feature-3", workstacks_root, graphite_ops)
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
@@ -121,23 +182,49 @@ def test_consolidate_preserves_current_worktree() -> None:
         cwd = Path.cwd()
         workstacks_root = cwd / "workstacks"
 
-        # Configure graphite with stack (main -> feature-1)
-        graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
+        # Configure graphite with stack (main -> feature-1 -> feature-2)
+        # Use feature-1 and feature-2 so both are non-trunk
+        branches = {
+            "main": BranchMetadata(
+                name="main",
+                parent=None,
+                children=["feature-1"],
+                is_trunk=True,
+                commit_sha="abc123",
+            ),
+            "feature-1": BranchMetadata(
+                name="feature-1",
+                parent="main",
+                children=["feature-2"],
+                is_trunk=False,
+                commit_sha="abc123",
+            ),
+            "feature-2": BranchMetadata(
+                name="feature-2",
+                parent="feature-1",
+                children=[],
+                is_trunk=False,
+                commit_sha="abc123",
+            ),
+        }
+        graphite_ops = FakeGraphiteOps(
+            stacks={"feature-2": ["main", "feature-1", "feature-2"]}, branches=branches
+        )
 
         # Create other worktree
         repo_name = cwd.name
         wt1_path = workstacks_root / repo_name / "wt1"
         wt1_path.mkdir(parents=True)
 
-        # Both worktrees in same stack, current is on feature-1
+        # Both worktrees in same stack, current is on feature-2
         worktrees = {
             cwd: [
-                WorktreeInfo(path=cwd, branch="feature-1"),
-                WorktreeInfo(path=wt1_path, branch="main"),
+                WorktreeInfo(path=cwd, branch="feature-2"),
+                WorktreeInfo(path=wt1_path, branch="feature-1"),
             ]
         }
 
-        test_ctx = _create_test_context(cwd, worktrees, "feature-1", workstacks_root, graphite_ops)
+        test_ctx = _create_test_context(cwd, worktrees, "feature-2", workstacks_root, graphite_ops)
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
@@ -153,8 +240,33 @@ def test_consolidate_aborts_on_uncommitted_changes() -> None:
         cwd = Path.cwd()
         workstacks_root = cwd / "workstacks"
 
-        # Configure graphite with stack (main -> feature-1)
-        graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
+        # Configure graphite with stack (main -> feature-1 -> feature-2)
+        branches = {
+            "main": BranchMetadata(
+                name="main",
+                parent=None,
+                children=["feature-1"],
+                is_trunk=True,
+                commit_sha="abc123",
+            ),
+            "feature-1": BranchMetadata(
+                name="feature-1",
+                parent="main",
+                children=["feature-2"],
+                is_trunk=False,
+                commit_sha="abc123",
+            ),
+            "feature-2": BranchMetadata(
+                name="feature-2",
+                parent="feature-1",
+                children=[],
+                is_trunk=False,
+                commit_sha="abc123",
+            ),
+        }
+        graphite_ops = FakeGraphiteOps(
+            stacks={"feature-2": ["main", "feature-1", "feature-2"]}, branches=branches
+        )
 
         # Create worktree with uncommitted changes marker
         repo_name = cwd.name
@@ -165,8 +277,8 @@ def test_consolidate_aborts_on_uncommitted_changes() -> None:
 
         worktrees = {
             cwd: [
-                WorktreeInfo(path=cwd, branch="feature-1"),
-                WorktreeInfo(path=wt1_path, branch="main"),
+                WorktreeInfo(path=cwd, branch="feature-2"),
+                WorktreeInfo(path=wt1_path, branch="feature-1"),
             ]
         }
 
@@ -176,7 +288,7 @@ def test_consolidate_aborts_on_uncommitted_changes() -> None:
         }
 
         test_ctx = _create_test_context(
-            cwd, worktrees, "feature-1", workstacks_root, graphite_ops, file_statuses=file_statuses
+            cwd, worktrees, "feature-2", workstacks_root, graphite_ops, file_statuses=file_statuses
         )
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
@@ -192,8 +304,33 @@ def test_consolidate_dry_run_shows_preview() -> None:
         cwd = Path.cwd()
         workstacks_root = cwd / "workstacks"
 
-        # Configure graphite with stack (main -> feature-1)
-        graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
+        # Configure graphite with stack (main -> feature-1 -> feature-2)
+        branches = {
+            "main": BranchMetadata(
+                name="main",
+                parent=None,
+                children=["feature-1"],
+                is_trunk=True,
+                commit_sha="abc123",
+            ),
+            "feature-1": BranchMetadata(
+                name="feature-1",
+                parent="main",
+                children=["feature-2"],
+                is_trunk=False,
+                commit_sha="abc123",
+            ),
+            "feature-2": BranchMetadata(
+                name="feature-2",
+                parent="feature-1",
+                children=[],
+                is_trunk=False,
+                commit_sha="abc123",
+            ),
+        }
+        graphite_ops = FakeGraphiteOps(
+            stacks={"feature-2": ["main", "feature-1", "feature-2"]}, branches=branches
+        )
 
         # Create worktree
         repo_name = cwd.name
@@ -202,12 +339,12 @@ def test_consolidate_dry_run_shows_preview() -> None:
 
         worktrees = {
             cwd: [
-                WorktreeInfo(path=cwd, branch="feature-1"),
-                WorktreeInfo(path=wt1_path, branch="main"),
+                WorktreeInfo(path=cwd, branch="feature-2"),
+                WorktreeInfo(path=wt1_path, branch="feature-1"),
             ]
         }
 
-        test_ctx = _create_test_context(cwd, worktrees, "feature-1", workstacks_root, graphite_ops)
+        test_ctx = _create_test_context(cwd, worktrees, "feature-2", workstacks_root, graphite_ops)
         result = runner.invoke(cli, ["consolidate", "--dry-run"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
@@ -224,8 +361,33 @@ def test_consolidate_confirmation_prompt() -> None:
         cwd = Path.cwd()
         workstacks_root = cwd / "workstacks"
 
-        # Configure graphite with stack (main -> feature-1)
-        graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
+        # Configure graphite with stack (main -> feature-1 -> feature-2)
+        branches = {
+            "main": BranchMetadata(
+                name="main",
+                parent=None,
+                children=["feature-1"],
+                is_trunk=True,
+                commit_sha="abc123",
+            ),
+            "feature-1": BranchMetadata(
+                name="feature-1",
+                parent="main",
+                children=["feature-2"],
+                is_trunk=False,
+                commit_sha="abc123",
+            ),
+            "feature-2": BranchMetadata(
+                name="feature-2",
+                parent="feature-1",
+                children=[],
+                is_trunk=False,
+                commit_sha="abc123",
+            ),
+        }
+        graphite_ops = FakeGraphiteOps(
+            stacks={"feature-2": ["main", "feature-1", "feature-2"]}, branches=branches
+        )
 
         # Create worktree
         repo_name = cwd.name
@@ -234,12 +396,12 @@ def test_consolidate_confirmation_prompt() -> None:
 
         worktrees = {
             cwd: [
-                WorktreeInfo(path=cwd, branch="feature-1"),
-                WorktreeInfo(path=wt1_path, branch="main"),
+                WorktreeInfo(path=cwd, branch="feature-2"),
+                WorktreeInfo(path=wt1_path, branch="feature-1"),
             ]
         }
 
-        test_ctx = _create_test_context(cwd, worktrees, "feature-1", workstacks_root, graphite_ops)
+        test_ctx = _create_test_context(cwd, worktrees, "feature-2", workstacks_root, graphite_ops)
 
         # Test saying "no" to prompt
         result = runner.invoke(cli, ["consolidate"], input="n\n", obj=test_ctx)
@@ -309,9 +471,34 @@ def test_consolidate_skips_non_stack_worktrees() -> None:
         cwd = Path.cwd()
         workstacks_root = cwd / "workstacks"
 
-        # Configure graphite with stack-a only (main -> stack-a)
+        # Configure graphite with stack-a only (main -> stack-a-1 -> stack-a-2)
         # stack-b is a separate branch not in this stack
-        graphite_ops = FakeGraphiteOps(stacks={"stack-a": ["main", "stack-a"]})
+        branches = {
+            "main": BranchMetadata(
+                name="main",
+                parent=None,
+                children=["stack-a-1"],
+                is_trunk=True,
+                commit_sha="abc123",
+            ),
+            "stack-a-1": BranchMetadata(
+                name="stack-a-1",
+                parent="main",
+                children=["stack-a-2"],
+                is_trunk=False,
+                commit_sha="abc123",
+            ),
+            "stack-a-2": BranchMetadata(
+                name="stack-a-2",
+                parent="stack-a-1",
+                children=[],
+                is_trunk=False,
+                commit_sha="abc123",
+            ),
+        }
+        graphite_ops = FakeGraphiteOps(
+            stacks={"stack-a-2": ["main", "stack-a-1", "stack-a-2"]}, branches=branches
+        )
 
         # Create worktrees
         repo_name = cwd.name
@@ -320,23 +507,85 @@ def test_consolidate_skips_non_stack_worktrees() -> None:
         wt1_path.mkdir(parents=True)
         wt2_path.mkdir(parents=True)
 
-        # Current on stack-a, wt1 on main (in stack), wt2 on stack-b (NOT in stack)
+        # Current on stack-a-2, wt1 on stack-a-1 (in stack), wt2 on stack-b (NOT in stack)
         worktrees = {
             cwd: [
-                WorktreeInfo(path=cwd, branch="stack-a"),
-                WorktreeInfo(path=wt1_path, branch="main"),
+                WorktreeInfo(path=cwd, branch="stack-a-2"),
+                WorktreeInfo(path=wt1_path, branch="stack-a-1"),
                 WorktreeInfo(path=wt2_path, branch="stack-b"),
             ]
         }
 
-        test_ctx = _create_test_context(cwd, worktrees, "stack-a", workstacks_root, graphite_ops)
+        test_ctx = _create_test_context(cwd, worktrees, "stack-a-2", workstacks_root, graphite_ops)
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
-        # Only wt1 (main) should be removed, wt2 (stack-b) should remain
+        # Only wt1 (stack-a-1) should be removed, wt2 (stack-b) should remain
         assert len(test_ctx.git_ops.removed_worktrees) == 1
         assert wt1_path in test_ctx.git_ops.removed_worktrees
         assert wt2_path not in test_ctx.git_ops.removed_worktrees
+
+
+def test_consolidate_protects_trunk_branches() -> None:
+    """Test consolidate never suggests removing trunk branch worktrees."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        workstacks_root = cwd / "workstacks"
+
+        # Configure graphite with stack (main -> feature-1 -> feature-2)
+        # Main is trunk, feature branches are not
+        branches = {
+            "main": BranchMetadata(
+                name="main",
+                parent=None,
+                children=["feature-1"],
+                is_trunk=True,
+                commit_sha="abc123",
+            ),
+            "feature-1": BranchMetadata(
+                name="feature-1",
+                parent="main",
+                children=["feature-2"],
+                is_trunk=False,
+                commit_sha="abc123",
+            ),
+            "feature-2": BranchMetadata(
+                name="feature-2",
+                parent="feature-1",
+                children=[],
+                is_trunk=False,
+                commit_sha="abc123",
+            ),
+        }
+        graphite_ops = FakeGraphiteOps(
+            stacks={"feature-2": ["main", "feature-1", "feature-2"]}, branches=branches
+        )
+
+        # Create worktrees
+        repo_name = cwd.name
+        wt_main = workstacks_root / repo_name / "wt-main"
+        wt_f1 = workstacks_root / repo_name / "wt-f1"
+        wt_main.mkdir(parents=True)
+        wt_f1.mkdir(parents=True)
+
+        # Current worktree on feature-2, other worktrees on main (trunk) and feature-1
+        worktrees = {
+            cwd: [
+                WorktreeInfo(path=cwd, branch="feature-2"),
+                WorktreeInfo(path=wt_main, branch="main"),
+                WorktreeInfo(path=wt_f1, branch="feature-1"),
+            ]
+        }
+
+        test_ctx = _create_test_context(cwd, worktrees, "feature-2", workstacks_root, graphite_ops)
+        result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
+
+        assert result.exit_code == 0, result.output
+        # Only feature-1 worktree should be removed, NOT main (trunk)
+        assert len(test_ctx.git_ops.removed_worktrees) == 1
+        assert wt_f1 in test_ctx.git_ops.removed_worktrees
+        assert wt_main not in test_ctx.git_ops.removed_worktrees
 
 
 def test_consolidate_with_uncommitted_changes_in_non_stack_worktree() -> None:
@@ -346,8 +595,40 @@ def test_consolidate_with_uncommitted_changes_in_non_stack_worktree() -> None:
         cwd = Path.cwd()
         workstacks_root = cwd / "workstacks"
 
-        # Configure graphite with stack (main -> feature-1 -> feature-2)
-        graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
+        # Configure graphite with stack (main -> feature-1 -> feature-2 -> feature-3)
+        branches = {
+            "main": BranchMetadata(
+                name="main",
+                parent=None,
+                children=["feature-1"],
+                is_trunk=True,
+                commit_sha="abc123",
+            ),
+            "feature-1": BranchMetadata(
+                name="feature-1",
+                parent="main",
+                children=["feature-2"],
+                is_trunk=False,
+                commit_sha="abc123",
+            ),
+            "feature-2": BranchMetadata(
+                name="feature-2",
+                parent="feature-1",
+                children=["feature-3"],
+                is_trunk=False,
+                commit_sha="abc123",
+            ),
+            "feature-3": BranchMetadata(
+                name="feature-3",
+                parent="feature-2",
+                children=[],
+                is_trunk=False,
+                commit_sha="abc123",
+            ),
+        }
+        graphite_ops = FakeGraphiteOps(
+            stacks={"feature-3": ["main", "feature-1", "feature-2", "feature-3"]}, branches=branches
+        )
 
         # Create worktrees
         repo_name = cwd.name
@@ -361,13 +642,13 @@ def test_consolidate_with_uncommitted_changes_in_non_stack_worktree() -> None:
         # Create a file to simulate uncommitted changes in non-stack worktree
         (wt3_path / "uncommitted.txt").write_text("changes", encoding="utf-8")
 
-        # Current on feature-2, wt1 on feature-1 (in stack), wt2 on main (in stack),
+        # Current on feature-3, wt1 on feature-1 (in stack), wt2 on feature-2 (in stack),
         # wt3 on other-branch (NOT in stack, has uncommitted changes)
         worktrees = {
             cwd: [
-                WorktreeInfo(path=cwd, branch="feature-2"),
+                WorktreeInfo(path=cwd, branch="feature-3"),
                 WorktreeInfo(path=wt1_path, branch="feature-1"),
-                WorktreeInfo(path=wt2_path, branch="main"),
+                WorktreeInfo(path=wt2_path, branch="feature-2"),
                 WorktreeInfo(path=wt3_path, branch="other-branch"),
             ]
         }
@@ -378,13 +659,13 @@ def test_consolidate_with_uncommitted_changes_in_non_stack_worktree() -> None:
         }
 
         test_ctx = _create_test_context(
-            cwd, worktrees, "feature-2", workstacks_root, graphite_ops, file_statuses=file_statuses
+            cwd, worktrees, "feature-3", workstacks_root, graphite_ops, file_statuses=file_statuses
         )
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
         # Command should succeed despite uncommitted changes in non-stack worktree
         assert result.exit_code == 0, result.output
-        # Only feature-1 and main worktrees should be removed
+        # Only feature-1 and feature-2 worktrees should be removed (main is trunk, protected)
         assert len(test_ctx.git_ops.removed_worktrees) == 2
         assert wt1_path in test_ctx.git_ops.removed_worktrees
         assert wt2_path in test_ctx.git_ops.removed_worktrees

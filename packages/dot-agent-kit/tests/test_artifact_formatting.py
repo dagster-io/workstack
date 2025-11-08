@@ -260,15 +260,15 @@ def test_format_bundled_kit_item_cli_command() -> None:
     kit_info = BundledKitInfo(
         kit_id="gt",
         version="0.1.0",
-        cli_commands=["land-branch", "submit-branch"],
+        cli_commands=["submit-branch", "update-pr"],
         available_docs=[],
         level="project",
     )
 
-    result = format_bundled_kit_item("land-branch", kit_info, "cli_command")
+    result = format_bundled_kit_item("submit-branch", kit_info, "cli_command")
 
     # Should contain command name with kit prefix
-    assert "gt:land-branch" in result
+    assert "gt:submit-branch" in result
     # Should contain level marker
     assert "[P]" in result
     # Should contain kit version
@@ -313,7 +313,7 @@ def test_format_compact_list_with_bundled_kits() -> None:
         "gt": BundledKitInfo(
             kit_id="gt",
             version="0.1.0",
-            cli_commands=["land-branch", "submit-branch"],
+            cli_commands=["submit-branch", "update-pr"],
             available_docs=[],
             level="project",
         ),
@@ -328,8 +328,8 @@ def test_format_compact_list_with_bundled_kits() -> None:
     # Should have Installed Items section
     assert "Installed Items:" in result
     assert "Kit CLI Commands:" in result
-    assert "gt:land-branch" in result
     assert "gt:submit-branch" in result
+    assert "gt:update-pr" in result
 
 
 def test_format_compact_list_with_empty_bundled_kits() -> None:
@@ -412,7 +412,7 @@ def test_format_verbose_list_with_bundled_kits() -> None:
         "gt": BundledKitInfo(
             kit_id="gt",
             version="0.1.0",
-            cli_commands=["land-branch"],
+            cli_commands=["submit-branch"],
             available_docs=[],
             level="project",
         ),
@@ -427,7 +427,7 @@ def test_format_verbose_list_with_bundled_kits() -> None:
 
     # Should have Installed Items section with kit CLI command metadata
     assert "Installed Items:" in result
-    assert "gt:land-branch" in result
+    assert "gt:submit-branch" in result
     assert "kit_cli_command" in result
     assert "Kit: gt" in result
     assert "Version: 0.1.0" in result

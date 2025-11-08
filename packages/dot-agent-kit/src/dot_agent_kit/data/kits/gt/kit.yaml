@@ -14,7 +14,6 @@ kit_cli_commands:
     description: Update PR by staging changes, committing, restacking, and submitting
 artifacts:
   command:
-    - commands/gt/land-branch.md
     - commands/gt/submit-branch.md
     - commands/gt/update-pr.md
     - commands/gt/view-pr.md

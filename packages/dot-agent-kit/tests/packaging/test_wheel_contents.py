@@ -97,7 +97,8 @@ def test_wheel_contains_skill_markdown(
 @pytest.mark.parametrize(
     ("kit_name", "command_script"),
     [
-        ("gt", "land_branch.py"),
+        ("gt", "submit_branch.py"),
+        ("gt", "update_pr.py"),
     ],
 )
 def test_wheel_contains_kit_cli_commands(

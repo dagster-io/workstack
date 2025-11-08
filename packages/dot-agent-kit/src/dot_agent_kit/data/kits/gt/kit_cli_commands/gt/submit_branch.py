@@ -4,10 +4,11 @@ This script handles mechanical git/gh/gt operations for the submit-branch workfl
 leaving only AI-driven analysis in the Claude command layer. It operates in two phases:
 
 Phase 1 (pre-analysis):
-1. Get current branch and parent branch
-2. Count commits in branch (compared to parent)
-3. Run gt squash to consolidate commits (only if 2+ commits)
-4. Return branch info for AI analysis
+1. Check for and commit any uncommitted changes
+2. Get current branch and parent branch
+3. Count commits in branch (compared to parent)
+4. Run gt squash to consolidate commits (only if 2+ commits)
+5. Return branch info for AI analysis
 
 Phase 2 (post-analysis):
 1. Amend commit with AI-generated commit message
@@ -88,6 +89,7 @@ class PreAnalysisResult:
     parent_branch: str
     commit_count: int
     squashed: bool
+    uncommitted_changes_committed: bool
     message: str
 
 
@@ -120,6 +122,45 @@ class PostAnalysisError:
     error_type: PostAnalysisErrorType
     message: str
     details: dict[str, str]
+
+
+def has_uncommitted_changes() -> bool:
+    """Check if there are uncommitted changes. Returns True if changes exist."""
+    result = subprocess.run(
+        ["git", "status", "--porcelain"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    if result.returncode != 0:
+        return False
+
+    return len(result.stdout.strip()) > 0
+
+
+def commit_uncommitted_changes() -> bool:
+    """Commit all uncommitted changes with WIP message. Returns True on success."""
+    # Add all changes
+    add_result = subprocess.run(
+        ["git", "add", "."],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    if add_result.returncode != 0:
+        return False
+
+    # Commit with WIP message
+    commit_result = subprocess.run(
+        ["git", "commit", "-m", "WIP: Prepare for submission"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    return commit_result.returncode == 0
 
 
 def get_current_branch() -> str | None:
@@ -242,6 +283,18 @@ def update_pr_metadata(title: str, body: str) -> bool:
 def execute_pre_analysis() -> PreAnalysisResult | PreAnalysisError:
     """Execute the pre-analysis phase. Returns success or error result."""
 
+    # Step 0: Check for and commit uncommitted changes
+    uncommitted_changes_committed = False
+    if has_uncommitted_changes():
+        if not commit_uncommitted_changes():
+            return PreAnalysisError(
+                success=False,
+                error_type="squash_failed",
+                message="Failed to commit uncommitted changes",
+                details={"reason": "git add or git commit failed"},
+            )
+        uncommitted_changes_committed = True
+
     # Step 1: Get current branch
     branch_name = get_current_branch()
 
@@ -291,15 +344,17 @@ def execute_pre_analysis() -> PreAnalysisResult | PreAnalysisError:
         squashed = True
 
     # Build success message
+    message_parts = [f"Pre-analysis complete for branch: {branch_name}"]
+
+    if uncommitted_changes_committed:
+        message_parts.append("Committed uncommitted changes")
+
     if squashed:
-        message = (
-            f"Pre-analysis complete for branch: {branch_name}\n"
-            f"Squashed {commit_count} commits into 1"
-        )
+        message_parts.append(f"Squashed {commit_count} commits into 1")
     else:
-        message = (
-            f"Pre-analysis complete for branch: {branch_name}\nSingle commit, no squash needed"
-        )
+        message_parts.append("Single commit, no squash needed")
+
+    message = "\n".join(message_parts)
 
     return PreAnalysisResult(
         success=True,
@@ -307,6 +362,7 @@ def execute_pre_analysis() -> PreAnalysisResult | PreAnalysisError:
         parent_branch=parent_branch,
         commit_count=commit_count,
         squashed=squashed,
+        uncommitted_changes_committed=uncommitted_changes_committed,
         message=message,
     )
 

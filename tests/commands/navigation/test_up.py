@@ -1,6 +1,5 @@
 """Tests for workstack up command."""
 
-import json
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -11,39 +10,9 @@ from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.cli import cli
+from workstack.core.branch_metadata import BranchMetadata
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
-
-
-def setup_graphite_stack(
-    git_dir: Path, branches: dict[str, dict[str, list[str] | str | bool | None]]
-) -> None:
-    """Set up a fake Graphite cache file with a stack structure.
-
-    Args:
-        git_dir: Path to .git directory
-        branches: Dict mapping branch name to metadata with keys:
-            - parent: parent branch name or None for trunk
-            - children: list of child branch names
-            - is_trunk: optional bool, defaults to False
-    """
-    cache_file = git_dir / ".graphite_cache_persist"
-    cache_file.parent.mkdir(parents=True, exist_ok=True)
-
-    branches_data = []
-    for branch_name, metadata in branches.items():
-        branch_data = {
-            "children": metadata.get("children", []),
-        }
-        if metadata.get("parent") is not None:
-            branch_data["parentBranchName"] = metadata["parent"]
-        if metadata.get("is_trunk", False):
-            branch_data["validationResult"] = "TRUNK"
-
-        branches_data.append([branch_name, branch_data])
-
-    cache_data = {"branches": branches_data}
-    cache_file.write_text(json.dumps(cache_data), encoding="utf-8")
 
 
 def test_up_with_existing_worktree() -> None:
@@ -56,16 +25,6 @@ def test_up_with_existing_worktree() -> None:
         workstacks_dir.mkdir(parents=True)
         git_dir = cwd / ".git"
         git_dir.mkdir()
-
-        # Set up stack: main -> feature-1 -> feature-2
-        setup_graphite_stack(
-            git_dir,
-            {
-                "main": {"parent": None, "children": ["feature-1"], "is_trunk": True},
-                "feature-1": {"parent": "main", "children": ["feature-2"]},
-                "feature-2": {"parent": "feature-1", "children": []},
-            },
-        )
 
         # Set up worktrees
         feature_1_path = workstacks_dir / "feature-1"
@@ -95,11 +54,38 @@ def test_up_with_existing_worktree() -> None:
             use_graphite=True,
         )
 
+        # Set up stack: main -> feature-1 -> feature-2
+        graphite_ops = FakeGraphiteOps(
+            branches={
+                "main": BranchMetadata(
+                    name="main",
+                    parent=None,
+                    children=["feature-1"],
+                    is_trunk=True,
+                    sha="abc123",
+                ),
+                "feature-1": BranchMetadata(
+                    name="feature-1",
+                    parent="main",
+                    children=["feature-2"],
+                    is_trunk=False,
+                    sha="def456",
+                ),
+                "feature-2": BranchMetadata(
+                    name="feature-2",
+                    parent="feature-1",
+                    children=[],
+                    is_trunk=False,
+                    sha="ghi789",
+                ),
+            }
+        )
+
         test_ctx = WorkstackContext(
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
+            graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
             dry_run=False,
         )
@@ -133,16 +119,6 @@ def test_up_at_top_of_stack() -> None:
         git_dir = cwd / ".git"
         git_dir.mkdir()
 
-        # Set up stack: main -> feature-1 -> feature-2 (at top)
-        setup_graphite_stack(
-            git_dir,
-            {
-                "main": {"parent": None, "children": ["feature-1"], "is_trunk": True},
-                "feature-1": {"parent": "main", "children": ["feature-2"]},
-                "feature-2": {"parent": "feature-1", "children": []},
-            },
-        )
-
         git_ops = FakeGitOps(
             worktrees={
                 cwd: [
@@ -159,11 +135,38 @@ def test_up_at_top_of_stack() -> None:
             use_graphite=True,
         )
 
+        # Set up stack: main -> feature-1 -> feature-2 (at top)
+        graphite_ops = FakeGraphiteOps(
+            branches={
+                "main": BranchMetadata(
+                    name="main",
+                    parent=None,
+                    children=["feature-1"],
+                    is_trunk=True,
+                    sha="abc123",
+                ),
+                "feature-1": BranchMetadata(
+                    name="feature-1",
+                    parent="main",
+                    children=["feature-2"],
+                    is_trunk=False,
+                    sha="def456",
+                ),
+                "feature-2": BranchMetadata(
+                    name="feature-2",
+                    parent="feature-1",
+                    children=[],
+                    is_trunk=False,
+                    sha="ghi789",
+                ),
+            }
+        )
+
         test_ctx = WorkstackContext(
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
+            graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
             dry_run=False,
         )
@@ -185,16 +188,6 @@ def test_up_child_has_no_worktree() -> None:
         git_dir = cwd / ".git"
         git_dir.mkdir()
 
-        # Set up stack: main -> feature-1 -> feature-2
-        setup_graphite_stack(
-            git_dir,
-            {
-                "main": {"parent": None, "children": ["feature-1"], "is_trunk": True},
-                "feature-1": {"parent": "main", "children": ["feature-2"]},
-                "feature-2": {"parent": "feature-1", "children": []},
-            },
-        )
-
         # Only feature-1 has a worktree, feature-2 does not
         git_ops = FakeGitOps(
             worktrees={
@@ -212,11 +205,38 @@ def test_up_child_has_no_worktree() -> None:
             use_graphite=True,
         )
 
+        # Set up stack: main -> feature-1 -> feature-2
+        graphite_ops = FakeGraphiteOps(
+            branches={
+                "main": BranchMetadata(
+                    name="main",
+                    parent=None,
+                    children=["feature-1"],
+                    is_trunk=True,
+                    sha="abc123",
+                ),
+                "feature-1": BranchMetadata(
+                    name="feature-1",
+                    parent="main",
+                    children=["feature-2"],
+                    is_trunk=False,
+                    sha="def456",
+                ),
+                "feature-2": BranchMetadata(
+                    name="feature-2",
+                    parent="feature-1",
+                    children=[],
+                    is_trunk=False,
+                    sha="ghi789",
+                ),
+            }
+        )
+
         test_ctx = WorkstackContext(
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
+            graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
             dry_run=False,
         )
@@ -312,16 +332,6 @@ def test_up_script_flag() -> None:
         git_dir = cwd / ".git"
         git_dir.mkdir()
 
-        # Set up stack: main -> feature-1 -> feature-2
-        setup_graphite_stack(
-            git_dir,
-            {
-                "main": {"parent": None, "children": ["feature-1"], "is_trunk": True},
-                "feature-1": {"parent": "main", "children": ["feature-2"]},
-                "feature-2": {"parent": "feature-1", "children": []},
-            },
-        )
-
         # Set up worktrees
         (workstacks_dir / "feature-1").mkdir(parents=True, exist_ok=True)
         (workstacks_dir / "feature-2").mkdir(parents=True, exist_ok=True)
@@ -344,11 +354,38 @@ def test_up_script_flag() -> None:
             use_graphite=True,
         )
 
+        # Set up stack: main -> feature-1 -> feature-2
+        graphite_ops = FakeGraphiteOps(
+            branches={
+                "main": BranchMetadata(
+                    name="main",
+                    parent=None,
+                    children=["feature-1"],
+                    is_trunk=True,
+                    sha="abc123",
+                ),
+                "feature-1": BranchMetadata(
+                    name="feature-1",
+                    parent="main",
+                    children=["feature-2"],
+                    is_trunk=False,
+                    sha="def456",
+                ),
+                "feature-2": BranchMetadata(
+                    name="feature-2",
+                    parent="feature-1",
+                    children=[],
+                    is_trunk=False,
+                    sha="ghi789",
+                ),
+            }
+        )
+
         test_ctx = WorkstackContext(
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
+            graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
             dry_run=False,
         )
@@ -438,17 +475,6 @@ def test_up_with_mismatched_worktree_name() -> None:
         git_dir = cwd / ".git"
         git_dir.mkdir()
 
-        # Set up stack: main -> feature/auth -> feature/auth-tests
-        # Branch names contain slashes, but worktree dirs don't
-        setup_graphite_stack(
-            git_dir,
-            {
-                "main": {"parent": None, "children": ["feature/auth"], "is_trunk": True},
-                "feature/auth": {"parent": "main", "children": ["feature/auth-tests"]},
-                "feature/auth-tests": {"parent": "feature/auth", "children": []},
-            },
-        )
-
         # Worktree directories use different naming than branch names
         # Branch: feature/auth -> Worktree: auth-work
         # Branch: feature/auth-tests -> Worktree: auth-tests-work
@@ -475,11 +501,39 @@ def test_up_with_mismatched_worktree_name() -> None:
             use_graphite=True,
         )
 
+        # Set up stack: main -> feature/auth -> feature/auth-tests
+        # Branch names contain slashes, but worktree dirs don't
+        graphite_ops = FakeGraphiteOps(
+            branches={
+                "main": BranchMetadata(
+                    name="main",
+                    parent=None,
+                    children=["feature/auth"],
+                    is_trunk=True,
+                    sha="abc123",
+                ),
+                "feature/auth": BranchMetadata(
+                    name="feature/auth",
+                    parent="main",
+                    children=["feature/auth-tests"],
+                    is_trunk=False,
+                    sha="def456",
+                ),
+                "feature/auth-tests": BranchMetadata(
+                    name="feature/auth-tests",
+                    parent="feature/auth",
+                    children=[],
+                    is_trunk=False,
+                    sha="ghi789",
+                ),
+            }
+        )
+
         test_ctx = WorkstackContext(
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
+            graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
             dry_run=False,
         )

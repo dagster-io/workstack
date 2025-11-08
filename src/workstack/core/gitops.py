@@ -148,6 +148,19 @@ class GitOps(ABC):
         ...
 
     @abstractmethod
+    def find_worktree_for_branch(self, repo_root: Path, branch: str) -> Path | None:
+        """Find worktree path for given branch name.
+
+        Args:
+            repo_root: Repository root path
+            branch: Branch name to search for
+
+        Returns:
+            Path to worktree if branch is checked out, None otherwise
+        """
+        ...
+
+    @abstractmethod
     def get_branch_head(self, repo_root: Path, branch: str) -> str | None:
         """Get the commit SHA at the head of a branch.
 
@@ -431,6 +444,14 @@ class RealGitOps(GitOps):
                 return wt.path
         return None
 
+    def find_worktree_for_branch(self, repo_root: Path, branch: str) -> Path | None:
+        """Find worktree path for given branch name."""
+        worktrees = self.list_worktrees(repo_root)
+        for wt in worktrees:
+            if wt.branch == branch:
+                return wt.path
+        return None
+
     def get_branch_head(self, repo_root: Path, branch: str) -> str | None:
         """Get the commit SHA at the head of a branch."""
         result = subprocess.run(
@@ -668,6 +689,10 @@ class DryRunGitOps(GitOps):
     def is_branch_checked_out(self, repo_root: Path, branch: str) -> Path | None:
         """Check if branch is checked out (read-only, delegates to wrapped)."""
         return self._wrapped.is_branch_checked_out(repo_root, branch)
+
+    def find_worktree_for_branch(self, repo_root: Path, branch: str) -> Path | None:
+        """Find worktree path for branch (read-only, delegates to wrapped)."""
+        return self._wrapped.find_worktree_for_branch(repo_root, branch)
 
     def get_branch_head(self, repo_root: Path, branch: str) -> str | None:
         """Get branch head commit SHA (read-only, delegates to wrapped)."""

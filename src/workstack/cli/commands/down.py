@@ -9,7 +9,6 @@ from workstack.cli.commands.switch import (
     _resolve_down_navigation,
 )
 from workstack.cli.core import discover_repo_context
-from workstack.cli.graphite import find_worktree_for_branch
 from workstack.core.context import WorkstackContext
 
 
@@ -54,7 +53,7 @@ def down_cmd(ctx: WorkstackContext, script: bool) -> None:
         _activate_root_repo(repo, script, "down")
 
     # Resolve target branch to actual worktree path
-    target_wt_path = find_worktree_for_branch(worktrees, target_name)
+    target_wt_path = ctx.git_ops.find_worktree_for_branch(repo.root, target_name)
     if target_wt_path is None:
         # This should not happen because _resolve_down_navigation already checks
         # But include defensive error handling

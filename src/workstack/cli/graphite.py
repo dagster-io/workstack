@@ -79,29 +79,3 @@ def find_worktrees_containing_branch(
             matching_worktrees.append(wt)
 
     return matching_worktrees
-
-
-def find_worktree_for_branch(worktrees: list[WorktreeInfo], branch: str) -> Path | None:
-    """Find the worktree path for a given branch.
-
-    Args:
-        worktrees: List of WorktreeInfo from ctx.git_ops.list_worktrees()
-        branch: Branch name to search for
-
-    Returns:
-        Path to the worktree if branch is checked out in a worktree,
-        None if no worktree exists for the branch.
-
-    Note:
-        This function expects WorktreeInfo objects with 'path' and 'branch' attributes.
-
-    Example:
-        >>> worktrees = ctx.git_ops.list_worktrees(repo.root)
-        >>> wt_path = find_worktree_for_branch(worktrees, "feature-1")
-        >>> print(wt_path)
-        Path("/path/to/work/feature-1")
-    """
-    for wt in worktrees:
-        if hasattr(wt, "branch") and wt.branch == branch:
-            return wt.path
-    return None

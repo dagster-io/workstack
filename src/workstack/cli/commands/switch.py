@@ -10,7 +10,6 @@ from workstack.cli.core import (
     worktree_path_for,
 )
 from workstack.cli.debug import debug_log
-from workstack.cli.graphite import find_worktree_for_branch
 from workstack.cli.shell_utils import write_script_to_temp
 from workstack.core.context import WorkstackContext, create_context
 from workstack.core.gitops import WorktreeInfo
@@ -155,7 +154,7 @@ def _resolve_up_navigation(
     target_branch = children[0]
 
     # Check if target branch has a worktree
-    target_wt_path = find_worktree_for_branch(worktrees, target_branch)
+    target_wt_path = ctx.git_ops.find_worktree_for_branch(repo.root, target_branch)
     if target_wt_path is None:
         click.echo(
             f"Branch '{target_branch}' is the next branch up in the stack "
@@ -208,7 +207,7 @@ def _resolve_down_navigation(
     trunk_branch = ctx.git_ops.detect_default_branch(repo.root)
     if parent_branch == trunk_branch:
         # Check if trunk is checked out in root (repo.root path)
-        trunk_wt_path = find_worktree_for_branch(worktrees, trunk_branch)
+        trunk_wt_path = ctx.git_ops.find_worktree_for_branch(repo.root, trunk_branch)
         if trunk_wt_path is not None and trunk_wt_path == repo.root:
             # Trunk is in root repository, not in a dedicated worktree
             return "root"
@@ -225,7 +224,7 @@ def _resolve_down_navigation(
             return parent_branch
     else:
         # Parent is not trunk, check if it has a worktree
-        target_wt_path = find_worktree_for_branch(worktrees, parent_branch)
+        target_wt_path = ctx.git_ops.find_worktree_for_branch(repo.root, parent_branch)
         if target_wt_path is None:
             click.echo(
                 f"Branch '{parent_branch}' is the parent branch but has no worktree.\n"
@@ -358,7 +357,7 @@ def switch_cmd(ctx: WorkstackContext, name: str | None, script: bool, up: bool, 
             _activate_root_repo(repo, script, "switch")
 
         # Resolve to actual worktree path
-        target_wt_path = find_worktree_for_branch(worktrees, target_name)
+        target_wt_path = ctx.git_ops.find_worktree_for_branch(repo.root, target_name)
         if target_wt_path is None:
             click.echo(
                 f"Error: Branch '{target_name}' has no worktree. This should not happen.",

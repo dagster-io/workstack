@@ -19,41 +19,22 @@ def test_list_with_stacks_flag() -> None:
         # Build ops from branches
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["schrockn/ts-phase-1", "sibling-branch"],
-                    is_trunk=True,
-                    commit_sha="abc123",
+                "main": BranchMetadata.main(
+                    children=["schrockn/ts-phase-1", "sibling-branch"], sha="abc123"
                 ),
-                "schrockn/ts-phase-1": BranchMetadata(
-                    name="schrockn/ts-phase-1",
-                    parent="main",
-                    children=["schrockn/ts-phase-2"],
-                    is_trunk=False,
-                    commit_sha="def456",
+                "schrockn/ts-phase-1": BranchMetadata.branch(
+                    "schrockn/ts-phase-1", children=["schrockn/ts-phase-2"], sha="def456"
                 ),
-                "schrockn/ts-phase-2": BranchMetadata(
-                    name="schrockn/ts-phase-2",
+                "schrockn/ts-phase-2": BranchMetadata.branch(
+                    "schrockn/ts-phase-2",
                     parent="schrockn/ts-phase-1",
                     children=["schrockn/ts-phase-3"],
-                    is_trunk=False,
-                    commit_sha="ghi789",
+                    sha="ghi789",
                 ),
-                "schrockn/ts-phase-3": BranchMetadata(
-                    name="schrockn/ts-phase-3",
-                    parent="schrockn/ts-phase-2",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="jkl012",
+                "schrockn/ts-phase-3": BranchMetadata.branch(
+                    "schrockn/ts-phase-3", parent="schrockn/ts-phase-2", sha="jkl012"
                 ),
-                "sibling-branch": BranchMetadata(
-                    name="sibling-branch",
-                    parent="main",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="mno345",
-                ),
+                "sibling-branch": BranchMetadata.branch("sibling-branch", sha="mno345"),
             },
             current_branch="main",
         )
@@ -124,13 +105,7 @@ def test_list_with_stacks_graphite_disabled() -> None:
         # Build ops from branches
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=[],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
+                "main": BranchMetadata.main(sha="abc123"),
             },
             current_branch="main",
         )
@@ -160,13 +135,7 @@ def test_list_with_stacks_no_graphite_cache() -> None:
         # Build ops with empty branches (no graphite data)
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=[],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
+                "main": BranchMetadata.main(sha="abc123"),
             },
             current_branch="main",
         )
@@ -215,40 +184,24 @@ def test_list_with_stacks_highlights_current_branch_not_worktree_branch() -> Non
         # Build ops from branches, but set current_branch to ts-phase-3 in temporal-stack
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["schrockn/ts-phase-1"],
-                    is_trunk=True,
-                    commit_sha="abc123",
+                "main": BranchMetadata.main(children=["schrockn/ts-phase-1"], sha="abc123"),
+                "schrockn/ts-phase-1": BranchMetadata.branch(
+                    "schrockn/ts-phase-1", children=["schrockn/ts-phase-2"], sha="def456"
                 ),
-                "schrockn/ts-phase-1": BranchMetadata(
-                    name="schrockn/ts-phase-1",
-                    parent="main",
-                    children=["schrockn/ts-phase-2"],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
-                "schrockn/ts-phase-2": BranchMetadata(
-                    name="schrockn/ts-phase-2",
+                "schrockn/ts-phase-2": BranchMetadata.branch(
+                    "schrockn/ts-phase-2",
                     parent="schrockn/ts-phase-1",
                     children=["schrockn/ts-phase-3"],
-                    is_trunk=False,
-                    commit_sha="ghi789",
+                    sha="ghi789",
                 ),
-                "schrockn/ts-phase-3": BranchMetadata(
-                    name="schrockn/ts-phase-3",
+                "schrockn/ts-phase-3": BranchMetadata.branch(
+                    "schrockn/ts-phase-3",
                     parent="schrockn/ts-phase-2",
                     children=["schrockn/ts-phase-4"],
-                    is_trunk=False,
-                    commit_sha="jkl012",
+                    sha="jkl012",
                 ),
-                "schrockn/ts-phase-4": BranchMetadata(
-                    name="schrockn/ts-phase-4",
-                    parent="schrockn/ts-phase-3",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="mno345",
+                "schrockn/ts-phase-4": BranchMetadata.branch(
+                    "schrockn/ts-phase-4", parent="schrockn/ts-phase-3", sha="mno345"
                 ),
             },
             current_branch="schrockn/ts-phase-3",  # Actually on phase-3
@@ -322,20 +275,8 @@ def test_list_with_stacks_root_repo_does_not_duplicate_branch() -> None:
         # Build ops from branches - trunk is master, foo is child with no worktree
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "master": BranchMetadata(
-                    name="master",
-                    parent=None,
-                    children=["foo"],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
-                "foo": BranchMetadata(
-                    name="foo",
-                    parent="master",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
+                "master": BranchMetadata.main("master", children=["foo"], sha="abc123"),
+                "foo": BranchMetadata.branch("foo", parent="master", sha="def456"),
             },
             current_branch="master",
         )
@@ -394,20 +335,8 @@ def test_list_with_stacks_shows_descendants_with_worktrees() -> None:
         # Build ops from branches
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "master": BranchMetadata(
-                    name="master",
-                    parent=None,
-                    children=["foo"],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
-                "foo": BranchMetadata(
-                    name="foo",
-                    parent="master",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
+                "master": BranchMetadata.main("master", children=["foo"], sha="abc123"),
+                "foo": BranchMetadata.branch("foo", parent="master", sha="def456"),
             },
             current_branch="master",
         )
@@ -479,20 +408,8 @@ def test_list_with_stacks_hides_descendants_without_worktrees() -> None:
         # Build ops - feature-1 has no worktree
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-1"],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
-                "feature-1": BranchMetadata(
-                    name="feature-1",
-                    parent="main",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
+                "main": BranchMetadata.main(children=["feature-1"], sha="abc123"),
+                "feature-1": BranchMetadata.branch("feature-1", sha="def456"),
             },
             current_branch="main",
         )
@@ -555,34 +472,10 @@ def test_list_with_stacks_shows_descendants_with_gaps() -> None:
         # Build ops from branches
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["f1"],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
-                "f1": BranchMetadata(
-                    name="f1",
-                    parent="main",
-                    children=["f2"],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
-                "f2": BranchMetadata(
-                    name="f2",
-                    parent="f1",
-                    children=["f3"],
-                    is_trunk=False,
-                    commit_sha="ghi789",
-                ),
-                "f3": BranchMetadata(
-                    name="f3",
-                    parent="f2",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="jkl012",
-                ),
+                "main": BranchMetadata.main(children=["f1"], sha="abc123"),
+                "f1": BranchMetadata.branch("f1", children=["f2"], sha="def456"),
+                "f2": BranchMetadata.branch("f2", parent="f1", children=["f3"], sha="ghi789"),
+                "f3": BranchMetadata.branch("f3", parent="f2", sha="jkl012"),
             },
             current_branch="main",
         )
@@ -672,20 +565,8 @@ More content.
         # Build ops from branches
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature"],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
-                "feature": BranchMetadata(
-                    name="feature",
-                    parent="main",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
+                "main": BranchMetadata.main(children=["feature"], sha="abc123"),
+                "feature": BranchMetadata.branch("feature", sha="def456"),
             },
             current_branch="main",
         )
@@ -740,20 +621,8 @@ def test_list_without_stacks_shows_plan_summary() -> None:
         # Build ops from branches
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature"],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
-                "feature": BranchMetadata(
-                    name="feature",
-                    parent="main",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
+                "main": BranchMetadata.main(children=["feature"], sha="abc123"),
+                "feature": BranchMetadata.branch("feature", sha="def456"),
             },
             current_branch="main",
         )
@@ -790,20 +659,8 @@ def test_list_with_stacks_no_plan_file() -> None:
         # Build ops from branches
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature"],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
-                "feature": BranchMetadata(
-                    name="feature",
-                    parent="main",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
+                "main": BranchMetadata.main(children=["feature"], sha="abc123"),
+                "feature": BranchMetadata.branch("feature", sha="def456"),
             },
             current_branch="main",
         )
@@ -845,20 +702,8 @@ def test_list_with_stacks_plan_without_frontmatter() -> None:
         # Build ops from branches
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature"],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
-                "feature": BranchMetadata(
-                    name="feature",
-                    parent="main",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
+                "main": BranchMetadata.main(children=["feature"], sha="abc123"),
+                "feature": BranchMetadata.branch("feature", sha="def456"),
             },
             current_branch="main",
         )

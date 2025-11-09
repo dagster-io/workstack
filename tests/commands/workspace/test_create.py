@@ -1193,27 +1193,9 @@ def test_from_current_branch_with_main_in_use_prefers_graphite_parent() -> None:
         from workstack.core.branch_metadata import BranchMetadata
 
         graphite_branches = {
-            "main": BranchMetadata(
-                name="main",
-                parent=None,
-                children=["feature-1"],
-                is_trunk=True,
-                commit_sha="abc123",
-            ),
-            "feature-1": BranchMetadata(
-                name="feature-1",
-                parent="main",
-                children=["feature-2"],
-                is_trunk=False,
-                commit_sha="def456",
-            ),
-            "feature-2": BranchMetadata(
-                name="feature-2",
-                parent="feature-1",
-                children=[],
-                is_trunk=False,
-                commit_sha="ghi789",
-            ),
+            "main": BranchMetadata.main(children=["feature-1"], sha="abc123"),
+            "feature-1": BranchMetadata.branch("feature-1", children=["feature-2"], sha="def456"),
+            "feature-2": BranchMetadata.branch("feature-2", parent="feature-1", sha="ghi789"),
         }
 
         git_ops = FakeGitOps(
@@ -1292,27 +1274,9 @@ def test_from_current_branch_with_parent_in_use_falls_back_to_detached_head() ->
         from workstack.core.branch_metadata import BranchMetadata
 
         graphite_branches = {
-            "main": BranchMetadata(
-                name="main",
-                parent=None,
-                children=["feature-1"],
-                is_trunk=True,
-                commit_sha="abc123",
-            ),
-            "feature-1": BranchMetadata(
-                name="feature-1",
-                parent="main",
-                children=["feature-2"],
-                is_trunk=False,
-                commit_sha="def456",
-            ),
-            "feature-2": BranchMetadata(
-                name="feature-2",
-                parent="feature-1",
-                children=[],
-                is_trunk=False,
-                commit_sha="ghi789",
-            ),
+            "main": BranchMetadata.main(children=["feature-1"], sha="abc123"),
+            "feature-1": BranchMetadata.branch("feature-1", children=["feature-2"], sha="def456"),
+            "feature-2": BranchMetadata.branch("feature-2", parent="feature-1", sha="ghi789"),
         }
 
         git_ops = FakeGitOps(
@@ -1393,13 +1357,7 @@ def test_from_current_branch_without_graphite_falls_back_to_main() -> None:
         from workstack.core.branch_metadata import BranchMetadata
 
         graphite_branches = {
-            "main": BranchMetadata(
-                name="main",
-                parent=None,
-                children=[],
-                is_trunk=True,
-                commit_sha="abc123",
-            ),
+            "main": BranchMetadata.main(sha="abc123"),
         }
 
         git_ops = FakeGitOps(
@@ -1474,13 +1432,7 @@ def test_from_current_branch_no_graphite_main_in_use_uses_detached_head() -> Non
         from workstack.core.branch_metadata import BranchMetadata
 
         graphite_branches = {
-            "main": BranchMetadata(
-                name="main",
-                parent=None,
-                children=[],
-                is_trunk=True,
-                commit_sha="abc123",
-            ),
+            "main": BranchMetadata.main(sha="abc123"),
         }
 
         git_ops = FakeGitOps(

@@ -231,20 +231,8 @@ def test_tree_command_displays_hierarchy() -> None:
         # Build ops from branches
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-a"],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
-                "feature-a": BranchMetadata(
-                    name="feature-a",
-                    parent="main",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
+                "main": BranchMetadata.main(children=["feature-a"], sha="abc123"),
+                "feature-a": BranchMetadata.branch("feature-a", sha="def456"),
             },
             current_branch="main",
         )
@@ -285,27 +273,9 @@ def test_tree_command_filters_branches_without_worktrees() -> None:
         # Build ops with 3 branches, but only 2 have worktrees
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-a", "feature-b"],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
-                "feature-a": BranchMetadata(
-                    name="feature-a",
-                    parent="main",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
-                "feature-b": BranchMetadata(
-                    name="feature-b",
-                    parent="main",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="ghi789",
-                ),
+                "main": BranchMetadata.main(children=["feature-a", "feature-b"], sha="abc123"),
+                "feature-a": BranchMetadata.branch("feature-a", sha="def456"),
+                "feature-b": BranchMetadata.branch("feature-b", sha="ghi789"),
             },
             current_branch="main",
         )
@@ -337,13 +307,7 @@ def test_tree_command_fails_without_graphite_cache() -> None:
         # Build ops with minimal graphite data
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=[],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
+                "main": BranchMetadata.main(sha="abc123"),
             },
             current_branch="main",
         )

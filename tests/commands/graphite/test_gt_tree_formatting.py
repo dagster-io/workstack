@@ -15,27 +15,9 @@ def test_format_branches_as_tree_simple_hierarchy() -> None:
     """Test tree formatting with simple branch hierarchy."""
     # Arrange: Simple hierarchy with one root and two children
     branches = {
-        "main": BranchMetadata(
-            name="main",
-            parent=None,
-            children=["feature-1", "feature-2"],
-            is_trunk=True,
-            commit_sha="abc123456",
-        ),
-        "feature-1": BranchMetadata(
-            name="feature-1",
-            parent="main",
-            children=[],
-            is_trunk=False,
-            commit_sha="def456789",
-        ),
-        "feature-2": BranchMetadata(
-            name="feature-2",
-            parent="main",
-            children=[],
-            is_trunk=False,
-            commit_sha="ghi789012",
-        ),
+        "main": BranchMetadata.main(children=["feature-1", "feature-2"], sha="abc123456"),
+        "feature-1": BranchMetadata.branch("feature-1", sha="def456789"),
+        "feature-2": BranchMetadata.branch("feature-2", sha="ghi789012"),
     }
 
     git_ops = FakeGitOps(
@@ -63,47 +45,17 @@ def test_format_branches_as_tree_complex_hierarchy() -> None:
     """Test tree formatting with complex branch hierarchies."""
     # Arrange: Complex hierarchy with nested branches
     branches = {
-        "main": BranchMetadata(
-            name="main",
-            parent=None,
-            children=["feature-1", "feature-2"],
-            is_trunk=True,
-            commit_sha="aaa111111",
+        "main": BranchMetadata.main(children=["feature-1", "feature-2"], sha="aaa111111"),
+        "feature-1": BranchMetadata.branch(
+            "feature-1", children=["feature-1-a", "feature-1-b"], sha="bbb222222"
         ),
-        "feature-1": BranchMetadata(
-            name="feature-1",
-            parent="main",
-            children=["feature-1-a", "feature-1-b"],
-            is_trunk=False,
-            commit_sha="bbb222222",
+        "feature-1-a": BranchMetadata.branch("feature-1-a", parent="feature-1", sha="ccc333333"),
+        "feature-1-b": BranchMetadata.branch("feature-1-b", parent="feature-1", sha="ddd444444"),
+        "feature-2": BranchMetadata.branch(
+            "feature-2", children=["feature-2-sub"], sha="eee555555"
         ),
-        "feature-1-a": BranchMetadata(
-            name="feature-1-a",
-            parent="feature-1",
-            children=[],
-            is_trunk=False,
-            commit_sha="ccc333333",
-        ),
-        "feature-1-b": BranchMetadata(
-            name="feature-1-b",
-            parent="feature-1",
-            children=[],
-            is_trunk=False,
-            commit_sha="ddd444444",
-        ),
-        "feature-2": BranchMetadata(
-            name="feature-2",
-            parent="main",
-            children=["feature-2-sub"],
-            is_trunk=False,
-            commit_sha="eee555555",
-        ),
-        "feature-2-sub": BranchMetadata(
-            name="feature-2-sub",
-            parent="feature-2",
-            children=[],
-            is_trunk=False,
-            commit_sha="fff666666",
+        "feature-2-sub": BranchMetadata.branch(
+            "feature-2-sub", parent="feature-2", sha="fff666666"
         ),
     }
 
@@ -138,41 +90,15 @@ def test_format_branches_as_tree_deep_nesting() -> None:
     """Test tree formatting with deeply nested branches."""
     # Arrange: Deep linear nesting
     branches = {
-        "main": BranchMetadata(
-            name="main",
-            parent=None,
-            children=["level-1"],
-            is_trunk=True,
-            commit_sha="a1111111",
+        "main": BranchMetadata.main(children=["level-1"], sha="a1111111"),
+        "level-1": BranchMetadata.branch("level-1", children=["level-2"], sha="b2222222"),
+        "level-2": BranchMetadata.branch(
+            "level-2", parent="level-1", children=["level-3"], sha="c3333333"
         ),
-        "level-1": BranchMetadata(
-            name="level-1",
-            parent="main",
-            children=["level-2"],
-            is_trunk=False,
-            commit_sha="b2222222",
+        "level-3": BranchMetadata.branch(
+            "level-3", parent="level-2", children=["level-4"], sha="d4444444"
         ),
-        "level-2": BranchMetadata(
-            name="level-2",
-            parent="level-1",
-            children=["level-3"],
-            is_trunk=False,
-            commit_sha="c3333333",
-        ),
-        "level-3": BranchMetadata(
-            name="level-3",
-            parent="level-2",
-            children=["level-4"],
-            is_trunk=False,
-            commit_sha="d4444444",
-        ),
-        "level-4": BranchMetadata(
-            name="level-4",
-            parent="level-3",
-            children=[],
-            is_trunk=False,
-            commit_sha="e5555555",
-        ),
+        "level-4": BranchMetadata.branch("level-4", parent="level-3", sha="e5555555"),
     }
 
     commit_messages = {}
@@ -199,34 +125,10 @@ def test_format_branches_as_tree_multiple_roots() -> None:
     """Test tree formatting with multiple root branches."""
     # Arrange: Multiple trunk branches
     branches = {
-        "main": BranchMetadata(
-            name="main",
-            parent=None,
-            children=["feature-1"],
-            is_trunk=True,
-            commit_sha="aaa111111",
-        ),
-        "develop": BranchMetadata(
-            name="develop",
-            parent=None,
-            children=["feature-2"],
-            is_trunk=True,
-            commit_sha="bbb222222",
-        ),
-        "feature-1": BranchMetadata(
-            name="feature-1",
-            parent="main",
-            children=[],
-            is_trunk=False,
-            commit_sha="ccc333333",
-        ),
-        "feature-2": BranchMetadata(
-            name="feature-2",
-            parent="develop",
-            children=[],
-            is_trunk=False,
-            commit_sha="ddd444444",
-        ),
+        "main": BranchMetadata.main(children=["feature-1"], sha="aaa111111"),
+        "develop": BranchMetadata.main("develop", children=["feature-2"], sha="bbb222222"),
+        "feature-1": BranchMetadata.branch("feature-1", sha="ccc333333"),
+        "feature-2": BranchMetadata.branch("feature-2", parent="develop", sha="ddd444444"),
     }
 
     git_ops = FakeGitOps(
@@ -258,41 +160,11 @@ def test_format_branches_as_tree_with_root_branch() -> None:
     """Test tree formatting when specifying a root branch."""
     # Arrange: Complex tree but we'll filter to show only part
     branches = {
-        "main": BranchMetadata(
-            name="main",
-            parent=None,
-            children=["feature-1", "feature-2"],
-            is_trunk=True,
-            commit_sha="aaa111111",
-        ),
-        "feature-1": BranchMetadata(
-            name="feature-1",
-            parent="main",
-            children=["sub-1"],
-            is_trunk=False,
-            commit_sha="bbb222222",
-        ),
-        "feature-2": BranchMetadata(
-            name="feature-2",
-            parent="main",
-            children=["sub-2"],
-            is_trunk=False,
-            commit_sha="ccc333333",
-        ),
-        "sub-1": BranchMetadata(
-            name="sub-1",
-            parent="feature-1",
-            children=[],
-            is_trunk=False,
-            commit_sha="ddd444444",
-        ),
-        "sub-2": BranchMetadata(
-            name="sub-2",
-            parent="feature-2",
-            children=[],
-            is_trunk=False,
-            commit_sha="eee555555",
-        ),
+        "main": BranchMetadata.main(children=["feature-1", "feature-2"], sha="aaa111111"),
+        "feature-1": BranchMetadata.branch("feature-1", children=["sub-1"], sha="bbb222222"),
+        "feature-2": BranchMetadata.branch("feature-2", children=["sub-2"], sha="ccc333333"),
+        "sub-1": BranchMetadata.branch("sub-1", parent="feature-1", sha="ddd444444"),
+        "sub-2": BranchMetadata.branch("sub-2", parent="feature-2", sha="eee555555"),
     }
 
     git_ops = FakeGitOps(
@@ -321,13 +193,7 @@ def test_format_branch_recursive_base_case() -> None:
     """Test recursive formatting with single branch (base case)."""
     # Arrange: Single branch
     branches = {
-        "main": BranchMetadata(
-            name="main",
-            parent=None,
-            children=[],
-            is_trunk=True,
-            commit_sha="abc123456",
-        ),
+        "main": BranchMetadata.main(sha="abc123456"),
     }
 
     git_ops = FakeGitOps(
@@ -360,27 +226,9 @@ def test_format_branch_recursive_with_children() -> None:
     """Test recursive formatting with branch that has children."""
     # Arrange: Branch with two children
     branches = {
-        "parent": BranchMetadata(
-            name="parent",
-            parent=None,
-            children=["child-1", "child-2"],
-            is_trunk=True,
-            commit_sha="aaa111111",
-        ),
-        "child-1": BranchMetadata(
-            name="child-1",
-            parent="parent",
-            children=[],
-            is_trunk=False,
-            commit_sha="bbb222222",
-        ),
-        "child-2": BranchMetadata(
-            name="child-2",
-            parent="parent",
-            children=[],
-            is_trunk=False,
-            commit_sha="ccc333333",
-        ),
+        "parent": BranchMetadata.main("parent", children=["child-1", "child-2"], sha="aaa111111"),
+        "child-1": BranchMetadata.branch("child-1", parent="parent", sha="bbb222222"),
+        "child-2": BranchMetadata.branch("child-2", parent="parent", sha="ccc333333"),
     }
 
     git_ops = FakeGitOps(
@@ -457,13 +305,7 @@ def test_format_branches_as_tree_invalid_root_branch() -> None:
     """Test tree formatting with invalid root branch specified."""
     # Arrange: Branches without requested root
     branches = {
-        "main": BranchMetadata(
-            name="main",
-            parent=None,
-            children=[],
-            is_trunk=True,
-            commit_sha="abc123456",
-        ),
+        "main": BranchMetadata.main(sha="abc123456"),
     }
 
     git_ops = FakeGitOps()
@@ -480,13 +322,7 @@ def test_format_branches_as_tree_no_trunks() -> None:
     """Test tree formatting when no trunk branches exist."""
     # Arrange: All branches have parents (no trunk)
     branches = {
-        "feature-1": BranchMetadata(
-            name="feature-1",
-            parent="main",  # Parent exists but not in dict
-            children=[],
-            is_trunk=False,
-            commit_sha="abc123456",
-        ),
+        "feature-1": BranchMetadata.branch("feature-1", sha="abc123456"),
     }
 
     git_ops = FakeGitOps()
@@ -503,12 +339,8 @@ def test_format_branch_recursive_with_mixed_children() -> None:
     """Test recursive formatting with mix of leaf and non-leaf children."""
     # Arrange: Complex mix
     branches = {
-        "main": BranchMetadata(
-            name="main",
-            parent=None,
-            children=["feature-1", "feature-2", "feature-3"],
-            is_trunk=True,
-            commit_sha="aaa111111",
+        "main": BranchMetadata.main(
+            children=["feature-1", "feature-2", "feature-3"], sha="aaa111111"
         ),
         "feature-1": BranchMetadata(
             name="feature-1",
@@ -517,12 +349,8 @@ def test_format_branch_recursive_with_mixed_children() -> None:
             is_trunk=False,
             commit_sha="bbb222222",
         ),
-        "feature-1-sub": BranchMetadata(
-            name="feature-1-sub",
-            parent="feature-1",
-            children=[],
-            is_trunk=False,
-            commit_sha="ccc333333",
+        "feature-1-sub": BranchMetadata.branch(
+            "feature-1-sub", parent="feature-1", sha="ccc333333"
         ),
         "feature-2": BranchMetadata(
             name="feature-2",
@@ -538,20 +366,8 @@ def test_format_branch_recursive_with_mixed_children() -> None:
             is_trunk=False,
             commit_sha="eee555555",
         ),
-        "feature-3-a": BranchMetadata(
-            name="feature-3-a",
-            parent="feature-3",
-            children=[],
-            is_trunk=False,
-            commit_sha="fff666666",
-        ),
-        "feature-3-b": BranchMetadata(
-            name="feature-3-b",
-            parent="feature-3",
-            children=[],
-            is_trunk=False,
-            commit_sha="ggg777777",
-        ),
+        "feature-3-a": BranchMetadata.branch("feature-3-a", parent="feature-3", sha="fff666666"),
+        "feature-3-b": BranchMetadata.branch("feature-3-b", parent="feature-3", sha="ggg777777"),
     }
 
     git_ops = FakeGitOps(
@@ -587,13 +403,7 @@ def test_format_branches_with_missing_commit_message() -> None:
     """Test tree formatting when commit messages are missing."""
     # Arrange: Branch without commit message
     branches = {
-        "main": BranchMetadata(
-            name="main",
-            parent=None,
-            children=[],
-            is_trunk=True,
-            commit_sha="abc123456",
-        ),
+        "main": BranchMetadata.main(sha="abc123456"),
     }
 
     git_ops = FakeGitOps()
@@ -612,13 +422,7 @@ def test_format_branches_with_no_commit_sha() -> None:
     """Test tree formatting when commit SHA is None."""
     # Arrange: Branch without SHA
     branches = {
-        "main": BranchMetadata(
-            name="main",
-            parent=None,
-            children=[],
-            is_trunk=True,
-            commit_sha=None,  # No SHA
-        ),
+        "main": BranchMetadata.main(sha=None),
     }
 
     git_ops = FakeGitOps()
@@ -635,26 +439,12 @@ def test_format_branches_with_special_characters() -> None:
     """Test tree formatting with branch names containing special characters."""
     # Arrange: Branches with various special chars
     branches = {
-        "feature/test-123": BranchMetadata(
-            name="feature/test-123",
-            parent=None,
-            children=["bug#456", "hotfix-@special"],
-            is_trunk=True,
-            commit_sha="aaa111111",
+        "feature/test-123": BranchMetadata.main(
+            "feature/test-123", children=["bug#456", "hotfix-@special"], sha="aaa111111"
         ),
-        "bug#456": BranchMetadata(
-            name="bug#456",
-            parent="feature/test-123",
-            children=[],
-            is_trunk=False,
-            commit_sha="bbb222222",
-        ),
-        "hotfix-@special": BranchMetadata(
-            name="hotfix-@special",
-            parent="feature/test-123",
-            children=[],
-            is_trunk=False,
-            commit_sha="ccc333333",
+        "bug#456": BranchMetadata.branch("bug#456", parent="feature/test-123", sha="bbb222222"),
+        "hotfix-@special": BranchMetadata.branch(
+            "hotfix-@special", parent="feature/test-123", sha="ccc333333"
         ),
     }
 

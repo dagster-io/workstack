@@ -25,13 +25,7 @@ def test_sync_requires_graphite() -> None:
     with simulated_workstack_env(runner) as env:
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=[],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
+                "main": BranchMetadata.main(sha="abc123"),
             },
             current_branch="main",
         )
@@ -63,13 +57,7 @@ def test_sync_runs_gt_sync_from_root() -> None:
     with simulated_workstack_env(runner) as env:
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=[],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
+                "main": BranchMetadata.main(sha="abc123"),
             },
             current_branch="main",
         )
@@ -108,13 +96,7 @@ def test_sync_with_force_flag() -> None:
     with simulated_workstack_env(runner) as env:
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=[],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
+                "main": BranchMetadata.main(sha="abc123"),
             },
             current_branch="main",
         )
@@ -152,13 +134,7 @@ def test_sync_handles_gt_not_installed() -> None:
     with simulated_workstack_env(runner) as env:
         git_ops, _ = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=[],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
+                "main": BranchMetadata.main(sha="abc123"),
             },
             current_branch="main",
         )
@@ -194,13 +170,7 @@ def test_sync_handles_gt_sync_failure() -> None:
     with simulated_workstack_env(runner) as env:
         git_ops, _ = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=[],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
+                "main": BranchMetadata.main(sha="abc123"),
             },
             current_branch="main",
         )
@@ -242,27 +212,9 @@ def test_sync_identifies_deletable_workstacks() -> None:
         # Then build ops
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-1", "feature-2"],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
-                "feature-1": BranchMetadata(
-                    name="feature-1",
-                    parent="main",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
-                "feature-2": BranchMetadata(
-                    name="feature-2",
-                    parent="main",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="ghi789",
-                ),
+                "main": BranchMetadata.main(children=["feature-1", "feature-2"], sha="abc123"),
+                "feature-1": BranchMetadata.branch("feature-1", sha="def456"),
+                "feature-2": BranchMetadata.branch("feature-2", sha="ghi789"),
             },
             current_branch="main",
         )
@@ -308,13 +260,7 @@ def test_sync_no_deletable_workstacks() -> None:
     with simulated_workstack_env(runner) as env:
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=[],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
+                "main": BranchMetadata.main(sha="abc123"),
             },
             current_branch="main",
         )
@@ -350,20 +296,8 @@ def test_sync_with_confirmation() -> None:
         # Then build ops
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-1"],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
-                "feature-1": BranchMetadata(
-                    name="feature-1",
-                    parent="main",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
+                "main": BranchMetadata.main(children=["feature-1"], sha="abc123"),
+                "feature-1": BranchMetadata.branch("feature-1", sha="def456"),
             },
             current_branch="main",
         )
@@ -403,20 +337,8 @@ def test_sync_user_cancels() -> None:
         # Then build ops
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-1"],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
-                "feature-1": BranchMetadata(
-                    name="feature-1",
-                    parent="main",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
+                "main": BranchMetadata.main(children=["feature-1"], sha="abc123"),
+                "feature-1": BranchMetadata.branch("feature-1", sha="def456"),
             },
             current_branch="main",
         )
@@ -457,20 +379,8 @@ def test_sync_force_skips_confirmation() -> None:
         # Then build ops
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-1"],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
-                "feature-1": BranchMetadata(
-                    name="feature-1",
-                    parent="main",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
+                "main": BranchMetadata.main(children=["feature-1"], sha="abc123"),
+                "feature-1": BranchMetadata.branch("feature-1", sha="def456"),
             },
             current_branch="main",
         )
@@ -510,20 +420,8 @@ def test_sync_dry_run() -> None:
         # Then build ops
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-1"],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
-                "feature-1": BranchMetadata(
-                    name="feature-1",
-                    parent="main",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
+                "main": BranchMetadata.main(children=["feature-1"], sha="abc123"),
+                "feature-1": BranchMetadata.branch("feature-1", sha="def456"),
             },
             current_branch="main",
         )
@@ -568,20 +466,8 @@ def test_sync_return_to_original_worktree() -> None:
         # Then build ops
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-1"],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
-                "feature-1": BranchMetadata(
-                    name="feature-1",
-                    parent="main",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
+                "main": BranchMetadata.main(children=["feature-1"], sha="abc123"),
+                "feature-1": BranchMetadata.branch("feature-1", sha="def456"),
             },
             current_branch="main",
         )
@@ -621,20 +507,8 @@ def test_sync_original_worktree_deleted() -> None:
         # Then build ops
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-1"],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
-                "feature-1": BranchMetadata(
-                    name="feature-1",
-                    parent="main",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
+                "main": BranchMetadata.main(children=["feature-1"], sha="abc123"),
+                "feature-1": BranchMetadata.branch("feature-1", sha="def456"),
             },
             current_branch="main",
         )
@@ -701,20 +575,8 @@ def test_sync_script_mode_when_worktree_deleted() -> None:
         # Then build ops
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-1"],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
-                "feature-1": BranchMetadata(
-                    name="feature-1",
-                    parent="main",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
+                "main": BranchMetadata.main(children=["feature-1"], sha="abc123"),
+                "feature-1": BranchMetadata.branch("feature-1", sha="def456"),
             },
             current_branch="main",
         )
@@ -785,20 +647,8 @@ def test_sync_script_mode_when_worktree_exists() -> None:
         # Then build ops
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-1"],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
-                "feature-1": BranchMetadata(
-                    name="feature-1",
-                    parent="main",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
+                "main": BranchMetadata.main(children=["feature-1"], sha="abc123"),
+                "feature-1": BranchMetadata.branch("feature-1", sha="def456"),
             },
             current_branch="main",
         )
@@ -859,20 +709,8 @@ def test_sync_force_runs_double_gt_sync() -> None:
         # Then build ops
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-1"],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
-                "feature-1": BranchMetadata(
-                    name="feature-1",
-                    parent="main",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
+                "main": BranchMetadata.main(children=["feature-1"], sha="abc123"),
+                "feature-1": BranchMetadata.branch("feature-1", sha="def456"),
             },
             current_branch="main",
         )
@@ -921,20 +759,8 @@ def test_sync_without_force_runs_single_gt_sync() -> None:
         # Then build ops
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-1"],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
-                "feature-1": BranchMetadata(
-                    name="feature-1",
-                    parent="main",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
+                "main": BranchMetadata.main(children=["feature-1"], sha="abc123"),
+                "feature-1": BranchMetadata.branch("feature-1", sha="def456"),
             },
             current_branch="main",
         )
@@ -980,20 +806,8 @@ def test_sync_force_dry_run_no_sync_calls() -> None:
         # Then build ops
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-1"],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
-                "feature-1": BranchMetadata(
-                    name="feature-1",
-                    parent="main",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
+                "main": BranchMetadata.main(children=["feature-1"], sha="abc123"),
+                "feature-1": BranchMetadata.branch("feature-1", sha="def456"),
             },
             current_branch="main",
         )
@@ -1032,13 +846,7 @@ def test_sync_force_no_deletable_single_sync() -> None:
     with simulated_workstack_env(runner) as env:
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=[],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
+                "main": BranchMetadata.main(sha="abc123"),
             },
             current_branch="main",
         )
@@ -1077,13 +885,7 @@ def test_sync_verbose_flag() -> None:
     with simulated_workstack_env(runner) as env:
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=[],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
+                "main": BranchMetadata.main(sha="abc123"),
             },
             current_branch="main",
         )
@@ -1120,13 +922,7 @@ def test_sync_verbose_short_flag() -> None:
     with simulated_workstack_env(runner) as env:
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=[],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
+                "main": BranchMetadata.main(sha="abc123"),
             },
             current_branch="main",
         )
@@ -1162,13 +958,7 @@ def test_sync_force_verbose_combination() -> None:
     with simulated_workstack_env(runner) as env:
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=[],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
+                "main": BranchMetadata.main(sha="abc123"),
             },
             current_branch="main",
         )

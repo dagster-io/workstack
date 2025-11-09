@@ -35,6 +35,38 @@ from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
 
 
+def find_worktree_for_branch(
+    worktrees: list[WorktreeInfo],
+    branch: str,
+) -> Path | None:
+    """Find the worktree path for a given branch name.
+
+    Args:
+        worktrees: List of all worktrees
+        branch: Branch name to search for
+
+    Returns:
+        Path to the worktree with the matching branch, or None if not found.
+        Skips worktrees with detached HEAD (branch=None).
+
+    Example:
+        >>> worktrees = ctx.git_ops.list_worktrees(repo.root)
+        >>> path = find_worktree_for_branch(worktrees, "feature-2")
+        >>> if path:
+        ...     print(f"Branch checked out in: {path}")
+    """
+    for wt in worktrees:
+        # Skip worktrees with detached HEAD
+        if wt.branch is None:
+            continue
+
+        # Check if branch matches exactly
+        if wt.branch == branch:
+            return wt.path
+
+    return None
+
+
 def find_worktrees_containing_branch(
     ctx: WorkstackContext,
     repo_root: Path,

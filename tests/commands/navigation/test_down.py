@@ -24,27 +24,11 @@ def test_down_with_existing_worktree() -> None:
         # Build ops with feature-2 as current branch
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-1"],
-                    is_trunk=True,
-                    commit_sha="abc123",
+                "main": BranchMetadata.main(children=["feature-1"], sha="abc123"),
+                "feature-1": BranchMetadata.branch(
+                    "feature-1", children=["feature-2"], sha="def456"
                 ),
-                "feature-1": BranchMetadata(
-                    name="feature-1",
-                    parent="main",
-                    children=["feature-2"],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
-                "feature-2": BranchMetadata(
-                    name="feature-2",
-                    parent="feature-1",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="ghi789",
-                ),
+                "feature-2": BranchMetadata.branch("feature-2", parent="feature-1", sha="ghi789"),
             },
             current_branch="feature-2",
         )
@@ -83,20 +67,8 @@ def test_down_to_trunk_root() -> None:
         # Build ops with feature-1 as current branch
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-1"],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
-                "feature-1": BranchMetadata(
-                    name="feature-1",
-                    parent="main",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
+                "main": BranchMetadata.main(children=["feature-1"], sha="abc123"),
+                "feature-1": BranchMetadata.branch("feature-1", sha="def456"),
             },
             current_branch="feature-1",
         )
@@ -134,13 +106,7 @@ def test_down_at_trunk() -> None:
         # Build ops with main as current branch (at trunk)
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=[],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
+                "main": BranchMetadata.main(sha="abc123"),
             },
             current_branch="main",
         )
@@ -176,27 +142,11 @@ def test_down_parent_has_no_worktree() -> None:
         # Build ops with feature-2 as current branch
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-1"],
-                    is_trunk=True,
-                    commit_sha="abc123",
+                "main": BranchMetadata.main(children=["feature-1"], sha="abc123"),
+                "feature-1": BranchMetadata.branch(
+                    "feature-1", children=["feature-2"], sha="def456"
                 ),
-                "feature-1": BranchMetadata(
-                    name="feature-1",
-                    parent="main",
-                    children=["feature-2"],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
-                "feature-2": BranchMetadata(
-                    name="feature-2",
-                    parent="feature-1",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="ghi789",
-                ),
+                "feature-2": BranchMetadata.branch("feature-2", parent="feature-1", sha="ghi789"),
             },
             current_branch="feature-2",
         )
@@ -230,13 +180,7 @@ def test_down_graphite_not_enabled() -> None:
         # Build ops with just main branch
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=[],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
+                "main": BranchMetadata.main(sha="abc123"),
             },
             current_branch="main",
         )
@@ -322,27 +266,11 @@ def test_down_script_flag() -> None:
         # Build ops with feature-2 as current branch
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-1"],
-                    is_trunk=True,
-                    commit_sha="abc123",
+                "main": BranchMetadata.main(children=["feature-1"], sha="abc123"),
+                "feature-1": BranchMetadata.branch(
+                    "feature-1", children=["feature-2"], sha="def456"
                 ),
-                "feature-1": BranchMetadata(
-                    name="feature-1",
-                    parent="main",
-                    children=["feature-2"],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
-                "feature-2": BranchMetadata(
-                    name="feature-2",
-                    parent="feature-1",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="ghi789",
-                ),
+                "feature-2": BranchMetadata.branch("feature-2", parent="feature-1", sha="ghi789"),
             },
             current_branch="feature-2",
         )
@@ -390,26 +318,12 @@ def test_down_with_mismatched_worktree_name() -> None:
         # Build ops with feature/auth-tests as current branch
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature/auth"],
-                    is_trunk=True,
-                    commit_sha="abc123",
+                "main": BranchMetadata.main(children=["feature/auth"], sha="abc123"),
+                "feature/auth": BranchMetadata.branch(
+                    "feature/auth", children=["feature/auth-tests"], sha="def456"
                 ),
-                "feature/auth": BranchMetadata(
-                    name="feature/auth",
-                    parent="main",
-                    children=["feature/auth-tests"],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
-                "feature/auth-tests": BranchMetadata(
-                    name="feature/auth-tests",
-                    parent="feature/auth",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="ghi789",
+                "feature/auth-tests": BranchMetadata.branch(
+                    "feature/auth-tests", parent="feature/auth", sha="ghi789"
                 ),
             },
             current_branch="feature/auth-tests",

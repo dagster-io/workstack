@@ -98,11 +98,8 @@ Methods with >30 LOC in real implementation need comprehensive testing:
 - **Methods with >50 LOC** in real implementation
 - **User-visible behavior** (status display, command output)
 
-See [docs/agent/fake-testing.md](../../../docs/agent/fake-testing.md) for detailed patterns and examples.
-
 ## See Also
 
-- [docs/agent/fake-testing.md](../../../docs/agent/fake-testing.md) - Comprehensive testing guide
 - `tests/fakes/` - Fake implementations being tested
 - `tests/commands/` - Tests that USE these fakes
 - `tests/integration/` - Tests of real implementations

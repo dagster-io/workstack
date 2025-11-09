@@ -14,7 +14,8 @@ def extract_plan_title(plan_path: Path) -> str | None:
         plan_path: Path to the .PLAN.md file
 
     Returns:
-        The heading text (without the # prefix and common prefixes), or None if not found or file doesn't exist
+        The heading text (without the # prefix and common prefixes), or None if
+        not found or file doesn't exist
     """
     if not plan_path.exists():
         return None

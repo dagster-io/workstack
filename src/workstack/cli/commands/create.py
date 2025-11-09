@@ -8,11 +8,11 @@ from pathlib import Path
 
 import click
 
-from workstack.cli.config import LoadedConfig, load_config
+from workstack.cli.config import LoadedConfig, load_repo_config
 from workstack.cli.core import discover_repo_context, ensure_workstacks_dir, worktree_path_for
 from workstack.cli.shell_utils import render_cd_script, write_script_to_temp
 from workstack.cli.subprocess_utils import run_with_error_reporting
-from workstack.core.context import WorkstackContext, read_trunk_from_pyproject
+from workstack.core.context import WorkstackContext
 
 _SAFE_COMPONENT_RE = re.compile(r"[^A-Za-z0-9._/-]+")
 
@@ -556,8 +556,15 @@ def create(
 
     repo = discover_repo_context(ctx, ctx.cwd)
     workstacks_dir = ensure_workstacks_dir(repo)
-    cfg = load_config(workstacks_dir)
-    trunk_branch = read_trunk_from_pyproject(repo.root)
+    config = load_repo_config(repo.root, workstacks_dir)
+    trunk_branch = config.trunk_branch
+
+    # Convert to LoadedConfig for helper functions
+    cfg = LoadedConfig(
+        env=config.env,
+        post_create_commands=config.post_create_commands,
+        post_create_shell=config.post_create_shell,
+    )
 
     # Apply date prefix and uniqueness for plan-derived names
     if is_plan_derived:

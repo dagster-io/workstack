@@ -3,6 +3,7 @@ from pathlib import Path
 import click
 
 from workstack.cli.activation import render_activation_script
+from workstack.cli.config import load_repo_config
 from workstack.cli.core import (
     RepoContext,
     discover_repo_context,
@@ -11,7 +12,7 @@ from workstack.cli.core import (
 )
 from workstack.cli.debug import debug_log
 from workstack.cli.shell_utils import write_script_to_temp
-from workstack.core.context import WorkstackContext, create_context, read_trunk_from_pyproject
+from workstack.core.context import WorkstackContext, create_context
 from workstack.core.gitops import WorktreeInfo
 
 
@@ -329,7 +330,9 @@ def switch_cmd(ctx: WorkstackContext, name: str | None, script: bool, up: bool, 
         _ensure_graphite_enabled(ctx)
 
     repo = discover_repo_context(ctx, ctx.cwd)
-    trunk_branch = read_trunk_from_pyproject(repo.root)
+    workstacks_dir = ensure_workstacks_dir(repo)
+    config = load_repo_config(repo.root, workstacks_dir)
+    trunk_branch = config.trunk_branch
 
     # Check if user is trying to switch to main/master (should use root instead)
     if name and name.lower() in ("main", "master"):

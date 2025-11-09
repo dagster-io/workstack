@@ -797,8 +797,8 @@ def test_config_get_invalid_key() -> None:
         assert "Invalid key" in result.output
 
 
-def test_config_set_repo_keys_not_implemented() -> None:
-    """Test that setting repo keys is not yet implemented."""
+def test_config_set_env_variable() -> None:
+    """Test setting env.* repo config keys."""
     runner = CliRunner()
     with runner.isolated_filesystem():
         cwd = Path.cwd()
@@ -806,6 +806,12 @@ def test_config_set_repo_keys_not_implemented() -> None:
         git_dir.mkdir()
 
         workstacks_root = cwd / "workstacks"
+        workstacks_dir = workstacks_root / cwd.name
+        workstacks_dir.mkdir(parents=True)
+
+        # Create pyproject.toml
+        pyproject = cwd / "pyproject.toml"
+        pyproject.write_text("[tool.other]\nvalue = 1\n", encoding="utf-8")
 
         git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
         global_config_ops = FakeGlobalConfigOps(
@@ -825,8 +831,15 @@ def test_config_set_repo_keys_not_implemented() -> None:
 
         result = runner.invoke(cli, ["config", "set", "env.MY_VAR", "value"], obj=test_ctx)
 
-        assert result.exit_code == 1
-        assert "not yet implemented" in result.output
+        assert result.exit_code == 0, result.output
+        assert "Set env.MY_VAR=value" in result.output
+
+        # Verify config.toml was created
+        config_file = workstacks_dir / "config.toml"
+        assert config_file.exists()
+        config_content = config_file.read_text(encoding="utf-8")
+        assert "MY_VAR" in config_content
+        assert "value" in config_content
 
 
 def test_config_key_with_multiple_dots() -> None:

@@ -1,59 +1,11 @@
-import subprocess
+from dataclasses import replace
 from pathlib import Path
 
 import click
 
-from workstack.cli.config import LoadedConfig, load_config
+from workstack.cli.config import load_config, load_repo_config
 from workstack.cli.core import discover_repo_context, ensure_workstacks_dir
-from workstack.core.context import (
-    WorkstackContext,
-    read_trunk_from_pyproject,
-    write_trunk_to_pyproject,
-)
-
-
-def _get_env_value(cfg: LoadedConfig, parts: list[str], key: str) -> None:
-    """Handle env.* configuration keys.
-
-    Prints the value or exits with error if key not found.
-    """
-    if len(parts) != 2:
-        click.echo(f"Invalid key: {key}", err=True)
-        raise SystemExit(1)
-
-    if parts[1] not in cfg.env:
-        click.echo(f"Key not found: {key}", err=True)
-        raise SystemExit(1)
-
-    click.echo(cfg.env[parts[1]])
-
-
-def _get_post_create_value(cfg: LoadedConfig, parts: list[str], key: str) -> None:
-    """Handle post_create.* configuration keys.
-
-    Prints the value or exits with error if key not found.
-    """
-    if len(parts) != 2:
-        click.echo(f"Invalid key: {key}", err=True)
-        raise SystemExit(1)
-
-    # Handle shell subkey
-    if parts[1] == "shell":
-        if not cfg.post_create_shell:
-            click.echo(f"Key not found: {key}", err=True)
-            raise SystemExit(1)
-        click.echo(cfg.post_create_shell)
-        return
-
-    # Handle commands subkey
-    if parts[1] == "commands":
-        for cmd in cfg.post_create_commands:
-            click.echo(cmd)
-        return
-
-    # Unknown subkey
-    click.echo(f"Key not found: {key}", err=True)
-    raise SystemExit(1)
+from workstack.core.context import WorkstackContext, read_trunk_from_pyproject
 
 
 @click.group("config")
@@ -115,7 +67,12 @@ def config_list(ctx: WorkstackContext) -> None:
 @click.argument("key", metavar="KEY")
 @click.pass_obj
 def config_get(ctx: WorkstackContext, key: str) -> None:
-    """Print the value of a given configuration key."""
+    """Print the value of a given configuration key.
+
+    Related Context:
+    - Uses Python 3.10+ pattern matching for cleaner key dispatch
+    - Each case handles one specific key pattern
+    """
     parts = key.split(".")
 
     # Handle global config keys
@@ -134,37 +91,39 @@ def config_get(ctx: WorkstackContext, key: str) -> None:
             raise SystemExit(1) from e
         return
 
-    # Handle repo config keys
-    try:
-        repo = discover_repo_context(ctx, ctx.cwd)
-        workstacks_dir = ensure_workstacks_dir(repo)
-        cfg = load_config(workstacks_dir)
+    # Handle repo config: load and extract with pattern matching
+    repo = discover_repo_context(ctx, ctx.cwd)
+    workstacks_dir = ensure_workstacks_dir(repo)
+    config = load_repo_config(repo.root, workstacks_dir)
 
-        if parts[0] == "trunk-branch":
-            trunk_branch = read_trunk_from_pyproject(repo.root)
-            if trunk_branch:
-                click.echo(trunk_branch)
+    match parts:
+        case ["trunk-branch"]:
+            if config.trunk_branch:
+                click.echo(config.trunk_branch)
             else:
                 click.echo("not configured (will auto-detect)", err=True)
-            return
 
-        if parts[0] == "env":
-            _get_env_value(cfg, parts, key)
-            return
+        case ["env", subkey]:
+            if subkey in config.env:
+                click.echo(config.env[subkey])
+            else:
+                click.echo(f"Key not found: {key}", err=True)
+                raise SystemExit(1)
 
-        if parts[0] == "post_create":
-            _get_post_create_value(cfg, parts, key)
-            return
+        case ["post_create", "shell"]:
+            if config.post_create_shell:
+                click.echo(config.post_create_shell)
+            else:
+                click.echo(f"Key not found: {key}", err=True)
+                raise SystemExit(1)
 
-        click.echo(f"Invalid key: {key}", err=True)
-        raise SystemExit(1)
+        case ["post_create", "commands"]:
+            for cmd in config.post_create_commands:
+                click.echo(cmd)
 
-    except Exception as e:
-        if "not in a git repository" in str(e).lower() or "not a git repository" in str(e).lower():
-            click.echo("Not in a git repository", err=True)
-        else:
-            click.echo(f"Error: {e}", err=True)
-        raise SystemExit(1) from e
+        case _:
+            click.echo(f"Invalid key: {key}", err=True)
+            raise SystemExit(1)
 
 
 @config_group.command("set")
@@ -172,11 +131,16 @@ def config_get(ctx: WorkstackContext, key: str) -> None:
 @click.argument("value", metavar="VALUE")
 @click.pass_obj
 def config_set(ctx: WorkstackContext, key: str, value: str) -> None:
-    """Update configuration with a value for the given key."""
-    # Parse key into parts
+    """Update configuration with a value for the given key.
+
+    Related Context:
+    - Simple pattern: load → modify → save (which validates)
+    - Uses Python 3.10+ pattern matching for cleaner key dispatch
+    - See Known Pitfalls: NO field-by-field validation
+    """
     parts = key.split(".")
 
-    # Handle global config keys
+    # Handle global config keys (unchanged)
     if parts[0] in ("workstacks_root", "use_graphite", "show_pr_info", "show_pr_checks"):
         if not ctx.global_config_ops.exists():
             click.echo(f"Global config not found at {ctx.global_config_ops.get_path()}", err=True)
@@ -205,32 +169,31 @@ def config_set(ctx: WorkstackContext, key: str, value: str) -> None:
         click.echo(f"Set {key}={value}")
         return
 
-    # Handle repo config keys
-    if parts[0] == "trunk-branch":
-        # discover_repo_context checks for git repository and raises FileNotFoundError
-        repo = discover_repo_context(ctx, Path.cwd())
+    # Handle repo config: load → modify → save (which validates)
+    repo = discover_repo_context(ctx, Path.cwd())
+    workstacks_dir = ensure_workstacks_dir(repo)
+    config = load_repo_config(repo.root, workstacks_dir)
 
-        # Validate that the branch exists before writing
-        result = subprocess.run(
-            ["git", "rev-parse", "--verify", value],
-            cwd=repo.root,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if result.returncode != 0:
-            click.echo(
-                f"Error: Branch '{value}' does not exist in repository.\n"
-                f"Create the branch first before configuring it as trunk.",
-                err=True,
-            )
+    # Use pattern matching to modify config based on key
+    match parts:
+        case ["trunk-branch"]:
+            new_config = replace(config, trunk_branch=value)
+
+        case ["env", env_key]:
+            new_config = replace(config, env={**config.env, env_key: value})
+
+        case ["post_create", "shell"]:
+            new_config = replace(config, post_create_shell=value)
+
+        case ["post_create", "commands"]:
+            new_config = replace(config, post_create_commands=[*config.post_create_commands, value])
+
+        case _:
+            click.echo(f"Invalid key: {key}", err=True)
             raise SystemExit(1)
 
-        # Write configuration
-        write_trunk_to_pyproject(repo.root, value)
-        click.echo(f"Set trunk-branch={value}")
-        return
+    # Save validates automatically - will exit if invalid
+    from workstack.core.repo_config_ops import save_repo_config
 
-    # Other repo config keys not implemented yet
-    click.echo("Setting repo config keys not yet implemented", err=True)
-    raise SystemExit(1)
+    save_repo_config(repo.root, workstacks_dir, new_config, ctx.git_ops)
+    click.echo(f"Set {key}={value}")

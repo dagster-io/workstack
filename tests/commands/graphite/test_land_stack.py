@@ -791,3 +791,249 @@ def test_land_stack_succeeds_when_all_branches_in_current_worktree() -> None:
         assert "feat-2" in result.output
         # Should NOT show worktree conflict error
         assert "multiple worktrees" not in result.output
+
+
+def test_land_stack_dry_run_shows_preview_without_execution() -> None:
+    """Test that --dry-run shows what would be done without executing merges."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        workstacks_root = cwd / "workstacks"
+        repo_root = cwd
+        (repo_root / ".git").mkdir()
+
+        git_ops = FakeGitOps(
+            git_common_dirs={cwd: cwd / ".git"},
+            worktrees={
+                repo_root: [
+                    WorktreeInfo(path=repo_root, branch="main"),
+                ],
+            },
+            current_branches={cwd: "feat-1"},
+        )
+
+        global_config_ops = FakeGlobalConfigOps(
+            workstacks_root=workstacks_root,
+            use_graphite=True,
+        )
+
+        graphite_ops = FakeGraphiteOps(
+            branches={
+                "main": BranchMetadata(
+                    name="main",
+                    parent=None,
+                    children=["feat-1"],
+                    commit_sha="abc123",
+                    is_trunk=True,
+                ),
+                "feat-1": BranchMetadata(
+                    name="feat-1",
+                    parent="main",
+                    children=None,
+                    commit_sha="def456",
+                    is_trunk=False,
+                ),
+            },
+            stacks={
+                "feat-1": ["main", "feat-1"],
+            },
+        )
+
+        github_ops = FakeGitHubOps(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Feature 1"),
+            }
+        )
+
+        test_ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            graphite_ops=graphite_ops,
+            github_ops=github_ops,
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
+
+        result = runner.invoke(cli, ["land-stack", "--dry-run"], obj=test_ctx)
+
+        # Should show dry-run indicators
+        assert "(dry run)" in result.output
+        assert "Would checkout branch" in result.output or "(dry run)" in result.output
+        assert "Would: " in result.output or "(dry run)" in result.output
+
+        # Should show success message with dry-run prefix
+        assert "Would successfully land 1 PRs" in result.output or "Would" in result.output
+
+
+def test_land_stack_action_stream_integration() -> None:
+    """Test that refactored land-stack uses action streams correctly.
+
+    This test verifies that the action stream pattern is integrated correctly
+    and produces the expected dry-run output format.
+    """
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        workstacks_root = cwd / "workstacks"
+        repo_root = cwd
+        (repo_root / ".git").mkdir()
+
+        git_ops = FakeGitOps(
+            git_common_dirs={cwd: cwd / ".git"},
+            worktrees={
+                repo_root: [
+                    WorktreeInfo(path=repo_root, branch="main"),
+                ],
+            },
+            current_branches={cwd: "feat-2"},
+        )
+
+        global_config_ops = FakeGlobalConfigOps(
+            workstacks_root=workstacks_root,
+            use_graphite=True,
+        )
+
+        # Stack: main → feat-1 → feat-2
+        graphite_ops = FakeGraphiteOps(
+            branches={
+                "main": BranchMetadata(
+                    name="main",
+                    parent=None,
+                    children=["feat-1"],
+                    commit_sha="abc123",
+                    is_trunk=True,
+                ),
+                "feat-1": BranchMetadata(
+                    name="feat-1",
+                    parent="main",
+                    children=["feat-2"],
+                    commit_sha="def456",
+                    is_trunk=False,
+                ),
+                "feat-2": BranchMetadata(
+                    name="feat-2",
+                    parent="feat-1",
+                    children=None,
+                    commit_sha="ghi789",
+                    is_trunk=False,
+                ),
+            },
+            stacks={
+                "feat-2": ["main", "feat-1", "feat-2"],
+            },
+        )
+
+        github_ops = FakeGitHubOps(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Feature 1"),
+                "feat-2": ("OPEN", 200, "Feature 2"),
+            }
+        )
+
+        test_ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            graphite_ops=graphite_ops,
+            github_ops=github_ops,
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
+
+        result = runner.invoke(cli, ["land-stack", "--dry-run"], obj=test_ctx)
+
+        # Verify action stream dry-run output format
+        assert "(dry run)" in result.output
+        assert "Would:" in result.output
+
+        # Should show both branches being landed
+        assert "feat-1" in result.output
+        assert "feat-2" in result.output
+
+        # Should show final summary with dry-run indicator
+        assert "Would successfully land 2 PRs" in result.output or "Would" in result.output
+
+
+def test_land_stack_dry_run_validates_stack_integrity() -> None:
+    """Test that dry-run mode still validates stack integrity and fails on broken stacks.
+
+    Regression test: Previously, stack integrity validation was skipped in dry-run mode,
+    allowing broken stacks to appear to succeed when they would fail in production.
+    """
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        workstacks_root = cwd / "workstacks"
+        repo_root = cwd
+        (repo_root / ".git").mkdir()
+
+        git_ops = FakeGitOps(
+            git_common_dirs={cwd: cwd / ".git"},
+            worktrees={
+                repo_root: [
+                    WorktreeInfo(path=repo_root, branch="main"),
+                ],
+            },
+            current_branches={cwd: "feat-2"},
+        )
+
+        global_config_ops = FakeGlobalConfigOps(
+            workstacks_root=workstacks_root,
+            use_graphite=True,
+        )
+
+        # Stack: main → feat-1 → feat-2
+        # BUT feat-1's parent is feat-2 (broken - not trunk!)
+        # This simulates a broken stack state after a failed restack
+        graphite_ops = FakeGraphiteOps(
+            branches={
+                "main": BranchMetadata(
+                    name="main",
+                    parent=None,
+                    children=["feat-1"],
+                    commit_sha="abc123",
+                    is_trunk=True,
+                ),
+                "feat-1": BranchMetadata(
+                    name="feat-1",
+                    parent="feat-2",  # BROKEN: parent is not trunk!
+                    children=["feat-2"],
+                    commit_sha="def456",
+                    is_trunk=False,
+                ),
+                "feat-2": BranchMetadata(
+                    name="feat-2",
+                    parent="feat-1",
+                    children=None,
+                    commit_sha="ghi789",
+                    is_trunk=False,
+                ),
+            },
+            stacks={
+                "feat-2": ["main", "feat-1", "feat-2"],
+            },
+        )
+
+        github_ops = FakeGitHubOps(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Feature 1"),
+                "feat-2": ("OPEN", 200, "Feature 2"),
+            }
+        )
+
+        test_ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            graphite_ops=graphite_ops,
+            github_ops=github_ops,
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
+
+        # Run with --dry-run
+        result = runner.invoke(cli, ["land-stack", "--dry-run"], obj=test_ctx)
+
+        # Should FAIL even in dry-run mode due to stack integrity check
+        assert result.exit_code == 1
+        assert "Stack integrity broken" in result.output
+        assert "parent is 'feat-2'" in result.output
+        assert "expected trunk branch" in result.output

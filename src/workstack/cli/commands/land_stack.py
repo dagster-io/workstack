@@ -4,6 +4,7 @@ from pathlib import Path
 import click
 
 from workstack.cli.core import discover_repo_context
+from workstack.core.action_stream import Action, DryRunStream, ProductionStream
 from workstack.core.context import WorkstackContext
 
 
@@ -310,88 +311,68 @@ def _land_branch_sequence(
     """
     merged_branches: list[str] = []
     operations: list[str] = []
+    stream = DryRunStream(ctx, verbose) if dry_run else ProductionStream(ctx, verbose)
 
     check = click.style("✓", fg="green")
 
     for _idx, (branch, pr_number, _title) in enumerate(branches, 1):
         # Phase 1: Checkout
-        if dry_run:
+        try:
+            stream.execute(Action.git_checkout(ctx, repo_root, branch))
             operations.append(_format_cli_command(f"git checkout {branch}", check))
-        else:
-            try:
-                ctx.git_ops.checkout_branch(repo_root, branch)
-                operations.append(_format_cli_command(f"git checkout {branch}", check))
-            except Exception as e:
-                return merged_branches, f"Failed to checkout {branch}: {e}", operations
+        except Exception as e:
+            return merged_branches, f"Failed to checkout {branch}: {e}", operations
 
         # Phase 2: Verify stack integrity
         parent = ctx.graphite_ops.get_parent_branch(ctx.git_ops, repo_root, branch)
         all_branches = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo_root)
 
         # Parent should be trunk after previous restacks
-        if parent is None or parent not in all_branches or not all_branches[parent].is_trunk:
-            if not dry_run:
-                return (
-                    merged_branches,
-                    f"Stack integrity broken: {branch} parent is '{parent}', "
-                    f"expected trunk branch. Previous restack may have failed.",
-                    operations,
-                )
+        is_parent_trunk = (
+            parent is not None and parent in all_branches and all_branches[parent].is_trunk
+        )
+        if not is_parent_trunk:
+            return (
+                merged_branches,
+                f"Stack integrity broken: {branch} parent is '{parent}', "
+                f"expected trunk branch. Previous restack may have failed.",
+                operations,
+            )
 
         # Show specific verification message with branch and expected parent
         trunk_name = parent if parent else "trunk"
         operations.append(_format_description(f"verify {branch} parent is {trunk_name}", check))
 
         # Phase 3: Merge PR
-        if dry_run:
+        try:
+            stream.execute(
+                Action.subprocess_run(
+                    f"gh pr merge {pr_number} --squash --auto",
+                    ["gh", "pr", "merge", str(pr_number), "--squash", "--auto"],
+                    repo_root,
+                )
+            )
             merge_cmd = f"gh pr merge {pr_number} --squash --auto"
             operations.append(_format_cli_command(merge_cmd, check))
             merged_branches.append(branch)
-        else:
-            try:
-                # Use gh pr merge with squash strategy (Graphite's default)
-                cmd = ["gh", "pr", "merge", str(pr_number), "--squash", "--auto"]
-                result = subprocess.run(
-                    cmd,
-                    cwd=repo_root,
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                )
-                if verbose:
-                    click.echo(result.stdout)
 
-                merge_cmd = f"gh pr merge {pr_number} --squash --auto"
-                operations.append(_format_cli_command(merge_cmd, check))
-                merged_branches.append(branch)
-
-            except subprocess.CalledProcessError as e:
-                error_msg = e.stderr.strip() if e.stderr else str(e)
-                return (
-                    merged_branches,
-                    f"Failed to merge PR #{pr_number} for {branch}: {error_msg}",
-                    operations,
-                )
-            except FileNotFoundError:
-                return (
-                    merged_branches,
-                    "gh command not found. Install GitHub CLI: brew install gh",
-                    operations,
-                )
+        except subprocess.CalledProcessError as e:
+            error_msg = e.stderr.strip() if e.stderr else str(e)
+            msg = f"Failed to merge PR #{pr_number} for {branch}: {error_msg}"
+            return merged_branches, msg, operations
+        except FileNotFoundError:
+            return (
+                merged_branches,
+                "gh command not found. Install GitHub CLI: brew install gh",
+                operations,
+            )
 
         # Phase 4: Restack
-        if dry_run:
+        try:
+            stream.execute(Action.graphite_sync(ctx, repo_root, force=True, quiet=not verbose))
             operations.append(_format_cli_command("gt sync -f", check))
-        else:
-            try:
-                ctx.graphite_ops.sync(repo_root, force=True, quiet=not verbose)
-                operations.append(_format_cli_command("gt sync -f", check))
-            except Exception as e:
-                return (
-                    merged_branches,
-                    f"Failed to restack after merging {branch}: {e}",
-                    operations,
-                )
+        except Exception as e:
+            return merged_branches, f"Failed to restack after merging {branch}: {e}", operations
 
     return merged_branches, None, operations
 
@@ -420,13 +401,13 @@ def _cleanup_and_navigate(
     """
     operations: list[str] = []
     check = click.style("✓", fg="green")
+    stream = DryRunStream(ctx, verbose) if dry_run else ProductionStream(ctx, verbose)
 
     # Get last merged branch to find next unmerged child
     last_merged = merged_branches[-1] if merged_branches else None
 
     # Step 1: Checkout main
-    if not dry_run:
-        ctx.git_ops.checkout_branch(repo_root, "main")
+    stream.execute(Action.git_checkout(ctx, repo_root, "main"))
     operations.append(_format_cli_command("git checkout main", check))
     final_branch = "main"
 
@@ -435,25 +416,15 @@ def _cleanup_and_navigate(
     if verbose:
         base_cmd += " --verbose"
 
-    if dry_run:
-        operations.append(_format_cli_command(base_cmd, check))
-    else:
-        try:
-            # This will remove merged worktrees and delete branches
-            cmd = ["workstack", "sync", "-f"]
-            if verbose:
-                cmd.append("--verbose")
+    try:
+        cmd = ["workstack", "sync", "-f"]
+        if verbose:
+            cmd.append("--verbose")
 
-            subprocess.run(
-                cmd,
-                cwd=repo_root,
-                check=True,
-                capture_output=not verbose,
-                text=True,
-            )
-            operations.append(_format_cli_command(base_cmd, check))
-        except subprocess.CalledProcessError as e:
-            click.echo(f"Warning: Cleanup sync failed: {e}", err=True)
+        stream.execute(Action.subprocess_run(base_cmd, cmd, repo_root))
+        operations.append(_format_cli_command(base_cmd, check))
+    except subprocess.CalledProcessError as e:
+        click.echo(f"Warning: Cleanup sync failed: {e}", err=True)
 
     # Step 3: Navigate to next branch or stay on main
     # Check if last merged branch had unmerged children
@@ -464,18 +435,15 @@ def _cleanup_and_navigate(
             # Check if any children still exist and are unmerged
             for child in children:
                 if child in all_branches:
-                    if not dry_run:
-                        try:
-                            ctx.git_ops.checkout_branch(repo_root, child)
-                            operations.append(_format_cli_command(f"git checkout {child}", check))
-                            final_branch = child
-                            return operations, final_branch
-                        except Exception:
-                            pass  # Child branch may have been deleted
-                    else:
+                    try:
+                        stream.execute(Action.git_checkout(ctx, repo_root, child))
                         operations.append(_format_cli_command(f"git checkout {child}", check))
                         final_branch = child
                         return operations, final_branch
+                    except Exception:
+                        # Child branch may have been deleted - continue to next
+                        # child or fall through
+                        pass
 
     # No unmerged children, stay on main (already checked out above)
     return operations, final_branch

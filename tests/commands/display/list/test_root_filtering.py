@@ -21,20 +21,16 @@ shows only ancestors + current for the root worktree:
 These tests would have failed with the old implementation, catching the regression.
 """
 
-import json
-from pathlib import Path
-
 from click.testing import CliRunner
 
 from tests.commands.display.list import strip_ansi
 from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.gitops import FakeGitOps
 from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.shell_ops import FakeShellOps
+from tests.test_utils.repo_setup import simulated_workstack_env
 from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext
-from workstack.core.gitops import WorktreeInfo
-from workstack.core.graphite_ops import RealGraphiteOps
+from workstack.core.graphite_ops import BranchMetadata
 
 
 def test_root_on_trunk_shows_only_trunk() -> None:
@@ -55,54 +51,42 @@ def test_root_on_trunk_shows_only_trunk() -> None:
           ◉  main         <- CORRECT: only trunk shown
     """
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-
-        # Create git repo structure
-        git_dir = Path(".git")
-        git_dir.mkdir()
-
-        # Create graphite cache: main → feature-a → feature-b
-        graphite_cache = {
-            "branches": [
-                ["main", {"validationResult": "TRUNK", "children": ["feature-a"]}],
-                ["feature-a", {"parentBranchName": "main", "children": ["feature-b"]}],
-                ["feature-b", {"parentBranchName": "feature-a", "children": []}],
-            ]
-        }
-        (git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache))
-
+    with simulated_workstack_env(runner) as env:
         # Create feature-b worktree
-        repo_name = cwd.name
-        workstacks_dir = workstacks_root / repo_name
-        feature_b_dir = workstacks_dir / "feature-b"
-        feature_b_dir.mkdir(parents=True)
+        env.create_linked_worktree("feature-b", "feature-b", chdir=False)
 
-        # Build fake git ops - root on main, feature-b worktree
-        git_ops = FakeGitOps(
-            worktrees={
-                cwd: [
-                    WorktreeInfo(path=cwd, branch="main"),
-                    WorktreeInfo(path=feature_b_dir, branch="feature-b"),
-                ],
+        # Build ops from branches
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata(
+                    name="main",
+                    parent=None,
+                    children=["feature-a"],
+                    is_trunk=True,
+                    commit_sha="abc123",
+                ),
+                "feature-a": BranchMetadata(
+                    name="feature-a",
+                    parent="main",
+                    children=["feature-b"],
+                    is_trunk=False,
+                    commit_sha="def456",
+                ),
+                "feature-b": BranchMetadata(
+                    name="feature-b",
+                    parent="feature-a",
+                    children=[],
+                    is_trunk=False,
+                    commit_sha="ghi789",
+                ),
             },
-            git_common_dirs={
-                cwd: git_dir,
-                feature_b_dir: git_dir,
-            },
-            current_branches={
-                cwd: "main",
-                feature_b_dir: "feature-b",
-            },
+            current_branch="main",
         )
 
         global_config_ops = FakeGlobalConfigOps(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
         )
-
-        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
@@ -169,55 +153,49 @@ def test_root_on_non_trunk_shows_ancestors_only() -> None:
           ◯  main
     """
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-
-        # Create git repo structure
-        git_dir = Path(".git")
-        git_dir.mkdir()
-
-        # Create graphite cache: main → feature-a → feature-b → feature-c
-        graphite_cache = {
-            "branches": [
-                ["main", {"validationResult": "TRUNK", "children": ["feature-a"]}],
-                ["feature-a", {"parentBranchName": "main", "children": ["feature-b"]}],
-                ["feature-b", {"parentBranchName": "feature-a", "children": ["feature-c"]}],
-                ["feature-c", {"parentBranchName": "feature-b", "children": []}],
-            ]
-        }
-        (git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache))
-
+    with simulated_workstack_env(runner) as env:
         # Create feature-c worktree
-        repo_name = cwd.name
-        workstacks_dir = workstacks_root / repo_name
-        feature_c_dir = workstacks_dir / "feature-c"
-        feature_c_dir.mkdir(parents=True)
+        env.create_linked_worktree("feature-c", "feature-c", chdir=False)
 
-        # Build fake git ops - root on feature-b, feature-c worktree
-        git_ops = FakeGitOps(
-            worktrees={
-                cwd: [
-                    WorktreeInfo(path=cwd, branch="feature-b"),
-                    WorktreeInfo(path=feature_c_dir, branch="feature-c"),
-                ],
+        # Build ops from branches - root is on feature-b (non-trunk)
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata(
+                    name="main",
+                    parent=None,
+                    children=["feature-a"],
+                    is_trunk=True,
+                    commit_sha="abc123",
+                ),
+                "feature-a": BranchMetadata(
+                    name="feature-a",
+                    parent="main",
+                    children=["feature-b"],
+                    is_trunk=False,
+                    commit_sha="def456",
+                ),
+                "feature-b": BranchMetadata(
+                    name="feature-b",
+                    parent="feature-a",
+                    children=["feature-c"],
+                    is_trunk=False,
+                    commit_sha="ghi789",
+                ),
+                "feature-c": BranchMetadata(
+                    name="feature-c",
+                    parent="feature-b",
+                    children=[],
+                    is_trunk=False,
+                    commit_sha="jkl012",
+                ),
             },
-            git_common_dirs={
-                cwd: git_dir,
-                feature_c_dir: git_dir,
-            },
-            current_branches={
-                cwd: "feature-b",
-                feature_c_dir: "feature-c",
-            },
+            current_branch="feature-b",  # Root on feature-b
         )
 
         global_config_ops = FakeGlobalConfigOps(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
         )
-
-        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
@@ -290,60 +268,50 @@ def test_non_root_worktree_shows_descendants_with_worktrees() -> None:
           ◯  feature-c       <- descendant with worktree (skips feature-b)
     """
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-
-        # Create git repo structure
-        git_dir = Path(".git")
-        git_dir.mkdir()
-
-        # Create graphite cache: main → feature-a → feature-b → feature-c
-        graphite_cache = {
-            "branches": [
-                ["main", {"validationResult": "TRUNK", "children": ["feature-a"]}],
-                ["feature-a", {"parentBranchName": "main", "children": ["feature-b"]}],
-                ["feature-b", {"parentBranchName": "feature-a", "children": ["feature-c"]}],
-                ["feature-c", {"parentBranchName": "feature-b", "children": []}],
-            ]
-        }
-        (git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache))
-
+    with simulated_workstack_env(runner) as env:
         # Create worktrees
-        repo_name = cwd.name
-        workstacks_dir = workstacks_root / repo_name
-        feature_a_dir = workstacks_dir / "worktree-a"
-        feature_c_dir = workstacks_dir / "worktree-c"
-        feature_a_dir.mkdir(parents=True)
-        feature_c_dir.mkdir(parents=True)
+        env.create_linked_worktree("worktree-a", "feature-a", chdir=False)
+        env.create_linked_worktree("worktree-c", "feature-c", chdir=False)
 
-        # Build fake git ops
-        git_ops = FakeGitOps(
-            worktrees={
-                cwd: [
-                    WorktreeInfo(path=cwd, branch="main"),
-                    WorktreeInfo(path=feature_a_dir, branch="feature-a"),
-                    WorktreeInfo(path=feature_c_dir, branch="feature-c"),
-                ],
+        # Build ops from branches
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata(
+                    name="main",
+                    parent=None,
+                    children=["feature-a"],
+                    is_trunk=True,
+                    commit_sha="abc123",
+                ),
+                "feature-a": BranchMetadata(
+                    name="feature-a",
+                    parent="main",
+                    children=["feature-b"],
+                    is_trunk=False,
+                    commit_sha="def456",
+                ),
+                "feature-b": BranchMetadata(
+                    name="feature-b",
+                    parent="feature-a",
+                    children=["feature-c"],
+                    is_trunk=False,
+                    commit_sha="ghi789",
+                ),
+                "feature-c": BranchMetadata(
+                    name="feature-c",
+                    parent="feature-b",
+                    children=[],
+                    is_trunk=False,
+                    commit_sha="jkl012",
+                ),
             },
-            git_common_dirs={
-                cwd: git_dir,
-                feature_a_dir: git_dir,
-                feature_c_dir: git_dir,
-            },
-            current_branches={
-                cwd: "main",
-                feature_a_dir: "feature-a",
-                feature_c_dir: "feature-c",
-            },
+            current_branch="main",
         )
 
         global_config_ops = FakeGlobalConfigOps(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
         )
-
-        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,

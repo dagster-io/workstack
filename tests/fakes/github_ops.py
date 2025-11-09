@@ -6,7 +6,7 @@ in its constructor. Construct instances directly with keyword arguments.
 
 from pathlib import Path
 
-from workstack.core.github_ops import GitHubOps, PullRequestInfo
+from workstack.core.github_ops import GitHubOps, PRInfo, PullRequestInfo
 
 
 class FakeGitHubOps(GitHubOps):
@@ -51,29 +51,27 @@ class FakeGitHubOps(GitHubOps):
         """
         return self._prs
 
-    def get_pr_status(
-        self, repo_root: Path, branch: str, *, debug: bool
-    ) -> tuple[str, int | None, str | None]:
+    def get_pr_status(self, repo_root: Path, branch: str, *, debug: bool) -> PRInfo:
         """Get PR status from configured PRs.
 
-        Returns ("NONE", None, None) if branch not found.
+        Returns PRInfo("NONE", None, None) if branch not found.
         Note: Returns URL in place of title since PullRequestInfo has no title field.
         """
         # Support legacy pr_statuses format
         if self._pr_statuses is not None:
             result = self._pr_statuses.get(branch)
             if result is None:
-                return ("NONE", None, None)
+                return PRInfo("NONE", None, None)
             state, pr_number, title = result
             # Convert None state to "NONE" for consistency
             if state is None:
                 state = "NONE"
-            return (state, pr_number, title)
+            return PRInfo(state, pr_number, title)
 
         pr = self._prs.get(branch)
         if pr is None:
-            return ("NONE", None, None)
+            return PRInfo("NONE", None, None)
         # PullRequestInfo has: number, state, url, is_draft, checks_passing
         # But get_pr_status expects: state, number, title
         # Using url as title since PullRequestInfo doesn't have a title field
-        return (pr.state, pr.number, pr.url)
+        return PRInfo(pr.state, pr.number, pr.url)

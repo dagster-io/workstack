@@ -1,53 +1,36 @@
-from pathlib import Path
-
 from click.testing import CliRunner
 
 from tests.commands.display.list import strip_ansi
+from tests.commands.graphite.test_land_stack import simulated_workstack_env
 from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.gitops import FakeGitOps
 from tests.fakes.global_config_ops import FakeGlobalConfigOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext
-from workstack.core.gitops import WorktreeInfo
+from workstack.core.graphite_ops import BranchMetadata
 
 
 def test_list_outputs_names_not_paths() -> None:
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        # Set up isolated environment
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
+    with simulated_workstack_env(runner) as env:
+        # Create linked worktrees
+        env.create_linked_worktree(name="foo", branch="foo", chdir=False)
+        env.create_linked_worktree(name="bar", branch="feature/bar", chdir=False)
 
-        # Create git repo
-        Path(".git").mkdir()
-
-        # Create worktrees in the location determined by global config
-        repo_name = cwd.name
-        workstacks_dir = workstacks_root / repo_name
-        (workstacks_dir / "foo").mkdir(parents=True)
-        (workstacks_dir / "bar").mkdir(parents=True)
-
-        # Build fake git ops with worktree info
-        git_ops = FakeGitOps(
-            worktrees={
-                cwd: [
-                    WorktreeInfo(path=cwd, branch="main"),
-                    WorktreeInfo(path=workstacks_dir / "foo", branch="foo"),
-                    WorktreeInfo(path=workstacks_dir / "bar", branch="feature/bar"),
-                ],
+        # Build ops
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata.main(sha="abc123"),
+                "foo": BranchMetadata.branch("foo", sha="def456"),
+                "feature/bar": BranchMetadata.branch("feature/bar", sha="ghi789"),
             },
-            git_common_dirs={cwd: cwd / ".git"},
+            current_branch="main",
         )
 
-        # Build fake global config ops
         global_config_ops = FakeGlobalConfigOps(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
         )
-
-        graphite_ops = FakeGraphiteOps()
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
@@ -65,22 +48,14 @@ def test_list_outputs_names_not_paths() -> None:
         output = strip_ansi(result.output)
         lines = output.strip().splitlines()
 
-        # First line should be root with branch, PR placeholder, and plan placeholder
+        # First line should be root with branch and path
         assert lines[0].startswith("root")
-        assert "(main)" in lines[0]
-        assert "[no PR]" in lines[0]
-        assert "[no plan]" in lines[0]
+        assert str(env.root_worktree) in lines[0]
 
-        # Remaining lines should be worktrees with PR/plan info, sorted by name
+        # Remaining lines should be worktrees, sorted by name
         worktree_lines = sorted(lines[1:])
-        # Each line should contain: name (branch) [no PR] [no plan]
-        assert len(worktree_lines) == 2
-        assert worktree_lines[0].startswith("bar")
-        assert "(feature/bar)" in worktree_lines[0]
-        assert "[no PR]" in worktree_lines[0]
-        assert "[no plan]" in worktree_lines[0]
-
-        assert worktree_lines[1].startswith("foo")
-        assert "(=)" in worktree_lines[1]  # foo == foo, so displayed as "="
-        assert "[no PR]" in worktree_lines[1]
-        assert "[no plan]" in worktree_lines[1]
+        workstacks_dir = env.workstacks_root / "repo"
+        assert worktree_lines == [
+            f"bar  (feature/bar) [{workstacks_dir / 'bar'}]",
+            f"foo  (=)           [{workstacks_dir / 'foo'}]",
+        ]

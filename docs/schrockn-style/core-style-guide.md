@@ -6,6 +6,8 @@ _Version 1.0_
 
 This guide establishes the foundational voice and principles that remain constant across all technical writing, regardless of audience or format. These are the non-negotiables that create consistency and authenticity across all content.
 
+**Note**: This style guide captures Nick Schrock's writing voice and approach to technical communication.
+
 ## Universal Voice Principles
 
 ### Personal Authority
@@ -150,6 +152,37 @@ Ask yourself:
 - Can they do something with this information?
 
 If any answer is "no," revise.
+
+---
+
+## References
+
+This style guide was constructed from analysis of the following sources:
+
+### Internal Technical Documentation
+
+Code smell articles from internal GitHub discussions:
+
+- [What are Code Smells?](https://github.com/dagster-io/internal/discussions/9542)
+- [Using repr in Programmatically Significant Ways](https://github.com/dagster-io/internal/discussions/9505)
+- [Excessive Use of Default Values on Parameters](https://github.com/dagster-io/internal/discussions/9509)
+- [Operations that Mislead About Their Performance Characteristics](https://github.com/dagster-io/internal/discussions/9541)
+- [Errors Too Deep in the Call Stack or Too Far into the Program](https://github.com/dagster-io/internal/discussions/9602)
+- [Callsites with Multiple Non-Obvious Positional Parameters](https://github.com/dagster-io/internal/discussions/9682)
+- [Invalid Parameter Combinations](https://github.com/dagster-io/internal/discussions/9694)
+- [Using Overly Specific Context Objects in Context-Agnostic Code Paths](https://github.com/dagster-io/internal/discussions/9753)
+- [Parameter Anxiety](https://github.com/dagster-io/internal/discussions/9719)
+- [A God Class](https://github.com/dagster-io/internal/discussions/9791)
+- [Too Many Local Variables](https://github.com/dagster-io/internal/discussions/9986)
+- [Assigning Context Managers to Variables](https://github.com/dagster-io/internal/discussions/14241)
+
+### External Blog Articles
+
+- [The Rise of Medium-Code](https://dagster.io/blog/the-rise-of-medium-code)
+- [On Code Reviews](https://medium.com/@schrockn/on-code-reviews-b1c7c94d868c)
+- [Decade of Data Engineering](https://dagster.io/blog/decade-of-data-engineering)
+- [Decade of Data](https://dagster.io/blog/decade-of-data)
+- [Rebundling the Data Platform](https://dagster.io/blog/rebundling-the-data-platform)
 
 ---
 

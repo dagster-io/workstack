@@ -5,7 +5,9 @@ from pathlib import Path
 
 from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps, WorktreeInfo
+from tests.fakes.parallel_task_runner import FakeParallelTaskRunner
 from workstack.core.context import WorkstackContext
+from workstack.core.parallel_task_runner import RealParallelTaskRunner
 from workstack.status.collectors.base import StatusCollector
 from workstack.status.collectors.git import GitStatusCollector
 from workstack.status.collectors.plan import PlanFileCollector
@@ -38,7 +40,7 @@ def test_orchestrator_collects_all_data(tmp_path: Path) -> None:
         PlanFileCollector(),
     ]
 
-    orchestrator = StatusOrchestrator(collectors)
+    orchestrator = StatusOrchestrator(collectors, runner=RealParallelTaskRunner())
 
     # Act
     status = orchestrator.collect_status(ctx, worktree_path, repo_root)
@@ -65,7 +67,7 @@ def test_orchestrator_with_no_collectors(tmp_path: Path) -> None:
     repo_root.mkdir()
 
     ctx = create_test_context()
-    orchestrator = StatusOrchestrator([])
+    orchestrator = StatusOrchestrator([], runner=RealParallelTaskRunner())
 
     # Act
     status = orchestrator.collect_status(ctx, worktree_path, repo_root)
@@ -88,7 +90,7 @@ def test_orchestrator_handles_missing_plan(tmp_path: Path) -> None:
     ctx = create_test_context()
     collectors: list[StatusCollector] = [PlanFileCollector()]
 
-    orchestrator = StatusOrchestrator(collectors)
+    orchestrator = StatusOrchestrator(collectors, runner=RealParallelTaskRunner())
 
     # Act
     status = orchestrator.collect_status(ctx, worktree_path, repo_root)
@@ -110,7 +112,7 @@ def test_orchestrator_collector_exception_handling(tmp_path: Path) -> None:
 
     ctx = create_test_context()
 
-    # Create a collector that raises an exception
+    # Create collectors
     class FailingCollector(StatusCollector):
         @property
         def name(self) -> str:
@@ -120,10 +122,13 @@ def test_orchestrator_collector_exception_handling(tmp_path: Path) -> None:
             return True
 
         def collect(self, ctx: WorkstackContext, worktree_path: Path, repo_root: Path) -> object:
-            raise ValueError("Test exception")
+            raise AssertionError("Should not be called - fake executor returns configured result")
 
     collectors = [FailingCollector(), PlanFileCollector()]
-    orchestrator = StatusOrchestrator(collectors)
+
+    # Use fake runner that simulates exception by returning None
+    runner = FakeParallelTaskRunner(results={"failing": None})
+    orchestrator = StatusOrchestrator(collectors, runner=runner)
 
     # Act
     status = orchestrator.collect_status(ctx, worktree_path, repo_root)
@@ -132,7 +137,9 @@ def test_orchestrator_collector_exception_handling(tmp_path: Path) -> None:
     assert status is not None
     assert status.worktree_info is not None
     # Failed collector result should be None, but orchestrator should continue
-    assert status.plan is None  # No .PLAN.md file
+    assert status.plan is None  # Plan collector not available (no .PLAN.md file)
+    # Verify the failing collector was requested
+    assert "failing" in runner.requested_tasks
 
 
 def test_orchestrator_with_failing_collector(tmp_path: Path) -> None:
@@ -159,7 +166,7 @@ def test_orchestrator_with_failing_collector(tmp_path: Path) -> None:
             return "This is not a PlanStatus object"  # Wrong type
 
     collectors = [WrongTypeCollector()]
-    orchestrator = StatusOrchestrator(collectors)
+    orchestrator = StatusOrchestrator(collectors, runner=RealParallelTaskRunner())
 
     # Act
     status = orchestrator.collect_status(ctx, worktree_path, repo_root)
@@ -192,7 +199,7 @@ def test_orchestrator_with_missing_collector(tmp_path: Path) -> None:
             raise AssertionError("Should not be called")
 
     collectors = [UnavailableCollector()]
-    orchestrator = StatusOrchestrator(collectors)
+    orchestrator = StatusOrchestrator(collectors, runner=RealParallelTaskRunner())
 
     # Act
     status = orchestrator.collect_status(ctx, worktree_path, repo_root)
@@ -225,7 +232,7 @@ def test_orchestrator_with_empty_results(tmp_path: Path) -> None:
             return None
 
     collectors = [NoneCollector()]
-    orchestrator = StatusOrchestrator(collectors)
+    orchestrator = StatusOrchestrator(collectors, runner=RealParallelTaskRunner())
 
     # Act
     status = orchestrator.collect_status(ctx, worktree_path, repo_root)
@@ -247,7 +254,7 @@ def test_orchestrator_timeout_handling(tmp_path: Path) -> None:
 
     ctx = create_test_context()
 
-    # Create a slow collector
+    # Create a collector that would be slow (but won't actually be called)
     class SlowCollector(StatusCollector):
         @property
         def name(self) -> str:
@@ -257,19 +264,22 @@ def test_orchestrator_timeout_handling(tmp_path: Path) -> None:
             return True
 
         def collect(self, ctx: WorkstackContext, worktree_path: Path, repo_root: Path) -> object:
-            time.sleep(5)  # Sleep longer than timeout
-            return "Should timeout"
+            raise AssertionError("Should not be called - fake executor returns configured result")
 
     collectors = [SlowCollector()]
-    # Use very short timeout for testing
-    orchestrator = StatusOrchestrator(collectors, timeout_seconds=0.1)
+
+    # Use fake runner that returns None for timeout simulation
+    runner = FakeParallelTaskRunner(results={"slow": None})
+    orchestrator = StatusOrchestrator(collectors, timeout_seconds=0.1, runner=runner)
 
     # Act
     status = orchestrator.collect_status(ctx, worktree_path, repo_root)
 
-    # Assert - slow collector should timeout
+    # Assert - slow collector should timeout (None result)
     assert status is not None
     assert status.worktree_info is not None
+    # Verify the collector was requested
+    assert "slow" in runner.requested_tasks
 
 
 def test_orchestrator_parallel_execution(tmp_path: Path) -> None:
@@ -311,7 +321,7 @@ def test_orchestrator_parallel_execution(tmp_path: Path) -> None:
             return result
 
     collectors = [TrackedCollector1(), TrackedCollector2()]
-    orchestrator = StatusOrchestrator(collectors)
+    orchestrator = StatusOrchestrator(collectors, runner=RealParallelTaskRunner())
 
     # Act
     status = orchestrator.collect_status(ctx, worktree_path, repo_root)
@@ -350,7 +360,7 @@ def test_orchestrator_related_worktrees(tmp_path: Path) -> None:
     )
 
     ctx = create_test_context(git_ops=git_ops)
-    orchestrator = StatusOrchestrator([])
+    orchestrator = StatusOrchestrator([], runner=RealParallelTaskRunner())
 
     # Act
     status = orchestrator.collect_status(ctx, current, repo_root)
@@ -380,7 +390,7 @@ def test_orchestrator_worktree_info_root(tmp_path: Path) -> None:
     )
 
     ctx = create_test_context(git_ops=git_ops)
-    orchestrator = StatusOrchestrator([])
+    orchestrator = StatusOrchestrator([], runner=RealParallelTaskRunner())
 
     # Act
     status = orchestrator.collect_status(ctx, repo_root, repo_root)
@@ -410,7 +420,7 @@ def test_orchestrator_worktree_info_not_root(tmp_path: Path) -> None:
     )
 
     ctx = create_test_context(git_ops=git_ops)
-    orchestrator = StatusOrchestrator([])
+    orchestrator = StatusOrchestrator([], runner=RealParallelTaskRunner())
 
     # Act
     status = orchestrator.collect_status(ctx, worktree, repo_root)
@@ -439,7 +449,7 @@ def test_orchestrator_handles_nonexistent_paths(tmp_path: Path) -> None:
     )
 
     ctx = create_test_context(git_ops=git_ops)
-    orchestrator = StatusOrchestrator([])
+    orchestrator = StatusOrchestrator([], runner=RealParallelTaskRunner())
 
     # Act
     status = orchestrator.collect_status(ctx, repo_root, repo_root)
@@ -500,7 +510,7 @@ def test_orchestrator_multiple_collector_types(tmp_path: Path) -> None:
             )
 
     collectors = [GitCollector(), PlanCollector()]
-    orchestrator = StatusOrchestrator(collectors)
+    orchestrator = StatusOrchestrator(collectors, runner=RealParallelTaskRunner())
 
     # Act
     status = orchestrator.collect_status(ctx, worktree_path, repo_root)

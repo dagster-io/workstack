@@ -1,10 +1,11 @@
 """Orchestrator for collecting and assembling status information."""
 
 import logging
-from concurrent.futures import ThreadPoolExecutor, TimeoutError, as_completed
+from collections.abc import Callable
 from pathlib import Path
 
 from workstack.core.context import WorkstackContext
+from workstack.core.parallel_task_runner import ParallelTaskRunner
 from workstack.status.collectors.base import StatusCollector
 from workstack.status.models.status_data import StatusData, WorktreeInfo
 
@@ -18,15 +19,23 @@ class StatusOrchestrator:
     responsive output even if some collectors are slow or fail.
     """
 
-    def __init__(self, collectors: list[StatusCollector], *, timeout_seconds: float = 2.0) -> None:
+    def __init__(
+        self,
+        collectors: list[StatusCollector],
+        *,
+        timeout_seconds: float = 2.0,
+        runner: ParallelTaskRunner,
+    ) -> None:
         """Create a status orchestrator.
 
         Args:
             collectors: List of status collectors to run
             timeout_seconds: Maximum time to wait for each collector (default: 2.0)
+            runner: Parallel task runner for executing collectors
         """
         self.collectors = collectors
         self.timeout_seconds = timeout_seconds
+        self.runner = runner
 
     def collect_status(
         self, ctx: WorkstackContext, worktree_path: Path, repo_root: Path
@@ -47,48 +56,18 @@ class StatusOrchestrator:
         # Determine worktree info
         worktree_info = self._get_worktree_info(ctx, worktree_path, repo_root)
 
-        # Run collectors in parallel
-        results: dict[str, object] = {}
+        # Build tasks for available collectors
+        tasks: dict[str, Callable[[], object]] = {}
+        for collector in self.collectors:
+            if collector.is_available(ctx, worktree_path):
+                # Create closure that captures current values
+                def make_task(c=collector):
+                    return lambda: c.collect(ctx, worktree_path, repo_root)
 
-        with ThreadPoolExecutor(max_workers=5) as executor:
-            # Submit all available collectors
-            futures = {}
-            for collector in self.collectors:
-                if collector.is_available(ctx, worktree_path):
-                    future = executor.submit(collector.collect, ctx, worktree_path, repo_root)
-                    futures[future] = collector.name
+                tasks[collector.name] = make_task()
 
-            # Collect results with timeout per collector
-            # Use a separate timeout for as_completed (total time for all collectors)
-            total_timeout = self.timeout_seconds * len(futures) if futures else 1.0
-
-            try:
-                for future in as_completed(futures, timeout=total_timeout):
-                    collector_name = futures[future]
-                    try:
-                        result = future.result(timeout=0.1)  # Should be immediate once complete
-                        results[collector_name] = result
-                    except TimeoutError:
-                        # Error boundary: Collector timeouts shouldn't fail entire command
-                        # Log for debugging but continue with other collectors
-                        logger.debug(
-                            f"Collector '{collector_name}' timed out after {self.timeout_seconds}s"
-                        )
-                        results[collector_name] = None
-                    except Exception as e:
-                        # Error boundary: Individual collector failures shouldn't fail
-                        # entire command. This is an acceptable use of exception handling
-                        # at error boundaries per EXCEPTION_HANDLING.md - parallel
-                        # collectors should degrade gracefully
-                        logger.debug(f"Collector '{collector_name}' failed: {e}")
-                        results[collector_name] = None
-            except TimeoutError:
-                # Some collectors didn't complete in time
-                # Mark incomplete collectors as None
-                for future, collector_name in futures.items():
-                    if future.running() or not future.done():
-                        logger.debug(f"Collector '{collector_name}' did not complete in time")
-                        results[collector_name] = None
+        # Run collectors in parallel via runner
+        results = self.runner.run_parallel(tasks, self.timeout_seconds)
 
         # Get related worktrees
         related_worktrees = self._get_related_worktrees(ctx, repo_root, worktree_path)

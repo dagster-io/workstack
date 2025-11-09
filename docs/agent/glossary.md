@@ -411,7 +411,4 @@ Test that uses fake implementations and isolated filesystem.
 
 ## Related Documentation
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) - System design overview
-- [CLAUDE.md](CLAUDE.md) - Coding standards
-- [.agent/docs/MODULE_MAP.md](.agent/docs/MODULE_MAP.md) - Module organization
-- [FEATURE_INDEX.md](FEATURE_INDEX.md) - Feature → file mapping
+- [CLAUDE.md](../../CLAUDE.md) - Coding standards

@@ -1,14 +1,14 @@
 # Code Patterns and Examples
 
-**📍 You are here**: [CLAUDE.md](../CLAUDE.md) → docs/PATTERNS.md
+**📍 You are here**: [CLAUDE.md](../../CLAUDE.md) → docs/agent/patterns.md
 
 **Purpose**: Detailed examples for patterns referenced in CLAUDE.md coding standards.
 
 **Related docs**:
 
-- [CLAUDE.md](../CLAUDE.md) - Core coding rules
-- [EXCEPTION_HANDLING.md](EXCEPTION_HANDLING.md) - Exception handling guide
-- [GUIDE.md](GUIDE.md) - Documentation index
+- [CLAUDE.md](../../CLAUDE.md) - Core coding rules
+- [exception-handling.md](exception-handling.md) - Exception handling guide
+- [guide.md](guide.md) - Documentation index
 
 ---
 
@@ -216,7 +216,7 @@ class FakeMyOps(MyOps):
 
 See also:
 
-- [../CLAUDE.md](../CLAUDE.md) - Core rules for dependency injection
+- [../../CLAUDE.md](../../CLAUDE.md) - Core rules for dependency injection
 
 ---
 
@@ -522,7 +522,7 @@ def process_cmd(config_file: str) -> None:
 
 **See also**:
 
-- [EXCEPTION_HANDLING.md](EXCEPTION_HANDLING.md) - Complete exception handling guide
+- [exception-handling.md](exception-handling.md) - Complete exception handling guide
 - [CLAUDE.md](../CLAUDE.md#exception-handling--critical) - Core exception handling rules
 
 ---
@@ -759,7 +759,7 @@ def switch(ctx: WorkstackContext, name: str) -> None:
 
 See also:
 
-- [../CLAUDE.md](../CLAUDE.md) - CLI development rules
+- [../../CLAUDE.md](../../CLAUDE.md) - CLI development rules
 
 ---
 
@@ -959,7 +959,7 @@ with database_connection("postgresql://...") as conn:
 
 ## Related Documentation
 
-- [CLAUDE.md](../CLAUDE.md) - Core coding standards
-- [EXCEPTION_HANDLING.md](EXCEPTION_HANDLING.md) - Complete exception handling guide
-- [GUIDE.md](GUIDE.md) - Documentation index
-- [../tests/CLAUDE.md](../tests/CLAUDE.md) - Testing patterns and practices
+- [CLAUDE.md](../../CLAUDE.md) - Core coding standards
+- [exception-handling.md](exception-handling.md) - Complete exception handling guide
+- [guide.md](guide.md) - Documentation index
+- [../../tests/CLAUDE.md](../../tests/CLAUDE.md) - Testing patterns and practices

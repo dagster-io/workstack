@@ -18,7 +18,7 @@ def test_up_with_existing_worktree() -> None:
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
         # Create linked worktrees for feature-1 and feature-2
-        env.create_linked_worktree("feature-1", "feature-1", chdir=False)
+        feature_1_path = env.create_linked_worktree("feature-1", "feature-1", chdir=False)
         feature_2_path = env.create_linked_worktree("feature-2", "feature-2", chdir=False)
 
         # Build ops with feature-1 as current branch (in root worktree)
@@ -48,7 +48,11 @@ def test_up_with_existing_worktree() -> None:
         )
 
         # Navigate up from feature-1 to feature-2
-        result = runner.invoke(cli, ["up", "--script"], obj=test_ctx, catch_exceptions=False)
+        # Mock Path.cwd() to return feature-1 worktree path
+        from unittest import mock
+
+        with mock.patch("pathlib.Path.cwd", return_value=feature_1_path):
+            result = runner.invoke(cli, ["up", "--script"], obj=test_ctx, catch_exceptions=False)
 
         if result.exit_code != 0:
             print(f"stderr: {result.stderr}")
@@ -66,7 +70,7 @@ def test_up_at_top_of_stack() -> None:
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
         # Create linked worktree for feature-2
-        env.create_linked_worktree("feature-2", "feature-2", chdir=False)
+        feature_2_path = env.create_linked_worktree("feature-2", "feature-2", chdir=False)
 
         # Build ops with feature-2 as current branch (at top of stack)
         git_ops, graphite_ops = env.build_ops_from_branches(
@@ -94,7 +98,11 @@ def test_up_at_top_of_stack() -> None:
             dry_run=False,
         )
 
-        result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
+        # Mock Path.cwd() to return feature-2 worktree path
+        from unittest import mock
+
+        with mock.patch("pathlib.Path.cwd", return_value=feature_2_path):
+            result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
 
         assert result.exit_code == 1
         assert "Already at the top of the stack" in result.stderr
@@ -105,7 +113,7 @@ def test_up_child_has_no_worktree() -> None:
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
         # Only create worktree for feature-1, not feature-2
-        env.create_linked_worktree("feature-1", "feature-1", chdir=False)
+        feature_1_path = env.create_linked_worktree("feature-1", "feature-1", chdir=False)
 
         # Build ops with feature-1 as current branch
         git_ops, graphite_ops = env.build_ops_from_branches(
@@ -133,7 +141,11 @@ def test_up_child_has_no_worktree() -> None:
             dry_run=False,
         )
 
-        result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
+        # Mock Path.cwd() to return feature-1 worktree path
+        from unittest import mock
+
+        with mock.patch("pathlib.Path.cwd", return_value=feature_1_path):
+            result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
 
         assert result.exit_code == 1
         assert "feature-2" in result.stderr
@@ -228,7 +240,7 @@ def test_up_script_flag() -> None:
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
         # Create linked worktrees for feature-1 and feature-2
-        env.create_linked_worktree("feature-1", "feature-1", chdir=False)
+        feature_1_path = env.create_linked_worktree("feature-1", "feature-1", chdir=False)
         feature_2_path = env.create_linked_worktree("feature-2", "feature-2", chdir=False)
 
         # Build ops with feature-1 as current branch
@@ -257,7 +269,11 @@ def test_up_script_flag() -> None:
             dry_run=False,
         )
 
-        result = runner.invoke(cli, ["up", "--script"], obj=test_ctx, catch_exceptions=False)
+        # Mock Path.cwd() to return feature-1 worktree path
+        from unittest import mock
+
+        with mock.patch("pathlib.Path.cwd", return_value=feature_1_path):
+            result = runner.invoke(cli, ["up", "--script"], obj=test_ctx, catch_exceptions=False)
 
         assert result.exit_code == 0
         # Output should be a script path
@@ -273,7 +289,7 @@ def test_up_multiple_children_fails_explicitly() -> None:
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
         # Create worktrees for all branches
-        env.create_linked_worktree("feature-1", "feature-1", chdir=False)
+        feature_1_path = env.create_linked_worktree("feature-1", "feature-1", chdir=False)
         env.create_linked_worktree("feature-2a", "feature-2a", chdir=False)
         env.create_linked_worktree("feature-2b", "feature-2b", chdir=False)
 
@@ -305,7 +321,11 @@ def test_up_multiple_children_fails_explicitly() -> None:
             dry_run=False,
         )
 
-        result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
+        # Mock Path.cwd() to return feature-1 worktree path
+        from unittest import mock
+
+        with mock.patch("pathlib.Path.cwd", return_value=feature_1_path):
+            result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
 
         assert result.exit_code == 1
         assert "Error: Branch 'feature-1' has multiple children" in result.stderr
@@ -326,7 +346,7 @@ def test_up_with_mismatched_worktree_name() -> None:
         # Worktree directories use different naming than branch names
         # Branch: feature/auth -> Worktree: auth-work
         # Branch: feature/auth-tests -> Worktree: auth-tests-work
-        env.create_linked_worktree("auth-work", "feature/auth", chdir=False)
+        auth_work_path = env.create_linked_worktree("auth-work", "feature/auth", chdir=False)
         auth_tests_path = env.create_linked_worktree(
             "auth-tests-work", "feature/auth-tests", chdir=False
         )
@@ -362,7 +382,11 @@ def test_up_with_mismatched_worktree_name() -> None:
         # Navigate up from feature/auth to feature/auth-tests
         # This would fail before the fix because it would try to find a worktree named
         # "feature/auth-tests" instead of resolving to "auth-tests-work"
-        result = runner.invoke(cli, ["up", "--script"], obj=test_ctx, catch_exceptions=False)
+        # Mock Path.cwd() to return feature/auth worktree path
+        from unittest import mock
+
+        with mock.patch("pathlib.Path.cwd", return_value=auth_work_path):
+            result = runner.invoke(cli, ["up", "--script"], obj=test_ctx, catch_exceptions=False)
 
         if result.exit_code != 0:
             print(f"stderr: {result.stderr}")

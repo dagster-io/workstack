@@ -217,13 +217,13 @@ def test_list_includes_root(tmp_path: Path) -> None:
     )
 
     assert result.returncode == 0
-    # Should show root as first entry with path
+    # Should show root as first entry (paths are not shown in list output)
     clean_output = strip_ansi(result.stdout)
     lines = clean_output.strip().split("\n")
     assert len(lines) >= 2
-    # Output format is "root      (branch) [path]" with branch name included
+    # Output format is "root      (branch) [PR info] [plan]" with branch name included
     assert lines[0].startswith("root ")
-    assert str(repo) in lines[0]
+    # Note: List command does not show paths, only names and branches
     # Should also show the worktree
     assert any("myfeature" in line for line in lines)
 

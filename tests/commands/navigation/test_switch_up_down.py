@@ -18,7 +18,7 @@ def test_switch_up_with_existing_worktree() -> None:
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
         # Create linked worktrees for feature-1 and feature-2
-        env.create_linked_worktree("feature-1", "feature-1", chdir=False)
+        feature_1_path = env.create_linked_worktree("feature-1", "feature-1", chdir=False)
         feature_2_path = env.create_linked_worktree("feature-2", "feature-2", chdir=False)
 
         # Build ops with feature-1 as current branch (in root worktree)
@@ -47,9 +47,13 @@ def test_switch_up_with_existing_worktree() -> None:
             dry_run=False,
         )
 
-        result = runner.invoke(
-            cli, ["switch", "--up", "--script"], obj=test_ctx, catch_exceptions=False
-        )
+        # Mock Path.cwd() to return feature-1 worktree path
+        from unittest import mock
+
+        with mock.patch("pathlib.Path.cwd", return_value=feature_1_path):
+            result = runner.invoke(
+                cli, ["switch", "--up", "--script"], obj=test_ctx, catch_exceptions=False
+            )
 
         if result.exit_code != 0:
             print(f"stderr: {result.stderr}")
@@ -67,7 +71,7 @@ def test_switch_up_at_top_of_stack() -> None:
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
         # Create linked worktree for feature-2
-        env.create_linked_worktree("feature-2", "feature-2", chdir=False)
+        feature_2_path = env.create_linked_worktree("feature-2", "feature-2", chdir=False)
 
         # Build ops with feature-2 as current branch (at top of stack)
         git_ops, graphite_ops = env.build_ops_from_branches(
@@ -95,7 +99,11 @@ def test_switch_up_at_top_of_stack() -> None:
             dry_run=False,
         )
 
-        result = runner.invoke(cli, ["switch", "--up"], obj=test_ctx, catch_exceptions=False)
+        # Mock Path.cwd() to return feature-2 worktree path
+        from unittest import mock
+
+        with mock.patch("pathlib.Path.cwd", return_value=feature_2_path):
+            result = runner.invoke(cli, ["switch", "--up"], obj=test_ctx, catch_exceptions=False)
 
         assert result.exit_code == 1
         assert "Already at the top of the stack" in result.stderr
@@ -106,7 +114,7 @@ def test_switch_up_child_has_no_worktree() -> None:
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
         # Only create worktree for feature-1, not feature-2
-        env.create_linked_worktree("feature-1", "feature-1", chdir=False)
+        feature_1_path = env.create_linked_worktree("feature-1", "feature-1", chdir=False)
 
         # Build ops with feature-1 as current branch
         git_ops, graphite_ops = env.build_ops_from_branches(
@@ -134,7 +142,11 @@ def test_switch_up_child_has_no_worktree() -> None:
             dry_run=False,
         )
 
-        result = runner.invoke(cli, ["switch", "--up"], obj=test_ctx, catch_exceptions=False)
+        # Mock Path.cwd() to return feature-1 worktree path
+        from unittest import mock
+
+        with mock.patch("pathlib.Path.cwd", return_value=feature_1_path):
+            result = runner.invoke(cli, ["switch", "--up"], obj=test_ctx, catch_exceptions=False)
 
         assert result.exit_code == 1
         assert "feature-2" in result.stderr
@@ -148,7 +160,7 @@ def test_switch_down_with_existing_worktree() -> None:
     with simulated_workstack_env(runner) as env:
         # Create linked worktrees for feature-1 and feature-2
         feature_1_path = env.create_linked_worktree("feature-1", "feature-1", chdir=False)
-        env.create_linked_worktree("feature-2", "feature-2", chdir=False)
+        feature_2_path = env.create_linked_worktree("feature-2", "feature-2", chdir=False)
 
         # Build ops with feature-2 as current branch (in root worktree)
         git_ops, graphite_ops = env.build_ops_from_branches(
@@ -176,9 +188,13 @@ def test_switch_down_with_existing_worktree() -> None:
             dry_run=False,
         )
 
-        result = runner.invoke(
-            cli, ["switch", "--down", "--script"], obj=test_ctx, catch_exceptions=False
-        )
+        # Mock Path.cwd() to return feature-2 worktree path
+        from unittest import mock
+
+        with mock.patch("pathlib.Path.cwd", return_value=feature_2_path):
+            result = runner.invoke(
+                cli, ["switch", "--down", "--script"], obj=test_ctx, catch_exceptions=False
+            )
 
         assert result.exit_code == 0
         # Should generate script for feature-1
@@ -273,7 +289,7 @@ def test_switch_down_parent_has_no_worktree() -> None:
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
         # Only create worktree for feature-2, not feature-1
-        env.create_linked_worktree("feature-2", "feature-2", chdir=False)
+        feature_2_path = env.create_linked_worktree("feature-2", "feature-2", chdir=False)
 
         # Build ops with feature-2 as current branch
         git_ops, graphite_ops = env.build_ops_from_branches(
@@ -301,7 +317,11 @@ def test_switch_down_parent_has_no_worktree() -> None:
             dry_run=False,
         )
 
-        result = runner.invoke(cli, ["switch", "--down"], obj=test_ctx, catch_exceptions=False)
+        # Mock Path.cwd() to return feature-2 worktree path
+        from unittest import mock
+
+        with mock.patch("pathlib.Path.cwd", return_value=feature_2_path):
+            result = runner.invoke(cli, ["switch", "--down"], obj=test_ctx, catch_exceptions=False)
 
         assert result.exit_code == 1
         assert "feature-1" in result.stderr or "parent branch" in result.stderr
@@ -478,7 +498,7 @@ def test_switch_up_with_mismatched_worktree_name() -> None:
         # Worktree directories use different naming than branch names
         # Branch: feature/db -> Worktree: db-refactor
         # Branch: feature/db-tests -> Worktree: db-tests-implementation
-        env.create_linked_worktree("db-refactor", "feature/db", chdir=False)
+        db_refactor_path = env.create_linked_worktree("db-refactor", "feature/db", chdir=False)
         db_tests_path = env.create_linked_worktree(
             "db-tests-implementation", "feature/db-tests", chdir=False
         )
@@ -514,9 +534,13 @@ def test_switch_up_with_mismatched_worktree_name() -> None:
         # Navigate up from feature/db to feature/db-tests using switch --up
         # This would fail before the fix because it would try to find a worktree named
         # "feature/db-tests" instead of resolving to "db-tests-implementation"
-        result = runner.invoke(
-            cli, ["switch", "--up", "--script"], obj=test_ctx, catch_exceptions=False
-        )
+        # Mock Path.cwd() to return feature/db worktree path
+        from unittest import mock
+
+        with mock.patch("pathlib.Path.cwd", return_value=db_refactor_path):
+            result = runner.invoke(
+                cli, ["switch", "--up", "--script"], obj=test_ctx, catch_exceptions=False
+            )
 
         if result.exit_code != 0:
             print(f"stderr: {result.stderr}")
@@ -543,7 +567,9 @@ def test_switch_down_with_mismatched_worktree_name() -> None:
         # Branch: feature/api -> Worktree: api-work
         # Branch: feature/api-v2 -> Worktree: api-v2-work
         api_work_path = env.create_linked_worktree("api-work", "feature/api", chdir=False)
-        env.create_linked_worktree("api-v2-work", "feature/api-v2", chdir=False)
+        api_v2_work_path = env.create_linked_worktree(
+            "api-v2-work", "feature/api-v2", chdir=False
+        )
 
         # Build ops with feature/api-v2 as current branch
         git_ops, graphite_ops = env.build_ops_from_branches(
@@ -576,9 +602,13 @@ def test_switch_down_with_mismatched_worktree_name() -> None:
         # Navigate down from feature/api-v2 to feature/api using switch --down
         # This would fail before the fix because it would try to find a worktree named
         # "feature/api" instead of resolving to "api-work"
-        result = runner.invoke(
-            cli, ["switch", "--down", "--script"], obj=test_ctx, catch_exceptions=False
-        )
+        # Mock Path.cwd() to return feature/api-v2 worktree path
+        from unittest import mock
+
+        with mock.patch("pathlib.Path.cwd", return_value=api_v2_work_path):
+            result = runner.invoke(
+                cli, ["switch", "--down", "--script"], obj=test_ctx, catch_exceptions=False
+            )
 
         if result.exit_code != 0:
             print(f"stderr: {result.stderr}")

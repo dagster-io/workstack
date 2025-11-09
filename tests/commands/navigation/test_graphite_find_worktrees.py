@@ -210,7 +210,11 @@ def test_find_worktrees_containing_branch_detached_head(tmp_path: Path) -> None:
 
 
 def test_find_worktrees_containing_branch_no_graphite_cache(tmp_path: Path) -> None:
-    """Test that function returns empty list when Graphite cache doesn't exist."""
+    """Test that function still finds exact matches even without Graphite cache.
+
+    The function performs exact branch name matching first, before checking Graphite stacks.
+    This allows it to work even when Graphite cache doesn't exist.
+    """
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
     git_dir = repo_root / ".git"
@@ -242,12 +246,12 @@ def test_find_worktrees_containing_branch_no_graphite_cache(tmp_path: Path) -> N
         dry_run=False,
     )
 
-    # Search for any branch when no cache exists
+    # Search for feature-1 when no cache exists
     matching = find_worktrees_containing_branch(ctx, repo_root, worktrees, "feature-1")
 
-    # Should return empty list since no cache exists
-    assert len(matching) == 0
-    assert matching == []
+    # Should find the worktree via exact match, even without Graphite cache
+    assert len(matching) == 1
+    assert matching[0].path == wt1_path
 
 
 def test_find_worktree_for_branch_simple_match(tmp_path: Path) -> None:

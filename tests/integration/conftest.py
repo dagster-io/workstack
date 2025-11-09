@@ -112,7 +112,7 @@ def git_ops(
         # Fake implementation: configure with repo state
         git_ops = FakeGitOps(
             git_common_dirs={repo: repo / ".git"},
-            worktrees={repo: [WorktreeInfo(path=repo, branch="main")]},
+            worktrees={repo: [WorktreeInfo(path=repo, branch="main", is_root=True)]},
             current_branches={repo: "main"},
             default_branches={repo: "main"},
         )
@@ -161,9 +161,9 @@ def git_ops_with_worktrees(
             git_common_dirs={repo: repo / ".git", wt1: repo / ".git", wt2: repo / ".git"},
             worktrees={
                 repo: [
-                    WorktreeInfo(path=repo, branch="main"),
-                    WorktreeInfo(path=wt1, branch="feature-1"),
-                    WorktreeInfo(path=wt2, branch="feature-2"),
+                    WorktreeInfo(path=repo, branch="main", is_root=True),
+                    WorktreeInfo(path=wt1, branch="feature-1", is_root=False),
+                    WorktreeInfo(path=wt2, branch="feature-2", is_root=False),
                 ]
             },
             current_branches={repo: "main", wt1: "feature-1", wt2: "feature-2"},
@@ -201,8 +201,8 @@ def git_ops_with_detached(
             git_common_dirs={repo: repo / ".git", wt_detached: repo / ".git"},
             worktrees={
                 repo: [
-                    WorktreeInfo(path=repo, branch="main"),
-                    WorktreeInfo(path=wt_detached, branch=None),  # Detached HEAD
+                    WorktreeInfo(path=repo, branch="main", is_root=True),
+                    WorktreeInfo(path=wt_detached, branch=None, is_root=False),  # Detached HEAD
                 ]
             },
             current_branches={repo: "main", wt_detached: None},
@@ -233,7 +233,7 @@ def git_ops_with_existing_branch(
         # For fake, configure FakeGitOps
         git_ops = FakeGitOps(
             git_common_dirs={repo: repo / ".git"},
-            worktrees={repo: [WorktreeInfo(path=repo, branch="main")]},
+            worktrees={repo: [WorktreeInfo(path=repo, branch="main", is_root=True)]},
             current_branches={repo: "main"},
             default_branches={repo: "main"},
         )

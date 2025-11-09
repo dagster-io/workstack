@@ -303,7 +303,7 @@ def _land_branch_sequence(
     *,
     verbose: bool,
     dry_run: bool,
-) -> tuple[list[str], str | None, list[str]]:
+) -> tuple[list[str], str | None]:
     """Land branches sequentially, one at a time with restack between each.
 
     Args:
@@ -314,31 +314,40 @@ def _land_branch_sequence(
         dry_run: If True, show what would be done without executing
 
     Returns:
-        Tuple of (merged_branches, failure_reason, operations)
+        Tuple of (merged_branches, failure_reason)
         - merged_branches: List of successfully merged branch names
         - failure_reason: Error message if landing failed, None if all succeeded
-        - operations: List of formatted operation strings for display
     """
     merged_branches: list[str] = []
-    operations: list[str] = []
 
     check = click.style("✓", fg="green")
 
     for _idx, branch_pr in enumerate(branches, 1):
         branch = branch_pr.branch
         pr_number = branch_pr.pr_number
+
+        # Get parent for display
+        parent = ctx.graphite_ops.get_parent_branch(ctx.git_ops, repo_root, branch)
+        parent_display = parent if parent else "trunk"
+
+        # Print section header
+        click.echo()
+        pr_styled = click.style(f"#{pr_number}", fg="cyan")
+        branch_styled = click.style(branch, fg="yellow")
+        parent_styled = click.style(parent_display, fg="yellow")
+        click.echo(f"Landing PR {pr_styled} ({branch_styled} → {parent_styled})...")
+
         # Phase 1: Checkout
         if dry_run:
-            operations.append(_format_cli_command(f"git checkout {branch}", check))
+            click.echo(_format_cli_command(f"git checkout {branch}", check))
         else:
             try:
                 ctx.git_ops.checkout_branch(repo_root, branch)
-                operations.append(_format_cli_command(f"git checkout {branch}", check))
+                click.echo(_format_cli_command(f"git checkout {branch}", check))
             except Exception as e:
-                return merged_branches, f"Failed to checkout {branch}: {e}", operations
+                return merged_branches, f"Failed to checkout {branch}: {e}"
 
         # Phase 2: Verify stack integrity
-        parent = ctx.graphite_ops.get_parent_branch(ctx.git_ops, repo_root, branch)
         all_branches = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo_root)
 
         # Parent should be trunk after previous restacks
@@ -348,17 +357,16 @@ def _land_branch_sequence(
                     merged_branches,
                     f"Stack integrity broken: {branch} parent is '{parent}', "
                     f"expected trunk branch. Previous restack may have failed.",
-                    operations,
                 )
 
         # Show specific verification message with branch and expected parent
         trunk_name = parent if parent else "trunk"
-        operations.append(_format_description(f"verify {branch} parent is {trunk_name}", check))
+        click.echo(_format_description(f"verify {branch} parent is {trunk_name}", check))
 
         # Phase 3: Merge PR
         if dry_run:
             merge_cmd = f"gh pr merge {pr_number} --squash --auto"
-            operations.append(_format_cli_command(merge_cmd, check))
+            click.echo(_format_cli_command(merge_cmd, check))
             merged_branches.append(branch)
         else:
             try:
@@ -375,7 +383,7 @@ def _land_branch_sequence(
                     click.echo(result.stdout)
 
                 merge_cmd = f"gh pr merge {pr_number} --squash --auto"
-                operations.append(_format_cli_command(merge_cmd, check))
+                click.echo(_format_cli_command(merge_cmd, check))
                 merged_branches.append(branch)
 
             except subprocess.CalledProcessError as e:
@@ -383,30 +391,27 @@ def _land_branch_sequence(
                 return (
                     merged_branches,
                     f"Failed to merge PR #{pr_number} for {branch}: {error_msg}",
-                    operations,
                 )
             except FileNotFoundError:
                 return (
                     merged_branches,
                     "gh command not found. Install GitHub CLI: brew install gh",
-                    operations,
                 )
 
         # Phase 4: Restack
         if dry_run:
-            operations.append(_format_cli_command("gt sync -f", check))
+            click.echo(_format_cli_command("gt sync -f", check))
         else:
             try:
                 ctx.graphite_ops.sync(repo_root, force=True, quiet=not verbose)
-                operations.append(_format_cli_command("gt sync -f", check))
+                click.echo(_format_cli_command("gt sync -f", check))
             except Exception as e:
                 return (
                     merged_branches,
                     f"Failed to restack after merging {branch}: {e}",
-                    operations,
                 )
 
-    return merged_branches, None, operations
+    return merged_branches, None
 
 
 def _cleanup_and_navigate(
@@ -416,7 +421,7 @@ def _cleanup_and_navigate(
     *,
     verbose: bool,
     dry_run: bool,
-) -> tuple[list[str], str]:
+) -> str:
     """Clean up merged worktrees and navigate to appropriate branch.
 
     Args:
@@ -427,12 +432,13 @@ def _cleanup_and_navigate(
         dry_run: If True, show what would be done without executing
 
     Returns:
-        Tuple of (operations, final_branch)
-        - operations: List of formatted operation strings for display
-        - final_branch: Name of branch after cleanup and navigation
+        Name of branch after cleanup and navigation
     """
-    operations: list[str] = []
     check = click.style("✓", fg="green")
+
+    # Print section header
+    click.echo()
+    click.echo("Cleaning up...")
 
     # Get last merged branch to find next unmerged child
     last_merged = merged_branches[-1] if merged_branches else None
@@ -440,7 +446,7 @@ def _cleanup_and_navigate(
     # Step 1: Checkout main
     if not dry_run:
         ctx.git_ops.checkout_branch(repo_root, "main")
-    operations.append(_format_cli_command("git checkout main", check))
+    click.echo(_format_cli_command("git checkout main", check))
     final_branch = "main"
 
     # Step 2: Sync worktrees
@@ -449,7 +455,7 @@ def _cleanup_and_navigate(
         base_cmd += " --verbose"
 
     if dry_run:
-        operations.append(_format_cli_command(base_cmd, check))
+        click.echo(_format_cli_command(base_cmd, check))
     else:
         try:
             # This will remove merged worktrees and delete branches
@@ -464,7 +470,7 @@ def _cleanup_and_navigate(
                 capture_output=not verbose,
                 text=True,
             )
-            operations.append(_format_cli_command(base_cmd, check))
+            click.echo(_format_cli_command(base_cmd, check))
         except subprocess.CalledProcessError as e:
             click.echo(f"Warning: Cleanup sync failed: {e}", err=True)
 
@@ -480,18 +486,18 @@ def _cleanup_and_navigate(
                     if not dry_run:
                         try:
                             ctx.git_ops.checkout_branch(repo_root, child)
-                            operations.append(_format_cli_command(f"git checkout {child}", check))
+                            click.echo(_format_cli_command(f"git checkout {child}", check))
                             final_branch = child
-                            return operations, final_branch
+                            return final_branch
                         except Exception:
                             pass  # Child branch may have been deleted
                     else:
-                        operations.append(_format_cli_command(f"git checkout {child}", check))
+                        click.echo(_format_cli_command(f"git checkout {child}", check))
                         final_branch = child
-                        return operations, final_branch
+                        return final_branch
 
     # No unmerged children, stay on main (already checked out above)
-    return operations, final_branch
+    return final_branch
 
 
 def _show_final_state(
@@ -601,21 +607,13 @@ def land_stack(ctx: WorkstackContext, force: bool, verbose: bool, dry_run: bool)
     )
 
     # Execute landing sequence
-    merged_branches, failure_reason, landing_operations = _land_branch_sequence(
+    merged_branches, failure_reason = _land_branch_sequence(
         ctx, repo.root, valid_branches, verbose=verbose, dry_run=dry_run
     )
 
     # Report results if failure
     if failure_reason:
-        # Show operations executed before failure
-        if landing_operations:
-            click.echo()
-            click.echo(click.style("Operations executed:", bold=True))
-            click.echo()
-            for op in landing_operations:
-                click.echo(op)
-            click.echo()
-
+        click.echo()
         error_msg = click.style(f"❌ Landing stopped: {failure_reason}", fg="red")
         click.echo(error_msg, err=True)
         if merged_branches:
@@ -623,17 +621,10 @@ def land_stack(ctx: WorkstackContext, force: bool, verbose: bool, dry_run: bool)
             click.echo(f"\nSuccessfully merged before failure: {branches_styled}")
         raise SystemExit(1)
 
-    # All succeeded - collect cleanup operations
-    cleanup_operations, final_branch = _cleanup_and_navigate(
+    # All succeeded - run cleanup operations
+    final_branch = _cleanup_and_navigate(
         ctx, repo.root, merged_branches, verbose=verbose, dry_run=dry_run
     )
-
-    # Show all operations (landing + cleanup)
-    all_operations = landing_operations + cleanup_operations
-    click.echo(click.style("Operations executed:", bold=True))
-    click.echo()
-    for op in all_operations:
-        click.echo(op)
 
     # Show final state
     click.echo()

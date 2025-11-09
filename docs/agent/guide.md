@@ -1,203 +1,45 @@
-# Workstack Documentation
+# Documentation Guide
 
-**Welcome!** This directory contains detailed documentation for the workstack project.
+## Quick Navigation
 
----
+The documentation is organized by audience and purpose:
 
-## For AI Agents: Start Here
+### For Agents (AI Assistants)
 
-Choose your starting point based on your task:
+**Python Coding Standards:**
 
-| Your Task                           | Start Here                                                                |
-| ----------------------------------- | ------------------------------------------------------------------------- |
-| **First time working on workstack** | [../../../CLAUDE.md](../../../CLAUDE.md) - Core coding standards          |
-| **Need code examples**              | [patterns.md](patterns.md) - Code patterns and examples                   |
-| **Working with exceptions**         | [exception-handling.md](exception-handling.md) - Exception handling guide |
-| **Writing tests**                   | [../../../tests/CLAUDE.md](../../../tests/CLAUDE.md) - Testing patterns   |
-| **Publishing to PyPI**              | [publishing.md](publishing.md) - Publishing guide                         |
-| **Project overview**                | [../../README.md](../../README.md) - Getting started                      |
+- Load the `dignified-python` skill for all Python coding standards
+- Covers: exception handling, type annotations, imports, ABC patterns, file operations, CLI development
 
----
+**Workstack-Specific Documentation:**
+
+- [glossary.md](glossary.md) - Project terminology and definitions
+- [testing.md](testing.md) - Testing architecture with fakes and ops patterns
+
+### For Humans
+
+- [../writing/agentic-programming/agentic-programming.md](../writing/agentic-programming/agentic-programming.md) - Agentic programming philosophy
+- [../writing/schrockn-style/](../writing/schrockn-style/) - Writing style guides
+- Package READMEs (e.g., `packages/workstack-dev/README.md`)
 
 ## Documentation Structure
 
-### 📋 Core Standards (Start here)
-
-**[../../CLAUDE.md](../../CLAUDE.md)** - Coding standards and rules
-
-- Core rules (type annotations, imports, exception handling, etc.)
-- Quick reference table to all other docs
-- Design principles
-
-### 📖 Detailed References
-
-**[patterns.md](patterns.md)** - Code patterns and examples
-
-- Type annotations examples
-- Dependency injection pattern
-- Import organization examples
-- Code style (reducing nesting, etc.)
-- File operations, CLI development, context managers
-- Resource management
-
-**[exception-handling.md](exception-handling.md)** - Complete exception handling guide
-
-- LBYL vs EAFP patterns
-- Critical enforcement rules
-- Acceptable uses of exception handling
-- Dictionary access, validation, file processing
-- Anti-patterns and examples
-
-**[publishing.md](publishing.md)** - PyPI publishing guide
-
-- Publishing both devclikit and workstack packages
-- Authentication setup and credentials
-- Version management and release process
-- Testing and troubleshooting
-
-### 🧪 Testing
-
-**[../../tests/CLAUDE.md](../../tests/CLAUDE.md)** - Testing patterns and practices
-
-- Unit tests with fakes
-- Integration tests with real implementations
-- Testing patterns
-
----
-
-## Documentation Hierarchy
-
 ```
-📂 Root Level (/)
-├─ CLAUDE.md ................... Core coding standards (START HERE)
-├─ README.md ................... Project overview
-│
-📂 docs/ (You are here)
-├─ guide.md .................... This file - documentation index
-├─ patterns.md ................. Code examples and patterns
-└─ exception-handling.md ....... Complete exception guide
-│
-📂 tests/
-└─ CLAUDE.md ................... Testing patterns and practices
+docs/
+├── agent/                      # Agent-focused reference
+│   ├── glossary.md            # Workstack terminology
+│   ├── guide.md               # This file
+│   └── testing.md             # Testing patterns
+└── writing/                   # Human-readable guides
+    ├── agentic-programming/
+    └── schrockn-style/
 ```
 
----
+## Task-Based Navigation
 
-## Navigation Flow
-
-### Typical Workflows
-
-**1. First-time contributor:**
-
-```
-../../CLAUDE.md (core rules)
-  └─> patterns.md (see examples)
-      └─> ../../tests/CLAUDE.md (learn testing)
-```
-
-**2. Working with exceptions:**
-
-```
-../../CLAUDE.md#exception-handling (rules)
-  └─> exception-handling.md (complete guide)
-      └─> patterns.md (related examples)
-```
-
-**3. Understanding a pattern:**
-
-```
-../../CLAUDE.md (read rule)
-  └─> patterns.md#specific-pattern (see example)
-```
-
----
-
-## Quick Links
-
-### Most Referenced Documents
-
-1. [../../CLAUDE.md](../../CLAUDE.md) - Core standards (read first!)
-2. [patterns.md](patterns.md) - Code examples
-3. [exception-handling.md](exception-handling.md) - Exception guide
-4. [../../tests/CLAUDE.md](../../tests/CLAUDE.md) - Testing guide
-5. [publishing.md](publishing.md) - Publishing to PyPI
-
-### By Topic
-
-**Writing code:**
-
-- [../../CLAUDE.md](../../CLAUDE.md) - Coding standards
-- [patterns.md](patterns.md) - Examples
-- [exception-handling.md](exception-handling.md) - Exception rules
-
-**Testing:**
-
-- [../../tests/CLAUDE.md](../../tests/CLAUDE.md) - Testing patterns
-
-**Publishing:**
-
-- [publishing.md](publishing.md) - Publishing to PyPI
-
----
-
-## Documentation Maintenance
-
-### Keeping Docs Up-to-Date
-
-When making changes to the codebase:
-
-1. **Update patterns.md** - If you add new patterns or examples
-2. **Update exception-handling.md** - If exception handling patterns change
-3. **Update tests/CLAUDE.md** - If testing patterns change
-4. **Update CLAUDE.md** - If core rules change
-
-### Review Checklist
-
-During code review, verify:
-
-- [ ] Examples in patterns.md still compile and follow current patterns
-- [ ] exception-handling.md reflects current exception handling approach
-- [ ] tests/CLAUDE.md matches current testing practices
-- [ ] Links in all docs point to files that exist
-
----
-
-## Contributing to Documentation
-
-Documentation improvements are welcome! When updating docs:
-
-1. **Keep it concise** - AI agents prefer brief, scannable content
-2. **Use examples** - Code examples are worth a thousand words
-3. **Link liberally** - Cross-reference related docs
-4. **Maintain hierarchy** - Rules in CLAUDE.md, examples in patterns.md
-5. **Update navigation** - Keep quick reference tables current
-6. **Only link to existing files** - Verify all links work
-
----
-
-## Questions?
-
-If you can't find what you need:
-
-1. Check [patterns.md](patterns.md) for code examples
-2. Check [exception-handling.md](exception-handling.md) for exception handling details
-3. Check [../../tests/CLAUDE.md](../../tests/CLAUDE.md) for testing guidance
-4. Read [../../CLAUDE.md](../../CLAUDE.md) for core rules
-
-Still stuck? The documentation may need improvement - consider opening an issue or PR.
-
----
-
-## Future Documentation (Planned)
-
-These documents have been planned but not yet implemented:
-
-- **guides/ADDING_A_COMMAND.md** - Step-by-step command guide
-- **guides/ADDING_AN_OPS_INTERFACE.md** - Step-by-step ops interface guide
-- **COMMON_TASKS.md** - FAQ and common tasks
-
-Note: ARCHITECTURE.md and FEATURE_INDEX.md now exist in the `.agent/` directory, and GLOSSARY.md is at the root level.
-
----
-
-**Last updated**: 2025-10-08 (Documentation restructure - moved to .agent/ directory)
+| Your Task                           | Start Here                                                                                                     |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Understanding workstack terminology | [glossary.md](glossary.md)                                                                                     |
+| Writing tests with fakes/ops        | [testing.md](testing.md)                                                                                       |
+| Python coding standards             | Load `dignified-python` skill                                                                                  |
+| Understanding agentic programming   | [../writing/agentic-programming/agentic-programming.md](../writing/agentic-programming/agentic-programming.md) |

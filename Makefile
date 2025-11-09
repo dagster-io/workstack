@@ -25,15 +25,15 @@ upgrade-pyright:
 	uv remove pyright --group dev && uv add --dev pyright
 
 test-workstack-dev:
-	cd packages/workstack-dev && uv run pytest
+	cd packages/workstack-dev && uv run pytest -n auto
 
 test-dot-agent-kit:
-	cd packages/dot-agent-kit && uv run pytest
+	cd packages/dot-agent-kit && uv run pytest -n auto
 
-test-root:
-	uv run pytest tests/
+test-workstack:
+	uv run pytest tests/ -n auto
 
-test: test-root test-workstack-dev test-dot-agent-kit
+test: test-workstack test-workstack-dev test-dot-agent-kit
 
 check:
 	uv run dot-agent check

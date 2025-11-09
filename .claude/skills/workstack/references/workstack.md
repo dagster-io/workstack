@@ -1372,5 +1372,5 @@ else:
 - **[ARCHITECTURE.md](.agent/ARCHITECTURE.md)** - System design and patterns
 - **[GLOSSARY.md](GLOSSARY.md)** - Terminology reference
 - **[FEATURE_INDEX.md](.agent/FEATURE_INDEX.md)** - Feature → file mapping
-- **[CLAUDE.md](CLAUDE.md)** - Coding standards
-- **[tests/CLAUDE.md](tests/CLAUDE.md)** - Testing guidelines
+- **[AGENTS.md](AGENTS.md)** - Coding standards
+- **[tests/AGENTS.md](tests/AGENTS.md)** - Testing guidelines

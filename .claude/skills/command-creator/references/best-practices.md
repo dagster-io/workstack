@@ -656,7 +656,7 @@ Check these sources in order:
 
 1. **Context files** (if they exist):
    - .PLAN.md - implementation plan
-   - CLAUDE.md - coding standards
+   - AGENTS.md - coding standards
    - CONTRIBUTING.md - contribution guidelines
 
 2. **Git information**:

@@ -5,6 +5,7 @@ from dot_agent_kit.commands.artifact import artifact_group
 from dot_agent_kit.commands.hook import hook_group
 from dot_agent_kit.commands.init import init
 from dot_agent_kit.commands.kit import kit_group
+from dot_agent_kit.commands.md import md_group
 from dot_agent_kit.commands.run import run_group
 from dot_agent_kit.commands.status import st, status
 from dot_agent_kit.error_boundary import cli_error_boundary
@@ -37,6 +38,7 @@ cli.add_command(st)
 cli.add_command(artifact_group)
 cli.add_command(hook_group)
 cli.add_command(kit_group)
+cli.add_command(md_group)
 cli.add_command(run_group)
 
 

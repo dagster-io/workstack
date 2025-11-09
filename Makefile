@@ -1,4 +1,4 @@
-.PHONY: format format-check lint prettier prettier-check pyright upgrade-pyright test all-ci check clean publish fix
+.PHONY: format format-check lint prettier prettier-check pyright upgrade-pyright test all-ci check md-check clean publish fix
 
 prettier:
 	prettier --write '**/*.md' --ignore-path .gitignore
@@ -35,9 +35,12 @@ test: test-workstack-dev test-dot-agent-kit
 check:
 	uv run dot-agent check
 
+md-check:
+	uv run dot-agent md check
+
 # Removed: land-branch command has been deprecated
 
-all-ci: lint format-check prettier-check pyright test check
+all-ci: lint format-check prettier-check md-check pyright test check
 
 # Clean build artifacts
 clean:

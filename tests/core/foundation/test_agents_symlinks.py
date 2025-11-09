@@ -1,30 +1,37 @@
 from pathlib import Path
 
 
-def test_each_claude_md_has_agents_md_symlink() -> None:
-    """Verify that every CLAUDE.md has a peer AGENTS.md that is a symbolic link to it."""
+def test_each_agents_md_has_claude_md_reference() -> None:
+    """Verify that every AGENTS.md has a peer CLAUDE.md that contains '@AGENTS.md'.
+
+    This follows the AGENTS.md standard where AGENTS.md is the primary file and
+    CLAUDE.md is a reference file containing @AGENTS.md for backwards compatibility.
+
+    See: https://code.claude.com/docs/en/claude-code-on-the-web
+    """
     repo_root = Path(__file__).parent.parent
 
-    # Find all CLAUDE.md files
-    claude_files = list(repo_root.rglob("CLAUDE.md"))
+    # Find all AGENTS.md files
+    agents_files = list(repo_root.rglob("AGENTS.md"))
 
     # Ensure we found at least one (so test doesn't pass vacuously)
-    assert len(claude_files) > 0, "Expected to find at least one CLAUDE.md file"
+    assert len(agents_files) > 0, "Expected to find at least one AGENTS.md file"
 
-    for claude_file in claude_files:
-        # Check for peer AGENTS.md
-        agents_file = claude_file.parent / "AGENTS.md"
+    for agents_file in agents_files:
+        # Check for peer CLAUDE.md
+        claude_file = agents_file.parent / "CLAUDE.md"
 
-        assert agents_file.exists(), (
-            f"Missing AGENTS.md peer for {claude_file.relative_to(repo_root)}"
+        assert claude_file.exists(), (
+            f"Missing CLAUDE.md peer for {agents_file.relative_to(repo_root)}"
         )
 
-        assert agents_file.is_symlink(), (
-            f"{agents_file.relative_to(repo_root)} exists but is not a symbolic link"
+        assert claude_file.is_file(), (
+            f"{claude_file.relative_to(repo_root)} exists but is not a regular file"
         )
 
-        # Verify it points to CLAUDE.md
-        link_target = agents_file.readlink()
-        assert link_target == Path("CLAUDE.md"), (
-            f"{agents_file.relative_to(repo_root)} points to '{link_target}', expected 'CLAUDE.md'"
+        # Verify it contains @AGENTS.md
+        content = claude_file.read_text(encoding="utf-8")
+        assert content.strip() == "@AGENTS.md", (
+            f"{claude_file.relative_to(repo_root)} content is '{content.strip()}', "
+            "expected '@AGENTS.md'"
         )

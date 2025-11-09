@@ -241,7 +241,7 @@ make prettier # Runs: prettier --write '\*_/_.md'
 
 - Use Read tool to examine the file at the reported line number
 - Use Edit tool to fix type annotations, add type hints, or fix type mismatches
-- Follow the coding standards in CLAUDE.md (use `list[...]` not `List[...]`, etc.)
+- Follow the coding standards in AGENTS.md (use `list[...]` not `List[...]`, etc.)
 
 #### Test Failures
 
@@ -345,7 +345,7 @@ The code is ready for commit/PR.
 2. **Run full CI**: Always run full `make all-ci`, not individual checks
 3. **Track progress**: Use TodoWrite for every iteration
 4. **Don't guess**: Read files before making changes
-5. **Follow standards**: Adhere to CLAUDE.md coding standards
+5. **Follow standards**: Adhere to AGENTS.md coding standards
 6. **Fail gracefully**: Report clearly when stuck
 7. **Be efficient**: Use targeted fixes (don't reformat everything for one lint error)
 
@@ -544,7 +544,7 @@ If the script fails:
 | --------------------- | ------------------------ | ------------------ | -------------------------- | ------------------------ |
 | **Pattern**           | Workflow Automation      | Iterative Fixing   | Agent Delegation           | Simple Execution         |
 | **Arguments**         | Optional `<description>` | None               | None                       | Optional `[base-branch]` |
-| **Context Files**     | Checks `.PLAN.md`        | Checks `CLAUDE.md` | None                       | None                     |
+| **Context Files**     | Checks `.PLAN.md`        | Checks `AGENTS.md` | None                       | None                     |
 | **Iterations**        | Single pass              | Up to 10           | Iterative (user-driven)    | Single pass              |
 | **Tool Usage**        | Git, Graphite            | Make, Edit tools   | Task tool (agent)          | Script execution         |
 | **Progress Tracking** | Inline reporting         | TodoWrite required | None (user reviews)        | None                     |

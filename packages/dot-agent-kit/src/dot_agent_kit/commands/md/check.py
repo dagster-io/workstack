@@ -1,0 +1,103 @@
+"""Check AGENTS.md standard compliance command.
+
+This command validates that repositories follow the AGENTS.md standard where:
+- AGENTS.md is the primary context file
+- CLAUDE.md contains '@AGENTS.md' reference for backwards compatibility
+
+See: https://code.claude.com/docs/en/claude-code-on-the-web
+"""
+
+import subprocess
+from pathlib import Path
+
+import click
+
+
+@click.command(name="check")
+def check_command() -> None:
+    """Validate AGENTS.md standard compliance in the repository.
+
+    Checks that:
+    - Every CLAUDE.md file has a peer AGENTS.md file
+    - Every CLAUDE.md file contains '@AGENTS.md' reference
+
+    Exit codes:
+    - 0: All checks passed
+    - 1: Violations found
+    """
+    # Find repository root
+    result = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    repo_root_str = result.stdout.strip()
+    repo_root_path = Path(repo_root_str)
+
+    if not repo_root_path.exists():
+        click.echo(
+            click.style("✗ Error: Repository root not found", fg="red"),
+            err=True,
+        )
+        raise SystemExit(1)
+
+    # Find all CLAUDE.md files
+    claude_files = list(repo_root_path.rglob("CLAUDE.md"))
+
+    if len(claude_files) == 0:
+        click.echo(click.style("ℹ️  No CLAUDE.md files found in repository", fg="cyan"))
+        raise SystemExit(0)
+
+    # Track violations
+    missing_agents = []
+    invalid_content = []
+
+    for claude_path in claude_files:
+        # Check for peer AGENTS.md
+        agents_path = claude_path.parent / "AGENTS.md"
+        if not agents_path.exists():
+            missing_agents.append(claude_path.parent)
+            continue
+
+        # Check CLAUDE.md content
+        content = claude_path.read_text(encoding="utf-8")
+        if content.strip() != "@AGENTS.md":
+            invalid_content.append(claude_path)
+
+    # Report results
+    if len(missing_agents) == 0 and len(invalid_content) == 0:
+        click.echo(click.style("✓ AGENTS.md standard: PASSED", fg="green", bold=True))
+        click.echo()
+        click.echo("All CLAUDE.md files properly reference AGENTS.md.")
+        click.echo()
+        click.echo(f"Files checked: {len(claude_files)}")
+        click.echo("Violations: 0")
+        raise SystemExit(0)
+
+    # Found violations
+    click.echo(click.style("✗ AGENTS.md standard: FAILED", fg="red", bold=True))
+    click.echo()
+    violation_count = len(missing_agents) + len(invalid_content)
+    plural = "s" if violation_count != 1 else ""
+    click.echo(f"Found {violation_count} violation{plural}:")
+    click.echo()
+
+    if len(missing_agents) > 0:
+        click.echo(click.style("Missing AGENTS.md:", fg="yellow"))
+        for path in missing_agents:
+            rel_path = path.relative_to(repo_root_path)
+            click.echo(f"  • {click.style(str(rel_path) + '/', fg='cyan')}")
+        click.echo()
+
+    if len(invalid_content) > 0:
+        click.echo(click.style("Invalid CLAUDE.md content:", fg="yellow"))
+        for path in invalid_content:
+            rel_path = path.relative_to(repo_root_path)
+            content = path.read_text(encoding="utf-8")
+            styled_path = click.style(str(rel_path), fg="cyan")
+            click.echo(f"  • {styled_path}: Content is '{content.strip()}', expected '@AGENTS.md'")
+        click.echo()
+
+    click.echo("Fix these issues and run again.")
+    raise SystemExit(1)

@@ -343,8 +343,17 @@ def _land_branch_sequence(
         if dry_run:
             click.echo(_format_cli_command(f"git checkout {branch}", check))
         else:
-            ctx.git_ops.checkout_branch(repo_root, branch)
-            click.echo(_format_cli_command(f"git checkout {branch}", check))
+            # Check if we're already on the target branch (LBYL)
+            # This handles the case where we're in a linked worktree on the branch being landed
+            current_branch = ctx.git_ops.get_current_branch(Path.cwd())
+            if current_branch != branch:
+                # Only checkout if we're not already on the branch
+                ctx.git_ops.checkout_branch(repo_root, branch)
+                click.echo(_format_cli_command(f"git checkout {branch}", check))
+            else:
+                # Already on branch, display as already done
+                already_msg = f"already on {branch}"
+                click.echo(_format_description(already_msg, check))
 
         # Phase 2: Verify stack integrity
         all_branches = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo_root)

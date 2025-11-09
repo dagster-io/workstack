@@ -7,11 +7,11 @@ from tests.commands.display.list import strip_ansi
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.global_config_ops import FakeGlobalConfigOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
+from workstack.core.graphite_ops import RealGraphiteOps
 
 
 def test_list_with_stacks_flag() -> None:
@@ -85,7 +85,7 @@ def test_list_with_stacks_flag() -> None:
             use_graphite=True,
         )
 
-        graphite_ops = FakeGraphiteOps()
+        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
@@ -107,9 +107,9 @@ def test_list_with_stacks_flag() -> None:
         root_section_start = None
         ts_section_start = None
         for i, line in enumerate(lines):
-            if line.startswith("root ["):
+            if line.startswith("root"):
                 root_section_start = i
-            if line.startswith("ts ["):
+            if line.startswith("ts"):
                 ts_section_start = i
 
         assert root_section_start is not None
@@ -122,7 +122,7 @@ def test_list_with_stacks_flag() -> None:
         # Check ts worktree stack shows linear chain in reversed order
         # (descendants at top, trunk at bottom)
         # Note: ts-phase-3 is NOT shown because it has no worktree
-        assert lines[ts_section_start].startswith("ts [")
+        assert lines[ts_section_start].startswith("ts")
         assert "◉  schrockn/ts-phase-2" in ts_section_text
         assert "◯  schrockn/ts-phase-1" in ts_section_text
         assert "◯  main" in ts_section_text
@@ -164,7 +164,7 @@ def test_list_with_stacks_graphite_disabled() -> None:
             use_graphite=False,
         )
 
-        graphite_ops = FakeGraphiteOps()
+        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
@@ -203,7 +203,7 @@ def test_list_with_stacks_no_graphite_cache() -> None:
             use_graphite=True,
         )
 
-        graphite_ops = FakeGraphiteOps()
+        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
@@ -219,7 +219,7 @@ def test_list_with_stacks_no_graphite_cache() -> None:
         assert result.exit_code == 0, result.output
         output = strip_ansi(result.output)
         # Should show worktree but no stack visualization
-        assert output.startswith("root [")
+        assert output.startswith("root")
         # Should not have any circle markers
         assert "◉" not in output
         assert "◯" not in output
@@ -312,7 +312,7 @@ def test_list_with_stacks_highlights_current_branch_not_worktree_branch() -> Non
             use_graphite=True,
         )
 
-        graphite_ops = FakeGraphiteOps()
+        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
@@ -403,7 +403,7 @@ def test_list_with_stacks_root_repo_does_not_duplicate_branch() -> None:
             use_graphite=True,
         )
 
-        graphite_ops = FakeGraphiteOps()
+        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
@@ -422,7 +422,7 @@ def test_list_with_stacks_root_repo_does_not_duplicate_branch() -> None:
         lines = output.strip().splitlines()
 
         # Should have header line with "root" as the name
-        assert lines[0].startswith("root [")
+        assert lines[0].startswith("root")
 
         # Only master should be shown (foo has no worktree)
         assert "◉  master" in output
@@ -495,7 +495,7 @@ def test_list_with_stacks_shows_descendants_with_worktrees() -> None:
             use_graphite=True,
         )
 
-        graphite_ops = FakeGraphiteOps()
+        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
@@ -517,9 +517,9 @@ def test_list_with_stacks_shows_descendants_with_worktrees() -> None:
         root_section_start = None
         foo_section_start = None
         for i, line in enumerate(lines):
-            if line.startswith("root ["):
+            if line.startswith("root"):
                 root_section_start = i
-            if line.startswith("foo ["):
+            if line.startswith("foo"):
                 foo_section_start = i
 
         assert root_section_start is not None, "Should have root section"
@@ -594,7 +594,7 @@ def test_list_with_stacks_hides_descendants_without_worktrees() -> None:
             use_graphite=True,
         )
 
-        graphite_ops = FakeGraphiteOps()
+        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
@@ -612,7 +612,7 @@ def test_list_with_stacks_hides_descendants_without_worktrees() -> None:
         output = strip_ansi(result.output)
 
         # Should only have root section
-        assert output.startswith("root [")
+        assert output.startswith("root")
         assert "◉  main" in output
 
         # feature-1 should NOT appear (no worktree for it)
@@ -692,7 +692,7 @@ def test_list_with_stacks_shows_descendants_with_gaps() -> None:
             use_graphite=True,
         )
 
-        graphite_ops = FakeGraphiteOps()
+        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
@@ -714,9 +714,9 @@ def test_list_with_stacks_shows_descendants_with_gaps() -> None:
         root_section_start = None
         f3_section_start = None
         for i, line in enumerate(lines):
-            if line.startswith("root ["):
+            if line.startswith("root"):
                 root_section_start = i
-            if line.startswith("f3 ["):
+            if line.startswith("f3"):
                 f3_section_start = i
 
         assert root_section_start is not None, "Should have root section"
@@ -783,7 +783,7 @@ def test_list_with_stacks_corrupted_cache() -> None:
             use_graphite=True,
         )
 
-        graphite_ops = FakeGraphiteOps()
+        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
@@ -860,7 +860,7 @@ More content.
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
+            graphite_ops=RealGraphiteOps(),
             shell_ops=FakeShellOps(),
             dry_run=False,
         )
@@ -874,28 +874,22 @@ More content.
         # Plan title should appear
         assert "Implement OAuth2 integration" in output
 
-        # Verify order: worktree header, then plan, then stack
+        # Verify plan appears on the feature header line
         lines = output.splitlines()
         feature_header_idx = None
-        plan_idx = None
-        stack_idx = None
 
         for i, line in enumerate(lines):
-            if line.startswith("feature ["):
+            if line.startswith("feature"):
                 feature_header_idx = i
-            elif "Implement OAuth2 integration" in line:
-                plan_idx = i
-            elif "◉  feature" in line:
-                stack_idx = i
+                break
 
         assert feature_header_idx is not None
-        assert plan_idx is not None
-        assert stack_idx is not None
-        assert feature_header_idx < plan_idx < stack_idx
+        # Plan should now appear ON the feature header line
+        assert "Implement OAuth2 integration" in lines[feature_header_idx]
 
 
-def test_list_without_stacks_hides_plan_summary() -> None:
-    """Test that plan summary only appears with --stacks flag."""
+def test_list_without_stacks_shows_plan_summary() -> None:
+    """Test that plan summary now appears on main line (not just with --stacks)."""
     runner = CliRunner()
     with runner.isolated_filesystem():
         # Set up isolated environment
@@ -933,7 +927,7 @@ def test_list_without_stacks_hides_plan_summary() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
+            graphite_ops=RealGraphiteOps(),
             shell_ops=FakeShellOps(),
             dry_run=False,
         )
@@ -942,8 +936,8 @@ def test_list_without_stacks_hides_plan_summary() -> None:
         assert result.exit_code == 0, result.output
         output = strip_ansi(result.output)
 
-        # Plan title should NOT appear
-        assert "Test Plan" not in output
+        # Plan title SHOULD appear on the main line now
+        assert "Test Plan" in output
 
 
 def test_list_with_stacks_no_plan_file() -> None:
@@ -992,7 +986,7 @@ def test_list_with_stacks_no_plan_file() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
+            graphite_ops=RealGraphiteOps(),
             shell_ops=FakeShellOps(),
             dry_run=False,
         )
@@ -1000,9 +994,10 @@ def test_list_with_stacks_no_plan_file() -> None:
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
         assert result.exit_code == 0, result.output
 
-        # Should display normally without plan summary
+        # Should display normally with [no plan] placeholder
         output = strip_ansi(result.output)
-        assert "feature [" in output
+        assert "feature" in output
+        assert "[no plan]" in output
         assert "◉  feature" in output
 
 
@@ -1055,7 +1050,7 @@ def test_list_with_stacks_plan_without_frontmatter() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
+            graphite_ops=RealGraphiteOps(),
             shell_ops=FakeShellOps(),
             dry_run=False,
         )

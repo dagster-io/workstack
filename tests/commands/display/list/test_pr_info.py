@@ -121,7 +121,8 @@ def test_list_with_stacks_pr_visibility(show_pr_info: bool, expected_visible: bo
             "feature-branch", pr, show_pr_info=show_pr_info
         )
 
-        result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
+        # PR info now shown on main line, not just with --stacks
+        result = runner.invoke(cli, ["list"], obj=test_ctx)
         assert result.exit_code == 0, result.output
 
         assert ("#42" in result.output) is expected_visible
@@ -165,7 +166,8 @@ def test_list_pr_emoji_mapping(
             "test-branch", pr, show_pr_info=True
         )
 
-        result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
+        # PR info now shown on main line, not just with --stacks
+        result = runner.invoke(cli, ["list"], obj=test_ctx)
         assert result.exit_code == 0, result.output
 
         # Verify emoji appears in output
@@ -199,7 +201,8 @@ def test_list_with_stacks_uses_graphite_url() -> None:
             "feature", pr, show_pr_info=True
         )
 
-        result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
+        # PR info now shown on main line, not just with --stacks
+        result = runner.invoke(cli, ["list"], obj=test_ctx)
         assert result.exit_code == 0, result.output
 
         # Output should contain OSC 8 escape sequence with Graphite URL

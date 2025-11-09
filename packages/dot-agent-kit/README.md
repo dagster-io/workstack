@@ -276,3 +276,120 @@ To add a new bundled kit to the dot-agent-kit registry:
 - `source: package:my-kit` → install with `dot-agent kit install package:my-kit`
 
 The kit will now appear in the available kits list and can be installed by users.
+
+## Managing Kit Artifacts
+
+Once a kit is created, you can add or remove artifacts (agents, skills, commands, docs) to extend or modify its functionality.
+
+### Adding Artifacts to an Existing Kit
+
+To add a new artifact to a bundled kit:
+
+1. **Create the artifact file** in the appropriate namespace directory:
+
+   ```
+   kits/{kit-name}/
+   ├── agents/{kit-name}/        # For agents
+   ├── skills/{kit-name}/         # For skills
+   ├── commands/{kit-name}/       # For slash commands
+   ├── docs/{kit-name}/           # For documentation
+   └── kit_cli_commands/{kit-name}/  # For CLI commands
+   ```
+
+2. **Update kit.yaml** to reference the new artifact:
+
+   For agents, skills, commands, or docs:
+
+   ```yaml
+   artifacts:
+     agent:
+       - agents/{kit-name}/my-agent.md
+     skill:
+       - skills/{kit-name}/my-skill/SKILL.md
+     command:
+       - commands/{kit-name}/my-command.md
+     doc:
+       - docs/{kit-name}/my-doc.md
+   ```
+
+   For kit CLI commands:
+
+   ```yaml
+   kit_cli_commands:
+     - name: my-cli-command
+       path: kit_cli_commands/{kit-name}/my_command.py
+       description: Brief description
+   ```
+
+3. **Test the changes** by reinstalling the kit:
+
+   ```bash
+   # Uninstall existing kit
+   dot-agent kit uninstall bundled:{kit-name}
+
+   # Reinstall with new artifacts
+   dot-agent kit install bundled:{kit-name}
+
+   # Verify installation
+   dot-agent check
+   ```
+
+### Removing Artifacts from a Kit
+
+To remove an artifact from a bundled kit:
+
+1. **Delete the artifact file** from the kit directory
+2. **Remove the entry** from `kit.yaml` (from `artifacts` or `kit_cli_commands` section)
+3. **Test the changes** by reinstalling the kit (see above)
+
+### Common Patterns
+
+**Adding an agent:**
+
+- File: `agents/{kit-name}/my-agent.md`
+- Entry: `artifacts.agent` list in kit.yaml
+- Invoked as: "my-agent" (filename without .md)
+
+**Adding a skill:**
+
+- File: `skills/{kit-name}/my-skill/SKILL.md` (or `skills/my-skill-name/SKILL.md` for flattened structure)
+- Entry: `artifacts.skill` list in kit.yaml
+- Invoked as: "my-skill" (directory name containing SKILL.md)
+
+**Adding a slash command:**
+
+- File: `commands/{kit-name}/my-command.md`
+- Entry: `artifacts.command` list in kit.yaml
+- Invoked as: "/my-command" (filename without .md)
+
+**Adding a kit CLI command:**
+
+- File: `kit_cli_commands/{kit-name}/my_command.py`
+- Entry: `kit_cli_commands` list in kit.yaml
+- Invoked as: `dot-agent run {kit-id} my-cli-command`
+
+**Adding documentation:**
+
+- File: `docs/{kit-name}/my-doc.md`
+- Entry: `artifacts.doc` list in kit.yaml
+- Referenced by: Skills or agents that need supporting documentation
+
+### Troubleshooting
+
+**Artifact not appearing after installation:**
+
+- Verify the artifact path in kit.yaml matches the actual file location
+- Check that the path is relative to the kit root directory
+- Ensure the artifact follows naming conventions (kebab-case, no underscores)
+
+**Kit reinstall fails:**
+
+- Validate kit.yaml syntax with a YAML parser
+- Check that all referenced files exist
+- Verify namespace directories match kit name
+
+**Artifact conflicts between kits:**
+
+- Ensure each kit uses its own namespace directory (`{kit-name}/`)
+- Check for duplicate artifact names across kits
+- Review installed artifacts with `dot-agent check`

@@ -13,6 +13,8 @@ kit_cli_commands:
     path: kit_cli_commands/gt/update_pr.py
     description: Update PR by staging changes, committing, restacking, and submitting
 artifacts:
+  agent:
+    - agents/gt/gt-branch-submitter.md
   command:
     - commands/gt/submit-branch.md
     - commands/gt/update-pr.md

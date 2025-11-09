@@ -163,6 +163,7 @@ class SimulatedWorkstackEnv:
             worktrees={self.root_worktree: worktrees_list},
             current_branches=current_branches_map,
             git_common_dirs=git_common_dirs_map,
+            default_branches={self.root_worktree: trunk_branch},
         )
 
         graphite_ops = FakeGraphiteOps(

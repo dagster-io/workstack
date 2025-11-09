@@ -4,47 +4,49 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
+from tests.commands.graphite.test_land_stack import (
+    simulated_workstack_env,
+)
 from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.gitops import FakeGitOps
 from tests.fakes.global_config_ops import FakeGlobalConfigOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext
-from workstack.core.gitops import WorktreeInfo
 
 
 def test_jump_to_branch_in_single_worktree() -> None:
     """Test jumping to a branch that is checked out in exactly one worktree."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        work_dir = cwd / "workstacks" / cwd.name
-        work_dir.mkdir(parents=True)
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
+    with simulated_workstack_env(runner) as env:
         # Create worktree directories
-        feature_wt = work_dir / "feature-wt"
-        other_wt = work_dir / "other-wt"
-        feature_wt.mkdir(parents=True, exist_ok=True)
-        other_wt.mkdir(parents=True, exist_ok=True)
+        feature_wt = env.create_linked_worktree("feature-wt", "feature-2", chdir=False)
+        env.create_linked_worktree("other-wt", "other-feature", chdir=False)
+
+        # Build ops with other-feature as current branch
+        # Note: jump doesn't use graphite, so we can pass empty branches dict
+        from tests.fakes.gitops import FakeGitOps
+        from tests.fakes.graphite_ops import FakeGraphiteOps
+        from workstack.core.gitops import WorktreeInfo
 
         git_ops = FakeGitOps(
             worktrees={
-                cwd: [
-                    WorktreeInfo(path=other_wt, branch="other-feature"),
-                    # feature-2 is checked out here
-                    WorktreeInfo(path=feature_wt, branch="feature-2"),
+                env.root_worktree: [
+                    WorktreeInfo(path=env.root_worktree, branch="main", is_root=True),
+                    WorktreeInfo(path=feature_wt, branch="feature-2", is_root=False),
+                    WorktreeInfo(
+                        path=env.root_worktree.parent / "workstacks" / "repo" / "other-wt",
+                        branch="other-feature",
+                        is_root=False,
+                    ),
                 ]
             },
-            current_branches={cwd: "other-feature"},
-            default_branches={cwd: "main"},
-            git_common_dirs={cwd: git_dir},
+            current_branches={env.root_worktree: "other-feature"},
+            default_branches={env.root_worktree: "main"},
+            git_common_dirs={env.root_worktree: env.root_worktree / ".git"},
         )
 
         global_config_ops = FakeGlobalConfigOps(
-            workstacks_root=cwd / "workstacks",
+            workstacks_root=env.root_worktree.parent / "workstacks",
             use_graphite=False,  # No longer requires Graphite
         )
 
@@ -79,26 +81,32 @@ def test_jump_to_branch_in_single_worktree() -> None:
 def test_jump_to_branch_not_found() -> None:
     """Test jumping to a branch that is not checked out in any worktree."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        work_dir = cwd / "workstacks" / cwd.name
-        work_dir.mkdir(parents=True)
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
+    with simulated_workstack_env(runner) as env:
+        # Create worktree for feature-1
+        env.create_linked_worktree("feature-1-wt", "feature-1", chdir=False)
+
+        # Build ops manually since jump doesn't use graphite
+        from tests.fakes.gitops import FakeGitOps
+        from tests.fakes.graphite_ops import FakeGraphiteOps
+        from workstack.core.gitops import WorktreeInfo
 
         git_ops = FakeGitOps(
             worktrees={
-                cwd: [
-                    WorktreeInfo(path=cwd, branch="main"),
-                    WorktreeInfo(path=work_dir / "feature-1-wt", branch="feature-1"),
+                env.root_worktree: [
+                    WorktreeInfo(path=env.root_worktree, branch="main", is_root=True),
+                    WorktreeInfo(
+                        path=env.root_worktree.parent / "workstacks" / "repo" / "feature-1-wt",
+                        branch="feature-1",
+                        is_root=False,
+                    ),
                 ]
             },
-            current_branches={cwd: "main"},
-            git_common_dirs={cwd: git_dir},
+            current_branches={env.root_worktree: "main"},
+            git_common_dirs={env.root_worktree: env.root_worktree / ".git"},
         )
 
         global_config_ops = FakeGlobalConfigOps(
-            workstacks_root=cwd / "workstacks",
+            workstacks_root=env.root_worktree.parent / "workstacks",
             use_graphite=False,  # No longer requires Graphite
         )
 
@@ -128,31 +136,30 @@ def test_jump_to_branch_in_stack_but_not_checked_out() -> None:
     directly checked out should fail with appropriate error message.
     """
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        work_dir = cwd / "workstacks" / cwd.name
-        work_dir.mkdir(parents=True)
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
+    with simulated_workstack_env(runner) as env:
+        # Create worktree for feature-1 only
+        wt1 = env.create_linked_worktree("feature-1-wt", "feature-1", chdir=False)
 
-        wt1 = work_dir / "feature-1-wt"
-        wt1.mkdir(parents=True, exist_ok=True)
+        # Build ops manually
+        from tests.fakes.gitops import FakeGitOps
+        from tests.fakes.graphite_ops import FakeGraphiteOps
+        from workstack.core.gitops import WorktreeInfo
 
         # feature-1 is checked out, but feature-base is not
         # (even though it might exist in the stack)
         git_ops = FakeGitOps(
             worktrees={
-                cwd: [
-                    WorktreeInfo(path=cwd, branch="main"),
-                    WorktreeInfo(path=wt1, branch="feature-1"),
+                env.root_worktree: [
+                    WorktreeInfo(path=env.root_worktree, branch="main", is_root=True),
+                    WorktreeInfo(path=wt1, branch="feature-1", is_root=False),
                 ]
             },
-            current_branches={cwd: "main"},
-            git_common_dirs={cwd: git_dir},
+            current_branches={env.root_worktree: "main"},
+            git_common_dirs={env.root_worktree: env.root_worktree / ".git"},
         )
 
         global_config_ops = FakeGlobalConfigOps(
-            workstacks_root=cwd / "workstacks",
+            workstacks_root=env.root_worktree.parent / "workstacks",
             use_graphite=False,
         )
 
@@ -175,30 +182,27 @@ def test_jump_to_branch_in_stack_but_not_checked_out() -> None:
 def test_jump_works_without_graphite() -> None:
     """Test that jump works without Graphite enabled."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        work_dir = cwd / "workstacks" / cwd.name
-        work_dir.mkdir(parents=True)
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
+    with simulated_workstack_env(runner) as env:
+        feature_wt = env.create_linked_worktree("feature-1-wt", "feature-1", chdir=False)
 
-        feature_wt = work_dir / "feature-1-wt"
-        feature_wt.mkdir(parents=True, exist_ok=True)
+        from tests.fakes.gitops import FakeGitOps
+        from tests.fakes.graphite_ops import FakeGraphiteOps
+        from workstack.core.gitops import WorktreeInfo
 
         git_ops = FakeGitOps(
             worktrees={
-                cwd: [
-                    WorktreeInfo(path=cwd, branch="main"),
-                    WorktreeInfo(path=feature_wt, branch="feature-1"),
+                env.root_worktree: [
+                    WorktreeInfo(path=env.root_worktree, branch="main", is_root=True),
+                    WorktreeInfo(path=feature_wt, branch="feature-1", is_root=False),
                 ]
             },
-            current_branches={cwd: "main"},
-            git_common_dirs={cwd: git_dir},
+            current_branches={env.root_worktree: "main"},
+            git_common_dirs={env.root_worktree: env.root_worktree / ".git"},
         )
 
         # Graphite is NOT enabled - jump should still work
         global_config_ops = FakeGlobalConfigOps(
-            workstacks_root=cwd / "workstacks",
+            workstacks_root=env.root_worktree.parent / "workstacks",
             use_graphite=False,
         )
 
@@ -224,31 +228,28 @@ def test_jump_works_without_graphite() -> None:
 def test_jump_already_on_target_branch() -> None:
     """Test jumping when the target branch is already checked out in a single worktree."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        work_dir = cwd / "workstacks" / cwd.name
-        work_dir.mkdir(parents=True)
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
+    with simulated_workstack_env(runner) as env:
+        feature_wt = env.create_linked_worktree("feature-1-wt", "feature-1", chdir=False)
+        other_wt = env.create_linked_worktree("other-wt", "other-feature", chdir=False)
 
-        feature_wt = work_dir / "feature-1-wt"
-        other_wt = work_dir / "other-wt"
-        feature_wt.mkdir(parents=True, exist_ok=True)
-        other_wt.mkdir(parents=True, exist_ok=True)
+        from tests.fakes.gitops import FakeGitOps
+        from tests.fakes.graphite_ops import FakeGraphiteOps
+        from workstack.core.gitops import WorktreeInfo
 
         git_ops = FakeGitOps(
             worktrees={
-                cwd: [
-                    WorktreeInfo(path=other_wt, branch="other-feature"),
-                    WorktreeInfo(path=feature_wt, branch="feature-1"),  # Already on feature-1
+                env.root_worktree: [
+                    WorktreeInfo(path=other_wt, branch="other-feature", is_root=False),
+                    # Already on feature-1
+                    WorktreeInfo(path=feature_wt, branch="feature-1", is_root=False),
                 ]
             },
-            current_branches={cwd: "other-feature"},
-            git_common_dirs={cwd: git_dir},
+            current_branches={env.root_worktree: "other-feature"},
+            git_common_dirs={env.root_worktree: env.root_worktree / ".git"},
         )
 
         global_config_ops = FakeGlobalConfigOps(
-            workstacks_root=cwd / "workstacks",
+            workstacks_root=env.root_worktree.parent / "workstacks",
             use_graphite=False,
         )
 
@@ -275,31 +276,28 @@ def test_jump_already_on_target_branch() -> None:
 def test_jump_succeeds_when_branch_exactly_checked_out() -> None:
     """Test that jump succeeds when branch is exactly checked out in a worktree."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        work_dir = cwd / "workstacks" / cwd.name
-        work_dir.mkdir(parents=True)
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
+    with simulated_workstack_env(runner) as env:
+        feature_wt = env.create_linked_worktree("feature-wt", "feature-2", chdir=False)
+        other_wt = env.create_linked_worktree("other-wt", "other-feature", chdir=False)
 
-        feature_wt = work_dir / "feature-wt"
-        other_wt = work_dir / "other-wt"
-        feature_wt.mkdir(parents=True, exist_ok=True)
-        other_wt.mkdir(parents=True, exist_ok=True)
+        from tests.fakes.gitops import FakeGitOps
+        from tests.fakes.graphite_ops import FakeGraphiteOps
+        from workstack.core.gitops import WorktreeInfo
 
         git_ops = FakeGitOps(
             worktrees={
-                cwd: [
-                    WorktreeInfo(path=other_wt, branch="other-feature"),
-                    WorktreeInfo(path=feature_wt, branch="feature-2"),  # feature-2 is checked out
+                env.root_worktree: [
+                    WorktreeInfo(path=other_wt, branch="other-feature", is_root=False),
+                    # feature-2 is checked out
+                    WorktreeInfo(path=feature_wt, branch="feature-2", is_root=False),
                 ]
             },
-            current_branches={cwd: "other-feature"},
-            git_common_dirs={cwd: git_dir},
+            current_branches={env.root_worktree: "other-feature"},
+            git_common_dirs={env.root_worktree: env.root_worktree / ".git"},
         )
 
         global_config_ops = FakeGlobalConfigOps(
-            workstacks_root=cwd / "workstacks",
+            workstacks_root=env.root_worktree.parent / "workstacks",
             use_graphite=False,
         )
 
@@ -332,33 +330,29 @@ def test_jump_with_multiple_worktrees_same_branch() -> None:
     but our code should handle it gracefully.
     """
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        work_dir = cwd / "workstacks" / cwd.name
-        work_dir.mkdir(parents=True)
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
+    with simulated_workstack_env(runner) as env:
+        wt1 = env.create_linked_worktree("wt1", "feature-2", chdir=False)
+        wt2 = env.create_linked_worktree("wt2", "feature-2", chdir=False)
 
-        wt1 = work_dir / "wt1"
-        wt2 = work_dir / "wt2"
-        wt1.mkdir(parents=True, exist_ok=True)
-        wt2.mkdir(parents=True, exist_ok=True)
+        from tests.fakes.gitops import FakeGitOps
+        from tests.fakes.graphite_ops import FakeGraphiteOps
+        from workstack.core.gitops import WorktreeInfo
 
         # Edge case: same branch checked out in multiple worktrees
         # (shouldn't happen in real git, but test our handling)
         git_ops = FakeGitOps(
             worktrees={
-                cwd: [
-                    WorktreeInfo(path=wt1, branch="feature-2"),
-                    WorktreeInfo(path=wt2, branch="feature-2"),  # Same branch
+                env.root_worktree: [
+                    WorktreeInfo(path=wt1, branch="feature-2", is_root=False),
+                    WorktreeInfo(path=wt2, branch="feature-2", is_root=False),  # Same branch
                 ]
             },
-            current_branches={cwd: "main"},
-            git_common_dirs={cwd: git_dir},
+            current_branches={env.root_worktree: "main"},
+            git_common_dirs={env.root_worktree: env.root_worktree / ".git"},
         )
 
         global_config_ops = FakeGlobalConfigOps(
-            workstacks_root=cwd / "workstacks",
+            workstacks_root=env.root_worktree.parent / "workstacks",
             use_graphite=False,
         )
 

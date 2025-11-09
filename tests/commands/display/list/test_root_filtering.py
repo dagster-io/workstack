@@ -58,27 +58,11 @@ def test_root_on_trunk_shows_only_trunk() -> None:
         # Build ops from branches
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-a"],
-                    is_trunk=True,
-                    commit_sha="abc123",
+                "main": BranchMetadata.main(children=["feature-a"], sha="abc123"),
+                "feature-a": BranchMetadata.branch(
+                    "feature-a", children=["feature-b"], sha="def456"
                 ),
-                "feature-a": BranchMetadata(
-                    name="feature-a",
-                    parent="main",
-                    children=["feature-b"],
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
-                "feature-b": BranchMetadata(
-                    name="feature-b",
-                    parent="feature-a",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="ghi789",
-                ),
+                "feature-b": BranchMetadata.branch("feature-b", parent="feature-a", sha="ghi789"),
             },
             current_branch="main",
         )
@@ -160,34 +144,14 @@ def test_root_on_non_trunk_shows_ancestors_only() -> None:
         # Build ops from branches - root is on feature-b (non-trunk)
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-a"],
-                    is_trunk=True,
-                    commit_sha="abc123",
+                "main": BranchMetadata.main(children=["feature-a"], sha="abc123"),
+                "feature-a": BranchMetadata.branch(
+                    "feature-a", children=["feature-b"], sha="def456"
                 ),
-                "feature-a": BranchMetadata(
-                    name="feature-a",
-                    parent="main",
-                    children=["feature-b"],
-                    is_trunk=False,
-                    commit_sha="def456",
+                "feature-b": BranchMetadata.branch(
+                    "feature-b", parent="feature-a", children=["feature-c"], sha="ghi789"
                 ),
-                "feature-b": BranchMetadata(
-                    name="feature-b",
-                    parent="feature-a",
-                    children=["feature-c"],
-                    is_trunk=False,
-                    commit_sha="ghi789",
-                ),
-                "feature-c": BranchMetadata(
-                    name="feature-c",
-                    parent="feature-b",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="jkl012",
-                ),
+                "feature-c": BranchMetadata.branch("feature-c", parent="feature-b", sha="jkl012"),
             },
             current_branch="feature-b",  # Root on feature-b
         )
@@ -276,34 +240,14 @@ def test_non_root_worktree_shows_descendants_with_worktrees() -> None:
         # Build ops from branches
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-a"],
-                    is_trunk=True,
-                    commit_sha="abc123",
+                "main": BranchMetadata.main(children=["feature-a"], sha="abc123"),
+                "feature-a": BranchMetadata.branch(
+                    "feature-a", children=["feature-b"], sha="def456"
                 ),
-                "feature-a": BranchMetadata(
-                    name="feature-a",
-                    parent="main",
-                    children=["feature-b"],
-                    is_trunk=False,
-                    commit_sha="def456",
+                "feature-b": BranchMetadata.branch(
+                    "feature-b", parent="feature-a", children=["feature-c"], sha="ghi789"
                 ),
-                "feature-b": BranchMetadata(
-                    name="feature-b",
-                    parent="feature-a",
-                    children=["feature-c"],
-                    is_trunk=False,
-                    commit_sha="ghi789",
-                ),
-                "feature-c": BranchMetadata(
-                    name="feature-c",
-                    parent="feature-b",
-                    children=[],
-                    is_trunk=False,
-                    commit_sha="jkl012",
-                ),
+                "feature-c": BranchMetadata.branch("feature-c", parent="feature-b", sha="jkl012"),
             },
             current_branch="main",
         )

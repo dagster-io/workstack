@@ -39,27 +39,9 @@ class SimulatedWorkstackEnv:
             # Build ops from branches
             git_ops, graphite_ops = env.build_ops_from_branches(
                 {
-                    "main": BranchMetadata(
-                        name="main",
-                        parent=None,
-                        children=["feat-1"],
-                        is_trunk=True,
-                        commit_sha="abc123",
-                    ),
-                    "feat-1": BranchMetadata(
-                        name="feat-1",
-                        parent="main",
-                        children=["feat-2"],
-                        is_trunk=False,
-                        commit_sha="def456",
-                    ),
-                    "feat-2": BranchMetadata(
-                        name="feat-2",
-                        parent="feat-1",
-                        children=[],
-                        is_trunk=False,
-                        commit_sha="ghi789",
-                    ),
+                    "main": BranchMetadata.main(children=["feat-1"], sha="abc123"),
+                    "feat-1": BranchMetadata.branch("feat-1", children=["feat-2"], sha="def456"),
+                    "feat-2": BranchMetadata.branch("feat-2", parent="feat-1", sha="ghi789"),
                 },
                 current_branch="feat-1",
             )
@@ -151,20 +133,8 @@ class SimulatedWorkstackEnv:
 
             git_ops, graphite_ops = env.build_ops_from_branches(
                 {
-                    "main": BranchMetadata(
-                        name="main",
-                        parent=None,
-                        children=["feat-1"],
-                        is_trunk=True,
-                        commit_sha="abc123",
-                    ),
-                    "feat-1": BranchMetadata(
-                        name="feat-1",
-                        parent="main",
-                        children=["feat-2"],
-                        is_trunk=False,
-                        commit_sha="def456",
-                    ),
+                    "main": BranchMetadata.main(children=["feat-1"], sha="abc123"),
+                    "feat-1": BranchMetadata.branch("feat-1", children=["feat-2"], sha="def456"),
                     "feat-2": BranchMetadata(
                         name="feat-2",
                         parent="feat-1",

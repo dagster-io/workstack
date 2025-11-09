@@ -54,6 +54,50 @@ def test_fake_tracks_mutation() -> None:
 These tests ensure fakes are **reliable test doubles** for production code tests.
 If fakes don't work correctly, all tests ABOVE the fakes layer are unreliable.
 
+## Maintenance Guidelines
+
+### When to Add or Update Tests
+
+**Add tests when:**
+
+- Creating a new fake implementation
+- Adding a new method to an existing fake
+- Discovering drift between fake and real behavior
+- Adding mutation tracking properties
+
+**Update tests when:**
+
+- Modifying fake implementation behavior
+- Changing method signatures
+- Fixing bugs in fakes
+- Modifying corresponding real implementation
+
+### Process: Keeping Fakes in Sync
+
+When modifying ANY real operations implementation:
+
+1. **Check** if corresponding fake implements the same method
+2. **Verify** tests exist for that method in `tests/unit/fakes/`
+3. **Add tests** BEFORE merging if missing
+4. **Run tests** - both unit tests (fakes) AND integration tests (real)
+
+**Checklist:**
+
+- [ ] Modified real implementation method
+- [ ] Checked fake has matching method
+- [ ] Verified fake tests exist
+- [ ] Added/updated fake tests if needed
+- [ ] All tests pass (unit + integration)
+
+### High-Risk Methods Needing Extra Attention
+
+Methods with >30 LOC in real implementation need comprehensive testing:
+
+- **Complex parsing methods** (e.g., `get_file_status`, `list_worktrees`)
+- **Stateful operations** that modify internal state
+- **Methods with >50 LOC** in real implementation
+- **User-visible behavior** (status display, command output)
+
 ## See Also
 
 - `tests/fakes/` - Fake implementations being tested

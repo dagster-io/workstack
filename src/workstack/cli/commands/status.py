@@ -6,6 +6,7 @@ import click
 
 from workstack.cli.core import discover_repo_context
 from workstack.core.context import WorkstackContext
+from workstack.core.parallel_task_runner import RealParallelTaskRunner
 from workstack.status.collectors.git import GitStatusCollector
 from workstack.status.collectors.github import GitHubPRCollector
 from workstack.status.collectors.graphite import GraphiteStackCollector
@@ -48,7 +49,7 @@ def status_cmd(ctx: WorkstackContext) -> None:
     ]
 
     # Create orchestrator
-    orchestrator = StatusOrchestrator(collectors)
+    orchestrator = StatusOrchestrator(collectors, runner=RealParallelTaskRunner())
 
     # Collect status
     status = orchestrator.collect_status(ctx, current_worktree_path, repo.root)

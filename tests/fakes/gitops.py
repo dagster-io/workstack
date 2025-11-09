@@ -149,8 +149,8 @@ class FakeGitOps(GitOps):
         """Add a new worktree (mutates internal state and creates directory)."""
         if repo_root not in self._worktrees:
             self._worktrees[repo_root] = []
-        # New worktrees are never the main worktree
-        self._worktrees[repo_root].append(WorktreeInfo(path=path, branch=branch, is_main=False))
+        # New worktrees are never the root worktree
+        self._worktrees[repo_root].append(WorktreeInfo(path=path, branch=branch, is_root=False))
         # Create the worktree directory to simulate git worktree add behavior
         path.mkdir(parents=True, exist_ok=True)
         # Track the addition
@@ -162,7 +162,7 @@ class FakeGitOps(GitOps):
             for i, wt in enumerate(self._worktrees[repo_root]):
                 if wt.path == old_path:
                     self._worktrees[repo_root][i] = WorktreeInfo(
-                        path=new_path, branch=wt.branch, is_main=wt.is_main
+                        path=new_path, branch=wt.branch, is_root=wt.is_root
                     )
                     break
         # Simulate the filesystem move if the paths exist
@@ -197,7 +197,7 @@ class FakeGitOps(GitOps):
             for i, wt in enumerate(worktrees):
                 if wt.path.resolve() == cwd.resolve():
                     self._worktrees[repo_root][i] = WorktreeInfo(
-                        path=wt.path, branch=branch, is_main=wt.is_main
+                        path=wt.path, branch=branch, is_root=wt.is_root
                     )
                     break
         # Track the checkout
@@ -212,7 +212,7 @@ class FakeGitOps(GitOps):
             for i, wt in enumerate(worktrees):
                 if wt.path.resolve() == cwd.resolve():
                     self._worktrees[repo_root][i] = WorktreeInfo(
-                        path=wt.path, branch=None, is_main=wt.is_main
+                        path=wt.path, branch=None, is_root=wt.is_root
                     )
                     break
         # Track the detached checkout

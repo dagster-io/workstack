@@ -296,7 +296,7 @@ class WorktreeScenario:
         self.git_dir.mkdir(parents=True, exist_ok=True)
 
         self._worktrees.setdefault(self.repo_root, []).append(
-            WorktreeInfo(path=self.repo_root, branch=name, is_main=True)
+            WorktreeInfo(path=self.repo_root, branch=name, is_root=True)
         )
         self._git_common_dirs[self.repo_root] = self.git_dir
         self._current_branches[self.repo_root] = name
@@ -317,7 +317,7 @@ class WorktreeScenario:
         worktree_path.mkdir(parents=True, exist_ok=True)
 
         self._worktrees.setdefault(self.repo_root, []).append(
-            WorktreeInfo(path=worktree_path, branch=name, is_main=False)
+            WorktreeInfo(path=worktree_path, branch=name, is_root=False)
         )
         self._git_common_dirs[worktree_path] = self.git_dir
         self._current_branches[worktree_path] = name

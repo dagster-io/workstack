@@ -28,8 +28,8 @@ from tests.test_utils.builders import WorktreeScenario
 from workstack.cli.commands.status import status_cmd
 
 
-def test_status_cmd_in_main_worktree(simple_repo: WorktreeScenario) -> None:
-    """Test status command when in the main worktree (CLI layer)."""
+def test_status_cmd_in_root_worktree(simple_repo: WorktreeScenario) -> None:
+    """Test status command when in the root worktree (CLI layer)."""
     runner = CliRunner()
     original_dir = os.getcwd()
     os.chdir(simple_repo.repo_root)

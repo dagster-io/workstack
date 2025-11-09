@@ -110,7 +110,7 @@ def consolidate_cmd(ctx: WorkstackContext, force: bool, dry_run: bool) -> None:
         for wt in all_worktrees
         if wt.branch in stack_branches
         and wt.path.resolve() != current_worktree_resolved
-        and not wt.is_main  # Never remove main worktree
+        and not wt.is_root  # Never remove root worktree
     ]
 
     # Display preview

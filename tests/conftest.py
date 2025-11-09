@@ -195,7 +195,7 @@ def detached_head_repo(tmp_path: Path):
     """Repository with worktree in detached HEAD state.
 
     Returns:
-        WorktreeScenario with main worktree in detached HEAD
+        WorktreeScenario with root worktree in detached HEAD
     """
     from tests.test_utils.builders import WorktreeScenario
 

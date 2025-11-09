@@ -392,11 +392,11 @@ def test_consolidate_with_uncommitted_changes_in_non_stack_worktree() -> None:
         assert wt3_path not in test_ctx.git_ops.removed_worktrees
 
 
-def test_consolidate_preserves_main_worktree_even_when_in_stack() -> None:
-    """Test consolidate never removes the main worktree, even if its branch is in the stack.
+def test_consolidate_preserves_root_worktree_even_when_in_stack() -> None:
+    """Test consolidate never removes the root worktree, even if its branch is in the stack.
 
     This is a regression test for the bug where consolidate would attempt to remove
-    the main worktree when run from a linked worktree, causing git to reject the
+    the root worktree when run from a linked worktree, causing git to reject the
     operation with "fatal: '/path' is a main working tree".
     """
     runner = CliRunner()
@@ -409,7 +409,7 @@ def test_consolidate_preserves_main_worktree_even_when_in_stack() -> None:
 
         # Create worktree directories
         repo_name = cwd.name
-        # Main worktree at repo root (on main branch, part of the stack)
+        # Root worktree at repo root (on main branch, part of the stack)
         main_worktree = cwd / "main-repo"
         main_worktree.mkdir(parents=True)
         # Linked worktree for feature-1
@@ -419,18 +419,18 @@ def test_consolidate_preserves_main_worktree_even_when_in_stack() -> None:
         wt2_path = workstacks_root / repo_name / "wt2"
         wt2_path.mkdir(parents=True)
 
-        # Main worktree is on 'main' branch (which is in the stack)
+        # Root worktree is on 'main' branch (which is in the stack)
         # Current worktree is wt2 on feature-2
         # wt1 is on feature-1 (also in stack)
         worktrees = {
             main_worktree: [
-                WorktreeInfo(path=main_worktree, branch="main", is_main=True),  # Main worktree
-                WorktreeInfo(path=wt1_path, branch="feature-1", is_main=False),  # Linked
-                WorktreeInfo(path=wt2_path, branch="feature-2", is_main=False),  # Current
+                WorktreeInfo(path=main_worktree, branch="main", is_root=True),  # Root worktree
+                WorktreeInfo(path=wt1_path, branch="feature-1", is_root=False),  # Linked
+                WorktreeInfo(path=wt2_path, branch="feature-2", is_root=False),  # Current
             ]
         }
 
-        # Current directory is the feature-2 worktree (NOT the main worktree)
+        # Current directory is the feature-2 worktree (NOT the root worktree)
         test_ctx = _create_test_context(
             wt2_path, worktrees, "feature-2", workstacks_root, graphite_ops
         )
@@ -439,15 +439,23 @@ def test_consolidate_preserves_main_worktree_even_when_in_stack() -> None:
         test_ctx.git_ops._git_common_dirs[wt1_path] = main_worktree / ".git"
         test_ctx.git_ops._git_common_dirs[wt2_path] = main_worktree / ".git"
 
-        result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
+        # Change to wt2_path to simulate running from that worktree
+        import os
+
+        original_cwd = os.getcwd()
+        os.chdir(wt2_path)
+        try:
+            result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
+        finally:
+            os.chdir(original_cwd)
 
         # Command should succeed
         assert result.exit_code == 0, result.output
 
-        # Main worktree should NEVER be removed, even though 'main' is in the stack
+        # Root worktree should NEVER be removed, even though 'main' is in the stack
         assert main_worktree not in test_ctx.git_ops.removed_worktrees
 
-        # Only feature-1 worktree should be removed (feature-2 is current, main is main)
+        # Only feature-1 worktree should be removed (feature-2 is current, root is root)
         assert len(test_ctx.git_ops.removed_worktrees) == 1
         assert wt1_path in test_ctx.git_ops.removed_worktrees
 

@@ -1,10 +1,19 @@
 import subprocess
 from pathlib import Path
+from typing import NamedTuple
 
 import click
 
 from workstack.cli.core import discover_repo_context
 from workstack.core.context import WorkstackContext
+
+
+class BranchPR(NamedTuple):
+    """Branch with associated PR information."""
+
+    branch: str
+    pr_number: int
+    title: str
 
 
 def _format_cli_command(cmd: str, check: str) -> str:
@@ -189,7 +198,7 @@ def _validate_landing_preconditions(
 
 def _validate_branches_have_prs(
     ctx: WorkstackContext, repo_root: Path, branches: list[str]
-) -> list[tuple[str, int, str]]:
+) -> list[BranchPR]:
     """Validate all branches have open PRs.
 
     Args:
@@ -198,27 +207,29 @@ def _validate_branches_have_prs(
         branches: List of branch names to validate
 
     Returns:
-        List of tuples (branch, pr_number, title) for all valid branches
+        List of BranchPR for all valid branches
 
     Raises:
         SystemExit: If any branch has invalid PR state
     """
     errors: list[str] = []
-    valid_branches: list[tuple[str, int, str]] = []
+    valid_branches: list[BranchPR] = []
 
     for branch in branches:
-        state, pr_number, title = ctx.github_ops.get_pr_status(repo_root, branch, debug=False)
+        pr_info = ctx.github_ops.get_pr_status(repo_root, branch, debug=False)
 
-        if state == "NONE":
+        if pr_info.state == "NONE":
             errors.append(f"No PR found for branch '{branch}'")
-        elif state == "MERGED":
-            errors.append(f"PR #{pr_number} for '{branch}' is already merged")
-        elif state == "CLOSED":
-            errors.append(f"PR #{pr_number} for '{branch}' is closed")
-        elif state == "OPEN" and pr_number is not None and title is not None:
-            valid_branches.append((branch, pr_number, title))
+        elif pr_info.state == "MERGED":
+            errors.append(f"PR #{pr_info.pr_number} for '{branch}' is already merged")
+        elif pr_info.state == "CLOSED":
+            errors.append(f"PR #{pr_info.pr_number} for '{branch}' is closed")
+        elif (
+            pr_info.state == "OPEN" and pr_info.pr_number is not None and pr_info.title is not None
+        ):
+            valid_branches.append(BranchPR(branch, pr_info.pr_number, pr_info.title))
         else:
-            errors.append(f"Unexpected PR state for '{branch}': {state}")
+            errors.append(f"Unexpected PR state for '{branch}': {pr_info.state}")
 
     if errors:
         click.echo("Error: Cannot land stack\n\nThe following branches have issues:", err=True)
@@ -232,7 +243,7 @@ def _validate_branches_have_prs(
 def _show_landing_plan(
     current_branch: str,
     trunk_branch: str,
-    branches: list[tuple[str, int, str]],
+    branches: list[BranchPR],
     *,
     force: bool,
     dry_run: bool,
@@ -242,7 +253,7 @@ def _show_landing_plan(
     Args:
         current_branch: Name of current branch
         trunk_branch: Name of trunk branch (displayed at bottom)
-        branches: List of (branch, pr_number, title) tuples to land (bottom to top order)
+        branches: List of BranchPR to land (bottom to top order)
         force: If True, skip confirmation
         dry_run: If True, skip confirmation and add dry-run prefix
 
@@ -262,11 +273,11 @@ def _show_landing_plan(
 
     # Display PRs in format: #PR (branch → target) - title
     # Show in landing order (bottom to top)
-    for branch, pr_number, title in branches:
-        pr_styled = click.style(f"#{pr_number}", fg="cyan")
-        branch_styled = click.style(branch, fg="yellow")
+    for branch_pr in branches:
+        pr_styled = click.style(f"#{branch_pr.pr_number}", fg="cyan")
+        branch_styled = click.style(branch_pr.branch, fg="yellow")
         trunk_styled = click.style(trunk_branch, fg="yellow")
-        title_styled = click.style(title, fg="bright_magenta")
+        title_styled = click.style(branch_pr.title, fg="bright_magenta")
 
         line = f"  {pr_styled} ({branch_styled} → {trunk_styled}) - {title_styled}"
         click.echo(line)
@@ -288,7 +299,7 @@ def _show_landing_plan(
 def _land_branch_sequence(
     ctx: WorkstackContext,
     repo_root: Path,
-    branches: list[tuple[str, int, str]],
+    branches: list[BranchPR],
     *,
     verbose: bool,
     dry_run: bool,
@@ -298,7 +309,7 @@ def _land_branch_sequence(
     Args:
         ctx: WorkstackContext with access to operations
         repo_root: Repository root directory
-        branches: List of (branch, pr_number, title) tuples to land
+        branches: List of BranchPR to land
         verbose: If True, show detailed output
         dry_run: If True, show what would be done without executing
 
@@ -313,7 +324,9 @@ def _land_branch_sequence(
 
     check = click.style("✓", fg="green")
 
-    for _idx, (branch, pr_number, _title) in enumerate(branches, 1):
+    for _idx, branch_pr in enumerate(branches, 1):
+        branch = branch_pr.branch
+        pr_number = branch_pr.pr_number
         # Phase 1: Checkout
         if dry_run:
             operations.append(_format_cli_command(f"git checkout {branch}", check))

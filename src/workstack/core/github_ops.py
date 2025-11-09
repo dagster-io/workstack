@@ -16,6 +16,17 @@ import subprocess
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal, NamedTuple
+
+PRState = Literal["OPEN", "MERGED", "CLOSED", "NONE"]
+
+
+class PRInfo(NamedTuple):
+    """PR status information from GitHub API."""
+
+    state: PRState
+    pr_number: int | None
+    title: str | None
 
 
 def execute_gh_command(cmd: list[str], cwd: Path) -> str:
@@ -78,14 +89,14 @@ def parse_github_pr_list(json_str: str, include_checks: bool) -> dict[str, "Pull
     return prs
 
 
-def parse_github_pr_status(json_str: str) -> tuple[str, int | None, str | None]:
+def parse_github_pr_status(json_str: str) -> PRInfo:
     """Parse gh pr status JSON output.
 
     Args:
         json_str: JSON string from gh pr list command for a specific branch
 
     Returns:
-        Tuple of (state, pr_number, title)
+        PRInfo with state, pr_number, and title
         - state: "OPEN", "MERGED", "CLOSED", or "NONE" if no PR exists
         - pr_number: PR number or None if no PR exists
         - title: PR title or None if no PR exists
@@ -94,11 +105,11 @@ def parse_github_pr_status(json_str: str) -> tuple[str, int | None, str | None]:
 
     # If no PR exists for this branch
     if not prs_data:
-        return ("NONE", None, None)
+        return PRInfo("NONE", None, None)
 
     # Take the first (and should be only) PR
     pr = prs_data[0]
-    return (pr["state"], pr["number"], pr["title"])
+    return PRInfo(pr["state"], pr["number"], pr["title"])
 
 
 def _determine_checks_status(check_rollup: list[dict]) -> bool | None:
@@ -186,9 +197,7 @@ class GitHubOps(ABC):
         ...
 
     @abstractmethod
-    def get_pr_status(
-        self, repo_root: Path, branch: str, *, debug: bool
-    ) -> tuple[str, int | None, str | None]:
+    def get_pr_status(self, repo_root: Path, branch: str, *, debug: bool) -> PRInfo:
         """Get PR status for a specific branch.
 
         Args:
@@ -197,7 +206,7 @@ class GitHubOps(ABC):
             debug: If True, print debug information
 
         Returns:
-            Tuple of (state, pr_number, title)
+            PRInfo with state, pr_number, and title
             - state: "OPEN", "MERGED", "CLOSED", or "NONE" if no PR exists
             - pr_number: PR number or None if no PR exists
             - title: PR title or None if no PR exists
@@ -251,9 +260,7 @@ class RealGitHubOps(GitHubOps):
             # gh not installed, not authenticated, or JSON parsing failed
             return {}
 
-    def get_pr_status(
-        self, repo_root: Path, branch: str, *, debug: bool
-    ) -> tuple[str, int | None, str | None]:
+    def get_pr_status(self, repo_root: Path, branch: str, *, debug: bool) -> PRInfo:
         """Get PR status for a specific branch.
 
         Note: Uses try/except as an acceptable error boundary for handling gh CLI
@@ -286,7 +293,7 @@ class RealGitHubOps(GitHubOps):
 
         except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError):
             # gh not installed, not authenticated, or JSON parsing failed
-            return ("NONE", None, None)
+            return PRInfo("NONE", None, None)
 
 
 # ============================================================================
@@ -319,8 +326,6 @@ class DryRunGitHubOps(GitHubOps):
         """Delegate read operation to wrapped implementation."""
         return self._wrapped.get_prs_for_repo(repo_root, include_checks=include_checks)
 
-    def get_pr_status(
-        self, repo_root: Path, branch: str, *, debug: bool
-    ) -> tuple[str, int | None, str | None]:
+    def get_pr_status(self, repo_root: Path, branch: str, *, debug: bool) -> PRInfo:
         """Delegate read operation to wrapped implementation."""
         return self._wrapped.get_pr_status(repo_root, branch, debug=debug)

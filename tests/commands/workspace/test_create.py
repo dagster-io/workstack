@@ -1963,7 +1963,7 @@ def test_create_default_behavior_generates_script() -> None:
 
 
 def test_create_with_long_name_truncation() -> None:
-    """Test that worktree names exceeding 30 characters are truncated consistently."""
+    """Test that worktree base names exceeding 30 characters are truncated before date prefix."""
     runner = CliRunner()
     with runner.isolated_filesystem():
         cwd = Path.cwd()
@@ -2001,11 +2001,13 @@ def test_create_with_long_name_truncation() -> None:
         result = runner.invoke(cli, ["create", long_name], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
-        # Worktree should be created with truncated name (30 chars max)
+        # Worktree base name should be truncated to 30 chars
+        # Note: worktree name doesn't include sanitize_worktree_name truncation in this flow
+        # as create without --plan uses sanitize_worktree_name which truncates to 30
         expected_truncated = "this-is-a-very-long-worktree-n"  # 30 chars
         wt_path = workstacks_dir / expected_truncated
         assert wt_path.exists(), f"Expected worktree at {wt_path}, but it doesn't exist"
-        assert len(expected_truncated) == 30, "Truncated name should be exactly 30 chars"
+        assert len(expected_truncated) == 30, "Truncated base name should be exactly 30 chars"
 
 
 def test_create_with_plan_ensures_uniqueness() -> None:
@@ -2078,12 +2080,15 @@ def test_create_with_plan_ensures_uniqueness() -> None:
 
 
 def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
-    """Test that long plan names produce matching branch/worktree names after truncation.
+    """Test that long plan names produce matching branch/worktree names.
 
-    This test verifies the fix for the naming mismatch issue where:
-    - LLM previously truncated plan titles to 30 chars BEFORE date prefix
-    - Workstack now truncates to 30 chars AFTER date prefix
-    - Result: worktree name == branch name (both 30 chars)
+    Without post-date truncation.
+
+    This test verifies the updated behavior where:
+    - Base name is truncated to 30 chars by sanitize_worktree_name()
+    - Date prefix (YY-MM-DD-) is added to the base name
+    - Final name can exceed 30 characters (up to ~39 chars)
+    - Result: worktree name == branch name (both can be >30 chars)
     """
     runner = CliRunner()
     with runner.isolated_filesystem():
@@ -2092,7 +2097,9 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
         git_dir.mkdir()
 
         # Create plan file with very long name that will exceed 30 chars with date prefix
-        # Example: "25-11-08-" (9 chars) + base name (61 chars) = 70 chars total
+        # The base will be truncated to 30 chars, then date prefix added
+        # Example: base "fix-branch-worktree-name-misma" (30 chars) + date "25-11-08-"
+        # (9 chars) = 39 chars total
         long_plan_name = "fix-branch-worktree-name-mismatch-in-workstack-plan-workflow-plan.md"
         plan_file = cwd / long_plan_name
         plan_file.write_text("# Fix Branch Worktree Name Mismatch\n", encoding="utf-8")
@@ -2146,12 +2153,13 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
             f"Branch '{actual_branch_name}' != worktree '{actual_worktree_name}'"
         )
 
-        # Both should be exactly 30 characters (truncated after date prefix)
-        assert len(actual_worktree_name) == 30, (
-            f"Worktree name: expected 30 chars, got {len(actual_worktree_name)}"
+        # Both should exceed 30 characters (base is 30, date prefix adds 9 more)
+        # Expected: YY-MM-DD-fix-branch-worktree-name-misma (39 chars)
+        assert len(actual_worktree_name) > 30, (
+            f"Worktree name: expected >30 chars, got {len(actual_worktree_name)}"
         )
-        assert len(actual_branch_name) == 30, (
-            f"Branch name: expected 30 chars, got {len(actual_branch_name)}"
+        assert len(actual_branch_name) > 30, (
+            f"Branch name: expected >30 chars, got {len(actual_branch_name)}"
         )
 
         # Both should start with date prefix (YY-MM-DD-)

@@ -976,13 +976,13 @@ Suggested fix: Include rollback procedure or backup strategy
 6. Strip any trailing hyphens or slashes: `base_name = base_name.rstrip('-/')`
 7. Ensure at least one alphanumeric character remains
 
-**No length restriction:** DO NOT truncate the base name. Workstack will handle truncation after adding the date prefix to ensure worktree and branch names match at exactly 30 characters. Your job is only to convert the title to valid kebab-case format.
+**No length restriction:** DO NOT truncate the base name. The base name is limited to 30 characters by `sanitize_worktree_name()`, but the final name (with date prefix) can exceed 30 characters. Workstack no longer truncates after adding the date prefix.
 
 **Resulting names:**
 
 - Filename: `<kebab-case-base>-plan.md` (any length - no LLM truncation)
-- Worktree name: `YY-MM-DD-<kebab-case-base>` truncated to 30 chars by workstack
-- Branch name: `YY-MM-DD-<kebab-case-base>` truncated to 30 chars by workstack (matches worktree)
+- Worktree name: `YY-MM-DD-<kebab-case-base>` (base ≤30 chars, final can be ~39 chars)
+- Branch name: `YY-MM-DD-<kebab-case-base>` (matches worktree exactly)
 
 **If extraction fails:**
 
@@ -1003,40 +1003,46 @@ Use AskUserQuestion tool to get the plan name from the user if extraction fails.
 **Example transformations:**
 
 - "User Authentication System" →
-  - Base: `user-authentication-system` (24 chars, no shortening needed)
+  - Base: `user-authentication-system` (27 chars)
   - Filename: `user-authentication-system-plan.md`
-  - Worktree & Branch: `user-authentication-system`
+  - Worktree & Branch: `25-11-09-user-authentication-system` (36 chars - exceeds 30!)
+
+- "Version-Specific Dignified Python Kits Structure" →
+  - Base: `version-dignified-python-kits` (29 chars, intelligently shortened)
+  - Rationale: Removed "specific", "structure"; kept key terms
+  - Filename: `version-dignified-python-kits-plan.md`
+  - Worktree & Branch: `25-11-09-version-dignified-python-kits` (38 chars - exceeds 30!)
 
 - "Fix: Database Connection Issues" →
-  - Base: `fix-database-connection-issues` (29 chars, no shortening needed)
+  - Base: `fix-database-connection-issues` (30 chars)
   - Filename: `fix-database-connection-issues-plan.md`
-  - Worktree & Branch: `fix-database-connection-issues`
+  - Worktree & Branch: `25-11-09-fix-database-connection-issues` (39 chars - at max!)
 
 - "Refactor Commands to Use GraphiteOps Abstraction" →
   - Base: `refactor-commands-graphite-ops` (30 chars, intelligently shortened)
   - Rationale: Removed filler words "to", "use"; kept key terms "refactor", "commands", "graphite", "ops"
   - Alternative valid approaches: `refactor-cmds-graphite-ops` (26 chars), `refactor-graphiteops-abstr` (26 chars)
   - Filename: `refactor-commands-graphite-ops-plan.md`
-  - Worktree & Branch: `refactor-commands-graphite-ops`
+  - Worktree & Branch: `25-11-09-refactor-commands-graphite-ops` (39 chars - at max!)
 
 - "🚀 Awesome Feature!!!" →
   - Base: `awesome-feature` (15 chars, emojis removed)
   - Filename: `awesome-feature-plan.md`
-  - Worktree & Branch: `awesome-feature`
+  - Worktree & Branch: `25-11-09-awesome-feature` (24 chars)
 
 - "This Is A Very Long Feature Name That Definitely Exceeds The Thirty Character Limit" →
   - Base: `very-long-feature-name` (22 chars, intelligently shortened)
   - Rationale: Removed redundant words "this", "is", "a", "that", "definitely", "exceeds", etc.; kept meaningful core
   - Alternative valid approaches: `long-feature-exceeds-limit` (26 chars), `very-long-feature-exceeds` (25 chars)
   - Filename: `very-long-feature-name-plan.md`
-  - Worktree & Branch: `very-long-feature-name`
+  - Worktree & Branch: `25-11-09-very-long-feature-name` (31 chars - slightly over 30!)
 
 - "Implement User Profile Settings Page with Dark Mode Support" →
   - Base: `user-profile-settings-dark` (26 chars, intelligently shortened)
   - Rationale: Kept "user", "profile", "settings", "dark"; removed "implement", "page", "with", "mode", "support"
   - Alternative valid approaches: `impl-profile-settings-dark` (26 chars), `user-settings-dark-mode` (23 chars)
   - Filename: `user-profile-settings-dark-plan.md`
-  - Worktree & Branch: `user-profile-settings-dark`
+  - Worktree & Branch: `25-11-09-user-profile-settings-dark` (35 chars - exceeds 30!)
 
 - "###" (only special chars) → Prompt user for name
 

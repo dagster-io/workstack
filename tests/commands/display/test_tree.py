@@ -6,7 +6,6 @@ tests/unit/hierarchy/test_branch_graph.py.
 """
 
 import json
-import os
 import tempfile
 from pathlib import Path
 

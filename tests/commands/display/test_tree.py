@@ -5,7 +5,6 @@ Pure business logic (graph filtering, tree building, rendering) is tested in
 tests/unit/hierarchy/test_branch_graph.py.
 """
 
-import json
 import tempfile
 from pathlib import Path
 
@@ -139,64 +138,47 @@ def test_load_graphite_branch_graph() -> None:
     """Test loading branch graph from Graphite cache."""
     repo_root = Path("/repo")
 
-    cache_data = {
-        "branches": [
-            [
-                "main",
-                {
-                    "validationResult": "TRUNK",
-                    "children": ["feature-a", "feature-b"],
-                },
-            ],
-            [
-                "feature-a",
-                {
-                    "parentBranchName": "main",
-                    "children": [],
-                },
-            ],
-            [
-                "feature-b",
-                {
-                    "parentBranchName": "main",
-                    "children": ["feature-b-2"],
-                },
-            ],
-            [
-                "feature-b-2",
-                {
-                    "parentBranchName": "feature-b",
-                    "children": [],
-                },
-            ],
-        ]
+    # Configure FakeGraphiteOps with branch metadata
+    branches = {
+        "main": BranchMetadata.main(
+            children=["feature-a", "feature-b"],
+        ),
+        "feature-a": BranchMetadata.branch(
+            "feature-a",
+            parent="main",
+            children=[],
+        ),
+        "feature-b": BranchMetadata.branch(
+            "feature-b",
+            parent="main",
+            children=["feature-b-2"],
+        ),
+        "feature-b-2": BranchMetadata.branch(
+            "feature-b-2",
+            parent="feature-b",
+            children=[],
+        ),
     }
 
-    # Create fake filesystem with cache file
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmp_git_dir = Path(tmpdir) / ".git"
-        tmp_git_dir.mkdir()
-        cache_file = tmp_git_dir / ".graphite_cache_persist"
-        cache_file.write_text(json.dumps(cache_data), encoding="utf-8")
+    git_ops = FakeGitOps()
+    graphite_ops = FakeGraphiteOps(branches=branches)
+    ctx = create_test_context(git_ops=git_ops, graphite_ops=graphite_ops)
 
-        git_ops = FakeGitOps(git_common_dirs={repo_root: tmp_git_dir})
-        ctx = create_test_context(git_ops=git_ops)
+    graph = _load_graphite_branch_graph(ctx, repo_root)
 
-        graph = _load_graphite_branch_graph(ctx, repo_root)
-
-        assert graph is not None
-        assert graph.trunk_branches == ["main"]
-        assert graph.parent_of == {
-            "feature-a": "main",
-            "feature-b": "main",
-            "feature-b-2": "feature-b",
-        }
-        assert graph.children_of == {
-            "main": ["feature-a", "feature-b"],
-            "feature-a": [],
-            "feature-b": ["feature-b-2"],
-            "feature-b-2": [],
-        }
+    assert graph is not None
+    assert graph.trunk_branches == ["main"]
+    assert graph.parent_of == {
+        "feature-a": "main",
+        "feature-b": "main",
+        "feature-b-2": "feature-b",
+    }
+    assert graph.children_of == {
+        "main": ["feature-a", "feature-b"],
+        "feature-a": [],
+        "feature-b": ["feature-b-2"],
+        "feature-b-2": [],
+    }
 
 
 def test_load_graphite_branch_graph_returns_none_when_missing() -> None:

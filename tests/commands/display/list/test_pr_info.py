@@ -4,67 +4,47 @@ This file tests CLI-specific behavior: emoji rendering, URL formatting, and conf
 Business logic for PR states is tested in tests/unit/status/test_github_pr_collector.py.
 """
 
-import json
-from pathlib import Path
-
 import pytest
 from click.testing import CliRunner
 
 from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.gitops import FakeGitOps
 from tests.fakes.global_config_ops import FakeGlobalConfigOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from tests.test_utils.builders import PullRequestInfoBuilder
+from tests.test_utils.repo_setup import SimulatedWorkstackEnv, simulated_workstack_env
 from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext
 from workstack.core.github_ops import PullRequestInfo
-from workstack.core.gitops import WorktreeInfo
+from workstack.core.graphite_ops import BranchMetadata
 
 
-def _setup_test_with_pr(
+def _build_context_with_pr(
+    env: SimulatedWorkstackEnv,
     branch_name: str,
     pr_info: PullRequestInfo,
     show_pr_info: bool,
-) -> tuple[Path, Path, Path, WorkstackContext]:
-    """Helper to set up a test environment with a PR on a branch.
+) -> WorkstackContext:
+    """Helper to build test context with a PR on a branch.
+
+    Args:
+        env: SimulatedWorkstackEnv instance
+        branch_name: Name of the branch with PR
+        pr_info: PR information
+        show_pr_info: Whether to show PR info in output
 
     Returns:
-        Tuple of (cwd, workstacks_root, feature_worktree, test_ctx)
+        WorkstackContext configured with PR info
     """
-    # Set up isolated environment
-    cwd = Path.cwd()
-    workstacks_root = cwd / "workstacks"
+    # Create linked worktree for feature branch
+    env.create_linked_worktree(branch_name, branch_name, chdir=False)
 
-    # Create git repo structure
-    git_dir = Path(".git")
-    git_dir.mkdir()
-
-    # Create graphite cache with a simple stack
-    graphite_cache = {
-        "branches": [
-            ("main", {"validationResult": "TRUNK", "children": [branch_name]}),
-            (branch_name, {"parentBranchName": "main", "children": []}),
-        ]
-    }
-    (git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache))
-
-    # Create worktree directory for branch so it appears in the stack
-    repo_name = cwd.name
-    workstacks_dir = workstacks_root / repo_name
-    feature_worktree = workstacks_dir / branch_name
-    feature_worktree.mkdir(parents=True)
-
-    # Build fake git ops with worktree for branch
-    git_ops = FakeGitOps(
-        worktrees={
-            cwd: [
-                WorktreeInfo(path=cwd, branch="main"),
-                WorktreeInfo(path=feature_worktree, branch=branch_name),
-            ]
+    # Build ops from branches with stack relationship
+    git_ops, graphite_ops = env.build_ops_from_branches(
+        {
+            "main": BranchMetadata.main(children=[branch_name], sha="abc123"),
+            branch_name: BranchMetadata.branch(branch_name, parent="main", sha="def456"),
         },
-        git_common_dirs={cwd: git_dir, feature_worktree: git_dir},
-        current_branches={cwd: "main", feature_worktree: branch_name},
+        current_branch="main",
     )
 
     # Build fake GitHub ops with PR data
@@ -72,14 +52,12 @@ def _setup_test_with_pr(
 
     # Configure show_pr_info
     global_config_ops = FakeGlobalConfigOps(
-        workstacks_root=workstacks_root,
+        workstacks_root=env.workstacks_root,
         use_graphite=True,
         show_pr_info=show_pr_info,
     )
 
-    graphite_ops = FakeGraphiteOps()
-
-    test_ctx = WorkstackContext(
+    return WorkstackContext(
         git_ops=git_ops,
         global_config_ops=global_config_ops,
         github_ops=github_ops,
@@ -87,8 +65,6 @@ def _setup_test_with_pr(
         shell_ops=FakeShellOps(),
         dry_run=False,
     )
-
-    return cwd, workstacks_root, feature_worktree, test_ctx
 
 
 # ===========================
@@ -107,7 +83,7 @@ def _setup_test_with_pr(
 def test_list_with_stacks_pr_visibility(show_pr_info: bool, expected_visible: bool) -> None:
     """PR info visibility follows the show_pr_info configuration flag."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
+    with simulated_workstack_env(runner) as env:
         pr = PullRequestInfo(
             number=42,
             state="OPEN",
@@ -117,9 +93,7 @@ def test_list_with_stacks_pr_visibility(show_pr_info: bool, expected_visible: bo
             owner="owner",
             repo="repo",
         )
-        _cwd, _workstacks_root, _feature_worktree, test_ctx = _setup_test_with_pr(
-            "feature-branch", pr, show_pr_info=show_pr_info
-        )
+        test_ctx = _build_context_with_pr(env, "feature-branch", pr, show_pr_info=show_pr_info)
 
         # PR info now shown on main line, not just with --stacks
         result = runner.invoke(cli, ["list"], obj=test_ctx)
@@ -154,7 +128,7 @@ def test_list_pr_emoji_mapping(
     This test covers all emoji rendering logic in a single parametrized test.
     """
     runner = CliRunner()
-    with runner.isolated_filesystem():
+    with simulated_workstack_env(runner) as env:
         # Use builder pattern for PR creation
         builder = PullRequestInfoBuilder(number=100, branch="test-branch")
         builder.state = state
@@ -162,9 +136,7 @@ def test_list_pr_emoji_mapping(
         builder.checks_passing = checks
         pr = builder.build()
 
-        _cwd, _workstacks_root, _feature_worktree, test_ctx = _setup_test_with_pr(
-            "test-branch", pr, show_pr_info=True
-        )
+        test_ctx = _build_context_with_pr(env, "test-branch", pr, show_pr_info=True)
 
         # PR info now shown on main line, not just with --stacks
         result = runner.invoke(cli, ["list"], obj=test_ctx)
@@ -187,7 +159,7 @@ def test_list_with_stacks_uses_graphite_url() -> None:
     for better integration with Graphite workflow.
     """
     runner = CliRunner()
-    with runner.isolated_filesystem():
+    with simulated_workstack_env(runner) as env:
         pr = PullRequestInfo(
             number=100,
             state="OPEN",
@@ -197,9 +169,7 @@ def test_list_with_stacks_uses_graphite_url() -> None:
             owner="testowner",
             repo="testrepo",
         )
-        _cwd, _workstacks_root, _feature_worktree, test_ctx = _setup_test_with_pr(
-            "feature", pr, show_pr_info=True
-        )
+        test_ctx = _build_context_with_pr(env, "feature", pr, show_pr_info=True)
 
         # PR info now shown on main line, not just with --stacks
         result = runner.invoke(cli, ["list"], obj=test_ctx)

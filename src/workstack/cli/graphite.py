@@ -73,31 +73,40 @@ def find_worktrees_containing_branch(
     worktrees: list[WorktreeInfo],
     target_branch: str,
 ) -> list[WorktreeInfo]:
-    """Find all worktrees that have target_branch checked out (exact match only).
+    """Find all worktrees where target_branch appears in the stack.
+
+    Searches for worktrees where target_branch is either:
+    - Checked out directly (exact match)
+    - An ancestor or descendant in the worktree's Graphite stack
 
     Args:
-        ctx: Workstack context with git operations
+        ctx: Workstack context with git and graphite operations
         repo_root: Path to the repository root
         worktrees: List of all worktrees from list_worktrees()
         target_branch: Branch name to search for
 
     Returns:
-        List of WorktreeInfo objects where target_branch is checked out.
-        Empty list if no worktrees have the branch checked out.
+        List of WorktreeInfo objects where target_branch appears in the stack.
+        Empty list if no worktrees contain the branch.
 
     Algorithm:
         1. For each worktree:
            a. Get the worktree's checked-out branch
            b. Skip worktrees with detached HEAD (branch=None)
-           c. Check if worktree.branch == target_branch (exact string match)
-           d. If yes, add worktree to results
+           c. Check for exact match first
+           d. If Graphite is available, get the full stack and check if target is in stack
+           e. If yes to either check, add worktree to results
         2. Return all matching worktrees
 
     Example:
+        Given stack: main → feature-1 → feature-2
+        Worktree feature-work is on feature-2
+
         >>> worktrees = ctx.git_ops.list_worktrees(repo.root)
-        >>> matching = find_worktrees_containing_branch(ctx, repo.root, worktrees, "feature-2")
+        >>> # Search for feature-1 (ancestor of feature-2)
+        >>> matching = find_worktrees_containing_branch(ctx, repo.root, worktrees, "feature-1")
         >>> print([wt.path for wt in matching])
-        [Path("/path/to/work/feature-work")]
+        [Path("/path/to/work/feature-work")]  # Found because feature-1 is in stack
     """
     matching_worktrees: list[WorktreeInfo] = []
 
@@ -106,8 +115,16 @@ def find_worktrees_containing_branch(
         if wt.branch is None:
             continue
 
-        # Check if target_branch is exactly checked out in this worktree
+        # First check for exact match (works without Graphite)
         if wt.branch == target_branch:
+            matching_worktrees.append(wt)
+            continue
+
+        # Then check if target is in the worktree's Graphite stack (if available)
+        stack = ctx.graphite_ops.get_branch_stack(ctx.git_ops, repo_root, wt.branch)
+
+        # Check if target_branch is in the stack
+        if stack and target_branch in stack:
             matching_worktrees.append(wt)
 
     return matching_worktrees

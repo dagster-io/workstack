@@ -92,9 +92,11 @@ def test_root_on_trunk_shows_only_trunk() -> None:
         root_section_start = None
         feature_b_section_start = None
         for i, line in enumerate(lines):
-            if line.startswith("root"):
+            # Format is "root      (branch) [path]" with branch name included
+            if line.startswith("root "):
                 root_section_start = i
-            if line.startswith("feature-b"):
+            # Format is "feature-b (branch) [path]" with branch name included
+            if "feature-b" in line and "[" in line:
                 feature_b_section_start = i
 
         assert root_section_start is not None
@@ -181,9 +183,11 @@ def test_root_on_non_trunk_shows_ancestors_only() -> None:
         root_section_start = None
         feature_c_section_start = None
         for i, line in enumerate(lines):
-            if line.startswith("root"):
+            # Format is "root      (branch) [path]" with branch name included
+            if line.startswith("root "):
                 root_section_start = i
-            if line.startswith("feature-c"):
+            # Format is "feature-c (branch) [path]" with branch name included
+            if "feature-c" in line and "[" in line:
                 feature_c_section_start = i
 
         assert root_section_start is not None
@@ -278,11 +282,14 @@ def test_non_root_worktree_shows_descendants_with_worktrees() -> None:
         worktree_a_section_start = None
         worktree_c_section_start = None
         for i, line in enumerate(lines):
-            if line.startswith("root"):
+            # Format is "root      (branch) [path]" with branch name included
+            if line.startswith("root "):
                 root_section_start = i
-            if line.startswith("worktree-a"):
+            # Format is "worktree-a (branch) [path]" with branch name included
+            if "worktree-a" in line and "[" in line:
                 worktree_a_section_start = i
-            if line.startswith("worktree-c"):
+            # Format is "worktree-c (branch) [path]" with branch name included
+            if "worktree-c" in line and "[" in line:
                 worktree_c_section_start = i
 
         assert root_section_start is not None

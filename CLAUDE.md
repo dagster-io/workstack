@@ -40,12 +40,20 @@
 
 ## 📚 Quick Reference
 
-| Need help with...     | See documentation                                        |
-| --------------------- | -------------------------------------------------------- |
-| **Code examples**     | [docs/PATTERNS.md](docs/PATTERNS.md)                     |
-| **Exception details** | [docs/EXCEPTION_HANDLING.md](docs/EXCEPTION_HANDLING.md) |
-| **Quick lookup**      | [docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md)       |
-| **Writing tests**     | [docs/TESTING.md](docs/TESTING.md)                       |
+| Need help with...     | See documentation                                                    |
+| --------------------- | -------------------------------------------------------------------- |
+| **Code examples**     | [docs/agent/patterns.md](docs/agent/patterns.md)                     |
+| **Exception details** | [docs/agent/exception-handling.md](docs/agent/exception-handling.md) |
+| **Quick lookup**      | [docs/agent/quick-reference.md](docs/agent/quick-reference.md)       |
+| **Writing tests**     | [docs/agent/testing.md](docs/agent/testing.md)                       |
+
+## Documentation Structure
+
+The `docs/` folder is organized by audience:
+
+- **docs/agent/**: Agent-focused navigation and coding standards (quick references, patterns, rules)
+- **docs/writing/**: Human-readable guides (agentic programming, writing style guides)
+- Package-specific documentation lives in each package's README (e.g., `packages/workstack-dev/README.md`)
 
 ---
 
@@ -132,7 +140,7 @@ else:
     value = default
 ```
 
-**Full guide**: [docs/EXCEPTION_HANDLING.md](docs/EXCEPTION_HANDLING.md)
+**Full guide**: [docs/agent/exception-handling.md](docs/agent/exception-handling.md)
 
 ### 2. Type Annotations 🔴 MUST
 
@@ -275,7 +283,7 @@ Given stack: `main → feat-1 → feat-2 → feat-3`
 2. Third-party APIs that force exception handling
 3. Adding context before re-raising
 
-**See**: [docs/EXCEPTION_HANDLING.md](docs/EXCEPTION_HANDLING.md)
+**See**: [docs/agent/exception-handling.md](docs/agent/exception-handling.md)
 
 ### File Operations
 
@@ -366,7 +374,7 @@ def test_new_feature_im_building_today():
     assert result == expected_value
 ```
 
-**See**: [docs/TESTING.md](docs/TESTING.md) for comprehensive testing guidance.
+**See**: [docs/agent/testing.md](docs/agent/testing.md) for comprehensive testing guidance.
 
 ### Planning and Documentation
 
@@ -409,10 +417,10 @@ Time-based estimates have no basis in reality for AI-assisted development and sh
 
 ## Related Documentation
 
-- [.agent/AGENTIC_PROGRAMMING.md](.agent/AGENTIC_PROGRAMMING.md) - Agentic programming patterns and best practices
-- [docs/PATTERNS.md](docs/PATTERNS.md) - Code examples
-- [docs/EXCEPTION_HANDLING.md](docs/EXCEPTION_HANDLING.md) - Exception guide
-- [docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md) - Quick lookup
+- [docs/writing/agentic-programming/agentic-programming.md](docs/writing/agentic-programming/agentic-programming.md) - Agentic programming patterns and best practices
+- [docs/agent/patterns.md](docs/agent/patterns.md) - Code examples
+- [docs/agent/exception-handling.md](docs/agent/exception-handling.md) - Exception guide
+- [docs/agent/quick-reference.md](docs/agent/quick-reference.md) - Quick lookup
 - [tests/CLAUDE.md](tests/CLAUDE.md) - Testing patterns
 - [README.md](README.md) - Project overview
 

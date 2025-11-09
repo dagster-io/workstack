@@ -1,14 +1,14 @@
 # Exception Handling Guide
 
-**📍 You are here**: [CLAUDE.md](../CLAUDE.md) → docs/EXCEPTION_HANDLING.md
+**📍 You are here**: [CLAUDE.md](../../CLAUDE.md) → docs/agent/exception-handling.md
 
 **Purpose**: Complete guide to exception handling in workstack. This codebase has strict rules about exception usage.
 
 **Related docs**:
 
-- [CLAUDE.md](../CLAUDE.md) - Core coding rules
-- [PATTERNS.md](PATTERNS.md) - Code examples and patterns
-- [GUIDE.md](GUIDE.md) - Documentation index
+- [CLAUDE.md](../../CLAUDE.md) - Core coding rules
+- [patterns.md](patterns.md) - Code examples and patterns
+- [guide.md](guide.md) - Documentation index
 
 ---
 
@@ -572,10 +572,10 @@ Before writing `try/except`, ask yourself:
 
 ## Related Documentation
 
-- [CLAUDE.md](../CLAUDE.md) - Core coding standards
-- [PATTERNS.md](PATTERNS.md) - Code examples and patterns
-- [GUIDE.md](GUIDE.md) - Documentation index
-- [../tests/CLAUDE.md](../tests/CLAUDE.md) - Testing patterns
+- [CLAUDE.md](../../CLAUDE.md) - Core coding standards
+- [patterns.md](patterns.md) - Code examples and patterns
+- [guide.md](guide.md) - Documentation index
+- [../../tests/CLAUDE.md](../../tests/CLAUDE.md) - Testing patterns
 
 ---
 

@@ -4,7 +4,7 @@
 
 **When to use**: Quick reminder when you know the codebase
 
-**For details**: See CHEATSHEET.md (2K tokens) or PATTERNS.md (8.5K tokens)
+**For details**: See cheatsheet.md (2K tokens) or patterns.md (8.5K tokens)
 
 ---
 
@@ -132,12 +132,12 @@ tests/
 
 | Need                 | Read                      | Tokens |
 | -------------------- | ------------------------- | ------ |
-| Quick ref + mistakes | CHEATSHEET.md             | 2,000  |
-| Detailed patterns    | PATTERNS.md               | 8,500  |
+| Quick ref + mistakes | cheatsheet.md             | 2,000  |
+| Detailed patterns    | patterns.md               | 8,500  |
 | Architecture         | ../.agent/ARCHITECTURE.md | 4,000  |
 | Terminology          | ../GLOSSARY.md            | 2,000  |
-| Exception handling   | EXCEPTION_HANDLING.md     | 5,000  |
-| Testing              | ../tests/CLAUDE.md        | 3,000  |
+| Exception handling   | exception-handling.md     | 5,000  |
+| Testing              | ../../tests/CLAUDE.md     | 3,000  |
 
 ---
 

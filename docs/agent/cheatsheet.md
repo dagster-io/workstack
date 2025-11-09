@@ -59,7 +59,7 @@ else:
 **Why agents do this**: Most Python uses EAFP. This codebase uses LBYL.
 **Detection**: `grep -r "try:" src/workstack/cli/commands/` should find ~0
 **Severity**: 🔴 Critical - Violates core pattern
-**Fix**: Convert to if/else check → See PATTERNS.md:353-365
+**Fix**: Convert to if/else check → See patterns.md:353-365
 
 ---
 
@@ -81,7 +81,7 @@ if wt_path.exists():
 **Why agents do this**: .resolve() seems safe
 **Detection**: `grep -r "\.resolve()" src/ | grep -v "exists()"`
 **Severity**: 🔴 Critical - Causes runtime errors
-**Fix**: Add exists() check before resolve() → See PATTERNS.md:393-416
+**Fix**: Add exists() check before resolve() → See patterns.md:393-416
 
 ---
 
@@ -150,7 +150,7 @@ def create(ctx: WorkstackContext, name: str):
 **Why agents do this**: Forgot decorator
 **Detection**: Test fails with "missing 1 required positional argument"
 **Severity**: 🟡 Important - Runtime error
-**Fix**: Add @click.pass_obj decorator → See PATTERNS.md:593-616
+**Fix**: Add @click.pass_obj decorator → See patterns.md:593-616
 
 ---
 
@@ -167,7 +167,7 @@ click.echo("Created worktree")
 **Why agents do this**: Habit
 **Detection**: `grep -r "print(" src/workstack/cli/commands/`
 **Severity**: 🟢 Style - Works but wrong
-**Fix**: Replace with click.echo() → See PATTERNS.md:624-627
+**Fix**: Replace with click.echo() → See patterns.md:624-627
 
 ---
 
@@ -196,7 +196,7 @@ def process(data):
 **Why agents do this**: Nested logic feels natural
 **Detection**: Look for deeply indented code
 **Severity**: 🟢 Style - Harder to read
-**Fix**: Extract functions or use early returns → See PATTERNS.md:447-516
+**Fix**: Extract functions or use early returns → See patterns.md:447-516
 
 ---
 
@@ -215,7 +215,7 @@ from workstack.core import discover_repo_context
 **Why agents do this**: Seems shorter
 **Detection**: `grep -r "from \." src/workstack/`
 **Severity**: 🟡 Important - Against standards
-**Fix**: Use full module path → See PATTERNS.md:317-327
+**Fix**: Use full module path → See patterns.md:317-327
 
 ---
 
@@ -239,7 +239,7 @@ class GitOps(ABC):
 **Why agents do this**: Protocol seems modern
 **Detection**: `grep -r "Protocol" src/workstack/`
 **Severity**: 🟡 Important - Wrong pattern
-**Fix**: Use ABC with @abstractmethod → See PATTERNS.md:115-158
+**Fix**: Use ABC with @abstractmethod → See patterns.md:115-158
 
 ---
 
@@ -260,7 +260,7 @@ class Config:
 **Why agents do this**: Forgets frozen=True
 **Detection**: `grep -r "@dataclass" src/ | grep -v "frozen"`
 **Severity**: 🟡 Important - Not immutable
-**Fix**: Add frozen=True → See PATTERNS.md:87-109
+**Fix**: Add frozen=True → See patterns.md:87-109
 
 ---
 
@@ -400,9 +400,9 @@ uv run workstack --help
 | Understand terminology | ../GLOSSARY.md             |
 | See architecture       | ../.agent/ARCHITECTURE.md  |
 | Learn coding rules     | ../CLAUDE.md               |
-| See code patterns      | PATTERNS.md                |
-| Understand exceptions  | EXCEPTION_HANDLING.md      |
-| Learn testing          | ../tests/CLAUDE.md         |
+| See code patterns      | patterns.md                |
+| Understand exceptions  | exception-handling.md      |
+| Learn testing          | ../../tests/CLAUDE.md      |
 | Find a feature         | ../.agent/FEATURE_INDEX.md |
 | Quick reference        | QUICK_REFERENCE.md         |
 
@@ -413,7 +413,7 @@ uv run workstack --help
 1. **Start here** → This cheat sheet
 2. **Understand terms** → ../GLOSSARY.md
 3. **See big picture** → ../.agent/ARCHITECTURE.md
-4. **Learn patterns** → PATTERNS.md
+4. **Learn patterns** → patterns.md
 5. **Deep dive rules** → ../CLAUDE.md
 
 ---

@@ -1,6 +1,6 @@
 # Quick Reference
 
-One-line rules with one-line examples. No explanations. For details, see PATTERNS.md.
+One-line rules with one-line examples. No explanations. For details, see patterns.md.
 
 ## Exception Handling
 

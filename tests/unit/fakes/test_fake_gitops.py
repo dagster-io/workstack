@@ -181,3 +181,245 @@ def test_fake_gitops_has_uncommitted_changes_unknown_path() -> None:
     git_ops = FakeGitOps()
 
     assert not git_ops.has_uncommitted_changes(cwd)
+
+
+# ========================================
+# Critical Gap Tests: High-Risk Methods
+# ========================================
+
+
+def test_fake_gitops_get_file_status_empty() -> None:
+    """Test get_file_status with no changes."""
+    cwd = Path("/repo")
+    git_ops = FakeGitOps(file_statuses={cwd: ([], [], [])})
+
+    staged, modified, untracked = git_ops.get_file_status(cwd)
+
+    assert staged == []
+    assert modified == []
+    assert untracked == []
+
+
+def test_fake_gitops_get_file_status_staged_only() -> None:
+    """Test get_file_status with only staged files."""
+    cwd = Path("/repo")
+    git_ops = FakeGitOps(file_statuses={cwd: (["file.txt"], [], [])})
+
+    staged, modified, untracked = git_ops.get_file_status(cwd)
+
+    assert staged == ["file.txt"]
+    assert modified == []
+    assert untracked == []
+
+
+def test_fake_gitops_get_file_status_modified_only() -> None:
+    """Test get_file_status with only modified files."""
+    cwd = Path("/repo")
+    git_ops = FakeGitOps(file_statuses={cwd: ([], ["file.txt"], [])})
+
+    staged, modified, untracked = git_ops.get_file_status(cwd)
+
+    assert staged == []
+    assert modified == ["file.txt"]
+    assert untracked == []
+
+
+def test_fake_gitops_get_file_status_untracked_only() -> None:
+    """Test get_file_status with only untracked files."""
+    cwd = Path("/repo")
+    git_ops = FakeGitOps(file_statuses={cwd: ([], [], ["file.txt"])})
+
+    staged, modified, untracked = git_ops.get_file_status(cwd)
+
+    assert staged == []
+    assert modified == []
+    assert untracked == ["file.txt"]
+
+
+def test_fake_gitops_get_file_status_mixed() -> None:
+    """Test get_file_status with all change types."""
+    cwd = Path("/repo")
+    git_ops = FakeGitOps(file_statuses={cwd: (["a.txt"], ["b.txt"], ["c.txt"])})
+
+    staged, modified, untracked = git_ops.get_file_status(cwd)
+
+    assert staged == ["a.txt"]
+    assert modified == ["b.txt"]
+    assert untracked == ["c.txt"]
+
+
+def test_fake_gitops_move_worktree(tmp_path: Path) -> None:
+    """Test move_worktree updates state and renames directory."""
+    repo_root = tmp_path / "repo"
+    old_wt = tmp_path / "old-wt"
+    new_wt = tmp_path / "new-wt"
+
+    # Create old worktree directory
+    old_wt.mkdir(parents=True)
+
+    git_ops = FakeGitOps(
+        worktrees={repo_root: [WorktreeInfo(path=old_wt, branch="feature", is_root=False)]}
+    )
+
+    git_ops.move_worktree(repo_root, old_wt, new_wt)
+
+    # Verify state updated
+    worktrees = git_ops.list_worktrees(repo_root)
+    assert len(worktrees) == 1
+    assert worktrees[0].path == new_wt
+    assert worktrees[0].branch == "feature"
+
+    # Verify filesystem rename occurred
+    assert not old_wt.exists()
+    assert new_wt.exists()
+
+
+def test_fake_gitops_checkout_detached(tmp_path: Path) -> None:
+    """Test checkout_detached sets branch to None and tracks operation."""
+    cwd = tmp_path / "repo"
+    git_ops = FakeGitOps(
+        current_branches={cwd: "main"},
+        worktrees={tmp_path: [WorktreeInfo(path=cwd, branch="main", is_root=True)]},
+    )
+
+    git_ops.checkout_detached(cwd, "abc123")
+
+    # Verify branch is now None (detached HEAD)
+    assert git_ops.get_current_branch(cwd) is None
+
+    # Verify tracking property updated
+    assert (cwd, "abc123") in git_ops.detached_checkouts
+
+    # Verify worktree state updated
+    worktrees = git_ops.list_worktrees(tmp_path)
+    assert worktrees[0].branch is None
+
+
+def test_fake_gitops_get_branch_head() -> None:
+    """Test get_branch_head returns commit SHA from dict."""
+    repo_root = Path("/repo")
+    git_ops = FakeGitOps(branch_heads={"main": "abc123", "feature": "def456"})
+
+    assert git_ops.get_branch_head(repo_root, "main") == "abc123"
+    assert git_ops.get_branch_head(repo_root, "feature") == "def456"
+    assert git_ops.get_branch_head(repo_root, "nonexistent") is None
+
+
+def test_fake_gitops_get_commit_message() -> None:
+    """Test get_commit_message returns message from dict."""
+    repo_root = Path("/repo")
+    git_ops = FakeGitOps(commit_messages={"abc123": "Initial commit", "def456": "Add feature"})
+
+    assert git_ops.get_commit_message(repo_root, "abc123") == "Initial commit"
+    assert git_ops.get_commit_message(repo_root, "def456") == "Add feature"
+    assert git_ops.get_commit_message(repo_root, "unknown") is None
+
+
+def test_fake_gitops_get_ahead_behind() -> None:
+    """Test get_ahead_behind returns (ahead, behind) tuple."""
+    cwd = Path("/repo")
+    git_ops = FakeGitOps(
+        ahead_behind={
+            (cwd, "main"): (0, 0),
+            (cwd, "feature"): (3, 1),
+        }
+    )
+
+    assert git_ops.get_ahead_behind(cwd, "main") == (0, 0)
+    assert git_ops.get_ahead_behind(cwd, "feature") == (3, 1)
+    assert git_ops.get_ahead_behind(cwd, "unknown") == (0, 0)
+
+
+def test_fake_gitops_get_recent_commits() -> None:
+    """Test get_recent_commits returns commit list with limit."""
+    cwd = Path("/repo")
+    commits = [
+        {"sha": "abc123", "message": "Commit 1"},
+        {"sha": "def456", "message": "Commit 2"},
+        {"sha": "ghi789", "message": "Commit 3"},
+        {"sha": "jkl012", "message": "Commit 4"},
+        {"sha": "mno345", "message": "Commit 5"},
+        {"sha": "pqr678", "message": "Commit 6"},
+    ]
+    git_ops = FakeGitOps(recent_commits={cwd: commits})
+
+    # Default limit is 5
+    result = git_ops.get_recent_commits(cwd, limit=5)
+    assert len(result) == 5
+    assert result[0]["sha"] == "abc123"
+
+    # Custom limit
+    result = git_ops.get_recent_commits(cwd, limit=3)
+    assert len(result) == 3
+
+    # No commits configured
+    result = git_ops.get_recent_commits(Path("/other"), limit=5)
+    assert result == []
+
+
+def test_fake_gitops_prune_worktrees_noop() -> None:
+    """Test prune_worktrees is a no-op (doesn't crash)."""
+    repo_root = Path("/repo")
+    git_ops = FakeGitOps()
+
+    # Should not raise
+    git_ops.prune_worktrees(repo_root)
+
+
+def test_fake_gitops_removed_worktrees_tracking() -> None:
+    """Test removed_worktrees tracking property updates on remove."""
+    repo_root = Path("/repo")
+    wt1 = Path("/repo/wt1")
+    wt2 = Path("/repo/wt2")
+
+    git_ops = FakeGitOps(
+        worktrees={
+            repo_root: [
+                WorktreeInfo(path=wt1, branch="feat-1", is_root=False),
+                WorktreeInfo(path=wt2, branch="feat-2", is_root=False),
+            ]
+        }
+    )
+
+    git_ops.remove_worktree(repo_root, wt1)
+    git_ops.remove_worktree(repo_root, wt2)
+
+    assert wt1 in git_ops.removed_worktrees
+    assert wt2 in git_ops.removed_worktrees
+    assert len(git_ops.removed_worktrees) == 2
+
+
+def test_fake_gitops_checked_out_branches_tracking() -> None:
+    """Test checked_out_branches tracking property updates on checkout."""
+    cwd1 = Path("/repo/wt1")
+    cwd2 = Path("/repo/wt2")
+
+    git_ops = FakeGitOps(
+        current_branches={cwd1: "main", cwd2: "feature"},
+        worktrees={
+            Path("/repo"): [
+                WorktreeInfo(path=cwd1, branch="main", is_root=True),
+                WorktreeInfo(path=cwd2, branch="feature", is_root=False),
+            ]
+        },
+    )
+
+    git_ops.checkout_branch(cwd1, "new-branch")
+
+    assert (cwd1, "new-branch") in git_ops.checked_out_branches
+
+
+def test_fake_gitops_detached_checkouts_tracking() -> None:
+    """Test detached_checkouts tracking property updates on detached checkout."""
+    cwd = Path("/repo")
+    git_ops = FakeGitOps(
+        current_branches={cwd: "main"},
+        worktrees={Path("/repo"): [WorktreeInfo(path=cwd, branch="main", is_root=True)]},
+    )
+
+    git_ops.checkout_detached(cwd, "abc123")
+    git_ops.checkout_detached(cwd, "def456")
+
+    assert (cwd, "abc123") in git_ops.detached_checkouts
+    assert (cwd, "def456") in git_ops.detached_checkouts
+    assert len(git_ops.detached_checkouts) == 2

@@ -233,22 +233,56 @@ Provide helpful, context-aware guidance based on the error type and command outp
 
 ### Step 4: Show Results
 
-After submission, provide a clear summary:
+After submission, provide a clear summary structured as:
+
+**Step 4a: Get Repository Information**
+
+Extract the GitHub owner and repo name from the git remote:
+
+```bash
+git remote get-url origin
+```
+
+Parse the URL to extract `owner` and `repo` (e.g., `dagster-io/workstack` from `git@github.com:dagster-io/workstack.git`)
+
+**Step 4b: Construct Graphite URL**
+
+Build the Graphite PR URL using:
+
+- Owner from Step 4a
+- Repo from Step 4a
+- PR number from Step 3's JSON output
+
+Format: `https://app.graphite.com/github/pr/{owner}/{repo}/{pr_number}`
+
+**Step 4c: Display Summary**
+
+Show results in this format:
 
 ```
-## ✅ Branch Submitted Successfully
+## Branch Submission Complete
 
-- **PR Created**: #235
-- **URL**: https://app.graphite.dev/github/pr/dagster-io/workstack/235
-- **Branch**: merge-artifact-check-commands
+### What Was Done
+
+- Created commit with AI-generated message
+- Submitted branch to Graphite
+- Updated PR #235 metadata
+
+### View PR
+
+https://app.graphite.com/github/pr/dagster-io/workstack/235
 ```
 
 **Formatting requirements:**
 
-- Use bullet list (`-`) for each item on its own line
-- Bold the labels (e.g., `**PR Created**:`, `**URL**:`, `**Branch**:`)
-- Each bullet must be on a separate line with proper line breaks
-- Do NOT concatenate multiple items on the same line
+- Use `##` for main heading
+- Use `###` for section headings
+- List actions taken under "What Was Done" as bullet points
+- Place the Graphite URL at the end under "View PR" section
+- Display the URL as plain text (not a bullet point, not bold)
+- Each section must be separated by a blank line
+
+**CRITICAL**: The Graphite URL MUST be the absolute last line of your output. Do not add any text, confirmations, follow-up questions, or messages after displaying the URL. This ensures the user sees the PR link as the final, most visible output.
 
 ## Error Handling
 
@@ -344,7 +378,9 @@ Before completing, verify:
 - [ ] Commit message has no Claude footer
 - [ ] File paths are relative to repository root
 - [ ] Post-analysis completed successfully
-- [ ] Results reported clearly
+- [ ] Graphite URL constructed correctly from owner/repo/pr_number
+- [ ] Results displayed with "What Was Done" section listing actions
+- [ ] Graphite URL placed at end under "View PR" section
 - [ ] Any errors handled with helpful guidance
 
 ```

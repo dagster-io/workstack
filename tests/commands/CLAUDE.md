@@ -6,14 +6,14 @@ All CLI command tests use dependency injection via WorkstackContext with fake im
 
 ## Subdirectory Organization
 
-| Directory     | Focus                    | When to Load                            |
-| ------------- | ------------------------ | --------------------------------------- |
-| `workspace/`  | create, rename, rm, move | Workspace manipulation commands         |
-| `navigation/` | switch, up, down         | Branch navigation commands              |
-| `display/`    | status, tree, list       | Information display commands            |
-| `shell/`      | Shell integration        | Shell wrapper generation and utilities  |
-| `management/` | gc, plan                 | Workspace cleanup and planning commands |
-| `setup/`      | init, config, completion | Initial configuration commands          |
+| Directory     | Focus                    | When to Load                           |
+| ------------- | ------------------------ | -------------------------------------- |
+| `workspace/`  | create, rename, rm, move | Workspace manipulation commands        |
+| `navigation/` | switch, up, down         | Branch navigation commands             |
+| `display/`    | status, tree, list       | Information display commands           |
+| `shell/`      | Shell integration        | Shell wrapper generation and utilities |
+| `management/` | plan                     | Workspace planning commands            |
+| `setup/`      | init, config, completion | Initial configuration commands         |
 
 ## Standard Test Pattern
 

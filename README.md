@@ -76,8 +76,8 @@ workstack list --stacks          # List with graphite stacks and PR status
 workstack tree                   # Show tree of worktrees with dependencies
 workstack rename OLD NEW         # Rename a worktree
 workstack rm NAME                # Remove worktree
-workstack gc                     # Find safe-to-delete worktrees (merged PRs)
 workstack sync                   # Sync with Graphite, show cleanup candidates
+workstack sync --dry-run         # Show safe-to-delete worktrees (merged PRs)
 workstack sync -f                # Sync and auto-remove merged workstacks
 ```
 
@@ -445,15 +445,17 @@ DAGSTER_GIT_REPO_DIR = "{worktree_path}"
 commands = ["uv venv", "uv run make dev_install"]
 ```
 
-### Garbage Collection
+### Cleanup
 
 Find and clean up merged/closed PR branches:
 
 ```bash
-workstack gc
+workstack sync --dry-run
 # Output:
 #   feature-x [work/feature-x] - merged (PR #123)
-#     → workstack rm feature-x
+#   feature-y [work/feature-y] - closed (PR #456)
+
+workstack sync -f  # Clean up automatically
 ```
 
 Requires GitHub CLI (`gh`) installed and authenticated.

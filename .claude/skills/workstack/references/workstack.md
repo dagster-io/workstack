@@ -655,28 +655,6 @@ workstack rm my-feature --dry-run
 
 ### Cleanup & Maintenance
 
-#### `workstack gc`
-
-Find worktrees safe to delete (merged PRs).
-
-```bash
-workstack gc
-
-# Output:
-# feature-x [work/feature-x] - merged (PR #123)
-#   → workstack rm feature-x
-# feature-y [work/feature-y] - closed (PR #456)
-#   → workstack rm feature-y
-```
-
-**Identifies:**
-
-- Worktrees with merged PRs
-- Worktrees with closed PRs
-- Suggests removal commands
-
-**Requirements**: GitHub CLI (`gh`) installed and authenticated.
-
 #### `workstack sync`
 
 Sync with Graphite and clean up merged worktrees.
@@ -822,9 +800,9 @@ workstack create --from-current-branch
 
 ```bash
 # Find merged worktrees
-workstack gc
+workstack sync --dry-run
 
-# Or auto-cleanup with sync
+# Auto-cleanup with sync
 workstack sync --force
 
 # Manual removal
@@ -996,7 +974,7 @@ workstack list --stacks
 # Shows: ✅ #123, 🚧 #456, 🟣 #789
 
 # Find merged worktrees
-workstack gc
+workstack sync --dry-run
 # Identifies worktrees with merged/closed PRs
 ```
 
@@ -1132,12 +1110,10 @@ echo $DATABASE_URL  # postgresql://localhost/payment-service_db
 # After merging several PRs on GitHub
 
 # Find merged worktrees
-workstack gc
+workstack sync --dry-run
 # Output:
 # feature-a [feature-a] - merged (PR #123)
-#   → workstack rm feature-a
 # feature-b [feature-b] - merged (PR #124)
-#   → workstack rm feature-b
 
 # Manual cleanup
 workstack rm feature-a

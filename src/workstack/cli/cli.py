@@ -6,7 +6,6 @@ from workstack.cli.commands.consolidate import consolidate_cmd
 from workstack.cli.commands.create import create
 from workstack.cli.commands.current import current_cmd
 from workstack.cli.commands.down import down_cmd
-from workstack.cli.commands.gc import gc_cmd
 from workstack.cli.commands.gt import graphite_group
 from workstack.cli.commands.init import init_cmd
 from workstack.cli.commands.jump import jump_cmd
@@ -56,7 +55,6 @@ cli.add_command(remove_cmd)
 cli.add_command(rm_cmd)
 cli.add_command(rename_cmd)
 cli.add_command(config_group)
-cli.add_command(gc_cmd)
 cli.add_command(sync_cmd)
 cli.add_command(tree_cmd)
 cli.add_command(graphite_group)

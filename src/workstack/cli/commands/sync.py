@@ -183,7 +183,7 @@ def sync_cmd(
         _emit("✓ No worktrees to clean up", script_mode=script)
     else:
         for name, branch, state, pr_number in deletable:
-            # Display formatted (reuse gc.py formatting)
+            # Display formatted
             name_part = click.style(name, fg="cyan", bold=True)
             branch_part = click.style(f"[{branch}]", fg="yellow")
             state_part = click.style(state.lower(), fg="green" if state == "MERGED" else "red")

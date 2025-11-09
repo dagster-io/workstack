@@ -31,3 +31,5 @@ Topics to explore in agentic programming articles.
 13. **Get started by using Claude for read-only tasks** - Build trust with agentic programming by starting with low-risk operations: searching logs, analyzing commit histories, running git blame, and distilling large amounts of context for human consumption
 
 14. **Fast tests and high-quality error messages have never been so important** - How agent-driven development amplifies the value of instant feedback loops and clear diagnostic messages for rapid iteration and debugging
+
+15. **Merge conflict resolution through thesis reapplication** - How to resolve merge conflicts by having agents re-apply the original thesis or intent of changes rather than mechanically merging line-level diffs

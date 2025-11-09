@@ -17,9 +17,10 @@ The `make all-ci` target runs these checks in order:
 1. **lint** - Ruff linting checks
 2. **format** - Ruff code formatting checks
 3. **prettier-check** - Markdown formatting checks
-4. **pyright** - Type checking
-5. **test** - Pytest test suite
-6. **sync-kit** - Kit synchronization validation
+4. **md-check** - AGENTS.md standard compliance validation
+5. **pyright** - Type checking
+6. **test** - Pytest test suite
+7. **sync-kit** - Kit synchronization validation
 
 ## Iteration Process
 
@@ -43,6 +44,7 @@ Analyze the output to identify which check(s) failed. Common failure patterns:
 - **Ruff lint failures**: Look for "ruff check" errors
 - **Format failures**: Look for "ruff format --check" or files that would be reformatted
 - **Prettier failures**: Look for markdown files that need formatting
+- **MD-check failures**: Look for CLAUDE.md files that don't properly reference AGENTS.md
 - **Pyright failures**: Look for type errors with file paths and line numbers
 - **Test failures**: Look for pytest failures with test names and assertion errors
 
@@ -90,6 +92,15 @@ Run dot-agent sync to update local artifacts:
 ```bash
 uv run dot-agent sync
 ```
+
+#### MD-Check Failures
+
+AGENTS.md standard violations occur when CLAUDE.md files don't properly reference AGENTS.md:
+
+- Read the error message to identify which CLAUDE.md file has issues
+- Ensure the CLAUDE.md file contains only `@AGENTS.md` (nothing else)
+- Ensure an AGENTS.md file exists in the same directory as the CLAUDE.md file
+- Use Edit tool to fix the CLAUDE.md file or create the missing AGENTS.md file
 
 #### Pyright Type Errors
 
@@ -159,7 +170,7 @@ If you get stuck, report clearly:
 
 I was unable to resolve the following issue after N attempts:
 
-**Check**: [lint/format/prettier/pyright/test]
+**Check**: [lint/format/prettier/md-check/pyright/test]
 
 **Error**:
 [Exact error message]
@@ -190,6 +201,8 @@ All CI checks passed after N iteration(s):
 ✅ **Format (ruff format --check)**: PASSED
 
 ✅ **Prettier**: PASSED
+
+✅ **AGENTS.md Standard (md-check)**: PASSED
 
 ✅ **Pyright**: PASSED
 

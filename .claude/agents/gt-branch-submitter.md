@@ -169,33 +169,76 @@ Parse the commit message created in Step 2 to extract THREE components:
 
 **Step 3b: Call post-analysis command**
 
-The command requires three separate flags. Pass each component as a command-line argument:
+The command requires three separate flags. Pass each component as a properly-quoted command-line argument.
 
-```bash
-dot-agent run gt submit-branch post-analysis \
-  --commit-message "[Full commit message]" \
-  --pr-title "[First line only]" \
-  --pr-body "[Everything after first line]"
+**IMPORTANT:** Never write to temporary files. Use the Task tool with the runner agent and proper shell quoting for multi-line content.
+
+**Pattern 1: Short messages (use Task tool):**
+
+For simple messages without complex special characters, use the Task tool directly:
+
+```
+Task(
+    subagent_type="runner",
+    description="Run submit-branch post-analysis",
+    prompt='Execute: dot-agent run gt submit-branch post-analysis --commit-message "First line
+
+Remaining content
+with multiple lines" --pr-title "First line" --pr-body "Remaining content
+with multiple lines"'
+)
 ```
 
-**Example:**
+**Pattern 2: Complex messages (use Bash tool with heredoc):**
+
+For messages with special characters or complex formatting, use the Bash tool with heredoc syntax:
 
 ```bash
 dot-agent run gt submit-branch post-analysis \
-  --commit-message "Add feature X
+  --commit-message "$(cat <<'COMMIT_MSG'
+Full commit message here
+with multiple lines
+and special characters
+COMMIT_MSG
+)" \
+  --pr-title "First line only" \
+  --pr-body "$(cat <<'PR_BODY'
+Everything after first line
+with multiple lines
+PR_BODY
+)"
+```
+
+**Example (complex message with special characters):**
+
+```bash
+dot-agent run gt submit-branch post-analysis \
+  --commit-message "$(cat <<'COMMIT_MSG'
+Add feature X
 
 This commit adds feature X by implementing Y and Z.
 
 ## Files Changed
 - src/foo.py - Added feature logic
-..." \
+COMMIT_MSG
+)" \
   --pr-title "Add feature X" \
-  --pr-body "This commit adds feature X by implementing Y and Z.
+  --pr-body "$(cat <<'PR_BODY'
+This commit adds feature X by implementing Y and Z.
 
 ## Files Changed
 - src/foo.py - Added feature logic
-..."
+PR_BODY
+)"
 ```
+
+**Key principles:**
+
+- Manipulate text in-context (in your message) not in filesystem
+- Use heredoc with command substitution `"$(cat <<'EOF'...EOF)"` for complex multi-line content
+- The heredoc never touches disk - it's processed entirely in the shell's memory
+- Single quotes in `<<'EOF'` prevent variable expansion
+- Double quotes around `"$(cat...)"` preserve newlines
 
 **Important notes:**
 
@@ -203,7 +246,6 @@ This commit adds feature X by implementing Y and Z.
 - The commit message should be the complete message from Step 2
 - The PR title is just the first line (brief summary)
 - The PR body is everything after the first line
-- Use proper shell quoting to handle multi-line content
 - Do not attempt automatic resolution of errors
 
 **What this does:**
@@ -347,6 +389,24 @@ git -C /path/to/repo status
 
 **Rationale:** Changing directories pollutes the execution context and makes it harder to reason about state. The working directory should remain stable throughout the entire workflow.
 
+### Never Write to Temporary Files
+
+**NEVER write commit messages or other content to temporary files.** Always use in-context manipulation and shell built-ins.
+
+```bash
+# ❌ WRONG - Triggers permission prompts
+echo "$message" > /tmp/commit_msg.txt
+dot-agent run ... --commit-message "$(cat /tmp/commit_msg.txt)"
+
+# ✅ CORRECT - In-memory heredoc
+dot-agent run ... --commit-message "$(cat <<'EOF'
+$message
+EOF
+)"
+```
+
+**Rationale:** Temporary files require filesystem permissions and create unnecessary I/O. Since agents operate in isolated contexts, there's no risk of context pollution from in-memory manipulation.
+
 ## Quality Standards
 
 ### Always
@@ -367,6 +427,7 @@ git -C /path/to/repo status
 - Provide time estimates
 - Use vague language like "various changes"
 - Retry failed operations automatically
+- Write to temporary files (use in-context quoting and shell built-ins instead)
 
 ## Self-Verification
 

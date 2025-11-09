@@ -1,15 +1,12 @@
+# Universal Python Standards
+
+Standards that apply to **ALL Python versions** when following Dignified Python practices.
+
 ---
-name: dignified-python
-description: This skill should be used when editing Python code in the workstack codebase. Use when writing, reviewing, or refactoring Python to ensure adherence to LBYL exception handling patterns, Python 3.13+ type syntax (list[str], str | None), pathlib operations, ABC-based interfaces, absolute imports, and explicit error boundaries at CLI level. Essential for maintaining workstack's dignified Python standards.
----
 
-# Dignified Python - Workstack Python Coding Standards
+## Core Philosophy
 
-## Purpose
-
-This skill provides workstack's Python coding standards and patterns. These standards emphasize **LBYL (Look Before You Leap)** patterns, explicit type annotations, and deterministic error handling.
-
-**Core Philosophy**: Write explicit, predictable code that fails fast at proper boundaries.
+Write explicit, predictable code that fails fast at proper boundaries.
 
 ### Backwards Compatibility Philosophy
 
@@ -32,7 +29,7 @@ Use your judgment to assess whether code is likely part of a public API (e.g., e
 
 ---
 
-## TOP 5 CRITICAL RULES
+## CRITICAL RULES
 
 ### 1. Exception Handling - NEVER for Control Flow 🔴
 
@@ -60,25 +57,7 @@ except KeyError:
 - Third-party APIs that force exception handling
 - Adding context before re-raising
 
-### 2. Type Annotations - Python 3.13+ Syntax Only 🔴
-
-**FORBIDDEN**: `from __future__ import annotations`
-
-```python
-# ✅ CORRECT: Modern Python 3.13+ syntax
-def process_items(items: list[str]) -> dict[str, int]:
-    return {item: len(item) for item in items}
-
-def find_user(user_id: int) -> User | None:
-    ...
-
-# ❌ WRONG: Legacy syntax
-from typing import List, Dict, Optional
-def process_items(items: List[str]) -> Dict[str, int]:
-    ...
-```
-
-### 3. Path Operations - Check Exists First 🔴
+### 2. Path Operations - Check Exists First 🔴
 
 **ALWAYS check `.exists()` BEFORE `.resolve()` or `.is_relative_to()`**
 
@@ -102,7 +81,7 @@ except (OSError, ValueError):
 
 **Why**: `.resolve()` raises `OSError` for invalid paths; `.is_relative_to()` raises `ValueError`
 
-### 4. Dependency Injection - ABC Not Protocol 🔴
+### 3. Dependency Injection - ABC Not Protocol 🔴
 
 ```python
 # ✅ CORRECT: Use ABC for interfaces
@@ -127,7 +106,7 @@ class MyOps(Protocol):
 - Runtime validation of implementations
 - Better IDE support
 
-### 5. Imports - Absolute Only 🟡
+### 4. Imports - Absolute Only 🟡
 
 ```python
 # ✅ CORRECT: Absolute imports
@@ -601,12 +580,6 @@ Before writing `try/except`:
 
 **Default answer should be: Let the exception bubble up.**
 
-Before using legacy type syntax:
-
-- [ ] Am I using `list[...]`, `dict[...]`, `str | None`?
-- [ ] Have I removed `from __future__ import annotations`?
-- [ ] Have I removed `List`, `Dict`, `Optional`, `Union` imports?
-
 Before path operations:
 
 - [ ] Did I check `.exists()` before `.resolve()`?
@@ -637,45 +610,33 @@ Before preserving backwards compatibility:
 
 ---
 
-## REFERENCES
-
----
-
 ## QUICK DECISION TREE
 
-**Writing Python code in workstack?**
+**Writing Python code?**
 
 1. **About to use `try/except`?**
-   - → Check [Exception Handling](#1-exception-handling---never-for-control-flow-) section
    - → Can you use LBYL instead?
    - → Is this an error boundary?
 
-2. **Using type hints?**
-   - → Use `list[str]`, `dict[str, Any]`, `str | None`
-   - → NO `List`, `Dict`, `Optional`, `Union`
-   - → NO `from __future__ import annotations`
-
-3. **Working with paths?**
+2. **Working with paths?**
    - → Check `.exists()` first
    - → Always use `pathlib.Path`
    - → Specify `encoding="utf-8"`
 
-4. **Writing CLI code?**
+3. **Writing CLI code?**
    - → Use `click.echo()`, not `print()`
    - → Use `subprocess.run(..., check=True)`
    - → Exit with `raise SystemExit(1)`
 
-5. **Creating interfaces?**
+4. **Creating interfaces?**
    - → Use `abc.ABC`, not `Protocol`
    - → Use frozen dataclasses for data
 
-6. **Nesting > 4 levels?**
+5. **Nesting > 4 levels?**
    - → Extract helper functions
    - → Use early returns
 
-7. **Considering backwards compatibility?**
+6. **Considering backwards compatibility?**
    - → Is this internal code? → Break and migrate
    - → Did user explicitly request it? → Only then preserve
    - → Default: Refactor freely, migrate callsites
-
-**When in doubt**: Check the references above or ask!

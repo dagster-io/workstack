@@ -25,22 +25,6 @@ artifacts = [
     ".claude/skills/gt-graphite/references/gt-reference.md",
 ]
 
-[kits.dignified-python]
-kit_id = "dignified-python"
-source_type = "bundled"
-version = "0.1.0"
-artifacts = [
-    ".claude/skills/dignified-python/SKILL.md",
-]
-
-[[kits.dignified-python.hooks]]
-id = "compliance-reminder-hook"
-lifecycle = "UserPromptSubmit"
-matcher = "*"
-invocation = "dot-agent run dignified-python compliance-reminder-hook"
-description = "Output dignified-python compliance reminder for UserPromptSubmit hook"
-timeout = 30
-
 [kits.workstack]
 kit_id = "workstack"
 source_type = "bundled"
@@ -49,3 +33,19 @@ artifacts = [
     ".claude/commands/workstack/create-from-plan.md",
     ".claude/commands/workstack/implement-plan.md",
 ]
+
+[kits.dignified-python-313]
+kit_id = "dignified-python-313"
+source_type = "bundled"
+version = "0.1.0"
+artifacts = [
+    ".claude/skills/dignified-python/SKILL.md",
+]
+
+[[kits.dignified-python-313.hooks]]
+id = "compliance-reminder-hook"
+lifecycle = "UserPromptSubmit"
+matcher = "*"
+invocation = "dot-agent run dignified-python compliance-reminder-hook"
+description = "Output dignified-python compliance reminder for UserPromptSubmit hook"
+timeout = 30

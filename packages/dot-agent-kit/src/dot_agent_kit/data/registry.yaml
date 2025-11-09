@@ -4,9 +4,13 @@ kits:
     source_type: bundled
     description: Consolidated development tool runner agent with integrated tool documentation for pytest, pyright, ruff, prettier, make, and gt
     version: "0.1.0"
-  - kit_id: dignified-python
+  - kit_id: dignified-python-310
     source_type: bundled
-    description: Workstack Python coding standards with automatic suggestion hook
+    description: Workstack Python 3.10-3.12 coding standards with automatic suggestion hook
+    version: "0.1.0"
+  - kit_id: dignified-python-313
+    source_type: bundled
+    description: Workstack Python 3.13+ coding standards with automatic suggestion hook
     version: "0.1.0"
   - kit_id: gt
     source_type: bundled

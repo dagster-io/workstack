@@ -169,96 +169,86 @@ This command succeeds when ALL of the following are true:
 
 You are executing the `/workstack:create-from-plan` command. Follow these steps carefully:
 
-### Step 1: Verify Scope and Constraints
-
-**Error Handling Template:**
-All errors must follow this format:
-
-```
-❌ Error: [Brief description in 5-10 words]
-
-Details: [Specific error message, relevant context, or diagnostic info]
-
-Suggested action: [1-3 concrete steps to resolve]
-```
-
-**YOUR ONLY TASKS:**
-
-1. Extract implementation plan from conversation
-2. Interactively enhance plan for autonomous execution
-3. Apply guidance modifications if provided
-4. Save enhanced plan to disk as markdown file
-5. Run `workstack create --plan <file>`
-6. Display next steps to user
-
-**FORBIDDEN ACTIONS:**
-
-- Writing ANY code files (.py, .ts, .js, etc.)
-- Making ANY edits to existing codebase
-- Running ANY commands except `git rev-parse` and `workstack create`
-- Implementing ANY part of the plan
-
-This command sets up the workspace. Implementation happens in the worktree via `/workstack:implement-plan`.
-
-**Plan Mode Handling:**
-
-This command cannot run while in plan mode. The workflow is:
-
-1. User presents a plan (optionally in plan mode)
-2. User invokes `/workstack:create-from-plan`
-3. If in plan mode, command informs user to exit plan mode and rerun, then aborts
-4. If not in plan mode, extracts, enhances, and saves the plan to disk
-5. Creates worktree with the plan
-6. User runs: `workstack switch <name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
-7. Implementation happens in the new worktree
-
-**Remember:** This command only prepares the workspace - actual code implementation happens after switching to the worktree.
-
 ### Step 1: Check Plan Mode and Abort (If Active)
 
-**Check if currently in plan mode:**
+**Detection Strategy:**
 
-Plan mode is indicated by the presence of an explicit system reminder tag in the **CURRENT user message context** (not historical messages).
+Plan mode is indicated by a `<system-reminder>` tag injected into the **current message context** by the Claude Code infrastructure. This tag is added dynamically to the user's message when plan mode is active.
 
-**How to detect plan mode:**
+**How to Detect Plan Mode:**
 
-Check for this **exact system reminder tag** in the **MOST RECENT system reminders** (those appearing immediately before/with the user's current request):
-
-```
-<system-reminder>
-Plan mode is active. The user indicated that they do not want you to execute yet...
-</system-reminder>
-```
-
-**Detection logic:**
-
-- If this system reminder tag appears in the CURRENT message context → Plan mode is ACTIVE
-- If this system reminder tag is absent from recent context → Plan mode is NOT active
-- **CRITICAL**: Ignore system reminders from earlier in conversation history
-- Only check reminders that appear with or immediately before the current command invocation
-- Do NOT use conversation content, context, or other heuristics to determine plan mode status
-- ONLY the presence of this explicit system tag in CURRENT context indicates plan mode
-
-**If in plan mode:**
-
-1. Do NOT proceed with any other steps
-2. Display this message to the user:
+Search for this pattern in the CURRENT user message (not historical conversation):
 
 ```
-⚠️ This command cannot run in plan mode.
-
-Please exit plan mode first, then rerun this command:
-
-/workstack:create-from-plan
+<system-reminder>Plan mode is active
 ```
 
-3. STOP execution immediately - do NOT continue to Step 2
+Or more broadly (regex-like pattern):
 
-**If NOT in plan mode:**
+```
+<system-reminder>.*[Pp]lan mode is active.*</system-reminder>
+```
 
-- Skip this step and proceed directly to Step 2
+**Critical Implementation Details:**
 
-This ensures the command only runs in execution mode, not planning mode.
+1. **Where to Look**: Check ONLY in the immediate context of the current user message that invoked this command
+   - NOT in conversation history
+   - NOT in previous messages
+   - ONLY in system reminders attached to the CURRENT invocation
+
+2. **What to Search For**: The system reminder will contain:
+   - Opening tag: `<system-reminder>`
+   - Text containing: "Plan mode is active" (case variations possible)
+   - Additional text about "Use only read-type tools" or "read-only"
+   - Closing tag: `</system-reminder>`
+
+3. **Detection Logic**:
+   ```
+   IF current_message contains "<system-reminder>" AND
+      content_within_tag matches "plan mode is active":
+      → Plan mode is ACTIVE
+   ELSE:
+      → Plan mode is NOT active
+   ```
+
+**Why This Detection Works:**
+
+- System reminders are injected at runtime when the user message is processed
+- They appear as part of the message content that Claude receives
+- They're not visible to the user but are visible to Claude
+- They're cleared when plan mode is exited, so absence = not in plan mode
+
+**If Plan Mode is DETECTED:**
+
+Display this message and STOP execution immediately:
+
+```
+⚠️ Plan Mode Detected
+
+This command cannot run while plan mode is active.
+
+To proceed:
+1. Exit plan mode by pressing Shift+Tab
+2. Rerun this command: /workstack:create-from-plan
+
+Note: Plan mode prevents file modifications and command execution,
+which this command requires to create worktrees and save files.
+```
+
+**DO NOT proceed to Step 2 if plan mode is detected.**
+
+**If Plan Mode is NOT detected:**
+
+- Continue to Step 2 normally
+
+**Alternative Detection Method (Fallback):**
+
+If system reminder detection is inconclusive, you may attempt a minimal write operation:
+
+- Try to create a temporary test file in `/tmp/`
+- If blocked with "plan mode active" error → Plan mode is ON
+- If succeeds → Plan mode is OFF (delete the test file immediately)
+- This is a fallback only - prefer the system reminder detection method
 
 ### Step 2: Verify Scope and Constraints
 
@@ -1278,7 +1268,4 @@ Location: `<worktree-path>`
 - User must manually run `workstack switch` and `/workstack:implement-plan` to begin implementation
 - The `--permission-mode acceptEdits` flag is included to automatically accept edits during implementation
 - Always provide clear feedback at each step
-
-```
-
-```
+- **Plan mode detection is deterministic** using system reminder tags

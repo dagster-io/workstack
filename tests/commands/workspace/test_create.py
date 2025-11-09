@@ -48,6 +48,7 @@ def test_create_basic_worktree() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -90,6 +91,7 @@ def test_create_with_custom_branch_name() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -136,6 +138,7 @@ def test_create_with_plan_file() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -181,6 +184,7 @@ def test_create_with_plan_file_removes_plan_word() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -242,6 +246,7 @@ def test_create_sanitizes_worktree_name() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -287,6 +292,7 @@ def test_create_sanitizes_branch_name() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -328,6 +334,7 @@ def test_create_detects_default_branch() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -384,11 +391,11 @@ def test_create_from_current_branch_in_worktree() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=current_worktree,
             dry_run=False,
         )
 
-        with mock.patch("pathlib.Path.cwd", return_value=current_worktree):
-            result = runner.invoke(cli, ["create", "--from-current-branch"], obj=test_ctx)
+        result = runner.invoke(cli, ["create", "--from-current-branch"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
 
@@ -435,6 +442,7 @@ def test_create_fails_if_worktree_exists() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -479,6 +487,7 @@ def test_create_runs_post_create_commands() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -523,6 +532,7 @@ def test_create_sets_env_variables() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -571,6 +581,7 @@ def test_create_uses_graphite_when_enabled() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -618,6 +629,7 @@ def test_create_blocks_when_staged_changes_present_with_graphite_enabled() -> No
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -661,6 +673,7 @@ def test_create_uses_git_when_graphite_disabled() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -699,6 +712,7 @@ def test_create_allows_staged_changes_when_graphite_disabled() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -730,6 +744,7 @@ def test_create_invalid_worktree_name() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -772,6 +787,7 @@ def test_create_plan_file_not_found() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -816,6 +832,7 @@ def test_create_no_post_flag_skips_commands() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -857,6 +874,7 @@ def test_create_from_current_branch() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -896,6 +914,7 @@ def test_create_from_branch() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -929,6 +948,7 @@ def test_create_requires_name_or_flag() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -970,6 +990,7 @@ def test_create_from_current_branch_on_main_fails() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -1022,6 +1043,7 @@ def test_create_detects_branch_already_checked_out() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -1066,6 +1088,7 @@ def test_create_from_current_branch_on_master_fails() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -1110,6 +1133,7 @@ def test_create_with_keep_plan_flag() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -1151,6 +1175,7 @@ def test_create_keep_plan_without_plan_fails() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -1229,11 +1254,11 @@ def test_from_current_branch_with_main_in_use_prefers_graphite_parent() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(branches=graphite_branches),
             shell_ops=FakeShellOps(),
+            cwd=current_worktree,
             dry_run=False,
         )
 
-        with mock.patch("pathlib.Path.cwd", return_value=current_worktree):
-            result = runner.invoke(cli, ["create", "--from-current-branch"], obj=test_ctx)
+        result = runner.invoke(cli, ["create", "--from-current-branch"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Should checkout feature-1 (the Graphite parent), not main
@@ -1315,11 +1340,11 @@ def test_from_current_branch_with_parent_in_use_falls_back_to_detached_head() ->
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(branches=graphite_branches),
             shell_ops=FakeShellOps(),
+            cwd=current_worktree,
             dry_run=False,
         )
 
-        with mock.patch("pathlib.Path.cwd", return_value=current_worktree):
-            result = runner.invoke(cli, ["create", "--from-current-branch"], obj=test_ctx)
+        result = runner.invoke(cli, ["create", "--from-current-branch"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Should use detached HEAD since both main and feature-1 are in use
@@ -1393,11 +1418,11 @@ def test_from_current_branch_without_graphite_falls_back_to_main() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(branches=graphite_branches),
             shell_ops=FakeShellOps(),
+            cwd=current_worktree,
             dry_run=False,
         )
 
-        with mock.patch("pathlib.Path.cwd", return_value=current_worktree):
-            result = runner.invoke(cli, ["create", "--from-current-branch"], obj=test_ctx)
+        result = runner.invoke(cli, ["create", "--from-current-branch"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Should checkout main since no Graphite parent exists
@@ -1468,11 +1493,11 @@ def test_from_current_branch_no_graphite_main_in_use_uses_detached_head() -> Non
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(branches=graphite_branches),
             shell_ops=FakeShellOps(),
+            cwd=current_worktree,
             dry_run=False,
         )
 
-        with mock.patch("pathlib.Path.cwd", return_value=current_worktree):
-            result = runner.invoke(cli, ["create", "--from-current-branch"], obj=test_ctx)
+        result = runner.invoke(cli, ["create", "--from-current-branch"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Should use detached HEAD since no parent and main is in use
@@ -1512,6 +1537,7 @@ def test_create_with_json_output() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -1568,6 +1594,7 @@ def test_create_existing_worktree_with_json() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -1614,6 +1641,7 @@ def test_create_json_and_script_mutually_exclusive() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -1659,6 +1687,7 @@ def test_create_with_json_and_plan_file() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -1716,6 +1745,7 @@ def test_create_with_json_no_plan() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -1760,6 +1790,7 @@ def test_create_with_stay_prevents_script_generation() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -1805,6 +1836,7 @@ def test_create_with_stay_and_json() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -1856,6 +1888,7 @@ def test_create_with_stay_and_plan() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -1905,6 +1938,7 @@ def test_create_default_behavior_generates_script() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -1949,6 +1983,7 @@ def test_create_with_long_name_truncation() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -2001,6 +2036,7 @@ def test_create_with_plan_ensures_uniqueness() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -2083,6 +2119,7 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=cwd,
             dry_run=False,
         )
 

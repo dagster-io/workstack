@@ -51,7 +51,7 @@ def consolidate_cmd(ctx: WorkstackContext, force: bool, dry_run: bool) -> None:
         workstack consolidate --force
     """
     # Get current worktree and branch
-    current_worktree = Path.cwd()
+    current_worktree = ctx.cwd
     current_branch = ctx.git_ops.get_current_branch(current_worktree)
 
     if current_branch is None:

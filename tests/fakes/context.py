@@ -1,5 +1,7 @@
 """Factory functions for creating test contexts."""
 
+from pathlib import Path
+
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.global_config_ops import FakeGlobalConfigOps
@@ -14,6 +16,7 @@ def create_test_context(
     github_ops: FakeGitHubOps | None = None,
     graphite_ops: FakeGraphiteOps | None = None,
     shell_ops: FakeShellOps | None = None,
+    cwd: Path | None = None,
     dry_run: bool = False,
 ) -> WorkstackContext:
     """Create test context with optional pre-configured ops.
@@ -29,6 +32,9 @@ def create_test_context(
                      If None, creates empty FakeGraphiteOps.
         shell_ops: Optional FakeShellOps with test configuration.
                   If None, creates empty FakeShellOps (no shell detected).
+        cwd: Optional current working directory path for test context.
+            If None, defaults to Path("/test/default/cwd") to prevent accidental use
+            of real Path.cwd() in tests.
         dry_run: Whether to set dry_run mode
 
     Returns:
@@ -74,5 +80,6 @@ def create_test_context(
         github_ops=github_ops,
         graphite_ops=graphite_ops,
         shell_ops=shell_ops,
+        cwd=cwd or Path("/test/default/cwd"),
         dry_run=dry_run,
     )

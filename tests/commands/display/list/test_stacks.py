@@ -93,6 +93,7 @@ def test_list_with_stacks_flag() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -172,6 +173,7 @@ def test_list_with_stacks_graphite_disabled() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -211,6 +213,7 @@ def test_list_with_stacks_no_graphite_cache() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -320,6 +323,7 @@ def test_list_with_stacks_highlights_current_branch_not_worktree_branch() -> Non
             github_ops=FakeGitHubOps(),
             graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -411,6 +415,7 @@ def test_list_with_stacks_root_repo_does_not_duplicate_branch() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -503,6 +508,7 @@ def test_list_with_stacks_shows_descendants_with_worktrees() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -602,6 +608,7 @@ def test_list_with_stacks_hides_descendants_without_worktrees() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -700,6 +707,7 @@ def test_list_with_stacks_shows_descendants_with_gaps() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -791,6 +799,7 @@ def test_list_with_stacks_corrupted_cache() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -862,6 +871,7 @@ More content.
             github_ops=FakeGitHubOps(),
             graphite_ops=RealGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -929,6 +939,7 @@ def test_list_without_stacks_shows_plan_summary() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=RealGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -988,6 +999,7 @@ def test_list_with_stacks_no_plan_file() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=RealGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -1052,6 +1064,7 @@ def test_list_with_stacks_plan_without_frontmatter() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=RealGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 

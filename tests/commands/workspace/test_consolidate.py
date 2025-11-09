@@ -54,6 +54,7 @@ def _create_test_context(
         github_ops=FakeGitHubOps(),
         graphite_ops=graphite_ops,
         shell_ops=FakeShellOps(),
+        cwd=Path("/test/default/cwd"),
         dry_run=False,
     )
 
@@ -273,6 +274,7 @@ def test_consolidate_detached_head_error() -> None:
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),
+        cwd=Path("/test/default/cwd"),
         dry_run=False,
     )
 

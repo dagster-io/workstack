@@ -348,8 +348,8 @@ def _display_branch_stack(
 
 def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool) -> None:
     """Internal function to list worktrees."""
-    repo = discover_repo_context(ctx, Path.cwd())
-    current_dir = Path.cwd().resolve()
+    repo = discover_repo_context(ctx, ctx.cwd)
+    current_dir = ctx.cwd.resolve()
 
     # Get branch info for all worktrees
     worktrees = ctx.git_ops.list_worktrees(repo.root)

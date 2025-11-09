@@ -165,7 +165,7 @@ def _validate_landing_preconditions(
         raise SystemExit(1)
 
     # Check no branches in stack are checked out in other worktrees
-    current_worktree = Path.cwd().resolve()
+    current_worktree = ctx.cwd.resolve()
     worktree_conflicts: list[tuple[str, Path]] = []
 
     for branch in branches_to_land:
@@ -572,10 +572,10 @@ def land_stack(ctx: WorkstackContext, force: bool, verbose: bool, dry_run: bool)
         Result: Lands feat-1, feat-2, feat-3 (in that order, bottom to top)
     """
     # Discover repository context
-    repo = discover_repo_context(ctx, Path.cwd())
+    repo = discover_repo_context(ctx, ctx.cwd)
 
     # Get current branch
-    current_branch = ctx.git_ops.get_current_branch(Path.cwd())
+    current_branch = ctx.git_ops.get_current_branch(ctx.cwd)
 
     # Get branches to land
     branches_to_land = _get_branches_to_land(ctx, repo.root, current_branch or "")

@@ -71,6 +71,7 @@ def test_list_with_trunk_branch(trunk_branch: str) -> None:
             graphite_ops=FakeGraphiteOps(),
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 

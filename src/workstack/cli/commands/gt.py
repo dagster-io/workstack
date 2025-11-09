@@ -96,7 +96,7 @@ def graphite_branches_cmd(ctx: WorkstackContext, format: str, stack: str | None)
         raise SystemExit(1)
 
     # Discover repository
-    repo = discover_repo_context(ctx, Path.cwd())
+    repo = discover_repo_context(ctx, ctx.cwd)
 
     # Get branches from GraphiteOps
     branches_dict = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo.root)

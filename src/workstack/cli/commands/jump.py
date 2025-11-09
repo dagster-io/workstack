@@ -60,7 +60,7 @@ def _perform_jump(
         raise SystemExit(1)
 
     # Check if we're already on the target branch in the target worktree
-    current_cwd = Path.cwd()
+    current_cwd = ctx.cwd
     if current_cwd == target_path and current_branch_in_worktree == branch:
         # Already in the right place - activation script will show the message
         return
@@ -128,7 +128,7 @@ def jump_cmd(ctx: WorkstackContext, branch: str, script: bool) -> None:
 
     If multiple worktrees contain the branch, all options are shown.
     """
-    repo = discover_repo_context(ctx, Path.cwd())
+    repo = discover_repo_context(ctx, ctx.cwd)
 
     # Get all worktrees
     worktrees = ctx.git_ops.list_worktrees(repo.root)

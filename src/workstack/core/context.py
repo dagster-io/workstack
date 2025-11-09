@@ -1,6 +1,7 @@
 """Application context with dependency injection."""
 
 from dataclasses import dataclass
+from pathlib import Path
 
 from workstack.core.github_ops import DryRunGitHubOps, GitHubOps, RealGitHubOps
 from workstack.core.gitops import DryRunGitOps, GitOps, RealGitOps
@@ -26,6 +27,7 @@ class WorkstackContext:
     github_ops: GitHubOps
     graphite_ops: GraphiteOps
     shell_ops: ShellOps
+    cwd: Path  # Current working directory at CLI invocation
     dry_run: bool
 
 
@@ -65,5 +67,6 @@ def create_context(*, dry_run: bool) -> WorkstackContext:
         github_ops=github_ops,
         graphite_ops=graphite_ops,
         shell_ops=RealShellOps(),
+        cwd=Path.cwd(),
         dry_run=dry_run,
     )

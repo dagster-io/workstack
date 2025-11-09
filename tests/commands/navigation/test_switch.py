@@ -286,6 +286,7 @@ def test_complete_worktree_names_without_context(
             github_ops=RealGitHubOps(),
             graphite_ops=RealGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 

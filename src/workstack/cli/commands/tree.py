@@ -1,7 +1,5 @@
 """Tree visualization command for workstack."""
 
-from pathlib import Path
-
 import click
 
 from workstack.cli.core import discover_repo_context
@@ -30,7 +28,7 @@ def tree_cmd(ctx: WorkstackContext) -> None:
         [@worktree-name] = worktree directory name
         Current worktree is highlighted in bright green
     """
-    repo = discover_repo_context(ctx, Path.cwd())
+    repo = discover_repo_context(ctx, ctx.cwd)
 
     # Build tree structure (will exit with error if Graphite cache missing)
     roots = build_workstack_tree(ctx, repo.root)

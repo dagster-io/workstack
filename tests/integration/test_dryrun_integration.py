@@ -74,6 +74,7 @@ def test_dryrun_read_operations_still_work(tmp_path: Path) -> None:
         github_ops=DryRunGitHubOps(FakeGitHubOps()),
         graphite_ops=DryRunGraphiteOps(FakeGraphiteOps()),
         shell_ops=FakeShellOps(),
+        cwd=Path("/test/default/cwd"),
         dry_run=True,
     )
 

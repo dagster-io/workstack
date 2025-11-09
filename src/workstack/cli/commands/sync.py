@@ -110,18 +110,18 @@ def sync_cmd(
         raise SystemExit(1)
 
     # Step 2: Save current location
-    repo = discover_repo_context(ctx, Path.cwd())
+    repo = discover_repo_context(ctx, ctx.cwd)
     workstacks_dir = ensure_workstacks_dir(repo)
 
     # Determine current worktree (if any)
-    current_wt_path = Path.cwd().resolve()
+    current_wt_path = ctx.cwd.resolve()
     current_worktree_name: str | None = None
 
     if current_wt_path.parent == workstacks_dir:
         current_worktree_name = current_wt_path.name
 
     # Step 3: Switch to root (only if not already at root)
-    if Path.cwd().resolve() != repo.root:
+    if ctx.cwd.resolve() != repo.root:
         os.chdir(repo.root)
 
     # Step 4: Run `gt sync`

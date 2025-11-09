@@ -1,7 +1,5 @@
 """Status command implementation."""
 
-from pathlib import Path
-
 import click
 
 from workstack.cli.core import discover_repo_context
@@ -20,8 +18,8 @@ from workstack.status.renderers.simple import SimpleRenderer
 def status_cmd(ctx: WorkstackContext) -> None:
     """Show comprehensive status of current worktree."""
     # Discover repository context
-    repo = discover_repo_context(ctx, Path.cwd())
-    current_dir = Path.cwd().resolve()
+    repo = discover_repo_context(ctx, ctx.cwd)
+    current_dir = ctx.cwd.resolve()
 
     # Find which worktree we're in
     worktrees = ctx.git_ops.list_worktrees(repo.root)

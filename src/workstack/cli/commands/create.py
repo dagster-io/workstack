@@ -270,7 +270,7 @@ def add_worktree(
         ctx.git_ops.add_worktree(repo_root, path, branch=branch, ref=None, create_branch=False)
     elif branch:
         if use_graphite:
-            cwd = Path.cwd()
+            cwd = ctx.cwd
             original_branch = ctx.git_ops.get_current_branch(cwd)
             if original_branch is None:
                 raise ValueError("Cannot create graphite branch from detached HEAD")
@@ -484,7 +484,7 @@ def create(
     # Handle --from-current-branch flag
     if from_current_branch:
         # Get the current branch
-        current_branch = ctx.git_ops.get_current_branch(Path.cwd())
+        current_branch = ctx.git_ops.get_current_branch(ctx.cwd)
         if current_branch is None:
             click.echo("Error: HEAD is detached (not on a branch)", err=True)
             raise SystemExit(1)
@@ -554,7 +554,7 @@ def create(
         )
         raise SystemExit(1)
 
-    repo = discover_repo_context(ctx, Path.cwd())
+    repo = discover_repo_context(ctx, ctx.cwd)
     workstacks_dir = ensure_workstacks_dir(repo)
     cfg = load_config(workstacks_dir)
 
@@ -585,7 +585,7 @@ def create(
     # Handle from-current-branch logic: switch current worktree first
     to_branch = None
     if from_current_branch:
-        current_branch = ctx.git_ops.get_current_branch(Path.cwd())
+        current_branch = ctx.git_ops.get_current_branch(ctx.cwd)
         if current_branch is None:
             click.echo("Error: Unable to determine current branch", err=True)
             raise SystemExit(1)
@@ -624,10 +624,10 @@ def create(
         checkout_path = ctx.git_ops.is_branch_checked_out(repo.root, to_branch)
         if checkout_path is not None:
             # Target branch is in use, fall back to detached HEAD
-            ctx.git_ops.checkout_detached(Path.cwd(), current_branch)
+            ctx.git_ops.checkout_detached(ctx.cwd, current_branch)
         else:
             # Target branch is available, checkout normally
-            ctx.git_ops.checkout_branch(Path.cwd(), to_branch)
+            ctx.git_ops.checkout_branch(ctx.cwd, to_branch)
 
         # Create worktree with existing branch
         add_worktree(

@@ -75,12 +75,12 @@ def _resolve_current_worktree(ctx: WorkstackContext, repo_root: Path) -> Path:
 
     Raises SystemExit if not in a git repository or not in any worktree.
     """
-    git_common_dir = ctx.git_ops.get_git_common_dir(Path.cwd())
+    git_common_dir = ctx.git_ops.get_git_common_dir(ctx.cwd)
     if git_common_dir is None:
         click.echo("Error: Not in a git repository", err=True)
         raise SystemExit(1)
 
-    cwd = Path.cwd().resolve()
+    cwd = ctx.cwd.resolve()
     worktrees = ctx.git_ops.list_worktrees(repo_root)
     wt_path = _find_worktree_containing_path(worktrees, cwd)
     if wt_path is None:
@@ -338,7 +338,7 @@ def move_cmd(
         workstack move --current new-wt --ref develop
     """
     # Discover repository context
-    repo = discover_repo_context(ctx, Path.cwd())
+    repo = discover_repo_context(ctx, ctx.cwd)
     workstacks_dir = ensure_workstacks_dir(repo)
 
     # Resolve source worktree

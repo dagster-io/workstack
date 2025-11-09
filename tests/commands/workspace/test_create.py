@@ -142,9 +142,11 @@ def test_create_with_plan_file() -> None:
         result = runner.invoke(cli, ["create", "--plan", str(plan_file)], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
-        # Should create worktree with "plan" stripped from filename
-        wt_path = workstacks_dir / "my-feature"
-        assert wt_path.exists()
+        # Should create worktree with date prefix and "plan" stripped from filename
+        # Name format: YY-MM-DD-my-feature
+        created_worktrees = [d for d in workstacks_dir.iterdir() if d.is_dir() and d.name.endswith("-my-feature")]
+        assert len(created_worktrees) == 1, f"Expected one worktree ending with '-my-feature', found: {[d.name for d in workstacks_dir.iterdir()]}"
+        wt_path = created_worktrees[0]
         # Plan file should be moved to .PLAN.md
         assert (wt_path / ".PLAN.md").exists()
         assert not plan_file.exists()
@@ -200,8 +202,10 @@ def test_create_with_plan_file_removes_plan_word() -> None:
             result = runner.invoke(cli, ["create", "--plan", str(plan_file)], obj=test_ctx)
 
             assert result.exit_code == 0, f"Failed for {plan_filename}: {result.output}"
-            wt_path = workstacks_dir / expected_worktree_name
-            assert wt_path.exists(), f"Expected worktree at {wt_path} for {plan_filename}"
+            # Worktree gets date prefix: YY-MM-DD-{expected_worktree_name}
+            created_worktrees = [d for d in workstacks_dir.iterdir() if d.is_dir() and d.name.endswith(f"-{expected_worktree_name}")]
+            assert len(created_worktrees) == 1, f"Expected one worktree ending with '-{expected_worktree_name}' for {plan_filename}, found: {[d.name for d in workstacks_dir.iterdir()]}"
+            wt_path = created_worktrees[0]
             assert (wt_path / ".PLAN.md").exists()
             assert not plan_file.exists()
 
@@ -574,17 +578,14 @@ def test_create_uses_graphite_when_enabled() -> None:
             dry_run=False,
         )
 
-        # Mock subprocess to simulate gt create
-        with mock.patch("workstack.cli.commands.create.subprocess.run") as mock_run:
-            # Configure mock to return a successful result
-            mock_run.return_value.returncode = 0
-            mock_run.return_value.stdout = ""
-            mock_run.return_value.stderr = ""
+        # Mock run_with_error_reporting to simulate gt create
+        with mock.patch("workstack.cli.commands.create.run_with_error_reporting") as mock_run:
             result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Verify gt create was called
-        assert any("gt" in str(call) for call in mock_run.call_args_list)
+        assert mock_run.called
+        assert mock_run.call_args[0][0] == ["gt", "create", "--no-interactive", "test-feature"]
 
 
 def test_create_blocks_when_staged_changes_present_with_graphite_enabled() -> None:
@@ -621,7 +622,7 @@ def test_create_blocks_when_staged_changes_present_with_graphite_enabled() -> No
             dry_run=False,
         )
 
-        with mock.patch("workstack.cli.commands.create.subprocess.run") as mock_run:
+        with mock.patch("workstack.cli.commands.create.run_with_error_reporting") as mock_run:
             result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
 
         assert result.exit_code == 1
@@ -1118,9 +1119,10 @@ def test_create_with_keep_plan_flag() -> None:
         )
 
         assert result.exit_code == 0, result.output
-        # Should create worktree with "plan" stripped from filename
-        wt_path = workstacks_dir / "my-feature"
-        assert wt_path.exists()
+        # Should create worktree with date prefix and "plan" stripped from filename
+        created_worktrees = [d for d in workstacks_dir.iterdir() if d.is_dir() and d.name.endswith("-my-feature")]
+        assert len(created_worktrees) == 1, f"Expected one worktree ending with '-my-feature', found: {[d.name for d in workstacks_dir.iterdir()]}"
+        wt_path = created_worktrees[0]
         # Plan file should be copied to .PLAN.md
         assert (wt_path / ".PLAN.md").exists()
         # Original plan file should still exist (copied, not moved)
@@ -1669,9 +1671,9 @@ def test_create_with_json_and_plan_file() -> None:
 
         # Verify JSON output includes plan file
         output_data = json.loads(result.output)
-        # Name is derived from "test-feature-plan.md" -> "test-feature"
-        assert output_data["worktree_name"] == "test-feature"
-        wt_path = workstacks_dir / "test-feature"
+        # Name is derived from "test-feature-plan.md" -> "YY-MM-DD-test-feature"
+        assert output_data["worktree_name"].endswith("-test-feature"), f"Expected worktree_name to end with '-test-feature', got: {output_data['worktree_name']}"
+        wt_path = Path(output_data["worktree_path"])
         expected_plan_path = wt_path / ".PLAN.md"
         assert output_data["plan_file"] == str(expected_plan_path)
         assert output_data["status"] == "created"
@@ -1860,9 +1862,10 @@ def test_create_with_stay_and_plan() -> None:
         )
 
         assert result.exit_code == 0, result.output
-        # Verify worktree was created
-        wt_path = workstacks_dir / "test-feature"
-        assert wt_path.exists()
+        # Verify worktree was created with date prefix
+        created_worktrees = [d for d in workstacks_dir.iterdir() if d.is_dir() and d.name.endswith("-test-feature")]
+        assert len(created_worktrees) == 1, f"Expected one worktree ending with '-test-feature', found: {[d.name for d in workstacks_dir.iterdir()]}"
+        wt_path = created_worktrees[0]
         # Plan file should be moved
         assert (wt_path / ".PLAN.md").exists()
         assert not plan_file.exists()

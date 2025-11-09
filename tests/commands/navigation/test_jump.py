@@ -18,29 +18,30 @@ def test_jump_to_branch_in_single_worktree() -> None:
     with simulated_workstack_env(runner) as env:
         # Create worktree directories
         feature_wt = env.create_linked_worktree("feature-wt", "feature-2", chdir=False)
-        env.create_linked_worktree("other-wt", "other-feature", chdir=False)
+        other_wt = env.create_linked_worktree("other-wt", "other-feature", chdir=False)
 
         # Build ops with other-feature as current branch
         # Note: jump doesn't use graphite, so we can pass empty branches dict
         from tests.fakes.gitops import FakeGitOps
         from tests.fakes.graphite_ops import FakeGraphiteOps
         from workstack.core.gitops import WorktreeInfo
+        from unittest import mock
 
         git_ops = FakeGitOps(
             worktrees={
                 env.root_worktree: [
                     WorktreeInfo(path=env.root_worktree, branch="main", is_root=True),
                     WorktreeInfo(path=feature_wt, branch="feature-2", is_root=False),
-                    WorktreeInfo(
-                        path=env.root_worktree.parent / "workstacks" / "repo" / "other-wt",
-                        branch="other-feature",
-                        is_root=False,
-                    ),
+                    WorktreeInfo(path=other_wt, branch="other-feature", is_root=False),
                 ]
             },
-            current_branches={env.root_worktree: "other-feature"},
+            current_branches={other_wt: "other-feature"},
             default_branches={env.root_worktree: "main"},
-            git_common_dirs={env.root_worktree: env.root_worktree / ".git"},
+            git_common_dirs={
+                env.root_worktree: env.root_worktree / ".git",
+                feature_wt: env.root_worktree / ".git",
+                other_wt: env.root_worktree / ".git",
+            },
         )
 
         global_config_ops = FakeGlobalConfigOps(
@@ -58,9 +59,11 @@ def test_jump_to_branch_in_single_worktree() -> None:
         )
 
         # Jump to feature-2 which is checked out in feature_wt
-        result = runner.invoke(
-            cli, ["jump", "feature-2", "--script"], obj=test_ctx, catch_exceptions=False
-        )
+        # Mock Path.cwd() to return the other_wt path (current location)
+        with mock.patch("pathlib.Path.cwd", return_value=other_wt):
+            result = runner.invoke(
+                cli, ["jump", "feature-2", "--script"], obj=test_ctx, catch_exceptions=False
+            )
 
         if result.exit_code != 0:
             print(f"stderr: {result.stderr}")

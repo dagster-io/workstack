@@ -221,7 +221,8 @@ def test_list_includes_root(tmp_path: Path) -> None:
     clean_output = strip_ansi(result.stdout)
     lines = clean_output.strip().split("\n")
     assert len(lines) >= 2
-    assert lines[0].startswith("root [")
+    # Output format is "root      (branch) [path]" with branch name included
+    assert lines[0].startswith("root ")
     assert str(repo) in lines[0]
     # Should also show the worktree
     assert any("myfeature" in line for line in lines)

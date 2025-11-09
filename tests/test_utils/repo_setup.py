@@ -148,7 +148,7 @@ class SimulatedWorkstackEnv:
         """
         current_worktree = current_worktree or self.root_worktree
 
-        # Find trunk branch (for root worktree)
+        # Find trunk branch (for root worktree default)
         trunk_branch = None
         for name, meta in branches.items():
             if meta.is_trunk:
@@ -158,8 +158,22 @@ class SimulatedWorkstackEnv:
         if trunk_branch is None:
             trunk_branch = "main"  # Fallback
 
+        # Determine root worktree's branch
+        # If current_branch is specified and it's in a linked worktree (not root), root stays on trunk
+        # If current_branch is specified for root worktree, use it
+        # Otherwise use trunk_branch
+        if current_branch and current_branch in self._linked_worktrees:
+            # Current branch is in a linked worktree, so root stays on trunk
+            root_branch = trunk_branch
+        elif current_branch and (current_worktree is None or current_worktree == self.root_worktree):
+            # Current branch is in root worktree
+            root_branch = current_branch
+        else:
+            # Default to trunk
+            root_branch = trunk_branch
+
         # Build worktrees list
-        worktrees_list = [WorktreeInfo(path=self.root_worktree, branch=trunk_branch, is_root=True)]
+        worktrees_list = [WorktreeInfo(path=self.root_worktree, branch=root_branch, is_root=True)]
 
         # Add linked worktrees created via create_linked_worktree()
         for branch, path in self._linked_worktrees.items():
@@ -167,8 +181,20 @@ class SimulatedWorkstackEnv:
 
         # Build current_branches mapping
         current_branches_map = {}
+
+        # Determine which worktree has current_branch
+        if current_branch and current_branch in self._linked_worktrees:
+            # Current branch is in a linked worktree
+            current_wt_path = self._linked_worktrees[current_branch]
+        elif current_branch:
+            # Current branch is in root (or unspecified location defaults to root)
+            current_wt_path = current_worktree if current_worktree else self.root_worktree
+        else:
+            # No current branch specified, default to root
+            current_wt_path = self.root_worktree
+
         for wt in worktrees_list:
-            if wt.path == current_worktree:
+            if wt.path == current_wt_path:
                 # This worktree has the current branch
                 current_branches_map[wt.path] = current_branch if current_branch else wt.branch
             else:

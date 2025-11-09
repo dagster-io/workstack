@@ -11,158 +11,160 @@ Business logic rules:
 4. Branch not in cache → False (default behavior)
 """
 
-import json
-from pathlib import Path
+from click.testing import CliRunner
 
 from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.gitops import FakeGitOps
 from tests.fakes.global_config_ops import FakeGlobalConfigOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
+from tests.test_utils.repo_setup import simulated_workstack_env
 from workstack.cli.commands.list import _is_trunk_branch
 from workstack.core.context import WorkstackContext
+from workstack.core.graphite_ops import BranchMetadata
 
 
-def test_branch_with_trunk_validation_result(tmp_path: Path) -> None:
+def test_branch_with_trunk_validation_result() -> None:
     """Branch with validationResult == "TRUNK" is identified as trunk."""
-    git_dir = tmp_path / ".git"
-    git_dir.mkdir()
+    runner = CliRunner()
+    with simulated_workstack_env(runner) as env:
+        # Build ops with main as trunk and feature-1 as child
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata.main(children=["feature-1"], sha="abc123"),
+                "feature-1": BranchMetadata.branch("feature-1", parent="main", sha="def456"),
+            },
+            current_branch="main",
+        )
 
-    # Create graphite cache with main marked as TRUNK
-    graphite_cache = {
-        "branches": [
-            ["main", {"validationResult": "TRUNK", "children": ["feature-1"]}],
-            ["feature-1", {"parentBranchName": "main", "children": []}],
-        ]
-    }
-    (git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache), encoding="utf-8")
+        global_config_ops = FakeGlobalConfigOps(
+            workstacks_root=env.workstacks_root,
+            use_graphite=True,
+        )
+        ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            graphite_ops=graphite_ops,
+            github_ops=FakeGitHubOps(),
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
 
-    git_ops = FakeGitOps(git_common_dirs={tmp_path: git_dir})
-    global_config_ops = FakeGlobalConfigOps(
-        workstacks_root=tmp_path / "workstacks",
-        use_graphite=True,
-    )
-    ctx = WorkstackContext(
-        git_ops=git_ops,
-        global_config_ops=global_config_ops,
-        graphite_ops=FakeGraphiteOps(),
-        github_ops=FakeGitHubOps(),
-        shell_ops=FakeShellOps(),
-        dry_run=False,
-    )
-
-    assert _is_trunk_branch(ctx, tmp_path, "main") is True
+        assert _is_trunk_branch(ctx, env.root_worktree, "main") is True
 
 
-def test_branch_with_no_parent_is_trunk(tmp_path: Path) -> None:
+def test_branch_with_no_parent_is_trunk() -> None:
     """Branch with parentBranchName == None but no TRUNK marker is still trunk."""
-    git_dir = tmp_path / ".git"
-    git_dir.mkdir()
+    runner = CliRunner()
+    with simulated_workstack_env(runner) as env:
+        # Build ops with orphan as trunk (no parent) and feature-1 as child
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "orphan": BranchMetadata.main(children=["feature-1"], sha="abc123"),
+                "feature-1": BranchMetadata.branch("feature-1", parent="orphan", sha="def456"),
+            },
+            current_branch="orphan",
+        )
 
-    # Create graphite cache with orphan branch (no parent, but not marked TRUNK)
-    graphite_cache = {
-        "branches": [
-            ["orphan", {"parentBranchName": None, "children": ["feature-1"]}],
-            ["feature-1", {"parentBranchName": "orphan", "children": []}],
-        ]
-    }
-    (git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache), encoding="utf-8")
+        global_config_ops = FakeGlobalConfigOps(
+            workstacks_root=env.workstacks_root,
+            use_graphite=True,
+        )
+        ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            graphite_ops=graphite_ops,
+            github_ops=FakeGitHubOps(),
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
 
-    git_ops = FakeGitOps(git_common_dirs={tmp_path: git_dir})
-    global_config_ops = FakeGlobalConfigOps(
-        workstacks_root=tmp_path / "workstacks",
-        use_graphite=True,
-    )
-    ctx = WorkstackContext(
-        git_ops=git_ops,
-        global_config_ops=global_config_ops,
-        graphite_ops=FakeGraphiteOps(),
-        github_ops=FakeGitHubOps(),
-        shell_ops=FakeShellOps(),
-        dry_run=False,
-    )
-
-    assert _is_trunk_branch(ctx, tmp_path, "orphan") is True
+        assert _is_trunk_branch(ctx, env.root_worktree, "orphan") is True
 
 
-def test_branch_with_parent_is_not_trunk(tmp_path: Path) -> None:
+def test_branch_with_parent_is_not_trunk() -> None:
     """Branch with parentBranchName is not a trunk."""
-    git_dir = tmp_path / ".git"
-    git_dir.mkdir()
+    runner = CliRunner()
+    with simulated_workstack_env(runner) as env:
+        # Build ops with main as trunk and feature-1 as child
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata.main(children=["feature-1"], sha="abc123"),
+                "feature-1": BranchMetadata.branch("feature-1", parent="main", sha="def456"),
+            },
+            current_branch="main",
+        )
 
-    graphite_cache = {
-        "branches": [
-            ["main", {"validationResult": "TRUNK", "children": ["feature-1"]}],
-            ["feature-1", {"parentBranchName": "main", "children": []}],
-        ]
-    }
-    (git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache), encoding="utf-8")
+        global_config_ops = FakeGlobalConfigOps(
+            workstacks_root=env.workstacks_root,
+            use_graphite=True,
+        )
+        ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            graphite_ops=graphite_ops,
+            github_ops=FakeGitHubOps(),
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
 
-    git_ops = FakeGitOps(git_common_dirs={tmp_path: git_dir})
-    global_config_ops = FakeGlobalConfigOps(
-        workstacks_root=tmp_path / "workstacks",
-        use_graphite=True,
-    )
-    ctx = WorkstackContext(
-        git_ops=git_ops,
-        global_config_ops=global_config_ops,
-        graphite_ops=FakeGraphiteOps(),
-        github_ops=FakeGitHubOps(),
-        shell_ops=FakeShellOps(),
-        dry_run=False,
-    )
-
-    assert _is_trunk_branch(ctx, tmp_path, "feature-1") is False
+        assert _is_trunk_branch(ctx, env.root_worktree, "feature-1") is False
 
 
-def test_branch_not_in_cache_is_not_trunk(tmp_path: Path) -> None:
+def test_branch_not_in_cache_is_not_trunk() -> None:
     """Branch not present in graphite cache is not a trunk."""
-    git_dir = tmp_path / ".git"
-    git_dir.mkdir()
+    runner = CliRunner()
+    with simulated_workstack_env(runner) as env:
+        # Build ops with only main in cache
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata.main(children=[], sha="abc123"),
+            },
+            current_branch="main",
+        )
 
-    graphite_cache = {
-        "branches": [
-            ["main", {"validationResult": "TRUNK", "children": []}],
-        ]
-    }
-    (git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache), encoding="utf-8")
+        global_config_ops = FakeGlobalConfigOps(
+            workstacks_root=env.workstacks_root,
+            use_graphite=True,
+        )
+        ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            graphite_ops=graphite_ops,
+            github_ops=FakeGitHubOps(),
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
 
-    git_ops = FakeGitOps(git_common_dirs={tmp_path: git_dir})
-    global_config_ops = FakeGlobalConfigOps(
-        workstacks_root=tmp_path / "workstacks",
-        use_graphite=True,
-    )
-    ctx = WorkstackContext(
-        git_ops=git_ops,
-        global_config_ops=global_config_ops,
-        graphite_ops=FakeGraphiteOps(),
-        github_ops=FakeGitHubOps(),
-        shell_ops=FakeShellOps(),
-        dry_run=False,
-    )
-
-    # Query for branch not in cache
-    assert _is_trunk_branch(ctx, tmp_path, "unknown-branch") is False
+        # Query for branch not in cache
+        assert _is_trunk_branch(ctx, env.root_worktree, "unknown-branch") is False
 
 
-def test_graphite_disabled_returns_false(tmp_path: Path) -> None:
+def test_graphite_disabled_returns_false() -> None:
     """When Graphite is disabled, trunk detection returns False."""
-    git_dir = tmp_path / ".git"
-    git_dir.mkdir()
+    runner = CliRunner()
+    with simulated_workstack_env(runner) as env:
+        # When Graphite is disabled, configure FakeGraphiteOps to return empty
+        # (simulating no Graphite cache available)
+        git_ops, _unused_graphite_ops = env.build_ops_from_branches(
+            {},  # Empty branches - no Graphite data
+            current_branch="main",
+        )
 
-    git_ops = FakeGitOps(git_common_dirs={tmp_path: git_dir})
-    global_config_ops = FakeGlobalConfigOps(
-        workstacks_root=tmp_path / "workstacks",
-        use_graphite=False,  # Graphite disabled
-    )
-    ctx = WorkstackContext(
-        git_ops=git_ops,
-        global_config_ops=global_config_ops,
-        graphite_ops=FakeGraphiteOps(),
-        github_ops=FakeGitHubOps(),
-        shell_ops=FakeShellOps(),
-        dry_run=False,
-    )
+        global_config_ops = FakeGlobalConfigOps(
+            workstacks_root=env.workstacks_root,
+            use_graphite=False,  # Graphite disabled
+        )
 
-    # Without Graphite, should return False (no way to detect trunk)
-    assert _is_trunk_branch(ctx, tmp_path, "main") is False
+        # Use empty FakeGraphiteOps (no branches configured)
+        from tests.fakes.graphite_ops import FakeGraphiteOps
+
+        ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            graphite_ops=FakeGraphiteOps(),  # Empty ops
+            github_ops=FakeGitHubOps(),
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
+
+        # Without Graphite, should return False (no way to detect trunk)
+        assert _is_trunk_branch(ctx, env.root_worktree, "main") is False

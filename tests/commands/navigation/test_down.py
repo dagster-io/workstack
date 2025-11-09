@@ -62,7 +62,7 @@ def test_down_to_trunk_root() -> None:
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
         # Create linked worktree for feature-1
-        env.create_linked_worktree("feature-1", "feature-1", chdir=False)
+        feature_1_path = env.create_linked_worktree("feature-1", "feature-1", chdir=False)
 
         # Build ops with feature-1 as current branch
         git_ops, graphite_ops = env.build_ops_from_branches(
@@ -88,7 +88,11 @@ def test_down_to_trunk_root() -> None:
         )
 
         # Navigate down from feature-1 to root (main)
-        result = runner.invoke(cli, ["down", "--script"], obj=test_ctx, catch_exceptions=False)
+        # Mock Path.cwd() to return the feature-1 worktree path
+        from unittest import mock
+
+        with mock.patch("pathlib.Path.cwd", return_value=feature_1_path):
+            result = runner.invoke(cli, ["down", "--script"], obj=test_ctx, catch_exceptions=False)
 
         assert result.exit_code == 0
         # Should generate script for root

@@ -67,11 +67,18 @@ class FakeGraphiteOps(GraphiteOps):
         """Return pre-configured stack for the given branch."""
         # If stacks are configured, use those
         if self._stacks:
-            # Find the stack that contains this branch
+            # Find the LONGEST stack that contains this branch
+            # This ensures we return the full stack from trunk to furthest descendant
+            matching_stacks = []
             for _stack_branch, stack in self._stacks.items():
                 if branch in stack:
-                    return stack.copy()
-            return None
+                    matching_stacks.append(stack)
+
+            if not matching_stacks:
+                return None
+
+            # Return the longest stack (most descendants)
+            return max(matching_stacks, key=len).copy()
 
         # Otherwise, build from branch metadata if available
         if not self._branches:

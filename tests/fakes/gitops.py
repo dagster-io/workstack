@@ -35,6 +35,7 @@ class FakeGitOps(GitOps):
     Mutation Tracking:
     -----------------
     This fake tracks mutations for test assertions via read-only properties:
+    - created_branches: Branches created via add_worktree(create_branch=True)
     - deleted_branches: Branches deleted via delete_branch_with_graphite()
     - added_worktrees: Worktrees added via add_worktree()
     - removed_worktrees: Worktrees removed via remove_worktree()
@@ -103,6 +104,7 @@ class FakeGitOps(GitOps):
         self._recent_commits = recent_commits or {}
 
         # Mutation tracking
+        self._created_branches: list[str] = []
         self._deleted_branches: list[str] = []
         self._added_worktrees: list[tuple[Path, str | None]] = []
         self._removed_worktrees: list[Path] = []
@@ -155,6 +157,9 @@ class FakeGitOps(GitOps):
         path.mkdir(parents=True, exist_ok=True)
         # Track the addition
         self._added_worktrees.append((path, branch))
+        # Track branch creation if requested
+        if create_branch and branch is not None:
+            self._created_branches.append(branch)
 
     def move_worktree(self, repo_root: Path, old_path: Path, new_path: Path) -> None:
         """Move a worktree (mutates internal state and simulates filesystem move)."""
@@ -262,6 +267,14 @@ class FakeGitOps(GitOps):
         """Get recent commit information."""
         commits = self._recent_commits.get(cwd, [])
         return commits[:limit]
+
+    @property
+    def created_branches(self) -> list[str]:
+        """Get the list of branches that have been created.
+
+        This property is for test assertions only.
+        """
+        return self._created_branches.copy()
 
     @property
     def deleted_branches(self) -> list[str]:

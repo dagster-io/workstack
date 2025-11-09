@@ -31,6 +31,7 @@ test-dot-agent-kit:
 	cd packages/dot-agent-kit && uv run pytest
 
 test: test-workstack-dev test-dot-agent-kit
+	uv run pytest tests
 
 check:
 	uv run dot-agent check

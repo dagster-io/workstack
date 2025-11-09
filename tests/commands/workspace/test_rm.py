@@ -16,6 +16,7 @@ from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import DryRunGitOps, WorktreeInfo
+from workstack.core.graphite_ops import BranchMetadata
 
 
 def _create_test_context(
@@ -123,24 +124,20 @@ def test_rm_dry_run_with_delete_stack() -> None:
         git_dir = cwd / ".git"
         git_dir.mkdir()
 
-        # Create graphite cache file
-        cache_file = git_dir / ".graphite_cache_persist"
-        cache_content = {
-            "branches": [
-                ["main", {"validationResult": "TRUNK", "children": ["feature-1"]}],
-                ["feature-1", {"parentBranchName": "main", "children": ["feature-2"]}],
-                ["feature-2", {"parentBranchName": "feature-1", "children": []}],
-            ]
-        }
-        cache_file.write_text(json.dumps(cache_content), encoding="utf-8")
-
         repo_name = cwd.name
         wt = workstacks_root / repo_name / "test-stack"
         wt.mkdir(parents=True)
 
+        # Configure FakeGraphiteOps with branch metadata instead of cache file
+        branches = {
+            "main": BranchMetadata.main(children=["feature-1"]),
+            "feature-1": BranchMetadata.branch("feature-1", parent="main", children=["feature-2"]),
+            "feature-2": BranchMetadata.branch("feature-2", parent="feature-1", children=[]),
+        }
+
         # Build fake git ops with worktree info
         fake_git_ops = FakeGitOps(
-            worktrees={cwd: [WorktreeInfo(path=wt, branch="feature-2")]},
+            worktrees={cwd: [WorktreeInfo(path=wt, branch="feature-2", is_root=False)]},
             git_common_dirs={cwd: git_dir},
         )
         git_ops = DryRunGitOps(fake_git_ops)
@@ -151,7 +148,7 @@ def test_rm_dry_run_with_delete_stack() -> None:
                 workstacks_root=workstacks_root, use_graphite=True
             ),
             github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
+            graphite_ops=FakeGraphiteOps(branches=branches),
             shell_ops=FakeShellOps(),
             dry_run=True,
         )

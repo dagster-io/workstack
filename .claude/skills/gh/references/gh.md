@@ -1073,9 +1073,9 @@ feature-3    feature/experimental         (no PR)
 - `(closed)` - Closed PR
 - `(merged)` - Merged PR
 
-#### 3. Garbage Collection (`workstack gc`)
+#### 3. Cleanup with Sync (`workstack sync`)
 
-**File**: `src/workstack/commands/gc.py`
+**File**: `src/workstack/commands/sync.py`
 
 Uses PR state to identify cleanup candidates:
 
@@ -1083,18 +1083,7 @@ Uses PR state to identify cleanup candidates:
 - Worktrees with closed PRs → Prompt user
 - Worktrees without PRs → Skip
 
-**Integration code:**
-
-```python
-# Simplified from actual implementation
-prs = github_ops.get_prs(repo_root)
-for worktree in worktrees:
-    if worktree.branch in prs:
-        pr = prs[worktree.branch]
-        if pr.state == "MERGED":
-            # Offer to delete this worktree
-            ...
-```
+Use `workstack sync --dry-run` to preview cleanup candidates without removal.
 
 #### 4. Error Handling
 

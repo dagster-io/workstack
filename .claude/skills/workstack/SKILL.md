@@ -115,10 +115,10 @@ Load `references/workstack.md` and search for "workstack list" section to provid
 
 ### Cleanup and Maintenance
 
-Load `references/workstack.md` and search for "workstack gc" and "workstack sync" sections to provide:
+Load `references/workstack.md` and search for "workstack sync" section to provide:
 
-- Finding merged worktrees: `workstack gc`
-- Syncing with Graphite: `workstack sync`
+- Finding merged worktrees: `workstack sync --dry-run`
+- Syncing and cleaning with Graphite: `workstack sync -f`
 - Manual removal: `workstack rm <name>`
 
 ## Workflow Guidance
@@ -162,7 +162,7 @@ When users need PR status information:
 
 - Load the GitHub Integration section from `references/workstack.md`
 - Explain PR status indicators in listings
-- Show `workstack gc` for finding merged worktrees
+- Show `workstack sync --dry-run` for finding merged worktrees
 - Note requirement for `gh` CLI
 
 ## Architecture for Contributors

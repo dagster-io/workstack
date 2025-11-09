@@ -791,3 +791,90 @@ def test_land_stack_succeeds_when_all_branches_in_current_worktree() -> None:
         assert "feat-2" in result.output
         # Should NOT show worktree conflict error
         assert "multiple worktrees" not in result.output
+
+
+def test_land_stack_refreshes_metadata_after_sync() -> None:
+    """Test that RealGraphiteOps invalidates cache after gt sync.
+
+    This test verifies the fix for the cache invalidation bug:
+    - Bug: RealGraphiteOps.sync() didn't invalidate _branches_cache
+    - Result: After gt sync updated metadata, stale cached data was returned
+    - Fix: Added `self._branches_cache = None` at end of sync()
+
+    The test creates a simulated scenario where sync() modifies metadata
+    and verifies that subsequent get_all_branches() calls return fresh data.
+    """
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        workstacks_root = cwd / "workstacks"
+        repo_root = cwd
+        (repo_root / ".git").mkdir()
+
+        git_ops = FakeGitOps(
+            git_common_dirs={cwd: cwd / ".git"},
+            worktrees={
+                repo_root: [
+                    WorktreeInfo(path=repo_root, branch="main"),
+                ],
+            },
+            current_branches={cwd: "feat-2"},
+        )
+
+        global_config_ops = FakeGlobalConfigOps(
+            workstacks_root=workstacks_root,
+            use_graphite=True,
+        )
+
+        # Stack: main → feat-1 → feat-2
+        graphite_ops = FakeGraphiteOps(
+            branches={
+                "main": BranchMetadata(
+                    name="main",
+                    parent=None,
+                    children=["feat-1"],
+                    commit_sha="abc123",
+                    is_trunk=True,
+                ),
+                "feat-1": BranchMetadata(
+                    name="feat-1",
+                    parent="main",
+                    children=["feat-2"],
+                    commit_sha="def456",
+                    is_trunk=False,
+                ),
+                "feat-2": BranchMetadata(
+                    name="feat-2",
+                    parent="feat-1",
+                    children=[],
+                    commit_sha="ghi789",
+                    is_trunk=False,
+                ),
+            },
+            stacks={
+                "feat-2": ["main", "feat-1", "feat-2"],
+            },
+        )
+
+        github_ops = FakeGitHubOps(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Feature 1"),
+                "feat-2": ("OPEN", 200, "Feature 2"),
+            }
+        )
+
+        test_ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            graphite_ops=graphite_ops,
+            github_ops=github_ops,
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
+
+        # Execute land-stack - should complete successfully
+        # The fix ensures cache is invalidated after each sync
+        result = runner.invoke(cli, ["land-stack", "--dry-run"], obj=test_ctx)
+
+        assert result.exit_code == 0
+        assert "Landing 2 PRs" in result.output

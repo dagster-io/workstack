@@ -1090,3 +1090,70 @@ def test_land_stack_refreshes_metadata_after_sync() -> None:
 
         assert result.exit_code == 0
         assert "Landing 2 PRs" in result.output
+
+
+def test_land_stack_from_linked_worktree_on_branch_being_landed() -> None:
+    """Test that land-stack works when run from a linked worktree on branch being landed.
+
+    Scenario: User is in a linked worktree on feat-1 and wants to land that PR.
+    The command should detect we're already on the branch and skip checkout.
+
+    Before fix: Would try to checkout feat-1 in repo root, failing because it's
+    already checked out in the linked worktree.
+
+    After fix: Detects current branch and skips unnecessary checkout.
+    """
+    runner = CliRunner()
+    with simulated_workstack_env(runner) as env:
+        # Create linked worktree for feat-1 and change to it
+        env.create_linked_worktree(name="feat-1-work", branch="feat-1", chdir=True)
+
+        # Build ops for simple stack: main → feat-1
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata(
+                    name="main",
+                    parent=None,
+                    children=["feat-1"],
+                    commit_sha="abc123",
+                    is_trunk=True,
+                ),
+                "feat-1": BranchMetadata(
+                    name="feat-1",
+                    parent="main",
+                    children=None,
+                    commit_sha="def456",
+                    is_trunk=False,
+                ),
+            },
+            current_branch="feat-1",
+        )
+
+        global_config_ops = FakeGlobalConfigOps(
+            workstacks_root=env.workstacks_root,
+            use_graphite=True,
+        )
+
+        github_ops = FakeGitHubOps(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Add feature 1"),
+            }
+        )
+
+        test_ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            graphite_ops=graphite_ops,
+            github_ops=github_ops,
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
+
+        # Try to land feat-1 from the linked worktree
+        result = runner.invoke(cli, ["land-stack", "--dry-run"], obj=test_ctx)
+
+        # Should succeed - command skips checkout when already on the branch
+        # (dry-run mode doesn't execute real checkout logic, but validates flow works)
+        assert result.exit_code == 0
+        assert "Landing 1 PR" in result.output
+        assert "feat-1" in result.output

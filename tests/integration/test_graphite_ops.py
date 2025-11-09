@@ -71,7 +71,10 @@ def test_graphite_ops_get_prs_json_error():
         mock_read_text.return_value = "not valid json"
 
         ops = RealGraphiteOps()
-        with pytest.raises(json.JSONDecodeError):
+        with (
+            pytest.warns(UserWarning, match="Cannot parse Graphite PR info"),
+            pytest.raises(json.JSONDecodeError),
+        ):
             ops.get_prs_from_graphite(mock_git_ops, Path("/test"))
 
 
@@ -139,7 +142,10 @@ def test_graphite_ops_get_all_branches_json_error():
         mock_read_text.return_value = "not valid json"
 
         ops = RealGraphiteOps()
-        with pytest.raises(json.JSONDecodeError):
+        with (
+            pytest.warns(UserWarning, match="Cannot parse Graphite cache"),
+            pytest.raises(json.JSONDecodeError),
+        ):
             ops.get_all_branches(mock_git_ops, Path("/test"))
 
 

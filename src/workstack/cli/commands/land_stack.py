@@ -303,7 +303,7 @@ def _land_branch_sequence(
     *,
     verbose: bool,
     dry_run: bool,
-) -> tuple[list[str], str | None]:
+) -> list[str]:
     """Land branches sequentially, one at a time with restack between each.
 
     Args:
@@ -314,9 +314,11 @@ def _land_branch_sequence(
         dry_run: If True, show what would be done without executing
 
     Returns:
-        Tuple of (merged_branches, failure_reason)
-        - merged_branches: List of successfully merged branch names
-        - failure_reason: Error message if landing failed, None if all succeeded
+        List of successfully merged branch names
+
+    Raises:
+        subprocess.CalledProcessError: If git/gh/gt commands fail
+        Exception: If other operations fail
     """
     merged_branches: list[str] = []
 
@@ -341,11 +343,17 @@ def _land_branch_sequence(
         if dry_run:
             click.echo(_format_cli_command(f"git checkout {branch}", check))
         else:
-            try:
+            # Check if we're already on the target branch (LBYL)
+            # This handles the case where we're in a linked worktree on the branch being landed
+            current_branch = ctx.git_ops.get_current_branch(Path.cwd())
+            if current_branch != branch:
+                # Only checkout if we're not already on the branch
                 ctx.git_ops.checkout_branch(repo_root, branch)
                 click.echo(_format_cli_command(f"git checkout {branch}", check))
-            except Exception as e:
-                return merged_branches, f"Failed to checkout {branch}: {e}"
+            else:
+                # Already on branch, display as already done
+                already_msg = f"already on {branch}"
+                click.echo(_format_description(already_msg, check))
 
         # Phase 2: Verify stack integrity
         all_branches = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo_root)
@@ -353,10 +361,9 @@ def _land_branch_sequence(
         # Parent should be trunk after previous restacks
         if parent is None or parent not in all_branches or not all_branches[parent].is_trunk:
             if not dry_run:
-                return (
-                    merged_branches,
+                raise RuntimeError(
                     f"Stack integrity broken: {branch} parent is '{parent}', "
-                    f"expected trunk branch. Previous restack may have failed.",
+                    f"expected trunk branch. Previous restack may have failed."
                 )
 
         # Show specific verification message with branch and expected parent
@@ -369,49 +376,30 @@ def _land_branch_sequence(
             click.echo(_format_cli_command(merge_cmd, check))
             merged_branches.append(branch)
         else:
-            try:
-                # Use gh pr merge with squash strategy (Graphite's default)
-                cmd = ["gh", "pr", "merge", str(pr_number), "--squash", "--auto"]
-                result = subprocess.run(
-                    cmd,
-                    cwd=repo_root,
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                )
-                if verbose:
-                    click.echo(result.stdout)
+            # Use gh pr merge with squash strategy (Graphite's default)
+            cmd = ["gh", "pr", "merge", str(pr_number), "--squash", "--auto"]
+            result = subprocess.run(
+                cmd,
+                cwd=repo_root,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            if verbose:
+                click.echo(result.stdout)
 
-                merge_cmd = f"gh pr merge {pr_number} --squash --auto"
-                click.echo(_format_cli_command(merge_cmd, check))
-                merged_branches.append(branch)
-
-            except subprocess.CalledProcessError as e:
-                error_msg = e.stderr.strip() if e.stderr else str(e)
-                return (
-                    merged_branches,
-                    f"Failed to merge PR #{pr_number} for {branch}: {error_msg}",
-                )
-            except FileNotFoundError:
-                return (
-                    merged_branches,
-                    "gh command not found. Install GitHub CLI: brew install gh",
-                )
+            merge_cmd = f"gh pr merge {pr_number} --squash --auto"
+            click.echo(_format_cli_command(merge_cmd, check))
+            merged_branches.append(branch)
 
         # Phase 4: Restack
         if dry_run:
             click.echo(_format_cli_command("gt sync -f", check))
         else:
-            try:
-                ctx.graphite_ops.sync(repo_root, force=True, quiet=not verbose)
-                click.echo(_format_cli_command("gt sync -f", check))
-            except Exception as e:
-                return (
-                    merged_branches,
-                    f"Failed to restack after merging {branch}: {e}",
-                )
+            ctx.graphite_ops.sync(repo_root, force=True, quiet=not verbose)
+            click.echo(_format_cli_command("gt sync -f", check))
 
-    return merged_branches, None
+    return merged_branches
 
 
 def _cleanup_and_navigate(
@@ -472,7 +460,8 @@ def _cleanup_and_navigate(
             )
             click.echo(_format_cli_command(base_cmd, check))
         except subprocess.CalledProcessError as e:
-            click.echo(f"Warning: Cleanup sync failed: {e}", err=True)
+            error_msg = e.stderr.strip() if e.stderr else str(e)
+            click.echo(f"Warning: Cleanup sync failed: {error_msg}", err=True)
 
     # Step 3: Navigate to next branch or stay on main
     # Check if last merged branch had unmerged children
@@ -607,19 +596,28 @@ def land_stack(ctx: WorkstackContext, force: bool, verbose: bool, dry_run: bool)
     )
 
     # Execute landing sequence
-    merged_branches, failure_reason = _land_branch_sequence(
-        ctx, repo.root, valid_branches, verbose=verbose, dry_run=dry_run
-    )
-
-    # Report results if failure
-    if failure_reason:
+    try:
+        merged_branches = _land_branch_sequence(
+            ctx, repo.root, valid_branches, verbose=verbose, dry_run=dry_run
+        )
+    except subprocess.CalledProcessError as e:
         click.echo()
-        error_msg = click.style(f"❌ Landing stopped: {failure_reason}", fg="red")
+        # Show full stderr from subprocess for complete error context
+        error_detail = e.stderr.strip() if e.stderr else str(e)
+        error_msg = click.style(f"❌ Landing stopped: {error_detail}", fg="red")
         click.echo(error_msg, err=True)
-        if merged_branches:
-            branches_styled = ", ".join(click.style(b, fg="yellow") for b in merged_branches)
-            click.echo(f"\nSuccessfully merged before failure: {branches_styled}")
-        raise SystemExit(1)
+        raise SystemExit(1) from None
+    except FileNotFoundError as e:
+        click.echo()
+        error_msg = click.style(
+            f"❌ Command not found: {e.filename}\n\n"
+            "Install required tools:\n"
+            "  • GitHub CLI: brew install gh\n"
+            "  • Graphite CLI: brew install withgraphite/tap/graphite",
+            fg="red",
+        )
+        click.echo(error_msg, err=True)
+        raise SystemExit(1) from None
 
     # All succeeded - run cleanup operations
     final_branch = _cleanup_and_navigate(

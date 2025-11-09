@@ -149,7 +149,8 @@ class FakeGitOps(GitOps):
         """Add a new worktree (mutates internal state and creates directory)."""
         if repo_root not in self._worktrees:
             self._worktrees[repo_root] = []
-        self._worktrees[repo_root].append(WorktreeInfo(path=path, branch=branch))
+        # New worktrees are never the main worktree
+        self._worktrees[repo_root].append(WorktreeInfo(path=path, branch=branch, is_main=False))
         # Create the worktree directory to simulate git worktree add behavior
         path.mkdir(parents=True, exist_ok=True)
         # Track the addition
@@ -160,7 +161,9 @@ class FakeGitOps(GitOps):
         if repo_root in self._worktrees:
             for i, wt in enumerate(self._worktrees[repo_root]):
                 if wt.path == old_path:
-                    self._worktrees[repo_root][i] = WorktreeInfo(path=new_path, branch=wt.branch)
+                    self._worktrees[repo_root][i] = WorktreeInfo(
+                        path=new_path, branch=wt.branch, is_main=wt.is_main
+                    )
                     break
         # Simulate the filesystem move if the paths exist
         if old_path.exists():
@@ -193,7 +196,9 @@ class FakeGitOps(GitOps):
         for repo_root, worktrees in self._worktrees.items():
             for i, wt in enumerate(worktrees):
                 if wt.path.resolve() == cwd.resolve():
-                    self._worktrees[repo_root][i] = WorktreeInfo(path=wt.path, branch=branch)
+                    self._worktrees[repo_root][i] = WorktreeInfo(
+                        path=wt.path, branch=branch, is_main=wt.is_main
+                    )
                     break
         # Track the checkout
         self._checked_out_branches.append((cwd, branch))
@@ -206,7 +211,9 @@ class FakeGitOps(GitOps):
         for repo_root, worktrees in self._worktrees.items():
             for i, wt in enumerate(worktrees):
                 if wt.path.resolve() == cwd.resolve():
-                    self._worktrees[repo_root][i] = WorktreeInfo(path=wt.path, branch=None)
+                    self._worktrees[repo_root][i] = WorktreeInfo(
+                        path=wt.path, branch=None, is_main=wt.is_main
+                    )
                     break
         # Track the detached checkout
         self._detached_checkouts.append((cwd, ref))

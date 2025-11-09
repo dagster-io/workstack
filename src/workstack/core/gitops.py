@@ -23,6 +23,7 @@ class WorktreeInfo:
 
     path: Path
     branch: str | None
+    is_main: bool = False
 
 
 # ============================================================================
@@ -267,6 +268,11 @@ class RealGitOps(GitOps):
 
         if current_path is not None:
             worktrees.append(WorktreeInfo(path=current_path, branch=current_branch))
+
+        # Mark first worktree as main (git guarantees this ordering)
+        if worktrees:
+            first = worktrees[0]
+            worktrees[0] = WorktreeInfo(path=first.path, branch=first.branch, is_main=True)
 
         return worktrees
 

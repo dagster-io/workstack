@@ -40,12 +40,12 @@
 
 ## 📚 Quick Reference
 
-| Need help with...     | See documentation                                                    |
-| --------------------- | -------------------------------------------------------------------- |
-| **Code examples**     | [docs/agent/patterns.md](docs/agent/patterns.md)                     |
-| **Exception details** | [docs/agent/exception-handling.md](docs/agent/exception-handling.md) |
-| **Quick lookup**      | [docs/agent/quick-reference.md](docs/agent/quick-reference.md)       |
-| **Writing tests**     | [docs/agent/testing.md](docs/agent/testing.md)                       |
+| Need help with...     | See documentation                                |
+| --------------------- | ------------------------------------------------ |
+| **Python standards**  | Load dignified-python skill                      |
+| **Project terms**     | [docs/agent/glossary.md](docs/agent/glossary.md) |
+| **Documentation nav** | [docs/agent/guide.md](docs/agent/guide.md)       |
+| **Testing patterns**  | [docs/agent/testing.md](docs/agent/testing.md)   |
 
 ## Documentation Structure
 
@@ -54,6 +54,22 @@ The `docs/` folder is organized by audience:
 - **docs/agent/**: Agent-focused navigation and coding standards (quick references, patterns, rules)
 - **docs/writing/**: Human-readable guides (agentic programming, writing style guides)
 - Package-specific documentation lives in each package's README (e.g., `packages/workstack-dev/README.md`)
+
+## Python Coding Standards
+
+**All Python coding standards are maintained in the `dignified-python` skill.**
+
+To access Python coding standards, load the skill:
+
+- Exception handling (LBYL vs EAFP)
+- Type annotations (list[str], str | None)
+- Dependency injection (ABC patterns)
+- Import organization
+- File operations
+- CLI development
+- Code style patterns
+
+The `docs/agent/` folder contains only workstack-specific documentation (terminology, testing, navigation).
 
 ---
 
@@ -417,11 +433,11 @@ Time-based estimates have no basis in reality for AI-assisted development and sh
 
 ## Related Documentation
 
-- [docs/writing/agentic-programming/agentic-programming.md](docs/writing/agentic-programming/agentic-programming.md) - Agentic programming patterns and best practices
-- [docs/agent/patterns.md](docs/agent/patterns.md) - Code examples
-- [docs/agent/exception-handling.md](docs/agent/exception-handling.md) - Exception guide
-- [docs/agent/quick-reference.md](docs/agent/quick-reference.md) - Quick lookup
-- [tests/CLAUDE.md](tests/CLAUDE.md) - Testing patterns
+- Load `dignified-python` skill for Python coding standards
+- [docs/agent/glossary.md](docs/agent/glossary.md) - Project terminology
+- [docs/agent/guide.md](docs/agent/guide.md) - Documentation navigation
+- [docs/agent/testing.md](docs/agent/testing.md) - Testing architecture
+- [docs/writing/agentic-programming/agentic-programming.md](docs/writing/agentic-programming/agentic-programming.md) - Agentic programming patterns
 - [README.md](README.md) - Project overview
 
 ## Skills and Agents

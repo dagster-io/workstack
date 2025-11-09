@@ -76,16 +76,14 @@ Identify which tool is being executed from the command:
 
 **CRITICAL**: Load tool-specific parsing patterns BEFORE executing the command.
 
-Use the Read tool to load the appropriate documentation file:
+Use the Read tool to load the appropriate documentation file from the **project's** `.claude` directory (not user home):
 
-```
-.claude/docs/devrun/tools/pytest.md    - for pytest commands
-.claude/docs/devrun/tools/pyright.md   - for pyright commands
-.claude/docs/devrun/tools/ruff.md      - for ruff commands
-.claude/docs/devrun/tools/prettier.md  - for prettier commands
-.claude/docs/devrun/tools/make.md      - for make commands
-.claude/docs/devrun/tools/gt.md        - for gt commands
-```
+- **pytest**: `./.claude/docs/devrun/tools/pytest.md`
+- **pyright**: `./.claude/docs/devrun/tools/pyright.md`
+- **ruff**: `./.claude/docs/devrun/tools/ruff.md`
+- **prettier**: `./.claude/docs/devrun/tools/prettier.md`
+- **make**: `./.claude/docs/devrun/tools/make.md`
+- **gt**: `./.claude/docs/devrun/tools/gt.md`
 
 The documentation file contains:
 

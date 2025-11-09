@@ -5,7 +5,7 @@
 > the product.
 
 <!-- AGENT NOTICE: This file is loaded automatically. Read FULLY before writing code. -->
-<!-- Priority sections: BEFORE WRITING CODE (line 6), TOP 5 CRITICAL RULES (line 35) -->
+<!-- Priority sections: BEFORE WRITING CODE (line 10), TOP 5 CRITICAL RULES (line 114), GRAPHITE STACK TERMINOLOGY (line 178) -->
 
 ## ⚠️ BEFORE WRITING CODE (AI Assistant Checklist)
 
@@ -32,6 +32,7 @@
 | Prettier formatting issues                  | → Use `make prettier` (via runner agent with Task tool)                                     |
 | Submitting a branch with Graphite           | → Use /gt:submit-branch command (delegates to gt-branch-submitter agent)                    |
 | `gt ...` or user says "gt" or "graphite"    | → Use runner agent (Task tool, devrun subagent) for execution, graphite skill for knowledge |
+| Stack traversal or "upstack"/"downstack"    | → [Graphite Stack Terminology](#-graphite-stack-terminology-critical) - main is at BOTTOM   |
 | 4+ levels of indentation                    | → Extract helper functions                                                                  |
 | Code in `__init__.py`                       | → Keep empty or docstring-only (except package entry points)                                |
 | Tests for speculative features              | → **FORBIDDEN** - Only test actively implemented code (TDD is fine)                         |
@@ -175,6 +176,55 @@ class MyOps(ABC):  # ✅ Not Protocol
 
 ---
 
+## 🔴 GRAPHITE STACK TERMINOLOGY (CRITICAL)
+
+**When working with Graphite stacks, always visualize trunk at the BOTTOM:**
+
+### Stack Visualization
+
+```
+TOP ↑    feat-3  ← upstack (leaf)
+         feat-2
+         feat-1
+BOTTOM ↓ main    ← downstack (trunk)
+```
+
+### Directional Terminology 🔴 MUST UNDERSTAND
+
+- **UPSTACK / UP** = away from trunk = toward TOP = toward leaves
+- **DOWNSTACK / DOWN** = toward trunk = toward BOTTOM = toward main
+
+### Examples
+
+Given stack: `main → feat-1 → feat-2 → feat-3`
+
+**If current branch is `feat-1`:**
+
+- Upstack: `feat-2`, `feat-3` (children, toward top)
+- Downstack: `main` (parent, toward bottom)
+
+**If current branch is `feat-3` (at top):**
+
+- Upstack: _(nothing, already at top/leaf)_
+- Downstack: `feat-2`, `feat-1`, `main` (ancestors, toward bottom)
+
+### Why This Is Critical
+
+🔴 **Commands depend on this mental model:**
+
+- `gt up` / `gt down` navigate the stack
+- `land-stack` traverses branches in specific direction
+- Stack traversal logic (parent/child relationships)
+
+🔴 **Common mistake:** Thinking "upstack" means "toward trunk"
+
+- **WRONG**: upstack = toward main ❌
+- **CORRECT**: upstack = away from main ✅
+
+🔴 **PR landing order:** Always bottom→top (main first, then each layer up)
+
+---
+
 ## Core Standards
 
 ### Python Requirements
@@ -239,6 +289,40 @@ class MyOps(ABC):  # ✅ Not Protocol
 - Use `click.echo(..., err=True)` for errors
 - Exit with `raise SystemExit(1)` for CLI errors
 - Use `subprocess.run(..., check=True)`
+
+#### CLI Output Styling
+
+**Use consistent colors and styling for CLI output via `click.style()`:**
+
+| Element                  | Color            | Bold | Example                                             |
+| ------------------------ | ---------------- | ---- | --------------------------------------------------- |
+| Branch names             | `yellow`         | No   | `click.style(branch, fg="yellow")`                  |
+| PR numbers               | `cyan`           | No   | `click.style(f"PR #{pr}", fg="cyan")`               |
+| PR titles                | `bright_magenta` | No   | `click.style(title, fg="bright_magenta")`           |
+| Success messages (✓)     | `green`          | No   | `click.style("✓ Done", fg="green")`                 |
+| Section headers          | -                | Yes  | `click.style(header, bold=True)`                    |
+| Current/active branches  | `bright_green`   | Yes  | `click.style(branch, fg="bright_green", bold=True)` |
+| Paths (after completion) | `green`          | No   | `click.style(str(path), fg="green")`                |
+| Paths (metadata)         | `white`          | Dim  | `click.style(str(path), fg="white", dim=True)`      |
+| Error states             | `red`            | No   | `click.style("Error", fg="red")`                    |
+| Dry run markers          | `bright_black`   | No   | `click.style("(dry run)", fg="bright_black")`       |
+| Worktree/stack names     | `cyan`           | Yes  | `click.style(name, fg="cyan", bold=True)`           |
+
+**Emoji conventions:**
+
+- `✓` - Success indicators
+- `✅` - Major success/completion
+- `❌` - Errors/failures
+- `📋` - Lists/plans
+- `🗑️` - Deletion operations
+- `⭕` - Aborted/cancelled
+- `ℹ️` - Info notes
+
+**Spacing:**
+
+- Use empty `click.echo()` for vertical spacing between sections
+- Use `\n` prefix in strings for section breaks
+- Indent list items with `  ` (2 spaces)
 
 ### Code Style
 

@@ -10,6 +10,7 @@ from workstack.cli.commands.gc import gc_cmd
 from workstack.cli.commands.gt import graphite_group
 from workstack.cli.commands.init import init_cmd
 from workstack.cli.commands.jump import jump_cmd
+from workstack.cli.commands.land_stack import land_stack
 from workstack.cli.commands.list import list_cmd, ls_cmd
 from workstack.cli.commands.move import move_cmd
 from workstack.cli.commands.prepare_cwd_recovery import prepare_cwd_recovery_cmd
@@ -43,6 +44,7 @@ cli.add_command(create)
 cli.add_command(current_cmd)
 cli.add_command(down_cmd)
 cli.add_command(jump_cmd)
+cli.add_command(land_stack)
 cli.add_command(switch_cmd)
 cli.add_command(up_cmd)
 cli.add_command(list_cmd)

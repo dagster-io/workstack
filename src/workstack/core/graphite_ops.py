@@ -222,8 +222,8 @@ class GraphiteOps(ABC):
 
         This function builds the linear chain of branches that the given branch belongs to.
         The chain includes:
-        - All ancestor branches from current up to trunk
-        - All descendant branches from current down to the leaf
+        - All ancestor branches from current down to trunk
+        - All descendant branches from current up to the leaf
 
         Args:
             git_ops: GitOps instance for accessing git common directory and branch heads

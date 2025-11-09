@@ -3,7 +3,6 @@
 This file tests the rm command which removes a worktree workspace.
 """
 
-import json
 from pathlib import Path
 
 from click.testing import CliRunner

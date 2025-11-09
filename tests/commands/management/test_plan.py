@@ -51,8 +51,13 @@ def test_create_with_plan_file(tmp_path: Path) -> None:
     # Verify worktree was created with date prefix and sanitized name
     # Name format: YY-MM-DD-add-auth-feature
     repo_workstacks = workstacks_root / "repo"
-    created_worktrees = [d for d in repo_workstacks.iterdir() if d.is_dir() and d.name.endswith("-add-auth-feature")]
-    assert len(created_worktrees) == 1, f"Expected one worktree ending with '-add-auth-feature', found: {[d.name for d in repo_workstacks.iterdir()]}"
+    created_worktrees = [
+        d for d in repo_workstacks.iterdir() if d.is_dir() and d.name.endswith("-add-auth-feature")
+    ]
+    found_names = [d.name for d in repo_workstacks.iterdir()]
+    assert len(created_worktrees) == 1, (
+        f"Expected one worktree ending with '-add-auth-feature', found: {found_names}"
+    )
     worktree_path = created_worktrees[0]
 
     # Verify plan file was moved to .PLAN.md in worktree
@@ -109,8 +114,13 @@ def test_create_with_plan_name_sanitization(tmp_path: Path) -> None:
     # Verify worktree name is lowercase with hyphens, date prefix, and "plan" removed
     # Name format: YY-MM-DD-my-cool-file
     repo_workstacks = workstacks_root / "repo"
-    created_worktrees = [d for d in repo_workstacks.iterdir() if d.is_dir() and d.name.endswith("-my-cool-file")]
-    assert len(created_worktrees) == 1, f"Expected one worktree ending with '-my-cool-file', found: {[d.name for d in repo_workstacks.iterdir()]}"
+    created_worktrees = [
+        d for d in repo_workstacks.iterdir() if d.is_dir() and d.name.endswith("-my-cool-file")
+    ]
+    found_names = [d.name for d in repo_workstacks.iterdir()]
+    assert len(created_worktrees) == 1, (
+        f"Expected one worktree ending with '-my-cool-file', found: {found_names}"
+    )
     worktree_path = created_worktrees[0]
 
     # Verify plan was moved

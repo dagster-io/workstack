@@ -22,10 +22,11 @@ def test_jump_to_branch_in_single_worktree() -> None:
 
         # Build ops with other-feature as current branch
         # Note: jump doesn't use graphite, so we can pass empty branches dict
+        from unittest import mock
+
         from tests.fakes.gitops import FakeGitOps
         from tests.fakes.graphite_ops import FakeGraphiteOps
         from workstack.core.gitops import WorktreeInfo
-        from unittest import mock
 
         git_ops = FakeGitOps(
             worktrees={

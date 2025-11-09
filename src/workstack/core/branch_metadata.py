@@ -3,7 +3,6 @@
 import secrets
 from dataclasses import dataclass
 
-
 # Sentinel for distinguishing "not provided" from "explicitly None"
 _RANDOM_SHA = object()
 
@@ -40,7 +39,7 @@ class BranchMetadata:
         """
         # Generate random SHA if not provided, allow explicit None
         if sha is _RANDOM_SHA:
-            actual_sha = secrets.token_hex(3)
+            actual_sha: str | None = secrets.token_hex(3)
         else:
             actual_sha = sha  # type: ignore[assignment]
 
@@ -73,7 +72,7 @@ class BranchMetadata:
         """
         # Generate random SHA if not provided, allow explicit None
         if sha is _RANDOM_SHA:
-            actual_sha = secrets.token_hex(3)
+            actual_sha: str | None = secrets.token_hex(3)
         else:
             actual_sha = sha  # type: ignore[assignment]
 

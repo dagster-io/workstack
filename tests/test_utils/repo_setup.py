@@ -159,13 +159,16 @@ class SimulatedWorkstackEnv:
             trunk_branch = "main"  # Fallback
 
         # Determine root worktree's branch
-        # If current_branch is specified and it's in a linked worktree (not root), root stays on trunk
+        # If current_branch is specified and it's in a linked worktree (not
+        # root), root stays on trunk
         # If current_branch is specified for root worktree, use it
         # Otherwise use trunk_branch
         if current_branch and current_branch in self._linked_worktrees:
             # Current branch is in a linked worktree, so root stays on trunk
             root_branch = trunk_branch
-        elif current_branch and (current_worktree is None or current_worktree == self.root_worktree):
+        elif current_branch and (
+            current_worktree is None or current_worktree == self.root_worktree
+        ):
             # Current branch is in root worktree
             root_branch = current_branch
         else:

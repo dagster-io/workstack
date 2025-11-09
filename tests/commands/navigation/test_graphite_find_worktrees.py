@@ -77,10 +77,18 @@ def test_find_worktrees_containing_branch_multiple_matches(tmp_path: Path) -> No
     # main -> feature-2 -> feature-2-child
     branches = {
         "main": BranchMetadata.main(children=["feature-1", "feature-2"]),
-        "feature-1": BranchMetadata.branch("feature-1", parent="main", children=["feature-1-child"]),
-        "feature-1-child": BranchMetadata.branch("feature-1-child", parent="feature-1", children=[]),
-        "feature-2": BranchMetadata.branch("feature-2", parent="main", children=["feature-2-child"]),
-        "feature-2-child": BranchMetadata.branch("feature-2-child", parent="feature-2", children=[]),
+        "feature-1": BranchMetadata.branch(
+            "feature-1", parent="main", children=["feature-1-child"]
+        ),
+        "feature-1-child": BranchMetadata.branch(
+            "feature-1-child", parent="feature-1", children=[]
+        ),
+        "feature-2": BranchMetadata.branch(
+            "feature-2", parent="main", children=["feature-2-child"]
+        ),
+        "feature-2-child": BranchMetadata.branch(
+            "feature-2-child", parent="feature-2", children=[]
+        ),
     }
 
     wt1_path = work_dir / "feature-1-wt"

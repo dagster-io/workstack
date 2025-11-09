@@ -5,7 +5,6 @@ Pure business logic (graph filtering, tree building, rendering) is tested in
 tests/unit/hierarchy/test_branch_graph.py.
 """
 
-import json
 import tempfile
 from pathlib import Path
 

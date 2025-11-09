@@ -42,9 +42,7 @@ def _build_context_with_pr(
     git_ops, graphite_ops = env.build_ops_from_branches(
         {
             "main": BranchMetadata.main(children=[branch_name], sha="abc123"),
-            branch_name: BranchMetadata.branch(
-                branch_name, parent="main", sha="def456"
-            ),
+            branch_name: BranchMetadata.branch(branch_name, parent="main", sha="def456"),
         },
         current_branch="main",
     )
@@ -95,9 +93,7 @@ def test_list_with_stacks_pr_visibility(show_pr_info: bool, expected_visible: bo
             owner="owner",
             repo="repo",
         )
-        test_ctx = _build_context_with_pr(
-            env, "feature-branch", pr, show_pr_info=show_pr_info
-        )
+        test_ctx = _build_context_with_pr(env, "feature-branch", pr, show_pr_info=show_pr_info)
 
         # PR info now shown on main line, not just with --stacks
         result = runner.invoke(cli, ["list"], obj=test_ctx)
@@ -140,9 +136,7 @@ def test_list_pr_emoji_mapping(
         builder.checks_passing = checks
         pr = builder.build()
 
-        test_ctx = _build_context_with_pr(
-            env, "test-branch", pr, show_pr_info=True
-        )
+        test_ctx = _build_context_with_pr(env, "test-branch", pr, show_pr_info=True)
 
         # PR info now shown on main line, not just with --stacks
         result = runner.invoke(cli, ["list"], obj=test_ctx)
@@ -175,9 +169,7 @@ def test_list_with_stacks_uses_graphite_url() -> None:
             owner="testowner",
             repo="testrepo",
         )
-        test_ctx = _build_context_with_pr(
-            env, "feature", pr, show_pr_info=True
-        )
+        test_ctx = _build_context_with_pr(env, "feature", pr, show_pr_info=True)
 
         # PR info now shown on main line, not just with --stacks
         result = runner.invoke(cli, ["list"], obj=test_ctx)

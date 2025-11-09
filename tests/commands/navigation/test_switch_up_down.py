@@ -567,9 +567,7 @@ def test_switch_down_with_mismatched_worktree_name() -> None:
         # Branch: feature/api -> Worktree: api-work
         # Branch: feature/api-v2 -> Worktree: api-v2-work
         api_work_path = env.create_linked_worktree("api-work", "feature/api", chdir=False)
-        api_v2_work_path = env.create_linked_worktree(
-            "api-v2-work", "feature/api-v2", chdir=False
-        )
+        api_v2_work_path = env.create_linked_worktree("api-v2-work", "feature/api-v2", chdir=False)
 
         # Build ops with feature/api-v2 as current branch
         git_ops, graphite_ops = env.build_ops_from_branches(

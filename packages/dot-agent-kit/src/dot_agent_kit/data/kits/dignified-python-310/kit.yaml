@@ -1,6 +1,6 @@
-name: dignified-python
+name: dignified-python-310
 version: 0.1.0
-description: Workstack Python coding standards with automatic suggestion hook
+description: Workstack Python 3.10-3.12 coding standards with automatic suggestion hook
 license: MIT
 artifacts:
   skill:
@@ -13,6 +13,6 @@ hooks:
   - id: compliance-reminder-hook
     lifecycle: UserPromptSubmit
     matcher: "*"
-    invocation: dot-agent run dignified-python compliance-reminder-hook
+    invocation: dot-agent run dignified-python-310 compliance-reminder-hook
     description: Output dignified-python compliance reminder for UserPromptSubmit hook
     timeout: 30

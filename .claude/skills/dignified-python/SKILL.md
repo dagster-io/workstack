@@ -1,1 +1,1 @@
-../../../packages/dot-agent-kit/src/dot_agent_kit/data/kits/dignified-python/skills/dignified-python/SKILL.md
+../../../packages/dot-agent-kit/src/dot_agent_kit/data/kits/dignified-python-313/skills/dignified-python/SKILL.md

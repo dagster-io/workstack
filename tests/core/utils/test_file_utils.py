@@ -92,6 +92,34 @@ More content.
         None,
         id="missing_file",
     ),
+    pytest.param(
+        "implementation_plan_prefix_colon",
+        "plan.md",
+        "# Implementation Plan: Change Workstack LS to Display PR and Plan Info\n\nContent.",
+        "Change Workstack LS to Display PR and Plan Info",
+        id="implementation_plan_prefix_colon",
+    ),
+    pytest.param(
+        "implementation_plan_prefix_hyphen",
+        "plan.md",
+        "# Implementation Plan - Migrate Test Suite to SimulatedWorkstackEnv Pattern\n\nContent.",
+        "Migrate Test Suite to SimulatedWorkstackEnv Pattern",
+        id="implementation_plan_prefix_hyphen",
+    ),
+    pytest.param(
+        "implementation_plan_case_insensitive",
+        "plan.md",
+        "# IMPLEMENTATION PLAN: Add Real-Time Progress Output\n\nContent.",
+        "Add Real-Time Progress Output",
+        id="implementation_plan_case_insensitive",
+    ),
+    pytest.param(
+        "implementation_plan_mixed_case",
+        "plan.md",
+        "# Implementation Plan: Convert Subprocess CLI Tests to CliRunner\n\nContent.",
+        "Convert Subprocess CLI Tests to CliRunner",
+        id="implementation_plan_mixed_case",
+    ),
 ]
 
 

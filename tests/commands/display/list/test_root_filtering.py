@@ -30,11 +30,11 @@ from tests.commands.display.list import strip_ansi
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.global_config_ops import FakeGlobalConfigOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
+from workstack.core.graphite_ops import RealGraphiteOps
 
 
 def test_root_on_trunk_shows_only_trunk() -> None:
@@ -102,7 +102,7 @@ def test_root_on_trunk_shows_only_trunk() -> None:
             use_graphite=True,
         )
 
-        graphite_ops = FakeGraphiteOps()
+        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
@@ -124,9 +124,9 @@ def test_root_on_trunk_shows_only_trunk() -> None:
         root_section_start = None
         feature_b_section_start = None
         for i, line in enumerate(lines):
-            if line.startswith("root ["):
+            if line.startswith("root"):
                 root_section_start = i
-            if line.startswith("feature-b ["):
+            if line.startswith("feature-b"):
                 feature_b_section_start = i
 
         assert root_section_start is not None
@@ -217,7 +217,7 @@ def test_root_on_non_trunk_shows_ancestors_only() -> None:
             use_graphite=True,
         )
 
-        graphite_ops = FakeGraphiteOps()
+        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
@@ -239,9 +239,9 @@ def test_root_on_non_trunk_shows_ancestors_only() -> None:
         root_section_start = None
         feature_c_section_start = None
         for i, line in enumerate(lines):
-            if line.startswith("root ["):
+            if line.startswith("root"):
                 root_section_start = i
-            if line.startswith("feature-c ["):
+            if line.startswith("feature-c"):
                 feature_c_section_start = i
 
         assert root_section_start is not None
@@ -343,7 +343,7 @@ def test_non_root_worktree_shows_descendants_with_worktrees() -> None:
             use_graphite=True,
         )
 
-        graphite_ops = FakeGraphiteOps()
+        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
@@ -366,11 +366,11 @@ def test_non_root_worktree_shows_descendants_with_worktrees() -> None:
         worktree_a_section_start = None
         worktree_c_section_start = None
         for i, line in enumerate(lines):
-            if line.startswith("root ["):
+            if line.startswith("root"):
                 root_section_start = i
-            if line.startswith("worktree-a ["):
+            if line.startswith("worktree-a"):
                 worktree_a_section_start = i
-            if line.startswith("worktree-c ["):
+            if line.startswith("worktree-c"):
                 worktree_c_section_start = i
 
         assert root_section_start is not None

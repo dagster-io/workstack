@@ -7,28 +7,50 @@ from workstack.core.context import WorkstackContext
 from workstack.core.github_ops import PullRequestInfo
 
 
+def _get_visible_length(text: str) -> int:
+    """Calculate the visible length of text, excluding ANSI and OSC escape sequences.
+
+    Args:
+        text: Text that may contain escape sequences
+
+    Returns:
+        Number of visible characters
+    """
+    import re
+
+    # Remove ANSI color codes (\033[...m)
+    text = re.sub(r"\033\[[0-9;]*m", "", text)
+    # Remove OSC 8 hyperlink sequences (\033]8;;URL\033\\)
+    text = re.sub(r"\033\]8;;[^\033]*\033\\", "", text)
+    return len(text)
+
+
 def _format_worktree_line(
     name: str,
     branch: str | None,
-    path: str | None,
+    pr_info: str | None,
+    plan_summary: str | None,
     is_root: bool,
     is_current: bool,
     max_name_len: int = 0,
     max_branch_len: int = 0,
+    max_pr_info_len: int = 0,
 ) -> str:
     """Format a single worktree line with colorization and optional alignment.
 
     Args:
         name: Worktree name to display
         branch: Branch name (if any)
-        path: Filesystem path to display
+        pr_info: Formatted PR info string (e.g., "✅ #23") or None
+        plan_summary: Plan title or None if no plan
         is_root: True if this is the root repository worktree
         is_current: True if this is the worktree the user is currently in
         max_name_len: Maximum name length for alignment (0 = no alignment)
         max_branch_len: Maximum branch length for alignment (0 = no alignment)
+        max_pr_info_len: Maximum PR info visible length for alignment (0 = no alignment)
 
     Returns:
-        Formatted line with appropriate colorization in format: name (branch) [path]
+        Formatted line with colorization in format: name (branch) {PR info} {plan summary}
     """
     # Root worktree gets green to distinguish it from regular worktrees
     name_color = "green" if is_root else "cyan"
@@ -38,7 +60,7 @@ def _format_worktree_line(
     name_with_padding = name + (" " * name_padding)
     name_part = click.style(name_with_padding, fg=name_color, bold=True)
 
-    # Build parts for display: name (branch) [path]
+    # Build parts for display: name (branch) {PR info} {plan summary}
     parts = [name_part]
 
     # Add branch in parentheses (yellow)
@@ -55,10 +77,25 @@ def _format_worktree_line(
         # Add spacing even if no branch to maintain alignment
         parts.append(" " * max_branch_len)
 
-    # Add path in brackets (dim white)
-    if path:
-        path_part = click.style(f"[{path}]", fg="white", dim=True)
-        parts.append(path_part)
+    # Add PR info or placeholder with alignment
+    pr_info_placeholder = click.style("[no PR]", fg="white", dim=True)
+    pr_display = pr_info if pr_info else pr_info_placeholder
+
+    if max_pr_info_len > 0:
+        # Calculate visible length and add padding
+        visible_len = _get_visible_length(pr_display)
+        padding = max_pr_info_len - visible_len
+        pr_display_with_padding = pr_display + (" " * padding)
+        parts.append(pr_display_with_padding)
+    else:
+        parts.append(pr_display)
+
+    # Add plan summary or placeholder
+    if plan_summary:
+        plan_colored = click.style(f"📋 {plan_summary}", fg="bright_magenta")
+        parts.append(plan_colored)
+    else:
+        parts.append(click.style("[no plan]", fg="white", dim=True))
 
     # Build the main line
     line = " ".join(parts)
@@ -232,25 +269,18 @@ def _format_pr_info(
 
 
 def _format_plan_summary(worktree_path: Path) -> str | None:
-    """Format plan summary line if .PLAN.md exists.
+    """Extract plan title from .PLAN.md if it exists.
 
     Args:
         worktree_path: Path to the worktree directory
 
     Returns:
-        Formatted line with plan title, or None if no plan file
+        Plan title string, or None if no plan file
     """
     from workstack.core.file_utils import extract_plan_title
 
     plan_path = worktree_path / ".PLAN.md"
-    title = extract_plan_title(plan_path)
-
-    if title is None:
-        return None
-
-    # Format: "  📋 <title in bright magenta>"
-    title_colored = click.style(title, fg="bright_magenta")
-    return f"  📋 {title_colored}"
+    return extract_plan_title(plan_path)
 
 
 def _display_branch_stack(
@@ -334,37 +364,6 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
                 current_worktree_path = wt_path_resolved
                 break
 
-    # Calculate maximum widths for alignment
-    # First, collect all names and branches to display
-    workstacks_dir = ensure_workstacks_dir(repo)
-
-    # Start with root
-    all_names = ["root"]
-    all_branches = []
-
-    root_branch = branches.get(repo.root)
-    if root_branch:
-        branch_display = "=" if "root" == root_branch else root_branch
-        all_branches.append(f"({branch_display})")
-
-    # Add worktree entries
-    if workstacks_dir.exists():
-        entries = sorted(p for p in workstacks_dir.iterdir() if p.is_dir())
-        for p in entries:
-            name = p.name
-            # Check if this directory has a corresponding worktree
-            for branch_path, branch_name in branches.items():
-                if branch_path.resolve() == p.resolve():
-                    all_names.append(name)
-                    if branch_name:
-                        branch_display = "=" if name == branch_name else branch_name
-                        all_branches.append(f"({branch_display})")
-                    break
-
-    # Calculate max widths
-    max_name_len = max(len(name) for name in all_names) if all_names else 0
-    max_branch_len = max(len(branch) for branch in all_branches) if all_branches else 0
-
     # Validate graphite is enabled if showing stacks
     if show_stacks:
         if not ctx.global_config_ops.get_use_graphite():
@@ -392,25 +391,81 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
             if not prs:
                 prs = ctx.github_ops.get_prs_for_repo(repo.root, include_checks=False)
 
+    # Calculate maximum widths for alignment
+    # First, collect all names, branches, and PR info to display
+    workstacks_dir = ensure_workstacks_dir(repo)
+
+    # Start with root
+    all_names = ["root"]
+    all_branches = []
+    all_pr_info = []
+
+    root_branch = branches.get(repo.root)
+    if root_branch:
+        branch_display = "=" if "root" == root_branch else root_branch
+        all_branches.append(f"({branch_display})")
+
+        # Add root PR info for width calculation
+        if prs:
+            root_pr_info = _format_pr_info(ctx, repo.root, root_branch, prs)
+            all_pr_info.append(root_pr_info if root_pr_info else "[no PR]")
+        else:
+            all_pr_info.append("[no PR]")
+    else:
+        all_pr_info.append("[no PR]")
+
+    # Add worktree entries
+    if workstacks_dir.exists():
+        entries = sorted(p for p in workstacks_dir.iterdir() if p.is_dir())
+        for p in entries:
+            name = p.name
+            # Check if this directory has a corresponding worktree
+            for branch_path, branch_name in branches.items():
+                if branch_path.resolve() == p.resolve():
+                    all_names.append(name)
+                    if branch_name:
+                        branch_display = "=" if name == branch_name else branch_name
+                        all_branches.append(f"({branch_display})")
+
+                        # Add PR info for width calculation
+                        if prs:
+                            wt_pr_info = _format_pr_info(ctx, repo.root, branch_name, prs)
+                            all_pr_info.append(wt_pr_info if wt_pr_info else "[no PR]")
+                        else:
+                            all_pr_info.append("[no PR]")
+                    else:
+                        all_pr_info.append("[no PR]")
+                    break
+
+    # Calculate max widths using visible length for PR info
+    max_name_len = max(len(name) for name in all_names) if all_names else 0
+    max_branch_len = max(len(branch) for branch in all_branches) if all_branches else 0
+    max_pr_info_len = (
+        max(_get_visible_length(pr_info) for pr_info in all_pr_info) if all_pr_info else 0
+    )
+
     # Show root repo first (display as "root" to distinguish from worktrees)
     is_current_root = repo.root.resolve() == current_worktree_path
+
+    # Get PR info and plan summary for root
+    root_pr_info = None
+    if prs and root_branch:
+        root_pr_info = _format_pr_info(ctx, repo.root, root_branch, prs)
+    root_plan_summary = _format_plan_summary(repo.root)
+
     click.echo(
         _format_worktree_line(
             "root",
             root_branch,
-            path=str(repo.root),
+            pr_info=root_pr_info,
+            plan_summary=root_plan_summary,
             is_root=True,
             is_current=is_current_root,
             max_name_len=max_name_len,
             max_branch_len=max_branch_len,
+            max_pr_info_len=max_pr_info_len,
         )
     )
-
-    # Add plan summary if exists (only when showing stacks)
-    if show_stacks:
-        plan_summary = _format_plan_summary(repo.root)
-        if plan_summary:
-            click.echo(plan_summary)
 
     if show_stacks and root_branch:
         _display_branch_stack(ctx, repo.root, repo.root, root_branch, branches, True, prs)
@@ -441,23 +496,26 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
             click.echo()
 
         is_current_wt = bool(wt_path and wt_path.resolve() == current_worktree_path)
+
+        # Get PR info and plan summary for this worktree
+        wt_pr_info = None
+        if prs and wt_branch:
+            wt_pr_info = _format_pr_info(ctx, repo.root, wt_branch, prs)
+        wt_plan_summary = _format_plan_summary(wt_path) if wt_path else None
+
         click.echo(
             _format_worktree_line(
                 name,
                 wt_branch,
-                path=str(p),
+                pr_info=wt_pr_info,
+                plan_summary=wt_plan_summary,
                 is_root=False,
                 is_current=is_current_wt,
                 max_name_len=max_name_len,
                 max_branch_len=max_branch_len,
+                max_pr_info_len=max_pr_info_len,
             )
         )
-
-        # Add plan summary if exists (only when showing stacks)
-        if show_stacks and wt_path:
-            plan_summary = _format_plan_summary(wt_path)
-            if plan_summary:
-                click.echo(plan_summary)
 
         if show_stacks and wt_branch and wt_path:
             _display_branch_stack(ctx, repo.root, wt_path, wt_branch, branches, False, prs)

@@ -2,8 +2,8 @@
 
 First, read and understand the repository's coding standards and conventions:
 
-1. Read CLAUDE.md in the root directory - this contains the core coding standards
-2. Follow all standards outlined in CLAUDE.md and any documentation it references
+1. Read AGENTS.md in the root directory - this contains the core coding standards
+2. Follow all standards outlined in AGENTS.md and any documentation it references
 3. Pay special attention to:
    - Exception handling patterns
    - Type annotation requirements

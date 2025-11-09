@@ -37,122 +37,123 @@ def test_is_git_repo_root_with_git_file() -> None:
         assert not command.is_git_repo_root(Path.cwd())
 
 
-def test_create_symlink_for_claude_md_creates_new_symlink() -> None:
-    """Test creating a new symlink when AGENTS.md doesn't exist."""
+def test_create_reference_for_agents_md_creates_new_file() -> None:
+    """Test creating a new CLAUDE.md reference when it doesn't exist."""
     runner = CliRunner()
     with runner.isolated_filesystem():
-        # Create a CLAUDE.md file
-        claude_md = Path.cwd() / "CLAUDE.md"
-        claude_md.write_text("# Project instructions", encoding="utf-8")
+        # Create an AGENTS.md file
+        agents_md = Path.cwd() / "AGENTS.md"
+        agents_md.write_text("# Project instructions", encoding="utf-8")
 
-        # Create symlink
-        status = command.create_symlink_for_claude_md(claude_md, dry_run=False)
+        # Create reference file
+        status = command.create_reference_for_agents_md(agents_md, dry_run=False)
 
         assert status == "created"
-        agents_md = Path.cwd() / "AGENTS.md"
-        assert agents_md.exists()
-        assert agents_md.is_symlink()
-        assert agents_md.readlink() == Path("CLAUDE.md")
+        claude_md = Path.cwd() / "CLAUDE.md"
+        assert claude_md.exists()
+        assert claude_md.is_file()
+        assert claude_md.read_text(encoding="utf-8") == "@AGENTS.md"
 
 
-def test_create_symlink_for_claude_md_dry_run() -> None:
-    """Test dry run mode doesn't create symlink."""
+def test_create_reference_for_agents_md_dry_run() -> None:
+    """Test dry run mode doesn't create reference file."""
     runner = CliRunner()
     with runner.isolated_filesystem():
-        # Create a CLAUDE.md file
-        claude_md = Path.cwd() / "CLAUDE.md"
-        claude_md.write_text("# Project instructions", encoding="utf-8")
+        # Create an AGENTS.md file
+        agents_md = Path.cwd() / "AGENTS.md"
+        agents_md.write_text("# Project instructions", encoding="utf-8")
 
-        # Try to create symlink in dry-run mode
-        status = command.create_symlink_for_claude_md(claude_md, dry_run=True)
+        # Try to create reference in dry-run mode
+        status = command.create_reference_for_agents_md(agents_md, dry_run=True)
 
         assert status == "created"
-        agents_md = Path.cwd() / "AGENTS.md"
-        assert not agents_md.exists()
+        claude_md = Path.cwd() / "CLAUDE.md"
+        assert not claude_md.exists()
 
 
-def test_create_symlink_for_claude_md_skips_correct_symlink() -> None:
-    """Test skipping when AGENTS.md already points to CLAUDE.md."""
+def test_create_reference_for_agents_md_skips_correct_reference() -> None:
+    """Test skipping when CLAUDE.md already contains @AGENTS.md."""
     runner = CliRunner()
     with runner.isolated_filesystem():
-        # Create a CLAUDE.md file
-        claude_md = Path.cwd() / "CLAUDE.md"
-        claude_md.write_text("# Project instructions", encoding="utf-8")
-
-        # Create correct symlink
+        # Create an AGENTS.md file
         agents_md = Path.cwd() / "AGENTS.md"
-        agents_md.symlink_to("CLAUDE.md")
+        agents_md.write_text("# Project instructions", encoding="utf-8")
+
+        # Create correct reference file
+        claude_md = Path.cwd() / "CLAUDE.md"
+        claude_md.write_text("@AGENTS.md", encoding="utf-8")
 
         # Should skip
-        status = command.create_symlink_for_claude_md(claude_md, dry_run=False)
+        status = command.create_reference_for_agents_md(agents_md, dry_run=False)
 
         assert status == "skipped_correct"
-        assert agents_md.is_symlink()
-        assert agents_md.readlink() == Path("CLAUDE.md")
+        assert claude_md.is_file()
+        assert claude_md.read_text(encoding="utf-8") == "@AGENTS.md"
 
 
-def test_create_symlink_for_claude_md_skips_regular_file() -> None:
-    """Test skipping when AGENTS.md exists as regular file."""
+def test_create_reference_for_agents_md_skips_different_file() -> None:
+    """Test skipping when CLAUDE.md exists with different content."""
     runner = CliRunner()
     with runner.isolated_filesystem():
-        # Create a CLAUDE.md file
-        claude_md = Path.cwd() / "CLAUDE.md"
-        claude_md.write_text("# Project instructions", encoding="utf-8")
-
-        # Create AGENTS.md as regular file
+        # Create an AGENTS.md file
         agents_md = Path.cwd() / "AGENTS.md"
-        agents_md.write_text("# Different content", encoding="utf-8")
+        agents_md.write_text("# Project instructions", encoding="utf-8")
+
+        # Create CLAUDE.md with different content
+        claude_md = Path.cwd() / "CLAUDE.md"
+        claude_md.write_text("# Different content", encoding="utf-8")
 
         # Should skip
-        status = command.create_symlink_for_claude_md(claude_md, dry_run=False)
+        status = command.create_reference_for_agents_md(agents_md, dry_run=False)
 
         assert status == "skipped_exists"
-        assert agents_md.exists()
-        assert not agents_md.is_symlink()
+        assert claude_md.exists()
+        assert claude_md.read_text(encoding="utf-8") == "# Different content"
 
 
-def test_create_symlink_for_claude_md_skips_wrong_symlink() -> None:
-    """Test skipping when AGENTS.md points to something else."""
+def test_create_reference_for_agents_md_skips_symlink() -> None:
+    """Test skipping when CLAUDE.md is a symlink."""
     runner = CliRunner()
     with runner.isolated_filesystem():
         # Create files
-        claude_md = Path.cwd() / "CLAUDE.md"
-        claude_md.write_text("# Project instructions", encoding="utf-8")
+        agents_md = Path.cwd() / "AGENTS.md"
+        agents_md.write_text("# Project instructions", encoding="utf-8")
         other_file = Path.cwd() / "OTHER.md"
         other_file.write_text("# Other content", encoding="utf-8")
 
-        # Create symlink to OTHER.md
-        agents_md = Path.cwd() / "AGENTS.md"
-        agents_md.symlink_to("OTHER.md")
+        # Create CLAUDE.md as symlink to OTHER.md
+        claude_md = Path.cwd() / "CLAUDE.md"
+        claude_md.symlink_to("OTHER.md")
 
         # Should skip
-        status = command.create_symlink_for_claude_md(claude_md, dry_run=False)
+        status = command.create_reference_for_agents_md(agents_md, dry_run=False)
 
         assert status == "skipped_exists"
-        assert agents_md.is_symlink()
-        assert agents_md.readlink() == Path("OTHER.md")
+        assert claude_md.is_symlink()
+        assert claude_md.readlink() == Path("OTHER.md")
 
 
 def test_create_agents_symlinks_finds_multiple_files() -> None:
-    """Test finding and creating symlinks for multiple CLAUDE.md files."""
+    """Test finding and creating references for multiple AGENTS.md files."""
     runner = CliRunner()
     with runner.isolated_filesystem():
         repo_root = Path.cwd()
 
-        # Create multiple CLAUDE.md files
-        (repo_root / "CLAUDE.md").write_text("# Root", encoding="utf-8")
+        # Create multiple AGENTS.md files
+        (repo_root / "AGENTS.md").write_text("# Root", encoding="utf-8")
         (repo_root / "sub1").mkdir()
-        (repo_root / "sub1" / "CLAUDE.md").write_text("# Sub1", encoding="utf-8")
+        (repo_root / "sub1" / "AGENTS.md").write_text("# Sub1", encoding="utf-8")
         (repo_root / "sub2").mkdir()
-        (repo_root / "sub2" / "CLAUDE.md").write_text("# Sub2", encoding="utf-8")
+        (repo_root / "sub2" / "AGENTS.md").write_text("# Sub2", encoding="utf-8")
 
         created, skipped = command.create_agents_symlinks(repo_root, dry_run=False, verbose=False)
 
         assert created == 3
         assert skipped == 0
-        assert (repo_root / "AGENTS.md").is_symlink()
-        assert (repo_root / "sub1" / "AGENTS.md").is_symlink()
-        assert (repo_root / "sub2" / "AGENTS.md").is_symlink()
+        assert (repo_root / "CLAUDE.md").is_file()
+        assert (repo_root / "CLAUDE.md").read_text(encoding="utf-8") == "@AGENTS.md"
+        assert (repo_root / "sub1" / "CLAUDE.md").is_file()
+        assert (repo_root / "sub2" / "CLAUDE.md").is_file()
 
 
 def test_create_agents_symlinks_idempotent() -> None:
@@ -161,8 +162,8 @@ def test_create_agents_symlinks_idempotent() -> None:
     with runner.isolated_filesystem():
         repo_root = Path.cwd()
 
-        # Create CLAUDE.md file
-        (repo_root / "CLAUDE.md").write_text("# Root", encoding="utf-8")
+        # Create AGENTS.md file
+        (repo_root / "AGENTS.md").write_text("# Root", encoding="utf-8")
 
         # First run
         created1, skipped1 = command.create_agents_symlinks(repo_root, dry_run=False, verbose=False)
@@ -175,8 +176,8 @@ def test_create_agents_symlinks_idempotent() -> None:
         assert skipped2 == 1
 
 
-def test_create_agents_symlinks_no_claude_files() -> None:
-    """Test behavior when no CLAUDE.md files exist."""
+def test_create_agents_symlinks_no_agents_files() -> None:
+    """Test behavior when no AGENTS.md files exist."""
     runner = CliRunner()
     with runner.isolated_filesystem():
         repo_root = Path.cwd()
@@ -192,7 +193,7 @@ def test_cli_help() -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ["create-agents-symlinks", "--help"])
     assert result.exit_code == 0
-    assert "Create AGENTS.md symlinks" in result.output
+    assert "Create CLAUDE.md reference" in result.output
     assert "--dry-run" in result.output
     assert "--verbose" in result.output
 

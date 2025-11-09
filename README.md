@@ -477,8 +477,8 @@ A: Works perfectly with standard git commands.
 
 Core documentation for contributors:
 
-- **[CLAUDE.md](CLAUDE.md)** - Coding standards and conventions (required reading)
-- **[tests/CLAUDE.md](tests/CLAUDE.md)** - Testing patterns and practices
+- **[AGENTS.md](AGENTS.md)** - Coding standards and conventions (required reading)
+- **[tests/AGENTS.md](tests/AGENTS.md)** - Testing patterns and practices
 - **[docs/PUBLISHING.md](docs/PUBLISHING.md)** - Publishing to PyPI guide
 
 #### Workspace Structure

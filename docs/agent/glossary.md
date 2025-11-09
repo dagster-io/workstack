@@ -411,4 +411,4 @@ Test that uses fake implementations and isolated filesystem.
 
 ## Related Documentation
 
-- [CLAUDE.md](../../CLAUDE.md) - Coding standards
+- [AGENTS.md](../../AGENTS.md) - Coding standards

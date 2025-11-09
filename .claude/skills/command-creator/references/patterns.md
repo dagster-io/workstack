@@ -223,7 +223,7 @@ Check these files in order for context:
 
 1. .PLAN.md - implementation plan (highest priority)
 2. .github/CONTRIBUTING.md - contribution guidelines
-3. CLAUDE.md - coding standards
+3. AGENTS.md - coding standards
 4. README.md - project overview
 
 Use the first file found to inform the workflow. Different files trigger different behaviors.

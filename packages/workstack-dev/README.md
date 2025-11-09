@@ -40,7 +40,7 @@ packages/workstack-dev/
 ├── src/workstack_dev/
 │   ├── __main__.py          # Entry point - imports cli from cli.py
 │   ├── cli.py               # Static CLI definition with all command imports
-│   ├── CLAUDE.md            # Implementation guidelines for AI assistants
+│   ├── AGENTS.md            # Implementation guidelines for AI assistants
 │   └── commands/            # Command implementations
 │       ├── branch_commit_count/
 │       │   ├── __init__.py  # Optional docstring
@@ -266,7 +266,7 @@ To add a new command to `workstack-dev`:
 
 ## Implementation Guidelines
 
-See `packages/workstack-dev/src/workstack_dev/CLAUDE.md` for detailed implementation guidelines including:
+See `packages/workstack-dev/src/workstack_dev/AGENTS.md` for detailed implementation guidelines including:
 
 - Function naming conventions (`{command_name}_command`)
 - Static import architecture requirements

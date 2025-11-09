@@ -36,7 +36,7 @@ def test_create_agents_symlinks_help() -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ["create-agents-symlinks", "--help"])
     assert result.exit_code == 0
-    assert "Create AGENTS.md symlinks" in result.output
+    assert "Create CLAUDE.md reference" in result.output
 
 
 def test_cli_help_shows_commands() -> None:

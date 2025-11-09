@@ -335,6 +335,9 @@ class RealGraphiteOps(GraphiteOps):
             stderr=DEVNULL if quiet else sys.stderr,
         )
 
+        # Invalidate branches cache - gt sync modifies Graphite metadata
+        self._branches_cache = None
+
     def get_prs_from_graphite(self, git_ops: GitOps, repo_root: Path) -> dict[str, PullRequestInfo]:
         """Get PR information from Graphite's .git/.graphite_pr_info file."""
         git_dir = git_ops.get_git_common_dir(repo_root)

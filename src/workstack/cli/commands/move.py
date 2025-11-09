@@ -6,7 +6,7 @@ import click
 
 from workstack.cli.commands.switch import complete_worktree_names
 from workstack.cli.core import discover_repo_context, ensure_workstacks_dir, worktree_path_for
-from workstack.core.context import WorkstackContext
+from workstack.core.context import WorkstackContext, read_trunk_from_pyproject
 
 
 def _get_worktree_branch(ctx: WorkstackContext, repo_root: Path, wt_path: Path) -> str | None:
@@ -340,6 +340,7 @@ def move_cmd(
     # Discover repository context
     repo = discover_repo_context(ctx, ctx.cwd)
     workstacks_dir = ensure_workstacks_dir(repo)
+    trunk_branch = read_trunk_from_pyproject(repo.root)
 
     # Resolve source worktree
     source_wt = resolve_source_worktree(
@@ -372,7 +373,7 @@ def move_cmd(
     else:
         # Auto-detect default branch if using 'main' default and it doesn't exist
         if ref == "main":
-            detected_default = ctx.git_ops.detect_default_branch(repo.root)
+            detected_default = ctx.git_ops.detect_default_branch(repo.root, trunk_branch)
             ref = detected_default
 
         execute_move(ctx, repo.root, source_wt, target_wt, ref, force=force)

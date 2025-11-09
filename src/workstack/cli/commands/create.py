@@ -12,7 +12,7 @@ from workstack.cli.config import LoadedConfig, load_config
 from workstack.cli.core import discover_repo_context, ensure_workstacks_dir, worktree_path_for
 from workstack.cli.shell_utils import render_cd_script, write_script_to_temp
 from workstack.cli.subprocess_utils import run_with_error_reporting
-from workstack.core.context import WorkstackContext
+from workstack.core.context import WorkstackContext, read_trunk_from_pyproject
 
 _SAFE_COMPONENT_RE = re.compile(r"[^A-Za-z0-9._/-]+")
 
@@ -557,6 +557,7 @@ def create(
     repo = discover_repo_context(ctx, ctx.cwd)
     workstacks_dir = ensure_workstacks_dir(repo)
     cfg = load_config(workstacks_dir)
+    trunk_branch = read_trunk_from_pyproject(repo.root)
 
     # Apply date prefix and uniqueness for plan-derived names
     if is_plan_derived:
@@ -605,7 +606,7 @@ def create(
             to_branch = ref
         else:
             # Fall back to default branch (main/master)
-            to_branch = ctx.git_ops.detect_default_branch(repo.root)
+            to_branch = ctx.git_ops.detect_default_branch(repo.root, trunk_branch)
 
         # Check for edge case: can't move main to worktree then switch to main
         if current_branch == to_branch:

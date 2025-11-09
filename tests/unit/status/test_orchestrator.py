@@ -1,4 +1,24 @@
-"""Unit tests for StatusOrchestrator with comprehensive coverage."""
+"""Unit tests for StatusOrchestrator with comprehensive coverage.
+
+Test Runner Strategy
+--------------------
+These tests use two different parallel task runner implementations:
+
+1. **RealParallelTaskRunner**: Used for most tests where we want actual collector
+   execution to happen. This validates the real-world behavior of the orchestrator
+   with actual collector implementations. The underlying tasks (reading files,
+   checking git status with FakeGitOps) are fast, making this tractable for fast tests.
+
+2. **FakeParallelTaskRunner**: Used only for specific scenarios where we need to
+   simulate exceptional conditions that are difficult to reproduce with real
+   collectors:
+   - Exception handling (test_orchestrator_collector_exception_handling)
+   - Timeout scenarios (test_orchestrator_timeout_handling)
+
+The fake runner allows us to simulate specific results (including None for failures)
+without needing collectors that actually fail or timeout. This keeps tests fast and
+reliable while still validating the orchestrator's error handling logic.
+"""
 
 import time
 from pathlib import Path

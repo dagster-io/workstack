@@ -15,11 +15,13 @@ from click.testing import CliRunner
 from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps, WorktreeInfo
 from tests.fakes.global_config_ops import FakeGlobalConfigOps
+from tests.test_utils.repo_setup import simulated_workstack_env
 from workstack.cli.cli import cli
 from workstack.cli.tree import (
     _get_worktree_mapping,
     _load_graphite_branch_graph,
 )
+from workstack.core.graphite_ops import BranchMetadata
 
 # ===========================
 # Integration Tests (Functions with Filesystem)
@@ -222,58 +224,41 @@ def test_load_graphite_branch_graph_returns_none_when_missing() -> None:
 def test_tree_command_displays_hierarchy() -> None:
     """Test that tree command shows worktree hierarchy."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        repo_root = cwd / "repo"
-        repo_root.mkdir()
+    with simulated_workstack_env(runner) as env:
+        # Create feature-a worktree
+        env.create_linked_worktree("feature-a", "feature-a", chdir=False)
 
-        # Create fake git directory with Graphite cache
-        git_dir = repo_root / ".git"
-        git_dir.mkdir()
-
-        cache_data = {
-            "branches": [
-                [
-                    "main",
-                    {
-                        "validationResult": "TRUNK",
-                        "children": ["feature-a"],
-                    },
-                ],
-                [
-                    "feature-a",
-                    {
-                        "parentBranchName": "main",
-                        "children": [],
-                    },
-                ],
-            ]
-        }
-        cache_file = git_dir / ".graphite_cache_persist"
-        cache_file.write_text(json.dumps(cache_data), encoding="utf-8")
-
-        git_ops = FakeGitOps(
-            worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main"),
-                    WorktreeInfo(
-                        path=repo_root / "work" / "feature-a",
-                        branch="feature-a",
-                    ),
-                ]
+        # Build ops from branches
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata(
+                    name="main",
+                    parent=None,
+                    children=["feature-a"],
+                    is_trunk=True,
+                    commit_sha="abc123",
+                ),
+                "feature-a": BranchMetadata(
+                    name="feature-a",
+                    parent="main",
+                    children=[],
+                    is_trunk=False,
+                    commit_sha="def456",
+                ),
             },
-            git_common_dirs={repo_root: git_dir},
-            current_branches={repo_root: "main"},
+            current_branch="main",
         )
 
         global_config_ops = FakeGlobalConfigOps(
-            workstacks_root=cwd / "workstacks", use_graphite=True
+            workstacks_root=env.workstacks_root,
+            use_graphite=True,
         )
 
-        ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
-
-        # Change to repo directory so discover_repo_context can find .git
-        os.chdir(repo_root)
+        ctx = create_test_context(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            graphite_ops=graphite_ops,
+        )
 
         result = runner.invoke(cli, ["tree"], obj=ctx)
 
@@ -293,65 +278,48 @@ def test_tree_command_filters_branches_without_worktrees() -> None:
     before rendering to show only branches with active worktrees.
     """
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        repo_root = cwd / "repo"
-        repo_root.mkdir()
+    with simulated_workstack_env(runner) as env:
+        # Only create worktree for feature-a (not feature-b)
+        env.create_linked_worktree("feature-a", "feature-a", chdir=False)
 
-        git_dir = repo_root / ".git"
-        git_dir.mkdir()
-
-        # Cache has 3 branches, but only 2 have worktrees
-        cache_data = {
-            "branches": [
-                [
-                    "main",
-                    {
-                        "validationResult": "TRUNK",
-                        "children": ["feature-a", "feature-b"],
-                    },
-                ],
-                [
-                    "feature-a",
-                    {
-                        "parentBranchName": "main",
-                        "children": [],
-                    },
-                ],
-                [
-                    "feature-b",
-                    {
-                        "parentBranchName": "main",
-                        "children": [],
-                    },
-                ],
-            ]
-        }
-        cache_file = git_dir / ".graphite_cache_persist"
-        cache_file.write_text(json.dumps(cache_data), encoding="utf-8")
-
-        # Only main and feature-a have worktrees (feature-b does not)
-        git_ops = FakeGitOps(
-            worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main"),
-                    WorktreeInfo(
-                        path=repo_root / "work" / "feature-a",
-                        branch="feature-a",
-                    ),
-                ]
+        # Build ops with 3 branches, but only 2 have worktrees
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata(
+                    name="main",
+                    parent=None,
+                    children=["feature-a", "feature-b"],
+                    is_trunk=True,
+                    commit_sha="abc123",
+                ),
+                "feature-a": BranchMetadata(
+                    name="feature-a",
+                    parent="main",
+                    children=[],
+                    is_trunk=False,
+                    commit_sha="def456",
+                ),
+                "feature-b": BranchMetadata(
+                    name="feature-b",
+                    parent="main",
+                    children=[],
+                    is_trunk=False,
+                    commit_sha="ghi789",
+                ),
             },
-            git_common_dirs={repo_root: git_dir},
+            current_branch="main",
         )
 
         global_config_ops = FakeGlobalConfigOps(
-            workstacks_root=cwd / "workstacks", use_graphite=True
+            workstacks_root=env.workstacks_root,
+            use_graphite=True,
         )
 
-        ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
-
-        # Change to repo directory so discover_repo_context can find .git
-        os.chdir(repo_root)
+        ctx = create_test_context(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            graphite_ops=graphite_ops,
+        )
 
         result = runner.invoke(cli, ["tree"], obj=ctx)
 
@@ -365,32 +333,31 @@ def test_tree_command_filters_branches_without_worktrees() -> None:
 def test_tree_command_fails_without_graphite_cache() -> None:
     """Test that tree command fails gracefully when Graphite cache is missing."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        repo_root = cwd / "repo"
-        repo_root.mkdir()
-
-        git_dir = repo_root / ".git"
-        git_dir.mkdir()
-        # Note: No .graphite_cache_persist file created
-
-        git_ops = FakeGitOps(
-            worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main"),
-                ]
+    with simulated_workstack_env(runner) as env:
+        # Build ops with minimal graphite data
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata(
+                    name="main",
+                    parent=None,
+                    children=[],
+                    is_trunk=True,
+                    commit_sha="abc123",
+                ),
             },
-            git_common_dirs={repo_root: git_dir},
+            current_branch="main",
         )
 
         global_config_ops = FakeGlobalConfigOps(
-            workstacks_root=cwd / "workstacks", use_graphite=True
+            workstacks_root=env.workstacks_root,
+            use_graphite=True,
         )
 
-        ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
-
-        # Change to repo directory so discover_repo_context can find .git
-        os.chdir(repo_root)
+        ctx = create_test_context(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            graphite_ops=graphite_ops,
+        )
 
         result = runner.invoke(cli, ["tree"], obj=ctx)
 

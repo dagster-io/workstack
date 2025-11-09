@@ -19,27 +19,9 @@ def test_graphite_branches_text_format(tmp_path: Path) -> None:
     """Test graphite branches command with default text format."""
     # Arrange: Set up branch metadata
     branches = {
-        "main": BranchMetadata(
-            name="main",
-            parent=None,
-            children=["feat-1"],
-            is_trunk=True,
-            commit_sha="abc123",
-        ),
-        "feat-1": BranchMetadata(
-            name="feat-1",
-            parent="main",
-            children=[],
-            is_trunk=False,
-            commit_sha="def456",
-        ),
-        "feat-2": BranchMetadata(
-            name="feat-2",
-            parent="main",
-            children=[],
-            is_trunk=False,
-            commit_sha="ghi789",
-        ),
+        "main": BranchMetadata.main(children=["feat-1"], sha="abc123"),
+        "feat-1": BranchMetadata.branch("feat-1", sha="def456"),
+        "feat-2": BranchMetadata.branch("feat-2", sha="ghi789"),
     }
 
     graphite_ops = FakeGraphiteOps(branches=branches)
@@ -74,20 +56,8 @@ def test_graphite_branches_json_format(tmp_path: Path) -> None:
     """Test graphite branches command with JSON format."""
     # Arrange: Set up branch metadata
     branches = {
-        "main": BranchMetadata(
-            name="main",
-            parent=None,
-            children=["feat-1"],
-            is_trunk=True,
-            commit_sha="abc123",
-        ),
-        "feat-1": BranchMetadata(
-            name="feat-1",
-            parent="main",
-            children=[],
-            is_trunk=False,
-            commit_sha="def456",
-        ),
+        "main": BranchMetadata.main(children=["feat-1"], sha="abc123"),
+        "feat-1": BranchMetadata.branch("feat-1", sha="def456"),
     }
 
     graphite_ops = FakeGraphiteOps(branches=branches)
@@ -194,27 +164,9 @@ def test_graphite_branches_multiple_children(tmp_path: Path) -> None:
     """Test graphite branches command with branch that has multiple children."""
     # Arrange: Main with multiple children
     branches = {
-        "main": BranchMetadata(
-            name="main",
-            parent=None,
-            children=["feat-1", "feat-2"],
-            is_trunk=True,
-            commit_sha="abc123",
-        ),
-        "feat-1": BranchMetadata(
-            name="feat-1",
-            parent="main",
-            children=[],
-            is_trunk=False,
-            commit_sha="def456",
-        ),
-        "feat-2": BranchMetadata(
-            name="feat-2",
-            parent="main",
-            children=[],
-            is_trunk=False,
-            commit_sha="ghi789",
-        ),
+        "main": BranchMetadata.main(children=["feat-1", "feat-2"], sha="abc123"),
+        "feat-1": BranchMetadata.branch("feat-1", sha="def456"),
+        "feat-2": BranchMetadata.branch("feat-2", sha="ghi789"),
     }
 
     graphite_ops = FakeGraphiteOps(branches=branches)
@@ -250,27 +202,9 @@ def test_graphite_branches_linear_stack(tmp_path: Path) -> None:
     """Test graphite branches command with a linear stack."""
     # Arrange: Linear stack: main -> feat-1 -> feat-2
     branches = {
-        "main": BranchMetadata(
-            name="main",
-            parent=None,
-            children=["feat-1"],
-            is_trunk=True,
-            commit_sha="aaa111",
-        ),
-        "feat-1": BranchMetadata(
-            name="feat-1",
-            parent="main",
-            children=["feat-2"],
-            is_trunk=False,
-            commit_sha="bbb222",
-        ),
-        "feat-2": BranchMetadata(
-            name="feat-2",
-            parent="feat-1",
-            children=[],
-            is_trunk=False,
-            commit_sha="ccc333",
-        ),
+        "main": BranchMetadata.main(children=["feat-1"], sha="aaa111"),
+        "feat-1": BranchMetadata.branch("feat-1", children=["feat-2"], sha="bbb222"),
+        "feat-2": BranchMetadata.branch("feat-2", parent="feat-1", sha="ccc333"),
     }
 
     graphite_ops = FakeGraphiteOps(branches=branches)

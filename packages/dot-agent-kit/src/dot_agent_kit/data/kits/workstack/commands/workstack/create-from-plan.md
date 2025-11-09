@@ -173,82 +173,59 @@ You are executing the `/workstack:create-from-plan` command. Follow these steps 
 
 **Detection Strategy:**
 
-Plan mode is indicated by a `<system-reminder>` tag injected into the **current message context** by the Claude Code infrastructure. This tag is added dynamically to the user's message when plan mode is active.
+Plan mode blocks write operations. Test this directly by attempting a harmless write operation.
 
 **How to Detect Plan Mode:**
 
-Search for this pattern in the CURRENT user message (not historical conversation):
+1. **Generate unique temp filename:**
+   - Use current timestamp or random string to ensure uniqueness
+   - Format: `/tmp/claude-plan-test-{unique-id}.tmp`
+   - Example: `/tmp/claude-plan-test-1699564832.tmp`
 
-```
-<system-reminder>Plan mode is active
-```
+2. **Attempt to create test file:**
+   - Use Write tool to create the temp file
+   - Content: Single space character ` ` (minimal content)
+   - This tests write capability without side effects
 
-Or more broadly (regex-like pattern):
+3. **Interpret the result:**
+   - **If Write succeeds** → Plan mode is OFF
+     - Immediately use Bash to delete: `rm /tmp/claude-plan-test-{unique-id}.tmp`
+     - Proceed to Step 2
+   - **If Write fails with ANY error** → Plan mode is ON
+     - Display plan mode warning (below)
+     - Abort execution immediately
 
-```
-<system-reminder>.*[Pp]lan mode is active.*</system-reminder>
-```
+**Why This Works:**
 
-**Critical Implementation Details:**
+- **Deterministic**: Tests actual write capability, not proxy signals
+- **Reliable**: Directly tests the restriction that matters for this command
+- **No false positives**: If we can write to /tmp/, we can write plan files
+- **No false negatives**: If plan mode blocks writes, this catches it
+- **Safe**: /tmp/ location won't pollute repository or user files
+- **Self-cleaning**: Temp file deleted immediately after successful test
 
-1. **Where to Look**: Check ONLY in the immediate context of the current user message that invoked this command
-   - NOT in conversation history
-   - NOT in previous messages
-   - ONLY in system reminders attached to the CURRENT invocation
-
-2. **What to Search For**: The system reminder will contain:
-   - Opening tag: `<system-reminder>`
-   - Text containing: "Plan mode is active" (case variations possible)
-   - Additional text about "Use only read-type tools" or "read-only"
-   - Closing tag: `</system-reminder>`
-
-3. **Detection Logic**:
-   ```
-   IF current_message contains "<system-reminder>" AND
-      content_within_tag matches "plan mode is active":
-      → Plan mode is ACTIVE
-   ELSE:
-      → Plan mode is NOT active
-   ```
-
-**Why This Detection Works:**
-
-- System reminders are injected at runtime when the user message is processed
-- They appear as part of the message content that Claude receives
-- They're not visible to the user but are visible to Claude
-- They're cleared when plan mode is exited, so absence = not in plan mode
-
-**If Plan Mode is DETECTED:**
+**If Plan Mode is DETECTED (Write failed):**
 
 Display this message and STOP execution immediately:
 
 ```
 ⚠️ Plan Mode Detected
 
-This command cannot run while plan mode is active.
+This command cannot run while plan mode is active (write operations are blocked).
 
 To proceed:
 1. Exit plan mode by pressing Shift+Tab
 2. Rerun this command: /workstack:create-from-plan
 
-Note: Plan mode prevents file modifications and command execution,
-which this command requires to create worktrees and save files.
+Note: This command requires file write permissions to save plans and create worktrees.
 ```
 
 **DO NOT proceed to Step 2 if plan mode is detected.**
 
-**If Plan Mode is NOT detected:**
+**If Plan Mode is NOT detected (Write succeeded):**
 
+- Clean up temp file with: `rm /tmp/claude-plan-test-{unique-id}.tmp`
 - Continue to Step 2 normally
-
-**Alternative Detection Method (Fallback):**
-
-If system reminder detection is inconclusive, you may attempt a minimal write operation:
-
-- Try to create a temporary test file in `/tmp/`
-- If blocked with "plan mode active" error → Plan mode is ON
-- If succeeds → Plan mode is OFF (delete the test file immediately)
-- This is a fallback only - prefer the system reminder detection method
 
 ### Step 2: Verify Scope and Constraints
 
@@ -1268,4 +1245,4 @@ Location: `<worktree-path>`
 - User must manually run `workstack switch` and `/workstack:implement-plan` to begin implementation
 - The `--permission-mode acceptEdits` flag is included to automatically accept edits during implementation
 - Always provide clear feedback at each step
-- **Plan mode detection is deterministic** using system reminder tags
+- **Plan mode detection uses write-test** - attempts temp file creation to verify write capability

@@ -1786,8 +1786,8 @@ def test_create_with_stay_prevents_script_generation() -> None:
 
         assert result.exit_code == 0, result.output
         # When --stay is used, no script path should be output
-        # The output should not contain /tmp/ paths (script file paths)
-        assert "/tmp/" not in result.output
+        # Check for the specific script file pattern, not just /tmp/
+        assert "workstack-create-" not in result.output
         # Should still create the worktree
         wt_path = workstacks_dir / "test-feature"
         assert wt_path.exists()
@@ -1896,7 +1896,8 @@ def test_create_with_stay_and_plan() -> None:
         assert (wt_path / ".PLAN.md").exists()
         assert not plan_file.exists()
         # No script should be generated
-        assert "/tmp/" not in result.output
+        # Check for the specific script file pattern, not just /tmp/
+        assert "workstack-create-" not in result.output
 
 
 def test_create_default_behavior_generates_script() -> None:

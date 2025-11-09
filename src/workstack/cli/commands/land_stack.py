@@ -597,7 +597,7 @@ def land_stack(ctx: WorkstackContext, force: bool, verbose: bool, dry_run: bool)
         error_detail = e.stderr.strip() if e.stderr else str(e)
         error_msg = click.style(f"❌ Landing stopped: {error_detail}", fg="red")
         click.echo(error_msg, err=True)
-        raise SystemExit(1)
+        raise SystemExit(1) from None
     except FileNotFoundError as e:
         click.echo()
         error_msg = click.style(
@@ -608,7 +608,7 @@ def land_stack(ctx: WorkstackContext, force: bool, verbose: bool, dry_run: bool)
             fg="red",
         )
         click.echo(error_msg, err=True)
-        raise SystemExit(1)
+        raise SystemExit(1) from None
 
     # All succeeded - run cleanup operations
     final_branch = _cleanup_and_navigate(

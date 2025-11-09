@@ -324,6 +324,28 @@ https://app.graphite.com/github/pr/dagster-io/workstack/235
 - Display the URL as plain text (not a bullet point, not bold)
 - Each section must be separated by a blank line
 
+**CRITICAL - Blank Lines in Output:**
+
+If you add ANY status messages (like "✅ Branch submitted", etc.) before or after the structured summary above, each status line MUST be separated by a blank line in the markdown output to render properly in the CLI.
+
+**Bad (concatenated):**
+
+```
+✅ All CI checks passed✅ Branch submitted to Graphite✅ PR created
+```
+
+**Good (properly spaced):**
+
+```
+✅ All CI checks passed
+
+✅ Branch submitted to Graphite
+
+✅ PR created
+```
+
+However, the PREFERRED approach is to stick strictly to the structured summary format above and avoid adding extra status checkmarks.
+
 **CRITICAL**: The Graphite URL MUST be the absolute last line of your output. Do not add any text, confirmations, follow-up questions, or messages after displaying the URL. This ensures the user sees the PR link as the final, most visible output.
 
 ## Error Handling

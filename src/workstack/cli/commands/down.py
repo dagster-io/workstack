@@ -6,7 +6,6 @@ from workstack.cli.commands.switch import (
     _ensure_graphite_enabled,
     _resolve_down_navigation,
 )
-from workstack.cli.config import load_repo_config
 from workstack.cli.core import discover_repo_context, ensure_workstacks_dir
 from workstack.core.context import WorkstackContext
 
@@ -34,9 +33,8 @@ def down_cmd(ctx: WorkstackContext, script: bool) -> None:
     """
     _ensure_graphite_enabled(ctx)
     repo = discover_repo_context(ctx, ctx.cwd)
-    workstacks_dir = ensure_workstacks_dir(repo)
-    config = load_repo_config(repo.root, workstacks_dir)
-    trunk_branch = config.trunk_branch
+    ensure_workstacks_dir(repo)
+    trunk_branch = ctx.repo_config_ops.get_trunk_branch(repo.root)
 
     # Get current branch
     current_branch = ctx.git_ops.get_current_branch(ctx.cwd)

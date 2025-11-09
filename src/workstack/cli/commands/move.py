@@ -5,7 +5,6 @@ from pathlib import Path
 import click
 
 from workstack.cli.commands.switch import complete_worktree_names
-from workstack.cli.config import load_repo_config
 from workstack.cli.core import discover_repo_context, ensure_workstacks_dir, worktree_path_for
 from workstack.core.context import WorkstackContext
 
@@ -341,8 +340,7 @@ def move_cmd(
     # Discover repository context
     repo = discover_repo_context(ctx, ctx.cwd)
     workstacks_dir = ensure_workstacks_dir(repo)
-    config = load_repo_config(repo.root, workstacks_dir)
-    trunk_branch = config.trunk_branch
+    trunk_branch = ctx.repo_config_ops.get_trunk_branch(repo.root)
 
     # Resolve source worktree
     source_wt = resolve_source_worktree(

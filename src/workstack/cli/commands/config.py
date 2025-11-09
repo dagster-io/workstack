@@ -1,11 +1,9 @@
-from dataclasses import replace
 from pathlib import Path
 
 import click
 
-from workstack.cli.config import load_config, load_repo_config
-from workstack.cli.core import discover_repo_context, ensure_workstacks_dir
-from workstack.core.context import WorkstackContext, read_trunk_from_pyproject
+from workstack.cli.core import discover_repo_context
+from workstack.core.context import WorkstackContext
 
 
 @click.group("config")
@@ -35,26 +33,24 @@ def config_list(ctx: WorkstackContext) -> None:
     # Try to load repo config
     try:
         repo = discover_repo_context(ctx, ctx.cwd)
-        workstacks_dir = ensure_workstacks_dir(repo)
-        cfg = load_config(workstacks_dir)
-        trunk_branch = read_trunk_from_pyproject(repo.root)
+        trunk_branch = ctx.repo_config_ops.get_trunk_branch(repo.root)
+        env = ctx.repo_config_ops.get_env(repo.root)
+        post_create_shell = ctx.repo_config_ops.get_post_create_shell(repo.root)
+        post_create_commands = ctx.repo_config_ops.get_post_create_commands(repo.root)
 
         click.echo(click.style("\nRepository configuration:", bold=True))
         if trunk_branch:
             click.echo(f"  trunk-branch={trunk_branch}")
-        if cfg.env:
-            for key, value in cfg.env.items():
+        if env:
+            for key, value in env.items():
                 click.echo(f"  env.{key}={value}")
-        if cfg.post_create_shell:
-            click.echo(f"  post_create.shell={cfg.post_create_shell}")
-        if cfg.post_create_commands:
-            click.echo(f"  post_create.commands={cfg.post_create_commands}")
+        if post_create_shell:
+            click.echo(f"  post_create.shell={post_create_shell}")
+        if post_create_commands:
+            click.echo(f"  post_create.commands={post_create_commands}")
 
         has_no_config = (
-            not trunk_branch
-            and not cfg.env
-            and not cfg.post_create_shell
-            and not cfg.post_create_commands
+            not trunk_branch and not env and not post_create_shell and not post_create_commands
         )
         if has_no_config:
             click.echo("  (no configuration - run 'workstack init --repo' to create)")
@@ -91,34 +87,36 @@ def config_get(ctx: WorkstackContext, key: str) -> None:
             raise SystemExit(1) from e
         return
 
-    # Handle repo config: load and extract with pattern matching
+    # Handle repo config: use ops to get values
     repo = discover_repo_context(ctx, ctx.cwd)
-    workstacks_dir = ensure_workstacks_dir(repo)
-    config = load_repo_config(repo.root, workstacks_dir)
 
     match parts:
         case ["trunk-branch"]:
-            if config.trunk_branch:
-                click.echo(config.trunk_branch)
+            trunk_branch = ctx.repo_config_ops.get_trunk_branch(repo.root)
+            if trunk_branch:
+                click.echo(trunk_branch)
             else:
                 click.echo("not configured (will auto-detect)", err=True)
 
         case ["env", subkey]:
-            if subkey in config.env:
-                click.echo(config.env[subkey])
+            env = ctx.repo_config_ops.get_env(repo.root)
+            if subkey in env:
+                click.echo(env[subkey])
             else:
                 click.echo(f"Key not found: {key}", err=True)
                 raise SystemExit(1)
 
         case ["post_create", "shell"]:
-            if config.post_create_shell:
-                click.echo(config.post_create_shell)
+            post_create_shell = ctx.repo_config_ops.get_post_create_shell(repo.root)
+            if post_create_shell:
+                click.echo(post_create_shell)
             else:
                 click.echo(f"Key not found: {key}", err=True)
                 raise SystemExit(1)
 
         case ["post_create", "commands"]:
-            for cmd in config.post_create_commands:
+            post_create_commands = ctx.repo_config_ops.get_post_create_commands(repo.root)
+            for cmd in post_create_commands:
                 click.echo(cmd)
 
         case _:
@@ -169,31 +167,26 @@ def config_set(ctx: WorkstackContext, key: str, value: str) -> None:
         click.echo(f"Set {key}={value}")
         return
 
-    # Handle repo config: load → modify → save (which validates)
+    # Handle repo config: use ops setters (which validate)
     repo = discover_repo_context(ctx, Path.cwd())
-    workstacks_dir = ensure_workstacks_dir(repo)
-    config = load_repo_config(repo.root, workstacks_dir)
 
-    # Use pattern matching to modify config based on key
+    # Use pattern matching to call appropriate setter
     match parts:
         case ["trunk-branch"]:
-            new_config = replace(config, trunk_branch=value)
+            ctx.repo_config_ops.set_trunk_branch(repo.root, value)
 
         case ["env", env_key]:
-            new_config = replace(config, env={**config.env, env_key: value})
+            current_env = ctx.repo_config_ops.get_env(repo.root)
+            ctx.repo_config_ops.set_env(repo.root, {**current_env, env_key: value})
 
         case ["post_create", "shell"]:
-            new_config = replace(config, post_create_shell=value)
+            ctx.repo_config_ops.set_post_create_shell(repo.root, value)
 
         case ["post_create", "commands"]:
-            new_config = replace(config, post_create_commands=[*config.post_create_commands, value])
+            ctx.repo_config_ops.add_post_create_command(repo.root, value)
 
         case _:
             click.echo(f"Invalid key: {key}", err=True)
             raise SystemExit(1)
 
-    # Save validates automatically - will exit if invalid
-    from workstack.core.repo_config_ops import save_repo_config
-
-    save_repo_config(repo.root, workstacks_dir, new_config, ctx.git_ops)
     click.echo(f"Set {key}={value}")

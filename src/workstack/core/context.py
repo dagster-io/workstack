@@ -14,6 +14,11 @@ from workstack.core.global_config_ops import (
     RealGlobalConfigOps,
 )
 from workstack.core.graphite_ops import DryRunGraphiteOps, GraphiteOps, RealGraphiteOps
+from workstack.core.repo_config_ops import (
+    DryRunRepoConfigOps,
+    RealRepoConfigOps,
+    RepoConfigOps,
+)
 from workstack.core.shell_ops import RealShellOps, ShellOps
 
 
@@ -29,6 +34,7 @@ class WorkstackContext:
     global_config_ops: GlobalConfigOps
     github_ops: GitHubOps
     graphite_ops: GraphiteOps
+    repo_config_ops: RepoConfigOps
     shell_ops: ShellOps
     cwd: Path  # Current working directory at CLI invocation
     dry_run: bool
@@ -123,12 +129,14 @@ def create_context(*, dry_run: bool, repo_root: Path | None = None) -> Workstack
     graphite_ops: GraphiteOps = RealGraphiteOps()
     github_ops: GitHubOps = RealGitHubOps()
     global_config_ops: GlobalConfigOps = RealGlobalConfigOps()
+    repo_config_ops: RepoConfigOps = RealRepoConfigOps(global_config_ops, git_ops)
 
     if dry_run:
         git_ops = DryRunGitOps(git_ops)
         graphite_ops = DryRunGraphiteOps(graphite_ops)
         github_ops = DryRunGitHubOps(github_ops)
         global_config_ops = DryRunGlobalConfigOps(global_config_ops)
+        repo_config_ops = DryRunRepoConfigOps(repo_config_ops)
 
     trunk_branch = read_trunk_from_pyproject(repo_root) if repo_root else None
 
@@ -137,6 +145,7 @@ def create_context(*, dry_run: bool, repo_root: Path | None = None) -> Workstack
         global_config_ops=global_config_ops,
         github_ops=github_ops,
         graphite_ops=graphite_ops,
+        repo_config_ops=repo_config_ops,
         shell_ops=RealShellOps(),
         cwd=Path.cwd(),
         dry_run=dry_run,

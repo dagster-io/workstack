@@ -6,6 +6,7 @@ from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
+from tests.fakes.repo_config_ops import FakeRepoConfigOps
 from tests.fakes.shell_ops import FakeShellOps
 from workstack.core.context import WorkstackContext
 
@@ -15,9 +16,11 @@ def create_test_context(
     global_config_ops: FakeGlobalConfigOps | None = None,
     github_ops: FakeGitHubOps | None = None,
     graphite_ops: FakeGraphiteOps | None = None,
+    repo_config_ops: FakeRepoConfigOps | None = None,
     shell_ops: FakeShellOps | None = None,
     cwd: Path | None = None,
     dry_run: bool = False,
+    trunk_branch: str | None = None,
 ) -> WorkstackContext:
     """Create test context with optional pre-configured ops.
 
@@ -30,12 +33,15 @@ def create_test_context(
                    If None, creates empty FakeGitHubOps.
         graphite_ops: Optional FakeGraphiteOps with test configuration.
                      If None, creates empty FakeGraphiteOps.
+        repo_config_ops: Optional FakeRepoConfigOps with test configuration.
+                        If None, creates empty FakeRepoConfigOps.
         shell_ops: Optional FakeShellOps with test configuration.
                   If None, creates empty FakeShellOps (no shell detected).
         cwd: Optional current working directory path for test context.
             If None, defaults to Path("/test/default/cwd") to prevent accidental use
             of real Path.cwd() in tests.
         dry_run: Whether to set dry_run mode
+        trunk_branch: Optional trunk branch override
 
     Returns:
         Frozen WorkstackContext for use in tests
@@ -71,6 +77,9 @@ def create_test_context(
     if graphite_ops is None:
         graphite_ops = FakeGraphiteOps()
 
+    if repo_config_ops is None:
+        repo_config_ops = FakeRepoConfigOps()
+
     if shell_ops is None:
         shell_ops = FakeShellOps()
 
@@ -79,7 +88,9 @@ def create_test_context(
         global_config_ops=global_config_ops,
         github_ops=github_ops,
         graphite_ops=graphite_ops,
+        repo_config_ops=repo_config_ops,
         shell_ops=shell_ops,
         cwd=cwd or Path("/test/default/cwd"),
         dry_run=dry_run,
+        trunk_branch=trunk_branch,
     )

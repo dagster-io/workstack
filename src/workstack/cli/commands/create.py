@@ -8,7 +8,7 @@ from pathlib import Path
 
 import click
 
-from workstack.cli.config import LoadedConfig, load_repo_config
+from workstack.cli.config import LoadedConfig
 from workstack.cli.core import discover_repo_context, ensure_workstacks_dir, worktree_path_for
 from workstack.cli.shell_utils import render_cd_script, write_script_to_temp
 from workstack.cli.subprocess_utils import run_with_error_reporting
@@ -556,14 +556,13 @@ def create(
 
     repo = discover_repo_context(ctx, ctx.cwd)
     workstacks_dir = ensure_workstacks_dir(repo)
-    config = load_repo_config(repo.root, workstacks_dir)
-    trunk_branch = config.trunk_branch
+    trunk_branch = ctx.repo_config_ops.get_trunk_branch(repo.root)
 
     # Convert to LoadedConfig for helper functions
     cfg = LoadedConfig(
-        env=config.env,
-        post_create_commands=config.post_create_commands,
-        post_create_shell=config.post_create_shell,
+        env=ctx.repo_config_ops.get_env(repo.root),
+        post_create_commands=ctx.repo_config_ops.get_post_create_commands(repo.root),
+        post_create_shell=ctx.repo_config_ops.get_post_create_shell(repo.root),
     )
 
     # Apply date prefix and uniqueness for plan-derived names

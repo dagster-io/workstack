@@ -3,7 +3,6 @@ from pathlib import Path
 import click
 
 from workstack.cli.activation import render_activation_script
-from workstack.cli.config import load_repo_config
 from workstack.cli.core import (
     RepoContext,
     discover_repo_context,
@@ -331,8 +330,7 @@ def switch_cmd(ctx: WorkstackContext, name: str | None, script: bool, up: bool, 
 
     repo = discover_repo_context(ctx, ctx.cwd)
     workstacks_dir = ensure_workstacks_dir(repo)
-    config = load_repo_config(repo.root, workstacks_dir)
-    trunk_branch = config.trunk_branch
+    trunk_branch = ctx.repo_config_ops.get_trunk_branch(repo.root)
 
     # Check if user is trying to switch to main/master (should use root instead)
     if name and name.lower() in ("main", "master"):

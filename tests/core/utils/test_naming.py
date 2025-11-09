@@ -20,28 +20,28 @@ from workstack.cli.commands.create import (
         (" Foo Bar ", "foo-bar"),
         ("A/B C", "a/b-c"),
         ("@@weird!!name??", "weird-name"),
-        # Test truncation to 30 characters
-        ("a" * 35, "a" * 30),
+        # Test no truncation - long names are preserved
+        ("a" * 35, "a" * 35),
         (
             "this-is-a-very-long-branch-name-that-exceeds-thirty-characters",
-            "this-is-a-very-long-branch-nam",
+            "this-is-a-very-long-branch-name-that-exceeds-thirty-characters",
         ),
         ("exactly-30-characters-long-ok", "exactly-30-characters-long-ok"),
         (
             "31-characters-long-should-be-ab",
-            "31-characters-long-should-be-a",
-        ),  # Truncates to 30
+            "31-characters-long-should-be-ab",
+        ),  # No longer truncates
         ("short", "short"),
-        # Test truncation with trailing hyphen removal
+        # Test long names with trailing hyphens are stripped
         (
             "branch-name-with-dash-at-position-30-",
-            "branch-name-with-dash-at-posit",
+            "branch-name-with-dash-at-position-30",
         ),
-        # Test truncation that ends with hyphen is stripped
+        # Test very long names preserve content
         (
             "12345678901234567890123456789-extra",
-            "12345678901234567890123456789",
-        ),  # Hyphen at position 30 stripped
+            "12345678901234567890123456789-extra",
+        ),  # No truncation
     ],
 )
 def test_sanitize_branch_component(value: str, expected: str) -> None:

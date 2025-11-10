@@ -2,7 +2,12 @@
 
 from pathlib import Path
 
-from workstack.status.models.status_data import CommitInfo, GitStatus, WorktreeDisplayInfo
+from workstack.status.models.status_data import (
+    CommitInfo,
+    GitStatus,
+    StatusData,
+    WorktreeDisplayInfo,
+)
 
 
 def test_worktree_display_info_root_factory() -> None:
@@ -219,3 +224,64 @@ def test_git_status_with_commits_factory_dirty() -> None:
     assert status.branch == "feature"
     assert status.clean is False
     assert status.recent_commits == [commit]
+
+
+# StatusData Factory Method Tests
+
+
+def test_status_data_minimal_factory() -> None:
+    """Test StatusData.minimal() factory method."""
+    # Arrange
+    worktree_info = WorktreeDisplayInfo.feature(Path("/tmp/my-feature"), "feature")
+
+    # Act
+    status_data = StatusData.minimal(worktree_info)
+
+    # Assert
+    assert status_data.worktree_info == worktree_info
+    assert status_data.git_status is None
+    assert status_data.stack_position is None
+    assert status_data.pr_status is None
+    assert status_data.environment is None
+    assert status_data.dependencies is None
+    assert status_data.plan is None
+    assert status_data.related_worktrees == []
+
+
+def test_status_data_with_git_status_factory() -> None:
+    """Test StatusData.with_git_status() factory method."""
+    # Arrange
+    worktree_info = WorktreeDisplayInfo.root(Path("/tmp/repo"))
+    git_status = GitStatus.clean_status("main")
+
+    # Act
+    status_data = StatusData.with_git_status(worktree_info, git_status)
+
+    # Assert
+    assert status_data.worktree_info == worktree_info
+    assert status_data.git_status == git_status
+    assert status_data.stack_position is None
+    assert status_data.pr_status is None
+    assert status_data.environment is None
+    assert status_data.dependencies is None
+    assert status_data.plan is None
+    assert status_data.related_worktrees == []
+
+
+def test_status_data_with_git_status_factory_with_dirty_status() -> None:
+    """Test StatusData.with_git_status() with dirty git status."""
+    # Arrange
+    worktree_info = WorktreeDisplayInfo.feature(Path("/tmp/feature"), "feature-1")
+    git_status = GitStatus.dirty_status("feature-1", modified=["file.py"], staged=["other.py"])
+
+    # Act
+    status_data = StatusData.with_git_status(worktree_info, git_status)
+
+    # Assert
+    assert status_data.worktree_info == worktree_info
+    assert status_data.git_status == git_status
+    assert status_data.git_status.clean is False
+    assert status_data.git_status.modified_files == ["file.py"]
+    assert status_data.git_status.staged_files == ["other.py"]
+    assert status_data.stack_position is None
+    assert status_data.pr_status is None

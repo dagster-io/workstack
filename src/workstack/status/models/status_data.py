@@ -282,3 +282,86 @@ class StatusData:
     dependencies: DependencyStatus | None
     plan: PlanStatus | None
     related_worktrees: list[WorktreeDisplayInfo]
+
+    @staticmethod
+    def minimal(worktree_info: WorktreeDisplayInfo) -> "StatusData":
+        """Create minimal status data (all optional fields None) for tests.
+
+        Args:
+            worktree_info: Worktree display information
+
+        Returns:
+            StatusData with only worktree_info set, all other fields None/empty
+
+        Example:
+            Before (9 lines):
+                status_data = StatusData(
+                    worktree_info=WorktreeDisplayInfo(
+                        name="my-feature", path=wt_path, branch="feature", is_root=False
+                    ),
+                    git_status=None,
+                    stack_position=None,
+                    pr_status=None,
+                    environment=None,
+                    dependencies=None,
+                    plan=None,
+                    related_worktrees=[],
+                )
+
+            After (2 lines):
+                worktree_info = WorktreeDisplayInfo.feature(wt_path, "feature")
+                status_data = StatusData.minimal(worktree_info)
+        """
+        return StatusData(
+            worktree_info=worktree_info,
+            git_status=None,
+            stack_position=None,
+            pr_status=None,
+            environment=None,
+            dependencies=None,
+            plan=None,
+            related_worktrees=[],
+        )
+
+    @staticmethod
+    def with_git_status(worktree_info: WorktreeDisplayInfo, git_status: GitStatus) -> "StatusData":
+        """Create status data with git status populated.
+
+        Args:
+            worktree_info: Worktree display information
+            git_status: Git status information
+
+        Returns:
+            StatusData with worktree_info and git_status set, other fields None/empty
+
+        Example:
+            Before (11 lines):
+                status_data = StatusData(
+                    worktree_info=WorktreeDisplayInfo(
+                        name="root", path=repo_root, branch="main", is_root=True
+                    ),
+                    git_status=GitStatus.clean_status("main"),
+                    stack_position=None,
+                    pr_status=None,
+                    environment=None,
+                    dependencies=None,
+                    plan=None,
+                    related_worktrees=[],
+                )
+
+            After (2 lines):
+                worktree_info = WorktreeDisplayInfo.root(repo_root)
+                status_data = StatusData.with_git_status(
+                    worktree_info, GitStatus.clean_status("main")
+                )
+        """
+        return StatusData(
+            worktree_info=worktree_info,
+            git_status=git_status,
+            stack_position=None,
+            pr_status=None,
+            environment=None,
+            dependencies=None,
+            plan=None,
+            related_worktrees=[],
+        )

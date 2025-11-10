@@ -12,7 +12,7 @@ from workstack.status.models.status_data import (
     PullRequestStatus,
     StackPosition,
     StatusData,
-    WorktreeInfo,
+    WorktreeDisplayInfo,
 )
 from workstack.status.renderers.simple import SimpleRenderer
 
@@ -40,7 +40,7 @@ def capture_renderer_output(renderer: SimpleRenderer, status_data: StatusData) -
 def test_renderer_clean_working_tree() -> None:
     """Test rendering with clean working tree."""
     # Arrange
-    worktree_info = WorktreeInfo(
+    worktree_info = WorktreeDisplayInfo(
         name="test-worktree",
         path=Path("/tmp/test"),
         branch="main",
@@ -84,7 +84,7 @@ def test_renderer_clean_working_tree() -> None:
 def test_renderer_dirty_working_tree() -> None:
     """Test rendering with dirty working tree."""
     # Arrange
-    worktree_info = WorktreeInfo(
+    worktree_info = WorktreeDisplayInfo(
         name="test-worktree",
         path=Path("/tmp/test"),
         branch="feature",
@@ -151,7 +151,7 @@ def test_renderer_dirty_working_tree() -> None:
 def test_renderer_with_plan_file() -> None:
     """Test rendering with plan file."""
     # Arrange
-    worktree_info = WorktreeInfo(
+    worktree_info = WorktreeDisplayInfo(
         name="test-worktree",
         path=Path("/tmp/test"),
         branch="feature",
@@ -210,7 +210,7 @@ def test_renderer_with_plan_file() -> None:
 def test_renderer_without_plan_file() -> None:
     """Test rendering when plan file doesn't exist."""
     # Arrange
-    worktree_info = WorktreeInfo(
+    worktree_info = WorktreeDisplayInfo(
         name="test-worktree",
         path=Path("/tmp/test"),
         branch="feature",
@@ -260,7 +260,7 @@ def test_renderer_without_plan_file() -> None:
 def test_renderer_with_stack_position() -> None:
     """Test rendering with Graphite stack position."""
     # Arrange
-    worktree_info = WorktreeInfo(
+    worktree_info = WorktreeDisplayInfo(
         name="test-worktree",
         path=Path("/tmp/test"),
         branch="feature-2",
@@ -315,7 +315,7 @@ def test_renderer_with_stack_position() -> None:
 def test_renderer_trunk_branch() -> None:
     """Test rendering when on trunk branch."""
     # Arrange
-    worktree_info = WorktreeInfo(
+    worktree_info = WorktreeDisplayInfo(
         name="test-worktree",
         path=Path("/tmp/test"),
         branch="main",
@@ -367,7 +367,7 @@ def test_renderer_trunk_branch() -> None:
 def test_renderer_with_pr_status() -> None:
     """Test rendering with pull request status."""
     # Arrange
-    worktree_info = WorktreeInfo(
+    worktree_info = WorktreeDisplayInfo(
         name="test-worktree",
         path=Path("/tmp/test"),
         branch="feature",
@@ -424,7 +424,7 @@ def test_renderer_with_pr_status() -> None:
 def test_renderer_draft_pr() -> None:
     """Test rendering with draft PR."""
     # Arrange
-    worktree_info = WorktreeInfo(
+    worktree_info = WorktreeDisplayInfo(
         name="test-worktree",
         path=Path("/tmp/test"),
         branch="feature",
@@ -481,7 +481,7 @@ def test_renderer_draft_pr() -> None:
 def test_renderer_closed_pr() -> None:
     """Test rendering with closed PR."""
     # Arrange
-    worktree_info = WorktreeInfo(
+    worktree_info = WorktreeDisplayInfo(
         name="test-worktree",
         path=Path("/tmp/test"),
         branch="feature",
@@ -536,7 +536,7 @@ def test_renderer_closed_pr() -> None:
 def test_renderer_merged_pr() -> None:
     """Test rendering with merged PR."""
     # Arrange
-    worktree_info = WorktreeInfo(
+    worktree_info = WorktreeDisplayInfo(
         name="test-worktree",
         path=Path("/tmp/test"),
         branch="feature",
@@ -590,7 +590,7 @@ def test_renderer_merged_pr() -> None:
 def test_renderer_related_worktrees() -> None:
     """Test rendering with related worktrees."""
     # Arrange
-    worktree_info = WorktreeInfo(
+    worktree_info = WorktreeDisplayInfo(
         name="test-worktree",
         path=Path("/tmp/test"),
         branch="feature",
@@ -598,19 +598,19 @@ def test_renderer_related_worktrees() -> None:
     )
 
     related_worktrees = [
-        WorktreeInfo(
+        WorktreeDisplayInfo(
             name="root",
             path=Path("/tmp/repo"),
             branch="main",
             is_root=True,
         ),
-        WorktreeInfo(
+        WorktreeDisplayInfo(
             name="feature-1",
             path=Path("/tmp/feature-1"),
             branch="feature-1",
             is_root=False,
         ),
-        WorktreeInfo(
+        WorktreeDisplayInfo(
             name="feature-2",
             path=Path("/tmp/feature-2"),
             branch="feature-2",
@@ -657,7 +657,7 @@ def test_renderer_related_worktrees() -> None:
 def test_renderer_many_related_worktrees() -> None:
     """Test rendering with many related worktrees (truncation)."""
     # Arrange
-    worktree_info = WorktreeInfo(
+    worktree_info = WorktreeDisplayInfo(
         name="test-worktree",
         path=Path("/tmp/test"),
         branch="feature",
@@ -668,7 +668,7 @@ def test_renderer_many_related_worktrees() -> None:
     related_worktrees = []
     for i in range(10):
         related_worktrees.append(
-            WorktreeInfo(
+            WorktreeDisplayInfo(
                 name=f"feature-{i}",
                 path=Path(f"/tmp/feature-{i}"),
                 branch=f"feature-{i}",
@@ -714,7 +714,7 @@ def test_renderer_many_related_worktrees() -> None:
 def test_renderer_detached_head() -> None:
     """Test rendering with detached HEAD."""
     # Arrange
-    worktree_info = WorktreeInfo(
+    worktree_info = WorktreeDisplayInfo(
         name="test-worktree",
         path=Path("/tmp/test"),
         branch=None,  # Detached HEAD
@@ -756,7 +756,7 @@ def test_renderer_detached_head() -> None:
 def test_renderer_root_worktree() -> None:
     """Test rendering with root worktree."""
     # Arrange
-    worktree_info = WorktreeInfo(
+    worktree_info = WorktreeDisplayInfo(
         name="root",
         path=Path("/tmp/repo"),
         branch="main",
@@ -797,7 +797,7 @@ def test_renderer_root_worktree() -> None:
 def test_renderer_many_recent_commits() -> None:
     """Test rendering with many recent commits (truncation)."""
     # Arrange
-    worktree_info = WorktreeInfo(
+    worktree_info = WorktreeDisplayInfo(
         name="test-worktree",
         path=Path("/tmp/test"),
         branch="feature",
@@ -854,7 +854,7 @@ def test_renderer_many_recent_commits() -> None:
 def test_renderer_full_status() -> None:
     """Test rendering with all status components."""
     # Arrange
-    worktree_info = WorktreeInfo(
+    worktree_info = WorktreeDisplayInfo(
         name="test-worktree",
         path=Path("/tmp/test"),
         branch="feature-2",
@@ -907,7 +907,7 @@ def test_renderer_full_status() -> None:
     )
 
     related_worktrees = [
-        WorktreeInfo(
+        WorktreeDisplayInfo(
             name="root",
             path=Path("/tmp/repo"),
             branch="main",
@@ -943,7 +943,7 @@ def test_renderer_full_status() -> None:
 def test_renderer_no_git_status() -> None:
     """Test rendering when git status is None."""
     # Arrange
-    worktree_info = WorktreeInfo(
+    worktree_info = WorktreeDisplayInfo(
         name="test-worktree",
         path=Path("/tmp/test"),
         branch="feature",
@@ -974,7 +974,7 @@ def test_renderer_no_git_status() -> None:
 def test_renderer_no_stack_position() -> None:
     """Test rendering when stack position is None."""
     # Arrange
-    worktree_info = WorktreeInfo(
+    worktree_info = WorktreeDisplayInfo(
         name="test-worktree",
         path=Path("/tmp/test"),
         branch="feature",

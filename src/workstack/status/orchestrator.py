@@ -7,7 +7,7 @@ from pathlib import Path
 from workstack.core.context import WorkstackContext
 from workstack.core.parallel_task_runner import ParallelTaskRunner
 from workstack.status.collectors.base import StatusCollector
-from workstack.status.models.status_data import StatusData, WorktreeInfo
+from workstack.status.models.status_data import StatusData, WorktreeDisplayInfo
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +103,7 @@ class StatusOrchestrator:
 
     def _get_worktree_info(
         self, ctx: WorkstackContext, worktree_path: Path, repo_root: Path
-    ) -> WorktreeInfo:
+    ) -> WorktreeDisplayInfo:
         """Get basic worktree information.
 
         Args:
@@ -112,7 +112,7 @@ class StatusOrchestrator:
             repo_root: Path to repository root
 
         Returns:
-            WorktreeInfo with basic information
+            WorktreeDisplayInfo with basic information
         """
         # Check paths exist before resolution to avoid OSError
         is_root = False
@@ -122,11 +122,11 @@ class StatusOrchestrator:
         name = "root" if is_root else worktree_path.name
         branch = ctx.git_ops.get_current_branch(worktree_path)
 
-        return WorktreeInfo(name=name, path=worktree_path, branch=branch, is_root=is_root)
+        return WorktreeDisplayInfo(name=name, path=worktree_path, branch=branch, is_root=is_root)
 
     def _get_related_worktrees(
         self, ctx: WorkstackContext, repo_root: Path, current_path: Path
-    ) -> list[WorktreeInfo]:
+    ) -> list[WorktreeDisplayInfo]:
         """Get list of other worktrees in the repository.
 
         Args:
@@ -135,7 +135,7 @@ class StatusOrchestrator:
             current_path: Path to current worktree (excluded from results)
 
         Returns:
-            List of WorktreeInfo for other worktrees
+            List of WorktreeDisplayInfo for other worktrees
         """
         worktrees = ctx.git_ops.list_worktrees(repo_root)
 
@@ -164,6 +164,8 @@ class StatusOrchestrator:
 
             name = "root" if is_root else wt.path.name
 
-            related.append(WorktreeInfo(name=name, path=wt.path, branch=wt.branch, is_root=is_root))
+            related.append(
+                WorktreeDisplayInfo(name=name, path=wt.path, branch=wt.branch, is_root=is_root)
+            )
 
         return related

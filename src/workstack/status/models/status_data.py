@@ -5,8 +5,12 @@ from pathlib import Path
 
 
 @dataclass(frozen=True)
-class WorktreeInfo:
-    """Basic worktree information."""
+class WorktreeDisplayInfo:
+    """Worktree information for display/presentation purposes.
+
+    This represents worktree data for status rendering and display.
+    For infrastructure-layer worktree data, see workstack.core.gitops.WorktreeInfo.
+    """
 
     name: str
     path: Path
@@ -95,11 +99,11 @@ class PlanStatus:
 class StatusData:
     """Container for all status information."""
 
-    worktree_info: WorktreeInfo
+    worktree_info: WorktreeDisplayInfo
     git_status: GitStatus | None
     stack_position: StackPosition | None
     pr_status: PullRequestStatus | None
     environment: EnvironmentStatus | None
     dependencies: DependencyStatus | None
     plan: PlanStatus | None
-    related_worktrees: list[WorktreeInfo]
+    related_worktrees: list[WorktreeDisplayInfo]

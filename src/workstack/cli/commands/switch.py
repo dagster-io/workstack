@@ -3,16 +3,12 @@ from pathlib import Path
 import click
 
 from workstack.cli.activation import render_activation_script
-from workstack.cli.core import (
-    RepoContext,
-    discover_repo_context,
-    ensure_workstacks_dir,
-    worktree_path_for,
-)
+from workstack.cli.core import discover_repo_context, worktree_path_for
 from workstack.cli.debug import debug_log
 from workstack.cli.shell_utils import write_script_to_temp
 from workstack.core.context import WorkstackContext, create_context, read_trunk_from_pyproject
 from workstack.core.gitops import WorktreeInfo
+from workstack.core.repo_discovery import RepoContext, ensure_workstacks_dir
 
 
 def _ensure_graphite_enabled(ctx: WorkstackContext) -> None:
@@ -24,7 +20,7 @@ def _ensure_graphite_enabled(ctx: WorkstackContext) -> None:
     Raises:
         SystemExit: If Graphite is not enabled
     """
-    if not ctx.global_config_ops.get_use_graphite():
+    if not (ctx.global_config and ctx.global_config.use_graphite):
         click.echo(
             "Error: This command requires Graphite to be enabled. "
             "Run 'workstack config set use_graphite true'",

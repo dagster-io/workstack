@@ -80,7 +80,7 @@ def graphite_branches_cmd(ctx: WorkstackContext, format: str, stack: str | None)
         - Valid .git/.graphite_cache_persist file
     """
     # Check if graphite is enabled
-    if not ctx.global_config_ops.get_use_graphite():
+    if not (ctx.global_config and ctx.global_config.use_graphite):
         click.echo(
             "Error: Graphite not enabled. Run 'workstack config set use_graphite true'",
             err=True,

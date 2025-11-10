@@ -2,9 +2,9 @@ import click
 
 from workstack.cli.commands.create import make_env_content, sanitize_worktree_name
 from workstack.cli.commands.switch import complete_worktree_names
-from workstack.cli.config import load_config
-from workstack.cli.core import discover_repo_context, ensure_workstacks_dir, worktree_path_for
+from workstack.cli.core import discover_repo_context, worktree_path_for
 from workstack.core.context import WorkstackContext, create_context
+from workstack.core.repo_discovery import ensure_workstacks_dir
 
 
 @click.command("rename")
@@ -51,7 +51,7 @@ def rename_cmd(ctx: WorkstackContext, old_name: str, new_name: str, dry_run: boo
     ctx.git_ops.move_worktree(repo.root, old_path, new_path)
 
     # Regenerate .env file with updated paths and name
-    cfg = load_config(workstacks_dir)
+    cfg = ctx.local_config
     env_content = make_env_content(
         cfg, worktree_path=new_path, repo_root=repo.root, name=sanitized_new_name
     )

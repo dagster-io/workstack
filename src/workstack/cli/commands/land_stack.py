@@ -122,7 +122,7 @@ def _validate_landing_preconditions(
         SystemExit: If any precondition fails
     """
     # Check Graphite enabled
-    use_graphite = ctx.global_config_ops.get_use_graphite()
+    use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
     if not use_graphite:
         _emit(
             "Error: 'workstack land-stack' requires Graphite.\n\n"

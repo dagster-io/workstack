@@ -25,7 +25,7 @@ class GitHubPRCollector(StatusCollector):
         Returns:
             True if PR info is enabled in config
         """
-        if not ctx.global_config_ops.get_show_pr_info():
+        if not (ctx.global_config and ctx.global_config.show_pr_info):
             return False
 
         if not worktree_path.exists():

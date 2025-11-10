@@ -8,11 +8,12 @@ from pathlib import Path
 
 import click
 
-from workstack.cli.config import LoadedConfig, load_config
-from workstack.cli.core import discover_repo_context, ensure_workstacks_dir, worktree_path_for
+from workstack.cli.config import LoadedConfig
+from workstack.cli.core import discover_repo_context, worktree_path_for
 from workstack.cli.shell_utils import render_cd_script, write_script_to_temp
 from workstack.cli.subprocess_utils import run_with_error_reporting
 from workstack.core.context import WorkstackContext, read_trunk_from_pyproject
+from workstack.core.repo_discovery import ensure_workstacks_dir
 
 _SAFE_COMPONENT_RE = re.compile(r"[^A-Za-z0-9._/-]+")
 
@@ -556,7 +557,7 @@ def create(
 
     repo = discover_repo_context(ctx, ctx.cwd)
     workstacks_dir = ensure_workstacks_dir(repo)
-    cfg = load_config(workstacks_dir)
+    cfg = ctx.local_config
     trunk_branch = read_trunk_from_pyproject(repo.root)
 
     # Apply date prefix and uniqueness for plan-derived names
@@ -657,7 +658,7 @@ def create(
             branch = default_branch_for_worktree(name)
 
         # Get graphite setting from global config
-        use_graphite = ctx.global_config_ops.get_use_graphite()
+        use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
         add_worktree(
             ctx,
             repo.root,

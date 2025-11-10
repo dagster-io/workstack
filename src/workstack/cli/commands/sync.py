@@ -6,9 +6,10 @@ import click
 
 from workstack.cli.activation import render_activation_script
 from workstack.cli.commands.remove import _remove_worktree
-from workstack.cli.core import discover_repo_context, ensure_workstacks_dir, worktree_path_for
+from workstack.cli.core import discover_repo_context, worktree_path_for
 from workstack.cli.shell_utils import render_cd_script, write_script_to_temp
 from workstack.core.context import WorkstackContext
+from workstack.core.repo_discovery import ensure_workstacks_dir
 
 
 def _emit(message: str, *, script_mode: bool, error: bool = False) -> None:
@@ -99,7 +100,7 @@ def sync_cmd(
     """
 
     # Step 1: Verify Graphite is enabled
-    use_graphite = ctx.global_config_ops.get_use_graphite()
+    use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
     if not use_graphite:
         _emit(
             "Error: 'workstack sync' requires Graphite. "

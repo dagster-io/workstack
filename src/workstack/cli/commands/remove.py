@@ -6,12 +6,12 @@ import click
 from workstack.cli.commands.switch import complete_worktree_names
 from workstack.cli.core import (
     discover_repo_context,
-    ensure_workstacks_dir,
     validate_worktree_name_for_removal,
     worktree_path_for,
 )
 from workstack.core.context import WorkstackContext, create_context
 from workstack.core.gitops import GitOps
+from workstack.core.repo_discovery import ensure_workstacks_dir
 
 
 def _try_git_worktree_remove(git_ops: GitOps, repo_root: Path, wt_path: Path) -> bool:
@@ -121,7 +121,7 @@ def _remove_worktree(
     # Step 1: Collect all operations to perform
     branches_to_delete: list[str] = []
     if delete_stack:
-        use_graphite = ctx.global_config_ops.get_use_graphite()
+        use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
         if not use_graphite:
             click.echo(
                 "Error: --delete-stack requires Graphite to be enabled. "

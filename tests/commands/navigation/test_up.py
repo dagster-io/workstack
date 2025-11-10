@@ -53,7 +53,7 @@ def test_up_with_existing_worktree() -> None:
         )
 
         # Set up stack: main -> feature-1 -> feature-2
-        FakeGraphiteOps(
+        graphite_ops = FakeGraphiteOps(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
                 "feature-1": BranchMetadata.branch(
@@ -66,6 +66,7 @@ def test_up_with_existing_worktree() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -162,7 +163,7 @@ def test_up_child_has_no_worktree() -> None:
         )
 
         # Set up stack: main -> feature-1 -> feature-2
-        FakeGraphiteOps(
+        graphite_ops = FakeGraphiteOps(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
                 "feature-1": BranchMetadata.branch(
@@ -175,6 +176,7 @@ def test_up_child_has_no_worktree() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -282,7 +284,7 @@ def test_up_script_flag() -> None:
         )
 
         # Set up stack: main -> feature-1 -> feature-2
-        FakeGraphiteOps(
+        graphite_ops = FakeGraphiteOps(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
                 "feature-1": BranchMetadata.branch(
@@ -295,6 +297,7 @@ def test_up_script_flag() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -405,7 +408,7 @@ def test_up_with_mismatched_worktree_name() -> None:
 
         # Set up stack: main -> feature/auth -> feature/auth-tests
         # Branch names contain slashes, but worktree dirs don't
-        FakeGraphiteOps(
+        graphite_ops = FakeGraphiteOps(
             branches={
                 "main": BranchMetadata.trunk(
                     "main", children=["feature/auth"], commit_sha="abc123"
@@ -422,6 +425,7 @@ def test_up_with_mismatched_worktree_name() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 

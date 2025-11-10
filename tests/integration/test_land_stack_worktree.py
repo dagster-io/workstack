@@ -125,20 +125,8 @@ def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> No
 
         graphite_ops = FakeGraphiteOps(
             branches={
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feat-1"],
-                    is_trunk=True,
-                    commit_sha="abc123",
-                ),
-                "feat-1": BranchMetadata(
-                    name="feat-1",
-                    parent="main",
-                    children=None,
-                    is_trunk=False,
-                    commit_sha="def456",
-                ),
+                "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
+                "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
             },
             stacks={
                 "feat-1": ["main", "feat-1"],

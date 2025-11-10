@@ -51,27 +51,11 @@ def test_down_with_existing_worktree() -> None:
         # Set up stack: main -> feature-1 -> feature-2
         graphite_ops = FakeGraphiteOps(
             branches={
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-1"],
-                    is_trunk=True,
-                    sha="abc123",
+                "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
+                "feature-1": BranchMetadata.branch(
+                    "feature-1", "main", children=["feature-2"], commit_sha="def456"
                 ),
-                "feature-1": BranchMetadata(
-                    name="feature-1",
-                    parent="main",
-                    children=["feature-2"],
-                    is_trunk=False,
-                    sha="def456",
-                ),
-                "feature-2": BranchMetadata(
-                    name="feature-2",
-                    parent="feature-1",
-                    children=[],
-                    is_trunk=False,
-                    sha="ghi789",
-                ),
+                "feature-2": BranchMetadata.branch("feature-2", "feature-1", commit_sha="ghi789"),
             }
         )
 
@@ -126,20 +110,8 @@ def test_down_to_trunk_root() -> None:
         # Set up stack: main -> feature-1
         graphite_ops = FakeGraphiteOps(
             branches={
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-1"],
-                    is_trunk=True,
-                    sha="abc123",
-                ),
-                "feature-1": BranchMetadata(
-                    name="feature-1",
-                    parent="main",
-                    children=[],
-                    is_trunk=False,
-                    sha="def456",
-                ),
+                "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
+                "feature-1": BranchMetadata.branch("feature-1", "main", commit_sha="def456"),
             }
         )
 
@@ -189,13 +161,7 @@ def test_down_at_trunk() -> None:
         # Set up stack: main (only trunk)
         graphite_ops = FakeGraphiteOps(
             branches={
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=[],
-                    is_trunk=True,
-                    sha="abc123",
-                ),
+                "main": BranchMetadata.trunk("main", commit_sha="abc123"),
             }
         )
 
@@ -247,27 +213,11 @@ def test_down_parent_has_no_worktree() -> None:
         # Set up stack: main -> feature-1 -> feature-2
         graphite_ops = FakeGraphiteOps(
             branches={
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-1"],
-                    is_trunk=True,
-                    sha="abc123",
+                "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
+                "feature-1": BranchMetadata.branch(
+                    "feature-1", "main", children=["feature-2"], commit_sha="def456"
                 ),
-                "feature-1": BranchMetadata(
-                    name="feature-1",
-                    parent="main",
-                    children=["feature-2"],
-                    is_trunk=False,
-                    sha="def456",
-                ),
-                "feature-2": BranchMetadata(
-                    name="feature-2",
-                    parent="feature-1",
-                    children=[],
-                    is_trunk=False,
-                    sha="ghi789",
-                ),
+                "feature-2": BranchMetadata.branch("feature-2", "feature-1", commit_sha="ghi789"),
             }
         )
 
@@ -396,27 +346,11 @@ def test_down_script_flag() -> None:
         # Set up stack: main -> feature-1 -> feature-2
         graphite_ops = FakeGraphiteOps(
             branches={
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature-1"],
-                    is_trunk=True,
-                    sha="abc123",
+                "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
+                "feature-1": BranchMetadata.branch(
+                    "feature-1", "main", children=["feature-2"], commit_sha="def456"
                 ),
-                "feature-1": BranchMetadata(
-                    name="feature-1",
-                    parent="main",
-                    children=["feature-2"],
-                    is_trunk=False,
-                    sha="def456",
-                ),
-                "feature-2": BranchMetadata(
-                    name="feature-2",
-                    parent="feature-1",
-                    children=[],
-                    is_trunk=False,
-                    sha="ghi789",
-                ),
+                "feature-2": BranchMetadata.branch("feature-2", "feature-1", commit_sha="ghi789"),
             }
         )
 
@@ -488,26 +422,14 @@ def test_down_with_mismatched_worktree_name() -> None:
         # Branch names contain slashes, but worktree dirs use different names
         graphite_ops = FakeGraphiteOps(
             branches={
-                "main": BranchMetadata(
-                    name="main",
-                    parent=None,
-                    children=["feature/auth"],
-                    is_trunk=True,
-                    sha="abc123",
+                "main": BranchMetadata.trunk(
+                    "main", children=["feature/auth"], commit_sha="abc123"
                 ),
-                "feature/auth": BranchMetadata(
-                    name="feature/auth",
-                    parent="main",
-                    children=["feature/auth-tests"],
-                    is_trunk=False,
-                    sha="def456",
+                "feature/auth": BranchMetadata.branch(
+                    "feature/auth", "main", children=["feature/auth-tests"], commit_sha="def456"
                 ),
-                "feature/auth-tests": BranchMetadata(
-                    name="feature/auth-tests",
-                    parent="feature/auth",
-                    children=[],
-                    is_trunk=False,
-                    sha="ghi789",
+                "feature/auth-tests": BranchMetadata.branch(
+                    "feature/auth-tests", "feature/auth", commit_sha="ghi789"
                 ),
             }
         )

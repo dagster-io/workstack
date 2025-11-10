@@ -25,19 +25,11 @@ def test_get_parent_branch_returns_parent() -> None:
     """Test get_parent_branch() returns correct parent from branches metadata."""
     # Arrange: Create branch hierarchy
     branches = {
-        "main": BranchMetadata(
-            name="main", parent=None, children=["feature-1"], is_trunk=True, commit_sha="abc123"
+        "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
+        "feature-1": BranchMetadata.branch(
+            "feature-1", "main", children=["feature-2"], commit_sha="def456"
         ),
-        "feature-1": BranchMetadata(
-            name="feature-1",
-            parent="main",
-            children=["feature-2"],
-            is_trunk=False,
-            commit_sha="def456",
-        ),
-        "feature-2": BranchMetadata(
-            name="feature-2", parent="feature-1", children=[], is_trunk=False, commit_sha="ghi789"
-        ),
+        "feature-2": BranchMetadata.branch("feature-2", "feature-1", commit_sha="ghi789"),
     }
     graphite_ops = FakeGraphiteOps(branches=branches)
     git_ops = FakeGitOps()  # Not actually used by helper methods
@@ -53,9 +45,7 @@ def test_get_parent_branch_returns_none_for_unknown_branch() -> None:
     """Test get_parent_branch() returns None if branch not tracked by graphite."""
     # Arrange
     branches = {
-        "main": BranchMetadata(
-            name="main", parent=None, children=[], is_trunk=True, commit_sha="abc123"
-        ),
+        "main": BranchMetadata.trunk("main", commit_sha="abc123"),
     }
     graphite_ops = FakeGraphiteOps(branches=branches)
     git_ops = FakeGitOps()
@@ -80,26 +70,14 @@ def test_get_child_branches_returns_children() -> None:
     """Test get_child_branches() returns correct children from branches metadata."""
     # Arrange: Create branch hierarchy with multiple children
     branches = {
-        "main": BranchMetadata(
-            name="main",
-            parent=None,
-            children=["feature-1", "feature-2"],
-            is_trunk=True,
-            commit_sha="abc123",
+        "main": BranchMetadata.trunk(
+            "main", children=["feature-1", "feature-2"], commit_sha="abc123"
         ),
-        "feature-1": BranchMetadata(
-            name="feature-1",
-            parent="main",
-            children=["feature-1-1"],
-            is_trunk=False,
-            commit_sha="def456",
+        "feature-1": BranchMetadata.branch(
+            "feature-1", "main", children=["feature-1-1"], commit_sha="def456"
         ),
-        "feature-2": BranchMetadata(
-            name="feature-2", parent="main", children=[], is_trunk=False, commit_sha="ghi789"
-        ),
-        "feature-1-1": BranchMetadata(
-            name="feature-1-1", parent="feature-1", children=[], is_trunk=False, commit_sha="jkl012"
-        ),
+        "feature-2": BranchMetadata.branch("feature-2", "main", commit_sha="ghi789"),
+        "feature-1-1": BranchMetadata.branch("feature-1-1", "feature-1", commit_sha="jkl012"),
     }
     graphite_ops = FakeGraphiteOps(branches=branches)
     git_ops = FakeGitOps()
@@ -116,9 +94,7 @@ def test_get_child_branches_returns_empty_for_unknown_branch() -> None:
     """Test get_child_branches() returns empty list if branch not tracked."""
     # Arrange
     branches = {
-        "main": BranchMetadata(
-            name="main", parent=None, children=[], is_trunk=True, commit_sha="abc123"
-        ),
+        "main": BranchMetadata.trunk("main", commit_sha="abc123"),
     }
     graphite_ops = FakeGraphiteOps(branches=branches)
     git_ops = FakeGitOps()

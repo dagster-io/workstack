@@ -133,34 +133,14 @@ BRANCH_METADATA_CASES = [
         "name": "linear_stack_from_branch_metadata",
         "branch": "feature-2",
         "branches": {
-            "main": BranchMetadata(
-                name="main",
-                parent=None,
-                children=["feature-1"],
-                is_trunk=True,
-                commit_sha="abc123",
+            "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
+            "feature-1": BranchMetadata.branch(
+                "feature-1", "main", children=["feature-2"], commit_sha="def456"
             ),
-            "feature-1": BranchMetadata(
-                name="feature-1",
-                parent="main",
-                children=["feature-2"],
-                is_trunk=False,
-                commit_sha="def456",
+            "feature-2": BranchMetadata.branch(
+                "feature-2", "feature-1", children=["feature-3"], commit_sha="ghi789"
             ),
-            "feature-2": BranchMetadata(
-                name="feature-2",
-                parent="feature-1",
-                children=["feature-3"],
-                is_trunk=False,
-                commit_sha="ghi789",
-            ),
-            "feature-3": BranchMetadata(
-                name="feature-3",
-                parent="feature-2",
-                children=[],
-                is_trunk=False,
-                commit_sha="jkl012",
-            ),
+            "feature-3": BranchMetadata.branch("feature-3", "feature-2", commit_sha="jkl012"),
         },
         "expected": {
             "stack": ["main", "feature-1", "feature-2", "feature-3"],
@@ -173,34 +153,14 @@ BRANCH_METADATA_CASES = [
         "name": "branch_metadata_prefers_first_child",
         "branch": "branch-a",
         "branches": {
-            "main": BranchMetadata(
-                name="main",
-                parent=None,
-                children=["branch-a", "branch-x"],
-                is_trunk=True,
-                commit_sha="abc123",
+            "main": BranchMetadata.trunk(
+                "main", children=["branch-a", "branch-x"], commit_sha="abc123"
             ),
-            "branch-a": BranchMetadata(
-                name="branch-a",
-                parent="main",
-                children=["branch-b"],
-                is_trunk=False,
-                commit_sha="def456",
+            "branch-a": BranchMetadata.branch(
+                "branch-a", "main", children=["branch-b"], commit_sha="def456"
             ),
-            "branch-b": BranchMetadata(
-                name="branch-b",
-                parent="branch-a",
-                children=[],
-                is_trunk=False,
-                commit_sha="ghi789",
-            ),
-            "branch-x": BranchMetadata(
-                name="branch-x",
-                parent="main",
-                children=[],
-                is_trunk=False,
-                commit_sha="xyz999",
-            ),
+            "branch-b": BranchMetadata.branch("branch-b", "branch-a", commit_sha="ghi789"),
+            "branch-x": BranchMetadata.branch("branch-x", "main", commit_sha="xyz999"),
         },
         "expected": {
             "stack": ["main", "branch-a", "branch-b"],

@@ -32,20 +32,8 @@ def test_fake_graphite_ops_initialization() -> None:
 def test_fake_graphite_ops_get_all_branches() -> None:
     """Test that get_all_branches returns pre-configured BranchMetadata dict."""
     branches = {
-        "main": BranchMetadata(
-            name="main",
-            parent=None,
-            children=["feature-1"],
-            is_trunk=True,
-            commit_sha="abc123",
-        ),
-        "feature-1": BranchMetadata(
-            name="feature-1",
-            parent="main",
-            children=[],
-            is_trunk=False,
-            commit_sha="def456",
-        ),
+        "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
+        "feature-1": BranchMetadata.branch("feature-1", "main", commit_sha="def456"),
     }
     ops = FakeGraphiteOps(branches=branches)
     git_ops = FakeGitOps()
@@ -88,20 +76,8 @@ def test_fake_graphite_ops_get_branch_stack_unknown() -> None:
 def test_fake_graphite_ops_get_parent_branch() -> None:
     """Test that parent relationships work from branches metadata."""
     branches = {
-        "main": BranchMetadata(
-            name="main",
-            parent=None,
-            children=["feature"],
-            is_trunk=True,
-            commit_sha="abc123",
-        ),
-        "feature": BranchMetadata(
-            name="feature",
-            parent="main",
-            children=[],
-            is_trunk=False,
-            commit_sha="def456",
-        ),
+        "main": BranchMetadata.trunk("main", children=["feature"], commit_sha="abc123"),
+        "feature": BranchMetadata.branch("feature", "main", commit_sha="def456"),
     }
     ops = FakeGraphiteOps(branches=branches)
     git_ops = FakeGitOps()
@@ -115,27 +91,9 @@ def test_fake_graphite_ops_get_parent_branch() -> None:
 def test_fake_graphite_ops_get_child_branches() -> None:
     """Test that child relationships work from branches metadata."""
     branches = {
-        "main": BranchMetadata(
-            name="main",
-            parent=None,
-            children=["feat-1", "feat-2"],
-            is_trunk=True,
-            commit_sha="abc123",
-        ),
-        "feat-1": BranchMetadata(
-            name="feat-1",
-            parent="main",
-            children=[],
-            is_trunk=False,
-            commit_sha="def456",
-        ),
-        "feat-2": BranchMetadata(
-            name="feat-2",
-            parent="main",
-            children=[],
-            is_trunk=False,
-            commit_sha="ghi789",
-        ),
+        "main": BranchMetadata.trunk("main", children=["feat-1", "feat-2"], commit_sha="abc123"),
+        "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
+        "feat-2": BranchMetadata.branch("feat-2", "main", commit_sha="ghi789"),
     }
     ops = FakeGraphiteOps(branches=branches)
     git_ops = FakeGitOps()
@@ -149,27 +107,11 @@ def test_fake_graphite_ops_get_child_branches() -> None:
 def test_fake_graphite_ops_branch_hierarchy() -> None:
     """Test parent→child relationships in multi-level hierarchy."""
     branches = {
-        "main": BranchMetadata(
-            name="main",
-            parent=None,
-            children=["level-1"],
-            is_trunk=True,
-            commit_sha="abc123",
+        "main": BranchMetadata.trunk("main", children=["level-1"], commit_sha="abc123"),
+        "level-1": BranchMetadata.branch(
+            "level-1", "main", children=["level-2"], commit_sha="def456"
         ),
-        "level-1": BranchMetadata(
-            name="level-1",
-            parent="main",
-            children=["level-2"],
-            is_trunk=False,
-            commit_sha="def456",
-        ),
-        "level-2": BranchMetadata(
-            name="level-2",
-            parent="level-1",
-            children=[],
-            is_trunk=False,
-            commit_sha="ghi789",
-        ),
+        "level-2": BranchMetadata.branch("level-2", "level-1", commit_sha="ghi789"),
     }
     ops = FakeGraphiteOps(branches=branches)
     git_ops = FakeGitOps()
@@ -190,27 +132,11 @@ def test_fake_graphite_ops_branch_hierarchy() -> None:
 def test_fake_graphite_ops_stack_traversal() -> None:
     """Test that get_branch_stack builds stack from branch metadata."""
     branches = {
-        "main": BranchMetadata(
-            name="main",
-            parent=None,
-            children=["feature-1"],
-            is_trunk=True,
-            commit_sha="abc123",
+        "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
+        "feature-1": BranchMetadata.branch(
+            "feature-1", "main", children=["feature-2"], commit_sha="def456"
         ),
-        "feature-1": BranchMetadata(
-            name="feature-1",
-            parent="main",
-            children=["feature-2"],
-            is_trunk=False,
-            commit_sha="def456",
-        ),
-        "feature-2": BranchMetadata(
-            name="feature-2",
-            parent="feature-1",
-            children=[],
-            is_trunk=False,
-            commit_sha="ghi789",
-        ),
+        "feature-2": BranchMetadata.branch("feature-2", "feature-1", commit_sha="ghi789"),
     }
     ops = FakeGraphiteOps(branches=branches)
     git_ops = FakeGitOps()
@@ -285,20 +211,8 @@ def test_fake_graphite_ops_get_graphite_url() -> None:
 def test_fake_graphite_ops_branches_only_config() -> None:
     """Test configuration with only branches (no stacks)."""
     branches = {
-        "main": BranchMetadata(
-            name="main",
-            parent=None,
-            children=["feature"],
-            is_trunk=True,
-            commit_sha="abc123",
-        ),
-        "feature": BranchMetadata(
-            name="feature",
-            parent="main",
-            children=[],
-            is_trunk=False,
-            commit_sha="def456",
-        ),
+        "main": BranchMetadata.trunk("main", children=["feature"], commit_sha="abc123"),
+        "feature": BranchMetadata.branch("feature", "main", commit_sha="def456"),
     }
     ops = FakeGraphiteOps(branches=branches)
     git_ops = FakeGitOps()
@@ -329,20 +243,8 @@ def test_fake_graphite_ops_stacks_only_config() -> None:
 def test_fake_graphite_ops_combined_config() -> None:
     """Test that stacks take precedence over branches when both configured."""
     branches = {
-        "main": BranchMetadata(
-            name="main",
-            parent=None,
-            children=["feat-a"],
-            is_trunk=True,
-            commit_sha="abc123",
-        ),
-        "feat-a": BranchMetadata(
-            name="feat-a",
-            parent="main",
-            children=[],
-            is_trunk=False,
-            commit_sha="def456",
-        ),
+        "main": BranchMetadata.trunk("main", children=["feat-a"], commit_sha="abc123"),
+        "feat-a": BranchMetadata.branch("feat-a", "main", commit_sha="def456"),
     }
     stacks = {
         "feat-b": ["main", "feat-b", "feat-c"],

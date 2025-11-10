@@ -54,8 +54,9 @@ def _create_test_context(
         github_ops=FakeGitHubOps(),
         graphite_ops=graphite_ops,
         shell_ops=FakeShellOps(),
-        cwd=Path("/test/default/cwd"),
+        cwd=cwd,  # Use the actual cwd parameter, not hardcoded path
         dry_run=False,
+        trunk_branch=None,
     )
 
 
@@ -274,8 +275,9 @@ def test_consolidate_detached_head_error() -> None:
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),
-        cwd=Path("/test/default/cwd"),
+        cwd=cwd,
         dry_run=False,
+        trunk_branch=None,
     )
 
     result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
@@ -548,14 +550,16 @@ def test_consolidate_with_new_name() -> None:
         # Run consolidate with --name option
         result = runner.invoke(cli, ["consolidate", "--name", "my-stack", "-f"], obj=test_ctx)
 
-        # Note: In isolated filesystem, git worktree add will fail since we don't have real git
-        # We're testing the validation and flow, not the actual git command
-        # In real usage, this would create a new worktree "my-stack" and consolidate into it
-        # For now, we expect this to fail at the git worktree add step
-        assert result.exit_code == 1
-        assert (
-            "Failed to create worktree" in result.output or "not a git repository" in result.output
-        )
+        # With FakeGitOps, this now succeeds and creates the new worktree
+        assert result.exit_code == 0, result.output
+        assert "Created new worktree: my-stack" in result.output
+        assert "Consolidation complete" in result.output
+
+        # Verify worktree was added
+        assert len(test_ctx.git_ops.added_worktrees) == 1
+        added_path, added_branch = test_ctx.git_ops.added_worktrees[0]
+        assert added_path.name == "my-stack"
+        assert added_branch == "feat-2"
 
 
 def test_consolidate_name_already_exists() -> None:
@@ -572,8 +576,8 @@ def test_consolidate_name_already_exists() -> None:
         repo_name = cwd.name
         wt1_path = workstacks_root / repo_name / "wt1"
         existing_stack = cwd.parent / "my-stack"
-        wt1_path.mkdir(parents=True)
-        existing_stack.mkdir(parents=True)
+        wt1_path.mkdir(parents=True, exist_ok=True)
+        existing_stack.mkdir(parents=True, exist_ok=True)
 
         # Worktrees: wt1 (feat-1, current) and existing "my-stack"
         worktrees = {
@@ -637,12 +641,16 @@ def test_consolidate_partial_with_name() -> None:
             cli, ["consolidate", "feat-2", "--name", "my-partial", "-f"], obj=test_ctx
         )
 
-        # In isolated filesystem, git worktree add will fail
-        # But we can verify that validation logic runs correctly
-        assert result.exit_code == 1
-        assert (
-            "Failed to create worktree" in result.output or "not a git repository" in result.output
-        )
+        # With FakeGitOps, this succeeds and creates partial consolidation
+        assert result.exit_code == 0, result.output
+        assert "Created new worktree: my-partial" in result.output
+        assert "Consolidation complete" in result.output
+
+        # Verify worktree was added
+        assert len(test_ctx.git_ops.added_worktrees) == 1
+        added_path, added_branch = test_ctx.git_ops.added_worktrees[0]
+        assert added_path.name == "my-partial"
+        assert added_branch == "feat-3"
 
 
 def test_consolidate_branch_not_in_stack() -> None:

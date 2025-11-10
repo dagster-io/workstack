@@ -237,6 +237,16 @@ class FakeGitOps(GitOps):
         # Track the detached checkout
         self._detached_checkouts.append((cwd, ref))
 
+    def create_branch(self, cwd: Path, branch_name: str, start_point: str) -> None:
+        """Create a new branch without checking it out (no-op for fake)."""
+        # Fake doesn't need to track created branches unless tests verify it
+        pass
+
+    def delete_branch(self, cwd: Path, branch_name: str, *, force: bool) -> None:
+        """Delete a local branch (no-op for fake)."""
+        # Fake doesn't need to track deleted branches unless using delete_branch_with_graphite
+        pass
+
     def delete_branch_with_graphite(self, repo_root: Path, branch: str, *, force: bool) -> None:
         """Track which branches were deleted (mutates internal state)."""
         self._deleted_branches.append(branch)

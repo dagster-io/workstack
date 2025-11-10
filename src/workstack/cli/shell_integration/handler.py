@@ -7,6 +7,7 @@ from typing import Final
 import click
 from click.testing import CliRunner
 
+from workstack.cli.commands.consolidate import consolidate_cmd
 from workstack.cli.commands.create import create
 from workstack.cli.commands.down import down_cmd
 from workstack.cli.commands.jump import jump_cmd
@@ -40,8 +41,9 @@ def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellInt
     If args contain help flags or explicit --script, passthrough to regular command.
     Otherwise, add --script flag and capture the activation script.
     """
-    # Check if help flags or --script are present - these should pass through
-    if "-h" in args or "--help" in args or "--script" in args:
+    # Check if help flags, --script, or --dry-run are present - these should pass through
+    # Dry-run mode should show output directly, not via shell integration
+    if "-h" in args or "--help" in args or "--script" in args or "--dry-run" in args:
         return ShellIntegrationResult(passthrough=True, script=None, exit_code=0)
 
     # Map command names to their Click commands
@@ -51,6 +53,7 @@ def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellInt
         "jump": jump_cmd,
         "up": up_cmd,
         "down": down_cmd,
+        "consolidate": consolidate_cmd,
     }
 
     command = command_map.get(command_name)

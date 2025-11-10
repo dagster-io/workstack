@@ -43,16 +43,7 @@ def test_renderer_clean_working_tree() -> None:
     worktree_info = WorktreeDisplayInfo.feature(Path("/tmp/test"), "main", name="test-worktree")
     git_status = GitStatus.clean_status("main")
 
-    status_data = StatusData(
-        worktree_info=worktree_info,
-        git_status=git_status,
-        stack_position=None,
-        pr_status=None,
-        environment=None,
-        dependencies=None,
-        plan=None,
-        related_worktrees=[],
-    )
+    status_data = StatusData.with_git_status(worktree_info, git_status)
 
     renderer = SimpleRenderer()
 
@@ -99,16 +90,7 @@ def test_renderer_dirty_working_tree() -> None:
         recent_commits=commits,
     )
 
-    status_data = StatusData(
-        worktree_info=worktree_info,
-        git_status=git_status,
-        stack_position=None,
-        pr_status=None,
-        environment=None,
-        dependencies=None,
-        plan=None,
-        related_worktrees=[],
-    )
+    status_data = StatusData.with_git_status(worktree_info, git_status)
 
     renderer = SimpleRenderer()
 
@@ -230,6 +212,7 @@ def test_renderer_with_stack_position() -> None:
 
     git_status = GitStatus.clean_status("feature-2")
 
+    # Use constructor for custom stack_position field
     status_data = StatusData(
         worktree_info=worktree_info,
         git_status=git_status,
@@ -561,16 +544,7 @@ def test_renderer_detached_head() -> None:
         recent_commits=[],
     )
 
-    status_data = StatusData(
-        worktree_info=worktree_info,
-        git_status=git_status,
-        stack_position=None,
-        pr_status=None,
-        environment=None,
-        dependencies=None,
-        plan=None,
-        related_worktrees=[],
-    )
+    status_data = StatusData.with_git_status(worktree_info, git_status)
 
     renderer = SimpleRenderer()
 
@@ -594,16 +568,7 @@ def test_renderer_root_worktree() -> None:
 
     git_status = GitStatus.clean_status("main")
 
-    status_data = StatusData(
-        worktree_info=worktree_info,
-        git_status=git_status,
-        stack_position=None,
-        pr_status=None,
-        environment=None,
-        dependencies=None,
-        plan=None,
-        related_worktrees=[],
-    )
+    status_data = StatusData.with_git_status(worktree_info, git_status)
 
     renderer = SimpleRenderer()
 
@@ -633,16 +598,7 @@ def test_renderer_many_recent_commits() -> None:
 
     git_status = GitStatus.with_commits("feature", commits)
 
-    status_data = StatusData(
-        worktree_info=worktree_info,
-        git_status=git_status,
-        stack_position=None,
-        pr_status=None,
-        environment=None,
-        dependencies=None,
-        plan=None,
-        related_worktrees=[],
-    )
+    status_data = StatusData.with_git_status(worktree_info, git_status)
 
     renderer = SimpleRenderer()
 
@@ -743,16 +699,7 @@ def test_renderer_no_git_status() -> None:
     # Arrange
     worktree_info = WorktreeDisplayInfo.feature(Path("/tmp/test"), "feature", name="test-worktree")
 
-    status_data = StatusData(
-        worktree_info=worktree_info,
-        git_status=None,  # No git status
-        stack_position=None,
-        pr_status=None,
-        environment=None,
-        dependencies=None,
-        plan=None,
-        related_worktrees=[],
-    )
+    status_data = StatusData.minimal(worktree_info)
 
     renderer = SimpleRenderer()
 
@@ -771,16 +718,7 @@ def test_renderer_no_stack_position() -> None:
 
     git_status = GitStatus.clean_status("feature")
 
-    status_data = StatusData(
-        worktree_info=worktree_info,
-        git_status=git_status,
-        stack_position=None,  # No stack position
-        pr_status=None,
-        environment=None,
-        dependencies=None,
-        plan=None,
-        related_worktrees=[],
-    )
+    status_data = StatusData.with_git_status(worktree_info, git_status)
 
     renderer = SimpleRenderer()
 

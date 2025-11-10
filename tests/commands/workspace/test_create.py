@@ -1953,7 +1953,7 @@ def test_create_default_behavior_generates_script() -> None:
 
 
 def test_create_with_long_name_truncation() -> None:
-    """Test that worktree base names exceeding 30 characters are truncated before date prefix."""
+    """Test that worktree base names exceeding 30 characters are truncated before date suffix."""
     runner = CliRunner()
     with runner.isolated_filesystem():
         cwd = Path.cwd()
@@ -2002,7 +2002,7 @@ def test_create_with_long_name_truncation() -> None:
 
 
 def test_create_with_plan_ensures_uniqueness() -> None:
-    """Test that --plan ensures uniqueness with date prefix and versioning."""
+    """Test that --plan ensures uniqueness with date suffix and versioning."""
     runner = CliRunner()
     with runner.isolated_filesystem():
         cwd = Path.cwd()
@@ -2044,11 +2044,11 @@ def test_create_with_plan_ensures_uniqueness() -> None:
         result1 = runner.invoke(cli, ["create", "--plan", str(plan_file)], obj=test_ctx)
         assert result1.exit_code == 0, result1.output
 
-        # Check that first worktree has date prefix
+        # Check that first worktree has date suffix
         from datetime import datetime
 
-        date_prefix = datetime.now().strftime("%y-%m-%d")
-        expected_name1 = f"{date_prefix}-my-feature"
+        date_suffix = datetime.now().strftime("%y-%m-%d")
+        expected_name1 = f"my-feature-{date_suffix}"
         wt_path1 = workstacks_dir / expected_name1
         assert wt_path1.exists(), f"Expected first worktree at {wt_path1}"
         assert (wt_path1 / ".PLAN.md").exists()
@@ -2060,8 +2060,8 @@ def test_create_with_plan_ensures_uniqueness() -> None:
         result2 = runner.invoke(cli, ["create", "--plan", str(plan_file)], obj=test_ctx)
         assert result2.exit_code == 0, result2.output
 
-        # Check that second worktree has date prefix and -2 suffix
-        expected_name2 = f"{date_prefix}-my-feature-2"
+        # Check that second worktree has -2 before date suffix
+        expected_name2 = f"my-feature-2-{date_suffix}"
         wt_path2 = workstacks_dir / expected_name2
         assert wt_path2.exists(), f"Expected second worktree at {wt_path2}"
         assert (wt_path2 / ".PLAN.md").exists()
@@ -2078,7 +2078,7 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
 
     This test verifies the updated behavior where:
     - Base name is truncated to 30 chars by sanitize_worktree_name()
-    - Date prefix (YY-MM-DD-) is added to the base name
+    - Date suffix (-YY-MM-DD) is added to the base name
     - Final name can exceed 30 characters (up to ~39 chars)
     - Result: worktree name == branch name (both can be >30 chars)
     """
@@ -2088,9 +2088,9 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
         git_dir = cwd / ".git"
         git_dir.mkdir()
 
-        # Create plan file with very long name that will exceed 30 chars with date prefix
-        # The base will be truncated to 30 chars, then date prefix added
-        # Example: base "fix-branch-worktree-name-misma" (30 chars) + date "25-11-08-"
+        # Create plan file with very long name that will exceed 30 chars with date suffix
+        # The base will be truncated to 30 chars, then date suffix added
+        # Example: base "fix-branch-worktree-name-misma" (30 chars) + date "-25-11-08"
         # (9 chars) = 39 chars total
         long_plan_name = "fix-branch-worktree-name-mismatch-in-workstack-plan-workflow-plan.md"
         plan_file = cwd / long_plan_name
@@ -2146,8 +2146,8 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
             f"Branch '{actual_branch_name}' != worktree '{actual_worktree_name}'"
         )
 
-        # Both should exceed 30 characters (base is 30, date prefix adds 9 more)
-        # Expected: YY-MM-DD-fix-branch-worktree-name-misma (39 chars)
+        # Both should exceed 30 characters (base is 30, date suffix adds 9 more)
+        # Expected: fix-branch-worktree-name-misma-YY-MM-DD (39 chars)
         assert len(actual_worktree_name) > 30, (
             f"Worktree name: expected >30 chars, got {len(actual_worktree_name)}"
         )
@@ -2155,13 +2155,13 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
             f"Branch name: expected >30 chars, got {len(actual_branch_name)}"
         )
 
-        # Both should start with date prefix (YY-MM-DD-)
+        # Both should end with date suffix (-YY-MM-DD)
         from datetime import datetime
 
-        date_prefix = datetime.now().strftime("%y-%m-%d")
-        assert actual_worktree_name.startswith(date_prefix), (
-            f"Worktree name should start with '{date_prefix}', got: {actual_worktree_name}"
+        date_suffix = datetime.now().strftime("%y-%m-%d")
+        assert actual_worktree_name.endswith(date_suffix), (
+            f"Worktree name should end with '{date_suffix}', got: {actual_worktree_name}"
         )
-        assert actual_branch_name.startswith(date_prefix), (
-            f"Branch name should start with '{date_prefix}', got: {actual_branch_name}"
+        assert actual_branch_name.endswith(date_suffix), (
+            f"Branch name should end with '{date_suffix}', got: {actual_branch_name}"
         )

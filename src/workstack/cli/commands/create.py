@@ -188,26 +188,26 @@ def extract_trailing_number(name: str) -> tuple[str, int | None]:
 
 
 def ensure_unique_worktree_name(base_name: str, workstacks_dir: Path) -> str:
-    """Ensure unique worktree name with date prefix and smart versioning.
+    """Ensure unique worktree name with date suffix and smart versioning.
 
-    Adds date prefix in format YY-MM-DD- to the base name.
+    Adds date suffix in format -YY-MM-DD to the base name.
     If a worktree with that name exists, increments numeric suffix starting at 2.
     Uses LBYL pattern: checks path.exists() before operations.
 
     Args:
-        base_name: Sanitized worktree base name (without date prefix)
+        base_name: Sanitized worktree base name (without date suffix)
         workstacks_dir: Directory containing worktrees
 
     Returns:
-        Guaranteed unique worktree name with date prefix
+        Guaranteed unique worktree name with date suffix
 
     Examples:
-        First time: "my-feature" → "25-11-08-my-feature"
-        Duplicate: "my-feature" → "25-11-08-my-feature-2"
-        Next day: "my-feature" → "25-11-09-my-feature"
+        First time: "my-feature" → "my-feature-25-11-08"
+        Duplicate: "my-feature" → "my-feature-2-25-11-08"
+        Next day: "my-feature" → "my-feature-25-11-09"
     """
-    date_prefix = datetime.now().strftime("%y-%m-%d")
-    candidate_name = f"{date_prefix}-{base_name}"
+    date_suffix = datetime.now().strftime("%y-%m-%d")
+    candidate_name = f"{base_name}-{date_suffix}"
 
     # Check if the base candidate exists
     if not (workstacks_dir / candidate_name).exists():
@@ -216,7 +216,7 @@ def ensure_unique_worktree_name(base_name: str, workstacks_dir: Path) -> str:
     # Name exists, find next available number
     counter = 2
     while True:
-        versioned_name = f"{candidate_name}-{counter}"
+        versioned_name = f"{base_name}-{counter}-{date_suffix}"
         if not (workstacks_dir / versioned_name).exists():
             return versioned_name
         counter += 1
@@ -401,7 +401,7 @@ def _create_json_response(
     help=(
         "Path to a plan markdown file. Will derive worktree name from filename "
         "and move to .PLAN.md in the worktree. "
-        "Worktree names are automatically prefixed with the current date (YYYY-MM-DD-) "
+        "Worktree names are automatically suffixed with the current date (-YY-MM-DD) "
         "and versioned if duplicates exist."
     ),
 )

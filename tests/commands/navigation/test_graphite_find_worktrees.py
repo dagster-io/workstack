@@ -7,9 +7,9 @@ from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from tests.test_utils.graphite_helpers import setup_graphite_stack
-from workstack.cli.graphite import find_worktree_for_branch, find_worktrees_containing_branch
+from workstack.cli.graphite import find_worktrees_containing_branch
 from workstack.core.context import WorkstackContext
-from workstack.core.gitops import WorktreeInfo
+from workstack.core.gitops import WorktreeInfo, find_worktree_for_branch
 from workstack.core.global_config import GlobalConfig
 
 

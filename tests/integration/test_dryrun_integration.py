@@ -43,8 +43,8 @@ def test_dryrun_context_creation(tmp_path: Path) -> None:
     # The context should have DryRun-wrapped implementations
     # We verify this by checking the class names
     assert "DryRun" in type(ctx.git_ops).__name__
-    # global_config_ops is now a GlobalConfig dataclass, not wrapped in DryRun
-    assert type(ctx.global_config_ops).__name__ == "GlobalConfig"
+    # global_config is now a GlobalConfig dataclass, not wrapped in DryRun
+    assert type(ctx.global_config).__name__ == "GlobalConfig"
     assert "DryRun" in type(ctx.github_ops).__name__
     assert "DryRun" in type(ctx.graphite_ops).__name__
 
@@ -71,9 +71,9 @@ def test_dryrun_read_operations_still_work(tmp_path: Path) -> None:
     )
 
     # Wrap fakes in dry-run wrappers
-    ctx = WorkstackContext(
+    ctx = WorkstackContext.for_test(
         git_ops=DryRunGitOps(git_ops),
-        global_config_ops=global_config_ops,
+        global_config=global_config_ops,
         github_ops=DryRunGitHubOps(FakeGitHubOps()),
         graphite_ops=DryRunGraphiteOps(FakeGraphiteOps()),
         shell_ops=FakeShellOps(),

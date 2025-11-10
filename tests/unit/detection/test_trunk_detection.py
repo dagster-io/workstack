@@ -45,9 +45,9 @@ def test_branch_with_trunk_validation_result(tmp_path: Path) -> None:
         show_pr_info=True,
         show_pr_checks=False,
     )
-    ctx = WorkstackContext(
+    ctx = WorkstackContext.for_test(
         git_ops=git_ops,
-        global_config_ops=global_config_ops,
+        global_config=global_config_ops,
         graphite_ops=FakeGraphiteOps(),
         github_ops=FakeGitHubOps(),
         shell_ops=FakeShellOps(),
@@ -80,9 +80,9 @@ def test_branch_with_no_parent_is_trunk(tmp_path: Path) -> None:
         show_pr_info=True,
         show_pr_checks=False,
     )
-    ctx = WorkstackContext(
+    ctx = WorkstackContext.for_test(
         git_ops=git_ops,
-        global_config_ops=global_config_ops,
+        global_config=global_config_ops,
         graphite_ops=FakeGraphiteOps(),
         github_ops=FakeGitHubOps(),
         shell_ops=FakeShellOps(),
@@ -114,9 +114,9 @@ def test_branch_with_parent_is_not_trunk(tmp_path: Path) -> None:
         show_pr_info=True,
         show_pr_checks=False,
     )
-    ctx = WorkstackContext(
+    ctx = WorkstackContext.for_test(
         git_ops=git_ops,
-        global_config_ops=global_config_ops,
+        global_config=global_config_ops,
         graphite_ops=FakeGraphiteOps(),
         github_ops=FakeGitHubOps(),
         shell_ops=FakeShellOps(),
@@ -147,9 +147,9 @@ def test_branch_not_in_cache_is_not_trunk(tmp_path: Path) -> None:
         show_pr_info=True,
         show_pr_checks=False,
     )
-    ctx = WorkstackContext(
+    ctx = WorkstackContext.for_test(
         git_ops=git_ops,
-        global_config_ops=global_config_ops,
+        global_config=global_config_ops,
         graphite_ops=FakeGraphiteOps(),
         github_ops=FakeGitHubOps(),
         shell_ops=FakeShellOps(),
@@ -174,9 +174,9 @@ def test_graphite_disabled_returns_false(tmp_path: Path) -> None:
         show_pr_info=True,
         show_pr_checks=False,
     )
-    ctx = WorkstackContext(
+    ctx = WorkstackContext.for_test(
         git_ops=git_ops,
-        global_config_ops=global_config_ops,
+        global_config=global_config_ops,
         graphite_ops=FakeGraphiteOps(),
         github_ops=FakeGitHubOps(),
         shell_ops=FakeShellOps(),

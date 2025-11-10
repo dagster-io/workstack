@@ -46,9 +46,9 @@ def _create_test_context(
         file_statuses=file_statuses,
     )
 
-    return WorkstackContext(
+    return WorkstackContext.for_test(
         git_ops=git_ops,
-        global_config_ops=GlobalConfig(
+        global_config=GlobalConfig(
             workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
@@ -89,8 +89,8 @@ def test_consolidate_removes_other_stack_worktrees() -> None:
         graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
 
         # Create worktree directories
-        wt1_path = env.workstacks_dir / "wt1"
-        wt2_path = env.workstacks_dir / "wt2"
+        wt1_path = env.workstacks_root / "wt1"
+        wt2_path = env.workstacks_root / "wt2"
         wt1_path.mkdir(parents=True)
         wt2_path.mkdir(parents=True)
 
@@ -121,7 +121,7 @@ def test_consolidate_preserves_current_worktree() -> None:
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create other worktree
-        wt1_path = env.workstacks_dir / "wt1"
+        wt1_path = env.workstacks_root / "wt1"
         wt1_path.mkdir(parents=True)
 
         # Both worktrees in same stack, current is on feature-1
@@ -149,7 +149,7 @@ def test_consolidate_aborts_on_uncommitted_changes() -> None:
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree with uncommitted changes marker
-        wt1_path = env.workstacks_dir / "wt1"
+        wt1_path = env.workstacks_root / "wt1"
         wt1_path.mkdir(parents=True)
         # Create a file to simulate uncommitted changes
         (wt1_path / "uncommitted.txt").write_text("changes", encoding="utf-8")
@@ -184,7 +184,7 @@ def test_consolidate_dry_run_shows_preview() -> None:
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree
-        wt1_path = env.workstacks_dir / "wt1"
+        wt1_path = env.workstacks_root / "wt1"
         wt1_path.mkdir(parents=True)
 
         worktrees = {
@@ -212,7 +212,7 @@ def test_consolidate_confirmation_prompt() -> None:
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree
-        wt1_path = env.workstacks_dir / "wt1"
+        wt1_path = env.workstacks_root / "wt1"
         wt1_path.mkdir(parents=True)
 
         worktrees = {
@@ -247,9 +247,9 @@ def test_consolidate_detached_head_error() -> None:
             current_branches={env.cwd: None},
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=GlobalConfig(
+            global_config=GlobalConfig(
                 workstacks_root=env.workstacks_root,
                 use_graphite=True,
                 shell_setup_complete=False,
@@ -296,8 +296,8 @@ def test_consolidate_skips_non_stack_worktrees() -> None:
         graphite_ops = FakeGraphiteOps(stacks={"stack-a": ["main", "stack-a"]})
 
         # Create worktrees
-        wt1_path = env.workstacks_dir / "wt1"
-        wt2_path = env.workstacks_dir / "wt2"
+        wt1_path = env.workstacks_root / "wt1"
+        wt2_path = env.workstacks_root / "wt2"
         wt1_path.mkdir(parents=True)
         wt2_path.mkdir(parents=True)
 
@@ -328,9 +328,9 @@ def test_consolidate_with_uncommitted_changes_in_non_stack_worktree() -> None:
         graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
 
         # Create worktrees
-        wt1_path = env.workstacks_dir / "wt1"
-        wt2_path = env.workstacks_dir / "wt2"
-        wt3_path = env.workstacks_dir / "wt3"
+        wt1_path = env.workstacks_root / "wt1"
+        wt2_path = env.workstacks_root / "wt2"
+        wt3_path = env.workstacks_root / "wt3"
         wt1_path.mkdir(parents=True)
         wt2_path.mkdir(parents=True)
         wt3_path.mkdir(parents=True)
@@ -386,10 +386,10 @@ def test_consolidate_preserves_root_worktree_even_when_in_stack() -> None:
         main_worktree = env.cwd / "main-repo"
         main_worktree.mkdir(parents=True)
         # Linked worktree for feature-1
-        wt1_path = env.workstacks_dir / "wt1"
+        wt1_path = env.workstacks_root / "wt1"
         wt1_path.mkdir(parents=True)
         # Current linked worktree for feature-2
-        wt2_path = env.workstacks_dir / "wt2"
+        wt2_path = env.workstacks_root / "wt2"
         wt2_path.mkdir(parents=True)
 
         # Root worktree is on 'main' branch (which is in the stack)
@@ -414,9 +414,9 @@ def test_consolidate_preserves_root_worktree_even_when_in_stack() -> None:
         git_ops._git_common_dirs[wt1_path] = main_worktree / ".git"
         git_ops._git_common_dirs[wt2_path] = main_worktree / ".git"
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=GlobalConfig(
+            global_config=GlobalConfig(
                 workstacks_root=env.workstacks_root,
                 use_graphite=True,
                 shell_setup_complete=False,

@@ -51,9 +51,9 @@ def test_find_worktrees_containing_branch_single_match(tmp_path: Path) -> None:
         git_common_dirs={repo_root: git_dir},
     )
 
-    ctx = WorkstackContext(
+    ctx = WorkstackContext.for_test(
         git_ops=git_ops,
-        global_config_ops=GlobalConfig(
+        global_config=GlobalConfig(
             workstacks_root=Path("/fake/workstacks"),
             use_graphite=False,
             shell_setup_complete=False,
@@ -63,7 +63,7 @@ def test_find_worktrees_containing_branch_single_match(tmp_path: Path) -> None:
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),
-        cwd=repo_root,
+        cwd=tmp_path,
         dry_run=False,
     )
 
@@ -115,9 +115,9 @@ def test_find_worktrees_containing_branch_multiple_matches(tmp_path: Path) -> No
         git_common_dirs={repo_root: git_dir},
     )
 
-    ctx = WorkstackContext(
+    ctx = WorkstackContext.for_test(
         git_ops=git_ops,
-        global_config_ops=GlobalConfig(
+        global_config=GlobalConfig(
             workstacks_root=Path("/fake/workstacks"),
             use_graphite=False,
             shell_setup_complete=False,
@@ -127,7 +127,7 @@ def test_find_worktrees_containing_branch_multiple_matches(tmp_path: Path) -> No
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),
-        cwd=repo_root,
+        cwd=tmp_path,
         dry_run=False,
     )
 
@@ -170,9 +170,9 @@ def test_find_worktrees_containing_branch_no_match(tmp_path: Path) -> None:
         git_common_dirs={repo_root: git_dir},
     )
 
-    ctx = WorkstackContext(
+    ctx = WorkstackContext.for_test(
         git_ops=git_ops,
-        global_config_ops=GlobalConfig(
+        global_config=GlobalConfig(
             workstacks_root=Path("/fake/workstacks"),
             use_graphite=False,
             shell_setup_complete=False,
@@ -182,7 +182,7 @@ def test_find_worktrees_containing_branch_no_match(tmp_path: Path) -> None:
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),
-        cwd=repo_root,
+        cwd=tmp_path,
         dry_run=False,
     )
 
@@ -227,9 +227,9 @@ def test_find_worktrees_containing_branch_detached_head(tmp_path: Path) -> None:
         git_common_dirs={repo_root: git_dir},
     )
 
-    ctx = WorkstackContext(
+    ctx = WorkstackContext.for_test(
         git_ops=git_ops,
-        global_config_ops=GlobalConfig(
+        global_config=GlobalConfig(
             workstacks_root=Path("/fake/workstacks"),
             use_graphite=False,
             shell_setup_complete=False,
@@ -239,7 +239,7 @@ def test_find_worktrees_containing_branch_detached_head(tmp_path: Path) -> None:
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),
-        cwd=repo_root,
+        cwd=tmp_path,
         dry_run=False,
     )
 
@@ -277,9 +277,9 @@ def test_find_worktrees_containing_branch_no_graphite_cache(tmp_path: Path) -> N
         git_common_dirs={repo_root: git_dir},
     )
 
-    ctx = WorkstackContext(
+    ctx = WorkstackContext.for_test(
         git_ops=git_ops,
-        global_config_ops=GlobalConfig(
+        global_config=GlobalConfig(
             workstacks_root=Path("/fake/workstacks"),
             use_graphite=False,
             shell_setup_complete=False,
@@ -289,7 +289,7 @@ def test_find_worktrees_containing_branch_no_graphite_cache(tmp_path: Path) -> N
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),
-        cwd=repo_root,
+        cwd=tmp_path,
         dry_run=False,
     )
 

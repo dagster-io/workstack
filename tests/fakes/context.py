@@ -22,6 +22,7 @@ def create_test_context(
     local_config: LoadedConfig | None = None,
     repo: RepoContext | NoRepoSentinel | None = None,
     dry_run: bool = False,
+    trunk_branch: str | None = None,
 ) -> WorkstackContext:
     """Create test context with optional pre-configured ops.
 
@@ -44,6 +45,7 @@ def create_test_context(
         repo: Optional RepoContext or NoRepoSentinel for test context.
              If None, uses NoRepoSentinel().
         dry_run: Whether to set dry_run mode
+        trunk_branch: Optional trunk branch name. If None, defaults to None.
 
     Returns:
         Frozen WorkstackContext for use in tests
@@ -104,4 +106,5 @@ def create_test_context(
         local_config=local_config,
         repo=repo,
         dry_run=dry_run,
+        trunk_branch=trunk_branch,
     )

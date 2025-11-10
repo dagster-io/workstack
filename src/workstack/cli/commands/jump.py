@@ -5,10 +5,9 @@ from pathlib import Path
 
 import click
 
-from workstack.cli.activation import render_activation_script
 from workstack.cli.core import discover_repo_context
 from workstack.cli.graphite import find_worktrees_containing_branch
-from workstack.cli.shell_utils import write_script_to_temp
+from workstack.cli.shell_integration.result import finish_with_activation
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
 
@@ -89,16 +88,12 @@ def _perform_jump(
             jump_message = f'echo "Jumped to branch {safe_branch}: $(pwd)"'
         else:
             jump_message = f'echo "Already on branch {safe_branch}: $(pwd)"'
-        script_content = render_activation_script(
-            worktree_path=target_path, final_message=jump_message
-        )
-
-        script_path = write_script_to_temp(
-            script_content,
+        finish_with_activation(
+            target_path,
+            script=True,
             command_name="jump",
-            comment=f"jump to {branch}",
+            final_message=jump_message,
         )
-        click.echo(str(script_path), nl=False)
     else:
         # No shell integration available, show manual instructions
         click.echo(

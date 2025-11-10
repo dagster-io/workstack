@@ -10,7 +10,7 @@ import click
 
 from workstack.cli.config import LoadedConfig
 from workstack.cli.core import discover_repo_context, worktree_path_for
-from workstack.cli.shell_utils import render_cd_script, write_script_to_temp
+from workstack.cli.shell_integration.result import finish_with_cd
 from workstack.cli.subprocess_utils import run_with_error_reporting
 from workstack.core.context import WorkstackContext, read_trunk_from_pyproject
 from workstack.core.repo_discovery import ensure_workstacks_dir
@@ -698,17 +698,12 @@ def create(
         )
 
     if script and not stay:
-        script_content = render_cd_script(
+        finish_with_cd(
             wt_path,
-            comment="cd to new worktree",
+            script=True,
+            command_name="create",
             success_message="✓ Switched to new worktree.",
         )
-        script_path = write_script_to_temp(
-            script_content,
-            command_name="create",
-            comment=f"cd to {name}",
-        )
-        click.echo(str(script_path), nl=False)
     elif output_json:
         # Output JSON with worktree information
         json_response = _create_json_response(

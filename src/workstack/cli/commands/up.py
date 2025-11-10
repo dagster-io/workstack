@@ -1,11 +1,11 @@
 import click
 
 from workstack.cli.commands.switch import (
-    _activate_worktree,
     _ensure_graphite_enabled,
     _resolve_up_navigation,
 )
 from workstack.cli.core import discover_repo_context
+from workstack.cli.shell_integration.result import activate_worktree
 from workstack.core.context import WorkstackContext
 
 
@@ -55,4 +55,4 @@ def up_cmd(ctx: WorkstackContext, script: bool) -> None:
         )
         raise SystemExit(1)
 
-    _activate_worktree(repo, target_wt_path, script, "up")
+    activate_worktree(repo, target_wt_path, script, "up")

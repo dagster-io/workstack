@@ -6,6 +6,7 @@ import click
 
 from workstack.cli.activation import render_activation_script
 from workstack.cli.core import discover_repo_context
+from workstack.cli.shell_integration.result import emit_script_path
 from workstack.cli.shell_utils import write_script_to_temp
 from workstack.core.context import WorkstackContext
 
@@ -56,4 +57,4 @@ def prepare_cwd_recovery_cmd(ctx: WorkstackContext) -> None:
     if script_path is None:
         return
 
-    click.echo(str(script_path), nl=False)
+    emit_script_path(script_path)

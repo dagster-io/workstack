@@ -6,6 +6,7 @@ import click
 from workstack.cli.config import LoadedConfig
 from workstack.cli.core import discover_repo_context
 from workstack.core.context import (
+    GlobalConfigNotFound,
     WorkstackContext,
     read_trunk_from_pyproject,
     write_trunk_to_pyproject,
@@ -143,13 +144,13 @@ def config_list(ctx: WorkstackContext) -> None:
     """Print a list of configuration keys and values."""
     # Display global config
     click.echo(click.style("Global configuration:", bold=True))
-    if ctx.global_config:
+    if isinstance(ctx.global_config, GlobalConfigNotFound):
+        click.echo("  (not configured - run 'workstack init' to create)")
+    else:
         click.echo(f"  workstacks_root={ctx.global_config.workstacks_root}")
         click.echo(f"  use_graphite={str(ctx.global_config.use_graphite).lower()}")
         click.echo(f"  show_pr_info={str(ctx.global_config.show_pr_info).lower()}")
         click.echo(f"  show_pr_checks={str(ctx.global_config.show_pr_checks).lower()}")
-    else:
-        click.echo("  (not configured - run 'workstack init' to create)")
 
     # Display local config
     click.echo(click.style("\nRepository configuration:", bold=True))
@@ -189,7 +190,7 @@ def config_get(ctx: WorkstackContext, key: str) -> None:
 
     # Handle global config keys
     if parts[0] in ("workstacks_root", "use_graphite", "show_pr_info", "show_pr_checks"):
-        if ctx.global_config is None:
+        if isinstance(ctx.global_config, GlobalConfigNotFound):
             config_path = global_config_path()
             click.echo(f"Global config not found at {config_path}", err=True)
             raise SystemExit(1)
@@ -243,7 +244,7 @@ def config_set(ctx: WorkstackContext, key: str, value: str) -> None:
 
     # Handle global config keys
     if parts[0] in ("workstacks_root", "use_graphite", "show_pr_info", "show_pr_checks"):
-        if ctx.global_config is None:
+        if isinstance(ctx.global_config, GlobalConfigNotFound):
             config_path = global_config_path()
             click.echo(f"Global config not found at {config_path}", err=True)
             click.echo("Run 'workstack init' to create it.", err=True)

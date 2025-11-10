@@ -5,7 +5,7 @@ from pathlib import Path
 import click
 
 from workstack.cli.core import discover_repo_context
-from workstack.core.context import WorkstackContext
+from workstack.core.context import GlobalConfigNotFound, WorkstackContext
 from workstack.core.global_config import GlobalConfig, global_config_path, save_global_config
 from workstack.core.repo_discovery import ensure_workstacks_dir
 from workstack.core.shell_ops import ShellOps
@@ -229,7 +229,7 @@ def init_cmd(
 
     # Handle --shell flag: only do shell setup
     if shell:
-        if ctx.global_config is None:
+        if isinstance(ctx.global_config, GlobalConfigNotFound):
             config_path = global_config_path()
             click.echo(f"Global config not found at {config_path}", err=True)
             click.echo(

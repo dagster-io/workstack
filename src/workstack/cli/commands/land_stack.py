@@ -6,7 +6,7 @@ from typing import NamedTuple
 import click
 
 from workstack.cli.core import discover_repo_context
-from workstack.core.context import WorkstackContext
+from workstack.core.context import GlobalConfigNotFound, WorkstackContext
 
 
 def _emit(message: str, *, script_mode: bool, error: bool = False) -> None:
@@ -122,8 +122,15 @@ def _validate_landing_preconditions(
         SystemExit: If any precondition fails
     """
     # Check Graphite enabled
-    use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
-    if not use_graphite:
+    if isinstance(ctx.global_config, GlobalConfigNotFound):
+        click.echo(
+            "Error: 'workstack land-stack' requires global config.\n\n"
+            "Run 'workstack init' to create global configuration.",
+            err=True,
+        )
+        raise SystemExit(1)
+
+    if not ctx.global_config.use_graphite:
         _emit(
             "Error: 'workstack land-stack' requires Graphite.\n\n"
             "To fix:\n"

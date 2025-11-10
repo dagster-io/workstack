@@ -11,7 +11,7 @@ import click
 
 from workstack.cli.core import discover_repo_context
 from workstack.core.branch_metadata import BranchMetadata
-from workstack.core.context import WorkstackContext
+from workstack.core.context import GlobalConfigNotFound, WorkstackContext
 from workstack.core.gitops import GitOps
 
 
@@ -80,7 +80,14 @@ def graphite_branches_cmd(ctx: WorkstackContext, format: str, stack: str | None)
         - Valid .git/.graphite_cache_persist file
     """
     # Check if graphite is enabled
-    if not (ctx.global_config and ctx.global_config.use_graphite):
+    if isinstance(ctx.global_config, GlobalConfigNotFound):
+        click.echo(
+            "Error: Global config not found. Run 'workstack init'",
+            err=True,
+        )
+        raise SystemExit(1)
+
+    if not ctx.global_config.use_graphite:
         click.echo(
             "Error: Graphite not enabled. Run 'workstack config set use_graphite true'",
             err=True,

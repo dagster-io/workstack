@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from workstack.core.context import WorkstackContext
+from workstack.core.context import GlobalConfigNotFound, WorkstackContext
 from workstack.status.collectors.base import StatusCollector
 from workstack.status.models.status_data import PullRequestStatus
 
@@ -25,7 +25,10 @@ class GitHubPRCollector(StatusCollector):
         Returns:
             True if PR info is enabled in config
         """
-        if not (ctx.global_config and ctx.global_config.show_pr_info):
+        if isinstance(ctx.global_config, GlobalConfigNotFound):
+            return False
+
+        if not ctx.global_config.show_pr_info:
             return False
 
         if not worktree_path.exists():

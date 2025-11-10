@@ -20,6 +20,12 @@ from workstack.core.repo_discovery import (
 from workstack.core.shell_ops import RealShellOps, ShellOps
 
 
+class GlobalConfigNotFound:
+    """Sentinel value indicating global config file was not found."""
+
+    pass
+
+
 @dataclass(frozen=True)
 class WorkstackContext:
     """Immutable context holding all dependencies for workstack operations.
@@ -27,8 +33,8 @@ class WorkstackContext:
     Created at CLI entry point and threaded through the application.
     Frozen to prevent accidental modification at runtime.
 
-    Note: global_config may be None only during init command before config is created.
-    All other commands should have a valid GlobalConfig.
+    Note: global_config is either a valid GlobalConfig or GlobalConfigNotFound.
+    Use isinstance(ctx.global_config, GlobalConfigNotFound) to check if config is missing.
     """
 
     git_ops: GitOps
@@ -36,7 +42,7 @@ class WorkstackContext:
     graphite_ops: GraphiteOps
     shell_ops: ShellOps
     cwd: Path  # Current working directory at CLI invocation
-    global_config: GlobalConfig | None
+    global_config: GlobalConfig | GlobalConfigNotFound
     local_config: LoadedConfig
     repo: RepoContext | NoRepoSentinel
     dry_run: bool
@@ -130,15 +136,15 @@ def create_context(*, dry_run: bool, repo_root: Path | None = None) -> Workstack
     # 1. Capture cwd (no deps)
     cwd = Path.cwd()
 
-    # 2. Load global config (no deps) - None if not exists (for init command)
+    # 2. Load global config (no deps) - sentinel if not exists (for init command)
     from workstack.core.global_config import global_config_exists
 
-    global_config: GlobalConfig | None
+    global_config: GlobalConfig | GlobalConfigNotFound
     if global_config_exists():
         global_config = load_global_config()
     else:
         # For init command only: config doesn't exist yet
-        global_config = None
+        global_config = GlobalConfigNotFound()
 
     # 3. Create ops (need git_ops for repo discovery)
     git_ops: GitOps = RealGitOps()
@@ -146,9 +152,11 @@ def create_context(*, dry_run: bool, repo_root: Path | None = None) -> Workstack
     github_ops: GitHubOps = RealGitHubOps()
 
     # 4. Discover repo (only needs cwd, workstacks_root, git_ops)
-    # If global_config is None, use placeholder path for repo discovery
-    workstacks_root = global_config.workstacks_root if global_config else Path.home() / "worktrees"
-    repo = discover_repo_or_sentinel(cwd, workstacks_root, git_ops)
+    # If global_config is sentinel, skip repo discovery (only init command should work)
+    if isinstance(global_config, GlobalConfigNotFound):
+        repo = NoRepoSentinel(message="Global config not found - run 'workstack init' first")
+    else:
+        repo = discover_repo_or_sentinel(cwd, global_config.workstacks_root, git_ops)
 
     # 5. Load local config (or defaults if no repo)
     if isinstance(repo, NoRepoSentinel):

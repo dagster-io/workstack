@@ -108,7 +108,9 @@ def test_fake_graphite_ops_branch_hierarchy() -> None:
     """Test parent→child relationships in multi-level hierarchy."""
     branches = {
         "main": BranchMetadata.trunk("main", children=["level-1"], commit_sha="abc123"),
-        "level-1": BranchMetadata.branch("level-1", "main", children=["level-2"], commit_sha="def456"),
+        "level-1": BranchMetadata.branch(
+            "level-1", "main", children=["level-2"], commit_sha="def456"
+        ),
         "level-2": BranchMetadata.branch("level-2", "level-1", commit_sha="ghi789"),
     }
     ops = FakeGraphiteOps(branches=branches)
@@ -131,7 +133,9 @@ def test_fake_graphite_ops_stack_traversal() -> None:
     """Test that get_branch_stack builds stack from branch metadata."""
     branches = {
         "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
-        "feature-1": BranchMetadata.branch("feature-1", "main", children=["feature-2"], commit_sha="def456"),
+        "feature-1": BranchMetadata.branch(
+            "feature-1", "main", children=["feature-2"], commit_sha="def456"
+        ),
         "feature-2": BranchMetadata.branch("feature-2", "feature-1", commit_sha="ghi789"),
     }
     ops = FakeGraphiteOps(branches=branches)

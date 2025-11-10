@@ -97,7 +97,9 @@ class SimulatedWorkstackEnv:
             git_ops, graphite_ops = env.build_ops_from_branches(
                 {
                     "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
-                    "feat-1": BranchMetadata.branch("feat-1", "main", children=["feat-2"], commit_sha="def456"),
+                    "feat-1": BranchMetadata.branch(
+                        "feat-1", "main", children=["feat-2"], commit_sha="def456"
+                    ),
                     "feat-2": BranchMetadata.branch("feat-2", "feat-1", commit_sha="ghi789"),
                 },
                 current_branch="feat-2",
@@ -475,8 +477,12 @@ def test_land_stack_fails_when_pr_missing() -> None:
 
         graphite_ops = FakeGraphiteOps(
             branches={
-                "main": BranchMetadata.trunk("main", children=["feat-1", "feat-2"], commit_sha="abc123"),
-                "feat-1": BranchMetadata.branch("feat-1", "main", children=["feat-2"], commit_sha="def456"),
+                "main": BranchMetadata.trunk(
+                    "main", children=["feat-1", "feat-2"], commit_sha="abc123"
+                ),
+                "feat-1": BranchMetadata.branch(
+                    "feat-1", "main", children=["feat-2"], commit_sha="def456"
+                ),
                 "feat-2": BranchMetadata.branch("feat-2", "feat-1", commit_sha="ghi789"),
             },
             stacks={
@@ -594,8 +600,12 @@ def test_land_stack_gets_branches_to_land_correctly() -> None:
         graphite_ops = FakeGraphiteOps(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
-                "feat-1": BranchMetadata.branch("feat-1", "main", children=["feat-2"], commit_sha="def456"),
-                "feat-2": BranchMetadata.branch("feat-2", "feat-1", children=["feat-3"], commit_sha="ghi789"),
+                "feat-1": BranchMetadata.branch(
+                    "feat-1", "main", children=["feat-2"], commit_sha="def456"
+                ),
+                "feat-2": BranchMetadata.branch(
+                    "feat-2", "feat-1", children=["feat-3"], commit_sha="ghi789"
+                ),
                 "feat-3": BranchMetadata.branch("feat-3", "feat-2", commit_sha="jkl012"),
             },
             stacks={
@@ -666,9 +676,15 @@ def test_land_stack_from_top_of_stack_lands_all_branches() -> None:
         graphite_ops = FakeGraphiteOps(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
-                "feat-1": BranchMetadata.branch("feat-1", "main", children=["feat-2"], commit_sha="def456"),
-                "feat-2": BranchMetadata.branch("feat-2", "feat-1", children=["feat-3"], commit_sha="ghi789"),
-                "feat-3": BranchMetadata.branch("feat-3", "feat-2", children=["feat-4"], commit_sha="jkl012"),
+                "feat-1": BranchMetadata.branch(
+                    "feat-1", "main", children=["feat-2"], commit_sha="def456"
+                ),
+                "feat-2": BranchMetadata.branch(
+                    "feat-2", "feat-1", children=["feat-3"], commit_sha="ghi789"
+                ),
+                "feat-3": BranchMetadata.branch(
+                    "feat-3", "feat-2", children=["feat-4"], commit_sha="jkl012"
+                ),
                 "feat-4": BranchMetadata.branch("feat-4", "feat-3", commit_sha="mno345"),
             },
             stacks={
@@ -719,8 +735,12 @@ def test_land_stack_fails_when_branches_in_multiple_worktrees() -> None:
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
-                "feat-1": BranchMetadata.branch("feat-1", "main", children=["feat-2"], commit_sha="def456"),
-                "feat-2": BranchMetadata.branch("feat-2", "feat-1", children=["feat-3"], commit_sha="ghi789"),
+                "feat-1": BranchMetadata.branch(
+                    "feat-1", "main", children=["feat-2"], commit_sha="def456"
+                ),
+                "feat-2": BranchMetadata.branch(
+                    "feat-2", "feat-1", children=["feat-3"], commit_sha="ghi789"
+                ),
                 "feat-3": BranchMetadata.branch("feat-3", "feat-2", commit_sha="jkl012"),
             },
             current_branch="feat-3",
@@ -790,7 +810,9 @@ def test_land_stack_succeeds_when_all_branches_in_current_worktree() -> None:
         graphite_ops = FakeGraphiteOps(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
-                "feat-1": BranchMetadata.branch("feat-1", "main", children=["feat-2"], commit_sha="def456"),
+                "feat-1": BranchMetadata.branch(
+                    "feat-1", "main", children=["feat-2"], commit_sha="def456"
+                ),
                 "feat-2": BranchMetadata.branch("feat-2", "feat-1", commit_sha="ghi789"),
             },
             stacks={
@@ -862,7 +884,9 @@ def test_land_stack_refreshes_metadata_after_sync() -> None:
         graphite_ops = FakeGraphiteOps(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
-                "feat-1": BranchMetadata.branch("feat-1", "main", children=["feat-2"], commit_sha="def456"),
+                "feat-1": BranchMetadata.branch(
+                    "feat-1", "main", children=["feat-2"], commit_sha="def456"
+                ),
                 "feat-2": BranchMetadata.branch("feat-2", "feat-1", commit_sha="ghi789"),
             },
             stacks={

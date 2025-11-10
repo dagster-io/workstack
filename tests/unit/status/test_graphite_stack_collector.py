@@ -134,8 +134,12 @@ BRANCH_METADATA_CASES = [
         "branch": "feature-2",
         "branches": {
             "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
-            "feature-1": BranchMetadata.branch("feature-1", "main", children=["feature-2"], commit_sha="def456"),
-            "feature-2": BranchMetadata.branch("feature-2", "feature-1", children=["feature-3"], commit_sha="ghi789"),
+            "feature-1": BranchMetadata.branch(
+                "feature-1", "main", children=["feature-2"], commit_sha="def456"
+            ),
+            "feature-2": BranchMetadata.branch(
+                "feature-2", "feature-1", children=["feature-3"], commit_sha="ghi789"
+            ),
             "feature-3": BranchMetadata.branch("feature-3", "feature-2", commit_sha="jkl012"),
         },
         "expected": {
@@ -149,8 +153,12 @@ BRANCH_METADATA_CASES = [
         "name": "branch_metadata_prefers_first_child",
         "branch": "branch-a",
         "branches": {
-            "main": BranchMetadata.trunk("main", children=["branch-a", "branch-x"], commit_sha="abc123"),
-            "branch-a": BranchMetadata.branch("branch-a", "main", children=["branch-b"], commit_sha="def456"),
+            "main": BranchMetadata.trunk(
+                "main", children=["branch-a", "branch-x"], commit_sha="abc123"
+            ),
+            "branch-a": BranchMetadata.branch(
+                "branch-a", "main", children=["branch-b"], commit_sha="def456"
+            ),
             "branch-b": BranchMetadata.branch("branch-b", "branch-a", commit_sha="ghi789"),
             "branch-x": BranchMetadata.branch("branch-x", "main", commit_sha="xyz999"),
         },

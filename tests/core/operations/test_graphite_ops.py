@@ -26,7 +26,9 @@ def test_get_parent_branch_returns_parent() -> None:
     # Arrange: Create branch hierarchy
     branches = {
         "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
-        "feature-1": BranchMetadata.branch("feature-1", "main", children=["feature-2"], commit_sha="def456"),
+        "feature-1": BranchMetadata.branch(
+            "feature-1", "main", children=["feature-2"], commit_sha="def456"
+        ),
         "feature-2": BranchMetadata.branch("feature-2", "feature-1", commit_sha="ghi789"),
     }
     graphite_ops = FakeGraphiteOps(branches=branches)
@@ -68,8 +70,12 @@ def test_get_child_branches_returns_children() -> None:
     """Test get_child_branches() returns correct children from branches metadata."""
     # Arrange: Create branch hierarchy with multiple children
     branches = {
-        "main": BranchMetadata.trunk("main", children=["feature-1", "feature-2"], commit_sha="abc123"),
-        "feature-1": BranchMetadata.branch("feature-1", "main", children=["feature-1-1"], commit_sha="def456"),
+        "main": BranchMetadata.trunk(
+            "main", children=["feature-1", "feature-2"], commit_sha="abc123"
+        ),
+        "feature-1": BranchMetadata.branch(
+            "feature-1", "main", children=["feature-1-1"], commit_sha="def456"
+        ),
         "feature-2": BranchMetadata.branch("feature-2", "main", commit_sha="ghi789"),
         "feature-1-1": BranchMetadata.branch("feature-1-1", "feature-1", commit_sha="jkl012"),
     }

@@ -1194,7 +1194,9 @@ def test_from_current_branch_with_main_in_use_prefers_graphite_parent() -> None:
 
         graphite_branches = {
             "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
-            "feature-1": BranchMetadata.branch("feature-1", "main", children=["feature-2"], commit_sha="def456"),
+            "feature-1": BranchMetadata.branch(
+                "feature-1", "main", children=["feature-2"], commit_sha="def456"
+            ),
             "feature-2": BranchMetadata.branch("feature-2", "feature-1", commit_sha="ghi789"),
         }
 
@@ -1275,7 +1277,9 @@ def test_from_current_branch_with_parent_in_use_falls_back_to_detached_head() ->
 
         graphite_branches = {
             "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
-            "feature-1": BranchMetadata.branch("feature-1", "main", children=["feature-2"], commit_sha="def456"),
+            "feature-1": BranchMetadata.branch(
+                "feature-1", "main", children=["feature-2"], commit_sha="def456"
+            ),
             "feature-2": BranchMetadata.branch("feature-2", "feature-1", commit_sha="ghi789"),
         }
 

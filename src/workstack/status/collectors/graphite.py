@@ -25,7 +25,7 @@ class GraphiteStackCollector(StatusCollector):
         Returns:
             True if Graphite is enabled
         """
-        if not ctx.global_config_ops.get_use_graphite():
+        if not (ctx.global_config and ctx.global_config.use_graphite):
             return False
 
         if not worktree_path.exists():

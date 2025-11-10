@@ -1,18 +1,9 @@
-from dataclasses import dataclass
 from pathlib import Path
 
 import click
 
 from workstack.core.context import WorkstackContext
-
-
-@dataclass(frozen=True)
-class RepoContext:
-    """Represents a git repo root and its managed worktrees directory."""
-
-    root: Path
-    repo_name: str
-    workstacks_dir: Path
+from workstack.core.repo_discovery import RepoContext, discover_repo_or_sentinel
 
 
 def discover_repo_context(ctx: WorkstackContext, start: Path) -> RepoContext:
@@ -20,43 +11,18 @@ def discover_repo_context(ctx: WorkstackContext, start: Path) -> RepoContext:
 
     Returns a RepoContext pointing to the repo root and the global worktrees directory
     for this repository.
-    Raises FileNotFoundError if not inside a git repo or if global config is missing.
+    Raises FileNotFoundError if not inside a git repo.
 
     Note: Properly handles git worktrees by finding the main repository root,
     not the worktree's .git file.
     """
-    if not start.exists():
-        raise FileNotFoundError(f"Start path '{start}' does not exist.")
+    if ctx.global_config is None:
+        raise FileNotFoundError("Global config not found. Run 'workstack init' to create it.")
 
-    cur = start.resolve()
-
-    root: Path | None = None
-    git_common_dir = ctx.git_ops.get_git_common_dir(cur)
-    if git_common_dir is not None:
-        root = git_common_dir.parent.resolve()
-    else:
-        for parent in [cur, *cur.parents]:
-            git_path = parent / ".git"
-            if not git_path.exists():
-                continue
-
-            if git_path.is_dir():
-                root = parent
-                break
-
-    if root is None:
-        raise FileNotFoundError("Not inside a git repository (no .git found up the tree).")
-
-    repo_name = root.name
-    workstacks_dir = ctx.global_config_ops.get_workstacks_root() / repo_name
-
-    return RepoContext(root=root, repo_name=repo_name, workstacks_dir=workstacks_dir)
-
-
-def ensure_workstacks_dir(repo: RepoContext) -> Path:
-    """Ensure the workstacks directory exists and return it."""
-    repo.workstacks_dir.mkdir(parents=True, exist_ok=True)
-    return repo.workstacks_dir
+    result = discover_repo_or_sentinel(start, ctx.global_config.workstacks_root, ctx.git_ops)
+    if isinstance(result, RepoContext):
+        return result
+    raise FileNotFoundError(result.message)
 
 
 def worktree_path_for(workstacks_dir: Path, name: str) -> Path:

@@ -2,9 +2,10 @@ from pathlib import Path
 
 import click
 
-from workstack.cli.core import discover_repo_context, ensure_workstacks_dir
+from workstack.cli.core import discover_repo_context
 from workstack.core.context import WorkstackContext
 from workstack.core.github_ops import PullRequestInfo
+from workstack.core.repo_discovery import ensure_workstacks_dir
 
 
 def _get_visible_length(text: str) -> int:
@@ -366,7 +367,7 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
 
     # Validate graphite is enabled if showing stacks
     if show_stacks:
-        if not ctx.global_config_ops.get_use_graphite():
+        if not (ctx.global_config and ctx.global_config.use_graphite):
             click.echo(
                 "Error: --stacks requires graphite to be enabled. "
                 "Run 'workstack config set use_graphite true'",
@@ -376,9 +377,9 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
 
     # Fetch PR information based on config and flags
     prs: dict[str, PullRequestInfo] | None = None
-    if ctx.global_config_ops.get_show_pr_info():
+    if ctx.global_config and ctx.global_config.show_pr_info:
         # Determine if we need CI check status
-        need_checks = show_checks or ctx.global_config_ops.get_show_pr_checks()
+        need_checks = show_checks or ctx.global_config.show_pr_checks
 
         if need_checks:
             # Fetch from GitHub with check status (slower)

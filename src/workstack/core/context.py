@@ -6,14 +6,17 @@ from pathlib import Path
 
 import tomlkit
 
+from workstack.cli.config import LoadedConfig, load_config
 from workstack.core.github_ops import DryRunGitHubOps, GitHubOps, RealGitHubOps
 from workstack.core.gitops import DryRunGitOps, GitOps, RealGitOps
-from workstack.core.global_config_ops import (
-    DryRunGlobalConfigOps,
-    GlobalConfigOps,
-    RealGlobalConfigOps,
-)
+from workstack.core.global_config import GlobalConfig, load_global_config
 from workstack.core.graphite_ops import DryRunGraphiteOps, GraphiteOps, RealGraphiteOps
+from workstack.core.repo_discovery import (
+    NoRepoSentinel,
+    RepoContext,
+    discover_repo_or_sentinel,
+    ensure_workstacks_dir,
+)
 from workstack.core.shell_ops import RealShellOps, ShellOps
 
 
@@ -23,14 +26,19 @@ class WorkstackContext:
 
     Created at CLI entry point and threaded through the application.
     Frozen to prevent accidental modification at runtime.
+
+    Note: global_config may be None only during init command before config is created.
+    All other commands should have a valid GlobalConfig.
     """
 
     git_ops: GitOps
-    global_config_ops: GlobalConfigOps
     github_ops: GitHubOps
     graphite_ops: GraphiteOps
     shell_ops: ShellOps
     cwd: Path  # Current working directory at CLI invocation
+    global_config: GlobalConfig | None
+    local_config: LoadedConfig
+    repo: RepoContext | NoRepoSentinel
     dry_run: bool
     trunk_branch: str | None
 
@@ -117,28 +125,57 @@ def create_context(*, dry_run: bool, repo_root: Path | None = None) -> Workstack
     Example:
         >>> ctx = create_context(dry_run=False)
         >>> worktrees = ctx.git_ops.list_worktrees(Path("/repo"))
-        >>> workstacks_root = ctx.global_config_ops.get_workstacks_root()
+        >>> workstacks_root = ctx.global_config.workstacks_root
     """
+    # 1. Capture cwd (no deps)
+    cwd = Path.cwd()
+
+    # 2. Load global config (no deps) - None if not exists (for init command)
+    from workstack.core.global_config import global_config_exists
+
+    global_config: GlobalConfig | None
+    if global_config_exists():
+        global_config = load_global_config()
+    else:
+        # For init command only: config doesn't exist yet
+        global_config = None
+
+    # 3. Create ops (need git_ops for repo discovery)
     git_ops: GitOps = RealGitOps()
     graphite_ops: GraphiteOps = RealGraphiteOps()
     github_ops: GitHubOps = RealGitHubOps()
-    global_config_ops: GlobalConfigOps = RealGlobalConfigOps()
 
+    # 4. Discover repo (only needs cwd, workstacks_root, git_ops)
+    # If global_config is None, use placeholder path for repo discovery
+    workstacks_root = global_config.workstacks_root if global_config else Path.home() / "worktrees"
+    repo = discover_repo_or_sentinel(cwd, workstacks_root, git_ops)
+
+    # 5. Load local config (or defaults if no repo)
+    if isinstance(repo, NoRepoSentinel):
+        local_config = LoadedConfig(env={}, post_create_commands=[], post_create_shell=None)
+    else:
+        workstacks_dir = ensure_workstacks_dir(repo)
+        local_config = load_config(workstacks_dir)
+
+    # 6. Apply dry-run wrappers if needed
     if dry_run:
         git_ops = DryRunGitOps(git_ops)
         graphite_ops = DryRunGraphiteOps(graphite_ops)
         github_ops = DryRunGitHubOps(github_ops)
-        global_config_ops = DryRunGlobalConfigOps(global_config_ops)
 
+    # 7. Load trunk branch config if in a repo
     trunk_branch = read_trunk_from_pyproject(repo_root) if repo_root else None
 
+    # 8. Create context with all values
     return WorkstackContext(
         git_ops=git_ops,
-        global_config_ops=global_config_ops,
         github_ops=github_ops,
         graphite_ops=graphite_ops,
         shell_ops=RealShellOps(),
-        cwd=Path.cwd(),
+        cwd=cwd,
+        global_config=global_config,
+        local_config=local_config,
+        repo=repo,
         dry_run=dry_run,
         trunk_branch=trunk_branch,
     )

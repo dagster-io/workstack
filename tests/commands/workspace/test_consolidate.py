@@ -731,3 +731,67 @@ def test_consolidate_preserves_upstack_branches() -> None:
         # Should NOT remove wt3 (feat-3) and wt4 (feat-4, current)
         assert wt3_path not in test_ctx.git_ops.removed_worktrees
         assert wt4_path not in test_ctx.git_ops.removed_worktrees
+
+
+def test_consolidate_shows_output_with_script_flag() -> None:
+    """Test consolidate displays removal output even when --script flag is enabled."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        workstacks_root = cwd / "workstacks"
+
+        # Configure graphite with stack (main -> feature-1)
+        graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
+
+        # Create worktree
+        repo_name = cwd.name
+        wt1_path = workstacks_root / repo_name / "wt1"
+        wt1_path.mkdir(parents=True)
+
+        worktrees = {
+            cwd: [
+                WorktreeInfo(path=cwd, branch="feature-1"),
+                WorktreeInfo(path=wt1_path, branch="main"),
+            ]
+        }
+
+        test_ctx = _create_test_context(cwd, worktrees, "feature-1", workstacks_root, graphite_ops)
+        result = runner.invoke(cli, ["consolidate", "--script", "-f"], obj=test_ctx)
+
+        assert result.exit_code == 0, result.output
+        # Verify output is shown even with --script flag
+        assert "✅ Removed:" in result.output
+        assert str(wt1_path) in result.output
+        assert "Consolidation complete" in result.output
+
+
+def test_consolidate_shows_output_without_script_flag() -> None:
+    """Test consolidate displays removal output when --script flag is not enabled."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        workstacks_root = cwd / "workstacks"
+
+        # Configure graphite with stack (main -> feature-1)
+        graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
+
+        # Create worktree
+        repo_name = cwd.name
+        wt1_path = workstacks_root / repo_name / "wt1"
+        wt1_path.mkdir(parents=True)
+
+        worktrees = {
+            cwd: [
+                WorktreeInfo(path=cwd, branch="feature-1"),
+                WorktreeInfo(path=wt1_path, branch="main"),
+            ]
+        }
+
+        test_ctx = _create_test_context(cwd, worktrees, "feature-1", workstacks_root, graphite_ops)
+        result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
+
+        assert result.exit_code == 0, result.output
+        # Verify output is shown
+        assert "✅ Removed:" in result.output
+        assert str(wt1_path) in result.output
+        assert "Consolidation complete" in result.output

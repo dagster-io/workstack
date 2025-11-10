@@ -244,6 +244,11 @@ def consolidate_cmd(
         path_text = click.style(str(wt.path), fg="cyan")
         click.echo(f"  - {branch_text} at {path_text}")
 
+    # Show source worktree removal if creating new worktree
+    if name is not None:
+        path_text = click.style(str(current_worktree), fg="cyan")
+        click.echo(f"  - source worktree at {path_text}")
+
     # Inform user about stack restackability
     click.echo()
     click.echo(
@@ -272,6 +277,12 @@ def consolidate_cmd(
         ctx.git_ops.remove_worktree(repo.root, wt.path, force=True)
         path_text = click.style(str(wt.path), fg="green")
         click.echo(f"✅ Removed: {path_text}")
+
+    # Remove source worktree if a new worktree was created
+    if name is not None:
+        ctx.git_ops.remove_worktree(repo.root, current_worktree.resolve(), force=True)
+        path_text = click.style(str(current_worktree), fg="green")
+        click.echo(f"✅ Removed source worktree: {path_text}")
 
     click.echo(f"\n{click.style('✅ Consolidation complete', fg='green', bold=True)}")
 

@@ -17,6 +17,53 @@ class WorktreeDisplayInfo:
     branch: str | None
     is_root: bool
 
+    @staticmethod
+    def root(path: Path, branch: str = "main", name: str = "root") -> "WorktreeDisplayInfo":
+        """Create root worktree for test display.
+
+        Args:
+            path: Path to the root worktree
+            branch: Branch name (default: "main")
+            name: Display name (default: "root")
+
+        Returns:
+            WorktreeDisplayInfo with is_root=True
+
+        Example:
+            Before (4 lines):
+                worktree = WorktreeDisplayInfo(
+                    name="root", path=repo_root, branch="main", is_root=True
+                )
+
+            After (1 line):
+                worktree = WorktreeDisplayInfo.root(repo_root)
+        """
+        return WorktreeDisplayInfo(path=path, branch=branch, is_root=True, name=name)
+
+    @staticmethod
+    def feature(path: Path, branch: str, name: str | None = None) -> "WorktreeDisplayInfo":
+        """Create feature worktree for test display.
+
+        Args:
+            path: Path to the feature worktree
+            branch: Branch name
+            name: Display name (default: uses path.name)
+
+        Returns:
+            WorktreeDisplayInfo with is_root=False
+
+        Example:
+            Before (4 lines):
+                worktree = WorktreeDisplayInfo(
+                    name="my-feature", path=feature_wt, branch="feature", is_root=False
+                )
+
+            After (1 line):
+                worktree = WorktreeDisplayInfo.feature(feature_wt, "feature")
+        """
+        display_name = name if name else path.name
+        return WorktreeDisplayInfo(path=path, branch=branch, is_root=False, name=display_name)
+
 
 @dataclass(frozen=True)
 class CommitInfo:

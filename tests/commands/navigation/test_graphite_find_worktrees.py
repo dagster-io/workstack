@@ -63,7 +63,7 @@ def test_find_worktrees_containing_branch_single_match(tmp_path: Path) -> None:
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),
-        cwd=Path("/test/default/cwd"),
+        cwd=repo_root,
         dry_run=False,
     )
 
@@ -127,7 +127,7 @@ def test_find_worktrees_containing_branch_multiple_matches(tmp_path: Path) -> No
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),
-        cwd=Path("/test/default/cwd"),
+        cwd=repo_root,
         dry_run=False,
     )
 
@@ -182,7 +182,7 @@ def test_find_worktrees_containing_branch_no_match(tmp_path: Path) -> None:
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),
-        cwd=Path("/test/default/cwd"),
+        cwd=repo_root,
         dry_run=False,
     )
 
@@ -239,7 +239,7 @@ def test_find_worktrees_containing_branch_detached_head(tmp_path: Path) -> None:
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),
-        cwd=Path("/test/default/cwd"),
+        cwd=repo_root,
         dry_run=False,
     )
 
@@ -289,7 +289,7 @@ def test_find_worktrees_containing_branch_no_graphite_cache(tmp_path: Path) -> N
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),
-        cwd=Path("/test/default/cwd"),
+        cwd=repo_root,
         dry_run=False,
     )
 

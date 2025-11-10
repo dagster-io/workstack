@@ -3,6 +3,7 @@ from unittest import mock
 
 import pytest
 
+from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.commands.create import make_env_content
 from workstack.cli.commands.init import create_and_save_global_config, discover_presets
 from workstack.cli.config import load_config
@@ -77,9 +78,6 @@ def test_load_global_config_missing_workstacks_root(
 
 def test_create_global_config_creates_parent_directory(tmp_path: Path) -> None:
     # Test that create_and_save_global_config creates parent directory
-    from tests.fakes.shell_ops import FakeShellOps
-    from workstack.core.global_config import save_global_config, GlobalConfig
-
     config_file = tmp_path / ".workstack" / "config.toml"
     assert not config_file.parent.exists()
 

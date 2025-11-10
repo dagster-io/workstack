@@ -27,7 +27,7 @@ def test_config_list_displays_global_config() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["config", "list"], obj=test_ctx)
@@ -66,7 +66,7 @@ def test_config_list_displays_repo_config() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["config", "list"], obj=test_ctx)
@@ -94,7 +94,7 @@ def test_config_list_handles_missing_global_config() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["config", "list"], obj=test_ctx)
@@ -120,7 +120,7 @@ def test_config_list_handles_missing_repo_config() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["config", "list"], obj=test_ctx)
@@ -147,7 +147,7 @@ def test_config_list_not_in_git_repo() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=Path.cwd(),
         )
 
         result = runner.invoke(cli, ["config", "list"], obj=test_ctx)
@@ -174,7 +174,7 @@ def test_config_get_workstacks_root() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["config", "get", "workstacks_root"], obj=test_ctx)
@@ -199,7 +199,7 @@ def test_config_get_use_graphite() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["config", "get", "use_graphite"], obj=test_ctx)
@@ -224,7 +224,7 @@ def test_config_get_show_pr_info() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["config", "get", "show_pr_info"], obj=test_ctx)
@@ -249,7 +249,7 @@ def test_config_get_show_pr_checks() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["config", "get", "show_pr_checks"], obj=test_ctx)
@@ -274,7 +274,7 @@ def test_config_get_global_key_missing_config_fails() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["config", "get", "workstacks_root"], obj=test_ctx)
@@ -306,7 +306,7 @@ def test_config_get_env_key() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["config", "get", "env.MY_VAR"], obj=test_ctx)
@@ -338,7 +338,7 @@ def test_config_get_post_create_shell() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["config", "get", "post_create.shell"], obj=test_ctx)
@@ -373,7 +373,7 @@ def test_config_get_post_create_commands() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["config", "get", "post_create.commands"], obj=test_ctx)
@@ -406,7 +406,7 @@ def test_config_get_env_key_not_found() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["config", "get", "env.NONEXISTENT"], obj=test_ctx)
@@ -431,7 +431,7 @@ def test_config_get_invalid_key_format() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["config", "get", "env"], obj=test_ctx)
@@ -458,7 +458,7 @@ def test_config_set_workstacks_root() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(
@@ -486,7 +486,7 @@ def test_config_set_use_graphite_true() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["config", "set", "use_graphite", "true"], obj=test_ctx)
@@ -512,7 +512,7 @@ def test_config_set_use_graphite_false() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["config", "set", "use_graphite", "false"], obj=test_ctx)
@@ -538,7 +538,7 @@ def test_config_set_show_pr_info() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["config", "set", "show_pr_info", "false"], obj=test_ctx)
@@ -564,7 +564,7 @@ def test_config_set_show_pr_checks() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["config", "set", "show_pr_checks", "true"], obj=test_ctx)
@@ -590,7 +590,7 @@ def test_config_set_invalid_boolean_fails() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["config", "set", "use_graphite", "maybe"], obj=test_ctx)
@@ -615,7 +615,7 @@ def test_config_set_without_global_config_fails() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["config", "set", "use_graphite", "true"], obj=test_ctx)
@@ -648,7 +648,7 @@ def test_config_get_invalid_key() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["config", "get", "invalid_key"], obj=test_ctx)
@@ -673,7 +673,7 @@ def test_config_set_repo_keys_not_implemented() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["config", "set", "env.MY_VAR", "value"], obj=test_ctx)
@@ -705,7 +705,7 @@ def test_config_key_with_multiple_dots() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["config", "get", "env.FOO.BAR"], obj=test_ctx)

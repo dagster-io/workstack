@@ -66,7 +66,7 @@ def test_up_with_existing_worktree() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         # Navigate up from feature-1 to feature-2
@@ -126,7 +126,7 @@ def test_up_at_top_of_stack() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
@@ -175,7 +175,7 @@ def test_up_child_has_no_worktree() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
@@ -208,7 +208,7 @@ def test_up_graphite_not_enabled() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
@@ -240,7 +240,7 @@ def test_up_detached_head() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
@@ -295,7 +295,7 @@ def test_up_script_flag() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["up", "--script"], obj=test_ctx, catch_exceptions=False)
@@ -351,7 +351,7 @@ def test_up_multiple_children_fails_explicitly() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
@@ -422,7 +422,7 @@ def test_up_with_mismatched_worktree_name() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         # Navigate up from feature/auth to feature/auth-tests

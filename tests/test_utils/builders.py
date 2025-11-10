@@ -397,7 +397,7 @@ class WorktreeScenario:
             github_ops=self.github_ops,
             graphite_ops=self.graphite_ops,
             shell_ops=self.shell_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=self.repo_root,
             dry_run=False,
         )
 

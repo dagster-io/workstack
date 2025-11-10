@@ -3,8 +3,6 @@
 This file tests the rename command which renames a worktree workspace.
 """
 
-from pathlib import Path
-
 from click.testing import CliRunner
 
 from tests.fakes.github_ops import FakeGitHubOps
@@ -42,7 +40,7 @@ def test_rename_successful() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
             dry_run=False,
         )
         result = runner.invoke(cli, ["rename", "old-name", "new-name"], obj=test_ctx)
@@ -68,7 +66,7 @@ def test_rename_old_worktree_not_found() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
             dry_run=False,
         )
         result = runner.invoke(cli, ["rename", "nonexistent", "new-name"], obj=test_ctx)
@@ -100,7 +98,7 @@ def test_rename_new_name_already_exists() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
             dry_run=False,
         )
         result = runner.invoke(cli, ["rename", "old-name", "existing"], obj=test_ctx)
@@ -131,7 +129,7 @@ def test_rename_with_graphite_enabled() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -163,7 +161,7 @@ def test_rename_dry_run() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
             dry_run=True,
         )
         result = runner.invoke(cli, ["rename", "old-name", "new-name"], obj=test_ctx)

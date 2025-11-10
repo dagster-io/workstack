@@ -60,7 +60,7 @@ def test_down_with_existing_worktree() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["down", "--script"], obj=test_ctx, catch_exceptions=False)
@@ -112,7 +112,7 @@ def test_down_to_trunk_root() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         # Navigate down from feature-1 to root (main)
@@ -158,7 +158,7 @@ def test_down_at_trunk() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["down"], obj=test_ctx, catch_exceptions=False)
@@ -210,7 +210,7 @@ def test_down_parent_has_no_worktree() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["down"], obj=test_ctx, catch_exceptions=False)
@@ -243,7 +243,7 @@ def test_down_graphite_not_enabled() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["down"], obj=test_ctx, catch_exceptions=False)
@@ -275,7 +275,7 @@ def test_down_detached_head() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["down"], obj=test_ctx, catch_exceptions=False)
@@ -331,7 +331,7 @@ def test_down_script_flag() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["down", "--script"], obj=test_ctx, catch_exceptions=False)
@@ -405,7 +405,7 @@ def test_down_with_mismatched_worktree_name() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         # Navigate down from feature/auth-tests to feature/auth

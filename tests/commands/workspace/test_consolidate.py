@@ -426,7 +426,7 @@ def test_consolidate_preserves_root_worktree_even_when_in_stack() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
             dry_run=False,
         )
 

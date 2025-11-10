@@ -5,6 +5,7 @@ from click.testing import CliRunner
 from tests.commands.display.list import strip_ansi
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
+from tests.test_utils.env_helpers import simulated_workstack_env
 from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
@@ -13,35 +14,28 @@ from workstack.core.global_config import GlobalConfig
 
 def test_list_outputs_names_not_paths() -> None:
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        # Set up isolated environment
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-
-        # Create git repo
-        Path(".git").mkdir()
-
+    with simulated_workstack_env(runner) as env:
         # Create worktrees in the location determined by global config
-        repo_name = cwd.name
-        workstacks_dir = workstacks_root / repo_name
+        repo_name = env.cwd.name
+        workstacks_dir = env.workstacks_root / repo_name
         (workstacks_dir / "foo").mkdir(parents=True)
         (workstacks_dir / "bar").mkdir(parents=True)
 
         # Build fake git ops with worktree info
         git_ops = FakeGitOps(
             worktrees={
-                cwd: [
-                    WorktreeInfo(path=cwd, branch="main"),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
                     WorktreeInfo(path=workstacks_dir / "foo", branch="foo"),
                     WorktreeInfo(path=workstacks_dir / "bar", branch="feature/bar"),
                 ],
             },
-            git_common_dirs={cwd: cwd / ".git"},
+            git_common_dirs={env.cwd: env.git_dir},
         )
 
         # Build fake global config ops
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,

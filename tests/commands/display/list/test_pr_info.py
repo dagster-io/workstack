@@ -5,7 +5,6 @@ Business logic for PR states is tested in tests/unit/status/test_github_pr_colle
 """
 
 import json
-from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
@@ -14,80 +13,12 @@ from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.test_utils.builders import PullRequestInfoBuilder
+from tests.test_utils.env_helpers import simulated_workstack_env
 from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext
 from workstack.core.github_ops import PullRequestInfo
 from workstack.core.gitops import WorktreeInfo
 from workstack.core.global_config import GlobalConfig
-
-
-def _setup_test_with_pr(
-    branch_name: str,
-    pr_info: PullRequestInfo,
-    show_pr_info: bool,
-) -> tuple[Path, Path, Path, WorkstackContext]:
-    """Helper to set up a test environment with a PR on a branch.
-
-    Returns:
-        Tuple of (cwd, workstacks_root, feature_worktree, test_ctx)
-    """
-    # Set up isolated environment
-    cwd = Path.cwd()
-    workstacks_root = cwd / "workstacks"
-
-    # Create git repo structure
-    git_dir = Path(".git")
-    git_dir.mkdir()
-
-    # Create graphite cache with a simple stack
-    graphite_cache = {
-        "branches": [
-            ("main", {"validationResult": "TRUNK", "children": [branch_name]}),
-            (branch_name, {"parentBranchName": "main", "children": []}),
-        ]
-    }
-    (git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache))
-
-    # Create worktree directory for branch so it appears in the stack
-    repo_name = cwd.name
-    workstacks_dir = workstacks_root / repo_name
-    feature_worktree = workstacks_dir / branch_name
-    feature_worktree.mkdir(parents=True)
-
-    # Build fake git ops with worktree for branch
-    git_ops = FakeGitOps(
-        worktrees={
-            cwd: [
-                WorktreeInfo(path=cwd, branch="main"),
-                WorktreeInfo(path=feature_worktree, branch=branch_name),
-            ]
-        },
-        git_common_dirs={cwd: git_dir, feature_worktree: git_dir},
-        current_branches={cwd: "main", feature_worktree: branch_name},
-    )
-
-    # Build fake GitHub ops with PR data
-    FakeGitHubOps(prs={branch_name: pr_info})
-
-    # Configure show_pr_info
-    global_config_ops = GlobalConfig(
-        workstacks_root=workstacks_root,
-        use_graphite=True,
-        shell_setup_complete=False,
-        show_pr_info=True,
-        show_pr_checks=False,
-    )
-
-    FakeGraphiteOps()
-
-    test_ctx = WorkstackContext.for_test(
-        git_ops=git_ops,
-        global_config=global_config_ops,
-        cwd=Path("/test/default/cwd"),
-    )
-
-    return cwd, workstacks_root, feature_worktree, test_ctx
-
 
 # ===========================
 # Config Handling Tests
@@ -105,7 +36,8 @@ def _setup_test_with_pr(
 def test_list_with_stacks_pr_visibility(show_pr_info: bool, expected_visible: bool) -> None:
     """PR info visibility follows the show_pr_info configuration flag."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
+    with simulated_workstack_env(runner) as env:
+        branch_name = "feature-branch"
         pr = PullRequestInfo(
             number=42,
             state="OPEN",
@@ -115,8 +47,54 @@ def test_list_with_stacks_pr_visibility(show_pr_info: bool, expected_visible: bo
             owner="owner",
             repo="repo",
         )
-        _cwd, _workstacks_root, _feature_worktree, test_ctx = _setup_test_with_pr(
-            "feature-branch", pr, show_pr_info=show_pr_info
+
+        # Create graphite cache with a simple stack
+        graphite_cache = {
+            "branches": [
+                ("main", {"validationResult": "TRUNK", "children": [branch_name]}),
+                (branch_name, {"parentBranchName": "main", "children": []}),
+            ]
+        }
+        (env.git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache))
+
+        # Create worktree directory for branch so it appears in the stack
+        repo_name = env.cwd.name
+        workstacks_dir = env.workstacks_root / repo_name
+        feature_worktree = workstacks_dir / branch_name
+        feature_worktree.mkdir(parents=True)
+
+        # Build fake git ops with worktree for branch
+        git_ops = FakeGitOps(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
+                    WorktreeInfo(path=feature_worktree, branch=branch_name),
+                ]
+            },
+            git_common_dirs={env.cwd: env.git_dir, feature_worktree: env.git_dir},
+            current_branches={env.cwd: "main", feature_worktree: branch_name},
+        )
+
+        # Build fake GitHub ops with PR data
+        github_ops = FakeGitHubOps(prs={branch_name: pr})
+
+        # Configure show_pr_info
+        global_config_ops = GlobalConfig(
+            workstacks_root=env.workstacks_root,
+            use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=show_pr_info,
+            show_pr_checks=False,
+        )
+
+        graphite_ops = FakeGraphiteOps()
+
+        test_ctx = WorkstackContext.for_test(
+            git_ops=git_ops,
+            github_ops=github_ops,
+            graphite_ops=graphite_ops,
+            global_config=global_config_ops,
+            cwd=env.cwd,
         )
 
         # PR info now shown on main line, not just with --stacks
@@ -152,16 +130,63 @@ def test_list_pr_emoji_mapping(
     This test covers all emoji rendering logic in a single parametrized test.
     """
     runner = CliRunner()
-    with runner.isolated_filesystem():
+    with simulated_workstack_env(runner) as env:
+        branch_name = "test-branch"
+
         # Use builder pattern for PR creation
-        builder = PullRequestInfoBuilder(number=100, branch="test-branch")
+        builder = PullRequestInfoBuilder(number=100, branch=branch_name)
         builder.state = state
         builder.is_draft = is_draft
         builder.checks_passing = checks
         pr = builder.build()
 
-        _cwd, _workstacks_root, _feature_worktree, test_ctx = _setup_test_with_pr(
-            "test-branch", pr, show_pr_info=True
+        # Create graphite cache with a simple stack
+        graphite_cache = {
+            "branches": [
+                ("main", {"validationResult": "TRUNK", "children": [branch_name]}),
+                (branch_name, {"parentBranchName": "main", "children": []}),
+            ]
+        }
+        (env.git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache))
+
+        # Create worktree directory for branch so it appears in the stack
+        repo_name = env.cwd.name
+        workstacks_dir = env.workstacks_root / repo_name
+        feature_worktree = workstacks_dir / branch_name
+        feature_worktree.mkdir(parents=True)
+
+        # Build fake git ops with worktree for branch
+        git_ops = FakeGitOps(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
+                    WorktreeInfo(path=feature_worktree, branch=branch_name),
+                ]
+            },
+            git_common_dirs={env.cwd: env.git_dir, feature_worktree: env.git_dir},
+            current_branches={env.cwd: "main", feature_worktree: branch_name},
+        )
+
+        # Build fake GitHub ops with PR data
+        github_ops = FakeGitHubOps(prs={branch_name: pr})
+
+        # Configure show_pr_info
+        global_config_ops = GlobalConfig(
+            workstacks_root=env.workstacks_root,
+            use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
+        )
+
+        graphite_ops = FakeGraphiteOps()
+
+        test_ctx = WorkstackContext.for_test(
+            git_ops=git_ops,
+            github_ops=github_ops,
+            graphite_ops=graphite_ops,
+            global_config=global_config_ops,
+            cwd=env.cwd,
         )
 
         # PR info now shown on main line, not just with --stacks
@@ -185,7 +210,8 @@ def test_list_with_stacks_uses_graphite_url() -> None:
     for better integration with Graphite workflow.
     """
     runner = CliRunner()
-    with runner.isolated_filesystem():
+    with simulated_workstack_env(runner) as env:
+        branch_name = "feature"
         pr = PullRequestInfo(
             number=100,
             state="OPEN",
@@ -195,8 +221,54 @@ def test_list_with_stacks_uses_graphite_url() -> None:
             owner="testowner",
             repo="testrepo",
         )
-        _cwd, _workstacks_root, _feature_worktree, test_ctx = _setup_test_with_pr(
-            "feature", pr, show_pr_info=True
+
+        # Create graphite cache with a simple stack
+        graphite_cache = {
+            "branches": [
+                ("main", {"validationResult": "TRUNK", "children": [branch_name]}),
+                (branch_name, {"parentBranchName": "main", "children": []}),
+            ]
+        }
+        (env.git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache))
+
+        # Create worktree directory for branch so it appears in the stack
+        repo_name = env.cwd.name
+        workstacks_dir = env.workstacks_root / repo_name
+        feature_worktree = workstacks_dir / branch_name
+        feature_worktree.mkdir(parents=True)
+
+        # Build fake git ops with worktree for branch
+        git_ops = FakeGitOps(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
+                    WorktreeInfo(path=feature_worktree, branch=branch_name),
+                ]
+            },
+            git_common_dirs={env.cwd: env.git_dir, feature_worktree: env.git_dir},
+            current_branches={env.cwd: "main", feature_worktree: branch_name},
+        )
+
+        # Build fake GitHub ops with PR data
+        github_ops = FakeGitHubOps(prs={branch_name: pr})
+
+        # Configure show_pr_info
+        global_config_ops = GlobalConfig(
+            workstacks_root=env.workstacks_root,
+            use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
+        )
+
+        graphite_ops = FakeGraphiteOps()
+
+        test_ctx = WorkstackContext.for_test(
+            git_ops=git_ops,
+            github_ops=github_ops,
+            graphite_ops=graphite_ops,
+            global_config=global_config_ops,
+            cwd=env.cwd,
         )
 
         # PR info now shown on main line, not just with --stacks

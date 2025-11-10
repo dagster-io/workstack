@@ -14,6 +14,7 @@ from click.testing import CliRunner
 
 from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps, WorktreeInfo
+from tests.test_utils.env_helpers import simulated_workstack_env
 from workstack.cli.cli import cli
 from workstack.cli.tree import (
     _get_worktree_mapping,
@@ -210,9 +211,8 @@ def test_load_graphite_branch_graph_returns_none_when_missing() -> None:
 def test_tree_command_displays_hierarchy() -> None:
     """Test that tree command shows worktree hierarchy."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        repo_root = cwd / "repo"
+    with simulated_workstack_env(runner) as env:
+        repo_root = env.repo_root / "repo"
         repo_root.mkdir()
 
         # Create fake git directory with Graphite cache
@@ -255,7 +255,7 @@ def test_tree_command_displays_hierarchy() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=cwd / "workstacks",
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -285,9 +285,8 @@ def test_tree_command_filters_branches_without_worktrees() -> None:
     before rendering to show only branches with active worktrees.
     """
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        repo_root = cwd / "repo"
+    with simulated_workstack_env(runner) as env:
+        repo_root = env.repo_root / "repo"
         repo_root.mkdir()
 
         git_dir = repo_root / ".git"
@@ -337,7 +336,7 @@ def test_tree_command_filters_branches_without_worktrees() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=cwd / "workstacks",
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -361,9 +360,8 @@ def test_tree_command_filters_branches_without_worktrees() -> None:
 def test_tree_command_fails_without_graphite_cache() -> None:
     """Test that tree command fails gracefully when Graphite cache is missing."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        repo_root = cwd / "repo"
+    with simulated_workstack_env(runner) as env:
+        repo_root = env.repo_root / "repo"
         repo_root.mkdir()
 
         git_dir = repo_root / ".git"
@@ -380,7 +378,7 @@ def test_tree_command_fails_without_graphite_cache() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=cwd / "workstacks",
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -402,9 +400,8 @@ def test_tree_command_fails_without_graphite_cache() -> None:
 def test_tree_command_shows_nested_hierarchy() -> None:
     """Test tree command with 3-level nested hierarchy."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        repo_root = cwd / "repo"
+    with simulated_workstack_env(runner) as env:
+        repo_root = env.repo_root / "repo"
         repo_root.mkdir()
 
         git_dir = repo_root / ".git"
@@ -450,7 +447,7 @@ def test_tree_command_shows_nested_hierarchy() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=cwd / "workstacks",
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -480,9 +477,8 @@ def test_tree_command_shows_three_level_hierarchy_with_correct_indentation() -> 
     instead of nested hierarchy.
     """
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        repo_root = cwd / "repo"
+    with simulated_workstack_env(runner) as env:
+        repo_root = env.repo_root / "repo"
         repo_root.mkdir()
 
         git_dir = repo_root / ".git"
@@ -539,7 +535,7 @@ def test_tree_command_shows_three_level_hierarchy_with_correct_indentation() -> 
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=cwd / "workstacks",
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -594,9 +590,8 @@ def test_tree_root_on_non_trunk_branch() -> None:
     when the root worktree is on a non-main branch.
     """
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        repo_root = cwd / "repo"
+    with simulated_workstack_env(runner) as env:
+        repo_root = env.repo_root / "repo"
         repo_root.mkdir()
 
         git_dir = repo_root / ".git"
@@ -659,7 +654,7 @@ def test_tree_root_on_non_trunk_branch() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=cwd / "workstacks",
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,

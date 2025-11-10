@@ -19,7 +19,13 @@ def build_ctx(repo_root: Path | None, workstacks_root: Path) -> WorkstackContext
         git_common_dirs[repo_root] = repo_root / ".git"
 
     git_ops = FakeGitOps(git_common_dirs=git_common_dirs)
-    global_config_ops = FakeGlobalConfigOps(workstacks_root=workstacks_root)
+    global_config_ops = GlobalConfig(
+        workstacks_root=workstacks_root,
+        use_graphite=False,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
+    )
     return create_test_context(
         git_ops=git_ops,
         global_config_ops=global_config_ops,

@@ -9,6 +9,7 @@ from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from workstack.core.branch_metadata import BranchMetadata
+from workstack.core.global_config import GlobalConfig
 from workstack.status.collectors.graphite import GraphiteStackCollector
 
 
@@ -31,10 +32,17 @@ def setup_stack_collector(
         **(git_kwargs or {}),
     )
     graphite_ops = FakeGraphiteOps(**(graphite_kwargs or {}))
+    global_config = GlobalConfig(
+        workstacks_root=Path("/fake/workstacks"),
+        use_graphite=use_graphite,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
+    )
     ctx = create_test_context(
         git_ops=git_ops,
         graphite_ops=graphite_ops,
-        global_config_ops=FakeGlobalConfigOps(use_graphite=use_graphite),
+        global_config=global_config,
     )
 
     return GraphiteStackCollector(), worktree_path, repo_root, ctx
@@ -221,7 +229,14 @@ def test_graphite_stack_collector_is_available(
     if path_exists:
         worktree_path.mkdir()
 
-    ctx = create_test_context(global_config_ops=FakeGlobalConfigOps(use_graphite=use_graphite))
+    global_config = GlobalConfig(
+        workstacks_root=Path("/fake/workstacks"),
+        use_graphite=use_graphite,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
+    )
+    ctx = create_test_context(global_config=global_config)
     collector = GraphiteStackCollector()
 
     assert collector.is_available(ctx, worktree_path) is expected

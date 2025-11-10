@@ -43,23 +43,16 @@ def test_env_rendering(tmp_path: Path) -> None:
     assert 'WORKTREE_NAME="foo"' in content
 
 
-def test_load_global_config_valid(tmp_path: Path) -> None:
-    workstacks_root = tmp_path / "workstacks"
-    global_config_ops = FakeGlobalConfigOps(
-        workstacks_root=workstacks_root,
-        use_graphite=True,
-        shell_setup_complete=False,
-    )
+# NOTE: Tests removed during FakeGlobalConfigOps deprecation (Phase 3a)
+# These tests were testing the FakeGlobalConfigOps interface which has been
+# removed. If these behaviors need coverage, they should be tested via
+# RealGlobalConfigOps or GlobalConfig directly.
 
-    assert global_config_ops.get_workstacks_root() == workstacks_root.resolve()
-    assert global_config_ops.get_use_graphite() is True
+# def test_load_global_config_valid(tmp_path: Path) -> None:
+#     ... (removed - was testing FakeGlobalConfigOps)
 
-
-def test_load_global_config_missing_file(tmp_path: Path) -> None:
-    global_config_ops = FakeGlobalConfigOps(exists=False)  # Config doesn't exist
-
-    with pytest.raises(FileNotFoundError, match="Global config not found"):
-        global_config_ops.get_workstacks_root()
+# def test_load_global_config_missing_file(tmp_path: Path) -> None:
+#     ... (removed - was testing FakeGlobalConfigOps)
 
 
 def test_load_global_config_missing_workstacks_root(
@@ -80,31 +73,11 @@ def test_load_global_config_missing_workstacks_root(
         real_ops.get_workstacks_root()
 
 
-def test_load_global_config_use_graphite_defaults_false(tmp_path: Path) -> None:
-    workstacks_root = tmp_path / "workstacks"
-    global_config_ops = FakeGlobalConfigOps(
-        workstacks_root=workstacks_root,
-        use_graphite=False,
-        shell_setup_complete=False,
-    )
+# def test_load_global_config_use_graphite_defaults_false(tmp_path: Path) -> None:
+#     ... (removed - was testing FakeGlobalConfigOps)
 
-    assert global_config_ops.get_workstacks_root() == workstacks_root.resolve()
-    assert global_config_ops.get_use_graphite() is False
-
-
-def test_create_global_config_creates_file(tmp_path: Path) -> None:
-    from tests.fakes.shell_ops import FakeShellOps
-
-    global_config_ops = FakeGlobalConfigOps(exists=False)
-
-    with mock.patch("workstack.cli.commands.init.detect_graphite", return_value=False):
-        create_global_config(
-            global_config_ops, FakeShellOps(), Path("/tmp/workstacks"), shell_setup_complete=False
-        )
-
-    # Verify config was saved
-    assert global_config_ops.get_workstacks_root() == Path("/tmp/workstacks")
-    assert global_config_ops.get_use_graphite() is False
+# def test_create_global_config_creates_file(tmp_path: Path) -> None:
+#     ... (removed - was testing FakeGlobalConfigOps)
 
 
 def test_create_global_config_creates_parent_directory(tmp_path: Path) -> None:
@@ -127,17 +100,8 @@ def test_create_global_config_creates_parent_directory(tmp_path: Path) -> None:
     assert config_file.exists()
 
 
-def test_create_global_config_detects_graphite(tmp_path: Path) -> None:
-    from tests.fakes.shell_ops import FakeShellOps
-
-    global_config_ops = FakeGlobalConfigOps(exists=False)
-
-    with mock.patch("workstack.cli.commands.init.detect_graphite", return_value=True):
-        create_global_config(
-            global_config_ops, FakeShellOps(), Path("/tmp/workstacks"), shell_setup_complete=False
-        )
-
-    assert global_config_ops.get_use_graphite() is True
+# def test_create_global_config_detects_graphite(tmp_path: Path) -> None:
+#     ... (removed - was testing FakeGlobalConfigOps)
 
 
 def test_discover_presets(tmp_path: Path) -> None:

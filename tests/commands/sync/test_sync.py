@@ -15,8 +15,8 @@ from workstack.cli.commands.shell_integration import hidden_shell_cmd
 from workstack.cli.commands.sync import sync_cmd
 from workstack.cli.shell_utils import render_cd_script
 from workstack.core.context import WorkstackContext
-from workstack.core.global_config import GlobalConfig
 from workstack.core.gitops import WorktreeInfo
+from workstack.core.global_config import GlobalConfig
 
 
 def test_sync_requires_graphite() -> None:
@@ -40,9 +40,12 @@ def test_sync_requires_graphite() -> None:
         )
 
         # use_graphite=False: Test that graphite is required
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps()
@@ -84,9 +87,12 @@ def test_sync_runs_gt_sync_from_root() -> None:
         )
 
         # use_graphite=True: Feature requires graphite
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps()
@@ -134,9 +140,12 @@ def test_sync_with_force_flag() -> None:
         )
 
         # use_graphite=True: Feature requires graphite
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps()
@@ -183,9 +192,12 @@ def test_sync_handles_gt_not_installed() -> None:
         )
 
         # use_graphite=True: Feature requires graphite
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         # Configure graphite_ops to raise FileNotFoundError
@@ -228,9 +240,12 @@ def test_sync_handles_gt_sync_failure() -> None:
         )
 
         # use_graphite=True: Feature requires graphite
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         # Configure graphite_ops to raise CalledProcessError
@@ -285,9 +300,12 @@ def test_sync_identifies_deletable_workstacks() -> None:
         )
 
         # use_graphite=True: Feature requires graphite
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps()
@@ -342,9 +360,12 @@ def test_sync_no_deletable_workstacks() -> None:
         )
 
         # use_graphite=True: Feature requires graphite
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps()
@@ -393,9 +414,12 @@ def test_sync_with_confirmation() -> None:
         )
 
         # use_graphite=True: Feature requires graphite
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps()
@@ -446,9 +470,12 @@ def test_sync_user_cancels() -> None:
         )
 
         # use_graphite=True: Feature requires graphite
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps()
@@ -500,9 +527,12 @@ def test_sync_force_skips_confirmation() -> None:
         )
 
         # use_graphite=True: Feature requires graphite
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps()
@@ -553,9 +583,12 @@ def test_sync_dry_run() -> None:
         )
 
         # use_graphite=True: Feature requires graphite
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps()
@@ -610,9 +643,12 @@ def test_sync_return_to_original_worktree() -> None:
         )
 
         # use_graphite=True: Feature requires graphite
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps()
@@ -664,9 +700,12 @@ def test_sync_original_worktree_deleted() -> None:
         )
 
         # use_graphite=True: Feature requires graphite
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps()
@@ -740,9 +779,12 @@ def test_sync_script_mode_when_worktree_deleted() -> None:
             },
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps()
@@ -823,9 +865,12 @@ def test_sync_script_mode_when_worktree_exists() -> None:
             },
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps()
@@ -898,9 +943,12 @@ def test_sync_force_runs_double_gt_sync() -> None:
         )
 
         # use_graphite=True: Feature requires graphite
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps()
@@ -962,9 +1010,12 @@ def test_sync_without_force_runs_single_gt_sync() -> None:
         )
 
         # use_graphite=True: Feature requires graphite
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps()
@@ -1022,9 +1073,12 @@ def test_sync_force_dry_run_no_sync_calls() -> None:
         )
 
         # use_graphite=True: Feature requires graphite
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps()
@@ -1071,9 +1125,12 @@ def test_sync_force_no_deletable_single_sync() -> None:
         )
 
         # use_graphite=True: Feature requires graphite
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps()
@@ -1120,9 +1177,12 @@ def test_sync_verbose_flag() -> None:
             },
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps()
@@ -1168,9 +1228,12 @@ def test_sync_verbose_short_flag() -> None:
             },
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps()
@@ -1215,9 +1278,12 @@ def test_sync_force_verbose_combination() -> None:
             },
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps()

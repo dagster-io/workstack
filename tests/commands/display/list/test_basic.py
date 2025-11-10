@@ -3,14 +3,12 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from tests.commands.display.list import strip_ansi
-from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext
-from workstack.core.global_config import GlobalConfig
 from workstack.core.gitops import WorktreeInfo
+from workstack.core.global_config import GlobalConfig
 
 
 def test_list_outputs_names_not_paths() -> None:
@@ -42,21 +40,20 @@ def test_list_outputs_names_not_paths() -> None:
         )
 
         # Build fake global config ops
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        graphite_ops = FakeGraphiteOps()
+        FakeGraphiteOps()
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=graphite_ops,
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=Path("/test/default/cwd"),
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["list"], obj=test_ctx)

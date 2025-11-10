@@ -16,10 +16,7 @@ import pytest
 from click.testing import CliRunner
 
 from tests.commands.display.list import strip_ansi
-from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps, WorktreeInfo
-from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext
 from workstack.core.global_config import GlobalConfig
@@ -59,20 +56,18 @@ def test_list_with_trunk_branch(trunk_branch: str) -> None:
             current_branches={cwd: trunk_branch, feature_dir: "feature"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
             show_pr_info=False,
+            show_pr_checks=False,
         )
 
-        ctx = WorkstackContext(
+        ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            graphite_ops=FakeGraphiteOps(),
-            github_ops=FakeGitHubOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config,
             cwd=Path("/test/default/cwd"),
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=ctx)

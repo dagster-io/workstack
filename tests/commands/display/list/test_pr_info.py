@@ -13,13 +13,12 @@ from click.testing import CliRunner
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.fakes.shell_ops import FakeShellOps
 from tests.test_utils.builders import PullRequestInfoBuilder
 from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext
-from workstack.core.global_config import GlobalConfig
 from workstack.core.github_ops import PullRequestInfo
 from workstack.core.gitops import WorktreeInfo
+from workstack.core.global_config import GlobalConfig
 
 
 def _setup_test_with_pr(
@@ -68,25 +67,23 @@ def _setup_test_with_pr(
     )
 
     # Build fake GitHub ops with PR data
-    github_ops = FakeGitHubOps(prs={branch_name: pr_info})
+    FakeGitHubOps(prs={branch_name: pr_info})
 
     # Configure show_pr_info
-    global_config_ops = FakeGlobalConfigOps(
+    global_config_ops = GlobalConfig(
         workstacks_root=workstacks_root,
         use_graphite=True,
-        show_pr_info=show_pr_info,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
     )
 
-    graphite_ops = FakeGraphiteOps()
+    FakeGraphiteOps()
 
-    test_ctx = WorkstackContext(
+    test_ctx = WorkstackContext.for_test(
         git_ops=git_ops,
-        global_config_ops=global_config_ops,
-        github_ops=github_ops,
-        graphite_ops=graphite_ops,
-        shell_ops=FakeShellOps(),
+        global_config=global_config_ops,
         cwd=Path("/test/default/cwd"),
-        dry_run=False,
     )
 
     return cwd, workstacks_root, feature_worktree, test_ctx

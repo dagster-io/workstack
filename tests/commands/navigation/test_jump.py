@@ -4,14 +4,11 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext
-from workstack.core.global_config import GlobalConfig
 from workstack.core.gitops import WorktreeInfo
+from workstack.core.global_config import GlobalConfig
 
 
 def test_jump_to_branch_in_single_worktree() -> None:
@@ -43,19 +40,18 @@ def test_jump_to_branch_in_single_worktree() -> None:
             git_common_dirs={cwd: git_dir},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=cwd / "workstacks",
-            use_graphite=False,  # No longer requires Graphite
+            use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=Path("/test/default/cwd"),
-            dry_run=False,
         )
 
         # Jump to feature-2 which is checked out in feature_wt
@@ -98,19 +94,18 @@ def test_jump_to_branch_not_found() -> None:
             git_common_dirs={cwd: git_dir},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=cwd / "workstacks",
-            use_graphite=False,  # No longer requires Graphite
+            use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=Path("/test/default/cwd"),
-            dry_run=False,
         )
 
         # Jump to a branch that doesn't exist
@@ -153,19 +148,18 @@ def test_jump_to_branch_in_stack_but_not_checked_out() -> None:
             git_common_dirs={cwd: git_dir},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=cwd / "workstacks",
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=Path("/test/default/cwd"),
-            dry_run=False,
         )
 
         # Jump to feature-base which exists in repo but is not checked out in any worktree
@@ -200,19 +194,18 @@ def test_jump_works_without_graphite() -> None:
         )
 
         # Graphite is NOT enabled - jump should still work
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=cwd / "workstacks",
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=Path("/test/default/cwd"),
-            dry_run=False,
         )
 
         result = runner.invoke(
@@ -251,19 +244,18 @@ def test_jump_already_on_target_branch() -> None:
             git_common_dirs={cwd: git_dir},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=cwd / "workstacks",
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=Path("/test/default/cwd"),
-            dry_run=False,
         )
 
         # Jump to feature-1 which is already checked out
@@ -303,19 +295,18 @@ def test_jump_succeeds_when_branch_exactly_checked_out() -> None:
             git_common_dirs={cwd: git_dir},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=cwd / "workstacks",
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=Path("/test/default/cwd"),
-            dry_run=False,
         )
 
         # Jump to feature-2 which is checked out in feature_wt
@@ -363,19 +354,18 @@ def test_jump_with_multiple_worktrees_same_branch() -> None:
             git_common_dirs={cwd: git_dir},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=cwd / "workstacks",
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=Path("/test/default/cwd"),
-            dry_run=False,
         )
 
         # Jump to feature-2 which is checked out in multiple worktrees

@@ -4,16 +4,14 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.fakes.shell_ops import FakeShellOps
 from tests.test_utils.graphite_helpers import setup_graphite_stack
 from workstack.cli.cli import cli
 from workstack.core.branch_metadata import BranchMetadata
 from workstack.core.context import WorkstackContext
-from workstack.core.global_config import GlobalConfig
 from workstack.core.gitops import WorktreeInfo
+from workstack.core.global_config import GlobalConfig
 
 
 def test_up_with_existing_worktree() -> None:
@@ -50,13 +48,16 @@ def test_up_with_existing_worktree() -> None:
             },
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=cwd / "workstacks",
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         # Set up stack: main -> feature-1 -> feature-2
-        graphite_ops = FakeGraphiteOps(
+        FakeGraphiteOps(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
                 "feature-1": BranchMetadata.branch(
@@ -66,14 +67,10 @@ def test_up_with_existing_worktree() -> None:
             }
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=graphite_ops,
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=Path("/test/default/cwd"),
-            dry_run=False,
         )
 
         # Navigate up from feature-1 to feature-2
@@ -116,13 +113,16 @@ def test_up_at_top_of_stack() -> None:
             git_common_dirs={cwd: git_dir},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=cwd / "workstacks",
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         # Set up stack: main -> feature-1 -> feature-2 (at top)
-        graphite_ops = FakeGraphiteOps(
+        FakeGraphiteOps(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
                 "feature-1": BranchMetadata.branch(
@@ -132,14 +132,10 @@ def test_up_at_top_of_stack() -> None:
             }
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=graphite_ops,
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=Path("/test/default/cwd"),
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
@@ -171,13 +167,16 @@ def test_up_child_has_no_worktree() -> None:
             git_common_dirs={cwd: git_dir},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=cwd / "workstacks",
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         # Set up stack: main -> feature-1 -> feature-2
-        graphite_ops = FakeGraphiteOps(
+        FakeGraphiteOps(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
                 "feature-1": BranchMetadata.branch(
@@ -187,14 +186,10 @@ def test_up_child_has_no_worktree() -> None:
             }
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=graphite_ops,
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=Path("/test/default/cwd"),
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
@@ -220,19 +215,18 @@ def test_up_graphite_not_enabled() -> None:
         )
 
         # Graphite is NOT enabled
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=cwd / "workstacks",
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=Path("/test/default/cwd"),
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
@@ -257,19 +251,18 @@ def test_up_detached_head() -> None:
             git_common_dirs={cwd: git_dir},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=cwd / "workstacks",
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=Path("/test/default/cwd"),
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
@@ -307,13 +300,16 @@ def test_up_script_flag() -> None:
             git_common_dirs={cwd: git_dir},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=cwd / "workstacks",
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         # Set up stack: main -> feature-1 -> feature-2
-        graphite_ops = FakeGraphiteOps(
+        FakeGraphiteOps(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
                 "feature-1": BranchMetadata.branch(
@@ -323,14 +319,10 @@ def test_up_script_flag() -> None:
             }
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=graphite_ops,
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=Path("/test/default/cwd"),
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["up", "--script"], obj=test_ctx, catch_exceptions=False)
@@ -379,19 +371,18 @@ def test_up_multiple_children_fails_explicitly() -> None:
             git_common_dirs={cwd: git_dir},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=cwd / "workstacks",
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=Path("/test/default/cwd"),
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
@@ -440,14 +431,17 @@ def test_up_with_mismatched_worktree_name() -> None:
             git_common_dirs={cwd: git_dir},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=cwd / "workstacks",
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         # Set up stack: main -> feature/auth -> feature/auth-tests
         # Branch names contain slashes, but worktree dirs don't
-        graphite_ops = FakeGraphiteOps(
+        FakeGraphiteOps(
             branches={
                 "main": BranchMetadata.trunk(
                     "main", children=["feature/auth"], commit_sha="abc123"
@@ -461,14 +455,10 @@ def test_up_with_mismatched_worktree_name() -> None:
             }
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=graphite_ops,
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=Path("/test/default/cwd"),
-            dry_run=False,
         )
 
         # Navigate up from feature/auth to feature/auth-tests

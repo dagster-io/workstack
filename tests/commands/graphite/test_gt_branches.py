@@ -12,6 +12,7 @@ from tests.fakes.graphite_ops import FakeGraphiteOps
 from workstack.cli.commands.gt import graphite_branches_cmd
 from workstack.cli.core import RepoContext
 from workstack.core.branch_metadata import BranchMetadata
+from workstack.core.global_config import GlobalConfig
 
 
 def test_graphite_branches_text_format(tmp_path: Path) -> None:
@@ -24,7 +25,13 @@ def test_graphite_branches_text_format(tmp_path: Path) -> None:
     }
 
     graphite_ops = FakeGraphiteOps(branches=branches)
-    global_config_ops = FakeGlobalConfigOps(use_graphite=True)
+    global_config_ops = GlobalConfig(
+        workstacks_root=Path("/fake/workstacks"),
+        use_graphite=True,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
+    )
     git_ops = FakeGitOps(
         git_common_dirs={tmp_path: tmp_path / ".git"},
     )
@@ -60,7 +67,13 @@ def test_graphite_branches_json_format(tmp_path: Path) -> None:
     }
 
     graphite_ops = FakeGraphiteOps(branches=branches)
-    global_config_ops = FakeGlobalConfigOps(use_graphite=True)
+    global_config_ops = GlobalConfig(
+        workstacks_root=Path("/fake/workstacks"),
+        use_graphite=True,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
+    )
     git_ops = FakeGitOps(
         git_common_dirs={tmp_path: tmp_path / ".git"},
     )
@@ -108,7 +121,13 @@ def test_graphite_branches_empty(tmp_path: Path) -> None:
     """Test graphite branches command with no branches."""
     # Arrange: Empty branch data
     graphite_ops = FakeGraphiteOps(branches={})
-    global_config_ops = FakeGlobalConfigOps(use_graphite=True)
+    global_config_ops = GlobalConfig(
+        workstacks_root=Path("/fake/workstacks"),
+        use_graphite=True,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
+    )
     git_ops = FakeGitOps(
         git_common_dirs={tmp_path: tmp_path / ".git"},
     )
@@ -137,7 +156,13 @@ def test_graphite_branches_graphite_disabled(tmp_path: Path) -> None:
     """Test graphite branches command fails when graphite is disabled."""
     # Arrange: Graphite disabled
     graphite_ops = FakeGraphiteOps()
-    global_config_ops = FakeGlobalConfigOps(use_graphite=False)
+    global_config_ops = GlobalConfig(
+        workstacks_root=Path("/fake/workstacks"),
+        use_graphite=False,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
+    )
     git_ops = FakeGitOps()
 
     ctx = create_test_context(
@@ -169,7 +194,13 @@ def test_graphite_branches_multiple_children(tmp_path: Path) -> None:
     }
 
     graphite_ops = FakeGraphiteOps(branches=branches)
-    global_config_ops = FakeGlobalConfigOps(use_graphite=True)
+    global_config_ops = GlobalConfig(
+        workstacks_root=Path("/fake/workstacks"),
+        use_graphite=True,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
+    )
     git_ops = FakeGitOps(git_common_dirs={tmp_path: tmp_path / ".git"})
 
     ctx = create_test_context(
@@ -207,7 +238,13 @@ def test_graphite_branches_linear_stack(tmp_path: Path) -> None:
     }
 
     graphite_ops = FakeGraphiteOps(branches=branches)
-    global_config_ops = FakeGlobalConfigOps(use_graphite=True)
+    global_config_ops = GlobalConfig(
+        workstacks_root=Path("/fake/workstacks"),
+        use_graphite=True,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
+    )
     git_ops = FakeGitOps(git_common_dirs={tmp_path: tmp_path / ".git"})
 
     ctx = create_test_context(

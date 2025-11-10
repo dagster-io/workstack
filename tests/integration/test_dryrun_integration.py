@@ -12,11 +12,11 @@ from click.testing import CliRunner
 
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext, create_context
+from workstack.core.global_config import GlobalConfig
 from workstack.core.github_ops import DryRunGitHubOps
 from workstack.core.gitops import DryRunGitOps, WorktreeInfo
 from workstack.core.global_config_ops import DryRunGlobalConfigOps

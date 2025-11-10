@@ -16,11 +16,11 @@ from pathlib import Path
 
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.commands.list import _is_trunk_branch
 from workstack.core.context import WorkstackContext
+from workstack.core.global_config import GlobalConfig
 
 
 def test_branch_with_trunk_validation_result(tmp_path: Path) -> None:

@@ -8,7 +8,6 @@ from click.testing import CliRunner
 
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.cli import cli
@@ -16,6 +15,7 @@ from workstack.cli.commands.shell_integration import hidden_shell_cmd
 from workstack.cli.commands.sync import sync_cmd
 from workstack.cli.shell_utils import render_cd_script
 from workstack.core.context import WorkstackContext
+from workstack.core.global_config import GlobalConfig
 from workstack.core.gitops import WorktreeInfo
 
 

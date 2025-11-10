@@ -5,11 +5,11 @@ from click.testing import CliRunner
 from tests.commands.display.list import strip_ansi
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext
+from workstack.core.global_config import GlobalConfig
 from workstack.core.gitops import WorktreeInfo
 
 

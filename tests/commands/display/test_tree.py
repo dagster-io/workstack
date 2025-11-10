@@ -14,7 +14,6 @@ from click.testing import CliRunner
 
 from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps, WorktreeInfo
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from workstack.cli.cli import cli
 from workstack.cli.tree import (
     _get_worktree_mapping,

@@ -8,7 +8,6 @@ import pytest
 from tests.fakes.context import create_test_context
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from workstack.core.github_ops import PullRequestInfo
 from workstack.status.collectors.github import GitHubPRCollector

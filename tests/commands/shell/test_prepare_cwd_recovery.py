@@ -7,9 +7,9 @@ from click.testing import CliRunner
 
 from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from workstack.cli.commands.prepare_cwd_recovery import prepare_cwd_recovery_cmd
 from workstack.core.context import WorkstackContext
+from workstack.core.global_config import GlobalConfig
 
 
 def build_ctx(repo_root: Path | None, workstacks_root: Path) -> WorkstackContext:

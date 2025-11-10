@@ -3,7 +3,6 @@ from unittest import mock
 
 import pytest
 
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from workstack.cli.commands.create import make_env_content
 from workstack.cli.commands.init import create_global_config, discover_presets
 from workstack.cli.config import load_config

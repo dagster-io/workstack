@@ -6,32 +6,38 @@ import pytest
 
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from workstack.core.context import WorkstackContext
+from workstack.core.global_config import GlobalConfig
 
 
 def test_context_initialization_and_attributes() -> None:
     """Initialization wires through every dependency and exposes them as attributes."""
     git_ops = FakeGitOps()
-    global_config_ops = FakeGlobalConfigOps(workstacks_root=Path("/tmp"))
     github_ops = FakeGitHubOps()
     graphite_ops = FakeGraphiteOps()
     shell_ops = FakeShellOps()
+    global_config = GlobalConfig(
+        workstacks_root=Path("/tmp"),
+        use_graphite=False,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
+    )
 
-    ctx = WorkstackContext(
+    ctx = WorkstackContext.for_test(
         git_ops=git_ops,
-        global_config_ops=global_config_ops,
         github_ops=github_ops,
         graphite_ops=graphite_ops,
         shell_ops=shell_ops,
         cwd=Path("/test/default/cwd"),
+        global_config=global_config,
         dry_run=False,
     )
 
     assert ctx.git_ops is git_ops
-    assert ctx.global_config_ops is global_config_ops
+    assert ctx.global_config == global_config
     assert ctx.github_ops is github_ops
     assert ctx.graphite_ops is graphite_ops
     assert ctx.shell_ops is shell_ops
@@ -40,9 +46,16 @@ def test_context_initialization_and_attributes() -> None:
 
 def test_context_is_frozen() -> None:
     """WorkstackContext is a frozen dataclass."""
-    ctx = WorkstackContext(
+    global_config = GlobalConfig(
+        workstacks_root=Path("/tmp"),
+        use_graphite=False,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
+    )
+    ctx = WorkstackContext.for_test(
         git_ops=FakeGitOps(),
-        global_config_ops=FakeGlobalConfigOps(workstacks_root=Path("/tmp")),
+        global_config=global_config,
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),

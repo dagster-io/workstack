@@ -4,12 +4,12 @@ from pathlib import Path
 
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from tests.test_utils.graphite_helpers import setup_graphite_stack
 from workstack.cli.graphite import find_worktree_for_branch, find_worktrees_containing_branch
 from workstack.core.context import WorkstackContext
+from workstack.core.global_config import GlobalConfig
 from workstack.core.gitops import WorktreeInfo
 
 

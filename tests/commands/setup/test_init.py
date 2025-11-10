@@ -8,6 +8,7 @@ from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
+from tests.test_utils.env_helpers import simulated_workstack_env
 from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext
 from workstack.core.global_config import GlobalConfig
@@ -16,14 +17,10 @@ from workstack.core.global_config import GlobalConfig
 def test_init_creates_global_config_first_time() -> None:
     """Test that init creates global config on first run."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
+    with simulated_workstack_env(runner) as env:
+        workstacks_root = env.cwd / "workstacks"
 
-        workstacks_root = cwd / "workstacks"
-
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=Path("/fake/workstacks"),
             use_graphite=False,
@@ -35,7 +32,7 @@ def test_init_creates_global_config_first_time() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["init"], obj=test_ctx, input=f"{workstacks_root}\nn\n")
@@ -49,14 +46,10 @@ def test_init_creates_global_config_first_time() -> None:
 def test_init_prompts_for_workstacks_root() -> None:
     """Test that init prompts for workstacks root when creating config."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
+    with simulated_workstack_env(runner) as env:
+        workstacks_root = env.cwd / "my-workstacks"
 
-        workstacks_root = cwd / "my-workstacks"
-
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=Path("/fake/workstacks"),
             use_graphite=False,
@@ -68,7 +61,7 @@ def test_init_prompts_for_workstacks_root() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["init"], obj=test_ctx, input=f"{workstacks_root}\nn\n")
@@ -81,14 +74,10 @@ def test_init_prompts_for_workstacks_root() -> None:
 def test_init_detects_graphite_installed() -> None:
     """Test that init detects when Graphite (gt) is installed."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
+    with simulated_workstack_env(runner) as env:
+        workstacks_root = env.cwd / "workstacks"
 
-        workstacks_root = cwd / "workstacks"
-
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=Path("/fake/workstacks"),
             use_graphite=False,
@@ -100,7 +89,7 @@ def test_init_detects_graphite_installed() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["init"], obj=test_ctx, input=f"{workstacks_root}\nn\n")
@@ -113,14 +102,10 @@ def test_init_detects_graphite_installed() -> None:
 def test_init_detects_graphite_not_installed() -> None:
     """Test that init detects when Graphite (gt) is NOT installed."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
+    with simulated_workstack_env(runner) as env:
+        workstacks_root = env.cwd / "workstacks"
 
-        workstacks_root = cwd / "workstacks"
-
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=Path("/fake/workstacks"),
             use_graphite=False,
@@ -132,7 +117,7 @@ def test_init_detects_graphite_not_installed() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["init"], obj=test_ctx, input=f"{workstacks_root}\nn\n")
@@ -145,14 +130,10 @@ def test_init_detects_graphite_not_installed() -> None:
 def test_init_skips_global_with_repo_flag() -> None:
     """Test that --repo flag skips global config creation."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
+    with simulated_workstack_env(runner) as env:
+        workstacks_root = env.cwd / "workstacks"
 
-        workstacks_root = cwd / "workstacks"
-
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
@@ -164,25 +145,21 @@ def test_init_skips_global_with_repo_flag() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["init", "--repo"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         assert "Global config not found" not in result.output
-        assert (cwd / "config.toml").exists()
+        assert (env.cwd / "config.toml").exists()
 
 
 def test_init_fails_repo_flag_without_global_config() -> None:
     """Test that --repo flag fails when global config doesn't exist."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+    with simulated_workstack_env(runner) as env:
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=Path("/fake/workstacks"),
             use_graphite=False,
@@ -194,7 +171,7 @@ def test_init_fails_repo_flag_without_global_config() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["init", "--repo"], obj=test_ctx)
@@ -207,18 +184,14 @@ def test_init_fails_repo_flag_without_global_config() -> None:
 def test_init_auto_preset_detects_dagster() -> None:
     """Test that auto preset detects dagster repo and uses dagster preset."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
+    with simulated_workstack_env(runner) as env:
         # Create pyproject.toml with dagster as the project name
-        pyproject = cwd / "pyproject.toml"
+        pyproject = env.cwd / "pyproject.toml"
         pyproject.write_text('[project]\nname = "dagster"\n', encoding="utf-8")
 
-        workstacks_root = cwd / "workstacks"
+        workstacks_root = env.cwd / "workstacks"
 
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
@@ -230,14 +203,14 @@ def test_init_auto_preset_detects_dagster() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["init"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Config should be created in workstacks_dir
-        workstacks_dir = workstacks_root / cwd.name
+        workstacks_dir = workstacks_root / env.cwd.name
         config_path = workstacks_dir / "config.toml"
         assert config_path.exists()
 
@@ -245,18 +218,14 @@ def test_init_auto_preset_detects_dagster() -> None:
 def test_init_auto_preset_uses_generic_fallback() -> None:
     """Test that auto preset falls back to generic for non-dagster repos."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
+    with simulated_workstack_env(runner) as env:
         # Create pyproject.toml with different project name
-        pyproject = cwd / "pyproject.toml"
+        pyproject = env.cwd / "pyproject.toml"
         pyproject.write_text('[project]\nname = "myproject"\n', encoding="utf-8")
 
-        workstacks_root = cwd / "workstacks"
+        workstacks_root = env.cwd / "workstacks"
 
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
@@ -268,13 +237,13 @@ def test_init_auto_preset_uses_generic_fallback() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["init"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
-        workstacks_dir = workstacks_root / cwd.name
+        workstacks_dir = workstacks_root / env.cwd.name
         config_path = workstacks_dir / "config.toml"
         assert config_path.exists()
 
@@ -282,14 +251,10 @@ def test_init_auto_preset_uses_generic_fallback() -> None:
 def test_init_explicit_preset_dagster() -> None:
     """Test that explicit --preset dagster uses dagster preset."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
+    with simulated_workstack_env(runner) as env:
+        workstacks_root = env.cwd / "workstacks"
 
-        workstacks_root = cwd / "workstacks"
-
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
@@ -301,13 +266,13 @@ def test_init_explicit_preset_dagster() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["init", "--preset", "dagster"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
-        workstacks_dir = workstacks_root / cwd.name
+        workstacks_dir = workstacks_root / env.cwd.name
         config_path = workstacks_dir / "config.toml"
         assert config_path.exists()
 
@@ -315,14 +280,10 @@ def test_init_explicit_preset_dagster() -> None:
 def test_init_explicit_preset_generic() -> None:
     """Test that explicit --preset generic uses generic preset."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
+    with simulated_workstack_env(runner) as env:
+        workstacks_root = env.cwd / "workstacks"
 
-        workstacks_root = cwd / "workstacks"
-
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
@@ -334,13 +295,13 @@ def test_init_explicit_preset_generic() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["init", "--preset", "generic"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
-        workstacks_dir = workstacks_root / cwd.name
+        workstacks_dir = workstacks_root / env.cwd.name
         config_path = workstacks_dir / "config.toml"
         assert config_path.exists()
 
@@ -348,12 +309,8 @@ def test_init_explicit_preset_generic() -> None:
 def test_init_list_presets_displays_available() -> None:
     """Test that --list-presets displays available presets."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+    with simulated_workstack_env(runner) as env:
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=Path("/fake/workstacks"),
             use_graphite=False,
@@ -365,7 +322,7 @@ def test_init_list_presets_displays_available() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["init", "--list-presets"], obj=test_ctx)
@@ -379,14 +336,10 @@ def test_init_list_presets_displays_available() -> None:
 def test_init_invalid_preset_fails() -> None:
     """Test that invalid preset name fails with helpful error."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
+    with simulated_workstack_env(runner) as env:
+        workstacks_root = env.cwd / "workstacks"
 
-        workstacks_root = cwd / "workstacks"
-
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
@@ -398,7 +351,7 @@ def test_init_invalid_preset_fails() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["init", "--preset", "nonexistent"], obj=test_ctx)
@@ -410,14 +363,10 @@ def test_init_invalid_preset_fails() -> None:
 def test_init_creates_config_at_workstacks_dir() -> None:
     """Test that init creates config.toml in workstacks_dir by default."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
+    with simulated_workstack_env(runner) as env:
+        workstacks_root = env.cwd / "workstacks"
 
-        workstacks_root = cwd / "workstacks"
-
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
@@ -429,30 +378,26 @@ def test_init_creates_config_at_workstacks_dir() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["init"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Config should be in workstacks_dir, not repo root
-        workstacks_dir = workstacks_root / cwd.name
+        workstacks_dir = workstacks_root / env.cwd.name
         config_path = workstacks_dir / "config.toml"
         assert config_path.exists()
-        assert not (cwd / "config.toml").exists()
+        assert not (env.cwd / "config.toml").exists()
 
 
 def test_init_repo_flag_creates_config_at_root() -> None:
     """Test that --repo creates config.toml at repo root."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
+    with simulated_workstack_env(runner) as env:
+        workstacks_root = env.cwd / "workstacks"
 
-        workstacks_root = cwd / "workstacks"
-
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
@@ -464,34 +409,30 @@ def test_init_repo_flag_creates_config_at_root() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["init", "--repo"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Config should be at repo root
-        config_path = cwd / "config.toml"
+        config_path = env.cwd / "config.toml"
         assert config_path.exists()
 
 
 def test_init_force_overwrites_existing_config() -> None:
     """Test that --force overwrites existing config."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_root = env.cwd / "workstacks"
+        workstacks_dir = workstacks_root / env.cwd.name
         workstacks_dir.mkdir(parents=True)
 
         # Create existing config
         config_path = workstacks_dir / "config.toml"
         config_path.write_text("# Old config\n", encoding="utf-8")
 
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
@@ -503,7 +444,7 @@ def test_init_force_overwrites_existing_config() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["init", "--force"], obj=test_ctx)
@@ -518,20 +459,16 @@ def test_init_force_overwrites_existing_config() -> None:
 def test_init_fails_without_force_when_exists() -> None:
     """Test that init fails when config exists without --force."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_root = env.cwd / "workstacks"
+        workstacks_dir = workstacks_root / env.cwd.name
         workstacks_dir.mkdir(parents=True)
 
         # Create existing config
         config_path = workstacks_dir / "config.toml"
         config_path.write_text("# Existing config\n", encoding="utf-8")
 
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
@@ -543,7 +480,7 @@ def test_init_fails_without_force_when_exists() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["init"], obj=test_ctx)
@@ -556,18 +493,14 @@ def test_init_fails_without_force_when_exists() -> None:
 def test_init_adds_plan_md_to_gitignore() -> None:
     """Test that init offers to add .PLAN.md to .gitignore."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
+    with simulated_workstack_env(runner) as env:
         # Create .gitignore
-        gitignore = cwd / ".gitignore"
+        gitignore = env.cwd / ".gitignore"
         gitignore.write_text("*.pyc\n", encoding="utf-8")
 
-        workstacks_root = cwd / "workstacks"
+        workstacks_root = env.cwd / "workstacks"
 
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
@@ -579,7 +512,7 @@ def test_init_adds_plan_md_to_gitignore() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         # Accept both prompts (y for .PLAN.md, y for .env)
@@ -593,18 +526,14 @@ def test_init_adds_plan_md_to_gitignore() -> None:
 def test_init_adds_env_to_gitignore() -> None:
     """Test that init offers to add .env to .gitignore."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
+    with simulated_workstack_env(runner) as env:
         # Create .gitignore
-        gitignore = cwd / ".gitignore"
+        gitignore = env.cwd / ".gitignore"
         gitignore.write_text("*.pyc\n", encoding="utf-8")
 
-        workstacks_root = cwd / "workstacks"
+        workstacks_root = env.cwd / "workstacks"
 
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
@@ -616,7 +545,7 @@ def test_init_adds_env_to_gitignore() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         # Accept both prompts
@@ -630,18 +559,14 @@ def test_init_adds_env_to_gitignore() -> None:
 def test_init_skips_gitignore_entries_if_declined() -> None:
     """Test that init skips gitignore entries if user declines."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
+    with simulated_workstack_env(runner) as env:
         # Create .gitignore
-        gitignore = cwd / ".gitignore"
+        gitignore = env.cwd / ".gitignore"
         gitignore.write_text("*.pyc\n", encoding="utf-8")
 
-        workstacks_root = cwd / "workstacks"
+        workstacks_root = env.cwd / "workstacks"
 
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
@@ -653,7 +578,7 @@ def test_init_skips_gitignore_entries_if_declined() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         # Decline both prompts
@@ -668,16 +593,12 @@ def test_init_skips_gitignore_entries_if_declined() -> None:
 def test_init_handles_missing_gitignore() -> None:
     """Test that init handles missing .gitignore gracefully."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
+    with simulated_workstack_env(runner) as env:
         # No .gitignore file
 
-        workstacks_root = cwd / "workstacks"
+        workstacks_root = env.cwd / "workstacks"
 
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
@@ -689,7 +610,7 @@ def test_init_handles_missing_gitignore() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["init"], obj=test_ctx)
@@ -701,19 +622,15 @@ def test_init_handles_missing_gitignore() -> None:
 def test_init_preserves_gitignore_formatting() -> None:
     """Test that init preserves existing gitignore formatting."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
+    with simulated_workstack_env(runner) as env:
         # Create .gitignore with specific formatting
-        gitignore = cwd / ".gitignore"
+        gitignore = env.cwd / ".gitignore"
         original_content = "# Python\n*.pyc\n__pycache__/\n"
         gitignore.write_text(original_content, encoding="utf-8")
 
-        workstacks_root = cwd / "workstacks"
+        workstacks_root = env.cwd / "workstacks"
 
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
@@ -725,7 +642,7 @@ def test_init_preserves_gitignore_formatting() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         # Accept both prompts
@@ -744,15 +661,11 @@ def test_init_preserves_gitignore_formatting() -> None:
 def test_init_first_time_offers_shell_setup() -> None:
     """Test that first-time init offers shell integration setup."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
+    with simulated_workstack_env(runner) as env:
+        workstacks_root = env.cwd / "workstacks"
         bashrc = Path.home() / ".bashrc"
 
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=Path("/fake/workstacks"),
             use_graphite=False,
@@ -767,6 +680,7 @@ def test_init_first_time_offers_shell_setup() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(detected_shell=("bash", bashrc)),
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -781,15 +695,11 @@ def test_init_first_time_offers_shell_setup() -> None:
 def test_init_shell_flag_only_setup() -> None:
     """Test that --shell flag only performs shell setup."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
+    with simulated_workstack_env(runner) as env:
+        workstacks_root = env.cwd / "workstacks"
         bashrc = Path.home() / ".bashrc"
 
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
@@ -804,6 +714,7 @@ def test_init_shell_flag_only_setup() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(detected_shell=("bash", bashrc)),
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -812,7 +723,7 @@ def test_init_shell_flag_only_setup() -> None:
 
         assert result.exit_code == 0, result.output
         # Should mention shell but not create config
-        workstacks_dir = workstacks_root / cwd.name
+        workstacks_dir = workstacks_root / env.cwd.name
         config_path = workstacks_dir / "config.toml"
         assert not config_path.exists()
 
@@ -820,15 +731,11 @@ def test_init_shell_flag_only_setup() -> None:
 def test_init_detects_bash_shell() -> None:
     """Test that init correctly detects bash shell."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
+    with simulated_workstack_env(runner) as env:
+        workstacks_root = env.cwd / "workstacks"
         bashrc = Path.home() / ".bashrc"
 
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=Path("/fake/workstacks"),
             use_graphite=False,
@@ -843,6 +750,7 @@ def test_init_detects_bash_shell() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(detected_shell=("bash", bashrc)),
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -860,15 +768,11 @@ def test_init_detects_bash_shell() -> None:
 def test_init_detects_zsh_shell() -> None:
     """Test that init correctly detects zsh shell."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
+    with simulated_workstack_env(runner) as env:
+        workstacks_root = env.cwd / "workstacks"
         zshrc = Path.home() / ".zshrc"
 
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=Path("/fake/workstacks"),
             use_graphite=False,
@@ -883,6 +787,7 @@ def test_init_detects_zsh_shell() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(detected_shell=("zsh", zshrc)),
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -900,15 +805,11 @@ def test_init_detects_zsh_shell() -> None:
 def test_init_detects_fish_shell() -> None:
     """Test that init correctly detects fish shell."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
+    with simulated_workstack_env(runner) as env:
+        workstacks_root = env.cwd / "workstacks"
         fish_config = Path.home() / ".config" / "fish" / "config.fish"
 
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=Path("/fake/workstacks"),
             use_graphite=False,
@@ -923,6 +824,7 @@ def test_init_detects_fish_shell() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(detected_shell=("fish", fish_config)),
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -940,14 +842,10 @@ def test_init_detects_fish_shell() -> None:
 def test_init_skips_unknown_shell() -> None:
     """Test that init skips shell setup for unknown shells."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
+    with simulated_workstack_env(runner) as env:
+        workstacks_root = env.cwd / "workstacks"
 
-        workstacks_root = cwd / "workstacks"
-
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=Path("/fake/workstacks"),
             use_graphite=False,
@@ -959,7 +857,7 @@ def test_init_skips_unknown_shell() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["init"], obj=test_ctx, input=f"{workstacks_root}\n")
@@ -971,15 +869,11 @@ def test_init_skips_unknown_shell() -> None:
 def test_init_prints_completion_instructions() -> None:
     """Test that init prints completion instructions."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
+    with simulated_workstack_env(runner) as env:
+        workstacks_root = env.cwd / "workstacks"
         bashrc = Path.home() / ".bashrc"
 
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=Path("/fake/workstacks"),
             use_graphite=False,
@@ -994,6 +888,7 @@ def test_init_prints_completion_instructions() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(detected_shell=("bash", bashrc)),
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -1015,15 +910,11 @@ def test_init_prints_completion_instructions() -> None:
 def test_init_prints_wrapper_instructions() -> None:
     """Test that init prints wrapper function instructions."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
+    with simulated_workstack_env(runner) as env:
+        workstacks_root = env.cwd / "workstacks"
         bashrc = Path.home() / ".bashrc"
 
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=Path("/fake/workstacks"),
             use_graphite=False,
@@ -1038,6 +929,7 @@ def test_init_prints_wrapper_instructions() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(detected_shell=("bash", bashrc)),
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -1059,15 +951,11 @@ def test_init_prints_wrapper_instructions() -> None:
 def test_init_skips_shell_if_declined() -> None:
     """Test that init skips shell setup if user declines."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
+    with simulated_workstack_env(runner) as env:
+        workstacks_root = env.cwd / "workstacks"
         bashrc = Path.home() / ".bashrc"
 
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=Path("/fake/workstacks"),
             use_graphite=False,
@@ -1082,6 +970,7 @@ def test_init_skips_shell_if_declined() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(detected_shell=("bash", bashrc)),
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -1104,6 +993,7 @@ def test_init_not_in_git_repo_fails() -> None:
     runner = CliRunner()
     with runner.isolated_filesystem():
         # No .git directory
+        cwd = Path.cwd()
 
         git_ops = FakeGitOps()  # Empty, no git_common_dirs
         global_config_ops = GlobalConfig(
@@ -1117,7 +1007,7 @@ def test_init_not_in_git_repo_fails() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
         )
 
         result = runner.invoke(cli, ["init"], obj=test_ctx, input="/tmp/workstacks\n")

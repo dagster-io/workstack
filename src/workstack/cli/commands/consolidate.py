@@ -327,24 +327,21 @@ def consolidate_cmd(
         click.echo()
     for wt in worktrees_to_remove:
         ctx.git_ops.remove_worktree(repo.root, wt.path, force=True)
-        if not script:
-            path_text = click.style(str(wt.path), fg="green")
-            click.echo(f"✅ Removed: {path_text}")
+        path_text = click.style(str(wt.path), fg="green")
+        click.echo(f"✅ Removed: {path_text}")
 
     # Remove source worktree if a new worktree was created
     if name is not None:
         ctx.git_ops.remove_worktree(repo.root, current_worktree.resolve(), force=True)
-        if not script:
-            path_text = click.style(str(current_worktree), fg="green")
-            click.echo(f"✅ Removed source worktree: {path_text}")
+        path_text = click.style(str(current_worktree), fg="green")
+        click.echo(f"✅ Removed source worktree: {path_text}")
 
         # Delete temporary branch after source worktree is removed
         # (can't delete while it's checked out in the source worktree)
         if temp_branch_name is not None:
             ctx.git_ops.delete_branch(repo.root, temp_branch_name, force=True)
 
-    if not script:
-        click.echo(f"\n{click.style('✅ Consolidation complete', fg='green', bold=True)}")
+    click.echo(f"\n{click.style('✅ Consolidation complete', fg='green', bold=True)}")
 
     # Shell integration: generate script to activate new worktree
     if name is not None and script and not dry_run:

@@ -125,7 +125,7 @@ def _get_worktree_mapping(
         WorktreeMapping with all active worktrees and their branches
     """
     worktrees = ctx.git_ops.list_worktrees(repo_root)
-    current_path = Path.cwd().resolve()
+    current_path = ctx.cwd.resolve()
 
     branch_to_worktree: dict[str, str] = {}
     worktree_to_path: dict[str, Path] = {}

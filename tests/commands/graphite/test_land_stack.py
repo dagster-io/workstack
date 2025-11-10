@@ -1147,9 +1147,12 @@ def test_land_stack_script_mode_accepts_flag() -> None:
         # Setup GitHub ops with an open PR
         github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("OPEN", 123, "Feature 1")})
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=env.workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         test_ctx = WorkstackContext(

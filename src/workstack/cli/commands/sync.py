@@ -8,7 +8,7 @@ from workstack.cli.activation import render_activation_script
 from workstack.cli.commands.remove import _remove_worktree
 from workstack.cli.core import discover_repo_context, worktree_path_for
 from workstack.cli.shell_utils import render_cd_script, write_script_to_temp
-from workstack.core.context import WorkstackContext
+from workstack.core.context import WorkstackContext, regenerate_context
 from workstack.core.repo_discovery import ensure_workstacks_dir
 
 
@@ -124,6 +124,7 @@ def sync_cmd(
     # Step 3: Switch to root (only if not already at root)
     if ctx.cwd.resolve() != repo.root:
         os.chdir(repo.root)
+        ctx = regenerate_context(ctx, repo_root=repo.root)
 
     # Step 4: Run `gt sync`
     cmd = ["gt", "sync"]

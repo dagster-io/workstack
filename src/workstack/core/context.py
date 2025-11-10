@@ -179,3 +179,32 @@ def create_context(*, dry_run: bool, repo_root: Path | None = None) -> Workstack
         dry_run=dry_run,
         trunk_branch=trunk_branch,
     )
+
+
+def regenerate_context(
+    existing_ctx: WorkstackContext, *, repo_root: Path | None = None
+) -> WorkstackContext:
+    """Regenerate context with fresh cwd and trunk_branch.
+
+    Creates a new WorkstackContext with:
+    - Current working directory (Path.cwd())
+    - Fresh trunk_branch from pyproject.toml (if repo_root provided)
+    - Preserved dry_run state and operation instances
+
+    Use this after mutations like os.chdir() or worktree removal
+    to ensure ctx.cwd reflects actual current directory.
+
+    Args:
+        existing_ctx: Current context to preserve settings from
+        repo_root: Optional path to repo for trunk_branch lookup.
+                   If None, trunk_branch will be None.
+
+    Returns:
+        New WorkstackContext with regenerated state
+
+    Example:
+        # After os.chdir() or worktree removal
+        repo = discover_repo_context(ctx, Path.cwd())
+        ctx = regenerate_context(ctx, repo_root=repo.root)
+    """
+    return create_context(dry_run=existing_ctx.dry_run, repo_root=repo_root)

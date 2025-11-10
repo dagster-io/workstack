@@ -51,7 +51,7 @@ def rename_cmd(ctx: WorkstackContext, old_name: str, new_name: str, dry_run: boo
     ctx.git_ops.move_worktree(repo.root, old_path, new_path)
 
     # Regenerate .env file with updated paths and name
-    cfg = ctx.local_config
+    cfg = ctx.repo_config
     env_content = make_env_content(
         cfg, worktree_path=new_path, repo_root=repo.root, name=sanitized_new_name
     )

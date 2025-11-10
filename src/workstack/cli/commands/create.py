@@ -557,7 +557,7 @@ def create(
 
     repo = discover_repo_context(ctx, ctx.cwd)
     workstacks_dir = ensure_workstacks_dir(repo)
-    cfg = ctx.local_config
+    cfg = ctx.repo_config
     trunk_branch = read_trunk_from_pyproject(repo.root)
 
     # Apply date prefix and uniqueness for plan-derived names

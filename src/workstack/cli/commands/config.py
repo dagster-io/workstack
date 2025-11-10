@@ -152,7 +152,7 @@ def config_list(ctx: WorkstackContext) -> None:
         click.echo(f"  show_pr_info={str(ctx.global_config.show_pr_info).lower()}")
         click.echo(f"  show_pr_checks={str(ctx.global_config.show_pr_checks).lower()}")
 
-    # Display local config
+    # Display repo config
     click.echo(click.style("\nRepository configuration:", bold=True))
     from workstack.core.repo_discovery import NoRepoSentinel
 
@@ -160,7 +160,7 @@ def config_list(ctx: WorkstackContext) -> None:
         click.echo("  (not in a git repository)")
     else:
         trunk_branch = read_trunk_from_pyproject(ctx.repo.root)
-        cfg = ctx.local_config
+        cfg = ctx.repo_config
         if trunk_branch:
             click.echo(f"  trunk-branch={trunk_branch}")
         if cfg.env:
@@ -221,7 +221,7 @@ def config_get(ctx: WorkstackContext, key: str) -> None:
             click.echo("not configured (will auto-detect)", err=True)
         return
 
-    cfg = ctx.local_config
+    cfg = ctx.repo_config
 
     match parts[0]:
         case "env":

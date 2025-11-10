@@ -43,7 +43,7 @@ class WorkstackContext:
     shell_ops: ShellOps
     cwd: Path  # Current working directory at CLI invocation
     global_config: GlobalConfig | GlobalConfigNotFound
-    local_config: LoadedConfig
+    repo_config: LoadedConfig
     repo: RepoContext | NoRepoSentinel
     dry_run: bool
     trunk_branch: str | None
@@ -158,12 +158,12 @@ def create_context(*, dry_run: bool, repo_root: Path | None = None) -> Workstack
     else:
         repo = discover_repo_or_sentinel(cwd, global_config.workstacks_root, git_ops)
 
-    # 5. Load local config (or defaults if no repo)
+    # 5. Load repo config (or defaults if no repo)
     if isinstance(repo, NoRepoSentinel):
-        local_config = LoadedConfig(env={}, post_create_commands=[], post_create_shell=None)
+        repo_config = LoadedConfig(env={}, post_create_commands=[], post_create_shell=None)
     else:
         workstacks_dir = ensure_workstacks_dir(repo)
-        local_config = load_config(workstacks_dir)
+        repo_config = load_config(workstacks_dir)
 
     # 6. Apply dry-run wrappers if needed
     if dry_run:
@@ -182,7 +182,7 @@ def create_context(*, dry_run: bool, repo_root: Path | None = None) -> Workstack
         shell_ops=RealShellOps(),
         cwd=cwd,
         global_config=global_config,
-        local_config=local_config,
+        repo_config=repo_config,
         repo=repo,
         dry_run=dry_run,
         trunk_branch=trunk_branch,

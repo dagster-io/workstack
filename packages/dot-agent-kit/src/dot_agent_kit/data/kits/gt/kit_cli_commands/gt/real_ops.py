@@ -242,6 +242,24 @@ class RealGitHubGtKitOps(GitHubGtKitOps):
         )
         return result.returncode == 0
 
+    def get_graphite_pr_url(self, pr_number: int) -> str | None:
+        """Get Graphite PR URL using gh repo view."""
+        result = subprocess.run(
+            ["gh", "repo", "view", "--json", "owner,name"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        if result.returncode != 0:
+            return None
+
+        data = json.loads(result.stdout)
+        owner = data["owner"]["login"]
+        repo = data["name"]
+
+        return f"https://app.graphite.dev/github/pr/{owner}/{repo}/{pr_number}"
+
 
 class RealGtKitOps(GtKitOps):
     """Real composite operations implementation.

@@ -220,6 +220,10 @@ class FakeGitHubGtKitOps(GitHubGtKitOps):
             return False
         return self._state.merge_success
 
+    def get_graphite_pr_url(self, pr_number: int) -> str | None:
+        """Get Graphite PR URL (fake returns test URL)."""
+        return f"https://app.graphite.dev/github/pr/test-owner/test-repo/{pr_number}"
+
 
 class FakeGtKitOps(GtKitOps):
     """Fake composite operations for testing.

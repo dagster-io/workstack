@@ -158,41 +158,25 @@ The message should be concise (typically 15-30 lines total) with essential infor
 
 ### Step 3: Execute Post-Analysis Phase
 
-Run the Python kit command to handle submission and PR metadata.
+Run the Python kit command to amend commit and submit branch.
 
-**Step 3a: Extract commit message components**
+**Pass the commit message:**
 
-Parse the commit message created in Step 2 to extract THREE components:
+With the consolidation of arguments, you only need to pass the complete commit message once. The command will automatically split it into PR title (first line) and body (remaining lines).
 
-- **Commit Message**: The full commit message (all content from Step 2)
-- **PR Title**: First line of the commit message (the brief summary)
-- **PR Body**: Everything after the first line (remaining sections)
-
-**Step 3b: Call post-analysis command**
-
-The command requires three separate flags. Pass each component as a properly-quoted command-line argument.
-
-**IMPORTANT:** Never write to temporary files. Use the Task tool with the runner agent and proper shell quoting for multi-line content.
-
-**Pattern 1: Short messages (use Task tool):**
-
-For simple messages without complex special characters, use the Task tool directly:
+**For simple messages, use Task tool:**
 
 ```
 Task(
     subagent_type="runner",
     description="Run submit-branch post-analysis",
-    prompt='Execute: dot-agent run gt submit-branch post-analysis --commit-message "First line
-
-Remaining content
-with multiple lines" --pr-title "First line" --pr-body "Remaining content
-with multiple lines"'
+    prompt='Execute: dot-agent run gt submit-branch post-analysis --commit-message "Full message
+with multiple lines
+including all content"'
 )
 ```
 
-**Pattern 2: Complex messages (use Bash tool with heredoc):**
-
-For messages with special characters or complex formatting, use the Bash tool with heredoc syntax:
+**For complex messages with special characters, use Bash with heredoc:**
 
 ```bash
 dot-agent run gt submit-branch post-analysis \
@@ -201,66 +185,23 @@ Full commit message here
 with multiple lines
 and special characters
 COMMIT_MSG
-)" \
-  --pr-title "First line only" \
-  --pr-body "$(cat <<'PR_BODY'
-Everything after first line
-with multiple lines
-PR_BODY
 )"
 ```
-
-**Example (complex message with special characters):**
-
-```bash
-dot-agent run gt submit-branch post-analysis \
-  --commit-message "$(cat <<'COMMIT_MSG'
-Add feature X
-
-This commit adds feature X by implementing Y and Z.
-
-## Files Changed
-- src/foo.py - Added feature logic
-COMMIT_MSG
-)" \
-  --pr-title "Add feature X" \
-  --pr-body "$(cat <<'PR_BODY'
-This commit adds feature X by implementing Y and Z.
-
-## Files Changed
-- src/foo.py - Added feature logic
-PR_BODY
-)"
-```
-
-**Key principles:**
-
-- Manipulate text in-context (in your message) not in filesystem
-- Use heredoc with command substitution `"$(cat <<'EOF'...EOF)"` for complex multi-line content
-- The heredoc never touches disk - it's processed entirely in the shell's memory
-- Single quotes in `<<'EOF'` prevent variable expansion
-- Double quotes around `"$(cat...)"` preserve newlines
-
-**Important notes:**
-
-- All three flags (`--commit-message`, `--pr-title`, `--pr-body`) are required
-- The commit message should be the complete message from Step 2
-- The PR title is just the first line (brief summary)
-- The PR body is everything after the first line
-- Do not attempt automatic resolution of errors
 
 **What this does:**
 
 - Amends the commit with the AI-generated commit message
+- Automatically extracts PR title from first line
+- Automatically extracts PR body from remaining lines
 - Runs `gt submit --publish --no-interactive --restack`
-- Checks if PR exists
-- If PR exists: updates title and body with `gh pr edit`
-- Returns JSON with PR number, URL, and status
+- Checks if PR exists and updates title/body
+- Returns JSON with PR number, URLs (GitHub and Graphite), and status
 
 **Parse the JSON output** to get:
 
 - `pr_number`: PR number (may be null)
-- `pr_url`: PR URL
+- `pr_url`: GitHub PR URL
+- `graphite_url`: Graphite PR URL
 - `branch_name`: Branch name
 - `message`: Human-readable status message
 
@@ -276,31 +217,9 @@ Provide helpful, context-aware guidance based on the error type and command outp
 
 ### Step 4: Show Results
 
-After submission, provide a clear summary structured as:
+After submission, provide a clear summary using the Graphite URL from the JSON output.
 
-**Step 4a: Get Repository Information**
-
-Extract the GitHub owner and repo name from the git remote:
-
-```bash
-git remote get-url origin
-```
-
-Parse the URL to extract `owner` and `repo` (e.g., `dagster-io/workstack` from `git@github.com:dagster-io/workstack.git`)
-
-**Step 4b: Construct Graphite URL**
-
-Build the Graphite PR URL using:
-
-- Owner from Step 4a
-- Repo from Step 4a
-- PR number from Step 3's JSON output
-
-Format: `https://app.graphite.com/github/pr/{owner}/{repo}/{pr_number}`
-
-**Step 4c: Display Summary**
-
-Show results in this format:
+**Display Summary:**
 
 ```
 ## Branch Submission Complete
@@ -309,11 +228,11 @@ Show results in this format:
 
 - Created commit with AI-generated message
 - Submitted branch to Graphite
-- Updated PR #235 metadata
+- Updated PR #<pr_number> metadata
 
 ### View PR
 
-https://app.graphite.com/github/pr/dagster-io/workstack/235
+<graphite_url from JSON>
 ```
 
 **Formatting requirements:**
@@ -325,29 +244,7 @@ https://app.graphite.com/github/pr/dagster-io/workstack/235
 - Display the URL as plain text (not a bullet point, not bold)
 - Each section must be separated by a blank line
 
-**CRITICAL - Blank Lines in Output:**
-
-If you add ANY status messages (like "✅ Branch submitted", etc.) before or after the structured summary above, each status line MUST be separated by a blank line in the markdown output to render properly in the CLI.
-
-**Bad (concatenated):**
-
-```
-✅ All CI checks passed✅ Branch submitted to Graphite✅ PR created
-```
-
-**Good (properly spaced):**
-
-```
-✅ All CI checks passed
-
-✅ Branch submitted to Graphite
-
-✅ PR created
-```
-
-However, the PREFERRED approach is to stick strictly to the structured summary format above and avoid adding extra status checkmarks.
-
-**CRITICAL**: The Graphite URL MUST be the absolute last line of your output. Do not add any text, confirmations, follow-up questions, or messages after displaying the URL. This ensures the user sees the PR link as the final, most visible output.
+**CRITICAL**: The Graphite URL MUST be the absolute last line of your output. Do not add any text, confirmations, follow-up questions, or messages after displaying the URL.
 
 ## Error Handling
 
@@ -430,6 +327,8 @@ EOF
 
 **Rationale:** Temporary files require filesystem permissions and create unnecessary I/O. Since agents operate in isolated contexts, there's no risk of context pollution from in-memory manipulation.
 
+With the simplified single-argument interface, heredocs are only needed for messages with special characters.
+
 ## Quality Standards
 
 ### Always
@@ -462,7 +361,7 @@ Before completing, verify:
 - [ ] Commit message has no Claude footer
 - [ ] File paths are relative to repository root
 - [ ] Post-analysis completed successfully
-- [ ] Graphite URL constructed correctly from owner/repo/pr_number
+- [ ] Graphite URL retrieved from JSON output
 - [ ] Results displayed with "What Was Done" section listing actions
 - [ ] Graphite URL placed at end under "View PR" section
 - [ ] Any errors handled with helpful guidance

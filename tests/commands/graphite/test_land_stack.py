@@ -1047,3 +1047,51 @@ def test_land_stack_switches_to_root_when_run_from_linked_worktree() -> None:
 
         # Verify we're not in a destroyed/invalid directory
         assert Path.cwd().exists()
+
+
+def test_land_stack_script_mode_accepts_flag() -> None:
+    """Verify land-stack accepts --script flag for shell integration."""
+    runner = CliRunner()
+    with simulated_workstack_env(runner) as env:
+        # Build test environment with a simple stack
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
+                "feature-1": BranchMetadata.branch(
+                    "feature-1", "main", pr_number=123, commit_sha="def456"
+                ),
+            },
+            current_branch="feature-1",
+        )
+
+        # Setup GitHub ops with an open PR
+        github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("OPEN", 123, "Feature 1")})
+
+        global_config_ops = FakeGlobalConfigOps(
+            workstacks_root=env.workstacks_root,
+            use_graphite=True,
+        )
+
+        test_ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            graphite_ops=graphite_ops,
+            github_ops=github_ops,
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
+
+        # Act: Run with --script flag (this is what shell wrapper will call)
+        result = runner.invoke(
+            cli,
+            ["land-stack", "-f", "--script"],  # force to skip confirmation
+            obj=test_ctx,
+        )
+
+        # Assert: Command should succeed
+        # Note: We can't verify actual shell integration behavior with CliRunner
+        # but we can verify the flag is accepted and the command runs
+        assert result.exit_code == 0
+
+        # In script mode, all output should go to stderr
+        # Passthrough commands rely on the recovery mechanism, not explicit script generation

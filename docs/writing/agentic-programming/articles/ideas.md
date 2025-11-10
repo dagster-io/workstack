@@ -35,3 +35,7 @@ Topics to explore in agentic programming articles.
 15. **Merge conflict resolution through thesis reapplication** - How to resolve merge conflicts by having agents re-apply the original thesis or intent of changes rather than mechanically merging line-level diffs
 
 16. **Worktrees are just a view** - Understanding git worktrees as filesystem projections of branches rather than heavyweight copies, demystifying how they enable parallel development without repository duplication
+
+17. **Ctrl-G is your friend** - How using Ctrl-G to interrupt and redirect agents mid-execution prevents wasted tokens, enables course correction, and creates a more collaborative development flow
+
+18. **Compaction Considered Harmful** - Why automatically compacting conversation history destroys crucial context, breaks agent reasoning chains, and how to design workflows that preserve the full conversational thread

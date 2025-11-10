@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from tests.helpers.commits import make_test_commits
 from workstack.status.models.status_data import (
     CommitInfo,
     GitStatus,
@@ -285,3 +286,98 @@ def test_status_data_with_git_status_factory_with_dirty_status() -> None:
     assert status_data.git_status.staged_files == ["other.py"]
     assert status_data.stack_position is None
     assert status_data.pr_status is None
+
+
+# CommitInfo Factory Method Tests
+
+
+def test_commit_info_test_commit_factory() -> None:
+    """Test CommitInfo.test_commit() factory method with defaults."""
+    # Act
+    commit = CommitInfo.test_commit()
+
+    # Assert
+    assert commit.sha == "abc1234"
+    assert commit.message == "Test commit"
+    assert commit.author == "Test User"
+    assert commit.date == "1 hour ago"
+
+
+def test_commit_info_test_commit_factory_custom_sha() -> None:
+    """Test CommitInfo.test_commit() with custom SHA."""
+    # Act
+    commit = CommitInfo.test_commit(sha="custom123")
+
+    # Assert
+    assert commit.sha == "custom123"
+    assert commit.message == "Test commit"
+    assert commit.author == "Test User"
+    assert commit.date == "1 hour ago"
+
+
+def test_commit_info_test_commit_factory_custom_message() -> None:
+    """Test CommitInfo.test_commit() with custom message."""
+    # Act
+    commit = CommitInfo.test_commit(message="Custom commit message")
+
+    # Assert
+    assert commit.sha == "abc1234"
+    assert commit.message == "Custom commit message"
+    assert commit.author == "Test User"
+    assert commit.date == "1 hour ago"
+
+
+def test_commit_info_test_commit_factory_all_custom() -> None:
+    """Test CommitInfo.test_commit() with all custom fields."""
+    # Act
+    commit = CommitInfo.test_commit(
+        sha="xyz789",
+        message="Important change",
+        author="Custom Author",
+        date="2 days ago",
+    )
+
+    # Assert
+    assert commit.sha == "xyz789"
+    assert commit.message == "Important change"
+    assert commit.author == "Custom Author"
+    assert commit.date == "2 days ago"
+
+
+def test_make_test_commits_helper_default_count() -> None:
+    """Test make_test_commits() helper with default count."""
+    # Act
+    commits = make_test_commits()
+
+    # Assert
+    assert len(commits) == 3
+    assert commits[0].sha == "abc0001"
+    assert commits[0].message == "Test commit 1"
+    assert commits[1].sha == "abc0002"
+    assert commits[1].message == "Test commit 2"
+    assert commits[2].sha == "abc0003"
+    assert commits[2].message == "Test commit 3"
+
+
+def test_make_test_commits_helper_custom_count() -> None:
+    """Test make_test_commits() helper with custom count."""
+    # Act
+    commits = make_test_commits(count=5)
+
+    # Assert
+    assert len(commits) == 5
+    assert commits[0].sha == "abc0001"
+    assert commits[4].sha == "abc0005"
+    assert commits[4].message == "Test commit 5"
+
+
+def test_make_test_commits_helper_unique_data() -> None:
+    """Test make_test_commits() generates unique SHAs and messages."""
+    # Act
+    commits = make_test_commits(count=10)
+
+    # Assert
+    shas = [c.sha for c in commits]
+    messages = [c.message for c in commits]
+    assert len(set(shas)) == 10  # All SHAs unique
+    assert len(set(messages)) == 10  # All messages unique

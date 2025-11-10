@@ -74,6 +74,36 @@ class CommitInfo:
     author: str
     date: str
 
+    @staticmethod
+    def test_commit(
+        sha: str = "abc1234",
+        message: str = "Test commit",
+        author: str = "Test User",
+        date: str = "1 hour ago",
+    ) -> "CommitInfo":
+        """Create a commit for tests with sensible defaults.
+
+        Args:
+            sha: Commit SHA (default: "abc1234")
+            message: Commit message (default: "Test commit")
+            author: Commit author (default: "Test User")
+            date: Commit date (default: "1 hour ago")
+
+        Returns:
+            CommitInfo with all fields populated
+
+        Example:
+            Before (5 lines):
+                recent_commits = [
+                    CommitInfo(sha="abc1234", message="Initial commit",
+                               author="Test User", date="1 hour ago"),
+                ]
+
+            After (1 line):
+                recent_commits = [CommitInfo.test_commit()]
+        """
+        return CommitInfo(sha=sha, message=message, author=author, date=date)
+
 
 @dataclass(frozen=True)
 class GitStatus:

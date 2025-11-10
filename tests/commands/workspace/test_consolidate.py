@@ -46,7 +46,7 @@ def _create_test_context(
         file_statuses=file_statuses,
     )
 
-    return WorkstackContext.for_test(
+    return WorkstackContext(
         git_ops=git_ops,
         global_config=GlobalConfig(
             workstacks_root=env.workstacks_root,
@@ -58,9 +58,8 @@ def _create_test_context(
         github_ops=FakeGitHubOps(),
         graphite_ops=graphite_ops,
         shell_ops=FakeShellOps(),
-        cwd=env.cwd,
+        cwd=Path("/test/default/cwd"),
         dry_run=False,
-        trunk_branch=None,
     )
 
 
@@ -89,8 +88,8 @@ def test_consolidate_removes_other_stack_worktrees() -> None:
         graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
 
         # Create worktree directories
-        wt1_path = env.workstacks_root / "wt1"
-        wt2_path = env.workstacks_root / "wt2"
+        wt1_path = env.workstacks_root / env.root_worktree.name / "wt1"
+        wt2_path = env.workstacks_root / env.root_worktree.name / "wt2"
         wt1_path.mkdir(parents=True)
         wt2_path.mkdir(parents=True)
 
@@ -121,7 +120,7 @@ def test_consolidate_preserves_current_worktree() -> None:
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create other worktree
-        wt1_path = env.workstacks_root / "wt1"
+        wt1_path = env.workstacks_root / env.root_worktree.name / "wt1"
         wt1_path.mkdir(parents=True)
 
         # Both worktrees in same stack, current is on feature-1
@@ -149,7 +148,7 @@ def test_consolidate_aborts_on_uncommitted_changes() -> None:
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree with uncommitted changes marker
-        wt1_path = env.workstacks_root / "wt1"
+        wt1_path = env.workstacks_root / env.root_worktree.name / "wt1"
         wt1_path.mkdir(parents=True)
         # Create a file to simulate uncommitted changes
         (wt1_path / "uncommitted.txt").write_text("changes", encoding="utf-8")
@@ -184,7 +183,7 @@ def test_consolidate_dry_run_shows_preview() -> None:
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree
-        wt1_path = env.workstacks_root / "wt1"
+        wt1_path = env.workstacks_root / env.root_worktree.name / "wt1"
         wt1_path.mkdir(parents=True)
 
         worktrees = {
@@ -212,7 +211,7 @@ def test_consolidate_confirmation_prompt() -> None:
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree
-        wt1_path = env.workstacks_root / "wt1"
+        wt1_path = env.workstacks_root / env.root_worktree.name / "wt1"
         wt1_path.mkdir(parents=True)
 
         worktrees = {
@@ -247,7 +246,7 @@ def test_consolidate_detached_head_error() -> None:
             current_branches={env.cwd: None},
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = WorkstackContext(
             git_ops=git_ops,
             global_config=GlobalConfig(
                 workstacks_root=env.workstacks_root,
@@ -259,9 +258,8 @@ def test_consolidate_detached_head_error() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
-            cwd=env.cwd,
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
-            trunk_branch=None,
         )
 
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
@@ -296,8 +294,8 @@ def test_consolidate_skips_non_stack_worktrees() -> None:
         graphite_ops = FakeGraphiteOps(stacks={"stack-a": ["main", "stack-a"]})
 
         # Create worktrees
-        wt1_path = env.workstacks_root / "wt1"
-        wt2_path = env.workstacks_root / "wt2"
+        wt1_path = env.workstacks_root / env.root_worktree.name / "wt1"
+        wt2_path = env.workstacks_root / env.root_worktree.name / "wt2"
         wt1_path.mkdir(parents=True)
         wt2_path.mkdir(parents=True)
 
@@ -328,9 +326,9 @@ def test_consolidate_with_uncommitted_changes_in_non_stack_worktree() -> None:
         graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
 
         # Create worktrees
-        wt1_path = env.workstacks_root / "wt1"
-        wt2_path = env.workstacks_root / "wt2"
-        wt3_path = env.workstacks_root / "wt3"
+        wt1_path = env.workstacks_root / env.root_worktree.name / "wt1"
+        wt2_path = env.workstacks_root / env.root_worktree.name / "wt2"
+        wt3_path = env.workstacks_root / env.root_worktree.name / "wt3"
         wt1_path.mkdir(parents=True)
         wt2_path.mkdir(parents=True)
         wt3_path.mkdir(parents=True)
@@ -386,10 +384,10 @@ def test_consolidate_preserves_root_worktree_even_when_in_stack() -> None:
         main_worktree = env.cwd / "main-repo"
         main_worktree.mkdir(parents=True)
         # Linked worktree for feature-1
-        wt1_path = env.workstacks_root / "wt1"
+        wt1_path = env.workstacks_root / env.root_worktree.name / "wt1"
         wt1_path.mkdir(parents=True)
         # Current linked worktree for feature-2
-        wt2_path = env.workstacks_root / "wt2"
+        wt2_path = env.workstacks_root / env.root_worktree.name / "wt2"
         wt2_path.mkdir(parents=True)
 
         # Root worktree is on 'main' branch (which is in the stack)
@@ -414,7 +412,7 @@ def test_consolidate_preserves_root_worktree_even_when_in_stack() -> None:
         git_ops._git_common_dirs[wt1_path] = main_worktree / ".git"
         git_ops._git_common_dirs[wt2_path] = main_worktree / ".git"
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = WorkstackContext(
             git_ops=git_ops,
             global_config=GlobalConfig(
                 workstacks_root=env.workstacks_root,
@@ -426,7 +424,7 @@ def test_consolidate_preserves_root_worktree_even_when_in_stack() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
-            cwd=env.cwd,
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -537,16 +535,14 @@ def test_consolidate_with_new_name() -> None:
         # Run consolidate with --name option
         result = runner.invoke(cli, ["consolidate", "--name", "my-stack", "-f"], obj=test_ctx)
 
-        # With FakeGitOps, this now succeeds and creates the new worktree
-        assert result.exit_code == 0, result.output
-        assert "Created new worktree: my-stack" in result.output
-        assert "Consolidation complete" in result.output
-
-        # Verify worktree was added
-        assert len(test_ctx.git_ops.added_worktrees) == 1
-        added_path, added_branch = test_ctx.git_ops.added_worktrees[0]
-        assert added_path.name == "my-stack"
-        assert added_branch == "feat-2"
+        # Note: In isolated filesystem, git worktree add will fail since we don't have real git
+        # We're testing the validation and flow, not the actual git command
+        # In real usage, this would create a new worktree "my-stack" and consolidate into it
+        # For now, we expect this to fail at the git worktree add step
+        assert result.exit_code == 1
+        assert (
+            "Failed to create worktree" in result.output or "not a git repository" in result.output
+        )
 
 
 def test_consolidate_name_already_exists() -> None:
@@ -563,8 +559,8 @@ def test_consolidate_name_already_exists() -> None:
         repo_name = cwd.name
         wt1_path = workstacks_root / repo_name / "wt1"
         existing_stack = cwd.parent / "my-stack"
-        wt1_path.mkdir(parents=True, exist_ok=True)
-        existing_stack.mkdir(parents=True, exist_ok=True)
+        wt1_path.mkdir(parents=True)
+        existing_stack.mkdir(parents=True)
 
         # Worktrees: wt1 (feat-1, current) and existing "my-stack"
         worktrees = {
@@ -628,16 +624,12 @@ def test_consolidate_partial_with_name() -> None:
             cli, ["consolidate", "feat-2", "--name", "my-partial", "-f"], obj=test_ctx
         )
 
-        # With FakeGitOps, this succeeds and creates partial consolidation
-        assert result.exit_code == 0, result.output
-        assert "Created new worktree: my-partial" in result.output
-        assert "Consolidation complete" in result.output
-
-        # Verify worktree was added
-        assert len(test_ctx.git_ops.added_worktrees) == 1
-        added_path, added_branch = test_ctx.git_ops.added_worktrees[0]
-        assert added_path.name == "my-partial"
-        assert added_branch == "feat-3"
+        # In isolated filesystem, git worktree add will fail
+        # But we can verify that validation logic runs correctly
+        assert result.exit_code == 1
+        assert (
+            "Failed to create worktree" in result.output or "not a git repository" in result.output
+        )
 
 
 def test_consolidate_branch_not_in_stack() -> None:

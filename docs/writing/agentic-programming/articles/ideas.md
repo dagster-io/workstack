@@ -33,3 +33,5 @@ Topics to explore in agentic programming articles.
 14. **Fast tests and high-quality error messages have never been so important** - How agent-driven development amplifies the value of instant feedback loops and clear diagnostic messages for rapid iteration and debugging
 
 15. **Merge conflict resolution through thesis reapplication** - How to resolve merge conflicts by having agents re-apply the original thesis or intent of changes rather than mechanically merging line-level diffs
+
+16. **Worktrees are just a view** - Understanding git worktrees as filesystem projections of branches rather than heavyweight copies, demystifying how they enable parallel development without repository duplication

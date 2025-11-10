@@ -1057,9 +1057,7 @@ def test_land_stack_script_mode_accepts_flag() -> None:
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
                 "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
-                "feature-1": BranchMetadata.branch(
-                    "feature-1", "main", pr_number=123, commit_sha="def456"
-                ),
+                "feature-1": BranchMetadata.branch("feature-1", "main", commit_sha="def456"),
             },
             current_branch="feature-1",
         )

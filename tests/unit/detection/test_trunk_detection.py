@@ -48,6 +48,7 @@ def test_branch_with_trunk_validation_result(tmp_path: Path) -> None:
         graphite_ops=FakeGraphiteOps(),
         github_ops=FakeGitHubOps(),
         shell_ops=FakeShellOps(),
+        cwd=Path("/test/default/cwd"),
         dry_run=False,
     )
 
@@ -79,6 +80,7 @@ def test_branch_with_no_parent_is_trunk(tmp_path: Path) -> None:
         graphite_ops=FakeGraphiteOps(),
         github_ops=FakeGitHubOps(),
         shell_ops=FakeShellOps(),
+        cwd=Path("/test/default/cwd"),
         dry_run=False,
     )
 
@@ -109,6 +111,7 @@ def test_branch_with_parent_is_not_trunk(tmp_path: Path) -> None:
         graphite_ops=FakeGraphiteOps(),
         github_ops=FakeGitHubOps(),
         shell_ops=FakeShellOps(),
+        cwd=Path("/test/default/cwd"),
         dry_run=False,
     )
 
@@ -138,6 +141,7 @@ def test_branch_not_in_cache_is_not_trunk(tmp_path: Path) -> None:
         graphite_ops=FakeGraphiteOps(),
         github_ops=FakeGitHubOps(),
         shell_ops=FakeShellOps(),
+        cwd=Path("/test/default/cwd"),
         dry_run=False,
     )
 
@@ -161,6 +165,7 @@ def test_graphite_disabled_returns_false(tmp_path: Path) -> None:
         graphite_ops=FakeGraphiteOps(),
         github_ops=FakeGitHubOps(),
         shell_ops=FakeShellOps(),
+        cwd=Path("/test/default/cwd"),
         dry_run=False,
     )
 

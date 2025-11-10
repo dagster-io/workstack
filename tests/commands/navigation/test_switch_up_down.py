@@ -101,6 +101,7 @@ def test_switch_up_with_existing_worktree() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -167,6 +168,7 @@ def test_switch_up_at_top_of_stack() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -220,6 +222,7 @@ def test_switch_up_child_has_no_worktree() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -280,6 +283,7 @@ def test_switch_down_with_existing_worktree() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -339,6 +343,7 @@ def test_switch_down_to_trunk_root() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -392,6 +397,7 @@ def test_switch_down_at_trunk() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -447,6 +453,7 @@ def test_switch_down_parent_has_no_worktree() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -484,6 +491,7 @@ def test_switch_graphite_not_enabled() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -526,6 +534,7 @@ def test_switch_up_and_down_mutually_exclusive() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -562,6 +571,7 @@ def test_switch_name_with_up_mutually_exclusive() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -599,6 +609,7 @@ def test_switch_detached_head() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -668,6 +679,7 @@ def test_switch_up_with_mismatched_worktree_name() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -747,6 +759,7 @@ def test_switch_down_with_mismatched_worktree_name() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 

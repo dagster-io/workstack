@@ -26,13 +26,10 @@ from workstack.cli.tree import (
 # ===========================
 
 
-def test_get_worktree_mapping(monkeypatch) -> None:
+def test_get_worktree_mapping() -> None:
     """Test worktree mapping creation from git worktrees."""
     repo_root = Path("/repo")
     workstacks_dir = Path("/repo/work")
-
-    # Mock Path.cwd() to return repo_root so it detects as current worktree
-    monkeypatch.setattr("pathlib.Path.cwd", lambda: repo_root)
 
     git_ops = FakeGitOps(
         worktrees={
@@ -45,7 +42,7 @@ def test_get_worktree_mapping(monkeypatch) -> None:
         current_branches={repo_root: "main"},
     )
 
-    ctx = create_test_context(git_ops=git_ops)
+    ctx = create_test_context(git_ops=git_ops, cwd=repo_root)
 
     mapping = _get_worktree_mapping(ctx, repo_root)
 
@@ -58,12 +55,9 @@ def test_get_worktree_mapping(monkeypatch) -> None:
     assert mapping.current_worktree == "root"
 
 
-def test_get_worktree_mapping_skips_detached_head(monkeypatch) -> None:
+def test_get_worktree_mapping_skips_detached_head() -> None:
     """Test that worktrees with detached HEAD are skipped."""
     repo_root = Path("/repo")
-
-    # Mock Path.cwd() to return repo_root
-    monkeypatch.setattr("pathlib.Path.cwd", lambda: repo_root)
 
     git_ops = FakeGitOps(
         worktrees={
@@ -74,7 +68,7 @@ def test_get_worktree_mapping_skips_detached_head(monkeypatch) -> None:
         },
     )
 
-    ctx = create_test_context(git_ops=git_ops)
+    ctx = create_test_context(git_ops=git_ops, cwd=repo_root)
 
     mapping = _get_worktree_mapping(ctx, repo_root)
 
@@ -82,14 +76,11 @@ def test_get_worktree_mapping_skips_detached_head(monkeypatch) -> None:
     assert mapping.branch_to_worktree == {"main": "root"}
 
 
-def test_get_worktree_mapping_detects_current_from_subdirectory(monkeypatch) -> None:
+def test_get_worktree_mapping_detects_current_from_subdirectory() -> None:
     """Test that current worktree is detected when cwd is a subdirectory."""
     repo_root = Path("/repo")
     feature_worktree = Path("/repo/work/feature-a")
     subdirectory = feature_worktree / "src" / "module"
-
-    # Mock Path.cwd() to return subdirectory within feature-a worktree
-    monkeypatch.setattr("pathlib.Path.cwd", lambda: subdirectory)
 
     git_ops = FakeGitOps(
         worktrees={
@@ -100,7 +91,7 @@ def test_get_worktree_mapping_detects_current_from_subdirectory(monkeypatch) -> 
         },
     )
 
-    ctx = create_test_context(git_ops=git_ops)
+    ctx = create_test_context(git_ops=git_ops, cwd=subdirectory)
 
     mapping = _get_worktree_mapping(ctx, repo_root)
 
@@ -108,13 +99,10 @@ def test_get_worktree_mapping_detects_current_from_subdirectory(monkeypatch) -> 
     assert mapping.current_worktree == "feature-a"
 
 
-def test_get_worktree_mapping_handles_user_outside_all_worktrees(monkeypatch) -> None:
+def test_get_worktree_mapping_handles_user_outside_all_worktrees() -> None:
     """Test behavior when user is not in any worktree."""
     repo_root = Path("/repo")
     outside_path = Path("/tmp/somewhere-else")
-
-    # Mock Path.cwd() to return path outside all worktrees
-    monkeypatch.setattr("pathlib.Path.cwd", lambda: outside_path)
 
     git_ops = FakeGitOps(
         worktrees={
@@ -125,7 +113,7 @@ def test_get_worktree_mapping_handles_user_outside_all_worktrees(monkeypatch) ->
         },
     )
 
-    ctx = create_test_context(git_ops=git_ops)
+    ctx = create_test_context(git_ops=git_ops, cwd=outside_path)
 
     mapping = _get_worktree_mapping(ctx, repo_root)
 

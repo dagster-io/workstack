@@ -1,7 +1,5 @@
 """Current command implementation - displays current workstack name."""
 
-from pathlib import Path
-
 import click
 
 from workstack.cli.core import discover_repo_context
@@ -15,12 +13,12 @@ def current_cmd(ctx: WorkstackContext) -> None:
     # Discover repository context
     # This raises FileNotFoundError if not in a git repo
     try:
-        repo = discover_repo_context(ctx, Path.cwd())
+        repo = discover_repo_context(ctx, ctx.cwd)
     except FileNotFoundError:
         # Not in a git repository - exit silently with error code
         raise SystemExit(1) from None
 
-    current_dir = Path.cwd().resolve()
+    current_dir = ctx.cwd.resolve()
 
     # Find which worktree we're in
     worktrees = ctx.git_ops.list_worktrees(repo.root)

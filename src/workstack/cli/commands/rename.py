@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import click
 
 from workstack.cli.commands.create import make_env_content, sanitize_worktree_name
@@ -33,7 +31,7 @@ def rename_cmd(ctx: WorkstackContext, old_name: str, new_name: str, dry_run: boo
     # Sanitize new name
     sanitized_new_name = sanitize_worktree_name(new_name)
 
-    repo = discover_repo_context(ctx, Path.cwd())
+    repo = discover_repo_context(ctx, ctx.cwd)
     workstacks_dir = ensure_workstacks_dir(repo)
 
     old_path = worktree_path_for(workstacks_dir, old_name)

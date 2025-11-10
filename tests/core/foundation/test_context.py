@@ -26,6 +26,7 @@ def test_context_initialization_and_attributes() -> None:
         github_ops=github_ops,
         graphite_ops=graphite_ops,
         shell_ops=shell_ops,
+        cwd=Path("/test/default/cwd"),
         dry_run=False,
     )
 
@@ -45,6 +46,7 @@ def test_context_is_frozen() -> None:
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),
+        cwd=Path("/test/default/cwd"),
         dry_run=True,
     )
 

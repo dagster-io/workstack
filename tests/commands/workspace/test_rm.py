@@ -46,6 +46,7 @@ def _create_test_context(
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),
+        cwd=Path("/test/default/cwd"),
         dry_run=dry_run,
     )
 
@@ -153,6 +154,7 @@ def test_rm_dry_run_with_delete_stack() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=True,
         )
 

@@ -40,6 +40,7 @@ def _create_test_context(cwd: Path, workstacks_root: Path, dry_run: bool = False
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),
+        cwd=Path("/test/default/cwd"),
         dry_run=dry_run,
     )
 
@@ -130,6 +131,7 @@ def test_rename_with_graphite_enabled() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 

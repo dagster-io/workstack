@@ -255,6 +255,7 @@ def test_land_stack_requires_graphite() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -297,6 +298,7 @@ def test_land_stack_fails_on_detached_head() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -347,6 +349,7 @@ def test_land_stack_fails_with_uncommitted_changes() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -395,6 +398,7 @@ def test_land_stack_fails_on_trunk_branch() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -442,6 +446,7 @@ def test_land_stack_fails_when_branch_not_tracked() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -504,6 +509,7 @@ def test_land_stack_fails_when_pr_missing() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -561,6 +567,7 @@ def test_land_stack_fails_when_pr_closed() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -627,6 +634,7 @@ def test_land_stack_gets_branches_to_land_correctly() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -708,6 +716,7 @@ def test_land_stack_from_top_of_stack_lands_all_branches() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -765,6 +774,7 @@ def test_land_stack_fails_when_branches_in_multiple_worktrees() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -833,6 +843,7 @@ def test_land_stack_succeeds_when_all_branches_in_current_worktree() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -907,6 +918,7 @@ def test_land_stack_refreshes_metadata_after_sync() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 

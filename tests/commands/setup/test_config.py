@@ -38,6 +38,7 @@ def test_config_list_displays_global_config() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -82,6 +83,7 @@ def test_config_list_displays_repo_config() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -111,6 +113,7 @@ def test_config_list_handles_missing_global_config() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -143,6 +146,7 @@ def test_config_list_handles_missing_repo_config() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -167,6 +171,7 @@ def test_config_list_not_in_git_repo() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -198,6 +203,7 @@ def test_config_get_workstacks_root() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -230,6 +236,7 @@ def test_config_get_use_graphite() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -262,6 +269,7 @@ def test_config_get_show_pr_info() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -294,6 +302,7 @@ def test_config_get_show_pr_checks() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -320,6 +329,7 @@ def test_config_get_global_key_missing_config_fails() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -357,6 +367,7 @@ def test_config_get_env_key() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -394,6 +405,7 @@ def test_config_get_post_create_shell() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -434,6 +446,7 @@ def test_config_get_post_create_commands() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -472,6 +485,7 @@ def test_config_get_env_key_not_found() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -503,6 +517,7 @@ def test_config_get_invalid_key_format() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -535,6 +550,7 @@ def test_config_set_workstacks_root() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -570,6 +586,7 @@ def test_config_set_use_graphite_true() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -603,6 +620,7 @@ def test_config_set_use_graphite_false() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -636,6 +654,7 @@ def test_config_set_show_pr_info() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -669,6 +688,7 @@ def test_config_set_show_pr_checks() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -701,6 +721,7 @@ def test_config_set_invalid_boolean_fails() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -727,6 +748,7 @@ def test_config_set_without_global_config_fails() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -765,6 +787,7 @@ def test_config_get_invalid_key() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -796,6 +819,7 @@ def test_config_set_repo_keys_not_implemented() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -833,6 +857,7 @@ def test_config_key_with_multiple_dots() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 

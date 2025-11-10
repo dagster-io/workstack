@@ -85,6 +85,7 @@ def _setup_test_with_pr(
         github_ops=github_ops,
         graphite_ops=graphite_ops,
         shell_ops=FakeShellOps(),
+        cwd=Path("/test/default/cwd"),
         dry_run=False,
     )
 

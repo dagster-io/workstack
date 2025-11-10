@@ -110,7 +110,7 @@ def _remove_worktree(
     # Validate worktree name before any operations
     validate_worktree_name_for_removal(name)
 
-    repo = discover_repo_context(ctx, Path.cwd())
+    repo = discover_repo_context(ctx, ctx.cwd)
     workstacks_dir = ensure_workstacks_dir(repo)
     wt_path = worktree_path_for(workstacks_dir, name)
 

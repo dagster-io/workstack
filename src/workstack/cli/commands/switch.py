@@ -257,7 +257,7 @@ def complete_worktree_names(
         if workstack_ctx is None:
             workstack_ctx = create_context(dry_run=False)
 
-        repo = discover_repo_context(workstack_ctx, Path.cwd())
+        repo = discover_repo_context(workstack_ctx, workstack_ctx.cwd)
 
         names = ["root"] if "root".startswith(incomplete) else []
 
@@ -323,7 +323,7 @@ def switch_cmd(ctx: WorkstackContext, name: str | None, script: bool, up: bool, 
     if up or down:
         _ensure_graphite_enabled(ctx)
 
-    repo = discover_repo_context(ctx, Path.cwd())
+    repo = discover_repo_context(ctx, ctx.cwd)
 
     # Check if user is trying to switch to main/master (should use root instead)
     if name and name.lower() in ("main", "master"):
@@ -339,7 +339,7 @@ def switch_cmd(ctx: WorkstackContext, name: str | None, script: bool, up: bool, 
     target_name: str
     if up or down:
         # Get current branch
-        current_branch = ctx.git_ops.get_current_branch(Path.cwd())
+        current_branch = ctx.git_ops.get_current_branch(ctx.cwd)
         if current_branch is None:
             click.echo("Error: Not currently on a branch (detached HEAD)", err=True)
             raise SystemExit(1)

@@ -110,6 +110,7 @@ def test_root_on_trunk_shows_only_trunk() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -225,6 +226,7 @@ def test_root_on_non_trunk_shows_ancestors_only() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 
@@ -351,6 +353,7 @@ def test_non_root_worktree_shows_descendants_with_worktrees() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
             dry_run=False,
         )
 

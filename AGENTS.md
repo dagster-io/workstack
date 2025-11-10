@@ -5,7 +5,7 @@
 > the product.
 
 <!-- AGENT NOTICE: This file is loaded automatically. Read FULLY before writing code. -->
-<!-- Priority sections: BEFORE WRITING CODE (line 10), TOP 5 CRITICAL RULES (line 114), GRAPHITE STACK TERMINOLOGY (line 178) -->
+<!-- Priority sections: BEFORE WRITING CODE (line 10), TOP 6 CRITICAL RULES (line 139), GRAPHITE STACK TERMINOLOGY (line 231) -->
 
 ## ⚠️ BEFORE WRITING CODE (AI Assistant Checklist)
 
@@ -13,30 +13,31 @@
 
 **CRITICAL: NEVER search, read, or access `/Users/schrockn/.claude` directory**
 
-| If you're about to write...                 | STOP! Check this instead                                                                    |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `try:` or `except:`                         | → [Exception Handling](#exception-handling) - Default: let exceptions bubble                |
-| `from __future__ import annotations`        | → **FORBIDDEN** - Python 3.13+ doesn't need it                                              |
-| `List[...]`, `Dict[...]`, `Union[...]`      | → Use `list[...]`, `dict[...]`, `X \| Y`                                                    |
-| `typing.Protocol`                           | → Use `abc.ABC` instead                                                                     |
-| `dict[key]` without checking                | → Use `if key in dict:` or `.get()`                                                         |
-| `path.resolve()` or `path.is_relative_to()` | → Check `path.exists()` first                                                               |
-| Function with default argument              | → Make explicit at call sites                                                               |
-| `from .module import`                       | → Use absolute imports only                                                                 |
-| `print(...)` in CLI code                    | → Use `click.echo()`                                                                        |
-| `subprocess.run(...)`                       | → Add `check=True`                                                                          |
-| `make ...` or user says "make"              | → Use runner agent (Task tool) instead of Bash; loads devrun/make skill                     |
-| `pyright` or `uv run pyright`               | → Use runner agent (Task tool); target paths directly, never `cd`                           |
-| `pytest` or `uv run pytest`                 | → Use runner agent (Task tool) for running tests                                            |
-| `ruff` or `uv run ruff`                     | → Use runner agent (Task tool) for linting/formatting                                       |
-| Prettier formatting issues                  | → Use `make prettier` (via runner agent with Task tool)                                     |
-| Submitting a branch with Graphite           | → Use /gt:submit-branch command (delegates to gt-branch-submitter agent)                    |
-| `gt ...` or user says "gt" or "graphite"    | → Use runner agent (Task tool, devrun subagent) for execution, graphite skill for knowledge |
-| Stack traversal or "upstack"/"downstack"    | → [Graphite Stack Terminology](#-graphite-stack-terminology-critical) - main is at BOTTOM   |
-| 4+ levels of indentation                    | → Extract helper functions                                                                  |
-| Code in `__init__.py`                       | → Keep empty or docstring-only (except package entry points)                                |
-| Tests for speculative features              | → **FORBIDDEN** - Only test actively implemented code (TDD is fine)                         |
-| Creating `.claude/` artifacts               | → Use `kebab-case` (hyphens) NOT `snake_case` (underscores)                                 |
+| If you're about to write...                 | STOP! Check this instead                                                                             |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `try:` or `except:`                         | → [Exception Handling](#exception-handling) - Default: let exceptions bubble                         |
+| `from __future__ import annotations`        | → **FORBIDDEN** - Python 3.13+ doesn't need it                                                       |
+| `List[...]`, `Dict[...]`, `Union[...]`      | → Use `list[...]`, `dict[...]`, `X \| Y`                                                             |
+| `typing.Protocol`                           | → Use `abc.ABC` instead                                                                              |
+| `dict[key]` without checking                | → Use `if key in dict:` or `.get()`                                                                  |
+| `path.resolve()` or `path.is_relative_to()` | → Check `path.exists()` first                                                                        |
+| Function with default argument              | → Make explicit at call sites                                                                        |
+| `from .module import`                       | → Use absolute imports only                                                                          |
+| `print(...)` in CLI code                    | → Use `click.echo()`                                                                                 |
+| `subprocess.run(...)`                       | → Add `check=True`                                                                                   |
+| `make ...` or user says "make"              | → Use runner agent (Task tool) instead of Bash; loads devrun/make skill                              |
+| `pyright` or `uv run pyright`               | → Use runner agent (Task tool); target paths directly, never `cd`                                    |
+| `pytest` or `uv run pytest`                 | → Use runner agent (Task tool) for running tests                                                     |
+| `ruff` or `uv run ruff`                     | → Use runner agent (Task tool) for linting/formatting                                                |
+| Prettier formatting issues                  | → Use `make prettier` (via runner agent with Task tool)                                              |
+| Submitting a branch with Graphite           | → Use /gt:submit-branch command (delegates to gt-branch-submitter agent)                             |
+| `gt ...` or user says "gt" or "graphite"    | → Use runner agent (Task tool, devrun subagent) for execution, graphite skill for knowledge          |
+| Stack traversal or "upstack"/"downstack"    | → [Graphite Stack Terminology](#-graphite-stack-terminology-critical) - main is at BOTTOM            |
+| 4+ levels of indentation                    | → Extract helper functions                                                                           |
+| Code in `__init__.py`                       | → Keep empty or docstring-only (except package entry points)                                         |
+| Tests for speculative features              | → **FORBIDDEN** - Only test actively implemented code (TDD is fine)                                  |
+| Creating `.claude/` artifacts               | → Use `kebab-case` (hyphens) NOT `snake_case` (underscores)                                          |
+| `Path("/test/...")` or hardcoded paths      | → **CATASTROPHIC** - Use `env.cwd` or `tmp_path` fixture - [Test Isolation](#6-test-isolation--must) |
 
 ## 📚 Quick Reference
 
@@ -136,7 +137,7 @@ Simple shell commands: `echo`, `pwd`, etc.
 
 ---
 
-## 🔴 TOP 5 CRITICAL RULES (Most Violated)
+## 🔴 TOP 6 CRITICAL RULES (Most Violated)
 
 ### 1. Exception Handling 🔴 MUST
 
@@ -197,6 +198,34 @@ class MyOps(ABC):  # ✅ Not Protocol
 # ✅ from workstack.config import load_config
 # ❌ from .config import load_config
 ```
+
+### 6. Test Isolation 🔴 MUST
+
+**NEVER use hardcoded paths in tests. ALWAYS use proper fixtures.**
+
+```python
+# ❌ WRONG - CATASTROPHICALLY DANGEROUS
+cwd=Path("/test/default/cwd")
+cwd=Path("/some/hardcoded/path")
+
+# ✅ CORRECT - Use simulated environment
+with simulated_workstack_env(runner) as env:
+    ctx = WorkstackContext(..., cwd=env.cwd)
+
+# ✅ CORRECT - Use tmp_path fixture
+def test_something(tmp_path: Path) -> None:
+    ctx = WorkstackContext(..., cwd=tmp_path)
+```
+
+**Why hardcoded paths are catastrophic:**
+
+- **Global config mutation**: Code may write `.workstack` files at hardcoded paths, polluting real filesystem
+- **False isolation**: Tests appear isolated but share state through hardcoded paths
+- **Security risk**: Creating files at system paths can be exploited
+
+**If you see `Path("/` in test code, STOP and use fixtures.**
+
+**Full guide**: [docs/agent/testing.md#critical-never-use-hardcoded-paths-in-tests](docs/agent/testing.md#critical-never-use-hardcoded-paths-in-tests)
 
 ---
 

@@ -120,7 +120,8 @@ def parse_graphite_cache(
             children_raw = []
         children = [c for c in children_raw if isinstance(c, str)]
 
-        is_trunk = info.get("validationResult") == "TRUNK"
+        # A branch is trunk if it has explicit TRUNK marker OR has no parent
+        is_trunk = info.get("validationResult") == "TRUNK" or parent is None
 
         result[branch_name] = BranchMetadata(
             name=branch_name,

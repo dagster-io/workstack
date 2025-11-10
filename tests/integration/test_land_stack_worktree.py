@@ -147,12 +147,13 @@ def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> No
             show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            cwd=worktree_path,
             dry_run=False,
         )
 

@@ -195,8 +195,8 @@ def _format_branch_recursive(
     # Get commit info
     short_sha = metadata.commit_sha[:7] if metadata.commit_sha else "unknown"
     commit_message = (
-        git_ops.get_commit_message(repo_root, metadata.commit_sha) or "No commit message"
-    )
+        git_ops.get_commit_message(repo_root, metadata.commit_sha) if metadata.commit_sha else None
+    ) or "No commit message"
 
     # Format current line
     connector = "└─" if is_last else "├─"

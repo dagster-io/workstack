@@ -79,11 +79,12 @@ def test_list_with_stacks_flag() -> None:
             show_pr_checks=False,
         )
 
-        RealGraphiteOps()
+        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -151,11 +152,12 @@ def test_list_with_stacks_graphite_disabled() -> None:
             show_pr_checks=False,
         )
 
-        RealGraphiteOps()
+        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -184,11 +186,12 @@ def test_list_with_stacks_no_graphite_cache() -> None:
             show_pr_checks=False,
         )
 
-        RealGraphiteOps()
+        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -284,11 +287,12 @@ def test_list_with_stacks_highlights_current_branch_not_worktree_branch() -> Non
             show_pr_checks=False,
         )
 
-        RealGraphiteOps()
+        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -367,11 +371,12 @@ def test_list_with_stacks_root_repo_does_not_duplicate_branch() -> None:
             show_pr_checks=False,
         )
 
-        RealGraphiteOps()
+        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -450,11 +455,12 @@ def test_list_with_stacks_shows_descendants_with_worktrees() -> None:
             show_pr_checks=False,
         )
 
-        RealGraphiteOps()
+        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -541,11 +547,12 @@ def test_list_with_stacks_hides_descendants_without_worktrees() -> None:
             show_pr_checks=False,
         )
 
-        RealGraphiteOps()
+        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -630,11 +637,12 @@ def test_list_with_stacks_shows_descendants_with_gaps() -> None:
             show_pr_checks=False,
         )
 
-        RealGraphiteOps()
+        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -783,9 +791,12 @@ More content.
             show_pr_checks=False,
         )
 
+        graphite_ops = RealGraphiteOps()
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -895,9 +906,12 @@ def test_list_with_stacks_no_plan_file() -> None:
             show_pr_checks=False,
         )
 
+        graphite_ops = RealGraphiteOps()
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -952,9 +966,12 @@ def test_list_with_stacks_plan_without_frontmatter() -> None:
             show_pr_checks=False,
         )
 
+        graphite_ops = RealGraphiteOps()
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 

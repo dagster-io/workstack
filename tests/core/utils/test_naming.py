@@ -169,30 +169,30 @@ def test_extract_trailing_number(
 
 
 def test_ensure_unique_worktree_name_first_time(tmp_path: Path) -> None:
-    """Test first-time worktree creation gets only date prefix."""
+    """Test first-time worktree creation gets only date suffix."""
     workstacks_dir = tmp_path / "workstacks"
     workstacks_dir.mkdir()
 
     result = ensure_unique_worktree_name("my-feature", workstacks_dir)
 
-    # Should have date prefix in format YY-MM-DD-
-    date_prefix = datetime.now().strftime("%y-%m-%d")
-    assert result == f"{date_prefix}-my-feature"
+    # Should have date suffix in format -YY-MM-DD
+    date_suffix = datetime.now().strftime("%y-%m-%d")
+    assert result == f"my-feature-{date_suffix}"
     assert not (workstacks_dir / result).exists()
 
 
 def test_ensure_unique_worktree_name_duplicate_same_day(tmp_path: Path) -> None:
-    """Test duplicate worktree on same day adds -2 suffix."""
+    """Test duplicate worktree on same day adds -2 before date suffix."""
     workstacks_dir = tmp_path / "workstacks"
     workstacks_dir.mkdir()
 
-    date_prefix = datetime.now().strftime("%y-%m-%d")
-    existing_name = f"{date_prefix}-my-feature"
+    date_suffix = datetime.now().strftime("%y-%m-%d")
+    existing_name = f"my-feature-{date_suffix}"
     (workstacks_dir / existing_name).mkdir()
 
     result = ensure_unique_worktree_name("my-feature", workstacks_dir)
 
-    assert result == f"{date_prefix}-my-feature-2"
+    assert result == f"my-feature-2-{date_suffix}"
     assert not (workstacks_dir / result).exists()
     assert (workstacks_dir / existing_name).exists()
 
@@ -202,14 +202,14 @@ def test_ensure_unique_worktree_name_multiple_duplicates(tmp_path: Path) -> None
     workstacks_dir = tmp_path / "workstacks"
     workstacks_dir.mkdir()
 
-    date_prefix = datetime.now().strftime("%y-%m-%d")
-    (workstacks_dir / f"{date_prefix}-my-feature").mkdir()
-    (workstacks_dir / f"{date_prefix}-my-feature-2").mkdir()
-    (workstacks_dir / f"{date_prefix}-my-feature-3").mkdir()
+    date_suffix = datetime.now().strftime("%y-%m-%d")
+    (workstacks_dir / f"my-feature-{date_suffix}").mkdir()
+    (workstacks_dir / f"my-feature-2-{date_suffix}").mkdir()
+    (workstacks_dir / f"my-feature-3-{date_suffix}").mkdir()
 
     result = ensure_unique_worktree_name("my-feature", workstacks_dir)
 
-    assert result == f"{date_prefix}-my-feature-4"
+    assert result == f"my-feature-4-{date_suffix}"
 
 
 def test_ensure_unique_worktree_name_with_existing_number(tmp_path: Path) -> None:
@@ -217,14 +217,14 @@ def test_ensure_unique_worktree_name_with_existing_number(tmp_path: Path) -> Non
     workstacks_dir = tmp_path / "workstacks"
     workstacks_dir.mkdir()
 
-    date_prefix = datetime.now().strftime("%y-%m-%d")
+    date_suffix = datetime.now().strftime("%y-%m-%d")
     result = ensure_unique_worktree_name("fix-v3", workstacks_dir)
 
-    # Base name has number, should preserve it in date-prefixed name
-    assert result == f"{date_prefix}-fix-v3"
+    # Base name has number, should preserve it in date-suffixed name
+    assert result == f"fix-v3-{date_suffix}"
 
     # Create it and try again
     (workstacks_dir / result).mkdir()
     result2 = ensure_unique_worktree_name("fix-v3", workstacks_dir)
 
-    assert result2 == f"{date_prefix}-fix-v3-2"
+    assert result2 == f"fix-v3-2-{date_suffix}"

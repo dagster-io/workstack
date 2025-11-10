@@ -19,7 +19,6 @@ from workstack.core.context import WorkstackContext, create_context
 from workstack.core.github_ops import DryRunGitHubOps
 from workstack.core.gitops import DryRunGitOps, WorktreeInfo
 from workstack.core.global_config import GlobalConfig
-from workstack.core.global_config_ops import DryRunGlobalConfigOps
 from workstack.core.graphite_ops import DryRunGraphiteOps
 
 
@@ -44,7 +43,8 @@ def test_dryrun_context_creation(tmp_path: Path) -> None:
     # The context should have DryRun-wrapped implementations
     # We verify this by checking the class names
     assert "DryRun" in type(ctx.git_ops).__name__
-    assert "DryRun" in type(ctx.global_config_ops).__name__
+    # global_config is now a GlobalConfig dataclass, not wrapped in DryRun
+    assert type(ctx.global_config).__name__ == "GlobalConfig"
     assert "DryRun" in type(ctx.github_ops).__name__
     assert "DryRun" in type(ctx.graphite_ops).__name__
 
@@ -71,13 +71,13 @@ def test_dryrun_read_operations_still_work(tmp_path: Path) -> None:
     )
 
     # Wrap fakes in dry-run wrappers
-    ctx = WorkstackContext(
+    ctx = WorkstackContext.for_test(
         git_ops=DryRunGitOps(git_ops),
-        global_config_ops=DryRunGlobalConfigOps(global_config_ops),
+        global_config=global_config_ops,
         github_ops=DryRunGitHubOps(FakeGitHubOps()),
         graphite_ops=DryRunGraphiteOps(FakeGraphiteOps()),
         shell_ops=FakeShellOps(),
-        cwd=Path("/test/default/cwd"),
+        cwd=repo,
         dry_run=True,
     )
 
@@ -219,35 +219,19 @@ def test_dryrun_git_checkout_branch_is_allowed(tmp_path: Path) -> None:
     assert real_ops.get_current_branch(repo) == "feature"
 
 
-def test_dryrun_config_set_prints_message(tmp_path: Path) -> None:
-    """Test that dry-run GlobalConfigOps.set prints message without writing."""
-    ctx = create_context(dry_run=True)
+# NOTE: Tests removed during global_config_ops migration
+# The GlobalConfigOps abstraction has been removed in favor of simple
+# GlobalConfig dataclass. Config is now loaded once at entry point.
+# Dry-run behavior for config mutations no longer applies since config
+# is immutable after loading.
 
-    # Try to set config in dry-run mode
-    # This should print a message but not actually write
-    test_root = tmp_path / "workstacks"
-    ctx.global_config_ops.set(
-        workstacks_root=test_root,
-        use_graphite=True,
-    )
+# def test_dryrun_config_set_prints_message(tmp_path: Path) -> None:
+#     """Test that dry-run GlobalConfigOps.set prints message without writing."""
+#     # REMOVED: GlobalConfig is now immutable, no .set() method
 
-    # Verify no actual config file was created
-    # (The real config file would be in ~/.config/workstack/config.toml)
-    # Since we're in dry-run mode, the real config should not be modified
-
-
-def test_dryrun_config_read_still_works(tmp_path: Path) -> None:
-    """Test that dry-run GlobalConfigOps read operations still work."""
-    ctx = create_context(dry_run=True)
-
-    # Read operations should work even in dry-run mode
-    # This may raise FileNotFoundError if config doesn't exist, which is expected
-    try:
-        _ = ctx.global_config_ops.get_workstacks_root()
-        # If it succeeds, that's fine
-    except FileNotFoundError:
-        # If it fails because config doesn't exist, that's also fine
-        pass
+# def test_dryrun_config_read_still_works(tmp_path: Path) -> None:
+#     """Test that dry-run GlobalConfigOps read operations still work."""
+#     # REMOVED: GlobalConfig is now a simple dataclass, no .get_workstacks_root() method
 
 
 def test_dryrun_graphite_operations(tmp_path: Path) -> None:

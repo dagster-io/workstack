@@ -412,8 +412,12 @@ def test_format_branches_with_missing_commit_message() -> None:
 
 def test_format_branches_with_no_commit_sha() -> None:
     """Test tree formatting when commit SHA is None."""
-    # Arrange: Branch without SHA
-    branches = {"main": BranchMetadata.trunk("main", commit_sha=None)}
+    # Arrange: Branch without SHA (create directly to avoid auto-generation)
+    branches = {
+        "main": BranchMetadata(
+            name="main", parent=None, children=[], is_trunk=True, commit_sha=None
+        )
+    }
 
     git_ops = FakeGitOps()
     repo_root = Path("/test/repo")

@@ -11,6 +11,7 @@ from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
 from workstack.core.global_config import GlobalConfig
+from workstack.core.graphite_ops import RealGraphiteOps
 
 
 def setup_graphite_stack(
@@ -91,9 +92,12 @@ def test_switch_up_with_existing_worktree() -> None:
             show_pr_checks=False,
         )
 
+        graphite_ops = RealGraphiteOps()
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -152,9 +156,12 @@ def test_switch_up_at_top_of_stack() -> None:
             show_pr_checks=False,
         )
 
+        graphite_ops = RealGraphiteOps()
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -200,9 +207,12 @@ def test_switch_up_child_has_no_worktree() -> None:
             show_pr_checks=False,
         )
 
+        graphite_ops = RealGraphiteOps()
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -255,9 +265,12 @@ def test_switch_down_with_existing_worktree() -> None:
             show_pr_checks=False,
         )
 
+        graphite_ops = RealGraphiteOps()
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -309,9 +322,12 @@ def test_switch_down_to_trunk_root() -> None:
             show_pr_checks=False,
         )
 
+        graphite_ops = RealGraphiteOps()
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -358,9 +374,12 @@ def test_switch_down_at_trunk() -> None:
             show_pr_checks=False,
         )
 
+        graphite_ops = RealGraphiteOps()
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -408,9 +427,12 @@ def test_switch_down_parent_has_no_worktree() -> None:
             show_pr_checks=False,
         )
 
+        graphite_ops = RealGraphiteOps()
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -441,9 +463,12 @@ def test_switch_graphite_not_enabled() -> None:
             show_pr_checks=False,
         )
 
+        graphite_ops = RealGraphiteOps()
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -479,9 +504,12 @@ def test_switch_up_and_down_mutually_exclusive() -> None:
             show_pr_checks=False,
         )
 
+        graphite_ops = RealGraphiteOps()
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -511,9 +539,12 @@ def test_switch_name_with_up_mutually_exclusive() -> None:
             show_pr_checks=False,
         )
 
+        graphite_ops = RealGraphiteOps()
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -544,9 +575,12 @@ def test_switch_detached_head() -> None:
             show_pr_checks=False,
         )
 
+        graphite_ops = RealGraphiteOps()
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -609,9 +643,12 @@ def test_switch_up_with_mismatched_worktree_name() -> None:
             show_pr_checks=False,
         )
 
+        graphite_ops = RealGraphiteOps()
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -684,9 +721,12 @@ def test_switch_down_with_mismatched_worktree_name() -> None:
             show_pr_checks=False,
         )
 
+        graphite_ops = RealGraphiteOps()
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 

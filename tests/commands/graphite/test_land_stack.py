@@ -30,6 +30,7 @@ class SimulatedWorkstackEnv:
         """
         self.root_worktree = root_worktree
         self.workstacks_root = workstacks_root
+        self.cwd = root_worktree  # Current working directory (starts at root)
         self._linked_worktrees: dict[str, Path] = {}  # Track branch -> worktree path
 
     def create_linked_worktree(self, name: str, branch: str, *, chdir: bool) -> Path:
@@ -61,6 +62,7 @@ class SimulatedWorkstackEnv:
         # Change directory if requested
         if chdir:
             os.chdir(linked_wt)
+            self.cwd = linked_wt  # Update current working directory
 
         # Track the mapping for build_ops_from_branches()
         self._linked_worktrees[branch] = linked_wt
@@ -252,13 +254,13 @@ def test_land_stack_requires_graphite() -> None:
             show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -298,13 +300,13 @@ def test_land_stack_fails_on_detached_head() -> None:
 
         graphite_ops = FakeGraphiteOps()
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -352,13 +354,13 @@ def test_land_stack_fails_with_uncommitted_changes() -> None:
             },
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -404,13 +406,13 @@ def test_land_stack_fails_on_trunk_branch() -> None:
             },
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -455,13 +457,13 @@ def test_land_stack_fails_when_branch_not_tracked() -> None:
             stacks={},
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -521,13 +523,13 @@ def test_land_stack_fails_when_pr_missing() -> None:
             }
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -582,13 +584,13 @@ def test_land_stack_fails_when_pr_closed() -> None:
             }
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -652,13 +654,13 @@ def test_land_stack_gets_branches_to_land_correctly() -> None:
             }
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -737,13 +739,13 @@ def test_land_stack_from_top_of_stack_lands_all_branches() -> None:
             }
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -798,13 +800,13 @@ def test_land_stack_fails_when_branches_in_multiple_worktrees() -> None:
             }
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -870,13 +872,13 @@ def test_land_stack_succeeds_when_all_branches_in_current_worktree() -> None:
             }
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -948,13 +950,13 @@ def test_land_stack_refreshes_metadata_after_sync() -> None:
             }
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -1005,13 +1007,14 @@ def test_land_stack_from_linked_worktree_on_branch_being_landed() -> None:
             }
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
             dry_run=False,
+            cwd=env.cwd,
         )
 
         # Try to land feat-1 from the linked worktree
@@ -1079,13 +1082,14 @@ def test_land_stack_switches_to_root_when_run_from_linked_worktree() -> None:
             }
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
             dry_run=False,
+            cwd=env.cwd,
         )
 
         # Run land-stack with --dry-run to avoid subprocess failures
@@ -1111,9 +1115,7 @@ def test_land_stack_script_mode_accepts_flag() -> None:
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
                 "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
-                "feature-1": BranchMetadata.branch(
-                    "feature-1", "main", pr_number=123, commit_sha="def456"
-                ),
+                "feature-1": BranchMetadata.branch("feature-1", "main", commit_sha="def456"),
             },
             current_branch="feature-1",
         )
@@ -1129,13 +1131,14 @@ def test_land_stack_script_mode_accepts_flag() -> None:
             show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
             dry_run=False,
+            cwd=env.cwd,
         )
 
         # Act: Run with --script flag (this is what shell wrapper will call)

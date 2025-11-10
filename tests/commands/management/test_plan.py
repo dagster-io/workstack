@@ -1,5 +1,6 @@
 import os
 import subprocess
+from datetime import datetime
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -48,8 +49,12 @@ def test_create_with_plan_file(tmp_path: Path) -> None:
 
     assert result.returncode == 0, f"Command failed: {result.stderr}"
 
-    # Verify worktree was created with sanitized name
-    worktree_path = workstacks_root / "repo" / "add-auth-feature"
+    # --plan flag adds date suffix in format -YY-MM-DD
+    date_suffix = datetime.now().strftime("%y-%m-%d")
+    expected_name = f"add-auth-feature-{date_suffix}"
+
+    # Verify worktree was created with sanitized name and date suffix
+    worktree_path = workstacks_root / "repo" / expected_name
     assert worktree_path.exists()
     assert worktree_path.is_dir()
 
@@ -104,8 +109,12 @@ def test_create_with_plan_name_sanitization(tmp_path: Path) -> None:
 
     assert result.returncode == 0, f"Command failed: {result.stderr}"
 
-    # Verify worktree name is lowercase with hyphens and "plan" removed
-    worktree_path = workstacks_root / "repo" / "my-cool-file"
+    # --plan flag adds date suffix in format -YY-MM-DD
+    date_suffix = datetime.now().strftime("%y-%m-%d")
+    expected_name = f"my-cool-file-{date_suffix}"
+
+    # Verify worktree name is lowercase with hyphens, "plan" removed, and date suffix added
+    worktree_path = workstacks_root / "repo" / expected_name
     assert worktree_path.exists()
 
     # Verify plan was moved

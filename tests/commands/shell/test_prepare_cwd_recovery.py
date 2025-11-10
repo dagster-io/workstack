@@ -12,7 +12,9 @@ from workstack.core.context import WorkstackContext
 from workstack.core.global_config import GlobalConfig
 
 
-def build_ctx(repo_root: Path | None, workstacks_root: Path) -> WorkstackContext:
+def build_ctx(
+    repo_root: Path | None, workstacks_root: Path, cwd: Path | None = None
+) -> WorkstackContext:
     """Create a WorkstackContext with test fakes."""
     git_common_dirs: dict[Path, Path] = {}
     if repo_root is not None:
@@ -28,7 +30,8 @@ def build_ctx(repo_root: Path | None, workstacks_root: Path) -> WorkstackContext
     )
     return create_test_context(
         git_ops=git_ops,
-        global_config_ops=global_config_ops,
+        global_config=global_config_ops,
+        cwd=cwd or repo_root or workstacks_root,
         dry_run=False,
     )
 
@@ -42,7 +45,7 @@ def test_prepare_cwd_recovery_outputs_script(tmp_path: Path) -> None:
     workstacks_root = tmp_path / "workstacks"
     workstacks_root.mkdir()
 
-    ctx = build_ctx(repo, workstacks_root)
+    ctx = build_ctx(repo, workstacks_root, cwd=repo)
 
     runner = CliRunner()
 

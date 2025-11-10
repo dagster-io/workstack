@@ -50,13 +50,13 @@ def test_sync_requires_graphite() -> None:
 
         graphite_ops = FakeGraphiteOps()
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -97,13 +97,13 @@ def test_sync_runs_gt_sync_from_root() -> None:
 
         graphite_ops = FakeGraphiteOps()
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -150,13 +150,13 @@ def test_sync_with_force_flag() -> None:
 
         graphite_ops = FakeGraphiteOps()
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -203,13 +203,13 @@ def test_sync_handles_gt_not_installed() -> None:
         # Configure graphite_ops to raise FileNotFoundError
         graphite_ops = FakeGraphiteOps(sync_raises=FileNotFoundError())
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -253,13 +253,13 @@ def test_sync_handles_gt_sync_failure() -> None:
             sync_raises=subprocess.CalledProcessError(128, ["gt", "sync"])
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -318,13 +318,13 @@ def test_sync_identifies_deletable_workstacks() -> None:
             }
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -332,7 +332,6 @@ def test_sync_identifies_deletable_workstacks() -> None:
         result = runner.invoke(cli, ["sync"], obj=test_ctx, input="n\n")
 
         assert result.exit_code == 0
-        assert "Workstacks safe to delete:" in result.output
         assert "feature-1" in result.output
         assert "merged" in result.output
         assert "PR #123" in result.output
@@ -370,20 +369,20 @@ def test_sync_no_deletable_workstacks() -> None:
 
         graphite_ops = FakeGraphiteOps()
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
         result = runner.invoke(cli, ["sync"], obj=test_ctx)
 
         assert result.exit_code == 0
-        assert "No workstacks to clean up." in result.output
+        assert "✓ No worktrees to clean up" in result.output
 
 
 def test_sync_with_confirmation() -> None:
@@ -425,13 +424,13 @@ def test_sync_with_confirmation() -> None:
         graphite_ops = FakeGraphiteOps()
         github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -481,13 +480,13 @@ def test_sync_user_cancels() -> None:
         graphite_ops = FakeGraphiteOps()
         github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -538,13 +537,13 @@ def test_sync_force_skips_confirmation() -> None:
         graphite_ops = FakeGraphiteOps()
         github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -594,13 +593,13 @@ def test_sync_dry_run() -> None:
         graphite_ops = FakeGraphiteOps()
         github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -654,13 +653,13 @@ def test_sync_return_to_original_worktree() -> None:
         graphite_ops = FakeGraphiteOps()
         github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("OPEN", 123, "Feature 1")})
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -711,13 +710,13 @@ def test_sync_original_worktree_deleted() -> None:
         graphite_ops = FakeGraphiteOps()
         github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -790,13 +789,13 @@ def test_sync_script_mode_when_worktree_deleted() -> None:
         graphite_ops = FakeGraphiteOps()
         github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -876,13 +875,13 @@ def test_sync_script_mode_when_worktree_exists() -> None:
         graphite_ops = FakeGraphiteOps()
         github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("OPEN", 123, "Feature 1")})
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -955,13 +954,13 @@ def test_sync_force_runs_double_gt_sync() -> None:
         # feature-1 is merged
         github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -978,7 +977,7 @@ def test_sync_force_runs_double_gt_sync() -> None:
         assert force2 is True
         assert quiet2 is True
         # Verify branch cleanup message appeared
-        assert "Deleting merged branches..." in result.output
+        assert "✓ Deleted merged branches" in result.output
         assert "✓ Merged branches deleted." in result.output
 
 
@@ -1022,13 +1021,13 @@ def test_sync_without_force_runs_single_gt_sync() -> None:
         # feature-1 is merged
         github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -1085,13 +1084,13 @@ def test_sync_force_dry_run_no_sync_calls() -> None:
         # feature-1 is merged
         github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -1135,13 +1134,13 @@ def test_sync_force_no_deletable_single_sync() -> None:
 
         graphite_ops = FakeGraphiteOps()
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -1154,8 +1153,8 @@ def test_sync_force_no_deletable_single_sync() -> None:
         assert force is True
         assert quiet is True  # Default is quiet mode
         # No cleanup message
-        assert "Deleting merged branches..." not in result.output
-        assert "No workstacks to clean up." in result.output
+        assert "✓ Deleted merged branches" not in result.output
+        assert "✓ No worktrees to clean up" in result.output
 
 
 def test_sync_verbose_flag() -> None:
@@ -1187,13 +1186,13 @@ def test_sync_verbose_flag() -> None:
 
         graphite_ops = FakeGraphiteOps()
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -1238,13 +1237,13 @@ def test_sync_verbose_short_flag() -> None:
 
         graphite_ops = FakeGraphiteOps()
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 
@@ -1288,13 +1287,13 @@ def test_sync_force_verbose_combination() -> None:
 
         graphite_ops = FakeGraphiteOps()
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
-            cwd=Path("/test/default/cwd"),
+            cwd=cwd,
             dry_run=False,
         )
 

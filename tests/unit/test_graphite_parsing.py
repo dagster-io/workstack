@@ -169,7 +169,7 @@ def test_parse_graphite_cache_invalid_data():
     mf = result["missing-fields"]
     assert mf.parent is None
     assert mf.children == []
-    assert mf.is_trunk is False
+    assert mf.is_trunk is True  # Branches with no parent are trunk branches
 
 
 def test_graphite_url_to_github_url():

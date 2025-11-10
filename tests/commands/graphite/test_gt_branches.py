@@ -38,7 +38,7 @@ def test_graphite_branches_text_format(tmp_path: Path) -> None:
 
     ctx = create_test_context(
         git_ops=git_ops,
-        global_config_ops=global_config_ops,
+        global_config=global_config_ops,
         graphite_ops=graphite_ops,
     )
 
@@ -80,7 +80,7 @@ def test_graphite_branches_json_format(tmp_path: Path) -> None:
 
     ctx = create_test_context(
         git_ops=git_ops,
-        global_config_ops=global_config_ops,
+        global_config=global_config_ops,
         graphite_ops=graphite_ops,
     )
 
@@ -134,7 +134,7 @@ def test_graphite_branches_empty(tmp_path: Path) -> None:
 
     ctx = create_test_context(
         git_ops=git_ops,
-        global_config_ops=global_config_ops,
+        global_config=global_config_ops,
         graphite_ops=graphite_ops,
     )
 
@@ -167,7 +167,7 @@ def test_graphite_branches_graphite_disabled(tmp_path: Path) -> None:
 
     ctx = create_test_context(
         git_ops=git_ops,
-        global_config_ops=global_config_ops,
+        global_config=global_config_ops,
         graphite_ops=graphite_ops,
     )
 
@@ -205,7 +205,7 @@ def test_graphite_branches_multiple_children(tmp_path: Path) -> None:
 
     ctx = create_test_context(
         git_ops=git_ops,
-        global_config_ops=global_config_ops,
+        global_config=global_config_ops,
         graphite_ops=graphite_ops,
     )
 
@@ -249,7 +249,7 @@ def test_graphite_branches_linear_stack(tmp_path: Path) -> None:
 
     ctx = create_test_context(
         git_ops=git_ops,
-        global_config_ops=global_config_ops,
+        global_config=global_config_ops,
         graphite_ops=graphite_ops,
     )
 

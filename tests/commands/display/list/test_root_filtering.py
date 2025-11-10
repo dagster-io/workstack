@@ -94,11 +94,12 @@ def test_root_on_trunk_shows_only_trunk() -> None:
             show_pr_checks=False,
         )
 
-        RealGraphiteOps()
+        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -200,11 +201,12 @@ def test_root_on_non_trunk_shows_ancestors_only() -> None:
             show_pr_checks=False,
         )
 
-        RealGraphiteOps()
+        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 
@@ -317,11 +319,12 @@ def test_non_root_worktree_shows_descendants_with_worktrees() -> None:
             show_pr_checks=False,
         )
 
-        RealGraphiteOps()
+        graphite_ops = RealGraphiteOps()
 
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 

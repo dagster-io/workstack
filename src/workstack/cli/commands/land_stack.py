@@ -1,3 +1,4 @@
+import os
 import subprocess
 from pathlib import Path
 from typing import NamedTuple
@@ -430,6 +431,12 @@ def _cleanup_and_navigate(
 
     # Get last merged branch to find next unmerged child
     last_merged = merged_branches[-1] if merged_branches else None
+
+    # Step 0: Switch to root worktree before cleanup
+    # This prevents shell from being left in a destroyed worktree directory
+    # Pattern mirrors sync.py:123-125
+    if Path.cwd().resolve() != repo_root:
+        os.chdir(repo_root)
 
     # Step 1: Checkout main
     if not dry_run:

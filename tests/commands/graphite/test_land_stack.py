@@ -1157,3 +1157,79 @@ def test_land_stack_from_linked_worktree_on_branch_being_landed() -> None:
         assert result.exit_code == 0
         assert "Landing 1 PR" in result.output
         assert "feat-1" in result.output
+
+
+def test_land_stack_switches_to_root_when_run_from_linked_worktree() -> None:
+    """Test that land-stack switches to root worktree before cleanup.
+
+    Scenario: User is in a linked worktree that will be destroyed during land-stack.
+    Without the fix, the user's shell ends up in a destroyed directory.
+
+    Bug: land-stack runs cleanup operations (including workstack sync -f) which
+    destroys worktrees. If the current directory is one of those worktrees, the
+    shell is left in a deleted directory.
+
+    Fix: Before cleanup, check if Path.cwd() != repo.root and call os.chdir(repo.root).
+    """
+    runner = CliRunner()
+    with simulated_workstack_env(runner) as env:
+        # Create linked worktree for feat-1 and change to it
+        linked_wt = env.create_linked_worktree(name="feat-1-work", branch="feat-1", chdir=True)
+
+        # Verify we're in the linked worktree
+        assert Path.cwd() == linked_wt
+
+        # Build ops for simple stack: main → feat-1
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata(
+                    name="main",
+                    parent=None,
+                    children=["feat-1"],
+                    commit_sha="abc123",
+                    is_trunk=True,
+                ),
+                "feat-1": BranchMetadata(
+                    name="feat-1",
+                    parent="main",
+                    children=None,
+                    commit_sha="def456",
+                    is_trunk=False,
+                ),
+            },
+            current_branch="feat-1",
+        )
+
+        global_config_ops = FakeGlobalConfigOps(
+            workstacks_root=env.workstacks_root,
+            use_graphite=True,
+        )
+
+        github_ops = FakeGitHubOps(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Add feature 1"),
+            }
+        )
+
+        test_ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            graphite_ops=graphite_ops,
+            github_ops=github_ops,
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+        )
+
+        # Run land-stack with --dry-run to avoid subprocess failures
+        # Note: cleanup still executes in dry-run mode, directory switch still happens
+        result = runner.invoke(cli, ["land-stack", "--dry-run"], obj=test_ctx)
+
+        # Verify the command completed
+        assert result.exit_code == 0
+
+        # CRITICAL: Verify working directory is now root worktree (not the linked worktree)
+        # This proves the fix moved us before destroying the linked worktree
+        assert Path.cwd() == env.root_worktree
+
+        # Verify we're not in a destroyed/invalid directory
+        assert Path.cwd().exists()

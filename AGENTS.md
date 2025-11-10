@@ -307,6 +307,40 @@ Given stack: `main → feat-1 → feat-2 → feat-3`
 - Always specify `encoding="utf-8"`
 - Check `.exists()` before path operations
 
+### Context Regeneration
+
+**When to regenerate context:**
+
+After filesystem mutations that invalidate `ctx.cwd`:
+
+- After `os.chdir()` calls
+- After worktree removal (if removed current directory)
+- After switching repositories
+
+**How to regenerate:**
+
+Use `regenerate_context()` from `workstack.core.context`:
+
+```python
+from workstack.core.context import regenerate_context
+
+# After os.chdir()
+os.chdir(new_directory)
+ctx = regenerate_context(ctx, repo_root=repo.root)
+
+# After worktree removal
+if removed_current_worktree:
+    os.chdir(safe_directory)
+    ctx = regenerate_context(ctx, repo_root=repo.root)
+```
+
+**Why regenerate:**
+
+- `ctx.cwd` is captured once at CLI entry point
+- After `os.chdir()`, `ctx.cwd` becomes stale
+- Stale `ctx.cwd` causes `FileNotFoundError` in operations that use it
+- Regeneration creates NEW context with fresh `cwd` and `trunk_branch`
+
 ### CLI Development (Click)
 
 - Use `click.echo()` for output (not `print()`)

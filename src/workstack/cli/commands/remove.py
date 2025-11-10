@@ -110,7 +110,10 @@ def _remove_worktree(
     # Validate worktree name before any operations
     validate_worktree_name_for_removal(name)
 
-    repo = discover_repo_context(ctx, ctx.cwd)
+    # Use Path.cwd() instead of ctx.cwd because this function may be called
+    # after os.chdir() (e.g., from sync.py), making ctx.cwd stale.
+    # We need the actual current directory to discover the repo correctly.
+    repo = discover_repo_context(ctx, Path.cwd())
     workstacks_dir = ensure_workstacks_dir(repo)
     wt_path = worktree_path_for(workstacks_dir, name)
 

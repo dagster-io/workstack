@@ -6,7 +6,7 @@ from typing import NamedTuple
 import click
 
 from workstack.cli.core import discover_repo_context
-from workstack.core.context import WorkstackContext
+from workstack.core.context import WorkstackContext, regenerate_context
 
 
 def _emit(message: str, *, script_mode: bool, error: bool = False) -> None:
@@ -479,8 +479,9 @@ def _cleanup_and_navigate(
     # Step 0: Switch to root worktree before cleanup
     # This prevents shell from being left in a destroyed worktree directory
     # Pattern mirrors sync.py:123-125
-    if Path.cwd().resolve() != repo_root:
+    if ctx.cwd.resolve() != repo_root:
         os.chdir(repo_root)
+        ctx = regenerate_context(ctx, repo_root=repo_root)
 
     # Step 1: Checkout main
     if not dry_run:

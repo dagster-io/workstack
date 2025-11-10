@@ -169,96 +169,63 @@ This command succeeds when ALL of the following are true:
 
 You are executing the `/workstack:create-from-plan` command. Follow these steps carefully:
 
-### Step 1: Verify Scope and Constraints
-
-**Error Handling Template:**
-All errors must follow this format:
-
-```
-❌ Error: [Brief description in 5-10 words]
-
-Details: [Specific error message, relevant context, or diagnostic info]
-
-Suggested action: [1-3 concrete steps to resolve]
-```
-
-**YOUR ONLY TASKS:**
-
-1. Extract implementation plan from conversation
-2. Interactively enhance plan for autonomous execution
-3. Apply guidance modifications if provided
-4. Save enhanced plan to disk as markdown file
-5. Run `workstack create --plan <file>`
-6. Display next steps to user
-
-**FORBIDDEN ACTIONS:**
-
-- Writing ANY code files (.py, .ts, .js, etc.)
-- Making ANY edits to existing codebase
-- Running ANY commands except `git rev-parse` and `workstack create`
-- Implementing ANY part of the plan
-
-This command sets up the workspace. Implementation happens in the worktree via `/workstack:implement-plan`.
-
-**Plan Mode Handling:**
-
-This command cannot run while in plan mode. The workflow is:
-
-1. User presents a plan (optionally in plan mode)
-2. User invokes `/workstack:create-from-plan`
-3. If in plan mode, command informs user to exit plan mode and rerun, then aborts
-4. If not in plan mode, extracts, enhances, and saves the plan to disk
-5. Creates worktree with the plan
-6. User runs: `workstack switch <name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
-7. Implementation happens in the new worktree
-
-**Remember:** This command only prepares the workspace - actual code implementation happens after switching to the worktree.
-
 ### Step 1: Check Plan Mode and Abort (If Active)
 
-**Check if currently in plan mode:**
+**Detection Strategy:**
 
-Plan mode is indicated by the presence of an explicit system reminder tag in the **CURRENT user message context** (not historical messages).
+Plan mode blocks write operations. Test this directly by attempting a harmless write operation.
 
-**How to detect plan mode:**
+**How to Detect Plan Mode:**
 
-Check for this **exact system reminder tag** in the **MOST RECENT system reminders** (those appearing immediately before/with the user's current request):
+1. **Generate unique temp filename:**
+   - Use current timestamp or random string to ensure uniqueness
+   - Format: `/tmp/claude-plan-test-{unique-id}.tmp`
+   - Example: `/tmp/claude-plan-test-1699564832.tmp`
+
+2. **Attempt to create test file:**
+   - Use Write tool to create the temp file
+   - Content: Single space character ` ` (minimal content)
+   - This tests write capability without side effects
+
+3. **Interpret the result:**
+   - **If Write succeeds** → Plan mode is OFF
+     - Immediately use Bash to delete: `rm /tmp/claude-plan-test-{unique-id}.tmp`
+     - Proceed to Step 2
+   - **If Write fails with ANY error** → Plan mode is ON
+     - Display plan mode warning (below)
+     - Abort execution immediately
+
+**Why This Works:**
+
+- **Deterministic**: Tests actual write capability, not proxy signals
+- **Reliable**: Directly tests the restriction that matters for this command
+- **No false positives**: If we can write to /tmp/, we can write plan files
+- **No false negatives**: If plan mode blocks writes, this catches it
+- **Safe**: /tmp/ location won't pollute repository or user files
+- **Self-cleaning**: Temp file deleted immediately after successful test
+
+**If Plan Mode is DETECTED (Write failed):**
+
+Display this message and STOP execution immediately:
 
 ```
-<system-reminder>
-Plan mode is active. The user indicated that they do not want you to execute yet...
-</system-reminder>
+⚠️ Plan Mode Detected
+
+This command cannot run while plan mode is active (write operations are blocked).
+
+To proceed:
+1. Exit plan mode by pressing Shift+Tab
+2. Rerun this command: /workstack:create-from-plan
+
+Note: This command requires file write permissions to save plans and create worktrees.
 ```
 
-**Detection logic:**
+**DO NOT proceed to Step 2 if plan mode is detected.**
 
-- If this system reminder tag appears in the CURRENT message context → Plan mode is ACTIVE
-- If this system reminder tag is absent from recent context → Plan mode is NOT active
-- **CRITICAL**: Ignore system reminders from earlier in conversation history
-- Only check reminders that appear with or immediately before the current command invocation
-- Do NOT use conversation content, context, or other heuristics to determine plan mode status
-- ONLY the presence of this explicit system tag in CURRENT context indicates plan mode
+**If Plan Mode is NOT detected (Write succeeded):**
 
-**If in plan mode:**
-
-1. Do NOT proceed with any other steps
-2. Display this message to the user:
-
-```
-⚠️ This command cannot run in plan mode.
-
-Please exit plan mode first, then rerun this command:
-
-/workstack:create-from-plan
-```
-
-3. STOP execution immediately - do NOT continue to Step 2
-
-**If NOT in plan mode:**
-
-- Skip this step and proceed directly to Step 2
-
-This ensures the command only runs in execution mode, not planning mode.
+- Clean up temp file with: `rm /tmp/claude-plan-test-{unique-id}.tmp`
+- Continue to Step 2 normally
 
 ### Step 2: Verify Scope and Constraints
 
@@ -1278,7 +1245,4 @@ Location: `<worktree-path>`
 - User must manually run `workstack switch` and `/workstack:implement-plan` to begin implementation
 - The `--permission-mode acceptEdits` flag is included to automatically accept edits during implementation
 - Always provide clear feedback at each step
-
-```
-
-```
+- **Plan mode detection uses write-test** - attempts temp file creation to verify write capability

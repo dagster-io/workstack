@@ -138,6 +138,28 @@ class GitOps(ABC):
         ...
 
     @abstractmethod
+    def create_branch(self, cwd: Path, branch_name: str, start_point: str) -> None:
+        """Create a new branch without checking it out.
+
+        Args:
+            cwd: Working directory to run command in
+            branch_name: Name of the branch to create
+            start_point: Commit/branch to base the new branch on
+        """
+        ...
+
+    @abstractmethod
+    def delete_branch(self, cwd: Path, branch_name: str, *, force: bool) -> None:
+        """Delete a local branch.
+
+        Args:
+            cwd: Working directory to run command in
+            branch_name: Name of the branch to delete
+            force: Use -D (force delete) instead of -d
+        """
+        ...
+
+    @abstractmethod
     def delete_branch_with_graphite(self, repo_root: Path, branch: str, *, force: bool) -> None:
         """Delete a branch using Graphite's gt delete command."""
         ...
@@ -463,6 +485,27 @@ class RealGitOps(GitOps):
             text=True,
         )
 
+    def create_branch(self, cwd: Path, branch_name: str, start_point: str) -> None:
+        """Create a new branch without checking it out."""
+        subprocess.run(
+            ["git", "branch", branch_name, start_point],
+            cwd=cwd,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+    def delete_branch(self, cwd: Path, branch_name: str, *, force: bool) -> None:
+        """Delete a local branch."""
+        flag = "-D" if force else "-d"
+        subprocess.run(
+            ["git", "branch", flag, branch_name],
+            cwd=cwd,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
     def delete_branch_with_graphite(self, repo_root: Path, branch: str, *, force: bool) -> None:
         """Delete a branch using Graphite's gt delete command."""
         cmd = ["gt", "delete", branch]
@@ -673,6 +716,15 @@ class DryRunGitOps(GitOps):
     def checkout_detached(self, cwd: Path, ref: str) -> None:
         """Checkout detached HEAD (delegates to wrapped - considered read-only for dry-run)."""
         return self._wrapped.checkout_detached(cwd, ref)
+
+    def create_branch(self, cwd: Path, branch_name: str, start_point: str) -> None:
+        """Print dry-run message instead of creating branch."""
+        click.echo(f"[DRY RUN] Would run: git branch {branch_name} {start_point}", err=True)
+
+    def delete_branch(self, cwd: Path, branch_name: str, *, force: bool) -> None:
+        """Print dry-run message instead of deleting branch."""
+        flag = "-D" if force else "-d"
+        click.echo(f"[DRY RUN] Would run: git branch {flag} {branch_name}", err=True)
 
     # Destructive operations: print dry-run message instead of executing
 

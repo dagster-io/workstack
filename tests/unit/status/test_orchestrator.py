@@ -501,16 +501,7 @@ def test_orchestrator_multiple_collector_types(tmp_path: Path) -> None:
             return True
 
         def collect(self, ctx: WorkstackContext, worktree_path: Path, repo_root: Path) -> object:
-            return GitStatus(
-                branch="test",
-                clean=True,
-                ahead=0,
-                behind=0,
-                staged_files=[],
-                modified_files=[],
-                untracked_files=[],
-                recent_commits=[],
-            )
+            return GitStatus.clean_status("test")
 
     class PlanCollector(StatusCollector):
         @property

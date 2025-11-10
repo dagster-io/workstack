@@ -77,8 +77,9 @@ def test_renderer_dirty_working_tree() -> None:
         ),
     ]
 
-    # Note: Can't use GitStatus.dirty_status() + with_commits() since they return different objects
-    # This test needs all features, so manual construction is still clearest
+    # Manual construction needed: test requires both dirty status AND commits
+    # Factory methods don't support this combination (.dirty_status() has no commits,
+    # .with_commits() assumes clean status)
     git_status = GitStatus(
         branch="feature",
         clean=False,
@@ -528,6 +529,7 @@ def test_renderer_detached_head() -> None:
         is_root=False,
     )
 
+    # Manual construction needed: detached HEAD (branch=None) not supported by factories
     git_status = GitStatus(
         branch=None,
         clean=True,
@@ -610,6 +612,7 @@ def test_renderer_full_status() -> None:
         Path("/tmp/test"), "feature-2", name="test-worktree"
     )
 
+    # Manual construction needed: test requires both dirty status AND commits
     git_status = GitStatus(
         branch="feature-2",
         clean=False,

@@ -170,6 +170,17 @@ class GitHubGtKitOps(ABC):
             True on success, False on failure
         """
 
+    @abstractmethod
+    def get_graphite_pr_url(self, pr_number: int) -> str | None:
+        """Get Graphite PR URL for given PR number.
+
+        Args:
+            pr_number: PR number
+
+        Returns:
+            Graphite URL or None if repo info cannot be determined
+        """
+
 
 class GtKitOps(ABC):
     """Composite interface combining all GT kit operations.

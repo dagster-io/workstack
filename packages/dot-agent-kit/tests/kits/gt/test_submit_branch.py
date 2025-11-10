@@ -169,9 +169,7 @@ class TestPostAnalysisExecution:
         # No PR initially (will be created)
 
         result = execute_post_analysis(
-            commit_message="feat: add feature",
-            pr_title="Add feature",
-            pr_body="Full description",
+            commit_message="Add feature\n\nFull description",
             ops=ops,
         )
 
@@ -191,9 +189,7 @@ class TestPostAnalysisExecution:
         )
 
         result = execute_post_analysis(
-            commit_message="feat: add feature",
-            pr_title="Add feature",
-            pr_body="Full description",
+            commit_message="Add feature\n\nFull description",
             ops=ops,
         )
 
@@ -209,9 +205,7 @@ class TestPostAnalysisExecution:
         # No commits, so amend will fail
 
         result = execute_post_analysis(
-            commit_message="feat: add feature",
-            pr_title="Add feature",
-            pr_body="Full description",
+            commit_message="Add feature\n\nFull description",
             ops=ops,
         )
 
@@ -230,9 +224,7 @@ class TestPostAnalysisExecution:
         )
 
         result = execute_post_analysis(
-            commit_message="feat: add feature",
-            pr_title="Add feature",
-            pr_body="Full description",
+            commit_message="Add feature\n\nFull description",
             ops=ops,
         )
 
@@ -254,9 +246,7 @@ class TestPostAnalysisExecution:
         )
 
         result = execute_post_analysis(
-            commit_message="feat: add feature",
-            pr_title="Add feature",
-            pr_body="Full description",
+            commit_message="Add feature\n\nFull description",
             ops=ops,
         )
 
@@ -278,9 +268,7 @@ class TestPostAnalysisExecution:
         )
 
         result = execute_post_analysis(
-            commit_message="feat: add feature",
-            pr_title="Add feature",
-            pr_body="Full description",
+            commit_message="Add feature\n\nFull description",
             ops=ops,
         )
 
@@ -301,9 +289,7 @@ class TestPostAnalysisExecution:
         )
 
         result = execute_post_analysis(
-            commit_message="feat: add feature",
-            pr_title="Add feature",
-            pr_body="Full description",
+            commit_message="Add feature\n\nFull description",
             ops=ops,
         )
 
@@ -355,10 +341,8 @@ class TestSubmitBranchCLI:
 
         original_execute = submit_module.execute_post_analysis
 
-        def patched_execute(
-            commit_message: str, pr_title: str, pr_body: str, ops_param: object | None = None
-        ) -> object:
-            return original_execute(commit_message, pr_title, pr_body, ops)
+        def patched_execute(commit_message: str, ops_param: object | None = None) -> object:
+            return original_execute(commit_message, ops)
 
         submit_module.execute_post_analysis = patched_execute
 
@@ -368,11 +352,7 @@ class TestSubmitBranchCLI:
                 [
                     "post-analysis",
                     "--commit-message",
-                    "feat: add feature",
-                    "--pr-title",
-                    "Add feature",
-                    "--pr-body",
-                    "Description",
+                    "Add feature\n\nDescription",
                 ],
             )
 

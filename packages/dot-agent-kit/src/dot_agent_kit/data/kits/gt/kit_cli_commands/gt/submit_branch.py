@@ -11,15 +11,15 @@ Phase 1 (pre-analysis):
 5. Return branch info for AI analysis
 
 Phase 2 (post-analysis):
-1. Amend commit with AI-generated commit message
-2. Submit branch with gt submit --publish --no-interactive --restack
-3. Check if PR exists and update metadata (title, body)
-4. Return PR info and status
+1. Split commit message into PR title (first line) and body (remaining lines)
+2. Amend commit with AI-generated commit message
+3. Submit branch with gt submit --publish --no-interactive --restack
+4. Check if PR exists and update metadata (title, body)
+5. Return PR info and status
 
 Usage:
     dot-agent run gt submit-branch pre-analysis
     dot-agent run gt submit-branch post-analysis --commit-message "..."
-        --pr-title "..." --pr-body "..."
 
 Output:
     JSON object with either success or error information
@@ -112,6 +112,7 @@ class PostAnalysisResult:
     success: bool
     pr_number: int | None
     pr_url: str
+    graphite_url: str
     branch_name: str
     message: str
 
@@ -223,11 +224,16 @@ def execute_pre_analysis(ops: GtKitOps | None = None) -> PreAnalysisResult | Pre
 
 
 def execute_post_analysis(
-    commit_message: str, pr_title: str, pr_body: str, ops: GtKitOps | None = None
+    commit_message: str, ops: GtKitOps | None = None
 ) -> PostAnalysisResult | PostAnalysisError:
     """Execute the post-analysis phase. Returns success or error result."""
     if ops is None:
         ops = RealGtKitOps()
+
+    # Split commit message into PR title and body
+    lines = commit_message.split("\n", 1)
+    pr_title = lines[0]
+    pr_body = lines[1].lstrip() if len(lines) > 1 else ""
 
     # Step 1: Get current branch for context
     branch_name = ops.git().get_current_branch()
@@ -294,9 +300,15 @@ def execute_post_analysis(
     # Step 5: Update PR metadata if PR exists
     pr_number = None
     pr_url = ""
+    graphite_url = ""
 
     if pr_info is not None:
         pr_number, pr_url = pr_info
+
+        # Get Graphite URL
+        graphite_url_result = ops.github().get_graphite_pr_url(pr_number)
+        if graphite_url_result is not None:
+            graphite_url = graphite_url_result
 
         if not ops.github().update_pr_metadata(pr_title, pr_body):
             return PostAnalysisError(
@@ -314,6 +326,7 @@ def execute_post_analysis(
         success=True,
         pr_number=pr_number,
         pr_url=pr_url,
+        graphite_url=graphite_url,
         branch_name=branch_name,
         message=message,
     )
@@ -350,22 +363,12 @@ def pre_analysis() -> None:
 @click.option(
     "--commit-message",
     required=True,
-    help="AI-generated commit message to use for the final commit",
+    help="AI-generated commit message (first line becomes PR title, rest becomes body)",
 )
-@click.option(
-    "--pr-title",
-    required=True,
-    help="Title for the pull request",
-)
-@click.option(
-    "--pr-body",
-    required=True,
-    help="Body content for the pull request",
-)
-def post_analysis(commit_message: str, pr_title: str, pr_body: str) -> None:
+def post_analysis(commit_message: str) -> None:
     """Execute post-analysis phase: amend commit and submit branch."""
     try:
-        result = execute_post_analysis(commit_message, pr_title, pr_body)
+        result = execute_post_analysis(commit_message)
         click.echo(json.dumps(asdict(result), indent=2))
 
         if isinstance(result, PostAnalysisError):

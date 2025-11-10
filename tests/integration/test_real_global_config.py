@@ -3,10 +3,10 @@ from unittest import mock
 
 import pytest
 
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from workstack.cli.commands.create import make_env_content
 from workstack.cli.commands.init import create_global_config, discover_presets
 from workstack.cli.config import load_config
+from workstack.core.global_config import GlobalConfig
 
 
 def test_load_config_defaults(tmp_path: Path) -> None:
@@ -46,10 +46,12 @@ def test_env_rendering(tmp_path: Path) -> None:
 
 def test_load_global_config_valid(tmp_path: Path) -> None:
     workstacks_root = tmp_path / "workstacks"
-    global_config_ops = FakeGlobalConfigOps(
+    global_config_ops = GlobalConfig(
         workstacks_root=workstacks_root,
         use_graphite=True,
         shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
     )
 
     assert global_config_ops.get_workstacks_root() == workstacks_root.resolve()
@@ -57,7 +59,13 @@ def test_load_global_config_valid(tmp_path: Path) -> None:
 
 
 def test_load_global_config_missing_file(tmp_path: Path) -> None:
-    global_config_ops = FakeGlobalConfigOps(exists=False)  # Config doesn't exist
+    global_config_ops = GlobalConfig(
+        workstacks_root=Path("/test/workstacks"),
+        use_graphite=False,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
+    )  # Config doesn't exist
 
     with pytest.raises(FileNotFoundError, match="Global config not found"):
         global_config_ops.get_workstacks_root()
@@ -83,10 +91,12 @@ def test_load_global_config_missing_workstacks_root(
 
 def test_load_global_config_use_graphite_defaults_false(tmp_path: Path) -> None:
     workstacks_root = tmp_path / "workstacks"
-    global_config_ops = FakeGlobalConfigOps(
+    global_config_ops = GlobalConfig(
         workstacks_root=workstacks_root,
         use_graphite=False,
         shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
     )
 
     assert global_config_ops.get_workstacks_root() == workstacks_root.resolve()
@@ -96,7 +106,13 @@ def test_load_global_config_use_graphite_defaults_false(tmp_path: Path) -> None:
 def test_create_global_config_creates_file(tmp_path: Path) -> None:
     from tests.fakes.shell_ops import FakeShellOps
 
-    global_config_ops = FakeGlobalConfigOps(exists=False)
+    global_config_ops = GlobalConfig(
+        workstacks_root=Path("/test/workstacks"),
+        use_graphite=False,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
+    )
 
     with mock.patch("workstack.cli.commands.init.detect_graphite", return_value=False):
         create_global_config(
@@ -131,7 +147,13 @@ def test_create_global_config_creates_parent_directory(tmp_path: Path) -> None:
 def test_create_global_config_detects_graphite(tmp_path: Path) -> None:
     from tests.fakes.shell_ops import FakeShellOps
 
-    global_config_ops = FakeGlobalConfigOps(exists=False)
+    global_config_ops = GlobalConfig(
+        workstacks_root=Path("/test/workstacks"),
+        use_graphite=False,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
+    )
 
     with mock.patch("workstack.cli.commands.init.detect_graphite", return_value=True):
         create_global_config(

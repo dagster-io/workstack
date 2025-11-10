@@ -8,9 +8,9 @@ import pytest
 from tests.fakes.context import create_test_context
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from workstack.core.github_ops import PullRequestInfo
+from workstack.core.global_config import GlobalConfig
 from workstack.status.collectors.github import GitHubPRCollector
 
 
@@ -65,7 +65,13 @@ def setup_collector(
         git_ops=git_ops,
         github_ops=FakeGitHubOps(prs=prs or {}),
         graphite_ops=graphite_ops,
-        global_config_ops=FakeGlobalConfigOps(show_pr_info=show_pr_info),
+        global_config_ops=GlobalConfig(
+            workstacks_root=Path("/test/workstacks"),
+            use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
+        ),
     )
 
     return GitHubPRCollector(), worktree_path, repo_root, ctx
@@ -259,7 +265,15 @@ def test_github_pr_collector_is_available(
     if path_exists:
         worktree_path.mkdir()
 
-    ctx = create_test_context(global_config_ops=FakeGlobalConfigOps(show_pr_info=show_pr_info))
+    ctx = create_test_context(
+        global_config=GlobalConfig(
+            workstacks_root=Path("/test/workstacks"),
+            use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=show_pr_info,
+            show_pr_checks=False,
+        )
+    )
     collector = GitHubPRCollector()
 
     assert collector.is_available(ctx, worktree_path) is expected

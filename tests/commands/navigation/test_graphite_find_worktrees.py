@@ -4,13 +4,15 @@ from pathlib import Path
 
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from tests.test_utils.graphite_helpers import setup_graphite_stack
+from workstack.cli.config import LoadedConfig
 from workstack.cli.graphite import find_worktree_for_branch, find_worktrees_containing_branch
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
+from workstack.core.global_config import GlobalConfig
+from workstack.core.repo_discovery import NoRepoSentinel
 
 
 def test_find_worktrees_containing_branch_single_match(tmp_path: Path) -> None:
@@ -53,11 +55,19 @@ def test_find_worktrees_containing_branch_single_match(tmp_path: Path) -> None:
 
     ctx = WorkstackContext(
         git_ops=git_ops,
-        global_config_ops=FakeGlobalConfigOps(),
+        global_config=GlobalConfig(
+            workstacks_root=Path("/test/workstacks"),
+            use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
+        ),
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),
         cwd=Path("/test/default/cwd"),
+        repo_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+        repo=NoRepoSentinel(),
         dry_run=False,
     )
 
@@ -111,11 +121,19 @@ def test_find_worktrees_containing_branch_multiple_matches(tmp_path: Path) -> No
 
     ctx = WorkstackContext(
         git_ops=git_ops,
-        global_config_ops=FakeGlobalConfigOps(),
+        global_config=GlobalConfig(
+            workstacks_root=Path("/test/workstacks"),
+            use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
+        ),
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),
         cwd=Path("/test/default/cwd"),
+        repo_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+        repo=NoRepoSentinel(),
         dry_run=False,
     )
 
@@ -160,11 +178,19 @@ def test_find_worktrees_containing_branch_no_match(tmp_path: Path) -> None:
 
     ctx = WorkstackContext(
         git_ops=git_ops,
-        global_config_ops=FakeGlobalConfigOps(),
+        global_config=GlobalConfig(
+            workstacks_root=Path("/test/workstacks"),
+            use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
+        ),
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),
         cwd=Path("/test/default/cwd"),
+        repo_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+        repo=NoRepoSentinel(),
         dry_run=False,
     )
 
@@ -211,11 +237,19 @@ def test_find_worktrees_containing_branch_detached_head(tmp_path: Path) -> None:
 
     ctx = WorkstackContext(
         git_ops=git_ops,
-        global_config_ops=FakeGlobalConfigOps(),
+        global_config=GlobalConfig(
+            workstacks_root=Path("/test/workstacks"),
+            use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
+        ),
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),
         cwd=Path("/test/default/cwd"),
+        repo_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+        repo=NoRepoSentinel(),
         dry_run=False,
     )
 
@@ -255,11 +289,19 @@ def test_find_worktrees_containing_branch_no_graphite_cache(tmp_path: Path) -> N
 
     ctx = WorkstackContext(
         git_ops=git_ops,
-        global_config_ops=FakeGlobalConfigOps(),
+        global_config=GlobalConfig(
+            workstacks_root=Path("/test/workstacks"),
+            use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
+        ),
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),
         cwd=Path("/test/default/cwd"),
+        repo_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+        repo=NoRepoSentinel(),
         dry_run=False,
     )
 

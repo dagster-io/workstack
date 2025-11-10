@@ -12,14 +12,16 @@ from click.testing import CliRunner
 
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from tests.test_utils.builders import PullRequestInfoBuilder
 from workstack.cli.cli import cli
+from workstack.cli.config import LoadedConfig
 from workstack.core.context import WorkstackContext
 from workstack.core.github_ops import PullRequestInfo
 from workstack.core.gitops import WorktreeInfo
+from workstack.core.global_config import GlobalConfig
+from workstack.core.repo_discovery import NoRepoSentinel
 
 
 def _setup_test_with_pr(
@@ -71,21 +73,25 @@ def _setup_test_with_pr(
     github_ops = FakeGitHubOps(prs={branch_name: pr_info})
 
     # Configure show_pr_info
-    global_config_ops = FakeGlobalConfigOps(
+    global_config_ops = GlobalConfig(
         workstacks_root=workstacks_root,
         use_graphite=True,
-        show_pr_info=show_pr_info,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
     )
 
     graphite_ops = FakeGraphiteOps()
 
     test_ctx = WorkstackContext(
         git_ops=git_ops,
-        global_config_ops=global_config_ops,
+        global_config=global_config_ops,
         github_ops=github_ops,
         graphite_ops=graphite_ops,
         shell_ops=FakeShellOps(),
         cwd=Path("/test/default/cwd"),
+        repo_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+        repo=NoRepoSentinel(),
         dry_run=False,
     )
 

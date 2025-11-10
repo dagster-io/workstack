@@ -18,11 +18,13 @@ from click.testing import CliRunner
 from tests.commands.display.list import strip_ansi
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps, WorktreeInfo
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.cli import cli
+from workstack.cli.config import LoadedConfig
 from workstack.core.context import WorkstackContext
+from workstack.core.global_config import GlobalConfig
+from workstack.core.repo_discovery import NoRepoSentinel
 
 
 @pytest.mark.parametrize("trunk_branch", ["main", "master"])
@@ -59,19 +61,23 @@ def test_list_with_trunk_branch(trunk_branch: str) -> None:
             current_branches={cwd: trunk_branch, feature_dir: "feature"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
             show_pr_info=False,
+            show_pr_checks=False,
         )
 
         ctx = WorkstackContext(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=FakeGraphiteOps(),
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
             cwd=Path("/test/default/cwd"),
+            repo_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+            repo=NoRepoSentinel(),
             dry_run=False,
         )
 

@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from workstack.status.models.status_data import WorktreeDisplayInfo
+from workstack.status.models.status_data import CommitInfo, GitStatus, WorktreeDisplayInfo
 
 
 def test_worktree_display_info_root_factory() -> None:
@@ -91,3 +91,131 @@ def test_worktree_display_info_feature_uses_path_name_by_default() -> None:
     # Assert
     assert worktree.name == "my-worktree-name"
     assert worktree.is_root is False
+
+
+# GitStatus Factory Method Tests
+
+
+def test_git_status_clean_status_factory() -> None:
+    """Test GitStatus.clean_status() factory method."""
+    # Act
+    status = GitStatus.clean_status("main")
+
+    # Assert
+    assert status.branch == "main"
+    assert status.clean is True
+    assert status.ahead == 0
+    assert status.behind == 0
+    assert status.staged_files == []
+    assert status.modified_files == []
+    assert status.untracked_files == []
+    assert status.recent_commits == []
+
+
+def test_git_status_clean_status_factory_with_ahead_behind() -> None:
+    """Test GitStatus.clean_status() with ahead/behind counts."""
+    # Act
+    status = GitStatus.clean_status("feature", ahead=2, behind=1)
+
+    # Assert
+    assert status.branch == "feature"
+    assert status.clean is True
+    assert status.ahead == 2
+    assert status.behind == 1
+    assert status.staged_files == []
+    assert status.modified_files == []
+    assert status.untracked_files == []
+
+
+def test_git_status_dirty_status_factory_with_modified() -> None:
+    """Test GitStatus.dirty_status() with modified files."""
+    # Act
+    status = GitStatus.dirty_status("feature", modified=["file.py", "other.py"])
+
+    # Assert
+    assert status.branch == "feature"
+    assert status.clean is False
+    assert status.modified_files == ["file.py", "other.py"]
+    assert status.staged_files == []
+    assert status.untracked_files == []
+    assert status.recent_commits == []
+
+
+def test_git_status_dirty_status_factory_with_staged() -> None:
+    """Test GitStatus.dirty_status() with staged files."""
+    # Act
+    status = GitStatus.dirty_status("feature", staged=["staged.py"])
+
+    # Assert
+    assert status.branch == "feature"
+    assert status.clean is False
+    assert status.staged_files == ["staged.py"]
+    assert status.modified_files == []
+    assert status.untracked_files == []
+
+
+def test_git_status_dirty_status_factory_with_untracked() -> None:
+    """Test GitStatus.dirty_status() with untracked files."""
+    # Act
+    status = GitStatus.dirty_status("feature", untracked=["new.py", "temp.txt"])
+
+    # Assert
+    assert status.branch == "feature"
+    assert status.clean is False
+    assert status.untracked_files == ["new.py", "temp.txt"]
+    assert status.staged_files == []
+    assert status.modified_files == []
+
+
+def test_git_status_dirty_status_factory_with_all_changes() -> None:
+    """Test GitStatus.dirty_status() with all change types."""
+    # Act
+    status = GitStatus.dirty_status(
+        "feature",
+        modified=["mod.py"],
+        staged=["staged.py"],
+        untracked=["new.py"],
+        ahead=1,
+        behind=2,
+    )
+
+    # Assert
+    assert status.branch == "feature"
+    assert status.clean is False
+    assert status.modified_files == ["mod.py"]
+    assert status.staged_files == ["staged.py"]
+    assert status.untracked_files == ["new.py"]
+    assert status.ahead == 1
+    assert status.behind == 2
+
+
+def test_git_status_with_commits_factory() -> None:
+    """Test GitStatus.with_commits() factory method."""
+    # Arrange
+    commit1 = CommitInfo(sha="abc123", message="First", author="Author", date="1 day ago")
+    commit2 = CommitInfo(sha="def456", message="Second", author="Author", date="2 days ago")
+
+    # Act
+    status = GitStatus.with_commits("main", [commit1, commit2])
+
+    # Assert
+    assert status.branch == "main"
+    assert status.clean is True
+    assert status.recent_commits == [commit1, commit2]
+    assert status.staged_files == []
+    assert status.modified_files == []
+    assert status.untracked_files == []
+
+
+def test_git_status_with_commits_factory_dirty() -> None:
+    """Test GitStatus.with_commits() with dirty working tree."""
+    # Arrange
+    commit = CommitInfo(sha="abc123", message="Test", author="Author", date="1 hour ago")
+
+    # Act
+    status = GitStatus.with_commits("feature", [commit], clean=False)
+
+    # Assert
+    assert status.branch == "feature"
+    assert status.clean is False
+    assert status.recent_commits == [commit]

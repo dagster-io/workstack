@@ -88,6 +88,134 @@ class GitStatus:
     untracked_files: list[str]
     recent_commits: list[CommitInfo]
 
+    @staticmethod
+    def clean_status(branch: str, ahead: int = 0, behind: int = 0) -> "GitStatus":
+        """Create clean status (no changes) for tests.
+
+        Args:
+            branch: Branch name
+            ahead: Commits ahead of remote (default: 0)
+            behind: Commits behind remote (default: 0)
+
+        Returns:
+            GitStatus with clean=True and empty file lists
+
+        Example:
+            Before (8 lines):
+                status = GitStatus(
+                    branch="test",
+                    clean=True,
+                    ahead=0,
+                    behind=0,
+                    staged_files=[],
+                    modified_files=[],
+                    untracked_files=[],
+                    recent_commits=[],
+                )
+
+            After (1 line):
+                status = GitStatus.clean_status("test")
+        """
+        return GitStatus(
+            branch=branch,
+            clean=True,
+            ahead=ahead,
+            behind=behind,
+            staged_files=[],
+            modified_files=[],
+            untracked_files=[],
+            recent_commits=[],
+        )
+
+    @staticmethod
+    def dirty_status(
+        branch: str,
+        *,
+        modified: list[str] | None = None,
+        staged: list[str] | None = None,
+        untracked: list[str] | None = None,
+        ahead: int = 0,
+        behind: int = 0,
+    ) -> "GitStatus":
+        """Create dirty status (with changes) for tests.
+
+        Args:
+            branch: Branch name
+            modified: Modified files (default: [])
+            staged: Staged files (default: [])
+            untracked: Untracked files (default: [])
+            ahead: Commits ahead of remote (default: 0)
+            behind: Commits behind remote (default: 0)
+
+        Returns:
+            GitStatus with clean=False and specified file lists
+
+        Example:
+            Before (9 lines):
+                status = GitStatus(
+                    branch="feature",
+                    clean=False,
+                    ahead=0,
+                    behind=0,
+                    staged_files=[],
+                    modified_files=["file.py"],
+                    untracked_files=[],
+                    recent_commits=[],
+                )
+
+            After (1 line):
+                status = GitStatus.dirty_status("feature", modified=["file.py"])
+        """
+        return GitStatus(
+            branch=branch,
+            clean=False,
+            ahead=ahead,
+            behind=behind,
+            staged_files=staged or [],
+            modified_files=modified or [],
+            untracked_files=untracked or [],
+            recent_commits=[],
+        )
+
+    @staticmethod
+    def with_commits(branch: str, commits: list[CommitInfo], clean: bool = True) -> "GitStatus":
+        """Create status with commit history for tests.
+
+        Args:
+            branch: Branch name
+            commits: List of recent commits
+            clean: Whether working tree is clean (default: True)
+
+        Returns:
+            GitStatus with commits populated
+
+        Example:
+            Before (9 lines):
+                status = GitStatus(
+                    branch="main",
+                    clean=True,
+                    ahead=0,
+                    behind=0,
+                    staged_files=[],
+                    modified_files=[],
+                    untracked_files=[],
+                    recent_commits=[commit1, commit2],
+                )
+
+            After (1 line):
+                status = GitStatus.with_commits("main", [commit1, commit2])
+        """
+        return GitStatus(
+            branch=branch,
+            clean=clean,
+            ahead=0,
+            behind=0,
+            staged_files=[],
+            modified_files=[],
+            untracked_files=[],
+            recent_commits=commits,
+        )
+
 
 @dataclass(frozen=True)
 class StackPosition:

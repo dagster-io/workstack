@@ -6,24 +6,8 @@ from typing import NamedTuple
 import click
 
 from workstack.cli.core import discover_repo_context
+from workstack.cli.shell_integration.output import script_mode_echo
 from workstack.core.context import WorkstackContext, regenerate_context
-
-
-def _emit(message: str, *, script_mode: bool, error: bool = False) -> None:
-    """Emit a message to stdout or stderr based on script mode.
-
-    In script mode, ALL output goes to stderr (so the shell wrapper can capture
-    only the activation script from stdout). The `error` parameter has no effect
-    in script mode since everything is already sent to stderr.
-
-    In non-script mode, output goes to stdout by default, unless `error=True`.
-
-    Args:
-        message: Text to output.
-        script_mode: True when running in --script mode (all output to stderr).
-        error: Force stderr output in non-script mode (ignored in script mode).
-    """
-    click.echo(message, err=error or script_mode)
 
 
 class BranchPR(NamedTuple):
@@ -124,7 +108,7 @@ def _validate_landing_preconditions(
     # Check Graphite enabled
     use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
     if not use_graphite:
-        _emit(
+        script_mode_echo(
             "Error: 'workstack land-stack' requires Graphite.\n\n"
             "To fix:\n"
             "  • Run: workstack config set use-graphite true\n"
@@ -136,7 +120,7 @@ def _validate_landing_preconditions(
 
     # Check not detached HEAD
     if current_branch is None:
-        _emit(
+        script_mode_echo(
             "Error: HEAD is detached (not on a branch)\n\n"
             "To fix:\n"
             "  • Check out a branch: git checkout <branch-name>",
@@ -147,7 +131,7 @@ def _validate_landing_preconditions(
 
     # Check no uncommitted changes
     if ctx.git_ops.has_uncommitted_changes(repo_root):
-        _emit(
+        script_mode_echo(
             "Error: Working directory has uncommitted changes\n"
             "Landing requires a clean working directory.\n\n"
             "To fix:\n"
@@ -162,7 +146,7 @@ def _validate_landing_preconditions(
     # Check current branch not trunk
     all_branches = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo_root)
     if current_branch in all_branches and all_branches[current_branch].is_trunk:
-        _emit(
+        script_mode_echo(
             f"Error: Cannot land trunk branch '{current_branch}'\n"
             "Trunk branches (main/master) cannot be landed.\n\n"
             "To fix:\n"
@@ -176,7 +160,7 @@ def _validate_landing_preconditions(
     if not branches_to_land:
         stack = ctx.graphite_ops.get_branch_stack(ctx.git_ops, repo_root, current_branch)
         if stack is None:
-            _emit(
+            script_mode_echo(
                 f"Error: Branch '{current_branch}' is not tracked by Graphite\n\n"
                 "To fix:\n"
                 "  • Track the branch with Graphite: gt create -s\n"
@@ -185,7 +169,7 @@ def _validate_landing_preconditions(
                 error=True,
             )
         else:
-            _emit(
+            script_mode_echo(
                 f"Error: No branches to land\n"
                 f"Branch '{current_branch}' may already be landed or is a trunk branch.",
                 script_mode=script_mode,
@@ -203,7 +187,7 @@ def _validate_landing_preconditions(
             worktree_conflicts.append((branch, worktree_path))
 
     if worktree_conflicts:
-        _emit(
+        script_mode_echo(
             "Error: Cannot land stack - branches are checked out in multiple worktrees\n\n"
             "The following branches are checked out in other worktrees:",
             script_mode=script_mode,
@@ -212,9 +196,11 @@ def _validate_landing_preconditions(
         for branch, path in worktree_conflicts:
             branch_styled = click.style(branch, fg="yellow")
             path_styled = click.style(str(path), fg="white", dim=True)
-            _emit(f"  • {branch_styled} → {path_styled}", script_mode=script_mode, error=True)
+            script_mode_echo(
+                f"  • {branch_styled} → {path_styled}", script_mode=script_mode, error=True
+            )
 
-        _emit(
+        script_mode_echo(
             "\nGit does not allow checking out a branch that is already checked out\n"
             "in another worktree. To land this stack, you need to consolidate all\n"
             "branches into the current worktree first.\n\n"
@@ -265,13 +251,13 @@ def _validate_branches_have_prs(
             errors.append(f"Unexpected PR state for '{branch}': {pr_info.state}")
 
     if errors:
-        _emit(
+        script_mode_echo(
             "Error: Cannot land stack\n\nThe following branches have issues:",
             script_mode=script_mode,
             error=True,
         )
         for error in errors:
-            _emit(f"  • {error}", script_mode=script_mode, error=True)
+            script_mode_echo(f"  • {error}", script_mode=script_mode, error=True)
         raise SystemExit(1)
 
     return valid_branches
@@ -303,12 +289,12 @@ def _show_landing_plan(
     header = "📋 Summary"
     if dry_run:
         header += click.style(" (dry run)", fg="bright_black")
-    _emit(click.style(f"\n{header}", bold=True), script_mode=script_mode)
-    _emit("", script_mode=script_mode)
+    script_mode_echo(click.style(f"\n{header}", bold=True), script_mode=script_mode)
+    script_mode_echo("", script_mode=script_mode)
 
     # Display summary
     pr_text = "PR" if len(branches) == 1 else "PRs"
-    _emit(f"Landing {len(branches)} {pr_text}:", script_mode=script_mode)
+    script_mode_echo(f"Landing {len(branches)} {pr_text}:", script_mode=script_mode)
 
     # Display PRs in format: #PR (branch → target) - title
     # Show in landing order (bottom to top)
@@ -319,19 +305,21 @@ def _show_landing_plan(
         title_styled = click.style(branch_pr.title, fg="bright_magenta")
 
         line = f"  {pr_styled} ({branch_styled} → {trunk_styled}) - {title_styled}"
-        _emit(line, script_mode=script_mode)
+        script_mode_echo(line, script_mode=script_mode)
 
-    _emit("", script_mode=script_mode)
+    script_mode_echo("", script_mode=script_mode)
 
     # Confirmation or force flag
     if dry_run:
         # No additional message needed - already indicated in header
         pass
     elif force:
-        _emit("[--force flag set, proceeding without confirmation]", script_mode=script_mode)
+        script_mode_echo(
+            "[--force flag set, proceeding without confirmation]", script_mode=script_mode
+        )
     else:
         if not click.confirm("Proceed with landing these PRs?", default=False, err=script_mode):
-            _emit("Landing cancelled.", script_mode=script_mode)
+            script_mode_echo("Landing cancelled.", script_mode=script_mode)
             raise SystemExit(0)
 
 
@@ -374,16 +362,18 @@ def _land_branch_sequence(
         parent_display = parent if parent else "trunk"
 
         # Print section header
-        _emit("", script_mode=script_mode)
+        script_mode_echo("", script_mode=script_mode)
         pr_styled = click.style(f"#{pr_number}", fg="cyan")
         branch_styled = click.style(branch, fg="yellow")
         parent_styled = click.style(parent_display, fg="yellow")
         msg = f"Landing PR {pr_styled} ({branch_styled} → {parent_styled})..."
-        _emit(msg, script_mode=script_mode)
+        script_mode_echo(msg, script_mode=script_mode)
 
         # Phase 1: Checkout
         if dry_run:
-            _emit(_format_cli_command(f"git checkout {branch}", check), script_mode=script_mode)
+            script_mode_echo(
+                _format_cli_command(f"git checkout {branch}", check), script_mode=script_mode
+            )
         else:
             # Check if we're already on the target branch (LBYL)
             # This handles the case where we're in a linked worktree on the branch being landed
@@ -391,11 +381,13 @@ def _land_branch_sequence(
             if current_branch != branch:
                 # Only checkout if we're not already on the branch
                 ctx.git_ops.checkout_branch(repo_root, branch)
-                _emit(_format_cli_command(f"git checkout {branch}", check), script_mode=script_mode)
+                script_mode_echo(
+                    _format_cli_command(f"git checkout {branch}", check), script_mode=script_mode
+                )
             else:
                 # Already on branch, display as already done
                 already_msg = f"already on {branch}"
-                _emit(_format_description(already_msg, check), script_mode=script_mode)
+                script_mode_echo(_format_description(already_msg, check), script_mode=script_mode)
 
         # Phase 2: Verify stack integrity
         all_branches = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo_root)
@@ -411,12 +403,12 @@ def _land_branch_sequence(
         # Show specific verification message with branch and expected parent
         trunk_name = parent if parent else "trunk"
         desc = _format_description(f"verify {branch} parent is {trunk_name}", check)
-        _emit(desc, script_mode=script_mode)
+        script_mode_echo(desc, script_mode=script_mode)
 
         # Phase 3: Merge PR
         if dry_run:
             merge_cmd = f"gh pr merge {pr_number} --squash --auto"
-            _emit(_format_cli_command(merge_cmd, check), script_mode=script_mode)
+            script_mode_echo(_format_cli_command(merge_cmd, check), script_mode=script_mode)
             merged_branches.append(branch)
         else:
             # Use gh pr merge with squash strategy (Graphite's default)
@@ -429,18 +421,18 @@ def _land_branch_sequence(
                 check=True,
             )
             if verbose:
-                _emit(result.stdout, script_mode=script_mode)
+                script_mode_echo(result.stdout, script_mode=script_mode)
 
             merge_cmd = f"gh pr merge {pr_number} --squash --auto"
-            _emit(_format_cli_command(merge_cmd, check), script_mode=script_mode)
+            script_mode_echo(_format_cli_command(merge_cmd, check), script_mode=script_mode)
             merged_branches.append(branch)
 
         # Phase 4: Restack
         if dry_run:
-            _emit(_format_cli_command("gt sync -f", check), script_mode=script_mode)
+            script_mode_echo(_format_cli_command("gt sync -f", check), script_mode=script_mode)
         else:
             ctx.graphite_ops.sync(repo_root, force=True, quiet=not verbose)
-            _emit(_format_cli_command("gt sync -f", check), script_mode=script_mode)
+            script_mode_echo(_format_cli_command("gt sync -f", check), script_mode=script_mode)
 
     return merged_branches
 
@@ -470,8 +462,8 @@ def _cleanup_and_navigate(
     check = click.style("✓", fg="green")
 
     # Print section header
-    _emit("", script_mode=script_mode)
-    _emit("Cleaning up...", script_mode=script_mode)
+    script_mode_echo("", script_mode=script_mode)
+    script_mode_echo("Cleaning up...", script_mode=script_mode)
 
     # Get last merged branch to find next unmerged child
     last_merged = merged_branches[-1] if merged_branches else None
@@ -486,7 +478,7 @@ def _cleanup_and_navigate(
     # Step 1: Checkout main
     if not dry_run:
         ctx.git_ops.checkout_branch(repo_root, "main")
-    _emit(_format_cli_command("git checkout main", check), script_mode=script_mode)
+    script_mode_echo(_format_cli_command("git checkout main", check), script_mode=script_mode)
     final_branch = "main"
 
     # Step 2: Sync worktrees
@@ -495,7 +487,7 @@ def _cleanup_and_navigate(
         base_cmd += " --verbose"
 
     if dry_run:
-        _emit(_format_cli_command(base_cmd, check), script_mode=script_mode)
+        script_mode_echo(_format_cli_command(base_cmd, check), script_mode=script_mode)
     else:
         try:
             # This will remove merged worktrees and delete branches
@@ -510,10 +502,12 @@ def _cleanup_and_navigate(
                 capture_output=not verbose,
                 text=True,
             )
-            _emit(_format_cli_command(base_cmd, check), script_mode=script_mode)
+            script_mode_echo(_format_cli_command(base_cmd, check), script_mode=script_mode)
         except subprocess.CalledProcessError as e:
             error_msg = e.stderr.strip() if e.stderr else str(e)
-            _emit(f"Warning: Cleanup sync failed: {error_msg}", script_mode=script_mode, error=True)
+            script_mode_echo(
+                f"Warning: Cleanup sync failed: {error_msg}", script_mode=script_mode, error=True
+            )
 
     # Step 3: Navigate to next branch or stay on main
     # Check if last merged branch had unmerged children
@@ -528,14 +522,14 @@ def _cleanup_and_navigate(
                         try:
                             ctx.git_ops.checkout_branch(repo_root, child)
                             cmd = _format_cli_command(f"git checkout {child}", check)
-                            _emit(cmd, script_mode=script_mode)
+                            script_mode_echo(cmd, script_mode=script_mode)
                             final_branch = child
                             return final_branch
                         except Exception:
                             pass  # Child branch may have been deleted
                     else:
                         cmd = _format_cli_command(f"git checkout {child}", check)
-                        _emit(cmd, script_mode=script_mode)
+                        script_mode_echo(cmd, script_mode=script_mode)
                         final_branch = child
                         return final_branch
 
@@ -558,26 +552,26 @@ def _show_final_state(
         dry_run: If True, this was a dry run
         script_mode: True when running in --script mode (output to stderr)
     """
-    _emit("Final state:", script_mode=script_mode)
-    _emit("", script_mode=script_mode)
+    script_mode_echo("Final state:", script_mode=script_mode)
+    script_mode_echo("", script_mode=script_mode)
 
     # Success message
     pr_text = "PR" if len(merged_branches) == 1 else "PRs"
     success_msg = f"✅ Successfully landed {len(merged_branches)} {pr_text}"
     if dry_run:
         success_msg += click.style(" (dry run)", fg="bright_black")
-    _emit(f"  {success_msg}", script_mode=script_mode)
+    script_mode_echo(f"  {success_msg}", script_mode=script_mode)
 
     # Current branch
     branch_styled = click.style(final_branch, fg="yellow")
-    _emit(f"  Current branch: {branch_styled}", script_mode=script_mode)
+    script_mode_echo(f"  Current branch: {branch_styled}", script_mode=script_mode)
 
     # Merged branches
     branches_list = ", ".join(click.style(b, fg="yellow") for b in merged_branches)
-    _emit(f"  Merged branches: {branches_list}", script_mode=script_mode)
+    script_mode_echo(f"  Merged branches: {branches_list}", script_mode=script_mode)
 
     # Worktrees status
-    _emit("  Worktrees: cleaned up", script_mode=script_mode)
+    script_mode_echo("  Worktrees: cleaned up", script_mode=script_mode)
 
 
 @click.command("land-stack")
@@ -649,14 +643,14 @@ def land_stack(
 
     # Get trunk branch (parent of first branch to land)
     if not valid_branches:
-        _emit("No branches to land.", script_mode=script, error=True)
+        script_mode_echo("No branches to land.", script_mode=script, error=True)
         raise SystemExit(1)
 
     first_branch = valid_branches[0][0]  # First tuple is (branch, pr_number, title)
     trunk_branch = ctx.graphite_ops.get_parent_branch(ctx.git_ops, repo.root, first_branch)
     if trunk_branch is None:
         error_msg = f"Error: Could not determine trunk branch for {first_branch}"
-        _emit(error_msg, script_mode=script, error=True)
+        script_mode_echo(error_msg, script_mode=script, error=True)
         raise SystemExit(1)
 
     # Show plan and get confirmation
@@ -675,14 +669,14 @@ def land_stack(
             ctx, repo.root, valid_branches, verbose=verbose, dry_run=dry_run, script_mode=script
         )
     except subprocess.CalledProcessError as e:
-        _emit("", script_mode=script)
+        script_mode_echo("", script_mode=script)
         # Show full stderr from subprocess for complete error context
         error_detail = e.stderr.strip() if e.stderr else str(e)
         error_msg = click.style(f"❌ Landing stopped: {error_detail}", fg="red")
-        _emit(error_msg, script_mode=script, error=True)
+        script_mode_echo(error_msg, script_mode=script, error=True)
         raise SystemExit(1) from None
     except FileNotFoundError as e:
-        _emit("", script_mode=script)
+        script_mode_echo("", script_mode=script)
         error_msg = click.style(
             f"❌ Command not found: {e.filename}\n\n"
             "Install required tools:\n"
@@ -690,7 +684,7 @@ def land_stack(
             "  • Graphite CLI: brew install withgraphite/tap/graphite",
             fg="red",
         )
-        _emit(error_msg, script_mode=script, error=True)
+        script_mode_echo(error_msg, script_mode=script, error=True)
         raise SystemExit(1) from None
 
     # All succeeded - run cleanup operations
@@ -699,5 +693,5 @@ def land_stack(
     )
 
     # Show final state
-    _emit("", script_mode=script)
+    script_mode_echo("", script_mode=script)
     _show_final_state(merged_branches, final_branch, dry_run=dry_run, script_mode=script)

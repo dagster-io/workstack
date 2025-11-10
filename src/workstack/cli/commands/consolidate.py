@@ -6,9 +6,8 @@ from pathlib import Path
 
 import click
 
-from workstack.cli.activation import render_activation_script
 from workstack.cli.core import discover_repo_context, worktree_path_for
-from workstack.cli.shell_utils import write_script_to_temp
+from workstack.cli.shell_integration.result import emit_activation_script
 from workstack.core.context import WorkstackContext, create_context
 from workstack.core.repo_discovery import ensure_workstacks_dir
 
@@ -348,17 +347,12 @@ def consolidate_cmd(
 
     # Shell integration: generate script to activate new worktree
     if name is not None and script and not dry_run:
-        script_content = render_activation_script(
+        emit_activation_script(
             worktree_path=target_worktree_path,
+            command_name="consolidate",
             final_message='echo "✓ Switched to consolidated worktree."',
             comment="work activate-script (consolidate)",
         )
-        script_path = write_script_to_temp(
-            script_content,
-            command_name="consolidate",
-            comment=f"activate {name}",
-        )
-        click.echo(str(script_path), nl=False)
     elif name is not None and not dry_run:
         # Manual cd instruction when not in script mode
         click.echo(f"Switching to worktree: {click.style(name, fg='cyan', bold=True)}")

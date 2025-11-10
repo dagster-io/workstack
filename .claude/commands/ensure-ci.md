@@ -189,12 +189,22 @@ I was unable to resolve the following issue after N attempts:
 
 ## Success Reporting Format
 
-When all checks pass, format the output with **blank lines** between each check for proper CLI rendering:
+When all checks pass, format the output with **blank lines** between each check for proper CLI rendering.
+
+You may optionally include a brief summary section to highlight key changes or results. If you include a summary, use markdown list format (NOT checkmarks) with each item as a separate list item.
 
 ```markdown
 ## Finalization Status: SUCCESS
 
-All CI checks passed after N iteration(s):
+All CI checks passed after N iteration(s).
+
+### Summary
+
+- Refactoring eliminated code duplication
+- All type checks pass with 0 errors
+- All tests pass (N workstack-dev + M dot-agent-kit)
+
+### Detailed CI Results
 
 ✅ **Lint (ruff check)**: PASSED
 
@@ -213,7 +223,11 @@ All CI checks passed after N iteration(s):
 The code is ready for commit/PR.
 ```
 
-**IMPORTANT**: Each check line MUST be separated by a blank line in the markdown output to render properly in the CLI.
+**IMPORTANT**:
+
+- Each detailed check line MUST be separated by a blank line in the markdown output to render properly in the CLI
+- Summary items MUST use markdown list format (`-` or `*`), with each item on its own line
+- Do NOT use checkmarks (✅) in summary sections, only in the detailed CI results section
 
 ## Important Guidelines
 

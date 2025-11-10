@@ -4,29 +4,13 @@ from pathlib import Path
 
 import click
 
-from workstack.cli.activation import render_activation_script
 from workstack.cli.commands.remove import _remove_worktree
 from workstack.cli.core import discover_repo_context, worktree_path_for
+from workstack.cli.shell_integration.output import script_mode_echo
+from workstack.cli.shell_integration.result import emit_activation_script, emit_script_path
 from workstack.cli.shell_utils import render_cd_script, write_script_to_temp
 from workstack.core.context import WorkstackContext, regenerate_context
 from workstack.core.repo_discovery import ensure_workstacks_dir
-
-
-def _emit(message: str, *, script_mode: bool, error: bool = False) -> None:
-    """Emit a message to stdout or stderr based on script mode.
-
-    In script mode, ALL output goes to stderr (so the shell wrapper can capture
-    only the activation script from stdout). The `error` parameter has no effect
-    in script mode since everything is already sent to stderr.
-
-    In non-script mode, output goes to stdout by default, unless `error=True`.
-
-    Args:
-        message: Text to output.
-        script_mode: True when running in --script mode (all output to stderr).
-        error: Force stderr output in non-script mode (ignored in script mode).
-    """
-    click.echo(message, err=error or script_mode)
 
 
 def _return_to_original_worktree(
@@ -44,7 +28,7 @@ def _return_to_original_worktree(
     if not wt_path.exists():
         return
 
-    _emit(f"✓ Returning to: {current_worktree_name}", script_mode=script_mode)
+    script_mode_echo(f"✓ Returning to: {current_worktree_name}", script_mode=script_mode)
     # Only chdir in non-script mode; script output handles cd in script mode
     if not script_mode:
         os.chdir(wt_path)
@@ -102,7 +86,7 @@ def sync_cmd(
     # Step 1: Verify Graphite is enabled
     use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
     if not use_graphite:
-        _emit(
+        script_mode_echo(
             "Error: 'workstack sync' requires Graphite. "
             "Run 'workstack config set use-graphite true'",
             script_mode=script,
@@ -133,18 +117,18 @@ def sync_cmd(
 
     if not dry_run:
         if verbose:
-            _emit(f"Running: {' '.join(cmd)}", script_mode=script)
+            script_mode_echo(f"Running: {' '.join(cmd)}", script_mode=script)
         try:
             ctx.graphite_ops.sync(repo.root, force=force, quiet=not verbose)
         except subprocess.CalledProcessError as e:
-            _emit(
+            script_mode_echo(
                 f"Error: gt sync failed with exit code {e.returncode}",
                 script_mode=script,
                 error=True,
             )
             raise SystemExit(e.returncode) from e
         except FileNotFoundError as e:
-            _emit(
+            script_mode_echo(
                 "Error: 'gt' command not found. Install Graphite CLI: "
                 "brew install withgraphite/tap/graphite",
                 script_mode=script,
@@ -152,7 +136,7 @@ def sync_cmd(
             )
             raise SystemExit(1) from e
     else:
-        _emit(f"[DRY RUN] Would run {' '.join(cmd)}", script_mode=script)
+        script_mode_echo(f"[DRY RUN] Would run {' '.join(cmd)}", script_mode=script)
 
     # Step 5: Identify deletable workstacks
     worktrees = ctx.git_ops.list_worktrees(repo.root)
@@ -182,7 +166,7 @@ def sync_cmd(
 
     # Step 6: Display and optionally clean
     if not deletable:
-        _emit("✓ No worktrees to clean up", script_mode=script)
+        script_mode_echo("✓ No worktrees to clean up", script_mode=script)
     else:
         for name, branch, state, pr_number in deletable:
             # Display formatted
@@ -191,14 +175,16 @@ def sync_cmd(
             state_part = click.style(state.lower(), fg="green" if state == "MERGED" else "red")
             pr_part = click.style(f"PR #{pr_number}", fg="bright_black")
 
-            _emit(f"  {name_part} {branch_part} - {state_part} ({pr_part})", script_mode=script)
+            script_mode_echo(
+                f"  {name_part} {branch_part} - {state_part} ({pr_part})", script_mode=script
+            )
 
         # Confirm unless --force or --dry-run
         if not force and not dry_run:
             if not click.confirm(
                 f"Remove {len(deletable)} worktree(s)?", default=False, err=script
             ):
-                _emit("Cleanup cancelled.", script_mode=script)
+                script_mode_echo("Cleanup cancelled.", script_mode=script)
                 _return_to_original_worktree(
                     workstacks_dir, current_worktree_name, script_mode=script
                 )
@@ -207,7 +193,7 @@ def sync_cmd(
         # Remove each worktree
         for name, _branch, _state, _pr_number in deletable:
             if dry_run:
-                _emit(
+                script_mode_echo(
                     f"[DRY RUN] Would remove worktree: {name} (branch: {_branch})",
                     script_mode=script,
                 )
@@ -222,29 +208,27 @@ def sync_cmd(
                     quiet=True,  # Suppress planning output during sync
                 )
                 # Show clean confirmation after removal completes
-                _emit(f"✓ Removed: {name} [{_branch}]", script_mode=script)
+                script_mode_echo(f"✓ Removed: {name} [{_branch}]", script_mode=script)
 
         # Step 6.5: Automatically run second gt sync -f to delete branches (when force=True)
         if force and not dry_run and deletable:
             ctx.graphite_ops.sync(repo.root, force=True, quiet=not verbose)
-            _emit("✓ Deleted merged branches", script_mode=script)
+            script_mode_echo("✓ Deleted merged branches", script_mode=script)
 
         # Only show manual instruction if force was not used
         if not force:
-            _emit(
+            script_mode_echo(
                 "Next step: Run 'workstack sync -f' to automatically delete the merged branches.",
                 script_mode=script,
             )
 
     # Step 7: Return to original worktree
-    script_output_path: Path | None = None
-
     if current_worktree_name:
         wt_path = worktree_path_for(workstacks_dir, current_worktree_name)
 
         # Check if worktree still exists
         if wt_path.exists():
-            _emit(f"✓ Returning to: {current_worktree_name}", script_mode=script)
+            script_mode_echo(f"✓ Returning to: {current_worktree_name}", script_mode=script)
             if not script:
                 os.chdir(wt_path)
             else:
@@ -254,28 +238,21 @@ def sync_cmd(
                     comment=f"return to {current_worktree_name}",
                     success_message=f"✓ Returned to {current_worktree_name}.",
                 )
-                script_output_path = write_script_to_temp(
+                script_path = write_script_to_temp(
                     script_content,
                     command_name="sync",
                     comment=f"return to {current_worktree_name}",
                 )
+                emit_script_path(script_path)
         else:
-            _emit(
+            script_mode_echo(
                 f"✅ {repo.root}",
                 script_mode=script,
             )
             if script:
-                script_content = render_activation_script(
+                emit_activation_script(
                     worktree_path=repo.root,
-                    comment="return to root",
-                    final_message=f'echo "✓ Switched to: root [{repo.root}]"',
-                )
-                script_output_path = write_script_to_temp(
-                    script_content,
                     command_name="sync",
+                    final_message=f'echo "✓ Switched to: root [{repo.root}]"',
                     comment="return to root",
                 )
-
-    # Output temp file path for shell wrapper
-    if script and script_output_path:
-        click.echo(str(script_output_path), nl=False)

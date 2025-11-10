@@ -1,12 +1,11 @@
 import click
 
 from workstack.cli.commands.switch import (
-    _activate_root_repo,
-    _activate_worktree,
     _ensure_graphite_enabled,
     _resolve_down_navigation,
 )
 from workstack.cli.core import discover_repo_context
+from workstack.cli.shell_integration.result import activate_root_repo, activate_worktree
 from workstack.core.context import WorkstackContext, read_trunk_from_pyproject
 
 
@@ -49,7 +48,7 @@ def down_cmd(ctx: WorkstackContext, script: bool) -> None:
 
     # Check if target_name refers to 'root' which means root repo
     if target_name == "root":
-        _activate_root_repo(repo, script, "down")
+        activate_root_repo(repo, script, "down")
 
     # Resolve target branch to actual worktree path
     target_wt_path = ctx.git_ops.find_worktree_for_branch(repo.root, target_name)
@@ -62,4 +61,4 @@ def down_cmd(ctx: WorkstackContext, script: bool) -> None:
         )
         raise SystemExit(1)
 
-    _activate_worktree(repo, target_wt_path, script, "down")
+    activate_worktree(repo, target_wt_path, script, "down")

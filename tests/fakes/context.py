@@ -19,7 +19,7 @@ def create_test_context(
     shell_ops: FakeShellOps | None = None,
     cwd: Path | None = None,
     global_config: GlobalConfig | None = None,
-    local_config: LoadedConfig | None = None,
+    repo_config: LoadedConfig | None = None,
     repo: RepoContext | NoRepoSentinel | None = None,
     dry_run: bool = False,
 ) -> WorkstackContext:
@@ -39,8 +39,8 @@ def create_test_context(
             of real Path.cwd() in tests.
         global_config: Optional GlobalConfig for test context.
                       If None, uses test defaults.
-        local_config: Optional LoadedConfig for test context.
-                     If None, uses empty defaults.
+        repo_config: Optional LoadedConfig for test context.
+                    If None, uses empty defaults.
         repo: Optional RepoContext or NoRepoSentinel for test context.
              If None, uses NoRepoSentinel().
         dry_run: Whether to set dry_run mode
@@ -88,8 +88,8 @@ def create_test_context(
             show_pr_checks=False,
         )
 
-    if local_config is None:
-        local_config = LoadedConfig(env={}, post_create_commands=[], post_create_shell=None)
+    if repo_config is None:
+        repo_config = LoadedConfig(env={}, post_create_commands=[], post_create_shell=None)
 
     if repo is None:
         repo = NoRepoSentinel()
@@ -101,7 +101,7 @@ def create_test_context(
         shell_ops=shell_ops,
         cwd=cwd or Path("/test/default/cwd"),
         global_config=global_config,
-        local_config=local_config,
+        repo_config=repo_config,
         repo=repo,
         dry_run=dry_run,
     )

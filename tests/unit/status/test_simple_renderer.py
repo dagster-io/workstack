@@ -242,12 +242,7 @@ def test_renderer_with_stack_position() -> None:
 def test_renderer_trunk_branch() -> None:
     """Test rendering when on trunk branch."""
     # Arrange
-    worktree_info = WorktreeDisplayInfo(
-        name="test-worktree",
-        path=Path("/tmp/test"),
-        branch="main",
-        is_root=True,
-    )
+    worktree_info = WorktreeDisplayInfo.root(Path("/tmp/test"), name="test-worktree")
 
     stack_position = StackPosition(
         stack=["main"],
@@ -559,12 +554,7 @@ def test_renderer_detached_head() -> None:
 def test_renderer_root_worktree() -> None:
     """Test rendering with root worktree."""
     # Arrange
-    worktree_info = WorktreeDisplayInfo(
-        name="root",
-        path=Path("/tmp/repo"),
-        branch="main",
-        is_root=True,  # Root worktree
-    )
+    worktree_info = WorktreeDisplayInfo.root(Path("/tmp/repo"))
 
     git_status = GitStatus.clean_status("main")
 

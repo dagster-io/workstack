@@ -49,8 +49,20 @@ class GitOps(ABC):
         ...
 
     @abstractmethod
-    def detect_default_branch(self, repo_root: Path) -> str:
-        """Detect the default branch (main or master)."""
+    def detect_default_branch(self, repo_root: Path, configured: str | None = None) -> str:
+        """Detect the default branch (main or master).
+
+        Args:
+            repo_root: Path to the repository root
+            configured: Optional configured trunk branch name. If provided, validates
+                       that this branch exists. If None, uses auto-detection.
+
+        Returns:
+            The trunk branch name
+
+        Raises:
+            SystemExit: If configured branch doesn't exist or no trunk can be detected
+        """
         ...
 
     @abstractmethod
@@ -294,8 +306,27 @@ class RealGitOps(GitOps):
 
         return branch
 
-    def detect_default_branch(self, repo_root: Path) -> str:
+    def detect_default_branch(self, repo_root: Path, configured: str | None = None) -> str:
         """Detect the default branch (main or master)."""
+        # If trunk is explicitly configured, validate and use it
+        if configured is not None:
+            result = subprocess.run(
+                ["git", "rev-parse", "--verify", configured],
+                cwd=repo_root,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if result.returncode == 0:
+                return configured
+            click.echo(
+                f"Error: Configured trunk branch '{configured}' does not exist in repository.\n"
+                f"Update your configuration in pyproject.toml or create the branch.",
+                err=True,
+            )
+            raise SystemExit(1)
+
+        # Auto-detection: try remote HEAD first
         result = subprocess.run(
             ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
             cwd=repo_root,
@@ -309,7 +340,8 @@ class RealGitOps(GitOps):
                 branch = remote_head.replace("refs/remotes/origin/", "")
                 return branch
 
-        for candidate in ["main", "master"]:
+        # Fallback: check master first, then main
+        for candidate in ["master", "main"]:
             result = subprocess.run(
                 ["git", "rev-parse", "--verify", candidate],
                 cwd=repo_root,
@@ -626,9 +658,9 @@ class DryRunGitOps(GitOps):
         """Get current branch (read-only, delegates to wrapped)."""
         return self._wrapped.get_current_branch(cwd)
 
-    def detect_default_branch(self, repo_root: Path) -> str:
+    def detect_default_branch(self, repo_root: Path, configured: str | None = None) -> str:
         """Detect default branch (read-only, delegates to wrapped)."""
-        return self._wrapped.detect_default_branch(repo_root)
+        return self._wrapped.detect_default_branch(repo_root, configured)
 
     def get_git_common_dir(self, cwd: Path) -> Path | None:
         """Get git common directory (read-only, delegates to wrapped)."""

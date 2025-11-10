@@ -117,8 +117,27 @@ class FakeGitOps(GitOps):
         """Get the currently checked-out branch."""
         return self._current_branches.get(cwd)
 
-    def detect_default_branch(self, repo_root: Path) -> str:
+    def detect_default_branch(self, repo_root: Path, configured: str | None = None) -> str:
         """Detect the default branch."""
+        # If configured trunk is provided, validate it exists
+        if configured is not None:
+            is_valid = (
+                repo_root in self._default_branches
+                and self._default_branches[repo_root] == configured
+            )
+            if is_valid:
+                return configured
+            # For testing, we check if ANY branch with that name exists
+            # In a real fake, we'd track all branches, but for simplicity
+            # we just validate against default
+            click.echo(
+                f"Error: Configured trunk branch '{configured}' does not exist in repository.\n"
+                f"Update your configuration in pyproject.toml or create the branch.",
+                err=True,
+            )
+            raise SystemExit(1)
+
+        # Auto-detection path
         if repo_root in self._default_branches:
             return self._default_branches[repo_root]
         click.echo("Error: Could not find 'main' or 'master' branch.", err=True)

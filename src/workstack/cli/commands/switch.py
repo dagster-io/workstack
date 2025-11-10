@@ -11,7 +11,7 @@ from workstack.cli.core import (
 )
 from workstack.cli.debug import debug_log
 from workstack.cli.shell_utils import write_script_to_temp
-from workstack.core.context import WorkstackContext, create_context
+from workstack.core.context import WorkstackContext, create_context, read_trunk_from_pyproject
 from workstack.core.gitops import WorktreeInfo
 
 
@@ -169,7 +169,11 @@ def _resolve_up_navigation(
 
 
 def _resolve_down_navigation(
-    ctx: WorkstackContext, repo: RepoContext, current_branch: str, worktrees: list[WorktreeInfo]
+    ctx: WorkstackContext,
+    repo: RepoContext,
+    current_branch: str,
+    worktrees: list[WorktreeInfo],
+    trunk_branch: str | None,
 ) -> str:
     """Resolve --down navigation to determine target branch name.
 
@@ -178,6 +182,7 @@ def _resolve_down_navigation(
         repo: Repository context
         current_branch: Current branch name
         worktrees: List of worktrees from git_ops.list_worktrees()
+        trunk_branch: Configured trunk branch name, or None for auto-detection
 
     Returns:
         Target branch name or 'root' to switch to
@@ -189,10 +194,10 @@ def _resolve_down_navigation(
     parent_branch = ctx.graphite_ops.get_parent_branch(ctx.git_ops, repo.root, current_branch)
     if parent_branch is None:
         # Check if we're already on trunk
-        trunk_branch = ctx.git_ops.detect_default_branch(repo.root)
-        if current_branch == trunk_branch:
+        detected_trunk = ctx.git_ops.detect_default_branch(repo.root, trunk_branch)
+        if current_branch == detected_trunk:
             click.echo(
-                f"Already at the bottom of the stack (on trunk branch '{trunk_branch}')",
+                f"Already at the bottom of the stack (on trunk branch '{detected_trunk}')",
                 err=True,
             )
             raise SystemExit(1)
@@ -204,10 +209,10 @@ def _resolve_down_navigation(
             raise SystemExit(1)
 
     # Check if parent is the trunk - if so, switch to root
-    trunk_branch = ctx.git_ops.detect_default_branch(repo.root)
-    if parent_branch == trunk_branch:
+    detected_trunk = ctx.git_ops.detect_default_branch(repo.root, trunk_branch)
+    if parent_branch == detected_trunk:
         # Check if trunk is checked out in root (repo.root path)
-        trunk_wt_path = ctx.git_ops.find_worktree_for_branch(repo.root, trunk_branch)
+        trunk_wt_path = ctx.git_ops.find_worktree_for_branch(repo.root, detected_trunk)
         if trunk_wt_path is not None and trunk_wt_path == repo.root:
             # Trunk is in root repository, not in a dedicated worktree
             return "root"
@@ -324,6 +329,7 @@ def switch_cmd(ctx: WorkstackContext, name: str | None, script: bool, up: bool, 
         _ensure_graphite_enabled(ctx)
 
     repo = discover_repo_context(ctx, ctx.cwd)
+    trunk_branch = read_trunk_from_pyproject(repo.root)
 
     # Check if user is trying to switch to main/master (should use root instead)
     if name and name.lower() in ("main", "master"):
@@ -350,7 +356,9 @@ def switch_cmd(ctx: WorkstackContext, name: str | None, script: bool, up: bool, 
         if up:
             target_name = _resolve_up_navigation(ctx, repo, current_branch, worktrees)
         else:  # down
-            target_name = _resolve_down_navigation(ctx, repo, current_branch, worktrees)
+            target_name = _resolve_down_navigation(
+                ctx, repo, current_branch, worktrees, trunk_branch
+            )
 
         # Check if target_name refers to 'root' which means root repo
         if target_name == "root":

@@ -1,10 +1,15 @@
+import subprocess
 from pathlib import Path
 
 import click
 
 from workstack.cli.config import LoadedConfig, load_config
 from workstack.cli.core import discover_repo_context, ensure_workstacks_dir
-from workstack.core.context import WorkstackContext
+from workstack.core.context import (
+    WorkstackContext,
+    read_trunk_from_pyproject,
+    write_trunk_to_pyproject,
+)
 
 
 def _get_env_value(cfg: LoadedConfig, parts: list[str], key: str) -> None:
@@ -80,8 +85,11 @@ def config_list(ctx: WorkstackContext) -> None:
         repo = discover_repo_context(ctx, ctx.cwd)
         workstacks_dir = ensure_workstacks_dir(repo)
         cfg = load_config(workstacks_dir)
+        trunk_branch = read_trunk_from_pyproject(repo.root)
 
         click.echo(click.style("\nRepository configuration:", bold=True))
+        if trunk_branch:
+            click.echo(f"  trunk-branch={trunk_branch}")
         if cfg.env:
             for key, value in cfg.env.items():
                 click.echo(f"  env.{key}={value}")
@@ -90,7 +98,13 @@ def config_list(ctx: WorkstackContext) -> None:
         if cfg.post_create_commands:
             click.echo(f"  post_create.commands={cfg.post_create_commands}")
 
-        if not cfg.env and not cfg.post_create_shell and not cfg.post_create_commands:
+        has_no_config = (
+            not trunk_branch
+            and not cfg.env
+            and not cfg.post_create_shell
+            and not cfg.post_create_commands
+        )
+        if has_no_config:
             click.echo("  (no configuration - run 'workstack init --repo' to create)")
     except Exception:
         click.echo(click.style("\nRepository configuration:", bold=True))
@@ -125,6 +139,14 @@ def config_get(ctx: WorkstackContext, key: str) -> None:
         repo = discover_repo_context(ctx, ctx.cwd)
         workstacks_dir = ensure_workstacks_dir(repo)
         cfg = load_config(workstacks_dir)
+
+        if parts[0] == "trunk-branch":
+            trunk_branch = read_trunk_from_pyproject(repo.root)
+            if trunk_branch:
+                click.echo(trunk_branch)
+            else:
+                click.echo("not configured (will auto-detect)", err=True)
+            return
 
         if parts[0] == "env":
             _get_env_value(cfg, parts, key)
@@ -183,6 +205,32 @@ def config_set(ctx: WorkstackContext, key: str, value: str) -> None:
         click.echo(f"Set {key}={value}")
         return
 
-    # Handle repo config keys - not implemented yet
+    # Handle repo config keys
+    if parts[0] == "trunk-branch":
+        # discover_repo_context checks for git repository and raises FileNotFoundError
+        repo = discover_repo_context(ctx, Path.cwd())
+
+        # Validate that the branch exists before writing
+        result = subprocess.run(
+            ["git", "rev-parse", "--verify", value],
+            cwd=repo.root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            click.echo(
+                f"Error: Branch '{value}' does not exist in repository.\n"
+                f"Create the branch first before configuring it as trunk.",
+                err=True,
+            )
+            raise SystemExit(1)
+
+        # Write configuration
+        write_trunk_to_pyproject(repo.root, value)
+        click.echo(f"Set trunk-branch={value}")
+        return
+
+    # Other repo config keys not implemented yet
     click.echo("Setting repo config keys not yet implemented", err=True)
     raise SystemExit(1)

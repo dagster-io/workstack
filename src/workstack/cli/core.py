@@ -2,7 +2,7 @@ from pathlib import Path
 
 import click
 
-from workstack.core.context import WorkstackContext
+from workstack.core.context import GlobalConfigNotFound, WorkstackContext
 from workstack.core.repo_discovery import RepoContext, discover_repo_or_sentinel
 
 
@@ -16,7 +16,7 @@ def discover_repo_context(ctx: WorkstackContext, start: Path) -> RepoContext:
     Note: Properly handles git worktrees by finding the main repository root,
     not the worktree's .git file.
     """
-    if ctx.global_config is None:
+    if isinstance(ctx.global_config, GlobalConfigNotFound):
         raise FileNotFoundError("Global config not found. Run 'workstack init' to create it.")
 
     result = discover_repo_or_sentinel(start, ctx.global_config.workstacks_root, ctx.git_ops)

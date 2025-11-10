@@ -12,7 +12,7 @@ from workstack.cli.config import LoadedConfig
 from workstack.cli.core import discover_repo_context, worktree_path_for
 from workstack.cli.shell_utils import render_cd_script, write_script_to_temp
 from workstack.cli.subprocess_utils import run_with_error_reporting
-from workstack.core.context import WorkstackContext, read_trunk_from_pyproject
+from workstack.core.context import GlobalConfigNotFound, WorkstackContext, read_trunk_from_pyproject
 from workstack.core.repo_discovery import ensure_workstacks_dir
 
 _SAFE_COMPONENT_RE = re.compile(r"[^A-Za-z0-9._/-]+")
@@ -658,7 +658,11 @@ def create(
             branch = default_branch_for_worktree(name)
 
         # Get graphite setting from global config
-        use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
+        if isinstance(ctx.global_config, GlobalConfigNotFound):
+            click.echo("Global config not found. Run 'workstack init' first.", err=True)
+            raise SystemExit(1)
+
+        use_graphite = ctx.global_config.use_graphite
         add_worktree(
             ctx,
             repo.root,

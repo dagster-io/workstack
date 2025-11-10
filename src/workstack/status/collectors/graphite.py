@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from workstack.core.context import WorkstackContext
+from workstack.core.context import GlobalConfigNotFound, WorkstackContext
 from workstack.status.collectors.base import StatusCollector
 from workstack.status.models.status_data import StackPosition
 
@@ -25,7 +25,10 @@ class GraphiteStackCollector(StatusCollector):
         Returns:
             True if Graphite is enabled
         """
-        if not (ctx.global_config and ctx.global_config.use_graphite):
+        if isinstance(ctx.global_config, GlobalConfigNotFound):
+            return False
+
+        if not ctx.global_config.use_graphite:
             return False
 
         if not worktree_path.exists():

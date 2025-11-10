@@ -9,7 +9,7 @@ from workstack.cli.core import (
     validate_worktree_name_for_removal,
     worktree_path_for,
 )
-from workstack.core.context import WorkstackContext, create_context
+from workstack.core.context import GlobalConfigNotFound, WorkstackContext, create_context
 from workstack.core.gitops import GitOps
 from workstack.core.repo_discovery import ensure_workstacks_dir
 
@@ -121,8 +121,15 @@ def _remove_worktree(
     # Step 1: Collect all operations to perform
     branches_to_delete: list[str] = []
     if delete_stack:
-        use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
-        if not use_graphite:
+        if isinstance(ctx.global_config, GlobalConfigNotFound):
+            click.echo(
+                "Error: '--delete-stack' requires global config.\n\n"
+                "Run 'workstack init' to create global configuration.",
+                err=True,
+            )
+            raise SystemExit(1)
+
+        if not ctx.global_config.use_graphite:
             click.echo(
                 "Error: --delete-stack requires Graphite to be enabled. "
                 "Run 'workstack config set use-graphite true'",

@@ -8,7 +8,7 @@ from workstack.cli.activation import render_activation_script
 from workstack.cli.commands.remove import _remove_worktree
 from workstack.cli.core import discover_repo_context, worktree_path_for
 from workstack.cli.shell_utils import render_cd_script, write_script_to_temp
-from workstack.core.context import WorkstackContext
+from workstack.core.context import GlobalConfigNotFound, WorkstackContext
 from workstack.core.repo_discovery import ensure_workstacks_dir
 
 
@@ -100,8 +100,16 @@ def sync_cmd(
     """
 
     # Step 1: Verify Graphite is enabled
-    use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
-    if not use_graphite:
+    if isinstance(ctx.global_config, GlobalConfigNotFound):
+        _emit(
+            "Error: 'workstack sync' requires global config.\n\n"
+            "Run 'workstack init' to create global configuration.",
+            script_mode=script,
+            error=True,
+        )
+        raise SystemExit(1)
+
+    if not ctx.global_config.use_graphite:
         _emit(
             "Error: 'workstack sync' requires Graphite. "
             "Run 'workstack config set use-graphite true'",

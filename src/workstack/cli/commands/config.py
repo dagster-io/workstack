@@ -119,14 +119,15 @@ def config_get(ctx: WorkstackContext, key: str) -> None:
             click.echo(f"Global config not found at {config_path}", err=True)
             raise SystemExit(1)
 
-        if parts[0] == "workstacks_root":
-            click.echo(str(ctx.global_config.workstacks_root))
-        elif parts[0] == "use_graphite":
-            click.echo(str(ctx.global_config.use_graphite).lower())
-        elif parts[0] == "show_pr_info":
-            click.echo(str(ctx.global_config.show_pr_info).lower())
-        elif parts[0] == "show_pr_checks":
-            click.echo(str(ctx.global_config.show_pr_checks).lower())
+        match parts[0]:
+            case "workstacks_root":
+                click.echo(str(ctx.global_config.workstacks_root))
+            case "use_graphite":
+                click.echo(str(ctx.global_config.use_graphite).lower())
+            case "show_pr_info":
+                click.echo(str(ctx.global_config.show_pr_info).lower())
+            case "show_pr_checks":
+                click.echo(str(ctx.global_config.show_pr_checks).lower())
         return
 
     # Handle repo config keys
@@ -146,16 +147,14 @@ def config_get(ctx: WorkstackContext, key: str) -> None:
 
     cfg = ctx.local_config
 
-    if parts[0] == "env":
-        _get_env_value(cfg, parts, key)
-        return
-
-    if parts[0] == "post_create":
-        _get_post_create_value(cfg, parts, key)
-        return
-
-    click.echo(f"Invalid key: {key}", err=True)
-    raise SystemExit(1)
+    match parts[0]:
+        case "env":
+            _get_env_value(cfg, parts, key)
+        case "post_create":
+            _get_post_create_value(cfg, parts, key)
+        case _:
+            click.echo(f"Invalid key: {key}", err=True)
+            raise SystemExit(1)
 
 
 @config_group.command("set")
@@ -176,50 +175,51 @@ def config_set(ctx: WorkstackContext, key: str, value: str) -> None:
             raise SystemExit(1)
 
         # Create new config with updated value
-        if parts[0] == "workstacks_root":
-            new_config = GlobalConfig(
-                workstacks_root=Path(value).expanduser().resolve(),
-                use_graphite=ctx.global_config.use_graphite,
-                shell_setup_complete=ctx.global_config.shell_setup_complete,
-                show_pr_info=ctx.global_config.show_pr_info,
-                show_pr_checks=ctx.global_config.show_pr_checks,
-            )
-        elif parts[0] == "use_graphite":
-            if value.lower() not in ("true", "false"):
-                click.echo(f"Invalid boolean value: {value}", err=True)
+        match parts[0]:
+            case "workstacks_root":
+                new_config = GlobalConfig(
+                    workstacks_root=Path(value).expanduser().resolve(),
+                    use_graphite=ctx.global_config.use_graphite,
+                    shell_setup_complete=ctx.global_config.shell_setup_complete,
+                    show_pr_info=ctx.global_config.show_pr_info,
+                    show_pr_checks=ctx.global_config.show_pr_checks,
+                )
+            case "use_graphite":
+                if value.lower() not in ("true", "false"):
+                    click.echo(f"Invalid boolean value: {value}", err=True)
+                    raise SystemExit(1)
+                new_config = GlobalConfig(
+                    workstacks_root=ctx.global_config.workstacks_root,
+                    use_graphite=value.lower() == "true",
+                    shell_setup_complete=ctx.global_config.shell_setup_complete,
+                    show_pr_info=ctx.global_config.show_pr_info,
+                    show_pr_checks=ctx.global_config.show_pr_checks,
+                )
+            case "show_pr_info":
+                if value.lower() not in ("true", "false"):
+                    click.echo(f"Invalid boolean value: {value}", err=True)
+                    raise SystemExit(1)
+                new_config = GlobalConfig(
+                    workstacks_root=ctx.global_config.workstacks_root,
+                    use_graphite=ctx.global_config.use_graphite,
+                    shell_setup_complete=ctx.global_config.shell_setup_complete,
+                    show_pr_info=value.lower() == "true",
+                    show_pr_checks=ctx.global_config.show_pr_checks,
+                )
+            case "show_pr_checks":
+                if value.lower() not in ("true", "false"):
+                    click.echo(f"Invalid boolean value: {value}", err=True)
+                    raise SystemExit(1)
+                new_config = GlobalConfig(
+                    workstacks_root=ctx.global_config.workstacks_root,
+                    use_graphite=ctx.global_config.use_graphite,
+                    shell_setup_complete=ctx.global_config.shell_setup_complete,
+                    show_pr_info=ctx.global_config.show_pr_info,
+                    show_pr_checks=value.lower() == "true",
+                )
+            case _:
+                click.echo(f"Invalid key: {key}", err=True)
                 raise SystemExit(1)
-            new_config = GlobalConfig(
-                workstacks_root=ctx.global_config.workstacks_root,
-                use_graphite=value.lower() == "true",
-                shell_setup_complete=ctx.global_config.shell_setup_complete,
-                show_pr_info=ctx.global_config.show_pr_info,
-                show_pr_checks=ctx.global_config.show_pr_checks,
-            )
-        elif parts[0] == "show_pr_info":
-            if value.lower() not in ("true", "false"):
-                click.echo(f"Invalid boolean value: {value}", err=True)
-                raise SystemExit(1)
-            new_config = GlobalConfig(
-                workstacks_root=ctx.global_config.workstacks_root,
-                use_graphite=ctx.global_config.use_graphite,
-                shell_setup_complete=ctx.global_config.shell_setup_complete,
-                show_pr_info=value.lower() == "true",
-                show_pr_checks=ctx.global_config.show_pr_checks,
-            )
-        elif parts[0] == "show_pr_checks":
-            if value.lower() not in ("true", "false"):
-                click.echo(f"Invalid boolean value: {value}", err=True)
-                raise SystemExit(1)
-            new_config = GlobalConfig(
-                workstacks_root=ctx.global_config.workstacks_root,
-                use_graphite=ctx.global_config.use_graphite,
-                shell_setup_complete=ctx.global_config.shell_setup_complete,
-                show_pr_info=ctx.global_config.show_pr_info,
-                show_pr_checks=value.lower() == "true",
-            )
-        else:
-            click.echo(f"Invalid key: {key}", err=True)
-            raise SystemExit(1)
 
         save_global_config(new_config)
         click.echo(f"Set {key}={value}")

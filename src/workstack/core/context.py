@@ -42,6 +42,165 @@ class WorkstackContext:
     dry_run: bool
     trunk_branch: str | None
 
+    @staticmethod
+    def minimal(git_ops: GitOps, cwd: Path, dry_run: bool = False) -> "WorkstackContext":
+        """Create minimal context with only git_ops configured, rest are test defaults.
+
+        Useful for simple tests that only need git operations. Other ops
+        are initialized with their standard test defaults (fake implementations).
+
+        Args:
+            git_ops: The GitOps implementation (usually FakeGitOps with test configuration)
+            cwd: Current working directory path for the context
+            dry_run: Whether to enable dry-run mode (default False)
+
+        Returns:
+            WorkstackContext with git_ops configured and other dependencies using test defaults
+
+        Example:
+            Before (7 lines):
+            >>> from tests.fakes.gitops import FakeGitOps
+            >>> from tests.fakes.github_ops import FakeGitHubOps
+            >>> from tests.fakes.graphite_ops import FakeGraphiteOps
+            >>> from tests.fakes.shell_ops import FakeShellOps
+            >>> ctx = WorkstackContext(
+            ...     git_ops=git_ops,
+            ...     github_ops=FakeGitHubOps(),
+            ...     graphite_ops=FakeGraphiteOps(),
+            ...     shell_ops=FakeShellOps(),
+            ...     cwd=cwd,
+            ...     global_config=None,
+            ...     local_config=LoadedConfig(
+            ...         env={}, post_create_commands=[], post_create_shell=None
+            ...     ),
+            ...     repo=NoRepoSentinel(),
+            ...     dry_run=False,
+            ...     trunk_branch=None,
+            ... )
+
+            After (1 line):
+            >>> ctx = WorkstackContext.minimal(git_ops, cwd)
+
+        Note:
+            For more complex test setup with custom configs or multiple ops,
+            use WorkstackContext.for_test() instead.
+        """
+        from tests.fakes.github_ops import FakeGitHubOps
+        from tests.fakes.graphite_ops import FakeGraphiteOps
+        from tests.fakes.shell_ops import FakeShellOps
+
+        return WorkstackContext(
+            git_ops=git_ops,
+            github_ops=FakeGitHubOps(),
+            graphite_ops=FakeGraphiteOps(),
+            shell_ops=FakeShellOps(),
+            cwd=cwd,
+            global_config=None,
+            local_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+            repo=NoRepoSentinel(),
+            dry_run=dry_run,
+            trunk_branch=None,
+        )
+
+    @staticmethod
+    def for_test(
+        git_ops: GitOps | None = None,
+        github_ops: GitHubOps | None = None,
+        graphite_ops: GraphiteOps | None = None,
+        shell_ops: ShellOps | None = None,
+        cwd: Path | None = None,
+        global_config: GlobalConfig | None = None,
+        local_config: LoadedConfig | None = None,
+        repo: RepoContext | NoRepoSentinel | None = None,
+        dry_run: bool = False,
+        trunk_branch: str | None = None,
+    ) -> "WorkstackContext":
+        """Create test context with optional pre-configured ops.
+
+        Provides full control over all context parameters with sensible test defaults
+        for any unspecified values. Use this for complex test scenarios that need
+        specific configurations for multiple operations.
+
+        Args:
+            git_ops: Optional GitOps implementation. If None, creates empty FakeGitOps.
+            github_ops: Optional GitHubOps implementation. If None, creates empty FakeGitHubOps.
+            graphite_ops: Optional GraphiteOps implementation.
+                         If None, creates empty FakeGraphiteOps.
+            shell_ops: Optional ShellOps implementation. If None, creates empty FakeShellOps.
+            cwd: Optional current working directory. If None, uses Path("/test/default/cwd").
+            global_config: Optional GlobalConfig. If None, uses test defaults.
+            local_config: Optional LoadedConfig. If None, uses empty defaults.
+            repo: Optional RepoContext or NoRepoSentinel. If None, uses NoRepoSentinel().
+            dry_run: Whether to enable dry-run mode (default False).
+            trunk_branch: Optional trunk branch name. If None, no trunk configured.
+
+        Returns:
+            WorkstackContext configured with provided values and test defaults
+
+        Example:
+            Simple case (use .minimal() instead):
+            >>> git_ops = FakeGitOps(default_branches={Path("/repo"): "main"})
+            >>> ctx = WorkstackContext.for_test(git_ops=git_ops)
+
+            Complex case with multiple ops:
+            >>> git_ops = FakeGitOps(default_branches={Path("/repo"): "main"})
+            >>> github_ops = FakeGitHubOps(prs={123: PR(...)})
+            >>> graphite_ops = FakeGraphiteOps(stack_info={"feature": StackInfo(...)})
+            >>> ctx = WorkstackContext.for_test(
+            ...     git_ops=git_ops,
+            ...     github_ops=github_ops,
+            ...     graphite_ops=graphite_ops,
+            ... )
+
+        Note:
+            For simple cases that only need git_ops, use WorkstackContext.minimal()
+            which is more concise.
+        """
+        from tests.fakes.github_ops import FakeGitHubOps
+        from tests.fakes.gitops import FakeGitOps
+        from tests.fakes.graphite_ops import FakeGraphiteOps
+        from tests.fakes.shell_ops import FakeShellOps
+
+        if git_ops is None:
+            git_ops = FakeGitOps()
+
+        if github_ops is None:
+            github_ops = FakeGitHubOps()
+
+        if graphite_ops is None:
+            graphite_ops = FakeGraphiteOps()
+
+        if shell_ops is None:
+            shell_ops = FakeShellOps()
+
+        if global_config is None:
+            global_config = GlobalConfig(
+                workstacks_root=Path("/test/workstacks"),
+                use_graphite=False,
+                shell_setup_complete=False,
+                show_pr_info=True,
+                show_pr_checks=False,
+            )
+
+        if local_config is None:
+            local_config = LoadedConfig(env={}, post_create_commands=[], post_create_shell=None)
+
+        if repo is None:
+            repo = NoRepoSentinel()
+
+        return WorkstackContext(
+            git_ops=git_ops,
+            github_ops=github_ops,
+            graphite_ops=graphite_ops,
+            shell_ops=shell_ops,
+            cwd=cwd or Path("/test/default/cwd"),
+            global_config=global_config,
+            local_config=local_config,
+            repo=repo,
+            dry_run=dry_run,
+            trunk_branch=trunk_branch,
+        )
+
 
 def read_trunk_from_pyproject(repo_root: Path) -> str | None:
     """Read trunk branch configuration from pyproject.toml.

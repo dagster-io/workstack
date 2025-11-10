@@ -22,8 +22,12 @@ def create_test_context(
     local_config: LoadedConfig | None = None,
     repo: RepoContext | NoRepoSentinel | None = None,
     dry_run: bool = False,
+    trunk_branch: str | None = None,
 ) -> WorkstackContext:
     """Create test context with optional pre-configured ops.
+
+    This is a convenience wrapper around WorkstackContext.for_test() for backward
+    compatibility. New code should use WorkstackContext.for_test() directly.
 
     Args:
         git_ops: Optional FakeGitOps with test configuration.
@@ -44,6 +48,8 @@ def create_test_context(
         repo: Optional RepoContext or NoRepoSentinel for test context.
              If None, uses NoRepoSentinel().
         dry_run: Whether to set dry_run mode
+        trunk_branch: Optional trunk branch name for test context.
+                     If None, uses None (no trunk configured).
 
     Returns:
         Frozen WorkstackContext for use in tests
@@ -67,41 +73,15 @@ def create_test_context(
         # Without any ops (empty fakes)
         >>> ctx = create_test_context()
     """
-    if git_ops is None:
-        git_ops = FakeGitOps()
-
-    if github_ops is None:
-        github_ops = FakeGitHubOps()
-
-    if graphite_ops is None:
-        graphite_ops = FakeGraphiteOps()
-
-    if shell_ops is None:
-        shell_ops = FakeShellOps()
-
-    if global_config is None:
-        global_config = GlobalConfig(
-            workstacks_root=Path("/test/workstacks"),
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-    if local_config is None:
-        local_config = LoadedConfig(env={}, post_create_commands=[], post_create_shell=None)
-
-    if repo is None:
-        repo = NoRepoSentinel()
-
-    return WorkstackContext(
+    return WorkstackContext.for_test(
         git_ops=git_ops,
         github_ops=github_ops,
         graphite_ops=graphite_ops,
         shell_ops=shell_ops,
-        cwd=cwd or Path("/test/default/cwd"),
+        cwd=cwd,
         global_config=global_config,
         local_config=local_config,
         repo=repo,
         dry_run=dry_run,
+        trunk_branch=trunk_branch,
     )

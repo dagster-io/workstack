@@ -33,11 +33,13 @@ from typing import Any
 
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps, WorktreeInfo
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
+from workstack.cli.config import LoadedConfig
 from workstack.core.context import WorkstackContext
 from workstack.core.github_ops import PullRequestInfo
+from workstack.core.global_config import GlobalConfig
+from workstack.core.repo_discovery import NoRepoSentinel
 
 
 class GraphiteCacheBuilder:
@@ -381,21 +383,27 @@ class WorktreeScenario:
 
         self.graphite_ops = FakeGraphiteOps(stacks=self._graphite_stacks)
 
-        self.global_config_ops = FakeGlobalConfigOps(
+        self.global_config = GlobalConfig(
             workstacks_root=self.workstacks_root,
             use_graphite=self._use_graphite,
             show_pr_info=self._show_pr_info,
+            shell_setup_complete=False,
+            show_pr_checks=False,
         )
 
         self.shell_ops = FakeShellOps()
 
+        self.repo_config = LoadedConfig(env={}, post_create_commands=[], post_create_shell=None)
+
         self.ctx = WorkstackContext(
             git_ops=self.git_ops,
-            global_config_ops=self.global_config_ops,
+            global_config=self.global_config,
             github_ops=self.github_ops,
             graphite_ops=self.graphite_ops,
             shell_ops=self.shell_ops,
             cwd=Path("/test/default/cwd"),
+            repo_config=self.repo_config,
+            repo=NoRepoSentinel(),
             dry_run=False,
         )
 

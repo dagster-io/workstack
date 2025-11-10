@@ -5,12 +5,14 @@ from click.testing import CliRunner
 from tests.commands.display.list import strip_ansi
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.cli import cli
+from workstack.cli.config import LoadedConfig
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
+from workstack.core.global_config import GlobalConfig
+from workstack.core.repo_discovery import NoRepoSentinel
 
 
 def test_list_outputs_names_not_paths() -> None:
@@ -42,20 +44,25 @@ def test_list_outputs_names_not_paths() -> None:
         )
 
         # Build fake global config ops
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps()
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             github_ops=FakeGitHubOps(),
             graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
             cwd=Path("/test/default/cwd"),
+            repo_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+            repo=NoRepoSentinel(),
             dry_run=False,
         )
 

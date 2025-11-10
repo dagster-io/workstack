@@ -6,13 +6,15 @@ from click.testing import CliRunner
 
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.cli import cli
+from workstack.cli.config import LoadedConfig
 from workstack.core.branch_metadata import BranchMetadata
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
+from workstack.core.global_config import GlobalConfig
+from workstack.core.repo_discovery import NoRepoSentinel
 
 
 def test_down_with_existing_worktree() -> None:
@@ -43,9 +45,12 @@ def test_down_with_existing_worktree() -> None:
             git_common_dirs={cwd: git_dir},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=cwd / "workstacks",
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         # Set up stack: main -> feature-1 -> feature-2
@@ -61,11 +66,13 @@ def test_down_with_existing_worktree() -> None:
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             github_ops=FakeGitHubOps(),
             graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
             cwd=Path("/test/default/cwd"),
+            repo_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+            repo=NoRepoSentinel(),
             dry_run=False,
         )
 
@@ -103,9 +110,12 @@ def test_down_to_trunk_root() -> None:
             git_common_dirs={cwd: git_dir},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=cwd / "workstacks",
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         # Set up stack: main -> feature-1
@@ -118,11 +128,13 @@ def test_down_to_trunk_root() -> None:
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             github_ops=FakeGitHubOps(),
             graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
             cwd=Path("/test/default/cwd"),
+            repo_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+            repo=NoRepoSentinel(),
             dry_run=False,
         )
 
@@ -155,9 +167,12 @@ def test_down_at_trunk() -> None:
             git_common_dirs={cwd: git_dir},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=cwd / "workstacks",
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         # Set up stack: main (only trunk)
@@ -169,11 +184,13 @@ def test_down_at_trunk() -> None:
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             github_ops=FakeGitHubOps(),
             graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
             cwd=Path("/test/default/cwd"),
+            repo_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+            repo=NoRepoSentinel(),
             dry_run=False,
         )
 
@@ -208,9 +225,12 @@ def test_down_parent_has_no_worktree() -> None:
             git_common_dirs={cwd: git_dir},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=cwd / "workstacks",
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         # Set up stack: main -> feature-1 -> feature-2
@@ -226,11 +246,13 @@ def test_down_parent_has_no_worktree() -> None:
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             github_ops=FakeGitHubOps(),
             graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
             cwd=Path("/test/default/cwd"),
+            repo_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+            repo=NoRepoSentinel(),
             dry_run=False,
         )
 
@@ -257,18 +279,23 @@ def test_down_graphite_not_enabled() -> None:
         )
 
         # Graphite is NOT enabled
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=cwd / "workstacks",
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
             cwd=Path("/test/default/cwd"),
+            repo_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+            repo=NoRepoSentinel(),
             dry_run=False,
         )
 
@@ -294,18 +321,23 @@ def test_down_detached_head() -> None:
             git_common_dirs={cwd: git_dir},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=cwd / "workstacks",
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
             cwd=Path("/test/default/cwd"),
+            repo_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+            repo=NoRepoSentinel(),
             dry_run=False,
         )
 
@@ -344,9 +376,12 @@ def test_down_script_flag() -> None:
             git_common_dirs={cwd: git_dir},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=cwd / "workstacks",
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         # Set up stack: main -> feature-1 -> feature-2
@@ -362,11 +397,13 @@ def test_down_script_flag() -> None:
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             github_ops=FakeGitHubOps(),
             graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
             cwd=Path("/test/default/cwd"),
+            repo_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+            repo=NoRepoSentinel(),
             dry_run=False,
         )
 
@@ -420,9 +457,12 @@ def test_down_with_mismatched_worktree_name() -> None:
             git_common_dirs={cwd: git_dir},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=cwd / "workstacks",
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         # Set up stack: main -> feature/auth -> feature/auth-tests
@@ -443,11 +483,13 @@ def test_down_with_mismatched_worktree_name() -> None:
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             github_ops=FakeGitHubOps(),
             graphite_ops=graphite_ops,
             shell_ops=FakeShellOps(),
             cwd=Path("/test/default/cwd"),
+            repo_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+            repo=NoRepoSentinel(),
             dry_run=False,
         )
 

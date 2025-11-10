@@ -11,13 +11,13 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.cli import cli
 from workstack.core.branch_metadata import BranchMetadata
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import RealGitOps
+from workstack.core.global_config import GlobalConfig
 
 
 def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> None:
@@ -139,14 +139,17 @@ def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> No
             }
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_dir.parent,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),

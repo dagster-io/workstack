@@ -12,15 +12,16 @@ from click.testing import CliRunner
 
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.cli import cli
+from workstack.cli.config import LoadedConfig
 from workstack.core.context import WorkstackContext, create_context
 from workstack.core.github_ops import DryRunGitHubOps
-from workstack.core.gitops import DryRunGitOps, WorktreeInfo
-from workstack.core.global_config_ops import DryRunGlobalConfigOps
+from workstack.core.gitops import DryRunGitOps, RealGitOps, WorktreeInfo
+from workstack.core.global_config import GlobalConfig
 from workstack.core.graphite_ops import DryRunGraphiteOps
+from workstack.core.repo_discovery import NoRepoSentinel
 
 
 def init_git_repo(repo_path: Path, default_branch: str = "main") -> None:
@@ -62,19 +63,24 @@ def test_dryrun_read_operations_still_work(tmp_path: Path) -> None:
         },
         git_common_dirs={repo: repo / ".git"},
     )
-    global_config_ops = FakeGlobalConfigOps(
+    global_config_ops = GlobalConfig(
         workstacks_root=tmp_path / "workstacks",
         use_graphite=False,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
     )
 
     # Wrap fakes in dry-run wrappers
     ctx = WorkstackContext(
         git_ops=DryRunGitOps(git_ops),
-        global_config_ops=DryRunGlobalConfigOps(global_config_ops),
+        global_config=global_config_ops,
         github_ops=DryRunGitHubOps(FakeGitHubOps()),
         graphite_ops=DryRunGraphiteOps(FakeGraphiteOps()),
         shell_ops=FakeShellOps(),
         cwd=Path("/test/default/cwd"),
+        repo_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+        repo=NoRepoSentinel(),
         dry_run=True,
     )
 
@@ -261,8 +267,6 @@ def test_dryrun_graphite_operations(tmp_path: Path) -> None:
     assert "graphite.dev" in url
 
     # Test get_prs_from_graphite (read operation)
-    from workstack.core.gitops import RealGitOps
-
     git_ops = RealGitOps()
     prs = ctx.graphite_ops.get_prs_from_graphite(git_ops, repo)
     assert isinstance(prs, dict)

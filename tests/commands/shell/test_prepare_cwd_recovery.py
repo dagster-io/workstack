@@ -7,9 +7,9 @@ from click.testing import CliRunner
 
 from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from workstack.cli.commands.prepare_cwd_recovery import prepare_cwd_recovery_cmd
 from workstack.core.context import WorkstackContext
+from workstack.core.global_config import GlobalConfig
 
 
 def build_ctx(repo_root: Path | None, workstacks_root: Path) -> WorkstackContext:
@@ -19,10 +19,16 @@ def build_ctx(repo_root: Path | None, workstacks_root: Path) -> WorkstackContext
         git_common_dirs[repo_root] = repo_root / ".git"
 
     git_ops = FakeGitOps(git_common_dirs=git_common_dirs)
-    global_config_ops = FakeGlobalConfigOps(workstacks_root=workstacks_root)
+    global_config_ops = GlobalConfig(
+        workstacks_root=workstacks_root,
+        use_graphite=False,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
+    )
     return create_test_context(
         git_ops=git_ops,
-        global_config_ops=global_config_ops,
+        global_config=global_config_ops,
         dry_run=False,
     )
 

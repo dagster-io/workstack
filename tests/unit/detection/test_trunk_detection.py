@@ -16,11 +16,13 @@ from pathlib import Path
 
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.commands.list import _is_trunk_branch
+from workstack.cli.config import LoadedConfig
 from workstack.core.context import WorkstackContext
+from workstack.core.global_config import GlobalConfig
+from workstack.core.repo_discovery import NoRepoSentinel
 
 
 def test_branch_with_trunk_validation_result(tmp_path: Path) -> None:
@@ -38,17 +40,22 @@ def test_branch_with_trunk_validation_result(tmp_path: Path) -> None:
     (git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache), encoding="utf-8")
 
     git_ops = FakeGitOps(git_common_dirs={tmp_path: git_dir})
-    global_config_ops = FakeGlobalConfigOps(
+    global_config_ops = GlobalConfig(
         workstacks_root=tmp_path / "workstacks",
         use_graphite=True,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
     )
     ctx = WorkstackContext(
         git_ops=git_ops,
-        global_config_ops=global_config_ops,
+        global_config=global_config_ops,
         graphite_ops=FakeGraphiteOps(),
         github_ops=FakeGitHubOps(),
         shell_ops=FakeShellOps(),
         cwd=Path("/test/default/cwd"),
+        repo_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+        repo=NoRepoSentinel(),
         dry_run=False,
     )
 
@@ -70,17 +77,22 @@ def test_branch_with_no_parent_is_trunk(tmp_path: Path) -> None:
     (git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache), encoding="utf-8")
 
     git_ops = FakeGitOps(git_common_dirs={tmp_path: git_dir})
-    global_config_ops = FakeGlobalConfigOps(
+    global_config_ops = GlobalConfig(
         workstacks_root=tmp_path / "workstacks",
         use_graphite=True,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
     )
     ctx = WorkstackContext(
         git_ops=git_ops,
-        global_config_ops=global_config_ops,
+        global_config=global_config_ops,
         graphite_ops=FakeGraphiteOps(),
         github_ops=FakeGitHubOps(),
         shell_ops=FakeShellOps(),
         cwd=Path("/test/default/cwd"),
+        repo_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+        repo=NoRepoSentinel(),
         dry_run=False,
     )
 
@@ -101,17 +113,22 @@ def test_branch_with_parent_is_not_trunk(tmp_path: Path) -> None:
     (git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache), encoding="utf-8")
 
     git_ops = FakeGitOps(git_common_dirs={tmp_path: git_dir})
-    global_config_ops = FakeGlobalConfigOps(
+    global_config_ops = GlobalConfig(
         workstacks_root=tmp_path / "workstacks",
         use_graphite=True,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
     )
     ctx = WorkstackContext(
         git_ops=git_ops,
-        global_config_ops=global_config_ops,
+        global_config=global_config_ops,
         graphite_ops=FakeGraphiteOps(),
         github_ops=FakeGitHubOps(),
         shell_ops=FakeShellOps(),
         cwd=Path("/test/default/cwd"),
+        repo_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+        repo=NoRepoSentinel(),
         dry_run=False,
     )
 
@@ -131,17 +148,22 @@ def test_branch_not_in_cache_is_not_trunk(tmp_path: Path) -> None:
     (git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache), encoding="utf-8")
 
     git_ops = FakeGitOps(git_common_dirs={tmp_path: git_dir})
-    global_config_ops = FakeGlobalConfigOps(
+    global_config_ops = GlobalConfig(
         workstacks_root=tmp_path / "workstacks",
         use_graphite=True,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
     )
     ctx = WorkstackContext(
         git_ops=git_ops,
-        global_config_ops=global_config_ops,
+        global_config=global_config_ops,
         graphite_ops=FakeGraphiteOps(),
         github_ops=FakeGitHubOps(),
         shell_ops=FakeShellOps(),
         cwd=Path("/test/default/cwd"),
+        repo_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+        repo=NoRepoSentinel(),
         dry_run=False,
     )
 
@@ -155,17 +177,22 @@ def test_graphite_disabled_returns_false(tmp_path: Path) -> None:
     git_dir.mkdir()
 
     git_ops = FakeGitOps(git_common_dirs={tmp_path: git_dir})
-    global_config_ops = FakeGlobalConfigOps(
+    global_config_ops = GlobalConfig(
         workstacks_root=tmp_path / "workstacks",
-        use_graphite=False,  # Graphite disabled
+        use_graphite=False,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
     )
     ctx = WorkstackContext(
         git_ops=git_ops,
-        global_config_ops=global_config_ops,
+        global_config=global_config_ops,
         graphite_ops=FakeGraphiteOps(),
         github_ops=FakeGitHubOps(),
         shell_ops=FakeShellOps(),
         cwd=Path("/test/default/cwd"),
+        repo_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+        repo=NoRepoSentinel(),
         dry_run=False,
     )
 

@@ -10,12 +10,14 @@ from click.testing import CliRunner
 
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.cli import cli
+from workstack.cli.config import LoadedConfig
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import DryRunGitOps, WorktreeInfo
+from workstack.core.global_config import GlobalConfig
+from workstack.core.repo_discovery import NoRepoSentinel
 
 
 def _create_test_context(
@@ -40,13 +42,19 @@ def _create_test_context(
 
     return WorkstackContext(
         git_ops=git_ops,
-        global_config_ops=FakeGlobalConfigOps(
-            workstacks_root=workstacks_root, use_graphite=use_graphite
+        global_config=GlobalConfig(
+            workstacks_root=workstacks_root,
+            use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         ),
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),
         cwd=Path("/test/default/cwd"),
+        repo_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+        repo=NoRepoSentinel(),
         dry_run=dry_run,
     )
 
@@ -148,13 +156,19 @@ def test_rm_dry_run_with_delete_stack() -> None:
 
         test_ctx = WorkstackContext(
             git_ops=git_ops,
-            global_config_ops=FakeGlobalConfigOps(
-                workstacks_root=workstacks_root, use_graphite=True
+            global_config=GlobalConfig(
+                workstacks_root=workstacks_root,
+                use_graphite=True,
+                shell_setup_complete=False,
+                show_pr_info=True,
+                show_pr_checks=False,
             ),
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
             cwd=Path("/test/default/cwd"),
+            repo_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+            repo=NoRepoSentinel(),
             dry_run=True,
         )
 

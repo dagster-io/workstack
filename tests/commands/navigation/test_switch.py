@@ -240,11 +240,13 @@ def test_complete_worktree_names_without_context(
     from tests.fakes.shell_ops import FakeShellOps
     from workstack.cli.cli import cli
     from workstack.cli.commands.switch import complete_worktree_names
+    from workstack.cli.config import LoadedConfig
     from workstack.core.context import WorkstackContext
     from workstack.core.github_ops import RealGitHubOps
     from workstack.core.gitops import RealGitOps
-    from workstack.core.global_config_ops import RealGlobalConfigOps
+    from workstack.core.global_config import GlobalConfig
     from workstack.core.graphite_ops import RealGraphiteOps
+    from workstack.core.repo_discovery import NoRepoSentinel
 
     # Set up isolated global config
     global_config_dir = tmp_path / ".workstack"
@@ -282,11 +284,19 @@ def test_complete_worktree_names_without_context(
     def mock_create_context() -> WorkstackContext:
         return WorkstackContext(
             git_ops=RealGitOps(),
-            global_config_ops=RealGlobalConfigOps(),
+            global_config=GlobalConfig(
+                workstacks_root=workstacks_root,
+                use_graphite=False,
+                shell_setup_complete=False,
+                show_pr_info=True,
+                show_pr_checks=False,
+            ),
             github_ops=RealGitHubOps(),
             graphite_ops=RealGraphiteOps(),
             shell_ops=FakeShellOps(),
             cwd=Path("/test/default/cwd"),
+            repo_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
+            repo=NoRepoSentinel(),
             dry_run=False,
         )
 

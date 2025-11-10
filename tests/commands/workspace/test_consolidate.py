@@ -463,3 +463,263 @@ def test_consolidate_preserves_root_worktree_even_when_in_stack() -> None:
 
         # Current worktree (feature-2) should also not be removed
         assert wt2_path not in test_ctx.git_ops.removed_worktrees
+
+
+def test_consolidate_partial_stack() -> None:
+    """Test consolidating only trunk → specified branch."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        workstacks_root = cwd / "workstacks"
+
+        # Configure graphite with stack (main -> feat-1 -> feat-2 -> feat-3)
+        graphite_ops = FakeGraphiteOps(stacks={"feat-3": ["main", "feat-1", "feat-2", "feat-3"]})
+
+        # Create worktree directories
+        repo_name = cwd.name
+        wt1_path = workstacks_root / repo_name / "wt1"
+        wt2_path = workstacks_root / repo_name / "wt2"
+        wt3_path = workstacks_root / repo_name / "wt3"
+        wt1_path.mkdir(parents=True)
+        wt2_path.mkdir(parents=True)
+        wt3_path.mkdir(parents=True)
+
+        # Three worktrees: wt1 (feat-1), wt2 (feat-2), wt3 (feat-3, current)
+        worktrees = {
+            cwd: [
+                WorktreeInfo(path=wt1_path, branch="feat-1"),
+                WorktreeInfo(path=wt2_path, branch="feat-2"),
+                WorktreeInfo(path=wt3_path, branch="feat-3"),
+            ]
+        }
+
+        test_ctx = _create_test_context(
+            wt3_path, worktrees, "feat-3", workstacks_root, graphite_ops
+        )
+        # Override git_common_dirs
+        test_ctx.git_ops._git_common_dirs[wt1_path] = cwd / ".git"
+        test_ctx.git_ops._git_common_dirs[wt2_path] = cwd / ".git"
+        test_ctx.git_ops._git_common_dirs[wt3_path] = cwd / ".git"
+
+        # Run consolidate with branch argument: consolidate feat-2
+        # Should consolidate main → feat-2 only, keeping feat-3 separate
+        result = runner.invoke(cli, ["consolidate", "feat-2", "-f"], obj=test_ctx)
+
+        assert result.exit_code == 0, result.output
+        # Should remove wt1 (feat-1) and wt2 (feat-2), but NOT wt3 (feat-3, current)
+        assert len(test_ctx.git_ops.removed_worktrees) == 2
+        assert wt1_path in test_ctx.git_ops.removed_worktrees
+        assert wt2_path in test_ctx.git_ops.removed_worktrees
+        assert wt3_path not in test_ctx.git_ops.removed_worktrees
+
+
+def test_consolidate_with_new_name() -> None:
+    """Test consolidating into a new worktree with --name option."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        workstacks_root = cwd / "workstacks"
+
+        # Configure graphite with stack (main -> feat-1 -> feat-2)
+        graphite_ops = FakeGraphiteOps(stacks={"feat-2": ["main", "feat-1", "feat-2"]})
+
+        # Create worktree directories
+        repo_name = cwd.name
+        wt1_path = workstacks_root / repo_name / "wt1"
+        wt2_path = workstacks_root / repo_name / "wt2"
+        wt1_path.mkdir(parents=True)
+        wt2_path.mkdir(parents=True)
+
+        # Two worktrees: wt1 (feat-1), wt2 (feat-2, current)
+        worktrees = {
+            cwd: [
+                WorktreeInfo(path=wt1_path, branch="feat-1"),
+                WorktreeInfo(path=wt2_path, branch="feat-2"),
+            ]
+        }
+
+        test_ctx = _create_test_context(
+            wt2_path, worktrees, "feat-2", workstacks_root, graphite_ops
+        )
+        # Override git_common_dirs
+        test_ctx.git_ops._git_common_dirs[wt1_path] = cwd / ".git"
+        test_ctx.git_ops._git_common_dirs[wt2_path] = cwd / ".git"
+
+        # Run consolidate with --name option
+        result = runner.invoke(cli, ["consolidate", "--name", "my-stack", "-f"], obj=test_ctx)
+
+        # Note: In isolated filesystem, git worktree add will fail since we don't have real git
+        # We're testing the validation and flow, not the actual git command
+        # In real usage, this would create a new worktree "my-stack" and consolidate into it
+        # For now, we expect this to fail at the git worktree add step
+        assert result.exit_code == 1
+        assert (
+            "Failed to create worktree" in result.output or "not a git repository" in result.output
+        )
+
+
+def test_consolidate_name_already_exists() -> None:
+    """Test that --name errors if worktree already exists."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        workstacks_root = cwd / "workstacks"
+
+        # Configure graphite with stack (main -> feat-1)
+        graphite_ops = FakeGraphiteOps(stacks={"feat-1": ["main", "feat-1"]})
+
+        # Create worktree directories including one named "my-stack"
+        repo_name = cwd.name
+        wt1_path = workstacks_root / repo_name / "wt1"
+        existing_stack = cwd.parent / "my-stack"
+        wt1_path.mkdir(parents=True)
+        existing_stack.mkdir(parents=True)
+
+        # Worktrees: wt1 (feat-1, current) and existing "my-stack"
+        worktrees = {
+            cwd: [
+                WorktreeInfo(path=wt1_path, branch="feat-1"),
+                WorktreeInfo(path=existing_stack, branch="other"),
+            ]
+        }
+
+        test_ctx = _create_test_context(
+            wt1_path, worktrees, "feat-1", workstacks_root, graphite_ops
+        )
+        test_ctx.git_ops._git_common_dirs[wt1_path] = cwd / ".git"
+        test_ctx.git_ops._git_common_dirs[existing_stack] = cwd / ".git"
+
+        # Run consolidate with --name for existing worktree
+        result = runner.invoke(cli, ["consolidate", "--name", "my-stack", "-f"], obj=test_ctx)
+
+        assert result.exit_code == 1
+        assert "already exists" in result.output
+
+
+def test_consolidate_partial_with_name() -> None:
+    """Test combining both features: partial stack + new worktree."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        workstacks_root = cwd / "workstacks"
+
+        # Configure graphite with stack (main -> feat-1 -> feat-2 -> feat-3)
+        graphite_ops = FakeGraphiteOps(stacks={"feat-3": ["main", "feat-1", "feat-2", "feat-3"]})
+
+        # Create worktree directories
+        repo_name = cwd.name
+        wt1_path = workstacks_root / repo_name / "wt1"
+        wt2_path = workstacks_root / repo_name / "wt2"
+        wt3_path = workstacks_root / repo_name / "wt3"
+        wt1_path.mkdir(parents=True)
+        wt2_path.mkdir(parents=True)
+        wt3_path.mkdir(parents=True)
+
+        # Three worktrees: wt1 (feat-1), wt2 (feat-2), wt3 (feat-3, current)
+        worktrees = {
+            cwd: [
+                WorktreeInfo(path=wt1_path, branch="feat-1"),
+                WorktreeInfo(path=wt2_path, branch="feat-2"),
+                WorktreeInfo(path=wt3_path, branch="feat-3"),
+            ]
+        }
+
+        test_ctx = _create_test_context(
+            wt3_path, worktrees, "feat-3", workstacks_root, graphite_ops
+        )
+        # Override git_common_dirs
+        test_ctx.git_ops._git_common_dirs[wt1_path] = cwd / ".git"
+        test_ctx.git_ops._git_common_dirs[wt2_path] = cwd / ".git"
+        test_ctx.git_ops._git_common_dirs[wt3_path] = cwd / ".git"
+
+        # Run consolidate with both branch and --name
+        result = runner.invoke(
+            cli, ["consolidate", "feat-2", "--name", "my-partial", "-f"], obj=test_ctx
+        )
+
+        # In isolated filesystem, git worktree add will fail
+        # But we can verify that validation logic runs correctly
+        assert result.exit_code == 1
+        assert (
+            "Failed to create worktree" in result.output or "not a git repository" in result.output
+        )
+
+
+def test_consolidate_branch_not_in_stack() -> None:
+    """Test error when specified branch is not in current stack."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        workstacks_root = cwd / "workstacks"
+
+        # Configure graphite with stack (main -> feat-1 -> feat-2)
+        graphite_ops = FakeGraphiteOps(stacks={"feat-2": ["main", "feat-1", "feat-2"]})
+
+        # Current worktree on feat-2
+        worktrees = {cwd: [WorktreeInfo(path=cwd, branch="feat-2")]}
+
+        test_ctx = _create_test_context(cwd, worktrees, "feat-2", workstacks_root, graphite_ops)
+
+        # Try to consolidate to a branch not in the stack
+        result = runner.invoke(cli, ["consolidate", "feat-99", "-f"], obj=test_ctx)
+
+        assert result.exit_code == 1
+        assert "not in the current stack" in result.output
+        assert "feat-99" in result.output
+
+
+def test_consolidate_preserves_upstack_branches() -> None:
+    """Test that branches above the specified branch remain in separate worktrees."""
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        cwd = Path.cwd()
+        workstacks_root = cwd / "workstacks"
+
+        # Configure graphite with stack (main -> feat-1 -> feat-2 -> feat-3 -> feat-4)
+        graphite_ops = FakeGraphiteOps(
+            stacks={"feat-4": ["main", "feat-1", "feat-2", "feat-3", "feat-4"]}
+        )
+
+        # Create worktree directories
+        repo_name = cwd.name
+        wt1_path = workstacks_root / repo_name / "wt1"
+        wt2_path = workstacks_root / repo_name / "wt2"
+        wt3_path = workstacks_root / repo_name / "wt3"
+        wt4_path = workstacks_root / repo_name / "wt4"
+        wt1_path.mkdir(parents=True)
+        wt2_path.mkdir(parents=True)
+        wt3_path.mkdir(parents=True)
+        wt4_path.mkdir(parents=True)
+
+        # Four worktrees for feat-1, feat-2, feat-3, feat-4
+        # Current is wt4 (feat-4)
+        worktrees = {
+            cwd: [
+                WorktreeInfo(path=wt1_path, branch="feat-1"),
+                WorktreeInfo(path=wt2_path, branch="feat-2"),
+                WorktreeInfo(path=wt3_path, branch="feat-3"),
+                WorktreeInfo(path=wt4_path, branch="feat-4"),
+            ]
+        }
+
+        test_ctx = _create_test_context(
+            wt4_path, worktrees, "feat-4", workstacks_root, graphite_ops
+        )
+        # Override git_common_dirs
+        test_ctx.git_ops._git_common_dirs[wt1_path] = cwd / ".git"
+        test_ctx.git_ops._git_common_dirs[wt2_path] = cwd / ".git"
+        test_ctx.git_ops._git_common_dirs[wt3_path] = cwd / ".git"
+        test_ctx.git_ops._git_common_dirs[wt4_path] = cwd / ".git"
+
+        # Consolidate feat-2 (from current=feat-4)
+        # Should remove feat-1 and feat-2, but keep feat-3 and feat-4
+        result = runner.invoke(cli, ["consolidate", "feat-2", "-f"], obj=test_ctx)
+
+        assert result.exit_code == 0, result.output
+        # Should remove wt1 (feat-1) and wt2 (feat-2)
+        assert len(test_ctx.git_ops.removed_worktrees) == 2
+        assert wt1_path in test_ctx.git_ops.removed_worktrees
+        assert wt2_path in test_ctx.git_ops.removed_worktrees
+        # Should NOT remove wt3 (feat-3) and wt4 (feat-4, current)
+        assert wt3_path not in test_ctx.git_ops.removed_worktrees
+        assert wt4_path not in test_ctx.git_ops.removed_worktrees

@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from tests.fakes.github_ops import FakeGitHubOps
+from tests.test_utils import sentinel_path
 from workstack.core.github_ops import PRInfo, PullRequestInfo
 
 
@@ -16,7 +17,7 @@ def test_fake_github_ops_initialization() -> None:
     """Test that FakeGitHubOps initializes with empty state."""
     ops = FakeGitHubOps()
 
-    result = ops.get_prs_for_repo(Path("/repo"), include_checks=False)
+    result = ops.get_prs_for_repo(sentinel_path(), include_checks=False)
     assert result == {}
 
 
@@ -44,7 +45,7 @@ def test_fake_github_ops_get_prs_for_repo() -> None:
     }
     ops = FakeGitHubOps(prs=prs)
 
-    result = ops.get_prs_for_repo(Path("/repo"), include_checks=False)
+    result = ops.get_prs_for_repo(sentinel_path(), include_checks=False)
 
     assert len(result) == 2
     assert result["feature-1"].number == 123
@@ -69,8 +70,8 @@ def test_fake_github_ops_get_prs_for_repo_with_checks() -> None:
     ops = FakeGitHubOps(prs=prs)
 
     # Both calls should return same data regardless of include_checks
-    result_without = ops.get_prs_for_repo(Path("/repo"), include_checks=False)
-    result_with = ops.get_prs_for_repo(Path("/repo"), include_checks=True)
+    result_without = ops.get_prs_for_repo(sentinel_path(), include_checks=False)
+    result_with = ops.get_prs_for_repo(sentinel_path(), include_checks=True)
 
     assert result_without == result_with
     assert len(result_without) == 1
@@ -91,7 +92,7 @@ def test_fake_github_ops_get_pr_status_existing_branch() -> None:
     }
     ops = FakeGitHubOps(prs=prs)
 
-    result = ops.get_pr_status(Path("/repo"), "feature", debug=False)
+    result = ops.get_pr_status(sentinel_path(), "feature", debug=False)
 
     assert result.state == "OPEN"
     assert result.pr_number == 123
@@ -102,7 +103,7 @@ def test_fake_github_ops_get_pr_status_missing_branch() -> None:
     """Test get_pr_status returns NONE for missing branch."""
     ops = FakeGitHubOps()
 
-    result = ops.get_pr_status(Path("/repo"), "nonexistent", debug=False)
+    result = ops.get_pr_status(sentinel_path(), "nonexistent", debug=False)
 
     assert result.state == "NONE"
     assert result.pr_number is None
@@ -117,12 +118,12 @@ def test_fake_github_ops_legacy_pr_statuses_format() -> None:
     }
     ops = FakeGitHubOps(pr_statuses=pr_statuses)
 
-    result_feature = ops.get_pr_status(Path("/repo"), "feature", debug=False)
+    result_feature = ops.get_pr_status(sentinel_path(), "feature", debug=False)
     assert result_feature.state == "OPEN"
     assert result_feature.pr_number == 123
     assert result_feature.title == "Add feature"
 
-    result_bugfix = ops.get_pr_status(Path("/repo"), "bugfix", debug=False)
+    result_bugfix = ops.get_pr_status(sentinel_path(), "bugfix", debug=False)
     assert result_bugfix.state == "MERGED"
     assert result_bugfix.pr_number == 456
     assert result_bugfix.title == "Fix bug"
@@ -135,7 +136,7 @@ def test_fake_github_ops_state_conversion() -> None:
     }
     ops = FakeGitHubOps(pr_statuses=pr_statuses)
 
-    result = ops.get_pr_status(Path("/repo"), "no-pr", debug=False)
+    result = ops.get_pr_status(sentinel_path(), "no-pr", debug=False)
 
     assert result.state == "NONE"
     assert result.pr_number is None
@@ -157,7 +158,7 @@ def test_fake_github_ops_pull_request_info_fields() -> None:
     }
     ops = FakeGitHubOps(prs=prs)
 
-    result = ops.get_pr_status(Path("/repo"), "feature", debug=False)
+    result = ops.get_pr_status(sentinel_path(), "feature", debug=False)
 
     # Verify field mapping: PullRequestInfo -> PRInfo
     assert result.state == "CLOSED"
@@ -169,10 +170,10 @@ def test_fake_github_ops_empty_prs_dict() -> None:
     """Test behavior with explicitly empty prs dict."""
     ops = FakeGitHubOps(prs={})
 
-    result = ops.get_prs_for_repo(Path("/repo"), include_checks=False)
+    result = ops.get_prs_for_repo(sentinel_path(), include_checks=False)
     assert result == {}
 
-    pr_status = ops.get_pr_status(Path("/repo"), "any-branch", debug=False)
+    pr_status = ops.get_pr_status(sentinel_path(), "any-branch", debug=False)
     assert pr_status == PRInfo("NONE", None, None)
 
 
@@ -203,7 +204,7 @@ def test_fake_github_ops_get_pr_base_branch_existing() -> None:
     }
     ops = FakeGitHubOps(pr_bases=pr_bases)
 
-    result = ops.get_pr_base_branch(Path("/repo"), 123)
+    result = ops.get_pr_base_branch(sentinel_path(), 123)
 
     assert result == "main"
 
@@ -212,7 +213,7 @@ def test_fake_github_ops_get_pr_base_branch_missing() -> None:
     """Test get_pr_base_branch returns None for missing PR."""
     ops = FakeGitHubOps()
 
-    result = ops.get_pr_base_branch(Path("/repo"), 999)
+    result = ops.get_pr_base_branch(sentinel_path(), 999)
 
     assert result is None
 
@@ -221,7 +222,7 @@ def test_fake_github_ops_get_pr_base_branch_empty_dict() -> None:
     """Test get_pr_base_branch with explicitly empty pr_bases dict."""
     ops = FakeGitHubOps(pr_bases={})
 
-    result = ops.get_pr_base_branch(Path("/repo"), 123)
+    result = ops.get_pr_base_branch(sentinel_path(), 123)
 
     assert result is None
 
@@ -230,7 +231,7 @@ def test_fake_github_ops_update_pr_base_branch_single() -> None:
     """Test update_pr_base_branch tracks single update."""
     ops = FakeGitHubOps()
 
-    ops.update_pr_base_branch(Path("/repo"), 123, "main")
+    ops.update_pr_base_branch(sentinel_path(), 123, "main")
 
     assert ops.updated_pr_bases == [(123, "main")]
 
@@ -239,9 +240,9 @@ def test_fake_github_ops_update_pr_base_branch_multiple() -> None:
     """Test update_pr_base_branch tracks multiple updates in order."""
     ops = FakeGitHubOps()
 
-    ops.update_pr_base_branch(Path("/repo"), 123, "main")
-    ops.update_pr_base_branch(Path("/repo"), 456, "develop")
-    ops.update_pr_base_branch(Path("/repo"), 789, "feature-1")
+    ops.update_pr_base_branch(sentinel_path(), 123, "main")
+    ops.update_pr_base_branch(sentinel_path(), 456, "develop")
+    ops.update_pr_base_branch(sentinel_path(), 789, "feature-1")
 
     assert ops.updated_pr_bases == [
         (123, "main"),
@@ -254,8 +255,8 @@ def test_fake_github_ops_update_pr_base_branch_same_pr_twice() -> None:
     """Test update_pr_base_branch tracks same PR updated multiple times."""
     ops = FakeGitHubOps()
 
-    ops.update_pr_base_branch(Path("/repo"), 123, "main")
-    ops.update_pr_base_branch(Path("/repo"), 123, "develop")
+    ops.update_pr_base_branch(sentinel_path(), 123, "main")
+    ops.update_pr_base_branch(sentinel_path(), 123, "develop")
 
     # Both updates should be tracked
     assert ops.updated_pr_bases == [
@@ -274,7 +275,7 @@ def test_fake_github_ops_updated_pr_bases_empty_initially() -> None:
 def test_fake_github_ops_updated_pr_bases_read_only() -> None:
     """Test updated_pr_bases property returns list that can be read."""
     ops = FakeGitHubOps()
-    ops.update_pr_base_branch(Path("/repo"), 123, "main")
+    ops.update_pr_base_branch(sentinel_path(), 123, "main")
 
     # Should be able to read the list
     updates = ops.updated_pr_bases
@@ -291,7 +292,7 @@ def test_fake_github_ops_update_does_not_affect_get() -> None:
     ops.update_pr_base_branch(Path("/repo"), 123, "new-base")
 
     # get_pr_base_branch should still return original configured value
-    assert ops.get_pr_base_branch(Path("/repo"), 123) == "original-base"
+    assert ops.get_pr_base_branch(sentinel_path(), 123) == "original-base"
     # But update should be tracked
     assert ops.updated_pr_bases == [(123, "new-base")]
 
@@ -326,22 +327,22 @@ def test_fake_github_ops_full_workflow() -> None:
     ops = FakeGitHubOps(prs=prs, pr_bases=pr_bases)
 
     # Query operations
-    all_prs = ops.get_prs_for_repo(Path("/repo"), include_checks=False)
+    all_prs = ops.get_prs_for_repo(sentinel_path(), include_checks=False)
     assert len(all_prs) == 2
 
-    pr_status = ops.get_pr_status(Path("/repo"), "feature-1", debug=False)
+    pr_status = ops.get_pr_status(sentinel_path(), "feature-1", debug=False)
     assert pr_status.pr_number == 123
 
-    base = ops.get_pr_base_branch(Path("/repo"), 123)
+    base = ops.get_pr_base_branch(sentinel_path(), 123)
     assert base == "main"
 
     # Mutation tracking
     ops.update_pr_base_branch(Path("/repo"), 456, "main")
-    ops.update_pr_base_branch(Path("/repo"), 123, "develop")
+    ops.update_pr_base_branch(sentinel_path(), 123, "develop")
 
     # Verify mutations tracked
     assert ops.updated_pr_bases == [(456, "main"), (123, "develop")]
 
     # Verify configured state unchanged
-    assert ops.get_pr_base_branch(Path("/repo"), 123) == "main"
-    assert ops.get_pr_base_branch(Path("/repo"), 456) == "feature-1"
+    assert ops.get_pr_base_branch(sentinel_path(), 123) == "main"
+    assert ops.get_pr_base_branch(sentinel_path(), 456) == "feature-1"

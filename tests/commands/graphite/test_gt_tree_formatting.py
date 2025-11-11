@@ -4,9 +4,8 @@ This module tests the tree visualization functions used by the GT command
 to display branch hierarchies in a tree format.
 """
 
-from pathlib import Path
-
 from tests.fakes.gitops import FakeGitOps
+from tests.test_utils import sentinel_path
 from workstack.cli.commands.gt import _format_branch_recursive, _format_branches_as_tree
 from workstack.core.branch_metadata import BranchMetadata
 
@@ -30,7 +29,7 @@ def test_format_branches_as_tree_simple_hierarchy() -> None:
         }
     )
 
-    repo_root = Path("/test/repo")
+    repo_root = sentinel_path()
 
     # Act: Format tree
     tree = _format_branches_as_tree(branches, git_ops, repo_root, root_branch=None)
@@ -74,7 +73,7 @@ def test_format_branches_as_tree_complex_hierarchy() -> None:
         }
     )
 
-    repo_root = Path("/test/repo")
+    repo_root = sentinel_path()
 
     # Act: Format tree
     tree = _format_branches_as_tree(branches, git_ops, repo_root, root_branch=None)
@@ -112,7 +111,7 @@ def test_format_branches_as_tree_deep_nesting() -> None:
         commit_messages[f"{chr(97 + i)}{str(i + 1) * 7}"] = f"Level {i} commit"
     git_ops = FakeGitOps(commit_messages=commit_messages)
 
-    repo_root = Path("/test/repo")
+    repo_root = sentinel_path()
 
     # Act: Format tree
     tree = _format_branches_as_tree(branches, git_ops, repo_root, root_branch=None)
@@ -146,7 +145,7 @@ def test_format_branches_as_tree_multiple_roots() -> None:
         }
     )
 
-    repo_root = Path("/test/repo")
+    repo_root = sentinel_path()
 
     # Act: Format tree
     tree = _format_branches_as_tree(branches, git_ops, repo_root, root_branch=None)
@@ -186,7 +185,7 @@ def test_format_branches_as_tree_with_root_branch() -> None:
         }
     )
 
-    repo_root = Path("/test/repo")
+    repo_root = sentinel_path()
 
     # Act: Format tree with feature-1 as root
     tree = _format_branches_as_tree(branches, git_ops, repo_root, root_branch="feature-1")
@@ -212,7 +211,7 @@ def test_format_branch_recursive_base_case() -> None:
         }
     )
 
-    repo_root = Path("/test/repo")
+    repo_root = sentinel_path()
     lines: list[str] = []
 
     # Act: Format single branch
@@ -251,7 +250,7 @@ def test_format_branch_recursive_with_children() -> None:
         }
     )
 
-    repo_root = Path("/test/repo")
+    repo_root = sentinel_path()
     lines: list[str] = []
 
     # Act: Format parent and children
@@ -280,7 +279,7 @@ def test_format_branch_recursive_missing_branch() -> None:
     branches: dict[str, BranchMetadata] = {}
 
     git_ops = FakeGitOps()
-    repo_root = Path("/test/repo")
+    repo_root = sentinel_path()
     lines: list[str] = []
 
     # Act: Try to format non-existent branch
@@ -304,7 +303,7 @@ def test_format_branches_as_tree_empty() -> None:
     # Arrange: Empty branches
     branches: dict[str, BranchMetadata] = {}
     git_ops = FakeGitOps()
-    repo_root = Path("/test/repo")
+    repo_root = sentinel_path()
 
     # Act: Format empty tree
     tree = _format_branches_as_tree(branches, git_ops, repo_root, root_branch=None)
@@ -319,7 +318,7 @@ def test_format_branches_as_tree_invalid_root_branch() -> None:
     branches = {"main": BranchMetadata.trunk("main", commit_sha="abc123456")}
 
     git_ops = FakeGitOps()
-    repo_root = Path("/test/repo")
+    repo_root = sentinel_path()
 
     # Act: Request non-existent branch
     tree = _format_branches_as_tree(branches, git_ops, repo_root, root_branch="nonexistent")
@@ -334,7 +333,7 @@ def test_format_branches_as_tree_no_trunks() -> None:
     branches = {"feature-1": BranchMetadata.branch("feature-1", "main", commit_sha="abc123456")}
 
     git_ops = FakeGitOps()
-    repo_root = Path("/test/repo")
+    repo_root = sentinel_path()
 
     # Act: Format without trunk branches
     tree = _format_branches_as_tree(branches, git_ops, repo_root, root_branch=None)
@@ -376,7 +375,7 @@ def test_format_branch_recursive_with_mixed_children() -> None:
         }
     )
 
-    repo_root = Path("/test/repo")
+    repo_root = sentinel_path()
 
     # Act: Format entire tree
     tree = _format_branches_as_tree(branches, git_ops, repo_root, root_branch=None)
@@ -401,7 +400,7 @@ def test_format_branches_with_missing_commit_message() -> None:
     git_ops = FakeGitOps()
     # Don't add commit message for this SHA - test default message behavior
 
-    repo_root = Path("/test/repo")
+    repo_root = sentinel_path()
 
     # Act: Format tree
     tree = _format_branches_as_tree(branches, git_ops, repo_root, root_branch=None)
@@ -420,7 +419,7 @@ def test_format_branches_with_no_commit_sha() -> None:
     }
 
     git_ops = FakeGitOps()
-    repo_root = Path("/test/repo")
+    repo_root = sentinel_path()
 
     # Act: Format tree
     tree = _format_branches_as_tree(branches, git_ops, repo_root, root_branch=None)
@@ -450,7 +449,7 @@ def test_format_branches_with_special_characters() -> None:
         }
     )
 
-    repo_root = Path("/test/repo")
+    repo_root = sentinel_path()
 
     # Act: Format tree
     tree = _format_branches_as_tree(branches, git_ops, repo_root, root_branch=None)

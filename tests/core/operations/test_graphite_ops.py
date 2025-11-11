@@ -1,9 +1,8 @@
 """Tests for GraphiteOps helper methods."""
 
-from pathlib import Path
-
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
+from tests.test_utils import sentinel_path
 from workstack.core.branch_metadata import BranchMetadata
 
 
@@ -33,7 +32,7 @@ def test_get_parent_branch_returns_parent() -> None:
     }
     graphite_ops = FakeGraphiteOps(branches=branches)
     git_ops = FakeGitOps()  # Not actually used by helper methods
-    repo_root = Path("/fake/repo")
+    repo_root = sentinel_path()
 
     # Act & Assert: Test parent relationships
     assert graphite_ops.get_parent_branch(git_ops, repo_root, "feature-2") == "feature-1"
@@ -49,7 +48,7 @@ def test_get_parent_branch_returns_none_for_unknown_branch() -> None:
     }
     graphite_ops = FakeGraphiteOps(branches=branches)
     git_ops = FakeGitOps()
-    repo_root = Path("/fake/repo")
+    repo_root = sentinel_path()
 
     # Act & Assert
     assert graphite_ops.get_parent_branch(git_ops, repo_root, "unknown-branch") is None
@@ -60,7 +59,7 @@ def test_get_parent_branch_returns_none_when_no_branches() -> None:
     # Arrange: No branches configured
     graphite_ops = FakeGraphiteOps()
     git_ops = FakeGitOps()
-    repo_root = Path("/fake/repo")
+    repo_root = sentinel_path()
 
     # Act & Assert
     assert graphite_ops.get_parent_branch(git_ops, repo_root, "any-branch") is None
@@ -81,7 +80,7 @@ def test_get_child_branches_returns_children() -> None:
     }
     graphite_ops = FakeGraphiteOps(branches=branches)
     git_ops = FakeGitOps()
-    repo_root = Path("/fake/repo")
+    repo_root = sentinel_path()
 
     # Act & Assert: Test child relationships
     assert graphite_ops.get_child_branches(git_ops, repo_root, "main") == ["feature-1", "feature-2"]
@@ -98,7 +97,7 @@ def test_get_child_branches_returns_empty_for_unknown_branch() -> None:
     }
     graphite_ops = FakeGraphiteOps(branches=branches)
     git_ops = FakeGitOps()
-    repo_root = Path("/fake/repo")
+    repo_root = sentinel_path()
 
     # Act & Assert
     assert graphite_ops.get_child_branches(git_ops, repo_root, "unknown-branch") == []
@@ -109,7 +108,7 @@ def test_get_child_branches_returns_empty_when_no_branches() -> None:
     # Arrange: No branches configured
     graphite_ops = FakeGraphiteOps()
     git_ops = FakeGitOps()
-    repo_root = Path("/fake/repo")
+    repo_root = sentinel_path()
 
     # Act & Assert
     assert graphite_ops.get_child_branches(git_ops, repo_root, "any-branch") == []
@@ -124,7 +123,7 @@ def test_helper_methods_work_with_stacks_configuration() -> None:
     # Arrange: Use stacks parameter (simpler configuration)
     graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
     git_ops = FakeGitOps()
-    repo_root = Path("/fake/repo")
+    repo_root = sentinel_path()
 
     # Act & Assert: stacks doesn't populate get_all_branches(), so helpers return empty
     assert graphite_ops.get_parent_branch(git_ops, repo_root, "feature-2") is None

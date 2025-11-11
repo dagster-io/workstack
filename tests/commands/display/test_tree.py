@@ -13,6 +13,7 @@ from click.testing import CliRunner
 
 from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps, WorktreeInfo
+from tests.test_utils import sentinel_path
 from tests.test_utils.env_helpers import simulated_workstack_env
 from workstack.cli.cli import cli
 from workstack.cli.tree import (
@@ -29,8 +30,8 @@ from workstack.core.graphite_ops import RealGraphiteOps
 
 def test_get_worktree_mapping() -> None:
     """Test worktree mapping creation from git worktrees."""
-    repo_root = Path("/repo")
-    workstacks_dir = Path("/repo/work")
+    repo_root = sentinel_path()
+    workstacks_dir = sentinel_path() / "work"
 
     git_ops = FakeGitOps(
         worktrees={
@@ -58,13 +59,13 @@ def test_get_worktree_mapping() -> None:
 
 def test_get_worktree_mapping_skips_detached_head() -> None:
     """Test that worktrees with detached HEAD are skipped."""
-    repo_root = Path("/repo")
+    repo_root = sentinel_path()
 
     git_ops = FakeGitOps(
         worktrees={
             repo_root: [
                 WorktreeInfo(path=repo_root, branch="main"),
-                WorktreeInfo(path=Path("/repo/work/detached"), branch=None),
+                WorktreeInfo(path=sentinel_path() / "work" / "detached", branch=None),
             ]
         },
     )
@@ -79,7 +80,7 @@ def test_get_worktree_mapping_skips_detached_head() -> None:
 
 def test_get_worktree_mapping_detects_current_from_subdirectory() -> None:
     """Test that current worktree is detected when cwd is a subdirectory."""
-    repo_root = Path("/repo")
+    repo_root = sentinel_path()
     feature_worktree = Path("/repo/work/feature-a")
     subdirectory = feature_worktree / "src" / "module"
 
@@ -102,14 +103,14 @@ def test_get_worktree_mapping_detects_current_from_subdirectory() -> None:
 
 def test_get_worktree_mapping_handles_user_outside_all_worktrees() -> None:
     """Test behavior when user is not in any worktree."""
-    repo_root = Path("/repo")
-    outside_path = Path("/tmp/somewhere-else")
+    repo_root = sentinel_path()
+    outside_path = Path("/completely/different/path")
 
     git_ops = FakeGitOps(
         worktrees={
             repo_root: [
                 WorktreeInfo(path=repo_root, branch="main"),
-                WorktreeInfo(path=Path("/repo/work/feature-a"), branch="feature-a"),
+                WorktreeInfo(path=repo_root / "work" / "feature-a", branch="feature-a"),
             ]
         },
     )
@@ -124,7 +125,7 @@ def test_get_worktree_mapping_handles_user_outside_all_worktrees() -> None:
 
 def test_load_graphite_branch_graph() -> None:
     """Test loading branch graph from Graphite cache."""
-    repo_root = Path("/repo")
+    repo_root = sentinel_path()
 
     cache_data = {
         "branches": [
@@ -189,7 +190,7 @@ def test_load_graphite_branch_graph() -> None:
 
 def test_load_graphite_branch_graph_returns_none_when_missing() -> None:
     """Test that missing cache returns None."""
-    repo_root = Path("/repo")
+    repo_root = sentinel_path()
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_git_dir = Path(tmpdir) / ".git"

@@ -50,3 +50,11 @@ matcher = "*"
 invocation = "dot-agent run dignified-python-313 compliance-reminder-hook"
 description = "Output dignified-python compliance reminder for UserPromptSubmit hook"
 timeout = 30
+
+[kits.fix-merge-conflicts]
+kit_id = "fix-merge-conflicts"
+source_type = "bundled"
+version = "0.1.0"
+artifacts = [
+    ".claude/commands/fix-merge-conflicts/fix-merge-conflicts.md",
+]

@@ -21,6 +21,7 @@ from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.commands.list import _is_trunk_branch
 from workstack.core.context import WorkstackContext
 from workstack.core.global_config import GlobalConfig
+from workstack.core.graphite_ops import RealGraphiteOps
 
 
 def test_branch_with_trunk_validation_result(tmp_path: Path) -> None:
@@ -45,10 +46,12 @@ def test_branch_with_trunk_validation_result(tmp_path: Path) -> None:
         show_pr_info=True,
         show_pr_checks=False,
     )
+    graphite_ops = RealGraphiteOps()
+
     ctx = WorkstackContext.for_test(
         git_ops=git_ops,
         global_config=global_config_ops,
-        graphite_ops=FakeGraphiteOps(),
+        graphite_ops=graphite_ops,
         github_ops=FakeGitHubOps(),
         shell_ops=FakeShellOps(),
         cwd=tmp_path,
@@ -80,10 +83,12 @@ def test_branch_with_no_parent_is_trunk(tmp_path: Path) -> None:
         show_pr_info=True,
         show_pr_checks=False,
     )
+    graphite_ops = RealGraphiteOps()
+
     ctx = WorkstackContext.for_test(
         git_ops=git_ops,
         global_config=global_config_ops,
-        graphite_ops=FakeGraphiteOps(),
+        graphite_ops=graphite_ops,
         github_ops=FakeGitHubOps(),
         shell_ops=FakeShellOps(),
         cwd=tmp_path,

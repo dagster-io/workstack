@@ -6,7 +6,6 @@ tests/unit/hierarchy/test_branch_graph.py.
 """
 
 import json
-import os
 import tempfile
 from pathlib import Path
 
@@ -262,8 +261,12 @@ def test_tree_command_displays_hierarchy() -> None:
             show_pr_checks=False,
         )
 
-        ctx = create_test_context(git_ops=git_ops, graphite_ops=RealGraphiteOps(), global_config=global_config_ops, cwd=repo_root)
-
+        ctx = create_test_context(
+            git_ops=git_ops,
+            graphite_ops=RealGraphiteOps(),
+            global_config=global_config_ops,
+            cwd=repo_root,
+        )
 
         result = runner.invoke(cli, ["tree"], obj=ctx)
 
@@ -338,8 +341,12 @@ def test_tree_command_filters_branches_without_worktrees() -> None:
             show_pr_checks=False,
         )
 
-        ctx = create_test_context(git_ops=git_ops, graphite_ops=RealGraphiteOps(), global_config=global_config_ops, cwd=repo_root)
-
+        ctx = create_test_context(
+            git_ops=git_ops,
+            graphite_ops=RealGraphiteOps(),
+            global_config=global_config_ops,
+            cwd=repo_root,
+        )
 
         result = runner.invoke(cli, ["tree"], obj=ctx)
 
@@ -375,8 +382,12 @@ def test_tree_command_fails_without_graphite_cache() -> None:
             show_pr_checks=False,
         )
 
-        ctx = create_test_context(git_ops=git_ops, graphite_ops=RealGraphiteOps(), global_config=global_config_ops, cwd=repo_root)
-
+        ctx = create_test_context(
+            git_ops=git_ops,
+            graphite_ops=RealGraphiteOps(),
+            global_config=global_config_ops,
+            cwd=repo_root,
+        )
 
         result = runner.invoke(cli, ["tree"], obj=ctx)
 
@@ -439,8 +450,12 @@ def test_tree_command_shows_nested_hierarchy() -> None:
             show_pr_checks=False,
         )
 
-        ctx = create_test_context(git_ops=git_ops, graphite_ops=RealGraphiteOps(), global_config=global_config_ops, cwd=repo_root)
-
+        ctx = create_test_context(
+            git_ops=git_ops,
+            graphite_ops=RealGraphiteOps(),
+            global_config=global_config_ops,
+            cwd=repo_root,
+        )
 
         result = runner.invoke(cli, ["tree"], obj=ctx)
 
@@ -523,8 +538,12 @@ def test_tree_command_shows_three_level_hierarchy_with_correct_indentation() -> 
             show_pr_checks=False,
         )
 
-        ctx = create_test_context(git_ops=git_ops, graphite_ops=RealGraphiteOps(), global_config=global_config_ops, cwd=repo_root)
-
+        ctx = create_test_context(
+            git_ops=git_ops,
+            graphite_ops=RealGraphiteOps(),
+            global_config=global_config_ops,
+            cwd=repo_root,
+        )
 
         result = runner.invoke(cli, ["tree"], obj=ctx)
 
@@ -638,8 +657,12 @@ def test_tree_root_on_non_trunk_branch() -> None:
             show_pr_checks=False,
         )
 
-        ctx = create_test_context(git_ops=git_ops, graphite_ops=RealGraphiteOps(), global_config=global_config_ops, cwd=repo_root)
-
+        ctx = create_test_context(
+            git_ops=git_ops,
+            graphite_ops=RealGraphiteOps(),
+            global_config=global_config_ops,
+            cwd=repo_root,
+        )
 
         result = runner.invoke(cli, ["tree"], obj=ctx)
 

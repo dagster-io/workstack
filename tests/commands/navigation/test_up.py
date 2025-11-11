@@ -13,6 +13,7 @@ from workstack.core.branch_metadata import BranchMetadata
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
 from workstack.core.global_config import GlobalConfig
+from workstack.core.graphite_ops import RealGraphiteOps
 
 
 def test_up_with_existing_worktree() -> None:
@@ -351,9 +352,12 @@ def test_up_multiple_children_fails_explicitly() -> None:
             show_pr_checks=False,
         )
 
+        graphite_ops = RealGraphiteOps()
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            graphite_ops=graphite_ops,
             cwd=env.cwd,
         )
 

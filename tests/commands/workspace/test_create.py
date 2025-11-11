@@ -138,6 +138,7 @@ def test_create_with_plan_file() -> None:
         assert result.exit_code == 0, result.output
         # Should create worktree with "plan" stripped from filename and date suffix added
         from datetime import datetime
+
         date_suffix = datetime.now().strftime("%y-%m-%d")
         wt_path = workstacks_dir / f"my-feature-{date_suffix}"
         assert wt_path.exists()
@@ -188,6 +189,7 @@ def test_create_with_plan_file_removes_plan_word() -> None:
 
         # Test multiple plan file examples
         from datetime import datetime
+
         date_suffix = datetime.now().strftime("%y-%m-%d")
 
         test_cases = [
@@ -1051,6 +1053,7 @@ def test_create_with_keep_plan_flag() -> None:
         assert result.exit_code == 0, result.output
         # Should create worktree with "plan" stripped from filename and date suffix added
         from datetime import datetime
+
         date_suffix = datetime.now().strftime("%y-%m-%d")
         wt_path = workstacks_dir / f"my-feature-{date_suffix}"
         assert wt_path.exists()
@@ -1575,6 +1578,7 @@ def test_create_with_json_and_plan_file() -> None:
         output_data = json.loads(result.output)
         # Name is derived from "test-feature-plan.md" -> "test-feature" with date suffix
         from datetime import datetime
+
         date_suffix = datetime.now().strftime("%y-%m-%d")
         expected_name = f"test-feature-{date_suffix}"
         assert output_data["worktree_name"] == expected_name
@@ -1757,6 +1761,7 @@ def test_create_with_stay_and_plan() -> None:
         assert result.exit_code == 0, result.output
         # Verify worktree was created with date suffix
         from datetime import datetime
+
         date_suffix = datetime.now().strftime("%y-%m-%d")
         wt_path = workstacks_dir / f"test-feature-{date_suffix}"
         assert wt_path.exists()

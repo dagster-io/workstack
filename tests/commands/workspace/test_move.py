@@ -567,7 +567,9 @@ def test_move_to_root_with_explicit_current() -> None:
             show_pr_checks=False,
         )
 
-        test_ctx = create_test_context(git_ops=git_ops, global_config=global_config, cwd=env.cwd)
+        test_ctx = create_test_context(
+            git_ops=git_ops, global_config=global_config, cwd=current_dir
+        )
 
         # Execute from within source_wt (now we're already there due to os.chdir)
         result = runner.invoke(cli, ["move", "root", "--force"], obj=test_ctx)

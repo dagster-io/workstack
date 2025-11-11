@@ -7,7 +7,6 @@ from unittest import mock
 from click.testing import CliRunner
 
 from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.shell_ops import FakeShellOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps

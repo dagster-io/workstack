@@ -25,11 +25,13 @@ This document tracks the implementation of fixes for test failures identified in
 **Status**: All 3 tests now passing
 
 **Changes Made**:
+
 - Line ~97: `test_root_on_trunk_shows_only_trunk()` - Added graphite_ops parameter
 - Line ~203: `test_root_on_non_trunk_shows_ancestors_only()` - Added graphite_ops parameter
 - Line ~320: `test_non_root_worktree_shows_descendants_with_worktrees()` - Added graphite_ops parameter
 
 **Pattern Applied** (3 occurrences):
+
 ```python
 # Before (broken):
 RealGraphiteOps()
@@ -52,6 +54,7 @@ test_ctx = WorkstackContext.for_test(
 ```
 
 **Verification**:
+
 ```bash
 $ uv run pytest tests/commands/display/list/test_root_filtering.py -v
 # Result: 3 passed in 0.05s ✅
@@ -66,6 +69,7 @@ $ uv run pytest tests/commands/display/list/test_root_filtering.py -v
 **Changes Made** (11 total fixes):
 
 **Initial 8 fixes** - Tests with orphaned `RealGraphiteOps()`:
+
 - Line ~82: `test_list_with_stacks_flag()` - Fixed
 - Line ~154: `test_list_with_stacks_graphite_disabled()` - Fixed
 - Line ~187: `test_list_with_stacks_no_graphite_cache()` - Fixed
@@ -76,6 +80,7 @@ $ uv run pytest tests/commands/display/list/test_root_filtering.py -v
 - Line ~633: `test_list_with_stacks_shows_descendants_with_gaps()` - Fixed
 
 **Additional 3 fixes** - Tests completely missing graphite_ops:
+
 - Line ~794: `test_list_with_stacks_shows_plan_summary()` - Added graphite_ops setup
 - Line ~909: `test_list_with_stacks_no_plan_file()` - Added graphite_ops setup
 - Line ~969: `test_list_with_stacks_plan_without_frontmatter()` - Added graphite_ops setup
@@ -83,6 +88,7 @@ $ uv run pytest tests/commands/display/list/test_root_filtering.py -v
 **Note**: Line ~716 in `test_list_with_stacks_corrupted_cache()` was already correct and used as reference.
 
 **Verification**:
+
 ```bash
 $ uv run pytest tests/commands/display/list/test_stacks.py -v
 # Result: 13 passed, 1 warning in 0.07s ✅
@@ -97,6 +103,7 @@ $ uv run pytest tests/commands/display/list/test_stacks.py -v
 **Total Occurrences Fixed**: 14
 
 **Impact on Overall Test Suite**:
+
 - **Before**: 174 failures (21.8%), 621 passes (77.9%)
 - **After**: 164 failures (20.6%), 631 passes (79.3%)
 - **Improvement**: 10 tests fixed ✅
@@ -127,15 +134,15 @@ The original analysis assumed that all 174 failures stemmed from the same root c
 
 ### Breakdown by Category
 
-| Category            | Failures | Files Affected                                  |
-| ------------------- | -------- | ----------------------------------------------- |
-| Workspace Commands  | ~50      | test_create.py, test_move.py, test_rename.py    |
+| Category            | Failures | Files Affected                                       |
+| ------------------- | -------- | ---------------------------------------------------- |
+| Workspace Commands  | ~50      | test_create.py, test_move.py, test_rename.py         |
 | Navigation Commands | ~20      | test_down.py, test_switch.py, test_switch_up_down.py |
-| Hooks               | 19       | test_suggest_dignified_python.py                |
-| Display/Tree        | 9        | test_tree.py                                    |
-| Graphite Commands   | 7        | test_gt_branches.py, test_gt_tree_formatting.py |
-| Management          | 4+       | test_plan.py                                    |
-| Setup Commands      | ~48      | Various setup-related tests                     |
+| Hooks               | 19       | test_suggest_dignified_python.py                     |
+| Display/Tree        | 9        | test_tree.py                                         |
+| Graphite Commands   | 7        | test_gt_branches.py, test_gt_tree_formatting.py      |
+| Management          | 4+       | test_plan.py                                         |
+| Setup Commands      | ~48      | Various setup-related tests                          |
 | Integration/Unit    | 3+       | test_land_stack_worktree.py, test_trunk_detection.py |
 
 ---
@@ -147,6 +154,7 @@ The original analysis assumed that all 174 failures stemmed from the same root c
 **Target**: ~50 failures in workspace commands
 
 **Recommended Approach**:
+
 1. Run specific test file to see failure patterns:
    ```bash
    uv run pytest tests/commands/workspace/test_create.py -v
@@ -172,6 +180,7 @@ The original analysis assumed that all 174 failures stemmed from the same root c
 ### Code Changes
 
 **Total lines changed**: ~28 (14 occurrences × 2 lines each)
+
 - Added 14 variable assignments: `graphite_ops = RealGraphiteOps()`
 - Added 14 parameter passings: `graphite_ops=graphite_ops,`
 
@@ -201,17 +210,20 @@ The original analysis assumed that all 174 failures stemmed from the same root c
 ## Test Suite Health Metrics
 
 ### Current State (After Phase 1)
+
 - **Pass Rate**: 79.3% (631/795 collected)
 - **Failure Rate**: 20.6% (164/795)
 - **Skip Rate**: 0.3% (2/795)
 - **Execution Time**: 10.44s
 
 ### Target State (After All Phases)
+
 - **Pass Rate**: 99.7%+ (~795/797)
 - **Failure Rate**: <1% (~2/797 or less)
 - **Skip Rate**: 0.3% (2/797)
 
 ### Progress
+
 - **Phase 1**: ✅ 16 tests fixed (10 net improvement due to test suite fluctuation)
 - **Remaining**: 164 failures to investigate and fix
 

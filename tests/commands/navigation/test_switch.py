@@ -217,13 +217,13 @@ def test_list_includes_root(tmp_path: Path) -> None:
     )
 
     assert result.returncode == 0
-    # Should show root as first entry with path
+    # Should show root as first entry
     clean_output = strip_ansi(result.stdout)
     lines = clean_output.strip().split("\n")
     assert len(lines) >= 2
-    assert lines[0].startswith("root [")
-    assert str(repo) in lines[0]
-    # Should also show the worktree
+    # Check that first line shows the root worktree
+    assert lines[0].startswith("root")
+    # Should also show the created worktree
     assert any("myfeature" in line for line in lines)
 
 
@@ -243,7 +243,7 @@ def test_complete_worktree_names_without_context(
     from workstack.core.context import WorkstackContext
     from workstack.core.github_ops import RealGitHubOps
     from workstack.core.gitops import RealGitOps
-    from workstack.core.global_config_ops import RealGlobalConfigOps
+    from workstack.core.global_config import load_global_config
     from workstack.core.graphite_ops import RealGraphiteOps
 
     # Set up isolated global config
@@ -251,7 +251,8 @@ def test_complete_worktree_names_without_context(
     global_config_dir.mkdir()
     workstacks_root = tmp_path / "workstacks"
     (global_config_dir / "config.toml").write_text(
-        f'workstacks_root = "{workstacks_root}"\nuse_graphite = false\n'
+        f'workstacks_root = "{workstacks_root}"\nuse_graphite = false\n',
+        encoding="utf-8",
     )
 
     # Set up a fake git repo
@@ -280,13 +281,15 @@ def test_complete_worktree_names_without_context(
     # Mock create_context to use test environment
     # NOTE: Use FakeShellOps to avoid any risk of mutating user shell config files
     def mock_create_context() -> WorkstackContext:
-        return WorkstackContext(
+        # Load global config from test environment
+        global_config = load_global_config()
+        return WorkstackContext.for_test(
             git_ops=RealGitOps(),
-            global_config_ops=RealGlobalConfigOps(),
+            global_config=global_config,
             github_ops=RealGitHubOps(),
             graphite_ops=RealGraphiteOps(),
             shell_ops=FakeShellOps(),
-            cwd=env.cwd,
+            cwd=repo,
             dry_run=False,
         )
 

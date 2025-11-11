@@ -1,13 +1,14 @@
 """Smoke tests for real_ops.py subprocess integration.
 
 These tests verify that real subprocess-based implementations can be called
-without crashing and handle basic success/failure scenarios. Tests use actual
-git/gh/gt commands as requested for code coverage.
+without crashing and handle basic success/failure scenarios. Git and Graphite
+tests use actual git/gt commands. GitHub tests mock subprocess.run to avoid
+network API calls while still testing JSON parsing and error handling.
 
 Test organization:
-- TestRealGitGtKitOpsSmoke: Git operations (6 methods)
-- TestRealGraphiteGtKitOpsSmoke: Graphite operations (6 methods)
-- TestRealGitHubGtKitOpsSmoke: GitHub operations (4 methods)
+- TestRealGitGtKitOpsSmoke: Git operations (6 methods, uses actual git commands)
+- TestRealGraphiteGtKitOpsSmoke: Graphite operations (6 methods, uses actual gt commands)
+- TestRealGitHubGtKitOpsSmoke: GitHub operations (4 methods, mocks subprocess.run)
 - TestRealGtKitOpsSmoke: Composite operations (3 accessor methods)
 """
 
@@ -508,33 +509,91 @@ class TestRealGitHubGtKitOpsSmoke:
 
     def test_get_pr_info(self) -> None:
         """Test get_pr_info returns tuple or None."""
-        ops = RealGitHubGtKitOps()
+        # Test success case with real JSON response format
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = (
+            '{"number":467,"url":"https://github.com/dagster-io/workstack/pull/467"}'
+        )
+        mock_result.stderr = ""
 
-        # Call the method - may return None if not in repo with PR or gh not installed
-        result = ops.get_pr_info()
+        with patch(
+            "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            return_value=mock_result,
+        ) as mock_run:
+            ops = RealGitHubGtKitOps()
+            result = ops.get_pr_info()
 
-        # Verify return type matches interface contract
-        if result is not None:
+            # Verify correct command was called
+            mock_run.assert_called_once_with(
+                ["gh", "pr", "view", "--json", "number,url"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            # Verify return type matches interface contract
+            assert result is not None
             assert isinstance(result, tuple)
             assert len(result) == 2
             pr_number, pr_url = result
+            assert pr_number == 467
             assert isinstance(pr_number, int)
+            assert pr_url == "https://github.com/dagster-io/workstack/pull/467"
             assert isinstance(pr_url, str)
+
+        # Test failure case (no PR found)
+        mock_result.returncode = 1
+        with patch(
+            "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            return_value=mock_result,
+        ):
+            ops = RealGitHubGtKitOps()
+            result = ops.get_pr_info()
+            assert result is None
 
     def test_get_pr_state(self) -> None:
         """Test get_pr_state returns tuple or None."""
-        ops = RealGitHubGtKitOps()
+        # Test success case with real JSON response format
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = '{"number":467,"state":"OPEN"}'
+        mock_result.stderr = ""
 
-        # Call the method - may return None if not in repo with PR or gh not installed
-        result = ops.get_pr_state()
+        with patch(
+            "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            return_value=mock_result,
+        ) as mock_run:
+            ops = RealGitHubGtKitOps()
+            result = ops.get_pr_state()
 
-        # Verify return type matches interface contract
-        if result is not None:
+            # Verify correct command was called
+            mock_run.assert_called_once_with(
+                ["gh", "pr", "view", "--json", "state,number"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            # Verify return type matches interface contract
+            assert result is not None
             assert isinstance(result, tuple)
             assert len(result) == 2
             pr_number, pr_state = result
+            assert pr_number == 467
             assert isinstance(pr_number, int)
+            assert pr_state == "OPEN"
             assert isinstance(pr_state, str)
+
+        # Test failure case (no PR found)
+        mock_result.returncode = 1
+        with patch(
+            "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
+            return_value=mock_result,
+        ):
+            ops = RealGitHubGtKitOps()
+            result = ops.get_pr_state()
+            assert result is None
 
     def test_update_pr_metadata(self) -> None:
         """Test update_pr_metadata returns bool and calls correct command."""

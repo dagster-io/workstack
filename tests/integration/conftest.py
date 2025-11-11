@@ -1,26 +1,24 @@
 """Fixtures and helpers for integration tests.
 
-This module provides fixtures that configure git operations implementations
-(Real and Fake) for parametrized testing.
+This module provides fixtures that configure real git operations for integration testing.
 """
 
 import subprocess
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Literal, NamedTuple
+from typing import NamedTuple
 
 import pytest
 
-from tests.fakes.gitops import FakeGitOps
-from workstack.core.gitops import GitOps, RealGitOps, WorktreeInfo
+from workstack.core.gitops import GitOps, RealGitOps
 
 
 class GitOpsSetup(NamedTuple):
-    """Result of git operations setup fixture.
+    """Result of git operations setup fixture for integration testing.
 
     Attributes:
-        git_ops: Either RealGitOps or FakeGitOps (determined by parametrization)
-        repo: Path to the repository root (real or mocked)
+        git_ops: RealGitOps instance for integration testing
+        repo: Path to the real repository root
     """
 
     git_ops: GitOps
@@ -28,12 +26,12 @@ class GitOpsSetup(NamedTuple):
 
 
 class GitOpsWithWorktrees(NamedTuple):
-    """Result of git operations setup with multiple worktrees.
+    """Result of git operations setup with multiple worktrees for integration testing.
 
     Attributes:
-        git_ops: Either RealGitOps or FakeGitOps (determined by parametrization)
-        repo: Path to the repository root
-        worktrees: List of worktree paths (wt1, wt2, etc.)
+        git_ops: RealGitOps instance for integration testing
+        repo: Path to the real repository root
+        worktrees: List of real worktree paths (wt1, wt2, etc.)
     """
 
     git_ops: GitOps
@@ -42,12 +40,12 @@ class GitOpsWithWorktrees(NamedTuple):
 
 
 class GitOpsWithDetached(NamedTuple):
-    """Result of git operations setup with detached HEAD worktree.
+    """Result of git operations setup with detached HEAD worktree for integration testing.
 
     Attributes:
-        git_ops: Either RealGitOps or FakeGitOps (determined by parametrization)
-        repo: Path to the repository root
-        detached_wt: Path to the detached HEAD worktree
+        git_ops: RealGitOps instance for integration testing
+        repo: Path to the real repository root
+        detached_wt: Path to the real detached HEAD worktree
     """
 
     git_ops: GitOps
@@ -56,11 +54,11 @@ class GitOpsWithDetached(NamedTuple):
 
 
 class GitOpsWithExistingBranch(NamedTuple):
-    """Result of git operations setup with existing branch.
+    """Result of git operations setup with existing branch for integration testing.
 
     Attributes:
-        git_ops: Either RealGitOps or FakeGitOps (determined by parametrization)
-        repo: Path to the repository root
+        git_ops: RealGitOps instance for integration testing
+        repo: Path to the real repository root
         wt_path: Path to a worktree location (not yet created, for testing add_worktree)
     """
 
@@ -82,56 +80,34 @@ def init_git_repo(repo_path: Path, default_branch: str = "main") -> None:
     subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=repo_path, check=True)
 
 
-@pytest.fixture(params=["real", "fake"])
-def git_ops_impl(request: pytest.FixtureRequest) -> str:
-    """Parametrize between 'real' and 'fake' git operations implementations."""
-    return request.param
-
-
 @pytest.fixture
 def git_ops(
-    request: pytest.FixtureRequest,
     tmp_path: Path,
-    git_ops_impl: Literal["real", "fake"],
 ) -> Iterator[GitOpsSetup]:
-    """Provide a git operations implementation (Real or Fake) with setup repo.
+    """Provide RealGitOps with setup repo for integration testing.
 
     Returns a GitOpsSetup namedtuple with (git_ops, repo) where repo is the path
     to a real git repository that can be used for testing.
 
-    For 'real' implementation: Uses actual git subprocess calls on tmp_path repo
-    For 'fake' implementation: Returns FakeGitOps configured with the repo state
+    Uses actual git subprocess calls on tmp_path repo for integration testing.
     """
     repo = tmp_path / "repo"
     repo.mkdir()
     init_git_repo(repo, "main")
 
-    if git_ops_impl == "real":
-        yield GitOpsSetup(git_ops=RealGitOps(), repo=repo)
-    else:
-        # Fake implementation: configure with repo state
-        git_ops = FakeGitOps(
-            git_common_dirs={repo: repo / ".git"},
-            worktrees={repo: [WorktreeInfo(path=repo, branch="main", is_root=True)]},
-            current_branches={repo: "main"},
-            default_branches={repo: "main"},
-        )
-        yield GitOpsSetup(git_ops=git_ops, repo=repo)
+    yield GitOpsSetup(git_ops=RealGitOps(), repo=repo)
 
 
 @pytest.fixture
 def git_ops_with_worktrees(
-    request: pytest.FixtureRequest,
     tmp_path: Path,
-    git_ops_impl: Literal["real", "fake"],
 ) -> Iterator[GitOpsWithWorktrees]:
-    """Provide git operations with multiple pre-configured worktrees.
+    """Provide RealGitOps with multiple pre-configured worktrees for integration testing.
 
     Returns a GitOpsWithWorktrees namedtuple with (git_ops, repo, worktrees)
     where worktrees is a list of worktree paths created via 'git worktree add'.
 
-    For 'real': Creates actual worktrees via git
-    For 'fake': Configures FakeGitOps with the worktree state
+    Creates actual worktrees via git for integration testing.
     """
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -140,47 +116,29 @@ def git_ops_with_worktrees(
     wt1 = tmp_path / "wt1"
     wt2 = tmp_path / "wt2"
 
-    if git_ops_impl == "real":
-        # Create real worktrees
-        subprocess.run(
-            ["git", "worktree", "add", "-b", "feature-1", str(wt1)],
-            cwd=repo,
-            check=True,
-        )
-        subprocess.run(
-            ["git", "worktree", "add", "-b", "feature-2", str(wt2)],
-            cwd=repo,
-            check=True,
-        )
-        yield GitOpsWithWorktrees(git_ops=RealGitOps(), repo=repo, worktrees=[wt1, wt2])
-    else:
-        # Fake implementation: create directories and configure FakeGitOps
-        wt1.mkdir()
-        wt2.mkdir()
-        git_ops = FakeGitOps(
-            git_common_dirs={repo: repo / ".git", wt1: repo / ".git", wt2: repo / ".git"},
-            worktrees={
-                repo: [
-                    WorktreeInfo(path=repo, branch="main", is_root=True),
-                    WorktreeInfo(path=wt1, branch="feature-1", is_root=False),
-                    WorktreeInfo(path=wt2, branch="feature-2", is_root=False),
-                ]
-            },
-            current_branches={repo: "main", wt1: "feature-1", wt2: "feature-2"},
-            default_branches={repo: "main"},
-        )
-        yield GitOpsWithWorktrees(git_ops=git_ops, repo=repo, worktrees=[wt1, wt2])
+    # Create real worktrees
+    subprocess.run(
+        ["git", "worktree", "add", "-b", "feature-1", str(wt1)],
+        cwd=repo,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "worktree", "add", "-b", "feature-2", str(wt2)],
+        cwd=repo,
+        check=True,
+    )
+    yield GitOpsWithWorktrees(git_ops=RealGitOps(), repo=repo, worktrees=[wt1, wt2])
 
 
 @pytest.fixture
 def git_ops_with_detached(
-    request: pytest.FixtureRequest,
     tmp_path: Path,
-    git_ops_impl: Literal["real", "fake"],
 ) -> Iterator[GitOpsWithDetached]:
-    """Provide git operations with a detached HEAD worktree.
+    """Provide RealGitOps with a detached HEAD worktree for integration testing.
 
     Returns a GitOpsWithDetached namedtuple with (git_ops, repo, detached_wt).
+
+    Creates actual detached HEAD worktree via git for integration testing.
     """
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -188,38 +146,23 @@ def git_ops_with_detached(
 
     wt_detached = tmp_path / "detached"
 
-    if git_ops_impl == "real":
-        subprocess.run(
-            ["git", "worktree", "add", "--detach", str(wt_detached)],
-            cwd=repo,
-            check=True,
-        )
-        yield GitOpsWithDetached(git_ops=RealGitOps(), repo=repo, detached_wt=wt_detached)
-    else:
-        wt_detached.mkdir()
-        git_ops = FakeGitOps(
-            git_common_dirs={repo: repo / ".git", wt_detached: repo / ".git"},
-            worktrees={
-                repo: [
-                    WorktreeInfo(path=repo, branch="main", is_root=True),
-                    WorktreeInfo(path=wt_detached, branch=None, is_root=False),  # Detached HEAD
-                ]
-            },
-            current_branches={repo: "main", wt_detached: None},
-            default_branches={repo: "main"},
-        )
-        yield GitOpsWithDetached(git_ops=git_ops, repo=repo, detached_wt=wt_detached)
+    subprocess.run(
+        ["git", "worktree", "add", "--detach", str(wt_detached)],
+        cwd=repo,
+        check=True,
+    )
+    yield GitOpsWithDetached(git_ops=RealGitOps(), repo=repo, detached_wt=wt_detached)
 
 
 @pytest.fixture
 def git_ops_with_existing_branch(
-    request: pytest.FixtureRequest,
     tmp_path: Path,
-    git_ops_impl: Literal["real", "fake"],
 ) -> Iterator[GitOpsWithExistingBranch]:
-    """Provide git operations with existing branch and worktree path.
+    """Provide RealGitOps with existing branch and worktree path for integration testing.
 
     Returns a GitOpsWithExistingBranch namedtuple with (git_ops, repo, wt_path).
+
+    Creates real git repository for integration testing.
     """
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -227,14 +170,4 @@ def git_ops_with_existing_branch(
 
     wt = tmp_path / "wt"
 
-    if git_ops_impl == "real":
-        yield GitOpsWithExistingBranch(git_ops=RealGitOps(), repo=repo, wt_path=wt)
-    else:
-        # For fake, configure FakeGitOps
-        git_ops = FakeGitOps(
-            git_common_dirs={repo: repo / ".git"},
-            worktrees={repo: [WorktreeInfo(path=repo, branch="main", is_root=True)]},
-            current_branches={repo: "main"},
-            default_branches={repo: "main"},
-        )
-        yield GitOpsWithExistingBranch(git_ops=git_ops, repo=repo, wt_path=wt)
+    yield GitOpsWithExistingBranch(git_ops=RealGitOps(), repo=repo, wt_path=wt)

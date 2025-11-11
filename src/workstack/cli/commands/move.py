@@ -8,67 +8,11 @@ from workstack.cli.commands.switch import complete_worktree_names
 from workstack.cli.core import discover_repo_context, worktree_path_for
 from workstack.core.context import WorkstackContext, read_trunk_from_pyproject
 from workstack.core.repo_discovery import ensure_workstacks_dir
-
-
-def _get_worktree_branch(ctx: WorkstackContext, repo_root: Path, wt_path: Path) -> str | None:
-    """Get the branch checked out in a worktree.
-
-    Returns None if worktree is not found or is in detached HEAD state.
-    """
-    worktrees = ctx.git_ops.list_worktrees(repo_root)
-    # Resolve paths for comparison to handle relative vs absolute paths
-    wt_path_resolved = wt_path.resolve()
-    for wt in worktrees:
-        if wt.path.resolve() == wt_path_resolved:
-            return wt.branch
-    return None
-
-
-def _find_worktree_containing_path(worktrees: list, target_path: Path) -> Path | None:
-    """Find which worktree contains the given path.
-
-    Args:
-        worktrees: List of WorktreeInfo objects
-        target_path: Path to check (should be resolved)
-
-    Returns:
-        Path to the worktree that contains target_path, or None if not found
-
-    Note:
-        Uses is_relative_to() to check path containment. This is the LBYL approach
-        (vs catching ValueError from relative_to()).
-
-        Returns the most specific (longest) match to handle nested worktrees.
-        For example, if target_path is /a/b/c and we have worktrees at /a and /a/b,
-        this returns /a/b (the more specific match).
-    """
-    best_match: Path | None = None
-    best_match_depth = -1
-
-    for wt in worktrees:
-        wt_path = wt.path.resolve()
-        # Check if target_path is within this worktree
-        # is_relative_to() returns True if target_path is under wt_path
-        if target_path.is_relative_to(wt_path):
-            # Count path depth to find most specific match
-            depth = len(wt_path.parts)
-            if depth > best_match_depth:
-                best_match = wt_path
-                best_match_depth = depth
-
-    return best_match
-
-
-def _find_worktree_with_branch(ctx: WorkstackContext, repo_root: Path, branch: str) -> Path | None:
-    """Find the worktree path containing the specified branch.
-
-    Returns None if the branch is not found in any worktree.
-    """
-    worktrees = ctx.git_ops.list_worktrees(repo_root)
-    for wt in worktrees:
-        if wt.branch == branch:
-            return wt.path
-    return None
+from workstack.core.worktree_utils import (
+    find_worktree_containing_path,
+    find_worktree_with_branch,
+    get_worktree_branch,
+)
 
 
 def _resolve_current_worktree(ctx: WorkstackContext, repo_root: Path) -> Path:
@@ -83,7 +27,7 @@ def _resolve_current_worktree(ctx: WorkstackContext, repo_root: Path) -> Path:
 
     cwd = ctx.cwd.resolve()
     worktrees = ctx.git_ops.list_worktrees(repo_root)
-    wt_path = _find_worktree_containing_path(worktrees, cwd)
+    wt_path = find_worktree_containing_path(worktrees, cwd)
     if wt_path is None:
         click.echo(
             f"Error: Current directory ({cwd}) is not in any worktree.\n"
@@ -124,7 +68,8 @@ def resolve_source_worktree(
 
     if branch:
         # Find worktree containing this branch
-        wt = _find_worktree_with_branch(ctx, repo_root, branch)
+        worktrees = ctx.git_ops.list_worktrees(repo_root)
+        wt = find_worktree_with_branch(worktrees, branch)
         if wt is None:
             click.echo(f"Error: Branch '{branch}' not found in any worktree", err=True)
             raise SystemExit(1)
@@ -156,7 +101,8 @@ def detect_operation_type(
         return "create"
 
     # Target exists - check if it has a branch
-    target_branch = _get_worktree_branch(ctx, repo_root, target_wt)
+    worktrees = ctx.git_ops.list_worktrees(repo_root)
+    target_branch = get_worktree_branch(worktrees, target_wt)
     if target_branch:
         return "swap"
     else:
@@ -177,7 +123,8 @@ def execute_move(
     Moves the branch from source to target, then switches source to fallback_ref.
     """
     # Validate source has a branch
-    source_branch = _get_worktree_branch(ctx, repo_root, source_wt)
+    worktrees = ctx.git_ops.list_worktrees(repo_root)
+    source_branch = get_worktree_branch(worktrees, source_wt)
     if source_branch is None:
         click.echo("Error: Source worktree is in detached HEAD state", err=True)
         raise SystemExit(1)
@@ -243,8 +190,9 @@ def execute_swap(
 
     Swaps the branches between source and target worktrees.
     """
-    source_branch = _get_worktree_branch(ctx, repo_root, source_wt)
-    target_branch = _get_worktree_branch(ctx, repo_root, target_wt)
+    worktrees = ctx.git_ops.list_worktrees(repo_root)
+    source_branch = get_worktree_branch(worktrees, source_wt)
+    target_branch = get_worktree_branch(worktrees, target_wt)
 
     if source_branch is None or target_branch is None:
         click.echo("Error: Both worktrees must have branches checked out for swap", err=True)

@@ -12,6 +12,7 @@ from workstack.cli.core import (
 from workstack.core.context import WorkstackContext, create_context
 from workstack.core.gitops import GitOps
 from workstack.core.repo_discovery import ensure_workstacks_dir
+from workstack.core.worktree_utils import filter_non_trunk_branches
 
 
 def _try_git_worktree_remove(git_ops: GitOps, repo_root: Path, wt_path: Path) -> bool:
@@ -62,21 +63,6 @@ def _find_worktree_branch(ctx: WorkstackContext, repo_root: Path, wt_path: Path)
         if wt.path == wt_path:
             return wt.branch
     return None
-
-
-def _get_non_trunk_branches(ctx: WorkstackContext, repo_root: Path, stack: list[str]) -> list[str]:
-    """Filter out trunk branches from a stack using GraphiteOps abstraction.
-
-    Raises:
-        ValueError: If Graphite cache is missing or cannot be read
-    """
-    # Get all branches from GraphiteOps abstraction
-    all_branches = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo_root)
-    if not all_branches:
-        raise ValueError("Graphite cache not available")
-
-    # Filter stack to only non-trunk branches
-    return [b for b in stack if b in all_branches and not all_branches[b].is_trunk]
 
 
 def _remove_worktree(
@@ -156,7 +142,11 @@ def _remove_worktree(
                     err=True,
                 )
             else:
-                branches_to_delete = _get_non_trunk_branches(ctx, repo.root, stack)
+                # Get all branches and filter to non-trunk branches
+                all_branches = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo.root)
+                if not all_branches:
+                    raise ValueError("Graphite cache not available")
+                branches_to_delete = filter_non_trunk_branches(all_branches, stack)
 
                 if not branches_to_delete:
                     click.echo("No branches to delete (all branches in stack are trunk branches).")

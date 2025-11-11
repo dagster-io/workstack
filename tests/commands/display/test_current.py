@@ -4,6 +4,10 @@ import os
 import subprocess
 from pathlib import Path
 
+from click.testing import CliRunner
+
+from workstack.cli.cli import cli
+
 
 def test_current_returns_worktree_name(tmp_path: Path) -> None:
     """Test that current returns worktree name when in named worktree."""
@@ -27,33 +31,30 @@ def test_current_returns_worktree_name(tmp_path: Path) -> None:
     subprocess.run(["git", "add", "."], cwd=repo, check=True)
     subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=repo, check=True)
 
-    # Create a worktree using isolated config
-    env = os.environ.copy()
-    env["HOME"] = str(tmp_path)
-    result = subprocess.run(
-        ["uv", "run", "workstack", "create", "feature-x", "--no-post"],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-        env=env,
-    )
-    assert result.returncode == 0, f"Create failed: {result.stderr}"
+    # Create a worktree using CliRunner with isolated config
+    env_vars = os.environ.copy()
+    env_vars["HOME"] = str(tmp_path)
+    runner = CliRunner(env=env_vars)
 
-    # Get worktree path
-    worktree_path = workstacks_root / "repo" / "feature-x"
-    assert worktree_path.exists()
+    # Change to repo directory and create worktree
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(repo)
+        result = runner.invoke(cli, ["create", "feature-x", "--no-post"])
+        assert result.exit_code == 0, f"Create failed: {result.output}"
 
-    # Run current command from worktree directory
-    result = subprocess.run(
-        ["uv", "run", "workstack", "current"],
-        cwd=worktree_path,
-        capture_output=True,
-        text=True,
-        env=env,
-    )
+        # Get worktree path
+        worktree_path = workstacks_root / "repo" / "feature-x"
+        assert worktree_path.exists()
 
-    assert result.returncode == 0
-    assert result.stdout.strip() == "feature-x"
+        # Run current command from worktree directory
+        os.chdir(worktree_path)
+        result = runner.invoke(cli, ["current"])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == "feature-x"
+    finally:
+        os.chdir(original_cwd)
 
 
 def test_current_returns_root_in_root_repository(tmp_path: Path) -> None:
@@ -78,19 +79,20 @@ def test_current_returns_root_in_root_repository(tmp_path: Path) -> None:
     subprocess.run(["git", "add", "."], cwd=repo, check=True)
     subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=repo, check=True)
 
-    # Run current command from root directory
-    env = os.environ.copy()
-    env["HOME"] = str(tmp_path)
-    result = subprocess.run(
-        ["uv", "run", "workstack", "current"],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-        env=env,
-    )
+    # Run current command from root directory using CliRunner
+    env_vars = os.environ.copy()
+    env_vars["HOME"] = str(tmp_path)
+    runner = CliRunner(env=env_vars)
 
-    assert result.returncode == 0
-    assert result.stdout.strip() == "root"
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(repo)
+        result = runner.invoke(cli, ["current"])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == "root"
+    finally:
+        os.chdir(original_cwd)
 
 
 def test_current_exits_with_error_when_not_in_worktree(tmp_path: Path) -> None:
@@ -115,31 +117,27 @@ def test_current_exits_with_error_when_not_in_worktree(tmp_path: Path) -> None:
     subprocess.run(["git", "add", "."], cwd=repo, check=True)
     subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=repo, check=True)
 
-    # Create a worktree
-    env = os.environ.copy()
-    env["HOME"] = str(tmp_path)
-    result = subprocess.run(
-        ["uv", "run", "workstack", "create", "feature-y", "--no-post"],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-        env=env,
-    )
-    assert result.returncode == 0
+    # Create a worktree using CliRunner
+    env_vars = os.environ.copy()
+    env_vars["HOME"] = str(tmp_path)
+    runner = CliRunner(env=env_vars)
 
-    # Run current command from a directory outside any worktree
-    outside_dir = tmp_path / "outside"
-    outside_dir.mkdir()
-    result = subprocess.run(
-        ["uv", "run", "workstack", "current"],
-        cwd=outside_dir,
-        capture_output=True,
-        text=True,
-        env=env,
-    )
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(repo)
+        result = runner.invoke(cli, ["create", "feature-y", "--no-post"])
+        assert result.exit_code == 0
 
-    assert result.returncode == 1
-    assert result.stdout.strip() == ""
+        # Run current command from a directory outside any worktree
+        outside_dir = tmp_path / "outside"
+        outside_dir.mkdir()
+        os.chdir(outside_dir)
+        result = runner.invoke(cli, ["current"])
+
+        assert result.exit_code == 1
+        assert result.output.strip() == ""
+    finally:
+        os.chdir(original_cwd)
 
 
 def test_current_works_from_subdirectory(tmp_path: Path) -> None:
@@ -164,35 +162,31 @@ def test_current_works_from_subdirectory(tmp_path: Path) -> None:
     subprocess.run(["git", "add", "."], cwd=repo, check=True)
     subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=repo, check=True)
 
-    # Create a worktree using isolated config
-    env = os.environ.copy()
-    env["HOME"] = str(tmp_path)
-    result = subprocess.run(
-        ["uv", "run", "workstack", "create", "feature-y", "--no-post"],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-        env=env,
-    )
-    assert result.returncode == 0, f"Create failed: {result.stderr}"
+    # Create a worktree using CliRunner with isolated config
+    env_vars = os.environ.copy()
+    env_vars["HOME"] = str(tmp_path)
+    runner = CliRunner(env=env_vars)
 
-    # Get worktree path and create subdirectory
-    worktree_path = workstacks_root / "repo" / "feature-y"
-    assert worktree_path.exists()
-    subdir = worktree_path / "src" / "nested"
-    subdir.mkdir(parents=True)
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(repo)
+        result = runner.invoke(cli, ["create", "feature-y", "--no-post"])
+        assert result.exit_code == 0, f"Create failed: {result.output}"
 
-    # Run current command from subdirectory
-    result = subprocess.run(
-        ["uv", "run", "workstack", "current"],
-        cwd=subdir,
-        capture_output=True,
-        text=True,
-        env=env,
-    )
+        # Get worktree path and create subdirectory
+        worktree_path = workstacks_root / "repo" / "feature-y"
+        assert worktree_path.exists()
+        subdir = worktree_path / "src" / "nested"
+        subdir.mkdir(parents=True)
 
-    assert result.returncode == 0
-    assert result.stdout.strip() == "feature-y"
+        # Run current command from subdirectory
+        os.chdir(subdir)
+        result = runner.invoke(cli, ["current"])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == "feature-y"
+    finally:
+        os.chdir(original_cwd)
 
 
 def test_current_handles_missing_git_gracefully(tmp_path: Path) -> None:
@@ -209,16 +203,17 @@ def test_current_handles_missing_git_gracefully(tmp_path: Path) -> None:
     non_git_dir = tmp_path / "not-git"
     non_git_dir.mkdir()
 
-    # Run current command from non-git directory
-    env = os.environ.copy()
-    env["HOME"] = str(tmp_path)
-    result = subprocess.run(
-        ["uv", "run", "workstack", "current"],
-        cwd=non_git_dir,
-        capture_output=True,
-        text=True,
-        env=env,
-    )
+    # Run current command from non-git directory using CliRunner
+    env_vars = os.environ.copy()
+    env_vars["HOME"] = str(tmp_path)
+    runner = CliRunner(env=env_vars)
 
-    assert result.returncode == 1
-    assert result.stdout.strip() == ""
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(non_git_dir)
+        result = runner.invoke(cli, ["current"])
+
+        assert result.exit_code == 1
+        assert result.output.strip() == ""
+    finally:
+        os.chdir(original_cwd)

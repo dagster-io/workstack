@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
+from workstack.cli.cli import cli
 from workstack.cli.commands.shell_integration import hidden_shell_cmd
 
 
@@ -89,30 +90,29 @@ def test_switch_nonexistent_worktree(tmp_path: Path) -> None:
     subprocess.run(["git", "add", "."], cwd=repo, check=True)
     subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=repo, check=True)
 
-    # Try to switch to non-existent worktree
-    result = subprocess.run(
-        ["uv", "run", "workstack", "switch", "doesnotexist"],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-    )
+    # Try to switch to non-existent worktree using CliRunner
+    runner = CliRunner()
 
-    assert result.returncode != 0
-    assert "not found" in result.stderr.lower() or "not found" in result.stdout.lower()
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(repo)
+        result = runner.invoke(cli, ["switch", "doesnotexist"])
+
+        assert result.exit_code != 0
+        assert "not found" in result.output.lower()
+    finally:
+        os.chdir(original_cwd)
 
 
-def test_switch_shell_completion(tmp_path: Path) -> None:
+def test_switch_shell_completion() -> None:
     """Test that switch command has shell completion configured."""
     # This is a bit tricky to test without a real shell, but we can verify
     # the command is set up with the right completion function by checking help
-    result = subprocess.run(
-        ["uv", "run", "workstack", "switch", "--help"],
-        capture_output=True,
-        text=True,
-    )
+    runner = CliRunner()
+    result = runner.invoke(cli, ["switch", "--help"])
 
-    assert result.returncode == 0
-    assert "NAME" in result.stdout
+    assert result.exit_code == 0
+    assert "NAME" in result.output
 
 
 def test_switch_to_root(tmp_path: Path) -> None:
@@ -346,21 +346,22 @@ def test_switch_rejects_main_as_worktree_name(tmp_path: Path) -> None:
     subprocess.run(["git", "add", "."], cwd=repo, check=True)
     subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=repo, check=True)
 
-    # Try to switch to "main"
-    env = os.environ.copy()
-    env["HOME"] = str(tmp_path)
-    result = subprocess.run(
-        ["uv", "run", "workstack", "switch", "main"],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-        env=env,
-    )
+    # Try to switch to "main" using CliRunner
+    env_vars = os.environ.copy()
+    env_vars["HOME"] = str(tmp_path)
+    runner = CliRunner(env=env_vars)
 
-    # Should fail with error suggesting to use root
-    assert result.returncode != 0
-    assert "main" in result.stderr.lower()
-    assert "workstack switch root" in result.stderr
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(repo)
+        result = runner.invoke(cli, ["switch", "main"])
+
+        # Should fail with error suggesting to use root
+        assert result.exit_code != 0
+        assert "main" in result.output.lower()
+        assert "workstack switch root" in result.output
+    finally:
+        os.chdir(original_cwd)
 
 
 def test_switch_rejects_master_as_worktree_name(tmp_path: Path) -> None:
@@ -385,18 +386,19 @@ def test_switch_rejects_master_as_worktree_name(tmp_path: Path) -> None:
     subprocess.run(["git", "add", "."], cwd=repo, check=True)
     subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=repo, check=True)
 
-    # Try to switch to "master"
-    env = os.environ.copy()
-    env["HOME"] = str(tmp_path)
-    result = subprocess.run(
-        ["uv", "run", "workstack", "switch", "master"],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-        env=env,
-    )
+    # Try to switch to "master" using CliRunner
+    env_vars = os.environ.copy()
+    env_vars["HOME"] = str(tmp_path)
+    runner = CliRunner(env=env_vars)
 
-    # Should fail with error suggesting to use root
-    assert result.returncode != 0
-    assert "master" in result.stderr.lower()
-    assert "workstack switch root" in result.stderr
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(repo)
+        result = runner.invoke(cli, ["switch", "master"])
+
+        # Should fail with error suggesting to use root
+        assert result.exit_code != 0
+        assert "master" in result.output.lower()
+        assert "workstack switch root" in result.output
+    finally:
+        os.chdir(original_cwd)

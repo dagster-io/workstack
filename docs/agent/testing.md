@@ -326,6 +326,192 @@ def test_dryrun_prevents_mutations() -> None:
         assert directory_still_exists
 ```
 
+## CLI Testing Patterns
+
+### When to Use CliRunner vs Subprocess
+
+**Use CliRunner (preferred for command tests):**
+
+- Testing Click command behavior (arguments, options, validation)
+- Testing command output and exit codes
+- Unit/integration testing of individual commands
+- Any test that doesn't require true end-to-end CLI invocation
+
+**Benefits:**
+
+- 3-5× faster execution (no subprocess overhead)
+- Better error messages (Python stack traces)
+- Easier debugging (single process)
+- Works with dependency injection and fakes
+
+**Use subprocess (only for E2E tests):**
+
+- Testing full CLI installation and packaging
+- Testing shell integration (completion, environment)
+- Verifying actual `uv run workstack` behavior
+- True end-to-end acceptance tests
+
+**Benefits:**
+
+- Tests real user experience
+- Catches packaging and distribution issues
+- Verifies shell environment handling
+
+### CliRunner Pattern (PREFERRED)
+
+**Standard pattern for command tests:**
+
+```python
+from click.testing import CliRunner
+from workstack.cli.cli import cli
+
+def test_create_command(tmp_path: Path) -> None:
+    # Set up isolated global config
+    global_config_dir = tmp_path / ".workstack"
+    global_config_dir.mkdir()
+    workstacks_root = tmp_path / "workstacks"
+    (global_config_dir / "config.toml").write_text(
+        f'workstacks_root = "{workstacks_root}"\nuse_graphite = false\n'
+    )
+
+    # Set up real git repo
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-b", "main"], cwd=repo, check=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
+
+    # Create an initial commit
+    (repo / "README.md").write_text("test")
+    subprocess.run(["git", "add", "."], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=repo, check=True)
+
+    # Use CliRunner with isolated config
+    env_vars = os.environ.copy()
+    env_vars["HOME"] = str(tmp_path)
+    runner = CliRunner(env=env_vars)
+
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(repo)
+        result = runner.invoke(cli, ["create", "feature-name", "--no-post"])
+        assert result.exit_code == 0
+        assert "Created worktree" in result.output
+    finally:
+        os.chdir(original_cwd)
+```
+
+**Key components:**
+
+- `CliRunner(env=env_vars)`: Click's test harness with isolated HOME
+- `runner.invoke(cli, ["command", "args"])`: Invokes CLI group, which creates context naturally
+- NO `obj=` parameter - let CLI create context from environment
+- `result.exit_code`: Command exit code (0 = success)
+- `result.output`: Combined stdout/stderr output
+- Manual `os.chdir()` with try/finally for working directory changes
+
+### Subprocess Pattern (E2E ONLY)
+
+**Only use for true end-to-end tests:**
+
+```python
+import subprocess
+
+def test_cli_installation(tmp_path: Path) -> None:
+    # Test actual CLI invocation
+    result = subprocess.run(
+        ["uv", "run", "workstack", "create", "feature"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+```
+
+**When subprocess is required:**
+
+- Testing `uv run workstack` actually works
+- Verifying package installation
+- Shell completion integration tests
+
+### Common Mistakes
+
+**❌ Using subprocess for command tests:**
+
+```python
+# SLOW - Spawns Python interpreter for each call (0.1-0.2s overhead each)
+subprocess.run(["uv", "run", "workstack", "create", "feature"])
+```
+
+**✅ Using CliRunner for command tests:**
+
+```python
+# FAST - Direct function call with Click harness (3-5× faster)
+runner.invoke(cli, ["create", "feature"])
+```
+
+**❌ Using individual command imports:**
+
+```python
+# WRONG - Context not created properly
+from workstack.cli.commands.create import create
+runner.invoke(create, ["feature"])  # AttributeError: 'NoneType' object has no attribute 'cwd'
+```
+
+**✅ Using cli group:**
+
+```python
+# CORRECT - CLI group creates context from environment
+from workstack.cli.cli import cli
+runner.invoke(cli, ["create", "feature"])
+```
+
+**❌ Not isolating HOME directory:**
+
+```python
+# WRONG - Uses real user's config
+runner = CliRunner()
+runner.invoke(cli, ["create", "feature"])
+```
+
+**✅ Isolating HOME directory:**
+
+```python
+# CORRECT - Isolated config environment
+env_vars = os.environ.copy()
+env_vars["HOME"] = str(tmp_path)
+runner = CliRunner(env=env_vars)
+```
+
+### Performance Comparison
+
+**Before optimization (subprocess pattern):**
+
+- `test_complete_worktree_names_without_context`: 0.47s
+- `test_create_rejects_reserved_name`: 0.44s
+- `test_current_returns_worktree_name`: 0.33s
+- Top 30 tests: ~7-8 seconds combined
+
+**After optimization (CliRunner pattern):**
+
+- `test_complete_worktree_names_without_context`: ~0.12s (75% faster)
+- `test_create_rejects_reserved_name`: ~0.10s (77% faster)
+- `test_current_returns_worktree_name`: ~0.10s (70% faster)
+- Top 30 tests: ~2-3 seconds combined (60-70% faster)
+
+### Migration Checklist
+
+When converting tests from subprocess to CliRunner:
+
+- [ ] Import `CliRunner` from `click.testing`
+- [ ] Import `cli` from `workstack.cli.cli` (NOT individual commands)
+- [ ] Replace `subprocess.run([...])` with `runner.invoke(cli, [...])`
+- [ ] Replace `result.returncode` with `result.exit_code`
+- [ ] Replace stdout/stderr parsing with `result.output`
+- [ ] Use `CliRunner(env=env_vars)` to isolate HOME directory
+- [ ] Use `os.chdir()` with try/finally for working directory changes
+- [ ] Run tests and verify performance improvement with `pytest --durations=10`
+
 ## Anti-Patterns to Avoid
 
 ### ❌ Anti-Pattern 1: Using mock.patch

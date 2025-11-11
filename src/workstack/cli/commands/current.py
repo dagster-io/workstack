@@ -4,6 +4,7 @@ import click
 
 from workstack.cli.core import discover_repo_context
 from workstack.core.context import WorkstackContext
+from workstack.core.worktree_utils import find_current_worktree, is_root_worktree
 
 
 @click.command("current", hidden=True)
@@ -19,26 +20,13 @@ def current_cmd(ctx: WorkstackContext) -> None:
         raise SystemExit(1) from None
 
     current_dir = ctx.cwd.resolve()
-
-    # Find which worktree we're in
     worktrees = ctx.git_ops.list_worktrees(repo.root)
+    wt_info = find_current_worktree(worktrees, current_dir)
 
-    for wt in worktrees:
-        # Check path exists before resolution/comparison (LBYL pattern)
-        if wt.path.exists():
-            wt_path_resolved = wt.path.resolve()
-            # Check if we're in this worktree
-            if current_dir == wt_path_resolved or current_dir.is_relative_to(wt_path_resolved):
-                # Determine if this is the root worktree
-                if repo.root.exists():
-                    repo_root_resolved = repo.root.resolve()
-                    if wt_path_resolved == repo_root_resolved:
-                        click.echo("root")
-                        return
+    if wt_info is None:
+        raise SystemExit(1)
 
-                # Non-root worktree - output the directory name
-                click.echo(wt.path.name)
-                return
-
-    # Not in any worktree - exit silently with error code
-    raise SystemExit(1)
+    if is_root_worktree(wt_info.path, repo.root):
+        click.echo("root")
+    else:
+        click.echo(wt_info.path.name)

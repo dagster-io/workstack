@@ -6,6 +6,7 @@ separated from I/O and CLI concerns. These functions work with data objects
 """
 
 from pathlib import Path
+from typing import Any
 
 from workstack.core.gitops import WorktreeInfo
 
@@ -95,3 +96,73 @@ def is_root_worktree(worktree_path: Path, repo_root: Path) -> bool:
         False
     """
     return worktree_path.resolve() == repo_root.resolve()
+
+
+def get_worktree_branch(worktrees: list[WorktreeInfo], wt_path: Path) -> str | None:
+    """Get the branch checked out in a worktree.
+
+    Returns None if worktree is not found or is in detached HEAD state.
+
+    Args:
+        worktrees: List of WorktreeInfo objects to search
+        wt_path: Path to the worktree
+
+    Returns:
+        Branch name if found and checked out, None otherwise
+
+    Examples:
+        >>> worktrees = [WorktreeInfo(Path("/repo/workstacks/feat"), "feature-x", False)]
+        >>> get_worktree_branch(worktrees, Path("/repo/workstacks/feat"))
+        "feature-x"
+        >>> get_worktree_branch(worktrees, Path("/repo/workstacks/other"))
+        None
+    """
+    # Resolve paths for comparison to handle relative vs absolute paths
+    wt_path_resolved = wt_path.resolve()
+    for wt in worktrees:
+        if wt.path.resolve() == wt_path_resolved:
+            return wt.branch
+    return None
+
+
+def find_worktree_with_branch(worktrees: list[WorktreeInfo], branch: str) -> Path | None:
+    """Find the worktree path containing the specified branch.
+
+    Returns None if the branch is not found in any worktree.
+
+    Args:
+        worktrees: List of WorktreeInfo objects to search
+        branch: Branch name to find
+
+    Returns:
+        Path to worktree containing the branch, or None if not found
+
+    Examples:
+        >>> worktrees = [WorktreeInfo(Path("/repo/workstacks/feat"), "feature-x", False)]
+        >>> find_worktree_with_branch(worktrees, "feature-x")
+        Path("/repo/workstacks/feat")
+        >>> find_worktree_with_branch(worktrees, "unknown")
+        None
+    """
+    for wt in worktrees:
+        if wt.branch == branch:
+            return wt.path
+    return None
+
+
+def filter_non_trunk_branches(all_branches: dict[str, Any], stack: list[str]) -> list[str]:
+    """Filter out trunk branches from a stack.
+
+    Args:
+        all_branches: Dictionary mapping branch names to branch info (with is_trunk attribute)
+        stack: List of branch names to filter
+
+    Returns:
+        List of non-trunk branches from the stack
+
+    Examples:
+        >>> branches = {"main": BranchInfo(is_trunk=True), "feat": BranchInfo(is_trunk=False)}
+        >>> filter_non_trunk_branches(branches, ["main", "feat"])
+        ["feat"]
+    """
+    return [b for b in stack if b in all_branches and not all_branches[b].is_trunk]

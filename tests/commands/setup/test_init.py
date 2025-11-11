@@ -1,4 +1,25 @@
-"""Tests for the init command."""
+"""Tests for the init command.
+
+Mock Usage Policy:
+------------------
+This file uses mocks for external boundaries that are legitimate to mock:
+
+1. os.environ HOME patches (14 uses):
+   - LEGITIMATE: Testing path resolution logic that depends on $HOME
+   - The init command uses Path.home() to determine ~/.workstack location
+   - Patching HOME redirects to temp directory for test isolation
+   - Cannot be replaced with fakes (environment variable is external boundary)
+
+2. global_config_exists() patches (14 uses):
+   - LEGITIMATE: Testing file system boundary
+   - Function just checks if ~/.workstack/config.toml exists
+   - Could be replaced with real file creation, but mock is clearer for intent
+   - Explicitly shows "simulate existing config" vs "create temp file and hope test sees it"
+   - The trivial file check is already tested in integration tests
+
+Both patches are necessary for testing init command's conditional logic without
+polluting real filesystem or requiring complex fixture setup.
+"""
 
 import os
 from pathlib import Path

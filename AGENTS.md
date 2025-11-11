@@ -423,6 +423,22 @@ if removed_current_worktree:
 🔴 **MUST**: Only write tests for code being actively implemented
 🔴 **FORBIDDEN**: Writing tests for speculative or "maybe later" features
 
+**When Tests Are Required:**
+
+🔴 **MUST write tests for:**
+
+- **Adding a feature** → Test over fake layer
+- **Fixing a bug** → Test over fake layer (reproduce bug, then fix)
+- **Changing business logic** → Test over fake layer
+
+**Default testing position:** Any change to business logic, features, or bug fixes MUST include tests written over the fake layer.
+
+🔴 **MUST add coverage for ops implementations:**
+
+- **New ops interface method** → Test the real implementation with mocked stateful interactions
+- **Example:** Adding `GitOps.new_method()` → Mock subprocess calls, test error paths
+- **Goal:** Ensure code coverage even when underlying systems (git, filesystem, network) are mocked
+
 **TDD is explicitly allowed and encouraged:**
 
 - Write test → implement feature → refactor is a valid workflow

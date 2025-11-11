@@ -46,6 +46,222 @@ ctx = _create_test_context(env, ...)  # env.cwd used internally
 | Test shell detection          | FakeShellOps with detected_shell parameter           |
 | Test tool availability        | FakeShellOps with installed_tools parameter          |
 
+## Test Coverage Requirements
+
+### When Tests Are Required
+
+**Every code change falls into one of these categories, each requiring tests:**
+
+| Change Type               | Test Requirement         | Test Layer          | Example                                                         |
+| ------------------------- | ------------------------ | ------------------- | --------------------------------------------------------------- |
+| **New Feature**           | MUST have tests          | Fake layer          | Adding `workstack merge` command → Test with FakeGitOps         |
+| **Bug Fix**               | MUST reproduce then fix  | Fake layer          | Fixing branch detection → Test that reproduces bug, then passes |
+| **Business Logic Change** | MUST have tests          | Fake layer          | Changing worktree naming logic → Test new behavior with fakes   |
+| **New Ops Method**        | MUST test implementation | Mock stateful calls | Adding `GitOps.cherry_pick()` → Mock git subprocess, test paths |
+
+### Default Testing Strategy: Fake Layer
+
+**The default position is that ALL business logic changes require tests written over the fake layer.**
+
+**Why fake layer by default:**
+
+- **Fast execution** - No subprocess calls, no file I/O
+- **Deterministic** - Controlled state, predictable results
+- **Comprehensive** - Can test all code paths including error cases
+- **Maintainable** - Changes to implementation don't break tests
+
+**What counts as business logic:**
+
+- Command behavior and workflow
+- Data transformation and formatting
+- Decision logic (if/else branches)
+- State management and mutations
+- User interaction flows
+
+**What doesn't count as business logic:**
+
+- Pure infrastructure (logging setup)
+- Configuration constants
+- Type definitions
+- Documentation
+
+### Testing Ops Implementations
+
+**When adding new methods to ops interfaces, you MUST provide test coverage for the real implementation.**
+
+**Pattern for testing ops implementations:**
+
+1. **Test the interface contract with fakes** (for consumers)
+2. **Test the real implementation with mocked stateful interactions** (for coverage)
+
+**Example: Adding a new GitOps method**
+
+```python
+# In src/workstack/core/git_ops.py
+class GitOps(ABC):
+    @abstractmethod
+    def stash_changes(self, repo_path: Path, message: str) -> None:
+        """Stash uncommitted changes."""
+        ...
+
+class RealGitOps(GitOps):
+    def stash_changes(self, repo_path: Path, message: str) -> None:
+        result = subprocess.run(
+            ["git", "stash", "push", "-m", message],
+            cwd=repo_path,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            raise GitError(f"Failed to stash: {result.stderr}")
+```
+
+**Test 1: Fake implementation for consumers**
+
+```python
+# In tests/fakes/gitops.py
+class FakeGitOps(GitOps):
+    def __init__(self):
+        self.stashed_changes: list[tuple[Path, str]] = []
+
+    def stash_changes(self, repo_path: Path, message: str) -> None:
+        self.stashed_changes.append((repo_path, message))
+
+# In tests/commands/test_stash.py
+def test_stash_command():
+    git_ops = FakeGitOps()
+    ctx = create_test_context(git_ops=git_ops)
+
+    result = runner.invoke(cli, ["stash", "WIP"], obj=ctx)
+
+    assert result.exit_code == 0
+    assert (".", "WIP") in git_ops.stashed_changes
+```
+
+**Test 2: Real implementation with mocked subprocess**
+
+```python
+# In tests/integration/test_git_ops.py
+from unittest.mock import patch, MagicMock
+
+def test_real_git_ops_stash_success():
+    """Test RealGitOps.stash_changes with successful git stash."""
+    ops = RealGitOps()
+
+    with patch("subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(returncode=0, stderr="")
+
+        ops.stash_changes(Path("/repo"), "WIP message")
+
+        mock_run.assert_called_once_with(
+            ["git", "stash", "push", "-m", "WIP message"],
+            cwd=Path("/repo"),
+            capture_output=True,
+            text=True,
+        )
+
+def test_real_git_ops_stash_failure():
+    """Test RealGitOps.stash_changes handles git errors."""
+    ops = RealGitOps()
+
+    with patch("subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(
+            returncode=1,
+            stderr="error: cannot stash"
+        )
+
+        with pytest.raises(GitError, match="Failed to stash"):
+            ops.stash_changes(Path("/repo"), "WIP")
+```
+
+**Key points for ops implementation testing:**
+
+- Mock at the boundary (subprocess, file I/O, network)
+- Test both success and error paths
+- Verify correct parameters passed to external systems
+- Ensure error messages are meaningful
+
+### Testing Decision Matrix
+
+```
+What are you changing?
+├─ Adding a feature?
+│  └─ Write tests using fake layer
+│
+├─ Fixing a bug?
+│  └─ Write test that reproduces bug with fakes
+│     └─ Fix bug so test passes
+│
+├─ Changing business logic?
+│  └─ Write tests using fake layer
+│
+├─ Adding new ops interface method?
+│  ├─ Write fake implementation with mutation tracking
+│  ├─ Write tests for consumers using fake
+│  └─ Write tests for real implementation with mocks
+│
+└─ Refactoring without behavior change?
+   └─ Existing tests should pass unchanged
+```
+
+### Common Testing Patterns
+
+**Feature Addition Pattern:**
+
+```python
+def test_new_merge_command():
+    """Test new merge command merges worktree branch."""
+    git_ops = FakeGitOps(
+        worktrees={repo: [
+            WorktreeInfo(path=repo, branch="main"),
+            WorktreeInfo(path=wt, branch="feature"),
+        ]}
+    )
+    ctx = create_test_context(git_ops=git_ops)
+
+    result = runner.invoke(cli, ["merge", "feature"], obj=ctx)
+
+    assert result.exit_code == 0
+    assert "feature" in git_ops.merged_branches  # Mutation tracking
+```
+
+**Bug Fix Pattern:**
+
+```python
+def test_branch_detection_with_detached_head():
+    """Regression test for bug #123: crash on detached HEAD."""
+    # Setup state that reproduces the bug
+    git_ops = FakeGitOps(
+        current_branches={repo: None}  # Detached HEAD
+    )
+    ctx = create_test_context(git_ops=git_ops)
+
+    # This used to crash, now should handle gracefully
+    result = runner.invoke(cli, ["current"], obj=ctx)
+
+    assert result.exit_code == 0
+    assert "Not on any branch" in result.output
+```
+
+**Business Logic Change Pattern:**
+
+```python
+def test_new_worktree_naming_convention():
+    """Test updated worktree naming includes timestamp."""
+    git_ops = FakeGitOps()
+    ctx = create_test_context(git_ops=git_ops)
+
+    with patch("time.time", return_value=1234567890):
+        result = runner.invoke(
+            cli, ["create", "feature"], obj=ctx
+        )
+
+    assert result.exit_code == 0
+    # New naming convention includes timestamp
+    assert any("feature-1234567890" in str(wt)
+              for wt, _ in git_ops.added_worktrees)
+```
+
 ## Dependency Categories
 
 ### 1. GitOps - Version Control Operations

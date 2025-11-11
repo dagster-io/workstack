@@ -162,7 +162,9 @@ def test_init_skips_global_with_repo_flag() -> None:
             cwd=env.cwd,
         )
 
-        result = runner.invoke(cli, ["init", "--repo"], obj=test_ctx)
+        # Mock global_config_exists to return True (simulating existing global config)
+        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
+            result = runner.invoke(cli, ["init", "--repo"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         assert "Global config not found" not in result.output
@@ -222,7 +224,9 @@ def test_init_auto_preset_detects_dagster() -> None:
             cwd=env.cwd,
         )
 
-        result = runner.invoke(cli, ["init"], obj=test_ctx)
+        # Mock global_config_exists to return True (simulating existing global config)
+        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
+            result = runner.invoke(cli, ["init"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Config should be created in workstacks_dir
@@ -256,7 +260,9 @@ def test_init_auto_preset_uses_generic_fallback() -> None:
             cwd=env.cwd,
         )
 
-        result = runner.invoke(cli, ["init"], obj=test_ctx)
+        # Mock global_config_exists to return True (simulating existing global config)
+        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
+            result = runner.invoke(cli, ["init"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         workstacks_dir = workstacks_root / env.cwd.name
@@ -285,7 +291,9 @@ def test_init_explicit_preset_dagster() -> None:
             cwd=env.cwd,
         )
 
-        result = runner.invoke(cli, ["init", "--preset", "dagster"], obj=test_ctx)
+        # Mock global_config_exists to return True (simulating existing global config)
+        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
+            result = runner.invoke(cli, ["init", "--preset", "dagster"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         workstacks_dir = workstacks_root / env.cwd.name
@@ -314,7 +322,9 @@ def test_init_explicit_preset_generic() -> None:
             cwd=env.cwd,
         )
 
-        result = runner.invoke(cli, ["init", "--preset", "generic"], obj=test_ctx)
+        # Mock global_config_exists to return True (simulating existing global config)
+        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
+            result = runner.invoke(cli, ["init", "--preset", "generic"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         workstacks_dir = workstacks_root / env.cwd.name
@@ -397,7 +407,9 @@ def test_init_creates_config_at_workstacks_dir() -> None:
             cwd=env.cwd,
         )
 
-        result = runner.invoke(cli, ["init"], obj=test_ctx)
+        # Mock global_config_exists to return True (simulating existing global config)
+        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
+            result = runner.invoke(cli, ["init"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Config should be in workstacks_dir, not repo root
@@ -428,7 +440,9 @@ def test_init_repo_flag_creates_config_at_root() -> None:
             cwd=env.cwd,
         )
 
-        result = runner.invoke(cli, ["init", "--repo"], obj=test_ctx)
+        # Mock global_config_exists to return True (simulating existing global config)
+        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
+            result = runner.invoke(cli, ["init", "--repo"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Config should be at repo root
@@ -463,7 +477,9 @@ def test_init_force_overwrites_existing_config() -> None:
             cwd=env.cwd,
         )
 
-        result = runner.invoke(cli, ["init", "--force"], obj=test_ctx)
+        # Mock global_config_exists to return True (simulating existing global config)
+        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
+            result = runner.invoke(cli, ["init", "--force"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         assert config_path.exists()
@@ -499,7 +515,9 @@ def test_init_fails_without_force_when_exists() -> None:
             cwd=env.cwd,
         )
 
-        result = runner.invoke(cli, ["init"], obj=test_ctx)
+        # Mock global_config_exists to return True (simulating existing global config)
+        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
+            result = runner.invoke(cli, ["init"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "Config already exists" in result.output
@@ -532,7 +550,9 @@ def test_init_adds_plan_md_to_gitignore() -> None:
         )
 
         # Accept both prompts (y for .PLAN.md, y for .env)
-        result = runner.invoke(cli, ["init"], obj=test_ctx, input="y\ny\n")
+        # Mock global_config_exists to return True (simulating existing global config)
+        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
+            result = runner.invoke(cli, ["init"], obj=test_ctx, input="y\ny\n")
 
         assert result.exit_code == 0, result.output
         gitignore_content = gitignore.read_text(encoding="utf-8")

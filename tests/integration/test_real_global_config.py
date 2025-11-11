@@ -59,14 +59,23 @@ def test_env_rendering(tmp_path: Path) -> None:
 def test_load_global_config_missing_workstacks_root(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # Test that load_global_config validates required fields
-    from workstack.core.global_config import load_global_config
+    # Test that FilesystemGlobalConfigOps validates required fields
+    from workstack.core.global_config import FilesystemGlobalConfigOps
 
     config_file = tmp_path / "config.toml"
     config_file.write_text("use_graphite = true\n", encoding="utf-8")
 
+    # Patch Path.home to return tmp_path so ops looks in tmp_path/.workstack/
+    monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
+
+    # Create .workstack dir and write config there
+    workstack_dir = tmp_path / ".workstack"
+    workstack_dir.mkdir()
+    (workstack_dir / "config.toml").write_text("use_graphite = true\n", encoding="utf-8")
+
+    ops = FilesystemGlobalConfigOps()
     with pytest.raises(ValueError, match="Missing 'workstacks_root'"):
-        load_global_config(config_file)
+        ops.load()
 
 
 # def test_load_global_config_use_graphite_defaults_false(tmp_path: Path) -> None:
@@ -78,19 +87,31 @@ def test_load_global_config_missing_workstacks_root(
 
 def test_create_global_config_creates_parent_directory(tmp_path: Path) -> None:
     # Test that create_and_save_global_config creates parent directory
+    from workstack.core.context import WorkstackContext
+    from workstack.core.global_config import InMemoryGlobalConfigOps
+
     config_file = tmp_path / ".workstack" / "config.toml"
     assert not config_file.parent.exists()
+
+    # Create test context with InMemoryGlobalConfigOps
+    global_config_ops = InMemoryGlobalConfigOps(config=None)
+    ctx = WorkstackContext.for_test(
+        shell_ops=FakeShellOps(),
+        global_config_ops=global_config_ops,
+        global_config=None,
+        cwd=tmp_path,
+    )
 
     with (
         mock.patch("workstack.cli.commands.init.detect_graphite", return_value=False),
         mock.patch("workstack.core.global_config.Path.home", return_value=tmp_path),
     ):
-        create_and_save_global_config(
-            FakeShellOps(), Path("/tmp/workstacks"), shell_setup_complete=False
-        )
+        create_and_save_global_config(ctx, Path("/tmp/workstacks"), shell_setup_complete=False)
 
-    assert config_file.parent.exists()
-    assert config_file.exists()
+    # Verify config was saved to in-memory ops
+    assert global_config_ops.exists()
+    loaded = global_config_ops.load()
+    assert loaded.workstacks_root == Path("/tmp/workstacks")
 
 
 # def test_create_global_config_detects_graphite(tmp_path: Path) -> None:

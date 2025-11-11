@@ -31,7 +31,6 @@ kit_id = "workstack"
 source_type = "bundled"
 version = "0.1.0"
 artifacts = [
-    ".claude/commands/workstack/create-from-plan.md",
     ".claude/commands/workstack/implement-plan.md",
 ]
 

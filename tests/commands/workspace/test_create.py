@@ -6,14 +6,12 @@ from unittest import mock
 
 from click.testing import CliRunner
 
-from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
+from workstack.core.global_config import GlobalConfig
 
 
 def test_create_basic_worktree() -> None:
@@ -36,20 +34,18 @@ def test_create_basic_worktree() -> None:
             git_common_dirs={cwd: git_dir},
             default_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
@@ -79,20 +75,18 @@ def test_create_with_custom_branch_name() -> None:
             git_common_dirs={cwd: git_dir},
             default_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(
@@ -126,20 +120,18 @@ def test_create_with_plan_file() -> None:
             git_common_dirs={cwd: git_dir},
             default_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "--plan", str(plan_file)], obj=test_ctx)
@@ -172,20 +164,18 @@ def test_create_with_plan_file_removes_plan_word() -> None:
             git_common_dirs={cwd: git_dir},
             default_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         # Test multiple plan file examples
@@ -234,20 +224,18 @@ def test_create_sanitizes_worktree_name() -> None:
             git_common_dirs={cwd: git_dir},
             default_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "Test_Feature!!"], obj=test_ctx)
@@ -280,20 +268,18 @@ def test_create_sanitizes_branch_name() -> None:
             git_common_dirs={cwd: git_dir},
             default_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         # Branch name should be sanitized differently than worktree name
@@ -322,20 +308,18 @@ def test_create_detects_default_branch() -> None:
             default_branches={cwd: "main"},
             current_branches={cwd: "feature"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(
@@ -379,20 +363,18 @@ def test_create_from_current_branch_in_worktree() -> None:
                 repo_root: git_dir,
             },
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=current_worktree,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "--from-current-branch"], obj=test_ctx)
@@ -430,20 +412,18 @@ def test_create_fails_if_worktree_exists() -> None:
             git_common_dirs={cwd: git_dir},
             default_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
@@ -475,20 +455,18 @@ def test_create_runs_post_create_commands() -> None:
             git_common_dirs={cwd: git_dir},
             default_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
@@ -520,20 +498,18 @@ def test_create_sets_env_variables() -> None:
             git_common_dirs={cwd: git_dir},
             default_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
@@ -568,21 +544,19 @@ def test_create_uses_graphite_when_enabled() -> None:
             default_branches={cwd: "main"},
             current_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
-        graphite_ops = FakeGraphiteOps()
+        FakeGraphiteOps()
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=graphite_ops,
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         # Mock subprocess to simulate gt create
@@ -617,20 +591,18 @@ def test_create_blocks_when_staged_changes_present_with_graphite_enabled() -> No
             current_branches={cwd: "main"},
             staged_repos={cwd},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         with mock.patch("workstack.cli.commands.create.subprocess.run") as mock_run:
@@ -661,20 +633,18 @@ def test_create_uses_git_when_graphite_disabled() -> None:
             git_common_dirs={cwd: git_dir},
             default_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
@@ -700,20 +670,18 @@ def test_create_allows_staged_changes_when_graphite_disabled() -> None:
             default_branches={cwd: "main"},
             staged_repos={cwd},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
@@ -732,20 +700,18 @@ def test_create_invalid_worktree_name() -> None:
         workstacks_root = cwd / "workstacks"
 
         git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         # Test reserved name "root"
@@ -775,20 +741,18 @@ def test_create_plan_file_not_found() -> None:
         workstacks_root = cwd / "workstacks"
 
         git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "--plan", "nonexistent.md"], obj=test_ctx)
@@ -820,20 +784,18 @@ def test_create_no_post_flag_skips_commands() -> None:
             git_common_dirs={cwd: git_dir},
             default_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "test-feature", "--no-post"], obj=test_ctx)
@@ -862,20 +824,18 @@ def test_create_from_current_branch() -> None:
             default_branches={cwd: "main"},
             current_branches={cwd: "feature-branch"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "feature", "--from-current-branch"], obj=test_ctx)
@@ -902,20 +862,18 @@ def test_create_from_branch() -> None:
             git_common_dirs={cwd: git_dir},
             default_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(
@@ -936,20 +894,18 @@ def test_create_requires_name_or_flag() -> None:
         workstacks_root = cwd / "workstacks"
 
         git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create"], obj=test_ctx)
@@ -978,20 +934,18 @@ def test_create_from_current_branch_on_main_fails() -> None:
             default_branches={cwd: "main"},
             current_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "feature", "--from-current-branch"], obj=test_ctx)
@@ -1031,20 +985,18 @@ def test_create_detects_branch_already_checked_out() -> None:
                 ],
             },
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(
@@ -1076,20 +1028,18 @@ def test_create_from_current_branch_on_master_fails() -> None:
             default_branches={cwd: "master"},
             current_branches={cwd: "master"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "feature", "--from-current-branch"], obj=test_ctx)
@@ -1121,20 +1071,18 @@ def test_create_with_keep_plan_flag() -> None:
             git_common_dirs={cwd: git_dir},
             default_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(
@@ -1163,20 +1111,18 @@ def test_create_keep_plan_without_plan_fails() -> None:
         workstacks_root = cwd / "workstacks"
 
         git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "test-feature", "--keep-plan"], obj=test_ctx)
@@ -1217,7 +1163,7 @@ def test_from_current_branch_with_main_in_use_prefers_graphite_parent() -> None:
         # Set up Graphite stack: main -> feature-1 -> feature-2
         from workstack.core.branch_metadata import BranchMetadata
 
-        graphite_branches = {
+        {
             "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
             "feature-1": BranchMetadata.branch(
                 "feature-1", "main", children=["feature-2"], commit_sha="def456"
@@ -1242,20 +1188,18 @@ def test_from_current_branch_with_main_in_use_prefers_graphite_parent() -> None:
                 repo_root: git_dir,
             },
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(branches=graphite_branches),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=current_worktree,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "--from-current-branch"], obj=test_ctx)
@@ -1300,7 +1244,7 @@ def test_from_current_branch_with_parent_in_use_falls_back_to_detached_head() ->
         # Set up Graphite stack: main -> feature-1 -> feature-2
         from workstack.core.branch_metadata import BranchMetadata
 
-        graphite_branches = {
+        {
             "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
             "feature-1": BranchMetadata.branch(
                 "feature-1", "main", children=["feature-2"], commit_sha="def456"
@@ -1328,20 +1272,18 @@ def test_from_current_branch_with_parent_in_use_falls_back_to_detached_head() ->
                 other_worktree: git_dir,
             },
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(branches=graphite_branches),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=current_worktree,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "--from-current-branch"], obj=test_ctx)
@@ -1385,7 +1327,7 @@ def test_from_current_branch_without_graphite_falls_back_to_main() -> None:
         # Set up minimal Graphite stack (standalone-feature not in it)
         from workstack.core.branch_metadata import BranchMetadata
 
-        graphite_branches = {
+        {
             "main": BranchMetadata.trunk("main", commit_sha="abc123"),
         }
 
@@ -1406,20 +1348,18 @@ def test_from_current_branch_without_graphite_falls_back_to_main() -> None:
                 repo_root: git_dir,
             },
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(branches=graphite_branches),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=current_worktree,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "--from-current-branch"], obj=test_ctx)
@@ -1460,7 +1400,7 @@ def test_from_current_branch_no_graphite_main_in_use_uses_detached_head() -> Non
         # Set up minimal Graphite stack (standalone-feature not in it)
         from workstack.core.branch_metadata import BranchMetadata
 
-        graphite_branches = {
+        {
             "main": BranchMetadata.trunk("main", commit_sha="abc123"),
         }
 
@@ -1481,20 +1421,18 @@ def test_from_current_branch_no_graphite_main_in_use_uses_detached_head() -> Non
                 repo_root: git_dir,
             },
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(branches=graphite_branches),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=current_worktree,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "--from-current-branch"], obj=test_ctx)
@@ -1525,20 +1463,18 @@ def test_create_with_json_output() -> None:
             git_common_dirs={cwd: git_dir},
             default_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "test-feature", "--json"], obj=test_ctx)
@@ -1582,20 +1518,18 @@ def test_create_existing_worktree_with_json() -> None:
             default_branches={cwd: "main"},
             current_branches={existing_wt: "existing-branch"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "existing-feature", "--json"], obj=test_ctx)
@@ -1629,20 +1563,18 @@ def test_create_json_and_script_mutually_exclusive() -> None:
             git_common_dirs={cwd: git_dir},
             default_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "test-feature", "--json", "--script"], obj=test_ctx)
@@ -1675,20 +1607,18 @@ def test_create_with_json_and_plan_file() -> None:
             git_common_dirs={cwd: git_dir},
             default_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         # Don't provide NAME - it's derived from plan filename
@@ -1733,20 +1663,18 @@ def test_create_with_json_no_plan() -> None:
             git_common_dirs={cwd: git_dir},
             default_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "test-feature", "--json"], obj=test_ctx)
@@ -1778,20 +1706,18 @@ def test_create_with_stay_prevents_script_generation() -> None:
             git_common_dirs={cwd: git_dir},
             default_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "test-feature", "--script", "--stay"], obj=test_ctx)
@@ -1824,20 +1750,18 @@ def test_create_with_stay_and_json() -> None:
             git_common_dirs={cwd: git_dir},
             default_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "test-feature", "--json", "--stay"], obj=test_ctx)
@@ -1876,20 +1800,18 @@ def test_create_with_stay_and_plan() -> None:
             git_common_dirs={cwd: git_dir},
             default_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(
@@ -1926,20 +1848,18 @@ def test_create_default_behavior_generates_script() -> None:
             git_common_dirs={cwd: git_dir},
             default_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         result = runner.invoke(cli, ["create", "test-feature", "--script"], obj=test_ctx)
@@ -1971,20 +1891,18 @@ def test_create_with_long_name_truncation() -> None:
             git_common_dirs={cwd: git_dir},
             default_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         # Create with name that exceeds 30 characters
@@ -2024,20 +1942,18 @@ def test_create_with_plan_ensures_uniqueness() -> None:
             git_common_dirs={cwd: git_dir},
             default_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         # Create first worktree from plan
@@ -2107,20 +2023,18 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
             git_common_dirs={cwd: git_dir},
             default_branches={cwd: "main"},
         )
-        global_config_ops = FakeGlobalConfigOps(
-            exists=True,
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
-        test_ctx = WorkstackContext(
+        test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            global_config=global_config_ops,
             cwd=cwd,
-            dry_run=False,
         )
 
         # Create worktree from long plan filename

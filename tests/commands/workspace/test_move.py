@@ -6,9 +6,9 @@ from click.testing import CliRunner
 
 from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from workstack.cli.cli import cli
 from workstack.core.gitops import WorktreeInfo
+from workstack.core.global_config import GlobalConfig
 
 
 def test_move_from_current_to_new_worktree() -> None:
@@ -38,9 +38,12 @@ def test_move_from_current_to_new_worktree() -> None:
             default_branches={repo_root: "main"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         test_ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
@@ -83,9 +86,12 @@ def test_move_with_explicit_current_flag() -> None:
             default_branches={repo_root: "main"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         test_ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
@@ -124,9 +130,12 @@ def test_move_with_branch_flag_auto_detect() -> None:
             default_branches={repo_root: "main"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         test_ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
@@ -165,9 +174,12 @@ def test_move_with_worktree_flag() -> None:
             default_branches={repo_root: "main"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         test_ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
@@ -208,9 +220,12 @@ def test_move_swap_between_two_worktrees() -> None:
             default_branches={repo_root: "main"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         test_ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
@@ -252,9 +267,12 @@ def test_move_swap_requires_confirmation() -> None:
             default_branches={repo_root: "main"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         test_ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
@@ -290,9 +308,12 @@ def test_move_with_custom_ref() -> None:
             default_branches={repo_root: "develop"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         test_ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
@@ -319,9 +340,12 @@ def test_move_error_multiple_source_flags() -> None:
             },
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         test_ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
@@ -357,9 +381,12 @@ def test_move_error_branch_not_found() -> None:
             },
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         test_ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
@@ -393,9 +420,12 @@ def test_move_error_worktree_not_found() -> None:
             default_branches={repo_root: "main"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         test_ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
@@ -437,9 +467,12 @@ def test_move_error_source_and_target_same() -> None:
             },
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         test_ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
@@ -478,9 +511,12 @@ def test_move_error_source_in_detached_head() -> None:
             default_branches={repo_root: "main"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         test_ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
@@ -522,9 +558,12 @@ def test_move_to_existing_worktree_in_detached_head() -> None:
             default_branches={repo_root: "main"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         test_ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
@@ -565,9 +604,12 @@ def test_move_to_root() -> None:
             default_branches={repo_root: "main"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         test_ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
@@ -616,9 +658,12 @@ def test_move_to_root_with_explicit_current() -> None:
             default_branches={repo_root: "main"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         test_ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
@@ -659,9 +704,12 @@ def test_move_to_root_when_root_is_detached_head() -> None:
             default_branches={repo_root: "main"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         test_ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
@@ -698,9 +746,12 @@ def test_move_error_source_is_root_target_is_root() -> None:
             default_branches={repo_root: "main"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         test_ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)

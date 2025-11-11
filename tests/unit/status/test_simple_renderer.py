@@ -12,7 +12,7 @@ from workstack.status.models.status_data import (
     PullRequestStatus,
     StackPosition,
     StatusData,
-    WorktreeInfo,
+    WorktreeDisplayInfo,
 )
 from workstack.status.renderers.simple import SimpleRenderer
 
@@ -40,34 +40,10 @@ def capture_renderer_output(renderer: SimpleRenderer, status_data: StatusData) -
 def test_renderer_clean_working_tree() -> None:
     """Test rendering with clean working tree."""
     # Arrange
-    worktree_info = WorktreeInfo(
-        name="test-worktree",
-        path=Path("/tmp/test"),
-        branch="main",
-        is_root=False,
-    )
+    worktree_info = WorktreeDisplayInfo.feature(Path("/tmp/test"), "main", name="test-worktree")
+    git_status = GitStatus.clean_status("main")
 
-    git_status = GitStatus(
-        branch="main",
-        clean=True,
-        ahead=0,
-        behind=0,
-        staged_files=[],
-        modified_files=[],
-        untracked_files=[],
-        recent_commits=[],
-    )
-
-    status_data = StatusData(
-        worktree_info=worktree_info,
-        git_status=git_status,
-        stack_position=None,
-        pr_status=None,
-        environment=None,
-        dependencies=None,
-        plan=None,
-        related_worktrees=[],
-    )
+    status_data = StatusData.with_git_status(worktree_info, git_status)
 
     renderer = SimpleRenderer()
 
@@ -84,13 +60,26 @@ def test_renderer_clean_working_tree() -> None:
 def test_renderer_dirty_working_tree() -> None:
     """Test rendering with dirty working tree."""
     # Arrange
-    worktree_info = WorktreeInfo(
-        name="test-worktree",
-        path=Path("/tmp/test"),
-        branch="feature",
-        is_root=False,
-    )
+    worktree_info = WorktreeDisplayInfo.feature(Path("/tmp/test"), "feature", name="test-worktree")
 
+    commits = [
+        CommitInfo(
+            sha="abc123",
+            message="Add new feature",
+            author="Test Author",
+            date="2 hours ago",
+        ),
+        CommitInfo(
+            sha="def456",
+            message="Fix bug in previous commit that was really long and needs truncation",
+            author="Test Author",
+            date="3 hours ago",
+        ),
+    ]
+
+    # Manual construction needed: test requires both dirty status AND commits
+    # Factory methods don't support this combination (.dirty_status() has no commits,
+    # .with_commits() assumes clean status)
     git_status = GitStatus(
         branch="feature",
         clean=False,
@@ -99,32 +88,10 @@ def test_renderer_dirty_working_tree() -> None:
         staged_files=["file1.py", "file2.py"],
         modified_files=["file3.py", "file4.py", "file5.py"],
         untracked_files=["file6.py", "file7.py", "file8.py", "file9.py", "file10.py"],
-        recent_commits=[
-            CommitInfo(
-                sha="abc123",
-                message="Add new feature",
-                author="Test Author",
-                date="2 hours ago",
-            ),
-            CommitInfo(
-                sha="def456",
-                message="Fix bug in previous commit that was really long and needs truncation",
-                author="Test Author",
-                date="3 hours ago",
-            ),
-        ],
+        recent_commits=commits,
     )
 
-    status_data = StatusData(
-        worktree_info=worktree_info,
-        git_status=git_status,
-        stack_position=None,
-        pr_status=None,
-        environment=None,
-        dependencies=None,
-        plan=None,
-        related_worktrees=[],
-    )
+    status_data = StatusData.with_git_status(worktree_info, git_status)
 
     renderer = SimpleRenderer()
 
@@ -151,12 +118,7 @@ def test_renderer_dirty_working_tree() -> None:
 def test_renderer_with_plan_file() -> None:
     """Test rendering with plan file."""
     # Arrange
-    worktree_info = WorktreeInfo(
-        name="test-worktree",
-        path=Path("/tmp/test"),
-        branch="feature",
-        is_root=False,
-    )
+    worktree_info = WorktreeDisplayInfo.feature(Path("/tmp/test"), "feature", name="test-worktree")
 
     plan = PlanStatus(
         exists=True,
@@ -172,16 +134,7 @@ def test_renderer_with_plan_file() -> None:
         ],
     )
 
-    git_status = GitStatus(
-        branch="feature",
-        clean=True,
-        ahead=0,
-        behind=0,
-        staged_files=[],
-        modified_files=[],
-        untracked_files=[],
-        recent_commits=[],
-    )
+    git_status = GitStatus.clean_status("feature")
 
     status_data = StatusData(
         worktree_info=worktree_info,
@@ -210,12 +163,7 @@ def test_renderer_with_plan_file() -> None:
 def test_renderer_without_plan_file() -> None:
     """Test rendering when plan file doesn't exist."""
     # Arrange
-    worktree_info = WorktreeInfo(
-        name="test-worktree",
-        path=Path("/tmp/test"),
-        branch="feature",
-        is_root=False,
-    )
+    worktree_info = WorktreeDisplayInfo.feature(Path("/tmp/test"), "feature", name="test-worktree")
 
     # Plan exists but file not found
     plan = PlanStatus(
@@ -226,16 +174,7 @@ def test_renderer_without_plan_file() -> None:
         first_lines=[],
     )
 
-    git_status = GitStatus(
-        branch="feature",
-        clean=True,
-        ahead=0,
-        behind=0,
-        staged_files=[],
-        modified_files=[],
-        untracked_files=[],
-        recent_commits=[],
-    )
+    git_status = GitStatus.clean_status("feature")
 
     status_data = StatusData(
         worktree_info=worktree_info,
@@ -260,11 +199,8 @@ def test_renderer_without_plan_file() -> None:
 def test_renderer_with_stack_position() -> None:
     """Test rendering with Graphite stack position."""
     # Arrange
-    worktree_info = WorktreeInfo(
-        name="test-worktree",
-        path=Path("/tmp/test"),
-        branch="feature-2",
-        is_root=False,
+    worktree_info = WorktreeDisplayInfo.feature(
+        Path("/tmp/test"), "feature-2", name="test-worktree"
     )
 
     stack_position = StackPosition(
@@ -275,17 +211,9 @@ def test_renderer_with_stack_position() -> None:
         is_trunk=False,
     )
 
-    git_status = GitStatus(
-        branch="feature-2",
-        clean=True,
-        ahead=0,
-        behind=0,
-        staged_files=[],
-        modified_files=[],
-        untracked_files=[],
-        recent_commits=[],
-    )
+    git_status = GitStatus.clean_status("feature-2")
 
+    # Use constructor for custom stack_position field
     status_data = StatusData(
         worktree_info=worktree_info,
         git_status=git_status,
@@ -315,12 +243,7 @@ def test_renderer_with_stack_position() -> None:
 def test_renderer_trunk_branch() -> None:
     """Test rendering when on trunk branch."""
     # Arrange
-    worktree_info = WorktreeInfo(
-        name="test-worktree",
-        path=Path("/tmp/test"),
-        branch="main",
-        is_root=True,
-    )
+    worktree_info = WorktreeDisplayInfo.root(Path("/tmp/test"), name="test-worktree")
 
     stack_position = StackPosition(
         stack=["main"],
@@ -330,16 +253,7 @@ def test_renderer_trunk_branch() -> None:
         is_trunk=True,
     )
 
-    git_status = GitStatus(
-        branch="main",
-        clean=True,
-        ahead=0,
-        behind=0,
-        staged_files=[],
-        modified_files=[],
-        untracked_files=[],
-        recent_commits=[],
-    )
+    git_status = GitStatus.clean_status("main")
 
     status_data = StatusData(
         worktree_info=worktree_info,
@@ -367,12 +281,7 @@ def test_renderer_trunk_branch() -> None:
 def test_renderer_with_pr_status() -> None:
     """Test rendering with pull request status."""
     # Arrange
-    worktree_info = WorktreeInfo(
-        name="test-worktree",
-        path=Path("/tmp/test"),
-        branch="feature",
-        is_root=False,
-    )
+    worktree_info = WorktreeDisplayInfo.feature(Path("/tmp/test"), "feature", name="test-worktree")
 
     pr_status = PullRequestStatus(
         number=123,
@@ -385,16 +294,7 @@ def test_renderer_with_pr_status() -> None:
         ready_to_merge=True,
     )
 
-    git_status = GitStatus(
-        branch="feature",
-        clean=True,
-        ahead=0,
-        behind=0,
-        staged_files=[],
-        modified_files=[],
-        untracked_files=[],
-        recent_commits=[],
-    )
+    git_status = GitStatus.clean_status("feature")
 
     status_data = StatusData(
         worktree_info=worktree_info,
@@ -424,12 +324,7 @@ def test_renderer_with_pr_status() -> None:
 def test_renderer_draft_pr() -> None:
     """Test rendering with draft PR."""
     # Arrange
-    worktree_info = WorktreeInfo(
-        name="test-worktree",
-        path=Path("/tmp/test"),
-        branch="feature",
-        is_root=False,
-    )
+    worktree_info = WorktreeDisplayInfo.feature(Path("/tmp/test"), "feature", name="test-worktree")
 
     pr_status = PullRequestStatus(
         number=456,
@@ -442,16 +337,7 @@ def test_renderer_draft_pr() -> None:
         ready_to_merge=False,
     )
 
-    git_status = GitStatus(
-        branch="feature",
-        clean=True,
-        ahead=0,
-        behind=0,
-        staged_files=[],
-        modified_files=[],
-        untracked_files=[],
-        recent_commits=[],
-    )
+    git_status = GitStatus.clean_status("feature")
 
     status_data = StatusData(
         worktree_info=worktree_info,
@@ -481,12 +367,7 @@ def test_renderer_draft_pr() -> None:
 def test_renderer_closed_pr() -> None:
     """Test rendering with closed PR."""
     # Arrange
-    worktree_info = WorktreeInfo(
-        name="test-worktree",
-        path=Path("/tmp/test"),
-        branch="feature",
-        is_root=False,
-    )
+    worktree_info = WorktreeDisplayInfo.feature(Path("/tmp/test"), "feature", name="test-worktree")
 
     pr_status = PullRequestStatus(
         number=789,
@@ -499,16 +380,7 @@ def test_renderer_closed_pr() -> None:
         ready_to_merge=False,
     )
 
-    git_status = GitStatus(
-        branch="feature",
-        clean=True,
-        ahead=0,
-        behind=0,
-        staged_files=[],
-        modified_files=[],
-        untracked_files=[],
-        recent_commits=[],
-    )
+    git_status = GitStatus.clean_status("feature")
 
     status_data = StatusData(
         worktree_info=worktree_info,
@@ -536,12 +408,7 @@ def test_renderer_closed_pr() -> None:
 def test_renderer_merged_pr() -> None:
     """Test rendering with merged PR."""
     # Arrange
-    worktree_info = WorktreeInfo(
-        name="test-worktree",
-        path=Path("/tmp/test"),
-        branch="feature",
-        is_root=False,
-    )
+    worktree_info = WorktreeDisplayInfo.feature(Path("/tmp/test"), "feature", name="test-worktree")
 
     pr_status = PullRequestStatus(
         number=999,
@@ -554,16 +421,7 @@ def test_renderer_merged_pr() -> None:
         ready_to_merge=False,  # Already merged
     )
 
-    git_status = GitStatus(
-        branch="feature",
-        clean=True,
-        ahead=0,
-        behind=0,
-        staged_files=[],
-        modified_files=[],
-        untracked_files=[],
-        recent_commits=[],
-    )
+    git_status = GitStatus.clean_status("feature")
 
     status_data = StatusData(
         worktree_info=worktree_info,
@@ -590,44 +448,15 @@ def test_renderer_merged_pr() -> None:
 def test_renderer_related_worktrees() -> None:
     """Test rendering with related worktrees."""
     # Arrange
-    worktree_info = WorktreeInfo(
-        name="test-worktree",
-        path=Path("/tmp/test"),
-        branch="feature",
-        is_root=False,
-    )
+    worktree_info = WorktreeDisplayInfo.feature(Path("/tmp/test"), "feature", name="test-worktree")
 
     related_worktrees = [
-        WorktreeInfo(
-            name="root",
-            path=Path("/tmp/repo"),
-            branch="main",
-            is_root=True,
-        ),
-        WorktreeInfo(
-            name="feature-1",
-            path=Path("/tmp/feature-1"),
-            branch="feature-1",
-            is_root=False,
-        ),
-        WorktreeInfo(
-            name="feature-2",
-            path=Path("/tmp/feature-2"),
-            branch="feature-2",
-            is_root=False,
-        ),
+        WorktreeDisplayInfo.root(Path("/tmp/repo")),
+        WorktreeDisplayInfo.feature(Path("/tmp/feature-1"), "feature-1"),
+        WorktreeDisplayInfo.feature(Path("/tmp/feature-2"), "feature-2"),
     ]
 
-    git_status = GitStatus(
-        branch="feature",
-        clean=True,
-        ahead=0,
-        behind=0,
-        staged_files=[],
-        modified_files=[],
-        untracked_files=[],
-        recent_commits=[],
-    )
+    git_status = GitStatus.clean_status("feature")
 
     status_data = StatusData(
         worktree_info=worktree_info,
@@ -657,35 +486,14 @@ def test_renderer_related_worktrees() -> None:
 def test_renderer_many_related_worktrees() -> None:
     """Test rendering with many related worktrees (truncation)."""
     # Arrange
-    worktree_info = WorktreeInfo(
-        name="test-worktree",
-        path=Path("/tmp/test"),
-        branch="feature",
-        is_root=False,
-    )
+    worktree_info = WorktreeDisplayInfo.feature(Path("/tmp/test"), "feature", name="test-worktree")
 
     # Create many related worktrees
-    related_worktrees = []
-    for i in range(10):
-        related_worktrees.append(
-            WorktreeInfo(
-                name=f"feature-{i}",
-                path=Path(f"/tmp/feature-{i}"),
-                branch=f"feature-{i}",
-                is_root=False,
-            )
-        )
+    related_worktrees = [
+        WorktreeDisplayInfo.feature(Path(f"/tmp/feature-{i}"), f"feature-{i}") for i in range(10)
+    ]
 
-    git_status = GitStatus(
-        branch="feature",
-        clean=True,
-        ahead=0,
-        behind=0,
-        staged_files=[],
-        modified_files=[],
-        untracked_files=[],
-        recent_commits=[],
-    )
+    git_status = GitStatus.clean_status("feature")
 
     status_data = StatusData(
         worktree_info=worktree_info,
@@ -714,13 +522,14 @@ def test_renderer_many_related_worktrees() -> None:
 def test_renderer_detached_head() -> None:
     """Test rendering with detached HEAD."""
     # Arrange
-    worktree_info = WorktreeInfo(
+    worktree_info = WorktreeDisplayInfo(
         name="test-worktree",
         path=Path("/tmp/test"),
         branch=None,  # Detached HEAD
         is_root=False,
     )
 
+    # Manual construction needed: detached HEAD (branch=None) not supported by factories
     git_status = GitStatus(
         branch=None,
         clean=True,
@@ -732,16 +541,7 @@ def test_renderer_detached_head() -> None:
         recent_commits=[],
     )
 
-    status_data = StatusData(
-        worktree_info=worktree_info,
-        git_status=git_status,
-        stack_position=None,
-        pr_status=None,
-        environment=None,
-        dependencies=None,
-        plan=None,
-        related_worktrees=[],
-    )
+    status_data = StatusData.with_git_status(worktree_info, git_status)
 
     renderer = SimpleRenderer()
 
@@ -756,34 +556,11 @@ def test_renderer_detached_head() -> None:
 def test_renderer_root_worktree() -> None:
     """Test rendering with root worktree."""
     # Arrange
-    worktree_info = WorktreeInfo(
-        name="root",
-        path=Path("/tmp/repo"),
-        branch="main",
-        is_root=True,  # Root worktree
-    )
+    worktree_info = WorktreeDisplayInfo.root(Path("/tmp/repo"))
 
-    git_status = GitStatus(
-        branch="main",
-        clean=True,
-        ahead=0,
-        behind=0,
-        staged_files=[],
-        modified_files=[],
-        untracked_files=[],
-        recent_commits=[],
-    )
+    git_status = GitStatus.clean_status("main")
 
-    status_data = StatusData(
-        worktree_info=worktree_info,
-        git_status=git_status,
-        stack_position=None,
-        pr_status=None,
-        environment=None,
-        dependencies=None,
-        plan=None,
-        related_worktrees=[],
-    )
+    status_data = StatusData.with_git_status(worktree_info, git_status)
 
     renderer = SimpleRenderer()
 
@@ -797,12 +574,7 @@ def test_renderer_root_worktree() -> None:
 def test_renderer_many_recent_commits() -> None:
     """Test rendering with many recent commits (truncation)."""
     # Arrange
-    worktree_info = WorktreeInfo(
-        name="test-worktree",
-        path=Path("/tmp/test"),
-        branch="feature",
-        is_root=False,
-    )
+    worktree_info = WorktreeDisplayInfo.feature(Path("/tmp/test"), "feature", name="test-worktree")
 
     # Create many commits
     commits = []
@@ -816,27 +588,9 @@ def test_renderer_many_recent_commits() -> None:
             )
         )
 
-    git_status = GitStatus(
-        branch="feature",
-        clean=True,
-        ahead=0,
-        behind=0,
-        staged_files=[],
-        modified_files=[],
-        untracked_files=[],
-        recent_commits=commits,
-    )
+    git_status = GitStatus.with_commits("feature", commits)
 
-    status_data = StatusData(
-        worktree_info=worktree_info,
-        git_status=git_status,
-        stack_position=None,
-        pr_status=None,
-        environment=None,
-        dependencies=None,
-        plan=None,
-        related_worktrees=[],
-    )
+    status_data = StatusData.with_git_status(worktree_info, git_status)
 
     renderer = SimpleRenderer()
 
@@ -854,13 +608,11 @@ def test_renderer_many_recent_commits() -> None:
 def test_renderer_full_status() -> None:
     """Test rendering with all status components."""
     # Arrange
-    worktree_info = WorktreeInfo(
-        name="test-worktree",
-        path=Path("/tmp/test"),
-        branch="feature-2",
-        is_root=False,
+    worktree_info = WorktreeDisplayInfo.feature(
+        Path("/tmp/test"), "feature-2", name="test-worktree"
     )
 
+    # Manual construction needed: test requires both dirty status AND commits
     git_status = GitStatus(
         branch="feature-2",
         clean=False,
@@ -907,12 +659,7 @@ def test_renderer_full_status() -> None:
     )
 
     related_worktrees = [
-        WorktreeInfo(
-            name="root",
-            path=Path("/tmp/repo"),
-            branch="main",
-            is_root=True,
-        ),
+        WorktreeDisplayInfo.root(Path("/tmp/repo")),
     ]
 
     status_data = StatusData(
@@ -943,23 +690,9 @@ def test_renderer_full_status() -> None:
 def test_renderer_no_git_status() -> None:
     """Test rendering when git status is None."""
     # Arrange
-    worktree_info = WorktreeInfo(
-        name="test-worktree",
-        path=Path("/tmp/test"),
-        branch="feature",
-        is_root=False,
-    )
+    worktree_info = WorktreeDisplayInfo.feature(Path("/tmp/test"), "feature", name="test-worktree")
 
-    status_data = StatusData(
-        worktree_info=worktree_info,
-        git_status=None,  # No git status
-        stack_position=None,
-        pr_status=None,
-        environment=None,
-        dependencies=None,
-        plan=None,
-        related_worktrees=[],
-    )
+    status_data = StatusData.minimal(worktree_info)
 
     renderer = SimpleRenderer()
 
@@ -974,34 +707,11 @@ def test_renderer_no_git_status() -> None:
 def test_renderer_no_stack_position() -> None:
     """Test rendering when stack position is None."""
     # Arrange
-    worktree_info = WorktreeInfo(
-        name="test-worktree",
-        path=Path("/tmp/test"),
-        branch="feature",
-        is_root=False,
-    )
+    worktree_info = WorktreeDisplayInfo.feature(Path("/tmp/test"), "feature", name="test-worktree")
 
-    git_status = GitStatus(
-        branch="feature",
-        clean=True,
-        ahead=0,
-        behind=0,
-        staged_files=[],
-        modified_files=[],
-        untracked_files=[],
-        recent_commits=[],
-    )
+    git_status = GitStatus.clean_status("feature")
 
-    status_data = StatusData(
-        worktree_info=worktree_info,
-        git_status=git_status,
-        stack_position=None,  # No stack position
-        pr_status=None,
-        environment=None,
-        dependencies=None,
-        plan=None,
-        related_worktrees=[],
-    )
+    status_data = StatusData.with_git_status(worktree_info, git_status)
 
     renderer = SimpleRenderer()
 

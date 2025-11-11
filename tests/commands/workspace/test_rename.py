@@ -9,12 +9,12 @@ from click.testing import CliRunner
 
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import DryRunGitOps
+from workstack.core.global_config import GlobalConfig
 
 
 def _create_test_context(cwd: Path, workstacks_root: Path, dry_run: bool = False):
@@ -36,7 +36,13 @@ def _create_test_context(cwd: Path, workstacks_root: Path, dry_run: bool = False
 
     return WorkstackContext(
         git_ops=git_ops,
-        global_config_ops=FakeGlobalConfigOps(workstacks_root=workstacks_root, use_graphite=False),
+        global_config_ops=GlobalConfig(
+            workstacks_root=workstacks_root,
+            use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
+        ),
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),
@@ -125,8 +131,12 @@ def test_rename_with_graphite_enabled() -> None:
         git_ops = FakeGitOps(git_common_dirs={cwd: cwd / ".git"})
         test_ctx = WorkstackContext(
             git_ops=git_ops,
-            global_config_ops=FakeGlobalConfigOps(
-                workstacks_root=workstacks_root, use_graphite=True
+            global_config_ops=GlobalConfig(
+                workstacks_root=workstacks_root,
+                use_graphite=True,
+                shell_setup_complete=False,
+                show_pr_info=True,
+                show_pr_checks=False,
             ),
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),

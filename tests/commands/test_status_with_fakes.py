@@ -23,9 +23,9 @@ from click.testing import CliRunner
 
 from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps, WorktreeInfo
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.test_utils.builders import WorktreeScenario
 from workstack.cli.commands.status import status_cmd
+from workstack.core.global_config import GlobalConfig
 
 
 def test_status_cmd_in_root_worktree(simple_repo: WorktreeScenario) -> None:
@@ -89,12 +89,14 @@ def test_status_cmd_in_subdirectory_of_worktree(tmp_path: Path) -> None:
         ahead_behind={(worktree_path, "feature"): (0, 0), (subdir, "feature"): (0, 0)},
         recent_commits={worktree_path: [], subdir: []},
     )
-    global_config_ops = FakeGlobalConfigOps(
+    global_config = GlobalConfig(
         workstacks_root=tmp_path / "workstacks",
         use_graphite=False,
+        shell_setup_complete=False,
         show_pr_info=False,
+        show_pr_checks=False,
     )
-    ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
+    ctx = create_test_context(git_ops=git_ops, global_config=global_config)
 
     runner = CliRunner()
     original_dir = os.getcwd()
@@ -160,11 +162,15 @@ def test_status_cmd_not_in_git_repo(tmp_path: Path) -> None:
         worktrees={},
     )
 
-    global_config_ops = FakeGlobalConfigOps(
+    global_config = GlobalConfig(
         workstacks_root=tmp_path / "workstacks",
+        use_graphite=False,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
     )
 
-    ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
+    ctx = create_test_context(git_ops=git_ops, global_config=global_config)
 
     runner = CliRunner()
     original_dir = os.getcwd()

@@ -14,12 +14,12 @@ from click.testing import CliRunner
 
 from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps, WorktreeInfo
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from workstack.cli.cli import cli
 from workstack.cli.tree import (
     _get_worktree_mapping,
     _load_graphite_branch_graph,
 )
+from workstack.core.global_config import GlobalConfig
 
 # ===========================
 # Integration Tests (Functions with Filesystem)
@@ -254,8 +254,12 @@ def test_tree_command_displays_hierarchy() -> None:
             current_branches={repo_root: "main"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
-            workstacks_root=cwd / "workstacks", use_graphite=True
+        global_config_ops = GlobalConfig(
+            workstacks_root=cwd / "workstacks",
+            use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
@@ -332,8 +336,12 @@ def test_tree_command_filters_branches_without_worktrees() -> None:
             git_common_dirs={repo_root: git_dir},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
-            workstacks_root=cwd / "workstacks", use_graphite=True
+        global_config_ops = GlobalConfig(
+            workstacks_root=cwd / "workstacks",
+            use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
@@ -371,8 +379,12 @@ def test_tree_command_fails_without_graphite_cache() -> None:
             git_common_dirs={repo_root: git_dir},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
-            workstacks_root=cwd / "workstacks", use_graphite=True
+        global_config_ops = GlobalConfig(
+            workstacks_root=cwd / "workstacks",
+            use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
@@ -437,8 +449,12 @@ def test_tree_command_shows_nested_hierarchy() -> None:
             git_common_dirs={repo_root: git_dir},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
-            workstacks_root=cwd / "workstacks", use_graphite=True
+        global_config_ops = GlobalConfig(
+            workstacks_root=cwd / "workstacks",
+            use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
@@ -522,8 +538,12 @@ def test_tree_command_shows_three_level_hierarchy_with_correct_indentation() -> 
             current_branches={repo_root: "main"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
-            workstacks_root=cwd / "workstacks", use_graphite=True
+        global_config_ops = GlobalConfig(
+            workstacks_root=cwd / "workstacks",
+            use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
@@ -638,8 +658,12 @@ def test_tree_root_on_non_trunk_branch() -> None:
             current_branches={repo_root: "cleanup"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
-            workstacks_root=cwd / "workstacks", use_graphite=True
+        global_config_ops = GlobalConfig(
+            workstacks_root=cwd / "workstacks",
+            use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)

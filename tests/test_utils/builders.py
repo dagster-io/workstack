@@ -33,11 +33,11 @@ from typing import Any
 
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps, WorktreeInfo
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from workstack.core.context import WorkstackContext
 from workstack.core.github_ops import PullRequestInfo
+from workstack.core.global_config import GlobalConfig
 
 
 class GraphiteCacheBuilder:
@@ -381,17 +381,19 @@ class WorktreeScenario:
 
         self.graphite_ops = FakeGraphiteOps(stacks=self._graphite_stacks)
 
-        self.global_config_ops = FakeGlobalConfigOps(
+        global_config = GlobalConfig(
             workstacks_root=self.workstacks_root,
             use_graphite=self._use_graphite,
+            shell_setup_complete=False,
             show_pr_info=self._show_pr_info,
+            show_pr_checks=False,
         )
 
         self.shell_ops = FakeShellOps()
 
-        self.ctx = WorkstackContext(
+        self.ctx = WorkstackContext.for_test(
             git_ops=self.git_ops,
-            global_config_ops=self.global_config_ops,
+            global_config=global_config,
             github_ops=self.github_ops,
             graphite_ops=self.graphite_ops,
             shell_ops=self.shell_ops,

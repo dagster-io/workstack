@@ -9,12 +9,12 @@ from click.testing import CliRunner
 
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
+from workstack.core.global_config import GlobalConfig
 from workstack.core.graphite_ops import BranchMetadata
 
 
@@ -244,9 +244,12 @@ def test_land_stack_requires_graphite() -> None:
         )
 
         # use_graphite=False: Test that graphite is required
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=env.workstacks_root,
             use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         test_ctx = WorkstackContext(
@@ -285,9 +288,12 @@ def test_land_stack_fails_on_detached_head() -> None:
             current_branches={cwd: None},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps()
@@ -328,9 +334,12 @@ def test_land_stack_fails_with_uncommitted_changes() -> None:
             file_statuses={cwd: (["file.txt"], [], [])},  # Has staged changes
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps(
@@ -378,9 +387,12 @@ def test_land_stack_fails_on_trunk_branch() -> None:
             current_branches={cwd: "main"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps(
@@ -427,9 +439,12 @@ def test_land_stack_fails_when_branch_not_tracked() -> None:
             current_branches={cwd: "untracked-branch"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         # Branch not in graphite stack
@@ -475,9 +490,12 @@ def test_land_stack_fails_when_pr_missing() -> None:
             current_branches={cwd: "feat-1"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps(
@@ -539,9 +557,12 @@ def test_land_stack_fails_when_pr_closed() -> None:
             current_branches={cwd: "feat-1"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps(
@@ -596,9 +617,12 @@ def test_land_stack_gets_branches_to_land_correctly() -> None:
             current_branches={cwd: "feat-2"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         # Stack: main → feat-1 → feat-2 → feat-3
@@ -673,9 +697,12 @@ def test_land_stack_from_top_of_stack_lands_all_branches() -> None:
             current_branches={cwd: "feat-4"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         # Stack: main → feat-1 → feat-2 → feat-3 → feat-4
@@ -755,9 +782,12 @@ def test_land_stack_fails_when_branches_in_multiple_worktrees() -> None:
             current_branch="feat-3",
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=env.workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         github_ops = FakeGitHubOps(
@@ -809,9 +839,12 @@ def test_land_stack_succeeds_when_all_branches_in_current_worktree() -> None:
             current_branches={cwd: "feat-2"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         # Stack: main → feat-1 → feat-2
@@ -886,9 +919,12 @@ def test_land_stack_refreshes_metadata_after_sync() -> None:
             current_branches={cwd: "feat-2"},
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         # Stack: main → feat-1 → feat-2
@@ -955,9 +991,12 @@ def test_land_stack_from_linked_worktree_on_branch_being_landed() -> None:
             current_branch="feat-1",
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=env.workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         github_ops = FakeGitHubOps(
@@ -1026,9 +1065,12 @@ def test_land_stack_switches_to_root_when_run_from_linked_worktree() -> None:
             current_branch="feat-1",
         )
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=env.workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         github_ops = FakeGitHubOps(
@@ -1079,9 +1121,12 @@ def test_land_stack_script_mode_accepts_flag() -> None:
         # Setup GitHub ops with an open PR
         github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("OPEN", 123, "Feature 1")})
 
-        global_config_ops = FakeGlobalConfigOps(
+        global_config_ops = GlobalConfig(
             workstacks_root=env.workstacks_root,
             use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
         )
 
         test_ctx = WorkstackContext(

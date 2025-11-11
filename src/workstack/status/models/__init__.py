@@ -9,7 +9,7 @@ from workstack.status.models.status_data import (
     PullRequestStatus,
     StackPosition,
     StatusData,
-    WorktreeInfo,
+    WorktreeDisplayInfo,
 )
 
 __all__ = [
@@ -21,5 +21,5 @@ __all__ = [
     "PullRequestStatus",
     "StackPosition",
     "StatusData",
-    "WorktreeInfo",
+    "WorktreeDisplayInfo",
 ]

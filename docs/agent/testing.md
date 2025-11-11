@@ -326,6 +326,326 @@ def test_dryrun_prevents_mutations() -> None:
         assert directory_still_exists
 ```
 
+## CLI Testing Patterns
+
+### When to Use CliRunner vs Subprocess
+
+**Use CliRunner (preferred for command tests):**
+
+- Testing Click command behavior (arguments, options, validation)
+- Testing command output and exit codes
+- Unit/integration testing of individual commands
+- Any test that doesn't require true end-to-end CLI invocation
+
+**Benefits:**
+
+- 3-5× faster execution (no subprocess overhead)
+- Better error messages (Python stack traces)
+- Easier debugging (single process)
+- Works with dependency injection and fakes
+
+**Use subprocess (only for E2E tests):**
+
+- Testing full CLI installation and packaging
+- Testing shell integration (completion, environment)
+- Verifying actual `uv run workstack` behavior
+- True end-to-end acceptance tests
+
+**Benefits:**
+
+- Tests real user experience
+- Catches packaging and distribution issues
+- Verifies shell environment handling
+
+### CliRunner Pattern (PREFERRED)
+
+#### Using simulated_workstack_env() (Recommended)
+
+**For most CLI tests, use the `simulated_workstack_env()` helper:**
+
+```python
+from click.testing import CliRunner
+from workstack.cli.cli import cli
+from tests.test_utils.env_helpers import simulated_workstack_env
+from tests.fakes.gitops import FakeGitOps
+from workstack.core.context import WorkstackContext
+from workstack.core.global_config import GlobalConfig
+
+def test_create_command() -> None:
+    runner = CliRunner()
+    with simulated_workstack_env(runner) as env:
+        # Set up configuration and test context
+        git_ops = FakeGitOps(
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
+        )
+        global_config = GlobalConfig(
+            workstacks_root=env.workstacks_root,
+            use_graphite=False,
+        )
+
+        test_ctx = WorkstackContext.for_test(
+            git_ops=git_ops,
+            global_config=global_config,
+            cwd=env.cwd,
+        )
+
+        result = runner.invoke(cli, ["create", "feature-name"], obj=test_ctx)
+        assert result.exit_code == 0
+        assert "Created worktree" in result.output
+```
+
+**What `simulated_workstack_env()` provides:**
+
+- `env.cwd`: Current working directory (root worktree)
+- `env.git_dir`: Path to .git directory
+- `env.root_worktree`: Root worktree with .git/ directory
+- `env.workstacks_root`: Workstacks directory (parallel to root)
+- `env.create_linked_worktree()`: Helper to create additional worktrees
+- Automatic `runner.isolated_filesystem()` management
+- Directory structure setup (repo/ and workstacks/ directories)
+
+**Why use `simulated_workstack_env()`:**
+
+- Complete isolation via `runner.isolated_filesystem()`
+- Works with FakeGitOps (faster than real git)
+- No HOME environment manipulation needed
+- No manual directory changes or try/finally blocks
+- Provides helpers for complex worktree scenarios
+
+#### Using cli_test_repo() (For Real Git Operations)
+
+**Only use `cli_test_repo()` when you need REAL git operations:**
+
+```python
+from click.testing import CliRunner
+from workstack.cli.cli import cli
+from tests.test_utils.cli_helpers import cli_test_repo
+
+def test_git_hook_integration(tmp_path: Path) -> None:
+    with cli_test_repo(tmp_path) as test_env:
+        # Set up CliRunner with isolated HOME
+        env_vars = os.environ.copy()
+        env_vars["HOME"] = str(test_env.tmp_path)
+        runner = CliRunner(env=env_vars)
+
+        # Run test from repo directory
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(test_env.repo)
+            result = runner.invoke(cli, ["create", "feature-name", "--no-post"])
+            assert result.exit_code == 0
+            assert "Created worktree" in result.output
+        finally:
+            os.chdir(original_cwd)
+```
+
+**What `cli_test_repo()` provides:**
+
+- `test_env.repo`: Real git repository with initial commit
+- `test_env.workstacks_root`: Configured workstacks directory
+- `test_env.tmp_path`: Test root with isolated .workstack config
+
+**When to use `cli_test_repo()` over `simulated_workstack_env()`:**
+
+- Testing git hooks or git worktree edge cases
+- Testing actual filesystem permissions
+- Testing real subprocess interactions
+- Integration tests requiring actual git behavior
+
+**For 95% of CLI tests, use `simulated_workstack_env()` instead.**
+
+#### Manual Setup (For Custom Requirements)
+
+**When you need custom git state or special configuration, set up manually:**
+
+```python
+from click.testing import CliRunner
+from workstack.cli.cli import cli
+
+def test_create_command(tmp_path: Path) -> None:
+    # Set up isolated global config
+    global_config_dir = tmp_path / ".workstack"
+    global_config_dir.mkdir()
+    workstacks_root = tmp_path / "workstacks"
+    (global_config_dir / "config.toml").write_text(
+        f'workstacks_root = "{workstacks_root}"\nuse_graphite = false\n'
+    )
+
+    # Set up real git repo
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-b", "main"], cwd=repo, check=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
+
+    # Create an initial commit
+    (repo / "README.md").write_text("test")
+    subprocess.run(["git", "add", "."], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=repo, check=True)
+
+    # Use CliRunner with isolated config
+    env_vars = os.environ.copy()
+    env_vars["HOME"] = str(tmp_path)
+    runner = CliRunner(env=env_vars)
+
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(repo)
+        result = runner.invoke(cli, ["create", "feature-name", "--no-post"])
+        assert result.exit_code == 0
+        assert "Created worktree" in result.output
+    finally:
+        os.chdir(original_cwd)
+```
+
+**Use manual setup when:**
+
+- Testing with multiple worktrees pre-created
+- Testing with specific branch configurations
+- Testing with custom config settings
+- Testing edge cases requiring non-standard git state
+
+**Key components:**
+
+**For `simulated_workstack_env()` pattern (recommended):**
+
+- `runner = CliRunner()`: Click's test harness
+- `simulated_workstack_env(runner)`: Context manager providing isolated environment
+- `runner.invoke(cli, ["command"], obj=test_ctx)`: Pass context explicitly via `obj=`
+- `result.exit_code`: Command exit code (0 = success)
+- `result.output`: Combined stdout/stderr output
+- Works with FakeGitOps for fast, isolated tests
+
+**For `cli_test_repo()` pattern (real git only):**
+
+- `CliRunner(env=env_vars)`: Click's test harness with isolated HOME
+- `runner.invoke(cli, ["command", "args"])`: Invokes CLI group, which creates context naturally
+- NO `obj=` parameter - let CLI create context from environment
+- Manual `os.chdir()` with try/finally for working directory changes
+- Uses real git commands via subprocess
+
+### Subprocess Pattern (E2E ONLY)
+
+**Only use for true end-to-end tests:**
+
+```python
+import subprocess
+
+def test_cli_installation(tmp_path: Path) -> None:
+    # Test actual CLI invocation
+    result = subprocess.run(
+        ["uv", "run", "workstack", "create", "feature"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+```
+
+**When subprocess is required:**
+
+- Testing `uv run workstack` actually works
+- Verifying package installation
+- Shell completion integration tests
+
+### Common Mistakes
+
+**❌ Using subprocess for command tests:**
+
+```python
+# SLOW - Spawns Python interpreter for each call (0.1-0.2s overhead each)
+subprocess.run(["uv", "run", "workstack", "create", "feature"])
+```
+
+**✅ Using CliRunner for command tests:**
+
+```python
+# FAST - Direct function call with Click harness (3-5× faster)
+runner.invoke(cli, ["create", "feature"])
+```
+
+**❌ Using individual command imports:**
+
+```python
+# WRONG - Context not created properly
+from workstack.cli.commands.create import create
+runner.invoke(create, ["feature"])  # AttributeError: 'NoneType' object has no attribute 'cwd'
+```
+
+**✅ Using cli group:**
+
+```python
+# CORRECT - CLI group creates context from environment
+from workstack.cli.cli import cli
+runner.invoke(cli, ["create", "feature"])
+```
+
+**❌ Not using simulated_workstack_env():**
+
+```python
+# HARDER TO MAINTAIN - Manual setup with real git
+runner = CliRunner()
+# ... 20+ lines of git setup, config creation, env vars, os.chdir ...
+```
+
+**✅ Using simulated_workstack_env():**
+
+```python
+# CLEAN AND SIMPLE - Helper provides everything
+runner = CliRunner()
+with simulated_workstack_env(runner) as env:
+    # Ready to test immediately
+    git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
+    test_ctx = WorkstackContext.for_test(git_ops=git_ops, cwd=env.cwd)
+```
+
+### Performance Comparison
+
+**Before optimization (subprocess pattern):**
+
+- `test_complete_worktree_names_without_context`: 0.47s
+- `test_create_rejects_reserved_name`: 0.44s
+- `test_current_returns_worktree_name`: 0.33s
+- Top 30 tests: ~7-8 seconds combined
+
+**After optimization (CliRunner pattern):**
+
+- `test_complete_worktree_names_without_context`: ~0.12s (75% faster)
+- `test_create_rejects_reserved_name`: ~0.10s (77% faster)
+- `test_current_returns_worktree_name`: ~0.10s (70% faster)
+- Top 30 tests: ~2-3 seconds combined (60-70% faster)
+
+### Migration Checklist
+
+When converting tests from subprocess to CliRunner:
+
+**Recommended approach (using simulated_workstack_env()):**
+
+- [ ] Import `CliRunner` from `click.testing`
+- [ ] Import `simulated_workstack_env` from `tests.test_utils.env_helpers`
+- [ ] Import `cli` from `workstack.cli.cli`
+- [ ] Set up `runner = CliRunner()`
+- [ ] Use `with simulated_workstack_env(runner) as env:` context manager
+- [ ] Create `FakeGitOps` with `git_common_dirs={env.cwd: env.git_dir}`
+- [ ] Create `WorkstackContext.for_test()` with fakes and `cwd=env.cwd`
+- [ ] Replace `subprocess.run([...])` with `runner.invoke(cli, [...], obj=test_ctx)`
+- [ ] Replace `result.returncode` with `result.exit_code`
+- [ ] Replace stdout/stderr parsing with `result.output`
+- [ ] Run tests and verify performance improvement with `pytest --durations=10`
+
+**Alternative approach (using cli_test_repo() for real git):**
+
+- [ ] Import `CliRunner` from `click.testing`
+- [ ] Import `cli_test_repo` from `tests.test_utils.cli_helpers`
+- [ ] Import `cli` from `workstack.cli.cli`
+- [ ] Use `with cli_test_repo(tmp_path) as test_env:` context manager
+- [ ] Set up isolated HOME with `env_vars["HOME"] = str(test_env.tmp_path)`
+- [ ] Use `CliRunner(env=env_vars)` to isolate HOME directory
+- [ ] Use `os.chdir()` with try/finally for working directory changes
+- [ ] Replace `subprocess.run([...])` with `runner.invoke(cli, [...])`
+- [ ] Run tests and verify behavior matches subprocess version
+
 ## Anti-Patterns to Avoid
 
 ### ❌ Anti-Pattern 1: Using mock.patch

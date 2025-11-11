@@ -453,6 +453,12 @@ def test_new_feature_im_building_today():
     assert result == expected_value
 ```
 
+**CLI Testing Performance:**
+
+- Use Click's `CliRunner` for command tests (NOT subprocess)
+- Only use subprocess for true end-to-end tests
+- See [docs/agent/testing.md#cli-testing-patterns](docs/agent/testing.md#cli-testing-patterns) for detailed patterns and performance comparison
+
 **See**: [docs/agent/testing.md](docs/agent/testing.md) for comprehensive testing guidance.
 
 ### Planning and Documentation

@@ -26,59 +26,6 @@ def _emit(message: str, *, script_mode: bool, error: bool = False) -> None:
     click.echo(message, err=error or script_mode)
 
 
-def _get_pr_base_branch(pr_number: int) -> str:
-    """Get the current base branch of a PR from GitHub.
-
-    Args:
-        pr_number: PR number to query
-
-    Returns:
-        Name of the base branch
-
-    Raises:
-        subprocess.CalledProcessError: If gh command fails
-    """
-    result = subprocess.run(
-        ["gh", "pr", "view", str(pr_number), "--json", "baseRefName", "--jq", ".baseRefName"],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    return result.stdout.strip()
-
-
-def _update_pr_base_branch(
-    pr_number: int,
-    new_base: str,
-    dry_run: bool,
-    verbose: bool,
-) -> None:
-    """Update the base branch of a PR on GitHub.
-
-    Args:
-        pr_number: PR number to update
-        new_base: New base branch name
-        dry_run: If True, show command without executing
-        verbose: If True, show confirmation message
-
-    Raises:
-        subprocess.CalledProcessError: If gh command fails
-    """
-    if dry_run:
-        click.echo(f"  gh pr edit {pr_number} --base {new_base}")
-        return
-
-    subprocess.run(
-        ["gh", "pr", "edit", str(pr_number), "--base", new_base],
-        check=True,
-        capture_output=not verbose,
-        text=True,
-    )
-
-    if verbose:
-        click.echo(f"  Updated PR #{pr_number} base: {new_base}")
-
-
 class BranchPR(NamedTuple):
     """Branch with associated PR information."""
 
@@ -473,12 +420,7 @@ def _land_branch_sequence(
         # Note: We query GitHub even in dry-run mode to show accurate information
         # about what would be updated. In test environments without gh CLI, this
         # will gracefully skip (acceptable for testing other functionality).
-        try:
-            current_base = _get_pr_base_branch(pr_number)
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            # Graceful degradation when gh CLI is not available (e.g., test environments)
-            # Skip base check if we can't query GitHub
-            current_base = None
+        current_base = ctx.github_ops.get_pr_base_branch(repo_root, pr_number)
 
         if current_base is not None and parent is not None:
             expected_base = parent  # Should be trunk after previous restacks
@@ -489,7 +431,10 @@ def _land_branch_sequence(
                         f"  Updating PR #{pr_number} base: {current_base} → {expected_base}",
                         script_mode=script_mode,
                     )
-                _update_pr_base_branch(pr_number, expected_base, dry_run, verbose)
+                ctx.github_ops.update_pr_base_branch(repo_root, pr_number, expected_base)
+                if verbose:
+                    msg = f"  Updated PR #{pr_number} base: {expected_base}"
+                    _emit(msg, script_mode=script_mode)
             elif verbose:
                 _emit(
                     f"  PR #{pr_number} base already correct: {current_base}",

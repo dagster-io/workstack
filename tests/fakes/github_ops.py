@@ -21,6 +21,7 @@ class FakeGitHubOps(GitHubOps):
         *,
         prs: dict[str, PullRequestInfo] | None = None,
         pr_statuses: dict[str, tuple[str | None, int | None, str | None]] | None = None,
+        pr_bases: dict[int, str] | None = None,
     ) -> None:
         """Create FakeGitHubOps with pre-configured state.
 
@@ -28,6 +29,7 @@ class FakeGitHubOps(GitHubOps):
             prs: Mapping of branch name -> PullRequestInfo
             pr_statuses: Legacy parameter for backward compatibility.
                         Mapping of branch name -> (state, pr_number, title)
+            pr_bases: Mapping of pr_number -> base_branch
         """
         if prs is not None and pr_statuses is not None:
             msg = "Cannot specify both prs and pr_statuses"
@@ -40,6 +42,9 @@ class FakeGitHubOps(GitHubOps):
         else:
             self._prs = prs or {}
             self._pr_statuses = None
+
+        self._pr_bases = pr_bases or {}
+        self._updated_pr_bases: list[tuple[int, str]] = []
 
     def get_prs_for_repo(
         self, repo_root: Path, *, include_checks: bool
@@ -75,3 +80,19 @@ class FakeGitHubOps(GitHubOps):
         # But get_pr_status expects: state, number, title
         # Using url as title since PullRequestInfo doesn't have a title field
         return PRInfo(pr.state, pr.number, pr.url)
+
+    def get_pr_base_branch(self, repo_root: Path, pr_number: int) -> str | None:
+        """Get current base branch of a PR from configured state.
+
+        Returns None if PR number not found.
+        """
+        return self._pr_bases.get(pr_number)
+
+    def update_pr_base_branch(self, repo_root: Path, pr_number: int, new_base: str) -> None:
+        """Record PR base branch update in mutation tracking list."""
+        self._updated_pr_bases.append((pr_number, new_base))
+
+    @property
+    def updated_pr_bases(self) -> list[tuple[int, str]]:
+        """Read-only access to tracked PR base updates for test assertions."""
+        return self._updated_pr_bases

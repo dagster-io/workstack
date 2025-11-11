@@ -199,6 +199,12 @@ class WorkstackContext:
         if repo is None:
             repo = NoRepoSentinel()
 
+        # Apply dry-run wrappers if needed (matching production behavior)
+        if dry_run:
+            git_ops = DryRunGitOps(git_ops)
+            graphite_ops = DryRunGraphiteOps(graphite_ops)
+            github_ops = DryRunGitHubOps(github_ops)
+
         return WorkstackContext(
             git_ops=git_ops,
             github_ops=github_ops,

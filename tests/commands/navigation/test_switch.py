@@ -78,6 +78,14 @@ def test_switch_command(tmp_path: Path) -> None:
 
 def test_switch_nonexistent_worktree(tmp_path: Path) -> None:
     """Test switch command with non-existent worktree."""
+    # Set up isolated global config
+    global_config_dir = tmp_path / ".workstack"
+    global_config_dir.mkdir()
+    workstacks_root = tmp_path / "workstacks"
+    (global_config_dir / "config.toml").write_text(
+        f'workstacks_root = "{workstacks_root}"\nuse_graphite = false\n'
+    )
+
     # Set up a fake git repo
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -91,7 +99,9 @@ def test_switch_nonexistent_worktree(tmp_path: Path) -> None:
     subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=repo, check=True)
 
     # Try to switch to non-existent worktree using CliRunner
-    runner = CliRunner()
+    env_vars = os.environ.copy()
+    env_vars["HOME"] = str(tmp_path)
+    runner = CliRunner(env=env_vars)
 
     original_cwd = os.getcwd()
     try:

@@ -1156,3 +1156,418 @@ def test_land_stack_script_mode_accepts_flag() -> None:
 
         # In script mode, all output should go to stderr
         # Passthrough commands rely on the recovery mechanism, not explicit script generation
+
+
+def test_land_stack_updates_pr_base_before_merge_when_stale() -> None:
+    """Test that land-stack updates PR base on GitHub before merging when stale.
+
+    Bug scenario:
+    - Stack: main → feat-1 → feat-2
+    - After landing feat-1, gt sync updates local metadata (feat-2 parent = main)
+    - But GitHub PR #2 still shows base = feat-1 (stale)
+    - Without fix: gh pr merge tries to merge into deleted branch
+    - With fix: gh pr edit --base main is called before gh pr merge
+
+    This test verifies the fix inserts Phase 2.5 logic to check and update
+    GitHub PR base before each merge operation.
+    """
+    from unittest.mock import Mock, patch
+
+    runner = CliRunner()
+    with simulated_workstack_env(runner) as env:
+        # Build two-PR stack: main → feat-1 → feat-2
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
+                "feat-1": BranchMetadata.branch(
+                    "feat-1", "main", children=["feat-2"], commit_sha="def456"
+                ),
+                "feat-2": BranchMetadata.branch("feat-2", "feat-1", commit_sha="ghi789"),
+            },
+            current_branch="feat-2",
+        )
+
+        github_ops = FakeGitHubOps(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Feature 1"),
+                "feat-2": ("OPEN", 200, "Feature 2"),
+            }
+        )
+
+        global_config_ops = GlobalConfig(
+            workstacks_root=env.workstacks_root,
+            use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
+        )
+
+        test_ctx = WorkstackContext.for_test(
+            git_ops=git_ops,
+            global_config=global_config_ops,
+            graphite_ops=graphite_ops,
+            github_ops=github_ops,
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+            cwd=env.cwd,
+        )
+
+        # Mock subprocess.run to capture gh/gt command sequence
+        # We need to track:
+        # 1. First PR merge succeeds
+        # 2. gt sync runs (simulates metadata update)
+        # 3. gh pr view shows stale base for PR #2
+        # 4. gh pr edit --base is called BEFORE gh pr merge for PR #2
+        captured_calls: list[tuple[list[str], Path | None]] = []
+
+        def mock_run(*args: object, **kwargs: object) -> Mock:
+            # Extract command and cwd
+            if len(args) > 0 and isinstance(args[0], list):
+                cmd = args[0]
+            elif "args" in kwargs:
+                cmd = kwargs["args"]
+            else:
+                cmd = []
+
+            cwd = kwargs.get("cwd")
+            captured_calls.append((cmd, cwd))
+
+            # Mock responses for specific commands
+            mock_result = Mock()
+            mock_result.returncode = 0
+            mock_result.stdout = ""
+            mock_result.stderr = ""
+
+            # Simulate gh pr view returning stale base for PR #2
+            if cmd == ["gh", "pr", "view", "200", "--json", "baseRefName", "--jq", ".baseRefName"]:
+                mock_result.stdout = "feat-1"  # Stale base (should be main)
+
+            return mock_result
+
+        with patch("workstack.cli.commands.land_stack.subprocess.run", side_effect=mock_run):
+            # Simulate gt sync updating metadata
+            # After first PR merges, feat-2's parent becomes main in Graphite metadata
+            def mock_sync(repo_root: Path, *, force: bool, quiet: bool) -> None:
+                # Update graphite_ops to reflect parent change
+                # feat-2's parent should become main after feat-1 lands
+                graphite_ops._branches["feat-2"] = BranchMetadata.branch(
+                    "feat-2",
+                    "main",
+                    commit_sha="ghi789",  # Parent changed from feat-1 to main
+                )
+
+            # Patch graphite sync to simulate metadata update
+            graphite_ops.sync = mock_sync
+
+            # Run land-stack with force flag
+            result = runner.invoke(cli, ["land-stack", "--force"], obj=test_ctx)
+
+        # Verify command succeeded
+        assert result.exit_code == 0, f"Command failed: {result.output}"
+
+        # Extract just the command names for easier assertion
+        command_sequences = [cmd[0] if cmd else "" for cmd, _ in captured_calls if cmd]
+
+        # Verify critical sequence:
+        # 1. gh pr merge 100 (first PR)
+        # 2. gh pr view 200 (check base of second PR)
+        # 3. gh pr edit 200 --base main (update stale base)
+        # 4. gh pr merge 200 (second PR)
+
+        # Find indices of key commands
+        pr_edit_idx = None
+        pr_merge_200_idx = None
+
+        for idx, cmd in enumerate(captured_calls):
+            cmd_list = cmd[0] if cmd else []
+            if len(cmd_list) >= 2 and cmd_list[0] == "gh":
+                if cmd_list[1] == "pr" and len(cmd_list) >= 4:
+                    if cmd_list[2] == "view" and cmd_list[3] == "200":
+                        pass
+                    elif cmd_list[2] == "edit" and cmd_list[3] == "200":
+                        pr_edit_idx = idx
+                    elif cmd_list[2] == "merge" and cmd_list[3] == "200":
+                        pr_merge_200_idx = idx
+
+        # Assert: gh pr edit --base was called
+        assert pr_edit_idx is not None, (
+            f"Expected 'gh pr edit 200 --base main' call not found\n"
+            f"Captured commands: {command_sequences}"
+        )
+
+        # Assert: gh pr edit happened BEFORE gh pr merge for PR #200
+        assert pr_merge_200_idx is not None, "Expected 'gh pr merge 200' call not found"
+        assert pr_edit_idx < pr_merge_200_idx, (
+            f"gh pr edit must be called BEFORE gh pr merge\n"
+            f"edit index: {pr_edit_idx}, merge index: {pr_merge_200_idx}"
+        )
+
+
+def test_land_stack_skips_base_update_when_already_correct() -> None:
+    """Test that land-stack skips PR base update when already correct.
+
+    When GitHub PR base already matches expected parent, we should not
+    make unnecessary API calls to update it.
+    """
+    from unittest.mock import Mock, patch
+
+    runner = CliRunner()
+    with simulated_workstack_env(runner) as env:
+        # Build two-PR stack
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
+                "feat-1": BranchMetadata.branch(
+                    "feat-1", "main", children=["feat-2"], commit_sha="def456"
+                ),
+                "feat-2": BranchMetadata.branch("feat-2", "feat-1", commit_sha="ghi789"),
+            },
+            current_branch="feat-2",
+        )
+
+        github_ops = FakeGitHubOps(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Feature 1"),
+                "feat-2": ("OPEN", 200, "Feature 2"),
+            }
+        )
+
+        global_config_ops = GlobalConfig(
+            workstacks_root=env.workstacks_root,
+            use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
+        )
+
+        test_ctx = WorkstackContext.for_test(
+            git_ops=git_ops,
+            global_config=global_config_ops,
+            graphite_ops=graphite_ops,
+            github_ops=github_ops,
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+            cwd=env.cwd,
+        )
+
+        captured_calls: list[tuple[list[str], Path | None]] = []
+
+        def mock_run(*args: object, **kwargs: object) -> Mock:
+            if len(args) > 0 and isinstance(args[0], list):
+                cmd = args[0]
+            elif "args" in kwargs:
+                cmd = kwargs["args"]
+            else:
+                cmd = []
+
+            cwd = kwargs.get("cwd")
+            captured_calls.append((cmd, cwd))
+
+            mock_result = Mock()
+            mock_result.returncode = 0
+            mock_result.stdout = ""
+            mock_result.stderr = ""
+
+            # Simulate gh pr view returning CORRECT base for PR #2
+            if cmd == ["gh", "pr", "view", "200", "--json", "baseRefName", "--jq", ".baseRefName"]:
+                mock_result.stdout = "main"  # Correct base (matches expected parent)
+
+            return mock_result
+
+        with patch("workstack.cli.commands.land_stack.subprocess.run", side_effect=mock_run):
+            # Simulate sync updating metadata
+            def mock_sync(repo_root: Path, *, force: bool, quiet: bool) -> None:
+                graphite_ops._branches["feat-2"] = BranchMetadata.branch(
+                    "feat-2", "main", commit_sha="ghi789"
+                )
+
+            graphite_ops.sync = mock_sync
+
+            result = runner.invoke(cli, ["land-stack", "--force"], obj=test_ctx)
+
+        assert result.exit_code == 0, f"Command failed: {result.output}"
+
+        # Verify that gh pr edit was NOT called for PR #200
+        for cmd, _ in captured_calls:
+            if len(cmd) >= 4 and cmd[0] == "gh" and cmd[1] == "pr":
+                if cmd[2] == "edit" and cmd[3] == "200":
+                    msg = "gh pr edit should not be called when base is already correct"
+                    raise AssertionError(msg)
+
+
+def test_land_stack_dry_run_shows_base_update() -> None:
+    """Test that dry-run mode shows PR base update without executing.
+
+    This test verifies that when a PR's GitHub base is stale (points to a branch
+    that should no longer be its parent), the dry-run output shows the update
+    that would be made.
+
+    Setup: Single PR with stale base on GitHub (not reflecting a prior update)
+    """
+    runner = CliRunner()
+    with simulated_workstack_env(runner) as env:
+        # Simple scenario: feat-1's parent is main, but GitHub shows old base
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
+                "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
+            },
+            current_branch="feat-1",
+        )
+
+        github_ops = FakeGitHubOps(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Feature 1"),
+            }
+        )
+
+        global_config_ops = GlobalConfig(
+            workstacks_root=env.workstacks_root,
+            use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
+        )
+
+        test_ctx = WorkstackContext.for_test(
+            git_ops=git_ops,
+            global_config=global_config_ops,
+            graphite_ops=graphite_ops,
+            github_ops=github_ops,
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+            cwd=env.cwd,
+        )
+
+        # Mock to simulate stale base on GitHub
+        from unittest.mock import Mock, patch
+
+        def mock_run(*args: object, **kwargs: object) -> Mock:
+            if len(args) > 0 and isinstance(args[0], list):
+                cmd = args[0]
+            elif "args" in kwargs:
+                cmd = kwargs["args"]
+            else:
+                cmd = []
+
+            mock_result = Mock()
+            mock_result.returncode = 0
+            mock_result.stdout = ""
+            mock_result.stderr = ""
+
+            # Mock gh pr view to return stale base
+            # PR #100 (feat-1) should have stale base "old-branch" but parent is "main"
+            if cmd == ["gh", "pr", "view", "100", "--json", "baseRefName", "--jq", ".baseRefName"]:
+                mock_result.stdout = "old-branch"  # Stale - should be "main"
+
+            return mock_result
+
+        with patch("workstack.cli.commands.land_stack.subprocess.run", side_effect=mock_run):
+            # Run with --dry-run flag
+            result = runner.invoke(cli, ["land-stack", "--dry-run"], obj=test_ctx)
+
+        assert result.exit_code == 0, f"Command failed: {result.output}"
+
+        # Verify output shows the update that would happen
+        assert "Updating PR #100 base: old-branch → main" in result.output, (
+            f"Expected base update message not found. Actual output:\n{result.output}"
+        )
+        assert "gh pr edit 100 --base main" in result.output
+
+
+def test_land_stack_fails_gracefully_when_base_update_fails() -> None:
+    """Test that land-stack fails gracefully when PR base update fails.
+
+    If gh pr edit fails, the command should exit with error before
+    attempting to merge the PR.
+    """
+    import subprocess
+    from unittest.mock import Mock, patch
+
+    runner = CliRunner()
+    with simulated_workstack_env(runner) as env:
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
+                "feat-1": BranchMetadata.branch(
+                    "feat-1", "main", children=["feat-2"], commit_sha="def456"
+                ),
+                "feat-2": BranchMetadata.branch("feat-2", "feat-1", commit_sha="ghi789"),
+            },
+            current_branch="feat-2",
+        )
+
+        github_ops = FakeGitHubOps(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Feature 1"),
+                "feat-2": ("OPEN", 200, "Feature 2"),
+            }
+        )
+
+        global_config_ops = GlobalConfig(
+            workstacks_root=env.workstacks_root,
+            use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
+        )
+
+        test_ctx = WorkstackContext.for_test(
+            git_ops=git_ops,
+            global_config=global_config_ops,
+            graphite_ops=graphite_ops,
+            github_ops=github_ops,
+            shell_ops=FakeShellOps(),
+            dry_run=False,
+            cwd=env.cwd,
+        )
+
+        def mock_run(*args: object, **kwargs: object) -> Mock:
+            if len(args) > 0 and isinstance(args[0], list):
+                cmd = args[0]
+            elif "args" in kwargs:
+                cmd = kwargs["args"]
+            else:
+                cmd = []
+
+            # Check if check=True is set
+            check = kwargs.get("check", False)
+
+            mock_result = Mock()
+            mock_result.returncode = 0
+            mock_result.stdout = ""
+            mock_result.stderr = ""
+
+            # Simulate stale base
+            if cmd == ["gh", "pr", "view", "200", "--json", "baseRefName", "--jq", ".baseRefName"]:
+                mock_result.stdout = "feat-1"
+                return mock_result
+
+            # Simulate gh pr edit failure
+            if len(cmd) >= 4 and cmd[0] == "gh" and cmd[1] == "pr" and cmd[2] == "edit":
+                if check:
+                    raise subprocess.CalledProcessError(1, cmd, stderr="Permission denied")
+                mock_result.returncode = 1
+                mock_result.stderr = "Permission denied"
+                return mock_result
+
+            return mock_result
+
+        with patch("workstack.cli.commands.land_stack.subprocess.run", side_effect=mock_run):
+            # Simulate metadata update
+            def mock_sync(repo_root: Path, *, force: bool, quiet: bool) -> None:
+                graphite_ops._branches["feat-2"] = BranchMetadata.branch(
+                    "feat-2", "main", commit_sha="ghi789"
+                )
+
+            graphite_ops.sync = mock_sync
+
+            # Run and expect failure
+            result = runner.invoke(cli, ["land-stack", "--force"], obj=test_ctx)
+
+        # Should fail with non-zero exit code
+        assert result.exit_code != 0, "Command should fail when gh pr edit fails"
+
+        # Should show error about the failure
+        # Note: CalledProcessError typically shows in traceback or error output
+        assert "CalledProcessError" in result.output or result.exit_code == 1

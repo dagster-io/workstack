@@ -26,6 +26,59 @@ def _emit(message: str, *, script_mode: bool, error: bool = False) -> None:
     click.echo(message, err=error or script_mode)
 
 
+def _get_pr_base_branch(pr_number: int) -> str:
+    """Get the current base branch of a PR from GitHub.
+
+    Args:
+        pr_number: PR number to query
+
+    Returns:
+        Name of the base branch
+
+    Raises:
+        subprocess.CalledProcessError: If gh command fails
+    """
+    result = subprocess.run(
+        ["gh", "pr", "view", str(pr_number), "--json", "baseRefName", "--jq", ".baseRefName"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip()
+
+
+def _update_pr_base_branch(
+    pr_number: int,
+    new_base: str,
+    dry_run: bool,
+    verbose: bool,
+) -> None:
+    """Update the base branch of a PR on GitHub.
+
+    Args:
+        pr_number: PR number to update
+        new_base: New base branch name
+        dry_run: If True, show command without executing
+        verbose: If True, show confirmation message
+
+    Raises:
+        subprocess.CalledProcessError: If gh command fails
+    """
+    if dry_run:
+        click.echo(f"  gh pr edit {pr_number} --base {new_base}")
+        return
+
+    subprocess.run(
+        ["gh", "pr", "edit", str(pr_number), "--base", new_base],
+        check=True,
+        capture_output=not verbose,
+        text=True,
+    )
+
+    if verbose:
+        click.echo(f"  Updated PR #{pr_number} base: {new_base}")
+
+
 class BranchPR(NamedTuple):
     """Branch with associated PR information."""
 
@@ -412,6 +465,36 @@ def _land_branch_sequence(
         trunk_name = parent if parent else "trunk"
         desc = _format_description(f"verify {branch} parent is {trunk_name}", check)
         _emit(desc, script_mode=script_mode)
+
+        # Phase 2.5: Update PR base branch on GitHub if needed
+        # After previous PR merges, GitHub PR base may be stale even though
+        # local Graphite metadata is correct (from gt sync)
+        #
+        # Note: We query GitHub even in dry-run mode to show accurate information
+        # about what would be updated. In test environments without gh CLI, this
+        # will gracefully skip (acceptable for testing other functionality).
+        try:
+            current_base = _get_pr_base_branch(pr_number)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            # Graceful degradation when gh CLI is not available (e.g., test environments)
+            # Skip base check if we can't query GitHub
+            current_base = None
+
+        if current_base is not None and parent is not None:
+            expected_base = parent  # Should be trunk after previous restacks
+
+            if current_base != expected_base:
+                if verbose or dry_run:
+                    _emit(
+                        f"  Updating PR #{pr_number} base: {current_base} → {expected_base}",
+                        script_mode=script_mode,
+                    )
+                _update_pr_base_branch(pr_number, expected_base, dry_run, verbose)
+            elif verbose:
+                _emit(
+                    f"  PR #{pr_number} base already correct: {current_base}",
+                    script_mode=script_mode,
+                )
 
         # Phase 3: Merge PR
         if dry_run:

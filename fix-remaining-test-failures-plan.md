@@ -70,6 +70,7 @@ The code is functionally correct - all failures are tests checking for specific 
 The sync command output format has evolved:
 
 **Old Format** (tests expect):
+
 ```
 Workstacks safe to delete:
   feature-1 [branch] - merged (PR #123)
@@ -79,6 +80,7 @@ No workstacks to clean up.
 ```
 
 **New Format** (actual output):
+
 ```
   feature-1 [feature-1] - merged (PR #123)
 Remove 1 worktree(s)? [y/N]:
@@ -88,6 +90,7 @@ Remove 1 worktree(s)? [y/N]:
 ```
 
 Changes:
+
 - Removed "Workstacks safe to delete:" header
 - Changed message format to use ✓ emoji prefix
 - Changed "Deleting..." to "✓ Deleted"
@@ -113,6 +116,7 @@ uv run pytest tests/commands/sync/test_sync.py::test_sync_force_runs_double_gt_s
 ```
 
 For each test, document:
+
 1. Expected output (from assertion)
 2. Actual output (from error message)
 3. Whether test logic is correct or needs updating
@@ -122,14 +126,17 @@ For each test, document:
 For each test, decide approach:
 
 **Option A: Update Assertions** (if command output is correct)
+
 - Change test to match new output format
 - Use content-based assertions instead of exact text matching
 
 **Option B: Fix Command** (if command has regression)
+
 - Restore expected behavior
 - Update implementation
 
 **Option C: Fix Test Logic** (if test is wrong)
+
 - Test may be checking wrong thing
 - Update test approach
 
@@ -150,6 +157,7 @@ assert "PR #123" in result.output
 #### For test_sync_script_mode_when_worktree_deleted
 
 This test likely has logic issues. Need to:
+
 1. Understand what script mode should output
 2. Verify test is parsing output correctly
 3. Fix test logic or command output
@@ -168,6 +176,7 @@ make all-ci
 ### Phase 5: Documentation (5 minutes)
 
 Update this plan with:
+
 - Actual fixes applied
 - Rationale for each change
 - Any patterns discovered
@@ -227,6 +236,7 @@ assert "✓ Deleted merged branches" in result.output
 ### test_land_stack_script_mode_accepts_flag
 
 Need to see actual error - may be:
+
 1. Missing --script flag handling
 2. Validation failure in test setup
 3. Actual command regression
@@ -274,36 +284,40 @@ assert "PR #123" in output
 ## Risk Assessment
 
 **Low Risk**:
+
 - All failures are test assertions, not functional bugs
 - High test coverage means any real issues would show elsewhere
 - Changes isolated to test files only
 
 **No Production Impact**:
+
 - These are test maintenance issues
 - Command functionality is correct
 
 ## Alternative: Defer to Later
 
 If time-constrained, these fixes could be deferred because:
+
 - 99.1% test success rate
 - No functional issues
 - All failures are known and documented
 
 However, fixing now prevents:
+
 - False negatives in future CI runs
 - Confusion about which failures are expected
 - Merge friction with other branches
 
 ## Time Estimate Breakdown
 
-| Phase | Task | Time |
-|-------|------|------|
-| 1 | Investigation - Run all tests, capture output | 10 min |
-| 2 | Decision - Determine fix approach | 5 min |
-| 3 | Implementation - Update test assertions | 15-20 min |
-| 4 | Verification - Run tests, full CI | 5 min |
-| 5 | Documentation - Update plan | 5 min |
-| **Total** | | **40-45 min** |
+| Phase     | Task                                          | Time          |
+| --------- | --------------------------------------------- | ------------- |
+| 1         | Investigation - Run all tests, capture output | 10 min        |
+| 2         | Decision - Determine fix approach             | 5 min         |
+| 3         | Implementation - Update test assertions       | 15-20 min     |
+| 4         | Verification - Run tests, full CI             | 5 min         |
+| 5         | Documentation - Update plan                   | 5 min         |
+| **Total** |                                               | **40-45 min** |
 
 ## Next Steps
 
@@ -325,7 +339,7 @@ However, fixing now prevents:
 
 ### Investigation Results
 
-*To be filled in during Phase 1*
+_To be filled in during Phase 1_
 
 ```
 Test 1: test_land_stack_script_mode_accepts_flag
@@ -345,7 +359,7 @@ Test 2: test_sync_identifies_deletable_workstacks
 
 ### Fixes Applied
 
-*To be filled in during Phase 3*
+_To be filled in during Phase 3_
 
 ```
 1. test_name
@@ -358,7 +372,7 @@ Test 2: test_sync_identifies_deletable_workstacks
 
 ### Final Results
 
-*To be filled in during Phase 4*
+_To be filled in during Phase 4_
 
 ```
 - Tests passing: [number]/763
@@ -368,4 +382,4 @@ Test 2: test_sync_identifies_deletable_workstacks
 
 ---
 
-*This plan will be updated as work progresses. Check Implementation Log section for current status.*
+_This plan will be updated as work progresses. Check Implementation Log section for current status._

@@ -95,6 +95,7 @@ git rebase --continue
 ### WorkstackContext API Evolution
 
 **OLD API** (❌ Don't use):
+
 ```python
 test_ctx = WorkstackContext(
     git_ops=git_ops,
@@ -104,6 +105,7 @@ test_ctx = WorkstackContext(
 ```
 
 **NEW API** (✅ Use this):
+
 ```python
 test_ctx = WorkstackContext.for_test(  # ✅ Factory method
     git_ops=git_ops,
@@ -113,6 +115,7 @@ test_ctx = WorkstackContext.for_test(  # ✅ Factory method
 ```
 
 **Why changed**:
+
 - Parameter renamed: `global_config_ops` → `global_config` (clearer naming)
 - Constructor now requires `local_config`, `repo`, `trunk_branch` parameters
 - Factory method `.for_test()` provides sensible defaults
@@ -239,6 +242,7 @@ github_ops = FakeGitHubOps(
 **Cause**: File `tests/test_utils/env_helpers.py` doesn't exist
 
 **Solution**:
+
 ```bash
 git show <commit>~1:tests/test_utils/env_helpers.py > tests/test_utils/env_helpers.py
 git add tests/test_utils/env_helpers.py
@@ -248,11 +252,12 @@ git add tests/test_utils/env_helpers.py
 
 ---
 
-### TypeError: WorkstackContext.__init__() missing 3 required positional arguments
+### TypeError: WorkstackContext.**init**() missing 3 required positional arguments
 
 **Cause**: Direct constructor call instead of factory method
 
 **Solution**:
+
 ```bash
 sed -i '' 's/WorkstackContext(/WorkstackContext.for_test(/g' tests/commands/**/*.py
 git add tests/commands/
@@ -265,6 +270,7 @@ git add tests/commands/
 **Cause**: Parameter renamed
 
 **Solution**:
+
 ```bash
 sed -i '' 's/global_config_ops=/global_config=/g' tests/commands/**/*.py
 git add tests/commands/
@@ -279,6 +285,7 @@ git add tests/commands/
 **Solution**:
 
 In `simulated_workstack_env`:
+
 ```python
 # ❌ WRONG
 cwd=Path("/test/default/cwd")
@@ -289,6 +296,7 @@ with simulated_workstack_env(runner) as env:
 ```
 
 In `isolated_filesystem`:
+
 ```python
 # ❌ WRONG
 cwd=Path("/test/default/cwd")
@@ -306,6 +314,7 @@ with runner.isolated_filesystem():
 **Cause**: Local `SimulatedWorkstackEnv` class missing `cwd` attribute
 
 **Solution**:
+
 ```python
 class SimulatedWorkstackEnv:
     def __init__(self, root_worktree: Path, workstacks_root: Path) -> None:
@@ -329,6 +338,7 @@ class SimulatedWorkstackEnv:
 **Cause**: `pr_number` parameter doesn't exist in API
 
 **Solution**:
+
 ```python
 # ❌ WRONG
 BranchMetadata.branch("feat", "main", pr_number=123, commit_sha="abc")
@@ -347,6 +357,7 @@ github_ops = FakeGitHubOps(pr_statuses={"feat": ("OPEN", 123, "Title")})
 **Cause**: Output message format changed
 
 **Solution**:
+
 ```python
 # Instead of checking exact message:
 assert "Workstacks safe to delete:" in result.output  # ❌ Brittle
@@ -364,6 +375,7 @@ assert "PR #123" in result.output
 **Cause**: File needs formatting
 
 **Solution**:
+
 ```bash
 uv run ruff format tests/
 git add tests/
@@ -479,33 +491,36 @@ dfead85f - Migrates tests to use env_helpers.py
 **Problem**: Rebasing only `01091d39` → Missing `env_helpers.py` from `c6516290`
 
 **Solutions**:
+
 1. Extract file from parent: `git show <commit>~1:path > path`
 2. Rebase entire chain: `git rebase <base> <branch>~2` (include parents)
 
 ## Time Estimates
 
-| Task | Without Guide | With Guide | Speedup |
-|------|---------------|------------|---------|
-| Identify conflict type | 5 min | 1 min | 5x |
-| Extract missing dependencies | 15 min | 2 min | 7.5x |
-| Fix parameter names | 10 min | 2 min | 5x |
-| Fix constructor calls | 15 min | 2 min | 7.5x |
-| Fix hardcoded paths | 30 min | 5 min | 6x |
-| Fix local env class | 10 min | 3 min | 3x |
-| Fix invalid parameters | 5 min | 1 min | 5x |
-| Format and finish | 5 min | 2 min | 2.5x |
-| **Total** | **~2 hours** | **~15 min** | **8x** |
+| Task                         | Without Guide | With Guide  | Speedup |
+| ---------------------------- | ------------- | ----------- | ------- |
+| Identify conflict type       | 5 min         | 1 min       | 5x      |
+| Extract missing dependencies | 15 min        | 2 min       | 7.5x    |
+| Fix parameter names          | 10 min        | 2 min       | 5x      |
+| Fix constructor calls        | 15 min        | 2 min       | 7.5x    |
+| Fix hardcoded paths          | 30 min        | 5 min       | 6x      |
+| Fix local env class          | 10 min        | 3 min       | 3x      |
+| Fix invalid parameters       | 5 min         | 1 min       | 5x      |
+| Format and finish            | 5 min         | 2 min       | 2.5x    |
+| **Total**                    | **~2 hours**  | **~15 min** | **8x**  |
 
 ## Prevention Strategies
 
 ### Before Rebasing
 
 1. **Check commit dependencies**:
+
    ```bash
    git log --oneline <target>..<branch>
    ```
 
 2. **Verify all files exist**:
+
    ```bash
    git show <commit> --name-status
    ```
@@ -544,10 +559,11 @@ dfead85f - Migrates tests to use env_helpers.py
 **Speedup factor**: 8-12x
 
 **Most valuable discoveries**:
+
 1. Dependency extraction from parent commits (saved 20 min)
 2. WorkstackContext evolution guide (saved 30 min)
 3. Test environment patterns reference (saved 45 min)
 
 ---
 
-*This document captures hard-won knowledge from actual conflict resolution. Keep it updated as the codebase evolves.*
+_This document captures hard-won knowledge from actual conflict resolution. Keep it updated as the codebase evolves._

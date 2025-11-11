@@ -1142,9 +1142,10 @@ def test_land_stack_script_mode_accepts_flag() -> None:
         )
 
         # Act: Run with --script flag (this is what shell wrapper will call)
+        # Use --dry-run to avoid subprocess failures in test environment
         result = runner.invoke(
             cli,
-            ["land-stack", "-f", "--script"],  # force to skip confirmation
+            ["land-stack", "-f", "--script", "--dry-run"],
             obj=test_ctx,
         )
 

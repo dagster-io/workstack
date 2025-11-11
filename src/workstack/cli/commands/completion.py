@@ -1,9 +1,6 @@
-import os
-import shutil
-import subprocess
-import sys
-
 import click
+
+from workstack.core.context import WorkstackContext
 
 
 @click.group("completion")
@@ -12,7 +9,8 @@ def completion_group() -> None:
 
 
 @completion_group.command("bash")
-def completion_bash() -> None:
+@click.pass_obj
+def completion_bash(ctx: WorkstackContext) -> None:
     """Generate bash completion script.
 
     \b
@@ -34,20 +32,13 @@ def completion_bash() -> None:
     \b
     You will need to start a new shell for this setup to take effect.
     """
-    # Find the workstack executable
-    workstack_exe = shutil.which("workstack")
-    if not workstack_exe:
-        # Fallback to current Python + module
-        workstack_exe = sys.argv[0]
-
-    env = os.environ.copy()
-    env["_WORKSTACK_COMPLETE"] = "bash_source"
-    result = subprocess.run([workstack_exe], env=env, capture_output=True, text=True)
-    click.echo(result.stdout, nl=False)
+    script = ctx.completion_ops.generate_bash()
+    click.echo(script, nl=False)
 
 
 @completion_group.command("zsh")
-def completion_zsh() -> None:
+@click.pass_obj
+def completion_zsh(ctx: WorkstackContext) -> None:
     """Generate zsh completion script.
 
     \b
@@ -68,20 +59,13 @@ def completion_zsh() -> None:
     \b
     You will need to start a new shell for this setup to take effect.
     """
-    # Find the workstack executable
-    workstack_exe = shutil.which("workstack")
-    if not workstack_exe:
-        # Fallback to current Python + module
-        workstack_exe = sys.argv[0]
-
-    env = os.environ.copy()
-    env["_WORKSTACK_COMPLETE"] = "zsh_source"
-    result = subprocess.run([workstack_exe], env=env, capture_output=True, text=True)
-    click.echo(result.stdout, nl=False)
+    script = ctx.completion_ops.generate_zsh()
+    click.echo(script, nl=False)
 
 
 @completion_group.command("fish")
-def completion_fish() -> None:
+@click.pass_obj
+def completion_fish(ctx: WorkstackContext) -> None:
     """Generate fish completion script.
 
     \b
@@ -100,13 +84,5 @@ def completion_fish() -> None:
     \b
     You will need to start a new shell for this setup to take effect.
     """
-    # Find the workstack executable
-    workstack_exe = shutil.which("workstack")
-    if not workstack_exe:
-        # Fallback to current Python + module
-        workstack_exe = sys.argv[0]
-
-    env = os.environ.copy()
-    env["_WORKSTACK_COMPLETE"] = "fish_source"
-    result = subprocess.run([workstack_exe], env=env, capture_output=True, text=True)
-    click.echo(result.stdout, nl=False)
+    script = ctx.completion_ops.generate_fish()
+    click.echo(script, nl=False)

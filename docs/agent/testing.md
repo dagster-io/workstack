@@ -644,6 +644,7 @@ def test_init_creates_global_config_first_time() -> None:
 ```
 
 **Why these mocks are acceptable:**
+
 1. Testing environment variable behavior (external boundary)
 2. Cannot create an abstraction for `os.environ` (it's the OS interface)
 3. Documented clearly in test file docstring

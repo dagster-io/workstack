@@ -584,8 +584,10 @@ def test_init_adds_env_to_gitignore() -> None:
             cwd=env.cwd,
         )
 
-        # Accept both prompts
-        result = runner.invoke(cli, ["init"], obj=test_ctx, input="y\ny\n")
+        # Accept both prompts (y for .PLAN.md, y for .env)
+        # Mock global_config_exists to return True (simulating existing global config)
+        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
+            result = runner.invoke(cli, ["init"], obj=test_ctx, input="y\ny\n")
 
         assert result.exit_code == 0, result.output
         gitignore_content = gitignore.read_text(encoding="utf-8")
@@ -618,7 +620,9 @@ def test_init_skips_gitignore_entries_if_declined() -> None:
         )
 
         # Decline both prompts
-        result = runner.invoke(cli, ["init"], obj=test_ctx, input="n\nn\n")
+        # Mock global_config_exists to return True (simulating existing global config)
+        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
+            result = runner.invoke(cli, ["init"], obj=test_ctx, input="n\nn\n")
 
         assert result.exit_code == 0, result.output
         gitignore_content = gitignore.read_text(encoding="utf-8")
@@ -649,7 +653,9 @@ def test_init_handles_missing_gitignore() -> None:
             cwd=env.cwd,
         )
 
-        result = runner.invoke(cli, ["init"], obj=test_ctx)
+        # Mock global_config_exists to return True (simulating existing global config)
+        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
+            result = runner.invoke(cli, ["init"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Should not crash or prompt about gitignore
@@ -681,8 +687,10 @@ def test_init_preserves_gitignore_formatting() -> None:
             cwd=env.cwd,
         )
 
-        # Accept both prompts
-        result = runner.invoke(cli, ["init"], obj=test_ctx, input="y\ny\n")
+        # Accept both prompts (y for .PLAN.md, y for .env)
+        # Mock global_config_exists to return True (simulating existing global config)
+        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
+            result = runner.invoke(cli, ["init"], obj=test_ctx, input="y\ny\n")
 
         assert result.exit_code == 0, result.output
         gitignore_content = gitignore.read_text(encoding="utf-8")

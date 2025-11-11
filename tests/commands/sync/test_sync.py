@@ -10,6 +10,7 @@ from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
+from tests.test_utils import sentinel_path
 from workstack.cli.cli import cli
 from workstack.cli.commands.shell_integration import hidden_shell_cmd
 from workstack.cli.commands.sync import sync_cmd
@@ -19,19 +20,10 @@ from workstack.core.gitops import WorktreeInfo
 from workstack.core.global_config import GlobalConfig
 
 
-def _test_sentinel_path() -> Path:
-    """Return sentinel path for tests that don't need real filesystem.
-
-    Exploration: Investigating pattern where tests use fake paths to eliminate
-    filesystem dependencies when only validating CLI logic (exit codes, messages).
-    """
-    return Path("/test/sentinel/sync")
-
-
 def test_sync_requires_graphite() -> None:
     """Test that sync command requires Graphite to be enabled."""
     runner = CliRunner()
-    cwd = _test_sentinel_path()
+    cwd = sentinel_path()
     workstacks_root = cwd / "workstacks"
 
     # Create minimal git repo structure

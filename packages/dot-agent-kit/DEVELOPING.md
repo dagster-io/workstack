@@ -89,6 +89,65 @@ When `dev_mode` is enabled:
 
 Editing either path affects the same file. This eliminates the need for sync-back operations.
 
+## The Three-Step Synchronization Principle
+
+**Critical understanding**: While symlinks sync file **contents** automatically, they do NOT eliminate the need for manifest updates when **renaming, moving, or deleting** artifacts.
+
+When working with bundled kits, changes must be synchronized across three locations:
+
+1. **Source file** - The actual file in `packages/dot-agent-kit/src/dot_agent_kit/data/kits/`
+2. **Manifest** - The `kit.yaml` file declaring which artifacts belong to the kit
+3. **Installed artifact** - The symlink in `.claude/` pointing to the source
+
+### What Works Automatically (No Manual Sync)
+
+✅ **Editing file contents**: Changes to `.claude/` files sync immediately via symlinks
+✅ **Adding new content**: Writing new sections, updating documentation, fixing bugs
+✅ **Testing changes**: Claude Code sees changes immediately
+
+### What Requires Manual Steps
+
+❌ **Renaming artifacts**: Update kit.yaml + recreate symlink + update cross-references
+❌ **Moving artifacts**: Update kit.yaml paths + reinstall kit
+❌ **Deleting artifacts**: Remove from kit.yaml + reinstall to clean up symlinks
+❌ **Adding artifacts**: Add to kit.yaml + reinstall to create symlinks
+
+### Kit Modification Checklist
+
+Use this checklist when making structural changes to kits (rename/move/delete/add):
+
+```markdown
+## Before Committing Kit Changes
+
+- [ ] Updated kit.yaml manifest with new paths/entries
+- [ ] Updated cross-references in other artifacts (search for old names)
+- [ ] Force-reinstalled kit: `dot-agent kit install bundled:{kit-name} --force`
+- [ ] Verified installation: `dot-agent check` shows ✅
+- [ ] Tested artifact invocation works correctly
+- [ ] Committed source files (in packages/, not .claude/)
+```
+
+### Common Mistake: Renaming Without Manifest Update
+
+**Scenario**: You rename `create-from-plan.md` to `create-planned-stack.md`
+
+**What happens without proper steps:**
+
+1. ✅ File renamed in source directory
+2. ❌ kit.yaml still references old filename
+3. ❌ Symlink points to non-existent file
+4. ❌ `dot-agent check` reports "Missing artifact"
+
+**Correct procedure:**
+
+1. Rename source file: `git mv old-name.md new-name.md`
+2. Update kit.yaml: Change artifact path to new filename
+3. Update cross-references: Search for old command name in other files
+4. Force-reinstall: `dot-agent kit install bundled:{kit-name} --force`
+5. Verify: `dot-agent check` should show ✅
+
+**See**: [docs/ARTIFACT_LIFECYCLE.md](docs/ARTIFACT_LIFECYCLE.md) for detailed procedures on renaming, moving, and deleting artifacts.
+
 ## Symlink Protection
 
 The system automatically protects symlinks:

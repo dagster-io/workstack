@@ -26,14 +26,6 @@ artifacts = [
     ".claude/skills/gt-graphite/references/gt-reference.md",
 ]
 
-[kits.workstack]
-kit_id = "workstack"
-source_type = "bundled"
-version = "0.1.0"
-artifacts = [
-    ".claude/commands/workstack/implement-plan.md",
-]
-
 [kits.dignified-python-313]
 kit_id = "dignified-python-313"
 source_type = "bundled"
@@ -56,4 +48,13 @@ source_type = "bundled"
 version = "0.1.0"
 artifacts = [
     ".claude/commands/fix-merge-conflicts/fix-merge-conflicts.md",
+]
+
+[kits.workstack]
+kit_id = "workstack"
+source_type = "bundled"
+version = "0.1.0"
+artifacts = [
+    ".claude/commands/workstack/create-planned-stack.md",
+    ".claude/commands/workstack/implement-plan.md",
 ]

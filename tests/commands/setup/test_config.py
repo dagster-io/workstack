@@ -131,9 +131,8 @@ def test_config_list_handles_missing_repo_config() -> None:
 def test_config_list_not_in_git_repo() -> None:
     """Test that config list handles not being in a git repo."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
+    with simulated_workstack_env(runner) as env:
         # No .git directory
-
         git_ops = FakeGitOps()
         global_config_ops = GlobalConfig(
             workstacks_root=Path("/fake/workstacks"),
@@ -146,7 +145,7 @@ def test_config_list_not_in_git_repo() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path.cwd(),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["config", "list"], obj=test_ctx)

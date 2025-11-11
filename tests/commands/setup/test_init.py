@@ -1065,13 +1065,15 @@ def test_init_skips_shell_if_declined() -> None:
 def test_init_not_in_git_repo_fails() -> None:
     """Test that init fails when not in a git repository."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        # No .git directory
-        cwd = Path.cwd()
+    with simulated_workstack_env(runner) as env:
+        # Remove .git directory to simulate non-git directory
+        import shutil
+
+        shutil.rmtree(env.git_dir)
 
         git_ops = FakeGitOps()  # Empty, no git_common_dirs
         global_config = GlobalConfig(
-            workstacks_root=cwd / "fake-workstacks",
+            workstacks_root=env.cwd / "fake-workstacks",
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -1081,10 +1083,10 @@ def test_init_not_in_git_repo_fails() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
-        result = runner.invoke(cli, ["init"], obj=test_ctx, input="/tmp/workstacks\n")
+        result = runner.invoke(cli, ["init"], obj=test_ctx, input=f"{env.cwd}/workstacks\n")
 
         # The command should fail at repo discovery
         assert result.exit_code != 0

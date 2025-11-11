@@ -414,12 +414,20 @@ def test_hidden_shell_cmd_create_passthrough_on_help() -> None:
     assert result.output.strip() == "__WORKSTACK_PASSTHROUGH__"
 
 
-def test_hidden_shell_cmd_create_passthrough_on_error() -> None:
+def test_hidden_shell_cmd_create_passthrough_on_error(tmp_path: Path) -> None:
     """Shell integration command signals passthrough for errors."""
-    runner = CliRunner()
-    # Try to create without any setup - should error
-    result = runner.invoke(hidden_shell_cmd, ["create", "test-worktree"])
+    # Set up isolated environment without workstack config
+    # This ensures create_context() won't find a real repo
+    env_vars = os.environ.copy()
+    env_vars["HOME"] = str(tmp_path)
 
-    # Should passthrough on error
-    assert result.exit_code != 0
-    assert result.output.strip() == "__WORKSTACK_PASSTHROUGH__"
+    runner = CliRunner(env=env_vars)
+
+    # Create isolated filesystem without git repo or config
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        # Try to create without any setup - should error
+        result = runner.invoke(hidden_shell_cmd, ["create", "test-worktree"])
+
+        # Should passthrough on error
+        assert result.exit_code != 0
+        assert result.output.strip() == "__WORKSTACK_PASSTHROUGH__"

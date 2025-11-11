@@ -70,28 +70,6 @@ detects this and suggests `workstack consolidate` to fix.
 After `os.chdir()` calls, must regenerate WorkstackContext to update `ctx.cwd`.
 This happens in Phase 4 after navigation operations.
 
-## Function Organization
-
-**Validation Functions:**
-- `_validate_landing_preconditions()` - Precondition checks
-- `_validate_branches_have_prs()` - PR existence/state checks
-- `_validate_pr_mergeability()` - Conflict detection
-
-**Display Functions:**
-- `_emit()` - Output with script mode handling
-- `_format_cli_command()` - Format git/gh/gt commands
-- `_format_description()` - Format internal operation descriptions
-- `_show_landing_plan()` - Display plan and get confirmation
-- `_show_final_state()` - Display completion summary
-
-**Execution Functions:**
-- `_get_branches_to_land()` - Discover stack branches
-- `_land_branch_sequence()` - Main landing loop
-- `_cleanup_and_navigate()` - Post-landing cleanup
-
-**Entry Point:**
-- `land_stack()` - Click command, orchestrates all phases
-
 ## Error Handling Strategy
 
 **Fail Fast:**

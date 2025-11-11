@@ -8,6 +8,7 @@ import os
 import subprocess
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from tests.fakes.github_ops import FakeGitHubOps
@@ -35,16 +36,37 @@ def init_git_repo(repo_path: Path, default_branch: str = "main") -> None:
     subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=repo_path, check=True)
 
 
-def test_dryrun_context_creation(tmp_path: Path) -> None:
+def test_dryrun_context_creation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that create_context with dry_run=True creates wrapped implementations."""
+    # Set up a temporary config file to make the test deterministic
+    config_dir = tmp_path / ".workstack"
+    config_dir.mkdir()
+    config_file = config_dir / "config.toml"
+    workstacks_root = tmp_path / "workstacks"
+    config_file.write_text(
+        f"""workstacks_root = "{workstacks_root}"
+use_graphite = false
+shell_setup_complete = false
+show_pr_info = true
+show_pr_checks = false
+""",
+        encoding="utf-8",
+    )
+
+    # Monkeypatch Path.home() to return tmp_path so config loading uses our test config
+    monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
+
     ctx = create_context(dry_run=True)
 
     assert ctx.dry_run is True
     # The context should have DryRun-wrapped implementations
     # We verify this by checking the class names
     assert "DryRun" in type(ctx.git_ops).__name__
-    # global_config is now a GlobalConfig dataclass, not wrapped in DryRun
+    # global_config should now be loaded from our test config
+    assert ctx.global_config is not None
     assert type(ctx.global_config).__name__ == "GlobalConfig"
+    # Config loading resolves paths, so compare resolved paths
+    assert ctx.global_config.workstacks_root == workstacks_root.resolve()
     assert "DryRun" in type(ctx.github_ops).__name__
     assert "DryRun" in type(ctx.graphite_ops).__name__
 

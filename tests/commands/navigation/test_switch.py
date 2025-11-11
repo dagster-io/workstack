@@ -37,43 +37,40 @@ def test_switch_command(tmp_path: Path) -> None:
     subprocess.run(["git", "add", "."], cwd=repo, check=True)
     subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=repo, check=True)
 
-    # Create a worktree using isolated config
-    env = os.environ.copy()
-    env["HOME"] = str(tmp_path)
-    result = subprocess.run(
-        ["uv", "run", "workstack", "create", "myfeature", "--no-post"],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-        env=env,
-    )
-    assert result.returncode == 0, f"Create failed: {result.stderr}"
+    # Create a worktree and switch using CliRunner
+    env_vars = os.environ.copy()
+    env_vars["HOME"] = str(tmp_path)
+    runner = CliRunner(env=env_vars)
 
-    # Run switch command with --script flag
-    result = subprocess.run(
-        ["uv", "run", "workstack", "switch", "myfeature", "--script"],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-        env=env,
-    )
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(repo)
 
-    assert result.returncode == 0
-    # Output should be a temp file path
-    script_path = Path(result.stdout.strip())
-    assert script_path.exists()
-    assert script_path.name.startswith("workstack-switch-")
-    assert script_path.name.endswith(".sh")
+        # Create worktree
+        result = runner.invoke(cli, ["create", "myfeature", "--no-post"])
+        assert result.exit_code == 0, f"Create failed: {result.output}"
 
-    # Verify script content
-    script_content = script_path.read_text()
-    assert "cd" in script_content
-    assert str(workstacks_root / "repo" / "myfeature") in script_content
-    # Should source activate if venv exists
-    assert "activate" in script_content
+        # Run switch command with --script flag
+        result = runner.invoke(cli, ["switch", "myfeature", "--script"])
+        assert result.exit_code == 0
 
-    # Cleanup
-    script_path.unlink(missing_ok=True)
+        # Output should be a temp file path
+        script_path = Path(result.output.strip())
+        assert script_path.exists()
+        assert script_path.name.startswith("workstack-switch-")
+        assert script_path.name.endswith(".sh")
+
+        # Verify script content
+        script_content = script_path.read_text()
+        assert "cd" in script_content
+        assert str(workstacks_root / "repo" / "myfeature") in script_content
+        # Should source activate if venv exists
+        assert "activate" in script_content
+
+        # Cleanup
+        script_path.unlink(missing_ok=True)
+    finally:
+        os.chdir(original_cwd)
 
 
 def test_switch_nonexistent_worktree(tmp_path: Path) -> None:
@@ -147,32 +144,34 @@ def test_switch_to_root(tmp_path: Path) -> None:
     subprocess.run(["git", "add", "."], cwd=repo, check=True)
     subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=repo, check=True)
 
-    # Run switch command with "root" and --script flag, using isolated config
-    env = os.environ.copy()
-    env["HOME"] = str(tmp_path)
-    result = subprocess.run(
-        ["uv", "run", "workstack", "switch", "root", "--script"],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-        env=env,
-    )
+    # Run switch command with "root" and --script flag using CliRunner
+    env_vars = os.environ.copy()
+    env_vars["HOME"] = str(tmp_path)
+    runner = CliRunner(env=env_vars)
 
-    assert result.returncode == 0
-    # Output should be a temp file path
-    script_path = Path(result.stdout.strip())
-    assert script_path.exists()
-    assert script_path.name.startswith("workstack-switch-")
-    assert script_path.name.endswith(".sh")
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(repo)
 
-    # Verify script content
-    script_content = script_path.read_text()
-    assert "cd" in script_content
-    assert str(repo) in script_content
-    assert "root" in script_content.lower()
+        result = runner.invoke(cli, ["switch", "root", "--script"])
+        assert result.exit_code == 0
 
-    # Cleanup
-    script_path.unlink(missing_ok=True)
+        # Output should be a temp file path
+        script_path = Path(result.output.strip())
+        assert script_path.exists()
+        assert script_path.name.startswith("workstack-switch-")
+        assert script_path.name.endswith(".sh")
+
+        # Verify script content
+        script_content = script_path.read_text()
+        assert "cd" in script_content
+        assert str(repo) in script_content
+        assert "root" in script_content.lower()
+
+        # Cleanup
+        script_path.unlink(missing_ok=True)
+    finally:
+        os.chdir(original_cwd)
 
 
 def test_hidden_shell_cmd_switch_passthrough_on_help() -> None:
@@ -206,35 +205,33 @@ def test_list_includes_root(tmp_path: Path) -> None:
     subprocess.run(["git", "add", "."], cwd=repo, check=True)
     subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=repo, check=True)
 
-    # Create a worktree using isolated config
-    env = os.environ.copy()
-    env["HOME"] = str(tmp_path)
-    subprocess.run(
-        ["uv", "run", "workstack", "create", "myfeature", "--no-post"],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-        env=env,
-    )
+    # Create a worktree and list using CliRunner
+    env_vars = os.environ.copy()
+    env_vars["HOME"] = str(tmp_path)
+    runner = CliRunner(env=env_vars)
 
-    # List worktrees
-    result = subprocess.run(
-        ["uv", "run", "workstack", "list"],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-        env=env,
-    )
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(repo)
 
-    assert result.returncode == 0
-    # Should show root as first entry
-    clean_output = strip_ansi(result.stdout)
-    lines = clean_output.strip().split("\n")
-    assert len(lines) >= 2
-    # Check that first line shows the root worktree
-    assert lines[0].startswith("root")
-    # Should also show the created worktree
-    assert any("myfeature" in line for line in lines)
+        # Create worktree
+        result = runner.invoke(cli, ["create", "myfeature", "--no-post"])
+        assert result.exit_code == 0
+
+        # List worktrees
+        result = runner.invoke(cli, ["list"])
+        assert result.exit_code == 0
+
+        # Should show root as first entry
+        clean_output = strip_ansi(result.output)
+        lines = clean_output.strip().split("\n")
+        assert len(lines) >= 2
+        # Check that first line shows the root worktree
+        assert lines[0].startswith("root")
+        # Should also show the created worktree
+        assert any("myfeature" in line for line in lines)
+    finally:
+        os.chdir(original_cwd)
 
 
 def test_complete_worktree_names_without_context(
@@ -277,16 +274,19 @@ def test_complete_worktree_names_without_context(
     subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True)
     subprocess.run(["git", "commit", "-m", "Initial"], cwd=repo, check=True, capture_output=True)
 
-    # Create worktrees
-    env = os.environ.copy()
-    env["HOME"] = str(tmp_path)
-    for name in ["feature-a", "feature-b", "bugfix-123"]:
-        subprocess.run(
-            ["uv", "run", "workstack", "create", name, "--no-post"],
-            cwd=repo,
-            capture_output=True,
-            env=env,
-        )
+    # Create worktrees using CliRunner
+    env_vars = os.environ.copy()
+    env_vars["HOME"] = str(tmp_path)
+    runner = CliRunner(env=env_vars)
+
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(repo)
+        for name in ["feature-a", "feature-b", "bugfix-123"]:
+            result = runner.invoke(cli, ["create", name, "--no-post"])
+            assert result.exit_code == 0
+    finally:
+        os.chdir(original_cwd)
 
     # Mock create_context to use test environment
     # NOTE: Use FakeShellOps to avoid any risk of mutating user shell config files

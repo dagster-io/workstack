@@ -10,7 +10,12 @@ from workstack.cli.config import LoadedConfig, load_config
 from workstack.core.completion_ops import CompletionOps, RealCompletionOps
 from workstack.core.github_ops import DryRunGitHubOps, GitHubOps, RealGitHubOps
 from workstack.core.gitops import DryRunGitOps, GitOps, RealGitOps
-from workstack.core.global_config import GlobalConfig, load_global_config
+from workstack.core.global_config import (
+    FilesystemGlobalConfigOps,
+    GlobalConfig,
+    GlobalConfigOps,
+    InMemoryGlobalConfigOps,
+)
 from workstack.core.graphite_ops import DryRunGraphiteOps, GraphiteOps, RealGraphiteOps
 from workstack.core.repo_discovery import (
     NoRepoSentinel,
@@ -37,6 +42,7 @@ class WorkstackContext:
     graphite_ops: GraphiteOps
     shell_ops: ShellOps
     completion_ops: CompletionOps
+    global_config_ops: GlobalConfigOps
     cwd: Path  # Current working directory at CLI invocation
     global_config: GlobalConfig | None
     local_config: LoadedConfig
@@ -98,6 +104,7 @@ class WorkstackContext:
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
             completion_ops=FakeCompletionOps(),
+            global_config_ops=InMemoryGlobalConfigOps(config=None),
             cwd=cwd,
             global_config=None,
             local_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
@@ -113,6 +120,7 @@ class WorkstackContext:
         graphite_ops: GraphiteOps | None = None,
         shell_ops: ShellOps | None = None,
         completion_ops: CompletionOps | None = None,
+        global_config_ops: GlobalConfigOps | None = None,
         cwd: Path | None = None,
         global_config: GlobalConfig | None = None,
         local_config: LoadedConfig | None = None,
@@ -134,6 +142,8 @@ class WorkstackContext:
             shell_ops: Optional ShellOps implementation. If None, creates empty FakeShellOps.
             completion_ops: Optional CompletionOps implementation.
                            If None, creates empty FakeCompletionOps.
+            global_config_ops: Optional GlobalConfigOps implementation.
+                              If None, creates InMemoryGlobalConfigOps with test config.
             cwd: Optional current working directory. If None, uses Path("/test/default/cwd").
             global_config: Optional GlobalConfig. If None, uses test defaults.
             local_config: Optional LoadedConfig. If None, uses empty defaults.
@@ -193,6 +203,9 @@ class WorkstackContext:
                 show_pr_checks=False,
             )
 
+        if global_config_ops is None:
+            global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+
         if local_config is None:
             local_config = LoadedConfig(env={}, post_create_commands=[], post_create_shell=None)
 
@@ -205,6 +218,7 @@ class WorkstackContext:
             graphite_ops=graphite_ops,
             shell_ops=shell_ops,
             completion_ops=completion_ops,
+            global_config_ops=global_config_ops,
             cwd=cwd or Path("/test/default/cwd"),
             global_config=global_config,
             local_config=local_config,
@@ -301,49 +315,51 @@ def create_context(*, dry_run: bool, repo_root: Path | None = None) -> Workstack
     # 1. Capture cwd (no deps)
     cwd = Path.cwd()
 
-    # 2. Load global config (no deps) - None if not exists (for init command)
-    from workstack.core.global_config import global_config_exists
+    # 2. Create global config ops
+    global_config_ops = FilesystemGlobalConfigOps()
 
+    # 3. Load global config (no deps) - None if not exists (for init command)
     global_config: GlobalConfig | None
-    if global_config_exists():
-        global_config = load_global_config()
+    if global_config_ops.exists():
+        global_config = global_config_ops.load()
     else:
         # For init command only: config doesn't exist yet
         global_config = None
 
-    # 3. Create ops (need git_ops for repo discovery)
+    # 4. Create ops (need git_ops for repo discovery)
     git_ops: GitOps = RealGitOps()
     graphite_ops: GraphiteOps = RealGraphiteOps()
     github_ops: GitHubOps = RealGitHubOps()
 
-    # 4. Discover repo (only needs cwd, workstacks_root, git_ops)
+    # 5. Discover repo (only needs cwd, workstacks_root, git_ops)
     # If global_config is None, use placeholder path for repo discovery
     workstacks_root = global_config.workstacks_root if global_config else Path.home() / "worktrees"
     repo = discover_repo_or_sentinel(cwd, workstacks_root, git_ops)
 
-    # 5. Load local config (or defaults if no repo)
+    # 6. Load local config (or defaults if no repo)
     if isinstance(repo, NoRepoSentinel):
         local_config = LoadedConfig(env={}, post_create_commands=[], post_create_shell=None)
     else:
         workstacks_dir = ensure_workstacks_dir(repo)
         local_config = load_config(workstacks_dir)
 
-    # 6. Apply dry-run wrappers if needed
+    # 7. Apply dry-run wrappers if needed
     if dry_run:
         git_ops = DryRunGitOps(git_ops)
         graphite_ops = DryRunGraphiteOps(graphite_ops)
         github_ops = DryRunGitHubOps(github_ops)
 
-    # 7. Load trunk branch config if in a repo
+    # 8. Load trunk branch config if in a repo
     trunk_branch = read_trunk_from_pyproject(repo_root) if repo_root else None
 
-    # 8. Create context with all values
+    # 9. Create context with all values
     return WorkstackContext(
         git_ops=git_ops,
         github_ops=github_ops,
         graphite_ops=graphite_ops,
         shell_ops=RealShellOps(),
         completion_ops=RealCompletionOps(),
+        global_config_ops=FilesystemGlobalConfigOps(),
         cwd=cwd,
         global_config=global_config,
         local_config=local_config,

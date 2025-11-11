@@ -243,17 +243,21 @@ def test_complete_worktree_names_without_context(
     from workstack.core.context import WorkstackContext
     from workstack.core.github_ops import RealGitHubOps
     from workstack.core.gitops import RealGitOps
-    from workstack.core.global_config import load_global_config
+    from workstack.core.global_config import FilesystemGlobalConfigOps
     from workstack.core.graphite_ops import RealGraphiteOps
 
     # Set up isolated global config
     global_config_dir = tmp_path / ".workstack"
     global_config_dir.mkdir()
     workstacks_root = tmp_path / "workstacks"
-    (global_config_dir / "config.toml").write_text(
-        f'workstacks_root = "{workstacks_root}"\nuse_graphite = false\n',
-        encoding="utf-8",
+    config_content = (
+        f'workstacks_root = "{workstacks_root}"\n'
+        "use_graphite = false\n"
+        "shell_setup_complete = false\n"
+        "show_pr_info = true\n"
+        "show_pr_checks = false\n"
     )
+    (global_config_dir / "config.toml").write_text(config_content, encoding="utf-8")
 
     # Set up a fake git repo
     repo = tmp_path / "repo"
@@ -282,9 +286,11 @@ def test_complete_worktree_names_without_context(
     # NOTE: Use FakeShellOps to avoid any risk of mutating user shell config files
     def mock_create_context() -> WorkstackContext:
         # Load global config from test environment
-        global_config = load_global_config()
+        global_config_ops = FilesystemGlobalConfigOps()
+        global_config = global_config_ops.load()
         return WorkstackContext.for_test(
             git_ops=RealGitOps(),
+            global_config_ops=global_config_ops,
             global_config=global_config,
             github_ops=RealGitHubOps(),
             graphite_ops=RealGraphiteOps(),

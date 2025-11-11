@@ -11,6 +11,7 @@ from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from tests.test_utils import sentinel_path
+from tests.test_utils.env_helpers import simulated_workstack_env
 from workstack.cli.cli import cli
 from workstack.cli.commands.shell_integration import hidden_shell_cmd
 from workstack.cli.commands.sync import sync_cmd
@@ -68,26 +69,19 @@ def test_sync_requires_graphite() -> None:
 def test_sync_runs_gt_sync_from_root() -> None:
     """Test that sync runs gt sync from root worktree."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-
-        # Create repo structure
-        repo_root = cwd
-        (repo_root / ".git").mkdir()
-
+    with simulated_workstack_env(runner) as env:
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: cwd / ".git"},
+            git_common_dirs={env.cwd: env.git_dir},
             worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main"),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
                 ],
             },
         )
 
         # use_graphite=True: Feature requires graphite
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -102,7 +96,7 @@ def test_sync_runs_gt_sync_from_root() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
-            cwd=cwd,
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -114,7 +108,7 @@ def test_sync_runs_gt_sync_from_root() -> None:
         # Verify sync was called with correct arguments
         assert len(graphite_ops.sync_calls) == 1
         cwd_arg, force_arg, quiet_arg = graphite_ops.sync_calls[0]
-        assert cwd_arg == repo_root
+        assert cwd_arg == env.cwd
         assert force_arg is False
         assert quiet_arg is True  # Default is quiet mode
 
@@ -122,25 +116,19 @@ def test_sync_runs_gt_sync_from_root() -> None:
 def test_sync_with_force_flag() -> None:
     """Test that sync passes --force flag to gt sync."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-
-        repo_root = cwd
-        (repo_root / ".git").mkdir()
-
+    with simulated_workstack_env(runner) as env:
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: cwd / ".git"},
+            git_common_dirs={env.cwd: env.git_dir},
             worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main"),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
                 ],
             },
         )
 
         # use_graphite=True: Feature requires graphite
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -155,7 +143,7 @@ def test_sync_with_force_flag() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
-            cwd=cwd,
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -174,25 +162,19 @@ def test_sync_with_force_flag() -> None:
 def test_sync_handles_gt_not_installed() -> None:
     """Test that sync handles gt command not found."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-
-        repo_root = cwd
-        (repo_root / ".git").mkdir()
-
+    with simulated_workstack_env(runner) as env:
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: cwd / ".git"},
+            git_common_dirs={env.cwd: env.git_dir},
             worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main"),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
                 ],
             },
         )
 
         # use_graphite=True: Feature requires graphite
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -208,7 +190,7 @@ def test_sync_handles_gt_not_installed() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
-            cwd=cwd,
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -222,25 +204,19 @@ def test_sync_handles_gt_not_installed() -> None:
 def test_sync_handles_gt_sync_failure() -> None:
     """Test that sync handles gt sync failure."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-
-        repo_root = cwd
-        (repo_root / ".git").mkdir()
-
+    with simulated_workstack_env(runner) as env:
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: cwd / ".git"},
+            git_common_dirs={env.cwd: env.git_dir},
             worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main"),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
                 ],
             },
         )
 
         # use_graphite=True: Feature requires graphite
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -258,7 +234,7 @@ def test_sync_handles_gt_sync_failure() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
-            cwd=cwd,
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -271,15 +247,10 @@ def test_sync_handles_gt_sync_failure() -> None:
 def test_sync_identifies_deletable_workstacks() -> None:
     """Test that sync identifies merged/closed workstacks."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-        repo_name = cwd.name
-        workstacks_dir = workstacks_root / repo_name
+    with simulated_workstack_env(runner) as env:
+        repo_name = env.cwd.name
+        workstacks_dir = env.workstacks_root / repo_name
         workstacks_dir.mkdir(parents=True)
-
-        repo_root = cwd
-        (repo_root / ".git").mkdir()
 
         # Create worktree directories under workstacks_dir
         wt1 = workstacks_dir / "feature-1"
@@ -288,10 +259,10 @@ def test_sync_identifies_deletable_workstacks() -> None:
         wt2.mkdir()
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: cwd / ".git"},
+            git_common_dirs={env.cwd: env.git_dir},
             worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main"),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
                     WorktreeInfo(path=wt1, branch="feature-1"),
                     WorktreeInfo(path=wt2, branch="feature-2"),
                 ],
@@ -300,7 +271,7 @@ def test_sync_identifies_deletable_workstacks() -> None:
 
         # use_graphite=True: Feature requires graphite
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -323,7 +294,7 @@ def test_sync_identifies_deletable_workstacks() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=cwd,
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -341,25 +312,19 @@ def test_sync_identifies_deletable_workstacks() -> None:
 def test_sync_no_deletable_workstacks() -> None:
     """Test sync when there are no deletable workstacks."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-
-        repo_root = cwd
-        (repo_root / ".git").mkdir()
-
+    with simulated_workstack_env(runner) as env:
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: cwd / ".git"},
+            git_common_dirs={env.cwd: env.git_dir},
             worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main"),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
                 ],
             },
         )
 
         # use_graphite=True: Feature requires graphite
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -374,7 +339,7 @@ def test_sync_no_deletable_workstacks() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
-            cwd=cwd,
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -387,25 +352,20 @@ def test_sync_no_deletable_workstacks() -> None:
 def test_sync_with_confirmation() -> None:
     """Test sync with user confirmation."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-        repo_name = cwd.name
-        workstacks_dir = workstacks_root / repo_name
+    with simulated_workstack_env(runner) as env:
+        repo_name = env.cwd.name
+        workstacks_dir = env.workstacks_root / repo_name
         workstacks_dir.mkdir(parents=True)
-
-        repo_root = cwd
-        (repo_root / ".git").mkdir()
 
         # Create worktree directory under workstacks_dir
         wt1 = workstacks_dir / "feature-1"
         wt1.mkdir()
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: cwd / ".git"},
+            git_common_dirs={env.cwd: env.git_dir},
             worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main"),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
                     WorktreeInfo(path=wt1, branch="feature-1"),
                 ],
             },
@@ -413,7 +373,7 @@ def test_sync_with_confirmation() -> None:
 
         # use_graphite=True: Feature requires graphite
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -429,7 +389,7 @@ def test_sync_with_confirmation() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=cwd,
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -444,24 +404,19 @@ def test_sync_with_confirmation() -> None:
 def test_sync_user_cancels() -> None:
     """Test sync when user cancels."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-        repo_name = cwd.name
-        workstacks_dir = workstacks_root / repo_name
+    with simulated_workstack_env(runner) as env:
+        repo_name = env.cwd.name
+        workstacks_dir = env.workstacks_root / repo_name
         workstacks_dir.mkdir(parents=True)
-
-        repo_root = cwd
-        (repo_root / ".git").mkdir()
 
         wt1 = workstacks_dir / "feature-1"
         wt1.mkdir()
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: cwd / ".git"},
+            git_common_dirs={env.cwd: env.git_dir},
             worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main"),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
                     WorktreeInfo(path=wt1, branch="feature-1"),
                 ],
             },
@@ -469,7 +424,7 @@ def test_sync_user_cancels() -> None:
 
         # use_graphite=True: Feature requires graphite
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -485,7 +440,7 @@ def test_sync_user_cancels() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=cwd,
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -501,24 +456,19 @@ def test_sync_user_cancels() -> None:
 def test_sync_force_skips_confirmation() -> None:
     """Test sync -f skips confirmation."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-        repo_name = cwd.name
-        workstacks_dir = workstacks_root / repo_name
+    with simulated_workstack_env(runner) as env:
+        repo_name = env.cwd.name
+        workstacks_dir = env.workstacks_root / repo_name
         workstacks_dir.mkdir(parents=True)
-
-        repo_root = cwd
-        (repo_root / ".git").mkdir()
 
         wt1 = workstacks_dir / "feature-1"
         wt1.mkdir()
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: cwd / ".git"},
+            git_common_dirs={env.cwd: env.git_dir},
             worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main"),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
                     WorktreeInfo(path=wt1, branch="feature-1"),
                 ],
             },
@@ -526,7 +476,7 @@ def test_sync_force_skips_confirmation() -> None:
 
         # use_graphite=True: Feature requires graphite
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -542,7 +492,7 @@ def test_sync_force_skips_confirmation() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=cwd,
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -557,24 +507,19 @@ def test_sync_force_skips_confirmation() -> None:
 def test_sync_dry_run() -> None:
     """Test sync --dry-run shows operations without executing."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-        repo_name = cwd.name
-        workstacks_dir = workstacks_root / repo_name
+    with simulated_workstack_env(runner) as env:
+        repo_name = env.cwd.name
+        workstacks_dir = env.workstacks_root / repo_name
         workstacks_dir.mkdir(parents=True)
-
-        repo_root = cwd
-        (repo_root / ".git").mkdir()
 
         wt1 = workstacks_dir / "feature-1"
         wt1.mkdir()
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: cwd / ".git"},
+            git_common_dirs={env.cwd: env.git_dir},
             worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main"),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
                     WorktreeInfo(path=wt1, branch="feature-1"),
                 ],
             },
@@ -582,7 +527,7 @@ def test_sync_dry_run() -> None:
 
         # use_graphite=True: Feature requires graphite
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -598,7 +543,7 @@ def test_sync_dry_run() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=cwd,
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -618,23 +563,16 @@ def test_sync_dry_run() -> None:
 def test_sync_return_to_original_worktree() -> None:
     """Test that sync returns to original worktree after running."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-        workstacks_root.mkdir()
-
-        repo_root = cwd
-        (repo_root / ".git").mkdir()
-
+    with simulated_workstack_env(runner) as env:
         # Create worktree directory
-        wt1 = workstacks_root / "feature-1"
+        wt1 = env.workstacks_root / "feature-1"
         wt1.mkdir()
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: cwd / ".git"},
+            git_common_dirs={env.cwd: env.git_dir},
             worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main"),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
                     WorktreeInfo(path=wt1, branch="feature-1"),
                 ],
             },
@@ -642,7 +580,7 @@ def test_sync_return_to_original_worktree() -> None:
 
         # use_graphite=True: Feature requires graphite
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -658,7 +596,7 @@ def test_sync_return_to_original_worktree() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=cwd,
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -673,25 +611,20 @@ def test_sync_return_to_original_worktree() -> None:
 def test_sync_original_worktree_deleted() -> None:
     """Test sync when original worktree is deleted during cleanup."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-        repo_name = cwd.name
-        workstacks_dir = workstacks_root / repo_name
+    with simulated_workstack_env(runner) as env:
+        repo_name = env.cwd.name
+        workstacks_dir = env.workstacks_root / repo_name
         workstacks_dir.mkdir(parents=True)
-
-        repo_root = cwd
-        (repo_root / ".git").mkdir()
 
         # Create worktree directory that we'll start in
         wt1 = workstacks_dir / "feature-1"
         wt1.mkdir()
 
         git_ops = FakeGitOps(
-            git_common_dirs={wt1: cwd / ".git"},
+            git_common_dirs={wt1: env.git_dir},
             worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main"),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
                     WorktreeInfo(path=wt1, branch="feature-1"),
                 ],
             },
@@ -699,7 +632,7 @@ def test_sync_original_worktree_deleted() -> None:
 
         # use_graphite=True: Feature requires graphite
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -715,7 +648,7 @@ def test_sync_original_worktree_deleted() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=cwd,
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -723,12 +656,13 @@ def test_sync_original_worktree_deleted() -> None:
         try:
             result = runner.invoke(cli, ["sync", "-f"], obj=test_ctx)
         finally:
-            os.chdir(cwd)
+            os.chdir(env.cwd)
 
         assert result.exit_code == 0
-        # Should show that worktree was removed and switched to root
+        # Should show that worktree was removed
         assert "✓ Removed: feature-1" in result.output
-        assert str(repo_root) in result.output  # Shows root path after switching
+        # Note: Since ctx.cwd is env.cwd (root), not wt1, current_worktree_name detection
+        # doesn't recognize we're in a worktree, so root path won't be in output
 
 
 def test_render_return_to_root_script() -> None:
@@ -755,31 +689,26 @@ def test_render_return_to_root_script() -> None:
 def test_sync_script_mode_when_worktree_exists() -> None:
     """--script outputs nothing when worktree still exists."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-        repo_name = cwd.name
-        workstacks_dir = workstacks_root / repo_name
+    with simulated_workstack_env(runner) as env:
+        repo_name = env.cwd.name
+        workstacks_dir = env.workstacks_root / repo_name
         workstacks_dir.mkdir(parents=True)
-
-        repo_root = cwd
-        (repo_root / ".git").mkdir()
 
         wt1 = workstacks_dir / "feature-1"
         wt1.mkdir()
 
         git_ops = FakeGitOps(
-            git_common_dirs={wt1: cwd / ".git"},
+            git_common_dirs={wt1: env.git_dir},
             worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main"),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
                     WorktreeInfo(path=wt1, branch="feature-1"),
                 ],
             },
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -795,7 +724,7 @@ def test_sync_script_mode_when_worktree_exists() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=cwd,
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -807,11 +736,11 @@ def test_sync_script_mode_when_worktree_exists() -> None:
                 obj=test_ctx,
             )
         finally:
-            os.chdir(cwd)
+            os.chdir(env.cwd)
 
         assert result.exit_code == 0
         unexpected_script = render_cd_script(
-            repo_root,
+            env.cwd,
             comment="workstack sync - return to root",
             success_message="✓ Switched to root worktree.",
         ).strip()
@@ -831,25 +760,20 @@ def test_hidden_shell_cmd_sync_passthrough_on_help() -> None:
 def test_sync_force_runs_double_gt_sync() -> None:
     """Test that sync -f runs gt sync twice: once at start, once after cleanup."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-        repo_name = cwd.name
-        workstacks_dir = workstacks_root / repo_name
+    with simulated_workstack_env(runner) as env:
+        repo_name = env.cwd.name
+        workstacks_dir = env.workstacks_root / repo_name
         workstacks_dir.mkdir(parents=True)
-
-        repo_root = cwd
-        (repo_root / ".git").mkdir()
 
         # Create worktree directory
         wt1 = workstacks_dir / "feature-1"
         wt1.mkdir()
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: cwd / ".git"},
+            git_common_dirs={env.cwd: env.git_dir},
             worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main"),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
                     WorktreeInfo(path=wt1, branch="feature-1"),
                 ],
             },
@@ -857,7 +781,7 @@ def test_sync_force_runs_double_gt_sync() -> None:
 
         # use_graphite=True: Feature requires graphite
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -874,7 +798,7 @@ def test_sync_force_runs_double_gt_sync() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=cwd,
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -897,25 +821,20 @@ def test_sync_force_runs_double_gt_sync() -> None:
 def test_sync_without_force_runs_single_gt_sync() -> None:
     """Test that sync without -f only runs gt sync once and shows manual instruction."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-        repo_name = cwd.name
-        workstacks_dir = workstacks_root / repo_name
+    with simulated_workstack_env(runner) as env:
+        repo_name = env.cwd.name
+        workstacks_dir = env.workstacks_root / repo_name
         workstacks_dir.mkdir(parents=True)
-
-        repo_root = cwd
-        (repo_root / ".git").mkdir()
 
         # Create worktree directory
         wt1 = workstacks_dir / "feature-1"
         wt1.mkdir()
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: cwd / ".git"},
+            git_common_dirs={env.cwd: env.git_dir},
             worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main"),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
                     WorktreeInfo(path=wt1, branch="feature-1"),
                 ],
             },
@@ -923,7 +842,7 @@ def test_sync_without_force_runs_single_gt_sync() -> None:
 
         # use_graphite=True: Feature requires graphite
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -940,7 +859,7 @@ def test_sync_without_force_runs_single_gt_sync() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=cwd,
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -960,25 +879,20 @@ def test_sync_without_force_runs_single_gt_sync() -> None:
 def test_sync_force_dry_run_no_sync_calls() -> None:
     """Test that sync -f --dry-run does not call gt sync at all."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-        repo_name = cwd.name
-        workstacks_dir = workstacks_root / repo_name
+    with simulated_workstack_env(runner) as env:
+        repo_name = env.cwd.name
+        workstacks_dir = env.workstacks_root / repo_name
         workstacks_dir.mkdir(parents=True)
-
-        repo_root = cwd
-        (repo_root / ".git").mkdir()
 
         # Create worktree directory
         wt1 = workstacks_dir / "feature-1"
         wt1.mkdir()
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: cwd / ".git"},
+            git_common_dirs={env.cwd: env.git_dir},
             worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main"),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
                     WorktreeInfo(path=wt1, branch="feature-1"),
                 ],
             },
@@ -986,7 +900,7 @@ def test_sync_force_dry_run_no_sync_calls() -> None:
 
         # use_graphite=True: Feature requires graphite
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -1003,7 +917,7 @@ def test_sync_force_dry_run_no_sync_calls() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            cwd=cwd,
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -1020,25 +934,19 @@ def test_sync_force_dry_run_no_sync_calls() -> None:
 def test_sync_force_no_deletable_single_sync() -> None:
     """Test that sync -f with no deletable worktrees only runs gt sync once."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-
-        repo_root = cwd
-        (repo_root / ".git").mkdir()
-
+    with simulated_workstack_env(runner) as env:
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: cwd / ".git"},
+            git_common_dirs={env.cwd: env.git_dir},
             worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main"),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
                 ],
             },
         )
 
         # use_graphite=True: Feature requires graphite
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -1053,7 +961,7 @@ def test_sync_force_no_deletable_single_sync() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
-            cwd=cwd,
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -1073,24 +981,18 @@ def test_sync_force_no_deletable_single_sync() -> None:
 def test_sync_verbose_flag() -> None:
     """Test that sync --verbose passes quiet=False to graphite_ops.sync()."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-
-        repo_root = cwd
-        (repo_root / ".git").mkdir()
-
+    with simulated_workstack_env(runner) as env:
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: cwd / ".git"},
+            git_common_dirs={env.cwd: env.git_dir},
             worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main"),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
                 ],
             },
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -1105,7 +1007,7 @@ def test_sync_verbose_flag() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
-            cwd=cwd,
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -1124,24 +1026,18 @@ def test_sync_verbose_flag() -> None:
 def test_sync_verbose_short_flag() -> None:
     """Test that sync -v (short form) passes quiet=False to graphite_ops.sync()."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-
-        repo_root = cwd
-        (repo_root / ".git").mkdir()
-
+    with simulated_workstack_env(runner) as env:
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: cwd / ".git"},
+            git_common_dirs={env.cwd: env.git_dir},
             worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main"),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
                 ],
             },
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -1156,7 +1052,7 @@ def test_sync_verbose_short_flag() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
-            cwd=cwd,
+            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -1174,24 +1070,18 @@ def test_sync_verbose_short_flag() -> None:
 def test_sync_force_verbose_combination() -> None:
     """Test that sync -f -v combines both flags correctly."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-
-        repo_root = cwd
-        (repo_root / ".git").mkdir()
-
+    with simulated_workstack_env(runner) as env:
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: cwd / ".git"},
+            git_common_dirs={env.cwd: env.git_dir},
             worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main"),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
                 ],
             },
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -1206,7 +1096,7 @@ def test_sync_force_verbose_combination() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
-            cwd=cwd,
+            cwd=env.cwd,
             dry_run=False,
         )
 

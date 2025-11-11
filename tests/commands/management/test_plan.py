@@ -417,10 +417,9 @@ def test_hidden_shell_cmd_create_passthrough_on_help() -> None:
 def test_hidden_shell_cmd_create_passthrough_on_error() -> None:
     """Shell integration command signals passthrough for errors."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        # Try to create without any setup - should error
-        result = runner.invoke(hidden_shell_cmd, ["create", "test-worktree"])
+    # Try to create without any setup - should error
+    result = runner.invoke(hidden_shell_cmd, ["create", "test-worktree"])
 
-        # Should passthrough on error
-        assert result.exit_code != 0
-        assert result.output.strip() == "__WORKSTACK_PASSTHROUGH__"
+    # Should passthrough on error
+    assert result.exit_code != 0
+    assert result.output.strip() == "__WORKSTACK_PASSTHROUGH__"

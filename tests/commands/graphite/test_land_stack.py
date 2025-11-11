@@ -1350,3 +1350,66 @@ def test_land_stack_dry_run_shows_base_update() -> None:
             f"Expected base update message not found. Actual output:\n{result.output}"
         )
         assert "gh pr edit 100 --base main" in result.output
+
+
+def test_land_stack_merge_command_excludes_auto_flag() -> None:
+    """Test that land-stack merge commands do NOT include --auto flag.
+
+    Regression test for GitHub auto-merge issue:
+    - The --auto flag requires branch protection rules to be configured
+    - Without protection rules, GitHub returns "Pull request is in clean status" error
+    - land-stack uses synchronous sequential landing, so auto-merge provides no value
+
+    This test ensures the --auto flag remains removed from merge commands.
+    """
+    runner = CliRunner()
+    with simulated_workstack_env(runner) as env:
+        # Build simple stack with one PR
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
+                "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
+            },
+            current_branch="feat-1",
+        )
+
+        github_ops = FakeGitHubOps(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Feature 1"),
+            }
+        )
+
+        global_config_ops = GlobalConfig(
+            workstacks_root=env.workstacks_root,
+            use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
+        )
+
+        test_ctx = WorkstackContext.for_test(
+            git_ops=git_ops,
+            global_config=global_config_ops,
+            graphite_ops=graphite_ops,
+            github_ops=github_ops,
+            shell_ops=FakeShellOps(),
+            dry_run=True,
+            cwd=env.cwd,
+        )
+
+        # Run in dry-run mode to see the commands that would be executed
+        result = runner.invoke(cli, ["land-stack", "--dry-run"], obj=test_ctx)
+
+        assert result.exit_code == 0, f"Command failed: {result.output}"
+
+        # Verify merge command appears in output
+        assert "gh pr merge 100 --squash" in result.output, (
+            f"Expected merge command not found in output:\n{result.output}"
+        )
+
+        # Verify --auto flag is NOT present in merge command
+        assert "--auto" not in result.output, (
+            f"The --auto flag should NOT appear in merge commands. "
+            f"This flag requires branch protection rules and provides no value "
+            f"for synchronous sequential landing. Actual output:\n{result.output}"
+        )

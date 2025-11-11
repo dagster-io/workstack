@@ -26,6 +26,22 @@ class WorktreeInfo:
     is_root: bool = False
 
 
+def find_worktree_for_branch(worktrees: list[WorktreeInfo], branch: str) -> Path | None:
+    """Find the path of the worktree that has the given branch checked out.
+
+    Args:
+        worktrees: List of worktrees to search
+        branch: Branch name to find
+
+    Returns:
+        Path to the worktree with the branch checked out, or None if not found
+    """
+    for wt in worktrees:
+        if wt.branch == branch:
+            return wt.path
+    return None
+
+
 # ============================================================================
 # Abstract Interface
 # ============================================================================

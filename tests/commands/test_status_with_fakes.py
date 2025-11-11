@@ -25,6 +25,7 @@ from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps, WorktreeInfo
 from tests.test_utils.builders import WorktreeScenario
 from workstack.cli.commands.status import status_cmd
+from workstack.core.context import WorkstackContext
 from workstack.core.global_config import GlobalConfig
 
 
@@ -96,7 +97,7 @@ def test_status_cmd_in_subdirectory_of_worktree(tmp_path: Path) -> None:
         show_pr_info=False,
         show_pr_checks=False,
     )
-    ctx = create_test_context(git_ops=git_ops, global_config=global_config)
+    ctx = create_test_context(git_ops=git_ops, global_config=global_config, cwd=subdir)
 
     runner = CliRunner()
     original_dir = os.getcwd()
@@ -134,12 +135,24 @@ def test_status_cmd_displays_all_collector_sections(tmp_path: Path) -> None:
 
     scenario = scenario.build()
 
+    # Update context with correct cwd for feature worktree
+    feature_dir = scenario.workstacks_dir / "feature"
+    ctx = WorkstackContext.for_test(
+        git_ops=scenario.ctx.git_ops,
+        global_config=scenario.ctx.global_config,
+        github_ops=scenario.ctx.github_ops,
+        graphite_ops=scenario.ctx.graphite_ops,
+        shell_ops=scenario.ctx.shell_ops,
+        cwd=feature_dir,
+        dry_run=scenario.ctx.dry_run,
+    )
+
     runner = CliRunner()
     original_dir = os.getcwd()
-    os.chdir(scenario.workstacks_dir / "feature")
+    os.chdir(feature_dir)
 
     try:
-        result = runner.invoke(status_cmd, obj=scenario.ctx, catch_exceptions=False)
+        result = runner.invoke(status_cmd, obj=ctx, catch_exceptions=False)
     finally:
         os.chdir(original_dir)
 

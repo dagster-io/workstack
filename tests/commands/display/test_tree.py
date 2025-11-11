@@ -6,7 +6,6 @@ tests/unit/hierarchy/test_branch_graph.py.
 """
 
 import json
-import os
 import tempfile
 from pathlib import Path
 
@@ -21,6 +20,7 @@ from workstack.cli.tree import (
     _load_graphite_branch_graph,
 )
 from workstack.core.global_config import GlobalConfig
+from workstack.core.graphite_ops import RealGraphiteOps
 
 # ===========================
 # Integration Tests (Functions with Filesystem)
@@ -167,7 +167,8 @@ def test_load_graphite_branch_graph() -> None:
         cache_file.write_text(json.dumps(cache_data), encoding="utf-8")
 
         git_ops = FakeGitOps(git_common_dirs={repo_root: tmp_git_dir})
-        ctx = create_test_context(git_ops=git_ops)
+        graphite_ops = RealGraphiteOps()
+        ctx = create_test_context(git_ops=git_ops, graphite_ops=graphite_ops)
 
         graph = _load_graphite_branch_graph(ctx, repo_root)
 
@@ -196,7 +197,8 @@ def test_load_graphite_branch_graph_returns_none_when_missing() -> None:
         # No cache file created
 
         git_ops = FakeGitOps(git_common_dirs={repo_root: tmp_git_dir})
-        ctx = create_test_context(git_ops=git_ops)
+        graphite_ops = RealGraphiteOps()
+        ctx = create_test_context(git_ops=git_ops, graphite_ops=graphite_ops)
 
         graph = _load_graphite_branch_graph(ctx, repo_root)
 
@@ -212,13 +214,10 @@ def test_tree_command_displays_hierarchy() -> None:
     """Test that tree command shows worktree hierarchy."""
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
-        repo_root = env.repo_root / "repo"
-        repo_root.mkdir()
+        repo_root = env.root_worktree
+        git_dir = env.git_dir
 
-        # Create fake git directory with Graphite cache
-        git_dir = repo_root / ".git"
-        git_dir.mkdir()
-
+        # Write Graphite cache to git directory
         cache_data = {
             "branches": [
                 [
@@ -262,10 +261,12 @@ def test_tree_command_displays_hierarchy() -> None:
             show_pr_checks=False,
         )
 
-        ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
-
-        # Change to repo directory so discover_repo_context can find .git
-        os.chdir(repo_root)
+        ctx = create_test_context(
+            git_ops=git_ops,
+            graphite_ops=RealGraphiteOps(),
+            global_config=global_config_ops,
+            cwd=repo_root,
+        )
 
         result = runner.invoke(cli, ["tree"], obj=ctx)
 
@@ -286,11 +287,8 @@ def test_tree_command_filters_branches_without_worktrees() -> None:
     """
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
-        repo_root = env.repo_root / "repo"
-        repo_root.mkdir()
-
-        git_dir = repo_root / ".git"
-        git_dir.mkdir()
+        repo_root = env.root_worktree
+        git_dir = env.git_dir
 
         # Cache has 3 branches, but only 2 have worktrees
         cache_data = {
@@ -343,10 +341,12 @@ def test_tree_command_filters_branches_without_worktrees() -> None:
             show_pr_checks=False,
         )
 
-        ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
-
-        # Change to repo directory so discover_repo_context can find .git
-        os.chdir(repo_root)
+        ctx = create_test_context(
+            git_ops=git_ops,
+            graphite_ops=RealGraphiteOps(),
+            global_config=global_config_ops,
+            cwd=repo_root,
+        )
 
         result = runner.invoke(cli, ["tree"], obj=ctx)
 
@@ -361,11 +361,8 @@ def test_tree_command_fails_without_graphite_cache() -> None:
     """Test that tree command fails gracefully when Graphite cache is missing."""
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
-        repo_root = env.repo_root / "repo"
-        repo_root.mkdir()
-
-        git_dir = repo_root / ".git"
-        git_dir.mkdir()
+        repo_root = env.root_worktree
+        git_dir = env.git_dir
         # Note: No .graphite_cache_persist file created
 
         git_ops = FakeGitOps(
@@ -385,10 +382,12 @@ def test_tree_command_fails_without_graphite_cache() -> None:
             show_pr_checks=False,
         )
 
-        ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
-
-        # Change to repo directory so discover_repo_context can find .git
-        os.chdir(repo_root)
+        ctx = create_test_context(
+            git_ops=git_ops,
+            graphite_ops=RealGraphiteOps(),
+            global_config=global_config_ops,
+            cwd=repo_root,
+        )
 
         result = runner.invoke(cli, ["tree"], obj=ctx)
 
@@ -401,11 +400,8 @@ def test_tree_command_shows_nested_hierarchy() -> None:
     """Test tree command with 3-level nested hierarchy."""
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
-        repo_root = env.repo_root / "repo"
-        repo_root.mkdir()
-
-        git_dir = repo_root / ".git"
-        git_dir.mkdir()
+        repo_root = env.root_worktree
+        git_dir = env.git_dir
 
         cache_data = {
             "branches": [
@@ -454,10 +450,12 @@ def test_tree_command_shows_nested_hierarchy() -> None:
             show_pr_checks=False,
         )
 
-        ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
-
-        # Change to repo directory so discover_repo_context can find .git
-        os.chdir(repo_root)
+        ctx = create_test_context(
+            git_ops=git_ops,
+            graphite_ops=RealGraphiteOps(),
+            global_config=global_config_ops,
+            cwd=repo_root,
+        )
 
         result = runner.invoke(cli, ["tree"], obj=ctx)
 
@@ -478,11 +476,9 @@ def test_tree_command_shows_three_level_hierarchy_with_correct_indentation() -> 
     """
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
-        repo_root = env.repo_root / "repo"
-        repo_root.mkdir()
+        repo_root = env.root_worktree
 
         git_dir = repo_root / ".git"
-        git_dir.mkdir()
 
         # Setup 3-level stack matching the real bug scenario
         cache_data = {
@@ -542,10 +538,12 @@ def test_tree_command_shows_three_level_hierarchy_with_correct_indentation() -> 
             show_pr_checks=False,
         )
 
-        ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
-
-        # Change to repo directory so discover_repo_context can find .git
-        os.chdir(repo_root)
+        ctx = create_test_context(
+            git_ops=git_ops,
+            graphite_ops=RealGraphiteOps(),
+            global_config=global_config_ops,
+            cwd=repo_root,
+        )
 
         result = runner.invoke(cli, ["tree"], obj=ctx)
 
@@ -591,11 +589,9 @@ def test_tree_root_on_non_trunk_branch() -> None:
     """
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
-        repo_root = env.repo_root / "repo"
-        repo_root.mkdir()
+        repo_root = env.root_worktree
 
         git_dir = repo_root / ".git"
-        git_dir.mkdir()
 
         # Cache has cleanup as child of main, but only cleanup has a worktree
         cache_data = {
@@ -661,10 +657,12 @@ def test_tree_root_on_non_trunk_branch() -> None:
             show_pr_checks=False,
         )
 
-        ctx = create_test_context(git_ops=git_ops, global_config_ops=global_config_ops)
-
-        # Change to repo directory so discover_repo_context can find .git
-        os.chdir(repo_root)
+        ctx = create_test_context(
+            git_ops=git_ops,
+            graphite_ops=RealGraphiteOps(),
+            global_config=global_config_ops,
+            cwd=repo_root,
+        )
 
         result = runner.invoke(cli, ["tree"], obj=ctx)
 

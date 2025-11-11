@@ -267,7 +267,7 @@ def test_sync_handles_gt_sync_failure() -> None:
         result = runner.invoke(cli, ["sync"], obj=test_ctx)
 
         assert result.exit_code == 128
-        assert "gt sync failed with exit code 128" in result.output
+        assert "gt sync failed: exit code 128" in result.output
 
 
 def test_sync_identifies_deletable_workstacks() -> None:

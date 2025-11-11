@@ -1,12 +1,11 @@
 """Integration tests for git operations.
 
-These tests verify that both RealGitOps and FakeGitOps correctly handle git operations
-and return consistent results. Tests are parametrized to run against both implementations.
+These tests verify that RealGitOps correctly handles git operations with real git repositories.
+Integration tests use actual git subprocess calls to validate the abstractions.
 """
 
 import subprocess
 from pathlib import Path
-from typing import Literal
 
 import pytest
 
@@ -16,14 +15,10 @@ from tests.integration.conftest import (
     GitOpsWithExistingBranch,
     GitOpsWithWorktrees,
 )
-from workstack.core.gitops import WorktreeInfo
 
 
 def test_list_worktrees_single_repo(git_ops: GitOpsSetup) -> None:
-    """Test listing worktrees returns only main repository when no worktrees exist.
-
-    Parametrized to test both RealGitOps and FakeGitOps implementations.
-    """
+    """Test listing worktrees returns only main repository when no worktrees exist."""
     worktrees = git_ops.git_ops.list_worktrees(git_ops.repo)
 
     assert len(worktrees) == 1
@@ -65,14 +60,8 @@ def test_get_current_branch_normal(git_ops: GitOpsSetup) -> None:
 
 def test_get_current_branch_after_checkout(git_ops: GitOpsSetup) -> None:
     """Test getting current branch after checking out a different branch."""
-    # For real implementation, create and checkout new branch
-    # For fake, we need to set up the state properly
-    if type(git_ops.git_ops).__name__ == "RealGitOps":
-        subprocess.run(["git", "checkout", "-b", "feature"], cwd=git_ops.repo, check=True)
-    else:
-        # For fake, add a worktree with feature branch and checkout
-        git_ops.git_ops._default_branches[git_ops.repo] = "main"
-        git_ops.git_ops.checkout_branch(git_ops.repo, "feature")
+    # Create and checkout new branch
+    subprocess.run(["git", "checkout", "-b", "feature"], cwd=git_ops.repo, check=True)
 
     branch = git_ops.git_ops.get_current_branch(git_ops.repo)
 
@@ -81,20 +70,16 @@ def test_get_current_branch_after_checkout(git_ops: GitOpsSetup) -> None:
 
 def test_get_current_branch_detached_head(git_ops: GitOpsSetup) -> None:
     """Test getting current branch in detached HEAD state returns None."""
-    if type(git_ops.git_ops).__name__ == "RealGitOps":
-        # Get commit hash and checkout in detached state
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=git_ops.repo,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        commit_hash = result.stdout.strip()
-        subprocess.run(["git", "checkout", commit_hash], cwd=git_ops.repo, check=True)
-    else:
-        # For fake, set branch to None (detached HEAD)
-        git_ops.git_ops.checkout_detached(git_ops.repo, "HEAD")
+    # Get commit hash and checkout in detached state
+    result = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=git_ops.repo,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    commit_hash = result.stdout.strip()
+    subprocess.run(["git", "checkout", commit_hash], cwd=git_ops.repo, check=True)
 
     branch = git_ops.git_ops.get_current_branch(git_ops.repo)
 
@@ -118,117 +103,68 @@ def test_detect_default_branch_main(git_ops: GitOpsSetup) -> None:
     assert default_branch == "main"
 
 
-@pytest.mark.parametrize("git_ops_impl", ["real", "fake"])
 def test_detect_default_branch_master(
-    request: pytest.FixtureRequest,
     tmp_path: Path,
-    git_ops_impl: Literal["real", "fake"],
 ) -> None:
-    """Test detecting default branch when it's master."""
-    git_ops_impl_str = git_ops_impl
+    """Test detecting default branch when it's master using real git."""
+    from tests.integration.conftest import init_git_repo
+    from workstack.core.gitops import RealGitOps
 
     repo = tmp_path / "repo"
     repo.mkdir()
 
-    if git_ops_impl_str == "real":
-        # Create real repo with master branch
-        from tests.integration.conftest import init_git_repo
-
-        init_git_repo(repo, "master")
-        from workstack.core.gitops import RealGitOps
-
-        git_ops = RealGitOps()
-    else:
-        from tests.fakes.gitops import FakeGitOps
-
-        git_ops = FakeGitOps(
-            git_common_dirs={repo: repo / ".git"},
-            worktrees={repo: [WorktreeInfo(path=repo, branch="master")]},
-            current_branches={repo: "master"},
-            default_branches={repo: "master"},
-        )
+    # Create real repo with master branch
+    init_git_repo(repo, "master")
+    git_ops = RealGitOps()
 
     default_branch = git_ops.detect_default_branch(repo)
 
     assert default_branch == "master"
 
 
-@pytest.mark.parametrize("git_ops_impl", ["real", "fake"])
 def test_detect_default_branch_with_remote_head(
-    request: pytest.FixtureRequest,
     tmp_path: Path,
-    git_ops_impl: Literal["real", "fake"],
 ) -> None:
-    """Test detecting default branch using remote HEAD."""
-    git_ops_impl_str = git_ops_impl
+    """Test detecting default branch using remote HEAD with real git."""
+    from tests.integration.conftest import init_git_repo
+    from workstack.core.gitops import RealGitOps
 
     repo = tmp_path / "repo"
     repo.mkdir()
 
-    if git_ops_impl_str == "real":
-        from tests.integration.conftest import init_git_repo
+    init_git_repo(repo, "main")
 
-        init_git_repo(repo, "main")
+    # Set up remote HEAD manually
+    subprocess.run(
+        ["git", "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main"],
+        cwd=repo,
+        check=True,
+    )
 
-        # Set up remote HEAD manually
-        subprocess.run(
-            ["git", "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main"],
-            cwd=repo,
-            check=True,
-        )
-
-        from workstack.core.gitops import RealGitOps
-
-        git_ops = RealGitOps()
-    else:
-        from tests.fakes.gitops import FakeGitOps
-
-        git_ops = FakeGitOps(
-            git_common_dirs={repo: repo / ".git"},
-            worktrees={repo: [WorktreeInfo(path=repo, branch="main")]},
-            current_branches={repo: "main"},
-            default_branches={repo: "main"},
-        )
+    git_ops = RealGitOps()
 
     default_branch = git_ops.detect_default_branch(repo)
 
     assert default_branch == "main"
 
 
-@pytest.mark.parametrize("git_ops_impl", ["real", "fake"])
 def test_detect_default_branch_neither_exists(
-    request: pytest.FixtureRequest,
     tmp_path: Path,
-    git_ops_impl: Literal["real", "fake"],
 ) -> None:
-    """Test detecting default branch when neither main nor master exist raises SystemExit."""
-    git_ops_impl_str = git_ops_impl
+    """Test default branch detection when neither main nor master exist using real git."""
+    from tests.integration.conftest import init_git_repo
+    from workstack.core.gitops import RealGitOps
 
     repo = tmp_path / "repo"
     repo.mkdir()
 
-    if git_ops_impl_str == "real":
-        from tests.integration.conftest import init_git_repo
+    init_git_repo(repo, "trunk")
 
-        init_git_repo(repo, "trunk")
+    # Delete the trunk branch we just created (keep the commit)
+    subprocess.run(["git", "checkout", "--detach"], cwd=repo, check=True)
+    subprocess.run(["git", "branch", "-D", "trunk"], cwd=repo, check=True)
 
-        # Delete the trunk branch we just created (keep the commit)
-        subprocess.run(["git", "checkout", "--detach"], cwd=repo, check=True)
-        subprocess.run(["git", "branch", "-D", "trunk"], cwd=repo, check=True)
-
-        from workstack.core.gitops import RealGitOps
-
-        git_ops = RealGitOps()
-    else:
-        from tests.fakes.gitops import FakeGitOps
-
-        # Fake with no main/master default branch
-        git_ops = FakeGitOps(
-            git_common_dirs={repo: repo / ".git"},
-            worktrees={repo: [WorktreeInfo(path=repo, branch=None)]},
-            current_branches={repo: None},
-            default_branches={},  # No default branch configured
-        )
+    git_ops = RealGitOps()
 
     with pytest.raises(SystemExit):
         git_ops.detect_default_branch(repo)
@@ -283,24 +219,11 @@ def test_add_worktree_with_existing_branch(
 
     assert git_ops_with_existing_branch.wt_path.exists()
 
-    # Verify branch is checked out (or added to fake's tracking)
-    if type(git_ops_with_existing_branch.git_ops).__name__ == "FakeGitOps":
-        # Fake add_worktree creates directory and adds to worktrees list
-        # but doesn't set current_branch. Just verify the worktree was added
-        worktrees = git_ops_with_existing_branch.git_ops.list_worktrees(
-            git_ops_with_existing_branch.repo
-        )
-        feature_wt = next(
-            (wt for wt in worktrees if wt.path == git_ops_with_existing_branch.wt_path),
-            None,
-        )
-        assert feature_wt is not None
-        assert feature_wt.branch == "feature"
-    else:
-        branch = git_ops_with_existing_branch.git_ops.get_current_branch(
-            git_ops_with_existing_branch.wt_path
-        )
-        assert branch == "feature"
+    # Verify branch is checked out
+    branch = git_ops_with_existing_branch.git_ops.get_current_branch(
+        git_ops_with_existing_branch.wt_path
+    )
+    assert branch == "feature"
 
 
 def test_add_worktree_create_new_branch(
@@ -317,69 +240,35 @@ def test_add_worktree_create_new_branch(
 
     assert git_ops_with_existing_branch.wt_path.exists()
 
-    # Verify new branch is checked out (or added to fake's tracking)
-    if type(git_ops_with_existing_branch.git_ops).__name__ == "FakeGitOps":
-        # Fake add_worktree creates directory and adds to worktrees list
-        # but doesn't set current_branch. Just verify the worktree was added
-        # with new-feature branch
-        worktrees = git_ops_with_existing_branch.git_ops.list_worktrees(
-            git_ops_with_existing_branch.repo
-        )
-        new_feature_wt = next(
-            (wt for wt in worktrees if wt.path == git_ops_with_existing_branch.wt_path),
-            None,
-        )
-        assert new_feature_wt is not None
-        assert new_feature_wt.branch == "new-feature"
-    else:
-        branch = git_ops_with_existing_branch.git_ops.get_current_branch(
-            git_ops_with_existing_branch.wt_path
-        )
-        assert branch == "new-feature"
+    # Verify new branch is checked out
+    branch = git_ops_with_existing_branch.git_ops.get_current_branch(
+        git_ops_with_existing_branch.wt_path
+    )
+    assert branch == "new-feature"
 
 
-@pytest.mark.parametrize("git_ops_impl", ["real", "fake"])
 def test_add_worktree_from_specific_ref(
-    request: pytest.FixtureRequest,
     tmp_path: Path,
-    git_ops_impl: Literal["real", "fake"],
 ) -> None:
-    """Test adding worktree from specific ref."""
-    git_ops_impl_str = git_ops_impl
+    """Test adding worktree from specific ref using real git."""
+    from tests.integration.conftest import init_git_repo
+    from workstack.core.gitops import RealGitOps
 
     repo = tmp_path / "repo"
     repo.mkdir()
     wt = tmp_path / "wt"
 
-    if git_ops_impl_str == "real":
-        from tests.integration.conftest import init_git_repo
+    init_git_repo(repo, "main")
 
-        init_git_repo(repo, "main")
+    # Create another commit on main
+    (repo / "file.txt").write_text("content\n", encoding="utf-8")
+    subprocess.run(["git", "add", "file.txt"], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-m", "Add file"], cwd=repo, check=True)
 
-        # Create another commit on main
-        (repo / "file.txt").write_text("content\n", encoding="utf-8")
-        subprocess.run(["git", "add", "file.txt"], cwd=repo, check=True)
-        subprocess.run(["git", "commit", "-m", "Add file"], cwd=repo, check=True)
+    # Create branch at main
+    subprocess.run(["git", "branch", "old-main", "HEAD~1"], cwd=repo, check=True)
 
-        # Create branch at main
-        subprocess.run(["git", "branch", "old-main", "HEAD~1"], cwd=repo, check=True)
-
-        from workstack.core.gitops import RealGitOps
-
-        git_ops = RealGitOps()
-    else:
-        from tests.fakes.gitops import FakeGitOps
-
-        # Create directory structure for fake
-        repo.mkdir(exist_ok=True)
-        (repo / ".git").mkdir(exist_ok=True)
-
-        git_ops = FakeGitOps(
-            git_common_dirs={repo: repo / ".git"},
-            worktrees={repo: [WorktreeInfo(path=repo, branch="main")]},
-            current_branches={repo: "main"},
-            default_branches={repo: "main"},
-        )
+    git_ops = RealGitOps()
 
     git_ops.add_worktree(repo, wt, branch="test-branch", ref="old-main", create_branch=True)
 
@@ -409,11 +298,6 @@ def test_move_worktree(git_ops_with_worktrees: GitOpsWithWorktrees) -> None:
     """Test moving worktree to new location."""
     old_path = git_ops_with_worktrees.worktrees[0]
 
-    # For real implementation, worktrees already exist
-    # For fake, need to create the directory
-    if not old_path.exists():
-        old_path.mkdir(parents=True, exist_ok=True)
-
     new_base_path = git_ops_with_worktrees.repo.parent / "new"
     new_base_path.mkdir(parents=True, exist_ok=True)
 
@@ -427,8 +311,7 @@ def test_move_worktree(git_ops_with_worktrees: GitOpsWithWorktrees) -> None:
     # Verify git still tracks it correctly
     worktrees = git_ops_with_worktrees.git_ops.list_worktrees(git_ops_with_worktrees.repo)
     moved_wt = next(wt for wt in worktrees if wt.branch == "feature-1")
-    # For RealGitOps, it moves to new/wt1 (subdirectory)
-    # For FakeGitOps, it moves to new (since we control the destination)
+    # Git moves to new/wt1 (subdirectory)
     assert moved_wt.path in [new_base_path, new_base_path / old_path.name]
 
 
@@ -468,38 +351,22 @@ def test_remove_worktree_with_force(git_ops_with_worktrees: GitOpsWithWorktrees)
     assert worktrees[0].branch == "main"
 
 
-@pytest.mark.parametrize("git_ops_impl", ["real", "fake"])
 def test_checkout_branch(
-    request: pytest.FixtureRequest,
     tmp_path: Path,
-    git_ops_impl: Literal["real", "fake"],
 ) -> None:
-    """Test checking out a branch."""
-    git_ops_impl_str = git_ops_impl
+    """Test checking out a branch using real git."""
+    from tests.integration.conftest import init_git_repo
+    from workstack.core.gitops import RealGitOps
 
     repo = tmp_path / "repo"
     repo.mkdir()
 
-    if git_ops_impl_str == "real":
-        from tests.integration.conftest import init_git_repo
+    init_git_repo(repo, "main")
 
-        init_git_repo(repo, "main")
+    # Create a new branch
+    subprocess.run(["git", "branch", "feature"], cwd=repo, check=True)
 
-        # Create a new branch
-        subprocess.run(["git", "branch", "feature"], cwd=repo, check=True)
-
-        from workstack.core.gitops import RealGitOps
-
-        git_ops = RealGitOps()
-    else:
-        from tests.fakes.gitops import FakeGitOps
-
-        git_ops = FakeGitOps(
-            git_common_dirs={repo: repo / ".git"},
-            worktrees={repo: [WorktreeInfo(path=repo, branch="main")]},
-            current_branches={repo: "main"},
-            default_branches={repo: "main"},
-        )
+    git_ops = RealGitOps()
 
     # Checkout the branch
     git_ops.checkout_branch(repo, "feature")
@@ -509,52 +376,30 @@ def test_checkout_branch(
     assert branch == "feature"
 
 
-@pytest.mark.parametrize("git_ops_impl", ["real", "fake"])
 def test_checkout_branch_in_worktree(
-    request: pytest.FixtureRequest,
     tmp_path: Path,
-    git_ops_impl: Literal["real", "fake"],
 ) -> None:
-    """Test checking out a branch within a worktree."""
-    git_ops_impl_str = git_ops_impl
+    """Test checking out a branch within a worktree using real git."""
+    from tests.integration.conftest import init_git_repo
+    from workstack.core.gitops import RealGitOps
 
     repo = tmp_path / "repo"
     repo.mkdir()
     wt = tmp_path / "wt"
 
-    if git_ops_impl_str == "real":
-        from tests.integration.conftest import init_git_repo
+    init_git_repo(repo, "main")
 
-        init_git_repo(repo, "main")
+    # Create worktree with feature-1
+    subprocess.run(
+        ["git", "worktree", "add", "-b", "feature-1", str(wt)],
+        cwd=repo,
+        check=True,
+    )
 
-        # Create worktree with feature-1
-        subprocess.run(
-            ["git", "worktree", "add", "-b", "feature-1", str(wt)],
-            cwd=repo,
-            check=True,
-        )
+    # Create another branch from the worktree
+    subprocess.run(["git", "branch", "feature-2"], cwd=wt, check=True)
 
-        # Create another branch from the worktree
-        subprocess.run(["git", "branch", "feature-2"], cwd=wt, check=True)
-
-        from workstack.core.gitops import RealGitOps
-
-        git_ops = RealGitOps()
-    else:
-        from tests.fakes.gitops import FakeGitOps
-
-        wt.mkdir()
-        git_ops = FakeGitOps(
-            git_common_dirs={repo: repo / ".git", wt: repo / ".git"},
-            worktrees={
-                repo: [
-                    WorktreeInfo(path=repo, branch="main"),
-                    WorktreeInfo(path=wt, branch="feature-1"),
-                ]
-            },
-            current_branches={repo: "main", wt: "feature-1"},
-            default_branches={repo: "main"},
-        )
+    git_ops = RealGitOps()
 
     # Checkout feature-2 in the worktree
     git_ops.checkout_branch(wt, "feature-2")

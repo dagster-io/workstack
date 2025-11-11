@@ -19,51 +19,58 @@ from workstack.core.gitops import WorktreeInfo
 from workstack.core.global_config import GlobalConfig
 
 
+def _test_sentinel_path() -> Path:
+    """Return sentinel path for tests that don't need real filesystem.
+
+    Exploration: Investigating pattern where tests use fake paths to eliminate
+    filesystem dependencies when only validating CLI logic (exit codes, messages).
+    """
+    return Path("/test/sentinel/sync")
+
+
 def test_sync_requires_graphite() -> None:
     """Test that sync command requires Graphite to be enabled."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
+    cwd = _test_sentinel_path()
+    workstacks_root = cwd / "workstacks"
 
-        # Create minimal git repo structure
-        repo_root = cwd
-        (repo_root / ".git").mkdir()
+    # Create minimal git repo structure
+    repo_root = cwd
 
-        git_ops = FakeGitOps(
-            git_common_dirs={cwd: cwd / ".git"},
-            worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main"),
-                ],
-            },
-        )
+    git_ops = FakeGitOps(
+        git_common_dirs={cwd: cwd / ".git"},
+        worktrees={
+            repo_root: [
+                WorktreeInfo(path=repo_root, branch="main"),
+            ],
+        },
+    )
 
-        # use_graphite=False: Test that graphite is required
-        global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
+    # use_graphite=False: Test that graphite is required
+    global_config_ops = GlobalConfig(
+        workstacks_root=workstacks_root,
+        use_graphite=False,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
+    )
 
-        graphite_ops = FakeGraphiteOps()
+    graphite_ops = FakeGraphiteOps()
 
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            github_ops=FakeGitHubOps(),
-            shell_ops=FakeShellOps(),
-            cwd=cwd,
-            dry_run=False,
-        )
+    test_ctx = WorkstackContext.for_test(
+        git_ops=git_ops,
+        global_config=global_config_ops,
+        graphite_ops=graphite_ops,
+        github_ops=FakeGitHubOps(),
+        shell_ops=FakeShellOps(),
+        cwd=cwd,
+        dry_run=False,
+    )
 
-        result = runner.invoke(cli, ["sync"], obj=test_ctx)
+    result = runner.invoke(cli, ["sync"], obj=test_ctx)
 
-        assert result.exit_code == 1
-        assert "requires Graphite" in result.output
+    assert result.exit_code == 1
+    assert "requires Graphite" in result.output
 
 
 def test_sync_runs_gt_sync_from_root() -> None:

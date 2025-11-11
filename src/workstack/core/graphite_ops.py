@@ -17,6 +17,8 @@ from pathlib import Path
 from subprocess import DEVNULL
 from typing import Any
 
+import click
+
 from workstack.core.branch_metadata import BranchMetadata
 from workstack.core.github_ops import PullRequestInfo, _parse_github_pr_url
 from workstack.core.gitops import GitOps
@@ -310,9 +312,9 @@ class RealGraphiteOps(GraphiteOps):
     def sync(self, repo_root: Path, *, force: bool, quiet: bool) -> None:
         """Run gt sync to synchronize with remote.
 
-        Output goes directly to sys.stdout/sys.stderr to avoid capture by
-        CliRunner when running in shell integration mode. This ensures gt sync
-        output doesn't leak into the shell script that gets eval'd.
+        Error output (stderr) is always captured to ensure CalledProcessError
+        includes complete error messages for debugging. In verbose mode (!quiet),
+        stderr is displayed to the user after successful execution.
 
         Note: Uses try/except as an acceptable error boundary for handling gt CLI
         availability. We cannot reliably check gt installation status a priori.
@@ -328,13 +330,18 @@ class RealGraphiteOps(GraphiteOps):
         if quiet:
             cmd.append("--quiet")
 
-        subprocess.run(
+        result = subprocess.run(
             cmd,
             cwd=repo_root,
             check=True,
             stdout=DEVNULL if quiet else sys.stdout,
-            stderr=DEVNULL if quiet else sys.stderr,
+            stderr=subprocess.PIPE,
+            text=True,
         )
+
+        # Display stderr in verbose mode after successful execution
+        if not quiet and result.stderr:
+            click.echo(result.stderr, err=True, nl=False)
 
         # Invalidate branches cache - gt sync modifies Graphite metadata
         self._branches_cache = None

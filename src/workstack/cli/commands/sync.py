@@ -137,8 +137,9 @@ def sync_cmd(
         try:
             ctx.graphite_ops.sync(repo.root, force=force, quiet=not verbose)
         except subprocess.CalledProcessError as e:
+            error_detail = e.stderr.strip() if e.stderr else f"exit code {e.returncode}"
             _emit(
-                f"Error: gt sync failed with exit code {e.returncode}",
+                f"Error: gt sync failed: {error_detail}",
                 script_mode=script,
                 error=True,
             )

@@ -1,58 +1,64 @@
 ---
-description: Enhance an implementation plan from context with clarifying questions and semantic preservation
+description: Create a workstack worktree from an implementation plan in context (with interactive enhancement for autonomous execution)
 ---
 
-# /workstack:enhance-plan
+# /workstack:create-planned-stack
+
+⚠️ **CRITICAL: This command ONLY sets up the workspace - it does NOT implement code!**
 
 ## Goal
 
-**Extract and enhance an implementation plan from conversation context for clarity and autonomous execution.**
+**Create a workstack worktree from an implementation plan, optionally enhancing it for clarity.**
 
-This command finds a plan in the conversation, optionally applies guidance, asks clarifying questions, preserves semantic understanding, and outputs an enhanced plan as markdown text.
+This command extracts a plan from conversation context, saves it to disk, and creates a worktree for implementation. For complex or unclear plans, it can interactively enhance them through clarifying questions and phase structuring.
 
 **What this command does:**
 
 - ✅ Find plan in conversation
+- ✅ Interactively enhance plan for autonomous execution
 - ✅ Apply optional guidance to plan
-- ✅ Interactively enhance plan through clarifying questions
-- ✅ Preserve semantic understanding and context
 - ✅ Structure complex plans into phases (when beneficial)
-- ✅ Output enhanced plan as markdown text
+- ✅ Save enhanced plan to disk
+- ✅ Create worktree with `workstack create --plan`
 
-**What this command does NOT do:**
+**What happens AFTER (in separate command):**
 
-- ❌ Save plan to disk
-- ❌ Create worktree
-- ❌ Check plan mode (works in ANY mode)
+- ⏭️ Switch and implement: `workstack switch <name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
 
 ## What Happens
 
 When you run this command, these steps occur:
 
-1. **Detect Plan** - Search conversation for implementation plan
-2. **Apply Guidance** - Merge optional guidance into plan (if provided)
-3. **Extract Semantic Understanding** - Preserve valuable context discovered during planning
-4. **Interactive Enhancement** - Analyze plan and ask clarifying questions if needed
-5. **Output Enhanced Plan** - Display the enhanced plan as markdown text
+1. **Check Plan Mode** - If currently in plan mode, inform user to exit and rerun command, then abort
+2. **Verify Scope** - Confirm we're in a git repository with workstack available
+3. **Detect Plan** - Search conversation for implementation plan
+4. **Apply Guidance** - Merge optional guidance into plan (if provided)
+5. **Interactive Enhancement** - Analyze plan and ask clarifying questions if needed
+6. **Generate Filename** - Derive filename from plan title
+7. **Detect Root** - Find worktree root directory
+8. **Save Plan** - Write enhanced plan to disk as markdown file
+9. **Create Worktree** - Run `workstack create --plan` command
+10. **Display Next Steps** - Show commands to switch and implement
 
 ## Usage
 
 ```bash
-/workstack:enhance-plan [guidance]
+/workstack:create-planned-stack [guidance]
 ```
 
 **Examples:**
 
-- `/workstack:enhance-plan` - Enhance plan from context
-- `/workstack:enhance-plan "Make error handling more robust and add retry logic"` - Apply guidance to plan
-- `/workstack:enhance-plan "Fix: Use LBYL instead of try/except throughout"` - Apply corrections to plan
+- `/workstack:create-planned-stack` - Create worktree from plan
+- `/workstack:create-planned-stack "Make error handling more robust and add retry logic"` - Apply guidance to plan
+- `/workstack:create-planned-stack "Fix: Use LBYL instead of try/except throughout"` - Apply corrections to plan
 
-**Next step after enhancement:**
-Use `/workstack:create-plan-stack` to save the enhanced plan and create a worktree.
+**For detailed interaction examples, see [EXAMPLES.md](./EXAMPLES.md)**
 
 ## Prerequisites
 
 - An implementation plan must exist in conversation
+- Current working directory must be in a workstack repository
+- The plan should not already be saved to disk at repository root
 - (Optional) Guidance text for final corrections/additions to the plan
 
 ## Semantic Understanding & Context Preservation
@@ -99,16 +105,18 @@ Use `/workstack:create-plan-stack` to save the enhanced plan and create a worktr
 
 This command succeeds when ALL of the following are true:
 
-**Plan Enhancement:**
+**Plan Extraction:**
 ✅ Implementation plan extracted from conversation context
 ✅ If guidance provided, it has been applied to the plan
-✅ Semantic understanding preserved in Context & Understanding section
-✅ Clarifying questions asked and incorporated (if needed)
-✅ Plan structured into phases (if beneficial)
 
-**Output:**
-✅ Enhanced plan displayed as markdown text
-✅ User informed about next step (`/workstack:create-plan-stack`)
+**File & Worktree Creation:**
+✅ Plan saved to `<worktree-root>/<filename>-plan.md`
+✅ Worktree created with `workstack create --plan`
+✅ Worktree contains `.PLAN.md` file (moved by workstack)
+✅ Worktree listed in `workstack list`
+
+**Next Steps:**
+✅ Next command displayed: `workstack switch <name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
 
 ## Troubleshooting
 
@@ -121,6 +129,31 @@ This command succeeds when ALL of the following are true:
 - Plan should have headers like "## Implementation Plan" or numbered steps
 - Re-paste plan in conversation if needed
 
+### "Plan file already exists"
+
+**Cause:** File with same name exists at repository root
+**Solution:**
+
+- Change plan title to generate different filename
+- Delete existing file: `rm <worktree-root>/<filename>-plan.md`
+
+### "Worktree already exists"
+
+**Cause:** Worktree with derived name already exists
+**Solution:**
+
+- List worktrees: `workstack list`
+- Remove existing: `workstack remove <name>`
+- Or switch to existing: `workstack switch <name>`
+
+### "Failed to parse workstack output"
+
+**Cause:** Workstack version doesn't support --json flag
+**Solution:**
+
+- Check version: `workstack --version`
+- Update: `uv pip install --upgrade workstack`
+
 ### Enhancement suggestions not applied correctly
 
 **Cause:** Ambiguous user responses or misinterpretation
@@ -128,15 +161,104 @@ This command succeeds when ALL of the following are true:
 
 - Be specific in responses to clarifying questions
 - Use clear action words: "Fix:", "Add:", "Change:", "Reorder:"
-- Re-run command with clearer guidance
+- Or skip enhancement and edit the .PLAN.md file after creation
 
 ---
 
 ## Agent Instructions
 
-You are executing the `/workstack:enhance-plan` command. Follow these steps carefully:
+You are executing the `/workstack:create-planned-stack` command. Follow these steps carefully:
 
-### Step 1: Detect Implementation Plan in Context
+### Step 1: Check Plan Mode and Abort (If Active)
+
+**Detection Strategy:**
+
+Plan mode blocks write operations. Test this directly by attempting a harmless write operation.
+
+**How to Detect Plan Mode:**
+
+1. **Generate unique temp filename:**
+   - Use current timestamp or random string to ensure uniqueness
+   - Format: `/tmp/claude-plan-test-{unique-id}.tmp`
+   - Example: `/tmp/claude-plan-test-1699564832.tmp`
+
+2. **Attempt to create test file:**
+   - Use Write tool to create the temp file
+   - Content: Single space character ` ` (minimal content)
+   - This tests write capability without side effects
+
+3. **Interpret the result:**
+   - **If Write succeeds** → Plan mode is OFF
+     - Immediately use Bash to delete: `rm /tmp/claude-plan-test-{unique-id}.tmp`
+     - Proceed to Step 2
+   - **If Write fails with ANY error** → Plan mode is ON
+     - Display plan mode warning (below)
+     - Abort execution immediately
+
+**Why This Works:**
+
+- **Deterministic**: Tests actual write capability, not proxy signals
+- **Reliable**: Directly tests the restriction that matters for this command
+- **No false positives**: If we can write to /tmp/, we can write plan files
+- **No false negatives**: If plan mode blocks writes, this catches it
+- **Safe**: /tmp/ location won't pollute repository or user files
+- **Self-cleaning**: Temp file deleted immediately after successful test
+
+**If Plan Mode is DETECTED (Write failed):**
+
+Display this message and STOP execution immediately:
+
+```
+⚠️ Plan Mode Detected
+
+This command cannot run while plan mode is active (write operations are blocked).
+
+To proceed:
+1. Exit plan mode by pressing Shift+Tab
+2. Rerun this command: /workstack:create-planned-stack
+
+Note: This command requires file write permissions to save plans and create worktrees.
+```
+
+**DO NOT proceed to Step 2 if plan mode is detected.**
+
+**If Plan Mode is NOT detected (Write succeeded):**
+
+- Clean up temp file with: `rm /tmp/claude-plan-test-{unique-id}.tmp`
+- Continue to Step 2 normally
+
+### Step 2: Verify Scope and Constraints
+
+**Error Handling Template:**
+All errors must follow this format:
+
+```
+❌ Error: [Brief description in 5-10 words]
+
+Details: [Specific error message, relevant context, or diagnostic info]
+
+Suggested action: [1-3 concrete steps to resolve]
+```
+
+**YOUR ONLY TASKS:**
+
+1. Extract implementation plan from conversation
+2. Interactively enhance plan for autonomous execution
+3. Apply guidance modifications if provided
+4. Save enhanced plan to disk as markdown file
+5. Run `workstack create --plan <file>`
+6. Display next steps to user
+
+**FORBIDDEN ACTIONS:**
+
+- Writing ANY code files (.py, .ts, .js, etc.)
+- Making ANY edits to existing codebase
+- Running ANY commands except `git rev-parse` and `workstack create`
+- Implementing ANY part of the plan
+
+This command sets up the workspace. Implementation happens in the worktree via `/workstack:implement-plan`.
+
+### Step 3: Detect Implementation Plan in Context
 
 Search conversation history for an implementation plan:
 
@@ -188,7 +310,7 @@ Suggested action:
   3. Use headers and lists to structure the plan
 ```
 
-### Step 2: Apply Optional Guidance to Plan
+### Step 4: Apply Optional Guidance to Plan
 
 **Check for guidance argument:**
 
@@ -235,7 +357,7 @@ Details: Guidance provided: "[first 100 chars of guidance]"
 
 Suggested action:
   1. First create or present an implementation plan
-  2. Then run: /workstack:enhance-plan "your guidance here"
+  2. Then run: /workstack:create-planned-stack "your guidance here"
 ```
 
 **Multi-line guidance limitation:**
@@ -243,7 +365,9 @@ Note: Guidance must be provided as a single-line string in quotes. Multi-line gu
 
 If no guidance provided: use the original plan as-is
 
-### Step 3: Extract and Preserve Semantic Understanding
+**Output:** Final plan content (original or modified) ready for Step 6 processing
+
+### Step 5: Extract and Preserve Semantic Understanding
 
 Analyze the planning discussion to extract valuable context that implementing agents would find expensive to rediscover. Use the structured template sections to organize discoveries.
 
@@ -370,7 +494,9 @@ Examples to extract:
 5. **Link to implementation steps** - ensure every context item connects to at least one step
 6. **Flag orphaned context** - context without corresponding steps is probably not relevant
 
-### Step 4: Interactive Plan Enhancement
+**Output:** Enhanced plan with populated Context & Understanding sections, ready for Step 6 interactive enhancement
+
+### Step 6: Interactive Plan Enhancement
 
 Analyze the plan for common ambiguities and ask clarifying questions when helpful. Focus on practical improvements that make implementation clearer.
 
@@ -500,7 +626,7 @@ Were any approaches considered but rejected? If so, why?
 
 #### Check for Semantic Understanding
 
-After clarifying questions, check if you discovered valuable context during planning. If relevant, include it in the plan's "Context & Understanding" section.
+After clarifying questions, check if you discovered valuable context during planning (see "Semantic Understanding & Context Preservation" section). If relevant, include it in the plan's "Context & Understanding" section.
 
 #### Suggest Phase Decomposition (When Helpful)
 
@@ -569,6 +695,8 @@ Preserve valuable context discovered during planning. Include items that:
 - Took time to discover and aren't obvious from code
 - Would change implementation if known vs. unknown
 - Would cause bugs if missed (especially subtle or delayed bugs)
+
+See EXAMPLES.md for complete examples of excellent context preservation.
 
 #### API/Tool Quirks
 
@@ -649,7 +777,33 @@ Use hybrid context linking:
 
 ### Context & Understanding
 
-[Same sections as single-phase plan]
+Preserve valuable context discovered during planning. Include items that:
+
+- Took time to discover and aren't obvious from code
+- Would change implementation if known vs. unknown
+- Would cause bugs if missed (especially subtle or delayed bugs)
+
+See EXAMPLES.md for complete examples of excellent context preservation.
+
+#### API/Tool Quirks
+
+[Undocumented behaviors, timing issues, version constraints, edge cases]
+
+#### Architectural Insights
+
+[Why design decisions were made, not just what was decided]
+
+#### Domain Logic & Business Rules
+
+[Non-obvious requirements, edge cases, compliance rules]
+
+#### Complex Reasoning
+
+[Alternatives considered and why some were rejected]
+
+#### Known Pitfalls
+
+[What looks right but causes problems - specific gotchas]
 
 ### Phase 1: [Name]
 
@@ -658,7 +812,23 @@ Use hybrid context linking:
 
 **Steps:**
 
-[Same step format as single-phase]
+Use hybrid context linking:
+
+- Inline [CRITICAL:] tags for must-not-miss warnings
+- "Related Context:" subsections for detailed explanations
+
+1. **[Action]**: [What to do] in `[exact/file/path]`
+   [CRITICAL: Any security or breaking change warnings]
+   - Success: [How to verify]
+   - On failure: [Recovery action]
+
+   Related Context:
+   - [Why this approach was chosen]
+   - [What constraints or gotchas apply]
+   - [Link to relevant Context & Understanding sections above]
+
+2. Add tests in [test file]
+3. Validate with `/ensure-ci`
 
 ### Phase 2: [Name]
 
@@ -679,11 +849,28 @@ Before finalizing the plan, ensure context is properly linked to implementation 
    - Irreversible operations
    - Race conditions or timing requirements
 
+   Example:
+
+   ```markdown
+   1. **Create database migration**: Add migration 0001_initial.py
+      [CRITICAL: Run backup BEFORE migration. Irreversible schema change.]
+   ```
+
 2. **"Related Context:" subsections** - For detailed explanations
    - Link to relevant Context & Understanding sections
    - Explain WHY this approach was chosen
    - Document discovered constraints or gotchas
    - Reference rejected alternatives
+
+   Example:
+
+   ```markdown
+   Related Context:
+
+   - Migration is 4-phase to allow rollback (see Architectural Insights)
+   - Foreign keys must be created in dependency order (see API/Tool Quirks)
+   - See Known Pitfalls for DROP COLUMN version constraint
+   ```
 
 **Validation Checklist:**
 
@@ -735,34 +922,327 @@ Suggested fix: Include rollback procedure or backup strategy
 - Don't use percentages or scores
 - Focus on actionability
 
-### Step 5: Output Enhanced Plan
+**Output:** Final enhanced plan content ready for Step 7 processing
 
-Display the complete enhanced plan to the user as markdown text:
+### Step 7: Generate Filename from Plan
+
+**Filename Extraction Algorithm:**
+
+1. **Try H1 header** - Look for `# Title` at start of document
+2. **Try H2 header** - Look for `## Title` if no H1
+3. **Try prefix patterns** - Look for text after "Plan:", "Implementation Plan:"
+4. **Fallback to first line** - Use first non-empty line as last resort
+
+**Validation and Cleanup:**
+
+1. Extract raw title using above priority
+2. Convert to lowercase
+3. Replace spaces with hyphens
+4. Remove all special characters except hyphens and alphanumeric
+5. Handle Unicode: Normalize to NFC, remove emojis/special symbols
+6. Strip any trailing hyphens or slashes: `base_name = base_name.rstrip('-/')`
+7. Ensure at least one alphanumeric character remains
+
+**No length restriction:** DO NOT truncate the base name. The base name is limited to 30 characters by `sanitize_worktree_name()`, but the final name (with date suffix) can exceed 30 characters. Workstack no longer truncates after adding the date suffix.
+
+**Resulting names:**
+
+- Filename: `<kebab-case-base>-plan.md` (any length - no LLM truncation)
+- Worktree name: `<kebab-case-base>-YY-MM-DD` (base ≤30 chars, final can be ~39 chars)
+- Branch name: `<kebab-case-base>-YY-MM-DD` (matches worktree exactly)
+
+**If extraction fails:**
+
+If cleanup results in empty string or no alphanumeric chars, prompt the user:
+
+```
+❌ Error: Could not extract valid plan name from title
+
+Details: Plan title contains only special characters or is empty
+
+Suggested action:
+  1. Add a clear title to your plan (e.g., # Feature Name)
+  2. Or provide a name: What would you like to name this plan?
+```
+
+Use AskUserQuestion tool to get the plan name from the user if extraction fails.
+
+**Example transformations:**
+
+- "User Authentication System" →
+  - Base: `user-authentication-system` (27 chars)
+  - Filename: `user-authentication-system-plan.md`
+  - Worktree & Branch: `user-authentication-system-25-11-09` (36 chars - exceeds 30!)
+
+- "Version-Specific Dignified Python Kits Structure" →
+  - Base: `version-dignified-python-kits` (29 chars, intelligently shortened)
+  - Rationale: Removed "specific", "structure"; kept key terms
+  - Filename: `version-dignified-python-kits-plan.md`
+  - Worktree & Branch: `version-dignified-python-kits-25-11-09` (38 chars - exceeds 30!)
+
+- "Fix: Database Connection Issues" →
+  - Base: `fix-database-connection-issues` (30 chars)
+  - Filename: `fix-database-connection-issues-plan.md`
+  - Worktree & Branch: `fix-database-connection-issues-25-11-09` (39 chars - at max!)
+
+- "Refactor Commands to Use GraphiteOps Abstraction" →
+  - Base: `refactor-commands-graphite-ops` (30 chars, intelligently shortened)
+  - Rationale: Removed filler words "to", "use"; kept key terms "refactor", "commands", "graphite", "ops"
+  - Alternative valid approaches: `refactor-cmds-graphite-ops` (26 chars), `refactor-graphiteops-abstr` (26 chars)
+  - Filename: `refactor-commands-graphite-ops-plan.md`
+  - Worktree & Branch: `refactor-commands-graphite-ops-25-11-09` (39 chars - at max!)
+
+- "🚀 Awesome Feature!!!" →
+  - Base: `awesome-feature` (15 chars, emojis removed)
+  - Filename: `awesome-feature-plan.md`
+  - Worktree & Branch: `awesome-feature-25-11-09` (24 chars)
+
+- "This Is A Very Long Feature Name That Definitely Exceeds The Thirty Character Limit" →
+  - Base: `very-long-feature-name` (22 chars, intelligently shortened)
+  - Rationale: Removed redundant words "this", "is", "a", "that", "definitely", "exceeds", etc.; kept meaningful core
+  - Alternative valid approaches: `long-feature-exceeds-limit` (26 chars), `very-long-feature-exceeds` (25 chars)
+  - Filename: `very-long-feature-name-plan.md`
+  - Worktree & Branch: `very-long-feature-name-25-11-09` (31 chars - slightly over 30!)
+
+- "Implement User Profile Settings Page with Dark Mode Support" →
+  - Base: `user-profile-settings-dark` (26 chars, intelligently shortened)
+  - Rationale: Kept "user", "profile", "settings", "dark"; removed "implement", "page", "with", "mode", "support"
+  - Alternative valid approaches: `impl-profile-settings-dark` (26 chars), `user-settings-dark-mode` (23 chars)
+  - Filename: `user-profile-settings-dark-plan.md`
+  - Worktree & Branch: `user-profile-settings-dark-25-11-09` (35 chars - exceeds 30!)
+
+- "###" (only special chars) → Prompt user for name
+
+### Step 8: Detect Worktree Root
+
+Execute: `git rev-parse --show-toplevel`
+
+This returns the absolute path to the root of the current worktree. Store this as `<worktree-root>` for use in subsequent steps.
+
+**If the command fails:**
+
+```
+❌ Error: Could not detect worktree root
+
+Details: Not in a git repository or git command failed
+
+Suggested action:
+  1. Ensure you are in a valid git repository
+  2. Run: git status (to verify git is working)
+  3. Check if .git directory exists
+```
+
+### Step 9: Save Plan to Disk
+
+**Pre-save validation:**
+
+1. **Verify filename base length** (CRITICAL):
+   - Extract base name from `<derived-filename>` (remove `-plan.md` suffix)
+   - MUST be ≤ 30 characters
+   - If > 30 characters, this is an implementation bug - the filename generation in Step 7 failed
+
+```
+❌ Error: Internal error - filename base exceeds 30 characters
+
+Details: Generated base name '<base>' is <length> characters (max: 30)
+
+This is a bug in the filename generation algorithm. The base should have been
+truncated to 30 characters in Step 7.
+
+Suggested action:
+  1. Report this as a bug in /workstack:create-planned-stack
+  2. Manually truncate the plan title and rerun the command
+```
+
+2. **Check if file already exists** at `<worktree-root>/<derived-filename>`:
+
+```
+❌ Error: Plan file already exists
+
+Details: File exists at: <worktree-root>/<derived-filename>
+
+Suggested action:
+  1. Change plan title to generate different filename
+  2. Or delete existing: rm <worktree-root>/<derived-filename>
+  3. Or choose different plan name
+```
+
+**Save the plan:**
+
+Use the Write tool to save:
+
+- Path: `<worktree-root>/<derived-filename>`
+- Content: Full enhanced plan markdown content
+- Verify file creation
+
+**If save fails:**
+
+```
+❌ Error: Failed to save plan file
+
+Details: [specific write error from tool]
+
+Suggested action:
+  1. Check file permissions in repository root
+  2. Verify available disk space
+  3. Ensure path is valid: <worktree-root>/<derived-filename>
+```
+
+### Step 10: Create Worktree with Plan
+
+Execute: `workstack create --plan <worktree-root>/<filename> --json --stay`
+
+**Parse JSON output:**
+
+Expected JSON structure:
+
+```json
+{
+  "worktree_name": "feature-name",
+  "worktree_path": "/path/to/worktree",
+  "branch_name": "feature-branch",
+  "plan_file": "/path/to/.PLAN.md",
+  "status": "created"
+}
+```
+
+**Validate all required fields exist:**
+
+- `worktree_name` (string, non-empty)
+- `worktree_path` (string, valid path)
+- `branch_name` (string, non-empty)
+- `plan_file` (string, path to .PLAN.md)
+- `status` (string: "created" or "exists")
+
+**Handle errors:**
+
+**Missing fields in JSON:**
+
+```
+❌ Error: Invalid workstack output - missing required fields
+
+Details: Missing: [list of missing fields]
+
+Suggested action:
+  1. Check workstack version: workstack --version
+  2. Update if needed: uv pip install --upgrade workstack
+  3. Report issue if version is current
+```
+
+**JSON parsing fails:**
+
+```
+❌ Error: Failed to parse workstack create output
+
+Details: [parse error message]
+
+Suggested action:
+  1. Check workstack version: workstack --version
+  2. Ensure --json flag is supported (v0.2.0+)
+  3. Try running manually: workstack create --plan <file> --json
+```
+
+**Worktree already exists (status = "exists"):**
+
+```
+❌ Error: Worktree already exists: <worktree_name>
+
+Details: A worktree with this name already exists from a previous plan
+
+Suggested action:
+  1. View existing: workstack status <worktree_name>
+  2. Switch to it: workstack switch <worktree_name>
+  3. Or remove it: workstack remove <worktree_name>
+  4. Or modify plan title to generate different name
+```
+
+**Command execution fails:**
+
+```
+❌ Error: Failed to create worktree
+
+Details: [workstack error message from stderr]
+
+Suggested action:
+  1. Check git repository health: git fsck
+  2. Verify workstack is installed: workstack --version
+  3. Check plan file exists: ls -la <plan-file>
+```
+
+**CRITICAL: Claude Code Directory Behavior**
+
+🔴 **Claude Code CANNOT switch directories.** After `workstack create` runs, you will remain in your original directory. This is **NORMAL and EXPECTED**. The JSON output gives you all the information you need about the new worktree.
+
+**Do NOT:**
+
+- ❌ Try to verify with `git branch --show-current` (shows the OLD branch)
+- ❌ Try to `cd` to the new worktree (will just reset back)
+- ❌ Run any commands assuming you're in the new worktree
+
+**Use the JSON output directly** for all worktree information.
+
+### Step 11: Display Next Steps
+
+After successful worktree creation, provide clear instructions based on plan structure.
+
+**IMPORTANT:** You have NOT implemented any code. Implementation happens after the user switches to the worktree.
+
+**For single-phase plans:**
 
 ```markdown
-## Enhanced Implementation Plan
+✅ Worktree created: **<worktree-name>**
 
-[Full enhanced plan content with all sections]
+Plan:
 
----
+<full-plan-markdown-content>
 
-✅ **Plan enhanced successfully!**
+Branch: `<branch-name>`
+Location: `<worktree-path>`
 
-This enhanced plan is now ready to be saved and used to create a worktree.
+**Next step:**
 
-**Next steps:**
-
-1. Exit plan mode if currently active
-2. Run: `/workstack:create-plan-stack`
-
-This will save the plan to disk and create a new worktree for implementation.
+`workstack switch <worktree_name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
 ```
+
+**For multi-phase plans:**
+
+```markdown
+✅ Worktree created: **<worktree-name>**
+
+Plan:
+
+<full-plan-markdown-content>
+
+Branch: `<branch-name>`
+Location: `<worktree-path>`
+
+**Next step:**
+
+`workstack switch <worktree_name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
+```
+
+**Template Variable Clarification:**
+
+- `<full-plan-markdown-content>` refers to the final enhanced plan markdown that was saved in Step 9
+- Output the complete plan text verbatim (all headers, sections, steps)
+- This is the same content that was written to `<worktree-root>/<derived-filename>`
+- The plan content is already in memory from previous steps - no additional file reads required
+- Preserve all markdown formatting (headers, lists, code blocks)
+- Do not truncate or summarize the plan
+
+**Note:** The final output the user sees should be the single copy-pasteable command above. No additional text after that command.
 
 ## Important Notes
 
-- 🟢 **Works in ANY mode** - No plan mode detection or restrictions
-- Focuses on enhancement only - no file operations
+- 🔴 **This command does NOT write code** - only creates workspace with enhanced plan
+- Searches conversation for implementation plans
+- Enhances plans through clarifying questions when helpful
+- Suggests phase decomposition for complex plans with multiple features
 - All enhancements are optional - users can dismiss suggestions
-- Context preservation helps implementing agents avoid re-discovery
-- Output is markdown text ready for `/workstack:create-plan-stack`
+- Filename derived from plan title, prompts user if extraction fails
+- All errors follow consistent template with details and suggested actions
+- This command does NOT switch directories or execute the plan
+- User must manually run `workstack switch` and `/workstack:implement-plan` to begin implementation
+- The `--permission-mode acceptEdits` flag is included to automatically accept edits during implementation
 - Always provide clear feedback at each step
+- **Plan mode detection uses write-test** - attempts temp file creation to verify write capability

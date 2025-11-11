@@ -12,6 +12,7 @@ from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
+from tests.test_utils.env_helpers import simulated_workstack_env
 from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
@@ -19,10 +20,9 @@ from workstack.core.global_config import GlobalConfig
 
 
 def _create_test_context(
-    cwd: Path,
+    env,
     worktrees: dict[Path, list[WorktreeInfo]],
     current_branch: str,
-    workstacks_root: Path,
     graphite_ops: FakeGraphiteOps,
     *,
     file_statuses: dict[Path, tuple[list[str], list[str], list[str]]] | None = None,
@@ -30,28 +30,26 @@ def _create_test_context(
     """Helper to create test context for consolidate command tests.
 
     Args:
-        cwd: Current working directory (repo root)
+        env: SimulatedWorkstackEnv from simulated_workstack_env
         worktrees: Map of repo_root to list of WorktreeInfo objects
         current_branch: Current branch name
-        workstacks_root: Root directory for workstacks
         graphite_ops: FakeGraphiteOps configured with branch stack data
         file_statuses: Optional mapping of worktree paths to (staged, modified, untracked) files
 
     Returns:
         WorkstackContext configured for testing
     """
-    git_dir = cwd / ".git"
     git_ops = FakeGitOps(
         worktrees=worktrees,
-        git_common_dirs={cwd: git_dir},
-        current_branches={cwd: current_branch},
+        git_common_dirs={env.cwd: env.git_dir},
+        current_branches={env.cwd: current_branch},
         file_statuses=file_statuses,
     )
 
     return WorkstackContext(
         git_ops=git_ops,
         global_config_ops=GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -60,7 +58,7 @@ def _create_test_context(
         github_ops=FakeGitHubOps(),
         graphite_ops=graphite_ops,
         shell_ops=FakeShellOps(),
-        cwd=cwd,  # Use the actual cwd parameter, not hardcoded path
+        cwd=env.cwd,
         dry_run=False,
         trunk_branch=None,
     )
@@ -69,17 +67,14 @@ def _create_test_context(
 def test_consolidate_no_other_worktrees() -> None:
     """Test consolidate when no other worktrees contain stack branches."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-
+    with simulated_workstack_env(runner) as env:
         # Configure graphite with stack (main -> feature-1 -> feature-2)
         graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
 
         # Current worktree only (on feature-2)
-        worktrees = {cwd: [WorktreeInfo(path=cwd, branch="feature-2")]}
+        worktrees = {env.cwd: [WorktreeInfo(path=env.cwd, branch="feature-2")]}
 
-        test_ctx = _create_test_context(cwd, worktrees, "feature-2", workstacks_root, graphite_ops)
+        test_ctx = _create_test_context(env, worktrees, "feature-2", graphite_ops)
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
@@ -89,30 +84,26 @@ def test_consolidate_no_other_worktrees() -> None:
 def test_consolidate_removes_other_stack_worktrees() -> None:
     """Test consolidate removes worktrees with branches from current stack."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-
+    with simulated_workstack_env(runner) as env:
         # Configure graphite with stack (main -> feature-1 -> feature-2)
         graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
 
         # Create worktree directories
-        repo_name = cwd.name
-        wt1_path = workstacks_root / repo_name / "wt1"
-        wt2_path = workstacks_root / repo_name / "wt2"
+        wt1_path = env.workstacks_dir / "wt1"
+        wt2_path = env.workstacks_dir / "wt2"
         wt1_path.mkdir(parents=True)
         wt2_path.mkdir(parents=True)
 
         # Current worktree on feature-2, other worktrees on feature-1 and main
         worktrees = {
-            cwd: [
-                WorktreeInfo(path=cwd, branch="feature-2"),
+            env.cwd: [
+                WorktreeInfo(path=env.cwd, branch="feature-2"),
                 WorktreeInfo(path=wt1_path, branch="feature-1"),
                 WorktreeInfo(path=wt2_path, branch="main"),
             ]
         }
 
-        test_ctx = _create_test_context(cwd, worktrees, "feature-2", workstacks_root, graphite_ops)
+        test_ctx = _create_test_context(env, worktrees, "feature-2", graphite_ops)
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
@@ -125,27 +116,23 @@ def test_consolidate_removes_other_stack_worktrees() -> None:
 def test_consolidate_preserves_current_worktree() -> None:
     """Test consolidate preserves the current worktree even if it's in the stack."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-
+    with simulated_workstack_env(runner) as env:
         # Configure graphite with stack (main -> feature-1)
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create other worktree
-        repo_name = cwd.name
-        wt1_path = workstacks_root / repo_name / "wt1"
+        wt1_path = env.workstacks_dir / "wt1"
         wt1_path.mkdir(parents=True)
 
         # Both worktrees in same stack, current is on feature-1
         worktrees = {
-            cwd: [
-                WorktreeInfo(path=cwd, branch="feature-1"),
+            env.cwd: [
+                WorktreeInfo(path=env.cwd, branch="feature-1"),
                 WorktreeInfo(path=wt1_path, branch="main"),
             ]
         }
 
-        test_ctx = _create_test_context(cwd, worktrees, "feature-1", workstacks_root, graphite_ops)
+        test_ctx = _create_test_context(env, worktrees, "feature-1", graphite_ops)
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
@@ -157,23 +144,19 @@ def test_consolidate_preserves_current_worktree() -> None:
 def test_consolidate_aborts_on_uncommitted_changes() -> None:
     """Test consolidate aborts if ANY worktree has uncommitted changes."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-
+    with simulated_workstack_env(runner) as env:
         # Configure graphite with stack (main -> feature-1)
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree with uncommitted changes marker
-        repo_name = cwd.name
-        wt1_path = workstacks_root / repo_name / "wt1"
+        wt1_path = env.workstacks_dir / "wt1"
         wt1_path.mkdir(parents=True)
         # Create a file to simulate uncommitted changes
         (wt1_path / "uncommitted.txt").write_text("changes", encoding="utf-8")
 
         worktrees = {
-            cwd: [
-                WorktreeInfo(path=cwd, branch="feature-1"),
+            env.cwd: [
+                WorktreeInfo(path=env.cwd, branch="feature-1"),
                 WorktreeInfo(path=wt1_path, branch="main"),
             ]
         }
@@ -184,7 +167,7 @@ def test_consolidate_aborts_on_uncommitted_changes() -> None:
         }
 
         test_ctx = _create_test_context(
-            cwd, worktrees, "feature-1", workstacks_root, graphite_ops, file_statuses=file_statuses
+            env, worktrees, "feature-1", graphite_ops, file_statuses=file_statuses
         )
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
@@ -196,26 +179,22 @@ def test_consolidate_aborts_on_uncommitted_changes() -> None:
 def test_consolidate_dry_run_shows_preview() -> None:
     """Test --dry-run shows what would be removed without executing."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-
+    with simulated_workstack_env(runner) as env:
         # Configure graphite with stack (main -> feature-1)
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree
-        repo_name = cwd.name
-        wt1_path = workstacks_root / repo_name / "wt1"
+        wt1_path = env.workstacks_dir / "wt1"
         wt1_path.mkdir(parents=True)
 
         worktrees = {
-            cwd: [
-                WorktreeInfo(path=cwd, branch="feature-1"),
+            env.cwd: [
+                WorktreeInfo(path=env.cwd, branch="feature-1"),
                 WorktreeInfo(path=wt1_path, branch="main"),
             ]
         }
 
-        test_ctx = _create_test_context(cwd, worktrees, "feature-1", workstacks_root, graphite_ops)
+        test_ctx = _create_test_context(env, worktrees, "feature-1", graphite_ops)
         result = runner.invoke(cli, ["consolidate", "--dry-run"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
@@ -228,26 +207,22 @@ def test_consolidate_dry_run_shows_preview() -> None:
 def test_consolidate_confirmation_prompt() -> None:
     """Test consolidate prompts for confirmation without --force."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-
+    with simulated_workstack_env(runner) as env:
         # Configure graphite with stack (main -> feature-1)
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree
-        repo_name = cwd.name
-        wt1_path = workstacks_root / repo_name / "wt1"
+        wt1_path = env.workstacks_dir / "wt1"
         wt1_path.mkdir(parents=True)
 
         worktrees = {
-            cwd: [
-                WorktreeInfo(path=cwd, branch="feature-1"),
+            env.cwd: [
+                WorktreeInfo(path=env.cwd, branch="feature-1"),
                 WorktreeInfo(path=wt1_path, branch="main"),
             ]
         }
 
-        test_ctx = _create_test_context(cwd, worktrees, "feature-1", workstacks_root, graphite_ops)
+        test_ctx = _create_test_context(env, worktrees, "feature-1", graphite_ops)
 
         # Test saying "no" to prompt
         result = runner.invoke(cli, ["consolidate"], input="n\n", obj=test_ctx)
@@ -261,57 +236,51 @@ def test_consolidate_confirmation_prompt() -> None:
 def test_consolidate_detached_head_error() -> None:
     """Test consolidate aborts if current worktree is in detached HEAD state."""
     runner = CliRunner()
-    cwd = Path("/fake/repo")
-    workstacks_root = cwd / "workstacks"
-    git_dir = cwd / ".git"
+    with simulated_workstack_env(runner) as env:
+        # Current worktree with detached HEAD (None branch)
+        worktrees = {env.cwd: [WorktreeInfo(path=env.cwd, branch=None)]}
 
-    # Current worktree with detached HEAD (None branch)
-    worktrees = {cwd: [WorktreeInfo(path=cwd, branch=None)]}
+        # Create context with no current branch
+        git_ops = FakeGitOps(
+            worktrees=worktrees,
+            git_common_dirs={env.cwd: env.git_dir},
+            current_branches={env.cwd: None},
+        )
 
-    # Create context with no current branch
-    git_ops = FakeGitOps(
-        worktrees=worktrees,
-        git_common_dirs={cwd: git_dir},
-        current_branches={cwd: None},
-    )
+        test_ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=GlobalConfig(
+                workstacks_root=env.workstacks_root,
+                use_graphite=True,
+                shell_setup_complete=False,
+                show_pr_info=True,
+                show_pr_checks=False,
+            ),
+            github_ops=FakeGitHubOps(),
+            graphite_ops=FakeGraphiteOps(),
+            shell_ops=FakeShellOps(),
+            cwd=env.cwd,
+            dry_run=False,
+            trunk_branch=None,
+        )
 
-    test_ctx = WorkstackContext(
-        git_ops=git_ops,
-        global_config_ops=GlobalConfig(
-            workstacks_root=workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        ),
-        github_ops=FakeGitHubOps(),
-        graphite_ops=FakeGraphiteOps(),
-        shell_ops=FakeShellOps(),
-        cwd=cwd,
-        dry_run=False,
-        trunk_branch=None,
-    )
+        result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
-    result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
-
-    assert result.exit_code == 1
-    assert "detached HEAD state" in result.output
+        assert result.exit_code == 1
+        assert "detached HEAD state" in result.output
 
 
 def test_consolidate_not_tracked_by_graphite() -> None:
     """Test consolidate errors if current branch is not tracked by Graphite."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-
+    with simulated_workstack_env(runner) as env:
         # Configure graphite with only main branch (feature-1 is not tracked)
         graphite_ops = FakeGraphiteOps(stacks={"main": ["main"]})
 
         # Current branch is "feature-1" but not in Graphite
-        worktrees = {cwd: [WorktreeInfo(path=cwd, branch="feature-1")]}
+        worktrees = {env.cwd: [WorktreeInfo(path=env.cwd, branch="feature-1")]}
 
-        test_ctx = _create_test_context(cwd, worktrees, "feature-1", workstacks_root, graphite_ops)
+        test_ctx = _create_test_context(env, worktrees, "feature-1", graphite_ops)
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
         assert result.exit_code == 1
@@ -321,31 +290,27 @@ def test_consolidate_not_tracked_by_graphite() -> None:
 def test_consolidate_skips_non_stack_worktrees() -> None:
     """Test consolidate only removes worktrees with branches in current stack."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-
+    with simulated_workstack_env(runner) as env:
         # Configure graphite with stack-a only (main -> stack-a)
         # stack-b is a separate branch not in this stack
         graphite_ops = FakeGraphiteOps(stacks={"stack-a": ["main", "stack-a"]})
 
         # Create worktrees
-        repo_name = cwd.name
-        wt1_path = workstacks_root / repo_name / "wt1"
-        wt2_path = workstacks_root / repo_name / "wt2"
+        wt1_path = env.workstacks_dir / "wt1"
+        wt2_path = env.workstacks_dir / "wt2"
         wt1_path.mkdir(parents=True)
         wt2_path.mkdir(parents=True)
 
         # Current on stack-a, wt1 on main (in stack), wt2 on stack-b (NOT in stack)
         worktrees = {
-            cwd: [
-                WorktreeInfo(path=cwd, branch="stack-a"),
+            env.cwd: [
+                WorktreeInfo(path=env.cwd, branch="stack-a"),
                 WorktreeInfo(path=wt1_path, branch="main"),
                 WorktreeInfo(path=wt2_path, branch="stack-b"),
             ]
         }
 
-        test_ctx = _create_test_context(cwd, worktrees, "stack-a", workstacks_root, graphite_ops)
+        test_ctx = _create_test_context(env, worktrees, "stack-a", graphite_ops)
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
@@ -358,18 +323,14 @@ def test_consolidate_skips_non_stack_worktrees() -> None:
 def test_consolidate_with_uncommitted_changes_in_non_stack_worktree() -> None:
     """Test consolidate succeeds when non-stack worktrees have uncommitted changes."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-
+    with simulated_workstack_env(runner) as env:
         # Configure graphite with stack (main -> feature-1 -> feature-2)
         graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
 
         # Create worktrees
-        repo_name = cwd.name
-        wt1_path = workstacks_root / repo_name / "wt1"
-        wt2_path = workstacks_root / repo_name / "wt2"
-        wt3_path = workstacks_root / repo_name / "wt3"
+        wt1_path = env.workstacks_dir / "wt1"
+        wt2_path = env.workstacks_dir / "wt2"
+        wt3_path = env.workstacks_dir / "wt3"
         wt1_path.mkdir(parents=True)
         wt2_path.mkdir(parents=True)
         wt3_path.mkdir(parents=True)
@@ -380,8 +341,8 @@ def test_consolidate_with_uncommitted_changes_in_non_stack_worktree() -> None:
         # Current on feature-2, wt1 on feature-1 (in stack), wt2 on main (in stack),
         # wt3 on other-branch (NOT in stack, has uncommitted changes)
         worktrees = {
-            cwd: [
-                WorktreeInfo(path=cwd, branch="feature-2"),
+            env.cwd: [
+                WorktreeInfo(path=env.cwd, branch="feature-2"),
                 WorktreeInfo(path=wt1_path, branch="feature-1"),
                 WorktreeInfo(path=wt2_path, branch="main"),
                 WorktreeInfo(path=wt3_path, branch="other-branch"),
@@ -394,7 +355,7 @@ def test_consolidate_with_uncommitted_changes_in_non_stack_worktree() -> None:
         }
 
         test_ctx = _create_test_context(
-            cwd, worktrees, "feature-2", workstacks_root, graphite_ops, file_statuses=file_statuses
+            env, worktrees, "feature-2", graphite_ops, file_statuses=file_statuses
         )
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
@@ -416,23 +377,19 @@ def test_consolidate_preserves_root_worktree_even_when_in_stack() -> None:
     operation with "fatal: '/path' is a main working tree".
     """
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-
+    with simulated_workstack_env(runner) as env:
         # Configure graphite with stack (main -> feature-1 -> feature-2)
         graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
 
         # Create worktree directories
-        repo_name = cwd.name
         # Root worktree at repo root (on main branch, part of the stack)
-        main_worktree = cwd / "main-repo"
+        main_worktree = env.cwd / "main-repo"
         main_worktree.mkdir(parents=True)
         # Linked worktree for feature-1
-        wt1_path = workstacks_root / repo_name / "wt1"
+        wt1_path = env.workstacks_dir / "wt1"
         wt1_path.mkdir(parents=True)
         # Current linked worktree for feature-2
-        wt2_path = workstacks_root / repo_name / "wt2"
+        wt2_path = env.workstacks_dir / "wt2"
         wt2_path.mkdir(parents=True)
 
         # Root worktree is on 'main' branch (which is in the stack)
@@ -446,14 +403,32 @@ def test_consolidate_preserves_root_worktree_even_when_in_stack() -> None:
             ]
         }
 
-        # Current directory is the feature-2 worktree (NOT the root worktree)
-        test_ctx = _create_test_context(
-            wt2_path, worktrees, "feature-2", workstacks_root, graphite_ops
+        # Create custom context with wt2_path as cwd
+        git_ops = FakeGitOps(
+            worktrees=worktrees,
+            git_common_dirs={wt2_path: main_worktree / ".git"},
+            current_branches={wt2_path: "feature-2"},
         )
         # Override git_common_dirs to include all worktrees
-        test_ctx.git_ops._git_common_dirs[main_worktree] = main_worktree / ".git"
-        test_ctx.git_ops._git_common_dirs[wt1_path] = main_worktree / ".git"
-        test_ctx.git_ops._git_common_dirs[wt2_path] = main_worktree / ".git"
+        git_ops._git_common_dirs[main_worktree] = main_worktree / ".git"
+        git_ops._git_common_dirs[wt1_path] = main_worktree / ".git"
+        git_ops._git_common_dirs[wt2_path] = main_worktree / ".git"
+
+        test_ctx = WorkstackContext(
+            git_ops=git_ops,
+            global_config_ops=GlobalConfig(
+                workstacks_root=env.workstacks_root,
+                use_graphite=True,
+                shell_setup_complete=False,
+                show_pr_info=True,
+                show_pr_checks=False,
+            ),
+            github_ops=FakeGitHubOps(),
+            graphite_ops=graphite_ops,
+            shell_ops=FakeShellOps(),
+            cwd=Path("/test/default/cwd"),
+            dry_run=False,
+        )
 
         # Change to wt2_path to simulate running from that worktree
         import os

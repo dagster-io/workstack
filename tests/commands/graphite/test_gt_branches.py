@@ -2,7 +2,6 @@
 
 import json
 from pathlib import Path
-from unittest.mock import patch
 
 from click.testing import CliRunner
 
@@ -10,7 +9,6 @@ from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from workstack.cli.commands.gt import graphite_branches_cmd
-from workstack.cli.core import RepoContext
 from workstack.core.branch_metadata import BranchMetadata
 from workstack.core.global_config import GlobalConfig
 
@@ -40,17 +38,13 @@ def test_graphite_branches_text_format(tmp_path: Path) -> None:
         git_ops=git_ops,
         global_config=global_config_ops,
         graphite_ops=graphite_ops,
+        cwd=tmp_path,
     )
-
-    # Mock discover_repo_context to return a test repo
-    repo = RepoContext(root=tmp_path, repo_name="test-repo", workstacks_dir=tmp_path / "workstacks")
 
     runner = CliRunner()
 
     # Act: Execute command with default text format
-    with patch("workstack.cli.commands.gt.discover_repo_context", return_value=repo):
-        with runner.isolated_filesystem(temp_dir=tmp_path):
-            result = runner.invoke(graphite_branches_cmd, [], obj=ctx, catch_exceptions=False)
+    result = runner.invoke(graphite_branches_cmd, [], obj=ctx, catch_exceptions=False)
 
     # Assert: Verify success and text output (sorted branch names)
     assert result.exit_code == 0
@@ -82,18 +76,15 @@ def test_graphite_branches_json_format(tmp_path: Path) -> None:
         git_ops=git_ops,
         global_config=global_config_ops,
         graphite_ops=graphite_ops,
+        cwd=tmp_path,
     )
-
-    repo = RepoContext(root=tmp_path, repo_name="test-repo", workstacks_dir=tmp_path / "workstacks")
 
     runner = CliRunner()
 
     # Act: Execute command with JSON format
-    with patch("workstack.cli.commands.gt.discover_repo_context", return_value=repo):
-        with runner.isolated_filesystem(temp_dir=tmp_path):
-            result = runner.invoke(
-                graphite_branches_cmd, ["--format", "json"], obj=ctx, catch_exceptions=False
-            )
+    result = runner.invoke(
+        graphite_branches_cmd, ["--format", "json"], obj=ctx, catch_exceptions=False
+    )
 
     # Assert: Verify success and JSON output
     assert result.exit_code == 0
@@ -136,16 +127,13 @@ def test_graphite_branches_empty(tmp_path: Path) -> None:
         git_ops=git_ops,
         global_config=global_config_ops,
         graphite_ops=graphite_ops,
+        cwd=tmp_path,
     )
-
-    repo = RepoContext(root=tmp_path, repo_name="test-repo", workstacks_dir=tmp_path / "workstacks")
 
     runner = CliRunner()
 
     # Act: Execute command with default text format - empty should give empty output
-    with patch("workstack.cli.commands.gt.discover_repo_context", return_value=repo):
-        with runner.isolated_filesystem(temp_dir=tmp_path):
-            result = runner.invoke(graphite_branches_cmd, [], obj=ctx, catch_exceptions=False)
+    result = runner.invoke(graphite_branches_cmd, [], obj=ctx, catch_exceptions=False)
 
     # Assert: Verify empty output with success
     assert result.exit_code == 0
@@ -171,13 +159,10 @@ def test_graphite_branches_graphite_disabled(tmp_path: Path) -> None:
         graphite_ops=graphite_ops,
     )
 
-    RepoContext(root=tmp_path, repo_name="test-repo", workstacks_dir=tmp_path / "workstacks")
-
     runner = CliRunner()
 
     # Act: Execute command - should fail before discover_repo_context
-    with runner.isolated_filesystem(temp_dir=tmp_path):
-        result = runner.invoke(graphite_branches_cmd, [], obj=ctx, catch_exceptions=False)
+    result = runner.invoke(graphite_branches_cmd, [], obj=ctx, catch_exceptions=False)
 
     # Assert: Verify error (fails before discovery, so no need to mock)
     assert result.exit_code == 1
@@ -207,18 +192,15 @@ def test_graphite_branches_multiple_children(tmp_path: Path) -> None:
         git_ops=git_ops,
         global_config=global_config_ops,
         graphite_ops=graphite_ops,
+        cwd=tmp_path,
     )
-
-    repo = RepoContext(root=tmp_path, repo_name="test-repo", workstacks_dir=tmp_path / "workstacks")
 
     runner = CliRunner()
 
     # Act: Execute command
-    with patch("workstack.cli.commands.gt.discover_repo_context", return_value=repo):
-        with runner.isolated_filesystem(temp_dir=tmp_path):
-            result = runner.invoke(
-                graphite_branches_cmd, ["--format", "json"], obj=ctx, catch_exceptions=False
-            )
+    result = runner.invoke(
+        graphite_branches_cmd, ["--format", "json"], obj=ctx, catch_exceptions=False
+    )
 
     # Assert: Verify multiple children properly serialized
     assert result.exit_code == 0
@@ -251,18 +233,15 @@ def test_graphite_branches_linear_stack(tmp_path: Path) -> None:
         git_ops=git_ops,
         global_config=global_config_ops,
         graphite_ops=graphite_ops,
+        cwd=tmp_path,
     )
-
-    repo = RepoContext(root=tmp_path, repo_name="test-repo", workstacks_dir=tmp_path / "workstacks")
 
     runner = CliRunner()
 
     # Act: Execute command
-    with patch("workstack.cli.commands.gt.discover_repo_context", return_value=repo):
-        with runner.isolated_filesystem(temp_dir=tmp_path):
-            result = runner.invoke(
-                graphite_branches_cmd, ["--format", "json"], obj=ctx, catch_exceptions=False
-            )
+    result = runner.invoke(
+        graphite_branches_cmd, ["--format", "json"], obj=ctx, catch_exceptions=False
+    )
 
     # Assert: Verify linear stack
     assert result.exit_code == 0

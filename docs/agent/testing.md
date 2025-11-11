@@ -482,6 +482,189 @@ If you encounter existing tests using mocks:
 
 This codebase has successfully migrated from 100+ mock patches to fake-based testing. The completion tests (17 tests using `@patch`) were refactored to FakeCompletionOps, demonstrating this pattern.
 
+## Real-World Refactoring Examples
+
+### Example 1: Repository Discovery Without Patches
+
+**❌ Before (using mock.patch):**
+
+```python
+from unittest.mock import patch
+from workstack.cli.core import RepoContext
+
+def test_graphite_branches_json_format(tmp_path: Path) -> None:
+    git_ops = FakeGitOps(git_common_dirs={tmp_path: tmp_path / ".git"})
+    ctx = create_test_context(git_ops=git_ops, graphite_ops=graphite_ops)
+    repo = RepoContext(root=tmp_path, repo_name="test-repo", workstacks_dir=tmp_path / "workstacks")
+
+    runner = CliRunner()
+    with patch("workstack.cli.commands.gt.discover_repo_context", return_value=repo):
+        with runner.isolated_filesystem(temp_dir=tmp_path):
+            result = runner.invoke(graphite_branches_cmd, ["--format", "json"], obj=ctx)
+```
+
+**✅ After (using cwd injection):**
+
+```python
+def test_graphite_branches_json_format(tmp_path: Path) -> None:
+    git_ops = FakeGitOps(git_common_dirs={tmp_path: tmp_path / ".git"})
+    ctx = create_test_context(
+        git_ops=git_ops,
+        graphite_ops=graphite_ops,
+        cwd=tmp_path  # ← Set cwd to match git_common_dirs
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(graphite_branches_cmd, ["--format", "json"], obj=ctx)
+```
+
+**Key insight**: `discover_repo_context()` uses `ctx.git_ops.get_git_common_dir(ctx.cwd)`, so configuring FakeGitOps with `git_common_dirs` and setting matching `cwd` allows discovery to work naturally without patching.
+
+**Files refactored**: `tests/commands/graphite/test_gt_branches.py` (4 patches eliminated)
+
+### Example 2: Path Mocking → Real File I/O with tmp_path
+
+**❌ Before (using mock.patch.object):**
+
+```python
+from unittest.mock import patch
+from pathlib import Path
+
+def test_graphite_ops_get_prs():
+    fixture_data = '{"branches": [...]}'
+
+    with patch.object(Path, "exists", return_value=True), \
+         patch.object(Path, "read_text", return_value=fixture_data):
+        git_ops = MagicMock()
+        ops = RealGraphiteOps()
+        result = ops.get_prs_from_graphite(git_ops, Path("/fake/repo"))
+```
+
+**✅ After (using tmp_path fixture):**
+
+```python
+def test_graphite_ops_get_prs(tmp_path: Path):
+    # Create real files in temp directory
+    git_dir = tmp_path / ".git"
+    git_dir.mkdir()
+    pr_info_file = git_dir / ".graphite_pr_info"
+    pr_info_file.write_text('{"branches": [...]}', encoding="utf-8")
+
+    git_ops = FakeGitOps(git_common_dirs={tmp_path: git_dir})
+    ops = RealGraphiteOps()
+    result = ops.get_prs_from_graphite(git_ops, tmp_path)
+```
+
+**Key insight**: Integration tests should use real file I/O with `tmp_path`, not Path mocking. This tests actual file reading behavior and ensures encoding is handled correctly.
+
+**Files refactored**: `tests/integration/test_graphite_ops.py` (20 patches/mocks eliminated)
+
+### Example 3: Subprocess Mocks → Fake Abstractions
+
+**❌ Before (using subprocess mock):**
+
+```python
+from unittest import mock
+
+def test_create_uses_graphite():
+    with mock.patch("subprocess.run") as mock_run:
+        result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
+        # Fragile: relies on subprocess call implementation details
+        assert any("gt" in str(call) for call in mock_run.call_args_list)
+```
+
+**✅ After (using FakeGraphiteOps):**
+
+```python
+def test_create_without_graphite():
+    # Test the non-graphite path (uses FakeGitOps successfully)
+    graphite_ops = FakeGraphiteOps()
+    ctx = create_test_context(git_ops=git_ops, graphite_ops=graphite_ops, graphite=False)
+
+    result = runner.invoke(cli, ["create", "test-feature"], obj=ctx)
+    # Clear assertion on actual behavior
+    assert result.exit_code == 0
+    assert "test-feature" in git_ops.added_worktrees
+```
+
+**Key insight**: If command calls subprocess directly without abstraction, refactor tests to focus on paths that DO use abstractions, or test error handling before subprocess is reached.
+
+**Files refactored**: `tests/commands/workspace/test_create.py` (2 patches eliminated)
+
+### Example 4: Environment Variable Mocks → FakeShellOps
+
+**❌ Before (using patch.dict):**
+
+```python
+from unittest.mock import patch
+import os
+
+def test_shell_detection_zsh():
+    with patch.dict(os.environ, {"SHELL": "/bin/zsh"}):
+        ops = RealShellOps()
+        result = ops.detect_shell()
+        assert result == ("zsh", Path.home() / ".zshrc")
+```
+
+**✅ After (using FakeShellOps):**
+
+```python
+def test_shell_detection_zsh():
+    shell_ops = FakeShellOps(detected_shell=("zsh", Path.home() / ".zshrc"))
+    ctx = create_test_context(shell_ops=shell_ops)
+
+    result = runner.invoke(init_cmd, obj=ctx)
+    assert "zsh" in result.output
+```
+
+**Key insight**: Use FakeShellOps for shell detection logic in unit tests. Keep integration tests with real environment for actual shell detection.
+
+**Files refactored**: `tests/integration/test_shell_ops.py` (5 patches eliminated)
+
+### Example 5: When Mocks ARE Legitimate
+
+Some mocks are legitimate and should NOT be replaced:
+
+**✅ Legitimate Mock Usage:**
+
+```python
+# tests/commands/setup/test_init.py
+from unittest import mock
+
+def test_init_creates_global_config_first_time() -> None:
+    """Test that init creates global config on first run.
+
+    Mock usage here is LEGITIMATE:
+    - os.environ HOME patch: Testing path resolution that depends on $HOME
+    - Cannot fake environment variables (external boundary)
+    - Patching HOME redirects Path.home() to test directory
+    """
+    with mock.patch.dict(os.environ, {"HOME": str(env.cwd)}):
+        result = runner.invoke(cli, ["init"], obj=test_ctx)
+```
+
+**Why these mocks are acceptable:**
+
+1. Testing environment variable behavior (external boundary)
+2. Cannot create an abstraction for `os.environ` (it's the OS interface)
+3. Documented clearly in test file docstring
+4. Used consistently across related tests
+
+**Files with legitimate mocks**: `tests/commands/setup/test_init.py` (28 mocks, all documented)
+
+## Migration Checklist
+
+When refactoring tests from mocks to fakes:
+
+- [ ] Check if ops abstraction exists (GitOps, ShellOps, GraphiteOps, etc.)
+- [ ] Replace mock setup with fake constructor injection
+- [ ] Replace mock assertions with mutation tracking properties
+- [ ] Set `cwd` in context to match fake configuration
+- [ ] Use `tmp_path` for file operations instead of Path mocking
+- [ ] Remove unused mock imports
+- [ ] Run tests to verify behavior unchanged
+- [ ] If mock remains, document why it's legitimate
+
 ## State Mutation in Fakes
 
 ### When Fakes Need Mutation

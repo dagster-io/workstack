@@ -1,31 +1,36 @@
-"""Integration tests for GraphiteOps with minimal mocking."""
+"""Integration tests for GraphiteOps with real file I/O.
+
+These tests verify RealGraphiteOps correctly reads and parses Graphite cache
+files using actual filesystem operations with tmp_path.
+"""
 
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
 from tests.conftest import load_fixture
+from tests.fakes.gitops import FakeGitOps
 from workstack.core.graphite_ops import RealGraphiteOps
 
 
-def test_graphite_ops_get_prs_with_mock_gitops():
-    """Test GraphiteOps getting PR info with mocked GitOps."""
-    # Create a mock GitOps that returns a test git directory
-    mock_git_ops = MagicMock()
-    test_git_dir = Path("/test/.git")
-    mock_git_ops.get_git_common_dir.return_value = test_git_dir
+def test_graphite_ops_get_prs_with_real_files(tmp_path: Path):
+    """Test GraphiteOps getting PR info with real file I/O."""
+    # Set up real file structure
+    git_dir = tmp_path / ".git"
+    git_dir.mkdir()
+    pr_info_file = git_dir / ".graphite_pr_info"
 
-    # Mock file reading - use side_effect to handle the call correctly
+    # Write actual fixture data to real file
     fixture_data = load_fixture("graphite/graphite_pr_info.json")
+    pr_info_file.write_text(fixture_data, encoding="utf-8")
 
-    with (
-        patch.object(Path, "exists", return_value=True),
-        patch.object(Path, "read_text", return_value=fixture_data),
-    ):
-        ops = RealGraphiteOps()
-        result = ops.get_prs_from_graphite(mock_git_ops, Path("/test"))
+    # Use FakeGitOps to provide git directory location
+    git_ops = FakeGitOps(git_common_dirs={tmp_path: git_dir})
+
+    ops = RealGraphiteOps()
+    result = ops.get_prs_from_graphite(git_ops, tmp_path)
 
     assert len(result) == 3
     assert "feature-stack-1" in result
@@ -33,76 +38,74 @@ def test_graphite_ops_get_prs_with_mock_gitops():
     assert result["feature-stack-1"].state == "OPEN"
 
 
-def test_graphite_ops_get_prs_no_git_dir():
+def test_graphite_ops_get_prs_no_git_dir(tmp_path: Path):
     """Test getting PR info when git dir cannot be determined."""
-    mock_git_ops = MagicMock()
-    mock_git_ops.get_git_common_dir.return_value = None
+    # FakeGitOps with no git_common_dirs configured returns None
+    git_ops = FakeGitOps()
 
     ops = RealGraphiteOps()
-    result = ops.get_prs_from_graphite(mock_git_ops, Path("/test"))
+    result = ops.get_prs_from_graphite(git_ops, tmp_path)
 
     assert result == {}
 
 
-def test_graphite_ops_get_prs_file_not_exists():
+def test_graphite_ops_get_prs_file_not_exists(tmp_path: Path):
     """Test getting PR info when .graphite_pr_info doesn't exist."""
-    mock_git_ops = MagicMock()
-    mock_git_ops.get_git_common_dir.return_value = Path("/test/.git")
+    # Create git dir but no .graphite_pr_info file
+    git_dir = tmp_path / ".git"
+    git_dir.mkdir()
 
-    with patch.object(Path, "exists") as mock_exists:
-        mock_exists.return_value = False
+    git_ops = FakeGitOps(git_common_dirs={tmp_path: git_dir})
 
-        ops = RealGraphiteOps()
-        result = ops.get_prs_from_graphite(mock_git_ops, Path("/test"))
+    ops = RealGraphiteOps()
+    result = ops.get_prs_from_graphite(git_ops, tmp_path)
 
     assert result == {}
 
 
-def test_graphite_ops_get_prs_json_error():
+def test_graphite_ops_get_prs_json_error(tmp_path: Path):
     """Test that malformed JSON in .graphite_pr_info raises JSONDecodeError."""
-    mock_git_ops = MagicMock()
-    mock_git_ops.get_git_common_dir.return_value = Path("/test/.git")
+    # Set up real file with invalid JSON
+    git_dir = tmp_path / ".git"
+    git_dir.mkdir()
+    pr_info_file = git_dir / ".graphite_pr_info"
+    pr_info_file.write_text("not valid json", encoding="utf-8")
 
+    git_ops = FakeGitOps(git_common_dirs={tmp_path: git_dir})
+
+    ops = RealGraphiteOps()
     with (
-        patch.object(Path, "exists") as mock_exists,
-        patch.object(Path, "read_text") as mock_read_text,
+        pytest.warns(UserWarning, match="Cannot parse Graphite PR info"),
+        pytest.raises(json.JSONDecodeError),
     ):
-        mock_exists.return_value = True
-        mock_read_text.return_value = "not valid json"
-
-        ops = RealGraphiteOps()
-        with (
-            pytest.warns(UserWarning, match="Cannot parse Graphite PR info"),
-            pytest.raises(json.JSONDecodeError),
-        ):
-            ops.get_prs_from_graphite(mock_git_ops, Path("/test"))
+        ops.get_prs_from_graphite(git_ops, tmp_path)
 
 
-def test_graphite_ops_get_all_branches():
-    """Test getting all branches from Graphite cache."""
-    mock_git_ops = MagicMock()
-    mock_git_ops.get_git_common_dir.return_value = Path("/test/.git")
+def test_graphite_ops_get_all_branches(tmp_path: Path):
+    """Test getting all branches from Graphite cache with real file I/O."""
+    # Set up real file structure
+    git_dir = tmp_path / ".git"
+    git_dir.mkdir()
+    cache_file = git_dir / ".graphite_cache_persist"
 
-    # Mock get_branch_head to return commit SHAs
-    def mock_get_branch_head(repo_root, branch_name):
-        commit_map = {
-            "main": "abc123",
-            "feature-1": "def456",
-            "feature-1-sub": "ghi789",
-            "feature-2": "jkl012",
-        }
-        return commit_map.get(branch_name)
-
-    mock_git_ops.get_branch_head = mock_get_branch_head
-
+    # Write actual fixture data to real file
     fixture_data = load_fixture("graphite/graphite_cache_persist.json")
+    cache_file.write_text(fixture_data, encoding="utf-8")
 
-    with (
-        patch.object(Path, "exists", return_value=True),
-        patch.object(Path, "read_text", return_value=fixture_data),
-    ):
-        ops = RealGraphiteOps()
-        result = ops.get_all_branches(mock_git_ops, Path("/test"))
+    # Configure FakeGitOps with branch head commits
+    commit_map = {
+        "main": "abc123",
+        "feature-1": "def456",
+        "feature-1-sub": "ghi789",
+        "feature-2": "jkl012",
+    }
+    git_ops = FakeGitOps(
+        git_common_dirs={tmp_path: git_dir},
+        branch_heads=commit_map,
+    )
+
+    ops = RealGraphiteOps()
+    result = ops.get_all_branches(git_ops, tmp_path)
 
     assert len(result) == 4
     assert "main" in result
@@ -115,88 +118,80 @@ def test_graphite_ops_get_all_branches():
     assert result["feature-1"].children == ["feature-1-sub"]
 
 
-def test_graphite_ops_get_all_branches_no_cache():
+def test_graphite_ops_get_all_branches_no_cache(tmp_path: Path):
     """Test getting branches when cache file doesn't exist."""
-    mock_git_ops = MagicMock()
-    mock_git_ops.get_git_common_dir.return_value = Path("/test/.git")
+    # Create git dir but no cache file
+    git_dir = tmp_path / ".git"
+    git_dir.mkdir()
 
-    with patch.object(Path, "exists") as mock_exists:
-        mock_exists.return_value = False
+    git_ops = FakeGitOps(git_common_dirs={tmp_path: git_dir})
 
-        ops = RealGraphiteOps()
-        result = ops.get_all_branches(mock_git_ops, Path("/test"))
+    ops = RealGraphiteOps()
+    result = ops.get_all_branches(git_ops, tmp_path)
 
     assert result == {}
 
 
-def test_graphite_ops_get_all_branches_json_error():
+def test_graphite_ops_get_all_branches_json_error(tmp_path: Path):
     """Test that malformed JSON in .graphite_cache_persist raises JSONDecodeError."""
-    mock_git_ops = MagicMock()
-    mock_git_ops.get_git_common_dir.return_value = Path("/test/.git")
+    # Set up real file with invalid JSON
+    git_dir = tmp_path / ".git"
+    git_dir.mkdir()
+    cache_file = git_dir / ".graphite_cache_persist"
+    cache_file.write_text("not valid json", encoding="utf-8")
 
+    git_ops = FakeGitOps(git_common_dirs={tmp_path: git_dir})
+
+    ops = RealGraphiteOps()
     with (
-        patch.object(Path, "exists") as mock_exists,
-        patch.object(Path, "read_text") as mock_read_text,
+        pytest.warns(UserWarning, match="Cannot parse Graphite cache"),
+        pytest.raises(json.JSONDecodeError),
     ):
-        mock_exists.return_value = True
-        mock_read_text.return_value = "not valid json"
-
-        ops = RealGraphiteOps()
-        with (
-            pytest.warns(UserWarning, match="Cannot parse Graphite cache"),
-            pytest.raises(json.JSONDecodeError),
-        ):
-            ops.get_all_branches(mock_git_ops, Path("/test"))
+        ops.get_all_branches(git_ops, tmp_path)
 
 
-def test_graphite_ops_get_all_branches_caches_results():
-    """Test that get_all_branches() caches results for repeated calls."""
-    mock_git_ops = MagicMock()
-    mock_git_ops.get_git_common_dir.return_value = Path("/test/.git")
+def test_graphite_ops_get_all_branches_caches_results(tmp_path: Path):
+    """Test that get_all_branches() caches results for repeated calls.
 
-    # Mock get_branch_head to return commit SHAs with call tracking
+    This test verifies internal caching behavior - the same RealGraphiteOps
+    instance should cache results and not re-read files on subsequent calls.
+    """
+    # Set up real file structure
+    git_dir = tmp_path / ".git"
+    git_dir.mkdir()
+    cache_file = git_dir / ".graphite_cache_persist"
+
+    # Write actual fixture data to real file
+    fixture_data = load_fixture("graphite/graphite_cache_persist.json")
+    cache_file.write_text(fixture_data, encoding="utf-8")
+
+    # Configure FakeGitOps with branch head commits
     commit_map = {
         "main": "abc123",
         "feature-1": "def456",
         "feature-1-sub": "ghi789",
         "feature-2": "jkl012",
     }
-    mock_git_ops.get_branch_head.side_effect = lambda repo_root, branch_name: commit_map.get(
-        branch_name
+    git_ops = FakeGitOps(
+        git_common_dirs={tmp_path: git_dir},
+        branch_heads=commit_map,
     )
 
-    fixture_data = load_fixture("graphite/graphite_cache_persist.json")
+    ops = RealGraphiteOps()
 
-    with (
-        patch.object(Path, "exists", return_value=True) as mock_exists,
-        patch.object(Path, "read_text", return_value=fixture_data) as mock_read_text,
-    ):
-        ops = RealGraphiteOps()
+    # First call - should read from file
+    result1 = ops.get_all_branches(git_ops, tmp_path)
 
-        # First call - should read from file and call git
-        result1 = ops.get_all_branches(mock_git_ops, Path("/test"))
+    # Modify the file to verify caching (second call shouldn't read modified file)
+    cache_file.write_text("{}", encoding="utf-8")
 
-        # Second call - should use cache
-        result2 = ops.get_all_branches(mock_git_ops, Path("/test"))
+    # Second call - should use cache, not read modified file
+    result2 = ops.get_all_branches(git_ops, tmp_path)
 
-    # Verify caching: file operations called only once
-    assert mock_exists.call_count == 1, (
-        "exists() should only be called once (cached on second call)"
-    )
-    assert mock_read_text.call_count == 1, (
-        "read_text() should only be called once (cached on second call)"
-    )
-
-    # Verify git operations called once per branch (4 branches in fixture)
-    expected_git_calls = 4
-    assert mock_git_ops.get_branch_head.call_count == expected_git_calls, (
-        f"get_branch_head() should be called {expected_git_calls} times "
-        "(once per branch, cached on second call)"
-    )
-
-    # Verify both calls return same result
+    # Verify both calls return same result (from cache, not modified file)
     assert result1 == result2
     assert len(result1) == 4
+    assert len(result2) == 4  # Would be 0 if it re-read the modified file
 
 
 def test_graphite_url_construction():

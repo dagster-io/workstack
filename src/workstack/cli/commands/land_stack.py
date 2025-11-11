@@ -146,10 +146,12 @@ def _validate_landing_preconditions(
         )
         raise SystemExit(1)
 
-    # Check no uncommitted changes
-    if ctx.git_ops.has_uncommitted_changes(repo_root):
+    # Check no uncommitted changes in current worktree
+    if ctx.git_ops.has_uncommitted_changes(ctx.cwd):
         _emit(
-            "Error: Working directory has uncommitted changes\n"
+            f"Error: Current worktree has uncommitted changes\n"
+            f"Path: {ctx.cwd}\n"
+            f"Branch: {current_branch}\n\n"
             "Landing requires a clean working directory.\n\n"
             "To fix:\n"
             "  • Commit your changes: git add . && git commit -m 'message'\n"

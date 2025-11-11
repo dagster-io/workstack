@@ -11,6 +11,7 @@ from tests.fakes.shell_ops import FakeShellOps
 from tests.test_utils.env_helpers import simulated_workstack_env
 from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext
+from workstack.core.github_ops import PullRequestInfo
 from workstack.core.gitops import WorktreeInfo
 from workstack.core.global_config import GlobalConfig
 from workstack.core.graphite_ops import BranchMetadata
@@ -96,14 +97,14 @@ def test_land_stack_fails_on_detached_head() -> None:
 
 
 def test_land_stack_fails_with_uncommitted_changes() -> None:
-    """Test that land-stack fails when there are uncommitted changes."""
+    """Test that land-stack fails when current worktree has uncommitted changes."""
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
                 env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
                 ],
             },
             current_branches={env.cwd: "feat-1"},
@@ -141,7 +142,99 @@ def test_land_stack_fails_with_uncommitted_changes() -> None:
         result = runner.invoke(cli, ["land-stack"], obj=test_ctx)
 
         assert result.exit_code == 1
-        assert "uncommitted changes" in result.output
+        assert "Current worktree has uncommitted changes" in result.output
+        assert str(env.cwd) in result.output  # Check path is shown
+        assert "feat-1" in result.output  # Check branch is shown
+
+
+def test_land_stack_ignores_root_worktree_changes_on_unrelated_branch() -> None:
+    """Test that land-stack doesn't check root worktree when it's on unrelated branch."""
+    runner = CliRunner()
+    with simulated_workstack_env(runner) as env:
+        # Set up two worktrees:
+        # - Root worktree: on branch "test-docs" with uncommitted changes
+        # - Current worktree: on branch "feat-1" (clean)
+        root_path = Path("/root")
+        current_path = env.cwd
+
+        git_ops = FakeGitOps(
+            git_common_dirs={
+                root_path: env.git_dir,
+                current_path: env.git_dir,
+            },
+            worktrees={
+                root_path: [
+                    WorktreeInfo(path=root_path, branch="test-docs", is_root=True),
+                    WorktreeInfo(path=current_path, branch="feat-1", is_root=False),
+                ],
+                current_path: [
+                    WorktreeInfo(path=root_path, branch="test-docs", is_root=True),
+                    WorktreeInfo(path=current_path, branch="feat-1", is_root=False),
+                ],
+            },
+            current_branches={
+                root_path: "test-docs",
+                current_path: "feat-1",
+            },
+            file_statuses={
+                root_path: (["uncommitted.txt"], [], []),  # Root has uncommitted changes
+                current_path: ([], [], []),  # Current is clean
+            },
+        )
+
+        global_config_ops = GlobalConfig(
+            workstacks_root=env.workstacks_root,
+            use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
+        )
+
+        graphite_ops = FakeGraphiteOps(
+            branches={
+                "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
+                "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
+                "test-docs": BranchMetadata.branch("test-docs", "main", commit_sha="xyz999"),  # Unrelated branch
+            },
+            stacks={
+                "feat-1": ["main", "feat-1"],
+                "test-docs": ["main", "test-docs"],
+            },
+            pr_info={
+                "feat-1": PullRequestInfo(
+                    number=123,
+                    state="OPEN",
+                    url="https://github.com/owner/repo/pull/123",
+                    is_draft=False,
+                    checks_passing=True,
+                    owner="owner",
+                    repo="repo",
+                ),
+            },
+        )
+
+        test_ctx = WorkstackContext.for_test(
+            git_ops=git_ops,
+            global_config=global_config_ops,
+            graphite_ops=graphite_ops,
+            github_ops=FakeGitHubOps(
+                pr_statuses={
+                    "feat-1": "open",
+                }
+            ),
+            shell_ops=FakeShellOps(),
+            cwd=current_path,  # Current worktree is clean
+            dry_run=True,  # Use dry-run to avoid actual GitHub operations
+        )
+
+        result = runner.invoke(cli, ["land-stack", "--dry-run"], obj=test_ctx)
+
+        # The command should not fail due to uncommitted changes since we only check current worktree
+        # It might fail for other reasons (dry-run mode, no GitHub auth, etc.), but not for uncommitted changes
+        assert "Current worktree has uncommitted changes" not in result.output
+        # The error should not mention the root worktree path
+        if result.exit_code != 0:
+            assert str(root_path) not in result.output
 
 
 def test_land_stack_fails_on_trunk_branch() -> None:

@@ -168,6 +168,7 @@ class WorkstackContext:
         from tests.fakes.gitops import FakeGitOps
         from tests.fakes.graphite_ops import FakeGraphiteOps
         from tests.fakes.shell_ops import FakeShellOps
+        from tests.test_utils import sentinel_path
 
         if git_ops is None:
             git_ops = FakeGitOps()
@@ -211,7 +212,7 @@ class WorkstackContext:
             graphite_ops=graphite_ops,
             shell_ops=shell_ops,
             completion_ops=completion_ops,
-            cwd=cwd or Path("/test/default/cwd"),
+            cwd=cwd or sentinel_path(),
             global_config=global_config,
             local_config=local_config,
             repo=repo,

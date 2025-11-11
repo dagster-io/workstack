@@ -8,6 +8,7 @@ from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
+from tests.test_utils import sentinel_path
 from workstack.core.context import WorkstackContext
 from workstack.core.global_config import GlobalConfig
 
@@ -31,7 +32,7 @@ def test_context_initialization_and_attributes() -> None:
         github_ops=github_ops,
         graphite_ops=graphite_ops,
         shell_ops=shell_ops,
-        cwd=Path("/test/default/cwd"),
+        cwd=sentinel_path(),
         global_config=global_config,
         dry_run=False,
     )
@@ -59,7 +60,7 @@ def test_context_is_frozen() -> None:
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),
-        cwd=Path("/test/default/cwd"),
+        cwd=sentinel_path(),
         dry_run=True,
     )
 
@@ -73,7 +74,7 @@ def test_minimal_factory_creates_context_with_git_ops() -> None:
         current_branches={Path("/repo"): "main"},
         default_branches={Path("/repo"): "main"},
     )
-    cwd = Path("/test/cwd")
+    cwd = sentinel_path()
 
     ctx = WorkstackContext.minimal(git_ops, cwd)
 
@@ -87,7 +88,7 @@ def test_minimal_factory_creates_context_with_git_ops() -> None:
 def test_minimal_factory_with_dry_run() -> None:
     """WorkstackContext.minimal() respects dry_run parameter."""
     git_ops = FakeGitOps()
-    cwd = Path("/test/cwd")
+    cwd = sentinel_path()
 
     ctx = WorkstackContext.minimal(git_ops, cwd, dry_run=True)
 
@@ -97,7 +98,7 @@ def test_minimal_factory_with_dry_run() -> None:
 def test_minimal_factory_creates_fake_ops() -> None:
     """WorkstackContext.minimal() initializes other ops with fakes."""
     git_ops = FakeGitOps()
-    cwd = Path("/test/cwd")
+    cwd = sentinel_path()
 
     ctx = WorkstackContext.minimal(git_ops, cwd)
 
@@ -115,7 +116,7 @@ def test_for_test_factory_creates_context_with_defaults() -> None:
     assert isinstance(ctx.github_ops, FakeGitHubOps)
     assert isinstance(ctx.graphite_ops, FakeGraphiteOps)
     assert isinstance(ctx.shell_ops, FakeShellOps)
-    assert ctx.cwd == Path("/test/default/cwd")
+    assert ctx.cwd == sentinel_path()
     assert ctx.dry_run is False
     assert ctx.trunk_branch is None
 

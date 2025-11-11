@@ -4,8 +4,6 @@ description: Save an enhanced plan to disk and create a workstack worktree for i
 
 # /workstack:create-plan-stack
 
-⚠️ **CRITICAL: This command requires execution mode - it writes files and creates worktrees!**
-
 ## Goal
 
 **Save an enhanced implementation plan to disk and create a workstack worktree for implementation.**
@@ -14,7 +12,6 @@ This command extracts a plan from conversation context (preferably already enhan
 
 **What this command does:**
 
-- ✅ Check that we're NOT in plan mode
 - ✅ Find plan in conversation (enhanced or raw)
 - ✅ Generate filename from plan title
 - ✅ Save plan to disk
@@ -31,14 +28,13 @@ This command extracts a plan from conversation context (preferably already enhan
 
 When you run this command, these steps occur:
 
-1. **Check Plan Mode** - If in plan mode, inform user to exit and rerun
-2. **Verify Scope** - Confirm we're in a git repository with workstack
-3. **Detect Plan** - Search for plan in conversation (enhanced preferred)
-4. **Generate Filename** - Derive filename from plan title
-5. **Detect Root** - Find worktree root directory
-6. **Save Plan** - Write plan to disk as markdown file
-7. **Create Worktree** - Run `workstack create --plan` command
-8. **Display Next Steps** - Show commands to switch and implement
+1. **Verify Scope** - Confirm we're in a git repository with workstack
+2. **Detect Plan** - Search for plan in conversation (enhanced preferred)
+3. **Generate Filename** - Derive filename from plan title
+4. **Detect Root** - Find worktree root directory
+5. **Save Plan** - Write plan to disk as markdown file
+6. **Create Worktree** - Run `workstack create --plan` command
+7. **Display Next Steps** - Show commands to switch and implement
 
 ## Usage
 
@@ -49,14 +45,12 @@ When you run this command, these steps occur:
 **Workflow:**
 
 1. First enhance plan (optional): `/workstack:enhance-plan`
-2. Exit plan mode if active
-3. Run this command: `/workstack:create-plan-stack`
-4. Switch and implement: `workstack switch <name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
+2. Run this command: `/workstack:create-plan-stack`
+3. Switch and implement: `workstack switch <name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
 
 ## Prerequisites
 
 - An implementation plan must exist in conversation (enhanced or raw)
-- Must NOT be in plan mode (this command writes files)
 - Current working directory must be in a workstack repository
 - The plan should not already be saved to disk at repository root
 
@@ -74,7 +68,6 @@ If only a raw plan is found, the command will suggest running `/workstack:enhanc
 This command succeeds when ALL of the following are true:
 
 **Pre-conditions:**
-✅ Not in plan mode (execution mode confirmed)
 ✅ Implementation plan found in conversation
 
 **File & Worktree Creation:**
@@ -87,14 +80,6 @@ This command succeeds when ALL of the following are true:
 ✅ Next command displayed: `workstack switch <name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
 
 ## Troubleshooting
-
-### "Cannot run in plan mode"
-
-**Cause:** Command was run while in plan mode
-**Solution:**
-
-- Exit plan mode first
-- Then rerun: `/workstack:create-plan-stack`
 
 ### "No plan found in context"
 
@@ -136,49 +121,7 @@ This command succeeds when ALL of the following are true:
 
 You are executing the `/workstack:create-plan-stack` command. Follow these steps carefully:
 
-### Step 1: Check Plan Mode and Abort if Active
-
-**CRITICAL: This command CANNOT run in plan mode because it writes files.**
-
-**How to detect plan mode:**
-
-Check for this **exact system reminder tag** in the **MOST RECENT system reminders** (those appearing immediately before/with the user's current request):
-
-```
-<system-reminder>
-Plan mode is active. The user indicated that they do not want you to execute yet...
-</system-reminder>
-```
-
-**Detection logic:**
-
-- If this system reminder tag appears in the CURRENT message context → Plan mode is ACTIVE
-- If this system reminder tag is absent from recent context → Plan mode is NOT active
-- Only check reminders that appear with or immediately before the current command invocation
-- Do NOT use conversation content or other heuristics to determine plan mode status
-
-**If in plan mode:**
-
-1. Do NOT proceed with any other steps
-2. Display this message to the user:
-
-```
-⚠️ This command cannot run in plan mode.
-
-This command needs to write files to disk and create a worktree, which requires execution mode.
-
-Please exit plan mode first, then rerun this command:
-
-/workstack:create-plan-stack
-```
-
-3. STOP execution immediately - do NOT continue to Step 2
-
-**If NOT in plan mode:**
-
-- Continue to Step 2
-
-### Step 2: Verify Scope and Constraints
+### Step 1: Verify Scope and Constraints
 
 **YOUR ONLY TASKS:**
 
@@ -196,7 +139,7 @@ Please exit plan mode first, then rerun this command:
 
 This command sets up the workspace. Implementation happens in the worktree via `/workstack:implement-plan`.
 
-### Step 3: Detect Implementation Plan in Context
+### Step 2: Detect Implementation Plan in Context
 
 Search conversation history for an implementation plan, preferring enhanced plans:
 
@@ -265,7 +208,7 @@ Suggested action:
   3. Then rerun this command
 ```
 
-### Step 4: Generate Filename from Plan
+### Step 3: Generate Filename from Plan
 
 **Filename Extraction Algorithm:**
 
@@ -315,7 +258,7 @@ Use AskUserQuestion tool to get the plan name from the user if extraction fails.
 - "🚀 Awesome Feature!!!" → `awesome-feature`
 - "###" (only special chars) → Prompt user for name
 
-### Step 5: Detect Worktree Root
+### Step 4: Detect Worktree Root
 
 Execute: `git rev-parse --show-toplevel`
 
@@ -334,7 +277,7 @@ Suggested action:
   3. Check if .git directory exists
 ```
 
-### Step 6: Save Plan to Disk
+### Step 5: Save Plan to Disk
 
 **Pre-save validation:**
 
@@ -349,7 +292,7 @@ Suggested action:
 Details: Generated base name '<base>' is <length> characters (max: 30)
 
 This is a bug in the filename generation algorithm. The base should have been
-truncated to 30 characters in Step 4.
+truncated to 30 characters in Step 3.
 
 Suggested action:
   1. Report this as a bug in /workstack:create-plan-stack
@@ -390,7 +333,7 @@ Suggested action:
   3. Ensure path is valid: <worktree-root>/<derived-filename>
 ```
 
-### Step 7: Create Worktree with Plan
+### Step 6: Create Worktree with Plan
 
 Execute: `workstack create --plan <worktree-root>/<filename> --json --stay`
 
@@ -483,7 +426,7 @@ Suggested action:
 
 **Use the JSON output directly** for all worktree information.
 
-### Step 8: Display Next Steps
+### Step 7: Display Next Steps
 
 After successful worktree creation, provide clear instructions:
 
@@ -510,7 +453,6 @@ This will:
 
 ## Important Notes
 
-- 🔴 **REQUIRES execution mode** - Cannot run in plan mode
 - 🔴 **This command does NOT write code** - only creates workspace
 - Prefers enhanced plans but accepts raw plans
 - Filename derived from plan title, prompts user if extraction fails

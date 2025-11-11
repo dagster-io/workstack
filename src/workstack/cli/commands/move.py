@@ -9,6 +9,8 @@ from workstack.cli.core import discover_repo_context, worktree_path_for
 from workstack.core.context import WorkstackContext, read_trunk_from_pyproject
 from workstack.core.repo_discovery import ensure_workstacks_dir
 from workstack.core.worktree_utils import (
+    MoveOperationType,
+    determine_move_operation,
     find_worktree_containing_path,
     find_worktree_with_branch,
     get_worktree_branch,
@@ -90,23 +92,14 @@ def resolve_source_worktree(
 
 def detect_operation_type(
     source_wt: Path, target_wt: Path, ctx: WorkstackContext, repo_root: Path
-) -> str:
+) -> MoveOperationType:
     """Determine whether to move, swap, or create based on target existence.
 
-    Returns "move", "swap", or "create".
+    Returns MoveOperationType enum value.
     """
-    target_exists = target_wt.exists()
-
-    if not target_exists:
-        return "create"
-
-    # Target exists - check if it has a branch
     worktrees = ctx.git_ops.list_worktrees(repo_root)
-    target_branch = get_worktree_branch(worktrees, target_wt)
-    if target_branch:
-        return "swap"
-    else:
-        return "move"
+    operation = determine_move_operation(worktrees, source_wt, target_wt)
+    return operation.operation_type
 
 
 def execute_move(
@@ -317,7 +310,7 @@ def move_cmd(
     operation_type = detect_operation_type(source_wt, target_wt, ctx, repo.root)
 
     # Execute operation
-    if operation_type == "swap":
+    if operation_type == MoveOperationType.SWAP:
         execute_swap(ctx, repo.root, source_wt, target_wt, force=force)
     else:
         # Auto-detect default branch if using 'main' default and it doesn't exist

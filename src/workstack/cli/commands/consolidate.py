@@ -9,6 +9,7 @@ import click
 from workstack.cli.activation import render_activation_script
 from workstack.cli.core import discover_repo_context, worktree_path_for
 from workstack.cli.shell_utils import write_script_to_temp
+from workstack.core.consolidation_utils import calculate_stack_range, create_consolidation_plan
 from workstack.core.context import WorkstackContext, create_context
 from workstack.core.repo_discovery import ensure_workstacks_dir
 
@@ -120,15 +121,8 @@ def consolidate_cmd(
                 click.echo(f"  {click.style(b, fg='cyan')}{marker}", err=True)
             raise SystemExit(1)
 
-    # Determine which portion of the stack to consolidate
-    if branch is not None:
-        # Find the index of the specified branch
-        branch_index = stack_branches.index(branch)
-        # Partial stack: from trunk (index 0) up to and including the specified branch
-        stack_to_consolidate = stack_branches[: branch_index + 1]
-    else:
-        # Full stack consolidation (current behavior)
-        stack_to_consolidate = stack_branches
+    # Determine which portion of the stack to consolidate (now handled by utility)
+    # This will be used in create_consolidation_plan() below
 
     # Get all worktrees
     all_worktrees = ctx.git_ops.list_worktrees(repo.root)
@@ -147,6 +141,9 @@ def consolidate_cmd(
             click.echo(f"  2. Remove existing worktree: workstack remove {name}", err=True)
             click.echo(f"  3. Switch to existing: workstack switch {name}", err=True)
             raise SystemExit(1)
+
+    # Calculate stack range early (needed for safety check)
+    stack_to_consolidate = calculate_stack_range(stack_branches, branch)
 
     # Check worktrees in stack for uncommitted changes (including current)
     worktrees_with_changes: list[Path] = []
@@ -227,33 +224,18 @@ def consolidate_cmd(
         # Use current worktree as target (existing behavior)
         target_worktree_path = current_worktree
 
-    # Identify worktrees to remove
-    # Find worktrees to remove based on partial stack and target worktree
-    worktrees_to_remove = []
-    target_worktree_resolved = target_worktree_path.resolve()
+    # Create consolidation plan using utility function
+    plan = create_consolidation_plan(
+        all_worktrees=all_worktrees,
+        stack_branches=stack_branches,
+        end_branch=branch,
+        target_worktree_path=target_worktree_path,
+        source_worktree_path=current_worktree if name is not None else None,
+    )
 
-    for worktree in all_worktrees:
-        # Skip if no branch (detached HEAD)
-        if worktree.branch is None:
-            continue
-
-        # Skip if branch is not in the consolidation range
-        if worktree.branch not in stack_to_consolidate:
-            continue
-
-        # Skip the target worktree
-        if worktree.path.resolve() == target_worktree_resolved:
-            continue
-
-        # Skip current worktree if creating new worktree (will be removed separately)
-        if name is not None and worktree.path.resolve() == current_worktree.resolve():
-            continue
-
-        # Never remove root worktree (CRITICAL safety check)
-        if worktree.is_root:
-            continue
-
-        worktrees_to_remove.append(worktree)
+    # Extract data from plan for easier reference
+    worktrees_to_remove = plan.worktrees_to_remove
+    stack_to_consolidate = plan.stack_to_consolidate
 
     # Display preview
     if not worktrees_to_remove:

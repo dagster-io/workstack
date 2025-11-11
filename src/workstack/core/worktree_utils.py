@@ -5,10 +5,39 @@ separated from I/O and CLI concerns. These functions work with data objects
 (WorktreeInfo) and enable fast unit testing.
 """
 
+from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
 from workstack.core.gitops import WorktreeInfo
+
+
+class MoveOperationType(Enum):
+    """Type of move operation to perform between worktrees."""
+
+    MOVE = "move"  # Source has branch, target doesn't exist or is detached
+    SWAP = "swap"  # Both source and target have branches
+    CREATE = "create"  # Target doesn't exist
+
+
+@dataclass(frozen=True)
+class MoveOperation:
+    """Represents a move operation between worktrees.
+
+    Attributes:
+        operation_type: Type of operation (move, swap, or create)
+        source_path: Path to source worktree
+        target_path: Path to target worktree
+        source_branch: Branch in source worktree (None if detached)
+        target_branch: Branch in target worktree (None if doesn't exist or detached)
+    """
+
+    operation_type: MoveOperationType
+    source_path: Path
+    target_path: Path
+    source_branch: str | None
+    target_branch: str | None
 
 
 def find_worktree_containing_path(worktrees: list[WorktreeInfo], target_path: Path) -> Path | None:
@@ -166,3 +195,58 @@ def filter_non_trunk_branches(all_branches: dict[str, Any], stack: list[str]) ->
         ["feat"]
     """
     return [b for b in stack if b in all_branches and not all_branches[b].is_trunk]
+
+
+def determine_move_operation(
+    worktrees: list[WorktreeInfo],
+    source_path: Path,
+    target_path: Path,
+) -> MoveOperation:
+    """Determine the type of move operation based on source and target states.
+
+    Pure function that analyzes worktree states to determine operation type:
+    - CREATE: Target doesn't exist
+    - SWAP: Both source and target have branches
+    - MOVE: Source has branch, target exists but is detached or doesn't exist
+
+    Args:
+        worktrees: List of all worktrees in the repository
+        source_path: Path to source worktree (must exist)
+        target_path: Path to target worktree (may not exist)
+
+    Returns:
+        MoveOperation object describing the operation to perform
+
+    Examples:
+        >>> worktrees = [
+        ...     WorktreeInfo(Path("/repo/src"), "feat-1", False, False),
+        ... ]
+        >>> determine_move_operation(worktrees, Path("/repo/src"), Path("/repo/new"))
+        MoveOperation(operation_type=MoveOperationType.CREATE, ...)
+    """
+    # Get source branch
+    source_branch = get_worktree_branch(worktrees, source_path)
+
+    # Check if target exists in worktrees list
+    target_branch = get_worktree_branch(worktrees, target_path)
+
+    # Determine operation type
+    if target_branch is None:
+        # Target doesn't exist or is detached
+        # Check if any worktree exists at target_path
+        target_exists = any(wt.path.resolve() == target_path.resolve() for wt in worktrees)
+        if target_exists:
+            operation_type = MoveOperationType.MOVE
+        else:
+            operation_type = MoveOperationType.CREATE
+    else:
+        # Target exists with a branch - this is a swap
+        operation_type = MoveOperationType.SWAP
+
+    return MoveOperation(
+        operation_type=operation_type,
+        source_path=source_path,
+        target_path=target_path,
+        source_branch=source_branch,
+        target_branch=target_branch,
+    )

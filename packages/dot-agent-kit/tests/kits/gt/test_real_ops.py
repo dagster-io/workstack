@@ -1,13 +1,14 @@
 """Smoke tests for real_ops.py subprocess integration.
 
 These tests verify that real subprocess-based implementations can be called
-without crashing and handle basic success/failure scenarios. Tests use actual
-git/gh/gt commands as requested for code coverage.
+without crashing and handle basic success/failure scenarios. Git and Graphite
+tests use actual git/gt commands. GitHub tests mock subprocess.run to avoid
+network API calls while still testing JSON parsing and error handling.
 
 Test organization:
-- TestRealGitGtKitOpsSmoke: Git operations (6 methods)
-- TestRealGraphiteGtKitOpsSmoke: Graphite operations (6 methods)
-- TestRealGitHubGtKitOpsSmoke: GitHub operations (4 methods)
+- TestRealGitGtKitOpsSmoke: Git operations (6 methods, uses actual git commands)
+- TestRealGraphiteGtKitOpsSmoke: Graphite operations (6 methods, uses actual gt commands)
+- TestRealGitHubGtKitOpsSmoke: GitHub operations (4 methods, mocks subprocess.run)
 - TestRealGtKitOpsSmoke: Composite operations (3 accessor methods)
 """
 

@@ -4,269 +4,14 @@ import click
 
 from workstack.cli.core import discover_repo_context
 from workstack.core.context import WorkstackContext
+from workstack.core.display_utils import (
+    filter_stack_for_worktree,
+    format_pr_info,
+    format_worktree_line,
+    get_visible_length,
+)
 from workstack.core.github_ops import PullRequestInfo
 from workstack.core.repo_discovery import ensure_workstacks_dir
-
-
-def _get_visible_length(text: str) -> int:
-    """Calculate the visible length of text, excluding ANSI and OSC escape sequences.
-
-    Args:
-        text: Text that may contain escape sequences
-
-    Returns:
-        Number of visible characters
-    """
-    import re
-
-    # Remove ANSI color codes (\033[...m)
-    text = re.sub(r"\033\[[0-9;]*m", "", text)
-    # Remove OSC 8 hyperlink sequences (\033]8;;URL\033\\)
-    text = re.sub(r"\033\]8;;[^\033]*\033\\", "", text)
-    return len(text)
-
-
-def _format_worktree_line(
-    name: str,
-    branch: str | None,
-    pr_info: str | None,
-    plan_summary: str | None,
-    is_root: bool,
-    is_current: bool,
-    max_name_len: int = 0,
-    max_branch_len: int = 0,
-    max_pr_info_len: int = 0,
-) -> str:
-    """Format a single worktree line with colorization and optional alignment.
-
-    Args:
-        name: Worktree name to display
-        branch: Branch name (if any)
-        pr_info: Formatted PR info string (e.g., "✅ #23") or None
-        plan_summary: Plan title or None if no plan
-        is_root: True if this is the root repository worktree
-        is_current: True if this is the worktree the user is currently in
-        max_name_len: Maximum name length for alignment (0 = no alignment)
-        max_branch_len: Maximum branch length for alignment (0 = no alignment)
-        max_pr_info_len: Maximum PR info visible length for alignment (0 = no alignment)
-
-    Returns:
-        Formatted line with colorization in format: name (branch) {PR info} {plan summary}
-    """
-    # Root worktree gets green to distinguish it from regular worktrees
-    name_color = "green" if is_root else "cyan"
-
-    # Calculate padding for name field
-    name_padding = max_name_len - len(name) if max_name_len > 0 else 0
-    name_with_padding = name + (" " * name_padding)
-    name_part = click.style(name_with_padding, fg=name_color, bold=True)
-
-    # Build parts for display: name (branch) {PR info} {plan summary}
-    parts = [name_part]
-
-    # Add branch in parentheses (yellow)
-    # If name matches branch, show "=" instead of repeating the branch name
-    if branch:
-        branch_display = "=" if name == branch else branch
-        # Calculate padding for branch field (including parentheses)
-        branch_with_parens = f"({branch_display})"
-        branch_padding = max_branch_len - len(branch_with_parens) if max_branch_len > 0 else 0
-        branch_with_padding = branch_with_parens + (" " * branch_padding)
-        branch_part = click.style(branch_with_padding, fg="yellow")
-        parts.append(branch_part)
-    elif max_branch_len > 0:
-        # Add spacing even if no branch to maintain alignment
-        parts.append(" " * max_branch_len)
-
-    # Add PR info or placeholder with alignment
-    pr_info_placeholder = click.style("[no PR]", fg="white", dim=True)
-    pr_display = pr_info if pr_info else pr_info_placeholder
-
-    if max_pr_info_len > 0:
-        # Calculate visible length and add padding
-        visible_len = _get_visible_length(pr_display)
-        padding = max_pr_info_len - visible_len
-        pr_display_with_padding = pr_display + (" " * padding)
-        parts.append(pr_display_with_padding)
-    else:
-        parts.append(pr_display)
-
-    # Add plan summary or placeholder
-    if plan_summary:
-        plan_colored = click.style(f"📋 {plan_summary}", fg="bright_magenta")
-        parts.append(plan_colored)
-    else:
-        parts.append(click.style("[no plan]", fg="white", dim=True))
-
-    # Build the main line
-    line = " ".join(parts)
-
-    # Add indicator on the right for current worktree
-    if is_current:
-        indicator = click.style(" ← (cwd)", fg="bright_blue")
-        line += indicator
-
-    return line
-
-
-def _filter_stack_for_worktree(
-    stack: list[str],
-    current_worktree_path: Path,
-    all_worktree_branches: dict[Path, str | None],
-    is_root_worktree: bool,
-) -> list[str]:
-    """Filter a graphite stack to only show branches relevant to the current worktree.
-
-    When displaying a stack for a specific worktree, we want to show:
-    - Root worktree: Current branch + all ancestors (no descendants)
-    - Other worktrees: Ancestors + current + descendants that are checked out somewhere
-
-    This ensures that:
-    - Root worktree shows context from trunk down to current branch
-    - Other worktrees show full context but only "active" descendants with worktrees
-    - Branches without active worktrees don't clutter non-root displays
-
-    Example:
-        Stack: [main, foo, bar, baz]
-        Worktrees:
-          - root on bar
-          - worktree-baz on baz
-
-        Root display: [main, foo, bar]  (ancestors + current, no descendants)
-        Worktree-baz display: [main, foo, bar, baz]  (full context with checked-out descendants)
-
-    Args:
-        stack: The full graphite stack (ordered from trunk to leaf)
-        current_worktree_path: Path to the worktree we're displaying the stack for
-        all_worktree_branches: Mapping of all worktree paths to their checked-out branches
-        is_root_worktree: True if this is the root repository worktree
-
-    Returns:
-        Filtered stack with only relevant branches
-    """
-    # Get the branch checked out in the current worktree
-    current_branch = all_worktree_branches.get(current_worktree_path)
-    if current_branch is None or current_branch not in stack:
-        # If current branch is not in stack (shouldn't happen), return full stack
-        return stack
-
-    # Find the index of the current branch in the stack
-    current_idx = stack.index(current_branch)
-
-    # Filter the stack based on whether this is the root worktree
-    if is_root_worktree:
-        # Root worktree: show only ancestors + current (no descendants)
-        # This keeps the display clean and focused on context
-        return stack[: current_idx + 1]
-    else:
-        # Non-root worktree: show ancestors + current + descendants with worktrees
-        # Build a set of branches that are checked out in ANY worktree
-        all_checked_out_branches = {
-            branch for branch in all_worktree_branches.values() if branch is not None
-        }
-
-        result = []
-        for i, branch in enumerate(stack):
-            if i <= current_idx:
-                # Ancestors and current branch: always keep
-                result.append(branch)
-            else:
-                # Descendants: only keep if checked out in some worktree
-                if branch in all_checked_out_branches:
-                    result.append(branch)
-
-        return result
-
-
-def _is_trunk_branch(ctx: WorkstackContext, repo_root: Path, branch: str) -> bool:
-    """Check if a branch is a trunk branch (has no parent in graphite).
-
-    Returns False for missing cache files rather than None because this function
-    answers a boolean question: "Is this branch trunk?" When cache is missing,
-    the answer is definitively "no" (we can't determine trunk status, default to False).
-
-    This differs from get_branch_stack() which returns None for missing cache because
-    it's retrieving optional data - None indicates "no stack data available" vs
-    an empty list which would mean "stack exists but is empty".
-
-    Args:
-        ctx: Workstack context with git operations
-        repo_root: Path to the repository root
-        branch: Branch name to check
-
-    Returns:
-        True if the branch is a trunk branch (no parent), False otherwise
-        False is also returned when cache is missing/inaccessible (conservative default)
-    """
-    # Get all branches from GraphiteOps abstraction
-    all_branches = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo_root)
-    if not all_branches:
-        return False
-
-    # Check if branch exists and is trunk
-    if branch in all_branches:
-        return all_branches[branch].is_trunk
-
-    return False
-
-
-def _get_pr_status_emoji(pr: PullRequestInfo) -> str:
-    """Determine the emoji to display for a PR based on its status.
-
-    Args:
-        pr: Pull request information
-
-    Returns:
-        Emoji character representing the PR's current state
-    """
-    if pr.is_draft:
-        return "🚧"
-    if pr.state == "MERGED":
-        return "🟣"
-    if pr.state == "CLOSED":
-        return "⭕"
-    if pr.checks_passing is True:
-        return "✅"
-    if pr.checks_passing is False:
-        return "❌"
-    # Open PR with no checks
-    return "◯"
-
-
-def _format_pr_info(
-    ctx: WorkstackContext,
-    repo_root: Path,
-    branch: str,
-    prs: dict[str, PullRequestInfo],
-) -> str:
-    """Format PR status indicator with emoji and link.
-
-    Args:
-        ctx: Workstack context with GitHub/Graphite operations
-        repo_root: Repository root directory
-        branch: Branch name
-        prs: Mapping of branch name -> PullRequestInfo
-
-    Returns:
-        Formatted PR info string (e.g., "✅ #23") or empty string if no PR
-    """
-    pr = prs.get(branch)
-    if pr is None:
-        return ""
-
-    emoji = _get_pr_status_emoji(pr)
-
-    # Get Graphite URL (always available since we have owner/repo from GitHub)
-    url = ctx.graphite_ops.get_graphite_url(pr.owner, pr.repo, pr.number)
-
-    # Format as clickable link using OSC 8 terminal escape sequence with cyan color
-    # Format: \033]8;;URL\033\\TEXT\033]8;;\033\\
-    pr_text = f"#{pr.number}"
-    # Wrap the link text in cyan color to distinguish from non-clickable bright_blue indicators
-    colored_pr_text = click.style(pr_text, fg="cyan")
-    clickable_link = f"\033]8;;{url}\033\\{colored_pr_text}\033]8;;\033\\"
-
-    return f"{emoji} {clickable_link}"
 
 
 def _format_plan_summary(worktree_path: Path) -> str | None:
@@ -311,8 +56,16 @@ def _display_branch_stack(
     if not stack:
         return
 
-    filtered_stack = _filter_stack_for_worktree(
-        stack, worktree_path, all_branches, is_root_worktree
+    # Get current branch for filtering
+    current_branch = all_branches.get(worktree_path)
+    if current_branch is None:
+        return
+
+    # Build set of all checked-out branches
+    all_checked_out_branches = {b for b in all_branches.values() if b is not None}
+
+    filtered_stack = filter_stack_for_worktree(
+        stack, current_branch, all_checked_out_branches, is_root_worktree
     )
     if not filtered_stack:
         return
@@ -336,8 +89,10 @@ def _display_branch_stack(
 
         # Add PR info if available
         if prs:
-            pr_info = _format_pr_info(ctx, repo_root, branch_name, prs)
-            if pr_info:
+            pr = prs.get(branch_name)
+            if pr:
+                graphite_url = ctx.graphite_ops.get_graphite_url(pr.owner, pr.repo, pr.number)
+                pr_info = format_pr_info(pr, graphite_url)
                 line = f"  {marker}  {branch_text} {pr_info}"
             else:
                 line = f"  {marker}  {branch_text}"
@@ -408,8 +163,13 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
 
         # Add root PR info for width calculation
         if prs:
-            root_pr_info = _format_pr_info(ctx, repo.root, root_branch, prs)
-            all_pr_info.append(root_pr_info if root_pr_info else "[no PR]")
+            pr = prs.get(root_branch)
+            if pr:
+                graphite_url = ctx.graphite_ops.get_graphite_url(pr.owner, pr.repo, pr.number)
+                root_pr_info = format_pr_info(pr, graphite_url)
+                all_pr_info.append(root_pr_info if root_pr_info else "[no PR]")
+            else:
+                all_pr_info.append("[no PR]")
         else:
             all_pr_info.append("[no PR]")
     else:
@@ -430,8 +190,15 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
 
                         # Add PR info for width calculation
                         if prs:
-                            wt_pr_info = _format_pr_info(ctx, repo.root, branch_name, prs)
-                            all_pr_info.append(wt_pr_info if wt_pr_info else "[no PR]")
+                            pr = prs.get(branch_name)
+                            if pr:
+                                graphite_url = ctx.graphite_ops.get_graphite_url(
+                                    pr.owner, pr.repo, pr.number
+                                )
+                                wt_pr_info = format_pr_info(pr, graphite_url)
+                                all_pr_info.append(wt_pr_info if wt_pr_info else "[no PR]")
+                            else:
+                                all_pr_info.append("[no PR]")
                         else:
                             all_pr_info.append("[no PR]")
                     else:
@@ -442,7 +209,7 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
     max_name_len = max(len(name) for name in all_names) if all_names else 0
     max_branch_len = max(len(branch) for branch in all_branches) if all_branches else 0
     max_pr_info_len = (
-        max(_get_visible_length(pr_info) for pr_info in all_pr_info) if all_pr_info else 0
+        max(get_visible_length(pr_info) for pr_info in all_pr_info) if all_pr_info else 0
     )
 
     # Show root repo first (display as "root" to distinguish from worktrees)
@@ -451,11 +218,14 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
     # Get PR info and plan summary for root
     root_pr_info = None
     if prs and root_branch:
-        root_pr_info = _format_pr_info(ctx, repo.root, root_branch, prs)
+        pr = prs.get(root_branch)
+        if pr:
+            graphite_url = ctx.graphite_ops.get_graphite_url(pr.owner, pr.repo, pr.number)
+            root_pr_info = format_pr_info(pr, graphite_url)
     root_plan_summary = _format_plan_summary(repo.root)
 
     click.echo(
-        _format_worktree_line(
+        format_worktree_line(
             "root",
             root_branch,
             pr_info=root_pr_info,
@@ -501,11 +271,14 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
         # Get PR info and plan summary for this worktree
         wt_pr_info = None
         if prs and wt_branch:
-            wt_pr_info = _format_pr_info(ctx, repo.root, wt_branch, prs)
+            pr = prs.get(wt_branch)
+            if pr:
+                graphite_url = ctx.graphite_ops.get_graphite_url(pr.owner, pr.repo, pr.number)
+                wt_pr_info = format_pr_info(pr, graphite_url)
         wt_plan_summary = _format_plan_summary(wt_path) if wt_path else None
 
         click.echo(
-            _format_worktree_line(
+            format_worktree_line(
                 name,
                 wt_branch,
                 pr_info=wt_pr_info,

@@ -3,8 +3,9 @@
 import click
 
 from workstack.cli.core import discover_repo_context
-from workstack.cli.tree import build_workstack_tree, render_tree
+from workstack.cli.tree import build_workstack_tree
 from workstack.core.context import WorkstackContext
+from workstack.core.tree_utils import render_tree
 
 
 @click.command("tree")

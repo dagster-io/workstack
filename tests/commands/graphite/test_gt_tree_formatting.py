@@ -6,8 +6,21 @@ to display branch hierarchies in a tree format.
 
 from tests.fakes.gitops import FakeGitOps
 from tests.test_utils import sentinel_path
-from workstack.cli.commands.gt import _format_branch_recursive, _format_branches_as_tree
 from workstack.core.branch_metadata import BranchMetadata
+from workstack.core.tree_utils import format_branch_recursive, format_branches_as_tree
+
+
+def _collect_commit_messages(
+    branches: dict[str, BranchMetadata], git_ops: FakeGitOps, repo_root
+) -> dict[str, str]:
+    """Helper to collect commit messages for all branches."""
+    messages = {}
+    for metadata in branches.values():
+        if metadata.commit_sha:
+            msg = git_ops.get_commit_message(repo_root, metadata.commit_sha)
+            if msg:
+                messages[metadata.commit_sha] = msg
+    return messages
 
 
 def test_format_branches_as_tree_simple_hierarchy() -> None:
@@ -30,9 +43,10 @@ def test_format_branches_as_tree_simple_hierarchy() -> None:
     )
 
     repo_root = sentinel_path()
+    commit_messages = _collect_commit_messages(branches, git_ops, repo_root)
 
     # Act: Format tree
-    tree = _format_branches_as_tree(branches, git_ops, repo_root, root_branch=None)
+    tree = format_branches_as_tree(branches, commit_messages, root_branch=None)
 
     # Assert: Verify tree structure
     lines = tree.split("\n")
@@ -74,9 +88,10 @@ def test_format_branches_as_tree_complex_hierarchy() -> None:
     )
 
     repo_root = sentinel_path()
+    commit_messages = _collect_commit_messages(branches, git_ops, repo_root)
 
     # Act: Format tree
-    tree = _format_branches_as_tree(branches, git_ops, repo_root, root_branch=None)
+    tree = format_branches_as_tree(branches, commit_messages, root_branch=None)
 
     # Assert: Verify nested structure
     lines = tree.split("\n")
@@ -112,9 +127,10 @@ def test_format_branches_as_tree_deep_nesting() -> None:
     git_ops = FakeGitOps(commit_messages=commit_messages)
 
     repo_root = sentinel_path()
+    commit_messages_dict = _collect_commit_messages(branches, git_ops, repo_root)
 
     # Act: Format tree
-    tree = _format_branches_as_tree(branches, git_ops, repo_root, root_branch=None)
+    tree = format_branches_as_tree(branches, commit_messages_dict, root_branch=None)
 
     # Assert: Verify deep nesting with proper indentation
     lines = tree.split("\n")
@@ -146,9 +162,10 @@ def test_format_branches_as_tree_multiple_roots() -> None:
     )
 
     repo_root = sentinel_path()
+    commit_messages = _collect_commit_messages(branches, git_ops, repo_root)
 
     # Act: Format tree
-    tree = _format_branches_as_tree(branches, git_ops, repo_root, root_branch=None)
+    tree = format_branches_as_tree(branches, commit_messages, root_branch=None)
 
     # Assert: Verify multiple roots
     lines = tree.split("\n")
@@ -186,9 +203,10 @@ def test_format_branches_as_tree_with_root_branch() -> None:
     )
 
     repo_root = sentinel_path()
+    commit_messages = _collect_commit_messages(branches, git_ops, repo_root)
 
     # Act: Format tree with feature-1 as root
-    tree = _format_branches_as_tree(branches, git_ops, repo_root, root_branch="feature-1")
+    tree = format_branches_as_tree(branches, commit_messages, root_branch="feature-1")
 
     # Assert: Should only show feature-1 and its descendants
     lines = tree.split("\n")
@@ -212,14 +230,14 @@ def test_format_branch_recursive_base_case() -> None:
     )
 
     repo_root = sentinel_path()
+    commit_messages = _collect_commit_messages(branches, git_ops, repo_root)
     lines: list[str] = []
 
     # Act: Format single branch
-    _format_branch_recursive(
+    format_branch_recursive(
         branch_name="main",
         branches=branches,
-        git_ops=git_ops,
-        repo_root=repo_root,
+        commit_messages=commit_messages,
         lines=lines,
         prefix="",
         is_last=True,
@@ -251,14 +269,14 @@ def test_format_branch_recursive_with_children() -> None:
     )
 
     repo_root = sentinel_path()
+    commit_messages = _collect_commit_messages(branches, git_ops, repo_root)
     lines: list[str] = []
 
     # Act: Format parent and children
-    _format_branch_recursive(
+    format_branch_recursive(
         branch_name="parent",
         branches=branches,
-        git_ops=git_ops,
-        repo_root=repo_root,
+        commit_messages=commit_messages,
         lines=lines,
         prefix="",
         is_last=True,
@@ -277,17 +295,14 @@ def test_format_branch_recursive_missing_branch() -> None:
     """Test recursive formatting handles missing branch gracefully."""
     # Arrange: Empty branches dict
     branches: dict[str, BranchMetadata] = {}
-
-    git_ops = FakeGitOps()
-    repo_root = sentinel_path()
+    commit_messages: dict[str, str] = {}
     lines: list[str] = []
 
     # Act: Try to format non-existent branch
-    _format_branch_recursive(
+    format_branch_recursive(
         branch_name="missing",
         branches=branches,
-        git_ops=git_ops,
-        repo_root=repo_root,
+        commit_messages=commit_messages,
         lines=lines,
         prefix="",
         is_last=True,
@@ -302,11 +317,10 @@ def test_format_branches_as_tree_empty() -> None:
     """Test tree formatting with empty branches."""
     # Arrange: Empty branches
     branches: dict[str, BranchMetadata] = {}
-    git_ops = FakeGitOps()
-    repo_root = sentinel_path()
+    commit_messages: dict[str, str] = {}
 
     # Act: Format empty tree
-    tree = _format_branches_as_tree(branches, git_ops, repo_root, root_branch=None)
+    tree = format_branches_as_tree(branches, commit_messages, root_branch=None)
 
     # Assert: Appropriate message
     assert tree == "No branches found"
@@ -316,12 +330,10 @@ def test_format_branches_as_tree_invalid_root_branch() -> None:
     """Test tree formatting with invalid root branch specified."""
     # Arrange: Branches without requested root
     branches = {"main": BranchMetadata.trunk("main", commit_sha="abc123456")}
-
-    git_ops = FakeGitOps()
-    repo_root = sentinel_path()
+    commit_messages: dict[str, str] = {}
 
     # Act: Request non-existent branch
-    tree = _format_branches_as_tree(branches, git_ops, repo_root, root_branch="nonexistent")
+    tree = format_branches_as_tree(branches, commit_messages, root_branch="nonexistent")
 
     # Assert: Error message
     assert tree == "Error: Branch 'nonexistent' not found"
@@ -331,12 +343,10 @@ def test_format_branches_as_tree_no_trunks() -> None:
     """Test tree formatting when no trunk branches exist."""
     # Arrange: All branches have parents (no trunk)
     branches = {"feature-1": BranchMetadata.branch("feature-1", "main", commit_sha="abc123456")}
-
-    git_ops = FakeGitOps()
-    repo_root = sentinel_path()
+    commit_messages: dict[str, str] = {}
 
     # Act: Format without trunk branches
-    tree = _format_branches_as_tree(branches, git_ops, repo_root, root_branch=None)
+    tree = format_branches_as_tree(branches, commit_messages, root_branch=None)
 
     # Assert: No branches message (since no roots found)
     assert tree == "No branches found"
@@ -376,9 +386,10 @@ def test_format_branch_recursive_with_mixed_children() -> None:
     )
 
     repo_root = sentinel_path()
+    commit_messages = _collect_commit_messages(branches, git_ops, repo_root)
 
     # Act: Format entire tree
-    tree = _format_branches_as_tree(branches, git_ops, repo_root, root_branch=None)
+    tree = format_branches_as_tree(branches, commit_messages, root_branch=None)
 
     # Assert: Complex structure preserved
     lines = tree.split("\n")
@@ -396,14 +407,10 @@ def test_format_branches_with_missing_commit_message() -> None:
     """Test tree formatting when commit messages are missing."""
     # Arrange: Branch without commit message
     branches = {"main": BranchMetadata.trunk("main", commit_sha="abc123456")}
-
-    git_ops = FakeGitOps()
-    # Don't add commit message for this SHA - test default message behavior
-
-    repo_root = sentinel_path()
+    commit_messages: dict[str, str] = {}  # Empty - no messages available
 
     # Act: Format tree
-    tree = _format_branches_as_tree(branches, git_ops, repo_root, root_branch=None)
+    tree = format_branches_as_tree(branches, commit_messages, root_branch=None)
 
     # Assert: Uses default message
     assert 'main (abc1234) "No commit message"' in tree
@@ -417,12 +424,10 @@ def test_format_branches_with_no_commit_sha() -> None:
             name="main", parent=None, children=[], is_trunk=True, commit_sha=None
         )
     }
-
-    git_ops = FakeGitOps()
-    repo_root = sentinel_path()
+    commit_messages: dict[str, str] = {}
 
     # Act: Format tree
-    tree = _format_branches_as_tree(branches, git_ops, repo_root, root_branch=None)
+    tree = format_branches_as_tree(branches, commit_messages, root_branch=None)
 
     # Assert: Uses "unknown" for SHA
     assert 'main (unknown) "No commit message"' in tree
@@ -450,9 +455,10 @@ def test_format_branches_with_special_characters() -> None:
     )
 
     repo_root = sentinel_path()
+    commit_messages = _collect_commit_messages(branches, git_ops, repo_root)
 
     # Act: Format tree
-    tree = _format_branches_as_tree(branches, git_ops, repo_root, root_branch=None)
+    tree = format_branches_as_tree(branches, commit_messages, root_branch=None)
 
     # Assert: Special characters preserved
     lines = tree.split("\n")

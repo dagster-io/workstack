@@ -11,12 +11,12 @@ to follow proper test layer discipline.
 
 from pathlib import Path
 
-from workstack.cli.tree import (
+from workstack.core.tree_utils import (
     BranchGraph,
     TreeNode,
     WorktreeMapping,
-    _build_tree_from_graph,
-    _filter_graph_to_active_branches,
+    build_tree_from_graph,
+    filter_graph_to_active_branches,
     render_tree,
 )
 
@@ -45,7 +45,7 @@ def test_filter_graph_keeps_only_active_branches() -> None:
     # Only feature-a and main have worktrees
     active = {"main", "feature-a"}
 
-    filtered = _filter_graph_to_active_branches(graph, active)
+    filtered = filter_graph_to_active_branches(graph, active)
 
     assert filtered.parent_of == {"feature-a": "main"}
     assert filtered.children_of == {"main": ["feature-a"]}
@@ -70,7 +70,7 @@ def test_filter_graph_preserves_multi_level_hierarchy() -> None:
     # All branches are active
     active = {"parent", "child", "grandchild"}
 
-    filtered = _filter_graph_to_active_branches(graph, active)
+    filtered = filter_graph_to_active_branches(graph, active)
 
     assert filtered.parent_of == {"child": "parent", "grandchild": "child"}
     assert filtered.children_of == {
@@ -102,7 +102,7 @@ def test_build_tree_creates_correct_structure() -> None:
         current_worktree="root",
     )
 
-    roots = _build_tree_from_graph(graph, mapping)
+    roots = build_tree_from_graph(graph, mapping)
 
     assert len(roots) == 1
     assert roots[0].branch_name == "main"
@@ -142,7 +142,7 @@ def test_build_tree_handles_multiple_children() -> None:
         current_worktree=None,
     )
 
-    roots = _build_tree_from_graph(graph, mapping)
+    roots = build_tree_from_graph(graph, mapping)
 
     assert len(roots) == 1
     assert roots[0].branch_name == "main"
@@ -183,7 +183,7 @@ def test_build_tree_handles_multiple_trunk_branches() -> None:
         current_worktree="root",
     )
 
-    roots = _build_tree_from_graph(graph, mapping)
+    roots = build_tree_from_graph(graph, mapping)
 
     # Should have two root nodes (main and develop)
     assert len(roots) == 2

@@ -734,8 +734,10 @@ def test_list_with_stacks_corrupted_cache() -> None:
         )
 
         # Should raise json.JSONDecodeError (fail-fast behavior)
-        with pytest.raises(json.JSONDecodeError):
-            runner.invoke(cli, ["list", "--stacks"], obj=test_ctx, catch_exceptions=False)
+        # Capture expected warning about corrupted cache
+        with pytest.warns(UserWarning, match="Cannot parse Graphite cache"):
+            with pytest.raises(json.JSONDecodeError):
+                runner.invoke(cli, ["list", "--stacks"], obj=test_ctx, catch_exceptions=False)
 
 
 def test_list_with_stacks_shows_plan_summary() -> None:

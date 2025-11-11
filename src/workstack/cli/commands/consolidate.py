@@ -259,8 +259,8 @@ def consolidate_cmd(
     if not worktrees_to_remove:
         # If using --name, we still need to remove source worktree even if no other worktrees exist
         if name is None:
-            click.echo("No other worktrees found containing branches from current stack")
-            click.echo(f"\nCurrent stack branches: {', '.join(stack_branches)}")
+            click.echo("No other worktrees found containing branches from current stack", err=True)
+            click.echo(f"\nCurrent stack branches: {', '.join(stack_branches)}", err=True)
             return
         # Continue to source worktree removal when using --name
 

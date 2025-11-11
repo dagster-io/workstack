@@ -23,6 +23,7 @@ class FakeGraphiteOps(GraphiteOps):
         self,
         *,
         sync_raises: Exception | None = None,
+        submit_branch_raises: Exception | None = None,
         pr_info: dict[str, PullRequestInfo] | None = None,
         branches: dict[str, BranchMetadata] | None = None,
         stacks: dict[str, list[str]] | None = None,
@@ -31,12 +32,15 @@ class FakeGraphiteOps(GraphiteOps):
 
         Args:
             sync_raises: Exception to raise when sync() is called (for testing error cases)
+            submit_branch_raises: Exception to raise when submit_branch() is called
             pr_info: Mapping of branch name -> PullRequestInfo for get_prs_from_graphite()
             branches: Mapping of branch name -> BranchMetadata for get_all_branches()
             stacks: Mapping of branch name -> stack (list of branches from trunk to leaf)
         """
         self._sync_raises = sync_raises
+        self._submit_branch_raises = submit_branch_raises
         self._sync_calls: list[tuple[Path, bool, bool]] = []
+        self._submit_branch_calls: list[tuple[Path, str, bool]] = []
         self._pr_info = pr_info if pr_info is not None else {}
         self._branches = branches if branches is not None else {}
         self._stacks = stacks if stacks is not None else {}
@@ -107,6 +111,16 @@ class FakeGraphiteOps(GraphiteOps):
 
         return ancestors + descendants
 
+    def submit_branch(self, repo_root: Path, branch_name: str, *, quiet: bool) -> None:
+        """Fake submit_branch operation.
+
+        Tracks calls for verification and raises configured exception if set.
+        """
+        self._submit_branch_calls.append((repo_root, branch_name, quiet))
+
+        if self._submit_branch_raises is not None:
+            raise self._submit_branch_raises
+
     @property
     def sync_calls(self) -> list[tuple[Path, bool, bool]]:
         """Get the list of sync() calls that were made.
@@ -116,3 +130,13 @@ class FakeGraphiteOps(GraphiteOps):
         This property is for test assertions only.
         """
         return self._sync_calls
+
+    @property
+    def submit_branch_calls(self) -> list[tuple[Path, str, bool]]:
+        """Get the list of submit_branch() calls that were made.
+
+        Returns list of (repo_root, branch_name, quiet) tuples.
+
+        This property is for test assertions only.
+        """
+        return self._submit_branch_calls

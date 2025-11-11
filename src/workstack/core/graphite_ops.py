@@ -240,6 +240,21 @@ class GraphiteOps(ABC):
         """
         ...
 
+    @abstractmethod
+    def submit_branch(self, repo_root: Path, branch_name: str, *, quiet: bool) -> None:
+        """Submit (force-push) a branch to GitHub.
+
+        Uses `gt submit` to push a branch that was rebased by `gt sync -f`.
+        This is typically called after merging a PR to push the rebased remaining
+        branches in a stack to GitHub.
+
+        Args:
+            repo_root: Repository root directory
+            branch_name: Name of the branch to submit
+            quiet: If True, pass --quiet flag to gt submit for minimal output
+        """
+        ...
+
     def get_parent_branch(self, git_ops: GitOps, repo_root: Path, branch: str) -> str | None:
         """Get parent branch name for a given branch.
 
@@ -449,6 +464,39 @@ class RealGraphiteOps(GraphiteOps):
         # ancestors already contains the current branch
         return ancestors + descendants
 
+    def submit_branch(self, repo_root: Path, branch_name: str, *, quiet: bool) -> None:
+        """Submit (force-push) a branch to GitHub.
+
+        Uses `gt submit --branch <branch> --no-edit` to push a branch that was
+        rebased by `gt sync -f`. This ensures GitHub PRs show the rebased commits
+        rather than stale versions with duplicate commits.
+
+        Error output (stderr) is always captured to ensure CalledProcessError
+        includes complete error messages for debugging. In verbose mode (!quiet),
+        stderr is displayed to the user after successful execution.
+
+        Args:
+            repo_root: Repository root directory
+            branch_name: Name of the branch to submit
+            quiet: If True, pass --quiet flag to gt submit for minimal output
+        """
+        cmd = ["gt", "submit", "--branch", branch_name, "--no-edit"]
+        if quiet:
+            cmd.append("--quiet")
+
+        result = subprocess.run(
+            cmd,
+            cwd=repo_root,
+            check=True,
+            stdout=DEVNULL if quiet else sys.stdout,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+
+        # Display stderr in verbose mode after successful execution
+        if not quiet and result.stderr:
+            click.echo(result.stderr, err=True, nl=False)
+
 
 class DryRunGraphiteOps(GraphiteOps):
     """Wrapper that prints dry-run messages instead of executing destructive operations.
@@ -499,6 +547,16 @@ class DryRunGraphiteOps(GraphiteOps):
         cmd = ["gt", "sync"]
         if force:
             cmd.append("-f")
+        if quiet:
+            cmd.append("--quiet")
+
+        click.echo(f"[DRY RUN] Would run: {' '.join(cmd)}")
+
+    def submit_branch(self, repo_root: Path, branch_name: str, *, quiet: bool) -> None:
+        """Print dry-run message instead of running gt submit."""
+        import click
+
+        cmd = ["gt", "submit", "--branch", branch_name, "--no-edit"]
         if quiet:
             cmd.append("--quiet")
 

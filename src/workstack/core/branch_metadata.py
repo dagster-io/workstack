@@ -15,7 +15,7 @@ class BranchMetadata:
     parent: str | None
     children: list[str]
     is_trunk: bool
-    commit_sha: str
+    commit_sha: str | None
 
     @staticmethod
     def trunk(

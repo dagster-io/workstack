@@ -30,7 +30,10 @@ test-workstack-dev:
 test-dot-agent-kit:
 	cd packages/dot-agent-kit && uv run pytest
 
-test: test-workstack-dev test-dot-agent-kit
+test-root:
+	uv run pytest tests/
+
+test: test-root test-workstack-dev test-dot-agent-kit
 
 check:
 	uv run dot-agent check

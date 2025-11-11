@@ -1,29 +1,26 @@
 """Tests for the create command."""
 
 import json
-from pathlib import Path
 from unittest import mock
 
 from click.testing import CliRunner
 
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
+from tests.test_utils.env_helpers import simulated_workstack_env
 from workstack.cli.cli import cli
+from workstack.cli.config import LoadedConfig
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
 from workstack.core.global_config import GlobalConfig
+from workstack.core.repo_discovery import RepoContext
 
 
 def test_create_basic_worktree() -> None:
     """Test creating a basic worktree."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
         # Create minimal config
@@ -31,11 +28,11 @@ def test_create_basic_worktree() -> None:
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -45,7 +42,7 @@ def test_create_basic_worktree() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
@@ -59,24 +56,19 @@ def test_create_basic_worktree() -> None:
 def test_create_with_custom_branch_name() -> None:
     """Test creating a worktree with a custom branch name."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
         config_toml = workstacks_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -86,7 +78,7 @@ def test_create_with_custom_branch_name() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(
@@ -100,45 +92,55 @@ def test_create_with_custom_branch_name() -> None:
 def test_create_with_plan_file() -> None:
     """Test creating a worktree with a plan file."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
+    with simulated_workstack_env(runner) as env:
         # Create plan file
-        plan_file = cwd / "my-feature-plan.md"
+        plan_file = env.cwd / "my-feature-plan.md"
         plan_file.write_text("# My Feature Plan\n", encoding="utf-8")
 
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
-        config_toml.write_text("", encoding="utf-8")
+        # Pass local config directly
+        local_config = LoadedConfig(
+            env={},
+            post_create_commands=[],
+            post_create_shell=None,
+        )
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
             show_pr_checks=False,
         )
 
+        repo = RepoContext(
+            root=env.root_worktree,
+            repo_name=env.root_worktree.name,
+            workstacks_dir=workstacks_dir,
+        )
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            local_config=local_config,
+            repo=repo,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["create", "--plan", str(plan_file)], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
-        # Should create worktree with "plan" stripped from filename
-        wt_path = workstacks_dir / "my-feature"
+        # Should create worktree with "plan" stripped from filename and date suffix added
+        from datetime import datetime
+
+        date_suffix = datetime.now().strftime("%y-%m-%d")
+        wt_path = workstacks_dir / f"my-feature-{date_suffix}"
         assert wt_path.exists()
         # Plan file should be moved to .PLAN.md
         assert (wt_path / ".PLAN.md").exists()
@@ -148,37 +150,48 @@ def test_create_with_plan_file() -> None:
 def test_create_with_plan_file_removes_plan_word() -> None:
     """Test that --plan flag removes 'plan' from worktree names."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
-        config_toml.write_text("", encoding="utf-8")
+        # Pass local config directly
+        local_config = LoadedConfig(
+            env={},
+            post_create_commands=[],
+            post_create_shell=None,
+        )
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
             show_pr_checks=False,
         )
 
+        repo = RepoContext(
+            root=env.root_worktree,
+            repo_name=env.root_worktree.name,
+            workstacks_dir=workstacks_dir,
+        )
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            local_config=local_config,
+            repo=repo,
+            cwd=env.cwd,
         )
 
         # Test multiple plan file examples
+        from datetime import datetime
+
+        date_suffix = datetime.now().strftime("%y-%m-%d")
+
         test_cases = [
             ("devclikit-extraction-plan.md", "devclikit-extraction"),
             ("auth-plan.md", "auth"),
@@ -186,14 +199,16 @@ def test_create_with_plan_file_removes_plan_word() -> None:
             ("plan.md", "plan"),  # Edge case: only "plan" should be preserved
         ]
 
-        for plan_filename, expected_worktree_name in test_cases:
+        for plan_filename, expected_worktree_base in test_cases:
             # Create plan file
-            plan_file = cwd / plan_filename
+            plan_file = env.cwd / plan_filename
             plan_file.write_text(f"# {plan_filename}\n", encoding="utf-8")
 
             result = runner.invoke(cli, ["create", "--plan", str(plan_file)], obj=test_ctx)
 
             assert result.exit_code == 0, f"Failed for {plan_filename}: {result.output}"
+            # Worktree name includes date suffix
+            expected_worktree_name = f"{expected_worktree_base}-{date_suffix}"
             wt_path = workstacks_dir / expected_worktree_name
             assert wt_path.exists(), f"Expected worktree at {wt_path} for {plan_filename}"
             assert (wt_path / ".PLAN.md").exists()
@@ -208,24 +223,19 @@ def test_create_with_plan_file_removes_plan_word() -> None:
 def test_create_sanitizes_worktree_name() -> None:
     """Test that worktree names are sanitized."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
         config_toml = workstacks_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -235,7 +245,7 @@ def test_create_sanitizes_worktree_name() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["create", "Test_Feature!!"], obj=test_ctx)
@@ -252,24 +262,19 @@ def test_create_sanitizes_worktree_name() -> None:
 def test_create_sanitizes_branch_name() -> None:
     """Test that branch names are sanitized."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
         config_toml = workstacks_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -279,7 +284,7 @@ def test_create_sanitizes_branch_name() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         # Branch name should be sanitized differently than worktree name
@@ -291,25 +296,20 @@ def test_create_sanitizes_branch_name() -> None:
 def test_create_detects_default_branch() -> None:
     """Test that create detects the default branch when needed."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
         config_toml = workstacks_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
-            current_branches={cwd: "feature"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
+            current_branches={env.cwd: "feature"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -319,7 +319,7 @@ def test_create_detects_default_branch() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(
@@ -332,19 +332,14 @@ def test_create_detects_default_branch() -> None:
 def test_create_from_current_branch_in_worktree() -> None:
     """Regression: ensure --from-current-branch works when executed from a worktree."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        base = Path.cwd()
-        repo_root = base / "repo"
-        repo_root.mkdir()
-        git_dir = repo_root / ".git"
-        git_dir.mkdir()
+    with simulated_workstack_env(runner) as env:
+        repo_root = env.root_worktree
+        git_dir = env.git_dir
 
-        current_worktree = base / "wt-current"
+        current_worktree = env.root_worktree.parent / "wt-current"
         current_worktree.mkdir()
 
-        workstacks_root = base / "workstacks"
-        workstacks_root.mkdir()
-        workstacks_dir = workstacks_root / repo_root.name
+        workstacks_dir = env.workstacks_root / repo_root.name
         workstacks_dir.mkdir()
 
         config_toml = workstacks_dir / "config.toml"
@@ -364,7 +359,7 @@ def test_create_from_current_branch_in_worktree() -> None:
             },
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -392,13 +387,8 @@ def test_create_from_current_branch_in_worktree() -> None:
 def test_create_fails_if_worktree_exists() -> None:
     """Test that create fails if worktree already exists."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
         config_toml = workstacks_dir / "config.toml"
@@ -409,11 +399,11 @@ def test_create_fails_if_worktree_exists() -> None:
         wt_path.mkdir(parents=True)
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -423,7 +413,7 @@ def test_create_fails_if_worktree_exists() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
@@ -435,38 +425,41 @@ def test_create_fails_if_worktree_exists() -> None:
 def test_create_runs_post_create_commands() -> None:
     """Test that create runs post-create commands."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
-        # Create config with post_create commands
-        config_toml = workstacks_dir / "config.toml"
-        config_toml.write_text(
-            '[post_create]\ncommands = ["echo hello > test.txt"]\n',
-            encoding="utf-8",
+        # Pass local config directly with post_create commands
+        local_config = LoadedConfig(
+            env={},
+            post_create_commands=["echo hello > test.txt"],
+            post_create_shell=None,
         )
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
             show_pr_checks=False,
         )
 
+        repo = RepoContext(
+            root=env.root_worktree,
+            repo_name=env.root_worktree.name,
+            workstacks_dir=workstacks_dir,
+        )
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            local_config=local_config,
+            repo=repo,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
@@ -478,38 +471,41 @@ def test_create_runs_post_create_commands() -> None:
 def test_create_sets_env_variables() -> None:
     """Test that create sets environment variables in .env file."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
-        # Create config with env vars
-        config_toml = workstacks_dir / "config.toml"
-        config_toml.write_text(
-            '[env]\nMY_VAR = "my_value"\n',
-            encoding="utf-8",
+        # Pass local config directly with env vars
+        local_config = LoadedConfig(
+            env={"MY_VAR": "my_value"},
+            post_create_commands=[],
+            post_create_shell=None,
         )
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
             show_pr_checks=False,
         )
 
+        repo = RepoContext(
+            root=env.root_worktree,
+            repo_name=env.root_worktree.name,
+            workstacks_dir=workstacks_dir,
+        )
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            local_config=local_config,
+            repo=repo,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
@@ -527,25 +523,24 @@ def test_create_sets_env_variables() -> None:
 def test_create_uses_graphite_when_enabled() -> None:
     """Test that create uses graphite when enabled."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
-        config_toml.write_text("", encoding="utf-8")
+        # Pass local config directly
+        local_config = LoadedConfig(
+            env={},
+            post_create_commands=[],
+            post_create_shell=None,
+        )
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
-            current_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
+            current_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -553,14 +548,22 @@ def test_create_uses_graphite_when_enabled() -> None:
         )
         FakeGraphiteOps()
 
+        repo = RepoContext(
+            root=env.root_worktree,
+            repo_name=env.root_worktree.name,
+            workstacks_dir=workstacks_dir,
+        )
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            local_config=local_config,
+            repo=repo,
+            cwd=env.cwd,
         )
 
         # Mock subprocess to simulate gt create
-        with mock.patch("workstack.cli.commands.create.subprocess.run") as mock_run:
+        with mock.patch("subprocess.run") as mock_run:
             # Configure mock to return a successful result
             mock_run.return_value.returncode = 0
             mock_run.return_value.stdout = ""
@@ -575,37 +578,46 @@ def test_create_uses_graphite_when_enabled() -> None:
 def test_create_blocks_when_staged_changes_present_with_graphite_enabled() -> None:
     """Ensure the command fails fast when staged changes exist and graphite is enabled."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
-        (workstacks_dir / "config.toml").write_text("", encoding="utf-8")
+
+        # Pass local config directly
+        local_config = LoadedConfig(
+            env={},
+            post_create_commands=[],
+            post_create_shell=None,
+        )
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
-            current_branches={cwd: "main"},
-            staged_repos={cwd},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
+            current_branches={env.cwd: "main"},
+            staged_repos={env.cwd},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
             show_pr_checks=False,
         )
 
+        repo = RepoContext(
+            root=env.root_worktree,
+            repo_name=env.root_worktree.name,
+            workstacks_dir=workstacks_dir,
+        )
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            local_config=local_config,
+            repo=repo,
+            cwd=env.cwd,
         )
 
-        with mock.patch("workstack.cli.commands.create.subprocess.run") as mock_run:
+        with mock.patch("subprocess.run") as mock_run:
             result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
 
         assert result.exit_code == 1
@@ -617,24 +629,19 @@ def test_create_blocks_when_staged_changes_present_with_graphite_enabled() -> No
 def test_create_uses_git_when_graphite_disabled() -> None:
     """Test that create uses git when graphite is disabled."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
         config_toml = workstacks_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -644,7 +651,7 @@ def test_create_uses_git_when_graphite_disabled() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
@@ -655,23 +662,18 @@ def test_create_uses_git_when_graphite_disabled() -> None:
 def test_create_allows_staged_changes_when_graphite_disabled() -> None:
     """Graphite disabled path should ignore staged changes and continue."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
         (workstacks_dir / "config.toml").write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
-            staged_repos={cwd},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
+            staged_repos={env.cwd},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -681,7 +683,7 @@ def test_create_allows_staged_changes_when_graphite_disabled() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
@@ -692,16 +694,10 @@ def test_create_allows_staged_changes_when_graphite_disabled() -> None:
 def test_create_invalid_worktree_name() -> None:
     """Test that create rejects invalid worktree names."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+    with simulated_workstack_env(runner) as env:
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -711,7 +707,7 @@ def test_create_invalid_worktree_name() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         # Test reserved name "root"
@@ -733,16 +729,10 @@ def test_create_invalid_worktree_name() -> None:
 def test_create_plan_file_not_found() -> None:
     """Test that create fails when plan file doesn't exist."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+    with simulated_workstack_env(runner) as env:
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -752,7 +742,7 @@ def test_create_plan_file_not_found() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["create", "--plan", "nonexistent.md"], obj=test_ctx)
@@ -764,13 +754,8 @@ def test_create_plan_file_not_found() -> None:
 def test_create_no_post_flag_skips_commands() -> None:
     """Test that --no-post flag skips post-create commands."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
         # Create config with post_create commands
@@ -781,11 +766,11 @@ def test_create_no_post_flag_skips_commands() -> None:
         )
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -795,7 +780,7 @@ def test_create_no_post_flag_skips_commands() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["create", "test-feature", "--no-post"], obj=test_ctx)
@@ -807,25 +792,20 @@ def test_create_no_post_flag_skips_commands() -> None:
 def test_create_from_current_branch() -> None:
     """Test creating worktree from current branch."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
         config_toml = workstacks_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
-            current_branches={cwd: "feature-branch"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
+            current_branches={env.cwd: "feature-branch"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -835,7 +815,7 @@ def test_create_from_current_branch() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["create", "feature", "--from-current-branch"], obj=test_ctx)
@@ -846,24 +826,19 @@ def test_create_from_current_branch() -> None:
 def test_create_from_branch() -> None:
     """Test creating worktree from an existing branch."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
         config_toml = workstacks_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -873,7 +848,7 @@ def test_create_from_branch() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(
@@ -886,16 +861,10 @@ def test_create_from_branch() -> None:
 def test_create_requires_name_or_flag() -> None:
     """Test that create requires NAME or a flag."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+    with simulated_workstack_env(runner) as env:
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -905,7 +874,7 @@ def test_create_requires_name_or_flag() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["create"], obj=test_ctx)
@@ -917,25 +886,20 @@ def test_create_requires_name_or_flag() -> None:
 def test_create_from_current_branch_on_main_fails() -> None:
     """Test that --from-current-branch fails with helpful message when on main."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
         config_toml = workstacks_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
-            current_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
+            current_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -945,7 +909,7 @@ def test_create_from_current_branch_on_main_fails() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["create", "feature", "--from-current-branch"], obj=test_ctx)
@@ -958,13 +922,8 @@ def test_create_from_current_branch_on_main_fails() -> None:
 def test_create_detects_branch_already_checked_out() -> None:
     """Test that create detects when branch is already checked out."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
         config_toml = workstacks_dir / "config.toml"
@@ -975,18 +934,18 @@ def test_create_detects_branch_already_checked_out() -> None:
         existing_wt_path.mkdir(parents=True)
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
-            current_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
+            current_branches={env.cwd: "main"},
             worktrees={
-                cwd: [
-                    WorktreeInfo(path=cwd, branch="main"),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
                     WorktreeInfo(path=existing_wt_path, branch="feature-branch"),
                 ],
             },
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -996,7 +955,7 @@ def test_create_detects_branch_already_checked_out() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(
@@ -1011,25 +970,20 @@ def test_create_detects_branch_already_checked_out() -> None:
 def test_create_from_current_branch_on_master_fails() -> None:
     """Test that --from-current-branch fails when on master branch too."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
         config_toml = workstacks_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "master"},
-            current_branches={cwd: "master"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "master"},
+            current_branches={env.cwd: "master"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -1039,7 +993,7 @@ def test_create_from_current_branch_on_master_fails() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["create", "feature", "--from-current-branch"], obj=test_ctx)
@@ -1051,38 +1005,45 @@ def test_create_from_current_branch_on_master_fails() -> None:
 def test_create_with_keep_plan_flag() -> None:
     """Test that --keep-plan copies instead of moves the plan file."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
+    with simulated_workstack_env(runner) as env:
         # Create plan file
-        plan_file = cwd / "my-feature-plan.md"
+        plan_file = env.cwd / "my-feature-plan.md"
         plan_file.write_text("# My Feature Plan\n", encoding="utf-8")
 
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
-        config_toml.write_text("", encoding="utf-8")
+        # Pass local config directly
+        local_config = LoadedConfig(
+            env={},
+            post_create_commands=[],
+            post_create_shell=None,
+        )
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
             show_pr_checks=False,
         )
 
+        repo = RepoContext(
+            root=env.root_worktree,
+            repo_name=env.root_worktree.name,
+            workstacks_dir=workstacks_dir,
+        )
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            local_config=local_config,
+            repo=repo,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(
@@ -1090,8 +1051,11 @@ def test_create_with_keep_plan_flag() -> None:
         )
 
         assert result.exit_code == 0, result.output
-        # Should create worktree with "plan" stripped from filename
-        wt_path = workstacks_dir / "my-feature"
+        # Should create worktree with "plan" stripped from filename and date suffix added
+        from datetime import datetime
+
+        date_suffix = datetime.now().strftime("%y-%m-%d")
+        wt_path = workstacks_dir / f"my-feature-{date_suffix}"
         assert wt_path.exists()
         # Plan file should be copied to .PLAN.md
         assert (wt_path / ".PLAN.md").exists()
@@ -1103,16 +1067,10 @@ def test_create_with_keep_plan_flag() -> None:
 def test_create_keep_plan_without_plan_fails() -> None:
     """Test that --keep-plan without --plan fails with error message."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+    with simulated_workstack_env(runner) as env:
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -1122,7 +1080,7 @@ def test_create_keep_plan_without_plan_fails() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["create", "test-feature", "--keep-plan"], obj=test_ctx)
@@ -1142,28 +1100,27 @@ def test_from_current_branch_with_main_in_use_prefers_graphite_parent() -> None:
     Expected: Should checkout feature-1 (the parent), not try to checkout main
     """
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        base = Path.cwd()
-        repo_root = base / "repo"
-        repo_root.mkdir()
-        git_dir = repo_root / ".git"
-        git_dir.mkdir()
+    with simulated_workstack_env(runner) as env:
+        repo_root = env.root_worktree
+        git_dir = env.git_dir
 
-        current_worktree = base / "wt-current"
+        current_worktree = env.root_worktree.parent / "wt-current"
         current_worktree.mkdir()
 
-        workstacks_root = base / "workstacks"
-        workstacks_root.mkdir()
-        workstacks_dir = workstacks_root / repo_root.name
+        workstacks_dir = env.workstacks_root / repo_root.name
         workstacks_dir.mkdir()
 
-        config_toml = workstacks_dir / "config.toml"
-        config_toml.write_text("", encoding="utf-8")
+        # Pass local config directly
+        local_config = LoadedConfig(
+            env={},
+            post_create_commands=[],
+            post_create_shell=None,
+        )
 
         # Set up Graphite stack: main -> feature-1 -> feature-2
         from workstack.core.branch_metadata import BranchMetadata
 
-        {
+        branch_metadata = {
             "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
             "feature-1": BranchMetadata.branch(
                 "feature-1", "main", children=["feature-2"], commit_sha="def456"
@@ -1188,17 +1145,27 @@ def test_from_current_branch_with_main_in_use_prefers_graphite_parent() -> None:
                 repo_root: git_dir,
             },
         )
+        graphite_ops = FakeGraphiteOps(branches=branch_metadata)
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
             show_pr_checks=False,
         )
 
+        repo = RepoContext(
+            root=env.root_worktree,
+            repo_name=env.root_worktree.name,
+            workstacks_dir=workstacks_dir,
+        )
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
+            graphite_ops=graphite_ops,
             global_config=global_config_ops,
+            local_config=local_config,
+            repo=repo,
             cwd=current_worktree,
         )
 
@@ -1220,22 +1187,17 @@ def test_from_current_branch_with_parent_in_use_falls_back_to_detached_head() ->
     Expected: Should use detached HEAD as fallback since both main and parent are in use
     """
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        base = Path.cwd()
-        repo_root = base / "repo"
-        repo_root.mkdir()
-        git_dir = repo_root / ".git"
-        git_dir.mkdir()
+    with simulated_workstack_env(runner) as env:
+        repo_root = env.root_worktree
+        git_dir = env.git_dir
 
-        current_worktree = base / "wt-current"
+        current_worktree = env.root_worktree.parent / "wt-current"
         current_worktree.mkdir()
 
-        other_worktree = base / "wt-other"
+        other_worktree = env.root_worktree.parent / "wt-other"
         other_worktree.mkdir()
 
-        workstacks_root = base / "workstacks"
-        workstacks_root.mkdir()
-        workstacks_dir = workstacks_root / repo_root.name
+        workstacks_dir = env.workstacks_root / repo_root.name
         workstacks_dir.mkdir()
 
         config_toml = workstacks_dir / "config.toml"
@@ -1273,7 +1235,7 @@ def test_from_current_branch_with_parent_in_use_falls_back_to_detached_head() ->
             },
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -1306,19 +1268,14 @@ def test_from_current_branch_without_graphite_falls_back_to_main() -> None:
     Expected: Should checkout main as fallback
     """
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        base = Path.cwd()
-        repo_root = base / "repo"
-        repo_root.mkdir()
-        git_dir = repo_root / ".git"
-        git_dir.mkdir()
+    with simulated_workstack_env(runner) as env:
+        repo_root = env.root_worktree
+        git_dir = env.git_dir
 
-        current_worktree = base / "wt-current"
+        current_worktree = env.root_worktree.parent / "wt-current"
         current_worktree.mkdir()
 
-        workstacks_root = base / "workstacks"
-        workstacks_root.mkdir()
-        workstacks_dir = workstacks_root / repo_root.name
+        workstacks_dir = env.workstacks_root / repo_root.name
         workstacks_dir.mkdir()
 
         config_toml = workstacks_dir / "config.toml"
@@ -1349,7 +1306,7 @@ def test_from_current_branch_without_graphite_falls_back_to_main() -> None:
             },
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -1379,19 +1336,14 @@ def test_from_current_branch_no_graphite_main_in_use_uses_detached_head() -> Non
     Expected: Should use detached HEAD since no parent exists and main is in use
     """
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        base = Path.cwd()
-        repo_root = base / "repo"
-        repo_root.mkdir()
-        git_dir = repo_root / ".git"
-        git_dir.mkdir()
+    with simulated_workstack_env(runner) as env:
+        repo_root = env.root_worktree
+        git_dir = env.git_dir
 
-        current_worktree = base / "wt-current"
+        current_worktree = env.root_worktree.parent / "wt-current"
         current_worktree.mkdir()
 
-        workstacks_root = base / "workstacks"
-        workstacks_root.mkdir()
-        workstacks_dir = workstacks_root / repo_root.name
+        workstacks_dir = env.workstacks_root / repo_root.name
         workstacks_dir.mkdir()
 
         config_toml = workstacks_dir / "config.toml"
@@ -1422,7 +1374,7 @@ def test_from_current_branch_no_graphite_main_in_use_uses_detached_head() -> Non
             },
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -1447,24 +1399,19 @@ def test_from_current_branch_no_graphite_main_in_use_uses_detached_head() -> Non
 def test_create_with_json_output() -> None:
     """Test creating a worktree with JSON output."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
         config_toml = workstacks_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -1474,7 +1421,7 @@ def test_create_with_json_output() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["create", "test-feature", "--json"], obj=test_ctx)
@@ -1497,13 +1444,8 @@ def test_create_with_json_output() -> None:
 def test_create_existing_worktree_with_json() -> None:
     """Test creating a worktree that already exists with JSON output."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
         config_toml = workstacks_dir / "config.toml"
@@ -1514,12 +1456,12 @@ def test_create_existing_worktree_with_json() -> None:
         existing_wt.mkdir()
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
             current_branches={existing_wt: "existing-branch"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -1529,7 +1471,7 @@ def test_create_existing_worktree_with_json() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["create", "existing-feature", "--json"], obj=test_ctx)
@@ -1547,24 +1489,19 @@ def test_create_existing_worktree_with_json() -> None:
 def test_create_json_and_script_mutually_exclusive() -> None:
     """Test that --json and --script flags are mutually exclusive."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
         config_toml = workstacks_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -1574,7 +1511,7 @@ def test_create_json_and_script_mutually_exclusive() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["create", "test-feature", "--json", "--script"], obj=test_ctx)
@@ -1587,38 +1524,45 @@ def test_create_json_and_script_mutually_exclusive() -> None:
 def test_create_with_json_and_plan_file() -> None:
     """Test creating a worktree with JSON output and plan file."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
-        config_toml.write_text("", encoding="utf-8")
+        # Pass local config directly
+        local_config = LoadedConfig(
+            env={},
+            post_create_commands=[],
+            post_create_shell=None,
+        )
 
         # Create a plan file - name will be derived from filename
-        plan_file = cwd / "test-feature-plan.md"
+        plan_file = env.cwd / "test-feature-plan.md"
         plan_file.write_text("# Implementation Plan\n\nTest plan content", encoding="utf-8")
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
             show_pr_checks=False,
         )
 
+        repo = RepoContext(
+            root=env.root_worktree,
+            repo_name=env.root_worktree.name,
+            workstacks_dir=workstacks_dir,
+        )
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            local_config=local_config,
+            repo=repo,
+            cwd=env.cwd,
         )
 
         # Don't provide NAME - it's derived from plan filename
@@ -1632,9 +1576,13 @@ def test_create_with_json_and_plan_file() -> None:
 
         # Verify JSON output includes plan file
         output_data = json.loads(result.output)
-        # Name is derived from "test-feature-plan.md" -> "test-feature"
-        assert output_data["worktree_name"] == "test-feature"
-        wt_path = workstacks_dir / "test-feature"
+        # Name is derived from "test-feature-plan.md" -> "test-feature" with date suffix
+        from datetime import datetime
+
+        date_suffix = datetime.now().strftime("%y-%m-%d")
+        expected_name = f"test-feature-{date_suffix}"
+        assert output_data["worktree_name"] == expected_name
+        wt_path = workstacks_dir / expected_name
         expected_plan_path = wt_path / ".PLAN.md"
         assert output_data["plan_file"] == str(expected_plan_path)
         assert output_data["status"] == "created"
@@ -1647,24 +1595,19 @@ def test_create_with_json_and_plan_file() -> None:
 def test_create_with_json_no_plan() -> None:
     """Test that JSON output has null plan_file when no plan is provided."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
         config_toml = workstacks_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -1674,7 +1617,7 @@ def test_create_with_json_no_plan() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["create", "test-feature", "--json"], obj=test_ctx)
@@ -1690,24 +1633,19 @@ def test_create_with_json_no_plan() -> None:
 def test_create_with_stay_prevents_script_generation() -> None:
     """Test that --stay flag prevents script generation."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
         config_toml = workstacks_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -1717,15 +1655,15 @@ def test_create_with_stay_prevents_script_generation() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["create", "test-feature", "--script", "--stay"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # When --stay is used, no script path should be output
-        # The output should not contain /tmp/ paths (script file paths)
-        assert "/tmp/" not in result.output
+        # The output should contain the normal message with "workstack switch"
+        assert "workstack switch" in result.output
         # Should still create the worktree
         wt_path = workstacks_dir / "test-feature"
         assert wt_path.exists()
@@ -1734,24 +1672,19 @@ def test_create_with_stay_prevents_script_generation() -> None:
 def test_create_with_stay_and_json() -> None:
     """Test that --stay works with --json output mode."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
         config_toml = workstacks_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -1761,7 +1694,7 @@ def test_create_with_stay_and_json() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["create", "test-feature", "--json", "--stay"], obj=test_ctx)
@@ -1780,38 +1713,45 @@ def test_create_with_stay_and_json() -> None:
 def test_create_with_stay_and_plan() -> None:
     """Test that --stay works with --plan flag."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
+    with simulated_workstack_env(runner) as env:
         # Create plan file
-        plan_file = cwd / "test-feature-plan.md"
+        plan_file = env.cwd / "test-feature-plan.md"
         plan_file.write_text("# Test Feature Plan\n", encoding="utf-8")
 
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
-        config_toml.write_text("", encoding="utf-8")
+        # Pass local config directly
+        local_config = LoadedConfig(
+            env={},
+            post_create_commands=[],
+            post_create_shell=None,
+        )
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
             show_pr_checks=False,
         )
 
+        repo = RepoContext(
+            root=env.root_worktree,
+            repo_name=env.root_worktree.name,
+            workstacks_dir=workstacks_dir,
+        )
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            local_config=local_config,
+            repo=repo,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(
@@ -1819,37 +1759,35 @@ def test_create_with_stay_and_plan() -> None:
         )
 
         assert result.exit_code == 0, result.output
-        # Verify worktree was created
-        wt_path = workstacks_dir / "test-feature"
+        # Verify worktree was created with date suffix
+        from datetime import datetime
+
+        date_suffix = datetime.now().strftime("%y-%m-%d")
+        wt_path = workstacks_dir / f"test-feature-{date_suffix}"
         assert wt_path.exists()
         # Plan file should be moved
         assert (wt_path / ".PLAN.md").exists()
         assert not plan_file.exists()
-        # No script should be generated
-        assert "/tmp/" not in result.output
+        # When --stay is used, output should contain "workstack switch" message
+        assert "workstack switch" in result.output
 
 
 def test_create_default_behavior_generates_script() -> None:
     """Test that default behavior (without --stay) still generates script."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
         config_toml = workstacks_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -1859,7 +1797,7 @@ def test_create_default_behavior_generates_script() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["create", "test-feature", "--script"], obj=test_ctx)
@@ -1875,24 +1813,19 @@ def test_create_default_behavior_generates_script() -> None:
 def test_create_with_long_name_truncation() -> None:
     """Test that worktree base names exceeding 30 characters are truncated before date suffix."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+    with simulated_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
         config_toml = workstacks_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -1902,7 +1835,7 @@ def test_create_with_long_name_truncation() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         # Create with name that exceeds 30 characters
@@ -1922,28 +1855,23 @@ def test_create_with_long_name_truncation() -> None:
 def test_create_with_plan_ensures_uniqueness() -> None:
     """Test that --plan ensures uniqueness with date suffix and versioning."""
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
+    with simulated_workstack_env(runner) as env:
         # Create plan file
-        plan_file = cwd / "my-feature-plan.md"
+        plan_file = env.cwd / "my-feature-plan.md"
         plan_file.write_text("# My Feature Plan\n", encoding="utf-8")
 
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
         config_toml = workstacks_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -1953,7 +1881,7 @@ def test_create_with_plan_ensures_uniqueness() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            cwd=env.cwd,
         )
 
         # Create first worktree from plan
@@ -1999,42 +1927,49 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
     - Result: worktree name == branch name (both can be >30 chars)
     """
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        git_dir = cwd / ".git"
-        git_dir.mkdir()
-
+    with simulated_workstack_env(runner) as env:
         # Create plan file with very long name that will exceed 30 chars with date suffix
         # The base will be truncated to 30 chars, then date suffix added
         # Example: base "fix-branch-worktree-name-misma" (30 chars) + date "-25-11-08"
         # (9 chars) = 39 chars total
         long_plan_name = "fix-branch-worktree-name-mismatch-in-workstack-plan-workflow-plan.md"
-        plan_file = cwd / long_plan_name
+        plan_file = env.cwd / long_plan_name
         plan_file.write_text("# Fix Branch Worktree Name Mismatch\n", encoding="utf-8")
 
-        workstacks_root = cwd / "workstacks"
-        workstacks_dir = workstacks_root / cwd.name
+        workstacks_dir = env.workstacks_root / env.root_worktree.name
         workstacks_dir.mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
-        config_toml.write_text("", encoding="utf-8")
+        # Pass local config directly
+        local_config = LoadedConfig(
+            env={},
+            post_create_commands=[],
+            post_create_shell=None,
+        )
 
         git_ops = FakeGitOps(
-            git_common_dirs={cwd: git_dir},
-            default_branches={cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
+            workstacks_root=env.workstacks_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
             show_pr_checks=False,
         )
 
+        repo = RepoContext(
+            root=env.root_worktree,
+            repo_name=env.root_worktree.name,
+            workstacks_dir=workstacks_dir,
+        )
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=cwd,
+            local_config=local_config,
+            repo=repo,
+            cwd=env.cwd,
         )
 
         # Create worktree from long plan filename
@@ -2049,11 +1984,12 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
         actual_worktree_name = actual_worktree_path.name
 
         # Get the branch that was created for this worktree
-        # The git_ops fake tracks created branches
-        assert len(git_ops.created_branches) == 1, (
-            f"Expected exactly 1 branch created, found {len(git_ops.created_branches)}"
+        # The git_ops fake tracks added worktrees as (path, branch)
+        assert len(git_ops.added_worktrees) == 1, (
+            f"Expected exactly 1 worktree added, found {len(git_ops.added_worktrees)}"
         )
-        actual_branch_name = git_ops.created_branches[0]
+        added_worktree_path, actual_branch_name = git_ops.added_worktrees[0]
+        assert actual_branch_name is not None, "Branch name should not be None"
 
         # CRITICAL: Branch name MUST match worktree name
         assert actual_branch_name == actual_worktree_name, (

@@ -10,7 +10,6 @@ This file trusts that unit layer and only tests CLI integration.
 """
 
 import json
-from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
@@ -63,7 +62,7 @@ def test_list_with_trunk_branch(trunk_branch: str) -> None:
         ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=ctx)

@@ -48,7 +48,7 @@ def test_jump_to_branch_in_single_worktree() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         # Jump to feature-2 which is checked out in feature_wt
@@ -98,7 +98,7 @@ def test_jump_to_branch_not_found() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         # Jump to a branch that doesn't exist
@@ -148,7 +148,7 @@ def test_jump_to_branch_in_stack_but_not_checked_out() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         # Jump to feature-base which exists in repo but is not checked out in any worktree
@@ -190,7 +190,7 @@ def test_jump_works_without_graphite() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         result = runner.invoke(
@@ -236,7 +236,7 @@ def test_jump_already_on_target_branch() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         # Jump to feature-1 which is already checked out
@@ -283,7 +283,7 @@ def test_jump_succeeds_when_branch_exactly_checked_out() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         # Jump to feature-2 which is checked out in feature_wt
@@ -338,7 +338,7 @@ def test_jump_with_multiple_worktrees_same_branch() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            cwd=Path("/test/default/cwd"),
+            cwd=env.cwd,
         )
 
         # Jump to feature-2 which is checked out in multiple worktrees

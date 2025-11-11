@@ -1,5 +1,41 @@
 # Test Architecture: Coarse-Grained Dependency Injection
 
+## 🔴 CRITICAL: NEVER Use Hardcoded Paths in Tests
+
+**ABSOLUTELY FORBIDDEN** patterns in test code:
+
+```python
+# ❌ WRONG - EXTREMELY DANGEROUS
+cwd=Path("/test/default/cwd")
+cwd=Path("/some/hardcoded/path")
+```
+
+**Why this is catastrophic:**
+
+1. **Global Config Mutation Risk**: If any code tries to write `.workstack` config relative to a hardcoded path, it could pollute the REAL filesystem or global config
+2. **False Test Isolation**: Tests appear isolated but may share state through hardcoded paths
+3. **Unpredictable Failures**: Tests fail in CI/different environments where paths don't exist
+4. **Security Risk**: Creating files at hardcoded system paths can be exploited
+
+**ALWAYS use proper context from test fixtures:**
+
+```python
+# ✅ CORRECT - Use simulated environment
+with simulated_workstack_env(runner) as env:
+    ctx = WorkstackContext(..., cwd=env.cwd)
+
+# ✅ CORRECT - Use tmp_path fixture
+def test_something(tmp_path: Path) -> None:
+    ctx = WorkstackContext(..., cwd=tmp_path)
+
+# ✅ CORRECT - Use env from simulated helper
+ctx = _create_test_context(env, ...)  # env.cwd used internally
+```
+
+**If you see `Path("/` in test code, STOP IMMEDIATELY and use proper fixtures.**
+
+---
+
 ## Quick Reference
 
 | Testing Scenario              | Use This                                             |

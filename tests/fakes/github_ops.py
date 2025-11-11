@@ -6,7 +6,7 @@ in its constructor. Construct instances directly with keyword arguments.
 
 from pathlib import Path
 
-from workstack.core.github_ops import GitHubOps, PRInfo, PullRequestInfo
+from workstack.core.github_ops import GitHubOps, PRInfo, PRMergeability, PullRequestInfo
 
 
 class FakeGitHubOps(GitHubOps):
@@ -22,6 +22,7 @@ class FakeGitHubOps(GitHubOps):
         prs: dict[str, PullRequestInfo] | None = None,
         pr_statuses: dict[str, tuple[str | None, int | None, str | None]] | None = None,
         pr_bases: dict[int, str] | None = None,
+        pr_mergeability: dict[int, PRMergeability | None] | None = None,
     ) -> None:
         """Create FakeGitHubOps with pre-configured state.
 
@@ -30,6 +31,7 @@ class FakeGitHubOps(GitHubOps):
             pr_statuses: Legacy parameter for backward compatibility.
                         Mapping of branch name -> (state, pr_number, title)
             pr_bases: Mapping of pr_number -> base_branch
+            pr_mergeability: Mapping of pr_number -> PRMergeability (None for API errors)
         """
         if prs is not None and pr_statuses is not None:
             msg = "Cannot specify both prs and pr_statuses"
@@ -44,6 +46,7 @@ class FakeGitHubOps(GitHubOps):
             self._pr_statuses = None
 
         self._pr_bases = pr_bases or {}
+        self._pr_mergeability = pr_mergeability or {}
         self._updated_pr_bases: list[tuple[int, str]] = []
 
     def get_prs_for_repo(
@@ -91,6 +94,16 @@ class FakeGitHubOps(GitHubOps):
     def update_pr_base_branch(self, repo_root: Path, pr_number: int, new_base: str) -> None:
         """Record PR base branch update in mutation tracking list."""
         self._updated_pr_bases.append((pr_number, new_base))
+
+    def get_pr_mergeability(self, repo_root: Path, pr_number: int) -> PRMergeability | None:
+        """Get PR mergeability status from configured state.
+
+        Returns configured mergeability or defaults to MERGEABLE if not configured.
+        """
+        if pr_number in self._pr_mergeability:
+            return self._pr_mergeability[pr_number]
+        # Default to MERGEABLE if not configured
+        return PRMergeability(mergeable="MERGEABLE", merge_state_status="CLEAN")
 
     @property
     def updated_pr_bases(self) -> list[tuple[int, str]]:

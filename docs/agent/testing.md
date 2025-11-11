@@ -359,7 +359,42 @@ def test_dryrun_prevents_mutations() -> None:
 
 ### CliRunner Pattern (PREFERRED)
 
-**Standard pattern for command tests:**
+#### Using the Helper Function (Recommended)
+
+**For most CLI tests, use the `cli_test_repo()` helper:**
+
+```python
+from click.testing import CliRunner
+from workstack.cli.cli import cli
+from tests.test_utils.cli_helpers import cli_test_repo
+
+def test_create_command(tmp_path: Path) -> None:
+    with cli_test_repo(tmp_path) as test_env:
+        # Set up CliRunner with isolated HOME
+        env_vars = os.environ.copy()
+        env_vars["HOME"] = str(test_env.tmp_path)
+        runner = CliRunner(env=env_vars)
+
+        # Run test from repo directory
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(test_env.repo)
+            result = runner.invoke(cli, ["create", "feature-name", "--no-post"])
+            assert result.exit_code == 0
+            assert "Created worktree" in result.output
+        finally:
+            os.chdir(original_cwd)
+```
+
+**What `cli_test_repo()` provides:**
+
+- `test_env.repo`: Git repository with initial commit
+- `test_env.workstacks_root`: Configured workstacks directory
+- `test_env.tmp_path`: Test root with isolated .workstack config
+
+#### Manual Setup (For Custom Requirements)
+
+**When you need custom git state or special configuration, set up manually:**
 
 ```python
 from click.testing import CliRunner
@@ -401,7 +436,14 @@ def test_create_command(tmp_path: Path) -> None:
         os.chdir(original_cwd)
 ```
 
-**Key components:**
+**Use manual setup when:**
+
+- Testing with multiple worktrees pre-created
+- Testing with specific branch configurations
+- Testing with custom config settings
+- Testing edge cases requiring non-standard git state
+
+**Key components (both patterns):**
 
 - `CliRunner(env=env_vars)`: Click's test harness with isolated HOME
 - `runner.invoke(cli, ["command", "args"])`: Invokes CLI group, which creates context naturally

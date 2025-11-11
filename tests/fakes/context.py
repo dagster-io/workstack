@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from tests.fakes.completion_ops import FakeCompletionOps
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
@@ -17,6 +18,7 @@ def create_test_context(
     github_ops: FakeGitHubOps | None = None,
     graphite_ops: FakeGraphiteOps | None = None,
     shell_ops: FakeShellOps | None = None,
+    completion_ops: FakeCompletionOps | None = None,
     cwd: Path | None = None,
     global_config: GlobalConfig | None = None,
     local_config: LoadedConfig | None = None,
@@ -38,6 +40,8 @@ def create_test_context(
                      If None, creates empty FakeGraphiteOps.
         shell_ops: Optional FakeShellOps with test configuration.
                   If None, creates empty FakeShellOps (no shell detected).
+        completion_ops: Optional FakeCompletionOps with test configuration.
+                       If None, creates empty FakeCompletionOps.
         cwd: Optional current working directory path for test context.
             If None, defaults to Path("/test/default/cwd") to prevent accidental use
             of real Path.cwd() in tests.
@@ -78,6 +82,7 @@ def create_test_context(
         github_ops=github_ops,
         graphite_ops=graphite_ops,
         shell_ops=shell_ops,
+        completion_ops=completion_ops,
         cwd=cwd,
         global_config=global_config,
         local_config=local_config,

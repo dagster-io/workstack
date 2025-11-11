@@ -7,6 +7,7 @@ from pathlib import Path
 import tomlkit
 
 from workstack.cli.config import LoadedConfig, load_config
+from workstack.core.completion_ops import CompletionOps, RealCompletionOps
 from workstack.core.github_ops import DryRunGitHubOps, GitHubOps, RealGitHubOps
 from workstack.core.gitops import DryRunGitOps, GitOps, RealGitOps
 from workstack.core.global_config import GlobalConfig, load_global_config
@@ -35,6 +36,7 @@ class WorkstackContext:
     github_ops: GitHubOps
     graphite_ops: GraphiteOps
     shell_ops: ShellOps
+    completion_ops: CompletionOps
     cwd: Path  # Current working directory at CLI invocation
     global_config: GlobalConfig | None
     local_config: LoadedConfig
@@ -85,6 +87,7 @@ class WorkstackContext:
             For more complex test setup with custom configs or multiple ops,
             use WorkstackContext.for_test() instead.
         """
+        from tests.fakes.completion_ops import FakeCompletionOps
         from tests.fakes.github_ops import FakeGitHubOps
         from tests.fakes.graphite_ops import FakeGraphiteOps
         from tests.fakes.shell_ops import FakeShellOps
@@ -94,6 +97,7 @@ class WorkstackContext:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            completion_ops=FakeCompletionOps(),
             cwd=cwd,
             global_config=None,
             local_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
@@ -108,6 +112,7 @@ class WorkstackContext:
         github_ops: GitHubOps | None = None,
         graphite_ops: GraphiteOps | None = None,
         shell_ops: ShellOps | None = None,
+        completion_ops: CompletionOps | None = None,
         cwd: Path | None = None,
         global_config: GlobalConfig | None = None,
         local_config: LoadedConfig | None = None,
@@ -127,6 +132,8 @@ class WorkstackContext:
             graphite_ops: Optional GraphiteOps implementation.
                          If None, creates empty FakeGraphiteOps.
             shell_ops: Optional ShellOps implementation. If None, creates empty FakeShellOps.
+            completion_ops: Optional CompletionOps implementation.
+                           If None, creates empty FakeCompletionOps.
             cwd: Optional current working directory. If None, uses Path("/test/default/cwd").
             global_config: Optional GlobalConfig. If None, uses test defaults.
             local_config: Optional LoadedConfig. If None, uses empty defaults.
@@ -156,6 +163,7 @@ class WorkstackContext:
             For simple cases that only need git_ops, use WorkstackContext.minimal()
             which is more concise.
         """
+        from tests.fakes.completion_ops import FakeCompletionOps
         from tests.fakes.github_ops import FakeGitHubOps
         from tests.fakes.gitops import FakeGitOps
         from tests.fakes.graphite_ops import FakeGraphiteOps
@@ -172,6 +180,9 @@ class WorkstackContext:
 
         if shell_ops is None:
             shell_ops = FakeShellOps()
+
+        if completion_ops is None:
+            completion_ops = FakeCompletionOps()
 
         if global_config is None:
             global_config = GlobalConfig(
@@ -193,6 +204,7 @@ class WorkstackContext:
             github_ops=github_ops,
             graphite_ops=graphite_ops,
             shell_ops=shell_ops,
+            completion_ops=completion_ops,
             cwd=cwd or Path("/test/default/cwd"),
             global_config=global_config,
             local_config=local_config,
@@ -331,6 +343,7 @@ def create_context(*, dry_run: bool, repo_root: Path | None = None) -> Workstack
         github_ops=github_ops,
         graphite_ops=graphite_ops,
         shell_ops=RealShellOps(),
+        completion_ops=RealCompletionOps(),
         cwd=cwd,
         global_config=global_config,
         local_config=local_config,

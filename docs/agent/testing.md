@@ -383,6 +383,105 @@ def test_good():
     result = runner.invoke(cli, ["command"], obj=test_ctx)
 ```
 
+## When to Use Fakes vs Mocks
+
+### Prefer Fakes (Default Approach)
+
+Fakes simulate entire subsystems in-memory and are the preferred testing approach for workstack.
+
+**Benefits:**
+
+- Enable comprehensive testing without external I/O (filesystem, subprocess, network)
+- More maintainable than mocks (no brittle call assertions)
+- Easier to understand (clear constructor parameters show test state)
+- Support mutation tracking for asserting side effects
+- Self-documenting test setup
+
+**When to use fakes:**
+
+- Testing CLI commands with git operations
+- Testing configuration management
+- Testing GitHub API interactions
+- Testing Graphite workflows
+- Testing shell completion generation
+- Any scenario where you can model system behavior in-memory
+
+**Example:**
+
+```python
+def test_with_fake():
+    # Clear test setup: configure fake state via constructor
+    completion_ops = FakeCompletionOps(
+        bash_script="# bash completion code",
+        workstack_path="/usr/local/bin/workstack"
+    )
+    ctx = create_test_context(completion_ops=completion_ops)
+
+    # Run command
+    result = runner.invoke(completion_bash, obj=ctx)
+
+    # Assert behavior via mutation tracking
+    assert "bash" in completion_ops.generation_calls
+    assert "# bash completion code" in result.output
+```
+
+### When Mocks Make Sense
+
+While fakes are preferred, mocking has legitimate use cases for scenarios that are difficult or impossible to fake.
+
+**Acceptable use cases:**
+
+1. **Error simulation** - Hardware failures, I/O errors that can't be faked
+2. **Environment manipulation** - Testing behavior with specific environment variables
+3. **Testing subprocess integration** - When verifying actual subprocess behavior matters
+4. **External system edge cases** - Network timeouts, race conditions
+
+**Example - Testing environment-specific behavior:**
+
+```python
+@patch.dict(os.environ, {"HOME": "/test/home"})
+def test_home_directory_detection():
+    # Testing that code correctly reads HOME variable
+    result = detect_home_dir()
+    assert result == Path("/test/home")
+```
+
+**Example - Testing subprocess error handling:**
+
+```python
+@patch("subprocess.run")
+def test_subprocess_timeout(mock_run):
+    # Simulating a subprocess timeout is hard to fake reliably
+    mock_run.side_effect = subprocess.TimeoutExpired(cmd="git", timeout=5)
+    result = run_with_timeout()
+    assert result.timed_out
+```
+
+### Decision Tree
+
+```
+Can you create a fake for this dependency?
+├─ YES → Create/use a fake (preferred)
+│  └─ Examples: GitOps, CompletionOps, ShellOps
+│
+├─ NO → Consider if mocking is necessary
+   ├─ Testing error edge cases? → Mock acceptable
+   ├─ Testing environment behavior? → Mock acceptable
+   ├─ Testing subprocess integration? → Mock acceptable
+   └─ Otherwise → Reconsider if test is needed
+```
+
+### Migration Strategy
+
+If you encounter existing tests using mocks:
+
+1. **Evaluate**: Does an ops abstraction exist? (GitOps, ShellOps, etc.)
+2. **If yes**: Refactor to use the fake implementation
+3. **If no**: Consider creating an ops abstraction + fake if the mock is complex
+4. **Keep mock only if**: It falls into acceptable use cases above
+
+This codebase has successfully migrated from 100+ mock patches to fake-based testing. The completion tests (17 tests using `@patch`) were refactored to FakeCompletionOps, demonstrating this pattern.
+
 ## State Mutation in Fakes
 
 ### When Fakes Need Mutation

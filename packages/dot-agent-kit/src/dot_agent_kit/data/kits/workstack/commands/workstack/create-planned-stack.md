@@ -29,16 +29,15 @@ This command extracts a plan from conversation context, saves it to disk, and cr
 
 When you run this command, these steps occur:
 
-1. **Check Plan Mode** - If currently in plan mode, inform user to exit and rerun command, then abort
-2. **Verify Scope** - Confirm we're in a git repository with workstack available
-3. **Detect Plan** - Search conversation for implementation plan
-4. **Apply Guidance** - Merge optional guidance into plan (if provided)
-5. **Interactive Enhancement** - Analyze plan and ask clarifying questions if needed
-6. **Generate Filename** - Derive filename from plan title
-7. **Detect Root** - Find worktree root directory
-8. **Save Plan** - Write enhanced plan to disk as markdown file
-9. **Create Worktree** - Run `workstack create --plan` command
-10. **Display Next Steps** - Show commands to switch and implement
+1. **Verify Scope** - Confirm we're in a git repository with workstack available
+2. **Detect Plan** - Search conversation for implementation plan
+3. **Apply Guidance** - Merge optional guidance into plan (if provided)
+4. **Interactive Enhancement** - Analyze plan and ask clarifying questions if needed
+5. **Generate Filename** - Derive filename from plan title
+6. **Detect Root** - Find worktree root directory
+7. **Save Plan** - Write enhanced plan to disk as markdown file
+8. **Create Worktree** - Run `workstack create --plan` command
+9. **Display Next Steps** - Show commands to switch and implement
 
 ## Usage
 
@@ -169,65 +168,7 @@ This command succeeds when ALL of the following are true:
 
 You are executing the `/workstack:create-planned-stack` command. Follow these steps carefully:
 
-### Step 1: Check Plan Mode and Abort (If Active)
-
-**Detection Strategy:**
-
-Plan mode blocks write operations. Test this directly by attempting a harmless write operation.
-
-**How to Detect Plan Mode:**
-
-1. **Generate unique temp filename:**
-   - Use current timestamp or random string to ensure uniqueness
-   - Format: `/tmp/claude-plan-test-{unique-id}.tmp`
-   - Example: `/tmp/claude-plan-test-1699564832.tmp`
-
-2. **Attempt to create test file:**
-   - Use Write tool to create the temp file
-   - Content: Single space character ` ` (minimal content)
-   - This tests write capability without side effects
-
-3. **Interpret the result:**
-   - **If Write succeeds** → Plan mode is OFF
-     - Immediately use Bash to delete: `rm /tmp/claude-plan-test-{unique-id}.tmp`
-     - Proceed to Step 2
-   - **If Write fails with ANY error** → Plan mode is ON
-     - Display plan mode warning (below)
-     - Abort execution immediately
-
-**Why This Works:**
-
-- **Deterministic**: Tests actual write capability, not proxy signals
-- **Reliable**: Directly tests the restriction that matters for this command
-- **No false positives**: If we can write to /tmp/, we can write plan files
-- **No false negatives**: If plan mode blocks writes, this catches it
-- **Safe**: /tmp/ location won't pollute repository or user files
-- **Self-cleaning**: Temp file deleted immediately after successful test
-
-**If Plan Mode is DETECTED (Write failed):**
-
-Display this message and STOP execution immediately:
-
-```
-⚠️ Plan Mode Detected
-
-This command cannot run while plan mode is active (write operations are blocked).
-
-To proceed:
-1. Exit plan mode by pressing Shift+Tab
-2. Rerun this command: /workstack:create-planned-stack
-
-Note: This command requires file write permissions to save plans and create worktrees.
-```
-
-**DO NOT proceed to Step 2 if plan mode is detected.**
-
-**If Plan Mode is NOT detected (Write succeeded):**
-
-- Clean up temp file with: `rm /tmp/claude-plan-test-{unique-id}.tmp`
-- Continue to Step 2 normally
-
-### Step 2: Verify Scope and Constraints
+### Step 1: Verify Scope and Constraints
 
 **Error Handling Template:**
 All errors must follow this format:
@@ -258,7 +199,7 @@ Suggested action: [1-3 concrete steps to resolve]
 
 This command sets up the workspace. Implementation happens in the worktree via `/workstack:implement-plan`.
 
-### Step 3: Detect Implementation Plan in Context
+### Step 2: Detect Implementation Plan in Context
 
 Search conversation history for an implementation plan:
 
@@ -310,7 +251,7 @@ Suggested action:
   3. Use headers and lists to structure the plan
 ```
 
-### Step 4: Apply Optional Guidance to Plan
+### Step 3: Apply Optional Guidance to Plan
 
 **Check for guidance argument:**
 
@@ -365,9 +306,9 @@ Note: Guidance must be provided as a single-line string in quotes. Multi-line gu
 
 If no guidance provided: use the original plan as-is
 
-**Output:** Final plan content (original or modified) ready for Step 6 processing
+**Output:** Final plan content (original or modified) ready for Step 5 processing
 
-### Step 5: Extract and Preserve Semantic Understanding
+### Step 4: Extract and Preserve Semantic Understanding
 
 Analyze the planning discussion to extract valuable context that implementing agents would find expensive to rediscover. Use the structured template sections to organize discoveries.
 
@@ -494,9 +435,9 @@ Examples to extract:
 5. **Link to implementation steps** - ensure every context item connects to at least one step
 6. **Flag orphaned context** - context without corresponding steps is probably not relevant
 
-**Output:** Enhanced plan with populated Context & Understanding sections, ready for Step 6 interactive enhancement
+**Output:** Enhanced plan with populated Context & Understanding sections, ready for Step 5 interactive enhancement
 
-### Step 6: Interactive Plan Enhancement
+### Step 5: Interactive Plan Enhancement
 
 Analyze the plan for common ambiguities and ask clarifying questions when helpful. Focus on practical improvements that make implementation clearer.
 
@@ -922,9 +863,9 @@ Suggested fix: Include rollback procedure or backup strategy
 - Don't use percentages or scores
 - Focus on actionability
 
-**Output:** Final enhanced plan content ready for Step 7 processing
+**Output:** Final enhanced plan content ready for Step 6 processing
 
-### Step 7: Generate Filename from Plan
+### Step 6: Generate Filename from Plan
 
 **Filename Extraction Algorithm:**
 
@@ -1013,7 +954,7 @@ Use AskUserQuestion tool to get the plan name from the user if extraction fails.
 
 - "###" (only special chars) → Prompt user for name
 
-### Step 8: Detect Worktree Root
+### Step 7: Detect Worktree Root
 
 Execute: `git rev-parse --show-toplevel`
 
@@ -1032,14 +973,14 @@ Suggested action:
   3. Check if .git directory exists
 ```
 
-### Step 9: Save Plan to Disk
+### Step 8: Save Plan to Disk
 
 **Pre-save validation:**
 
 1. **Verify filename base length** (CRITICAL):
    - Extract base name from `<derived-filename>` (remove `-plan.md` suffix)
    - MUST be ≤ 30 characters
-   - If > 30 characters, this is an implementation bug - the filename generation in Step 7 failed
+   - If > 30 characters, this is an implementation bug - the filename generation in Step 6 failed
 
 ```
 ❌ Error: Internal error - filename base exceeds 30 characters
@@ -1047,7 +988,7 @@ Suggested action:
 Details: Generated base name '<base>' is <length> characters (max: 30)
 
 This is a bug in the filename generation algorithm. The base should have been
-truncated to 30 characters in Step 7.
+truncated to 30 characters in Step 6.
 
 Suggested action:
   1. Report this as a bug in /workstack:create-planned-stack
@@ -1088,7 +1029,7 @@ Suggested action:
   3. Ensure path is valid: <worktree-root>/<derived-filename>
 ```
 
-### Step 10: Create Worktree with Plan
+### Step 9: Create Worktree with Plan
 
 Execute: `workstack create --plan <worktree-root>/<filename> --json --stay`
 
@@ -1181,7 +1122,7 @@ Suggested action:
 
 **Use the JSON output directly** for all worktree information.
 
-### Step 11: Display Next Steps
+### Step 10: Display Next Steps
 
 After successful worktree creation, provide clear instructions based on plan structure.
 
@@ -1223,7 +1164,7 @@ Location: `<worktree-path>`
 
 **Template Variable Clarification:**
 
-- `<full-plan-markdown-content>` refers to the final enhanced plan markdown that was saved in Step 9
+- `<full-plan-markdown-content>` refers to the final enhanced plan markdown that was saved in Step 8
 - Output the complete plan text verbatim (all headers, sections, steps)
 - This is the same content that was written to `<worktree-root>/<derived-filename>`
 - The plan content is already in memory from previous steps - no additional file reads required
@@ -1245,4 +1186,3 @@ Location: `<worktree-path>`
 - User must manually run `workstack switch` and `/workstack:implement-plan` to begin implementation
 - The `--permission-mode acceptEdits` flag is included to automatically accept edits during implementation
 - Always provide clear feedback at each step
-- **Plan mode detection uses write-test** - attempts temp file creation to verify write capability

@@ -10,7 +10,7 @@ from workstack.core.context import (
     read_trunk_from_pyproject,
     write_trunk_to_pyproject,
 )
-from workstack.core.global_config import GlobalConfig, global_config_path, save_global_config
+from workstack.core.global_config import GlobalConfig
 
 
 def _get_env_value(cfg: LoadedConfig, parts: list[str], key: str) -> None:
@@ -115,7 +115,7 @@ def config_get(ctx: WorkstackContext, key: str) -> None:
     # Handle global config keys
     if parts[0] in ("workstacks_root", "use_graphite", "show_pr_info", "show_pr_checks"):
         if ctx.global_config is None:
-            config_path = global_config_path()
+            config_path = ctx.global_config_ops.path()
             click.echo(f"Global config not found at {config_path}", err=True)
             raise SystemExit(1)
 
@@ -170,7 +170,7 @@ def config_set(ctx: WorkstackContext, key: str, value: str) -> None:
     # Handle global config keys
     if parts[0] in ("workstacks_root", "use_graphite", "show_pr_info", "show_pr_checks"):
         if ctx.global_config is None:
-            config_path = global_config_path()
+            config_path = ctx.global_config_ops.path()
             click.echo(f"Global config not found at {config_path}", err=True)
             click.echo("Run 'workstack init' to create it.", err=True)
             raise SystemExit(1)
@@ -221,7 +221,7 @@ def config_set(ctx: WorkstackContext, key: str, value: str) -> None:
             click.echo(f"Invalid key: {key}", err=True)
             raise SystemExit(1)
 
-        save_global_config(new_config)
+        ctx.global_config_ops.save(new_config)
         click.echo(f"Set {key}={value}")
         return
 

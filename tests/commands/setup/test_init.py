@@ -2,23 +2,18 @@
 
 Mock Usage Policy:
 ------------------
-This file uses mocks for external boundaries that are legitimate to mock:
+This file uses minimal mocking for external boundaries:
 
-1. os.environ HOME patches (14 uses):
+1. os.environ HOME patches:
    - LEGITIMATE: Testing path resolution logic that depends on $HOME
    - The init command uses Path.home() to determine ~/.workstack location
    - Patching HOME redirects to temp directory for test isolation
    - Cannot be replaced with fakes (environment variable is external boundary)
 
-2. global_config_exists() patches (14 uses):
-   - LEGITIMATE: Testing file system boundary
-   - Function just checks if ~/.workstack/config.toml exists
-   - Could be replaced with real file creation, but mock is clearer for intent
-   - Explicitly shows "simulate existing config" vs "create temp file and hope test sees it"
-   - The trivial file check is already tested in integration tests
-
-Both patches are necessary for testing init command's conditional logic without
-polluting real filesystem or requiring complex fixture setup.
+2. Global config operations:
+   - Uses InMemoryGlobalConfigOps for dependency injection
+   - No mocking required - proper abstraction via GlobalConfigOps interface
+   - Tests inject InMemoryGlobalConfigOps with desired initial state
 """
 
 import os
@@ -34,7 +29,7 @@ from tests.fakes.shell_ops import FakeShellOps
 from tests.test_utils.env_helpers import simulated_workstack_env
 from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext
-from workstack.core.global_config import GlobalConfig, load_global_config
+from workstack.core.global_config import GlobalConfig, InMemoryGlobalConfigOps
 
 
 def test_init_creates_global_config_first_time() -> None:
@@ -44,17 +39,13 @@ def test_init_creates_global_config_first_time() -> None:
         workstacks_root = env.cwd / "workstacks"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config = GlobalConfig(
-            workstacks_root=env.cwd / "fake-workstacks",
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
+        # Config doesn't exist yet (first-time init)
+        global_config_ops = InMemoryGlobalConfigOps(config=None)
 
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config=global_config,
+            global_config_ops=global_config_ops,
+            global_config=None,
             cwd=env.cwd,
         )
 
@@ -64,7 +55,10 @@ def test_init_creates_global_config_first_time() -> None:
         assert result.exit_code == 0, result.output
         assert "Global config not found" in result.output
         assert "Created global config" in result.output
-        assert (env.cwd / ".workstack" / "config.toml").exists()
+        # Verify config was saved to in-memory ops
+        assert global_config_ops.exists()
+        loaded = global_config_ops.load()
+        assert loaded.workstacks_root == workstacks_root.resolve()
 
 
 def test_init_prompts_for_workstacks_root() -> None:
@@ -74,17 +68,13 @@ def test_init_prompts_for_workstacks_root() -> None:
         workstacks_root = env.cwd / "my-workstacks"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config = GlobalConfig(
-            workstacks_root=env.cwd / "fake-workstacks",
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
+        # Config doesn't exist yet
+        global_config_ops = InMemoryGlobalConfigOps(config=None)
 
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config=global_config,
+            global_config_ops=global_config_ops,
+            global_config=None,
             cwd=env.cwd,
         )
 
@@ -93,8 +83,8 @@ def test_init_prompts_for_workstacks_root() -> None:
 
         assert result.exit_code == 0, result.output
         assert "Worktrees root directory" in result.output
-        # Reload config from file to verify it was saved correctly
-        loaded_config = load_global_config(env.cwd / ".workstack" / "config.toml")
+        # Verify config was saved correctly to in-memory ops
+        loaded_config = global_config_ops.load()
         assert loaded_config.workstacks_root == workstacks_root.resolve()
 
 
@@ -105,19 +95,14 @@ def test_init_detects_graphite_installed() -> None:
         workstacks_root = env.cwd / "workstacks"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config = GlobalConfig(
-            workstacks_root=env.cwd / "fake-workstacks",
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
         shell_ops = FakeShellOps(installed_tools={"gt": "/usr/local/bin/gt"})
+        global_config_ops = InMemoryGlobalConfigOps(config=None)
 
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config=global_config,
             shell_ops=shell_ops,
+            global_config_ops=global_config_ops,
+            global_config=None,
             cwd=env.cwd,
         )
 
@@ -126,8 +111,8 @@ def test_init_detects_graphite_installed() -> None:
 
         assert result.exit_code == 0, result.output
         assert "Graphite (gt) detected" in result.output
-        # Reload config from file to verify graphite was enabled
-        loaded_config = load_global_config(env.cwd / ".workstack" / "config.toml")
+        # Verify config was saved with graphite enabled
+        loaded_config = global_config_ops.load()
         assert loaded_config.use_graphite
 
 
@@ -138,17 +123,12 @@ def test_init_detects_graphite_not_installed() -> None:
         workstacks_root = env.cwd / "workstacks"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config = GlobalConfig(
-            workstacks_root=env.cwd / "fake-workstacks",
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
+        global_config_ops = InMemoryGlobalConfigOps(config=None)
 
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config=global_config,
+            global_config_ops=global_config_ops,
+            global_config=None,
             cwd=env.cwd,
         )
 
@@ -157,8 +137,8 @@ def test_init_detects_graphite_not_installed() -> None:
 
         assert result.exit_code == 0, result.output
         assert "Graphite (gt) not detected" in result.output
-        # Reload config from file to verify graphite is disabled
-        loaded_config = load_global_config(env.cwd / ".workstack" / "config.toml")
+        # Verify config was saved with graphite disabled
+        loaded_config = global_config_ops.load()
         assert not loaded_config.use_graphite
 
 
@@ -177,15 +157,16 @@ def test_init_skips_global_with_repo_flag() -> None:
             show_pr_checks=False,
         )
 
+        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
+            global_config_ops=global_config_ops,
             global_config=global_config,
             cwd=env.cwd,
         )
 
-        # Mock global_config_exists to return True (simulating existing global config)
-        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
-            result = runner.invoke(cli, ["init", "--repo"], obj=test_ctx)
+        result = runner.invoke(cli, ["init", "--repo"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         assert "Global config not found" not in result.output
@@ -197,17 +178,13 @@ def test_init_fails_repo_flag_without_global_config() -> None:
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config = GlobalConfig(
-            workstacks_root=env.cwd / "fake-workstacks",
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
+        # Config doesn't exist - this is the error case being tested
+        global_config_ops = InMemoryGlobalConfigOps(config=None)
 
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config=global_config,
+            global_config_ops=global_config_ops,
+            global_config=None,
             cwd=env.cwd,
         )
 
@@ -216,7 +193,6 @@ def test_init_fails_repo_flag_without_global_config() -> None:
 
         assert result.exit_code == 1
         assert "Global config not found" in result.output
-        assert "Run 'workstack init' without --repo" in result.output
         assert "Run 'workstack init' without --repo" in result.output
 
 
@@ -239,15 +215,16 @@ def test_init_auto_preset_detects_dagster() -> None:
             show_pr_checks=False,
         )
 
+        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
+            global_config_ops=global_config_ops,
             global_config=global_config,
             cwd=env.cwd,
         )
 
-        # Mock global_config_exists to return True (simulating existing global config)
-        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
-            result = runner.invoke(cli, ["init"], obj=test_ctx)
+        result = runner.invoke(cli, ["init"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Config should be created in workstacks_dir
@@ -275,15 +252,16 @@ def test_init_auto_preset_uses_generic_fallback() -> None:
             show_pr_checks=False,
         )
 
+        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
+            global_config_ops=global_config_ops,
             global_config=global_config,
             cwd=env.cwd,
         )
 
-        # Mock global_config_exists to return True (simulating existing global config)
-        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
-            result = runner.invoke(cli, ["init"], obj=test_ctx)
+        result = runner.invoke(cli, ["init"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         workstacks_dir = workstacks_root / env.cwd.name
@@ -306,15 +284,16 @@ def test_init_explicit_preset_dagster() -> None:
             show_pr_checks=False,
         )
 
+        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
+            global_config_ops=global_config_ops,
             global_config=global_config,
             cwd=env.cwd,
         )
 
-        # Mock global_config_exists to return True (simulating existing global config)
-        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
-            result = runner.invoke(cli, ["init", "--preset", "dagster"], obj=test_ctx)
+        result = runner.invoke(cli, ["init", "--preset", "dagster"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         workstacks_dir = workstacks_root / env.cwd.name
@@ -337,15 +316,16 @@ def test_init_explicit_preset_generic() -> None:
             show_pr_checks=False,
         )
 
+        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
+            global_config_ops=global_config_ops,
             global_config=global_config,
             cwd=env.cwd,
         )
 
-        # Mock global_config_exists to return True (simulating existing global config)
-        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
-            result = runner.invoke(cli, ["init", "--preset", "generic"], obj=test_ctx)
+        result = runner.invoke(cli, ["init", "--preset", "generic"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         workstacks_dir = workstacks_root / env.cwd.name
@@ -366,8 +346,11 @@ def test_init_list_presets_displays_available() -> None:
             show_pr_checks=False,
         )
 
+        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
+            global_config_ops=global_config_ops,
             global_config=global_config,
             cwd=env.cwd,
         )
@@ -395,8 +378,11 @@ def test_init_invalid_preset_fails() -> None:
             show_pr_checks=False,
         )
 
+        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
+            global_config_ops=global_config_ops,
             global_config=global_config,
             cwd=env.cwd,
         )
@@ -422,15 +408,16 @@ def test_init_creates_config_at_workstacks_dir() -> None:
             show_pr_checks=False,
         )
 
+        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
+            global_config_ops=global_config_ops,
             global_config=global_config,
             cwd=env.cwd,
         )
 
-        # Mock global_config_exists to return True (simulating existing global config)
-        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
-            result = runner.invoke(cli, ["init"], obj=test_ctx)
+        result = runner.invoke(cli, ["init"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Config should be in workstacks_dir, not repo root
@@ -455,15 +442,16 @@ def test_init_repo_flag_creates_config_at_root() -> None:
             show_pr_checks=False,
         )
 
+        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
+            global_config_ops=global_config_ops,
             global_config=global_config,
             cwd=env.cwd,
         )
 
-        # Mock global_config_exists to return True (simulating existing global config)
-        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
-            result = runner.invoke(cli, ["init", "--repo"], obj=test_ctx)
+        result = runner.invoke(cli, ["init", "--repo"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Config should be at repo root
@@ -492,15 +480,16 @@ def test_init_force_overwrites_existing_config() -> None:
             show_pr_checks=False,
         )
 
+        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
+            global_config_ops=global_config_ops,
             global_config=global_config,
             cwd=env.cwd,
         )
 
-        # Mock global_config_exists to return True (simulating existing global config)
-        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
-            result = runner.invoke(cli, ["init", "--force"], obj=test_ctx)
+        result = runner.invoke(cli, ["init", "--force"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         assert config_path.exists()
@@ -530,15 +519,16 @@ def test_init_fails_without_force_when_exists() -> None:
             show_pr_checks=False,
         )
 
+        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
+            global_config_ops=global_config_ops,
             global_config=global_config,
             cwd=env.cwd,
         )
 
-        # Mock global_config_exists to return True (simulating existing global config)
-        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
-            result = runner.invoke(cli, ["init"], obj=test_ctx)
+        result = runner.invoke(cli, ["init"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "Config already exists" in result.output
@@ -564,16 +554,18 @@ def test_init_adds_plan_md_to_gitignore() -> None:
             show_pr_checks=False,
         )
 
+        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
+            global_config_ops=global_config_ops,
             global_config=global_config,
             cwd=env.cwd,
         )
 
         # Accept both prompts (y for .PLAN.md, y for .env)
-        # Mock global_config_exists to return True (simulating existing global config)
-        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
-            result = runner.invoke(cli, ["init"], obj=test_ctx, input="y\ny\n")
+
+        result = runner.invoke(cli, ["init"], obj=test_ctx, input="y\ny\n")
 
         assert result.exit_code == 0, result.output
         gitignore_content = gitignore.read_text(encoding="utf-8")
@@ -599,16 +591,18 @@ def test_init_adds_env_to_gitignore() -> None:
             show_pr_checks=False,
         )
 
+        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
+            global_config_ops=global_config_ops,
             global_config=global_config,
             cwd=env.cwd,
         )
 
         # Accept both prompts (y for .PLAN.md, y for .env)
-        # Mock global_config_exists to return True (simulating existing global config)
-        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
-            result = runner.invoke(cli, ["init"], obj=test_ctx, input="y\ny\n")
+
+        result = runner.invoke(cli, ["init"], obj=test_ctx, input="y\ny\n")
 
         assert result.exit_code == 0, result.output
         gitignore_content = gitignore.read_text(encoding="utf-8")
@@ -634,16 +628,17 @@ def test_init_skips_gitignore_entries_if_declined() -> None:
             show_pr_checks=False,
         )
 
+        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
+            global_config_ops=global_config_ops,
             global_config=global_config,
             cwd=env.cwd,
         )
 
         # Decline both prompts
-        # Mock global_config_exists to return True (simulating existing global config)
-        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
-            result = runner.invoke(cli, ["init"], obj=test_ctx, input="n\nn\n")
+        result = runner.invoke(cli, ["init"], obj=test_ctx, input="n\nn\n")
 
         assert result.exit_code == 0, result.output
         gitignore_content = gitignore.read_text(encoding="utf-8")
@@ -668,15 +663,16 @@ def test_init_handles_missing_gitignore() -> None:
             show_pr_checks=False,
         )
 
+        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
+            global_config_ops=global_config_ops,
             global_config=global_config,
             cwd=env.cwd,
         )
 
-        # Mock global_config_exists to return True (simulating existing global config)
-        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
-            result = runner.invoke(cli, ["init"], obj=test_ctx)
+        result = runner.invoke(cli, ["init"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Should not crash or prompt about gitignore
@@ -702,16 +698,18 @@ def test_init_preserves_gitignore_formatting() -> None:
             show_pr_checks=False,
         )
 
+        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
+            global_config_ops=global_config_ops,
             global_config=global_config,
             cwd=env.cwd,
         )
 
         # Accept both prompts (y for .PLAN.md, y for .env)
-        # Mock global_config_exists to return True (simulating existing global config)
-        with mock.patch("workstack.core.global_config.global_config_exists", return_value=True):
-            result = runner.invoke(cli, ["init"], obj=test_ctx, input="y\ny\n")
+
+        result = runner.invoke(cli, ["init"], obj=test_ctx, input="y\ny\n")
 
         assert result.exit_code == 0, result.output
         gitignore_content = gitignore.read_text(encoding="utf-8")
@@ -731,17 +729,13 @@ def test_init_first_time_offers_shell_setup() -> None:
         bashrc = Path.home() / ".bashrc"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config = GlobalConfig(
-            workstacks_root=env.cwd / "fake-workstacks",
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
+        # Config doesn't exist yet (first-time init)
+        global_config_ops = InMemoryGlobalConfigOps(config=None)
 
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config=global_config,
+            global_config_ops=global_config_ops,
+            global_config=None,
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(detected_shell=("bash", bashrc)),
@@ -774,8 +768,11 @@ def test_init_shell_flag_only_setup() -> None:
             show_pr_checks=False,
         )
 
+        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
+            global_config_ops=global_config_ops,
             global_config=global_config,
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
@@ -803,17 +800,13 @@ def test_init_detects_bash_shell() -> None:
         bashrc = Path.home() / ".bashrc"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config = GlobalConfig(
-            workstacks_root=env.cwd / "fake-workstacks",
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
+        # Config doesn't exist yet (first-time init)
+        global_config_ops = InMemoryGlobalConfigOps(config=None)
 
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config=global_config,
+            global_config_ops=global_config_ops,
+            global_config=None,
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(detected_shell=("bash", bashrc)),
@@ -841,17 +834,13 @@ def test_init_detects_zsh_shell() -> None:
         zshrc = Path.home() / ".zshrc"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config = GlobalConfig(
-            workstacks_root=env.cwd / "fake-workstacks",
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
+        # Config doesn't exist yet (first-time init)
+        global_config_ops = InMemoryGlobalConfigOps(config=None)
 
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config=global_config,
+            global_config_ops=global_config_ops,
+            global_config=None,
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(detected_shell=("zsh", zshrc)),
@@ -879,17 +868,13 @@ def test_init_detects_fish_shell() -> None:
         fish_config = Path.home() / ".config" / "fish" / "config.fish"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config = GlobalConfig(
-            workstacks_root=env.cwd / "fake-workstacks",
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
+        # Config doesn't exist yet (first-time init)
+        global_config_ops = InMemoryGlobalConfigOps(config=None)
 
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config=global_config,
+            global_config_ops=global_config_ops,
+            global_config=None,
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(detected_shell=("fish", fish_config)),
@@ -916,17 +901,13 @@ def test_init_skips_unknown_shell() -> None:
         workstacks_root = env.cwd / "workstacks"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config = GlobalConfig(
-            workstacks_root=env.cwd / "fake-workstacks",
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
+        # Config doesn't exist yet (first-time init)
+        global_config_ops = InMemoryGlobalConfigOps(config=None)
 
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config=global_config,
+            global_config_ops=global_config_ops,
+            global_config=None,
             cwd=env.cwd,
         )
 
@@ -945,17 +926,13 @@ def test_init_prints_completion_instructions() -> None:
         bashrc = Path.home() / ".bashrc"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config = GlobalConfig(
-            workstacks_root=env.cwd / "fake-workstacks",
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
+        # Config doesn't exist yet (first-time init)
+        global_config_ops = InMemoryGlobalConfigOps(config=None)
 
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config=global_config,
+            global_config_ops=global_config_ops,
+            global_config=None,
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(detected_shell=("bash", bashrc)),
@@ -987,17 +964,13 @@ def test_init_prints_wrapper_instructions() -> None:
         bashrc = Path.home() / ".bashrc"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config = GlobalConfig(
-            workstacks_root=env.cwd / "fake-workstacks",
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
+        # Config doesn't exist yet (first-time init)
+        global_config_ops = InMemoryGlobalConfigOps(config=None)
 
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config=global_config,
+            global_config_ops=global_config_ops,
+            global_config=None,
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(detected_shell=("bash", bashrc)),
@@ -1029,17 +1002,13 @@ def test_init_skips_shell_if_declined() -> None:
         bashrc = Path.home() / ".bashrc"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config = GlobalConfig(
-            workstacks_root=env.cwd / "fake-workstacks",
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
+        # Config doesn't exist yet (first-time init)
+        global_config_ops = InMemoryGlobalConfigOps(config=None)
 
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
-            global_config=global_config,
+            global_config_ops=global_config_ops,
+            global_config=None,
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(detected_shell=("bash", bashrc)),
@@ -1080,8 +1049,11 @@ def test_init_not_in_git_repo_fails() -> None:
             show_pr_checks=False,
         )
 
+        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
+            global_config_ops=global_config_ops,
             global_config=global_config,
             cwd=env.cwd,
         )

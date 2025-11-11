@@ -5,6 +5,7 @@ Replaces lazy-loading GlobalConfigOps pattern with eager loading at entry point.
 """
 
 import tomllib
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -24,75 +25,152 @@ class GlobalConfig:
     show_pr_checks: bool
 
 
-def load_global_config(path: Path | None = None) -> GlobalConfig:
-    """Load global config from ~/.workstack/config.toml.
+class GlobalConfigOps(ABC):
+    """Abstract interface for global config operations.
 
-    Args:
-        path: Config file path (defaults to ~/.workstack/config.toml)
-
-    Returns:
-        GlobalConfig instance with loaded values
-
-    Raises:
-        FileNotFoundError: If config file doesn't exist
-        ValueError: If config is missing required fields or malformed
+    Provides dependency injection for global config access, enabling
+    in-memory implementations for tests without touching filesystem.
     """
-    config_path = path if path is not None else Path.home() / ".workstack" / "config.toml"
 
-    if not config_path.exists():
-        raise FileNotFoundError(f"Global config not found at {config_path}")
+    @abstractmethod
+    def exists(self) -> bool:
+        """Check if global config exists."""
+        ...
 
-    data = tomllib.loads(config_path.read_text(encoding="utf-8"))
-    root = data.get("workstacks_root")
-    if not root:
-        raise ValueError(f"Missing 'workstacks_root' in {config_path}")
+    @abstractmethod
+    def load(self) -> GlobalConfig:
+        """Load global config.
 
-    return GlobalConfig(
-        workstacks_root=Path(root).expanduser().resolve(),
-        use_graphite=bool(data.get("use_graphite", False)),
-        shell_setup_complete=bool(data.get("shell_setup_complete", False)),
-        show_pr_info=bool(data.get("show_pr_info", True)),
-        show_pr_checks=bool(data.get("show_pr_checks", False)),
-    )
+        Returns:
+            GlobalConfig instance with loaded values
+
+        Raises:
+            FileNotFoundError: If config doesn't exist
+            ValueError: If config is missing required fields or malformed
+        """
+        ...
+
+    @abstractmethod
+    def save(self, config: GlobalConfig) -> None:
+        """Save global config.
+
+        Args:
+            config: GlobalConfig instance to save
+        """
+        ...
+
+    @abstractmethod
+    def path(self) -> Path:
+        """Get the path to the global config file.
+
+        Returns:
+            Path to config file (for error messages and debugging)
+        """
+        ...
 
 
-def save_global_config(config: GlobalConfig, path: Path | None = None) -> None:
-    """Save global config to ~/.workstack/config.toml.
+class FilesystemGlobalConfigOps(GlobalConfigOps):
+    """Production implementation that reads/writes ~/.workstack/config.toml."""
 
-    Args:
-        config: GlobalConfig instance to save
-        path: Config file path (defaults to ~/.workstack/config.toml)
-    """
-    config_path = path if path is not None else Path.home() / ".workstack" / "config.toml"
-    config_path.parent.mkdir(parents=True, exist_ok=True)
+    def exists(self) -> bool:
+        """Check if global config file exists."""
+        return self.path().exists()
 
-    content = f"""# Global workstack configuration
+    def load(self) -> GlobalConfig:
+        """Load global config from ~/.workstack/config.toml.
+
+        Returns:
+            GlobalConfig instance with loaded values
+
+        Raises:
+            FileNotFoundError: If config file doesn't exist
+            ValueError: If config is missing required fields or malformed
+        """
+        config_path = self.path()
+
+        if not config_path.exists():
+            raise FileNotFoundError(f"Global config not found at {config_path}")
+
+        data = tomllib.loads(config_path.read_text(encoding="utf-8"))
+        root = data.get("workstacks_root")
+        if not root:
+            raise ValueError(f"Missing 'workstacks_root' in {config_path}")
+
+        return GlobalConfig(
+            workstacks_root=Path(root).expanduser().resolve(),
+            use_graphite=bool(data.get("use_graphite", False)),
+            shell_setup_complete=bool(data.get("shell_setup_complete", False)),
+            show_pr_info=bool(data.get("show_pr_info", True)),
+            show_pr_checks=bool(data.get("show_pr_checks", False)),
+        )
+
+    def save(self, config: GlobalConfig) -> None:
+        """Save global config to ~/.workstack/config.toml.
+
+        Args:
+            config: GlobalConfig instance to save
+        """
+        config_path = self.path()
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+
+        content = f"""# Global workstack configuration
 workstacks_root = "{config.workstacks_root}"
 use_graphite = {str(config.use_graphite).lower()}
 shell_setup_complete = {str(config.shell_setup_complete).lower()}
 show_pr_info = {str(config.show_pr_info).lower()}
 show_pr_checks = {str(config.show_pr_checks).lower()}
 """
-    config_path.write_text(content, encoding="utf-8")
+        config_path.write_text(content, encoding="utf-8")
+
+    def path(self) -> Path:
+        """Get the path to the global config file.
+
+        Returns:
+            Path to ~/.workstack/config.toml
+        """
+        return Path.home() / ".workstack" / "config.toml"
 
 
-def global_config_exists(path: Path | None = None) -> bool:
-    """Check if global config file exists.
+class InMemoryGlobalConfigOps(GlobalConfigOps):
+    """Test implementation that stores config in memory without touching filesystem."""
 
-    Args:
-        path: Config file path (defaults to ~/.workstack/config.toml)
+    def __init__(self, config: GlobalConfig | None = None) -> None:
+        """Initialize in-memory config ops.
 
-    Returns:
-        True if config exists, False otherwise
-    """
-    config_path = path if path is not None else Path.home() / ".workstack" / "config.toml"
-    return config_path.exists()
+        Args:
+            config: Initial config state (None = config doesn't exist)
+        """
+        self._config = config
 
+    def exists(self) -> bool:
+        """Check if global config exists in memory."""
+        return self._config is not None
 
-def global_config_path() -> Path:
-    """Get the path to the global config file.
+    def load(self) -> GlobalConfig:
+        """Load global config from memory.
 
-    Returns:
-        Path to config file (for error messages and debugging)
-    """
-    return Path.home() / ".workstack" / "config.toml"
+        Returns:
+            GlobalConfig instance stored in memory
+
+        Raises:
+            FileNotFoundError: If config doesn't exist in memory
+        """
+        if self._config is None:
+            raise FileNotFoundError(f"Global config not found at {self.path()}")
+        return self._config
+
+    def save(self, config: GlobalConfig) -> None:
+        """Save global config to memory.
+
+        Args:
+            config: GlobalConfig instance to store
+        """
+        self._config = config
+
+    def path(self) -> Path:
+        """Get fake path for error messages.
+
+        Returns:
+            Path to fake config location (for error messages)
+        """
+        return Path("/fake/workstack/config.toml")

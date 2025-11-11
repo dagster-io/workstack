@@ -1338,8 +1338,7 @@ else:
 Check if Graphite is available:
 
 ```python
-config = ctx.global_config_ops.load_global_config()
-if config.use_graphite:
+if ctx.global_config and ctx.global_config.use_graphite:
     # Use Graphite features
     parent = ctx.graphite_ops.get_parent_branch(branch)
 ```

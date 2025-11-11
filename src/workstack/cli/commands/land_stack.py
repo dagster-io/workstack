@@ -443,12 +443,12 @@ def _land_branch_sequence(
 
         # Phase 3: Merge PR
         if dry_run:
-            merge_cmd = f"gh pr merge {pr_number} --squash --auto"
+            merge_cmd = f"gh pr merge {pr_number} --squash"
             _emit(_format_cli_command(merge_cmd, check), script_mode=script_mode)
             merged_branches.append(branch)
         else:
             # Use gh pr merge with squash strategy (Graphite's default)
-            cmd = ["gh", "pr", "merge", str(pr_number), "--squash", "--auto"]
+            cmd = ["gh", "pr", "merge", str(pr_number), "--squash"]
             result = subprocess.run(
                 cmd,
                 cwd=repo_root,
@@ -459,7 +459,7 @@ def _land_branch_sequence(
             if verbose:
                 _emit(result.stdout, script_mode=script_mode)
 
-            merge_cmd = f"gh pr merge {pr_number} --squash --auto"
+            merge_cmd = f"gh pr merge {pr_number} --squash"
             _emit(_format_cli_command(merge_cmd, check), script_mode=script_mode)
             merged_branches.append(branch)
 

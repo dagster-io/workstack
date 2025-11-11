@@ -14,7 +14,9 @@ wheels/
 .venv
 activate.sh
 .workstack
-.PLAN.md
+
+# Local planning and configuration (not tracked in git)
+.PLAN.md  # Agent-tracked implementation plans (local-only, see docs/agent/guide.md)
 .env
 
 CLAUDE.local.md

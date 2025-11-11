@@ -22,6 +22,18 @@ The documentation is organized by audience and purpose:
 - [../writing/schrockn-style/](../writing/schrockn-style/) - Writing style guides
 - Package READMEs (e.g., `packages/workstack-dev/README.md`)
 
+## Project Planning Files
+
+**`.PLAN.md`** - Local implementation planning document
+
+- Located at repository root (`.PLAN.md`)
+- **In `.gitignore`** - Not tracked by git, local-only
+- Used for tracking multi-phase implementation progress
+- Updated as work progresses through phases
+- Format: Markdown with phase/step tracking, completion status, and next steps
+
+**Purpose**: Agents can read and update `.PLAN.md` to track implementation progress across sessions without cluttering git history with planning documents.
+
 ## Documentation Structure
 
 ```

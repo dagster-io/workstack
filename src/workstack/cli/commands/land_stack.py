@@ -7,6 +7,7 @@ import click
 
 from workstack.cli.core import discover_repo_context
 from workstack.core.context import WorkstackContext, regenerate_context
+from workstack.core.graphite_ops import BranchMetadata
 
 
 def _emit(message: str, *, script_mode: bool, error: bool = False) -> None:
@@ -145,10 +146,12 @@ def _validate_landing_preconditions(
         )
         raise SystemExit(1)
 
-    # Check no uncommitted changes
-    if ctx.git_ops.has_uncommitted_changes(repo_root):
+    # Check no uncommitted changes in current worktree
+    if ctx.git_ops.has_uncommitted_changes(ctx.cwd):
         _emit(
-            "Error: Working directory has uncommitted changes\n"
+            f"Error: Current worktree has uncommitted changes\n"
+            f"Path: {ctx.cwd}\n"
+            f"Branch: {current_branch}\n\n"
             "Landing requires a clean working directory.\n\n"
             "To fix:\n"
             "  • Commit your changes: git add . && git commit -m 'message'\n"
@@ -335,6 +338,32 @@ def _show_landing_plan(
             raise SystemExit(0)
 
 
+def _get_all_children(branch: str, all_branches: dict[str, BranchMetadata]) -> list[str]:
+    """Get all children (upstack branches) of a branch recursively.
+
+    Args:
+        branch: Branch name to get children for
+        all_branches: Dict of all branch metadata from get_all_branches()
+
+    Returns:
+        List of all children branch names (direct and indirect), in order from
+        closest to furthest upstack. Returns empty list if branch has no children.
+    """
+    result: list[str] = []
+
+    branch_metadata = all_branches.get(branch)
+    if not branch_metadata or not branch_metadata.children:
+        return result
+
+    # Process direct children
+    for child in branch_metadata.children:
+        result.append(child)
+        # Recursively get children of children
+        result.extend(_get_all_children(child, all_branches))
+
+    return result
+
+
 def _land_branch_sequence(
     ctx: WorkstackContext,
     repo_root: Path,
@@ -469,6 +498,28 @@ def _land_branch_sequence(
         else:
             ctx.graphite_ops.sync(repo_root, force=True, quiet=not verbose)
             _emit(_format_cli_command("gt sync -f", check), script_mode=script_mode)
+
+        # Phase 5: Force-push rebased branches
+        # After gt sync -f rebases remaining branches locally,
+        # push them to GitHub so subsequent PR merges will succeed
+        #
+        # Get ALL upstack branches from the full Graphite tree, not just
+        # the branches in our landing list. After landing feat-1 in a stack
+        # like main → feat-1 → feat-2 → feat-3, we need to force-push BOTH
+        # feat-2 and feat-3, even if we're only landing up to feat-2.
+        all_branches_metadata = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo_root)
+        if all_branches_metadata:
+            # Get all children of the current branch recursively
+            upstack_branches = _get_all_children(branch, all_branches_metadata)
+            if upstack_branches:
+                for upstack_branch in upstack_branches:
+                    if dry_run:
+                        submit_cmd = f"gt submit --branch {upstack_branch} --no-edit"
+                        _emit(_format_cli_command(submit_cmd, check), script_mode=script_mode)
+                    else:
+                        ctx.graphite_ops.submit_branch(repo_root, upstack_branch, quiet=not verbose)
+                        submit_cmd = f"gt submit --branch {upstack_branch} --no-edit"
+                        _emit(_format_cli_command(submit_cmd, check), script_mode=script_mode)
 
     return merged_branches
 

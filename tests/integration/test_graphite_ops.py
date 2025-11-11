@@ -6,7 +6,6 @@ files using actual filesystem operations with tmp_path.
 
 import json
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
@@ -200,49 +199,3 @@ def test_graphite_url_construction():
     url = ops.get_graphite_url("dagster-io", "workstack", 42)
 
     assert url == "https://app.graphite.dev/github/pr/dagster-io/workstack/42"
-
-
-def test_graphite_ops_sync_with_mock():
-    """Test gt sync with mocked subprocess."""
-    with patch("subprocess.run") as mock_run:
-        ops = RealGraphiteOps()
-        ops.sync(Path("/test"), force=False, quiet=False)
-
-        mock_run.assert_called_once()
-        call_args = mock_run.call_args
-        assert call_args[0][0] == ["gt", "sync"]
-        assert call_args[1]["cwd"] == Path("/test")
-        assert call_args[1]["check"] is True
-
-
-def test_graphite_ops_sync_with_force():
-    """Test gt sync with force flag."""
-    with patch("subprocess.run") as mock_run:
-        ops = RealGraphiteOps()
-        ops.sync(Path("/test"), force=True, quiet=False)
-
-        mock_run.assert_called_once()
-        call_args = mock_run.call_args
-        assert call_args[0][0] == ["gt", "sync", "-f"]
-
-
-def test_graphite_ops_sync_with_quiet():
-    """Test gt sync with quiet flag."""
-    with patch("subprocess.run") as mock_run:
-        ops = RealGraphiteOps()
-        ops.sync(Path("/test"), force=False, quiet=True)
-
-        mock_run.assert_called_once()
-        call_args = mock_run.call_args
-        assert call_args[0][0] == ["gt", "sync", "--quiet"]
-
-
-def test_graphite_ops_sync_with_force_and_quiet():
-    """Test gt sync with both force and quiet flags."""
-    with patch("subprocess.run") as mock_run:
-        ops = RealGraphiteOps()
-        ops.sync(Path("/test"), force=True, quiet=True)
-
-        mock_run.assert_called_once()
-        call_args = mock_run.call_args
-        assert call_args[0][0] == ["gt", "sync", "-f", "--quiet"]

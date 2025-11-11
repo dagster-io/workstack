@@ -1,6 +1,4 @@
 import dataclasses
-import re
-import tomllib
 from pathlib import Path
 
 import click
@@ -8,39 +6,15 @@ import click
 from workstack.cli.core import discover_repo_context
 from workstack.core.context import WorkstackContext
 from workstack.core.global_config import GlobalConfig
+from workstack.core.init_utils import (
+    add_gitignore_entry,
+    discover_presets,
+    get_shell_wrapper_content,
+    is_repo_named,
+    render_config_template,
+)
 from workstack.core.repo_discovery import ensure_workstacks_dir
 from workstack.core.shell_ops import ShellOps
-
-
-def detect_root_project_name(repo_root: Path) -> str | None:
-    """Return the declared project name at the repo root, if any.
-
-    Checks root `pyproject.toml`'s `[project].name`. If absent, tries to heuristically
-    extract from `setup.py` by matching `name="..."` or `name='...'`.
-    """
-
-    root_pyproject = repo_root / "pyproject.toml"
-    if root_pyproject.exists():
-        data = tomllib.loads(root_pyproject.read_text(encoding="utf-8"))
-        project = data.get("project") or {}
-        name = project.get("name")
-        if isinstance(name, str) and name:
-            return name
-
-    setup_py = repo_root / "setup.py"
-    if setup_py.exists():
-        text = setup_py.read_text(encoding="utf-8")
-        m = re.search(r"name\s*=\s*['\"]([^'\"]+)['\"]", text)
-        if m:
-            return m.group(1)
-
-    return None
-
-
-def is_repo_named(repo_root: Path, expected_name: str) -> bool:
-    """Return True if the root project name matches `expected_name` (case-insensitive)."""
-    name = detect_root_project_name(repo_root)
-    return (name or "").lower() == expected_name.lower()
 
 
 def detect_graphite(shell_ops: ShellOps) -> bool:
@@ -66,36 +40,12 @@ def create_and_save_global_config(
     return config
 
 
-def discover_presets() -> list[str]:
-    """Discover available preset names by scanning the presets directory.
-
-    Returns a list of preset names (without .toml extension).
-    """
-    presets_dir = Path(__file__).parent.parent / "presets"
-    if not presets_dir.exists():
-        return []
-
-    return sorted(p.stem for p in presets_dir.glob("*.toml") if p.is_file())
-
-
-def render_config_template(preset: str | None) -> str:
-    """Return default config TOML content, optionally using a preset.
-
-    If preset is None, uses the "generic" preset by default.
-    Preset files are loaded from src/workstack/presets/<preset>.toml
-    """
-    preset_name = preset if preset is not None else "generic"
-    presets_dir = Path(__file__).parent.parent / "presets"
-    preset_file = presets_dir / f"{preset_name}.toml"
-
-    if not preset_file.exists():
-        raise ValueError(f"Preset '{preset_name}' not found at {preset_file}")
-
-    return preset_file.read_text(encoding="utf-8")
-
-
-def _add_gitignore_entry(content: str, entry: str, prompt_message: str) -> tuple[str, bool]:
+def _add_gitignore_entry_with_prompt(
+    content: str, entry: str, prompt_message: str
+) -> tuple[str, bool]:
     """Add an entry to gitignore content if not present and user confirms.
+
+    This wrapper adds user interaction to the pure add_gitignore_entry function.
 
     Args:
         content: Current gitignore content
@@ -113,27 +63,9 @@ def _add_gitignore_entry(content: str, entry: str, prompt_message: str) -> tuple
     if not click.confirm(prompt_message, default=True):
         return (content, False)
 
-    # Ensure trailing newline before adding
-    if not content.endswith("\n"):
-        content += "\n"
-
-    content += f"{entry}\n"
-    return (content, True)
-
-
-def get_shell_wrapper_content(shell: str) -> str:
-    """Load the shell wrapper function for the given shell type."""
-    shell_integration_dir = Path(__file__).parent.parent / "shell_integration"
-
-    if shell == "fish":
-        wrapper_file = shell_integration_dir / "fish_wrapper.fish"
-    else:
-        wrapper_file = shell_integration_dir / f"{shell}_wrapper.sh"
-
-    if not wrapper_file.exists():
-        raise ValueError(f"Shell wrapper not found for {shell}")
-
-    return wrapper_file.read_text(encoding="utf-8")
+    # Use pure function to add entry
+    new_content = add_gitignore_entry(content, entry)
+    return (new_content, True)
 
 
 def print_shell_setup_instructions(
@@ -188,12 +120,18 @@ def perform_shell_setup(shell_ops: ShellOps) -> bool:
 
     # Generate the instructions
     completion_line = f"source <(workstack completion {shell})"
-    wrapper_content = get_shell_wrapper_content(shell)
+    shell_integration_dir = Path(__file__).parent.parent / "shell_integration"
+    wrapper_content = get_shell_wrapper_content(shell_integration_dir, shell)
 
     # Print the formatted instructions
     print_shell_setup_instructions(shell, rc_file, completion_line, wrapper_content)
 
     return True
+
+
+def _get_presets_dir() -> Path:
+    """Get the path to the presets directory."""
+    return Path(__file__).parent.parent / "presets"
 
 
 @click.command("init")
@@ -204,7 +142,7 @@ def perform_shell_setup(shell_ops: ShellOps) -> bool:
     default="auto",
     help=(
         "Config template to use. 'auto' detects preset based on repo characteristics. "
-        f"Available: auto, {', '.join(discover_presets())}."
+        f"Available: auto, {', '.join(discover_presets(_get_presets_dir()))}."
     ),
 )
 @click.option(
@@ -252,7 +190,8 @@ def init_cmd(
         return
 
     # Discover available presets on demand
-    available_presets = discover_presets()
+    presets_dir = _get_presets_dir()
+    available_presets = discover_presets(presets_dir)
     valid_choices = ["auto"] + available_presets
 
     # Handle --list-presets flag
@@ -320,7 +259,7 @@ def init_cmd(
     else:
         effective_preset = choice
 
-    content = render_config_template(effective_preset)
+    content = render_config_template(presets_dir, effective_preset)
     cfg_path.write_text(content, encoding="utf-8")
     click.echo(f"Wrote {cfg_path}")
 
@@ -334,7 +273,7 @@ def init_cmd(
         modified = False
 
         # Add .PLAN.md
-        gitignore_content, plan_added = _add_gitignore_entry(
+        gitignore_content, plan_added = _add_gitignore_entry_with_prompt(
             gitignore_content,
             ".PLAN.md",
             "Add .PLAN.md to .gitignore?",
@@ -342,7 +281,7 @@ def init_cmd(
         modified = modified or plan_added
 
         # Add .env
-        gitignore_content, env_added = _add_gitignore_entry(
+        gitignore_content, env_added = _add_gitignore_entry_with_prompt(
             gitignore_content,
             ".env",
             "Add .env to .gitignore?",

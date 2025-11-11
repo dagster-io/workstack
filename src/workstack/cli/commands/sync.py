@@ -10,6 +10,7 @@ from workstack.cli.core import discover_repo_context, worktree_path_for
 from workstack.cli.shell_utils import render_cd_script, write_script_to_temp
 from workstack.core.context import WorkstackContext, regenerate_context
 from workstack.core.repo_discovery import ensure_workstacks_dir
+from workstack.core.sync_utils import PRStatus, identify_deletable_worktrees
 
 
 def _emit(message: str, *, script_mode: bool, error: bool = False) -> None:
@@ -158,39 +159,32 @@ def sync_cmd(
     # Step 5: Identify deletable workstacks
     worktrees = ctx.git_ops.list_worktrees(repo.root)
 
-    # Track workstacks eligible for deletion
-    deletable: list[tuple[str, str, str, int]] = []
-
+    # Fetch PR status for all branches
+    pr_statuses: dict[str, PRStatus] = {}
     for wt in worktrees:
-        # Skip root
-        if wt.path == repo.root:
-            continue
+        if wt.branch is not None:
+            state, pr_number, title = ctx.github_ops.get_pr_status(
+                repo.root, wt.branch, debug=False
+            )
+            pr_statuses[wt.branch] = PRStatus(
+                branch=wt.branch, state=state, pr_number=pr_number, title=title
+            )
 
-        # Skip detached HEAD
-        if wt.branch is None:
-            continue
-
-        # Skip non-managed worktrees
-        if wt.path.parent != workstacks_dir:
-            continue
-
-        # Check PR status
-        state, pr_number, title = ctx.github_ops.get_pr_status(repo.root, wt.branch, debug=False)
-
-        if state in ("MERGED", "CLOSED") and pr_number is not None:
-            name = wt.path.name
-            deletable.append((name, wt.branch, state, pr_number))
+    # Identify deletable worktrees using pure business logic
+    deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo.root, workstacks_dir)
 
     # Step 6: Display and optionally clean
     if not deletable:
         _emit("✓ No worktrees to clean up", script_mode=script)
     else:
-        for name, branch, state, pr_number in deletable:
+        for wt in deletable:
             # Display formatted
-            name_part = click.style(name, fg="cyan", bold=True)
-            branch_part = click.style(f"[{branch}]", fg="yellow")
-            state_part = click.style(state.lower(), fg="green" if state == "MERGED" else "red")
-            pr_part = click.style(f"PR #{pr_number}", fg="bright_black")
+            name_part = click.style(wt.name, fg="cyan", bold=True)
+            branch_part = click.style(f"[{wt.branch}]", fg="yellow")
+            state_part = click.style(
+                wt.pr_state.lower(), fg="green" if wt.pr_state == "MERGED" else "red"
+            )
+            pr_part = click.style(f"PR #{wt.pr_number}", fg="bright_black")
 
             _emit(f"  {name_part} {branch_part} - {state_part} ({pr_part})", script_mode=script)
 
@@ -206,24 +200,24 @@ def sync_cmd(
                 return
 
         # Remove each worktree
-        for name, _branch, _state, _pr_number in deletable:
+        for wt in deletable:
             if dry_run:
                 _emit(
-                    f"[DRY RUN] Would remove worktree: {name} (branch: {_branch})",
+                    f"[DRY RUN] Would remove worktree: {wt.name} (branch: {wt.branch})",
                     script_mode=script,
                 )
             else:
                 # Reuse remove logic from remove.py
                 _remove_worktree(
                     ctx,
-                    name,
+                    wt.name,
                     force=True,  # Already confirmed above
                     delete_stack=False,  # Leave branches for gt sync -f
                     dry_run=False,
                     quiet=True,  # Suppress planning output during sync
                 )
                 # Show clean confirmation after removal completes
-                _emit(f"✓ Removed: {name} [{_branch}]", script_mode=script)
+                _emit(f"✓ Removed: {wt.name} [{wt.branch}]", script_mode=script)
 
         # Step 6.5: Automatically run second gt sync -f to delete branches (when force=True)
         if force and not dry_run and deletable:

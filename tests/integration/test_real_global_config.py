@@ -5,8 +5,9 @@ import pytest
 
 from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.commands.create import make_env_content
-from workstack.cli.commands.init import create_and_save_global_config, discover_presets
+from workstack.cli.commands.init import create_and_save_global_config
 from workstack.cli.config import load_config
+from workstack.core.init_utils import discover_presets
 
 
 def test_load_config_defaults(tmp_path: Path) -> None:
@@ -119,9 +120,7 @@ def test_create_global_config_creates_parent_directory(tmp_path: Path) -> None:
 
 
 def test_discover_presets(tmp_path: Path) -> None:
-    # Create structure: tmp_path/commands/init.py (mocked) and tmp_path/presets/*.toml
-    commands_dir = tmp_path / "commands"
-    commands_dir.mkdir()
+    # Create structure: tmp_path/presets/*.toml
     presets_dir = tmp_path / "presets"
     presets_dir.mkdir()
     (presets_dir / "generic.toml").write_text("# generic preset\n", encoding="utf-8")
@@ -130,19 +129,16 @@ def test_discover_presets(tmp_path: Path) -> None:
     (presets_dir / "README.md").write_text("# readme\n", encoding="utf-8")
     (presets_dir / "subdir").mkdir()
 
-    with mock.patch("workstack.cli.commands.init.__file__", str(commands_dir / "init.py")):
-        presets = discover_presets()
+    presets = discover_presets(presets_dir)
 
     assert presets == ["custom", "dagster", "generic"]
 
 
 def test_discover_presets_missing_directory(tmp_path: Path) -> None:
-    # Create structure: tmp_path/commands/init.py (mocked) but no presets directory
-    commands_dir = tmp_path / "commands"
-    commands_dir.mkdir()
+    # Test with non-existent presets directory
+    presets_dir = tmp_path / "nonexistent"
 
-    with mock.patch("workstack.cli.commands.init.__file__", str(commands_dir / "init.py")):
-        presets = discover_presets()
+    presets = discover_presets(presets_dir)
 
     assert presets == []
 

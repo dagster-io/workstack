@@ -89,6 +89,26 @@ def test_consolidate_no_other_worktrees() -> None:
         assert "No other worktrees found" in result.output
 
 
+def test_consolidate_no_other_worktrees_with_script_flag() -> None:
+    """Test consolidate shows output with --script flag when no worktrees to remove."""
+    runner = CliRunner()
+    with simulated_workstack_env(runner) as env:
+        # Configure graphite with stack (main -> feature-1 -> feature-2)
+        graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
+
+        # Current worktree only (on feature-2)
+        worktrees = {env.cwd: [WorktreeInfo(path=env.cwd, branch="feature-2")]}
+
+        test_ctx = _create_test_context(
+            env.cwd, worktrees, "feature-2", env.workstacks_root, graphite_ops, git_dir=env.git_dir
+        )
+        result = runner.invoke(cli, ["consolidate", "--script", "-f"], obj=test_ctx)
+
+        assert result.exit_code == 0, result.output
+        # This would have caught the bug: output should display even with --script flag
+        assert "No other worktrees found" in result.output
+
+
 def test_consolidate_removes_other_stack_worktrees() -> None:
     """Test consolidate removes worktrees with branches from current stack."""
     runner = CliRunner()

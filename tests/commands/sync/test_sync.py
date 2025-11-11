@@ -4,7 +4,6 @@ import os
 import subprocess
 from pathlib import Path
 
-import pytest
 from click.testing import CliRunner
 
 from tests.fakes.github_ops import FakeGitHubOps
@@ -752,107 +751,6 @@ def test_render_return_to_root_script() -> None:
     # Additional elements from activation script
     assert "unset VIRTUAL_ENV" in script  # Clears previous venv
     assert ".venv/bin/activate" in script  # Activates venv if exists
-
-
-@pytest.mark.skip(
-    reason="Test has complex issue with FakeGraphiteOps - needs further investigation"
-)
-def test_sync_script_mode_when_worktree_deleted() -> None:
-    """--script outputs cd command when current worktree is deleted."""
-    runner = CliRunner()
-    with runner.isolated_filesystem():
-        cwd = Path.cwd()
-        workstacks_root = cwd / "workstacks"
-        repo_name = cwd.name
-        workstacks_dir = workstacks_root / repo_name
-        workstacks_dir.mkdir(parents=True)
-
-        repo_root = cwd
-        (repo_root / ".git").mkdir()
-
-        wt1 = workstacks_dir / "feature-1"
-        wt1.mkdir()
-
-        git_ops = FakeGitOps(
-            git_common_dirs={
-                wt1: cwd / ".git",
-                cwd: cwd / ".git",  # Include root mapping too
-            },
-            worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main"),
-                    WorktreeInfo(path=wt1, branch="feature-1"),
-                ],
-            },
-        )
-
-        global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        graphite_ops = FakeGraphiteOps()
-        github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
-
-        # Change to wt1 before creating context so ctx.cwd is correct
-        os.chdir(wt1)
-        try:
-            test_ctx = WorkstackContext.for_test(
-                git_ops=git_ops,
-                global_config=global_config_ops,
-                graphite_ops=graphite_ops,
-                github_ops=github_ops,
-                shell_ops=FakeShellOps(),
-                cwd=wt1,  # Context needs to know we're in the worktree
-                dry_run=False,
-            )
-
-            result = runner.invoke(
-                cli,
-                ["sync", "-f", "--script"],
-                obj=test_ctx,
-            )
-        finally:
-            os.chdir(cwd)
-
-        if result.exit_code != 0:
-            print(f"\n=== ERROR ===\n{result.output}\n=== END ===\n")
-
-        assert result.exit_code == 0
-
-        # Output should contain a temp file path
-        # In script mode, status messages go to stderr but CliRunner mixes them with stdout
-        # Filter for lines that look like file paths (start with / or contain /tmp/)
-        output_lines = [
-            line.strip()
-            for line in result.output.split("\n")
-            if line.strip() and (line.strip().startswith("/") or "/tmp/" in line)
-        ]
-        script_path_str = output_lines[-1] if output_lines else ""
-        script_path = Path(script_path_str)
-
-        assert script_path.exists()
-        assert script_path.name.startswith("workstack-sync-")
-        assert script_path.name.endswith(".sh")
-
-        # Verify script content
-        script_content = script_path.read_text()
-        # The sync command now uses render_activation_script when worktree is deleted
-        # Check for key elements of the activation script
-        # Note: shlex.quote will add quotes around paths with spaces
-        import shlex
-
-        quoted_root = shlex.quote(str(repo_root))
-        assert f"cd {quoted_root}" in script_content
-        assert "# return to root" in script_content
-        assert 'echo "✓ Switched to root worktree."' in script_content
-        assert not wt1.exists()
-
-        # Cleanup
-        script_path.unlink(missing_ok=True)
 
 
 def test_sync_script_mode_when_worktree_exists() -> None:

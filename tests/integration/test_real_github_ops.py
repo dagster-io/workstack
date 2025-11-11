@@ -8,11 +8,8 @@ import json
 import subprocess
 from pathlib import Path
 
-import pytest
-
 from tests.conftest import load_fixture
-from workstack.core.github_ops import PRMergeability, RealGitHubOps
-
+from workstack.core.github_ops import RealGitHubOps
 
 # ============================================================================
 # get_prs_for_repo() Tests
@@ -272,7 +269,6 @@ def test_get_pr_mergeability_mergeable() -> None:
         return result
 
     # Patch subprocess.run in the github_ops module
-    import workstack.core.github_ops
 
     original_run = subprocess.run
     try:
@@ -301,8 +297,6 @@ def test_get_pr_mergeability_conflicting() -> None:
         )
         return result
 
-    import workstack.core.github_ops
-
     original_run = subprocess.run
     try:
         subprocess.run = mock_run
@@ -330,8 +324,6 @@ def test_get_pr_mergeability_unknown() -> None:
         )
         return result
 
-    import workstack.core.github_ops
-
     original_run = subprocess.run
     try:
         subprocess.run = mock_run
@@ -352,8 +344,6 @@ def test_get_pr_mergeability_command_failure() -> None:
 
     def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
         raise subprocess.CalledProcessError(1, cmd, stderr="PR not found")
-
-    import workstack.core.github_ops
 
     original_run = subprocess.run
     try:
@@ -376,8 +366,6 @@ def test_get_pr_mergeability_json_decode_error() -> None:
             args=cmd, returncode=0, stdout="not valid json", stderr=""
         )
         return result
-
-    import workstack.core.github_ops
 
     original_run = subprocess.run
     try:
@@ -402,8 +390,6 @@ def test_get_pr_mergeability_missing_key() -> None:
         )
         return result
 
-    import workstack.core.github_ops
-
     original_run = subprocess.run
     try:
         subprocess.run = mock_run
@@ -422,8 +408,6 @@ def test_get_pr_mergeability_file_not_found() -> None:
 
     def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
         raise FileNotFoundError("gh command not found")
-
-    import workstack.core.github_ops
 
     original_run = subprocess.run
     try:

@@ -1,7 +1,19 @@
-"""Helpers for CLI testing with CliRunner.
+"""Helpers for CLI testing with REAL git operations.
 
 This module provides utilities for setting up isolated test environments
-for CLI command tests using Click's CliRunner pattern.
+for CLI command tests that require REAL git operations (not fakes).
+
+IMPORTANT: For 95% of CLI tests, use `simulated_workstack_env()` from
+`tests.test_utils.env_helpers` instead. That helper uses FakeGitOps and
+is faster, better isolated, and easier to use.
+
+Only use `cli_test_repo()` when you specifically need:
+- Real git operations (hooks, worktree edge cases)
+- Actual filesystem permissions testing
+- Real subprocess interactions
+- Integration tests requiring actual git behavior
+
+See: tests.test_utils.env_helpers.simulated_workstack_env() for the recommended pattern.
 """
 
 import subprocess
@@ -28,17 +40,31 @@ class CLITestRepo:
 
 @contextmanager
 def cli_test_repo(tmp_path: Path) -> Generator[CLITestRepo]:
-    """Set up isolated git repo with workstack config for CLI testing.
+    """Set up isolated git repo with REAL git for CLI testing.
+
+    ⚠️ WARNING: Only use this helper when you NEED real git operations!
+    For 95% of CLI tests, use `simulated_workstack_env()` instead (from
+    tests.test_utils.env_helpers), which is faster and better isolated.
 
     Creates a complete test environment with:
     - Isolated .workstack config directory with basic settings
-    - Real git repository with main branch and initial commit
+    - REAL git repository with main branch and initial commit (subprocess calls)
     - workstacks_root directory structure
     - Configured git user (test@example.com / Test User)
 
-    This helper handles all the boilerplate setup needed for CLI tests that
-    invoke workstack commands via CliRunner. It does NOT create the CliRunner
-    itself - tests should create that with isolated HOME environment.
+    This helper handles boilerplate setup for CLI tests requiring REAL git.
+    It does NOT create the CliRunner itself - tests must create that with
+    isolated HOME environment and handle directory changes manually.
+
+    When to use this helper:
+    - Testing git hooks or git worktree edge cases
+    - Testing actual filesystem permissions
+    - Integration tests requiring actual git behavior
+
+    When NOT to use this helper:
+    - Regular CLI command tests → Use simulated_workstack_env() instead
+    - Unit tests of core logic → Use FakeGitOps directly
+    - Tests that can use fakes → Use simulated_workstack_env() instead
 
     Args:
         tmp_path: Pytest's tmp_path fixture providing isolated test directory
@@ -46,13 +72,13 @@ def cli_test_repo(tmp_path: Path) -> Generator[CLITestRepo]:
     Yields:
         CLITestRepo with repo path, workstacks_root, and tmp_path
 
-    Example:
+    Example (real git required):
         ```python
         from click.testing import CliRunner
         from workstack.cli.cli import cli
         from tests.test_utils.cli_helpers import cli_test_repo
 
-        def test_create_command(tmp_path: Path) -> None:
+        def test_git_hook_integration(tmp_path: Path) -> None:
             with cli_test_repo(tmp_path) as test_env:
                 # Set up CliRunner with isolated HOME
                 env_vars = os.environ.copy()
@@ -69,10 +95,22 @@ def cli_test_repo(tmp_path: Path) -> Generator[CLITestRepo]:
                     os.chdir(original_cwd)
         ```
 
-    Note:
-        This helper is designed for tests that need a standard git repository
-        setup. For tests that need custom git state (multiple worktrees,
-        specific branch configurations, etc.), set up git manually instead.
+    Better alternative for most tests:
+        ```python
+        from click.testing import CliRunner
+        from tests.test_utils.env_helpers import simulated_workstack_env
+
+        def test_create_command() -> None:
+            runner = CliRunner()
+            with simulated_workstack_env(runner) as env:
+                # Much simpler! No HOME setup, no os.chdir, uses fakes
+                git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
+                test_ctx = WorkstackContext.for_test(git_ops=git_ops, cwd=env.cwd)
+                result = runner.invoke(cli, ["create", "feature"], obj=test_ctx)
+        ```
+
+    See Also:
+        tests.test_utils.env_helpers.simulated_workstack_env() - Recommended helper
     """
     # Set up isolated global config
     global_config_dir = tmp_path / ".workstack"

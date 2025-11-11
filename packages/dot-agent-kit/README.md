@@ -376,6 +376,41 @@ To remove an artifact from a bundled kit:
 
 ### Troubleshooting
 
+**Missing artifact after rename:**
+
+This is the most common issue when renaming artifacts.
+
+- **Symptom**: `dot-agent check` shows "Missing artifacts (in manifest but not installed)"
+- **Cause**: kit.yaml still references old filename, or kit wasn't reinstalled after rename
+- **Fix**:
+  1. Update kit.yaml with new artifact path
+  2. Force-reinstall kit: `dot-agent kit install bundled:{kit-name} --force`
+  3. Verify: `dot-agent check` should show ✅
+- **See**: [ARTIFACT_LIFECYCLE.md](docs/ARTIFACT_LIFECYCLE.md#renaming-an-artifact) for complete rename procedure
+
+**Stale symlink:**
+
+- **Symptom**: Symlink exists in `.claude/` but appears broken (red in `ls -la`)
+- **Cause**: Source file was renamed/moved but kit wasn't reinstalled
+- **Diagnosis**: `readlink .claude/commands/{namespace}/{artifact}.md` points to non-existent file
+- **Fix**: Force-reinstall kit to recreate symlinks with correct targets
+
+**Force reinstall required after manifest changes:**
+
+- **When needed**: After any changes to kit.yaml (adding/removing/renaming artifacts)
+- **Why**: Symlinks sync file contents automatically, but structural changes require reinstallation
+- **How**: `dot-agent kit remove {kit-name}` then `dot-agent kit install bundled:{kit-name} --force`
+- **Safe in dev mode**: Symlinks point to source files, so no data is lost
+
+**Command not found after changes:**
+
+- **Symptom**: Artifact appears in `dot-agent artifact list` but invocation fails
+- **Possible causes**:
+  - Cross-references in other files still use old command name
+  - Naming convention violated (must use kebab-case, not snake_case)
+  - Namespace incorrect (should match directory structure)
+- **Fix**: Update all cross-references, verify kebab-case naming, check namespace matches directory path
+
 **Artifact not appearing after installation:**
 
 - Verify the artifact path in kit.yaml matches the actual file location
@@ -393,3 +428,7 @@ To remove an artifact from a bundled kit:
 - Ensure each kit uses its own namespace directory (`{kit-name}/`)
 - Check for duplicate artifact names across kits
 - Review installed artifacts with `dot-agent check`
+
+**Further troubleshooting:**
+
+For detailed procedures on common operations (renaming, deleting, moving artifacts), see [docs/ARTIFACT_LIFECYCLE.md](docs/ARTIFACT_LIFECYCLE.md).

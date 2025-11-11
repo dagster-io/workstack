@@ -194,7 +194,8 @@ def test_land_stack_ignores_root_worktree_changes_on_unrelated_branch() -> None:
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
-                "test-docs": BranchMetadata.branch("test-docs", "main", commit_sha="xyz999"),  # Unrelated branch
+                # Unrelated branch
+                "test-docs": BranchMetadata.branch("test-docs", "main", commit_sha="xyz999"),
             },
             stacks={
                 "feat-1": ["main", "feat-1"],
@@ -229,8 +230,9 @@ def test_land_stack_ignores_root_worktree_changes_on_unrelated_branch() -> None:
 
         result = runner.invoke(cli, ["land-stack", "--dry-run"], obj=test_ctx)
 
-        # The command should not fail due to uncommitted changes since we only check current worktree
-        # It might fail for other reasons (dry-run mode, no GitHub auth, etc.), but not for uncommitted changes
+        # The command should not fail due to uncommitted changes since we only check
+        # current worktree. It might fail for other reasons (dry-run mode, no GitHub
+        # auth, etc.), but not for uncommitted changes
         assert "Current worktree has uncommitted changes" not in result.output
         # The error should not mention the root worktree path
         if result.exit_code != 0:

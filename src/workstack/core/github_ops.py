@@ -213,6 +213,30 @@ class GitHubOps(ABC):
         """
         ...
 
+    @abstractmethod
+    def get_pr_base_branch(self, repo_root: Path, pr_number: int) -> str | None:
+        """Get current base branch of a PR from GitHub.
+
+        Args:
+            repo_root: Repository root directory
+            pr_number: PR number to query
+
+        Returns:
+            Name of the base branch, or None if query fails
+        """
+        ...
+
+    @abstractmethod
+    def update_pr_base_branch(self, repo_root: Path, pr_number: int, new_base: str) -> None:
+        """Update base branch of a PR on GitHub.
+
+        Args:
+            repo_root: Repository root directory
+            pr_number: PR number to update
+            new_base: New base branch name
+        """
+        ...
+
 
 class RealGitHubOps(GitHubOps):
     """Production implementation using gh CLI.
@@ -295,6 +319,47 @@ class RealGitHubOps(GitHubOps):
             # gh not installed, not authenticated, or JSON parsing failed
             return PRInfo("NONE", None, None)
 
+    def get_pr_base_branch(self, repo_root: Path, pr_number: int) -> str | None:
+        """Get current base branch of a PR from GitHub.
+
+        Note: Uses try/except as an acceptable error boundary for handling gh CLI
+        availability and authentication. We cannot reliably check gh installation
+        and authentication status a priori without duplicating gh's logic.
+        """
+        try:
+            cmd = [
+                "gh",
+                "pr",
+                "view",
+                str(pr_number),
+                "--json",
+                "baseRefName",
+                "--jq",
+                ".baseRefName",
+            ]
+            stdout = self._execute(cmd, repo_root)
+            return stdout.strip()
+
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            # gh not installed, not authenticated, or command failed
+            return None
+
+    def update_pr_base_branch(self, repo_root: Path, pr_number: int, new_base: str) -> None:
+        """Update base branch of a PR on GitHub.
+
+        Note: Uses try/except as an acceptable error boundary for handling gh CLI
+        availability and authentication. We cannot reliably check gh installation
+        and authentication status a priori without duplicating gh's logic.
+        """
+        try:
+            cmd = ["gh", "pr", "edit", str(pr_number), "--base", new_base]
+            self._execute(cmd, repo_root)
+
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            # gh not installed, not authenticated, or command failed
+            # Graceful degradation - operation skipped
+            pass
+
 
 # ============================================================================
 # Dry-Run Wrapper
@@ -329,3 +394,13 @@ class DryRunGitHubOps(GitHubOps):
     def get_pr_status(self, repo_root: Path, branch: str, *, debug: bool) -> PRInfo:
         """Delegate read operation to wrapped implementation."""
         return self._wrapped.get_pr_status(repo_root, branch, debug=debug)
+
+    def get_pr_base_branch(self, repo_root: Path, pr_number: int) -> str | None:
+        """Delegate read operation to wrapped implementation."""
+        return self._wrapped.get_pr_base_branch(repo_root, pr_number)
+
+    def update_pr_base_branch(self, repo_root: Path, pr_number: int, new_base: str) -> None:
+        """Print dry-run message for PR base branch update."""
+        import click
+
+        click.echo(f"  gh pr edit {pr_number} --base {new_base}")

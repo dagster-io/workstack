@@ -29,9 +29,7 @@ from tests.commands.display.list import strip_ansi
 from tests.fakes.gitops import FakeGitOps
 from tests.test_utils.env_helpers import simulated_workstack_env
 from workstack.cli.cli import cli
-from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
-from workstack.core.global_config import GlobalConfig
 from workstack.core.graphite_ops import RealGraphiteOps
 
 
@@ -86,22 +84,8 @@ def test_root_on_trunk_shows_only_trunk() -> None:
             },
         )
 
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        graphite_ops = RealGraphiteOps()
-
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
+        test_ctx = env.build_context(
+            git_ops=git_ops, graphite_ops=RealGraphiteOps(), use_graphite=True
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
@@ -194,22 +178,8 @@ def test_root_on_non_trunk_shows_ancestors_only() -> None:
             },
         )
 
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        graphite_ops = RealGraphiteOps()
-
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
+        test_ctx = env.build_context(
+            git_ops=git_ops, graphite_ops=RealGraphiteOps(), use_graphite=True
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
@@ -313,22 +283,8 @@ def test_non_root_worktree_shows_descendants_with_worktrees() -> None:
             },
         )
 
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        graphite_ops = RealGraphiteOps()
-
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
+        test_ctx = env.build_context(
+            git_ops=git_ops, graphite_ops=RealGraphiteOps(), use_graphite=True
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)

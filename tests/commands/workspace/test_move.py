@@ -4,12 +4,10 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps
 from tests.test_utils.env_helpers import simulated_workstack_env
 from workstack.cli.cli import cli
 from workstack.core.gitops import WorktreeInfo
-from workstack.core.global_config import GlobalConfig
 
 
 def test_move_from_current_to_new_worktree() -> None:
@@ -32,15 +30,7 @@ def test_move_from_current_to_new_worktree() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        test_ctx = create_test_context(git_ops=git_ops, global_config=global_config, cwd=env.cwd)
+        test_ctx = env.build_context(git_ops=git_ops)
 
         result = runner.invoke(cli, ["move", "target-wt"], obj=test_ctx)
 
@@ -73,15 +63,7 @@ def test_move_with_explicit_current_flag() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        test_ctx = create_test_context(git_ops=git_ops, global_config=global_config, cwd=env.cwd)
+        test_ctx = env.build_context(git_ops=git_ops)
 
         result = runner.invoke(cli, ["move", "--current", "new-wt"], obj=test_ctx)
 
@@ -110,15 +92,7 @@ def test_move_with_branch_flag_auto_detect() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        test_ctx = create_test_context(git_ops=git_ops, global_config=global_config, cwd=env.cwd)
+        test_ctx = env.build_context(git_ops=git_ops)
 
         result = runner.invoke(cli, ["move", "--branch", "feature-auth", "new-wt"], obj=test_ctx)
 
@@ -147,15 +121,7 @@ def test_move_with_worktree_flag() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        test_ctx = create_test_context(git_ops=git_ops, global_config=global_config, cwd=env.cwd)
+        test_ctx = env.build_context(git_ops=git_ops)
 
         result = runner.invoke(cli, ["move", "--worktree", "source-wt", "target-wt"], obj=test_ctx)
 
@@ -186,15 +152,7 @@ def test_move_swap_between_two_worktrees() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        test_ctx = create_test_context(git_ops=git_ops, global_config=global_config, cwd=env.cwd)
+        test_ctx = env.build_context(git_ops=git_ops)
 
         result = runner.invoke(cli, ["move", "--worktree", "wt1", "wt2", "--force"], obj=test_ctx)
 
@@ -226,15 +184,7 @@ def test_move_swap_requires_confirmation() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        test_ctx = create_test_context(git_ops=git_ops, global_config=global_config, cwd=env.cwd)
+        test_ctx = env.build_context(git_ops=git_ops)
 
         result = runner.invoke(cli, ["move", "--worktree", "wt1", "wt2"], input="n\n", obj=test_ctx)
 
@@ -260,15 +210,7 @@ def test_move_with_custom_ref() -> None:
             default_branches={env.root_worktree: "develop"},
         )
 
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        test_ctx = create_test_context(git_ops=git_ops, global_config=global_config, cwd=env.cwd)
+        test_ctx = env.build_context(git_ops=git_ops)
 
         result = runner.invoke(cli, ["move", "new-wt", "--ref", "develop"], obj=test_ctx)
 
@@ -287,15 +229,7 @@ def test_move_error_multiple_source_flags() -> None:
             },
         )
 
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        test_ctx = create_test_context(git_ops=git_ops, global_config=global_config, cwd=env.cwd)
+        test_ctx = env.build_context(git_ops=git_ops)
 
         result = runner.invoke(
             cli,
@@ -323,15 +257,7 @@ def test_move_error_branch_not_found() -> None:
             },
         )
 
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        test_ctx = create_test_context(git_ops=git_ops, global_config=global_config, cwd=env.cwd)
+        test_ctx = env.build_context(git_ops=git_ops)
 
         result = runner.invoke(
             cli,
@@ -355,15 +281,7 @@ def test_move_error_worktree_not_found() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        test_ctx = create_test_context(git_ops=git_ops, global_config=global_config, cwd=env.cwd)
+        test_ctx = env.build_context(git_ops=git_ops)
 
         result = runner.invoke(
             cli,
@@ -395,15 +313,7 @@ def test_move_error_source_and_target_same() -> None:
             },
         )
 
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        test_ctx = create_test_context(git_ops=git_ops, global_config=global_config, cwd=env.cwd)
+        test_ctx = env.build_context(git_ops=git_ops)
 
         result = runner.invoke(
             cli,
@@ -432,15 +342,7 @@ def test_move_error_source_in_detached_head() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        test_ctx = create_test_context(git_ops=git_ops, global_config=global_config, cwd=env.cwd)
+        test_ctx = env.build_context(git_ops=git_ops)
 
         result = runner.invoke(cli, ["move", "target"], obj=test_ctx)
 
@@ -472,15 +374,7 @@ def test_move_to_existing_worktree_in_detached_head() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        test_ctx = create_test_context(git_ops=git_ops, global_config=global_config, cwd=env.cwd)
+        test_ctx = env.build_context(git_ops=git_ops)
 
         result = runner.invoke(cli, ["move", "--worktree", "source", "target"], obj=test_ctx)
 
@@ -511,15 +405,7 @@ def test_move_to_root() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        test_ctx = create_test_context(git_ops=git_ops, global_config=global_config, cwd=env.cwd)
+        test_ctx = env.build_context(git_ops=git_ops)
 
         # Move from feature-wt to root (should swap branches)
         result = runner.invoke(
@@ -559,17 +445,7 @@ def test_move_to_root_with_explicit_current() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        test_ctx = create_test_context(
-            git_ops=git_ops, global_config=global_config, cwd=current_dir
-        )
+        test_ctx = env.build_context(git_ops=git_ops, cwd=current_dir)
 
         # Execute from within source_wt (now we're already there due to os.chdir)
         result = runner.invoke(cli, ["move", "root", "--force"], obj=test_ctx)
@@ -600,15 +476,7 @@ def test_move_to_root_when_root_is_detached_head() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        test_ctx = create_test_context(git_ops=git_ops, global_config=global_config, cwd=env.cwd)
+        test_ctx = env.build_context(git_ops=git_ops)
 
         # Move from feature-wt to root (should be a move, not swap, since root is detached)
         result = runner.invoke(cli, ["move", "--worktree", "feature-wt", "root"], obj=test_ctx)
@@ -635,15 +503,7 @@ def test_move_error_source_is_root_target_is_root() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        test_ctx = create_test_context(git_ops=git_ops, global_config=global_config, cwd=env.cwd)
+        test_ctx = env.build_context(git_ops=git_ops)
 
         # Try to move root to root (should fail)
         result = runner.invoke(cli, ["move", "root"], obj=test_ctx)

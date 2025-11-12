@@ -18,8 +18,6 @@ from tests.commands.display.list import strip_ansi
 from tests.fakes.gitops import FakeGitOps, WorktreeInfo
 from tests.test_utils.env_helpers import simulated_workstack_env
 from workstack.cli.cli import cli
-from workstack.core.context import WorkstackContext
-from workstack.core.global_config import GlobalConfig
 
 
 @pytest.mark.parametrize("trunk_branch", ["main", "master"])
@@ -51,20 +49,7 @@ def test_list_with_trunk_branch(trunk_branch: str) -> None:
             current_branches={env.cwd: trunk_branch, feature_dir: "feature"},
         )
 
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=False,
-            show_pr_checks=False,
-        )
-
-        ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-        )
+        ctx = env.build_context(git_ops=git_ops, use_graphite=True)
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=ctx)
 

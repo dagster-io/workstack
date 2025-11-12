@@ -11,14 +11,11 @@ from click.testing import CliRunner
 
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.test_utils.builders import PullRequestInfoBuilder
 from tests.test_utils.env_helpers import simulated_workstack_env
 from workstack.cli.cli import cli
-from workstack.core.context import WorkstackContext
 from workstack.core.github_ops import PullRequestInfo
 from workstack.core.gitops import WorktreeInfo
-from workstack.core.global_config import GlobalConfig
 
 # ===========================
 # Config Handling Tests
@@ -78,24 +75,11 @@ def test_list_with_stacks_pr_visibility(show_pr_info: bool, expected_visible: bo
         # Build fake GitHub ops with PR data
         github_ops = FakeGitHubOps(prs={branch_name: pr})
 
-        # Configure show_pr_info
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=show_pr_info,
-            show_pr_checks=False,
-        )
-
-        graphite_ops = FakeGraphiteOps()
-
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
             git_ops=git_ops,
             github_ops=github_ops,
-            graphite_ops=graphite_ops,
-            global_config=global_config_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
+            use_graphite=True,
+            show_pr_info=show_pr_info,
         )
 
         # PR info now shown on main line, not just with --stacks
@@ -171,24 +155,10 @@ def test_list_pr_emoji_mapping(
         # Build fake GitHub ops with PR data
         github_ops = FakeGitHubOps(prs={branch_name: pr})
 
-        # Configure show_pr_info
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        graphite_ops = FakeGraphiteOps()
-
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
             git_ops=git_ops,
             github_ops=github_ops,
-            graphite_ops=graphite_ops,
-            global_config=global_config_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
+            use_graphite=True,
         )
 
         # PR info now shown on main line, not just with --stacks
@@ -254,24 +224,10 @@ def test_list_with_stacks_uses_graphite_url() -> None:
         # Build fake GitHub ops with PR data
         github_ops = FakeGitHubOps(prs={branch_name: pr})
 
-        # Configure show_pr_info
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        graphite_ops = FakeGraphiteOps()
-
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
             git_ops=git_ops,
             github_ops=github_ops,
-            graphite_ops=graphite_ops,
-            global_config=global_config_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
+            use_graphite=True,
         )
 
         # PR info now shown on main line, not just with --stacks

@@ -11,9 +11,7 @@ from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from tests.test_utils.env_helpers import simulated_workstack_env
 from workstack.cli.cli import cli
-from workstack.core.context import WorkstackContext
 from workstack.core.gitops import DryRunGitOps, WorktreeInfo
-from workstack.core.global_config import GlobalConfig
 from workstack.core.graphite_ops import BranchMetadata
 
 
@@ -33,20 +31,12 @@ def _create_test_context(env, use_graphite: bool = False, dry_run: bool = False)
     if dry_run:
         git_ops = DryRunGitOps(git_ops)
 
-    return WorkstackContext.for_test(
+    return env.build_context(
+        use_graphite=use_graphite,
         git_ops=git_ops,
-        global_config=GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=use_graphite,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        ),
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),
-        script_writer=env.script_writer,
-        cwd=env.cwd,
         dry_run=dry_run,
     )
 
@@ -125,20 +115,12 @@ def test_rm_dry_run_with_delete_stack() -> None:
             "feature-2": BranchMetadata.branch("feature-2", "feature-1"),
         }
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
+            use_graphite=True,
             git_ops=git_ops,
-            global_config=GlobalConfig(
-                workstacks_root=env.workstacks_root,
-                use_graphite=True,
-                shell_setup_complete=False,
-                show_pr_info=True,
-                show_pr_checks=False,
-            ),
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(branches=branches),
             shell_ops=FakeShellOps(),
-            script_writer=env.script_writer,
-            cwd=env.cwd,
             dry_run=True,
         )
 

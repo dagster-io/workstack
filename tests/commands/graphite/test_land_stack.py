@@ -1975,3 +1975,75 @@ def test_land_stack_updates_pr_bases_after_force_push() -> None:
             f"This command should appear in Phase 6, AFTER force-push.\n"
             f"Actual output:\n{result.output}"
         )
+
+
+def test_land_stack_dry_run_shows_trunk_sync_commands() -> None:
+    """Test that land-stack --dry-run shows trunk sync commands in output.
+
+    Verifies that dry-run mode displays the git commands for trunk syncing
+    so users can see what would happen.
+    """
+    runner = CliRunner()
+    with pure_workstack_env(runner) as env:
+        # Build 2-branch stack
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
+                "feat-1": BranchMetadata.branch(
+                    "feat-1", "main", children=["feat-2"], commit_sha="def456"
+                ),
+                "feat-2": BranchMetadata.branch("feat-2", "feat-1", commit_sha="ghi789"),
+            },
+            current_branch="feat-2",
+        )
+
+        github_ops = FakeGitHubOps(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Feature 1"),
+                "feat-2": ("OPEN", 200, "Feature 2"),
+            }
+        )
+
+        global_config_ops = GlobalConfig(
+            workstacks_root=env.workstacks_root,
+            use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
+        )
+
+        test_ctx = WorkstackContext.for_test(
+            git_ops=git_ops,
+            global_config=global_config_ops,
+            graphite_ops=graphite_ops,
+            github_ops=github_ops,
+            shell_ops=FakeShellOps(),
+            dry_run=True,
+            script_writer=env.script_writer,
+            cwd=env.cwd,
+        )
+
+        # Act: Run with --dry-run to see commands
+        result = runner.invoke(cli, ["land-stack", "--force", "--dry-run"], obj=test_ctx)
+
+        # Assert: Command succeeded
+        assert result.exit_code == 0, f"Command failed: {result.output}"
+
+        # Assert: Output contains trunk sync commands (after each merge)
+        assert "git fetch origin main" in result.output, (
+            f"Expected 'git fetch origin main' in dry-run output.\nActual output:\n{result.output}"
+        )
+        assert "git checkout main" in result.output, (
+            f"Expected 'git checkout main' in dry-run output.\nActual output:\n{result.output}"
+        )
+        assert "git pull --ff-only origin main" in result.output, (
+            f"Expected 'git pull --ff-only origin main' in dry-run output.\n"
+            f"Actual output:\n{result.output}"
+        )
+
+        # Assert: Checkout back to branch after sync
+        # After landing feat-1, should checkout back to feat-1
+        assert "git checkout feat-1" in result.output, (
+            f"Expected 'git checkout feat-1' to return to branch after trunk sync.\n"
+            f"Actual output:\n{result.output}"
+        )

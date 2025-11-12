@@ -114,6 +114,8 @@ class FakeGitOps(GitOps):
         self._removed_worktrees: list[Path] = []
         self._checked_out_branches: list[tuple[Path, str]] = []
         self._detached_checkouts: list[tuple[Path, str]] = []
+        self._fetched_branches: list[tuple[str, str]] = []
+        self._pulled_branches: list[tuple[str, str, bool]] = []
 
     def list_worktrees(self, repo_root: Path) -> list[WorktreeInfo]:
         """List all worktrees in the repository."""
@@ -301,6 +303,14 @@ class FakeGitOps(GitOps):
         commits = self._recent_commits.get(cwd, [])
         return commits[:limit]
 
+    def fetch_branch(self, repo_root: Path, remote: str, branch: str) -> None:
+        """Fetch a specific branch from a remote (tracks mutation)."""
+        self._fetched_branches.append((remote, branch))
+
+    def pull_branch(self, repo_root: Path, remote: str, branch: str, *, ff_only: bool) -> None:
+        """Pull a specific branch from a remote (tracks mutation)."""
+        self._pulled_branches.append((remote, branch, ff_only))
+
     @property
     def deleted_branches(self) -> list[str]:
         """Get the list of branches that have been deleted.
@@ -343,6 +353,24 @@ class FakeGitOps(GitOps):
         This property is for test assertions only.
         """
         return self._detached_checkouts.copy()
+
+    @property
+    def fetched_branches(self) -> list[tuple[str, str]]:
+        """Get list of branches fetched during test.
+
+        Returns list of (remote, branch) tuples.
+        This property is for test assertions only.
+        """
+        return self._fetched_branches.copy()
+
+    @property
+    def pulled_branches(self) -> list[tuple[str, str, bool]]:
+        """Get list of branches pulled during test.
+
+        Returns list of (remote, branch, ff_only) tuples.
+        This property is for test assertions only.
+        """
+        return self._pulled_branches.copy()
 
     def _is_parent(self, parent: Path, child: Path) -> bool:
         """Check if parent is an ancestor of child."""

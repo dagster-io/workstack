@@ -39,8 +39,9 @@ For each branch from bottom to top:
   2. Verify stack integrity (parent is trunk after previous restacks)
   3. Update PR base branch on GitHub if stale
   4. Merge PR via `gh pr merge --squash --auto`
-  5. Restack remaining branches via `gt sync -f`
-  6. Submit updated PRs to GitHub
+  5. Sync trunk with remote (fetch + checkout + pull --ff-only + checkout back)
+  6. Restack remaining branches via `gt sync -f`
+  7. Submit updated PRs to GitHub
 
 ### Phase 4: Cleanup
 - Remove merged branch worktrees
@@ -61,6 +62,11 @@ For each branch from bottom to top:
 **Restacking:**
 After each PR merge, `gt sync -f` rebases all remaining branches onto the
 new trunk state. This maintains stack integrity as PRs are landed.
+
+After each PR merge on GitHub, we explicitly sync the local trunk branch with
+remote (git fetch + pull --ff-only) before running `gt sync -f`. This ensures
+the local trunk contains the just-merged PR commits, preventing race conditions
+where Graphite sees merged PRs but stale trunk state.
 
 **Worktree Conflicts:**
 Git prevents checking out a branch in multiple worktrees. Phase 1 validation
@@ -588,6 +594,34 @@ def _land_branch_sequence(
             merge_cmd = f"gh pr merge {pr_number} --squash"
             _emit(_format_cli_command(merge_cmd, check), script_mode=script_mode)
             merged_branches.append(branch)
+
+        # Phase 3.5: Sync trunk with remote
+        # At this point, parent should be trunk (verified in Phase 2)
+        if parent is None:
+            raise RuntimeError(f"Cannot sync trunk: {branch} has no parent branch")
+
+        if dry_run:
+            _emit(_format_cli_command(f"git fetch origin {parent}", check), script_mode=script_mode)
+            _emit(_format_cli_command(f"git checkout {parent}", check), script_mode=script_mode)
+            _emit(
+                _format_cli_command(f"git pull --ff-only origin {parent}", check),
+                script_mode=script_mode,
+            )
+            _emit(_format_cli_command(f"git checkout {branch}", check), script_mode=script_mode)
+        else:
+            # Sync trunk to include just-merged PR commits
+            ctx.git_ops.fetch_branch(repo_root, "origin", parent)
+            ctx.git_ops.checkout_branch(repo_root, parent)
+            ctx.git_ops.pull_branch(repo_root, "origin", parent, ff_only=True)
+            ctx.git_ops.checkout_branch(repo_root, branch)
+
+            _emit(_format_cli_command(f"git fetch origin {parent}", check), script_mode=script_mode)
+            _emit(_format_cli_command(f"git checkout {parent}", check), script_mode=script_mode)
+            _emit(
+                _format_cli_command(f"git pull --ff-only origin {parent}", check),
+                script_mode=script_mode,
+            )
+            _emit(_format_cli_command(f"git checkout {branch}", check), script_mode=script_mode)
 
         # Phase 4: Restack
         if dry_run:

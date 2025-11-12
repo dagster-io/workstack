@@ -246,15 +246,21 @@ def test_format_verbose_list_with_metadata() -> None:
     assert "test-skill" in result
     assert "test-cmd" in result
 
-    # Should contain metadata
-    assert "skill" in result
-    assert "command" in result
-    assert "user" in result
-    assert "project" in result
-    assert "managed" in result
-    assert "local" in result
-    assert "my-kit" in result
-    assert "1.0.0" in result
+    # Should contain type groupings
+    assert "Skills:" in result
+    assert "Commands:" in result
+
+    # Should contain level indicators
+    assert "[U]" in result  # User level
+    assert "[P]" in result  # Project level
+
+    # Should contain source indicators
+    assert "[local]" in result
+    assert "my-kit@1.0.0" in result  # Kit info in both source and Kit: line
+
+    # Should contain indented details
+    assert "Path:" in result
+    assert "Kit: my-kit@1.0.0" in result
 
 
 def test_format_verbose_list_with_hooks() -> None:
@@ -446,14 +452,13 @@ def test_format_verbose_list_with_bundled_kits() -> None:
     # Should have Claude Artifacts section with metadata
     assert "Claude Artifacts:" in result
     assert "devrun" in result
-    assert "agent" in result
+    assert "Agents:" in result
 
     # Should have Installed Items section with kit CLI command metadata
     assert "Installed Items:" in result
+    assert "Kit CLI Commands:" in result
     assert "gt:submit-branch" in result
-    assert "kit_cli_command" in result
-    assert "Kit: gt" in result
-    assert "Version: 0.1.0" in result
+    assert "Kit: gt@0.1.0" in result
 
 
 def test_format_compact_list_level_markers() -> None:

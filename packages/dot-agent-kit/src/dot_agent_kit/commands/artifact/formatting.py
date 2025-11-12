@@ -4,6 +4,7 @@ from pathlib import Path
 
 import click
 
+from dot_agent_kit.io.frontmatter import parse_user_metadata
 from dot_agent_kit.models.artifact import ArtifactLevel, ArtifactSource, InstalledArtifact
 from dot_agent_kit.models.bundled_kit import BundledKitInfo
 
@@ -137,6 +138,33 @@ def format_bundled_kit_item(item_name: str, kit_info: BundledKitInfo, item_type:
     return f"{level_indicator} {name} {source}"
 
 
+def _get_artifact_description(
+    artifact: InstalledArtifact, user_path: Path, project_path: Path
+) -> str | None:
+    """Extract description from artifact frontmatter.
+
+    Args:
+        artifact: Artifact to get description for
+        user_path: User-level .claude/ directory
+        project_path: Project-level .claude/ directory
+
+    Returns:
+        Description string or None if not found
+    """
+    # Determine which base path to use based on artifact level
+    base_path = user_path if artifact.level == ArtifactLevel.USER else project_path
+    artifact_path = base_path / artifact.file_path
+
+    if not artifact_path.exists():
+        return None
+
+    content = artifact_path.read_text(encoding="utf-8")
+    metadata = parse_user_metadata(content)
+    if metadata:
+        return metadata.get("description")
+    return None
+
+
 def format_compact_list(
     artifacts: list[InstalledArtifact], bundled_kits: dict[str, BundledKitInfo] | None = None
 ) -> str:
@@ -221,20 +249,27 @@ def format_compact_list(
 
 
 def format_verbose_list(
-    artifacts: list[InstalledArtifact], bundled_kits: dict[str, BundledKitInfo] | None = None
+    artifacts: list[InstalledArtifact],
+    bundled_kits: dict[str, BundledKitInfo] | None = None,
+    user_path: Path | None = None,
+    project_path: Path | None = None,
 ) -> str:
-    """Format detailed view with metadata in two sections.
+    """Format detailed view with grouped layout and indented details.
 
     Creates output structure:
-    - Claude Artifacts: skills, commands, agents, hooks with full metadata
-    - Installed Items: docs and kit CLI commands with full metadata
+    - Claude Artifacts: grouped by type (Skills, Commands, Agents, Hooks)
+      with indented details (description, kit, path)
+    - Installed Items: grouped by type (Docs, Kit CLI Commands)
+      with indented details
 
     Args:
         artifacts: List of artifacts to format
         bundled_kits: Dict of bundled kit information
+        user_path: User-level .claude/ directory for reading descriptions
+        project_path: Project-level .claude/ directory for reading descriptions
 
     Returns:
-        Formatted verbose list with full metadata per item
+        Formatted verbose list with grouped layout
     """
     if bundled_kits is None:
         bundled_kits = {}
@@ -257,26 +292,44 @@ def format_verbose_list(
 
     if has_claude_artifacts:
         lines.append(click.style("Claude Artifacts:", bold=True, fg="white"))
-        lines.append("")
 
-        first_artifact = True
         for artifact_type in claude_artifact_types:
             if artifact_type not in by_type:
                 continue
 
+            # Type header
+            lines.append(click.style(f"  {artifact_type.capitalize()}s:", bold=True, fg="white"))
+
             type_artifacts = sorted(by_type[artifact_type], key=lambda a: a.artifact_name)
             for artifact in type_artifacts:
-                if not first_artifact:
-                    lines.append("")
+                # Compact line: [level] name [source]
+                lines.append(f"    {format_compact_artifact_line(artifact)}")
 
-                lines.append(format_artifact_header(artifact))
+                # Indented details
+                # Description line
+                if user_path and project_path:
+                    description = _get_artifact_description(artifact, user_path, project_path)
+                    if description:
+                        lines.append(f"        → {description}")
 
-                if artifact.artifact_type == "hook":
-                    hook_meta = format_hook_metadata(artifact)
-                    if hook_meta:
-                        lines.append(hook_meta)
+                # Kit line (only for managed artifacts)
+                is_managed = artifact.source == ArtifactSource.MANAGED
+                if is_managed and artifact.kit_id and artifact.kit_version:
+                    lines.append(f"        Kit: {artifact.kit_id}@{artifact.kit_version}")
 
-                first_artifact = False
+                # Path line
+                lines.append(f"        Path: {artifact.file_path}")
+
+                # Hook-specific metadata
+                if artifact.artifact_type == "hook" and artifact.settings_source:
+                    if artifact.settings_source == "settings.local.json":
+                        warning = click.style("⚠️", fg="yellow")
+                        lines.append(f"        Settings: {artifact.settings_source} {warning}")
+                    else:
+                        lines.append(f"        Settings: {artifact.settings_source}")
+
+                # Blank line between artifacts
+                lines.append("")
 
     # Section 2: Installed Items
     has_docs = "doc" in by_type
@@ -285,24 +338,32 @@ def format_verbose_list(
     if has_docs or has_kit_commands:
         if has_claude_artifacts:
             lines.append("")
-            lines.append("")
 
         lines.append(click.style("Installed Items:", bold=True, fg="white"))
-        lines.append("")
 
-        first_item = True
-
-        # Docs
+        # Docs subsection
         if has_docs:
+            lines.append(click.style("  Docs:", bold=True, fg="white"))
             for artifact in sorted(by_type["doc"], key=lambda a: a.artifact_name):
-                if not first_item:
-                    lines.append("")
+                lines.append(f"    {format_compact_artifact_line(artifact)}")
 
-                lines.append(format_artifact_header(artifact))
-                first_item = False
+                # Indented details
+                if user_path and project_path:
+                    description = _get_artifact_description(artifact, user_path, project_path)
+                    if description:
+                        lines.append(f"        → {description}")
 
-        # Kit CLI Commands
+                is_managed = artifact.source == ArtifactSource.MANAGED
+                if is_managed and artifact.kit_id and artifact.kit_version:
+                    lines.append(f"        Kit: {artifact.kit_id}@{artifact.kit_version}")
+
+                lines.append(f"        Path: {artifact.file_path}")
+                lines.append("")
+
+        # Kit CLI Commands subsection
         if has_kit_commands:
+            lines.append(click.style("  Kit CLI Commands:", bold=True, fg="white"))
+
             all_commands: list[tuple[str, BundledKitInfo]] = []
             for kit_info in bundled_kits.values():
                 for cmd_name in kit_info.cli_commands:
@@ -311,17 +372,14 @@ def format_verbose_list(
             all_commands.sort(key=lambda x: f"{x[1].kit_id}:{x[0]}")
 
             for cmd_name, kit_info in all_commands:
-                if not first_item:
-                    lines.append("")
+                lines.append(f"    {format_bundled_kit_item(cmd_name, kit_info, 'cli_command')}")
 
-                # Format metadata for kit CLI command
-                full_name = f"{kit_info.kit_id}:{cmd_name}"
-                lines.append(click.style(f"Artifact: {full_name}", bold=True, fg="white"))
-                lines.append("Type: kit_cli_command")
-                lines.append(f"Level: {kit_info.level}")
-                lines.append(f"Kit: {kit_info.kit_id}")
-                lines.append(f"Version: {kit_info.version}")
+                # Indented details for kit CLI commands
+                lines.append(f"        Kit: {kit_info.kit_id}@{kit_info.version}")
+                lines.append("")
 
-                first_item = False
+    # Remove trailing blank line if present
+    if lines and lines[-1] == "":
+        lines.pop()
 
     return "\n".join(lines)

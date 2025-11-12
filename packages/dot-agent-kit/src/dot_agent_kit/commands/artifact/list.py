@@ -96,7 +96,7 @@ def _list_artifacts_impl(
         raise SystemExit(1)
 
     if verbose:
-        output = format_verbose_list(all_artifacts, bundled_kits)
+        output = format_verbose_list(all_artifacts, bundled_kits, user_path, project_path)
     else:
         output = format_compact_list(all_artifacts, bundled_kits)
 

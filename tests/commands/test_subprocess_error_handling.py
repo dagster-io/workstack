@@ -38,134 +38,134 @@ from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
 from workstack.core.global_config import GlobalConfig
 
+# Tests for sync command error handling
 
-class TestSyncErrorHandling:
-    """Test sync command error handling displays full stderr."""
 
-    def test_sync_displays_stderr_on_gt_sync_failure(self, tmp_path: Path) -> None:
-        """Test that sync command displays full stderr when gt sync fails.
+def test_sync_displays_stderr_on_gt_sync_failure(tmp_path: Path) -> None:
+    """Test that sync command displays full stderr when gt sync fails.
 
-        This verifies the fix for incomplete error messages - we should see
-        the actual error text from gt sync, not just the exit code.
-        """
-        # Arrange: Set up fake operations and context
-        repo_root = tmp_path / "repo"
-        repo_root.mkdir()
-        (repo_root / ".git").mkdir()
+    This verifies the fix for incomplete error messages - we should see
+    the actual error text from gt sync, not just the exit code.
+    """
+    # Arrange: Set up fake operations and context
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
 
-        git_ops = FakeGitOps(
-            git_common_dirs={repo_root: repo_root / ".git"},
-            worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main", is_root=True),
-                ],
-            },
-            current_branches={repo_root: "main"},
+    git_ops = FakeGitOps(
+        git_common_dirs={repo_root: repo_root / ".git"},
+        worktrees={
+            repo_root: [
+                WorktreeInfo(path=repo_root, branch="main", is_root=True),
+            ],
+        },
+        current_branches={repo_root: "main"},
+    )
+
+    github_ops = FakeGitHubOps()
+
+    # Create a FakeGraphiteOps that raises CalledProcessError with stderr
+    error_message = (
+        "fatal: unable to access 'https://github.com/user/repo.git/': "
+        "Failed to connect to github.com"
+    )
+    graphite_ops = FakeGraphiteOps(
+        sync_raises=subprocess.CalledProcessError(
+            returncode=128,
+            cmd=["gt", "sync"],
+            stderr=error_message,
         )
+    )
 
-        github_ops = FakeGitHubOps()
+    global_config = GlobalConfig(
+        workstacks_root=tmp_path / "workstacks",
+        use_graphite=True,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
+    )
 
-        # Create a FakeGraphiteOps that raises CalledProcessError with stderr
-        error_message = (
-            "fatal: unable to access 'https://github.com/user/repo.git/': "
-            "Failed to connect to github.com"
+    ctx = WorkstackContext.for_test(
+        git_ops=git_ops,
+        global_config=global_config,
+        graphite_ops=graphite_ops,
+        github_ops=github_ops,
+        cwd=repo_root,
+        dry_run=False,
+    )
+
+    runner = CliRunner()
+
+    # Act: Run sync command and capture output
+    result = runner.invoke(sync_cmd, [], obj=ctx)
+
+    # Assert: Verify exit code and error message contains full stderr
+    assert result.exit_code == 128
+    assert "Error: gt sync failed:" in result.output
+    # Key assertion: Full error message should be displayed, not just exit code
+    assert error_message in result.output
+    # Ensure we're not just showing exit code
+    assert "exit code 128" not in result.output or error_message in result.output
+
+
+def test_sync_shows_exit_code_when_stderr_empty(tmp_path: Path) -> None:
+    """Test sync command fallback when stderr is empty.
+
+    When stderr is not captured (e.g., verbose mode with direct streaming),
+    we should fall back to showing the exit code.
+    """
+    # Arrange
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+
+    git_ops = FakeGitOps(
+        git_common_dirs={repo_root: repo_root / ".git"},
+        worktrees={
+            repo_root: [
+                WorktreeInfo(path=repo_root, branch="main", is_root=True),
+            ],
+        },
+        current_branches={repo_root: "main"},
+    )
+
+    github_ops = FakeGitHubOps()
+
+    # Create FakeGraphiteOps that raises CalledProcessError WITHOUT stderr
+    graphite_ops = FakeGraphiteOps(
+        sync_raises=subprocess.CalledProcessError(
+            returncode=1,
+            cmd=["gt", "sync"],
+            stderr=None,  # No stderr captured
         )
-        graphite_ops = FakeGraphiteOps(
-            sync_raises=subprocess.CalledProcessError(
-                returncode=128,
-                cmd=["gt", "sync"],
-                stderr=error_message,
-            )
-        )
+    )
 
-        global_config = GlobalConfig(
-            workstacks_root=tmp_path / "workstacks",
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
+    global_config = GlobalConfig(
+        workstacks_root=tmp_path / "workstacks",
+        use_graphite=True,
+        shell_setup_complete=False,
+        show_pr_info=True,
+        show_pr_checks=False,
+    )
 
-        ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            cwd=repo_root,
-            dry_run=False,
-        )
+    ctx = WorkstackContext.for_test(
+        git_ops=git_ops,
+        global_config=global_config,
+        graphite_ops=graphite_ops,
+        github_ops=github_ops,
+        cwd=repo_root,
+        dry_run=False,
+    )
 
-        runner = CliRunner()
+    runner = CliRunner()
 
-        # Act: Run sync command and capture output
-        result = runner.invoke(sync_cmd, [], obj=ctx)
+    # Act
+    result = runner.invoke(sync_cmd, [], obj=ctx)
 
-        # Assert: Verify exit code and error message contains full stderr
-        assert result.exit_code == 128
-        assert "Error: gt sync failed:" in result.output
-        # Key assertion: Full error message should be displayed, not just exit code
-        assert error_message in result.output
-        # Ensure we're not just showing exit code
-        assert "exit code 128" not in result.output or error_message in result.output
-
-    def test_sync_shows_exit_code_when_stderr_empty(self, tmp_path: Path) -> None:
-        """Test sync command fallback when stderr is empty.
-
-        When stderr is not captured (e.g., verbose mode with direct streaming),
-        we should fall back to showing the exit code.
-        """
-        # Arrange
-        repo_root = tmp_path / "repo"
-        repo_root.mkdir()
-        (repo_root / ".git").mkdir()
-
-        git_ops = FakeGitOps(
-            git_common_dirs={repo_root: repo_root / ".git"},
-            worktrees={
-                repo_root: [
-                    WorktreeInfo(path=repo_root, branch="main", is_root=True),
-                ],
-            },
-            current_branches={repo_root: "main"},
-        )
-
-        github_ops = FakeGitHubOps()
-
-        # Create FakeGraphiteOps that raises CalledProcessError WITHOUT stderr
-        graphite_ops = FakeGraphiteOps(
-            sync_raises=subprocess.CalledProcessError(
-                returncode=1,
-                cmd=["gt", "sync"],
-                stderr=None,  # No stderr captured
-            )
-        )
-
-        global_config = GlobalConfig(
-            workstacks_root=tmp_path / "workstacks",
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            cwd=repo_root,
-            dry_run=False,
-        )
-
-        runner = CliRunner()
-
-        # Act
-        result = runner.invoke(sync_cmd, [], obj=ctx)
-
-        # Assert: Should show exit code when stderr is not available
-        assert result.exit_code == 1
-        assert "Error: gt sync failed:" in result.output
-        assert "exit code 1" in result.output
+    # Assert: Should show exit code when stderr is not available
+    assert result.exit_code == 1
+    assert "Error: gt sync failed:" in result.output
+    assert "exit code 1" in result.output
 
 
 # Note: land-stack error handling tests are not included here because they
@@ -175,37 +175,37 @@ class TestSyncErrorHandling:
 #     error_detail = e.stderr.strip() if e.stderr else str(e)
 
 
-class TestErrorHandlingConsistency:
-    """Test that error handling is consistent across CLI surface area."""
+# Tests for error handling consistency
 
-    def test_all_calledprocesserror_handlers_use_stderr(self) -> None:
-        """Test that all CalledProcessError handlers follow the same pattern.
 
-        This is a documentation test that verifies our error handling pattern:
+def test_all_calledprocesserror_handlers_use_stderr() -> None:
+    """Test that all CalledProcessError handlers follow the same pattern.
+
+    This is a documentation test that verifies our error handling pattern:
+    error_detail = e.stderr.strip() if e.stderr else fallback
+
+    This test doesn't execute code but documents the expected pattern.
+    """
+    # Expected pattern in all CalledProcessError handlers:
+    expected_pattern = """
+    except subprocess.CalledProcessError as e:
         error_detail = e.stderr.strip() if e.stderr else fallback
+        # Display error_detail to user
+    """
 
-        This test doesn't execute code but documents the expected pattern.
-        """
-        # Expected pattern in all CalledProcessError handlers:
-        expected_pattern = """
-        except subprocess.CalledProcessError as e:
-            error_detail = e.stderr.strip() if e.stderr else fallback
-            # Display error_detail to user
-        """
+    # Files that should follow this pattern:
+    files_with_error_handlers = [
+        "src/workstack/cli/commands/sync.py",
+        "src/workstack/cli/commands/land_stack.py",
+    ]
 
-        # Files that should follow this pattern:
-        files_with_error_handlers = [
-            "src/workstack/cli/commands/sync.py",
-            "src/workstack/cli/commands/land_stack.py",
-        ]
+    # This test serves as documentation. Actual enforcement happens in:
+    # 1. Code review
+    # 2. The specific error handling tests above
+    # 3. Integration tests that exercise error paths
 
-        # This test serves as documentation. Actual enforcement happens in:
-        # 1. Code review
-        # 2. The specific error handling tests above
-        # 3. Integration tests that exercise error paths
-
-        assert expected_pattern is not None  # Keeps pytest happy
-        assert files_with_error_handlers is not None
+    assert expected_pattern is not None  # Keeps pytest happy
+    assert files_with_error_handlers is not None
 
 
 # Note: Additional error handling tests could be added for:

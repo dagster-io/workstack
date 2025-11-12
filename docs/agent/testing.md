@@ -46,6 +46,92 @@ ctx = _create_test_context(env, ...)  # env.cwd used internally
 | Test shell detection          | FakeShellOps with detected_shell parameter           |
 | Test tool availability        | FakeShellOps with installed_tools parameter          |
 
+## Test Organization Principles
+
+### Plain Functions Over Test Classes
+
+**Default pattern: Use plain `def test_*()` functions.** Test classes should only be used when testing a class or dataclass itself.
+
+#### When to Use Test Classes
+
+✅ **ONLY when testing a class or dataclass:**
+
+```python
+# ✅ CORRECT: Testing a dataclass
+@dataclass(frozen=True)
+class DeletableWorktree:
+    path: Path
+    branch: str
+
+class TestDeletableWorktree:
+    def test_equality(self) -> None:
+        wt1 = DeletableWorktree(Path("/foo"), "branch")
+        wt2 = DeletableWorktree(Path("/foo"), "branch")
+        assert wt1 == wt2
+```
+
+#### When NOT to Use Test Classes
+
+❌ **WRONG: Using test classes to group related tests:**
+
+```python
+# ❌ WRONG - Don't use classes for grouping
+class TestWorktreeUtils:
+    def test_find_worktree(self) -> None: ...
+    def test_is_root_worktree(self) -> None: ...
+    def test_get_branch(self) -> None: ...
+```
+
+✅ **CORRECT: Use plain functions in single file OR separate module files:**
+
+**Option 1: Single file** (when tests are related and file is manageable)
+
+```python
+# tests/core/utils/test_worktree_utils.py
+
+def test_find_worktree() -> None: ...
+def test_is_root_worktree() -> None: ...
+def test_get_branch() -> None: ...
+```
+
+**Option 2: Separate module files** (when splitting improves organization)
+
+```
+tests/core/utils/worktree/
+├── __init__.py
+├── test_find_worktree.py
+├── test_is_root_worktree.py
+└── test_get_branch.py
+```
+
+#### When to Split vs Single File
+
+**Keep as single file when:**
+
+- Testing a single function/utility with multiple test cases
+- Splitting would create 4+ files with only 1-2 tests each
+- Tests are closely related and benefit from co-location
+
+**Split into subdirectory when:**
+
+- File has 5+ functions being tested AND
+- Each new file would have 3+ tests AND
+- Splitting improves discoverability
+
+**Example: File with 7 functions, 3-7 tests each:**
+
+- Total: ~30 tests, 450 lines
+- Split into `function_name/` subdirectory with 7 files
+- Each file has 3-7 related tests
+- ✅ Improved navigation and clarity
+
+**Example: File with 3 functions, 3-5 tests each:**
+
+- Total: ~12 tests, 275 lines
+- Keep as single file
+- Splitting creates only 3 files (below threshold)
+- ✅ Avoids excessive file proliferation
+
 ## Test Coverage Requirements
 
 ### When Tests Are Required

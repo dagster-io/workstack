@@ -239,6 +239,33 @@ shell_ops.add_command_result(
 ctx = WorkstackContext(shell_ops=shell_ops)
 ```
 
+## Test File Organization
+
+**Command tests use plain functions, not test classes.** Test classes should only be used when testing a class or dataclass itself.
+
+**Pattern for command tests (most common):**
+
+```python
+# ✅ CORRECT: Plain functions testing CLI commands
+def test_create_workspace() -> None:
+    # Test implementation using CliRunner
+    pass
+
+def test_create_workspace_with_force() -> None:
+    # Test implementation
+    pass
+
+def test_create_workspace_fails_with_duplicate() -> None:
+    # Test implementation
+    pass
+```
+
+**Single-file pattern:** Most command tests stay in single files since each command typically has a focused set of test cases.
+
+**Only split when:** A command has extensive test coverage (10+ tests) AND splitting creates files with 3+ tests each.
+
+**See [docs/agent/testing.md#test-organization-principles](../../docs/agent/testing.md#test-organization-principles) for detailed guidance.**
+
 ## See Also
 
 - [../../docs/TESTING.md#unit-test-pattern](../../docs/TESTING.md#unit-test-pattern)

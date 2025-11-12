@@ -37,9 +37,9 @@ artifacts = [
 [[kits.dignified-python-313.hooks]]
 id = "compliance-reminder-hook"
 lifecycle = "UserPromptSubmit"
-matcher = "*"
+matcher = "*.py"
 invocation = "dot-agent run dignified-python-313 compliance-reminder-hook"
-description = "Output dignified-python compliance reminder for UserPromptSubmit hook"
+description = "Output dignified-python compliance reminder when Python files are in context"
 timeout = 30
 
 [kits.fix-merge-conflicts]

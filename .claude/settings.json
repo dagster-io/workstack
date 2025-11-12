@@ -9,7 +9,7 @@
   "hooks": {
     "UserPromptSubmit": [
       {
-        "matcher": "*",
+        "matcher": "*.py",
         "hooks": [
           {
             "type": "command",

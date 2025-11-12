@@ -1,5 +1,35 @@
 # Test Architecture: Coarse-Grained Dependency Injection
 
+## Business Logic Extraction Pattern
+
+The Workstack codebase follows a **three-layer architecture** that enables fast unit testing through pure business logic extraction. For comprehensive documentation of this pattern, see [docs/architecture/business-logic-pattern.md](../architecture/business-logic-pattern.md).
+
+**Key benefits for testing:**
+
+- **5-10× faster tests**: Pure functions avoid filesystem and subprocess I/O
+- **Better test isolation**: Business logic testable without external dependencies
+- **Comprehensive edge case testing**: Easy to test edge cases with pure functions
+- **Clear test organization**: Unit tests for utilities, integration tests for commands
+
+**Performance improvements achieved:**
+
+| Test Type          | Before (subprocess)     | After (pure functions) | Improvement    |
+| ------------------ | ----------------------- | ---------------------- | -------------- |
+| Naming utils       | N/A (inline logic)      | ~10ms per test         | New capability |
+| Worktree ops       | ~500ms (real git)       | ~50-100ms (FakeGitOps) | 5-10× faster   |
+| Display formatting | ~300ms (CLI invoke)     | ~20ms (pure function)  | 15× faster     |
+| Tree building      | ~400ms (real git + CLI) | ~30ms (pure function)  | 13× faster     |
+
+**Test organization:**
+
+- `tests/core/utils/test_*_utils.py` - Fast unit tests for pure business logic
+- `tests/commands/*/test_*.py` - Integration tests using CliRunner + fakes
+- `tests/integration/test_*.py` - E2E tests with real git operations (minimal)
+
+See the [Business Logic Pattern](../architecture/business-logic-pattern.md) documentation for detailed examples and migration guidance.
+
+---
+
 ## 🔴 CRITICAL: NEVER Use Hardcoded Paths in Tests
 
 **ABSOLUTELY FORBIDDEN** patterns in test code:

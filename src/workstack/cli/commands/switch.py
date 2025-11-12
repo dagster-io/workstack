@@ -105,7 +105,6 @@ def _activate_worktree(
 
         debug_log(f"{command_name.capitalize()}: Generated script at {result.path}")
         debug_log(f"{command_name.capitalize()}: Script content:\n{activation_script}")
-        debug_log(f"{command_name.capitalize()}: File exists? {result.path.exists()}")
 
         click.echo(str(result.path), nl=False)
     else:

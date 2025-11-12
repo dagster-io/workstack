@@ -14,14 +14,11 @@ def generate_recovery_script(ctx: WorkstackContext) -> Path | None:
 
     This helper intentionally guards against runtime cwd races:
     - ctx.cwd is a snapshot from CLI entry; it may no longer exist by the time this runs.
-    - discover_repo_context() performs the authoritative repo lookup; probing earlier provides
-      no additional safety and merely repeats the work.
+    - discover_repo_context() performs the authoritative repo lookup and will raise
+      FileNotFoundError if the path doesn't exist.
     - Returning None signals that graceful degradation is preferred to exploding at the boundary.
     """
     current_dir = ctx.cwd
-
-    if not current_dir.exists():
-        return None
 
     try:
         repo = discover_repo_context(ctx, current_dir)

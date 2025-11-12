@@ -4,7 +4,7 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from tests.test_utils.env_helpers import pure_workstack_env, simulated_workstack_env
+from tests.test_utils.env_helpers import pure_workstack_env
 from workstack.cli.cli import cli
 
 
@@ -15,7 +15,8 @@ def test_shell_integration_with_switch() -> None:
         ctx = env.build_context()
         result = runner.invoke(cli, ["__shell", "switch", "test"], obj=ctx)
         # Should handle the command
-        assert result.exit_code in (0, 1)  # May fail due to missing config, which is OK for this test
+        # May fail due to missing config, which is OK for this test
+        assert result.exit_code in (0, 1)
 
 
 def test_shell_integration_with_passthrough() -> None:
@@ -62,15 +63,16 @@ def test_shell_integration_passthrough_marker() -> None:
 def test_shell_integration_sync_returns_script_by_default() -> None:
     """Sync passthrough should return a script path instead of executing inline."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         ctx = env.build_context()
         result = runner.invoke(cli, ["__shell", "sync"], obj=ctx)
         assert result.exit_code == 0
         script_output = result.output.strip()
         assert script_output
         script_path = Path(script_output)
-        # Verify script was written (uses RealScriptWriterOps in simulated env)
-        assert script_path.exists()
+        # Verify script was written to in-memory storage
+        content = env.script_writer.get_script_content(script_path)
+        assert content is not None
 
 
 def test_shell_integration_unknown_command() -> None:
@@ -86,15 +88,16 @@ def test_shell_integration_unknown_command() -> None:
 def test_shell_integration_sync_generates_posix_passthrough_script() -> None:
     """When invoked from bash/zsh, __shell should return a passthrough script."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         ctx = env.build_context()
         result = runner.invoke(cli, ["__shell", "sync"], env={"WORKSTACK_SHELL": "bash"}, obj=ctx)
         assert result.exit_code == 0
         script_output = result.output.strip()
         assert script_output
         script_path = Path(script_output)
-        # Verify script content from real filesystem
-        content = script_path.read_text(encoding="utf-8")
+        # Verify script content from in-memory storage
+        content = env.script_writer.get_script_content(script_path)
+        assert content is not None
         assert "command workstack sync" in content
         assert "__workstack_exit=$?" in content
 
@@ -102,15 +105,16 @@ def test_shell_integration_sync_generates_posix_passthrough_script() -> None:
 def test_shell_integration_sync_generates_fish_passthrough_script() -> None:
     """When invoked from fish, __shell should return a fish-compatible script."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         ctx = env.build_context()
         result = runner.invoke(cli, ["__shell", "sync"], env={"WORKSTACK_SHELL": "fish"}, obj=ctx)
         assert result.exit_code == 0
         script_output = result.output.strip()
         assert script_output
         script_path = Path(script_output)
-        # Verify script content from real filesystem
-        content = script_path.read_text(encoding="utf-8")
+        # Verify script content from in-memory storage
+        content = env.script_writer.get_script_content(script_path)
+        assert content is not None
         assert 'command workstack "sync"' in content
         assert "set __workstack_exit $status" in content
 
@@ -120,7 +124,7 @@ def test_shell_integration_fish_escapes_special_characters() -> None:
     runner = CliRunner()
     special_arg = "$branch;rm"
     second_arg = "(test)"
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         ctx = env.build_context()
         result = runner.invoke(
             cli,
@@ -132,8 +136,9 @@ def test_shell_integration_fish_escapes_special_characters() -> None:
         script_output = result.output.strip()
         assert script_output
         script_path = Path(script_output)
-        # Verify script content from real filesystem
-        content = script_path.read_text(encoding="utf-8")
+        # Verify script content from in-memory storage
+        content = env.script_writer.get_script_content(script_path)
+        assert content is not None
         assert 'command workstack "sync" "\\$branch\\;rm" "\\(test\\)"' in content
 
 

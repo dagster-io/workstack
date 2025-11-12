@@ -9,34 +9,25 @@ The business logic of trunk detection (_is_trunk_branch function) is tested in:
 This file trusts that unit layer and only tests CLI integration.
 """
 
-import json
-
 import pytest
 from click.testing import CliRunner
 
 from tests.commands.display.list import strip_ansi
-from tests.fakes.gitops import FakeGitOps, WorktreeInfo
-from tests.test_utils.env_helpers import simulated_workstack_env
+from tests.fakes.gitops import FakeGitOps
+from tests.fakes.graphite_ops import FakeGraphiteOps
+from tests.test_utils.env_helpers import pure_workstack_env
 from workstack.cli.cli import cli
+from workstack.core.gitops import WorktreeInfo
+from workstack.core.graphite_ops import BranchMetadata
 
 
 @pytest.mark.parametrize("trunk_branch", ["main", "master"])
 def test_list_with_trunk_branch(trunk_branch: str) -> None:
     """List command handles trunk branches correctly (CLI layer)."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        graphite_cache = {
-            "branches": [
-                [trunk_branch, {"validationResult": "TRUNK", "children": ["feature"]}],
-                ["feature", {"parentBranchName": trunk_branch, "children": []}],
-            ]
-        }
-        (env.git_dir / ".graphite_cache_persist").write_text(
-            json.dumps(graphite_cache), encoding="utf-8"
-        )
-
+    with pure_workstack_env(runner) as env:
+        # Construct sentinel path without filesystem operations
         feature_dir = env.workstacks_root / env.cwd.name / "feature"
-        feature_dir.mkdir(parents=True)
 
         git_ops = FakeGitOps(
             worktrees={
@@ -49,7 +40,20 @@ def test_list_with_trunk_branch(trunk_branch: str) -> None:
             current_branches={env.cwd: trunk_branch, feature_dir: "feature"},
         )
 
-        ctx = env.build_context(git_ops=git_ops, use_graphite=True)
+        # Configure FakeGraphiteOps with branch metadata instead of writing cache file
+        graphite_ops = FakeGraphiteOps(
+            branches={
+                trunk_branch: BranchMetadata.trunk(trunk_branch, children=["feature"]),
+                "feature": BranchMetadata.branch("feature", trunk_branch, children=[]),
+            }
+        )
+
+        ctx = env.build_context(
+            git_ops=git_ops,
+            graphite_ops=graphite_ops,
+            repo=env.repo,
+            use_graphite=True,
+        )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=ctx)
 

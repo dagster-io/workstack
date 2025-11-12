@@ -11,7 +11,8 @@ from workstack.core.display_utils import (
     get_visible_length,
 )
 from workstack.core.github_ops import PullRequestInfo
-from workstack.core.repo_discovery import ensure_workstacks_dir
+from workstack.core.repo_discovery import RepoContext
+from workstack.core.worktree_utils import find_current_worktree
 
 
 def _format_plan_summary(worktree_path: Path) -> str | None:
@@ -104,21 +105,23 @@ def _display_branch_stack(
 
 def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool) -> None:
     """Internal function to list worktrees."""
-    repo = discover_repo_context(ctx, ctx.cwd)
-    current_dir = ctx.cwd.resolve()
+    # Use ctx.repo if it's a valid RepoContext, otherwise discover
+    if isinstance(ctx.repo, RepoContext):
+        repo = ctx.repo
+    else:
+        # Discover repository context (handles None and NoRepoSentinel)
+        # If not in a git repo, FileNotFoundError will bubble up
+        repo = discover_repo_context(ctx, ctx.cwd)
+
+    current_dir = ctx.cwd
 
     # Get branch info for all worktrees
     worktrees = ctx.git_ops.list_worktrees(repo.root)
     branches = {wt.path: wt.branch for wt in worktrees}
 
     # Determine which worktree the user is currently in
-    current_worktree_path = None
-    for wt_path in branches.keys():
-        if wt_path.exists():
-            wt_path_resolved = wt_path.resolve()
-            if current_dir == wt_path_resolved or current_dir.is_relative_to(wt_path_resolved):
-                current_worktree_path = wt_path_resolved
-                break
+    wt_info = find_current_worktree(worktrees, current_dir)
+    current_worktree_path = wt_info.path if wt_info is not None else None
 
     # Validate graphite is enabled if showing stacks
     if show_stacks:
@@ -149,8 +152,6 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
 
     # Calculate maximum widths for alignment
     # First, collect all names, branches, and PR info to display
-    workstacks_dir = ensure_workstacks_dir(repo)
-
     # Start with root
     all_names = ["root"]
     all_branches = []
@@ -175,35 +176,30 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
     else:
         all_pr_info.append("[no PR]")
 
-    # Add worktree entries
-    if workstacks_dir.exists():
-        entries = sorted(p for p in workstacks_dir.iterdir() if p.is_dir())
-        for p in entries:
-            name = p.name
-            # Check if this directory has a corresponding worktree
-            for branch_path, branch_name in branches.items():
-                if branch_path.resolve() == p.resolve():
-                    all_names.append(name)
-                    if branch_name:
-                        branch_display = "=" if name == branch_name else branch_name
-                        all_branches.append(f"({branch_display})")
+    # Add worktree entries - iterate over worktrees instead of filesystem
+    # Filter out root worktree by comparing paths
+    non_root_worktrees = [wt for wt in worktrees if wt.path != repo.root]
+    for wt in sorted(non_root_worktrees, key=lambda w: w.path.name):
+        name = wt.path.name
+        branch_name = wt.branch
+        all_names.append(name)
+        if branch_name:
+            branch_display = "=" if name == branch_name else branch_name
+            all_branches.append(f"({branch_display})")
 
-                        # Add PR info for width calculation
-                        if prs:
-                            pr = prs.get(branch_name)
-                            if pr:
-                                graphite_url = ctx.graphite_ops.get_graphite_url(
-                                    pr.owner, pr.repo, pr.number
-                                )
-                                wt_pr_info = format_pr_info(pr, graphite_url)
-                                all_pr_info.append(wt_pr_info if wt_pr_info else "[no PR]")
-                            else:
-                                all_pr_info.append("[no PR]")
-                        else:
-                            all_pr_info.append("[no PR]")
-                    else:
-                        all_pr_info.append("[no PR]")
-                    break
+            # Add PR info for width calculation
+            if prs:
+                pr = prs.get(branch_name)
+                if pr:
+                    graphite_url = ctx.graphite_ops.get_graphite_url(pr.owner, pr.repo, pr.number)
+                    wt_pr_info = format_pr_info(pr, graphite_url)
+                    all_pr_info.append(wt_pr_info if wt_pr_info else "[no PR]")
+                else:
+                    all_pr_info.append("[no PR]")
+            else:
+                all_pr_info.append("[no PR]")
+        else:
+            all_pr_info.append("[no PR]")
 
     # Calculate max widths using visible length for PR info
     max_name_len = max(len(name) for name in all_names) if all_names else 0
@@ -213,7 +209,7 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
     )
 
     # Show root repo first (display as "root" to distinguish from worktrees)
-    is_current_root = repo.root.resolve() == current_worktree_path
+    is_current_root = repo.root == current_worktree_path
 
     # Get PR info and plan summary for root
     root_pr_info = None
@@ -241,32 +237,17 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
     if show_stacks and root_branch:
         _display_branch_stack(ctx, repo.root, repo.root, root_branch, branches, True, prs)
 
-    # Show worktrees
-    if not workstacks_dir.exists():
-        return
-    entries = sorted(p for p in workstacks_dir.iterdir() if p.is_dir())
-    for p in entries:
-        name = p.name
-        # Find the actual worktree path from git worktree list
-        # The path p might be a symlink or different from the actual worktree path
-        wt_path = None
-        wt_branch = None
-        for branch_path, branch_name in branches.items():
-            if branch_path.resolve() == p.resolve():
-                wt_path = branch_path
-                wt_branch = branch_name
-                break
-
-        # Skip directories that don't have a corresponding git worktree entry
-        # (e.g., leftover empty directories after worktree removal)
-        if wt_path is None:
-            continue
+    # Show worktrees - iterate over worktrees instead of filesystem
+    for idx, wt in enumerate(non_root_worktrees):
+        name = wt.path.name
+        wt_path = wt.path
+        wt_branch = wt.branch
 
         # Add blank line before each worktree (except first) when showing stacks
-        if show_stacks and (root_branch or entries.index(p) > 0):
+        if show_stacks and (root_branch or idx > 0):
             click.echo()
 
-        is_current_wt = bool(wt_path and wt_path.resolve() == current_worktree_path)
+        is_current_wt = wt_path == current_worktree_path
 
         # Get PR info and plan summary for this worktree
         wt_pr_info = None
@@ -275,7 +256,7 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
             if pr:
                 graphite_url = ctx.graphite_ops.get_graphite_url(pr.owner, pr.repo, pr.number)
                 wt_pr_info = format_pr_info(pr, graphite_url)
-        wt_plan_summary = _format_plan_summary(wt_path) if wt_path else None
+        wt_plan_summary = _format_plan_summary(wt_path)
 
         click.echo(
             format_worktree_line(
@@ -291,7 +272,7 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
             )
         )
 
-        if show_stacks and wt_branch and wt_path:
+        if show_stacks and wt_branch:
             _display_branch_stack(ctx, repo.root, wt_path, wt_branch, branches, False, prs)
 
 

@@ -12,7 +12,7 @@ from workstack.cli.core import (
 from workstack.core.context import WorkstackContext, create_context
 from workstack.core.gitops import GitOps
 from workstack.core.repo_discovery import ensure_workstacks_dir
-from workstack.core.worktree_utils import filter_non_trunk_branches
+from workstack.core.worktree_utils import filter_non_trunk_branches, get_worktree_branch
 
 
 def _try_git_worktree_remove(git_ops: GitOps, repo_root: Path, wt_path: Path) -> bool:
@@ -51,18 +51,6 @@ def _prune_worktrees_safe(git_ops: GitOps, repo_root: Path) -> None:
     except Exception:
         # Prune might fail if there's nothing to prune or other non-critical issues
         pass
-
-
-def _find_worktree_branch(ctx: WorkstackContext, repo_root: Path, wt_path: Path) -> str | None:
-    """Find the branch for a given worktree path.
-
-    Returns None if worktree is not found or is in detached HEAD state.
-    """
-    worktrees = ctx.git_ops.list_worktrees(repo_root)
-    for wt in worktrees:
-        if wt.path == wt_path:
-            return wt.branch
-    return None
 
 
 def _remove_worktree(
@@ -121,11 +109,7 @@ def _remove_worktree(
 
         # Get the branches in the stack before removing the worktree
         worktrees = ctx.git_ops.list_worktrees(repo.root)
-        worktree_branch = None
-        for wt in worktrees:
-            if wt.path == wt_path:
-                worktree_branch = wt.branch
-                break
+        worktree_branch = get_worktree_branch(worktrees, wt_path)
 
         if worktree_branch is None:
             click.echo(

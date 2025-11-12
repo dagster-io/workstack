@@ -74,6 +74,7 @@ def create_feature_branch(ctx: WorkstackContext, name: str) -> None:
 ```
 
 **Why**: Ops abstractions enable:
+
 - Testing without real git/filesystem/network operations
 - Dependency injection for different contexts
 - Clear separation between business logic and I/O
@@ -222,6 +223,7 @@ BOTTOM ↓ main    ← downstack (trunk)
 Given stack: `main → feat-1 → feat-2 → feat-3`
 
 If current branch is `feat-1`:
+
 - Upstack: `feat-2`, `feat-3` (children, toward top)
 - Downstack: `main` (parent, toward bottom)
 
@@ -233,19 +235,19 @@ If current branch is `feat-1`:
 
 **Use `click.style()` consistently:**
 
-| Element | Color | Bold | Example |
-|---------|-------|------|---------|
-| Branch names | `yellow` | No | `click.style(branch, fg="yellow")` |
-| PR numbers | `cyan` | No | `click.style(f"PR #{pr}", fg="cyan")` |
-| PR titles | `bright_magenta` | No | `click.style(title, fg="bright_magenta")` |
-| Success (✓) | `green` | No | `click.style("✓ Done", fg="green")` |
-| Section headers | - | Yes | `click.style(header, bold=True)` |
-| Current branch | `bright_green` | Yes | `click.style(branch, fg="bright_green", bold=True)` |
-| Paths (complete) | `green` | No | `click.style(str(path), fg="green")` |
-| Paths (metadata) | `white` | Dim | `click.style(str(path), fg="white", dim=True)` |
-| Errors | `red` | No | `click.style("Error", fg="red")` |
-| Dry run markers | `bright_black` | No | `click.style("(dry run)", fg="bright_black")` |
-| Worktree names | `cyan` | Yes | `click.style(name, fg="cyan", bold=True)` |
+| Element          | Color            | Bold | Example                                             |
+| ---------------- | ---------------- | ---- | --------------------------------------------------- |
+| Branch names     | `yellow`         | No   | `click.style(branch, fg="yellow")`                  |
+| PR numbers       | `cyan`           | No   | `click.style(f"PR #{pr}", fg="cyan")`               |
+| PR titles        | `bright_magenta` | No   | `click.style(title, fg="bright_magenta")`           |
+| Success (✓)      | `green`          | No   | `click.style("✓ Done", fg="green")`                 |
+| Section headers  | -                | Yes  | `click.style(header, bold=True)`                    |
+| Current branch   | `bright_green`   | Yes  | `click.style(branch, fg="bright_green", bold=True)` |
+| Paths (complete) | `green`          | No   | `click.style(str(path), fg="green")`                |
+| Paths (metadata) | `white`          | Dim  | `click.style(str(path), fg="white", dim=True)`      |
+| Errors           | `red`            | No   | `click.style("Error", fg="red")`                    |
+| Dry run markers  | `bright_black`   | No   | `click.style("(dry run)", fg="bright_black")`       |
+| Worktree names   | `cyan`           | Yes  | `click.style(name, fg="cyan", bold=True)`           |
 
 **Emoji conventions:**
 
@@ -408,29 +410,36 @@ Before documenting code:
 ## QUICK DECISION TREE
 
 **Creating a file in `.claude/`?**
+
 - → Use `kebab-case` (hyphens, not underscores)
 
 **Making external system calls (git, filesystem, network)?**
+
 - → Use Ops abstractions (`ctx.git_ops`, `ctx.file_ops`, etc.)
 - → Exception: Read-only git commands can use Bash directly
 
 **Changed directory with `os.chdir()`?**
+
 - → Regenerate context with `regenerate_context(ctx, repo_root)`
 
 **Running CLI tools (`make`, `pytest`, `ruff`, `gt`)?**
+
 - → Use Task tool with runner agent (not Bash)
 - → Exception: Simple read-only commands
 
 **Writing tests?**
+
 - → Use `tmp_path` fixture or `simulated_workstack_env`
 - → NEVER use hardcoded paths like `Path("/test/...")`
 - → Use `CliRunner` for CLI tests (not subprocess)
 
 **Referring to Graphite stack direction?**
+
 - → Upstack = away from main (toward leaves)
 - → Downstack = toward main (toward trunk)
 
 **Adding CLI output?**
+
 - → Use `click.style()` with consistent colors
 - → Use standard emoji conventions
 - → Add spacing between sections

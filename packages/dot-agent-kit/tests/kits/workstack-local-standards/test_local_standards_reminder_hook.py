@@ -5,7 +5,6 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-
 # Load the command module dynamically since the directory name contains hyphens
 _MODULE_PATH = (
     Path(__file__).parent.parent.parent.parent
@@ -96,7 +95,9 @@ class TestLocalStandardsReminderHook:
         result = cli_runner.invoke(local_standards_reminder_hook)
 
         assert result.exit_code == 0
-        assert "NEVER hardcoded paths" in result.output or "hardcoded paths" in result.output.lower()
+        assert (
+            "NEVER hardcoded paths" in result.output or "hardcoded paths" in result.output.lower()
+        )
 
     def test_mentions_subprocess_warning(self, cli_runner: CliRunner) -> None:
         """Test that subprocess usage warning is mentioned."""

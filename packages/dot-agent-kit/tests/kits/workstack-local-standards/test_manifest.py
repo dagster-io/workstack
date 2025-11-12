@@ -197,7 +197,8 @@ class TestKitManifest:
         # Verify hook configuration
         assert hook["lifecycle"] == "UserPromptSubmit"
         assert hook["matcher"] == "*.py"
-        assert "dot-agent run workstack-local-standards local-standards-reminder-hook" in hook["invocation"]
+        expected_cmd = "dot-agent run workstack-local-standards local-standards-reminder-hook"
+        assert expected_cmd in hook["invocation"]
         assert hook["timeout"] == 30
 
     def test_hook_has_description(self) -> None:

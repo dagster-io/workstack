@@ -150,6 +150,7 @@ The `.PLAN.md` file has two distinct sections:
 2. **Progress Tracking section** (at the bottom): Contains Current Status, Last Updated, phase/step checkboxes, and overall progress metrics. This is the ONLY section that should be updated during implementation.
 
 When updating progress:
+
 - Only edit the "Progress Tracking" section at the bottom of `.PLAN.md`
 - Update "Current Status" field with current phase/step
 - Update "Last Updated" timestamp

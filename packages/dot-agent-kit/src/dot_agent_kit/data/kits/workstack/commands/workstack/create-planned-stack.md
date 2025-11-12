@@ -91,12 +91,29 @@ When you run this command, these steps occur:
    - Framework-specific gotchas
    - Example: "Don't use .resolve() before checking .exists()"
 
-**Relevance Filter:** Only include if it:
+6. **Raw Discoveries Log**
+   - Everything discovered during planning, even if minor
+   - Examples: Version numbers, config formats, conventions observed
 
-- Took significant time to discover
-- Would change HOW something is implemented
-- Would likely cause bugs if missed
-- Isn't obvious from reading the code
+7. **Planning Artifacts**
+   - Code snippets examined, commands run, configurations discovered
+   - Example: "Checked auth.py lines 45-67 for validation pattern"
+
+8. **Implementation Risks**
+   - Technical debt, uncertainties, performance concerns, security considerations
+   - Example: "No caching layer could cause issues at scale"
+
+**Inclusion Philosophy:** Cast a wide net - over-document rather than under-document. Include anything that:
+
+- Took ANY time to discover (even 30 seconds of research)
+- MIGHT influence implementation decisions
+- Could POSSIBLY cause bugs or confusion
+- Wasn't immediately obvious on first glance
+- Required any clarification or discussion
+- Involved ANY decision between alternatives
+- Required looking at documentation or examples
+
+**Remember:** It's easier for implementing agents to skip irrelevant context than to rediscover missing context. When in doubt, include it.
 
 **How It's Used:** This understanding gets captured in the "Context & Understanding" section of enhanced plans, linked to specific implementation steps.
 
@@ -151,7 +168,7 @@ This command succeeds when ALL of the following are true:
 **Solution:**
 
 - Check version: `workstack --version`
-- Update: `uv pip install --upgrade workstack`
+- Update: `uv tool upgrade workstack`
 
 ### Enhancement suggestions not applied correctly
 
@@ -315,10 +332,21 @@ Analyze the planning discussion to extract valuable context that implementing ag
 **Context Preservation Criteria:**
 Include items that meet ANY of these:
 
-- Took time to discover and aren't obvious from code
-- Would change implementation if known vs. unknown
-- Would cause bugs if missed (especially subtle or delayed bugs)
-- Explain WHY decisions were made, not just WHAT was decided
+- Took ANY time to discover (even 30 seconds of research)
+- MIGHT influence implementation decisions
+- Could POSSIBLY cause bugs or confusion
+- Wasn't immediately obvious on first glance
+- Required any clarification or discussion
+- Involved ANY decision between alternatives
+- Required looking at documentation or examples
+
+**Extraction Process:**
+
+1. **Extract EVERYTHING first** - Do a complete pass capturing every single discovery, decision, clarification, or piece of information learned
+2. **Organize into categories** - Sort the raw extractions into the appropriate sections
+3. **Apply minimal filtering** - Only remove true duplicates and completely irrelevant items (like "user said hello")
+4. **Add a catch-all section** - Include "Other Discoveries" for items that don't fit categories
+5. **Document the planning process itself** - What research was done, what sources were consulted, what experiments were run
 
 **For each dimension, systematically check the planning discussion:**
 
@@ -426,14 +454,90 @@ Examples to extract:
 - "DO NOT use document.updated_at for version checking - clock skew and same-ms races cause false conflicts"
 - "DO NOT migrate superuser permissions first - if migration fails, you've locked out recovery access"
 
-#### Extraction Process
+#### 6. Raw Discoveries Log
 
-1. **Review the planning conversation** from start to current point
-2. **Identify valuable discoveries** using criteria above
-3. **Organize into appropriate categories** (API Quirks, Insights, Logic, Reasoning, Pitfalls)
-4. **Write specific, actionable items** - not vague generalizations
-5. **Link to implementation steps** - ensure every context item connects to at least one step
-6. **Flag orphaned context** - context without corresponding steps is probably not relevant
+Capture EVERYTHING discovered during planning, even if it seems minor:
+
+Questions to ask:
+
+- What did we look up or verify?
+- What assumptions did we validate?
+- What small details did we clarify?
+- What documentation did we reference?
+- What examples did we examine?
+
+Format as bullet points without filtering:
+
+- Discovered: SQLite version on system is 3.39
+- Confirmed: pytest is already in requirements.txt
+- Learned: The codebase uses pathlib, not os.path
+- Checked: No existing rate limiting on API endpoints
+- Found: Tests use unittest not pytest style
+- Verified: Python 3.11 is the minimum version
+- Noted: All configs are YAML not JSON
+- Observed: Error messages follow RFC7807 format
+- Clarified: User model is in models/user.py not auth/models.py
+- Researched: Stripe webhook signature verification requires raw body bytes
+- Discovered: Project uses Black formatter with 88 char line length
+- Found: All API responses use snake_case not camelCase
+- Verified: Database migrations run automatically on deploy
+- Learned: Redis is used for caching but not sessions
+
+#### 7. Planning Artifacts
+
+Preserve any code snippets, commands, or configurations discovered during planning:
+
+**Commands Run:**
+
+- `pip list | grep stripe` → Found stripe==5.4.0
+- `git log --oneline -5` → Verified recent commit patterns
+- `python --version` → Python 3.11.6
+
+**Code Examined:**
+
+- Looked at auth.py lines 45-67 for validation pattern
+- Reviewed test_utils.py for test fixture approach
+- Checked settings.py for database configuration
+
+**Config Samples:**
+
+- Database connection: `postgresql://user:pass@localhost/db`
+- Redis settings: `{"host": "localhost", "port": 6379}`
+- API rate limit: 100 requests per minute
+
+**Error Messages Encountered:**
+
+- "ImportError: circular import" when trying direct import
+- "TypeError: can't pickle" with multiprocessing approach
+- "ValidationError: field required" for missing user_id
+
+#### 8. Implementation Risks & Concerns
+
+Document any worries, uncertainties, or potential issues identified during planning:
+
+**Technical Debt:**
+
+- The auth system is tightly coupled to user model
+- No abstraction layer between API and database
+- Tests are not parallelizable due to shared fixtures
+
+**Uncertainty Areas:**
+
+- Not sure if webhook endpoint needs CSRF protection
+- Unclear if rate limiting applies to admin users
+- Don't know if database can handle expected load
+
+**Performance Concerns:**
+
+- Bulk operations might timeout with current 30s limit
+- No caching layer could cause issues at scale
+- N+1 queries likely in user list endpoint
+
+**Security Considerations:**
+
+- API keys stored in plain text in dev config
+- No audit logging for permission changes
+- CORS settings might be too permissive
 
 **Output:** Enhanced plan with populated Context & Understanding sections, ready for Step 5 interactive enhancement
 
@@ -524,39 +628,33 @@ The plan references "the payments API" - which service is this?
 - Example: "Stripe API v2" or "Internal billing service at /api/billing"
 ```
 
-**Reasoning and Context Discovery:**
+**Context Mining Questions:**
 
-Beyond file paths and metrics, probe for valuable reasoning and discoveries:
+To ensure we've captured all valuable discoveries from our planning discussion:
 
-```markdown
-**Discovered Constraints:**
-During planning, did you discover any constraints that aren't obvious from the code?
+**What did we learn about the codebase?**
 
-- Example: "API doesn't support bulk operations, must process items individually"
-- Example: "Database doesn't support transactions across schemas"
-- Answers: [Will be included in Context & Understanding section]
+- Any patterns, conventions, or structures we discovered?
+- Example: "All services inherit from BaseService class"
+- Example: "Database queries use raw SQL, not ORM"
 
-**Surprising Interdependencies:**
-Did you discover any non-obvious connections between components or requirements?
+**What external resources did we reference?**
 
-- Example: "Can't change user model without updating 3 other services due to shared schema"
-- Example: "Email sending must complete before payment finalization for audit trail"
-- Answers: [Will be included in Context & Understanding section]
+- Documentation, examples, or discussions we looked at?
+- Example: "Checked Stripe docs for webhook retry behavior"
+- Example: "Referenced Stack Overflow for datetime handling"
 
-**Known Pitfalls:**
-Did you discover anything that looks correct but actually causes problems?
+**What assumptions did we validate or invalidate?**
 
-- Example: "Using .filter().first() looks safe but returns None without error, use .get() instead"
-- Example: "Webhook signature must be verified with raw body, not parsed JSON"
-- Answers: [Will be included in Context & Understanding section]
+- Things that turned out different than expected?
+- Example: "Thought we could use async but parent is sync"
+- Example: "Expected JSON configs but found YAML"
 
-**Rejected Approaches:**
-Were any approaches considered but rejected? If so, why?
+**What small details matter?**
 
-- Example: "Tried caching at API layer but race conditions made it unreliable, moved to database layer"
-- Example: "Considered WebSocket for real-time updates but polling simpler and more reliable for our scale"
-- Answers: [Will be included in Context & Understanding section]
-```
+- Minor things that could trip up implementation?
+- Example: "Import order matters due to circular deps"
+- Example: "Must use double quotes in SQL, not single"
 
 **Important:**
 
@@ -635,7 +733,7 @@ Preserve valuable context discovered during planning. Include items that:
 
 - Took time to discover and aren't obvious from code
 - Would change implementation if known vs. unknown
-- Would cause bugs if missed (especially subtle or delayed bugs)
+- Could cause bugs if missed (especially subtle or delayed bugs)
 
 #### API/Tool Quirks
 
@@ -683,6 +781,50 @@ Example:
 
 - DO NOT use payment_intent.succeeded alone - fires for zero-amount tests
 - DO NOT store Stripe objects directly - schema changes across API versions
+
+#### Raw Discoveries Log
+
+[Everything discovered during planning, even minor details]
+
+Example:
+
+- Discovered: SQLite version is 3.39
+- Confirmed: pytest is in requirements.txt
+- Learned: Codebase uses pathlib not os.path
+- Verified: Python 3.11 is minimum version
+- Noted: All configs are YAML not JSON
+
+#### Planning Artifacts
+
+[Code examined, commands run, configurations discovered]
+
+Example:
+
+**Commands Run:**
+
+- `pip list | grep stripe` → Found stripe==5.4.0
+
+**Code Examined:**
+
+- Looked at auth.py lines 45-67 for validation pattern
+
+**Config Samples:**
+
+- Database: `postgresql://user:pass@localhost/db`
+
+#### Implementation Risks
+
+[Technical debt, uncertainties, performance and security concerns]
+
+Example:
+
+**Technical Debt:**
+
+- Auth system tightly coupled to user model
+
+**Uncertainty Areas:**
+
+- Not sure if webhook needs CSRF protection
 
 ### Implementation Steps
 
@@ -738,7 +880,7 @@ Preserve valuable context discovered during planning. Include items that:
 
 - Took time to discover and aren't obvious from code
 - Would change implementation if known vs. unknown
-- Would cause bugs if missed (especially subtle or delayed bugs)
+- Could cause bugs if missed (especially subtle or delayed bugs)
 
 #### API/Tool Quirks
 
@@ -759,6 +901,18 @@ Preserve valuable context discovered during planning. Include items that:
 #### Known Pitfalls
 
 [What looks right but causes problems - specific gotchas]
+
+#### Raw Discoveries Log
+
+[Everything discovered during planning, even minor details]
+
+#### Planning Artifacts
+
+[Code examined, commands run, configurations discovered]
+
+#### Implementation Risks
+
+[Technical debt, uncertainties, performance and security concerns]
 
 ### Phase 1: [Name]
 
@@ -859,7 +1013,9 @@ Before finalizing the plan, ensure context is properly linked to implementation 
 
 Before proceeding, verify:
 
-- [ ] Every complex or critical implementation step has appropriate context
+- [ ] EVERY implementation step has at least one context reference (even if minor)
+- [ ] Any step touching external services references relevant quirks
+- [ ] Any step with alternatives documents why this approach was chosen
 - [ ] Security-critical operations have inline [CRITICAL:] warnings
 - [ ] Each Context & Understanding item is referenced by at least one step
 - [ ] No orphaned context (context without corresponding steps)

@@ -50,10 +50,11 @@ def discover_repo_or_sentinel(
     Returns:
         RepoContext if inside a git repository, NoRepoSentinel otherwise
     """
-    if not cwd.exists():
+    ops = git_ops if git_ops is not None else RealGitOps()
+
+    if not ops.path_exists(cwd):
         return NoRepoSentinel(message=f"Start path '{cwd}' does not exist")
 
-    ops = git_ops if git_ops is not None else RealGitOps()
     cur = cwd.resolve()
 
     root: Path | None = None
@@ -63,10 +64,10 @@ def discover_repo_or_sentinel(
     else:
         for parent in [cur, *cur.parents]:
             git_path = parent / ".git"
-            if not git_path.exists():
+            if not ops.path_exists(git_path):
                 continue
 
-            if git_path.is_dir():
+            if ops.is_dir(git_path):
                 root = parent
                 break
 

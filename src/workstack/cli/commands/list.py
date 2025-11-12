@@ -15,11 +15,12 @@ from workstack.core.repo_discovery import RepoContext
 from workstack.core.worktree_utils import find_current_worktree
 
 
-def _format_plan_summary(worktree_path: Path) -> str | None:
+def _format_plan_summary(worktree_path: Path, ctx: WorkstackContext) -> str | None:
     """Extract plan title from .PLAN.md if it exists.
 
     Args:
         worktree_path: Path to the worktree directory
+        ctx: Workstack context with git operations
 
     Returns:
         Plan title string, or None if no plan file
@@ -27,7 +28,7 @@ def _format_plan_summary(worktree_path: Path) -> str | None:
     from workstack.core.file_utils import extract_plan_title
 
     plan_path = worktree_path / ".PLAN.md"
-    return extract_plan_title(plan_path)
+    return extract_plan_title(plan_path, git_ops=ctx.git_ops)
 
 
 def _display_branch_stack(
@@ -218,7 +219,7 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
         if pr:
             graphite_url = ctx.graphite_ops.get_graphite_url(pr.owner, pr.repo, pr.number)
             root_pr_info = format_pr_info(pr, graphite_url)
-    root_plan_summary = _format_plan_summary(repo.root)
+    root_plan_summary = _format_plan_summary(repo.root, ctx)
 
     click.echo(
         format_worktree_line(
@@ -256,7 +257,7 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
             if pr:
                 graphite_url = ctx.graphite_ops.get_graphite_url(pr.owner, pr.repo, pr.number)
                 wt_pr_info = format_pr_info(pr, graphite_url)
-        wt_plan_summary = _format_plan_summary(wt_path)
+        wt_plan_summary = _format_plan_summary(wt_path, ctx)
 
         click.echo(
             format_worktree_line(

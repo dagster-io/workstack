@@ -347,7 +347,7 @@ def create(
     repo = discover_repo_context(ctx, ctx.cwd)
     workstacks_dir = ensure_workstacks_dir(repo)
     cfg = ctx.local_config
-    trunk_branch = read_trunk_from_pyproject(repo.root)
+    trunk_branch = read_trunk_from_pyproject(repo.root, ctx.git_ops)
 
     # Apply date prefix and uniqueness for plan-derived names
     if is_plan_derived:
@@ -355,7 +355,7 @@ def create(
 
     wt_path = worktree_path_for(workstacks_dir, name)
 
-    if wt_path.exists():
+    if ctx.git_ops.path_exists(wt_path):
         if output_json:
             # For JSON output, emit a status: "exists" response with available info
             existing_branch = ctx.git_ops.get_current_branch(wt_path)
@@ -364,7 +364,7 @@ def create(
                 worktree_name=name,
                 worktree_path=wt_path,
                 branch_name=existing_branch,
-                plan_file_path=plan_file_path if plan_file_path.exists() else None,
+                plan_file_path=plan_file_path if ctx.git_ops.path_exists(plan_file_path) else None,
                 status="exists",
             )
             click.echo(json_response)

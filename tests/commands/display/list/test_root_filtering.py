@@ -21,16 +21,15 @@ shows only ancestors + current for the root worktree:
 These tests would have failed with the old implementation, catching the regression.
 """
 
-import json
-
 from click.testing import CliRunner
 
 from tests.commands.display.list import strip_ansi
 from tests.fakes.gitops import FakeGitOps
-from tests.test_utils.env_helpers import simulated_workstack_env
+from tests.fakes.graphite_ops import FakeGraphiteOps
+from tests.test_utils.env_helpers import pure_workstack_env
 from workstack.cli.cli import cli
+from workstack.core.branch_metadata import BranchMetadata
 from workstack.core.gitops import WorktreeInfo
-from workstack.core.graphite_ops import RealGraphiteOps
 
 
 def test_root_on_trunk_shows_only_trunk() -> None:
@@ -51,20 +50,16 @@ def test_root_on_trunk_shows_only_trunk() -> None:
           ◉  main         <- CORRECT: only trunk shown
     """
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        # Create graphite cache: main → feature-a → feature-b
-        graphite_cache = {
-            "branches": [
-                ["main", {"validationResult": "TRUNK", "children": ["feature-a"]}],
-                ["feature-a", {"parentBranchName": "main", "children": ["feature-b"]}],
-                ["feature-b", {"parentBranchName": "feature-a", "children": []}],
-            ]
+    with pure_workstack_env(runner) as env:
+        # Create branch metadata: main → feature-a → feature-b
+        branches = {
+            "main": BranchMetadata.trunk("main", children=["feature-a"]),
+            "feature-a": BranchMetadata.branch("feature-a", "main", children=["feature-b"]),
+            "feature-b": BranchMetadata.branch("feature-b", "feature-a", children=[]),
         }
-        (env.git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache))
 
         # Create feature-b worktree
         feature_b_dir = env.workstacks_root / env.cwd.name / "feature-b"
-        feature_b_dir.mkdir(parents=True)
 
         # Build fake git ops - root on main, feature-b worktree
         git_ops = FakeGitOps(
@@ -85,7 +80,7 @@ def test_root_on_trunk_shows_only_trunk() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=RealGraphiteOps(), use_graphite=True
+            git_ops=git_ops, graphite_ops=FakeGraphiteOps(branches=branches), use_graphite=True
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
@@ -144,21 +139,17 @@ def test_root_on_non_trunk_shows_ancestors_only() -> None:
           ◯  main
     """
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        # Create graphite cache: main → feature-a → feature-b → feature-c
-        graphite_cache = {
-            "branches": [
-                ["main", {"validationResult": "TRUNK", "children": ["feature-a"]}],
-                ["feature-a", {"parentBranchName": "main", "children": ["feature-b"]}],
-                ["feature-b", {"parentBranchName": "feature-a", "children": ["feature-c"]}],
-                ["feature-c", {"parentBranchName": "feature-b", "children": []}],
-            ]
+    with pure_workstack_env(runner) as env:
+        # Create branch metadata: main → feature-a → feature-b → feature-c
+        branches = {
+            "main": BranchMetadata.trunk("main", children=["feature-a"]),
+            "feature-a": BranchMetadata.branch("feature-a", "main", children=["feature-b"]),
+            "feature-b": BranchMetadata.branch("feature-b", "feature-a", children=["feature-c"]),
+            "feature-c": BranchMetadata.branch("feature-c", "feature-b", children=[]),
         }
-        (env.git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache))
 
         # Create feature-c worktree
         feature_c_dir = env.workstacks_root / env.cwd.name / "feature-c"
-        feature_c_dir.mkdir(parents=True)
 
         # Build fake git ops - root on feature-b, feature-c worktree
         git_ops = FakeGitOps(
@@ -179,7 +170,7 @@ def test_root_on_non_trunk_shows_ancestors_only() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=RealGraphiteOps(), use_graphite=True
+            git_ops=git_ops, graphite_ops=FakeGraphiteOps(branches=branches), use_graphite=True
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
@@ -244,23 +235,18 @@ def test_non_root_worktree_shows_descendants_with_worktrees() -> None:
           ◯  feature-c       <- descendant with worktree (skips feature-b)
     """
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        # Create graphite cache: main → feature-a → feature-b → feature-c
-        graphite_cache = {
-            "branches": [
-                ["main", {"validationResult": "TRUNK", "children": ["feature-a"]}],
-                ["feature-a", {"parentBranchName": "main", "children": ["feature-b"]}],
-                ["feature-b", {"parentBranchName": "feature-a", "children": ["feature-c"]}],
-                ["feature-c", {"parentBranchName": "feature-b", "children": []}],
-            ]
+    with pure_workstack_env(runner) as env:
+        # Create branch metadata: main → feature-a → feature-b → feature-c
+        branches = {
+            "main": BranchMetadata.trunk("main", children=["feature-a"]),
+            "feature-a": BranchMetadata.branch("feature-a", "main", children=["feature-b"]),
+            "feature-b": BranchMetadata.branch("feature-b", "feature-a", children=["feature-c"]),
+            "feature-c": BranchMetadata.branch("feature-c", "feature-b", children=[]),
         }
-        (env.git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache))
 
         # Create worktrees
         feature_a_dir = env.workstacks_root / env.cwd.name / "worktree-a"
         feature_c_dir = env.workstacks_root / env.cwd.name / "worktree-c"
-        feature_a_dir.mkdir(parents=True)
-        feature_c_dir.mkdir(parents=True)
 
         # Build fake git ops
         git_ops = FakeGitOps(
@@ -284,7 +270,7 @@ def test_non_root_worktree_shows_descendants_with_worktrees() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=RealGraphiteOps(), use_graphite=True
+            git_ops=git_ops, graphite_ops=FakeGraphiteOps(branches=branches), use_graphite=True
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)

@@ -38,12 +38,12 @@ def rename_cmd(ctx: WorkstackContext, old_name: str, new_name: str, dry_run: boo
     new_path = worktree_path_for(workstacks_dir, sanitized_new_name)
 
     # Validate old worktree exists
-    if not old_path.exists() or not old_path.is_dir():
+    if not ctx.git_ops.path_exists(old_path):
         click.echo(f"Worktree not found: {old_path}", err=True)
         raise SystemExit(1)
 
     # Validate new path doesn't already exist
-    if new_path.exists():
+    if ctx.git_ops.path_exists(new_path):
         click.echo(f"Destination already exists: {new_path}", err=True)
         raise SystemExit(1)
 

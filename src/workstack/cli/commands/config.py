@@ -83,7 +83,7 @@ def config_list(ctx: WorkstackContext) -> None:
     if isinstance(ctx.repo, NoRepoSentinel):
         click.echo("  (not in a git repository)")
     else:
-        trunk_branch = read_trunk_from_pyproject(ctx.repo.root)
+        trunk_branch = read_trunk_from_pyproject(ctx.repo.root, ctx.git_ops)
         cfg = ctx.local_config
         if trunk_branch:
             click.echo(f"  trunk-branch={trunk_branch}")
@@ -137,7 +137,7 @@ def config_get(ctx: WorkstackContext, key: str) -> None:
         raise SystemExit(1)
 
     if parts[0] == "trunk-branch":
-        trunk_branch = read_trunk_from_pyproject(ctx.repo.root)
+        trunk_branch = read_trunk_from_pyproject(ctx.repo.root, ctx.git_ops)
         if trunk_branch:
             click.echo(trunk_branch)
         else:

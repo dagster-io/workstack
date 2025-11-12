@@ -2,19 +2,17 @@ from click.testing import CliRunner
 
 from tests.commands.display.list import strip_ansi
 from tests.fakes.gitops import FakeGitOps
-from tests.test_utils.env_helpers import simulated_workstack_env
+from tests.test_utils.env_helpers import pure_workstack_env
 from workstack.cli.cli import cli
 from workstack.core.gitops import WorktreeInfo
 
 
 def test_list_outputs_names_not_paths() -> None:
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         # Create worktrees in the location determined by global config
         repo_name = env.cwd.name
         workstacks_dir = env.workstacks_root / repo_name
-        (workstacks_dir / "foo").mkdir(parents=True)
-        (workstacks_dir / "bar").mkdir(parents=True)
 
         # Build fake git ops with worktree info
         git_ops = FakeGitOps(

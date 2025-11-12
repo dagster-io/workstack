@@ -328,9 +328,58 @@ class SimulatedWorkstackEnv:
                 ctx = env.build_context(use_graphite=True, show_pr_checks=True)
             ```
         """
-        # Create default ops if not provided
+        # Determine repo to use (either provided or default)
+        if repo is None:
+            repo = self._repo
+
+        # Create default ops if not provided, or ensure existing paths are set
         if git_ops is None:
-            git_ops = FakeGitOps(git_common_dirs={self.cwd: self.git_dir})
+            git_ops = FakeGitOps(
+                git_common_dirs={self.cwd: self.git_dir},
+                existing_paths={
+                    self.cwd,
+                    self.git_dir,
+                    self.workstacks_root,
+                    repo.root,
+                    repo.workstacks_dir,
+                },
+            )
+        else:
+            # git_ops was provided - ensure it has necessary existing paths
+            # for discover_repo_context to work correctly
+            from workstack.core.gitops import DryRunGitOps
+
+            unwrapped_ops = git_ops._wrapped if isinstance(git_ops, DryRunGitOps) else git_ops
+
+            # Add core paths to existing_paths if they're actually git repos
+            # Only add paths that are in git_common_dirs (actual repos)
+            has_existing = hasattr(unwrapped_ops, "_existing_paths")
+            has_git_common = hasattr(unwrapped_ops, "_git_common_dirs")
+            has_worktrees = hasattr(unwrapped_ops, "_worktrees")
+            if has_existing and has_git_common:
+                # Determine which cwd to use (custom or default)
+                effective_cwd = kwargs.get("cwd", self.cwd)
+
+                # Collect core paths - always include cwd and workstacks_root
+                core_paths = {
+                    self.cwd,
+                    effective_cwd,
+                    self.workstacks_root,
+                    repo.workstacks_dir,
+                }
+
+                # Only add git_dir and repo.root if this is actually a git repo
+                # (i.e., git_common_dirs is not empty)
+                if unwrapped_ops._git_common_dirs:
+                    core_paths.update({self.git_dir, repo.root})
+
+                # Also add all worktree paths from git_ops
+                if has_worktrees:
+                    for worktree_list in unwrapped_ops._worktrees.values():
+                        for wt_info in worktree_list:
+                            core_paths.add(wt_info.path)
+
+                unwrapped_ops._existing_paths.update(core_paths)
 
         if graphite_ops is None:
             graphite_ops = FakeGraphiteOps()
@@ -338,14 +387,19 @@ class SimulatedWorkstackEnv:
         if github_ops is None:
             github_ops = FakeGitHubOps()
 
-        # Create global config
-        global_config = GlobalConfig(
-            use_graphite=use_graphite,
-            show_pr_info=show_pr_info,
-            show_pr_checks=show_pr_checks,
-            shell_setup_complete=False,
-            workstacks_root=self.workstacks_root,
-        )
+        # Create global config if not provided in kwargs
+        if "global_config" in kwargs:
+            # Use the provided global_config (might be None for init tests)
+            global_config = kwargs.pop("global_config")
+        else:
+            # Create default global config
+            global_config = GlobalConfig(
+                use_graphite=use_graphite,
+                show_pr_info=show_pr_info,
+                show_pr_checks=show_pr_checks,
+                shell_setup_complete=False,
+                workstacks_root=self.workstacks_root,
+            )
 
         # Build and return context
         # Default cwd and script_writer to env values unless overridden in kwargs
@@ -497,6 +551,7 @@ class PureWorkstackEnv:
         self.git_dir = git_dir
         self.workstacks_root = workstacks_root
         self.script_writer = script_writer
+        self._linked_worktrees: dict[str, Path] = {}  # Track branch -> worktree path
         self._repo = RepoContext(
             root=cwd,
             repo_name=cwd.name,
@@ -508,6 +563,11 @@ class PureWorkstackEnv:
         """RepoContext constructed from sentinel paths."""
         return self._repo
 
+    @property
+    def root_worktree(self) -> Path:
+        """Alias for cwd for compatibility with SimulatedWorkstackEnv."""
+        return self.cwd
+
     def build_context(
         self,
         *,
@@ -518,6 +578,8 @@ class PureWorkstackEnv:
         graphite_ops: FakeGraphiteOps | None = None,
         github_ops: FakeGitHubOps | None = None,
         repo: RepoContext | None = None,
+        existing_paths: set[Path] | None = None,
+        file_contents: dict[Path, str] | None = None,
         **kwargs,
     ) -> WorkstackContext:
         """Build WorkstackContext with sensible defaults for testing.
@@ -534,6 +596,8 @@ class PureWorkstackEnv:
             graphite_ops: Custom FakeGraphiteOps (default: empty)
             github_ops: Custom FakeGitHubOps (default: empty)
             repo: Custom RepoContext (default: None)
+            existing_paths: Set of sentinel paths to treat as existing (pure mode only)
+            file_contents: Mapping of sentinel paths to file content (pure mode only)
             **kwargs: Additional WorkstackContext.for_test() parameters
 
         Returns:
@@ -547,11 +611,64 @@ class PureWorkstackEnv:
 
                 # Enable Graphite with custom config
                 ctx = env.build_context(use_graphite=True, show_pr_checks=True)
+
+                # With existing paths for pure mode testing
+                ctx = env.build_context(
+                    existing_paths={Path("/test/repo/.workstack")},
+                    file_contents={Path("/test/repo/.PLAN.md"): "plan content"},
+                )
             ```
         """
+        # Determine repo to use (either provided or default)
+        if repo is None:
+            repo = self._repo
+
         # Create default ops if not provided
         if git_ops is None:
-            git_ops = FakeGitOps(git_common_dirs={self.cwd: self.git_dir})
+            # Automatically include core sentinel paths in existing_paths
+            # so that repo discovery and other path checks work correctly
+            # Include repo.root and repo.workstacks_dir so os.walk() and path checks succeed
+            core_paths = {
+                self.cwd,
+                self.git_dir,
+                self.workstacks_root,
+                repo.root,
+                repo.workstacks_dir,
+            }
+            all_existing = core_paths | (existing_paths or set())
+
+            git_ops = FakeGitOps(
+                git_common_dirs={self.cwd: self.git_dir},
+                existing_paths=all_existing,
+                file_contents=file_contents or {},
+            )
+        else:
+            # git_ops was provided - extract worktree paths and merge with existing_paths
+            # Unwrap DryRunGitOps if needed to access underlying FakeGitOps
+            from workstack.core.gitops import DryRunGitOps
+
+            unwrapped_ops = git_ops._wrapped if isinstance(git_ops, DryRunGitOps) else git_ops
+            worktree_paths = {
+                wt.path for worktrees in unwrapped_ops._worktrees.values() for wt in worktrees
+            }
+            # Determine which cwd to use (custom or default)
+            effective_cwd = kwargs.get("cwd", self.cwd)
+
+            core_paths = {
+                self.cwd,
+                effective_cwd,
+                self.git_dir,
+                self.workstacks_root,
+                repo.root,
+                repo.workstacks_dir,
+            }
+            all_existing = core_paths | worktree_paths | (existing_paths or set())
+
+            # Mutate existing ops instance instead of recreating
+            # This preserves mutation tracking for test assertions
+            unwrapped_ops._existing_paths.update(all_existing)
+            if file_contents:
+                unwrapped_ops._file_contents.update(file_contents)
 
         if graphite_ops is None:
             graphite_ops = FakeGraphiteOps()
@@ -559,14 +676,19 @@ class PureWorkstackEnv:
         if github_ops is None:
             github_ops = FakeGitHubOps()
 
-        # Create global config
-        global_config = GlobalConfig(
-            use_graphite=use_graphite,
-            show_pr_info=show_pr_info,
-            show_pr_checks=show_pr_checks,
-            shell_setup_complete=False,
-            workstacks_root=self.workstacks_root,
-        )
+        # Create global config if not provided in kwargs
+        if "global_config" in kwargs:
+            # Use the provided global_config (might be None for init tests)
+            global_config = kwargs.pop("global_config")
+        else:
+            # Create default global config
+            global_config = GlobalConfig(
+                use_graphite=use_graphite,
+                show_pr_info=show_pr_info,
+                show_pr_checks=show_pr_checks,
+                shell_setup_complete=False,
+                workstacks_root=self.workstacks_root,
+            )
 
         # Build and return context
         # Default cwd and script_writer to env values unless overridden in kwargs
@@ -589,6 +711,125 @@ class PureWorkstackEnv:
             **kwargs,
         )
 
+    def create_linked_worktree(self, name: str, branch: str, *, chdir: bool = False) -> Path:
+        """Create a linked worktree (sentinel path only, no filesystem).
+
+        Args:
+            name: Worktree directory name
+            branch: Branch to checkout in the worktree
+            chdir: Ignored in pure mode (no actual directory change)
+
+        Returns:
+            Sentinel path for the worktree
+        """
+        # Create sentinel path (no mkdir needed)
+        linked_wt = self.workstacks_root / self.cwd.name / name
+        # Track it
+        self._linked_worktrees[branch] = linked_wt
+        return linked_wt
+
+    def build_ops_from_branches(
+        self,
+        branches: dict[str, BranchMetadata],
+        *,
+        current_branch: str | None = None,
+        current_worktree: Path | None = None,
+    ) -> tuple[FakeGitOps, FakeGraphiteOps]:
+        """Build both FakeGitOps and FakeGraphiteOps from branch metadata.
+
+        Automatically:
+        - Maps branches to worktrees (root + any created linked worktrees)
+        - Computes stacks dict from parent/child relationships
+        - Configures git_common_dirs for all worktrees
+        - Sets current branch in specified worktree
+
+        Args:
+            branches: Branch metadata with parent/child relationships
+            current_branch: Which branch is checked out (defaults to root's branch)
+            current_worktree: Where current_branch is (defaults to root_worktree)
+
+        Returns:
+            Tuple of (FakeGitOps, FakeGraphiteOps) configured for testing
+        """
+        current_worktree = current_worktree or self.root_worktree
+
+        # Find trunk branch (for root worktree)
+        trunk_branch = None
+        for name, meta in branches.items():
+            if meta.is_trunk:
+                trunk_branch = name
+                break
+
+        if trunk_branch is None:
+            trunk_branch = "main"  # Fallback
+
+        # Build worktrees list
+        worktrees_list = [WorktreeInfo(path=self.root_worktree, branch=trunk_branch, is_root=True)]
+
+        # Add linked worktrees created via create_linked_worktree()
+        for branch, path in self._linked_worktrees.items():
+            worktrees_list.append(WorktreeInfo(path=path, branch=branch, is_root=False))
+
+        # Build current_branches mapping
+        current_branches_map = {}
+        for wt in worktrees_list:
+            if wt.path == current_worktree:
+                # This worktree has the current branch
+                current_branches_map[wt.path] = current_branch if current_branch else wt.branch
+            else:
+                # Other worktrees stay on their own branch
+                current_branches_map[wt.path] = wt.branch
+
+        # Build git_common_dirs mapping (all point to root's .git)
+        git_common_dirs_map = {wt.path: self.root_worktree / ".git" for wt in worktrees_list}
+
+        # Build stacks from branches (auto-compute from parent/child)
+        stacks = {}
+        for branch_name in branches:
+            if not branches[branch_name].is_trunk:
+                stacks[branch_name] = self._build_stack_path(branches, branch_name)
+
+        # Collect all worktree paths as existing
+        existing_paths = {wt.path for wt in worktrees_list} | {self.cwd, self.git_dir}
+
+        git_ops = FakeGitOps(
+            worktrees={self.root_worktree: worktrees_list},
+            current_branches=current_branches_map,
+            git_common_dirs=git_common_dirs_map,
+            existing_paths=existing_paths,
+        )
+
+        graphite_ops = FakeGraphiteOps(
+            branches=branches,
+            stacks=stacks,
+        )
+
+        return git_ops, graphite_ops
+
+    def _build_stack_path(
+        self,
+        branches: dict[str, BranchMetadata],
+        leaf: str,
+    ) -> list[str]:
+        """Build stack path from trunk to leaf.
+
+        Args:
+            branches: All branch metadata
+            leaf: Leaf branch name
+
+        Returns:
+            List of branch names from trunk to leaf (inclusive)
+        """
+        stack = []
+        current = leaf
+
+        while current is not None:
+            stack.insert(0, current)
+            parent = branches[current].parent
+            current = parent
+
+        return stack
+
 
 @contextmanager
 def pure_workstack_env(
@@ -601,6 +842,10 @@ def pure_workstack_env(
     This context manager provides a faster alternative to simulated_workstack_env()
     for tests that don't need actual filesystem operations. It uses sentinel paths
     and in-memory fakes exclusively.
+
+    Sentinel paths throw errors if filesystem operations are attempted (.exists(),
+    .resolve(), .mkdir(), etc.), enforcing that all checks go through fake operations
+    for high test fidelity.
 
     Use this when:
     - Testing command logic that doesn't depend on real directories
@@ -639,18 +884,26 @@ def pure_workstack_env(
                 assert content is not None
         ```
     """
-    # Use sentinel paths (no filesystem operations)
-    cwd = Path("/test/repo")
-    git_dir = Path("/test/repo/.git")
-    workstacks_root = Path("/test/workstacks")
+    from tests.test_utils import sentinel_path
+
+    # Use sentinel paths that throw on filesystem operations
+    cwd = sentinel_path("/test/repo")
+    git_dir = sentinel_path("/test/repo/.git")
+    workstacks_root = sentinel_path("/test/workstacks")
 
     # Create in-memory script writer
     script_writer = FakeScriptWriterOps()
 
     # No isolated_filesystem(), no os.chdir(), no mkdir()
-    yield PureWorkstackEnv(
-        cwd=cwd,
-        git_dir=git_dir,
-        workstacks_root=workstacks_root,
-        script_writer=script_writer,
-    )
+    try:
+        yield PureWorkstackEnv(
+            cwd=cwd,
+            git_dir=git_dir,
+            workstacks_root=workstacks_root,
+            script_writer=script_writer,
+        )
+    finally:
+        # Clear SentinelPath file storage for test isolation
+        from tests.test_utils.paths import SentinelPath
+
+        SentinelPath.clear_file_storage()

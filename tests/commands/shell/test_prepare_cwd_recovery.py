@@ -18,10 +18,17 @@ def build_ctx(
 ) -> WorkstackContext:
     """Create a WorkstackContext with test fakes."""
     git_common_dirs: dict[Path, Path] = {}
+    existing_paths: set[Path] = {workstacks_root}
+
     if repo_root is not None:
         git_common_dirs[repo_root] = repo_root / ".git"
+        existing_paths.update({repo_root, repo_root / ".git"})
 
-    git_ops = FakeGitOps(git_common_dirs=git_common_dirs)
+    # Add cwd to existing_paths if specified and different from repo_root
+    if cwd is not None and cwd != repo_root:
+        existing_paths.add(cwd)
+
+    git_ops = FakeGitOps(git_common_dirs=git_common_dirs, existing_paths=existing_paths)
     script_writer = FakeScriptWriterOps()
     global_config_ops = GlobalConfig(
         workstacks_root=workstacks_root,

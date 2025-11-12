@@ -247,18 +247,24 @@ class WorkstackContext:
         )
 
 
-def read_trunk_from_pyproject(repo_root: Path) -> str | None:
+def read_trunk_from_pyproject(repo_root: Path, git_ops: GitOps | None = None) -> str | None:
     """Read trunk branch configuration from pyproject.toml.
 
     Args:
         repo_root: Path to the repository root directory
+        git_ops: Optional GitOps interface for path checking (uses .exists() if None)
 
     Returns:
         Configured trunk branch name, or None if not configured
     """
     pyproject_path = repo_root / "pyproject.toml"
 
-    if not pyproject_path.exists():
+    # Check existence using git_ops if available (for test compatibility)
+    if git_ops is not None:
+        path_exists = git_ops.path_exists(pyproject_path)
+    else:
+        path_exists = pyproject_path.exists()
+    if not path_exists:
         return None
 
     with pyproject_path.open("rb") as f:
@@ -275,7 +281,7 @@ def read_trunk_from_pyproject(repo_root: Path) -> str | None:
     return workstack_section.get("trunk_branch")
 
 
-def write_trunk_to_pyproject(repo_root: Path, trunk: str) -> None:
+def write_trunk_to_pyproject(repo_root: Path, trunk: str, git_ops: GitOps | None = None) -> None:
     """Write trunk branch configuration to pyproject.toml.
 
     Creates or updates the [tool.workstack] section with trunk_branch setting.
@@ -284,11 +290,18 @@ def write_trunk_to_pyproject(repo_root: Path, trunk: str) -> None:
     Args:
         repo_root: Path to the repository root directory
         trunk: Trunk branch name to configure
+        git_ops: Optional GitOps interface for path checking (uses .exists() if None)
     """
     pyproject_path = repo_root / "pyproject.toml"
 
+    # Check existence using git_ops if available (for test compatibility)
+    if git_ops is not None:
+        path_exists = git_ops.path_exists(pyproject_path)
+    else:
+        path_exists = pyproject_path.exists()
+
     # Load existing file or create new document
-    if pyproject_path.exists():
+    if path_exists:
         with pyproject_path.open("r", encoding="utf-8") as f:
             doc = tomlkit.load(f)
     else:

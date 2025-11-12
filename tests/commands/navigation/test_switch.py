@@ -4,12 +4,11 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from tests.fakes.gitops import FakeGitOps
-from tests.test_utils.env_helpers import simulated_workstack_env
+from tests.test_utils.env_helpers import pure_workstack_env
 from workstack.cli.cli import cli
 from workstack.cli.commands.shell_integration import hidden_shell_cmd
-from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
-from workstack.core.global_config import GlobalConfig, InMemoryGlobalConfigOps
+from workstack.core.repo_discovery import RepoContext
 
 
 def strip_ansi(text: str) -> str:
@@ -20,105 +19,81 @@ def strip_ansi(text: str) -> str:
 def test_switch_command() -> None:
     """Test the switch command outputs activation script."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        # Create linked worktree for "myfeature"
-        myfeature_path = env.create_linked_worktree("myfeature", "myfeature", chdir=False)
+    with pure_workstack_env(runner) as env:
+        # Create repo-specific workstacks directory
+        work_dir = env.workstacks_root / env.cwd.name
+        myfeature_path = work_dir / "myfeature"
 
         # Configure FakeGitOps with worktrees
         git_ops = FakeGitOps(
             worktrees={
-                env.root_worktree: [
-                    WorktreeInfo(path=env.root_worktree, branch="main", is_root=True),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
                     WorktreeInfo(path=myfeature_path, branch="myfeature", is_root=False),
                 ]
             },
             current_branches={
-                env.root_worktree: "main",
+                env.cwd: "main",
                 myfeature_path: "myfeature",
             },
-            git_common_dirs={
-                env.root_worktree: env.git_dir,
-                myfeature_path: env.git_dir,
-            },
-            default_branches={env.root_worktree: "main"},
+            default_branches={env.cwd: "main"},
         )
 
-        # Create global config with workstacks_root
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=work_dir,
         )
-        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
 
-        # Create test context
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            global_config=global_config,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-            trunk_branch="main",
-        )
+        # Create test context using env helper
+        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
 
         # Run switch command with --script flag
         result = runner.invoke(cli, ["switch", "myfeature", "--script"], obj=test_ctx)
         assert result.exit_code == 0
 
-        # Output should be a temp file path
+        # Output should be a script path
         script_path = Path(result.output.strip())
-        assert script_path.exists()
         assert script_path.name.startswith("workstack-switch-")
         assert script_path.name.endswith(".sh")
 
-        # Verify script content
-        script_content = script_path.read_text()
+        # Verify script content (read from in-memory)
+        script_content = env.script_writer.get_script_content(script_path)
+        assert script_content is not None
         assert "cd" in script_content
         assert str(myfeature_path) in script_content
         # Should source activate if venv exists
         assert "activate" in script_content
 
-        # Cleanup
-        script_path.unlink(missing_ok=True)
-
 
 def test_switch_nonexistent_worktree() -> None:
     """Test switch command with non-existent worktree."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
+        # Create repo-specific workstacks directory
+        work_dir = env.workstacks_root / env.cwd.name
+
         # Configure FakeGitOps with just root worktree
         git_ops = FakeGitOps(
             worktrees={
-                env.root_worktree: [
-                    WorktreeInfo(path=env.root_worktree, branch="main", is_root=True),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
                 ]
             },
-            current_branches={env.root_worktree: "main"},
-            git_common_dirs={env.root_worktree: env.git_dir},
-            default_branches={env.root_worktree: "main"},
+            current_branches={env.cwd: "main"},
+            default_branches={env.cwd: "main"},
         )
 
-        # Create global config with workstacks_root
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=work_dir,
         )
-        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
 
-        # Create test context
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            global_config=global_config,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-            trunk_branch="main",
-        )
+        # Create test context using env helper
+        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
 
         # Try to switch to non-existent worktree
         result = runner.invoke(cli, ["switch", "doesnotexist"], obj=test_ctx)
@@ -141,56 +116,45 @@ def test_switch_shell_completion() -> None:
 def test_switch_to_root() -> None:
     """Test switching to root repo using 'root'."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
+        # Create repo-specific workstacks directory
+        work_dir = env.workstacks_root / env.cwd.name
+
         # Configure FakeGitOps with just the root worktree
         git_ops = FakeGitOps(
             worktrees={
-                env.root_worktree: [
-                    WorktreeInfo(path=env.root_worktree, branch="main", is_root=True),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
                 ]
             },
-            current_branches={env.root_worktree: "main"},
-            git_common_dirs={env.root_worktree: env.git_dir},
-            default_branches={env.root_worktree: "main"},
+            current_branches={env.cwd: "main"},
+            default_branches={env.cwd: "main"},
         )
 
-        # Create global config with workstacks_root
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=work_dir,
         )
-        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
 
-        # Create test context
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            global_config=global_config,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-            trunk_branch="main",
-        )
+        # Create test context using env helper
+        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
 
         result = runner.invoke(cli, ["switch", "root", "--script"], obj=test_ctx)
         assert result.exit_code == 0
 
-        # Output should be a temp file path
+        # Output should be a script path
         script_path = Path(result.output.strip())
-        assert script_path.exists()
         assert script_path.name.startswith("workstack-switch-")
         assert script_path.name.endswith(".sh")
 
-        # Verify script content
-        script_content = script_path.read_text()
+        # Verify script content (read from in-memory)
+        script_content = env.script_writer.get_script_content(script_path)
+        assert script_content is not None
         assert "cd" in script_content
-        assert str(env.root_worktree) in script_content
+        assert str(env.cwd) in script_content
         assert "root" in script_content.lower()
-
-        # Cleanup
-        script_path.unlink(missing_ok=True)
 
 
 def test_hidden_shell_cmd_switch_passthrough_on_help() -> None:
@@ -205,48 +169,35 @@ def test_hidden_shell_cmd_switch_passthrough_on_help() -> None:
 def test_list_includes_root() -> None:
     """Test that list command shows root repo with branch name."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        # Create linked worktree for "myfeature"
-        myfeature_path = env.create_linked_worktree("myfeature", "myfeature", chdir=False)
+    with pure_workstack_env(runner) as env:
+        # Create repo-specific workstacks directory
+        work_dir = env.workstacks_root / env.cwd.name
+        myfeature_path = work_dir / "myfeature"
 
         # Configure FakeGitOps with worktrees
         git_ops = FakeGitOps(
             worktrees={
-                env.root_worktree: [
-                    WorktreeInfo(path=env.root_worktree, branch="main", is_root=True),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
                     WorktreeInfo(path=myfeature_path, branch="myfeature", is_root=False),
                 ]
             },
             current_branches={
-                env.root_worktree: "main",
+                env.cwd: "main",
                 myfeature_path: "myfeature",
             },
-            git_common_dirs={
-                env.root_worktree: env.git_dir,
-                myfeature_path: env.git_dir,
-            },
-            default_branches={env.root_worktree: "main"},
+            default_branches={env.cwd: "main"},
         )
 
-        # Create global config with workstacks_root
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=work_dir,
         )
-        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
 
-        # Create test context
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            global_config=global_config,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-            trunk_branch="main",
-        )
+        # Create test context using env helper
+        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
 
         # List worktrees
         result = runner.invoke(cli, ["list"], obj=test_ctx)
@@ -274,56 +225,41 @@ def test_complete_worktree_names_without_context() -> None:
     from workstack.cli.commands.switch import complete_worktree_names
 
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        # Create linked worktrees
-        feature_a_path = env.create_linked_worktree("feature-a", "feature-a", chdir=False)
-        feature_b_path = env.create_linked_worktree("feature-b", "feature-b", chdir=False)
-        bugfix_123_path = env.create_linked_worktree("bugfix-123", "bugfix-123", chdir=False)
+    with pure_workstack_env(runner) as env:
+        # Create repo-specific workstacks directory
+        work_dir = env.workstacks_root / env.cwd.name
+        feature_a_path = work_dir / "feature-a"
+        feature_b_path = work_dir / "feature-b"
+        bugfix_123_path = work_dir / "bugfix-123"
 
         # Configure FakeGitOps with worktrees
         git_ops = FakeGitOps(
             worktrees={
-                env.root_worktree: [
-                    WorktreeInfo(path=env.root_worktree, branch="main", is_root=True),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
                     WorktreeInfo(path=feature_a_path, branch="feature-a", is_root=False),
                     WorktreeInfo(path=feature_b_path, branch="feature-b", is_root=False),
                     WorktreeInfo(path=bugfix_123_path, branch="bugfix-123", is_root=False),
                 ]
             },
             current_branches={
-                env.root_worktree: "main",
+                env.cwd: "main",
                 feature_a_path: "feature-a",
                 feature_b_path: "feature-b",
                 bugfix_123_path: "bugfix-123",
             },
-            git_common_dirs={
-                env.root_worktree: env.git_dir,
-                feature_a_path: env.git_dir,
-                feature_b_path: env.git_dir,
-                bugfix_123_path: env.git_dir,
-            },
-            default_branches={env.root_worktree: "main"},
+            default_branches={env.cwd: "main"},
         )
 
-        # Create global config with workstacks_root
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=work_dir,
         )
-        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
 
-        # Create test context with our fake setup
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            global_config=global_config,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-            trunk_branch="main",
-        )
+        # Create test context using env helper
+        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
 
         # Create a mock Click context with our test context
         ctx = click.Context(cli)
@@ -353,38 +289,30 @@ def test_complete_worktree_names_without_context() -> None:
 def test_switch_rejects_main_as_worktree_name() -> None:
     """Test that 'main' is rejected with helpful error."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
+        # Create repo-specific workstacks directory
+        work_dir = env.workstacks_root / env.cwd.name
+
         # Configure FakeGitOps with just root worktree
         git_ops = FakeGitOps(
             worktrees={
-                env.root_worktree: [
-                    WorktreeInfo(path=env.root_worktree, branch="main", is_root=True),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
                 ]
             },
-            current_branches={env.root_worktree: "main"},
-            git_common_dirs={env.root_worktree: env.git_dir},
-            default_branches={env.root_worktree: "main"},
+            current_branches={env.cwd: "main"},
+            default_branches={env.cwd: "main"},
         )
 
-        # Create global config with workstacks_root
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=work_dir,
         )
-        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
 
-        # Create test context
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            global_config=global_config,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-            trunk_branch="main",
-        )
+        # Create test context using env helper
+        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
 
         # Try to switch to "main"
         result = runner.invoke(cli, ["switch", "main"], obj=test_ctx)
@@ -398,26 +326,30 @@ def test_switch_rejects_main_as_worktree_name() -> None:
 def test_switch_rejects_master_as_worktree_name() -> None:
     """Test that 'master' is rejected with helpful error."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
+        # Create repo-specific workstacks directory
+        work_dir = env.workstacks_root / env.cwd.name
+
         # Configure FakeGitOps with master as trunk branch
         git_ops = FakeGitOps(
             worktrees={
-                env.root_worktree: [
-                    WorktreeInfo(path=env.root_worktree, branch="master", is_root=True),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="master", is_root=True),
                 ]
             },
-            current_branches={env.root_worktree: "master"},
-            git_common_dirs={env.root_worktree: env.git_dir},
-            default_branches={env.root_worktree: "master"},
+            current_branches={env.cwd: "master"},
+            default_branches={env.cwd: "master"},
         )
 
-        # Create test context
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-            trunk_branch="master",
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=work_dir,
         )
+
+        # Create test context using env helper (override trunk_branch)
+        test_ctx = env.build_context(git_ops=git_ops, repo=repo, trunk_branch="master")
 
         # Try to switch to "master"
         result = runner.invoke(cli, ["switch", "master"], obj=test_ctx)

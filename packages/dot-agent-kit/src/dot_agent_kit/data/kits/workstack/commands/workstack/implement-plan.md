@@ -141,6 +141,22 @@ For each phase in the plan:
 7. **Report progress**: what was done and what's next
 8. **Move to next phase**
 
+**IMPORTANT - Progress Tracking:**
+
+The `.PLAN.md` file has two distinct sections:
+
+1. **Main body (static reference material)**: Contains Objective, Context & Understanding, Implementation Steps/Phases, Testing. This section should NEVER be edited during implementation.
+
+2. **Progress Tracking section** (at the bottom): Contains Current Status, Last Updated, phase/step checkboxes, and overall progress metrics. This is the ONLY section that should be updated during implementation.
+
+When updating progress:
+- Only edit the "Progress Tracking" section at the bottom of `.PLAN.md`
+- Update "Current Status" field with current phase/step
+- Update "Last Updated" timestamp
+- Mark checkboxes as completed: `- [x]` instead of `- [ ]`
+- Update "Overall Progress" metrics
+- NEVER modify the main plan body (Objective, Context, Implementation Steps, etc.)
+
 ### Step 5: Follow Workstack Coding Standards
 
 The standards in CLAUDE.md OVERRIDE any conflicting guidance in the plan.

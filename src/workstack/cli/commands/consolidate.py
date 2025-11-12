@@ -165,9 +165,10 @@ def consolidate_cmd(
     # Safety check passed - all worktrees are clean
     if not script:
         click.echo(
-            click.style("✅ Safety check: All worktrees have no uncommitted changes", fg="green")
+            click.style("✅ Safety check: All worktrees have no uncommitted changes", fg="green"),
+            err=True,
         )
-        click.echo()
+        click.echo(err=True)
 
     # Create new worktree if --name is provided
     # Track temp branch name for cleanup after source worktree removal
@@ -201,7 +202,7 @@ def consolidate_cmd(
             )
 
             if not script:
-                click.echo(click.style(f"✅ Created new worktree: {name}", fg="green"))
+                click.echo(click.style(f"✅ Created new worktree: {name}", fg="green"), err=True)
 
             # Change to new worktree directory BEFORE removing source worktree
             # This prevents the shell from being in a deleted directory
@@ -211,12 +212,15 @@ def consolidate_cmd(
             ctx = create_context(dry_run=ctx.dry_run, repo_root=repo.root)
 
             if not script:
-                click.echo(click.style("✅ Changed directory to new worktree", fg="green"))
+                click.echo(
+                    click.style("✅ Changed directory to new worktree", fg="green"), err=True
+                )
 
             target_worktree_path = new_worktree_path
         else:
             click.echo(
-                click.style(f"[DRY RUN] Would create new worktree: {name}", fg="yellow", bold=True)
+                click.style(f"[DRY RUN] Would create new worktree: {name}", fg="yellow", bold=True),
+                err=True,
             )
             target_worktree_path = current_worktree  # In dry-run, keep current path
     else:
@@ -246,82 +250,91 @@ def consolidate_cmd(
         # Continue to source worktree removal when using --name
 
     # Display current stack (or partial stack) with visual indicators
-    if not script:
-        click.echo("\n" + click.style("Current stack:", bold=True))
-        for b in stack_branches:  # Show FULL stack for context
-            if b == current_branch:
-                marker = f" {click.style('←', fg='bright_green')} current"
-                branch_display = click.style(b, fg="bright_green", bold=True)
-            elif b in stack_to_consolidate:
-                marker = f" {click.style('→', fg='yellow')} consolidating"
-                branch_display = click.style(b, fg="yellow")
-            else:
-                marker = " (keeping separate)"
-                branch_display = click.style(b, fg="white", dim=True)
-
-            click.echo(f"  {branch_display}{marker}")
-
-        # Display target worktree info
-        if name is not None:
-            target_display = click.style(name, fg="cyan", bold=True)
-            click.echo(f"\n{click.style('Target worktree:', bold=True)} {target_display} (new)")
+    click.echo("\n" + click.style("Current stack:", bold=True), err=True)
+    for b in stack_branches:  # Show FULL stack for context
+        if b == current_branch:
+            marker = f" {click.style('←', fg='bright_green')} current"
+            branch_display = click.style(b, fg="bright_green", bold=True)
+        elif b in stack_to_consolidate:
+            marker = f" {click.style('→', fg='yellow')} consolidating"
+            branch_display = click.style(b, fg="yellow")
         else:
-            target_display = click.style(str(current_worktree), fg="cyan")
-            click.echo(f"\n{click.style('Target worktree:', bold=True)} {target_display} (current)")
+            marker = " (keeping separate)"
+            branch_display = click.style(b, fg="white", dim=True)
 
-        click.echo(f"\n{click.style('🗑️  Safe to remove (no uncommitted changes):', bold=True)}")
-        for wt in worktrees_to_remove:
-            branch_text = click.style(wt.branch or "detached", fg="yellow")
-            path_text = click.style(str(wt.path), fg="cyan")
-            click.echo(f"  - {branch_text} at {path_text}")
+        click.echo(f"  {branch_display}{marker}", err=True)
 
-        # Show source worktree removal if creating new worktree
-        if name is not None:
-            path_text = click.style(str(current_worktree), fg="cyan")
-            click.echo(f"  - source worktree at {path_text}")
-
-        # Inform user about stack restackability
-        click.echo()
+    # Display target worktree info
+    if name is not None:
+        target_display = click.style(name, fg="cyan", bold=True)
         click.echo(
-            f"ℹ️  Note: Use 'gt restack' on {target_worktree_path} to restack. "
-            "All branches are preserved."
+            f"\n{click.style('Target worktree:', bold=True)} {target_display} (new)", err=True
         )
+    else:
+        target_display = click.style(str(current_worktree), fg="cyan")
+        click.echo(
+            f"\n{click.style('Target worktree:', bold=True)} {target_display} (current)",
+            err=True,
+        )
+
+    click.echo(
+        f"\n{click.style('🗑️  Safe to remove (no uncommitted changes):', bold=True)}", err=True
+    )
+    for wt in worktrees_to_remove:
+        branch_text = click.style(wt.branch or "detached", fg="yellow")
+        path_text = click.style(str(wt.path), fg="cyan")
+        click.echo(f"  - {branch_text} at {path_text}", err=True)
+
+    # Show source worktree removal if creating new worktree
+    if name is not None:
+        path_text = click.style(str(current_worktree), fg="cyan")
+        click.echo(f"  - source worktree at {path_text}", err=True)
+
+    # Inform user about stack restackability
+    click.echo(err=True)
+    click.echo(
+        f"ℹ️  Note: Use 'gt restack' on {target_worktree_path} to restack. "
+        "All branches are preserved.",
+        err=True,
+    )
 
     # Exit if dry-run
     if dry_run:
-        click.echo(f"\n{click.style('[DRY RUN] No changes made', fg='yellow', bold=True)}")
+        click.echo(
+            f"\n{click.style('[DRY RUN] No changes made', fg='yellow', bold=True)}", err=True
+        )
         return
 
     # Get confirmation unless --force or --script
     if not force and not script:
-        click.echo()
+        click.echo(err=True)
         if not click.confirm(
             click.style("All worktrees are clean. Proceed with removal?", fg="yellow", bold=True),
             default=False,
         ):
-            click.echo(click.style("⭕ Aborted", fg="red", bold=True))
+            click.echo(click.style("⭕ Aborted", fg="red", bold=True), err=True)
             return
 
     # Remove worktrees
     if not script:
-        click.echo()
+        click.echo(err=True)
     for wt in worktrees_to_remove:
         ctx.git_ops.remove_worktree(repo.root, wt.path, force=True)
         path_text = click.style(str(wt.path), fg="green")
-        click.echo(f"✅ Removed: {path_text}")
+        click.echo(f"✅ Removed: {path_text}", err=True)
 
     # Remove source worktree if a new worktree was created
     if name is not None:
         ctx.git_ops.remove_worktree(repo.root, current_worktree.resolve(), force=True)
         path_text = click.style(str(current_worktree), fg="green")
-        click.echo(f"✅ Removed source worktree: {path_text}")
+        click.echo(f"✅ Removed source worktree: {path_text}", err=True)
 
         # Delete temporary branch after source worktree is removed
         # (can't delete while it's checked out in the source worktree)
         if temp_branch_name is not None:
             ctx.git_ops.delete_branch(repo.root, temp_branch_name, force=True)
 
-    click.echo(f"\n{click.style('✅ Consolidation complete', fg='green', bold=True)}")
+    click.echo(f"\n{click.style('✅ Consolidation complete', fg='green', bold=True)}", err=True)
 
     # Shell integration: generate script to activate new worktree
     if name is not None and script and not dry_run:
@@ -338,6 +351,6 @@ def consolidate_cmd(
         click.echo(str(result.path), nl=False)
     elif name is not None and not dry_run:
         # Manual cd instruction when not in script mode
-        click.echo(f"Switching to worktree: {click.style(name, fg='cyan', bold=True)}")
-        click.echo(f"\n{click.style('ℹ️', fg='blue')} Run this command to switch:")
-        click.echo(f"  cd {target_worktree_path}")
+        click.echo(f"Switching to worktree: {click.style(name, fg='cyan', bold=True)}", err=True)
+        click.echo(f"\n{click.style('ℹ️', fg='blue')} Run this command to switch:", err=True)
+        click.echo(f"  cd {target_worktree_path}", err=True)

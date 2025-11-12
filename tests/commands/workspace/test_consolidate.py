@@ -664,3 +664,55 @@ def test_consolidate_shows_output_without_script_flag() -> None:
         assert "✅ Removed:" in result.output
         assert str(wt1_path) in result.output
         assert "Consolidation complete" in result.output
+
+
+def test_consolidate_script_mode_outputs_to_stderr() -> None:
+    """Test consolidate outputs to stderr in script mode (shell integration).
+
+    This is a regression test for the bug where consolidate was silent when
+    invoked via shell integration because output went to stdout instead of stderr.
+
+    Shell integration only forwards stderr to the user (stdout is reserved for
+    the activation script path). This test verifies that all user-facing messages
+    are written to stderr when --script flag is enabled.
+    """
+    runner = CliRunner()
+    with simulated_workstack_env(runner) as env:
+        # Configure graphite with stack (main -> feature-1 -> feature-2)
+        graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
+
+        # Create worktrees to remove
+        workstacks_dir = env.workstacks_root / env.cwd.name
+        wt1_path = workstacks_dir / "wt1"
+        wt2_path = workstacks_dir / "wt2"
+        wt1_path.mkdir(parents=True)
+        wt2_path.mkdir(parents=True)
+
+        worktrees = {
+            env.cwd: [
+                WorktreeInfo(path=env.cwd, branch="feature-2"),
+                WorktreeInfo(path=wt1_path, branch="feature-1"),
+                WorktreeInfo(path=wt2_path, branch="main"),
+            ]
+        }
+
+        test_ctx = _create_test_context(
+            env, worktrees, "feature-2", graphite_ops, git_dir=env.git_dir
+        )
+
+        # Invoke with --script --force
+        result = runner.invoke(cli, ["consolidate", "--script", "-f"], obj=test_ctx)
+
+        assert result.exit_code == 0, result.output
+
+        # CRITICAL: Verify all user-facing messages are in stderr, not stdout
+        # Shell integration only forwards stderr to the user
+        assert "Current stack:" in result.stderr, "Stack preview should be in stderr"
+        assert "Safe to remove" in result.stderr, "Removal preview should be in stderr"
+        assert "✅ Removed:" in result.stderr, "Removal messages should be in stderr"
+        assert str(wt1_path) in result.stderr, "Worktree paths should be in stderr"
+        assert "Consolidation complete" in result.stderr, "Completion message should be in stderr"
+
+        # Verify preview information is shown
+        assert "consolidating" in result.stderr or "feature-1" in result.stderr
+        assert "feature-2" in result.stderr

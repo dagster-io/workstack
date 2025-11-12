@@ -14,20 +14,13 @@ def compliance_reminder_hook() -> None:
     """Output dignified-python compliance reminder for UserPromptSubmit hook."""
     click.echo("<reminder>")
     click.echo(
-        "🔴 DIGNIFIED PYTHON 3.13+: Load dignified-python-313 skill when editing Python. "
-        "STRICT compliance required."
+        "🔴 Dignified Python 3.13+: Load dignified-python-313 skill when editing Python. "
+        "Strict compliance required."
     )
     click.echo()
-    click.echo("LBYL (Look Before You Leap) NOT EAFP (Easier to Ask Forgiveness than Permission)")
-    click.echo("  • Check conditions FIRST: if key in dict, if path.exists(), if hasattr()")
-    click.echo("  • NEVER use try/except for control flow")
-    click.echo()
-    click.echo("FORBIDDEN patterns (will be rejected):")
-    click.echo("  • try/except for control flow → Use if key in dict, if path.exists(), etc.")
-    click.echo("  • List[str], Optional, Union → Use list[str], str|None")
-    click.echo("  • Relative imports (.module) → Use absolute (workstack.module)")
-    click.echo("  • Silent fallbacks → Let exceptions bubble, fail fast")
-    click.echo("  • from __future__ import annotations → Python 3.13+ doesn't need it")
+    click.echo("Look Before You Leap, not Easier to Ask Forgiveness than Permission")
+    click.echo("  • Check conditions first: if key in dict, if path.exists(), if hasattr()")
+    click.echo("  • Never use try/except for control flow")
     click.echo("</reminder>")
 
 

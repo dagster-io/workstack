@@ -1,16 +1,3 @@
----
-name: ephemeral-libcst-pro
-description: Use this skill for Python refactoring, renames, restructuring, or whenever you consider writing a script to transform code. Provides battle-tested LibCST patterns for systematic code transformations instead of ad-hoc scripting.
-version: 2.2.0
-tags:
-  - refactoring
-  - python
-  - ast
-  - libcst
-  - ephemeral
-  - codemods
----
-
 # Ephemeral LibCST Pro: Surgical Python Refactoring
 
 > **🔴 Agent trigger:** If you think "I should write a Python script to..." for code transformation → STOP and invoke this skill instead. It provides the patterns you need.
@@ -411,7 +398,7 @@ When Claude Code activates this skill:
 
 For detailed transformation patterns, gotchas, debugging techniques, and execution strategies, see:
 
-- **[references/patterns.md](references/patterns.md)** - 11 common patterns, 5 critical gotchas, 4 debugging techniques, advanced scope-aware refactoring
+- **patterns.md** - 11 common patterns, 5 critical gotchas, 4 debugging techniques, advanced scope-aware refactoring
 
 Load these references when you need:
 

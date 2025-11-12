@@ -13,6 +13,8 @@
 
 **CRITICAL: NEVER search, read, or access `/Users/schrockn/.claude` directory**
 
+**NOTE: `.PLAN.md` files are NOT tracked in git and should never be committed**
+
 | If you're about to write...                 | STOP! Check this instead                                                                             |
 | ------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | `try:` or `except:`                         | → [Exception Handling](#exception-handling) - Default: let exceptions bubble                         |
@@ -32,6 +34,7 @@
 | Prettier formatting issues                  | → Use `make prettier` (via runner agent with Task tool)                                              |
 | Submitting a branch with Graphite           | → Use /gt:submit-branch command (delegates to gt-branch-submitter agent)                             |
 | `gt ...` or user says "gt" or "graphite"    | → Use runner agent (Task tool, devrun subagent) for execution, graphite skill for knowledge          |
+| Python refactoring with LibCST              | → Use libcst-refactor agent (Task tool) for context isolation; loads guide + patterns docs           |
 | Stack traversal or "upstack"/"downstack"    | → [Graphite Stack Terminology](#-graphite-stack-terminology-critical) - main is at BOTTOM            |
 | 4+ levels of indentation                    | → Extract helper functions                                                                           |
 | Code in `__init__.py`                       | → Keep empty or docstring-only (except package entry points)                                         |
@@ -90,11 +93,12 @@ The `docs/agent/` folder contains only workstack-specific documentation (termino
 
 **ALWAYS use the Task tool with appropriate agent for:**
 
-| Tool Type                                       | Agent                 | Example                                                                            |
-| ----------------------------------------------- | --------------------- | ---------------------------------------------------------------------------------- |
-| `make`, `pytest`, `pyright`, `ruff`, `prettier` | `runner`              | Task(subagent_type="runner", prompt="Execute: make all-ci")                        |
-| `gt` commands (Graphite)                        | `runner`              | Task(subagent_type="runner", prompt="Execute: gt submit")                          |
-| Graphite branch submission workflow             | `gt-branch-submitter` | Task(subagent_type="gt-branch-submitter", prompt="Execute submit-branch workflow") |
+| Tool Type                                       | Agent                 | Example                                                                              |
+| ----------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------ |
+| `make`, `pytest`, `pyright`, `ruff`, `prettier` | `runner`              | Task(subagent_type="runner", prompt="Execute: make all-ci")                          |
+| `gt` commands (Graphite)                        | `runner`              | Task(subagent_type="runner", prompt="Execute: gt submit")                            |
+| Graphite branch submission workflow             | `gt-branch-submitter` | Task(subagent_type="gt-branch-submitter", prompt="Execute submit-branch workflow")   |
+| Python refactoring with LibCST                  | `libcst-refactor`     | Task(subagent_type="libcst-refactor", prompt="Rename function old_func to new_func") |
 
 ### Agent Invocation Pattern
 

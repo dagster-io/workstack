@@ -173,6 +173,14 @@ class PullRequestInfo:
     repo: str  # GitHub repo name (e.g., "workstack")
 
 
+@dataclass(frozen=True)
+class PRMergeability:
+    """GitHub PR mergeability status."""
+
+    mergeable: str  # "MERGEABLE", "CONFLICTING", "UNKNOWN"
+    merge_state_status: str  # "CLEAN", "BLOCKED", "UNSTABLE", "DIRTY", etc.
+
+
 class GitHubOps(ABC):
     """Abstract interface for GitHub operations.
 
@@ -234,6 +242,14 @@ class GitHubOps(ABC):
             repo_root: Repository root directory
             pr_number: PR number to update
             new_base: New base branch name
+        """
+        ...
+
+    @abstractmethod
+    def get_pr_mergeability(self, repo_root: Path, pr_number: int) -> PRMergeability | None:
+        """Get PR mergeability status from GitHub.
+
+        Returns None if PR not found or API error.
         """
         ...
 
@@ -360,6 +376,35 @@ class RealGitHubOps(GitHubOps):
             # Graceful degradation - operation skipped
             pass
 
+    def get_pr_mergeability(self, repo_root: Path, pr_number: int) -> PRMergeability | None:
+        """Get PR mergeability status from GitHub via gh CLI.
+
+        Note: Uses try/except as an acceptable error boundary for handling gh CLI
+        availability and authentication. We cannot reliably check gh installation
+        and authentication status a priori without duplicating gh's logic.
+        """
+        try:
+            result = subprocess.run(
+                ["gh", "pr", "view", str(pr_number), "--json", "mergeable,mergeStateStatus"],
+                cwd=repo_root,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                check=True,
+            )
+            data = json.loads(result.stdout)
+            return PRMergeability(
+                mergeable=data["mergeable"],
+                merge_state_status=data["mergeStateStatus"],
+            )
+        except (
+            subprocess.CalledProcessError,
+            json.JSONDecodeError,
+            KeyError,
+            FileNotFoundError,
+        ):
+            return None
+
 
 # ============================================================================
 # Dry-Run Wrapper
@@ -404,3 +449,7 @@ class DryRunGitHubOps(GitHubOps):
         import click
 
         click.echo(f"  gh pr edit {pr_number} --base {new_base}")
+
+    def get_pr_mergeability(self, repo_root: Path, pr_number: int) -> PRMergeability | None:
+        """Delegate read operation to wrapped implementation."""
+        return self._wrapped.get_pr_mergeability(repo_root, pr_number)

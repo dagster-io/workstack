@@ -9,6 +9,85 @@ from workstack.cli.core import discover_repo_context
 from workstack.core.context import WorkstackContext, regenerate_context
 from workstack.core.graphite_ops import BranchMetadata
 
+"""
+Workstack land-stack command: Land stacked PRs sequentially from bottom to top.
+
+## Module Overview
+
+Purpose: Merges a stack of Graphite pull requests sequentially from bottom
+(closest to trunk) to top (current branch), with restacking between each merge.
+
+Stack direction: main (bottom) → feat-1 → feat-2 → feat-3 (top)
+Landing order: feat-1, then feat-2, then feat-3 (bottom to top)
+
+Integration: Works with Graphite (gt CLI), GitHub CLI (gh), and worktrees.
+
+## Complete 5-Phase Workflow
+
+### Phase 1: Discovery & Validation
+- Build list of branches from bottom of stack to current branch
+- Check Graphite enabled, clean working directory, not on trunk, no worktree conflicts
+- Verify all branches have open PRs
+- Check GitHub for merge conflicts (prevents landing failures)
+
+### Phase 2: User Confirmation
+- Display PRs to land and get user confirmation (or --force to skip)
+
+### Phase 3: Landing Sequence
+For each branch from bottom to top:
+  1. Checkout branch (or verify already on branch)
+  2. Verify stack integrity (parent is trunk after previous restacks)
+  3. Update PR base branch on GitHub if stale
+  4. Merge PR via `gh pr merge --squash --auto`
+  5. Restack remaining branches via `gt sync -f`
+  6. Submit updated PRs to GitHub
+
+### Phase 4: Cleanup
+- Remove merged branch worktrees
+- Navigate to safe branch (trunk or next unmerged branch)
+- Regenerate context after directory changes
+
+### Phase 5: Final State
+- Display what was accomplished
+- Show current branch and merged branches
+
+## Key Concepts
+
+**Stack Direction:**
+- Bottom (downstack) = trunk (main/master)
+- Top (upstack) = leaves (feature branches furthest from trunk)
+- Commands like `gt up` / `gt down` navigate this direction
+
+**Restacking:**
+After each PR merge, `gt sync -f` rebases all remaining branches onto the
+new trunk state. This maintains stack integrity as PRs are landed.
+
+**Worktree Conflicts:**
+Git prevents checking out a branch in multiple worktrees. Phase 1 validation
+detects this and suggests `workstack consolidate` to fix.
+
+**Context Regeneration:**
+After `os.chdir()` calls, must regenerate WorkstackContext to update `ctx.cwd`.
+This happens in Phase 4 after navigation operations.
+
+## Error Handling Strategy
+
+**Fail Fast:**
+All validation happens in Phase 1, before user confirmation. If any
+precondition fails, command exits immediately with helpful error message.
+
+**Error Types:**
+- `SystemExit(1)` - All validation failures and expected errors
+- `subprocess.CalledProcessError` - git/gh/gt command failures (caught and converted to SystemExit)
+- `FileNotFoundError` - Missing CLI tools (caught and converted to SystemExit)
+
+**Error Messages:**
+All errors include:
+- Clear description of what failed
+- Context (branch names, paths, PR numbers)
+- Concrete fix steps ("To fix: ...")
+"""
+
 
 def _emit(message: str, *, script_mode: bool, error: bool = False) -> None:
     """Emit a message to stdout or stderr based on script mode.
@@ -278,6 +357,52 @@ def _validate_branches_have_prs(
         raise SystemExit(1)
 
     return valid_branches
+
+
+def _validate_pr_mergeability(
+    ctx: WorkstackContext,
+    repo_root: Path,
+    branches: list[BranchPR],
+    *,
+    script_mode: bool,
+) -> None:
+    """Validate all PRs are mergeable (no conflicts)."""
+    conflicts: list[tuple[str, int]] = []
+
+    for branch_pr in branches:
+        mergeability = ctx.github_ops.get_pr_mergeability(repo_root, branch_pr.pr_number)
+
+        if mergeability is None:
+            # API error - log warning but don't fail
+            continue
+
+        if mergeability.mergeable == "CONFLICTING":
+            conflicts.append((branch_pr.branch, branch_pr.pr_number))
+        elif mergeability.mergeable == "UNKNOWN":
+            # GitHub hasn't computed yet - log warning but don't fail
+            _emit(
+                f"⚠️  Warning: PR #{branch_pr.pr_number} mergeability unknown",
+                script_mode=script_mode,
+                error=False,
+            )
+
+    if conflicts:
+        # Show error with all conflicts and resolution steps
+        _emit(
+            "Error: Cannot land stack - PRs have merge conflicts\n",
+            script_mode=script_mode,
+            error=True,
+        )
+        for branch, pr_num in conflicts:
+            _emit(
+                f"  • PR #{pr_num} ({branch}): has conflicts with main",
+                script_mode=script_mode,
+                error=True,
+            )
+        _emit("\nTo fix:", script_mode=script_mode, error=True)
+        _emit("  1. Fetch latest: git fetch origin main", script_mode=script_mode, error=True)
+        _emit("  2. Rebase stack: gt stack rebase", script_mode=script_mode, error=True)
+        raise SystemExit(1)
 
 
 def _show_landing_plan(
@@ -725,6 +850,9 @@ def land_stack(
     valid_branches = _validate_branches_have_prs(
         ctx, repo.root, branches_to_land, script_mode=script
     )
+
+    # Validate no merge conflicts
+    _validate_pr_mergeability(ctx, repo.root, valid_branches, script_mode=script)
 
     # Get trunk branch (parent of first branch to land)
     if not valid_branches:

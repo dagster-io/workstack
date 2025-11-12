@@ -12,7 +12,6 @@ from workstack.cli.config import LoadedConfig
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
 from workstack.core.global_config import GlobalConfig
-from workstack.core.repo_discovery import RepoContext
 
 
 def test_create_basic_worktree() -> None:
@@ -120,17 +119,11 @@ def test_create_with_plan_file() -> None:
             show_pr_checks=False,
         )
 
-        repo = RepoContext(
-            root=env.root_worktree,
-            repo_name=env.root_worktree.name,
-            workstacks_dir=workstacks_dir,
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             local_config=local_config,
-            repo=repo,
+            repo=env.repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -175,17 +168,11 @@ def test_create_with_plan_file_removes_plan_word() -> None:
             show_pr_checks=False,
         )
 
-        repo = RepoContext(
-            root=env.root_worktree,
-            repo_name=env.root_worktree.name,
-            workstacks_dir=workstacks_dir,
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             local_config=local_config,
-            repo=repo,
+            repo=env.repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -456,17 +443,11 @@ def test_create_runs_post_create_commands() -> None:
             show_pr_checks=False,
         )
 
-        repo = RepoContext(
-            root=env.root_worktree,
-            repo_name=env.root_worktree.name,
-            workstacks_dir=workstacks_dir,
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             local_config=local_config,
-            repo=repo,
+            repo=env.repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -503,17 +484,11 @@ def test_create_sets_env_variables() -> None:
             show_pr_checks=False,
         )
 
-        repo = RepoContext(
-            root=env.root_worktree,
-            repo_name=env.root_worktree.name,
-            workstacks_dir=workstacks_dir,
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             local_config=local_config,
-            repo=repo,
+            repo=env.repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -565,18 +540,12 @@ def test_create_uses_graphite_when_enabled() -> None:
         )
         graphite_ops = FakeGraphiteOps()
 
-        repo = RepoContext(
-            root=env.root_worktree,
-            repo_name=env.root_worktree.name,
-            workstacks_dir=workstacks_dir,
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             graphite_ops=graphite_ops,
             global_config=global_config_ops,
             local_config=local_config,
-            repo=repo,
+            repo=env.repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -617,17 +586,11 @@ def test_create_blocks_when_staged_changes_present_with_graphite_enabled() -> No
             show_pr_checks=False,
         )
 
-        repo = RepoContext(
-            root=env.root_worktree,
-            repo_name=env.root_worktree.name,
-            workstacks_dir=workstacks_dir,
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             local_config=local_config,
-            repo=repo,
+            repo=env.repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -1057,17 +1020,11 @@ def test_create_with_keep_plan_flag() -> None:
             show_pr_checks=False,
         )
 
-        repo = RepoContext(
-            root=env.root_worktree,
-            repo_name=env.root_worktree.name,
-            workstacks_dir=workstacks_dir,
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             local_config=local_config,
-            repo=repo,
+            repo=env.repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -1181,18 +1138,12 @@ def test_from_current_branch_with_main_in_use_prefers_graphite_parent() -> None:
             show_pr_checks=False,
         )
 
-        repo = RepoContext(
-            root=env.root_worktree,
-            repo_name=env.root_worktree.name,
-            workstacks_dir=workstacks_dir,
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             graphite_ops=graphite_ops,
             global_config=global_config_ops,
             local_config=local_config,
-            repo=repo,
+            repo=env.repo,
             script_writer=env.script_writer,
             cwd=current_worktree,
         )
@@ -1585,17 +1536,11 @@ def test_create_with_json_and_plan_file() -> None:
             show_pr_checks=False,
         )
 
-        repo = RepoContext(
-            root=env.root_worktree,
-            repo_name=env.root_worktree.name,
-            workstacks_dir=workstacks_dir,
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             local_config=local_config,
-            repo=repo,
+            repo=env.repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -1778,17 +1723,11 @@ def test_create_with_stay_and_plan() -> None:
             show_pr_checks=False,
         )
 
-        repo = RepoContext(
-            root=env.root_worktree,
-            repo_name=env.root_worktree.name,
-            workstacks_dir=workstacks_dir,
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             local_config=local_config,
-            repo=repo,
+            repo=env.repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -2000,17 +1939,11 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
             show_pr_checks=False,
         )
 
-        repo = RepoContext(
-            root=env.root_worktree,
-            repo_name=env.root_worktree.name,
-            workstacks_dir=workstacks_dir,
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             local_config=local_config,
-            repo=repo,
+            repo=env.repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )

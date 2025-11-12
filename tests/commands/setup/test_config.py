@@ -10,7 +10,6 @@ from workstack.cli.cli import cli
 from workstack.cli.config import LoadedConfig
 from workstack.core.context import WorkstackContext
 from workstack.core.global_config import GlobalConfig
-from workstack.core.repo_discovery import RepoContext
 
 
 def test_config_list_displays_global_config() -> None:
@@ -26,17 +25,10 @@ def test_config_list_displays_global_config() -> None:
             show_pr_checks=False,
         )
 
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        repo = RepoContext(
-            root=env.cwd,
-            repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            repo=repo,
+            repo=env.repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -55,8 +47,6 @@ def test_config_list_displays_repo_config() -> None:
     """Test that config list displays repository configuration."""
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=env.workstacks_root,
@@ -73,17 +63,11 @@ def test_config_list_displays_repo_config() -> None:
             post_create_shell="/bin/bash",
         )
 
-        repo = RepoContext(
-            root=env.cwd,
-            repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             local_config=local_config,
-            repo=repo,
+            repo=env.repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -110,17 +94,10 @@ def test_config_list_handles_missing_repo_config() -> None:
             show_pr_checks=False,
         )
 
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        repo = RepoContext(
-            root=env.cwd,
-            repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            repo=repo,
+            repo=env.repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -173,17 +150,10 @@ def test_config_get_workstacks_root() -> None:
             show_pr_checks=False,
         )
 
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        repo = RepoContext(
-            root=env.cwd,
-            repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            repo=repo,
+            repo=env.repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -207,17 +177,10 @@ def test_config_get_use_graphite() -> None:
             show_pr_checks=False,
         )
 
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        repo = RepoContext(
-            root=env.cwd,
-            repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            repo=repo,
+            repo=env.repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -241,17 +204,10 @@ def test_config_get_show_pr_info() -> None:
             show_pr_checks=False,
         )
 
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        repo = RepoContext(
-            root=env.cwd,
-            repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            repo=repo,
+            repo=env.repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -275,17 +231,10 @@ def test_config_get_show_pr_checks() -> None:
             show_pr_checks=True,  # Set to True to match expected output
         )
 
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        repo = RepoContext(
-            root=env.cwd,
-            repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            repo=repo,
+            repo=env.repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -300,8 +249,6 @@ def test_config_get_env_key() -> None:
     """Test getting env.* config value."""
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=env.workstacks_root,
@@ -318,17 +265,11 @@ def test_config_get_env_key() -> None:
             post_create_shell=None,
         )
 
-        repo = RepoContext(
-            root=env.cwd,
-            repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             local_config=local_config,
-            repo=repo,
+            repo=env.repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -343,8 +284,6 @@ def test_config_get_post_create_shell() -> None:
     """Test getting post_create.shell config value."""
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=env.workstacks_root,
@@ -361,17 +300,11 @@ def test_config_get_post_create_shell() -> None:
             post_create_shell="/bin/zsh",
         )
 
-        repo = RepoContext(
-            root=env.cwd,
-            repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             local_config=local_config,
-            repo=repo,
+            repo=env.repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -386,8 +319,6 @@ def test_config_get_post_create_commands() -> None:
     """Test getting post_create.commands config value."""
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=env.workstacks_root,
@@ -404,17 +335,11 @@ def test_config_get_post_create_commands() -> None:
             post_create_shell=None,
         )
 
-        repo = RepoContext(
-            root=env.cwd,
-            repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             local_config=local_config,
-            repo=repo,
+            repo=env.repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -430,8 +355,6 @@ def test_config_get_env_key_not_found() -> None:
     """Test that getting non-existent env key fails."""
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = GlobalConfig(
             workstacks_root=env.workstacks_root,
@@ -448,17 +371,11 @@ def test_config_get_env_key_not_found() -> None:
             post_create_shell=None,
         )
 
-        repo = RepoContext(
-            root=env.cwd,
-            repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             local_config=local_config,
-            repo=repo,
+            repo=env.repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -482,17 +399,10 @@ def test_config_get_invalid_key_format() -> None:
             show_pr_checks=False,
         )
 
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        repo = RepoContext(
-            root=env.cwd,
-            repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            repo=repo,
+            repo=env.repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -523,16 +433,10 @@ def test_config_get_invalid_key() -> None:
             show_pr_checks=False,
         )
 
-        repo = RepoContext(
-            root=env.cwd,
-            repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            repo=repo,
+            repo=env.repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -563,16 +467,10 @@ def test_config_key_with_multiple_dots() -> None:
             show_pr_checks=False,
         )
 
-        repo = RepoContext(
-            root=env.cwd,
-            repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
-            repo=repo,
+            repo=env.repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )

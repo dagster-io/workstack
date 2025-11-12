@@ -5,12 +5,23 @@
 **ALWAYS use temp directories via `tmp_path` fixture or simulated environments:**
 
 ```python
-# ❌ WRONG - Hardcoded paths
-cwd=Path("/test/default/cwd")
-cwd=Path("/some/hardcoded/path")
+# ❌ CATASTROPHICALLY DANGEROUS - User/home directory paths
+cwd=Path("/Users/username/...")
+cwd=Path.home() / "some/path"
+cwd=Path("/home/username/...")
+
+# ❌ WRONG - Hardcoded sentinel paths (use tmp_path instead)
+cwd=Path("/test/default/cwd")  # Placeholder meant to pass through to APIs
+cwd=Path("/some/hardcoded/path")  # Sentinel value that doesn't exercise path
 ```
 
-**Why use temp directories:**
+**Why user/home paths are catastrophic:**
+
+1. **Real filesystem mutation**: Code may write files to actual user directories
+2. **Global config pollution**: Can corrupt real `.workstack` configuration
+3. **Security risk**: Creating files in user directories can be exploited
+
+**Why sentinel paths should use tmp_path:**
 
 1. **Isolation**: Each test gets its own temporary directory that's automatically cleaned up
 2. **No pollution**: Prevents writing to real filesystem or global config

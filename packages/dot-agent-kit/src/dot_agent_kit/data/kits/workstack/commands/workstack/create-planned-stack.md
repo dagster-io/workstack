@@ -709,6 +709,24 @@ Use hybrid context linking:
 
 - Tests are integrated within implementation steps
 - Final validation: Run `/ensure-ci`
+
+---
+
+## Progress Tracking
+
+**Current Status:** [Status description]
+
+**Last Updated:** [Date]
+
+### Implementation Progress
+
+- [ ] Step 1: [Description from Implementation Steps]
+- [ ] Step 2: [Description from Implementation Steps]
+- [ ] Step 3: [Description from Implementation Steps]
+
+### Overall Progress
+
+**Steps Completed:** 0 / N
 ```
 
 **For Multi-Phase Plans:**
@@ -775,6 +793,34 @@ Use hybrid context linking:
 
 **Branch**: feature-2 (stacks on: feature-1)
 [Continue pattern...]
+
+---
+
+## Progress Tracking
+
+**Current Status:** [Status description]
+
+**Last Updated:** [Date]
+
+### Phase 1: [Phase Name]
+
+**Status:** ⏸️ NOT STARTED
+
+- [ ] Step 1: [Description from Phase 1 Steps]
+- [ ] Step 2: [Description from Phase 1 Steps]
+- [ ] Step 3: [Description from Phase 1 Steps]
+
+### Phase 2: [Phase Name]
+
+**Status:** ⏸️ NOT STARTED
+
+- [ ] Step 1: [Description from Phase 2 Steps]
+- [ ] Step 2: [Description from Phase 2 Steps]
+
+### Overall Progress
+
+**Phases Complete:** 0 / N
+**Total Steps:** 0 / M
 ```
 
 #### Apply Hybrid Context Linking

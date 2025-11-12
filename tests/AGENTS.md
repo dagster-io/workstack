@@ -164,5 +164,6 @@ Each subdirectory has targeted CLAUDE.md files with domain-specific patterns:
 3. **Constructor injection** - All fake state configured at construction
 4. **Mutation tracking** - Use read-only properties for assertions (e.g., `git_ops.deleted_branches`)
 5. **Three implementations** - Real (production), Dry-Run (safety), Fake (testing)
+6. **Use `env.build_context()` helper** - Avoid manual GlobalConfig construction (see [commands/AGENTS.md](commands/AGENTS.md#context-construction) for details)
 
 For complete details, see [docs/TESTING.md](../docs/TESTING.md).

@@ -98,9 +98,6 @@ def _invoke_hidden_command(
     script_path = result.output.strip() if result.output else None
 
     debug_log(f"Handler: Got script_path={script_path}, exit_code={exit_code}")
-    if script_path:
-        script_exists = Path(script_path).exists()
-        debug_log(f"Handler: Script exists? {script_exists}")
 
     # Warn if command succeeded but produced no output
     if exit_code == 0 and (script_path is None or not script_path):

@@ -11,9 +11,8 @@ from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from tests.test_utils.env_helpers import simulated_workstack_env
 from workstack.cli.cli import cli
-from workstack.core.context import WorkstackContext
 from workstack.core.gitops import DryRunGitOps
-from workstack.core.global_config import GlobalConfig
+from workstack.core.repo_discovery import RepoContext
 
 
 def test_rename_successful() -> None:
@@ -28,21 +27,17 @@ def test_rename_successful() -> None:
         )
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        test_ctx = WorkstackContext.for_test(
+        repo = RepoContext(
+            root=env.root_worktree,
+            repo_name=env.root_worktree.name,
+            workstacks_dir=env.workstacks_root / env.root_worktree.name,
+        )
+        test_ctx = env.build_context(
             git_ops=git_ops,
-            global_config=GlobalConfig(
-                workstacks_root=env.workstacks_root,
-                use_graphite=False,
-                shell_setup_complete=False,
-                show_pr_info=True,
-                show_pr_checks=False,
-            ),
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
-            repo=env.repo,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
+            repo=repo,
             dry_run=False,
         )
         result = runner.invoke(cli, ["rename", "old-name", "new-name"], obj=test_ctx)
@@ -56,20 +51,11 @@ def test_rename_old_worktree_not_found() -> None:
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
             git_ops=git_ops,
-            global_config=GlobalConfig(
-                workstacks_root=env.workstacks_root,
-                use_graphite=False,
-                shell_setup_complete=False,
-                show_pr_info=True,
-                show_pr_checks=False,
-            ),
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
-            script_writer=env.script_writer,
-            cwd=env.cwd,
             dry_run=False,
         )
         result = runner.invoke(cli, ["rename", "nonexistent", "new-name"], obj=test_ctx)
@@ -89,21 +75,17 @@ def test_rename_new_name_already_exists() -> None:
         existing_wt.mkdir(parents=True)
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        test_ctx = WorkstackContext.for_test(
+        repo = RepoContext(
+            root=env.root_worktree,
+            repo_name=env.root_worktree.name,
+            workstacks_dir=env.workstacks_root / env.root_worktree.name,
+        )
+        test_ctx = env.build_context(
             git_ops=git_ops,
-            global_config=GlobalConfig(
-                workstacks_root=env.workstacks_root,
-                use_graphite=False,
-                shell_setup_complete=False,
-                show_pr_info=True,
-                show_pr_checks=False,
-            ),
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
-            repo=env.repo,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
+            repo=repo,
             dry_run=False,
         )
         result = runner.invoke(cli, ["rename", "old-name", "existing"], obj=test_ctx)
@@ -122,21 +104,18 @@ def test_rename_with_graphite_enabled() -> None:
 
         # Enable Graphite
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        test_ctx = WorkstackContext.for_test(
+        repo = RepoContext(
+            root=env.root_worktree,
+            repo_name=env.root_worktree.name,
+            workstacks_dir=env.workstacks_root / env.root_worktree.name,
+        )
+        test_ctx = env.build_context(
+            use_graphite=True,
             git_ops=git_ops,
-            global_config=GlobalConfig(
-                workstacks_root=env.workstacks_root,
-                use_graphite=True,
-                shell_setup_complete=False,
-                show_pr_info=True,
-                show_pr_checks=False,
-            ),
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
-            repo=env.repo,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
+            repo=repo,
             dry_run=False,
         )
 
@@ -156,21 +135,17 @@ def test_rename_dry_run() -> None:
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         git_ops = DryRunGitOps(git_ops)
-        test_ctx = WorkstackContext.for_test(
+        repo = RepoContext(
+            root=env.root_worktree,
+            repo_name=env.root_worktree.name,
+            workstacks_dir=env.workstacks_root / env.root_worktree.name,
+        )
+        test_ctx = env.build_context(
             git_ops=git_ops,
-            global_config=GlobalConfig(
-                workstacks_root=env.workstacks_root,
-                use_graphite=False,
-                shell_setup_complete=False,
-                show_pr_info=True,
-                show_pr_checks=False,
-            ),
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
-            repo=env.repo,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
+            repo=repo,
             dry_run=True,
         )
         result = runner.invoke(cli, ["rename", "old-name", "new-name"], obj=test_ctx)

@@ -7,9 +7,8 @@ from click.testing import CliRunner
 from tests.fakes.gitops import FakeGitOps
 from tests.test_utils.env_helpers import pure_workstack_env, simulated_workstack_env
 from workstack.cli.cli import cli
-from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
-from workstack.core.global_config import GlobalConfig
+from workstack.core.repo_discovery import RepoContext
 
 
 def test_jump_to_branch_in_single_worktree() -> None:
@@ -38,21 +37,14 @@ def test_jump_to_branch_in_single_worktree() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
+        # Create RepoContext to avoid filesystem checks in discover_repo_context
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name="repo",
+            workstacks_dir=env.workstacks_root / "repo",
         )
 
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            script_writer=env.script_writer,
-            repo=env.repo,
-            cwd=env.cwd,
-        )
+        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
 
         # Jump to feature-2 which is checked out in feature_wt
         result = runner.invoke(
@@ -90,20 +82,7 @@ def test_jump_to_branch_not_found() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-        )
+        test_ctx = env.build_context(git_ops=git_ops)
 
         # Jump to a branch that doesn't exist
         result = runner.invoke(
@@ -141,20 +120,7 @@ def test_jump_to_branch_in_stack_but_not_checked_out() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-        )
+        test_ctx = env.build_context(git_ops=git_ops)
 
         # Jump to feature-base which exists in repo but is not checked out in any worktree
         result = runner.invoke(cli, ["jump", "feature-base"], obj=test_ctx, catch_exceptions=False)
@@ -184,20 +150,7 @@ def test_jump_works_without_graphite() -> None:
         )
 
         # Graphite is NOT enabled - jump should still work
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-        )
+        test_ctx = env.build_context(git_ops=git_ops)
 
         result = runner.invoke(
             cli, ["jump", "feature-1", "--script"], obj=test_ctx, catch_exceptions=False
@@ -231,20 +184,7 @@ def test_jump_already_on_target_branch() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-        )
+        test_ctx = env.build_context(git_ops=git_ops)
 
         # Jump to feature-1 which is already checked out
         result = runner.invoke(
@@ -279,20 +219,7 @@ def test_jump_succeeds_when_branch_exactly_checked_out() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-        )
+        test_ctx = env.build_context(git_ops=git_ops)
 
         # Jump to feature-2 which is checked out in feature_wt
         result = runner.invoke(
@@ -335,20 +262,7 @@ def test_jump_with_multiple_worktrees_same_branch() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-        )
+        test_ctx = env.build_context(git_ops=git_ops)
 
         # Jump to feature-2 which is checked out in multiple worktrees
         result = runner.invoke(

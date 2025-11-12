@@ -79,20 +79,11 @@ def test_sync_runs_gt_sync_from_root() -> None:
             },
         )
 
-        # use_graphite=True: Feature requires graphite
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = FakeGraphiteOps()
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
+            use_graphite=True,
             git_ops=git_ops,
-            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
@@ -127,20 +118,11 @@ def test_sync_with_force_flag() -> None:
             },
         )
 
-        # use_graphite=True: Feature requires graphite
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = FakeGraphiteOps()
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
+            use_graphite=True,
             git_ops=git_ops,
-            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
@@ -174,21 +156,12 @@ def test_sync_handles_gt_not_installed() -> None:
             },
         )
 
-        # use_graphite=True: Feature requires graphite
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         # Configure graphite_ops to raise FileNotFoundError
         graphite_ops = FakeGraphiteOps(sync_raises=FileNotFoundError())
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
+            use_graphite=True,
             git_ops=git_ops,
-            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
@@ -217,23 +190,14 @@ def test_sync_handles_gt_sync_failure() -> None:
             },
         )
 
-        # use_graphite=True: Feature requires graphite
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         # Configure graphite_ops to raise CalledProcessError
         graphite_ops = FakeGraphiteOps(
             sync_raises=subprocess.CalledProcessError(128, ["gt", "sync"])
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
+            use_graphite=True,
             git_ops=git_ops,
-            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
@@ -273,15 +237,6 @@ def test_sync_identifies_deletable_workstacks() -> None:
             },
         )
 
-        # use_graphite=True: Feature requires graphite
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = FakeGraphiteOps()
 
         # feature-1 is merged, feature-2 is open
@@ -292,9 +247,9 @@ def test_sync_identifies_deletable_workstacks() -> None:
             }
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
+            use_graphite=True,
             git_ops=git_ops,
-            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
@@ -327,20 +282,11 @@ def test_sync_no_deletable_workstacks() -> None:
             },
         )
 
-        # use_graphite=True: Feature requires graphite
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = FakeGraphiteOps()
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
+            use_graphite=True,
             git_ops=git_ops,
-            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
@@ -377,21 +323,12 @@ def test_sync_with_confirmation() -> None:
             },
         )
 
-        # use_graphite=True: Feature requires graphite
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = FakeGraphiteOps()
         github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
+            use_graphite=True,
             git_ops=git_ops,
-            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
@@ -429,21 +366,12 @@ def test_sync_user_cancels() -> None:
             },
         )
 
-        # use_graphite=True: Feature requires graphite
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = FakeGraphiteOps()
         github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
+            use_graphite=True,
             git_ops=git_ops,
-            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
@@ -482,21 +410,12 @@ def test_sync_force_skips_confirmation() -> None:
             },
         )
 
-        # use_graphite=True: Feature requires graphite
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = FakeGraphiteOps()
         github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
+            use_graphite=True,
             git_ops=git_ops,
-            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
@@ -534,21 +453,12 @@ def test_sync_dry_run() -> None:
             },
         )
 
-        # use_graphite=True: Feature requires graphite
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = FakeGraphiteOps()
         github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
+            use_graphite=True,
             git_ops=git_ops,
-            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
@@ -588,21 +498,12 @@ def test_sync_return_to_original_worktree() -> None:
             },
         )
 
-        # use_graphite=True: Feature requires graphite
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = FakeGraphiteOps()
         github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("OPEN", 123, "Feature 1")})
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
+            use_graphite=True,
             git_ops=git_ops,
-            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
@@ -641,21 +542,12 @@ def test_sync_original_worktree_deleted() -> None:
             },
         )
 
-        # use_graphite=True: Feature requires graphite
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = FakeGraphiteOps()
         github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
+            use_graphite=True,
             git_ops=git_ops,
-            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
@@ -719,25 +611,15 @@ def test_sync_script_mode_when_worktree_exists() -> None:
             },
         )
 
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = FakeGraphiteOps()
         github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("OPEN", 123, "Feature 1")})
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
+            use_graphite=True,
             git_ops=git_ops,
-            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
-            script_writer=env.script_writer,
-            cwd=env.cwd,
             dry_run=False,
         )
 
@@ -792,22 +674,13 @@ def test_sync_force_runs_double_gt_sync() -> None:
             },
         )
 
-        # use_graphite=True: Feature requires graphite
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = FakeGraphiteOps()
         # feature-1 is merged
         github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
+            use_graphite=True,
             git_ops=git_ops,
-            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
@@ -854,22 +727,13 @@ def test_sync_without_force_runs_single_gt_sync() -> None:
             },
         )
 
-        # use_graphite=True: Feature requires graphite
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = FakeGraphiteOps()
         # feature-1 is merged
         github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
+            use_graphite=True,
             git_ops=git_ops,
-            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
@@ -913,22 +777,13 @@ def test_sync_force_dry_run_no_sync_calls() -> None:
             },
         )
 
-        # use_graphite=True: Feature requires graphite
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = FakeGraphiteOps()
         # feature-1 is merged
         github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
+            use_graphite=True,
             git_ops=git_ops,
-            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
@@ -960,20 +815,11 @@ def test_sync_force_no_deletable_single_sync() -> None:
             },
         )
 
-        # use_graphite=True: Feature requires graphite
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = FakeGraphiteOps()
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
+            use_graphite=True,
             git_ops=git_ops,
-            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
@@ -1008,19 +854,11 @@ def test_sync_verbose_flag() -> None:
             },
         )
 
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = FakeGraphiteOps()
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
+            use_graphite=True,
             git_ops=git_ops,
-            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
@@ -1054,19 +892,11 @@ def test_sync_verbose_short_flag() -> None:
             },
         )
 
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = FakeGraphiteOps()
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
+            use_graphite=True,
             git_ops=git_ops,
-            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
@@ -1099,19 +929,11 @@ def test_sync_force_verbose_combination() -> None:
             },
         )
 
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = FakeGraphiteOps()
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
+            use_graphite=True,
             git_ops=git_ops,
-            global_config=global_config_ops,
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),

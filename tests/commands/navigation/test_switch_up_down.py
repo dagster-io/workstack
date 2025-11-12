@@ -8,9 +8,7 @@ from click.testing import CliRunner
 from tests.fakes.gitops import FakeGitOps
 from tests.test_utils.env_helpers import simulated_workstack_env
 from workstack.cli.cli import cli
-from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
-from workstack.core.global_config import GlobalConfig
 from workstack.core.graphite_ops import RealGraphiteOps
 
 
@@ -84,23 +82,9 @@ def test_switch_up_with_existing_worktree() -> None:
             },
         )
 
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = RealGraphiteOps()
 
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-        )
+        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
 
         # Switch up from feature-1 to feature-2
         # Run from feature-1 worktree
@@ -149,23 +133,9 @@ def test_switch_up_at_top_of_stack() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = RealGraphiteOps()
 
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-        )
+        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
 
         result = runner.invoke(cli, ["switch", "--up"], obj=test_ctx, catch_exceptions=False)
 
@@ -201,23 +171,9 @@ def test_switch_up_child_has_no_worktree() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = RealGraphiteOps()
 
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-        )
+        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
 
         result = runner.invoke(cli, ["switch", "--up"], obj=test_ctx, catch_exceptions=False)
 
@@ -260,23 +216,9 @@ def test_switch_down_with_existing_worktree() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = RealGraphiteOps()
 
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-        )
+        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
 
         result = runner.invoke(
             cli, ["switch", "--down", "--script"], obj=test_ctx, catch_exceptions=False
@@ -318,23 +260,9 @@ def test_switch_down_to_trunk_root() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = RealGraphiteOps()
 
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-        )
+        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
 
         # Switch down from feature-1 to root (main)
         (workstacks_dir / "feature-1").mkdir(parents=True, exist_ok=True)
@@ -371,23 +299,9 @@ def test_switch_down_at_trunk() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = RealGraphiteOps()
 
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-        )
+        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
 
         result = runner.invoke(cli, ["switch", "--down"], obj=test_ctx, catch_exceptions=False)
 
@@ -425,23 +339,9 @@ def test_switch_down_parent_has_no_worktree() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = RealGraphiteOps()
 
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-        )
+        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
 
         result = runner.invoke(cli, ["switch", "--down"], obj=test_ctx, catch_exceptions=False)
 
@@ -462,23 +362,9 @@ def test_switch_graphite_not_enabled() -> None:
         )
 
         # Graphite is NOT enabled
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = RealGraphiteOps()
 
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-        )
+        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops)
 
         # Try --up
         result = runner.invoke(cli, ["switch", "--up"], obj=test_ctx, catch_exceptions=False)
@@ -504,23 +390,9 @@ def test_switch_up_and_down_mutually_exclusive() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = RealGraphiteOps()
 
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-        )
+        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
 
         result = runner.invoke(
             cli, ["switch", "--up", "--down"], obj=test_ctx, catch_exceptions=False
@@ -540,23 +412,9 @@ def test_switch_name_with_up_mutually_exclusive() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = RealGraphiteOps()
 
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-        )
+        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
 
         result = runner.invoke(
             cli, ["switch", "feature-1", "--up"], obj=test_ctx, catch_exceptions=False
@@ -577,23 +435,9 @@ def test_switch_detached_head() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = RealGraphiteOps()
 
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-        )
+        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
 
         result = runner.invoke(cli, ["switch", "--up"], obj=test_ctx, catch_exceptions=False)
 
@@ -646,23 +490,9 @@ def test_switch_up_with_mismatched_worktree_name() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = RealGraphiteOps()
 
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-        )
+        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
 
         # Navigate up from feature/db to feature/db-tests using switch --up
         # This would fail before the fix because it would try to find a worktree named
@@ -725,23 +555,9 @@ def test_switch_down_with_mismatched_worktree_name() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
         graphite_ops = RealGraphiteOps()
 
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-        )
+        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
 
         # Navigate down from feature/api-v2 to feature/api using switch --down
         # This would fail before the fix because it would try to find a worktree named

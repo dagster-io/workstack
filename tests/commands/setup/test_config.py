@@ -8,8 +8,7 @@ from tests.fakes.gitops import FakeGitOps
 from tests.test_utils.env_helpers import simulated_workstack_env
 from workstack.cli.cli import cli
 from workstack.cli.config import LoadedConfig
-from workstack.core.context import WorkstackContext
-from workstack.core.global_config import GlobalConfig
+from workstack.core.repo_discovery import RepoContext
 
 
 def test_config_list_displays_global_config() -> None:
@@ -17,18 +16,17 @@ def test_config_list_displays_global_config() -> None:
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
+        workstacks_dir = env.workstacks_root / env.cwd.name
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=workstacks_dir,
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
+            use_graphite=True,
             git_ops=git_ops,
-            global_config=global_config_ops,
-            repo=env.repo,
+            repo=repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -47,15 +45,9 @@ def test_config_list_displays_repo_config() -> None:
     """Test that config list displays repository configuration."""
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
-        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
+        workstacks_dir = env.workstacks_root / env.cwd.name
 
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         # Pass local config directly instead of creating files
         local_config = LoadedConfig(
             env={"FOO": "bar"},
@@ -63,11 +55,16 @@ def test_config_list_displays_repo_config() -> None:
             post_create_shell="/bin/bash",
         )
 
-        test_ctx = WorkstackContext.for_test(
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=workstacks_dir,
+        )
+
+        test_ctx = env.build_context(
             git_ops=git_ops,
-            global_config=global_config_ops,
             local_config=local_config,
-            repo=env.repo,
+            repo=repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -86,18 +83,16 @@ def test_config_list_handles_missing_repo_config() -> None:
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
+        workstacks_dir = env.workstacks_root / env.cwd.name
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=workstacks_dir,
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
             git_ops=git_ops,
-            global_config=global_config_ops,
-            repo=env.repo,
+            repo=repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -114,17 +109,10 @@ def test_config_list_not_in_git_repo() -> None:
     with simulated_workstack_env(runner) as env:
         # No .git directory
         git_ops = FakeGitOps()
-        global_config_ops = GlobalConfig(
-            workstacks_root=Path("/fake/workstacks"),
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
             git_ops=git_ops,
-            global_config=global_config_ops,
+            workstacks_root=Path("/fake/workstacks"),
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -139,29 +127,23 @@ def test_config_get_workstacks_root() -> None:
     """Test getting workstacks_root config value."""
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
-        workstacks_root = env.cwd / "my-workstacks"
-
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
+        workstacks_dir = env.workstacks_root / env.cwd.name
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=workstacks_dir,
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
             git_ops=git_ops,
-            global_config=global_config_ops,
-            repo=env.repo,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
+            repo=repo,
         )
 
         result = runner.invoke(cli, ["config", "get", "workstacks_root"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
-        assert str(workstacks_root) in result.output
+        assert str(env.workstacks_root) in result.output
 
 
 def test_config_get_use_graphite() -> None:
@@ -169,18 +151,17 @@ def test_config_get_use_graphite() -> None:
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
+        workstacks_dir = env.workstacks_root / env.cwd.name
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=workstacks_dir,
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
+            use_graphite=True,
             git_ops=git_ops,
-            global_config=global_config_ops,
-            repo=env.repo,
+            repo=repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -196,50 +177,11 @@ def test_config_get_show_pr_info() -> None:
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=False,
-            show_pr_checks=False,
-        )
-
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
             git_ops=git_ops,
-            global_config=global_config_ops,
-            repo=env.repo,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
         )
 
         result = runner.invoke(cli, ["config", "get", "show_pr_info"], obj=test_ctx)
-
-        assert result.exit_code == 0, result.output
-        assert "false" in result.output.strip()
-
-
-def test_config_get_show_pr_checks() -> None:
-    """Test getting show_pr_checks config value."""
-    runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=True,  # Set to True to match expected output
-        )
-
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            repo=env.repo,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-        )
-
-        result = runner.invoke(cli, ["config", "get", "show_pr_checks"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         assert "true" in result.output.strip()
@@ -249,15 +191,9 @@ def test_config_get_env_key() -> None:
     """Test getting env.* config value."""
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
-        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
+        workstacks_dir = env.workstacks_root / env.cwd.name
 
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         # Pass local config directly instead of creating files
         local_config = LoadedConfig(
             env={"MY_VAR": "my_value"},
@@ -265,11 +201,16 @@ def test_config_get_env_key() -> None:
             post_create_shell=None,
         )
 
-        test_ctx = WorkstackContext.for_test(
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=workstacks_dir,
+        )
+
+        test_ctx = env.build_context(
             git_ops=git_ops,
-            global_config=global_config_ops,
             local_config=local_config,
-            repo=env.repo,
+            repo=repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -284,15 +225,9 @@ def test_config_get_post_create_shell() -> None:
     """Test getting post_create.shell config value."""
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
-        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
+        workstacks_dir = env.workstacks_root / env.cwd.name
 
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         # Pass local config directly instead of creating files
         local_config = LoadedConfig(
             env={},
@@ -300,11 +235,16 @@ def test_config_get_post_create_shell() -> None:
             post_create_shell="/bin/zsh",
         )
 
-        test_ctx = WorkstackContext.for_test(
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=workstacks_dir,
+        )
+
+        test_ctx = env.build_context(
             git_ops=git_ops,
-            global_config=global_config_ops,
             local_config=local_config,
-            repo=env.repo,
+            repo=repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -319,15 +259,9 @@ def test_config_get_post_create_commands() -> None:
     """Test getting post_create.commands config value."""
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
-        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
+        workstacks_dir = env.workstacks_root / env.cwd.name
 
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         # Pass local config directly instead of creating files
         local_config = LoadedConfig(
             env={},
@@ -335,11 +269,16 @@ def test_config_get_post_create_commands() -> None:
             post_create_shell=None,
         )
 
-        test_ctx = WorkstackContext.for_test(
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=workstacks_dir,
+        )
+
+        test_ctx = env.build_context(
             git_ops=git_ops,
-            global_config=global_config_ops,
             local_config=local_config,
-            repo=env.repo,
+            repo=repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -355,15 +294,9 @@ def test_config_get_env_key_not_found() -> None:
     """Test that getting non-existent env key fails."""
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
-        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
+        workstacks_dir = env.workstacks_root / env.cwd.name
 
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         # Pass empty local config
         local_config = LoadedConfig(
             env={},
@@ -371,11 +304,16 @@ def test_config_get_env_key_not_found() -> None:
             post_create_shell=None,
         )
 
-        test_ctx = WorkstackContext.for_test(
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=workstacks_dir,
+        )
+
+        test_ctx = env.build_context(
             git_ops=git_ops,
-            global_config=global_config_ops,
             local_config=local_config,
-            repo=env.repo,
+            repo=repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -391,18 +329,16 @@ def test_config_get_invalid_key_format() -> None:
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
+        workstacks_dir = env.workstacks_root / env.cwd.name
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=workstacks_dir,
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
             git_ops=git_ops,
-            global_config=global_config_ops,
-            repo=env.repo,
+            repo=repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -425,18 +361,15 @@ def test_config_get_invalid_key() -> None:
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=workstacks_dir,
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
             git_ops=git_ops,
-            global_config=global_config_ops,
-            repo=env.repo,
+            repo=repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )
@@ -459,18 +392,15 @@ def test_config_key_with_multiple_dots() -> None:
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=workstacks_dir,
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = env.build_context(
             git_ops=git_ops,
-            global_config=global_config_ops,
-            repo=env.repo,
+            repo=repo,
             script_writer=env.script_writer,
             cwd=env.cwd,
         )

@@ -85,10 +85,13 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
+from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.script_writer import FakeScriptWriterOps
+from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
+from workstack.core.global_config import GlobalConfig
 from workstack.core.graphite_ops import BranchMetadata
 from workstack.core.repo_discovery import RepoContext
 from workstack.core.script_writer import RealScriptWriterOps
@@ -280,6 +283,91 @@ class SimulatedWorkstackEnv:
 
         return git_ops, graphite_ops
 
+    def build_context(
+        self,
+        *,
+        use_graphite: bool = False,
+        show_pr_info: bool = True,
+        show_pr_checks: bool = False,
+        git_ops: FakeGitOps | None = None,
+        graphite_ops: FakeGraphiteOps | None = None,
+        github_ops: FakeGitHubOps | None = None,
+        repo: RepoContext | None = None,
+        **kwargs,
+    ) -> WorkstackContext:
+        """Build WorkstackContext with sensible defaults for testing.
+
+        This helper eliminates boilerplate by providing default ops and config
+        for tests that don't need custom setup. Custom values can be provided
+        via keyword arguments.
+
+        Args:
+            use_graphite: Enable Graphite integration (default: False)
+            show_pr_info: Show PR information (default: True)
+            show_pr_checks: Show PR check status (default: False)
+            git_ops: Custom FakeGitOps (default: minimal git_common_dirs setup)
+            graphite_ops: Custom FakeGraphiteOps (default: empty)
+            github_ops: Custom FakeGitHubOps (default: empty)
+            repo: Custom RepoContext (default: None)
+            **kwargs: Additional WorkstackContext.for_test() parameters
+
+        Returns:
+            WorkstackContext configured for testing
+
+        Example:
+            ```python
+            with simulated_workstack_env(runner) as env:
+                # Simple case - use all defaults
+                ctx = env.build_context()
+
+                # Custom git ops with branches
+                git_ops, graphite_ops = env.build_ops_from_branches(...)
+                ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops)
+
+                # Enable Graphite with custom config
+                ctx = env.build_context(use_graphite=True, show_pr_checks=True)
+            ```
+        """
+        # Create default ops if not provided
+        if git_ops is None:
+            git_ops = FakeGitOps(git_common_dirs={self.cwd: self.git_dir})
+
+        if graphite_ops is None:
+            graphite_ops = FakeGraphiteOps()
+
+        if github_ops is None:
+            github_ops = FakeGitHubOps()
+
+        # Create global config
+        global_config = GlobalConfig(
+            use_graphite=use_graphite,
+            show_pr_info=show_pr_info,
+            show_pr_checks=show_pr_checks,
+            shell_setup_complete=False,
+            workstacks_root=self.workstacks_root,
+        )
+
+        # Build and return context
+        # Default cwd and script_writer to env values unless overridden in kwargs
+        if "cwd" not in kwargs:
+            kwargs["cwd"] = self.cwd
+        if "script_writer" not in kwargs:
+            kwargs["script_writer"] = self.script_writer
+
+        # Filter out workstacks_root - it's already set in global_config above
+        # Tests shouldn't override it via kwargs
+        if "workstacks_root" in kwargs:
+            kwargs.pop("workstacks_root")
+
+        return WorkstackContext.for_test(
+            git_ops=git_ops,
+            graphite_ops=graphite_ops,
+            github_ops=github_ops,
+            global_config=global_config,
+            repo=repo,
+            **kwargs,
+        )
+
     def _build_stack_path(
         self,
         branches: dict[str, BranchMetadata],
@@ -419,6 +507,87 @@ class PureWorkstackEnv:
     def repo(self) -> RepoContext:
         """RepoContext constructed from sentinel paths."""
         return self._repo
+
+    def build_context(
+        self,
+        *,
+        use_graphite: bool = False,
+        show_pr_info: bool = True,
+        show_pr_checks: bool = False,
+        git_ops: FakeGitOps | None = None,
+        graphite_ops: FakeGraphiteOps | None = None,
+        github_ops: FakeGitHubOps | None = None,
+        repo: RepoContext | None = None,
+        **kwargs,
+    ) -> WorkstackContext:
+        """Build WorkstackContext with sensible defaults for testing.
+
+        This helper eliminates boilerplate by providing default ops and config
+        for tests that don't need custom setup. Custom values can be provided
+        via keyword arguments.
+
+        Args:
+            use_graphite: Enable Graphite integration (default: False)
+            show_pr_info: Show PR information (default: True)
+            show_pr_checks: Show PR check status (default: False)
+            git_ops: Custom FakeGitOps (default: minimal git_common_dirs setup)
+            graphite_ops: Custom FakeGraphiteOps (default: empty)
+            github_ops: Custom FakeGitHubOps (default: empty)
+            repo: Custom RepoContext (default: None)
+            **kwargs: Additional WorkstackContext.for_test() parameters
+
+        Returns:
+            WorkstackContext configured for testing
+
+        Example:
+            ```python
+            with pure_workstack_env(runner) as env:
+                # Simple case - use all defaults
+                ctx = env.build_context()
+
+                # Enable Graphite with custom config
+                ctx = env.build_context(use_graphite=True, show_pr_checks=True)
+            ```
+        """
+        # Create default ops if not provided
+        if git_ops is None:
+            git_ops = FakeGitOps(git_common_dirs={self.cwd: self.git_dir})
+
+        if graphite_ops is None:
+            graphite_ops = FakeGraphiteOps()
+
+        if github_ops is None:
+            github_ops = FakeGitHubOps()
+
+        # Create global config
+        global_config = GlobalConfig(
+            use_graphite=use_graphite,
+            show_pr_info=show_pr_info,
+            show_pr_checks=show_pr_checks,
+            shell_setup_complete=False,
+            workstacks_root=self.workstacks_root,
+        )
+
+        # Build and return context
+        # Default cwd and script_writer to env values unless overridden in kwargs
+        if "cwd" not in kwargs:
+            kwargs["cwd"] = self.cwd
+        if "script_writer" not in kwargs:
+            kwargs["script_writer"] = self.script_writer
+
+        # Filter out workstacks_root - it's already set in global_config above
+        # Tests shouldn't override it via kwargs
+        if "workstacks_root" in kwargs:
+            kwargs.pop("workstacks_root")
+
+        return WorkstackContext.for_test(
+            git_ops=git_ops,
+            graphite_ops=graphite_ops,
+            github_ops=github_ops,
+            global_config=global_config,
+            repo=repo,
+            **kwargs,
+        )
 
 
 @contextmanager

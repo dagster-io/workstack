@@ -330,6 +330,7 @@ def test_detect_hook_drift_no_drift() -> None:
             ),
             timeout=30,
             lifecycle="UserPromptSubmit",
+            matcher="*",
         )
     ]
 
@@ -381,6 +382,7 @@ def test_detect_hook_drift_outdated_command_format() -> None:
             command="DOT_AGENT_KIT_ID=dignified-python python3 /path/to/script.py",
             timeout=30,
             lifecycle="UserPromptSubmit",
+            matcher="*",
         )
     ]
 
@@ -402,6 +404,7 @@ def test_detect_hook_drift_obsolete_hook() -> None:
             command="DOT_AGENT_KIT_ID=dignified-python python3 /path/to/old.py",
             timeout=30,
             lifecycle="UserPromptSubmit",
+            matcher="*",
         )
     ]
 
@@ -433,6 +436,7 @@ def test_detect_hook_drift_hook_id_mismatch() -> None:
             command="DOT_AGENT_KIT_ID=dignified-python python3 /path/to/script.py",
             timeout=30,
             lifecycle="UserPromptSubmit",
+            matcher="*",
         )
     ]
 
@@ -472,12 +476,14 @@ def test_detect_hook_drift_multiple_issues() -> None:
             command="DOT_AGENT_KIT_ID=test-kit python3 /path/to/hook1.py",
             timeout=30,
             lifecycle="UserPromptSubmit",
+            matcher="*",
         ),
         InstalledHook(
             hook_id="old-hook",
             command="DOT_AGENT_KIT_ID=test-kit python3 /path/to/old.py",
             timeout=30,
             lifecycle="UserPromptSubmit",
+            matcher="*",
         ),
     ]
 
@@ -771,3 +777,173 @@ def test_check_command_no_settings_file(tmp_path: Path) -> None:
         # Should pass - no settings.json means no hooks to validate
         assert result.exit_code == 0
         assert "All checks passed" in result.output
+
+
+def test_detect_hook_drift_matcher_mismatch() -> None:
+    """Test _detect_hook_drift detects matcher field mismatch."""
+    expected_hooks = [
+        HookDefinition(
+            id="compliance-hook",
+            lifecycle="UserPromptSubmit",
+            matcher="*.py",
+            invocation="dot-agent run test-kit compliance-hook",
+            description="Test hook",
+            timeout=30,
+        )
+    ]
+
+    installed_hooks = [
+        InstalledHook(
+            hook_id="compliance-hook",
+            command=(
+                "DOT_AGENT_KIT_ID=test-kit "
+                "DOT_AGENT_HOOK_ID=compliance-hook "
+                "dot-agent run test-kit compliance-hook"
+            ),
+            timeout=30,
+            lifecycle="UserPromptSubmit",
+            matcher="*",
+        )
+    ]
+
+    result = _detect_hook_drift("test-kit", expected_hooks, installed_hooks)
+
+    assert result is not None
+    assert len(result.issues) == 1
+    assert result.issues[0].severity == "warning"
+    assert "Matcher mismatch" in result.issues[0].message
+    assert result.issues[0].expected == "*.py"
+    assert result.issues[0].actual == "*"
+
+
+def test_detect_hook_drift_matcher_none_normalized() -> None:
+    """Test _detect_hook_drift normalizes None matcher to '*'."""
+    expected_hooks = [
+        HookDefinition(
+            id="compliance-hook",
+            lifecycle="UserPromptSubmit",
+            matcher=None,
+            invocation="dot-agent run test-kit compliance-hook",
+            description="Test hook",
+            timeout=30,
+        )
+    ]
+
+    installed_hooks = [
+        InstalledHook(
+            hook_id="compliance-hook",
+            command=(
+                "DOT_AGENT_KIT_ID=test-kit "
+                "DOT_AGENT_HOOK_ID=compliance-hook "
+                "dot-agent run test-kit compliance-hook"
+            ),
+            timeout=30,
+            lifecycle="UserPromptSubmit",
+            matcher="*",
+        )
+    ]
+
+    result = _detect_hook_drift("test-kit", expected_hooks, installed_hooks)
+
+    # Should have no drift - None is normalized to "*"
+    assert result is None
+
+
+def test_check_command_detects_matcher_drift(tmp_path: Path) -> None:
+    """Integration test: check command detects matcher drift and doesn't fail."""
+    runner = CliRunner()
+    # SAFETY: isolated_filesystem creates a temporary directory for this test
+    # All file operations below are isolated and won't affect real project files
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        # SAFE: Path.cwd() here returns the isolated temp directory, not real CWD
+        project_dir = Path.cwd()
+
+        # SAFE: Creating directories in isolated temp filesystem only
+        claude_dir = project_dir / ".claude"
+        claude_dir.mkdir()
+
+        # Create settings.json with matcher="*"
+        settings_data = {
+            "hooks": {
+                "UserPromptSubmit": [
+                    {
+                        "matcher": "*",
+                        "hooks": [
+                            {
+                                "command": (
+                                    "DOT_AGENT_KIT_ID=test-kit "
+                                    "DOT_AGENT_HOOK_ID=compliance-hook "
+                                    "dot-agent run test-kit compliance-hook"
+                                ),
+                                "timeout": 30,
+                            }
+                        ],
+                    }
+                ]
+            }
+        }
+        settings_path = claude_dir / "settings.json"
+        # SAFE: Writing to isolated temp directory only
+        settings_path.write_text(json.dumps(settings_data), encoding="utf-8")
+
+        # Create a mock bundled kit with matcher="*.py" in hooks field
+        # SAFE: tmp_path is a pytest fixture providing isolated temp directory
+        mock_kit_dir = tmp_path / "mock_bundled_kit"
+        mock_kit_dir.mkdir()
+
+        manifest_path = mock_kit_dir / "kit.yaml"
+        # SAFE: Writing to isolated temp directory only
+        manifest_path.write_text(
+            """name: test-kit
+version: 1.0.0
+description: Test kit
+artifacts: {}
+hooks:
+  - id: compliance-hook
+    lifecycle: UserPromptSubmit
+    matcher: "*.py"
+    invocation: dot-agent run test-kit compliance-hook
+    description: Compliance hook
+    timeout: 30
+""",
+            encoding="utf-8",
+        )
+
+        # Create config
+        config = ProjectConfig(
+            version="1",
+            kits={
+                "test-kit": InstalledKit(
+                    kit_id="test-kit",
+                    version="1.0.0",
+                    source_type="bundled",
+                    artifacts=[],
+                ),
+            },
+        )
+        # SAFE: save_project_config writes to project_dir which is isolated temp directory
+        # This creates dot-agent.toml in the temp directory, not real project
+        save_project_config(project_dir, config)
+
+        # Monkey patch BundledKitSource
+        original_get_path = BundledKitSource._get_bundled_kit_path
+
+        def mock_get_path(self: BundledKitSource, source: str) -> Path | None:
+            if source == "test-kit":
+                return mock_kit_dir
+            return original_get_path(self, source)
+
+        BundledKitSource._get_bundled_kit_path = mock_get_path
+
+        result = runner.invoke(check, ["--verbose"])
+
+        # Restore original method
+        BundledKitSource._get_bundled_kit_path = original_get_path
+
+        # Matcher mismatch is a warning, check should fail
+        assert result.exit_code == 1
+        assert "test-kit" in result.output
+        assert "Matcher mismatch" in result.output
+        assert "*.py" in result.output
+        assert "*" in result.output
+        assert "Some checks failed" in result.output

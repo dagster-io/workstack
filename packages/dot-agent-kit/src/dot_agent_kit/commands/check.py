@@ -47,6 +47,7 @@ class InstalledHook:
     command: str
     timeout: int
     lifecycle: str  # "UserPromptSubmit", etc.
+    matcher: str
 
 
 @dataclass(frozen=True)
@@ -382,6 +383,9 @@ def _extract_hooks_for_kit(
 
     for lifecycle, groups in settings.hooks.items():
         for group in groups:
+            # Extract matcher from the MatcherGroup
+            matcher = group.matcher
+
             for hook_entry in group.hooks:
                 # Extract kit ID from command
                 command_kit_id = extract_kit_id_from_command(hook_entry.command)
@@ -425,6 +429,7 @@ def _extract_hooks_for_kit(
                             command=hook_entry.command,
                             timeout=hook_entry.timeout,
                             lifecycle=lifecycle,
+                            matcher=matcher,
                         )
                     )
 
@@ -480,6 +485,19 @@ def _detect_hook_drift(
                         message=f"Command mismatch for '{expected_hook.id}'",
                         expected=expected_command,
                         actual=installed.command,
+                    )
+                )
+
+            # Check if matcher matches expectations
+            # Normalize None to "*" for comparison
+            expected_matcher = expected_hook.matcher if expected_hook.matcher is not None else "*"
+            if installed.matcher != expected_matcher:
+                issues.append(
+                    HookDriftIssue(
+                        severity="warning",
+                        message=f"Matcher mismatch for '{expected_hook.id}'",
+                        expected=expected_matcher,
+                        actual=installed.matcher,
                     )
                 )
 

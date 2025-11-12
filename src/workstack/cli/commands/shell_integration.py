@@ -5,6 +5,7 @@ from workstack.cli.shell_integration.handler import (
     ShellIntegrationResult,
     handle_shell_request,
 )
+from workstack.core.context import WorkstackContext
 
 
 @click.command(
@@ -14,9 +15,10 @@ from workstack.cli.shell_integration.handler import (
     context_settings={"ignore_unknown_options": True, "allow_interspersed_args": False},
 )
 @click.argument("args", nargs=-1, type=click.UNPROCESSED)
-def hidden_shell_cmd(args: tuple[str, ...]) -> None:
+@click.pass_obj
+def hidden_shell_cmd(ctx: WorkstackContext | None, args: tuple[str, ...]) -> None:
     """Unified entry point for shell integration wrappers."""
-    result: ShellIntegrationResult = handle_shell_request(args)
+    result: ShellIntegrationResult = handle_shell_request(args, ctx=ctx)
 
     if result.passthrough:
         click.echo(PASSTHROUGH_MARKER)

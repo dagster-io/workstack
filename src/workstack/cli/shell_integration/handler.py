@@ -19,7 +19,7 @@ from workstack.cli.shell_utils import (
     STALE_SCRIPT_MAX_AGE_SECONDS,
     cleanup_stale_scripts,
 )
-from workstack.core.context import create_context
+from workstack.core.context import WorkstackContext, create_context
 
 PASSTHROUGH_MARKER: Final[str] = "__WORKSTACK_PASSTHROUGH__"
 PASSTHROUGH_COMMANDS: Final[set[str]] = {"sync", "land-stack"}
@@ -34,7 +34,9 @@ class ShellIntegrationResult:
     exit_code: int
 
 
-def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellIntegrationResult:
+def _invoke_hidden_command(
+    command_name: str, args: tuple[str, ...], ctx: WorkstackContext | None
+) -> ShellIntegrationResult:
     """Invoke a command with --script flag for shell integration.
 
     If args contain help flags or explicit --script, passthrough to regular command.
@@ -58,7 +60,7 @@ def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellInt
     command = command_map.get(command_name)
     if command is None:
         if command_name in PASSTHROUGH_COMMANDS:
-            return _build_passthrough_script(command_name, args)
+            return _build_passthrough_script(command_name, args, ctx=ctx)
         return ShellIntegrationResult(passthrough=True, script=None, exit_code=0)
 
     # Add --script flag to get activation script
@@ -69,11 +71,15 @@ def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellInt
     # Clean up stale scripts before running (opportunistic cleanup)
     cleanup_stale_scripts(max_age_seconds=STALE_SCRIPT_MAX_AGE_SECONDS)
 
+    # Use injected context if provided (for testing), otherwise create new one
+    if ctx is None:
+        ctx = create_context(dry_run=False)
+
     runner = CliRunner()
     result = runner.invoke(
         command,
         script_args,
-        obj=create_context(dry_run=False),
+        obj=ctx,
         standalone_mode=False,
     )
 
@@ -106,7 +112,9 @@ def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellInt
     return ShellIntegrationResult(passthrough=False, script=script_path, exit_code=exit_code)
 
 
-def handle_shell_request(args: tuple[str, ...]) -> ShellIntegrationResult:
+def handle_shell_request(
+    args: tuple[str, ...], ctx: WorkstackContext | None = None
+) -> ShellIntegrationResult:
     """Dispatch shell integration handling based on the original CLI invocation."""
     if not args:
         return ShellIntegrationResult(passthrough=True, script=None, exit_code=0)
@@ -114,13 +122,17 @@ def handle_shell_request(args: tuple[str, ...]) -> ShellIntegrationResult:
     command_name = args[0]
     command_args = tuple(args[1:])
 
-    return _invoke_hidden_command(command_name, command_args)
+    return _invoke_hidden_command(command_name, command_args, ctx=ctx)
 
 
-def _build_passthrough_script(command_name: str, args: tuple[str, ...]) -> ShellIntegrationResult:
+def _build_passthrough_script(
+    command_name: str, args: tuple[str, ...], ctx: WorkstackContext | None
+) -> ShellIntegrationResult:
     """Create a passthrough script tailored for the caller's shell."""
     shell_name = os.environ.get("WORKSTACK_SHELL", "bash").lower()
-    ctx = create_context(dry_run=False)
+    # Use injected context if provided (for testing), otherwise create new one
+    if ctx is None:
+        ctx = create_context(dry_run=False)
     recovery_path = generate_recovery_script(ctx)
 
     script_content = _render_passthrough_script(shell_name, command_name, args, recovery_path)

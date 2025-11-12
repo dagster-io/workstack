@@ -29,19 +29,7 @@ Project-specific conventions for workstack development that complement dignified
 
 **Python Code:**
 
-```python
-# ✅ CORRECT: snake_case for Python
-def process_worktree(worktree_name: str) -> None:
-    ...
-
-class WorktreeManager:
-    ...
-
-MY_CONSTANT = "value"
-
-# ✅ CORRECT: Python files within .claude/ can use snake_case
-.claude/hooks/my_hook_script.py  # This is code, not an artifact
-```
+Python naming conventions (snake_case, PascalCase, UPPER_SNAKE_CASE) are covered in the dignified-python-313 skill.
 
 **Brand Names:**
 

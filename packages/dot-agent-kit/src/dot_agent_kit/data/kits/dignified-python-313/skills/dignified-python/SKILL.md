@@ -130,6 +130,26 @@ from .core import discover_repo_context
 2. Third-party imports
 3. Local imports
 
+### 6. Naming Conventions 🟡
+
+```python
+# ✅ CORRECT: Follow Python standards
+def process_worktree(worktree_name: str) -> None:  # snake_case for functions
+    ...
+
+class WorktreeManager:  # PascalCase for classes
+    ...
+
+MY_CONSTANT = "value"  # UPPER_SNAKE_CASE for constants
+```
+
+**Key conventions:**
+
+- **Functions/variables**: `snake_case`
+- **Classes**: `PascalCase`
+- **Constants**: `UPPER_SNAKE_CASE`
+- **Private members**: Prefix with single underscore (`_helper_function`)
+
 ---
 
 ## PATTERN REFERENCE

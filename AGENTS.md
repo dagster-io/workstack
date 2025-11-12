@@ -204,7 +204,7 @@ class MyOps(ABC):  # ✅ Not Protocol
 **NEVER use hardcoded paths in tests. ALWAYS use proper fixtures.**
 
 ```python
-# ❌ WRONG - CATASTROPHICALLY DANGEROUS
+# ❌ WRONG - Hardcoded paths
 cwd=Path("/test/default/cwd")
 cwd=Path("/some/hardcoded/path")
 
@@ -217,13 +217,13 @@ def test_something(tmp_path: Path) -> None:
     ctx = WorkstackContext(..., cwd=tmp_path)
 ```
 
-**Why hardcoded paths are catastrophic:**
+**Why use temp directories:**
 
-- **Global config mutation**: Code may write `.workstack` files at hardcoded paths, polluting real filesystem
-- **False isolation**: Tests appear isolated but share state through hardcoded paths
-- **Security risk**: Creating files at system paths can be exploited
+- **Isolation**: Each test gets its own temporary directory that's automatically cleaned up
+- **No pollution**: Temp directories prevent writing to real filesystem or global config
+- **Works everywhere**: Temp paths work in CI and all environments
 
-**If you see `Path("/` in test code, STOP and use fixtures.**
+**If you see `Path("/` in test code, STOP and use `tmp_path` fixture.**
 
 **Full guide**: [docs/agent/testing.md#critical-never-use-hardcoded-paths-in-tests](docs/agent/testing.md#critical-never-use-hardcoded-paths-in-tests)
 

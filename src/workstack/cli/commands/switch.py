@@ -89,7 +89,7 @@ def _activate_worktree(
     """
     wt_path = target_path
 
-    if not wt_path.exists():
+    if not ctx.git_ops.path_exists(wt_path):
         click.echo(f"Worktree not found: {wt_path}", err=True)
         raise SystemExit(1)
 
@@ -269,12 +269,14 @@ def complete_worktree_names(
 
         names = ["root"] if "root".startswith(incomplete) else []
 
-        if repo.workstacks_dir.exists():
-            names.extend(
-                p.name
-                for p in repo.workstacks_dir.iterdir()
-                if p.is_dir() and p.name.startswith(incomplete)
-            )
+        # Get worktree names from git_ops instead of filesystem iteration
+        worktrees = workstack_ctx.git_ops.list_worktrees(repo.root)
+        for wt in worktrees:
+            if wt.is_root:
+                continue  # Skip root worktree (already added as "root")
+            worktree_name = wt.path.name
+            if worktree_name.startswith(incomplete):
+                names.append(worktree_name)
 
         return names
     except Exception:
@@ -332,7 +334,7 @@ def switch_cmd(ctx: WorkstackContext, name: str | None, script: bool, up: bool, 
         _ensure_graphite_enabled(ctx)
 
     repo = discover_repo_context(ctx, ctx.cwd)
-    trunk_branch = read_trunk_from_pyproject(repo.root)
+    trunk_branch = read_trunk_from_pyproject(repo.root, ctx.git_ops)
 
     # Check if user is trying to switch to main/master (should use root instead)
     if name and name.lower() in ("main", "master"):

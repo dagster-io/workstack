@@ -81,7 +81,7 @@ def resolve_source_worktree(
         # Resolve worktree name to path
         wt_path = worktree_path_for(workstacks_dir, worktree)
         # Validate that the worktree exists
-        if not wt_path.exists():
+        if not ctx.git_ops.path_exists(wt_path):
             click.echo(f"Error: Worktree '{worktree}' does not exist", err=True)
             raise SystemExit(1)
         return wt_path
@@ -131,7 +131,7 @@ def execute_move(
         )
         raise SystemExit(1)
 
-    target_exists = target_wt.exists()
+    target_exists = ctx.git_ops.path_exists(target_wt)
 
     # To move branch from source to target, we need to avoid having the same branch
     # checked out in two places simultaneously. Strategy:
@@ -282,7 +282,7 @@ def move_cmd(
     # Discover repository context
     repo = discover_repo_context(ctx, ctx.cwd)
     workstacks_dir = ensure_workstacks_dir(repo)
-    trunk_branch = read_trunk_from_pyproject(repo.root)
+    trunk_branch = read_trunk_from_pyproject(repo.root, ctx.git_ops)
 
     # Resolve source worktree
     source_wt = resolve_source_worktree(

@@ -205,6 +205,7 @@ def test_current_handles_nested_worktrees(tmp_path: Path) -> None:
         git_common_dirs={
             target_dir: repo_root / ".git",
         },
+        existing_paths={repo_root, parent_wt, nested_wt, target_dir, repo_root / ".git"},
     )
 
     # Create global config

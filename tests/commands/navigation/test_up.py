@@ -6,23 +6,18 @@ from click.testing import CliRunner
 
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.test_utils.env_helpers import simulated_workstack_env
-from tests.test_utils.graphite_helpers import setup_graphite_stack
+from tests.test_utils.env_helpers import pure_workstack_env
 from workstack.cli.cli import cli
 from workstack.core.branch_metadata import BranchMetadata
 from workstack.core.gitops import WorktreeInfo
-from workstack.core.graphite_ops import RealGraphiteOps
+from workstack.core.repo_discovery import RepoContext
 
 
 def test_up_with_existing_worktree() -> None:
     """Test up command when child branch has a worktree."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         workstacks_dir = env.workstacks_root / env.cwd.name
-
-        # Set up worktrees
-        feature_1_path = workstacks_dir / "feature-1"
-        feature_1_path.mkdir(parents=True, exist_ok=True)
 
         # The test runs from cwd, so we simulate being in feature-1 by setting
         # cwd's current branch to feature-1
@@ -54,30 +49,35 @@ def test_up_with_existing_worktree() -> None:
             }
         )
 
-        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=workstacks_dir,
+        )
+
+        test_ctx = env.build_context(
+            git_ops=git_ops, graphite_ops=graphite_ops, repo=repo, use_graphite=True
+        )
 
         # Navigate up from feature-1 to feature-2
-        # Run from feature-1 worktree
-        (workstacks_dir / "feature-1").mkdir(parents=True, exist_ok=True)
-        (workstacks_dir / "feature-2").mkdir(parents=True, exist_ok=True)
-
         result = runner.invoke(cli, ["up", "--script"], obj=test_ctx, catch_exceptions=False)
 
         if result.exit_code != 0:
             print(f"stderr: {result.stderr}")
             print(f"stdout: {result.stdout}")
         assert result.exit_code == 0
-        # Should generate script for feature-2
+        # Should generate script for feature-2 (verify in-memory)
         script_path = Path(result.stdout.strip())
-        assert script_path.exists()
-        script_content = script_path.read_text()
+        script_content = env.script_writer.get_script_content(script_path)
+        assert script_content is not None
         assert str(workstacks_dir / "feature-2") in script_content
 
 
 def test_up_at_top_of_stack() -> None:
     """Test up command when at the top of stack (no children)."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         workstacks_dir = env.workstacks_root / env.cwd.name
 
         git_ops = FakeGitOps(
@@ -102,7 +102,14 @@ def test_up_at_top_of_stack() -> None:
             }
         )
 
-        test_ctx = env.build_context(git_ops=git_ops, use_graphite=True)
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=workstacks_dir,
+        )
+
+        test_ctx = env.build_context(git_ops=git_ops, repo=repo, use_graphite=True)
 
         result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
 
@@ -113,7 +120,7 @@ def test_up_at_top_of_stack() -> None:
 def test_up_child_has_no_worktree() -> None:
     """Test up command when child branch exists but has no worktree."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         workstacks_dir = env.workstacks_root / env.cwd.name
 
         # Only feature-1 has a worktree, feature-2 does not
@@ -139,7 +146,16 @@ def test_up_child_has_no_worktree() -> None:
             }
         )
 
-        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=workstacks_dir,
+        )
+
+        test_ctx = env.build_context(
+            git_ops=git_ops, graphite_ops=graphite_ops, repo=repo, use_graphite=True
+        )
 
         result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
 
@@ -152,15 +168,24 @@ def test_up_child_has_no_worktree() -> None:
 def test_up_graphite_not_enabled() -> None:
     """Test up command requires Graphite to be enabled."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.cwd.name
+
         git_ops = FakeGitOps(
             worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch="main")]},
             current_branches={env.cwd: "main"},
             git_common_dirs={env.cwd: env.git_dir},
         )
 
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=workstacks_dir,
+        )
+
         # Graphite is NOT enabled
-        test_ctx = env.build_context(git_ops=git_ops)
+        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
 
         result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
 
@@ -172,7 +197,9 @@ def test_up_graphite_not_enabled() -> None:
 def test_up_detached_head() -> None:
     """Test up command fails gracefully on detached HEAD."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
+        workstacks_dir = env.workstacks_root / env.cwd.name
+
         # Current branch is None (detached HEAD)
         git_ops = FakeGitOps(
             worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch=None)]},
@@ -180,7 +207,14 @@ def test_up_detached_head() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        test_ctx = env.build_context(git_ops=git_ops, use_graphite=True)
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=workstacks_dir,
+        )
+
+        test_ctx = env.build_context(git_ops=git_ops, repo=repo, use_graphite=True)
 
         result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
 
@@ -192,12 +226,8 @@ def test_up_detached_head() -> None:
 def test_up_script_flag() -> None:
     """Test up command with --script flag generates activation script."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         workstacks_dir = env.workstacks_root / env.cwd.name
-
-        # Set up worktrees
-        (workstacks_dir / "feature-1").mkdir(parents=True, exist_ok=True)
-        (workstacks_dir / "feature-2").mkdir(parents=True, exist_ok=True)
 
         git_ops = FakeGitOps(
             worktrees={
@@ -223,15 +253,24 @@ def test_up_script_flag() -> None:
             }
         )
 
-        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=workstacks_dir,
+        )
+
+        test_ctx = env.build_context(
+            git_ops=git_ops, graphite_ops=graphite_ops, repo=repo, use_graphite=True
+        )
 
         result = runner.invoke(cli, ["up", "--script"], obj=test_ctx, catch_exceptions=False)
 
         assert result.exit_code == 0
-        # Output should be a script path
+        # Output should be a script path (verify in-memory)
         script_path = Path(result.stdout.strip())
-        assert script_path.exists()
-        script_content = script_path.read_text()
+        script_content = env.script_writer.get_script_content(script_path)
+        assert script_content is not None
         # Verify script contains the target worktree path
         assert str(workstacks_dir / "feature-2") in script_content
 
@@ -239,21 +278,11 @@ def test_up_script_flag() -> None:
 def test_up_multiple_children_fails_explicitly() -> None:
     """Test up command fails when branch has multiple children."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         workstacks_dir = env.workstacks_root / env.cwd.name
 
         # Set up stack: main -> feature-1 -> [feature-2a, feature-2b]
         # feature-1 has TWO children
-        setup_graphite_stack(
-            env.git_dir,
-            {
-                "main": {"parent": None, "children": ["feature-1"], "is_trunk": True},
-                "feature-1": {"parent": "main", "children": ["feature-2a", "feature-2b"]},
-                "feature-2a": {"parent": "feature-1", "children": []},
-                "feature-2b": {"parent": "feature-1", "children": []},
-            },
-        )
-
         git_ops = FakeGitOps(
             worktrees={
                 env.cwd: [
@@ -267,9 +296,27 @@ def test_up_multiple_children_fails_explicitly() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        graphite_ops = RealGraphiteOps()
+        graphite_ops = FakeGraphiteOps(
+            branches={
+                "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
+                "feature-1": BranchMetadata.branch(
+                    "feature-1", "main", children=["feature-2a", "feature-2b"], commit_sha="def456"
+                ),
+                "feature-2a": BranchMetadata.branch("feature-2a", "feature-1", commit_sha="ghi789"),
+                "feature-2b": BranchMetadata.branch("feature-2b", "feature-1", commit_sha="jkl012"),
+            }
+        )
 
-        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=workstacks_dir,
+        )
+
+        test_ctx = env.build_context(
+            git_ops=git_ops, graphite_ops=graphite_ops, repo=repo, use_graphite=True
+        )
 
         result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
 
@@ -288,14 +335,12 @@ def test_up_with_mismatched_worktree_name() -> None:
     The fix uses find_worktree_for_branch() to resolve branch -> worktree path.
     """
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         workstacks_dir = env.workstacks_root / env.cwd.name
 
         # Worktree directories use different naming than branch names
         # Branch: feature/auth -> Worktree: auth-work
         # Branch: feature/auth-tests -> Worktree: auth-tests-work
-        (workstacks_dir / "auth-work").mkdir(parents=True, exist_ok=True)
-        (workstacks_dir / "auth-tests-work").mkdir(parents=True, exist_ok=True)
 
         git_ops = FakeGitOps(
             worktrees={
@@ -328,7 +373,16 @@ def test_up_with_mismatched_worktree_name() -> None:
             }
         )
 
-        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=workstacks_dir,
+        )
+
+        test_ctx = env.build_context(
+            git_ops=git_ops, graphite_ops=graphite_ops, repo=repo, use_graphite=True
+        )
 
         # Navigate up from feature/auth to feature/auth-tests
         # This would fail before the fix because it would try to find a worktree named
@@ -340,8 +394,8 @@ def test_up_with_mismatched_worktree_name() -> None:
             print(f"stdout: {result.stdout}")
         assert result.exit_code == 0
 
-        # Should generate script for auth-tests-work (not feature/auth-tests)
+        # Should generate script for auth-tests-work (not feature/auth-tests) - verify in-memory
         script_path = Path(result.stdout.strip())
-        assert script_path.exists()
-        script_content = script_path.read_text()
+        script_content = env.script_writer.get_script_content(script_path)
+        assert script_content is not None
         assert str(workstacks_dir / "auth-tests-work") in script_content

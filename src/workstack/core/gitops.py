@@ -186,6 +186,40 @@ class GitOps(ABC):
         ...
 
     @abstractmethod
+    def path_exists(self, path: Path) -> bool:
+        """Check if a path exists on the filesystem.
+
+        This is primarily used for checking if worktree directories still exist,
+        particularly after cleanup operations. In production (RealGitOps), this
+        delegates to Path.exists(). In tests (FakeGitOps), this checks an in-memory
+        set of existing paths to avoid filesystem I/O.
+
+        Args:
+            path: Path to check
+
+        Returns:
+            True if path exists, False otherwise
+        """
+        ...
+
+    @abstractmethod
+    def is_dir(self, path: Path) -> bool:
+        """Check if a path is a directory.
+
+        This is used for distinguishing between .git directories (normal repos)
+        and .git files (worktrees with gitdir pointers). In production (RealGitOps),
+        this delegates to Path.is_dir(). In tests (FakeGitOps), this checks an
+        in-memory set of directory paths to avoid filesystem I/O.
+
+        Args:
+            path: Path to check
+
+        Returns:
+            True if path is a directory, False otherwise
+        """
+        ...
+
+    @abstractmethod
     def is_branch_checked_out(self, repo_root: Path, branch: str) -> Path | None:
         """Check if a branch is already checked out in any worktree.
 
@@ -533,6 +567,14 @@ class RealGitOps(GitOps):
         """Prune stale worktree metadata."""
         subprocess.run(["git", "worktree", "prune"], cwd=repo_root, check=True)
 
+    def path_exists(self, path: Path) -> bool:
+        """Check if a path exists on the filesystem."""
+        return path.exists()
+
+    def is_dir(self, path: Path) -> bool:
+        """Check if a path is a directory."""
+        return path.is_dir()
+
     def is_branch_checked_out(self, repo_root: Path, branch: str) -> Path | None:
         """Check if a branch is already checked out in any worktree."""
         worktrees = self.list_worktrees(repo_root)
@@ -791,6 +833,14 @@ class DryRunGitOps(GitOps):
     def prune_worktrees(self, repo_root: Path) -> None:
         """Print dry-run message instead of pruning worktrees."""
         click.echo("[DRY RUN] Would run: git worktree prune", err=True)
+
+    def path_exists(self, path: Path) -> bool:
+        """Check if path exists (read-only, delegates to wrapped)."""
+        return self._wrapped.path_exists(path)
+
+    def is_dir(self, path: Path) -> bool:
+        """Check if path is directory (read-only, delegates to wrapped)."""
+        return self._wrapped.is_dir(path)
 
     def is_branch_checked_out(self, repo_root: Path, branch: str) -> Path | None:
         """Check if branch is checked out (read-only, delegates to wrapped)."""

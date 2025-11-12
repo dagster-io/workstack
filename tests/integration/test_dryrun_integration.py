@@ -4,7 +4,6 @@ These tests verify that dry-run mode prevents destructive operations
 while still allowing read operations.
 """
 
-import os
 import subprocess
 from pathlib import Path
 
@@ -83,6 +82,7 @@ def test_dryrun_read_operations_still_work(tmp_path: Path) -> None:
             repo: [WorktreeInfo(path=repo, branch="main")],
         },
         git_common_dirs={repo: repo / ".git"},
+        existing_paths={repo, repo / ".git", tmp_path / "workstacks"},
     )
     global_config_ops = GlobalConfig(
         workstacks_root=tmp_path / "workstacks",
@@ -105,13 +105,8 @@ def test_dryrun_read_operations_still_work(tmp_path: Path) -> None:
 
     runner = CliRunner()
     # List should work even in dry-run mode since it's a read operation
-    # Change to repo directory so discover_repo_context can find it
-    original_cwd = os.getcwd()
-    try:
-        os.chdir(repo)
-        result = runner.invoke(cli, ["list"], obj=ctx)
-    finally:
-        os.chdir(original_cwd)
+    # No need to os.chdir() since ctx.cwd is already set to repo
+    result = runner.invoke(cli, ["list"], obj=ctx)
 
     # Should succeed (read operations are not blocked)
     assert result.exit_code == 0

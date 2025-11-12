@@ -5,50 +5,39 @@ from click.testing import CliRunner
 from tests.commands.display.list import strip_ansi
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
+from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
-from tests.test_utils.env_helpers import simulated_workstack_env
+from tests.test_utils.env_helpers import pure_workstack_env, simulated_workstack_env
 from workstack.cli.cli import cli
+from workstack.core.branch_metadata import BranchMetadata
 from workstack.core.gitops import WorktreeInfo
 from workstack.core.graphite_ops import RealGraphiteOps
 
 
 def test_list_with_stacks_flag() -> None:
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        # Create graphite cache persist file with a linear stack
-        # AND a sibling branch to verify it's NOT included
-        graphite_cache = {
-            "branches": [
-                [
-                    "main",
-                    {
-                        "validationResult": "TRUNK",
-                        "children": ["schrockn/ts-phase-1", "sibling-branch"],
-                    },
-                ],
-                [
-                    "schrockn/ts-phase-1",
-                    {"parentBranchName": "main", "children": ["schrockn/ts-phase-2"]},
-                ],
-                [
-                    "schrockn/ts-phase-2",
-                    {
-                        "parentBranchName": "schrockn/ts-phase-1",
-                        "children": ["schrockn/ts-phase-3"],
-                    },
-                ],
-                [
-                    "schrockn/ts-phase-3",
-                    {"parentBranchName": "schrockn/ts-phase-2", "children": []},
-                ],
-                ["sibling-branch", {"parentBranchName": "main", "children": []}],
-            ]
+    with pure_workstack_env(runner) as env:
+        # Create branch metadata for graphite stack
+        # Linear stack: main → ts-phase-1 → ts-phase-2 → ts-phase-3
+        # Plus sibling branch (should NOT be shown in ts worktree stack)
+        branches = {
+            "main": BranchMetadata.trunk(
+                "main", children=["schrockn/ts-phase-1", "sibling-branch"]
+            ),
+            "schrockn/ts-phase-1": BranchMetadata.branch(
+                "schrockn/ts-phase-1", "main", children=["schrockn/ts-phase-2"]
+            ),
+            "schrockn/ts-phase-2": BranchMetadata.branch(
+                "schrockn/ts-phase-2", "schrockn/ts-phase-1", children=["schrockn/ts-phase-3"]
+            ),
+            "schrockn/ts-phase-3": BranchMetadata.branch(
+                "schrockn/ts-phase-3", "schrockn/ts-phase-2", children=[]
+            ),
+            "sibling-branch": BranchMetadata.branch("sibling-branch", "main", children=[]),
         }
-        (env.git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache))
 
-        # Create worktrees
+        # Create worktrees in pure mode
         workstacks_dir = env.workstacks_root / env.cwd.name
-        (workstacks_dir / "ts").mkdir(parents=True)
 
         # Build fake git ops
         git_ops = FakeGitOps(
@@ -69,7 +58,7 @@ def test_list_with_stacks_flag() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=RealGraphiteOps(), use_graphite=True
+            git_ops=git_ops, graphite_ops=FakeGraphiteOps(branches=branches), use_graphite=True
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
@@ -120,7 +109,7 @@ def test_list_with_stacks_flag() -> None:
 
 def test_list_with_stacks_graphite_disabled() -> None:
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         # Build fake git ops
         git_ops = FakeGitOps(
             worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch="main")]},
@@ -136,8 +125,8 @@ def test_list_with_stacks_graphite_disabled() -> None:
 
 def test_list_with_stacks_no_graphite_cache() -> None:
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        # No graphite cache file created (testing graceful degradation)
+    with pure_workstack_env(runner) as env:
+        # No graphite cache (testing graceful degradation with empty branches)
 
         # Build fake git ops
         git_ops = FakeGitOps(
@@ -146,7 +135,7 @@ def test_list_with_stacks_no_graphite_cache() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=RealGraphiteOps(), use_graphite=True
+            git_ops=git_ops, graphite_ops=FakeGraphiteOps(branches={}), use_graphite=True
         )
 
         # Should succeed but not show stack info (graceful degradation)
@@ -170,47 +159,27 @@ def test_list_with_stacks_highlights_current_branch_not_worktree_branch() -> Non
     the highlighted marker (◉) should show ts-phase-3, not ts-phase-4.
     """
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        # Create graphite cache with a linear stack
-        graphite_cache = {
-            "branches": [
-                [
-                    "main",
-                    {
-                        "validationResult": "TRUNK",
-                        "children": ["schrockn/ts-phase-1"],
-                    },
-                ],
-                [
-                    "schrockn/ts-phase-1",
-                    {"parentBranchName": "main", "children": ["schrockn/ts-phase-2"]},
-                ],
-                [
-                    "schrockn/ts-phase-2",
-                    {
-                        "parentBranchName": "schrockn/ts-phase-1",
-                        "children": ["schrockn/ts-phase-3"],
-                    },
-                ],
-                [
-                    "schrockn/ts-phase-3",
-                    {
-                        "parentBranchName": "schrockn/ts-phase-2",
-                        "children": ["schrockn/ts-phase-4"],
-                    },
-                ],
-                [
-                    "schrockn/ts-phase-4",
-                    {"parentBranchName": "schrockn/ts-phase-3", "children": []},
-                ],
-            ]
+    with pure_workstack_env(runner) as env:
+        # Create branch metadata for graphite stack
+        branches = {
+            "main": BranchMetadata.trunk("main", children=["schrockn/ts-phase-1"]),
+            "schrockn/ts-phase-1": BranchMetadata.branch(
+                "schrockn/ts-phase-1", "main", children=["schrockn/ts-phase-2"]
+            ),
+            "schrockn/ts-phase-2": BranchMetadata.branch(
+                "schrockn/ts-phase-2", "schrockn/ts-phase-1", children=["schrockn/ts-phase-3"]
+            ),
+            "schrockn/ts-phase-3": BranchMetadata.branch(
+                "schrockn/ts-phase-3", "schrockn/ts-phase-2", children=["schrockn/ts-phase-4"]
+            ),
+            "schrockn/ts-phase-4": BranchMetadata.branch(
+                "schrockn/ts-phase-4", "schrockn/ts-phase-3", children=[]
+            ),
         }
-        (env.git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache))
 
         # Create worktree
         workstacks_dir = env.workstacks_root / env.cwd.name
         temporal_stack_dir = workstacks_dir / "temporal-stack"
-        temporal_stack_dir.mkdir(parents=True)
 
         # Build fake git ops
         # Key setup: The worktree is registered with ts-phase-4,
@@ -233,7 +202,7 @@ def test_list_with_stacks_highlights_current_branch_not_worktree_branch() -> Non
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=RealGraphiteOps(), use_graphite=True
+            git_ops=git_ops, graphite_ops=FakeGraphiteOps(branches=branches), use_graphite=True
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
@@ -285,15 +254,12 @@ def test_list_with_stacks_root_repo_does_not_duplicate_branch() -> None:
           ◉  master
     """
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        # Create graphite cache with master as parent of foo
-        graphite_cache = {
-            "branches": [
-                ["master", {"validationResult": "TRUNK", "children": ["foo"]}],
-                ["foo", {"parentBranchName": "master", "children": []}],
-            ]
+    with pure_workstack_env(runner) as env:
+        # Create branch metadata with master as parent of foo
+        branches = {
+            "master": BranchMetadata.trunk("master", children=["foo"]),
+            "foo": BranchMetadata.branch("foo", "master", children=[]),
         }
-        (env.git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache))
 
         # Build fake git ops - only root repo on master
         git_ops = FakeGitOps(
@@ -303,7 +269,7 @@ def test_list_with_stacks_root_repo_does_not_duplicate_branch() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=RealGraphiteOps(), use_graphite=True
+            git_ops=git_ops, graphite_ops=FakeGraphiteOps(branches=branches), use_graphite=True
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
@@ -339,20 +305,16 @@ def test_list_with_stacks_shows_descendants_with_worktrees() -> None:
           ◯  master
     """
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        # Create graphite cache with master as parent of foo
-        graphite_cache = {
-            "branches": [
-                ["master", {"validationResult": "TRUNK", "children": ["foo"]}],
-                ["foo", {"parentBranchName": "master", "children": []}],
-            ]
+    with pure_workstack_env(runner) as env:
+        # Create branch metadata with master as parent of foo
+        branches = {
+            "master": BranchMetadata.trunk("master", children=["foo"]),
+            "foo": BranchMetadata.branch("foo", "master", children=[]),
         }
-        (env.git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache))
 
         # Create foo worktree
         workstacks_dir = env.workstacks_root / env.cwd.name
         foo_worktree_dir = workstacks_dir / "foo"
-        foo_worktree_dir.mkdir(parents=True)
 
         # Build fake git ops - root on master, foo worktree on foo branch
         git_ops = FakeGitOps(
@@ -373,7 +335,7 @@ def test_list_with_stacks_shows_descendants_with_worktrees() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=RealGraphiteOps(), use_graphite=True
+            git_ops=git_ops, graphite_ops=FakeGraphiteOps(branches=branches), use_graphite=True
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
@@ -425,15 +387,12 @@ def test_list_with_stacks_hides_descendants_without_worktrees() -> None:
           ◉  main       <- only main shown, feature-1 hidden (no worktree)
     """
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        # Create graphite cache with main as parent of feature-1
-        graphite_cache = {
-            "branches": [
-                ["main", {"validationResult": "TRUNK", "children": ["feature-1"]}],
-                ["feature-1", {"parentBranchName": "main", "children": []}],
-            ]
+    with pure_workstack_env(runner) as env:
+        # Create branch metadata with main as parent of feature-1
+        branches = {
+            "main": BranchMetadata.trunk("main", children=["feature-1"]),
+            "feature-1": BranchMetadata.branch("feature-1", "main", children=[]),
         }
-        (env.git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache))
 
         # Build fake git ops - only root on main, NO worktree on feature-1
         git_ops = FakeGitOps(
@@ -451,7 +410,7 @@ def test_list_with_stacks_hides_descendants_without_worktrees() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=RealGraphiteOps(), use_graphite=True
+            git_ops=git_ops, graphite_ops=FakeGraphiteOps(branches=branches), use_graphite=True
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
@@ -491,22 +450,18 @@ def test_list_with_stacks_shows_descendants_with_gaps() -> None:
           ◯  main
     """
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        # Create graphite cache: main → f1 → f2 → f3
-        graphite_cache = {
-            "branches": [
-                ["main", {"validationResult": "TRUNK", "children": ["f1"]}],
-                ["f1", {"parentBranchName": "main", "children": ["f2"]}],
-                ["f2", {"parentBranchName": "f1", "children": ["f3"]}],
-                ["f3", {"parentBranchName": "f2", "children": []}],
-            ]
+    with pure_workstack_env(runner) as env:
+        # Create branch metadata: main → f1 → f2 → f3
+        branches = {
+            "main": BranchMetadata.trunk("main", children=["f1"]),
+            "f1": BranchMetadata.branch("f1", "main", children=["f2"]),
+            "f2": BranchMetadata.branch("f2", "f1", children=["f3"]),
+            "f3": BranchMetadata.branch("f3", "f2", children=[]),
         }
-        (env.git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache))
 
         # Create f3 worktree
         workstacks_dir = env.workstacks_root / env.cwd.name
         f3_worktree_dir = workstacks_dir / "f3"
-        f3_worktree_dir.mkdir(parents=True)
 
         # Build fake git ops - root on main, f3 worktree on f3
         git_ops = FakeGitOps(
@@ -527,7 +482,7 @@ def test_list_with_stacks_shows_descendants_with_gaps() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=RealGraphiteOps(), use_graphite=True
+            git_ops=git_ops, graphite_ops=FakeGraphiteOps(branches=branches), use_graphite=True
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)

@@ -1,70 +1,24 @@
 """Tests for workstack switch --up and --down navigation."""
 
-import json
 from pathlib import Path
 
 from click.testing import CliRunner
 
 from tests.fakes.gitops import FakeGitOps
-from tests.test_utils.env_helpers import simulated_workstack_env
+from tests.fakes.graphite_ops import FakeGraphiteOps
+from tests.test_utils.env_helpers import pure_workstack_env
 from workstack.cli.cli import cli
+from workstack.core.branch_metadata import BranchMetadata
 from workstack.core.gitops import WorktreeInfo
-from workstack.core.graphite_ops import RealGraphiteOps
-
-
-def setup_graphite_stack(
-    git_dir: Path, branches: dict[str, dict[str, list[str] | str | bool | None]]
-) -> None:
-    """Set up a fake Graphite cache file with a stack structure.
-
-    Args:
-        git_dir: Path to .git directory
-        branches: Dict mapping branch name to metadata with keys:
-            - parent: parent branch name or None for trunk
-            - children: list of child branch names
-            - is_trunk: optional bool, defaults to False
-    """
-    cache_file = git_dir / ".graphite_cache_persist"
-    cache_file.parent.mkdir(parents=True, exist_ok=True)
-
-    branches_data = []
-    for branch_name, metadata in branches.items():
-        branch_data = {
-            "children": metadata.get("children", []),
-        }
-        if metadata.get("parent") is not None:
-            branch_data["parentBranchName"] = metadata["parent"]
-        if metadata.get("is_trunk", False):
-            branch_data["validationResult"] = "TRUNK"
-
-        branches_data.append([branch_name, branch_data])
-
-    cache_data = {"branches": branches_data}
-    cache_file.write_text(json.dumps(cache_data), encoding="utf-8")
+from workstack.core.repo_discovery import RepoContext
 
 
 def test_switch_up_with_existing_worktree() -> None:
     """Test --up navigation when child branch has a worktree."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         workstacks_dir = env.workstacks_root / env.cwd.name
 
-        # Set up stack: main -> feature-1 -> feature-2
-        setup_graphite_stack(
-            env.git_dir,
-            {
-                "main": {"parent": None, "children": ["feature-1"], "is_trunk": True},
-                "feature-1": {"parent": "main", "children": ["feature-2"]},
-                "feature-2": {"parent": "feature-1", "children": []},
-            },
-        )
-
-        # Set up worktrees
-        feature_1_path = workstacks_dir / "feature-1"
-        feature_1_path.mkdir(parents=True, exist_ok=True)
-
-        # The test runs from cwd, so we simulate being in feature-1 by setting
-        # cwd's current branch to feature-1
         git_ops = FakeGitOps(
             worktrees={
                 env.cwd: [
@@ -82,14 +36,27 @@ def test_switch_up_with_existing_worktree() -> None:
             },
         )
 
-        graphite_ops = RealGraphiteOps()
+        # Set up stack: main -> feature-1 -> feature-2
+        graphite_ops = FakeGraphiteOps(
+            branches={
+                "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
+                "feature-1": BranchMetadata.branch(
+                    "feature-1", "main", children=["feature-2"], commit_sha="def456"
+                ),
+                "feature-2": BranchMetadata.branch("feature-2", "feature-1", commit_sha="ghi789"),
+            }
+        )
 
-        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=workstacks_dir,
+        )
 
-        # Switch up from feature-1 to feature-2
-        # Run from feature-1 worktree
-        (workstacks_dir / "feature-1").mkdir(parents=True, exist_ok=True)
-        (workstacks_dir / "feature-2").mkdir(parents=True, exist_ok=True)
+        test_ctx = env.build_context(
+            git_ops=git_ops, graphite_ops=graphite_ops, repo=repo, use_graphite=True
+        )
 
         result = runner.invoke(
             cli, ["switch", "--up", "--script"], obj=test_ctx, catch_exceptions=False
@@ -99,28 +66,18 @@ def test_switch_up_with_existing_worktree() -> None:
             print(f"stderr: {result.stderr}")
             print(f"stdout: {result.stdout}")
         assert result.exit_code == 0
-        # Should generate script for feature-2
+        # Should generate script for feature-2 (verify in-memory)
         script_path = Path(result.stdout.strip())
-        assert script_path.exists()
-        script_content = script_path.read_text()
+        script_content = env.script_writer.get_script_content(script_path)
+        assert script_content is not None
         assert str(workstacks_dir / "feature-2") in script_content
 
 
 def test_switch_up_at_top_of_stack() -> None:
     """Test --up navigation when at the top of stack (no children)."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         workstacks_dir = env.workstacks_root / env.cwd.name
-
-        # Set up stack: main -> feature-1 -> feature-2 (at top)
-        setup_graphite_stack(
-            env.git_dir,
-            {
-                "main": {"parent": None, "children": ["feature-1"], "is_trunk": True},
-                "feature-1": {"parent": "main", "children": ["feature-2"]},
-                "feature-2": {"parent": "feature-1", "children": []},
-            },
-        )
 
         git_ops = FakeGitOps(
             worktrees={
@@ -133,7 +90,16 @@ def test_switch_up_at_top_of_stack() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        graphite_ops = RealGraphiteOps()
+        # Set up stack: main -> feature-1 -> feature-2 (at top)
+        graphite_ops = FakeGraphiteOps(
+            branches={
+                "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
+                "feature-1": BranchMetadata.branch(
+                    "feature-1", "main", children=["feature-2"], commit_sha="def456"
+                ),
+                "feature-2": BranchMetadata.branch("feature-2", "feature-1", commit_sha="ghi789"),
+            }
+        )
 
         test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
 
@@ -146,18 +112,8 @@ def test_switch_up_at_top_of_stack() -> None:
 def test_switch_up_child_has_no_worktree() -> None:
     """Test --up navigation when child branch exists but has no worktree."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         workstacks_dir = env.workstacks_root / env.cwd.name
-
-        # Set up stack: main -> feature-1 -> feature-2
-        setup_graphite_stack(
-            env.git_dir,
-            {
-                "main": {"parent": None, "children": ["feature-1"], "is_trunk": True},
-                "feature-1": {"parent": "main", "children": ["feature-2"]},
-                "feature-2": {"parent": "feature-1", "children": []},
-            },
-        )
 
         # Only feature-1 has a worktree, feature-2 does not
         git_ops = FakeGitOps(
@@ -171,7 +127,16 @@ def test_switch_up_child_has_no_worktree() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        graphite_ops = RealGraphiteOps()
+        # Set up stack: main -> feature-1 -> feature-2
+        graphite_ops = FakeGraphiteOps(
+            branches={
+                "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
+                "feature-1": BranchMetadata.branch(
+                    "feature-1", "main", children=["feature-2"], commit_sha="def456"
+                ),
+                "feature-2": BranchMetadata.branch("feature-2", "feature-1", commit_sha="ghi789"),
+            }
+        )
 
         test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
 
@@ -186,22 +151,8 @@ def test_switch_up_child_has_no_worktree() -> None:
 def test_switch_down_with_existing_worktree() -> None:
     """Test --down navigation when parent branch has a worktree."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         workstacks_dir = env.workstacks_root / env.cwd.name
-
-        # Set up stack: main -> feature-1 -> feature-2
-        setup_graphite_stack(
-            env.git_dir,
-            {
-                "main": {"parent": None, "children": ["feature-1"], "is_trunk": True},
-                "feature-1": {"parent": "main", "children": ["feature-2"]},
-                "feature-2": {"parent": "feature-1", "children": []},
-            },
-        )
-
-        # Set up worktrees
-        (workstacks_dir / "feature-1").mkdir(parents=True, exist_ok=True)
-        (workstacks_dir / "feature-2").mkdir(parents=True, exist_ok=True)
 
         git_ops = FakeGitOps(
             worktrees={
@@ -216,9 +167,27 @@ def test_switch_down_with_existing_worktree() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        graphite_ops = RealGraphiteOps()
+        # Set up stack: main -> feature-1 -> feature-2
+        graphite_ops = FakeGraphiteOps(
+            branches={
+                "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
+                "feature-1": BranchMetadata.branch(
+                    "feature-1", "main", children=["feature-2"], commit_sha="def456"
+                ),
+                "feature-2": BranchMetadata.branch("feature-2", "feature-1", commit_sha="ghi789"),
+            }
+        )
 
-        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=workstacks_dir,
+        )
+
+        test_ctx = env.build_context(
+            git_ops=git_ops, graphite_ops=graphite_ops, repo=repo, use_graphite=True
+        )
 
         result = runner.invoke(
             cli, ["switch", "--down", "--script"], obj=test_ctx, catch_exceptions=False
@@ -227,25 +196,16 @@ def test_switch_down_with_existing_worktree() -> None:
         assert result.exit_code == 0
         # Should generate script for feature-1
         script_path = Path(result.stdout.strip())
-        assert script_path.exists()
-        script_content = script_path.read_text()
+        script_content = env.script_writer.get_script_content(script_path)
+        assert script_content is not None
         assert str(workstacks_dir / "feature-1") in script_content
 
 
 def test_switch_down_to_trunk_root() -> None:
     """Test --down navigation when parent is trunk checked out in root."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         workstacks_dir = env.workstacks_root / env.cwd.name
-
-        # Set up stack: main -> feature-1
-        setup_graphite_stack(
-            env.git_dir,
-            {
-                "main": {"parent": None, "children": ["feature-1"], "is_trunk": True},
-                "feature-1": {"parent": "main", "children": []},
-            },
-        )
 
         # Main is checked out in root, feature-1 has its own worktree
         git_ops = FakeGitOps(
@@ -260,13 +220,26 @@ def test_switch_down_to_trunk_root() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        graphite_ops = RealGraphiteOps()
+        # Set up stack: main -> feature-1
+        graphite_ops = FakeGraphiteOps(
+            branches={
+                "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
+                "feature-1": BranchMetadata.branch("feature-1", "main", commit_sha="def456"),
+            }
+        )
 
-        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=workstacks_dir,
+        )
+
+        test_ctx = env.build_context(
+            git_ops=git_ops, graphite_ops=graphite_ops, repo=repo, use_graphite=True
+        )
 
         # Switch down from feature-1 to root (main)
-        (workstacks_dir / "feature-1").mkdir(parents=True, exist_ok=True)
-
         result = runner.invoke(
             cli, ["switch", "--down", "--script"], obj=test_ctx, catch_exceptions=False
         )
@@ -274,8 +247,8 @@ def test_switch_down_to_trunk_root() -> None:
         assert result.exit_code == 0
         # Should generate script for root
         script_path = Path(result.stdout.strip())
-        assert script_path.exists()
-        script_content = script_path.read_text()
+        script_content = env.script_writer.get_script_content(script_path)
+        assert script_content is not None
         assert str(env.cwd) in script_content
         assert "root" in script_content.lower()
 
@@ -283,15 +256,7 @@ def test_switch_down_to_trunk_root() -> None:
 def test_switch_down_at_trunk() -> None:
     """Test --down navigation when already at trunk."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        # Set up stack: main (only trunk)
-        setup_graphite_stack(
-            env.git_dir,
-            {
-                "main": {"parent": None, "children": [], "is_trunk": True},
-            },
-        )
-
+    with pure_workstack_env(runner) as env:
         git_ops = FakeGitOps(
             worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch="main")]},
             current_branches={env.cwd: "main"},
@@ -299,7 +264,12 @@ def test_switch_down_at_trunk() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        graphite_ops = RealGraphiteOps()
+        # Set up stack: main (only trunk)
+        graphite_ops = FakeGraphiteOps(
+            branches={
+                "main": BranchMetadata.trunk("main", commit_sha="abc123"),
+            }
+        )
 
         test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
 
@@ -313,18 +283,8 @@ def test_switch_down_at_trunk() -> None:
 def test_switch_down_parent_has_no_worktree() -> None:
     """Test --down navigation when parent branch exists but has no worktree."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         workstacks_dir = env.workstacks_root / env.cwd.name
-
-        # Set up stack: main -> feature-1 -> feature-2
-        setup_graphite_stack(
-            env.git_dir,
-            {
-                "main": {"parent": None, "children": ["feature-1"], "is_trunk": True},
-                "feature-1": {"parent": "main", "children": ["feature-2"]},
-                "feature-2": {"parent": "feature-1", "children": []},
-            },
-        )
 
         # Only feature-2 has a worktree, feature-1 does not
         git_ops = FakeGitOps(
@@ -339,7 +299,16 @@ def test_switch_down_parent_has_no_worktree() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        graphite_ops = RealGraphiteOps()
+        # Set up stack: main -> feature-1 -> feature-2
+        graphite_ops = FakeGraphiteOps(
+            branches={
+                "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
+                "feature-1": BranchMetadata.branch(
+                    "feature-1", "main", children=["feature-2"], commit_sha="def456"
+                ),
+                "feature-2": BranchMetadata.branch("feature-2", "feature-1", commit_sha="ghi789"),
+            }
+        )
 
         test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
 
@@ -354,7 +323,7 @@ def test_switch_down_parent_has_no_worktree() -> None:
 def test_switch_graphite_not_enabled() -> None:
     """Test --up/--down require Graphite to be enabled."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         git_ops = FakeGitOps(
             worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch="main")]},
             current_branches={env.cwd: "main"},
@@ -362,7 +331,7 @@ def test_switch_graphite_not_enabled() -> None:
         )
 
         # Graphite is NOT enabled
-        graphite_ops = RealGraphiteOps()
+        graphite_ops = FakeGraphiteOps()
 
         test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops)
 
@@ -383,14 +352,14 @@ def test_switch_graphite_not_enabled() -> None:
 def test_switch_up_and_down_mutually_exclusive() -> None:
     """Test that --up and --down cannot be used together."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         git_ops = FakeGitOps(
             worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch="main")]},
             current_branches={env.cwd: "main"},
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        graphite_ops = RealGraphiteOps()
+        graphite_ops = FakeGraphiteOps()
 
         test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
 
@@ -405,14 +374,14 @@ def test_switch_up_and_down_mutually_exclusive() -> None:
 def test_switch_name_with_up_mutually_exclusive() -> None:
     """Test that NAME and --up cannot be used together."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         git_ops = FakeGitOps(
             worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch="main")]},
             current_branches={env.cwd: "main"},
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        graphite_ops = RealGraphiteOps()
+        graphite_ops = FakeGraphiteOps()
 
         test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
 
@@ -427,7 +396,7 @@ def test_switch_name_with_up_mutually_exclusive() -> None:
 def test_switch_detached_head() -> None:
     """Test --up/--down fail gracefully on detached HEAD."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         # Current branch is None (detached HEAD)
         git_ops = FakeGitOps(
             worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch=None)]},
@@ -435,7 +404,7 @@ def test_switch_detached_head() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        graphite_ops = RealGraphiteOps()
+        graphite_ops = FakeGraphiteOps()
 
         test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
 
@@ -454,26 +423,12 @@ def test_switch_up_with_mismatched_worktree_name() -> None:
     The fix uses find_worktree_for_branch() to resolve branch -> worktree path.
     """
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         workstacks_dir = env.workstacks_root / env.cwd.name
-
-        # Set up stack: main -> feature/db -> feature/db-tests
-        # Branch names contain slashes, but worktree dirs use different names
-        setup_graphite_stack(
-            env.git_dir,
-            {
-                "main": {"parent": None, "children": ["feature/db"], "is_trunk": True},
-                "feature/db": {"parent": "main", "children": ["feature/db-tests"]},
-                "feature/db-tests": {"parent": "feature/db", "children": []},
-            },
-        )
 
         # Worktree directories use different naming than branch names
         # Branch: feature/db -> Worktree: db-refactor
         # Branch: feature/db-tests -> Worktree: db-tests-implementation
-        (workstacks_dir / "db-refactor").mkdir(parents=True, exist_ok=True)
-        (workstacks_dir / "db-tests-implementation").mkdir(parents=True, exist_ok=True)
-
         git_ops = FakeGitOps(
             worktrees={
                 env.cwd: [
@@ -490,9 +445,29 @@ def test_switch_up_with_mismatched_worktree_name() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        graphite_ops = RealGraphiteOps()
+        # Set up stack: main -> feature/db -> feature/db-tests
+        graphite_ops = FakeGraphiteOps(
+            branches={
+                "main": BranchMetadata.trunk("main", children=["feature/db"], commit_sha="abc123"),
+                "feature/db": BranchMetadata.branch(
+                    "feature/db", "main", children=["feature/db-tests"], commit_sha="def456"
+                ),
+                "feature/db-tests": BranchMetadata.branch(
+                    "feature/db-tests", "feature/db", commit_sha="ghi789"
+                ),
+            }
+        )
 
-        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=workstacks_dir,
+        )
+
+        test_ctx = env.build_context(
+            git_ops=git_ops, graphite_ops=graphite_ops, repo=repo, use_graphite=True
+        )
 
         # Navigate up from feature/db to feature/db-tests using switch --up
         # This would fail before the fix because it would try to find a worktree named
@@ -508,8 +483,8 @@ def test_switch_up_with_mismatched_worktree_name() -> None:
 
         # Should generate script for db-tests-implementation (not feature/db-tests)
         script_path = Path(result.stdout.strip())
-        assert script_path.exists()
-        script_content = script_path.read_text()
+        script_content = env.script_writer.get_script_content(script_path)
+        assert script_content is not None
         assert str(workstacks_dir / "db-tests-implementation") in script_content
 
 
@@ -521,26 +496,12 @@ def test_switch_down_with_mismatched_worktree_name() -> None:
     The fix uses find_worktree_for_branch() to resolve branch -> worktree path.
     """
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         workstacks_dir = env.workstacks_root / env.cwd.name
-
-        # Set up stack: main -> feature/api -> feature/api-v2
-        # Branch names contain slashes, but worktree dirs use different names
-        setup_graphite_stack(
-            env.git_dir,
-            {
-                "main": {"parent": None, "children": ["feature/api"], "is_trunk": True},
-                "feature/api": {"parent": "main", "children": ["feature/api-v2"]},
-                "feature/api-v2": {"parent": "feature/api", "children": []},
-            },
-        )
 
         # Worktree directories use different naming than branch names
         # Branch: feature/api -> Worktree: api-work
         # Branch: feature/api-v2 -> Worktree: api-v2-work
-        (workstacks_dir / "api-work").mkdir(parents=True, exist_ok=True)
-        (workstacks_dir / "api-v2-work").mkdir(parents=True, exist_ok=True)
-
         git_ops = FakeGitOps(
             worktrees={
                 env.cwd: [
@@ -555,9 +516,29 @@ def test_switch_down_with_mismatched_worktree_name() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        graphite_ops = RealGraphiteOps()
+        # Set up stack: main -> feature/api -> feature/api-v2
+        graphite_ops = FakeGraphiteOps(
+            branches={
+                "main": BranchMetadata.trunk("main", children=["feature/api"], commit_sha="abc123"),
+                "feature/api": BranchMetadata.branch(
+                    "feature/api", "main", children=["feature/api-v2"], commit_sha="def456"
+                ),
+                "feature/api-v2": BranchMetadata.branch(
+                    "feature/api-v2", "feature/api", commit_sha="ghi789"
+                ),
+            }
+        )
 
-        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=workstacks_dir,
+        )
+
+        test_ctx = env.build_context(
+            git_ops=git_ops, graphite_ops=graphite_ops, repo=repo, use_graphite=True
+        )
 
         # Navigate down from feature/api-v2 to feature/api using switch --down
         # This would fail before the fix because it would try to find a worktree named
@@ -573,6 +554,6 @@ def test_switch_down_with_mismatched_worktree_name() -> None:
 
         # Should generate script for api-work (not feature/api)
         script_path = Path(result.stdout.strip())
-        assert script_path.exists()
-        script_content = script_path.read_text()
+        script_content = env.script_writer.get_script_content(script_path)
+        assert script_content is not None
         assert str(workstacks_dir / "api-work") in script_content

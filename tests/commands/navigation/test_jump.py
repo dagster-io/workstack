@@ -5,7 +5,7 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from tests.fakes.gitops import FakeGitOps
-from tests.test_utils.env_helpers import pure_workstack_env, simulated_workstack_env
+from tests.test_utils.env_helpers import pure_workstack_env
 from workstack.cli.cli import cli
 from workstack.core.gitops import WorktreeInfo
 from workstack.core.repo_discovery import RepoContext
@@ -68,7 +68,7 @@ def test_jump_to_branch_in_single_worktree() -> None:
 def test_jump_to_branch_not_found() -> None:
     """Test jumping to a branch that is not checked out in any worktree."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         work_dir = env.workstacks_root / env.cwd.name
 
         git_ops = FakeGitOps(
@@ -82,7 +82,14 @@ def test_jump_to_branch_not_found() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        test_ctx = env.build_context(git_ops=git_ops)
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=work_dir,
+        )
+
+        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
 
         # Jump to a branch that doesn't exist
         result = runner.invoke(
@@ -101,11 +108,9 @@ def test_jump_to_branch_in_stack_but_not_checked_out() -> None:
     directly checked out should fail with appropriate error message.
     """
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         work_dir = env.workstacks_root / env.cwd.name
-
         wt1 = work_dir / "feature-1-wt"
-        wt1.mkdir(parents=True, exist_ok=True)
 
         # feature-1 is checked out, but feature-base is not
         # (even though it might exist in the stack)
@@ -120,7 +125,14 @@ def test_jump_to_branch_in_stack_but_not_checked_out() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        test_ctx = env.build_context(git_ops=git_ops)
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=work_dir,
+        )
+
+        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
 
         # Jump to feature-base which exists in repo but is not checked out in any worktree
         result = runner.invoke(cli, ["jump", "feature-base"], obj=test_ctx, catch_exceptions=False)
@@ -132,11 +144,9 @@ def test_jump_to_branch_in_stack_but_not_checked_out() -> None:
 def test_jump_works_without_graphite() -> None:
     """Test that jump works without Graphite enabled."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         work_dir = env.workstacks_root / env.cwd.name
-
         feature_wt = work_dir / "feature-1-wt"
-        feature_wt.mkdir(parents=True, exist_ok=True)
 
         git_ops = FakeGitOps(
             worktrees={
@@ -149,8 +159,15 @@ def test_jump_works_without_graphite() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=work_dir,
+        )
+
         # Graphite is NOT enabled - jump should still work
-        test_ctx = env.build_context(git_ops=git_ops)
+        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
 
         result = runner.invoke(
             cli, ["jump", "feature-1", "--script"], obj=test_ctx, catch_exceptions=False
@@ -159,19 +176,18 @@ def test_jump_works_without_graphite() -> None:
         # Should succeed - jump no longer requires Graphite
         assert result.exit_code == 0
         script_path = Path(result.stdout.strip())
-        assert script_path.exists()
+        # Verify script was written to in-memory store
+        script_content = env.script_writer.get_script_content(script_path)
+        assert script_content is not None
 
 
 def test_jump_already_on_target_branch() -> None:
     """Test jumping when the target branch is already checked out in a single worktree."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         work_dir = env.workstacks_root / env.cwd.name
-
         feature_wt = work_dir / "feature-1-wt"
         other_wt = work_dir / "other-wt"
-        feature_wt.mkdir(parents=True, exist_ok=True)
-        other_wt.mkdir(parents=True, exist_ok=True)
 
         git_ops = FakeGitOps(
             worktrees={
@@ -184,7 +200,14 @@ def test_jump_already_on_target_branch() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        test_ctx = env.build_context(git_ops=git_ops)
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=work_dir,
+        )
+
+        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
 
         # Jump to feature-1 which is already checked out
         result = runner.invoke(
@@ -200,13 +223,10 @@ def test_jump_already_on_target_branch() -> None:
 def test_jump_succeeds_when_branch_exactly_checked_out() -> None:
     """Test that jump succeeds when branch is exactly checked out in a worktree."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         work_dir = env.workstacks_root / env.cwd.name
-
         feature_wt = work_dir / "feature-wt"
         other_wt = work_dir / "other-wt"
-        feature_wt.mkdir(parents=True, exist_ok=True)
-        other_wt.mkdir(parents=True, exist_ok=True)
 
         git_ops = FakeGitOps(
             worktrees={
@@ -219,7 +239,14 @@ def test_jump_succeeds_when_branch_exactly_checked_out() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        test_ctx = env.build_context(git_ops=git_ops)
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=work_dir,
+        )
+
+        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
 
         # Jump to feature-2 which is checked out in feature_wt
         result = runner.invoke(
@@ -229,9 +256,10 @@ def test_jump_succeeds_when_branch_exactly_checked_out() -> None:
         assert result.exit_code == 0
         # Should not checkout (already on feature-2)
         assert len(git_ops.checked_out_branches) == 0
-        # Should generate activation script
+        # Should generate activation script (verify in-memory)
         script_path = Path(result.stdout.strip())
-        assert script_path.exists()
+        script_content = env.script_writer.get_script_content(script_path)
+        assert script_content is not None
 
 
 def test_jump_with_multiple_worktrees_same_branch() -> None:
@@ -241,13 +269,10 @@ def test_jump_with_multiple_worktrees_same_branch() -> None:
     but our code should handle it gracefully.
     """
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         work_dir = env.workstacks_root / env.cwd.name
-
         wt1 = work_dir / "wt1"
         wt2 = work_dir / "wt2"
-        wt1.mkdir(parents=True, exist_ok=True)
-        wt2.mkdir(parents=True, exist_ok=True)
 
         # Edge case: same branch checked out in multiple worktrees
         # (shouldn't happen in real git, but test our handling)
@@ -262,7 +287,14 @@ def test_jump_with_multiple_worktrees_same_branch() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        test_ctx = env.build_context(git_ops=git_ops)
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=work_dir,
+        )
+
+        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
 
         # Jump to feature-2 which is checked out in multiple worktrees
         result = runner.invoke(

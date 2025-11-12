@@ -35,25 +35,8 @@ def test_create_with_plan_file() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        # Create global config with workstacks_root
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
-
-        # Create test context
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            global_config=global_config,
-            script_writer=env.script_writer,
-            cwd=env.root_worktree,
-            trunk_branch="main",
-        )
+        # Create test context using env.build_context() helper
+        test_ctx = env.build_context(git_ops=git_ops)
 
         # Run workstack create with --plan
         result = runner.invoke(
@@ -102,25 +85,8 @@ def test_create_with_plan_name_sanitization() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        # Create global config with workstacks_root
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
-
-        # Create test context
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            global_config=global_config,
-            script_writer=env.script_writer,
-            cwd=env.root_worktree,
-            trunk_branch="main",
-        )
+        # Create test context using env.build_context() helper
+        test_ctx = env.build_context(git_ops=git_ops)
 
         # Run workstack create with --plan
         result = runner.invoke(
@@ -416,25 +382,8 @@ def test_create_with_script_flag() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        # Create global config with workstacks_root
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
-
-        # Create test context
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            global_config=global_config,
-            script_writer=env.script_writer,
-            cwd=env.root_worktree,
-            trunk_branch="main",
-        )
+        # Create test context using env.build_context() helper
+        test_ctx = env.build_context(git_ops=git_ops)
 
         # Run workstack create with --script flag
         result = runner.invoke(

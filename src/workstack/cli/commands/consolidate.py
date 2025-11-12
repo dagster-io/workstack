@@ -149,7 +149,7 @@ def consolidate_cmd(
     for wt in all_worktrees:
         if wt.branch not in stack_branches:
             continue
-        if wt.path.exists() and ctx.git_ops.has_uncommitted_changes(wt.path):
+        if ctx.git_ops.path_exists(wt.path) and ctx.git_ops.has_uncommitted_changes(wt.path):
             worktrees_with_changes.append(wt.path)
 
     if worktrees_with_changes:

@@ -76,6 +76,8 @@ class FakeGitOps(GitOps):
         file_statuses: dict[Path, tuple[list[str], list[str], list[str]]] | None = None,
         ahead_behind: dict[tuple[Path, str], tuple[int, int]] | None = None,
         recent_commits: dict[Path, list[dict[str, str]]] | None = None,
+        existing_paths: set[Path] | None = None,
+        file_contents: dict[Path, str] | None = None,
     ) -> None:
         """Create FakeGitOps with pre-configured state.
 
@@ -90,6 +92,8 @@ class FakeGitOps(GitOps):
             file_statuses: Mapping of cwd -> (staged, modified, untracked) files
             ahead_behind: Mapping of (cwd, branch) -> (ahead, behind) counts
             recent_commits: Mapping of cwd -> list of commit info dicts
+            existing_paths: Set of paths that should be treated as existing (for pure mode)
+            file_contents: Mapping of path -> file content (for commands that read files)
         """
         self._worktrees = worktrees or {}
         self._current_branches = current_branches or {}
@@ -101,6 +105,8 @@ class FakeGitOps(GitOps):
         self._file_statuses = file_statuses or {}
         self._ahead_behind = ahead_behind or {}
         self._recent_commits = recent_commits or {}
+        self._existing_paths = existing_paths or set()
+        self._file_contents = file_contents or {}
 
         # Mutation tracking
         self._deleted_branches: list[str] = []
@@ -184,9 +190,10 @@ class FakeGitOps(GitOps):
                         path=new_path, branch=wt.branch, is_root=wt.is_root
                     )
                     break
-        # Simulate the filesystem move if the paths exist
-        if old_path.exists():
-            old_path.rename(new_path)
+        # Update existing_paths for pure test mode
+        if old_path in self._existing_paths:
+            self._existing_paths.discard(old_path)
+            self._existing_paths.add(new_path)
 
     def remove_worktree(self, repo_root: Path, path: Path, *, force: bool = False) -> None:
         """Remove a worktree (mutates internal state)."""
@@ -196,6 +203,8 @@ class FakeGitOps(GitOps):
             ]
         # Track the removal
         self._removed_worktrees.append(path)
+        # Remove from existing_paths so path_exists() returns False after deletion
+        self._existing_paths.discard(path)
 
     def checkout_branch(self, cwd: Path, branch: str) -> None:
         """Checkout a branch (mutates internal state).
@@ -334,3 +343,88 @@ class FakeGitOps(GitOps):
         This property is for test assertions only.
         """
         return self._detached_checkouts.copy()
+
+    def _is_parent(self, parent: Path, child: Path) -> bool:
+        """Check if parent is an ancestor of child."""
+        try:
+            child.relative_to(parent)
+            return True
+        except ValueError:
+            return False
+
+    def path_exists(self, path: Path) -> bool:
+        """Check if path should be treated as existing.
+
+        Used in pure_workstack_env to simulate filesystem checks without
+        actual filesystem I/O. Paths in existing_paths are treated as
+        existing even though they're sentinel paths.
+
+        For simulated_workstack_env (real directories), falls back to
+        checking the real filesystem for paths within known worktrees.
+        """
+        from tests.test_utils.paths import SentinelPath
+
+        # First check if path is explicitly marked as existing
+        if path in self._existing_paths:
+            return True
+
+        # Don't check real filesystem for sentinel paths (pure test mode)
+        if isinstance(path, SentinelPath):
+            return False
+
+        # For real filesystem tests, check if path is under any existing path
+        for existing_path in self._existing_paths:
+            try:
+                # Check if path is relative to existing_path
+                path.relative_to(existing_path)
+                # If we get here, path is under existing_path
+                # Check if it actually exists on real filesystem
+                return path.exists()
+            except (ValueError, OSError, RuntimeError):
+                # Not relative to this existing_path or error checking, continue
+                continue
+
+        # Fallback: if no existing_paths configured and path is not under any known path,
+        # check real filesystem. This handles tests that create real files but don't
+        # set up existing_paths (like some unit tests).
+        # This fallback won't interfere with tests that explicitly set existing_paths
+        # (like the init test) because those will either find the path in existing_paths
+        # or not find it as a child of any existing_path.
+        if not self._existing_paths or not any(
+            self._is_parent(ep, path) for ep in self._existing_paths
+        ):
+            try:
+                return path.exists()
+            except (OSError, RuntimeError):
+                return False
+
+        return False
+
+    def is_dir(self, path: Path) -> bool:
+        """Check if path should be treated as a directory.
+
+        For testing purposes, paths in existing_paths that represent
+        git directories (.git) or worktree directories are treated as
+        directories. This is used primarily for distinguishing .git
+        directories (normal repos) from .git files (worktrees).
+
+        Returns True if path exists and is likely a directory.
+        """
+        if path not in self._existing_paths:
+            return False
+        # If it's a .git path, treat it as a directory
+        # (worktrees would have .git as a file, which wouldn't be in existing_paths)
+        return True
+
+    def read_file(self, path: Path) -> str:
+        """Read file content from in-memory store.
+
+        Used in pure_workstack_env for commands that need to read files
+        (e.g., plan files, config files) without actual filesystem I/O.
+
+        Raises:
+            FileNotFoundError: If path not in file_contents mapping.
+        """
+        if path not in self._file_contents:
+            raise FileNotFoundError(f"No content for {path}")
+        return self._file_contents[path]

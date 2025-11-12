@@ -33,7 +33,7 @@ def down_cmd(ctx: WorkstackContext, script: bool) -> None:
     """
     _ensure_graphite_enabled(ctx)
     repo = discover_repo_context(ctx, ctx.cwd)
-    trunk_branch = read_trunk_from_pyproject(repo.root)
+    trunk_branch = read_trunk_from_pyproject(repo.root, ctx.git_ops)
 
     # Get current branch
     current_branch = ctx.git_ops.get_current_branch(ctx.cwd)

@@ -4,16 +4,16 @@ This file tests CLI-specific behavior: emoji rendering, URL formatting, and conf
 Business logic for PR states is tested in tests/unit/status/test_github_pr_collector.py.
 """
 
-import json
-
 import pytest
 from click.testing import CliRunner
 
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
+from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.test_utils.builders import PullRequestInfoBuilder
-from tests.test_utils.env_helpers import simulated_workstack_env
+from tests.test_utils.env_helpers import pure_workstack_env
 from workstack.cli.cli import cli
+from workstack.core.branch_metadata import BranchMetadata
 from workstack.core.github_ops import PullRequestInfo
 from workstack.core.gitops import WorktreeInfo
 
@@ -33,7 +33,7 @@ from workstack.core.gitops import WorktreeInfo
 def test_list_with_stacks_pr_visibility(show_pr_info: bool, expected_visible: bool) -> None:
     """PR info visibility follows the show_pr_info configuration flag."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         branch_name = "feature-branch"
         pr = PullRequestInfo(
             number=42,
@@ -45,20 +45,16 @@ def test_list_with_stacks_pr_visibility(show_pr_info: bool, expected_visible: bo
             repo="repo",
         )
 
-        # Create graphite cache with a simple stack
-        graphite_cache = {
-            "branches": [
-                ("main", {"validationResult": "TRUNK", "children": [branch_name]}),
-                (branch_name, {"parentBranchName": "main", "children": []}),
-            ]
+        # Create branch metadata with a simple stack
+        branches = {
+            "main": BranchMetadata.trunk("main", children=[branch_name]),
+            branch_name: BranchMetadata.branch(branch_name, "main", children=[]),
         }
-        (env.git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache))
 
         # Create worktree directory for branch so it appears in the stack
         repo_name = env.cwd.name
         workstacks_dir = env.workstacks_root / repo_name
         feature_worktree = workstacks_dir / branch_name
-        feature_worktree.mkdir(parents=True)
 
         # Build fake git ops with worktree for branch
         git_ops = FakeGitOps(
@@ -78,6 +74,7 @@ def test_list_with_stacks_pr_visibility(show_pr_info: bool, expected_visible: bo
         test_ctx = env.build_context(
             git_ops=git_ops,
             github_ops=github_ops,
+            graphite_ops=FakeGraphiteOps(branches=branches),
             use_graphite=True,
             show_pr_info=show_pr_info,
         )
@@ -115,7 +112,7 @@ def test_list_pr_emoji_mapping(
     This test covers all emoji rendering logic in a single parametrized test.
     """
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         branch_name = "test-branch"
 
         # Use builder pattern for PR creation
@@ -125,20 +122,16 @@ def test_list_pr_emoji_mapping(
         builder.checks_passing = checks
         pr = builder.build()
 
-        # Create graphite cache with a simple stack
-        graphite_cache = {
-            "branches": [
-                ("main", {"validationResult": "TRUNK", "children": [branch_name]}),
-                (branch_name, {"parentBranchName": "main", "children": []}),
-            ]
+        # Create branch metadata with a simple stack
+        branches = {
+            "main": BranchMetadata.trunk("main", children=[branch_name]),
+            branch_name: BranchMetadata.branch(branch_name, "main", children=[]),
         }
-        (env.git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache))
 
         # Create worktree directory for branch so it appears in the stack
         repo_name = env.cwd.name
         workstacks_dir = env.workstacks_root / repo_name
         feature_worktree = workstacks_dir / branch_name
-        feature_worktree.mkdir(parents=True)
 
         # Build fake git ops with worktree for branch
         git_ops = FakeGitOps(
@@ -158,6 +151,7 @@ def test_list_pr_emoji_mapping(
         test_ctx = env.build_context(
             git_ops=git_ops,
             github_ops=github_ops,
+            graphite_ops=FakeGraphiteOps(branches=branches),
             use_graphite=True,
         )
 
@@ -182,7 +176,7 @@ def test_list_with_stacks_uses_graphite_url() -> None:
     for better integration with Graphite workflow.
     """
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         branch_name = "feature"
         pr = PullRequestInfo(
             number=100,
@@ -194,20 +188,16 @@ def test_list_with_stacks_uses_graphite_url() -> None:
             repo="testrepo",
         )
 
-        # Create graphite cache with a simple stack
-        graphite_cache = {
-            "branches": [
-                ("main", {"validationResult": "TRUNK", "children": [branch_name]}),
-                (branch_name, {"parentBranchName": "main", "children": []}),
-            ]
+        # Create branch metadata with a simple stack
+        branches = {
+            "main": BranchMetadata.trunk("main", children=[branch_name]),
+            branch_name: BranchMetadata.branch(branch_name, "main", children=[]),
         }
-        (env.git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache))
 
         # Create worktree directory for branch so it appears in the stack
         repo_name = env.cwd.name
         workstacks_dir = env.workstacks_root / repo_name
         feature_worktree = workstacks_dir / branch_name
-        feature_worktree.mkdir(parents=True)
 
         # Build fake git ops with worktree for branch
         git_ops = FakeGitOps(
@@ -227,6 +217,7 @@ def test_list_with_stacks_uses_graphite_url() -> None:
         test_ctx = env.build_context(
             git_ops=git_ops,
             github_ops=github_ops,
+            graphite_ops=FakeGraphiteOps(branches=branches),
             use_graphite=True,
         )
 

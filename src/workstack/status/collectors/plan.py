@@ -26,7 +26,7 @@ class PlanFileCollector(StatusCollector):
             True if .PLAN.md exists
         """
         plan_path = worktree_path / ".PLAN.md"
-        return plan_path.exists()
+        return ctx.git_ops.path_exists(plan_path)
 
     def collect(
         self, ctx: WorkstackContext, worktree_path: Path, repo_root: Path
@@ -43,7 +43,7 @@ class PlanFileCollector(StatusCollector):
         """
         plan_path = worktree_path / ".PLAN.md"
 
-        if not plan_path.exists():
+        if not ctx.git_ops.path_exists(plan_path):
             return PlanStatus(
                 exists=False,
                 path=None,

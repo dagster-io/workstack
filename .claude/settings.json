@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(workstack-dev:*)"
+      "Bash(workstack-dev:*)",
+      "Bash(uv run python:*)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []

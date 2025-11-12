@@ -47,6 +47,7 @@ def test_rename_successful() -> None:
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -73,6 +74,7 @@ def test_rename_old_worktree_not_found() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -111,6 +113,7 @@ def test_rename_new_name_already_exists() -> None:
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -148,6 +151,7 @@ def test_rename_with_graphite_enabled() -> None:
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -186,6 +190,7 @@ def test_rename_dry_run() -> None:
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=True,
         )

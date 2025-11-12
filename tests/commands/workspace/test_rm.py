@@ -45,6 +45,7 @@ def _create_test_context(env, use_graphite: bool = False, dry_run: bool = False)
         github_ops=FakeGitHubOps(),
         graphite_ops=FakeGraphiteOps(),
         shell_ops=FakeShellOps(),
+        script_writer=env.script_writer,
         cwd=env.cwd,
         dry_run=dry_run,
     )
@@ -136,6 +137,7 @@ def test_rm_dry_run_with_delete_stack() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(branches=branches),
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=True,
         )

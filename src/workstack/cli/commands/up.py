@@ -55,4 +55,4 @@ def up_cmd(ctx: WorkstackContext, script: bool) -> None:
         )
         raise SystemExit(1)
 
-    _activate_worktree(repo, target_wt_path, script, "up")
+    _activate_worktree(ctx, repo, target_wt_path, script, "up")

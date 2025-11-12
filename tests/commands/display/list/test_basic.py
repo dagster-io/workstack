@@ -45,6 +45,7 @@ def test_list_outputs_names_not_paths() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 

@@ -85,6 +85,7 @@ def test_list_with_stacks_flag() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -158,6 +159,7 @@ def test_list_with_stacks_graphite_disabled() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -192,6 +194,7 @@ def test_list_with_stacks_no_graphite_cache() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -293,6 +296,7 @@ def test_list_with_stacks_highlights_current_branch_not_worktree_branch() -> Non
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -377,6 +381,7 @@ def test_list_with_stacks_root_repo_does_not_duplicate_branch() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -461,6 +466,7 @@ def test_list_with_stacks_shows_descendants_with_worktrees() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -553,6 +559,7 @@ def test_list_with_stacks_hides_descendants_without_worktrees() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -643,6 +650,7 @@ def test_list_with_stacks_shows_descendants_with_gaps() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -729,6 +737,7 @@ def test_list_with_stacks_corrupted_cache() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -799,6 +808,7 @@ More content.
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -859,6 +869,7 @@ def test_list_without_stacks_shows_plan_summary() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -914,6 +925,7 @@ def test_list_with_stacks_no_plan_file() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -974,6 +986,7 @@ def test_list_with_stacks_plan_without_frontmatter() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 

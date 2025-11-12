@@ -58,6 +58,7 @@ def test_switch_command() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.cwd,
             trunk_branch="main",
         )
@@ -114,6 +115,7 @@ def test_switch_nonexistent_worktree() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.cwd,
             trunk_branch="main",
         )
@@ -167,6 +169,7 @@ def test_switch_to_root() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.cwd,
             trunk_branch="main",
         )
@@ -240,6 +243,7 @@ def test_list_includes_root() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.cwd,
             trunk_branch="main",
         )
@@ -316,6 +320,7 @@ def test_complete_worktree_names_without_context() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.cwd,
             trunk_branch="main",
         )
@@ -376,6 +381,7 @@ def test_switch_rejects_main_as_worktree_name() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.cwd,
             trunk_branch="main",
         )
@@ -408,6 +414,7 @@ def test_switch_rejects_master_as_worktree_name() -> None:
         # Create test context
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
             trunk_branch="master",
         )

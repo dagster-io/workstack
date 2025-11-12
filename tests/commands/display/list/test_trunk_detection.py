@@ -62,6 +62,7 @@ def test_list_with_trunk_branch(trunk_branch: str) -> None:
         ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 

@@ -50,6 +50,7 @@ def test_create_with_plan_file() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.root_worktree,
             trunk_branch="main",
         )
@@ -116,6 +117,7 @@ def test_create_with_plan_name_sanitization() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.root_worktree,
             trunk_branch="main",
         )
@@ -174,6 +176,7 @@ def test_create_with_both_name_and_plan_fails() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.root_worktree,
             trunk_branch="main",
         )
@@ -217,6 +220,7 @@ def test_create_rejects_reserved_name_root() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.root_worktree,
             trunk_branch="main",
         )
@@ -266,6 +270,7 @@ def test_create_rejects_reserved_name_root_case_insensitive() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.root_worktree,
             trunk_branch="main",
         )
@@ -314,6 +319,7 @@ def test_create_rejects_main_as_worktree_name() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.root_worktree,
             trunk_branch="main",
         )
@@ -362,6 +368,7 @@ def test_create_rejects_master_as_worktree_name() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.root_worktree,
             trunk_branch="main",
         )
@@ -424,6 +431,7 @@ def test_create_with_script_flag() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.root_worktree,
             trunk_branch="main",
         )

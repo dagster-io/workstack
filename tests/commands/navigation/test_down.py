@@ -61,6 +61,7 @@ def test_down_with_existing_worktree() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -114,6 +115,7 @@ def test_down_to_trunk_root() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -161,6 +163,7 @@ def test_down_at_trunk() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -214,6 +217,7 @@ def test_down_parent_has_no_worktree() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -247,6 +251,7 @@ def test_down_graphite_not_enabled() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -279,6 +284,7 @@ def test_down_detached_head() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -336,6 +342,7 @@ def test_down_script_flag() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -411,6 +418,7 @@ def test_down_with_mismatched_worktree_name() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 

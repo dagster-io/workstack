@@ -8,7 +8,6 @@ import click
 
 from workstack.cli.activation import render_activation_script
 from workstack.cli.core import discover_repo_context, worktree_path_for
-from workstack.cli.shell_utils import write_script_to_temp
 from workstack.core.consolidation_utils import calculate_stack_range, create_consolidation_plan
 from workstack.core.context import WorkstackContext, create_context
 from workstack.core.repo_discovery import ensure_workstacks_dir
@@ -331,12 +330,12 @@ def consolidate_cmd(
             final_message='echo "✓ Switched to consolidated worktree."',
             comment="work activate-script (consolidate)",
         )
-        script_path = write_script_to_temp(
+        result = ctx.script_writer.write_activation_script(
             script_content,
             command_name="consolidate",
             comment=f"activate {name}",
         )
-        click.echo(str(script_path), nl=False)
+        click.echo(str(result.path), nl=False)
     elif name is not None and not dry_run:
         # Manual cd instruction when not in script mode
         click.echo(f"Switching to worktree: {click.style(name, fg='cyan', bold=True)}")

@@ -49,7 +49,7 @@ def down_cmd(ctx: WorkstackContext, script: bool) -> None:
 
     # Check if target_name refers to 'root' which means root repo
     if target_name == "root":
-        _activate_root_repo(repo, script, "down")
+        _activate_root_repo(ctx, repo, script, "down")
 
     # Resolve target branch to actual worktree path
     target_wt_path = ctx.git_ops.find_worktree_for_branch(repo.root, target_name)
@@ -62,4 +62,4 @@ def down_cmd(ctx: WorkstackContext, script: bool) -> None:
         )
         raise SystemExit(1)
 
-    _activate_worktree(repo, target_wt_path, script, "down")
+    _activate_worktree(ctx, repo, target_wt_path, script, "down")

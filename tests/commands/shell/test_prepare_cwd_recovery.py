@@ -7,6 +7,7 @@ from click.testing import CliRunner
 
 from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps
+from tests.fakes.script_writer import FakeScriptWriterOps
 from workstack.cli.commands.prepare_cwd_recovery import prepare_cwd_recovery_cmd
 from workstack.core.context import WorkstackContext
 from workstack.core.global_config import GlobalConfig
@@ -21,6 +22,7 @@ def build_ctx(
         git_common_dirs[repo_root] = repo_root / ".git"
 
     git_ops = FakeGitOps(git_common_dirs=git_common_dirs)
+    script_writer = FakeScriptWriterOps()
     global_config_ops = GlobalConfig(
         workstacks_root=workstacks_root,
         use_graphite=False,
@@ -30,6 +32,7 @@ def build_ctx(
     )
     return create_test_context(
         git_ops=git_ops,
+        script_writer=script_writer,
         global_config=global_config_ops,
         cwd=cwd or repo_root or workstacks_root,
         dry_run=False,
@@ -58,8 +61,8 @@ def test_prepare_cwd_recovery_outputs_script(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     script_path = Path(result.output.strip())
-    assert script_path.exists()
-    script_path.unlink(missing_ok=True)
+    # Verify script was written to in-memory fake
+    assert ctx.script_writer.get_script_content(script_path) is not None
 
 
 def test_prepare_cwd_recovery_no_repo(tmp_path: Path) -> None:

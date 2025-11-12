@@ -7,12 +7,13 @@ from tests.fakes.gitops import FakeGitOps
 from workstack.cli.commands.prepare_cwd_recovery import generate_recovery_script
 from workstack.core.context import WorkstackContext
 from workstack.core.global_config import GlobalConfig
+from workstack.core.script_writer import RealScriptWriterOps
 
 
 def build_ctx(
     repo_root: Path | None, workstacks_root: Path, cwd: Path | None = None
 ) -> WorkstackContext:
-    """Create a WorkstackContext with test fakes."""
+    """Create a WorkstackContext with test fakes and real script writer for integration testing."""
     git_common_dirs: dict[Path, Path] = {}
     if repo_root is not None:
         git_common_dirs[repo_root] = repo_root / ".git"
@@ -28,6 +29,7 @@ def build_ctx(
     return create_test_context(
         git_ops=git_ops,
         global_config=global_config_ops,
+        script_writer=RealScriptWriterOps(),  # Use real script writer for integration tests
         cwd=cwd or repo_root or workstacks_root,
         dry_run=False,
     )

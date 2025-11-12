@@ -1,0 +1,83 @@
+"""Fake implementation of ScriptWriterOps for testing."""
+
+import os
+import uuid
+from datetime import datetime
+from pathlib import Path
+
+from workstack.core.script_writer import ScriptResult, ScriptWriterOps
+
+
+class FakeScriptWriterOps(ScriptWriterOps):
+    """In-memory fake for script writing operations.
+
+    Stores scripts in memory using sentinel paths instead of creating
+    actual temp files. This allows tests to verify script content
+    without filesystem I/O.
+    """
+
+    def __init__(self) -> None:
+        """Initialize empty script storage."""
+        self._scripts: dict[Path, str] = {}
+
+    def write_activation_script(
+        self,
+        content: str,
+        *,
+        command_name: str,
+        comment: str,
+    ) -> ScriptResult:
+        """Write script to in-memory storage with sentinel path.
+
+        Args:
+            content: The shell script content
+            command_name: Command generating the script
+            comment: Description for the script header
+
+        Returns:
+            ScriptResult with sentinel path and full content including headers
+        """
+        # Generate unique ID (same pattern as real implementation)
+        unique_id = uuid.uuid4().hex[:8]
+
+        # Use sentinel path instead of real temp file
+        script_path = Path(f"/test/script/workstack-{command_name}-{unique_id}.sh")
+
+        # Build header (same structure as real implementation)
+        header = [
+            "#!/bin/bash",
+            f"# workstack {command_name}",
+            f"# Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            f"# UUID: {unique_id}",
+            f"# User: {os.getenv('USER', 'unknown')}",
+            f"# Working dir: {Path.cwd()}",
+            f"# {comment}",
+            "",  # Blank line before script
+        ]
+
+        full_content = "\n".join(header) + "\n" + content
+
+        # Store in memory
+        self._scripts[script_path] = full_content
+
+        return ScriptResult(path=script_path, content=full_content)
+
+    def get_script_content(self, path: Path) -> str | None:
+        """Get stored script content for test assertions.
+
+        Args:
+            path: Sentinel path returned by write_activation_script()
+
+        Returns:
+            Script content if found, None otherwise
+        """
+        return self._scripts.get(path)
+
+    @property
+    def written_scripts(self) -> dict[Path, str]:
+        """Read-only view of all written scripts.
+
+        Returns:
+            Mapping of sentinel paths to script content
+        """
+        return dict(self._scripts)

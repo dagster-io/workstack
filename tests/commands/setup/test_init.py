@@ -46,6 +46,7 @@ def test_init_creates_global_config_first_time() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=None,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -75,6 +76,7 @@ def test_init_prompts_for_workstacks_root() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=None,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -103,6 +105,7 @@ def test_init_detects_graphite_installed() -> None:
             shell_ops=shell_ops,
             global_config_ops=global_config_ops,
             global_config=None,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -129,6 +132,7 @@ def test_init_detects_graphite_not_installed() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=None,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -163,6 +167,7 @@ def test_init_skips_global_with_repo_flag() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -185,6 +190,7 @@ def test_init_fails_repo_flag_without_global_config() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=None,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -221,6 +227,7 @@ def test_init_auto_preset_detects_dagster() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -258,6 +265,7 @@ def test_init_auto_preset_uses_generic_fallback() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -290,6 +298,7 @@ def test_init_explicit_preset_dagster() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -322,6 +331,7 @@ def test_init_explicit_preset_generic() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -352,6 +362,7 @@ def test_init_list_presets_displays_available() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -384,6 +395,7 @@ def test_init_invalid_preset_fails() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -414,6 +426,7 @@ def test_init_creates_config_at_workstacks_dir() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -448,6 +461,7 @@ def test_init_repo_flag_creates_config_at_root() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -486,6 +500,7 @@ def test_init_force_overwrites_existing_config() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -525,6 +540,7 @@ def test_init_fails_without_force_when_exists() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -560,6 +576,7 @@ def test_init_adds_plan_md_to_gitignore() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -597,6 +614,7 @@ def test_init_adds_env_to_gitignore() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -634,6 +652,7 @@ def test_init_skips_gitignore_entries_if_declined() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -669,6 +688,7 @@ def test_init_handles_missing_gitignore() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -704,6 +724,7 @@ def test_init_preserves_gitignore_formatting() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -739,6 +760,7 @@ def test_init_first_time_offers_shell_setup() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(detected_shell=("bash", bashrc)),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -777,6 +799,7 @@ def test_init_shell_flag_only_setup() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(detected_shell=("bash", bashrc)),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -810,6 +833,7 @@ def test_init_detects_bash_shell() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(detected_shell=("bash", bashrc)),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -844,6 +868,7 @@ def test_init_detects_zsh_shell() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(detected_shell=("zsh", zshrc)),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -878,6 +903,7 @@ def test_init_detects_fish_shell() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(detected_shell=("fish", fish_config)),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -908,6 +934,7 @@ def test_init_skips_unknown_shell() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=None,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -936,6 +963,7 @@ def test_init_prints_completion_instructions() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(detected_shell=("bash", bashrc)),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -974,6 +1002,7 @@ def test_init_prints_wrapper_instructions() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(detected_shell=("bash", bashrc)),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -1012,6 +1041,7 @@ def test_init_skips_shell_if_declined() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(detected_shell=("bash", bashrc)),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -1055,6 +1085,7 @@ def test_init_not_in_git_repo_fails() -> None:
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 

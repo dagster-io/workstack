@@ -34,7 +34,7 @@ def test_fake_gitops_list_worktrees() -> None:
 
 
 def test_fake_gitops_add_worktree(tmp_path: Path) -> None:
-    """Test that FakeGitOps can add worktrees."""
+    """Test that FakeGitOps can add worktrees (in-memory only, no filesystem operations)."""
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
     git_ops = FakeGitOps()
@@ -46,7 +46,7 @@ def test_fake_gitops_add_worktree(tmp_path: Path) -> None:
     assert len(worktrees) == 1
     assert worktrees[0].path == new_wt
     assert worktrees[0].branch == "new-branch"
-    assert new_wt.exists()  # Verify directory was created
+    # FakeGitOps is purely in-memory - does not create directories
 
 
 def test_fake_gitops_remove_worktree() -> None:
@@ -249,13 +249,10 @@ def test_fake_gitops_get_file_status_mixed() -> None:
 
 
 def test_fake_gitops_move_worktree(tmp_path: Path) -> None:
-    """Test move_worktree updates state and renames directory."""
+    """Test move_worktree updates state (in-memory only, no filesystem operations)."""
     repo_root = tmp_path / "repo"
     old_wt = tmp_path / "old-wt"
     new_wt = tmp_path / "new-wt"
-
-    # Create old worktree directory
-    old_wt.mkdir(parents=True)
 
     git_ops = FakeGitOps(
         worktrees={repo_root: [WorktreeInfo(path=old_wt, branch="feature", is_root=False)]}
@@ -269,9 +266,7 @@ def test_fake_gitops_move_worktree(tmp_path: Path) -> None:
     assert worktrees[0].path == new_wt
     assert worktrees[0].branch == "feature"
 
-    # Verify filesystem rename occurred
-    assert not old_wt.exists()
-    assert new_wt.exists()
+    # FakeGitOps is purely in-memory - does not rename directories
 
 
 def test_fake_gitops_checkout_detached(tmp_path: Path) -> None:

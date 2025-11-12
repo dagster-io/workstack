@@ -41,6 +41,7 @@ def test_create_basic_worktree() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -77,6 +78,7 @@ def test_create_with_custom_branch_name() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -129,6 +131,7 @@ def test_create_with_plan_file() -> None:
             global_config=global_config_ops,
             local_config=local_config,
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -183,6 +186,7 @@ def test_create_with_plan_file_removes_plan_word() -> None:
             global_config=global_config_ops,
             local_config=local_config,
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -244,6 +248,7 @@ def test_create_sanitizes_worktree_name() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -283,6 +288,7 @@ def test_create_sanitizes_branch_name() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -318,6 +324,7 @@ def test_create_detects_default_branch() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -368,6 +375,7 @@ def test_create_from_current_branch_in_worktree() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=current_worktree,
         )
 
@@ -412,6 +420,7 @@ def test_create_fails_if_worktree_exists() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -458,6 +467,7 @@ def test_create_runs_post_create_commands() -> None:
             global_config=global_config_ops,
             local_config=local_config,
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -504,6 +514,7 @@ def test_create_sets_env_variables() -> None:
             global_config=global_config_ops,
             local_config=local_config,
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -566,6 +577,7 @@ def test_create_uses_graphite_when_enabled() -> None:
             global_config=global_config_ops,
             local_config=local_config,
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -616,6 +628,7 @@ def test_create_blocks_when_staged_changes_present_with_graphite_enabled() -> No
             global_config=global_config_ops,
             local_config=local_config,
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -652,6 +665,7 @@ def test_create_uses_git_when_graphite_disabled() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -684,6 +698,7 @@ def test_create_allows_staged_changes_when_graphite_disabled() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -708,6 +723,7 @@ def test_create_invalid_worktree_name() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -743,6 +759,7 @@ def test_create_plan_file_not_found() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -781,6 +798,7 @@ def test_create_no_post_flag_skips_commands() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -816,6 +834,7 @@ def test_create_from_current_branch() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -849,6 +868,7 @@ def test_create_from_branch() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -875,6 +895,7 @@ def test_create_requires_name_or_flag() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -910,6 +931,7 @@ def test_create_from_current_branch_on_main_fails() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -956,6 +978,7 @@ def test_create_detects_branch_already_checked_out() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -994,6 +1017,7 @@ def test_create_from_current_branch_on_master_fails() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -1044,6 +1068,7 @@ def test_create_with_keep_plan_flag() -> None:
             global_config=global_config_ops,
             local_config=local_config,
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -1081,6 +1106,7 @@ def test_create_keep_plan_without_plan_fails() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -1167,6 +1193,7 @@ def test_from_current_branch_with_main_in_use_prefers_graphite_parent() -> None:
             global_config=global_config_ops,
             local_config=local_config,
             repo=repo,
+            script_writer=env.script_writer,
             cwd=current_worktree,
         )
 
@@ -1246,6 +1273,7 @@ def test_from_current_branch_with_parent_in_use_falls_back_to_detached_head() ->
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=current_worktree,
         )
 
@@ -1317,6 +1345,7 @@ def test_from_current_branch_without_graphite_falls_back_to_main() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=current_worktree,
         )
 
@@ -1385,6 +1414,7 @@ def test_from_current_branch_no_graphite_main_in_use_uses_detached_head() -> Non
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=current_worktree,
         )
 
@@ -1422,6 +1452,7 @@ def test_create_with_json_output() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -1472,6 +1503,7 @@ def test_create_existing_worktree_with_json() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -1512,6 +1544,7 @@ def test_create_json_and_script_mutually_exclusive() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -1563,6 +1596,7 @@ def test_create_with_json_and_plan_file() -> None:
             global_config=global_config_ops,
             local_config=local_config,
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -1618,6 +1652,7 @@ def test_create_with_json_no_plan() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -1656,6 +1691,7 @@ def test_create_with_stay_prevents_script_generation() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -1695,6 +1731,7 @@ def test_create_with_stay_and_json() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -1752,6 +1789,7 @@ def test_create_with_stay_and_plan() -> None:
             global_config=global_config_ops,
             local_config=local_config,
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -1798,6 +1836,7 @@ def test_create_default_behavior_generates_script() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -1836,6 +1875,7 @@ def test_create_with_long_name_truncation() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -1882,6 +1922,7 @@ def test_create_with_plan_ensures_uniqueness() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -1970,6 +2011,7 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
             global_config=global_config_ops,
             local_config=local_config,
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 

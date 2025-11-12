@@ -23,6 +23,7 @@ from workstack.core.repo_discovery import (
     discover_repo_or_sentinel,
     ensure_workstacks_dir,
 )
+from workstack.core.script_writer import RealScriptWriterOps, ScriptWriterOps
 from workstack.core.shell_ops import RealShellOps, ShellOps
 
 
@@ -43,6 +44,7 @@ class WorkstackContext:
     shell_ops: ShellOps
     completion_ops: CompletionOps
     global_config_ops: GlobalConfigOps
+    script_writer: ScriptWriterOps
     cwd: Path  # Current working directory at CLI invocation
     global_config: GlobalConfig | None
     local_config: LoadedConfig
@@ -96,6 +98,7 @@ class WorkstackContext:
         from tests.fakes.completion_ops import FakeCompletionOps
         from tests.fakes.github_ops import FakeGitHubOps
         from tests.fakes.graphite_ops import FakeGraphiteOps
+        from tests.fakes.script_writer import FakeScriptWriterOps
         from tests.fakes.shell_ops import FakeShellOps
 
         return WorkstackContext(
@@ -105,6 +108,7 @@ class WorkstackContext:
             shell_ops=FakeShellOps(),
             completion_ops=FakeCompletionOps(),
             global_config_ops=InMemoryGlobalConfigOps(config=None),
+            script_writer=FakeScriptWriterOps(),
             cwd=cwd,
             global_config=None,
             local_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
@@ -121,6 +125,7 @@ class WorkstackContext:
         shell_ops: ShellOps | None = None,
         completion_ops: CompletionOps | None = None,
         global_config_ops: GlobalConfigOps | None = None,
+        script_writer: ScriptWriterOps | None = None,
         cwd: Path | None = None,
         global_config: GlobalConfig | None = None,
         local_config: LoadedConfig | None = None,
@@ -144,6 +149,8 @@ class WorkstackContext:
                            If None, creates empty FakeCompletionOps.
             global_config_ops: Optional GlobalConfigOps implementation.
                               If None, creates InMemoryGlobalConfigOps with test config.
+            script_writer: Optional ScriptWriterOps implementation.
+                          If None, creates empty FakeScriptWriterOps.
             cwd: Optional current working directory. If None, uses Path("/test/default/cwd").
             global_config: Optional GlobalConfig. If None, uses test defaults.
             local_config: Optional LoadedConfig. If None, uses empty defaults.
@@ -177,6 +184,7 @@ class WorkstackContext:
         from tests.fakes.github_ops import FakeGitHubOps
         from tests.fakes.gitops import FakeGitOps
         from tests.fakes.graphite_ops import FakeGraphiteOps
+        from tests.fakes.script_writer import FakeScriptWriterOps
         from tests.fakes.shell_ops import FakeShellOps
         from tests.test_utils import sentinel_path
 
@@ -194,6 +202,9 @@ class WorkstackContext:
 
         if completion_ops is None:
             completion_ops = FakeCompletionOps()
+
+        if script_writer is None:
+            script_writer = FakeScriptWriterOps()
 
         if global_config is None:
             global_config = GlobalConfig(
@@ -226,6 +237,7 @@ class WorkstackContext:
             shell_ops=shell_ops,
             completion_ops=completion_ops,
             global_config_ops=global_config_ops,
+            script_writer=script_writer,
             cwd=cwd or sentinel_path(),
             global_config=global_config,
             local_config=local_config,
@@ -367,6 +379,7 @@ def create_context(*, dry_run: bool, repo_root: Path | None = None) -> Workstack
         shell_ops=RealShellOps(),
         completion_ops=RealCompletionOps(),
         global_config_ops=FilesystemGlobalConfigOps(),
+        script_writer=RealScriptWriterOps(),
         cwd=cwd,
         global_config=global_config,
         local_config=local_config,

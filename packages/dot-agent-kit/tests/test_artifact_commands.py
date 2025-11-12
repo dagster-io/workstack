@@ -185,7 +185,8 @@ def test_artifact_list_verbose(
     assert result.exit_code == 0
     # Verbose should include metadata
     assert "user-skill" in result.output
-    assert "Type:" in result.output or "Level:" in result.output
+    # New format uses type groupings and Path: labels
+    assert "Skills:" in result.output or "Path:" in result.output
 
 
 def test_artifact_list_no_artifacts(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

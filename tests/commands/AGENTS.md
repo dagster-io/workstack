@@ -50,6 +50,101 @@ def test_command_behavior() -> None:
     assert "new-branch" in git_ops.created_branches
 ```
 
+## Context Construction
+
+🔴 **CRITICAL: Use `env.build_context()` helper instead of manual construction**
+
+The `simulated_workstack_env()` context manager provides an `env.build_context()` helper method that eliminates boilerplate when constructing `WorkstackContext` for tests.
+
+### Anti-Pattern (DO NOT USE)
+
+```python
+# ❌ WRONG - Manual GlobalConfig construction with 5+ parameters
+from workstack.core.global_config import GlobalConfig
+from workstack.core.context import WorkstackContext
+
+git_ops = FakeGitOps(
+    git_common_dirs={env.cwd: env.git_dir},
+    default_branches={env.cwd: "main"},
+)
+
+global_config = GlobalConfig(
+    workstacks_root=env.workstacks_root,
+    use_graphite=False,
+    shell_setup_complete=False,
+    show_pr_info=True,
+    show_pr_checks=False,
+)
+
+test_ctx = WorkstackContext.for_test(
+    git_ops=git_ops,
+    global_config=global_config,
+    script_writer=env.script_writer,
+    cwd=env.cwd,
+)
+```
+
+### Correct Pattern (USE THIS)
+
+```python
+# ✅ CORRECT - Use env.build_context() helper
+git_ops = FakeGitOps(
+    git_common_dirs={env.cwd: env.git_dir},
+    default_branches={env.cwd: "main"},
+)
+
+test_ctx = env.build_context(git_ops=git_ops)
+```
+
+### When to Override Defaults
+
+The `env.build_context()` method accepts optional parameters to customize the context:
+
+```python
+# Override specific ops implementations
+test_ctx = env.build_context(
+    git_ops=custom_git_ops,
+    graphite_ops=custom_graphite_ops,
+    github_ops=FakeGitHubOps(),
+)
+
+# Enable Graphite integration
+test_ctx = env.build_context(
+    use_graphite=True,
+    show_pr_checks=True,
+)
+
+# Combine custom ops with config flags
+test_ctx = env.build_context(
+    git_ops=git_ops,
+    graphite_ops=graphite_ops,
+    use_graphite=True,
+    dry_run=False,
+)
+```
+
+### Available Parameters
+
+- `git_ops`: Custom GitOps implementation (defaults to FakeGitOps)
+- `graphite_ops`: Custom GraphiteOps implementation (defaults to FakeGraphiteOps)
+- `github_ops`: Custom GitHubOps implementation (defaults to FakeGitHubOps)
+- `shell_ops`: Custom ShellOps implementation
+- `script_writer`: Custom ScriptWriter implementation
+- `use_graphite`: Enable Graphite integration (default: False)
+- `show_pr_info`: Show PR information (default: True)
+- `show_pr_checks`: Show PR checks (default: False)
+- `dry_run`: Enable dry-run mode (default: False)
+- `cwd`: Override current working directory (default: env.cwd)
+
+### Why This Matters
+
+Using `env.build_context()`:
+
+1. **Reduces boilerplate**: Eliminates 10-15 lines of manual construction
+2. **Prevents errors**: Automatically handles parameter wiring
+3. **Improves maintainability**: Changes to GlobalConfig don't break every test
+4. **Standardizes patterns**: All tests use consistent context construction
+
 ## Common Assertions
 
 ### Exit Codes

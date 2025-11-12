@@ -309,6 +309,29 @@ class GitOps(ABC):
         """
         ...
 
+    @abstractmethod
+    def fetch_branch(self, repo_root: Path, remote: str, branch: str) -> None:
+        """Fetch a specific branch from a remote.
+
+        Args:
+            repo_root: Path to the git repository root
+            remote: Remote name (e.g., "origin")
+            branch: Branch name to fetch
+        """
+        ...
+
+    @abstractmethod
+    def pull_branch(self, repo_root: Path, remote: str, branch: str, *, ff_only: bool) -> None:
+        """Pull a specific branch from a remote.
+
+        Args:
+            repo_root: Path to the git repository root
+            remote: Remote name (e.g., "origin")
+            branch: Branch name to pull
+            ff_only: If True, use --ff-only to prevent merge commits
+        """
+        ...
+
 
 # ============================================================================
 # Production Implementation
@@ -721,6 +744,31 @@ class RealGitOps(GitOps):
 
         return commits
 
+    def fetch_branch(self, repo_root: Path, remote: str, branch: str) -> None:
+        """Fetch a specific branch from a remote."""
+        subprocess.run(
+            ["git", "fetch", remote, branch],
+            cwd=repo_root,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+    def pull_branch(self, repo_root: Path, remote: str, branch: str, *, ff_only: bool) -> None:
+        """Pull a specific branch from a remote."""
+        cmd = ["git", "pull"]
+        if ff_only:
+            cmd.append("--ff-only")
+        cmd.extend([remote, branch])
+
+        subprocess.run(
+            cmd,
+            cwd=repo_root,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
 
 # ============================================================================
 # Dry-Run Wrapper
@@ -869,3 +917,11 @@ class DryRunGitOps(GitOps):
     def get_recent_commits(self, cwd: Path, *, limit: int = 5) -> list[dict[str, str]]:
         """Get recent commits (read-only, delegates to wrapped)."""
         return self._wrapped.get_recent_commits(cwd, limit=limit)
+
+    def fetch_branch(self, repo_root: Path, remote: str, branch: str) -> None:
+        """Fetch branch (delegates to wrapped - considered read-only for dry-run)."""
+        return self._wrapped.fetch_branch(repo_root, remote, branch)
+
+    def pull_branch(self, repo_root: Path, remote: str, branch: str, *, ff_only: bool) -> None:
+        """Pull branch (delegates to wrapped - considered read-only for dry-run)."""
+        return self._wrapped.pull_branch(repo_root, remote, branch, ff_only=ff_only)

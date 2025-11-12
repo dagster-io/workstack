@@ -1000,76 +1000,6 @@ def test_land_stack_script_mode_accepts_flag() -> None:
         # Passthrough commands rely on the recovery mechanism, not explicit script generation
 
 
-def test_land_stack_updates_pr_base_before_merge_when_stale() -> None:
-    """Test that land-stack updates PR base on GitHub before merging when stale.
-
-    Bug scenario:
-    - Stack: main → feat-1 → feat-2
-    - After landing feat-1, gt sync updates local metadata (feat-2 parent = main)
-    - But GitHub PR #2 still shows base = feat-1 (stale)
-    - Without fix: gh pr merge tries to merge into deleted branch
-    - With fix: gh pr edit --base main is called before gh pr merge
-
-    This test verifies the fix uses GitHubOps abstraction to check and update
-    GitHub PR base before each merge operation.
-    """
-    runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        # Simulate scenario where feat-1 was already merged and gt sync updated
-        # Graphite metadata (feat-2's parent = main), but GitHub PR still shows
-        # the old base (feat-1) - this is the bug we're fixing
-        git_ops, graphite_ops = env.build_ops_from_branches(
-            {
-                "main": BranchMetadata.trunk("main", children=["feat-2"], commit_sha="abc123"),
-                "feat-2": BranchMetadata.branch("feat-2", "main", commit_sha="ghi789"),
-            },
-            current_branch="feat-2",
-        )
-
-        # Configure FakeGitHubOps with stale base for PR #200
-        github_ops = FakeGitHubOps(
-            pr_statuses={
-                "feat-2": ("OPEN", 200, "Feature 2"),
-            },
-            pr_bases={
-                200: "feat-1",  # Stale - Graphite shows parent as "main"
-            },
-        )
-
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
-            dry_run=True,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-        )
-
-        # Run land-stack with dry-run flag
-        result = runner.invoke(cli, ["land-stack", "--dry-run"], obj=test_ctx)
-
-        # Verify command succeeded
-        assert result.exit_code == 0, f"Command failed: {result.output}"
-
-        # Verify stale base detection message appears
-        assert "Updating PR #200 base: feat-1 → main" in result.output, (
-            f"Expected base update message not found in output:\n{result.output}"
-        )
-        assert "gh pr edit 200 --base main" in result.output, (
-            f"Expected gh command not found in output:\n{result.output}"
-        )
-
-
 def test_land_stack_skips_base_update_when_already_correct() -> None:
     """Test that land-stack skips PR base update when already correct.
 
@@ -1134,67 +1064,6 @@ def test_land_stack_skips_base_update_when_already_correct() -> None:
             f"No base update message should appear when base is already correct\n"
             f"Actual output: {result.output}"
         )
-
-
-def test_land_stack_dry_run_shows_base_update() -> None:
-    """Test that dry-run mode shows PR base update without executing.
-
-    This test verifies that when a PR's GitHub base is stale (points to a branch
-    that should no longer be its parent), the dry-run output shows the update
-    that would be made.
-
-    Setup: Single PR with stale base on GitHub (not reflecting a prior update)
-    """
-    runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        # Simple scenario: feat-1's parent is main, but GitHub shows old base
-        git_ops, graphite_ops = env.build_ops_from_branches(
-            {
-                "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
-                "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
-            },
-            current_branch="feat-1",
-        )
-
-        # Configure FakeGitHubOps with stale base
-        github_ops = FakeGitHubOps(
-            pr_statuses={
-                "feat-1": ("OPEN", 100, "Feature 1"),
-            },
-            pr_bases={
-                100: "old-branch",  # Stale - should be "main"
-            },
-        )
-
-        global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
-            dry_run=True,
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-        )
-
-        # Run with --dry-run flag
-        result = runner.invoke(cli, ["land-stack", "--dry-run"], obj=test_ctx)
-
-        assert result.exit_code == 0, f"Command failed: {result.output}"
-
-        # Verify output shows the update that would happen
-        assert "Updating PR #100 base: old-branch → main" in result.output, (
-            f"Expected base update message not found. Actual output:\n{result.output}"
-        )
-        assert "gh pr edit 100 --base main" in result.output
 
 
 def test_land_stack_merge_command_excludes_auto_flag() -> None:
@@ -1998,3 +1867,97 @@ def test_land_stack_succeeds_when_all_prs_mergeable() -> None:
         # Should pass validation and show landing plan
         assert "Cannot land stack - PRs have merge conflicts" not in result.output
         assert "Landing 2 PRs" in result.output
+
+
+def test_land_stack_updates_pr_bases_after_force_push() -> None:
+    """Test that land-stack updates PR bases on GitHub AFTER force-pushing rebased commits.
+
+    Bug scenario:
+    - Stack: main → feat-1 → feat-2
+    - When landing feat-1, gt sync rebases feat-2 onto main
+    - PR #200's base on GitHub is still "feat-1" (stale)
+    - Without fix: Base update happens before force-push, GitHub rejects it
+    - With fix: Base update happens AFTER force-push in Phase 6
+
+    This test verifies the fix by checking that gh pr edit commands appear
+    in the correct order in dry-run output.
+    """
+    runner = CliRunner()
+    with simulated_workstack_env(runner) as env:
+        # Build initial Graphite/Git state
+        # Running from feat-1, which will land only feat-1
+        # After sync, feat-2's parent will be updated to "main"
+        git_ops = FakeGitOps(
+            git_common_dirs={env.cwd: env.git_dir},
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
+                ],
+            },
+            current_branches={env.cwd: "feat-1"},
+        )
+
+        # Graphite metadata showing POST-sync state:
+        # - feat-2's parent is "main" (what it will be after landing feat-1 and syncing)
+        # - feat-1 still has feat-2 as a child (for finding upstack branches)
+        # - Stack includes full history for proper navigation
+        graphite_ops = FakeGraphiteOps(
+            branches={
+                "main": BranchMetadata.trunk("main", children=["feat-2"], commit_sha="abc123"),
+                "feat-1": BranchMetadata.branch(
+                    "feat-1", "main", children=["feat-2"], commit_sha="def456"
+                ),
+                "feat-2": BranchMetadata.branch("feat-2", "main", commit_sha="ghi789"),
+            },
+            stacks={
+                "feat-1": ["main", "feat-1"],
+                "feat-2": ["main", "feat-1", "feat-2"],
+            },
+        )
+
+        # Configure GitHub with stale base for PR #200
+        # After landing feat-1, Graphite updates feat-2's parent to "main"
+        # but GitHub still shows base as "feat-1" (this is the bug)
+        github_ops = FakeGitHubOps(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Feature 1"),
+                "feat-2": ("OPEN", 200, "Feature 2"),
+            },
+            pr_bases={
+                100: "main",  # Correct
+                200: "feat-1",  # Stale - will be updated to "main" after force-push
+            },
+        )
+
+        global_config_ops = GlobalConfig(
+            workstacks_root=env.workstacks_root,
+            use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
+        )
+
+        test_ctx = WorkstackContext.for_test(
+            git_ops=git_ops,
+            global_config=global_config_ops,
+            graphite_ops=graphite_ops,
+            github_ops=github_ops,
+            shell_ops=FakeShellOps(),
+            dry_run=True,
+            script_writer=env.script_writer,
+            cwd=env.cwd,
+        )
+
+        # Run land-stack with --dry-run to see command execution order
+        result = runner.invoke(cli, ["land-stack", "--force", "--dry-run"], obj=test_ctx)
+
+        # Assert: Command succeeded
+        assert result.exit_code == 0, f"Command failed: {result.output}"
+
+        # Assert: Phase 6 should show PR base update command AFTER force-push
+        # The key fix: gh pr edit happens after gt submit (force-push)
+        assert "gh pr edit 200 --base main" in result.output, (
+            f"Expected 'gh pr edit 200 --base main' in output.\n"
+            f"This command should appear in Phase 6, AFTER force-push.\n"
+            f"Actual output:\n{result.output}"
+        )

@@ -363,17 +363,21 @@ class RealGitHubOps(GitHubOps):
     def update_pr_base_branch(self, repo_root: Path, pr_number: int, new_base: str) -> None:
         """Update base branch of a PR on GitHub.
 
+        Gracefully handles gh CLI availability issues (not installed, not authenticated).
+        The calling code should validate preconditions (PR exists, is open, new base exists)
+        before calling this method.
+
         Note: Uses try/except as an acceptable error boundary for handling gh CLI
-        availability and authentication. We cannot reliably check gh installation
-        and authentication status a priori without duplicating gh's logic.
+        availability. Genuine command failures (invalid PR, invalid base) should be
+        caught by precondition checks in the caller.
         """
         try:
             cmd = ["gh", "pr", "edit", str(pr_number), "--base", new_base]
             self._execute(cmd, repo_root)
-
         except (subprocess.CalledProcessError, FileNotFoundError):
             # gh not installed, not authenticated, or command failed
             # Graceful degradation - operation skipped
+            # Caller is responsible for precondition validation
             pass
 
     def get_pr_mergeability(self, repo_root: Path, pr_number: int) -> PRMergeability | None:

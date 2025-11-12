@@ -139,6 +139,45 @@ Business logic tests using fakes. No CLI concerns.
 └─────────────────────────────────────┘
 ```
 
+## Test Organization Pattern
+
+### Plain Functions Over Test Classes
+
+**Use plain `def test_*()` functions by default.** Only use test classes when testing a class or dataclass itself.
+
+✅ **CORRECT: Plain functions for testing utilities/functions:**
+
+```python
+# tests/core/utils/test_worktree_utils.py
+def test_find_worktree() -> None:
+    # Test implementation
+    pass
+
+def test_is_root_worktree() -> None:
+    # Test implementation
+    pass
+```
+
+Or split into subdirectory when file is large (5+ functions, 3+ tests each):
+
+```
+tests/core/utils/worktree/
+├── __init__.py
+├── test_find_worktree.py
+└── test_is_root_worktree.py
+```
+
+❌ **WRONG: Test classes for grouping (avoid unless testing class/dataclass):**
+
+```python
+# Don't do this
+class TestWorktreeUtils:
+    def test_find_worktree(self) -> None: ...
+    def test_is_root_worktree(self) -> None: ...
+```
+
+**For detailed guidance on when to split files vs keep as single file, see [docs/agent/testing.md#test-organization-principles](../docs/agent/testing.md#test-organization-principles)**
+
 ## Quick Reference
 
 | Need to...                      | See                                                                                     |

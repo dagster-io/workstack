@@ -98,6 +98,34 @@ tests/unit/fakes/
 3. **Adding test utilities or fixtures**
    - Consider adding tests to verify they work as expected
 
+## Test File Organization
+
+**Use plain functions, not test classes.** Test classes should only be used when testing a class or dataclass itself.
+
+**Pattern for unit tests:**
+
+```python
+# ✅ CORRECT: Plain functions testing fake implementations
+def test_fake_gitops_tracks_branch_creation() -> None: ...
+def test_fake_gitops_tracks_branch_deletion() -> None: ...
+def test_fake_gitops_handles_checkout() -> None: ...
+
+# ❌ WRONG: Test classes for grouping
+class TestFakeGitOps:
+    def test_tracks_branch_creation(self) -> None: ...
+```
+
+**Exception:** When testing a dataclass or class behavior itself:
+
+```python
+# ✅ CORRECT: Testing dataclass methods
+class TestDeletableWorktree:
+    def test_equality(self) -> None: ...
+    def test_frozen(self) -> None: ...
+```
+
+**See [docs/agent/testing.md#test-organization-principles](../../docs/agent/testing.md#test-organization-principles) for detailed guidance.**
+
 ## See Also
 
 - [../CLAUDE.md](../CLAUDE.md) - Overall test structure and directory requirements

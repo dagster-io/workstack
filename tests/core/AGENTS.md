@@ -196,6 +196,48 @@ def test_mutation_tracking() -> None:
     assert "new-branch" in git_ops.created_branches
 ```
 
+## Test File Organization
+
+**Use plain functions, not test classes.** Test classes should only be used when testing a class or dataclass itself.
+
+**Pattern for core tests:**
+
+```python
+# ✅ CORRECT: Plain functions
+def test_calculate_stack_range() -> None: ...
+def test_identify_removable_worktrees() -> None: ...
+def test_create_consolidation_plan() -> None: ...
+
+# ❌ WRONG: Test classes for grouping
+class TestConsolidationUtils:
+    def test_calculate_stack_range(self) -> None: ...
+```
+
+**One-function-per-file pattern with subdirectories:**
+
+When a test file has 7+ test classes for different functions (~450 lines), split into:
+
+```
+tests/core/utils/worktree/
+├── __init__.py
+├── test_find_worktree_containing_path.py
+├── test_find_current_worktree.py
+└── test_is_root_worktree.py
+```
+
+Each file contains plain test functions (no classes) testing one utility function.
+
+**Exception:** Test classes ARE appropriate when testing a class or dataclass:
+
+```python
+# ✅ CORRECT: Testing a dataclass
+class TestDeletableWorktree:
+    def test_equality(self) -> None: ...
+    def test_frozen(self) -> None: ...
+```
+
+**See [docs/agent/testing.md#test-organization-principles](../../docs/agent/testing.md#test-organization-principles) for detailed guidance.**
+
 ## See Also
 
 - [operations/CLAUDE.md](operations/CLAUDE.md) - Operations testing patterns (critical)

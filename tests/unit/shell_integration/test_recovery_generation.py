@@ -35,141 +35,147 @@ def build_ctx(
     )
 
 
-class TestGenerateRecoveryScript:
-    """Test generate_recovery_script function directly."""
+# Tests for generate_recovery_script function
 
-    def test_returns_script_path_when_in_repo(self, tmp_path: Path) -> None:
-        """Function returns a script path when cwd is inside a repo."""
-        repo = tmp_path / "repo"
-        repo.mkdir()
-        (repo / ".git").mkdir()
 
-        workstacks_root = tmp_path / "workstacks"
-        workstacks_root.mkdir()
+def test_returns_script_path_when_in_repo(tmp_path: Path) -> None:
+    """Function returns a script path when cwd is inside a repo."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / ".git").mkdir()
 
-        ctx = build_ctx(repo, workstacks_root, cwd=repo)
+    workstacks_root = tmp_path / "workstacks"
+    workstacks_root.mkdir()
 
-        result = generate_recovery_script(ctx)
+    ctx = build_ctx(repo, workstacks_root, cwd=repo)
 
-        assert result is not None
-        assert isinstance(result, Path)
-        assert result.exists()
-        assert result.suffix == ".sh"
-        # Clean up
-        result.unlink(missing_ok=True)
+    result = generate_recovery_script(ctx)
 
-    def test_returns_none_when_not_in_repo(self, tmp_path: Path) -> None:
-        """Function returns None when cwd is not inside a repository."""
-        workstacks_root = tmp_path / "workstacks"
-        workstacks_root.mkdir()
+    assert result is not None
+    assert isinstance(result, Path)
+    assert result.exists()
+    assert result.suffix == ".sh"
+    # Clean up
+    result.unlink(missing_ok=True)
 
-        # No repo_root = not in a git repo
-        ctx = build_ctx(None, workstacks_root, cwd=tmp_path)
 
-        result = generate_recovery_script(ctx)
+def test_returns_none_when_not_in_repo(tmp_path: Path) -> None:
+    """Function returns None when cwd is not inside a repository."""
+    workstacks_root = tmp_path / "workstacks"
+    workstacks_root.mkdir()
 
-        assert result is None
+    # No repo_root = not in a git repo
+    ctx = build_ctx(None, workstacks_root, cwd=tmp_path)
 
-    def test_returns_none_when_cwd_missing(self, tmp_path: Path) -> None:
-        """Function returns None when cwd doesn't exist."""
-        workstacks_root = tmp_path / "workstacks"
-        workstacks_root.mkdir()
+    result = generate_recovery_script(ctx)
 
-        vanished = tmp_path / "vanished"
-        # Don't create vanished directory - it doesn't exist
+    assert result is None
 
-        ctx = build_ctx(None, workstacks_root, cwd=vanished)
 
-        result = generate_recovery_script(ctx)
+def test_returns_none_when_cwd_missing(tmp_path: Path) -> None:
+    """Function returns None when cwd doesn't exist."""
+    workstacks_root = tmp_path / "workstacks"
+    workstacks_root.mkdir()
 
-        assert result is None
+    vanished = tmp_path / "vanished"
+    # Don't create vanished directory - it doesn't exist
 
-    def test_script_contains_cd_command(self, tmp_path: Path) -> None:
-        """Generated script should contain cd command to repo root."""
-        repo = tmp_path / "repo"
-        repo.mkdir()
-        (repo / ".git").mkdir()
+    ctx = build_ctx(None, workstacks_root, cwd=vanished)
 
-        workstacks_root = tmp_path / "workstacks"
-        workstacks_root.mkdir()
+    result = generate_recovery_script(ctx)
 
-        ctx = build_ctx(repo, workstacks_root, cwd=repo)
+    assert result is None
 
-        result = generate_recovery_script(ctx)
 
-        assert result is not None
-        script_content = result.read_text(encoding="utf-8")
+def test_script_contains_cd_command(tmp_path: Path) -> None:
+    """Generated script should contain cd command to repo root."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / ".git").mkdir()
 
-        # Script should cd to repo root
-        assert f"cd {repo}" in script_content or f'cd "{repo}"' in script_content
+    workstacks_root = tmp_path / "workstacks"
+    workstacks_root.mkdir()
 
-        # Clean up
-        result.unlink(missing_ok=True)
+    ctx = build_ctx(repo, workstacks_root, cwd=repo)
 
-    def test_script_is_executable(self, tmp_path: Path) -> None:
-        """Generated script should be executable."""
-        repo = tmp_path / "repo"
-        repo.mkdir()
-        (repo / ".git").mkdir()
+    result = generate_recovery_script(ctx)
 
-        workstacks_root = tmp_path / "workstacks"
-        workstacks_root.mkdir()
+    assert result is not None
+    script_content = result.read_text(encoding="utf-8")
 
-        ctx = build_ctx(repo, workstacks_root, cwd=repo)
+    # Script should cd to repo root
+    assert f"cd {repo}" in script_content or f'cd "{repo}"' in script_content
 
-        result = generate_recovery_script(ctx)
+    # Clean up
+    result.unlink(missing_ok=True)
 
-        assert result is not None
-        # Check if file has execute permission
-        assert result.stat().st_mode & 0o100  # Owner execute bit
 
-        # Clean up
-        result.unlink(missing_ok=True)
+def test_script_is_executable(tmp_path: Path) -> None:
+    """Generated script should be executable."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / ".git").mkdir()
 
-    def test_handles_nested_directory_in_repo(self, tmp_path: Path) -> None:
-        """Function works when cwd is a subdirectory of the repo."""
-        repo = tmp_path / "repo"
-        repo.mkdir()
-        (repo / ".git").mkdir()
+    workstacks_root = tmp_path / "workstacks"
+    workstacks_root.mkdir()
 
-        # Create nested directory
-        nested = repo / "src" / "subdir"
-        nested.mkdir(parents=True)
+    ctx = build_ctx(repo, workstacks_root, cwd=repo)
 
-        workstacks_root = tmp_path / "workstacks"
-        workstacks_root.mkdir()
+    result = generate_recovery_script(ctx)
 
-        # cwd is nested inside repo
-        ctx = build_ctx(repo, workstacks_root, cwd=nested)
+    assert result is not None
+    # Check if file has execute permission
+    assert result.stat().st_mode & 0o100  # Owner execute bit
 
-        result = generate_recovery_script(ctx)
+    # Clean up
+    result.unlink(missing_ok=True)
 
-        assert result is not None
-        assert result.exists()
 
-        # Clean up
-        result.unlink(missing_ok=True)
+def test_handles_nested_directory_in_repo(tmp_path: Path) -> None:
+    """Function works when cwd is a subdirectory of the repo."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / ".git").mkdir()
 
-    def test_multiple_calls_create_unique_scripts(self, tmp_path: Path) -> None:
-        """Each call should create a unique temporary script."""
-        repo = tmp_path / "repo"
-        repo.mkdir()
-        (repo / ".git").mkdir()
+    # Create nested directory
+    nested = repo / "src" / "subdir"
+    nested.mkdir(parents=True)
 
-        workstacks_root = tmp_path / "workstacks"
-        workstacks_root.mkdir()
+    workstacks_root = tmp_path / "workstacks"
+    workstacks_root.mkdir()
 
-        ctx = build_ctx(repo, workstacks_root, cwd=repo)
+    # cwd is nested inside repo
+    ctx = build_ctx(repo, workstacks_root, cwd=nested)
 
-        result1 = generate_recovery_script(ctx)
-        result2 = generate_recovery_script(ctx)
+    result = generate_recovery_script(ctx)
 
-        assert result1 is not None
-        assert result2 is not None
-        assert result1 != result2  # Different paths
-        assert result1.exists()
-        assert result2.exists()
+    assert result is not None
+    assert result.exists()
 
-        # Clean up
-        result1.unlink(missing_ok=True)
-        result2.unlink(missing_ok=True)
+    # Clean up
+    result.unlink(missing_ok=True)
+
+
+def test_multiple_calls_create_unique_scripts(tmp_path: Path) -> None:
+    """Each call should create a unique temporary script."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / ".git").mkdir()
+
+    workstacks_root = tmp_path / "workstacks"
+    workstacks_root.mkdir()
+
+    ctx = build_ctx(repo, workstacks_root, cwd=repo)
+
+    result1 = generate_recovery_script(ctx)
+    result2 = generate_recovery_script(ctx)
+
+    assert result1 is not None
+    assert result2 is not None
+    assert result1 != result2  # Different paths
+    assert result1.exists()
+    assert result2.exists()
+
+    # Clean up
+    result1.unlink(missing_ok=True)
+    result2.unlink(missing_ok=True)

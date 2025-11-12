@@ -45,6 +45,7 @@ def test_land_stack_requires_graphite() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -86,6 +87,7 @@ def test_land_stack_fails_on_detached_head() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -135,6 +137,7 @@ def test_land_stack_fails_with_uncommitted_changes() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -276,6 +279,7 @@ def test_land_stack_fails_on_trunk_branch() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -322,6 +326,7 @@ def test_land_stack_fails_when_branch_not_tracked() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -383,6 +388,7 @@ def test_land_stack_fails_when_pr_missing() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -439,6 +445,7 @@ def test_land_stack_fails_when_pr_closed() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -504,6 +511,7 @@ def test_land_stack_gets_branches_to_land_correctly() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -584,6 +592,7 @@ def test_land_stack_from_top_of_stack_lands_all_branches() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -645,6 +654,7 @@ def test_land_stack_fails_when_branches_in_multiple_worktrees() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -712,6 +722,7 @@ def test_land_stack_succeeds_when_all_branches_in_current_worktree() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -785,6 +796,7 @@ def test_land_stack_refreshes_metadata_after_sync() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -967,6 +979,7 @@ def test_land_stack_script_mode_accepts_flag() -> None:
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
             dry_run=False,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -1038,6 +1051,7 @@ def test_land_stack_updates_pr_base_before_merge_when_stale() -> None:
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
             dry_run=True,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -1103,6 +1117,7 @@ def test_land_stack_skips_base_update_when_already_correct() -> None:
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
             dry_run=True,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -1166,6 +1181,7 @@ def test_land_stack_dry_run_shows_base_update() -> None:
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
             dry_run=True,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -1223,6 +1239,7 @@ def test_land_stack_merge_command_excludes_auto_flag() -> None:
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
             dry_run=True,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -1298,6 +1315,7 @@ def test_land_stack_force_pushes_remaining_branches_after_sync() -> None:
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
             dry_run=False,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -1377,6 +1395,7 @@ def test_land_stack_force_pushes_after_each_pr_landed() -> None:
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
             dry_run=False,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -1464,6 +1483,7 @@ def test_land_stack_no_submit_when_landing_top_branch() -> None:
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
             dry_run=False,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -1544,6 +1564,7 @@ def test_land_stack_verbose_flag_shows_detailed_output() -> None:
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
             dry_run=False,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -1604,6 +1625,7 @@ def test_land_stack_dry_run_shows_submit_commands() -> None:
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
             dry_run=True,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -1690,6 +1712,7 @@ def test_land_stack_fails_when_first_pr_has_conflict() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -1764,6 +1787,7 @@ def test_land_stack_fails_when_middle_pr_has_conflict() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -1832,6 +1856,7 @@ def test_land_stack_fails_when_last_pr_has_conflict() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -1895,6 +1920,7 @@ def test_land_stack_succeeds_with_unknown_mergeability() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -1962,6 +1988,7 @@ def test_land_stack_succeeds_when_all_prs_mergeable() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )

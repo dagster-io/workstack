@@ -5,7 +5,6 @@ import click
 from workstack.cli.activation import render_activation_script
 from workstack.cli.core import discover_repo_context, worktree_path_for
 from workstack.cli.debug import debug_log
-from workstack.cli.shell_utils import write_script_to_temp
 from workstack.core.context import WorkstackContext, create_context, read_trunk_from_pyproject
 from workstack.core.gitops import WorktreeInfo
 from workstack.core.repo_discovery import RepoContext, ensure_workstacks_dir
@@ -29,10 +28,13 @@ def _ensure_graphite_enabled(ctx: WorkstackContext) -> None:
         raise SystemExit(1)
 
 
-def _activate_root_repo(repo: RepoContext, script: bool, command_name: str) -> None:
+def _activate_root_repo(
+    ctx: WorkstackContext, repo: RepoContext, script: bool, command_name: str
+) -> None:
     """Activate the root repository and exit.
 
     Args:
+        ctx: Workstack context (for script_writer)
         repo: Repository context
         script: Whether to output script path or user message
         command_name: Name of the command (for script generation)
@@ -47,12 +49,12 @@ def _activate_root_repo(repo: RepoContext, script: bool, command_name: str) -> N
             final_message='echo "Switched to root repo: $(pwd)"',
             comment="work activate-script (root repo)",
         )
-        script_path = write_script_to_temp(
+        result = ctx.script_writer.write_activation_script(
             script_content,
             command_name=command_name,
             comment="activate root",
         )
-        click.echo(str(script_path), nl=False)
+        click.echo(str(result.path), nl=False)
     else:
         click.echo(f"Switched to root repo: {root_path}")
         click.echo(
@@ -67,11 +69,16 @@ def _activate_root_repo(repo: RepoContext, script: bool, command_name: str) -> N
 
 
 def _activate_worktree(
-    repo: RepoContext, target_path: Path, script: bool, command_name: str
+    ctx: WorkstackContext,
+    repo: RepoContext,
+    target_path: Path,
+    script: bool,
+    command_name: str,
 ) -> None:
     """Activate a worktree and exit.
 
     Args:
+        ctx: Workstack context (for script_writer)
         repo: Repository context
         target_path: Path to the target worktree directory
         script: Whether to output script path or user message
@@ -90,17 +97,17 @@ def _activate_worktree(
 
     if script:
         activation_script = render_activation_script(worktree_path=wt_path)
-        script_path = write_script_to_temp(
+        result = ctx.script_writer.write_activation_script(
             activation_script,
             command_name=command_name,
             comment=f"activate {worktree_name}",
         )
 
-        debug_log(f"{command_name.capitalize()}: Generated script at {script_path}")
+        debug_log(f"{command_name.capitalize()}: Generated script at {result.path}")
         debug_log(f"{command_name.capitalize()}: Script content:\n{activation_script}")
-        debug_log(f"{command_name.capitalize()}: File exists? {script_path.exists()}")
+        debug_log(f"{command_name.capitalize()}: File exists? {result.path.exists()}")
 
-        click.echo(str(script_path), nl=False)
+        click.echo(str(result.path), nl=False)
     else:
         click.echo(
             "Shell integration not detected. "
@@ -358,7 +365,7 @@ def switch_cmd(ctx: WorkstackContext, name: str | None, script: bool, up: bool, 
 
         # Check if target_name refers to 'root' which means root repo
         if target_name == "root":
-            _activate_root_repo(repo, script, "switch")
+            _activate_root_repo(ctx, repo, script, "switch")
 
         # Resolve to actual worktree path
         target_wt_path = ctx.git_ops.find_worktree_for_branch(repo.root, target_name)
@@ -369,17 +376,17 @@ def switch_cmd(ctx: WorkstackContext, name: str | None, script: bool, up: bool, 
             )
             raise SystemExit(1)
 
-        _activate_worktree(repo, target_wt_path, script, "switch")
+        _activate_worktree(ctx, repo, target_wt_path, script, "switch")
     else:
         # NAME argument was provided (validated earlier)
         target_name = name if name else ""  # This branch is unreachable due to validation
 
         # Check if target_name refers to 'root' which means root repo
         if target_name == "root":
-            _activate_root_repo(repo, script, "switch")
+            _activate_root_repo(ctx, repo, script, "switch")
 
         # For explicit name, use worktree_path_for since user provided the worktree name
         workstacks_dir = ensure_workstacks_dir(repo)
         wt_path = worktree_path_for(workstacks_dir, target_name)
 
-        _activate_worktree(repo, wt_path, script, "switch")
+        _activate_worktree(ctx, repo, wt_path, script, "switch")

@@ -94,6 +94,7 @@ def test_list_with_stacks_pr_visibility(show_pr_info: bool, expected_visible: bo
             github_ops=github_ops,
             graphite_ops=graphite_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -186,6 +187,7 @@ def test_list_pr_emoji_mapping(
             github_ops=github_ops,
             graphite_ops=graphite_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -268,6 +270,7 @@ def test_list_with_stacks_uses_graphite_url() -> None:
             github_ops=github_ops,
             graphite_ops=graphite_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 

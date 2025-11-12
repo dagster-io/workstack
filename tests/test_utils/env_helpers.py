@@ -1,12 +1,17 @@
 """Centralized test environment helpers for simulating workstack scenarios.
 
 This module provides helpers for setting up realistic workstack test environments
-with Click's CliRunner. It focuses on the CliRunner + isolated_filesystem() pattern,
-NOT pytest's tmp_path fixture (which is handled by WorktreeScenario in conftest.py).
+with Click's CliRunner. It provides two patterns:
+
+1. simulated_workstack_env(): Filesystem-based (uses isolated_filesystem(),
+   creates real directories)
+2. pure_workstack_env(): In-memory (uses fakes only, no filesystem I/O)
 
 Key Components:
-    - SimulatedWorkstackEnv: Helper class for managing test environments
-    - simulated_workstack_env(): Context manager that sets up complete environment
+    - SimulatedWorkstackEnv: Helper class for filesystem-based testing
+    - PureWorkstackEnv: Helper class for in-memory testing
+    - simulated_workstack_env(): Context manager for filesystem-based tests
+    - pure_workstack_env(): Context manager for in-memory tests
 
 Usage Pattern:
 
@@ -35,6 +40,7 @@ Usage Pattern:
         with simulated_workstack_env(runner) as env:
             git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
             global_config_ops = GlobalConfig(...)
+            script_writer=env.script_writer,
             test_ctx = WorkstackContext.for_test(cwd=env.cwd, ...)
 
             result = runner.invoke(cli, ["command"], obj=test_ctx)
@@ -59,6 +65,7 @@ Advanced Usage (complex worktree scenarios):
                 current_branch="feat-2",
             )
 
+            script_writer=env.script_writer,
             test_ctx = WorkstackContext.for_test(cwd=env.cwd, git_ops=git_ops, ...)
     ```
 
@@ -80,8 +87,10 @@ from click.testing import CliRunner
 
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
+from tests.fakes.script_writer import FakeScriptWriterOps
 from workstack.core.gitops import WorktreeInfo
 from workstack.core.graphite_ops import BranchMetadata
+from workstack.core.script_writer import RealScriptWriterOps
 
 
 class SimulatedWorkstackEnv:
@@ -97,6 +106,7 @@ class SimulatedWorkstackEnv:
         git_dir: Path to .git directory (root_worktree / ".git")
         root_worktree: Path to root worktree (has .git/ directory)
         workstacks_root: Path to workstacks directory (parallel to root)
+        script_writer: RealScriptWriterOps for creating actual temp files
     """
 
     def __init__(self, root_worktree: Path, workstacks_root: Path) -> None:
@@ -108,6 +118,7 @@ class SimulatedWorkstackEnv:
         """
         self.root_worktree = root_worktree
         self.workstacks_root = workstacks_root
+        self.script_writer = RealScriptWriterOps()
         self._linked_worktrees: dict[str, Path] = {}  # Track branch -> worktree path
 
     @property
@@ -322,8 +333,13 @@ def simulated_workstack_env(runner: CliRunner) -> Generator[SimulatedWorkstackEn
             with simulated_workstack_env(runner) as env:
                 # env.cwd is available (root worktree)
                 # env.git_dir is available (.git directory)
+                # env.script_writer is available (RealScriptWriterOps for temp files)
                 git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-                test_ctx = WorkstackContext.for_test(cwd=env.cwd, ...)
+                test_ctx = WorkstackContext.for_test(
+                    cwd=env.cwd,
+                    script_writer=env.script_writer,
+                    ...
+                )
         ```
     """
     with runner.isolated_filesystem():
@@ -345,3 +361,104 @@ def simulated_workstack_env(runner: CliRunner) -> Generator[SimulatedWorkstackEn
             root_worktree=root_worktree,
             workstacks_root=workstacks_root,
         )
+
+
+class PureWorkstackEnv:
+    """Helper for pure in-memory testing without filesystem I/O.
+
+    Use this for tests that verify command logic without needing
+    actual filesystem operations. This is faster and simpler than
+    simulated_workstack_env() for tests that don't need real directories.
+
+    Attributes:
+        cwd: Sentinel path representing current working directory
+        git_dir: Sentinel path representing .git directory
+        workstacks_root: Sentinel path for workstacks directory
+        script_writer: FakeScriptWriterOps for in-memory script verification
+    """
+
+    def __init__(
+        self,
+        cwd: Path,
+        git_dir: Path,
+        workstacks_root: Path,
+        script_writer: FakeScriptWriterOps,
+    ) -> None:
+        """Initialize pure test environment.
+
+        Args:
+            cwd: Sentinel path for current working directory
+            git_dir: Sentinel path for .git directory
+            workstacks_root: Sentinel path for workstacks directory
+            script_writer: FakeScriptWriterOps instance for script verification
+        """
+        self.cwd = cwd
+        self.git_dir = git_dir
+        self.workstacks_root = workstacks_root
+        self.script_writer = script_writer
+
+
+@contextmanager
+def pure_workstack_env(
+    runner: CliRunner,
+    *,
+    branches: list[BranchMetadata] | None = None,
+) -> Generator[PureWorkstackEnv]:
+    """Create pure in-memory test environment without filesystem I/O.
+
+    This context manager provides a faster alternative to simulated_workstack_env()
+    for tests that don't need actual filesystem operations. It uses sentinel paths
+    and in-memory fakes exclusively.
+
+    Use this when:
+    - Testing command logic that doesn't depend on real directories
+    - Verifying script content without creating temp files
+    - Running tests faster without filesystem overhead
+
+    Use simulated_workstack_env() when:
+    - Testing actual worktree creation/removal
+    - Verifying git integration with real directories
+    - Testing filesystem-dependent features
+
+    Args:
+        runner: Click CliRunner instance (not used, but kept for API consistency)
+        branches: Optional branch metadata for initializing git state
+
+    Yields:
+        PureWorkstackEnv with sentinel paths and in-memory fakes
+
+    Example:
+        ```python
+        def test_jump_pure() -> None:
+            runner = CliRunner()
+            with pure_workstack_env(runner) as env:
+                # No filesystem I/O, all operations in-memory
+                git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
+                ctx = WorkstackContext.for_test(
+                    cwd=env.cwd,
+                    git_ops=git_ops,
+                    script_writer=env.script_writer,
+                )
+                result = runner.invoke(cli, ["jump", "feature", "--script"], obj=ctx)
+
+                # Verify script content in-memory
+                script_path = Path(result.stdout.strip())
+                content = env.script_writer.get_script_content(script_path)
+                assert content is not None
+        ```
+    """
+    # Use sentinel paths (no filesystem operations)
+    cwd = Path("/test/repo")
+    git_dir = Path("/test/repo/.git")
+    workstacks_root = Path("/test/workstacks")
+
+    # Create in-memory script writer
+    script_writer = FakeScriptWriterOps()
+
+    # No isolated_filesystem(), no os.chdir(), no mkdir()
+    yield PureWorkstackEnv(
+        cwd=cwd,
+        git_dir=git_dir,
+        workstacks_root=workstacks_root,
+        script_writer=script_writer,
+    )

@@ -301,6 +301,7 @@ def test_consolidate_detached_head_error() -> None:
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )

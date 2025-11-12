@@ -7,7 +7,7 @@ import click
 from workstack.cli.activation import render_activation_script
 from workstack.cli.commands.remove import _remove_worktree
 from workstack.cli.core import discover_repo_context, worktree_path_for
-from workstack.cli.shell_utils import render_cd_script, write_script_to_temp
+from workstack.cli.shell_utils import render_cd_script
 from workstack.core.context import WorkstackContext, regenerate_context
 from workstack.core.repo_discovery import ensure_workstacks_dir
 from workstack.core.sync_utils import PRStatus, identify_deletable_worktrees
@@ -249,11 +249,12 @@ def sync_cmd(
                     comment=f"return to {current_worktree_name}",
                     success_message=f"✓ Returned to {current_worktree_name}.",
                 )
-                script_output_path = write_script_to_temp(
+                result = ctx.script_writer.write_activation_script(
                     script_content,
                     command_name="sync",
                     comment=f"return to {current_worktree_name}",
                 )
+                script_output_path = result.path
         else:
             _emit(
                 f"✅ {repo.root}",
@@ -265,11 +266,12 @@ def sync_cmd(
                     comment="return to root",
                     final_message=f'echo "✓ Switched to: root [{repo.root}]"',
                 )
-                script_output_path = write_script_to_temp(
+                result = ctx.script_writer.write_activation_script(
                     script_content,
                     command_name="sync",
                     comment="return to root",
                 )
+                script_output_path = result.path
 
     # Output temp file path for shell wrapper
     if script and script_output_path:

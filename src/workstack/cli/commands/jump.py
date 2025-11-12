@@ -8,9 +8,9 @@ import click
 from workstack.cli.activation import render_activation_script
 from workstack.cli.core import discover_repo_context
 from workstack.cli.graphite import find_worktrees_containing_branch
-from workstack.cli.shell_utils import write_script_to_temp
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
+from workstack.core.repo_discovery import RepoContext
 
 
 def _format_worktree_info(wt: WorktreeInfo, repo_root: Path) -> str:
@@ -51,14 +51,6 @@ def _perform_jump(
     target_path = target_worktree.path
     current_branch_in_worktree = target_worktree.branch
 
-    # Defensive check: verify path exists before any operations
-    if not target_path.exists():
-        click.echo(
-            f"Error: Worktree path does not exist: {target_path}",
-            err=True,
-        )
-        raise SystemExit(1)
-
     # Check if we're already on the target branch in the target worktree
     current_cwd = ctx.cwd
     if current_cwd == target_path and current_branch_in_worktree == branch:
@@ -93,12 +85,12 @@ def _perform_jump(
             worktree_path=target_path, final_message=jump_message
         )
 
-        script_path = write_script_to_temp(
+        result = ctx.script_writer.write_activation_script(
             script_content,
             command_name="jump",
             comment=f"jump to {branch}",
         )
-        click.echo(str(script_path), nl=False)
+        click.echo(str(result.path), nl=False)
     else:
         # No shell integration available, show manual instructions
         click.echo(
@@ -128,7 +120,11 @@ def jump_cmd(ctx: WorkstackContext, branch: str, script: bool) -> None:
 
     If multiple worktrees contain the branch, all options are shown.
     """
-    repo = discover_repo_context(ctx, ctx.cwd)
+    # Use existing repo from context if available (for tests), otherwise discover
+    if isinstance(ctx.repo, RepoContext):
+        repo = ctx.repo
+    else:
+        repo = discover_repo_context(ctx, ctx.cwd)
 
     # Get all worktrees
     worktrees = ctx.git_ops.list_worktrees(repo.root)

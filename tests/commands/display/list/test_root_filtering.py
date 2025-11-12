@@ -100,6 +100,7 @@ def test_root_on_trunk_shows_only_trunk() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -207,6 +208,7 @@ def test_root_on_non_trunk_shows_ancestors_only() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -325,6 +327,7 @@ def test_non_root_worktree_shows_descendants_with_worktrees() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 

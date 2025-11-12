@@ -11,6 +11,7 @@ from workstack.cli.config import LoadedConfig
 from workstack.core.context import WorkstackContext
 from workstack.core.global_config import GlobalConfig
 from workstack.core.repo_discovery import NoRepoSentinel, RepoContext
+from workstack.core.script_writer import ScriptWriterOps
 
 
 def create_test_context(
@@ -19,6 +20,7 @@ def create_test_context(
     graphite_ops: FakeGraphiteOps | None = None,
     shell_ops: FakeShellOps | None = None,
     completion_ops: FakeCompletionOps | None = None,
+    script_writer: ScriptWriterOps | None = None,
     cwd: Path | None = None,
     global_config: GlobalConfig | None = None,
     local_config: LoadedConfig | None = None,
@@ -42,6 +44,9 @@ def create_test_context(
                   If None, creates empty FakeShellOps (no shell detected).
         completion_ops: Optional FakeCompletionOps with test configuration.
                        If None, creates empty FakeCompletionOps.
+        script_writer: Optional ScriptWriterOps (Real or Fake) for test context.
+                      If None, defaults to FakeScriptWriterOps in WorkstackContext.for_test.
+                      Pass RealScriptWriterOps() for integration tests that need real scripts.
         cwd: Optional current working directory path for test context.
             If None, defaults to Path("/test/default/cwd") to prevent accidental use
             of real Path.cwd() in tests.
@@ -83,6 +88,7 @@ def create_test_context(
         graphite_ops=graphite_ops,
         shell_ops=shell_ops,
         completion_ops=completion_ops,
+        script_writer=script_writer,
         cwd=cwd,
         global_config=global_config,
         local_config=local_config,

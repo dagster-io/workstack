@@ -98,6 +98,7 @@ def test_switch_up_with_existing_worktree() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -162,6 +163,7 @@ def test_switch_up_at_top_of_stack() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -213,6 +215,7 @@ def test_switch_up_child_has_no_worktree() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -271,6 +274,7 @@ def test_switch_down_with_existing_worktree() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -328,6 +332,7 @@ def test_switch_down_to_trunk_root() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -380,6 +385,7 @@ def test_switch_down_at_trunk() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -433,6 +439,7 @@ def test_switch_down_parent_has_no_worktree() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -469,6 +476,7 @@ def test_switch_graphite_not_enabled() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -510,6 +518,7 @@ def test_switch_up_and_down_mutually_exclusive() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -545,6 +554,7 @@ def test_switch_name_with_up_mutually_exclusive() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -581,6 +591,7 @@ def test_switch_detached_head() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -649,6 +660,7 @@ def test_switch_up_with_mismatched_worktree_name() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -727,6 +739,7 @@ def test_switch_down_with_mismatched_worktree_name() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 

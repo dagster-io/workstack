@@ -8,7 +8,7 @@ import click
 
 from workstack.cli.config import LoadedConfig
 from workstack.cli.core import discover_repo_context, worktree_path_for
-from workstack.cli.shell_utils import render_cd_script, write_script_to_temp
+from workstack.cli.shell_utils import render_cd_script
 from workstack.cli.subprocess_utils import run_with_error_reporting
 from workstack.core.context import WorkstackContext, read_trunk_from_pyproject
 from workstack.core.naming_utils import (
@@ -492,12 +492,12 @@ def create(
             comment="cd to new worktree",
             success_message="✓ Switched to new worktree.",
         )
-        script_path = write_script_to_temp(
+        result = ctx.script_writer.write_activation_script(
             script_content,
             command_name="create",
             comment=f"cd to {name}",
         )
-        click.echo(str(script_path), nl=False)
+        click.echo(str(result.path), nl=False)
     elif output_json:
         # Output JSON with worktree information
         json_response = _create_json_response(

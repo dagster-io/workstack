@@ -37,6 +37,7 @@ def test_config_list_displays_global_config() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -83,6 +84,7 @@ def test_config_list_displays_repo_config() -> None:
             global_config=global_config_ops,
             local_config=local_config,
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -119,6 +121,7 @@ def test_config_list_handles_missing_repo_config() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -145,6 +148,7 @@ def test_config_list_not_in_git_repo() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -180,6 +184,7 @@ def test_config_get_workstacks_root() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -213,6 +218,7 @@ def test_config_get_use_graphite() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -246,6 +252,7 @@ def test_config_get_show_pr_info() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -279,6 +286,7 @@ def test_config_get_show_pr_checks() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -321,6 +329,7 @@ def test_config_get_env_key() -> None:
             global_config=global_config_ops,
             local_config=local_config,
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -363,6 +372,7 @@ def test_config_get_post_create_shell() -> None:
             global_config=global_config_ops,
             local_config=local_config,
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -405,6 +415,7 @@ def test_config_get_post_create_commands() -> None:
             global_config=global_config_ops,
             local_config=local_config,
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -448,6 +459,7 @@ def test_config_get_env_key_not_found() -> None:
             global_config=global_config_ops,
             local_config=local_config,
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -481,6 +493,7 @@ def test_config_get_invalid_key_format() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -520,6 +533,7 @@ def test_config_get_invalid_key() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -559,6 +573,7 @@ def test_config_key_with_multiple_dots() -> None:
             git_ops=git_ops,
             global_config=global_config_ops,
             repo=repo,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 

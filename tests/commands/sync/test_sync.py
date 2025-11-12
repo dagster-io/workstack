@@ -96,6 +96,7 @@ def test_sync_runs_gt_sync_from_root() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -143,6 +144,7 @@ def test_sync_with_force_flag() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -190,6 +192,7 @@ def test_sync_handles_gt_not_installed() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -234,6 +237,7 @@ def test_sync_handles_gt_sync_failure() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -294,6 +298,7 @@ def test_sync_identifies_deletable_workstacks() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -339,6 +344,7 @@ def test_sync_no_deletable_workstacks() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -389,6 +395,7 @@ def test_sync_with_confirmation() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -440,6 +447,7 @@ def test_sync_user_cancels() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -492,6 +500,7 @@ def test_sync_force_skips_confirmation() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -543,6 +552,7 @@ def test_sync_dry_run() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -596,6 +606,7 @@ def test_sync_return_to_original_worktree() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -648,6 +659,7 @@ def test_sync_original_worktree_deleted() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -724,6 +736,7 @@ def test_sync_script_mode_when_worktree_exists() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -798,6 +811,7 @@ def test_sync_force_runs_double_gt_sync() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -859,6 +873,7 @@ def test_sync_without_force_runs_single_gt_sync() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -917,6 +932,7 @@ def test_sync_force_dry_run_no_sync_calls() -> None:
             graphite_ops=graphite_ops,
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -961,6 +977,7 @@ def test_sync_force_no_deletable_single_sync() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -1007,6 +1024,7 @@ def test_sync_verbose_flag() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -1052,6 +1070,7 @@ def test_sync_verbose_short_flag() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )
@@ -1096,6 +1115,7 @@ def test_sync_force_verbose_combination() -> None:
             graphite_ops=graphite_ops,
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
         )

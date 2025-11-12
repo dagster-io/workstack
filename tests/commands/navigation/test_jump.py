@@ -5,24 +5,26 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from tests.fakes.gitops import FakeGitOps
-from tests.test_utils.env_helpers import simulated_workstack_env
+from tests.test_utils.env_helpers import pure_workstack_env, simulated_workstack_env
 from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
 from workstack.core.global_config import GlobalConfig
+from workstack.core.repo_discovery import RepoContext
 
 
 def test_jump_to_branch_in_single_worktree() -> None:
-    """Test jumping to a branch that is checked out in exactly one worktree."""
+    """Test jumping to a branch that is checked out in exactly one worktree.
+
+    This test uses pure_workstack_env() for in-memory testing without filesystem I/O.
+    """
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         work_dir = env.workstacks_root / env.cwd.name
 
-        # Create worktree directories
+        # Use sentinel paths (no mkdir() needed in pure mode)
         feature_wt = work_dir / "feature-wt"
         other_wt = work_dir / "other-wt"
-        feature_wt.mkdir(parents=True, exist_ok=True)
-        other_wt.mkdir(parents=True, exist_ok=True)
 
         git_ops = FakeGitOps(
             worktrees={
@@ -45,9 +47,18 @@ def test_jump_to_branch_in_single_worktree() -> None:
             show_pr_checks=False,
         )
 
+        # Create RepoContext to avoid filesystem checks in discover_repo_context
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name="repo",
+            workstacks_dir=env.workstacks_root / "repo",
+        )
+
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
+            repo=repo,
             cwd=env.cwd,
         )
 
@@ -63,10 +74,10 @@ def test_jump_to_branch_in_single_worktree() -> None:
 
         # Should not checkout (already on the branch)
         assert len(git_ops.checked_out_branches) == 0
-        # Should generate activation script
+        # Should generate activation script (verify in-memory)
         script_path = Path(result.stdout.strip())
-        assert script_path.exists()
-        script_content = script_path.read_text()
+        script_content = env.script_writer.get_script_content(script_path)
+        assert script_content is not None
         assert str(feature_wt) in script_content
 
 
@@ -98,6 +109,7 @@ def test_jump_to_branch_not_found() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -148,6 +160,7 @@ def test_jump_to_branch_in_stack_but_not_checked_out() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -190,6 +203,7 @@ def test_jump_works_without_graphite() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -236,6 +250,7 @@ def test_jump_already_on_target_branch() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -283,6 +298,7 @@ def test_jump_succeeds_when_branch_exactly_checked_out() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 
@@ -338,6 +354,7 @@ def test_jump_with_multiple_worktrees_same_branch() -> None:
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
+            script_writer=env.script_writer,
             cwd=env.cwd,
         )
 

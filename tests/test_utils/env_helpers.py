@@ -90,6 +90,7 @@ from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.script_writer import FakeScriptWriterOps
 from workstack.core.gitops import WorktreeInfo
 from workstack.core.graphite_ops import BranchMetadata
+from workstack.core.repo_discovery import RepoContext
 from workstack.core.script_writer import RealScriptWriterOps
 
 
@@ -107,6 +108,7 @@ class SimulatedWorkstackEnv:
         root_worktree: Path to root worktree (has .git/ directory)
         workstacks_root: Path to workstacks directory (parallel to root)
         script_writer: RealScriptWriterOps for creating actual temp files
+        repo: RepoContext computed from root_worktree and workstacks_root
     """
 
     def __init__(self, root_worktree: Path, workstacks_root: Path) -> None:
@@ -120,6 +122,11 @@ class SimulatedWorkstackEnv:
         self.workstacks_root = workstacks_root
         self.script_writer = RealScriptWriterOps()
         self._linked_worktrees: dict[str, Path] = {}  # Track branch -> worktree path
+        self._repo = RepoContext(
+            root=root_worktree,
+            repo_name=root_worktree.name,
+            workstacks_dir=workstacks_root / root_worktree.name,
+        )
 
     @property
     def cwd(self) -> Path:
@@ -130,6 +137,11 @@ class SimulatedWorkstackEnv:
     def git_dir(self) -> Path:
         """Path to .git directory (convenience property)."""
         return self.root_worktree / ".git"
+
+    @property
+    def repo(self) -> RepoContext:
+        """RepoContext constructed from root worktree paths."""
+        return self._repo
 
     def create_linked_worktree(self, name: str, branch: str, *, chdir: bool) -> Path:
         """Create a linked worktree in workstacks directory.
@@ -375,6 +387,7 @@ class PureWorkstackEnv:
         git_dir: Sentinel path representing .git directory
         workstacks_root: Sentinel path for workstacks directory
         script_writer: FakeScriptWriterOps for in-memory script verification
+        repo: RepoContext computed from cwd and workstacks_root
     """
 
     def __init__(
@@ -396,6 +409,16 @@ class PureWorkstackEnv:
         self.git_dir = git_dir
         self.workstacks_root = workstacks_root
         self.script_writer = script_writer
+        self._repo = RepoContext(
+            root=cwd,
+            repo_name=cwd.name,
+            workstacks_dir=workstacks_root / cwd.name,
+        )
+
+    @property
+    def repo(self) -> RepoContext:
+        """RepoContext constructed from sentinel paths."""
+        return self._repo
 
 
 @contextmanager

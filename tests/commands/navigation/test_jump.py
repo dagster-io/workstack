@@ -10,7 +10,6 @@ from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
 from workstack.core.global_config import GlobalConfig
-from workstack.core.repo_discovery import RepoContext
 
 
 def test_jump_to_branch_in_single_worktree() -> None:
@@ -47,18 +46,11 @@ def test_jump_to_branch_in_single_worktree() -> None:
             show_pr_checks=False,
         )
 
-        # Create RepoContext to avoid filesystem checks in discover_repo_context
-        repo = RepoContext(
-            root=env.cwd,
-            repo_name="repo",
-            workstacks_dir=env.workstacks_root / "repo",
-        )
-
         test_ctx = WorkstackContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             script_writer=env.script_writer,
-            repo=repo,
+            repo=env.repo,
             cwd=env.cwd,
         )
 

@@ -4,6 +4,7 @@ import click
 
 from workstack.cli.core import discover_repo_context
 from workstack.core.context import WorkstackContext
+from workstack.core.repo_discovery import RepoContext
 from workstack.core.worktree_utils import find_current_worktree, is_root_worktree
 
 
@@ -11,15 +12,15 @@ from workstack.core.worktree_utils import find_current_worktree, is_root_worktre
 @click.pass_obj
 def current_cmd(ctx: WorkstackContext) -> None:
     """Show current workstack name (hidden command for automation)."""
-    # Discover repository context
-    # This raises FileNotFoundError if not in a git repo
-    try:
+    # Use ctx.repo if it's a valid RepoContext, otherwise discover
+    if isinstance(ctx.repo, RepoContext):
+        repo = ctx.repo
+    else:
+        # Discover repository context (handles None and NoRepoSentinel)
+        # If not in a git repo, FileNotFoundError will bubble up
         repo = discover_repo_context(ctx, ctx.cwd)
-    except FileNotFoundError:
-        # Not in a git repository - exit silently with error code
-        raise SystemExit(1) from None
 
-    current_dir = ctx.cwd.resolve()
+    current_dir = ctx.cwd
     worktrees = ctx.git_ops.list_worktrees(repo.root)
     wt_info = find_current_worktree(worktrees, current_dir)
 

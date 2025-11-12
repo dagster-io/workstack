@@ -4,13 +4,12 @@ These tests use FakeGitOps with pre-configured WorktreeInfo data instead of
 real git operations, providing 5-10x speedup while maintaining full CLI coverage.
 """
 
-import os
 from pathlib import Path
 
 from click.testing import CliRunner
 
 from tests.fakes.gitops import FakeGitOps
-from tests.test_utils.env_helpers import simulated_workstack_env
+from tests.test_utils.env_helpers import pure_workstack_env
 from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
@@ -20,47 +19,32 @@ from workstack.core.global_config import GlobalConfig, InMemoryGlobalConfigOps
 def test_current_returns_worktree_name() -> None:
     """Test that current returns worktree name when in named worktree."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        # Create linked worktree for "feature-x"
-        feature_x_path = env.create_linked_worktree("feature-x", "feature-x", chdir=True)
+    with pure_workstack_env(runner) as env:
+        # Construct sentinel paths (no filesystem operations needed)
+        work_dir = env.workstacks_root / env.cwd.name
+        feature_x_path = work_dir / "feature-x"
 
         # Configure FakeGitOps with worktrees - feature-x is current
         git_ops = FakeGitOps(
             worktrees={
-                env.root_worktree: [
-                    WorktreeInfo(path=env.root_worktree, branch="main", is_root=True),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
                     WorktreeInfo(path=feature_x_path, branch="feature-x", is_root=False),
                 ]
             },
             current_branches={
-                env.root_worktree: "main",
+                env.cwd: "main",
                 feature_x_path: "feature-x",
             },
             git_common_dirs={
-                env.root_worktree: env.git_dir,
+                env.cwd: env.git_dir,
                 feature_x_path: env.git_dir,
             },
-            default_branches={env.root_worktree: "main"},
+            default_branches={env.cwd: "main"},
         )
 
-        # Create global config with workstacks_root
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
-
-        # Create test context - note cwd is feature_x_path since we changed dir
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            global_config=global_config,
-            cwd=feature_x_path,  # Current directory is the feature-x worktree
-            trunk_branch="main",
-        )
+        # Use env.build_context() helper to eliminate boilerplate
+        test_ctx = env.build_context(git_ops=git_ops, cwd=feature_x_path, repo=env.repo)
 
         # Run current command
         result = runner.invoke(cli, ["current"], obj=test_ctx)
@@ -72,37 +56,21 @@ def test_current_returns_worktree_name() -> None:
 def test_current_returns_root_in_root_repository() -> None:
     """Test that current returns 'root' when in root repository."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with pure_workstack_env(runner) as env:
         # Configure FakeGitOps with just root worktree
         git_ops = FakeGitOps(
             worktrees={
-                env.root_worktree: [
-                    WorktreeInfo(path=env.root_worktree, branch="main", is_root=True),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
                 ]
             },
-            current_branches={env.root_worktree: "main"},
-            git_common_dirs={env.root_worktree: env.git_dir},
-            default_branches={env.root_worktree: "main"},
+            current_branches={env.cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
 
-        # Create global config with workstacks_root
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
-
-        # Create test context - cwd is root worktree
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            global_config=global_config,
-            cwd=env.root_worktree,  # Current directory is root
-            trunk_branch="main",
-        )
+        # Use env.build_context() helper to eliminate boilerplate
+        test_ctx = env.build_context(git_ops=git_ops, cwd=env.cwd, repo=env.repo)
 
         # Run current command
         result = runner.invoke(cli, ["current"], obj=test_ctx)
@@ -114,44 +82,26 @@ def test_current_returns_root_in_root_repository() -> None:
 def test_current_exits_with_error_when_not_in_worktree() -> None:
     """Test that current exits with code 1 when not in any worktree."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        # Create a directory outside any worktree
-        outside_dir = env.root_worktree.parent / "outside"
-        outside_dir.mkdir()
+    with pure_workstack_env(runner) as env:
+        # Construct sentinel path outside any worktree (no mkdir needed)
+        outside_dir = env.cwd.parent / "outside"
 
         # Configure FakeGitOps with worktrees, but we'll run from outside
         git_ops = FakeGitOps(
             worktrees={
-                env.root_worktree: [
-                    WorktreeInfo(path=env.root_worktree, branch="main", is_root=True),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
                 ]
             },
-            current_branches={env.root_worktree: "main"},
-            git_common_dirs={env.root_worktree: env.git_dir},
-            default_branches={env.root_worktree: "main"},
+            current_branches={env.cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
 
-        # Create global config with workstacks_root
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+        # Use env.build_context() helper to eliminate boilerplate
+        test_ctx = env.build_context(git_ops=git_ops, cwd=outside_dir, repo=None)
 
-        # Create test context - cwd is outside any worktree
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            global_config=global_config,
-            cwd=outside_dir,  # Current directory is outside any worktree
-            trunk_branch="main",
-        )
-
-        # Run current command from outside directory
-        os.chdir(outside_dir)
+        # Run current command from outside directory (no os.chdir needed)
         result = runner.invoke(cli, ["current"], obj=test_ctx)
 
         assert result.exit_code == 1
@@ -161,55 +111,36 @@ def test_current_exits_with_error_when_not_in_worktree() -> None:
 def test_current_works_from_subdirectory() -> None:
     """Test that current returns worktree name from subdirectory within worktree."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        # Create linked worktree for "feature-y"
-        feature_y_path = env.create_linked_worktree("feature-y", "feature-y", chdir=False)
-
-        # Create subdirectory within worktree
+    with pure_workstack_env(runner) as env:
+        # Construct sentinel paths (no filesystem operations needed)
+        work_dir = env.workstacks_root / env.cwd.name
+        feature_y_path = work_dir / "feature-y"
         subdir = feature_y_path / "src" / "nested"
-        subdir.mkdir(parents=True)
 
         # Configure FakeGitOps with worktrees
         git_ops = FakeGitOps(
             worktrees={
-                env.root_worktree: [
-                    WorktreeInfo(path=env.root_worktree, branch="main", is_root=True),
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
                     WorktreeInfo(path=feature_y_path, branch="feature-y", is_root=False),
                 ]
             },
             current_branches={
-                env.root_worktree: "main",
+                env.cwd: "main",
                 feature_y_path: "feature-y",
             },
             git_common_dirs={
-                env.root_worktree: env.git_dir,
+                env.cwd: env.git_dir,
                 feature_y_path: env.git_dir,
                 subdir: env.git_dir,  # Subdirectory also maps to same git dir
             },
-            default_branches={env.root_worktree: "main"},
+            default_branches={env.cwd: "main"},
         )
 
-        # Create global config with workstacks_root
-        global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+        # Use env.build_context() helper to eliminate boilerplate
+        test_ctx = env.build_context(git_ops=git_ops, cwd=subdir, repo=env.repo)
 
-        # Create test context - cwd is subdirectory within worktree
-        test_ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            global_config=global_config,
-            cwd=subdir,  # Current directory is subdirectory
-            trunk_branch="main",
-        )
-
-        # Run current command from subdirectory
-        os.chdir(subdir)
+        # Run current command from subdirectory (no os.chdir needed)
         result = runner.invoke(cli, ["current"], obj=test_ctx)
 
         assert result.exit_code == 0

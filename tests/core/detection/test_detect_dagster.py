@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from workstack.cli.commands.init import detect_root_project_name, is_repo_named
+from workstack.core.init_utils import detect_root_project_name, is_repo_named
 
 
 def test_detects_by_root_pyproject(tmp_path: Path) -> None:

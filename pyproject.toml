@@ -32,6 +32,7 @@ dev = [
     "pytest-cov>=5.0.0",
     "pytest-xdist>=3.8.0",
     "pyright>=1.1.406",
+    "libcst>=1.8.6",
 ]
 
 [build-system]

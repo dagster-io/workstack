@@ -38,6 +38,11 @@ from workstack.core.context import WorkstackContext
     help="Show what would be done without executing merge operations.",
 )
 @click.option(
+    "--down",
+    is_flag=True,
+    help="Only land branches downstack (toward trunk) from current branch. Skips upstack rebase.",
+)
+@click.option(
     "--script",
     is_flag=True,
     hidden=True,
@@ -45,13 +50,16 @@ from workstack.core.context import WorkstackContext
 )
 @click.pass_obj
 def land_stack(
-    ctx: WorkstackContext, force: bool, verbose: bool, dry_run: bool, script: bool
+    ctx: WorkstackContext, force: bool, verbose: bool, dry_run: bool, down: bool, script: bool
 ) -> None:
-    """Land all PRs from bottom of stack up to and including current branch.
+    """Land all PRs in stack.
+
+    By default, lands entire stack from bottom (trunk) to top (leaf). With --down,
+    lands only downstack PRs from bottom up to current branch.
 
     This command merges all PRs sequentially from the bottom of the stack (first
-    branch above trunk) up to the current branch, running 'gt sync -f' between
-    each merge to restack remaining branches.
+    branch above trunk) upward, running 'gt sync -f' to restack remaining branches
+    (unless --down is used).
 
     PRs are landed bottom-up because each PR depends on the ones below it.
 
@@ -61,10 +69,15 @@ def land_stack(
     - All branches must have open PRs
     - Current branch must not be a trunk branch
 
-    Example:
+    Example (default):
         Stack: main → feat-1 → feat-2 → feat-3
-        Current branch: feat-3 (at top)
-        Result: Lands feat-1, feat-2, feat-3 (in that order, bottom to top)
+        Current branch: feat-2
+        Result: Lands feat-1, feat-2, feat-3 (entire stack)
+
+    Example (--down):
+        Stack: main → feat-1 → feat-2 → feat-3
+        Current branch: feat-2
+        Result: Lands feat-1, feat-2 (downstack only, feat-3 untouched)
     """
     # Discover repository context
     repo = discover_repo_context(ctx, ctx.cwd)
@@ -73,7 +86,7 @@ def land_stack(
     current_branch = ctx.git_ops.get_current_branch(ctx.cwd)
 
     # Get branches to land
-    branches_to_land = _get_branches_to_land(ctx, repo.root, current_branch or "")
+    branches_to_land = _get_branches_to_land(ctx, repo.root, current_branch or "", down_only=down)
 
     # Validate preconditions
     _validate_landing_preconditions(
@@ -113,7 +126,13 @@ def land_stack(
     # Execute landing sequence
     try:
         merged_branches = _land_branch_sequence(
-            ctx, repo.root, valid_branches, verbose=verbose, dry_run=dry_run, script_mode=script
+            ctx,
+            repo.root,
+            valid_branches,
+            verbose=verbose,
+            dry_run=dry_run,
+            down_only=down,
+            script_mode=script,
         )
     except subprocess.CalledProcessError as e:
         _emit("", script_mode=script)

@@ -51,7 +51,7 @@ def consolidate_cmd(
 ) -> None:
     """Consolidate stack branches into a single worktree.
 
-    By default, consolidates entire stack (trunk to leaf). With --down, consolidates
+    By default, consolidates full stack (trunk to leaf). With --down, consolidates
     only downstack branches (trunk to current).
 
     This command removes other worktrees that contain branches from the stack,
@@ -63,7 +63,7 @@ def consolidate_cmd(
 
     \b
     Examples:
-      # Consolidate entire stack into current worktree (default)
+      # Consolidate full stack into current worktree (default)
       $ workstack consolidate
 
       # Consolidate only downstack (trunk to current)
@@ -72,7 +72,7 @@ def consolidate_cmd(
       # Consolidate trunk → feat-2 only (leaves feat-3+ in separate worktrees)
       $ workstack consolidate feat-2
 
-      # Create new worktree "my-stack" and consolidate entire stack into it
+      # Create new worktree "my-stack" and consolidate full stack into it
       $ workstack consolidate --name my-stack
 
       # Consolidate downstack into new worktree

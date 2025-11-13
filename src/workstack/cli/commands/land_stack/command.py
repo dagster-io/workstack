@@ -54,14 +54,18 @@ def land_stack(
 ) -> None:
     """Land all PRs in stack.
 
-    By default, lands entire stack from bottom (trunk) to top (leaf). With --down,
-    lands only downstack PRs from bottom up to current branch.
+    By default, lands full stack (trunk to leaf). With --down, lands only
+    downstack PRs (trunk to current branch).
 
     This command merges all PRs sequentially from the bottom of the stack (first
-    branch above trunk) upward, running 'gt sync -f' to restack remaining branches
-    (unless --down is used).
+    branch above trunk) upward. After each merge, it runs 'gt sync -f' to rebase
+    upstack branches onto the updated trunk. With --down, skips the rebase and
+    force-push of upstack branches entirely.
 
     PRs are landed bottom-up because each PR depends on the ones below it.
+
+    Use --down when you have uncommitted changes or work-in-progress in upstack
+    branches that you don't want to rebase yet.
 
     Requirements:
     - Graphite must be enabled (use-graphite config)
@@ -69,15 +73,20 @@ def land_stack(
     - All branches must have open PRs
     - Current branch must not be a trunk branch
 
-    Example (default):
+    Example (default - full stack):
         Stack: main → feat-1 → feat-2 → feat-3
         Current branch: feat-2
-        Result: Lands feat-1, feat-2, feat-3 (entire stack)
+        Result: Lands feat-1, feat-2, feat-3 (full stack)
 
-    Example (--down):
+    Example (--down - downstack only):
         Stack: main → feat-1 → feat-2 → feat-3
         Current branch: feat-2
         Result: Lands feat-1, feat-2 (downstack only, feat-3 untouched)
+
+    Example (current at top of stack):
+        Stack: main → feat-1 → feat-2 → feat-3
+        Current branch: feat-3 (at the top of the stack)
+        Result: Lands feat-1, feat-2, feat-3 (same with or without --down)
     """
     # Discover repository context
     repo = discover_repo_context(ctx, ctx.cwd)

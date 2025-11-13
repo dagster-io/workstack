@@ -972,9 +972,10 @@ class DryRunGitOps(GitOps):
         return self._wrapped.get_recent_commits(cwd, limit=limit)
 
     def fetch_branch(self, repo_root: Path, remote: str, branch: str) -> None:
-        """Fetch branch (delegates to wrapped - considered read-only for dry-run)."""
-        return self._wrapped.fetch_branch(repo_root, remote, branch)
+        """Print dry-run message instead of fetching branch."""
+        click.echo(f"[DRY RUN] Would run: git fetch {remote} {branch}", err=True)
 
     def pull_branch(self, repo_root: Path, remote: str, branch: str, *, ff_only: bool) -> None:
-        """Pull branch (delegates to wrapped - considered read-only for dry-run)."""
-        return self._wrapped.pull_branch(repo_root, remote, branch, ff_only=ff_only)
+        """Print dry-run message instead of pulling branch."""
+        ff_flag = " --ff-only" if ff_only else ""
+        click.echo(f"[DRY RUN] Would run: git pull{ff_flag} {remote} {branch}", err=True)

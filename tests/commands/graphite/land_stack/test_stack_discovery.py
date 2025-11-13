@@ -39,7 +39,7 @@ def test_land_stack_gets_branches_to_land_correctly() -> None:
 
         # Stack: main → feat-1 → feat-2 → feat-3
         # Current: feat-2
-        # Should land: feat-1, feat-2 (bottom to current, not including feat-3)
+        # With --down flag: Should land feat-1, feat-2 (bottom to current, not including feat-3)
         graphite_ops = FakeGraphiteOps(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
@@ -75,8 +75,8 @@ def test_land_stack_gets_branches_to_land_correctly() -> None:
             dry_run=False,
         )
 
-        # Use --force to skip confirmation
-        result = runner.invoke(cli, ["land-stack", "--force"], obj=test_ctx, input="y\n")
+        # Use --force to skip confirmation and --down to land only downstack
+        result = runner.invoke(cli, ["land-stack", "--force", "--down"], obj=test_ctx, input="y\n")
 
         # Should show landing 2 PRs (feat-1 and feat-2 from bottom to current)
         assert "Landing 2 PRs" in result.output

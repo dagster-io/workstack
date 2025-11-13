@@ -154,7 +154,7 @@ def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> No
             github_ops=github_ops,
             shell_ops=FakeShellOps(),
             cwd=worktree_path,
-            dry_run=False,
+            dry_run=True,  # Match --dry-run flag on line 164
         )
 
         runner = CliRunner()

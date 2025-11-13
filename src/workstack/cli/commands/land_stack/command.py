@@ -7,7 +7,7 @@ import click
 from workstack.cli.commands.land_stack.cleanup import _cleanup_and_navigate
 from workstack.cli.commands.land_stack.discovery import _get_branches_to_land
 from workstack.cli.commands.land_stack.display import _show_final_state, _show_landing_plan
-from workstack.cli.commands.land_stack.execution import _land_branch_sequence
+from workstack.cli.commands.land_stack.execution import land_branch_sequence
 from workstack.cli.commands.land_stack.output import _emit
 from workstack.cli.commands.land_stack.validation import (
     _validate_branches_have_prs,
@@ -38,6 +38,11 @@ from workstack.core.context import WorkstackContext
     help="Show what would be done without executing merge operations.",
 )
 @click.option(
+    "--down",
+    is_flag=True,
+    help="Only land branches downstack (toward trunk) from current branch. Skips upstack rebase.",
+)
+@click.option(
     "--script",
     is_flag=True,
     hidden=True,
@@ -45,15 +50,22 @@ from workstack.core.context import WorkstackContext
 )
 @click.pass_obj
 def land_stack(
-    ctx: WorkstackContext, force: bool, verbose: bool, dry_run: bool, script: bool
+    ctx: WorkstackContext, force: bool, verbose: bool, dry_run: bool, down: bool, script: bool
 ) -> None:
-    """Land all PRs from bottom of stack up to and including current branch.
+    """Land all PRs in stack.
+
+    By default, lands full stack (trunk to leaf). With --down, lands only
+    downstack PRs (trunk to current branch).
 
     This command merges all PRs sequentially from the bottom of the stack (first
-    branch above trunk) up to the current branch, running 'gt sync -f' between
-    each merge to restack remaining branches.
+    branch above trunk) upward. After each merge, it runs 'gt sync -f' to rebase
+    upstack branches onto the updated trunk. With --down, skips the rebase and
+    force-push of upstack branches entirely.
 
     PRs are landed bottom-up because each PR depends on the ones below it.
+
+    Use --down when you have uncommitted changes or work-in-progress in upstack
+    branches that you don't want to rebase yet.
 
     Requirements:
     - Graphite must be enabled (use-graphite config)
@@ -61,10 +73,20 @@ def land_stack(
     - All branches must have open PRs
     - Current branch must not be a trunk branch
 
-    Example:
+    Example (default - full stack):
         Stack: main → feat-1 → feat-2 → feat-3
-        Current branch: feat-3 (at top)
-        Result: Lands feat-1, feat-2, feat-3 (in that order, bottom to top)
+        Current branch: feat-2
+        Result: Lands feat-1, feat-2, feat-3 (full stack)
+
+    Example (--down - downstack only):
+        Stack: main → feat-1 → feat-2 → feat-3
+        Current branch: feat-2
+        Result: Lands feat-1, feat-2 (downstack only, feat-3 untouched)
+
+    Example (current at top of stack):
+        Stack: main → feat-1 → feat-2 → feat-3
+        Current branch: feat-3 (at the top of the stack)
+        Result: Lands feat-1, feat-2, feat-3 (same with or without --down)
     """
     # Discover repository context
     repo = discover_repo_context(ctx, ctx.cwd)
@@ -73,7 +95,7 @@ def land_stack(
     current_branch = ctx.git_ops.get_current_branch(ctx.cwd)
 
     # Get branches to land
-    branches_to_land = _get_branches_to_land(ctx, repo.root, current_branch or "")
+    branches_to_land = _get_branches_to_land(ctx, repo.root, current_branch or "", down_only=down)
 
     # Validate preconditions
     _validate_landing_preconditions(
@@ -112,8 +134,14 @@ def land_stack(
 
     # Execute landing sequence
     try:
-        merged_branches = _land_branch_sequence(
-            ctx, repo.root, valid_branches, verbose=verbose, dry_run=dry_run, script_mode=script
+        merged_branches = land_branch_sequence(
+            ctx,
+            repo.root,
+            valid_branches,
+            verbose=verbose,
+            dry_run=dry_run,
+            down_only=down,
+            script_mode=script,
         )
     except subprocess.CalledProcessError as e:
         _emit("", script_mode=script)

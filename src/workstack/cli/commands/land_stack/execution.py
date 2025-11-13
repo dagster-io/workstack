@@ -18,6 +18,7 @@ def _land_branch_sequence(
     *,
     verbose: bool,
     dry_run: bool,
+    down_only: bool,
     script_mode: bool,
 ) -> list[str]:
     """Land branches sequentially, one at a time with restack between each.
@@ -28,6 +29,7 @@ def _land_branch_sequence(
         branches: List of BranchPR to land
         verbose: If True, show detailed output
         dry_run: If True, show what would be done without executing
+        down_only: If True, skip upstack rebase and force-push operations
         script_mode: True when running in --script mode (output to stderr)
 
     Returns:
@@ -139,14 +141,15 @@ def _land_branch_sequence(
             )
             _emit(_format_cli_command(f"git checkout {branch}", check), script_mode=script_mode)
 
-        # Phase 4: Restack
-        if dry_run:
-            _emit(_format_cli_command("gt sync -f", check), script_mode=script_mode)
-        else:
-            ctx.graphite_ops.sync(repo_root, force=True, quiet=not verbose)
-            _emit(_format_cli_command("gt sync -f", check), script_mode=script_mode)
+        # Phase 4: Restack (skip if down_only)
+        if not down_only:
+            if dry_run:
+                _emit(_format_cli_command("gt sync -f", check), script_mode=script_mode)
+            else:
+                ctx.graphite_ops.sync(repo_root, force=True, quiet=not verbose)
+                _emit(_format_cli_command("gt sync -f", check), script_mode=script_mode)
 
-        # Phase 5: Force-push rebased branches
+        # Phase 5: Force-push rebased branches (skip if down_only)
         # After gt sync -f rebases remaining branches locally,
         # push them to GitHub so subsequent PR merges will succeed
         #
@@ -154,74 +157,80 @@ def _land_branch_sequence(
         # the branches in our landing list. After landing feat-1 in a stack
         # like main → feat-1 → feat-2 → feat-3, we need to force-push BOTH
         # feat-2 and feat-3, even if we're only landing up to feat-2.
-        all_branches_metadata = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo_root)
-        upstack_branches: list[str] = []
-        if all_branches_metadata:
-            # Get all children of the current branch recursively
-            upstack_branches = _get_all_children(branch, all_branches_metadata)
-            if upstack_branches:
+        if not down_only:
+            all_branches_metadata = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo_root)
+            upstack_branches: list[str] = []
+            if all_branches_metadata:
+                # Get all children of the current branch recursively
+                upstack_branches = _get_all_children(branch, all_branches_metadata)
+                if upstack_branches:
+                    for upstack_branch in upstack_branches:
+                        if dry_run:
+                            submit_cmd = f"gt submit --branch {upstack_branch} --no-edit"
+                            _emit(_format_cli_command(submit_cmd, check), script_mode=script_mode)
+                        else:
+                            ctx.graphite_ops.submit_branch(
+                                repo_root, upstack_branch, quiet=not verbose
+                            )
+                            submit_cmd = f"gt submit --branch {upstack_branch} --no-edit"
+                            _emit(_format_cli_command(submit_cmd, check), script_mode=script_mode)
+
+            # Phase 6: Update PR base branches on GitHub after force-push
+            # After force-pushing rebased commits, update stale PR bases on GitHub
+            # This must happen AFTER force-push because GitHub rejects base changes
+            # when the new base doesn't contain the PR's head commits
+            #
+            # For each upstack branch that was force-pushed:
+            # 1. Get its updated parent from Graphite metadata
+            # 2. Get its PR number and current base from GitHub
+            # 3. Update base if stale (current base != expected parent)
+            if all_branches_metadata and upstack_branches:
                 for upstack_branch in upstack_branches:
-                    if dry_run:
-                        submit_cmd = f"gt submit --branch {upstack_branch} --no-edit"
-                        _emit(_format_cli_command(submit_cmd, check), script_mode=script_mode)
-                    else:
-                        ctx.graphite_ops.submit_branch(repo_root, upstack_branch, quiet=not verbose)
-                        submit_cmd = f"gt submit --branch {upstack_branch} --no-edit"
-                        _emit(_format_cli_command(submit_cmd, check), script_mode=script_mode)
+                    # Get updated parent from Graphite metadata (should be correct after sync)
+                    branch_metadata = all_branches_metadata.get(upstack_branch)
+                    if branch_metadata is None:
+                        continue
 
-        # Phase 6: Update PR base branches on GitHub after force-push
-        # After force-pushing rebased commits, update stale PR bases on GitHub
-        # This must happen AFTER force-push because GitHub rejects base changes
-        # when the new base doesn't contain the PR's head commits
-        #
-        # For each upstack branch that was force-pushed:
-        # 1. Get its updated parent from Graphite metadata
-        # 2. Get its PR number and current base from GitHub
-        # 3. Update base if stale (current base != expected parent)
-        if all_branches_metadata and upstack_branches:
-            for upstack_branch in upstack_branches:
-                # Get updated parent from Graphite metadata (should be correct after sync)
-                branch_metadata = all_branches_metadata.get(upstack_branch)
-                if branch_metadata is None:
-                    continue
+                    expected_parent = branch_metadata.parent
+                    if expected_parent is None:
+                        continue
 
-                expected_parent = branch_metadata.parent
-                if expected_parent is None:
-                    continue
+                    # Get PR status to check if PR exists and is open
+                    pr_info = ctx.github_ops.get_pr_status(repo_root, upstack_branch, debug=False)
+                    if pr_info.state != "OPEN":
+                        continue
 
-                # Get PR status to check if PR exists and is open
-                pr_info = ctx.github_ops.get_pr_status(repo_root, upstack_branch, debug=False)
-                if pr_info.state != "OPEN":
-                    continue
+                    if pr_info.pr_number is None:
+                        continue
 
-                if pr_info.pr_number is None:
-                    continue
+                    pr_number = pr_info.pr_number
 
-                pr_number = pr_info.pr_number
+                    # Check current base on GitHub
+                    current_base = ctx.github_ops.get_pr_base_branch(repo_root, pr_number)
+                    if current_base is None:
+                        continue
 
-                # Check current base on GitHub
-                current_base = ctx.github_ops.get_pr_base_branch(repo_root, pr_number)
-                if current_base is None:
-                    continue
-
-                # Update base if stale
-                if current_base != expected_parent:
-                    if verbose or dry_run:
+                    # Update base if stale
+                    if current_base != expected_parent:
+                        if verbose or dry_run:
+                            msg = (
+                                f"  Updating PR #{pr_number} base: "
+                                f"{current_base} → {expected_parent}"
+                            )
+                            _emit(msg, script_mode=script_mode)
+                        if dry_run:
+                            edit_cmd = f"gh pr edit {pr_number} --base {expected_parent}"
+                            _emit(_format_cli_command(edit_cmd, check), script_mode=script_mode)
+                        else:
+                            ctx.github_ops.update_pr_base_branch(
+                                repo_root, pr_number, expected_parent
+                            )
+                            edit_cmd = f"gh pr edit {pr_number} --base {expected_parent}"
+                            _emit(_format_cli_command(edit_cmd, check), script_mode=script_mode)
+                    elif verbose:
                         _emit(
-                            f"  Updating PR #{pr_number} base: {current_base} → {expected_parent}",
+                            f"  PR #{pr_number} base already correct: {current_base}",
                             script_mode=script_mode,
                         )
-                    if dry_run:
-                        edit_cmd = f"gh pr edit {pr_number} --base {expected_parent}"
-                        _emit(_format_cli_command(edit_cmd, check), script_mode=script_mode)
-                    else:
-                        ctx.github_ops.update_pr_base_branch(repo_root, pr_number, expected_parent)
-                        edit_cmd = f"gh pr edit {pr_number} --base {expected_parent}"
-                        _emit(_format_cli_command(edit_cmd, check), script_mode=script_mode)
-                elif verbose:
-                    _emit(
-                        f"  PR #{pr_number} base already correct: {current_base}",
-                        script_mode=script_mode,
-                    )
 
     return merged_branches

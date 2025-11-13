@@ -6,20 +6,26 @@ from workstack.core.context import WorkstackContext
 from workstack.core.graphite_ops import BranchMetadata
 
 
-def _get_branches_to_land(ctx: WorkstackContext, repo_root: Path, current_branch: str) -> list[str]:
-    """Get branches to land from bottom of stack up to and including current branch.
+def _get_branches_to_land(
+    ctx: WorkstackContext, repo_root: Path, current_branch: str, down_only: bool = False
+) -> list[str]:
+    """Get branches to land from stack.
+
+    By default, lands entire stack (trunk to leaf). With down_only=True, lands only
+    downstack branches (trunk to current).
 
     For PR landing, we need to land from the bottom (closest to trunk) upward,
-    as each PR depends on the one below it. This returns all branches from the
-    start of the stack up to the current branch.
+    as each PR depends on the one below it.
 
     Args:
         ctx: WorkstackContext with access to graphite operations
         repo_root: Repository root directory
         current_branch: Name of the current branch
+        down_only: If True, only return branches from trunk to current.
+                   If False, return entire stack (trunk to leaf).
 
     Returns:
-        List of branch names from bottom of stack to current (inclusive, excluding trunk)
+        List of branch names from bottom of stack to target (inclusive, excluding trunk)
         Empty list if branch not in stack
     """
     # Get full stack (trunk to leaves)
@@ -39,10 +45,13 @@ def _get_branches_to_land(ctx: WorkstackContext, repo_root: Path, current_branch
     if current_branch not in filtered_stack:
         return []
 
-    current_idx = filtered_stack.index(current_branch)
+    if down_only:
+        # Return slice from start to current (inclusive) - bottom to current for PR landing
+        current_idx = filtered_stack.index(current_branch)
+        return filtered_stack[: current_idx + 1]
 
-    # Return slice from start to current (inclusive) - bottom to current for PR landing
-    return filtered_stack[: current_idx + 1]
+    # Return entire stack (trunk to leaf)
+    return filtered_stack
 
 
 def _get_all_children(branch: str, all_branches: dict[str, BranchMetadata]) -> list[str]:

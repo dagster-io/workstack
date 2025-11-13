@@ -57,4 +57,5 @@ version = "0.1.0"
 artifacts = [
     ".claude/commands/workstack/create-planned-stack.md",
     ".claude/commands/workstack/implement-plan.md",
+    ".claude/docs/workstack/EXAMPLES.md",
 ]

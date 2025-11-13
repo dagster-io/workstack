@@ -2,20 +2,31 @@
 
 ## 🔴 CRITICAL: NEVER Use Hardcoded Paths in Tests
 
-**ABSOLUTELY FORBIDDEN** patterns in test code:
+**ALWAYS use temp directories via `tmp_path` fixture or simulated environments:**
 
 ```python
-# ❌ WRONG - EXTREMELY DANGEROUS
-cwd=Path("/test/default/cwd")
-cwd=Path("/some/hardcoded/path")
+# ❌ CATASTROPHICALLY DANGEROUS - User/home directory paths
+cwd=Path("/Users/username/...")
+cwd=Path.home() / "some/path"
+cwd=Path("/home/username/...")
+
+# ❌ WRONG - Hardcoded sentinel paths (use tmp_path instead)
+cwd=Path("/test/default/cwd")  # Placeholder meant to pass through to APIs
+cwd=Path("/some/hardcoded/path")  # Sentinel value that doesn't exercise path
 ```
 
-**Why this is catastrophic:**
+**Why user/home paths are catastrophic:**
 
-1. **Global Config Mutation Risk**: If any code tries to write `.workstack` config relative to a hardcoded path, it could pollute the REAL filesystem or global config
-2. **False Test Isolation**: Tests appear isolated but may share state through hardcoded paths
-3. **Unpredictable Failures**: Tests fail in CI/different environments where paths don't exist
-4. **Security Risk**: Creating files at hardcoded system paths can be exploited
+1. **Real filesystem mutation**: Code may write files to actual user directories
+2. **Global config pollution**: Can corrupt real `.workstack` configuration
+3. **Security risk**: Creating files in user directories can be exploited
+
+**Why sentinel paths should use tmp_path:**
+
+1. **Isolation**: Each test gets its own temporary directory that's automatically cleaned up
+2. **No pollution**: Prevents writing to real filesystem or global config
+3. **Works everywhere**: Temp paths work in CI and all environments
+4. **No shared state**: Tests don't interfere with each other
 
 **ALWAYS use proper context from test fixtures:**
 
@@ -32,7 +43,7 @@ def test_something(tmp_path: Path) -> None:
 ctx = _create_test_context(env, ...)  # env.cwd used internally
 ```
 
-**If you see `Path("/` in test code, STOP IMMEDIATELY and use proper fixtures.**
+**If you see `Path("/` in test code, STOP and use `tmp_path` fixture.**
 
 ---
 

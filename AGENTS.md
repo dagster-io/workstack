@@ -208,9 +208,14 @@ class MyOps(ABC):  # ✅ Not Protocol
 **NEVER use hardcoded paths in tests. ALWAYS use proper fixtures.**
 
 ```python
-# ❌ WRONG - CATASTROPHICALLY DANGEROUS
-cwd=Path("/test/default/cwd")
-cwd=Path("/some/hardcoded/path")
+# ❌ CATASTROPHICALLY DANGEROUS - User/home directory paths
+cwd=Path("/Users/username/...")
+cwd=Path.home() / "some/path"
+cwd=Path("/home/username/...")
+
+# ❌ WRONG - Hardcoded sentinel paths (use tmp_path instead)
+cwd=Path("/test/default/cwd")  # Placeholder meant to pass through to APIs
+cwd=Path("/some/hardcoded/path")  # Sentinel value that doesn't exercise path
 
 # ✅ CORRECT - Use simulated environment
 with simulated_workstack_env(runner) as env:
@@ -221,13 +226,19 @@ def test_something(tmp_path: Path) -> None:
     ctx = WorkstackContext(..., cwd=tmp_path)
 ```
 
-**Why hardcoded paths are catastrophic:**
+**Why user/home paths are catastrophic:**
 
-- **Global config mutation**: Code may write `.workstack` files at hardcoded paths, polluting real filesystem
-- **False isolation**: Tests appear isolated but share state through hardcoded paths
-- **Security risk**: Creating files at system paths can be exploited
+- **Real filesystem mutation**: Code may write files to actual user directories
+- **Global config pollution**: Can corrupt real `.workstack` configuration
+- **Security risk**: Creating files in user directories can be exploited
 
-**If you see `Path("/` in test code, STOP and use fixtures.**
+**Why sentinel paths should use tmp_path:**
+
+- **Isolation**: Each test gets its own temporary directory that's automatically cleaned up
+- **No pollution**: Temp directories prevent writing to real filesystem
+- **Works everywhere**: Temp paths work in CI and all environments
+
+**If you see `Path("/` in test code, STOP and use `tmp_path` fixture.**
 
 **Full guide**: [docs/agent/testing.md#critical-never-use-hardcoded-paths-in-tests](docs/agent/testing.md#critical-never-use-hardcoded-paths-in-tests)
 

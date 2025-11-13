@@ -4,7 +4,7 @@
 
 ## Overview
 
-This document covers common anti-patterns in testing and how to avoid them. Each anti-pattern includes examples of what NOT to do and the correct approach.
+This document covers common anti-patterns in Python testing and how to avoid them. Each anti-pattern includes examples of what NOT to do and the correct approach.
 
 ## ❌ Testing Speculative Features
 
@@ -30,9 +30,9 @@ This document covers common anti-patterns in testing and how to avoid them. Each
 ```python
 # ✅ CORRECT: TDD for feature being implemented NOW
 def test_new_feature_im_building_today():
-    """Test for feature I'm implementing in this session."""
-    result = my_new_feature()  # Will implement after this test
-    assert result == expected
+    """Test for feature I'm about to implement."""
+    result = process_payment(card="4111111111111111", amount=100.00)
+    assert result.status == "success"  # Will implement after this test
 
 # ✅ CORRECT: Test for actively worked bug fix
 def test_bug_123_is_fixed():
@@ -73,14 +73,17 @@ This is NOT speculative because you're implementing NOW, not "maybe later."
 ```python
 # ❌ WRONG - CATASTROPHICALLY DANGEROUS
 def test_something():
-    ctx = WorkstackContext(..., cwd=Path("/test/default/cwd"))
+    service = FileService(base_path=Path("/test/default/path"))
+    service.process_files()
 
 def test_another_thing():
-    ctx = WorkstackContext(..., cwd=Path("/some/hardcoded/path"))
+    db = DatabaseAdapter(data_dir=Path("/var/lib/myapp/test"))
+    db.initialize()
 
 def test_with_absolute_path():
-    repo = Path("/Users/someone/test/repo")
+    config_path = Path("/Users/someone/test/config.yaml")
     # Code may write files to this path!
+    config = load_config(config_path)
 ```
 
 ### Correct Approach
@@ -88,24 +91,28 @@ def test_with_absolute_path():
 ```python
 # ✅ CORRECT - Use tmp_path fixture
 def test_something(tmp_path: Path):
-    ctx = WorkstackContext(..., cwd=tmp_path)
+    service = FileService(base_path=tmp_path)
+    service.process_files()
 
-# ✅ CORRECT - Use simulated environment
-def test_another_thing():
-    runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        ctx = WorkstackContext(..., cwd=env.cwd)
+# ✅ CORRECT - Use temporary directory
+def test_another_thing(tmp_path: Path):
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    db = DatabaseAdapter(data_dir=data_dir)
+    db.initialize()
 
-# ✅ CORRECT - Use builder with tmp_path
-def test_with_builder(tmp_path: Path):
-    ctx = WorktreeScenario(tmp_path).with_main_branch().build()
+# ✅ CORRECT - Create config in tmp_path
+def test_with_config(tmp_path: Path):
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("debug: true")
+    config = load_config(config_path)
 ```
 
 ### Why This Is Catastrophic
 
 **Dangers of hardcoded paths**:
 
-1. **Global config mutation**: Code may write `.workstack` files at hardcoded paths, polluting real filesystem
+1. **Global config mutation**: Code may write config files at hardcoded paths, polluting real filesystem
 2. **False isolation**: Tests appear isolated but share state through hardcoded paths
 3. **Security risk**: Creating files at system paths can be exploited
 4. **CI/CD failures**: Paths may not exist on CI systems
@@ -113,40 +120,38 @@ def test_with_builder(tmp_path: Path):
 
 **Detection**: **If you see `Path("/` in test code, STOP and use fixtures.**
 
-**See also**: `docs/agent/testing.md#critical-never-use-hardcoded-paths-in-tests`
-
 ---
 
 ## ❌ Not Updating All Layers When Interface Changes
 
-**When changing an ops interface, you MUST update ALL four implementations.**
+**When changing an adapter interface, you MUST update ALL four implementations.**
 
 ### Wrong Approach
 
 ```python
-# You changed GitOps.list_worktrees() signature:
+# You changed DatabaseAdapter.query() signature:
 
-# 1. GitOps (ABC) ✅ Updated
-class GitOps(ABC):
+# 1. DatabaseAdapter (ABC) ✅ Updated
+class DatabaseAdapter(ABC):
     @abstractmethod
-    def list_worktrees(self, repo_root: Path, *, include_bare: bool = False) -> list[WorktreeInfo]:
+    def query(self, sql: str, *, timeout: float = 30.0) -> list[dict]:
         ...
 
-# 2. RealGitOps ✅ Updated
-class RealGitOps(GitOps):
-    def list_worktrees(self, repo_root: Path, *, include_bare: bool = False) -> list[WorktreeInfo]:
+# 2. RealDatabaseAdapter ✅ Updated
+class RealDatabaseAdapter(DatabaseAdapter):
+    def query(self, sql: str, *, timeout: float = 30.0) -> list[dict]:
         # Updated implementation
         ...
 
-# 3. FakeGitOps ❌ FORGOT TO UPDATE!
-class FakeGitOps(GitOps):
-    def list_worktrees(self, repo_root: Path) -> list[WorktreeInfo]:
+# 3. FakeDatabaseAdapter ❌ FORGOT TO UPDATE!
+class FakeDatabaseAdapter(DatabaseAdapter):
+    def query(self, sql: str) -> list[dict]:
         # Old signature - type error!
         ...
 
-# 4. DryRunGitOps ❌ FORGOT TO UPDATE!
-class DryRunGitOps(GitOps):
-    def list_worktrees(self, repo_root: Path) -> list[WorktreeInfo]:
+# 4. DryRunDatabaseAdapter ❌ FORGOT TO UPDATE!
+class DryRunDatabaseAdapter(DatabaseAdapter):
+    def query(self, sql: str) -> list[dict]:
         # Old signature - type error!
         ...
 
@@ -157,16 +162,16 @@ class DryRunGitOps(GitOps):
 
 **Use this checklist when changing an interface**:
 
-- [ ] Update ABC interface (e.g., `GitOps`)
-- [ ] Update real implementation (e.g., `RealGitOps`)
-- [ ] Update fake implementation (e.g., `FakeGitOps`)
-- [ ] Update dry-run wrapper (e.g., `DryRunGitOps`)
+- [ ] Update ABC interface (e.g., `DatabaseAdapter`)
+- [ ] Update real implementation (e.g., `RealDatabaseAdapter`)
+- [ ] Update fake implementation (e.g., `FakeDatabaseAdapter`)
+- [ ] Update dry-run wrapper (e.g., `DryRunDatabaseAdapter`)
 - [ ] Update all call sites in business logic
 - [ ] Update unit tests of fake
 - [ ] Update integration tests of real
 - [ ] Update business logic tests that use the method
 
-**Tool**: Run `uv run pyright` to catch signature mismatches.
+**Tool**: Run `mypy` or `pyright` to catch signature mismatches.
 
 ### Why This Is Wrong
 
@@ -179,31 +184,29 @@ class DryRunGitOps(GitOps):
 
 **Rule**: When changing interface, update ALL four layers + tests.
 
-**See also**: `workflows.md#changing-an-interface`
-
 ---
 
 ## ❌ Using subprocess in Unit Tests
 
-**Use CliRunner for CLI tests, NOT subprocess**.
+**Use test clients and CliRunner for testing, NOT subprocess**.
 
 ### Wrong Approach
 
 ```python
 # ❌ WRONG: Slow, harder to debug
-def test_status_command():
+def test_cli_command():
     result = subprocess.run(
-        ["workstack", "status"],
+        ["python", "-m", "myapp", "process", "--file", "data.csv"],
         capture_output=True,
         text=True,
     )
     assert result.returncode == 0
-    assert "main" in result.stdout
+    assert "processed" in result.stdout
 
 # ❌ WRONG: Even worse - shell=True
-def test_create_command():
+def test_another_command():
     result = subprocess.run(
-        "workstack create feature",
+        "myapp process --file data.csv",
         shell=True,
         capture_output=True,
     )
@@ -213,74 +216,86 @@ def test_create_command():
 ### Correct Approach
 
 ```python
-# ✅ CORRECT: Fast, better error messages
-def test_status_command(tmp_path: Path):
-    git_ops = FakeGitOps(...)
-    ctx = WorkstackContext.for_test(git_ops=git_ops, cwd=tmp_path)
+# ✅ CORRECT: Fast, better error messages (for Click CLIs)
+from click.testing import CliRunner
 
+def test_cli_command(tmp_path: Path):
     runner = CliRunner()
-    result = runner.invoke(status_cmd, obj=ctx)
+    data_file = tmp_path / "data.csv"
+    data_file.write_text("id,name\n1,Alice")
+
+    result = runner.invoke(process_cmd, ["--file", str(data_file)])
 
     assert result.exit_code == 0
-    assert "main" in result.output
+    assert "processed" in result.output
 
-# ✅ CORRECT: With arguments
-def test_create_command(tmp_path: Path):
-    runner = CliRunner()
-    result = runner.invoke(create_cmd, ["feature"], obj=ctx)
-    assert result.exit_code == 0
+# ✅ CORRECT: For Flask apps
+def test_flask_endpoint(client):
+    response = client.post("/process", json={"file": "data.csv"})
+    assert response.status_code == 200
+
+# ✅ CORRECT: For FastAPI apps
+def test_fastapi_endpoint(client):
+    response = client.post("/process", json={"file": "data.csv"})
+    assert response.status_code == 200
 ```
 
 ### Why This Is Wrong
 
 **Performance**:
 
-- **CliRunner**: milliseconds per test (~10ms)
+- **Test client/CliRunner**: milliseconds per test (~10ms)
 - **subprocess**: seconds per test (~1s)
 - **~100x slower** with subprocess
 
 **Debugging**:
 
 - subprocess: Harder to set breakpoints, unclear errors
-- CliRunner: Direct access to exceptions, clear stack traces
+- Test clients: Direct access to exceptions, clear stack traces
 
 **Reliability**:
 
 - subprocess: Shell interpretation issues, PATH dependencies
-- CliRunner: Direct Python invocation, no shell quirks
+- Test clients: Direct Python invocation, no shell quirks
 
-**Rule**: Always use `CliRunner` for CLI command tests. Only use subprocess for true end-to-end integration tests (Layer 4).
-
-**See also**: `docs/agent/testing.md#cli-testing-patterns`, `patterns.md#using-clirunner-for-cli-tests`
+**Rule**: Always use appropriate test clients. Only use subprocess for true end-to-end integration tests (Layer 4).
 
 ---
 
-## ❌ Complex Logic in Ops Classes
+## ❌ Complex Logic in Adapter Classes
 
-**Ops classes should be THIN wrappers**. Push complexity to business logic layer.
+**Adapters should be THIN wrappers**. Push complexity to business logic layer.
 
 ### Wrong Approach
 
 ```python
-# ❌ WRONG: Business logic in ops class
-class RealGitOps(GitOps):
-    def smart_branch_selection(self, repo_root: Path) -> str:
-        """Complex logic to select best branch."""
-        worktrees = self.list_worktrees(repo_root)
+# ❌ WRONG: Business logic in adapter class
+class RealDatabaseAdapter(DatabaseAdapter):
+    def get_premium_users_with_expired_subscriptions(self) -> list[dict]:
+        """Complex logic to find specific users."""
+        users = self.query("SELECT * FROM users WHERE premium = true")
 
         # 50 lines of complex business logic...
-        scored_branches = {}
-        for wt in worktrees:
-            score = self._calculate_branch_score(wt)
-            scored_branches[wt.branch] = score
+        result = []
+        for user in users:
+            subscriptions = self.query(
+                f"SELECT * FROM subscriptions WHERE user_id = {user['id']}"
+            )
 
-        # More logic...
-        best_branch = max(scored_branches, key=scored_branches.get)
-        return best_branch
+            # Complex date calculations
+            for sub in subscriptions:
+                end_date = datetime.fromisoformat(sub['end_date'])
+                grace_period = timedelta(days=7)
+                if end_date + grace_period < datetime.now():
+                    # More complex logic...
+                    if self._should_include_user(user, sub):
+                        result.append(user)
 
-    def _calculate_branch_score(self, wt: WorktreeInfo) -> float:
+        return result
+
+    def _should_include_user(self, user: dict, sub: dict) -> bool:
         # Even more business logic...
-        ...
+        return True
 ```
 
 **Problems**:
@@ -288,66 +303,73 @@ class RealGitOps(GitOps):
 - Hard to fake (complex logic in fake too)
 - Hard to test (need to mock everything)
 - Hard to understand (mixed concerns)
-- Hard to change (logic tied to git implementation)
+- Hard to change (logic tied to database implementation)
 
 ### Correct Approach
 
 ```python
-# ✅ CORRECT: Thin ops, just wrap git command
-class RealGitOps(GitOps):
-    def list_worktrees(self, repo_root: Path) -> list[WorktreeInfo]:
-        """Just wrap git command - no business logic."""
-        result = subprocess.run(
-            ["git", "worktree", "list", "--porcelain"],
-            cwd=repo_root,
-            capture_output=True,
-            text=True,
-            check=True,
+# ✅ CORRECT: Thin adapter, just wrap database operations
+class RealDatabaseAdapter(DatabaseAdapter):
+    def query(self, sql: str) -> list[dict[str, Any]]:
+        """Just wrap database query - no business logic."""
+        conn = psycopg2.connect(self.connection_string)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        cursor.execute(sql)
+        return [dict(row) for row in cursor.fetchall()]
+
+# ✅ CORRECT: Business logic in service layer
+class SubscriptionService:
+    def __init__(self, database: DatabaseAdapter) -> None:
+        self.database = database
+
+    def get_premium_users_with_expired_subscriptions(self) -> list[User]:
+        """Complex logic over thin adapter."""
+        users = self.database.query("SELECT * FROM users WHERE premium = true")
+
+        # Business logic here - easy to test over fakes!
+        result = []
+        for user_dict in users:
+            user = User.from_dict(user_dict)
+            if self._has_expired_subscription(user):
+                result.append(user)
+
+        return result
+
+    def _has_expired_subscription(self, user: User) -> bool:
+        """Business logic isolated from database."""
+        subscriptions = self.database.query(
+            f"SELECT * FROM subscriptions WHERE user_id = {user.id}"
         )
-        return self._parse_output(result.stdout)
 
-    def _parse_output(self, stdout: str) -> list[WorktreeInfo]:
-        """Parse git output - simple data transformation."""
-        # Simple parsing, no business logic
-        ...
-
-# ✅ CORRECT: Business logic in separate layer
-def select_best_branch(git_ops: GitOps, repo_root: Path) -> str:
-    """Complex logic over thin ops."""
-    worktrees = git_ops.list_worktrees(repo_root)
-
-    # 50 lines of business logic - easy to test over fakes!
-    scored_branches = {}
-    for wt in worktrees:
-        score = calculate_branch_score(wt)
-        scored_branches[wt.branch] = score
-
-    return max(scored_branches, key=scored_branches.get)
+        for sub in subscriptions:
+            if self._is_expired(sub):
+                return True
+        return False
 ```
 
 **Benefits**:
 
-- Easy to fake (thin ops, simple fake)
+- Easy to fake (thin adapter, simple fake)
 - Easy to test (business logic tested over fakes)
 - Easy to understand (clear separation of concerns)
-- Easy to change (business logic independent of git)
+- Easy to change (business logic independent of database)
 
 ### Rule
 
-**Ops classes should**:
+**Adapters should**:
 
-- Wrap external system calls (git, gh, gt)
-- Parse output into domain objects
-- Validate basic preconditions (path exists, etc.)
+- Wrap external system calls
+- Parse responses into domain objects
+- Validate basic preconditions (file exists, etc.)
 
-**Ops classes should NOT**:
+**Adapters should NOT**:
 
 - Contain business logic
 - Make decisions about "what to do"
-- Implement algorithms or scoring
+- Implement algorithms or calculations
 - Have complex control flow
 
-**Test**: If you can't easily fake an ops class, it's too complex. Push logic up.
+**Test**: If you can't easily fake an adapter, it's too complex. Push logic up.
 
 ---
 
@@ -359,19 +381,23 @@ def select_best_branch(git_ops: GitOps, repo_root: Path) -> str:
 
 ```python
 # ❌ WRONG: Fake performs I/O
-class FakeGitOps(GitOps):
-    def get_branch_name(self, path: Path) -> str:
-        # Reading real files defeats the purpose of fakes!
-        return (path / ".git" / "HEAD").read_text()
+class FakeDatabaseAdapter(DatabaseAdapter):
+    def __init__(self, db_file: Path) -> None:
+        self.db_file = db_file
 
-    def has_uncommitted_changes(self, repo_root: Path) -> bool:
-        # Running real git commands defeats the purpose!
-        result = subprocess.run(
-            ["git", "status", "--porcelain"],
-            cwd=repo_root,
-            capture_output=True,
-        )
-        return len(result.stdout) > 0
+    def query(self, sql: str) -> list[dict]:
+        # Reading/writing real files defeats the purpose!
+        import sqlite3
+        conn = sqlite3.connect(self.db_file)
+        cursor = conn.cursor()
+        cursor.execute(sql)
+        return cursor.fetchall()
+
+class FakeFileService(FileService):
+    def process_file(self, path: Path) -> str:
+        # Actually reading files defeats the purpose!
+        content = path.read_text()
+        return content.upper()
 ```
 
 **Problems**:
@@ -385,23 +411,32 @@ class FakeGitOps(GitOps):
 
 ```python
 # ✅ CORRECT: Fake uses in-memory state
-class FakeGitOps(GitOps):
+class FakeDatabaseAdapter(DatabaseAdapter):
     def __init__(
         self,
         *,
-        current_branches: dict[Path, str] | None = None,
-        uncommitted_changes: dict[Path, bool] | None = None,
+        initial_data: dict[str, list[dict]] | None = None
     ) -> None:
-        self._current_branches = current_branches or {}
-        self._uncommitted_changes = uncommitted_changes or {}
+        self._tables = initial_data or {}
+        self._executed_queries: list[str] = []
 
-    def get_branch_name(self, path: Path) -> str:
-        """Return in-memory branch name."""
-        return self._current_branches.get(path, "main")
+    def query(self, sql: str) -> list[dict]:
+        """Return in-memory data."""
+        self._executed_queries.append(sql)
 
-    def has_uncommitted_changes(self, repo_root: Path) -> bool:
-        """Return in-memory state."""
-        return self._uncommitted_changes.get(repo_root, False)
+        # Simple parsing, return from memory
+        if "FROM users" in sql:
+            return self._tables.get("users", []).copy()
+        return []
+
+class FakeFileService(FileService):
+    def __init__(self) -> None:
+        self._processed_files: list[str] = []
+
+    def process_file(self, path: Path) -> str:
+        """Simulate processing without I/O."""
+        self._processed_files.append(str(path))
+        return "SIMULATED RESULT"
 ```
 
 **Benefits**:
@@ -417,15 +452,19 @@ class FakeGitOps(GitOps):
 
 ```python
 # ✅ ACCEPTABLE: Create directory for integration
-class FakeGitOps(GitOps):
-    def add_worktree(self, repo_root: Path, path: Path, *, branch: str | None) -> None:
-        # Update in-memory state
-        self._worktrees[repo_root].append(WorktreeInfo(path=path, branch=branch))
-
+class FakeFileManager(FileManager):
+    def create_project(self, base_path: Path, name: str) -> Path:
         # Create real directory (acceptable for filesystem integration)
-        path.mkdir(parents=True, exist_ok=True)
+        project_path = base_path / name
+        project_path.mkdir(parents=True, exist_ok=True)
 
-        # But don't write .git files or anything else!
+        # But don't write actual files - keep data in memory
+        self._projects[str(project_path)] = {
+            "name": name,
+            "created": datetime.now()
+        }
+
+        return project_path
 ```
 
 **Rule**: Fakes may `mkdir()`, but should not read/write files.
@@ -440,32 +479,54 @@ class FakeGitOps(GitOps):
 
 ```python
 # ❌ WRONG: Testing internal implementation details
-def test_status_uses_collector_pattern():
-    """Test that status command uses collector pattern."""
-    # Checking how it's implemented, not what it does
-    assert hasattr(status_cmd, "_collectors")
-    assert len(status_cmd._collectors) == 3
+def test_service_uses_cache():
+    """Test that service uses internal cache."""
+    service = UserService(database=fake_db)
+
+    # Checking private implementation details
+    assert hasattr(service, "_cache")
+    assert isinstance(service._cache, dict)
+
+    service.get_user(1)
+    assert 1 in service._cache  # Testing private attribute
+
+def test_service_calls_private_method():
+    """Test that service calls private method."""
+    service = OrderService(database=fake_db)
+
+    # Mocking private method - fragile!
+    service._validate_order = Mock()
+
+    service.process_order(order)
+    service._validate_order.assert_called_once()
 ```
 
 ### Correct Approach
 
 ```python
 # ✅ CORRECT: Testing observable behavior
-def test_status_shows_worktrees_and_prs(tmp_path: Path):
-    """Test that status command displays worktrees and PRs."""
-    ctx = (
-        WorktreeScenario(tmp_path)
-        .with_feature_branch("feature", pr_number=123)
-        .build()
-    )
+def test_service_caches_users():
+    """Test that service doesn't query database twice for same user."""
+    fake_db = FakeDatabaseAdapter()
+    service = UserService(database=fake_db)
 
-    runner = CliRunner()
-    result = runner.invoke(status_cmd, obj=ctx)
+    # Get same user twice
+    user1 = service.get_user(1)
+    user2 = service.get_user(1)
 
-    # Assert on observable output, not implementation
-    assert result.exit_code == 0
-    assert "feature" in result.output
-    assert "#123" in result.output
+    # Assert on observable behavior - only one query
+    assert len(fake_db.executed_queries) == 1
+    assert user1 == user2
+
+def test_order_validation():
+    """Test that invalid orders are rejected."""
+    service = OrderService(database=fake_db)
+
+    invalid_order = Order(items=[], total=-50)
+
+    # Test behavior, not how it's implemented
+    with pytest.raises(ValueError, match="Invalid order"):
+        service.process_order(invalid_order)
 ```
 
 ### Why This Is Wrong
@@ -481,18 +542,18 @@ def test_status_shows_worktrees_and_prs(tmp_path: Path):
 
 ---
 
-## ❌ Incomplete Test Coverage for Ops Changes
+## ❌ Incomplete Test Coverage for Adapter Changes
 
-**When adding/changing ops method, you must test ALL implementations**.
+**When adding/changing adapter method, you must test ALL implementations**.
 
 ### Wrong Approach
 
 ```python
-# Added new method to GitOps
-# ✅ Implemented in RealGitOps
-# ✅ Implemented in FakeGitOps
-# ❌ Forgot to test FakeGitOps!
-# ❌ Forgot to test RealGitOps!
+# Added new method to DatabaseAdapter
+# ✅ Implemented in RealDatabaseAdapter
+# ✅ Implemented in FakeDatabaseAdapter
+# ❌ Forgot to test FakeDatabaseAdapter!
+# ❌ Forgot to test RealDatabaseAdapter!
 
 # Result: Untested code, potential bugs
 ```
@@ -501,12 +562,79 @@ def test_status_shows_worktrees_and_prs(tmp_path: Path):
 
 **Complete testing checklist**:
 
-- [ ] Unit test of fake (`tests/unit/fakes/test_fake_gitops.py`)
-- [ ] Integration test of real with mocking (`tests/integration/test_real_gitops.py`)
-- [ ] Business logic test using fake (`tests/commands/test_my_feature.py`)
+- [ ] Unit test of fake (`tests/unit/fakes/test_fake_database.py`)
+- [ ] Integration test of real with mocking (`tests/integration/test_real_database.py`)
+- [ ] Business logic test using fake (`tests/unit/services/test_my_service.py`)
 - [ ] (Optional) E2E test with real implementation
 
-**See**: `workflows.md#adding-an-ops-method` for full checklist.
+**See**: `workflows.md#adding-an-adapter-method` for full checklist.
+
+---
+
+## ❌ Mocking What You Don't Own
+
+**Create your own adapters instead of mocking third-party libraries directly**.
+
+### Wrong Approach
+
+```python
+# ❌ WRONG: Mocking third-party library
+@patch("requests.Session")
+def test_api_call(mock_session):
+    # Fragile - couples to requests internals
+    mock_session.return_value.get.return_value.json.return_value = {"data": "test"}
+
+    service = DataService()
+    result = service.fetch_data()
+
+@patch("boto3.client")
+def test_s3_upload(mock_boto):
+    # Fragile - AWS SDK might change
+    mock_client = Mock()
+    mock_boto.return_value = mock_client
+    mock_client.upload_file.return_value = None
+```
+
+### Correct Approach
+
+```python
+# ✅ CORRECT: Create your own adapter
+class StorageAdapter(ABC):
+    @abstractmethod
+    def upload_file(self, local_path: Path, remote_key: str) -> None:
+        """Upload file to storage."""
+
+class S3StorageAdapter(StorageAdapter):
+    """Real implementation using boto3."""
+    def upload_file(self, local_path: Path, remote_key: str) -> None:
+        import boto3
+        client = boto3.client("s3")
+        client.upload_file(str(local_path), self.bucket, remote_key)
+
+class FakeStorageAdapter(StorageAdapter):
+    """Fake for testing."""
+    def __init__(self) -> None:
+        self.uploaded_files: list[tuple[str, str]] = []
+
+    def upload_file(self, local_path: Path, remote_key: str) -> None:
+        self.uploaded_files.append((str(local_path), remote_key))
+
+# Test with your fake
+def test_file_upload():
+    storage = FakeStorageAdapter()
+    service = FileService(storage=storage)
+
+    service.process_and_upload("data.csv")
+
+    assert ("data.csv", "processed/data.csv") in storage.uploaded_files
+```
+
+**Benefits**:
+
+- Not coupled to third-party library internals
+- Easy to test
+- Clear interface
+- Can switch libraries without changing tests
 
 ---
 
@@ -517,15 +645,17 @@ def test_status_shows_worktrees_and_prs(tmp_path: Path):
 | Testing speculative features | Maintenance burden, no value      | Only test active work       |
 | Hardcoded paths              | Catastrophic: pollutes filesystem | Use `tmp_path` fixture      |
 | Not updating all layers      | Type errors, broken tests         | Update ABC/Real/Fake/DryRun |
-| subprocess in unit tests     | 100x slower, harder to debug      | Use `CliRunner`             |
-| Complex logic in ops         | Hard to test, hard to fake        | Keep ops thin               |
+| subprocess in unit tests     | 100x slower, harder to debug      | Use test clients            |
+| Complex logic in adapters    | Hard to test, hard to fake        | Keep adapters thin          |
 | Fakes with I/O               | Slow, defeats purpose             | In-memory only              |
 | Testing implementation       | Breaks on refactoring             | Test behavior               |
-| Incomplete ops test coverage | Untested code, potential bugs     | Test all implementations    |
+| Incomplete adapter tests     | Untested code, potential bugs     | Test all implementations    |
+| Mocking third-party libs     | Fragile, coupled to internals     | Create your own adapters    |
 
 ## Related Documentation
 
 - `workflows.md` - Step-by-step guides for correct approaches
 - `patterns.md` - Common testing patterns to follow
 - `testing-strategy.md` - Which layer to test at
-- `ops-architecture.md` - Understanding the ops layer
+- `ops-architecture.md` - Understanding the adapter layer
+- `python-specific.md` - Python testing best practices

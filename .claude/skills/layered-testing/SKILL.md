@@ -3,13 +3,13 @@ name: layered-testing
 description: This skill should be used when writing tests, fixing bugs, adding features, or modifying the ops layer. Use when you need guidance on testing architecture, working with fakes, implementing ops interfaces, or understanding the defense-in-depth testing strategy. Essential for maintaining test quality and understanding where different types of tests belong.
 ---
 
-# Layered Testing Architecture
+# Layered Testing Architecture for Python
 
-**Use this skill when**: Writing tests, fixing bugs, adding features, or modifying the ops layer (adapters that wrap external state).
+**Use this skill when**: Writing tests, fixing bugs, adding features, or modifying adapter/gateway/ops layers in Python projects.
 
 ## Overview
 
-This codebase uses a **defense-in-depth testing strategy** with four layers:
+This skill provides a **defense-in-depth testing strategy** with four layers for Python applications:
 
 ```
 ┌─────────────────────────────────────────┐
@@ -17,7 +17,7 @@ This codebase uses a **defense-in-depth testing strategy** with four layers:
 ├─────────────────────────────────────────┤
 │  Layer 3: Business Logic Tests (80%)   │  ← Tests over fakes (fast!)
 ├─────────────────────────────────────────┤
-│  Layer 2: Ops Implementation Tests (15%)│  ← Tests WITH mocking
+│  Layer 2: Adapter Implementation Tests (15%)│  ← Tests WITH mocking
 ├─────────────────────────────────────────┤
 │  Layer 1: Fake Infrastructure Tests    │  ← Verify test doubles work
 └─────────────────────────────────────────┘
@@ -25,7 +25,7 @@ This codebase uses a **defense-in-depth testing strategy** with four layers:
 
 **Philosophy**: Test business logic extensively over fast in-memory fakes. Use real implementations sparingly for integration validation.
 
-**Naming note**: The "ops layer" (adapters/gateways/providers) refers to thin wrappers around heavyweight external APIs (git, filesystem, GitHub API, etc.). The pattern matters more than the name.
+**Terminology note**: The "adapter layer" (also called ops/gateways/providers) refers to thin wrappers around heavyweight external APIs (databases, filesystems, HTTP APIs, message queues, etc.). The pattern matters more than the name.
 
 ## Quick Decision: What Should I Read?
 
@@ -35,8 +35,11 @@ This codebase uses a **defense-in-depth testing strategy** with four layers:
 **Need to understand where to put a test?**
 → Read `testing-strategy.md`
 
-**Adding/changing an ops interface?**
-→ Read `ops-architecture.md`, then `workflows.md#adding-an-ops-method`
+**Working with Python-specific patterns?**
+→ Read `python-specific.md`
+
+**Adding/changing an adapter interface?**
+→ Read `ops-architecture.md`, then `workflows.md#adding-an-adapter-method`
 
 **Need to implement a specific pattern (CliRunner, builders, etc.)?**
 → Read `patterns.md`
@@ -53,19 +56,19 @@ This codebase uses a **defense-in-depth testing strategy** with four layers:
 
 **Read when**:
 
-- Adding or changing ops interfaces
+- Adding or changing adapter/gateway/ops interfaces
 - Understanding the ABC/Real/Fake/DryRun pattern
-- Need examples of ops implementations
-- Want to understand what ops classes are (and why they're thin)
+- Need examples of adapter implementations
+- Want to understand what adapters are (and why they're thin)
 
 **Contents**:
 
-- What are ops classes? (naming: ops/adapters/gateways)
+- What are adapter classes? (naming: adapters/gateways/ops/providers)
 - The four implementations (ABC, Real, Fake, DryRun)
 - Code examples for each
-- When to add/change ops methods
-- Design principles (keep ops thin)
-- Existing ops interfaces (GitOps, GraphiteOps, GitHubOps)
+- When to add/change adapter methods
+- Design principles (keep adapters thin)
+- Common adapter types (Database, API, FileSystem, MessageQueue)
 
 ### 📖 `testing-strategy.md`
 
@@ -85,13 +88,32 @@ This codebase uses a **defense-in-depth testing strategy** with four layers:
 - Decision tree: where should my test go?
 - Test distribution examples
 
+### 📖 `python-specific.md`
+
+**Read when**:
+
+- Working with pytest fixtures
+- Need Python mocking patterns
+- Testing Flask/FastAPI/Django applications
+- Understanding Python testing tools
+- Need Python-specific commands
+
+**Contents**:
+
+- pytest fixtures and parametrization
+- Mocking with unittest.mock and pytest-mock
+- Testing web frameworks (Flask, FastAPI, Django)
+- Python testing commands
+- Type hints in tests
+- Python packaging for test utilities
+
 ### 📖 `workflows.md`
 
 **Read when**:
 
 - Adding a new feature (step-by-step)
 - Fixing a bug (step-by-step)
-- Adding an ops method (complete checklist)
+- Adding an adapter method (complete checklist)
 - Changing an interface (what to update)
 - Managing dry-run features
 
@@ -99,7 +121,7 @@ This codebase uses a **defense-in-depth testing strategy** with four layers:
 
 - Adding a new feature (TDD workflow)
 - Fixing a bug (reproduce → fix → regression test)
-- Adding an ops method (8-step checklist with examples)
+- Adding an adapter method (8-step checklist with examples)
 - Changing an interface (update all layers)
 - Managing dry-run features (wrapping pattern)
 - Testing with builder patterns
@@ -140,10 +162,10 @@ This codebase uses a **defense-in-depth testing strategy** with four layers:
 - ❌ Hardcoded paths in tests (catastrophic)
 - ❌ Not updating all layers
 - ❌ Using subprocess in unit tests
-- ❌ Complex logic in ops classes
+- ❌ Complex logic in adapter classes
 - ❌ Fakes with I/O operations
 - ❌ Testing implementation details
-- ❌ Incomplete test coverage for ops
+- ❌ Incomplete test coverage for adapters
 
 ### 📖 `quick-reference.md`
 
@@ -163,7 +185,7 @@ This codebase uses a **defense-in-depth testing strategy** with four layers:
 - Common test patterns (code snippets)
 - Example tests to reference
 - Useful commands (pytest, pyright, etc.)
-- Quick checklist for adding ops methods
+- Quick checklist for adding adapter methods
 
 ## Quick Navigation by Task
 
@@ -180,11 +202,11 @@ This codebase uses a **defense-in-depth testing strategy** with four layers:
 2. **Patterns**: `patterns.md#constructor-injection-for-fakes`
 3. **Examples**: `quick-reference.md#example-tests-to-reference`
 
-### I'm adding/changing an ops method
+### I'm adding/changing an adapter method
 
 1. **Understanding**: `ops-architecture.md`
-2. **Step-by-step**: `workflows.md#adding-an-ops-method`
-3. **Checklist**: `quick-reference.md#quick-checklist-adding-a-new-ops-method`
+2. **Step-by-step**: `workflows.md#adding-an-adapter-method`
+3. **Checklist**: `quick-reference.md#quick-checklist-adding-a-new-adapter-method`
 4. **Avoid**: `anti-patterns.md#not-updating-all-layers`
 
 ### I don't know where my test should go
@@ -209,29 +231,29 @@ This codebase uses a **defense-in-depth testing strategy** with four layers:
 ┌──────────────────────────────────────────────────────────────┐
 │ Layer 4: E2E Integration Tests (5%)                          │
 │ ┌──────────────────────────────────────────────────────────┐ │
-│ │ Real git, real filesystem, actual subprocess             │ │
+│ │ Real database, filesystem, APIs, actual subprocess        │ │
 │ │ Purpose: Smoke tests, catch integration issues           │ │
 │ │ When: Sparingly, for critical workflows                  │ │
 │ │ Speed: Seconds per test                                   │ │
-│ │ Location: tests/integration/                             │ │
+│ │ Location: tests/e2e/ or tests/integration/               │ │
 │ └──────────────────────────────────────────────────────────┘ │
 └──────────────────────────────────────────────────────────────┘
 
 ┌──────────────────────────────────────────────────────────────┐
 │ Layer 3: Business Logic Tests (80%) ← MOST TESTS HERE       │
 │ ┌──────────────────────────────────────────────────────────┐ │
-│ │ FakeGitOps, FakeGraphiteOps, FakeGitHubOps               │ │
+│ │ FakeDatabase, FakeApiClient, FakeFileSystem              │ │
 │ │ Purpose: Test features and business logic extensively    │ │
 │ │ When: For EVERY feature and bug fix                      │ │
 │ │ Speed: Milliseconds per test                              │ │
-│ │ Location: tests/commands/, tests/unit/                   │ │
+│ │ Location: tests/unit/, tests/services/, tests/commands/  │ │
 │ └──────────────────────────────────────────────────────────┘ │
 └──────────────────────────────────────────────────────────────┘
 
 ┌──────────────────────────────────────────────────────────────┐
-│ Layer 2: Ops Implementation Tests (15%)                      │
+│ Layer 2: Adapter Implementation Tests (15%)                  │
 │ ┌──────────────────────────────────────────────────────────┐ │
-│ │ RealGitOps with mocked subprocess                        │ │
+│ │ RealDatabase with mocked connections                     │ │
 │ │ Purpose: Code coverage of real implementations           │ │
 │ │ When: When adding/changing real implementation           │ │
 │ │ Speed: Fast (mocked)                                      │ │
@@ -242,7 +264,7 @@ This codebase uses a **defense-in-depth testing strategy** with four layers:
 ┌──────────────────────────────────────────────────────────────┐
 │ Layer 1: Fake Infrastructure Tests                           │
 │ ┌──────────────────────────────────────────────────────────┐ │
-│ │ Test FakeGitOps itself                                   │ │
+│ │ Test FakeDatabase itself                                 │ │
 │ │ Purpose: Verify test infrastructure is reliable          │ │
 │ │ When: When adding/changing fake implementation           │ │
 │ │ Speed: Milliseconds per test                              │ │
@@ -253,7 +275,7 @@ This codebase uses a **defense-in-depth testing strategy** with four layers:
 
 ## Key Principles
 
-1. **Thin ops layer**: Wrap external state, push complexity to business logic
+1. **Thin adapter layer**: Wrap external state, push complexity to business logic
 2. **Fast tests over fakes**: 80% of tests should use in-memory fakes
 3. **Defense in depth**: Fakes → mocked real → business logic → e2e
 4. **Test what you're building**: No speculative tests, only active work
@@ -264,7 +286,7 @@ This codebase uses a **defense-in-depth testing strategy** with four layers:
 **When in doubt**:
 
 - Write test over fakes (Layer 3)
-- Use `CliRunner` (not subprocess)
+- Use `pytest` with fixtures
 - Use `tmp_path` fixture (not hardcoded paths)
 - Follow examples in `quick-reference.md`
 
@@ -280,9 +302,4 @@ This codebase uses a **defense-in-depth testing strategy** with four layers:
 
 **For validation**: Check `anti-patterns.md`
 
-## Related Documentation
-
-- **Project-wide testing**: `docs/agent/testing.md` - Comprehensive testing guide
-- **Project terminology**: `docs/agent/glossary.md`
-- **Python standards**: Load `dignified-python` skill
-- **Test structure**: `tests/AGENTS.md`
+**For Python specifics**: Check `python-specific.md`

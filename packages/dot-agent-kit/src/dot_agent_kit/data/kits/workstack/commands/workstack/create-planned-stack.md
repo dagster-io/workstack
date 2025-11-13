@@ -51,7 +51,7 @@ When you run this command, these steps occur:
 - `/workstack:create-planned-stack "Make error handling more robust and add retry logic"` - Apply guidance to plan
 - `/workstack:create-planned-stack "Fix: Use LBYL instead of try/except throughout"` - Apply corrections to plan
 
-**For detailed interaction examples, see [EXAMPLES.md](../../docs/workstack/EXAMPLES.md)**
+**For detailed interaction examples, see kit documentation.**
 
 ## Prerequisites
 
@@ -637,8 +637,6 @@ Preserve valuable context discovered during planning. Include items that:
 - Would change implementation if known vs. unknown
 - Would cause bugs if missed (especially subtle or delayed bugs)
 
-See EXAMPLES.md for complete examples of excellent context preservation.
-
 #### API/Tool Quirks
 
 [Undocumented behaviors, timing issues, version constraints, edge cases]
@@ -708,7 +706,7 @@ Use hybrid context linking:
 ### Testing
 
 - Tests are integrated within implementation steps
-- Final validation: Run `/ensure-ci`
+- Final validation: Run project CI/validation checks
 
 ---
 
@@ -741,8 +739,6 @@ Preserve valuable context discovered during planning. Include items that:
 - Took time to discover and aren't obvious from code
 - Would change implementation if known vs. unknown
 - Would cause bugs if missed (especially subtle or delayed bugs)
-
-See EXAMPLES.md for complete examples of excellent context preservation.
 
 #### API/Tool Quirks
 
@@ -787,7 +783,7 @@ Use hybrid context linking:
    - [Link to relevant Context & Understanding sections above]
 
 2. Add tests in [test file]
-3. Validate with `/ensure-ci`
+3. Validate with project CI/validation checks
 
 ### Phase 2: [Name]
 

@@ -31,7 +31,7 @@ When you run this command:
 ## Expected Outcome
 
 - Implementation plan executed according to specifications
-- Code changes made following CLAUDE.md standards
+- Code changes follow project coding standards (if defined)
 - Clear progress tracking and completion summary
 
 ---
@@ -124,7 +124,7 @@ For each phase in the plan:
 
 1. **Mark phase as in_progress** before starting
 2. **Read task requirements** carefully
-3. **Check relevant coding standards** from CLAUDE.md
+3. **Check relevant coding standards** from project documentation (if available)
 4. **Implement the code** following these standards:
    - NEVER use try/except for control flow - use LBYL (Look Before You Leap)
    - Use Python 3.13+ type syntax (list[str], str | None, NOT List[str] or Optional[str])
@@ -135,7 +135,7 @@ For each phase in the plan:
    - Use click.echo() in CLI code, not print()
    - Add check=True to subprocess.run()
    - Keep indentation to max 4 levels - extract helpers if deeper
-   - If plan mentions tests, follow patterns in tests/CLAUDE.md
+   - If plan mentions tests, follow patterns in project test documentation (if available)
 5. **Verify implementation** against standards
 6. **Mark phase as completed** when done
 7. **Report progress**: what was done and what's next
@@ -160,7 +160,7 @@ When updating progress:
 
 ### Step 5: Follow Workstack Coding Standards
 
-The standards in CLAUDE.md OVERRIDE any conflicting guidance in the plan.
+Project coding standards (if defined) OVERRIDE any conflicting guidance in the plan.
 
 Key standards:
 
@@ -171,8 +171,6 @@ Key standards:
 - Imports: Absolute only
 - CLI: Use click.echo()
 - Code style: Max 4 indentation levels
-
-See [CLAUDE.md](../../../CLAUDE.md) for complete standards.
 
 ### Step 6: Report Progress
 
@@ -197,21 +195,26 @@ After all phases are complete:
 3. Note any deviations from the plan (with justification)
 4. Provide summary of changes
 
-### Step 8: Run CI Checks
+### Step 8: Final Verification
 
-After implementing the plan, verify all code quality checks pass:
+After completing all implementation steps:
 
-1. Run the `/ensure-ci` slash command to execute all CI checks
-2. The command will iteratively fix any issues until all checks pass
-3. This ensures the implementation meets code quality standards
+1. **Check for project documentation** at repository root:
+   - Look for `CLAUDE.md` or `AGENTS.md` files
+   - If found, read these files for CI/testing instructions
+   - Follow any specific commands or workflows documented there
 
-If CI checks reveal issues with the implementation:
+2. **Run project-specific CI checks**:
+   - If documentation specifies CI commands, use those
+   - Otherwise, run common checks if tools are available:
+     - Linting: `ruff check .` or equivalent
+     - Type checking: `pyright` or equivalent
+     - Tests: `pytest` or equivalent
+     - Formatting: `ruff format .` or equivalent
 
-- Fix them as part of the implementation process
-- Update todo list to track CI-related fixes
-- Only proceed once all checks pass
+3. **Verify all tests pass** before considering implementation complete
 
-**Note**: This step creates a hard dependency on the `/ensure-ci` command, which is specific to the current repository. When this command is packaged as a proper kit for distribution, this approach will need to be reassessed to work with arbitrary projects that may have different CI tooling.
+4. **Address any failures** by returning to relevant implementation steps
 
 ### Step 9: Output Format
 
@@ -220,8 +223,7 @@ Structure your output clearly:
 - **Start**: "Executing implementation plan from .PLAN.md"
 - **Each phase**: "Phase X: [brief description]" with code changes
 - **Progress updates**: Regular status reports
-- **CI verification**: "Running CI checks to verify implementation"
-- **End**: "Plan execution complete. All CI checks passed. [Summary of what was implemented]"
+- **End**: "Plan execution complete. [Summary of what was implemented]"
 
 ## Requesting Clarification
 
@@ -235,7 +237,7 @@ If clarification is needed during execution:
 ## Important Notes
 
 - **No time estimates**: Never provide time-based estimates or completion predictions
-- **Standards first**: CLAUDE.md standards override plan instructions
+- **Standards first**: Project coding standards (if defined) override plan instructions
 - **Sequential execution**: Complete phases in order unless plan specifies otherwise
 - **Progress tracking**: Keep todo list updated throughout
 - **User communication**: Provide clear, concise progress updates

@@ -51,7 +51,7 @@ When you run this command, these steps occur:
 - `/workstack:create-planned-stack "Make error handling more robust and add retry logic"` - Apply guidance to plan
 - `/workstack:create-planned-stack "Fix: Use LBYL instead of try/except throughout"` - Apply corrections to plan
 
-**For detailed interaction examples, see [EXAMPLES.md](./EXAMPLES.md)**
+**For detailed interaction examples, see [EXAMPLES.md](../../docs/workstack/EXAMPLES.md)**
 
 ## Prerequisites
 

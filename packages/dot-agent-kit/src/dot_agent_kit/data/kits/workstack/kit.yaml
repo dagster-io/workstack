@@ -6,3 +6,5 @@ artifacts:
   command:
     - commands/workstack/create-planned-stack.md
     - commands/workstack/implement-plan.md
+  doc:
+    - docs/workstack/EXAMPLES.md

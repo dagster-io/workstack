@@ -199,15 +199,22 @@ After all phases are complete:
 
 After completing all implementation steps:
 
-1. **Run project-specific CI checks** if available:
-   - Linting: `ruff check .` or equivalent
-   - Type checking: `pyright` or equivalent
-   - Tests: `pytest` or equivalent
-   - Formatting: `ruff format .` or equivalent
+1. **Check for project documentation** at repository root:
+   - Look for `CLAUDE.md` or `AGENTS.md` files
+   - If found, read these files for CI/testing instructions
+   - Follow any specific commands or workflows documented there
 
-2. **Verify all tests pass** before considering implementation complete
+2. **Run project-specific CI checks**:
+   - If documentation specifies CI commands, use those
+   - Otherwise, run common checks if tools are available:
+     - Linting: `ruff check .` or equivalent
+     - Type checking: `pyright` or equivalent
+     - Tests: `pytest` or equivalent
+     - Formatting: `ruff format .` or equivalent
 
-3. **Address any failures** by returning to relevant implementation steps
+3. **Verify all tests pass** before considering implementation complete
+
+4. **Address any failures** by returning to relevant implementation steps
 
 ### Step 9: Output Format
 

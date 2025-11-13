@@ -4,7 +4,7 @@
 
 ## Overview
 
-This codebase uses a **defense-in-depth testing strategy** with four layers:
+This skill uses a **defense-in-depth testing strategy** with four layers for Python applications:
 
 ```
 ┌─────────────────────────────────────────┐
@@ -12,7 +12,7 @@ This codebase uses a **defense-in-depth testing strategy** with four layers:
 ├─────────────────────────────────────────┤
 │  Layer 3: Business Logic Tests (80%)   │  ← Tests over fakes (fast!)
 ├─────────────────────────────────────────┤
-│  Layer 2: Ops Implementation Tests (15%)│  ← Tests WITH mocking
+│  Layer 2: Adapter Implementation Tests (15%)│  ← Tests WITH mocking
 ├─────────────────────────────────────────┤
 │  Layer 1: Fake Infrastructure Tests    │  ← Verify test doubles work
 └─────────────────────────────────────────┘
@@ -35,22 +35,23 @@ This codebase uses a **defense-in-depth testing strategy** with four layers:
 ### Pattern: Test the Fake Itself
 
 ```python
-def test_fake_gitops_add_worktree(tmp_path: Path) -> None:
-    """Verify FakeGitOps tracks worktree additions."""
-    repo_root = tmp_path / "repo"
-    repo_root.mkdir()
-
-    git_ops = FakeGitOps()
-    new_wt = repo_root / "new-wt"
+def test_fake_database_tracks_queries(tmp_path: Path) -> None:
+    """Verify FakeDatabaseAdapter tracks database operations."""
+    # Arrange
+    fake_db = FakeDatabaseAdapter()
 
     # Act
-    git_ops.add_worktree(repo_root, new_wt, branch="feature")
+    fake_db.execute("INSERT INTO users (name) VALUES ('Alice')")
+    result = fake_db.query("SELECT * FROM users WHERE name = 'Alice'")
 
-    # Assert fake tracked the operation
-    worktrees = git_ops.list_worktrees(repo_root)
-    assert len(worktrees) == 1
-    assert worktrees[0].branch == "feature"
-    assert (new_wt, "feature") in git_ops.added_worktrees
+    # Assert fake tracked the operations
+    assert len(fake_db.executed_queries) == 2
+    assert fake_db.executed_queries[0].startswith("INSERT")
+    assert fake_db.executed_queries[1].startswith("SELECT")
+
+    # Assert fake returns expected data
+    assert len(result) == 1
+    assert result[0]["name"] == "Alice"
 ```
 
 ### What to Test
@@ -62,11 +63,12 @@ def test_fake_gitops_add_worktree(tmp_path: Path) -> None:
 
 ### Example Tests
 
-- `tests/unit/fakes/test_fake_gitops.py` - Tests of FakeGitOps
-- `tests/unit/fakes/test_fake_graphite_ops.py` - Tests of FakeGraphiteOps
-- `tests/unit/fakes/test_fake_github_ops.py` - Tests of FakeGitHubOps
+- `tests/unit/fakes/test_fake_database.py` - Tests of FakeDatabaseAdapter
+- `tests/unit/fakes/test_fake_api_client.py` - Tests of FakeApiClient
+- `tests/unit/fakes/test_fake_cache.py` - Tests of FakeCache
+- `tests/unit/fakes/test_fake_message_queue.py` - Tests of FakeMessageQueue
 
-## Layer 2: Integration Tests of Real Ops (with Mocking)
+## Layer 2: Integration Tests of Real Adapters (with Mocking)
 
 **Purpose**: Get code coverage of real implementations without slow I/O.
 
@@ -74,53 +76,56 @@ def test_fake_gitops_add_worktree(tmp_path: Path) -> None:
 
 **When to write**: When adding or changing real implementations.
 
-**Why**: Ensures code coverage even when underlying systems (subprocess, filesystem, network) are mocked.
+**Why**: Ensures code coverage even when underlying systems (database, network, filesystem) are mocked.
 
-### Pattern: Mock External Systems, Verify Commands
+### Pattern: Mock External Systems, Verify Calls
 
 ```python
-def test_real_gitops_add_worktree(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Verify RealGitOps calls correct git command."""
-    repo_root = tmp_path / "repo"
-    repo_root.mkdir()
+def test_real_database_executes_correct_query(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify RealDatabaseAdapter calls correct SQL."""
+    # Mock the database connection
+    mock_connection = Mock()
+    mock_cursor = Mock()
+    mock_connection.cursor.return_value = mock_cursor
+    mock_cursor.fetchall.return_value = [{"id": 1, "name": "Alice"}]
 
-    # Mock subprocess.run
-    run_calls: list[list[str]] = []
-    def mock_run(cmd: list[str], **kwargs):
-        run_calls.append(cmd)
-        return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+    def mock_connect(**kwargs):
+        return mock_connection
 
-    monkeypatch.setattr(subprocess, "run", mock_run)
+    monkeypatch.setattr("psycopg2.connect", mock_connect)
 
-    git_ops = RealGitOps()
-    git_ops.add_worktree(repo_root, tmp_path / "new-wt", branch="feature")
+    # Act
+    db = RealDatabaseAdapter(connection_string="postgresql://...")
+    result = db.query("SELECT * FROM users")
 
     # Assert correct command was constructed
-    assert run_calls[0] == ["git", "worktree", "add", str(tmp_path / "new-wt"), "feature"]
+    mock_cursor.execute.assert_called_once_with("SELECT * FROM users")
+    assert result == [{"id": 1, "name": "Alice"}]
 ```
 
 ### What to Test
 
-- **Command construction**: Verify correct subprocess commands are built
-- **Error handling**: Verify exceptions from subprocess are handled correctly
-- **Parsing logic**: Verify output parsing works correctly (can use mock output)
+- **Command construction**: Verify correct SQL/API calls are built
+- **Error handling**: Verify exceptions from external systems are handled correctly
+- **Parsing logic**: Verify response parsing works correctly (can use mock responses)
 - **Edge cases**: Verify handling of unusual inputs or error conditions
 
 ### Tools
 
-- `monkeypatch` fixture for mocking `subprocess.run()`, `Path.exists()`, etc.
-- Mock return values to simulate various subprocess outputs
+- `monkeypatch` fixture for mocking database connections, HTTP clients, etc.
+- Mock return values to simulate various responses
 - Test error paths by raising exceptions from mocks
 
 ### Example Tests
 
-- `tests/integration/test_real_gitops.py` - Tests of RealGitOps with mocking
+- `tests/integration/test_real_database.py` - Tests of RealDatabaseAdapter with mocking
+- `tests/integration/test_real_api_client.py` - Tests of RealApiClient with mocked HTTP
 
 ## Layer 3: Business Logic Tests over Fakes (MAJORITY)
 
 **Purpose**: Test application logic extensively with fast in-memory fakes.
 
-**Location**: `tests/commands/`, `tests/unit/`, `tests/status/`
+**Location**: `tests/unit/services/`, `tests/unit/`, `tests/commands/`
 
 **When to write**: For EVERY feature and bug fix. This is the default testing layer.
 
@@ -129,44 +134,49 @@ def test_real_gitops_add_worktree(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
 ### Pattern: Configure Fakes, Execute Logic, Assert Behavior
 
 ```python
-def test_status_command_shows_worktrees(tmp_path: Path) -> None:
-    """Verify status command displays worktrees correctly."""
-    repo_root = tmp_path / "repo"
-    wt = tmp_path / "my-wt"
-    wt.mkdir(parents=True)
-
+def test_user_service_creates_user() -> None:
+    """Verify user service creates users correctly."""
     # Arrange: Configure fake with desired state
-    git_ops = FakeGitOps(
-        worktrees={repo_root: [WorktreeInfo(path=wt, branch="main")]},
-        current_branches={wt: "main"},
+    fake_db = FakeDatabaseAdapter()
+    fake_email = FakeEmailClient(
+        should_fail_for=["invalid@example.com"]
     )
 
-    ctx = WorkstackContext.for_test(git_ops=git_ops, cwd=wt)
+    service = UserService(database=fake_db, email_client=fake_email)
 
-    # Act: Execute via CliRunner
-    runner = CliRunner()
-    result = runner.invoke(status_cmd, obj=ctx)
+    # Act: Execute business logic
+    user = service.create_user(
+        name="Alice",
+        email="alice@example.com"
+    )
 
-    # Assert: Check output
-    assert result.exit_code == 0
-    assert "main" in result.output
+    # Assert: Check behavior
+    assert user.id == 1
+    assert user.name == "Alice"
+    assert user.email == "alice@example.com"
+
+    # Assert: Check side effects via fake's tracking
+    assert len(fake_db.executed_queries) == 1
+    assert "INSERT INTO users" in fake_db.executed_queries[0]
+    assert len(fake_email.sent_emails) == 1
+    assert fake_email.sent_emails[0]["to"] == "alice@example.com"
 ```
 
 ### Key Tools
 
-- **`FakeGitOps`, `FakeGraphiteOps`, `FakeGitHubOps`**: In-memory ops implementations
-- **`CliRunner`**: Click's test runner (NOT subprocess) for CLI command testing
-- **`WorkstackContext.for_test()`**: Helper to create test context with fakes
+- **Fake implementations**: `FakeDatabaseAdapter`, `FakeApiClient`, `FakeCache`, etc.
+- **Builder patterns**: Create complex test data easily
+- **pytest fixtures**: Share common test setup
 - **`tmp_path`**: pytest fixture for real directories when needed
-- **`simulated_workstack_env()`**: Isolated filesystem environment with proper cleanup
+- **CliRunner**: For testing Click CLI commands
 
 ### What to Test
 
 - **Feature behavior**: Does the feature work as expected?
 - **Error handling**: How does code handle error conditions?
 - **Edge cases**: Unusual inputs, empty states, boundary conditions
-- **Output formatting**: Is CLI output correct and user-friendly?
-- **State mutations**: Did operations modify state correctly? (Check fake's tracking properties)
+- **Business rules**: Validation, calculations, state transitions
+- **Side effects**: Did operations modify state correctly? (Check fake's tracking properties)
 
 ### Performance
 
@@ -174,69 +184,71 @@ Tests over fakes run in **milliseconds**. A typical test suite of 100+ tests run
 
 ### Example Tests
 
-- `tests/commands/test_status_with_fakes.py` - CLI command tests
-- `tests/status/test_plan_collector.py` - Business logic unit tests
-- `tests/commands/test_create.py` - Feature tests
+- `tests/unit/services/test_user_service.py` - Service layer tests
+- `tests/unit/services/test_order_service.py` - Business logic tests
+- `tests/unit/models/test_pricing.py` - Domain model tests
+- `tests/commands/test_cli.py` - CLI command tests with CliRunner
 
 ## Layer 4: End-to-End Integration Tests
 
 **Purpose**: Smoke tests over real system to catch integration issues.
 
-**Location**: `tests/integration/`
+**Location**: `tests/e2e/`
 
 **When to write**: Sparingly, for critical user-facing workflows.
 
-**Why**: Catches issues that mocks miss (actual git behavior, filesystem edge cases), but slow and brittle.
+**Why**: Catches issues that mocks miss (actual database behavior, filesystem edge cases, network issues), but slow and potentially brittle.
 
-### Pattern: Real Systems, Actual Subprocess
+### Pattern: Real Systems, Actual External Calls
 
 ```python
-def test_create_worktree_e2e(tmp_path: Path) -> None:
-    """End-to-end test: create worktree via CLI with real git."""
-    repo_root = tmp_path / "repo"
+def test_user_registration_e2e(test_database_url: str) -> None:
+    """End-to-end test: user registration with real database."""
+    # Setup: Use real database (possibly dockerized for tests)
+    db = RealDatabaseAdapter(connection_string=test_database_url)
 
-    # Setup: Initialize real git repo
-    subprocess.run(["git", "init"], cwd=repo_root, check=True)
-    subprocess.run(["git", "commit", "--allow-empty", "-m", "Initial"], cwd=repo_root, check=True)
+    # Clean slate
+    db.execute("DELETE FROM users")
 
-    ctx = WorkstackContext(
-        git_ops=RealGitOps(),
-        cwd=repo_root,
-        ...
+    service = UserService(
+        database=db,
+        email_client=RealEmailClient(api_key="test_key")
     )
 
-    runner = CliRunner()
-    result = runner.invoke(create_worktree_cmd, ["feature"], obj=ctx)
+    # Act: Execute real operation
+    user = service.register_user(
+        name="Alice",
+        email="alice@example.com",
+        password="secure123"
+    )
 
-    # Assert: Real worktree exists
-    assert result.exit_code == 0
-    worktrees = subprocess.run(
-        ["git", "worktree", "list"],
-        cwd=repo_root,
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout
-    assert "feature" in worktrees
+    # Assert: Verify in real database
+    users = db.query("SELECT * FROM users WHERE email = 'alice@example.com'")
+    assert len(users) == 1
+    assert users[0]["name"] == "Alice"
+
+    # Verify email was actually sent (might check test email service)
+    # This depends on your test infrastructure
 ```
 
 ### What to Test
 
-- **Critical workflows**: Core user-facing features (create, status, land)
-- **Integration points**: Where multiple systems interact (git + graphite + github)
+- **Critical workflows**: Core user-facing features (signup, checkout, payment)
+- **Integration points**: Where multiple systems interact
 - **Real system quirks**: Behavior that's hard to mock accurately
+- **Data persistence**: Verify data is actually saved and retrievable
 
 ### Characteristics
 
 - **Slow**: Tests take seconds, not milliseconds
-- **Brittle**: Can fail due to environment issues (git not installed, network problems)
+- **Brittle**: Can fail due to environment issues (database down, network problems)
 - **High value**: Catches real integration bugs that unit tests miss
 
 ### When NOT to Use E2E
 
 - ❌ Testing business logic (use Layer 3 instead)
 - ❌ Testing error handling (use Layer 3 with fakes configured for errors)
-- ❌ Testing output formatting (use Layer 3)
+- ❌ Testing calculations or validation (use Layer 3)
 - ❌ Rapid iteration during development (use Layer 3)
 
 Use E2E tests as **final validation**, not primary testing strategy.
@@ -247,38 +259,44 @@ Use E2E tests as **final validation**, not primary testing strategy.
 ┌─ I need to test...
 │
 ├─ A NEW FEATURE or BUG FIX
-│  └─> Layer 3: tests/commands/ or tests/unit/ (over fakes) ← START HERE
+│  └─> Layer 3: tests/unit/services/ or tests/unit/ (over fakes) ← START HERE
 │
 ├─ A FAKE IMPLEMENTATION (test infrastructure)
 │  └─> Layer 1: tests/unit/fakes/test_fake_*.py
 │
-├─ A REAL IMPLEMENTATION (code coverage with mocks)
+├─ A REAL ADAPTER IMPLEMENTATION (code coverage with mocks)
 │  └─> Layer 2: tests/integration/test_real_*.py
 │
 └─ CRITICAL USER WORKFLOW (smoke test)
-   └─> Layer 4: tests/integration/ (end-to-end, sparingly)
+   └─> Layer 4: tests/e2e/ (end-to-end, sparingly)
 ```
 
 **Default**: When in doubt, write tests over fakes (Layer 3).
 
 ## Test Distribution Example
 
-For a typical feature (e.g., "add worktree management"):
+For a typical feature (e.g., "add payment processing"):
 
-- **1-2 fake tests** (Layer 1): Verify `FakeGitOps.add_worktree()` works
-- **1-2 real tests** (Layer 2): Verify `RealGitOps.add_worktree()` calls correct git command
-- **10-15 business logic tests** (Layer 3): Test feature over fakes
-  - Happy path
-  - Error conditions (branch exists, path conflicts, etc.)
-  - Edge cases (empty repo, detached HEAD, etc.)
-  - Output formatting
-- **1 E2E test** (Layer 4): Smoke test entire workflow with real git
+- **1-2 fake tests** (Layer 1): Verify `FakePaymentGateway.charge()` works
+- **1-2 real tests** (Layer 2): Verify `RealPaymentGateway.charge()` calls correct API
+- **10-15 business logic tests** (Layer 3): Test payment flow over fakes
+  - Successful payment
+  - Insufficient funds
+  - Invalid card
+  - Network timeout
+  - Duplicate transaction
+  - Refund processing
+  - Currency conversion
+  - Tax calculation
+  - Receipt generation
+- **1 E2E test** (Layer 4): Smoke test entire payment flow with test payment gateway
 
 **Total**: ~20 tests, with 80% over fakes.
 
 ## Related Documentation
 
-- `ops-architecture.md` - Understanding the ops layer being tested
+- `ops-architecture.md` - Understanding the adapter layer being tested
 - `workflows.md` - Step-by-step guides for adding tests
 - `patterns.md` - Common testing patterns (CliRunner, builders, etc.)
 - `anti-patterns.md` - What to avoid when writing tests
+- `python-specific.md` - pytest fixtures, mocking, and Python tools

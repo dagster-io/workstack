@@ -4,7 +4,7 @@
 
 ## Overview
 
-This document provides concrete workflows for common testing scenarios. Each workflow includes a checklist and code examples.
+This document provides concrete workflows for common testing scenarios in Python projects. Each workflow includes a checklist and code examples.
 
 ## Adding a New Feature
 
@@ -12,71 +12,134 @@ This document provides concrete workflows for common testing scenarios. Each wor
 
 ### Step 1: Write Test Over Fakes
 
-**Location**: `tests/commands/test_my_feature.py` or `tests/unit/test_my_logic.py`
+**Location**: `tests/unit/services/test_my_feature.py` or `tests/unit/test_my_logic.py`
 
 ```python
-from click.testing import CliRunner
 from pathlib import Path
+import pytest
 
-def test_my_feature(tmp_path: Path) -> None:
-    """Test my new feature."""
+def test_new_payment_feature(tmp_path: Path) -> None:
+    """Test new payment processing feature."""
     # Arrange: Configure fake with initial state
-    git_ops = FakeGitOps(
-        worktrees={tmp_path / "repo": [WorktreeInfo(path=tmp_path / "wt", branch="main")]},
-        current_branches={tmp_path / "wt": "main"},
+    fake_db = FakeDatabaseAdapter(
+        users=[{"id": 1, "name": "Alice", "balance": 100}]
+    )
+    fake_payment = FakePaymentGateway(
+        approved_cards=["4111111111111111"],
+        declined_cards=["4000000000000002"]
     )
 
-    ctx = WorkstackContext.for_test(git_ops=git_ops, cwd=tmp_path)
+    service = PaymentService(database=fake_db, payment_gateway=fake_payment)
 
-    # Act: Execute via CliRunner
-    runner = CliRunner()
-    result = runner.invoke(my_feature_cmd, obj=ctx)
+    # Act: Execute the new feature
+    result = service.process_payment(
+        user_id=1,
+        card_number="4111111111111111",
+        amount=50.00
+    )
 
     # Assert: Check expected behavior
-    assert result.exit_code == 0
-    assert "expected output" in result.output
+    assert result.status == "success"
+    assert result.transaction_id is not None
 
     # Assert: Check state mutations (if applicable)
-    assert len(git_ops.added_worktrees) == 1
+    assert len(fake_payment.processed_transactions) == 1
+    assert fake_payment.processed_transactions[0]["amount"] == 50.00
+
+    # Check user balance was updated
+    user = fake_db.query("SELECT * FROM users WHERE id = 1")[0]
+    assert user["balance"] == 50.00
 ```
 
 **Key points**:
 
-- Use `FakeGitOps`, `FakeGraphiteOps`, `FakeGitHubOps` for speed
-- Use `CliRunner` (NOT subprocess)
+- Use `FakeDatabaseAdapter`, `FakePaymentGateway`, etc. for speed
+- Use pytest fixtures for common setup
 - Use `tmp_path` for real directories when needed
 - Test runs in milliseconds
 
 ### Step 2: Implement Feature
 
-**Location**: `src/workstack/commands/` or `src/workstack/core/`
+**Location**: `src/myapp/services/` or `src/myapp/core/`
 
 ```python
-@click.command()
-@click.pass_obj
-def my_feature_cmd(ctx: WorkstackContext) -> None:
-    """Implement my new feature."""
-    # Write business logic that calls ops interfaces
-    worktrees = ctx.git_ops.list_worktrees(ctx.repo.root)
+from typing import Any
+from dataclasses import dataclass
 
-    # Keep ops classes thin - push complexity here
-    filtered = [wt for wt in worktrees if some_business_logic(wt)]
+@dataclass
+class PaymentResult:
+    status: str
+    transaction_id: str | None
+    error_message: str | None = None
 
-    # Output using click.echo()
-    for wt in filtered:
-        click.echo(f"Found: {wt.branch}")
+class PaymentService:
+    """Service for processing payments."""
+
+    def __init__(self, database: DatabaseAdapter, payment_gateway: PaymentGateway) -> None:
+        self.database = database
+        self.payment_gateway = payment_gateway
+
+    def process_payment(
+        self,
+        user_id: int,
+        card_number: str,
+        amount: float
+    ) -> PaymentResult:
+        """Process a payment for a user."""
+        # Get user from database
+        users = self.database.query(f"SELECT * FROM users WHERE id = {user_id}")
+        if not users:
+            return PaymentResult(
+                status="failed",
+                transaction_id=None,
+                error_message="User not found"
+            )
+
+        user = users[0]
+
+        # Check user has sufficient balance
+        if user["balance"] < amount:
+            return PaymentResult(
+                status="failed",
+                transaction_id=None,
+                error_message="Insufficient balance"
+            )
+
+        # Process payment through gateway
+        try:
+            transaction_id = self.payment_gateway.charge(
+                card_number=card_number,
+                amount=amount
+            )
+        except PaymentDeclined as e:
+            return PaymentResult(
+                status="failed",
+                transaction_id=None,
+                error_message=str(e)
+            )
+
+        # Update user balance
+        new_balance = user["balance"] - amount
+        self.database.execute(
+            f"UPDATE users SET balance = {new_balance} WHERE id = {user_id}"
+        )
+
+        return PaymentResult(
+            status="success",
+            transaction_id=transaction_id
+        )
 ```
 
 **Design principles**:
 
-- Keep ops classes thin (thin wrappers)
+- Keep adapter classes thin (thin wrappers)
 - Push complexity to business logic layer
-- Business logic calls ops interfaces, not subprocess directly
+- Business logic calls adapter interfaces, not external systems directly
 
 ### Step 3: Run Tests
 
 ```bash
-uv run pytest tests/commands/test_my_feature.py -v
+pytest tests/unit/services/test_payment_service.py -v
 ```
 
 **Expected outcome**:
@@ -89,27 +152,37 @@ uv run pytest tests/commands/test_my_feature.py -v
 
 **When to add**: For critical user-facing features only.
 
-**Location**: `tests/integration/test_my_feature_e2e.py`
+**Location**: `tests/e2e/test_payment_e2e.py`
 
 ```python
-def test_my_feature_e2e(tmp_path: Path) -> None:
-    """End-to-end test with real git."""
-    # Setup real git repo
-    subprocess.run(["git", "init"], cwd=tmp_path, check=True)
-    subprocess.run(["git", "commit", "--allow-empty", "-m", "Initial"], cwd=tmp_path, check=True)
+def test_payment_processing_e2e(test_database_url: str) -> None:
+    """End-to-end test with real payment gateway (sandbox)."""
+    # Setup real database
+    db = RealDatabaseAdapter(test_database_url)
+    db.execute("DELETE FROM users")
+    db.execute("INSERT INTO users VALUES (1, 'Alice', 100)")
 
-    ctx = WorkstackContext(
-        git_ops=RealGitOps(),
-        cwd=tmp_path,
-        ...
+    # Use payment gateway sandbox
+    payment = RealPaymentGateway(
+        api_key="test_api_key",
+        sandbox=True
     )
 
-    runner = CliRunner()
-    result = runner.invoke(my_feature_cmd, obj=ctx)
+    service = PaymentService(database=db, payment_gateway=payment)
+
+    # Act
+    result = service.process_payment(
+        user_id=1,
+        card_number="4111111111111111",  # Test card
+        amount=50.00
+    )
 
     # Assert: Verify real system state
-    assert result.exit_code == 0
-    # ... check actual filesystem/git state
+    assert result.status == "success"
+
+    # Check actual database
+    users = db.query("SELECT * FROM users WHERE id = 1")
+    assert users[0]["balance"] == 50.00
 ```
 
 ---
@@ -121,52 +194,67 @@ def test_my_feature_e2e(tmp_path: Path) -> None:
 **Write a failing test first** to demonstrate the bug:
 
 ```python
-def test_bug_xyz_is_fixed(tmp_path: Path) -> None:
-    """Regression test for bug #XYZ: feature crashes with empty repo."""
+def test_bug_negative_balance_not_allowed(tmp_path: Path) -> None:
+    """Regression test for bug #123: negative balance was allowed."""
     # Arrange: Configure state that triggers bug
-    git_ops = FakeGitOps(
-        worktrees={},  # Empty repo triggers bug
-        current_branches={},
+    fake_db = FakeDatabaseAdapter(
+        users=[{"id": 1, "name": "Alice", "balance": 10}]
     )
+    fake_payment = FakePaymentGateway()
 
-    ctx = WorkstackContext.for_test(git_ops=git_ops, cwd=tmp_path)
+    service = PaymentService(database=fake_db, payment_gateway=fake_payment)
 
     # Act
-    runner = CliRunner()
-    result = runner.invoke(buggy_cmd, obj=ctx)
+    result = service.process_payment(
+        user_id=1,
+        card_number="4111111111111111",
+        amount=20.00  # More than balance
+    )
 
     # Assert: This should FAIL initially (demonstrating the bug)
-    assert result.exit_code == 0  # Bug: currently exits with 1
-    assert "No worktrees found" in result.output  # Bug: currently crashes
+    assert result.status == "failed"  # Bug: currently returns "success"
+    assert result.error_message == "Insufficient balance"  # Bug: no error message
+    assert fake_db.query("SELECT * FROM users WHERE id = 1")[0]["balance"] == 10  # Bug: balance becomes -10
 ```
 
 **Key insight**: Test should FAIL initially. This proves you've reproduced the bug.
 
 ### Step 2: Fix the Bug
 
-**Location**: `src/workstack/commands/` or `src/workstack/core/`
+**Location**: `src/myapp/services/payment_service.py`
 
 ```python
 # Before (buggy):
-def buggy_cmd(ctx: WorkstackContext) -> None:
-    worktrees = ctx.git_ops.list_worktrees(ctx.repo.root)
-    first_wt = worktrees[0]  # ❌ Crashes if empty!
+def process_payment(self, user_id: int, card_number: str, amount: float) -> PaymentResult:
+    user = self.get_user(user_id)
+    # ❌ Bug: No balance check!
+    transaction_id = self.payment_gateway.charge(card_number, amount)
+    new_balance = user["balance"] - amount  # Can go negative!
+    self.database.execute(f"UPDATE users SET balance = {new_balance} WHERE id = {user_id}")
+    return PaymentResult(status="success", transaction_id=transaction_id)
 
 # After (fixed):
-def buggy_cmd(ctx: WorkstackContext) -> None:
-    worktrees = ctx.git_ops.list_worktrees(ctx.repo.root)
+def process_payment(self, user_id: int, card_number: str, amount: float) -> PaymentResult:
+    user = self.get_user(user_id)
 
-    if not worktrees:  # ✅ Check first (LBYL)
-        click.echo("No worktrees found")
-        return
+    # ✅ Fix: Check balance first (LBYL)
+    if user["balance"] < amount:
+        return PaymentResult(
+            status="failed",
+            transaction_id=None,
+            error_message="Insufficient balance"
+        )
 
-    first_wt = worktrees[0]
+    transaction_id = self.payment_gateway.charge(card_number, amount)
+    new_balance = user["balance"] - amount
+    self.database.execute(f"UPDATE users SET balance = {new_balance} WHERE id = {user_id}")
+    return PaymentResult(status="success", transaction_id=transaction_id)
 ```
 
 ### Step 3: Run Test
 
 ```bash
-uv run pytest tests/commands/test_bug_xyz_is_fixed.py -v
+pytest tests/unit/services/test_bug_negative_balance_not_allowed.py -v
 ```
 
 **Expected outcome**: Test should now PASS.
@@ -176,149 +264,231 @@ uv run pytest tests/commands/test_bug_xyz_is_fixed.py -v
 **Don't delete the test!** It prevents future regressions.
 
 ```python
-def test_bug_xyz_is_fixed(tmp_path: Path) -> None:
-    """Regression test for bug #XYZ: feature crashed with empty repo."""
+def test_bug_123_negative_balance_not_allowed(tmp_path: Path) -> None:
+    """Regression test for bug #123: negative balance was allowed."""
     # Keep this test to prevent regression
     ...
 ```
 
 ---
 
-## Adding an Ops Method
+## Adding an Adapter Method
 
-**Use this checklist when adding a new method to an ops interface.**
+**Use this checklist when adding a new method to an adapter interface.**
 
 ### Checklist
 
-- [ ] Add `@abstractmethod` to ABC interface (e.g., `GitOps`)
-- [ ] Implement in real class (e.g., `RealGitOps`) with subprocess/filesystem
-- [ ] Implement in fake class (e.g., `FakeGitOps`) with in-memory state
+- [ ] Add `@abstractmethod` to ABC interface (e.g., `DatabaseAdapter`)
+- [ ] Implement in real class (e.g., `RealDatabaseAdapter`) with actual I/O
+- [ ] Implement in fake class (e.g., `FakeDatabaseAdapter`) with in-memory state
 - [ ] Add mutation tracking property to fake if it's a write operation
-- [ ] Add handler in dry-run wrapper (e.g., `DryRunGitOps`)
-- [ ] Write unit test of fake (`tests/unit/fakes/test_fake_gitops.py`)
-- [ ] Write integration test of real (`tests/integration/test_real_gitops.py`)
+- [ ] Add handler in dry-run wrapper if applicable
+- [ ] Write unit test of fake (`tests/unit/fakes/test_fake_database.py`)
+- [ ] Write integration test of real (`tests/integration/test_real_database.py`)
 - [ ] Update business logic to call new method
 - [ ] Write business logic test over fake
 
-### Example: Adding `GitOps.rename_branch()`
+### Example: Adding `DatabaseAdapter.bulk_insert()`
 
-#### 1. Interface (`src/workstack/core/gitops.py`)
+#### 1. Interface (`src/myapp/adapters/database.py`)
 
 ```python
-class GitOps(ABC):
+from abc import ABC, abstractmethod
+from typing import Any
+
+class DatabaseAdapter(ABC):
     @abstractmethod
-    def rename_branch(self, repo_root: Path, old_name: str, new_name: str) -> None:
-        """Rename a branch."""
+    def bulk_insert(self, table: str, records: list[dict[str, Any]]) -> int:
+        """Bulk insert records into table. Returns count of inserted records."""
 ```
 
-#### 2. Real Implementation (`src/workstack/core/gitops.py`)
+#### 2. Real Implementation (`src/myapp/adapters/database.py`)
 
 ```python
-class RealGitOps(GitOps):
-    def rename_branch(self, repo_root: Path, old_name: str, new_name: str) -> None:
-        subprocess.run(
-            ["git", "branch", "-m", old_name, new_name],
-            cwd=repo_root,
-            check=True,
-        )
+import psycopg2
+
+class RealDatabaseAdapter(DatabaseAdapter):
+    def __init__(self, connection_string: str) -> None:
+        self.connection_string = connection_string
+
+    def bulk_insert(self, table: str, records: list[dict[str, Any]]) -> int:
+        """Bulk insert using PostgreSQL COPY or multiple INSERT."""
+        if not records:
+            return 0
+
+        conn = psycopg2.connect(self.connection_string)
+        cursor = conn.cursor()
+
+        try:
+            # Build bulk insert SQL
+            columns = list(records[0].keys())
+            placeholders = [f"%({col})s" for col in columns]
+            sql = f"""
+                INSERT INTO {table} ({', '.join(columns)})
+                VALUES ({', '.join(placeholders)})
+            """
+
+            # Execute for all records
+            cursor.executemany(sql, records)
+            inserted_count = cursor.rowcount
+            conn.commit()
+
+            return inserted_count
+        finally:
+            cursor.close()
+            conn.close()
 ```
 
-#### 3. Fake Implementation (`tests/fakes/gitops.py`)
+#### 3. Fake Implementation (`tests/fakes/database.py`)
 
 ```python
-class FakeGitOps(GitOps):
-    def __init__(self, ...):
-        ...
-        self._renamed_branches: list[tuple[str, str]] = []
+class FakeDatabaseAdapter(DatabaseAdapter):
+    def __init__(self, **initial_tables: list[dict]) -> None:
+        self._tables: dict[str, list[dict]] = initial_tables
+        self._executed_queries: list[str] = []
+        self._bulk_inserted: list[tuple[str, int]] = []  # Track bulk inserts
 
-    def rename_branch(self, repo_root: Path, old_name: str, new_name: str) -> None:
-        # Update in-memory state
-        if old_name in self._branches:
-            self._branches[new_name] = self._branches.pop(old_name)
+    def bulk_insert(self, table: str, records: list[dict[str, Any]]) -> int:
+        """Simulate bulk insert in memory."""
+        if not records:
+            return 0
+
+        # Initialize table if doesn't exist
+        if table not in self._tables:
+            self._tables[table] = []
+
+        # Add records to in-memory table
+        for record in records:
+            # Add auto-incrementing ID if not present
+            if "id" not in record:
+                record["id"] = len(self._tables[table]) + 1
+            self._tables[table].append(record.copy())
 
         # Track mutation
-        self._renamed_branches.append((old_name, new_name))
+        self._bulk_inserted.append((table, len(records)))
+
+        return len(records)
 
     @property
-    def renamed_branches(self) -> list[tuple[str, str]]:
+    def bulk_inserted(self) -> list[tuple[str, int]]:
         """Read-only access for test assertions."""
-        return self._renamed_branches.copy()
+        return self._bulk_inserted.copy()
 ```
 
-#### 4. Dry-Run Wrapper (`src/workstack/core/gitops.py`)
+#### 4. Dry-Run Wrapper (`src/myapp/adapters/database.py`)
 
 ```python
-class DryRunGitOps(GitOps):
-    def rename_branch(self, repo_root: Path, old_name: str, new_name: str) -> None:
-        click.echo(f"[DRY RUN] Would rename branch: {old_name} → {new_name}")
+class DryRunDatabaseAdapter(DatabaseAdapter):
+    def __init__(self, adapter: DatabaseAdapter) -> None:
+        self._adapter = adapter
+
+    def bulk_insert(self, table: str, records: list[dict[str, Any]]) -> int:
+        """Print what would be inserted without executing."""
+        print(f"[DRY RUN] Would bulk insert {len(records)} records into {table}")
+        return len(records)  # Return expected count without inserting
+
+    def query(self, sql: str) -> list[dict[str, Any]]:
+        """Read operations delegate to wrapped adapter."""
+        return self._adapter.query(sql)
 ```
 
-#### 5. Test Fake (`tests/unit/fakes/test_fake_gitops.py`)
+#### 5. Test Fake (`tests/unit/fakes/test_fake_database.py`)
 
 ```python
-def test_fake_gitops_rename_branch() -> None:
-    """Test that FakeGitOps tracks branch renames."""
-    git_ops = FakeGitOps(branches={"old-name"})
+def test_fake_database_bulk_insert() -> None:
+    """Test that FakeDatabaseAdapter tracks bulk inserts."""
+    fake_db = FakeDatabaseAdapter()
 
-    git_ops.rename_branch(Path("/repo"), "old-name", "new-name")
+    records = [
+        {"name": "Alice", "email": "alice@example.com"},
+        {"name": "Bob", "email": "bob@example.com"},
+    ]
+
+    count = fake_db.bulk_insert("users", records)
 
     # Assert mutation was tracked
-    assert ("old-name", "new-name") in git_ops.renamed_branches
+    assert ("users", 2) in fake_db.bulk_inserted
 
     # Assert state was updated
-    assert "new-name" in git_ops.list_branches(Path("/repo"))
-    assert "old-name" not in git_ops.list_branches(Path("/repo"))
+    users = fake_db.query("SELECT * FROM users")
+    assert len(users) == 2
+    assert users[0]["name"] == "Alice"
+    assert users[1]["name"] == "Bob"
+
+    # Assert return value
+    assert count == 2
 ```
 
-#### 6. Test Real (`tests/integration/test_real_gitops.py`)
+#### 6. Test Real (`tests/integration/test_real_database.py`)
 
 ```python
-def test_real_gitops_rename_branch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test that RealGitOps calls correct git command."""
-    # Mock subprocess.run
-    run_calls: list[list[str]] = []
-    def mock_run(cmd: list[str], **kwargs):
-        run_calls.append(cmd)
-        return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+def test_real_database_bulk_insert(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that RealDatabaseAdapter calls correct SQL."""
+    # Mock psycopg2.connect
+    mock_conn = Mock()
+    mock_cursor = Mock()
+    mock_conn.cursor.return_value = mock_cursor
+    mock_cursor.rowcount = 2
 
-    monkeypatch.setattr(subprocess, "run", mock_run)
+    monkeypatch.setattr("psycopg2.connect", lambda **kwargs: mock_conn)
 
-    git_ops = RealGitOps()
-    git_ops.rename_branch(tmp_path, "old-name", "new-name")
+    db = RealDatabaseAdapter("postgresql://test")
+    records = [
+        {"name": "Alice", "email": "alice@example.com"},
+        {"name": "Bob", "email": "bob@example.com"},
+    ]
 
-    # Assert correct command was constructed
-    assert run_calls[0] == ["git", "branch", "-m", "old-name", "new-name"]
+    count = db.bulk_insert("users", records)
+
+    # Assert correct SQL was executed
+    mock_cursor.executemany.assert_called_once()
+    sql = mock_cursor.executemany.call_args[0][0]
+    assert "INSERT INTO users" in sql
+    assert count == 2
 ```
 
 #### 7. Update Business Logic
 
 ```python
-# src/workstack/commands/rename.py
-@click.command()
-@click.argument("old_name")
-@click.argument("new_name")
-@click.pass_obj
-def rename_branch_cmd(ctx: WorkstackContext, old_name: str, new_name: str) -> None:
-    """Rename a branch."""
-    ctx.git_ops.rename_branch(ctx.repo.root, old_name, new_name)
-    click.echo(f"✓ Renamed {old_name} → {new_name}")
+# src/myapp/services/user_service.py
+class UserService:
+    def __init__(self, database: DatabaseAdapter) -> None:
+        self.database = database
+
+    def import_users(self, csv_file: Path) -> int:
+        """Import users from CSV file."""
+        import csv
+
+        with open(csv_file, encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            records = list(reader)
+
+        # Use new bulk_insert method
+        count = self.database.bulk_insert("users", records)
+        return count
 ```
 
 #### 8. Write Business Logic Test
 
 ```python
-# tests/commands/test_rename.py
-def test_rename_branch_command(tmp_path: Path) -> None:
-    """Test rename branch command."""
-    git_ops = FakeGitOps(branches={"old-name"})
-    ctx = WorkstackContext.for_test(git_ops=git_ops, cwd=tmp_path)
+# tests/unit/services/test_user_service.py
+def test_import_users_from_csv(tmp_path: Path) -> None:
+    """Test importing users from CSV."""
+    # Create test CSV
+    csv_file = tmp_path / "users.csv"
+    csv_file.write_text("name,email\nAlice,alice@example.com\nBob,bob@example.com")
 
-    runner = CliRunner()
-    result = runner.invoke(rename_branch_cmd, ["old-name", "new-name"], obj=ctx)
+    fake_db = FakeDatabaseAdapter()
+    service = UserService(database=fake_db)
 
-    assert result.exit_code == 0
-    assert "Renamed old-name → new-name" in result.output
-    assert ("old-name", "new-name") in git_ops.renamed_branches
+    count = service.import_users(csv_file)
+
+    assert count == 2
+    assert ("users", 2) in fake_db.bulk_inserted
+
+    users = fake_db.query("SELECT * FROM users")
+    assert len(users) == 2
+    assert users[0]["name"] == "Alice"
 ```
 
 ---
@@ -343,82 +513,88 @@ def test_rename_branch_command(tmp_path: Path) -> None:
 **Before**:
 
 ```python
-def delete_branch(self, repo_root: Path, branch: str) -> None:
-    """Delete a branch."""
+def query(self, sql: str) -> list[dict[str, Any]]:
+    """Execute a query."""
 ```
 
-**After** (adding `force` parameter):
+**After** (adding `timeout` parameter):
 
 ```python
-def delete_branch(self, repo_root: Path, branch: str, *, force: bool = False) -> None:
-    """Delete a branch, optionally with --force."""
+def query(self, sql: str, *, timeout: float | None = None) -> list[dict[str, Any]]:
+    """Execute a query with optional timeout."""
 ```
 
 **Steps**:
 
-1. Update `GitOps` (ABC)
-2. Update `RealGitOps`: `["git", "branch", "-D" if force else "-d", branch]`
-3. Update `FakeGitOps`: Track `force` in mutations
-4. Update `DryRunGitOps`: Print force flag
-5. Update all call sites: `git_ops.delete_branch(repo, "feat", force=True)`
+1. Update `DatabaseAdapter` (ABC)
+2. Update `RealDatabaseAdapter`: Add timeout to connection
+3. Update `FakeDatabaseAdapter`: Track timeout in operation history
+4. Update `DryRunDatabaseAdapter`: Print timeout if specified
+5. Update all call sites: `db.query(sql, timeout=30.0)`
 6. Update tests
 
 ---
 
 ## Managing Dry-Run Features
 
-**Pattern**: Pass dry-run flag down to ops layer by wrapping with `DryRunGitOps`.
+**Pattern**: Pass dry-run flag down to adapter layer by wrapping with `DryRunAdapter`.
 
-### CLI Level
+### Service Level
 
-**Location**: `src/workstack/commands/`
+**Location**: `src/myapp/services/`
 
 ```python
-@click.command()
-@click.option("--dry-run", is_flag=True, help="Show what would be done without doing it")
-@click.pass_obj
-def remove_worktree_cmd(ctx: WorkstackContext, dry_run: bool) -> None:
-    """Remove a worktree."""
-    git_ops = ctx.git_ops
+class DataMigrationService:
+    """Service for data migration operations."""
 
-    # Wrap ops layer with dry-run wrapper
-    if dry_run:
-        git_ops = DryRunGitOps(git_ops)
+    def __init__(self, database: DatabaseAdapter) -> None:
+        self.database = database
 
-    # Business logic uses git_ops normally
-    # If dry-run, operations will print instead of executing
-    git_ops.remove_worktree(ctx.repo.root, path, force=False)
+    def migrate_data(self, *, dry_run: bool = False) -> None:
+        """Migrate data with optional dry-run."""
+        database = self.database
 
-    if not dry_run:
-        click.echo(f"✓ Removed worktree at {path}")
+        # Wrap adapter layer with dry-run wrapper
+        if dry_run:
+            database = DryRunDatabaseAdapter(database)
+
+        # Business logic uses database normally
+        # If dry-run, operations will print instead of executing
+        old_records = database.query("SELECT * FROM old_table")
+
+        for record in old_records:
+            transformed = self._transform_record(record)
+            database.execute(f"INSERT INTO new_table VALUES ({transformed})")
+
+        if not dry_run:
+            database.execute("DROP TABLE old_table")
+            print(f"✓ Migrated {len(old_records)} records")
 ```
 
-**Key insight**: Business logic doesn't change. Dry-run wrapping happens at CLI level.
+**Key insight**: Business logic doesn't change. Dry-run wrapping happens at service level.
 
 ### Testing Dry-Run
 
 **Pattern**: Verify operations are NOT executed, but messages are printed.
 
 ```python
-def test_remove_worktree_dry_run(tmp_path: Path) -> None:
-    """Verify --dry-run doesn't remove worktree."""
-    repo_root = tmp_path / "repo"
-    wt_path = tmp_path / "wt"
-
-    git_ops = FakeGitOps(
-        worktrees={repo_root: [WorktreeInfo(path=wt_path, branch="feature")]},
+def test_migrate_data_dry_run(capsys) -> None:
+    """Verify --dry-run doesn't modify data."""
+    fake_db = FakeDatabaseAdapter(
+        old_table=[{"id": 1, "data": "test"}]
     )
-    ctx = WorkstackContext.for_test(git_ops=git_ops, cwd=tmp_path)
 
-    runner = CliRunner()
-    result = runner.invoke(remove_worktree_cmd, ["--dry-run"], obj=ctx)
+    service = DataMigrationService(database=fake_db)
+    service.migrate_data(dry_run=True)
 
     # Verify operation was NOT executed
-    assert len(git_ops.removed_worktrees) == 0
+    assert len(fake_db.executed_queries) == 1  # Only the SELECT
+    assert "DROP TABLE" not in str(fake_db.executed_queries)
 
     # Verify dry-run message was printed
-    assert "[DRY RUN]" in result.output
-    assert "Would remove worktree" in result.output
+    captured = capsys.readouterr()
+    assert "[DRY RUN]" in captured.out
+    assert "Would insert" in captured.out
 ```
 
 ### Implementing Dry-Run in Wrapper
@@ -426,19 +602,22 @@ def test_remove_worktree_dry_run(tmp_path: Path) -> None:
 **Pattern**: Read operations delegate, write operations print.
 
 ```python
-class DryRunGitOps(GitOps):
-    def __init__(self, git_ops: GitOps) -> None:
-        self._git_ops = git_ops
+class DryRunDatabaseAdapter(DatabaseAdapter):
+    def __init__(self, adapter: DatabaseAdapter) -> None:
+        self._adapter = adapter
 
     # Read operation: delegate
-    def list_worktrees(self, repo_root: Path) -> list[WorktreeInfo]:
-        return self._git_ops.list_worktrees(repo_root)
+    def query(self, sql: str, *, timeout: float | None = None) -> list[dict[str, Any]]:
+        return self._adapter.query(sql, timeout=timeout)
 
     # Write operation: print instead of executing
-    def remove_worktree(self, repo_root: Path, path: Path, *, force: bool) -> None:
-        force_flag = " (force)" if force else ""
-        click.echo(f"[DRY RUN] Would remove worktree: {path}{force_flag}")
-        # Does NOT call self._git_ops.remove_worktree()
+    def execute(self, sql: str) -> None:
+        print(f"[DRY RUN] Would execute: {sql}")
+        # Does NOT call self._adapter.execute()
+
+    def bulk_insert(self, table: str, records: list[dict[str, Any]]) -> int:
+        print(f"[DRY RUN] Would bulk insert {len(records)} records into {table}")
+        return len(records)  # Return expected count
 ```
 
 ---
@@ -447,74 +626,108 @@ class DryRunGitOps(GitOps):
 
 **Use builder pattern for complex test scenarios.**
 
-### Example: WorktreeScenario Builder
+### Example: TestDataBuilder
 
 ```python
-class WorktreeScenario:
-    """Builder for complex worktree test scenarios."""
+class TestDataBuilder:
+    """Builder for complex test scenarios."""
 
-    def __init__(self, base_path: Path) -> None:
-        self.base_path = base_path
-        self.worktrees: dict[Path, list[WorktreeInfo]] = {}
-        self.prs: dict[str, PRInfo] = {}
-        self.stacks: dict[str, list[str]] = {}
+    def __init__(self) -> None:
+        self.users: list[dict] = []
+        self.orders: list[dict] = []
+        self.products: list[dict] = []
+        self.api_responses: dict[str, Any] = {}
 
-    def with_feature_branch(self, name: str) -> WorktreeScenario:
-        """Add a feature branch worktree."""
-        path = self.base_path / name
-        if self.base_path not in self.worktrees:
-            self.worktrees[self.base_path] = []
-        self.worktrees[self.base_path].append(
-            WorktreeInfo(path=path, branch=name, ...)
+    def with_user(
+        self,
+        name: str = "Test User",
+        email: str = "test@example.com",
+        balance: float = 100.0
+    ) -> "TestDataBuilder":
+        """Add a user to the scenario."""
+        user_id = len(self.users) + 1
+        self.users.append({
+            "id": user_id,
+            "name": name,
+            "email": email,
+            "balance": balance
+        })
+        return self
+
+    def with_order(
+        self,
+        user_id: int,
+        total: float = 50.0,
+        status: str = "pending"
+    ) -> "TestDataBuilder":
+        """Add an order to the scenario."""
+        order_id = len(self.orders) + 1
+        self.orders.append({
+            "id": order_id,
+            "user_id": user_id,
+            "total": total,
+            "status": status
+        })
+        return self
+
+    def with_product(
+        self,
+        name: str = "Test Product",
+        price: float = 10.0,
+        stock: int = 100
+    ) -> "TestDataBuilder":
+        """Add a product to the scenario."""
+        product_id = len(self.products) + 1
+        self.products.append({
+            "id": product_id,
+            "name": name,
+            "price": price,
+            "stock": stock
+        })
+        return self
+
+    def with_api_response(self, endpoint: str, response: dict) -> "TestDataBuilder":
+        """Configure API response."""
+        self.api_responses[endpoint] = response
+        return self
+
+    def build(self) -> tuple[FakeDatabaseAdapter, FakeApiClient]:
+        """Build configured test environment."""
+        fake_db = FakeDatabaseAdapter(
+            users=self.users,
+            orders=self.orders,
+            products=self.products
         )
-        return self
+        fake_api = FakeApiClient(responses=self.api_responses)
 
-    def with_pr(self, branch: str, *, number: int, title: str = "Test PR") -> WorktreeScenario:
-        """Add a PR for a branch."""
-        self.prs[branch] = PRInfo(number=number, title=title, ...)
-        return self
-
-    def with_stack(self, branches: list[str]) -> WorktreeScenario:
-        """Add a Graphite stack."""
-        for i, branch in enumerate(branches):
-            if i > 0:
-                self.stacks[branch] = [branches[i-1]]
-        return self
-
-    def build(self) -> WorkstackContext:
-        """Build context with configured state."""
-        git_ops = FakeGitOps(worktrees=self.worktrees)
-        github_ops = FakeGitHubOps(prs=self.prs)
-        graphite_ops = FakeGraphiteOps(stacks=self.stacks)
-
-        return WorkstackContext.for_test(
-            git_ops=git_ops,
-            github_ops=github_ops,
-            graphite_ops=graphite_ops,
-            cwd=self.base_path,
-        )
+        return fake_db, fake_api
 ```
 
 ### Usage
 
 ```python
-def test_complex_scenario(tmp_path: Path) -> None:
-    """Test with multiple worktrees, PRs, and stacks."""
-    ctx = (
-        WorktreeScenario(tmp_path)
-        .with_feature_branch("feature-1")
-        .with_feature_branch("feature-2")
-        .with_pr("feature-1", number=123, title="Add new feature")
-        .with_pr("feature-2", number=124, title="Fix bug")
-        .with_stack(["main", "feature-1", "feature-2"])
+def test_complex_order_scenario() -> None:
+    """Test with multiple users, orders, and products."""
+    # Fluent, readable test setup
+    fake_db, fake_api = (
+        TestDataBuilder()
+        .with_user(name="Alice", balance=200)
+        .with_user(name="Bob", balance=50)
+        .with_product(name="Widget", price=25, stock=10)
+        .with_product(name="Gadget", price=75, stock=5)
+        .with_order(user_id=1, total=100, status="completed")
+        .with_order(user_id=2, total=25, status="pending")
+        .with_api_response("/tax", {"rate": 0.08})
         .build()
     )
 
-    runner = CliRunner()
-    result = runner.invoke(status_cmd, obj=ctx)
+    service = OrderService(database=fake_db, api_client=fake_api)
 
-    assert "#123" in result.output
-    assert "#124" in result.output
+    # Test complex scenario
+    result = service.process_pending_orders()
+
+    assert result.processed_count == 1
+    assert result.total_revenue == 25.00
 ```
 
 **Benefits**:
@@ -529,6 +742,7 @@ def test_complex_scenario(tmp_path: Path) -> None:
 ## Related Documentation
 
 - `testing-strategy.md` - Which layer to test at
-- `ops-architecture.md` - Understanding the ops layer
+- `ops-architecture.md` - Understanding the adapter layer
 - `patterns.md` - Common testing patterns (CliRunner, mutation tracking, etc.)
 - `anti-patterns.md` - What to avoid
+- `python-specific.md` - pytest fixtures and Python tools

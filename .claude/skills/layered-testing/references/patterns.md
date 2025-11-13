@@ -4,7 +4,7 @@
 
 ## Overview
 
-This document covers common patterns used throughout the test suite. Each pattern includes examples and explanations.
+This document covers common patterns used throughout Python test suites. Each pattern includes examples and explanations.
 
 ## Constructor Injection for Fakes
 
@@ -13,22 +13,31 @@ This document covers common patterns used throughout the test suite. Each patter
 ### Implementation
 
 ```python
-class FakeGitOps(GitOps):
+from typing import Any
+from pathlib import Path
+
+class FakeDatabaseAdapter(DatabaseAdapter):
     def __init__(
         self,
         *,
-        worktrees: dict[Path, list[WorktreeInfo]] | None = None,
-        current_branches: dict[Path, str] | None = None,
-        branches: set[str] | None = None,
+        initial_data: dict[str, list[dict]] | None = None,
+        users: list[dict] | None = None,
+        orders: list[dict] | None = None,
+        should_fail_on: list[str] | None = None,
     ) -> None:
         # Initialize mutable state from constructor
-        self._worktrees = worktrees or {}
-        self._current_branches = current_branches or {}
-        self._branches = branches or set()
+        self._tables = initial_data or {}
+        if users:
+            self._tables["users"] = users
+        if orders:
+            self._tables["orders"] = orders
+
+        self._should_fail_on = should_fail_on or []
 
         # Initialize mutation tracking
-        self._deleted_branches: list[str] = []
-        self._added_worktrees: list[tuple[Path, str | None]] = []
+        self._executed_queries: list[str] = []
+        self._executed_commands: list[str] = []
+        self._transaction_count = 0
 ```
 
 ### Usage in Tests
@@ -36,17 +45,20 @@ class FakeGitOps(GitOps):
 ```python
 # ✅ CORRECT: Constructor injection
 def test_with_constructor_injection(tmp_path: Path) -> None:
-    repo_root = tmp_path / "repo"
-    wt = tmp_path / "wt"
-
-    git_ops = FakeGitOps(
-        worktrees={repo_root: [WorktreeInfo(path=wt, branch="main")]},
-        current_branches={wt: "main"},
-        branches={"main", "feature"},
+    # Configure fake with initial state
+    fake_db = FakeDatabaseAdapter(
+        users=[
+            {"id": 1, "name": "Alice", "email": "alice@example.com"},
+            {"id": 2, "name": "Bob", "email": "bob@example.com"},
+        ],
+        orders=[
+            {"id": 1, "user_id": 1, "total": 100.00},
+        ]
     )
 
     # Fake is fully configured, ready to use
-    assert len(git_ops.list_worktrees(repo_root)) == 1
+    users = fake_db.query("SELECT * FROM users")
+    assert len(users) == 2
 ```
 
 ### Anti-Pattern
@@ -54,11 +66,11 @@ def test_with_constructor_injection(tmp_path: Path) -> None:
 ```python
 # ❌ WRONG: Mutation after construction
 def test_with_mutation() -> None:
-    git_ops = FakeGitOps()
+    fake_db = FakeDatabaseAdapter()
 
     # Don't mutate private state directly!
-    git_ops._worktrees[repo_root] = [...]  # Bypasses encapsulation
-    git_ops._branches.add("main")  # Fragile, couples to implementation
+    fake_db._tables["users"] = [...]  # Bypasses encapsulation
+    fake_db._executed_queries = []  # Fragile, couples to implementation
 ```
 
 ### Why Constructor Injection?
@@ -81,60 +93,70 @@ def test_with_mutation() -> None:
 ### Implementation
 
 ```python
-class FakeGitOps(GitOps):
-    def __init__(self) -> None:
+class FakeApiClient(ApiClient):
+    def __init__(self, responses: dict[str, Any] | None = None) -> None:
+        self._responses = responses or {}
+
         # Private mutation tracking
-        self._deleted_branches: list[str] = []
-        self._added_worktrees: list[tuple[Path, str | None]] = []
-        self._removed_worktrees: list[tuple[Path, bool]] = []
+        self._requested_endpoints: list[str] = []
+        self._posted_data: list[tuple[str, dict]] = []
+        self._request_count = 0
 
-    def delete_branch(self, repo_root: Path, branch: str) -> None:
-        """Delete a branch."""
-        # Update state
-        self._branches.discard(branch)
-
+    def get(self, endpoint: str) -> dict:
+        """GET request."""
         # Track mutation
-        self._deleted_branches.append(branch)
+        self._requested_endpoints.append(endpoint)
+        self._request_count += 1
 
-    def add_worktree(
-        self, repo_root: Path, path: Path, *, branch: str | None
-    ) -> None:
-        """Add a worktree."""
-        # Update state
-        if repo_root not in self._worktrees:
-            self._worktrees[repo_root] = []
-        self._worktrees[repo_root].append(WorktreeInfo(path=path, branch=branch))
+        # Return configured response
+        return self._responses.get(endpoint, {})
 
+    def post(self, endpoint: str, *, json: dict) -> dict:
+        """POST request."""
         # Track mutation
-        self._added_worktrees.append((path, branch))
+        self._posted_data.append((endpoint, json))
+        self._request_count += 1
+
+        # Return configured response
+        return self._responses.get(endpoint, {})
 
     @property
-    def deleted_branches(self) -> list[str]:
+    def requested_endpoints(self) -> list[str]:
         """Read-only access for test assertions."""
-        return self._deleted_branches.copy()  # Return copy to prevent tampering
+        return self._requested_endpoints.copy()  # Return copy to prevent tampering
 
     @property
-    def added_worktrees(self) -> list[tuple[Path, str | None]]:
+    def posted_data(self) -> list[tuple[str, dict]]:
         """Read-only access for test assertions."""
-        return self._added_worktrees.copy()
+        return self._posted_data.copy()
+
+    @property
+    def request_count(self) -> int:
+        """Read-only access for test assertions."""
+        return self._request_count
 ```
 
 ### Usage in Tests
 
 ```python
-def test_mutation_tracking(tmp_path: Path) -> None:
-    repo_root = tmp_path / "repo"
-    wt = tmp_path / "wt"
-
-    git_ops = FakeGitOps(branches={"feature", "bugfix"})
+def test_mutation_tracking() -> None:
+    fake_api = FakeApiClient(
+        responses={
+            "/users": [{"id": 1, "name": "Alice"}],
+            "/users/1": {"id": 1, "name": "Alice"},
+        }
+    )
 
     # Perform operations
-    git_ops.delete_branch(repo_root, "feature")
-    git_ops.add_worktree(repo_root, wt, branch="bugfix")
+    users = fake_api.get("/users")
+    user = fake_api.get("/users/1")
+    fake_api.post("/users", json={"name": "Bob"})
 
     # Assert mutations were tracked
-    assert "feature" in git_ops.deleted_branches
-    assert (wt, "bugfix") in git_ops.added_worktrees
+    assert fake_api.requested_endpoints == ["/users", "/users/1"]
+    assert len(fake_api.posted_data) == 1
+    assert fake_api.posted_data[0] == ("/users", {"name": "Bob"})
+    assert fake_api.request_count == 3
 ```
 
 ### Why Track Mutations?
@@ -158,49 +180,89 @@ def test_mutation_tracking(tmp_path: Path) -> None:
 
 ```python
 from click.testing import CliRunner
+import click
 
-def test_status_command(tmp_path: Path) -> None:
+@click.command()
+@click.argument("name")
+@click.option("--greeting", default="Hello")
+def greet(name: str, greeting: str) -> None:
+    """Greet someone."""
+    click.echo(f"{greeting}, {name}!")
+
+def test_cli_command() -> None:
     """Test CLI command with CliRunner."""
-    # Arrange: Set up fakes
-    git_ops = FakeGitOps(...)
-    ctx = WorkstackContext.for_test(git_ops=git_ops, cwd=tmp_path)
-
-    # Act: Invoke command via CliRunner
     runner = CliRunner()
-    result = runner.invoke(status_cmd, obj=ctx)
 
-    # Assert: Check exit code and output
+    # Test with argument
+    result = runner.invoke(greet, ["Alice"])
+
     assert result.exit_code == 0
-    assert "expected output" in result.output
+    assert "Hello, Alice!" in result.output
+
+    # Test with option
+    result = runner.invoke(greet, ["Bob", "--greeting", "Hi"])
+    assert "Hi, Bob!" in result.output
 ```
 
-### With Arguments
+### With Context Object
 
 ```python
-def test_command_with_args(tmp_path: Path) -> None:
-    """Test command that takes arguments."""
+class AppContext:
+    """Application context passed to commands."""
+    def __init__(self, database: DatabaseAdapter, api: ApiClient) -> None:
+        self.database = database
+        self.api = api
+
+@click.command()
+@click.pass_obj
+def sync_data(ctx: AppContext) -> None:
+    """Sync data from API to database."""
+    data = ctx.api.get("/data")
+    ctx.database.execute(f"INSERT INTO sync_log VALUES ('{data}')")
+    click.echo(f"Synced {len(data)} records")
+
+def test_command_with_context(tmp_path: Path) -> None:
+    """Test command that uses context."""
+    # Create context with fakes
+    fake_db = FakeDatabaseAdapter()
+    fake_api = FakeApiClient(responses={"/data": {"records": [1, 2, 3]}})
+    ctx = AppContext(database=fake_db, api=fake_api)
+
+    # Invoke command with context
     runner = CliRunner()
-    ctx = WorkstackContext.for_test(...)
+    result = runner.invoke(sync_data, obj=ctx)
 
-    # Pass arguments as list
-    result = runner.invoke(create_cmd, ["feature-branch", "--stack"], obj=ctx)
-
+    # Assert
     assert result.exit_code == 0
+    assert "Synced 1 records" in result.output
+    assert len(fake_db.executed_commands) == 1
 ```
 
 ### With Isolated Filesystem
 
 ```python
-def test_command_with_files() -> None:
+@click.command()
+@click.argument("project_name")
+def init_project(project_name: str) -> None:
+    """Initialize a new project."""
+    project_dir = Path(project_name)
+    project_dir.mkdir()
+    (project_dir / "README.md").write_text(f"# {project_name}")
+    (project_dir / "config.yaml").write_text("version: 1.0")
+    click.echo(f"Created project: {project_name}")
+
+def test_command_creates_files() -> None:
     """Test command that creates files."""
     runner = CliRunner()
 
     with runner.isolated_filesystem():
         # Command runs in temporary directory
-        result = runner.invoke(init_cmd)
+        result = runner.invoke(init_project, ["my_project"])
 
         assert result.exit_code == 0
-        assert Path(".workstack").exists()
+        assert Path("my_project").exists()
+        assert Path("my_project/README.md").exists()
+        assert Path("my_project/config.yaml").exists()
 ```
 
 ### Capturing Exceptions
@@ -208,13 +270,17 @@ def test_command_with_files() -> None:
 ```python
 def test_command_error() -> None:
     """Test command that raises an exception."""
+    @click.command()
+    def buggy_cmd():
+        raise ValueError("Something went wrong!")
+
     runner = CliRunner()
 
     # CliRunner catches exceptions and sets exit_code
     result = runner.invoke(buggy_cmd, catch_exceptions=True)
 
     assert result.exit_code != 0
-    assert "Error:" in result.output
+    assert "ValueError" in result.output
 ```
 
 ### Why CliRunner (NOT subprocess)?
@@ -233,8 +299,6 @@ def test_command_error() -> None:
 
 **Rule**: Always use `CliRunner` for CLI tests. Only use subprocess for true end-to-end integration tests.
 
-**See**: `docs/agent/testing.md#cli-testing-patterns` for detailed comparison.
-
 ---
 
 ## Builder Patterns for Complex Scenarios
@@ -244,110 +308,136 @@ def test_command_error() -> None:
 ### Implementation
 
 ```python
-class WorktreeScenario:
-    """Builder for complex worktree test scenarios."""
+from dataclasses import dataclass
+from typing import Any
 
-    def __init__(self, base_path: Path) -> None:
-        self.base_path = base_path
-        self.worktrees: dict[Path, list[WorktreeInfo]] = {base_path: []}
-        self.current_branches: dict[Path, str] = {}
-        self.prs: dict[str, PRInfo] = {}
-        self.stacks: dict[str, list[str]] = {}
+@dataclass
+class User:
+    id: int
+    name: str
+    email: str
+    balance: float = 100.0
 
-    def with_main_branch(self) -> WorktreeScenario:
-        """Add main branch in root worktree."""
-        root_wt = WorktreeInfo(
-            path=self.base_path,
-            branch="main",
-            head="abc123",
-            is_bare=False,
-            is_detached=False,
-        )
-        self.worktrees[self.base_path] = [root_wt]
-        self.current_branches[self.base_path] = "main"
+@dataclass
+class Product:
+    id: int
+    name: str
+    price: float
+    stock: int = 100
+
+class TestScenarioBuilder:
+    """Builder for complex test scenarios."""
+
+    def __init__(self) -> None:
+        self.users: list[dict] = []
+        self.products: list[dict] = []
+        self.orders: list[dict] = []
+        self.api_responses: dict[str, Any] = {}
+        self.config: dict[str, Any] = {}
+
+    def with_user(
+        self,
+        name: str = "Test User",
+        email: str | None = None,
+        balance: float = 100.0
+    ) -> "TestScenarioBuilder":
+        """Add a user to the scenario."""
+        user_id = len(self.users) + 1
+        if email is None:
+            email = f"{name.lower().replace(' ', '.')}@example.com"
+
+        self.users.append({
+            "id": user_id,
+            "name": name,
+            "email": email,
+            "balance": balance
+        })
         return self
 
-    def with_feature_branch(
-        self, name: str, *, pr_number: int | None = None
-    ) -> WorktreeScenario:
-        """Add a feature branch worktree."""
-        path = self.base_path / "workstacks" / name
-        wt_info = WorktreeInfo(
-            path=path,
-            branch=name,
-            head="def456",
-            is_bare=False,
-            is_detached=False,
-        )
-        if self.base_path not in self.worktrees:
-            self.worktrees[self.base_path] = []
-        self.worktrees[self.base_path].append(wt_info)
-        self.current_branches[path] = name
-
-        if pr_number:
-            self.with_pr(name, number=pr_number)
-
+    def with_product(
+        self,
+        name: str = "Test Product",
+        price: float = 10.0,
+        stock: int = 100
+    ) -> "TestScenarioBuilder":
+        """Add a product to the scenario."""
+        product_id = len(self.products) + 1
+        self.products.append({
+            "id": product_id,
+            "name": name,
+            "price": price,
+            "stock": stock
+        })
         return self
 
-    def with_pr(
-        self, branch: str, *, number: int, title: str = "Test PR"
-    ) -> WorktreeScenario:
-        """Add a PR for a branch."""
-        self.prs[branch] = PRInfo(
-            number=number,
-            title=title,
-            state="OPEN",
-            url=f"https://github.com/user/repo/pull/{number}",
-        )
+    def with_order(
+        self,
+        user_id: int,
+        product_ids: list[int] | None = None,
+        status: str = "pending"
+    ) -> "TestScenarioBuilder":
+        """Add an order to the scenario."""
+        order_id = len(self.orders) + 1
+        self.orders.append({
+            "id": order_id,
+            "user_id": user_id,
+            "product_ids": product_ids or [1],
+            "status": status
+        })
         return self
 
-    def with_stack(self, branches: list[str]) -> WorktreeScenario:
-        """Add a Graphite stack."""
-        for i, branch in enumerate(branches):
-            if i > 0:
-                parent = branches[i - 1]
-                self.stacks[branch] = [parent]
+    def with_api_response(self, endpoint: str, response: Any) -> "TestScenarioBuilder":
+        """Configure API response."""
+        self.api_responses[endpoint] = response
         return self
 
-    def build(self) -> WorkstackContext:
-        """Build context with configured state."""
-        git_ops = FakeGitOps(
-            worktrees=self.worktrees,
-            current_branches=self.current_branches,
-        )
-        github_ops = FakeGitHubOps(prs=self.prs)
-        graphite_ops = FakeGraphiteOps(stacks=self.stacks)
+    def with_config(self, **kwargs) -> "TestScenarioBuilder":
+        """Set configuration values."""
+        self.config.update(kwargs)
+        return self
 
-        return WorkstackContext.for_test(
-            git_ops=git_ops,
-            github_ops=github_ops,
-            graphite_ops=graphite_ops,
-            cwd=self.base_path,
+    def build(self) -> tuple[FakeDatabaseAdapter, FakeApiClient, dict]:
+        """Build configured test environment."""
+        fake_db = FakeDatabaseAdapter(
+            users=self.users,
+            products=self.products,
+            orders=self.orders
         )
+        fake_api = FakeApiClient(responses=self.api_responses)
+
+        return fake_db, fake_api, self.config
 ```
 
 ### Usage in Tests
 
 ```python
-def test_complex_scenario(tmp_path: Path) -> None:
-    """Test with multiple worktrees, PRs, and stacks."""
-    # Declarative, fluent API
-    ctx = (
-        WorktreeScenario(tmp_path)
-        .with_main_branch()
-        .with_feature_branch("feature-1", pr_number=123)
-        .with_feature_branch("feature-2", pr_number=124)
-        .with_stack(["main", "feature-1", "feature-2"])
+def test_complex_e_commerce_scenario() -> None:
+    """Test with multiple users, products, and orders."""
+    # Fluent, readable test setup
+    fake_db, fake_api, config = (
+        TestScenarioBuilder()
+        .with_user(name="Alice", balance=500)
+        .with_user(name="Bob", balance=100)
+        .with_product(name="Laptop", price=1000, stock=5)
+        .with_product(name="Mouse", price=25, stock=50)
+        .with_order(user_id=1, product_ids=[1, 2])
+        .with_order(user_id=2, product_ids=[2])
+        .with_api_response("/tax", {"rate": 0.08})
+        .with_api_response("/shipping", {"cost": 10.00})
+        .with_config(enable_discounts=True, discount_rate=0.1)
         .build()
     )
 
-    runner = CliRunner()
-    result = runner.invoke(status_cmd, obj=ctx)
+    service = OrderService(database=fake_db, api_client=fake_api, config=config)
 
-    assert result.exit_code == 0
-    assert "#123" in result.output
-    assert "#124" in result.output
-    assert "Stack:" in result.output
+    # Test complex business logic
+    result = service.calculate_order_total(order_id=1)
+
+    assert result.subtotal == 1025.00
+    assert result.tax == 82.00
+    assert result.shipping == 10.00
+    assert result.discount == 102.50  # 10% discount
+    assert result.total == 1014.50
 ```
 
 ### When to Use Builders
@@ -372,69 +462,109 @@ def test_complex_scenario(tmp_path: Path) -> None:
 **Maintainability**: Changes to setup logic in one place
 **Flexibility**: Mix and match components as needed
 
-**Example builder in codebase**: `tests/integration/scenario_builder.py`
-
 ---
 
 ## Simulated Environment Pattern
 
-**Pattern**: Use `simulated_workstack_env()` for isolated filesystem tests.
+**Pattern**: Create isolated test environments with proper setup and cleanup.
 
 ### Implementation
 
 ```python
+from contextlib import contextmanager
+from dataclasses import dataclass
+
+@dataclass
+class TestEnvironment:
+    """Container for test environment resources."""
+    base_path: Path
+    config_path: Path
+    data_path: Path
+    database: FakeDatabaseAdapter
+    api_client: FakeApiClient
+
 @contextmanager
-def simulated_workstack_env(runner: CliRunner):
+def simulated_environment(tmp_path: Path):
     """Create isolated test environment with proper cleanup."""
-    with runner.isolated_filesystem():
-        # Setup test environment
-        repo_root = Path.cwd() / "repo"
-        repo_root.mkdir()
+    # Setup test environment structure
+    base_path = tmp_path / "test_env"
+    base_path.mkdir()
 
-        workstacks_dir = Path.cwd() / "workstacks"
-        workstacks_dir.mkdir()
+    config_path = base_path / "config"
+    config_path.mkdir()
 
-        env = SimulatedEnv(
-            cwd=Path.cwd(),
-            repo_root=repo_root,
-            workstacks_dir=workstacks_dir,
-        )
+    data_path = base_path / "data"
+    data_path.mkdir()
 
-        try:
-            yield env
-        finally:
-            # Cleanup happens automatically with isolated_filesystem()
-            pass
+    # Create default configuration
+    (config_path / "app.yaml").write_text("""
+    database:
+      host: localhost
+      port: 5432
+    api:
+      base_url: https://api.example.com
+      timeout: 30
+    """)
+
+    # Initialize test doubles
+    fake_db = FakeDatabaseAdapter(
+        users=[{"id": 1, "name": "Test User"}]
+    )
+    fake_api = FakeApiClient(
+        responses={"/health": {"status": "ok"}}
+    )
+
+    env = TestEnvironment(
+        base_path=base_path,
+        config_path=config_path,
+        data_path=data_path,
+        database=fake_db,
+        api_client=fake_api
+    )
+
+    try:
+        yield env
+    finally:
+        # Cleanup happens automatically with tmp_path
+        # But we could add explicit cleanup here if needed
+        pass
 ```
 
 ### Usage
 
 ```python
-def test_with_simulated_env() -> None:
+def test_with_simulated_environment(tmp_path: Path) -> None:
     """Test in isolated environment."""
-    runner = CliRunner()
-
-    with simulated_workstack_env(runner) as env:
-        git_ops = FakeGitOps()
-        ctx = WorkstackContext.for_test(
-            git_ops=git_ops,
-            cwd=env.cwd,  # Use simulated cwd
+    with simulated_environment(tmp_path) as env:
+        # Use the environment
+        service = DataService(
+            database=env.database,
+            api_client=env.api_client,
+            config_dir=env.config_path
         )
 
-        result = runner.invoke(status_cmd, obj=ctx)
-        assert result.exit_code == 0
+        # Perform operations
+        service.process_data()
+
+        # Assert using environment's test doubles
+        assert len(env.database.executed_queries) > 0
+        assert env.api_client.request_count > 0
+
+        # Can also use the filesystem
+        output_file = env.data_path / "output.json"
+        assert output_file.exists()
 ```
 
 ### Why Simulated Environments?
 
 **Benefits**:
 
-- **Isolation**: Each test runs in clean temporary directory
+- **Isolation**: Each test runs in clean environment
 - **Safety**: No risk of polluting real filesystem
 - **Cleanup**: Automatic cleanup after test
-- **Realistic**: Tests can create real files/directories
+- **Realistic**: Tests can create real files/directories when needed
 
-**Rule**: Use `simulated_workstack_env()` for tests that create files. Use `tmp_path` for simpler cases.
+**Rule**: Use simulated environments for integration tests that need filesystem isolation.
 
 ---
 
@@ -442,56 +572,115 @@ def test_with_simulated_env() -> None:
 
 **Pattern**: Configure fakes to raise errors for testing error handling.
 
-### Implementation in Fake
+### Implementation
 
 ```python
-class FakeGraphiteOps(GraphiteOps):
+from typing import Any
+
+class FakePaymentGateway(PaymentGateway):
     def __init__(
         self,
         *,
-        sync_raises: Exception | None = None,
-        submit_branch_raises: Exception | None = None,
+        approved_cards: list[str] | None = None,
+        declined_cards: list[str] | None = None,
+        network_error_on: list[str] | None = None,
+        rate_limit_after: int | None = None,
     ) -> None:
-        self._sync_raises = sync_raises
-        self._submit_branch_raises = submit_branch_raises
+        self._approved_cards = approved_cards or []
+        self._declined_cards = declined_cards or []
+        self._network_error_on = network_error_on or []
+        self._rate_limit_after = rate_limit_after
+        self._request_count = 0
+        self._processed_transactions: list[dict] = []
 
-    def sync(self) -> None:
-        """Sync Graphite stack."""
-        if self._sync_raises:
-            raise self._sync_raises
+    def charge(self, card_number: str, amount: float) -> str:
+        """Process payment with error injection."""
+        self._request_count += 1
 
-        # Normal sync logic
-        ...
+        # Inject rate limit error
+        if self._rate_limit_after and self._request_count > self._rate_limit_after:
+            raise RateLimitError("Too many requests")
 
-    def submit_branch(self, branch: str) -> None:
-        """Submit branch for PR."""
-        if self._submit_branch_raises:
-            raise self._submit_branch_raises
+        # Inject network error
+        if card_number in self._network_error_on:
+            raise NetworkError("Connection timeout")
 
-        # Normal submit logic
-        ...
+        # Simulate declined card
+        if card_number in self._declined_cards:
+            raise PaymentDeclined(f"Card {card_number[-4:]} declined")
+
+        # Simulate approved card
+        if card_number in self._approved_cards:
+            transaction_id = f"txn_{self._request_count:04d}"
+            self._processed_transactions.append({
+                "id": transaction_id,
+                "card": card_number,
+                "amount": amount,
+                "status": "approved"
+            })
+            return transaction_id
+
+        # Default behavior
+        raise ValueError(f"Unknown card: {card_number}")
+
+    @property
+    def processed_transactions(self) -> list[dict]:
+        """For test assertions."""
+        return self._processed_transactions.copy()
 ```
 
 ### Usage in Tests
 
 ```python
-def test_handles_graphite_sync_error(tmp_path: Path) -> None:
-    """Test error handling when Graphite sync fails."""
-    # Configure fake to raise error
-    graphite_ops = FakeGraphiteOps(
-        sync_raises=subprocess.CalledProcessError(
-            1, ["gt", "sync"], stderr="error: conflict detected"
-        )
+def test_handles_payment_declined() -> None:
+    """Test error handling when payment is declined."""
+    # Configure fake to decline specific card
+    payment_gateway = FakePaymentGateway(
+        approved_cards=["4111111111111111"],
+        declined_cards=["4000000000000002"]
     )
 
-    ctx = WorkstackContext.for_test(graphite_ops=graphite_ops, cwd=tmp_path)
+    service = PaymentService(payment_gateway=payment_gateway)
 
-    runner = CliRunner()
-    result = runner.invoke(sync_cmd, obj=ctx)
+    # Test declined card
+    result = service.process_payment("4000000000000002", 100.00)
 
-    # Assert error is handled gracefully
-    assert result.exit_code != 0
-    assert "conflict detected" in result.output
+    assert result.status == "failed"
+    assert "declined" in result.error_message.lower()
+    assert len(payment_gateway.processed_transactions) == 0
+
+def test_handles_network_errors() -> None:
+    """Test handling of network errors."""
+    payment_gateway = FakePaymentGateway(
+        network_error_on=["4242424242424242"]
+    )
+
+    service = PaymentService(payment_gateway=payment_gateway)
+
+    # Should retry on network error
+    result = service.process_payment_with_retry("4242424242424242", 50.00)
+
+    assert result.status == "failed"
+    assert result.retry_count == 3
+
+def test_handles_rate_limiting() -> None:
+    """Test rate limit handling."""
+    payment_gateway = FakePaymentGateway(
+        approved_cards=["4111111111111111"],
+        rate_limit_after=5
+    )
+
+    service = PaymentService(payment_gateway=payment_gateway)
+
+    # Process 5 successful payments
+    for i in range(5):
+        result = service.process_payment("4111111111111111", 10.00)
+        assert result.status == "success"
+
+    # 6th payment should hit rate limit
+    result = service.process_payment("4111111111111111", 10.00)
+    assert result.status == "failed"
+    assert "rate limit" in result.error_message.lower()
 ```
 
 ### Benefits
@@ -512,41 +701,84 @@ def test_handles_graphite_sync_error(tmp_path: Path) -> None:
 ### Implementation
 
 ```python
-def test_remove_worktree_dry_run(tmp_path: Path) -> None:
-    """Verify --dry-run doesn't remove worktree."""
-    repo_root = tmp_path / "repo"
-    wt_path = tmp_path / "wt"
-
-    # Arrange: Set up fake with worktree
-    git_ops = FakeGitOps(
-        worktrees={repo_root: [WorktreeInfo(path=wt_path, branch="feature")]},
+def test_data_migration_dry_run(tmp_path: Path, capsys) -> None:
+    """Verify --dry-run doesn't modify data."""
+    # Arrange: Set up fake with initial data
+    fake_db = FakeDatabaseAdapter(
+        users=[
+            {"id": 1, "name": "Alice", "old_field": "value1"},
+            {"id": 2, "name": "Bob", "old_field": "value2"},
+        ]
     )
-    ctx = WorkstackContext.for_test(git_ops=git_ops, cwd=tmp_path)
 
-    # Act: Invoke with --dry-run
-    runner = CliRunner()
-    result = runner.invoke(remove_worktree_cmd, ["--dry-run"], obj=ctx)
+    service = DataMigrationService(database=fake_db)
+
+    # Act: Run migration with dry-run flag
+    service.migrate_schema(dry_run=True)
 
     # Assert: Operation was NOT executed
-    assert len(git_ops.removed_worktrees) == 0
+    assert len(fake_db.executed_commands) == 0  # No writes
+    assert len(fake_db.executed_queries) == 1   # Only read queries
 
-    # Assert: Dry-run message was printed
-    assert "[DRY RUN]" in result.output
-    assert "Would remove worktree" in result.output
+    # Assert: Dry-run messages were printed
+    captured = capsys.readouterr()
+    assert "[DRY RUN]" in captured.out
+    assert "Would migrate 2 users" in captured.out
+    assert "Would drop column: old_field" in captured.out
 
-    # Assert: Worktree still exists (wasn't removed)
-    worktrees = git_ops.list_worktrees(repo_root)
-    assert len(worktrees) == 1
+    # Assert: Data unchanged
+    users = fake_db.query("SELECT * FROM users")
+    assert all("old_field" in user for user in users)
 ```
 
 ### Pattern
 
 1. **Arrange**: Set up fake with initial state
-2. **Act**: Invoke command with `--dry-run` flag
+2. **Act**: Execute operation with `dry_run=True`
 3. **Assert**:
-   - Mutation tracking shows operation NOT executed
-   - Output contains `[DRY RUN]` message
-   - State unchanged (operation didn't happen)
+   - Mutation tracking shows operations NOT executed
+   - Output contains `[DRY RUN]` messages
+   - State unchanged (operations didn't happen)
+
+### CLI Command with Dry-Run
+
+```python
+@click.command()
+@click.option("--dry-run", is_flag=True, help="Show what would be done")
+@click.pass_obj
+def cleanup_data(ctx: AppContext, dry_run: bool) -> None:
+    """Clean up old data."""
+    if dry_run:
+        # Wrap database with dry-run adapter
+        ctx.database = DryRunDatabaseAdapter(ctx.database)
+
+    old_records = ctx.database.query("SELECT * FROM logs WHERE age > 30")
+    click.echo(f"Found {len(old_records)} old records")
+
+    for record in old_records:
+        ctx.database.execute(f"DELETE FROM logs WHERE id = {record['id']}")
+
+    if not dry_run:
+        click.echo("✓ Cleanup complete")
+
+def test_cleanup_dry_run() -> None:
+    """Test cleanup command with dry-run."""
+    fake_db = FakeDatabaseAdapter(
+        logs=[
+            {"id": 1, "age": 45, "message": "old"},
+            {"id": 2, "age": 10, "message": "new"},
+        ]
+    )
+    ctx = AppContext(database=fake_db, api=FakeApiClient())
+
+    runner = CliRunner()
+    result = runner.invoke(cleanup_data, ["--dry-run"], obj=ctx)
+
+    # Verify no deletions
+    assert len(fake_db.executed_commands) == 0
+    assert "[DRY RUN]" in result.output
+    assert "Would execute: DELETE" in result.output
+```
 
 ### Benefits
 
@@ -562,5 +794,6 @@ def test_remove_worktree_dry_run(tmp_path: Path) -> None:
 
 - `workflows.md` - Step-by-step guides for using these patterns
 - `testing-strategy.md` - Which layer to test at
-- `ops-architecture.md` - Understanding fakes and ops layer
+- `ops-architecture.md` - Understanding fakes and adapter layer
 - `anti-patterns.md` - What to avoid
+- `python-specific.md` - Python-specific testing patterns

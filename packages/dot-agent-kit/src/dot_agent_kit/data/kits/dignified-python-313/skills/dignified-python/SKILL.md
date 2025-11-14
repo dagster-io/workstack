@@ -309,6 +309,35 @@ config = GlobalConfig(
 )
 ```
 
+### Avoid Global State 🔴
+
+**STRONGLY DISCOURAGED: Using `global` keyword**
+
+```python
+# ❌ WRONG: Global mutable state
+_cache = {}
+
+def get_value(key):
+    global _cache
+    if key not in _cache:
+        _cache[key] = expensive_computation(key)
+    return _cache[key]
+```
+
+**Why avoid `global`:**
+
+- Makes testing difficult (shared state across tests)
+- Creates hidden dependencies
+- Makes code flow non-obvious
+- Violates principle of explicit over implicit
+
+**Alternatives to `global`:**
+
+- Pass values as function parameters
+- Use class instance attributes
+- Use function closures
+- Use dependency injection
+
 ### Context Managers
 
 ```python

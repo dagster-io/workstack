@@ -7,6 +7,7 @@ from pathlib import Path
 import click
 import pathspec
 
+from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.io import require_project_config
 from dot_agent_kit.models.artifact import (
     ARTIFACT_TYPE_PLURALS,
@@ -166,7 +167,7 @@ def _list_artifacts(
     artifacts = repository.discover_all_artifacts(project_dir, config)
 
     if not artifacts:
-        print("No artifacts installed")
+        user_output("No artifacts installed")
         return
 
     # Find project root for gitignore resolution
@@ -278,65 +279,65 @@ def _list_artifacts(
 
         # Display kit header
         if kit_key == "local":
-            print("[local]:")
+            user_output("[local]:")
         else:
             # Extract kit_id and version from key
             if "@" in kit_key:
                 kit_id, version = kit_key.split("@", 1)
-                print(f"[{kit_id}] (v{version}):")
+                user_output(f"[{kit_id}] (v{version}):")
             else:
-                print(f"[{kit_key}]:")
+                user_output(f"[{kit_key}]:")
 
         # Display skills for this kit
         kit_skills_data = skills_data_by_kit.get(kit_key, [])
         if kit_skills_data:
-            print(f"  Skills ({len(kit_skills_data)}):")
+            user_output(f"  Skills ({len(kit_skills_data)}):")
             for data in sorted(kit_skills_data, key=lambda d: d.artifact.artifact_name):
                 name = data.artifact.artifact_name.ljust(max_name_len)
                 folder_path = data.folder_path.ljust(max_folder_len)
                 file_counts = data.file_counts
-                print(f"    {name} {folder_path} {file_counts}")
+                user_output(f"    {name} {folder_path} {file_counts}")
 
         # Display commands for this kit
         kit_commands = artifact_types["commands"]
         if kit_commands:
-            print(f"  Commands ({len(kit_commands)}):")
+            user_output(f"  Commands ({len(kit_commands)}):")
             for command in sorted(kit_commands, key=lambda a: a.artifact_name):
                 name = command.artifact_name.ljust(max_name_len)
                 file_path = str(command.file_path)
-                print(f"    {name} {file_path}")
+                user_output(f"    {name} {file_path}")
 
         # Display agents for this kit
         kit_agents = artifact_types["agents"]
         if kit_agents:
-            print(f"  Agents ({len(kit_agents)}):")
+            user_output(f"  Agents ({len(kit_agents)}):")
             for agent in sorted(kit_agents, key=lambda a: a.artifact_name):
                 name = agent.artifact_name.ljust(max_name_len)
                 file_path = str(agent.file_path)
-                print(f"    {name} {file_path}")
+                user_output(f"    {name} {file_path}")
 
         # Display hooks for this kit
         kit_hooks = artifact_types["hooks"]
         if kit_hooks:
-            print(f"  Hooks ({len(kit_hooks)}):")
+            user_output(f"  Hooks ({len(kit_hooks)}):")
             for hook in sorted(kit_hooks, key=lambda a: a.artifact_name):
                 name = hook.artifact_name.ljust(max_name_len)
                 file_path = str(hook.file_path)
-                print(f"    {name} {file_path}")
+                user_output(f"    {name} {file_path}")
 
         # Display docs for this kit
         kit_docs = artifact_types["docs"]
         if kit_docs:
-            print(f"  Docs ({len(kit_docs)}):")
+            user_output(f"  Docs ({len(kit_docs)}):")
             for doc in sorted(kit_docs, key=lambda a: a.artifact_name):
                 name = doc.artifact_name.ljust(max_name_len)
                 file_path = str(doc.file_path)
-                print(f"    {name} {file_path}")
+                user_output(f"    {name} {file_path}")
 
         # Add spacing between kits
-        print()
+        user_output()
 
-    print("Use 'dot-agent artifact list' to see installed artifacts from kits")
+    user_output("Use 'dot-agent artifact list' to see installed artifacts from kits")
 
 
 def _list_kits_impl(artifacts: bool) -> None:
@@ -345,7 +346,7 @@ def _list_kits_impl(artifacts: bool) -> None:
     config = require_project_config(project_dir)
 
     if len(config.kits) == 0:
-        print("No kits installed")
+        user_output("No kits installed")
         return
 
     # If --artifacts flag is provided, show artifact-level detail
@@ -355,11 +356,11 @@ def _list_kits_impl(artifacts: bool) -> None:
         return
 
     # Default kit-level view
-    print(f"Installed {len(config.kits)} kit(s):\n")
+    user_output(f"Installed {len(config.kits)} kit(s):\n")
 
     for kit_id, installed_kit in config.kits.items():
         line = f"  {kit_id:<20} {installed_kit.version:<10} {installed_kit.source_type:<10}"
-        print(line)
+        user_output(line)
 
 
 @click.command(name="list")

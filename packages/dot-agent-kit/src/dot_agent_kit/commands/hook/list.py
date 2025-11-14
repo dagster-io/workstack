@@ -7,7 +7,7 @@ from pathlib import Path
 import click
 from pydantic import ValidationError
 
-from dot_agent_kit.cli.output import machine_output, user_output
+from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.hooks.settings import extract_kit_id_from_command, get_all_hooks, load_settings
 
 
@@ -18,9 +18,7 @@ def _list_hooks_impl() -> None:
 
     if not settings_path.exists():
         user_output("No hooks installed.")
-        machine_output(
-            "Total: 0 hook(s)",
-        )
+        user_output("Total: 0 hook(s)")
         raise SystemExit(0)
 
     try:
@@ -34,9 +32,7 @@ def _list_hooks_impl() -> None:
 
     if not hooks:
         user_output("No hooks installed.")
-        machine_output(
-            "Total: 0 hook(s)",
-        )
+        user_output("Total: 0 hook(s)")
         raise SystemExit(0)
 
     # Display hooks
@@ -52,9 +48,7 @@ def _list_hooks_impl() -> None:
             hook_spec = f"local: {entry.command[:50]}"
         user_output(f"{hook_spec} [{lifecycle} / {matcher}]")
 
-    machine_output(
-        f"Total: {len(hooks)} hook(s)",
-    )
+    user_output(f"\nTotal: {len(hooks)} hook(s)")
 
 
 @click.command(name="list")

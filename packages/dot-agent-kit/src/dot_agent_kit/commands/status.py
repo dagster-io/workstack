@@ -4,6 +4,7 @@ from pathlib import Path
 
 import click
 
+from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.io import discover_installed_artifacts, require_project_config
 
 # Reusable option decorator
@@ -31,32 +32,32 @@ def _show_status(verbose: bool) -> None:
     unmanaged_kits = all_installed - managed_kits
 
     # Display managed kits section
-    click.echo("Managed Kits:")
+    user_output("Managed Kits:")
     if managed_kits and project_config:
         for kit_id in sorted(managed_kits):
             kit = project_config.kits[kit_id]
-            click.echo(f"  {kit_id} v{kit.version} ({kit.source_type})")
+            user_output(f"  {kit_id} v{kit.version} ({kit.source_type})")
             if verbose:
                 artifact_types = discovered.get(kit_id, set())
                 if artifact_types:
                     types_str = ", ".join(sorted(artifact_types))
-                    click.echo(f"    Artifacts: {types_str}")
+                    user_output(f"    Artifacts: {types_str}")
     else:
-        click.echo("  (none)")
+        user_output("  (none)")
 
-    click.echo()
+    user_output()
 
     # Display unmanaged artifacts section
-    click.echo("Unmanaged Artifacts:")
+    user_output("Unmanaged Artifacts:")
     if unmanaged_kits:
         for kit_id in sorted(unmanaged_kits):
             artifact_types = discovered[kit_id]
             types_str = ", ".join(sorted(artifact_types))
-            click.echo(f"  {kit_id} ({types_str})")
+            user_output(f"  {kit_id} ({types_str})")
     else:
-        click.echo("  (none)")
+        user_output("  (none)")
 
-    click.echo("\nUse 'dot-agent artifact list' for detailed artifact inspection")
+    user_output("\nUse 'dot-agent artifact list' for detailed artifact inspection")
 
 
 @click.command()

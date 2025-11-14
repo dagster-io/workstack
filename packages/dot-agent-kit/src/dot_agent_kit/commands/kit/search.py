@@ -2,6 +2,7 @@
 
 import click
 
+from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.io import load_kit_manifest, load_registry
 from dot_agent_kit.models.types import SOURCE_TYPE_BUNDLED
 from dot_agent_kit.sources.bundled import BundledKitSource
@@ -28,7 +29,7 @@ def search(query: str | None) -> None:
     registry = load_registry()
 
     if len(registry) == 0:
-        click.echo("Registry is empty")
+        user_output("Registry is empty")
         return
 
     # Filter by query if provided
@@ -44,16 +45,16 @@ def search(query: str | None) -> None:
 
     if len(filtered) == 0:
         if query:
-            click.echo(f"No kits found matching '{query}'")
+            user_output(f"No kits found matching '{query}'")
         else:
-            click.echo("No kits available")
+            user_output("No kits available")
         return
 
     # Display results
     if query:
-        click.echo(f"Found {len(filtered)} kit(s) matching '{query}':\n")
+        user_output(f"Found {len(filtered)} kit(s) matching '{query}':\n")
     else:
-        click.echo(f"Available kits ({len(filtered)}):\n")
+        user_output(f"Available kits ({len(filtered)}):\n")
 
     bundled_source = BundledKitSource()
 
@@ -88,6 +89,6 @@ def search(query: str | None) -> None:
             if artifact_counts:
                 artifacts_str = f" • {', '.join(artifact_counts)}"
 
-        click.echo(f"  [{entry.kit_id}]{version_str}")
-        click.echo(f"  └─ {entry.description}{artifacts_str}")
-        click.echo()
+        user_output(f"  [{entry.kit_id}]{version_str}")
+        user_output(f"  └─ {entry.description}{artifacts_str}")
+        user_output()

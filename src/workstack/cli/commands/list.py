@@ -3,6 +3,7 @@ from pathlib import Path
 import click
 
 from workstack.cli.core import discover_repo_context
+from workstack.cli.output import user_output
 from workstack.core.context import WorkstackContext
 from workstack.core.display_utils import (
     filter_stack_for_worktree,
@@ -101,7 +102,7 @@ def _display_branch_stack(
         else:
             line = f"  {marker}  {branch_text}"
 
-        click.echo(line)
+        user_output(line)
 
 
 def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool) -> None:
@@ -127,10 +128,9 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
     # Validate graphite is enabled if showing stacks
     if show_stacks:
         if not (ctx.global_config and ctx.global_config.use_graphite):
-            click.echo(
+            user_output(
                 "Error: --stacks requires graphite to be enabled. "
                 "Run 'workstack config set use_graphite true'",
-                err=True,
             )
             raise SystemExit(1)
 
@@ -221,7 +221,7 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
             root_pr_info = format_pr_info(pr, graphite_url)
     root_plan_summary = _format_plan_summary(repo.root, ctx)
 
-    click.echo(
+    user_output(
         format_worktree_line(
             "root",
             root_branch,
@@ -246,7 +246,7 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
 
         # Add blank line before each worktree (except first) when showing stacks
         if show_stacks and (root_branch or idx > 0):
-            click.echo()
+            user_output()
 
         is_current_wt = wt_path == current_worktree_path
 
@@ -259,7 +259,7 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
                 wt_pr_info = format_pr_info(pr, graphite_url)
         wt_plan_summary = _format_plan_summary(wt_path, ctx)
 
-        click.echo(
+        user_output(
             format_worktree_line(
                 name,
                 wt_branch,

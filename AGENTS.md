@@ -415,6 +415,47 @@ if removed_current_worktree:
 - Use `\n` prefix in strings for section breaks
 - Indent list items with `  ` (2 spaces)
 
+#### CLI Output Abstraction
+
+**Use output abstraction for all CLI output:**
+
+- `user_output()` - Routes to stderr for user-facing messages
+- `machine_output()` - Routes to stdout for shell integration data
+
+**Import:** `from workstack.cli.output import user_output, machine_output`
+
+**When to use each:**
+
+| Use case                  | Function           | Rationale                   |
+| ------------------------- | ------------------ | --------------------------- |
+| Status messages           | `user_output()`    | User info, goes to stderr   |
+| Error messages            | `user_output()`    | User info, goes to stderr   |
+| Progress indicators       | `user_output()`    | User info, goes to stderr   |
+| Success confirmations     | `user_output()`    | User info, goes to stderr   |
+| Shell activation scripts  | `machine_output()` | Script data, goes to stdout |
+| JSON output (--json flag) | `machine_output()` | Script data, goes to stdout |
+| Paths for script capture  | `machine_output()` | Script data, goes to stdout |
+
+**Example:**
+
+```python
+from workstack.cli.output import user_output, machine_output
+
+# User-facing messages
+user_output(f"✓ Created worktree {name}")
+user_output(click.style("Error: ", fg="red") + "Branch not found")
+
+# Script/machine data
+machine_output(json.dumps(result))
+machine_output(str(activation_path))
+```
+
+**Reference implementations:**
+
+- `src/workstack/cli/commands/sync.py` - Uses custom `_emit()` helper
+- `src/workstack/cli/commands/jump.py` - Uses both user_output() and machine_output()
+- `src/workstack/cli/commands/consolidate.py` - Uses both abstractions
+
 ### Code Style
 
 - **Max 4 levels of indentation** - extract helper functions

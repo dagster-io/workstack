@@ -10,6 +10,8 @@ from pathlib import Path
 
 import click
 
+from workstack_dev.cli.output import user_output
+
 
 def is_git_repo_root(path: Path) -> bool:
     """Return True when the path looks like a git repository root."""
@@ -44,7 +46,7 @@ def create_agents_symlinks(repo_root: Path, dry_run: bool, verbose: bool) -> tup
 
     if verbose:
         plural = "s" if len(agents_md_files) != 1 else ""
-        click.echo(f"Found {len(agents_md_files)} AGENTS.md file{plural}")
+        user_output(f"Found {len(agents_md_files)} AGENTS.md file{plural}")
 
     for agents_md_path in agents_md_files:
         status = create_reference_for_agents_md(agents_md_path, dry_run)
@@ -54,11 +56,11 @@ def create_agents_symlinks(repo_root: Path, dry_run: bool, verbose: bool) -> tup
             created_count += 1
             if verbose:
                 action = "Would create" if dry_run else "Created"
-                click.echo(f"  ✓ {action}: {rel_path.parent}/CLAUDE.md")
+                user_output(f"  ✓ {action}: {rel_path.parent}/CLAUDE.md")
         else:
             skipped_count += 1
             if verbose:
-                click.echo(f"  ⊘ Skipped: {rel_path.parent}/CLAUDE.md (already exists)")
+                user_output(f"  ⊘ Skipped: {rel_path.parent}/CLAUDE.md (already exists)")
 
     return created_count, skipped_count
 
@@ -75,7 +77,7 @@ def create_agents_symlinks_command(dry_run: bool, verbose: bool) -> None:
     """
     repo_root = Path.cwd()
     if not is_git_repo_root(repo_root):
-        click.echo("Error: Must be run from git repository root", err=True)
+        user_output("Error: Must be run from git repository root")
         raise SystemExit(1)
 
     created_count, skipped_count = create_agents_symlinks(repo_root, dry_run, verbose)
@@ -84,14 +86,14 @@ def create_agents_symlinks_command(dry_run: bool, verbose: bool) -> None:
         if dry_run:
             if created_count > 0:
                 plural = "s" if created_count != 1 else ""
-                click.echo(f"Would create {created_count} CLAUDE.md reference{plural}")
+                user_output(f"Would create {created_count} CLAUDE.md reference{plural}")
             if skipped_count > 0:
-                click.echo(f"Would skip {skipped_count} (already exists)")
+                user_output(f"Would skip {skipped_count} (already exists)")
         else:
             if created_count > 0:
                 plural = "s" if created_count != 1 else ""
-                click.echo(f"✓ Created {created_count} CLAUDE.md reference{plural}")
+                user_output(f"✓ Created {created_count} CLAUDE.md reference{plural}")
             if skipped_count > 0:
-                click.echo(f"⊘ Skipped {skipped_count} (already exists)")
+                user_output(f"⊘ Skipped {skipped_count} (already exists)")
     elif created_count == 0 and skipped_count == 0:
-        click.echo("No AGENTS.md files found")
+        user_output("No AGENTS.md files found")

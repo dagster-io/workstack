@@ -2,6 +2,8 @@
 
 import click
 
+from workstack.cli.output import machine_output, user_output
+
 
 def _emit(message: str, *, script_mode: bool, error: bool = False) -> None:
     """Emit a message to stdout or stderr based on script mode.
@@ -17,7 +19,10 @@ def _emit(message: str, *, script_mode: bool, error: bool = False) -> None:
         script_mode: True when running in --script mode (all output to stderr).
         error: Force stderr output in non-script mode (ignored in script mode).
     """
-    click.echo(message, err=error or script_mode)
+    if error or script_mode:
+        user_output(message)
+    else:
+        machine_output(message)
 
 
 def _format_cli_command(cmd: str, check: str) -> str:

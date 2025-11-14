@@ -12,6 +12,8 @@ from pathlib import Path
 
 import click
 
+from dot_agent_kit.cli.output import user_output
+
 
 @click.command(name="check")
 def check_command() -> None:
@@ -36,17 +38,14 @@ def check_command() -> None:
     repo_root_path = Path(repo_root_str)
 
     if not repo_root_path.exists():
-        click.echo(
-            click.style("✗ Error: Repository root not found", fg="red"),
-            err=True,
-        )
+        user_output(click.style("✗ Error: Repository root not found", fg="red"))
         raise SystemExit(1)
 
     # Find all CLAUDE.md files
     claude_files = list(repo_root_path.rglob("CLAUDE.md"))
 
     if len(claude_files) == 0:
-        click.echo(click.style("ℹ️  No CLAUDE.md files found in repository", fg="cyan"))
+        user_output(click.style("ℹ️  No CLAUDE.md files found in repository", fg="cyan"))
         raise SystemExit(0)
 
     # Track violations
@@ -67,37 +66,37 @@ def check_command() -> None:
 
     # Report results
     if len(missing_agents) == 0 and len(invalid_content) == 0:
-        click.echo(click.style("✓ AGENTS.md standard: PASSED", fg="green", bold=True))
-        click.echo()
-        click.echo("All CLAUDE.md files properly reference AGENTS.md.")
-        click.echo()
-        click.echo(f"Files checked: {len(claude_files)}")
-        click.echo("Violations: 0")
+        user_output(click.style("✓ AGENTS.md standard: PASSED", fg="green", bold=True))
+        user_output()
+        user_output("All CLAUDE.md files properly reference AGENTS.md.")
+        user_output()
+        user_output(f"Files checked: {len(claude_files)}")
+        user_output("Violations: 0")
         raise SystemExit(0)
 
     # Found violations
-    click.echo(click.style("✗ AGENTS.md standard: FAILED", fg="red", bold=True))
-    click.echo()
+    user_output(click.style("✗ AGENTS.md standard: FAILED", fg="red", bold=True))
+    user_output()
     violation_count = len(missing_agents) + len(invalid_content)
     plural = "s" if violation_count != 1 else ""
-    click.echo(f"Found {violation_count} violation{plural}:")
-    click.echo()
+    user_output(f"Found {violation_count} violation{plural}:")
+    user_output()
 
     if len(missing_agents) > 0:
-        click.echo(click.style("Missing AGENTS.md:", fg="yellow"))
+        user_output(click.style("Missing AGENTS.md:", fg="yellow"))
         for path in missing_agents:
             rel_path = path.relative_to(repo_root_path)
-            click.echo(f"  • {click.style(str(rel_path) + '/', fg='cyan')}")
-        click.echo()
+            user_output(f"  • {click.style(str(rel_path) + '/', fg='cyan')}")
+        user_output()
 
     if len(invalid_content) > 0:
-        click.echo(click.style("Invalid CLAUDE.md content:", fg="yellow"))
+        user_output(click.style("Invalid CLAUDE.md content:", fg="yellow"))
         for path in invalid_content:
             rel_path = path.relative_to(repo_root_path)
             content = path.read_text(encoding="utf-8")
             styled_path = click.style(str(rel_path), fg="cyan")
-            click.echo(f"  • {styled_path}: Content is '{content.strip()}', expected '@AGENTS.md'")
-        click.echo()
+            user_output(f"  • {styled_path}: Content is '{content.strip()}', expected '@AGENTS.md'")
+        user_output()
 
-    click.echo("Fix these issues and run again.")
+    user_output("Fix these issues and run again.")
     raise SystemExit(1)

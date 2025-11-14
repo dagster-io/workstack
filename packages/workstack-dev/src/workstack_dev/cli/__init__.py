@@ -7,13 +7,19 @@ available at import time for inspection.
 
 import click
 
-from workstack_dev.commands.branch_commit_count.command import branch_commit_count_command
+from workstack_dev.commands.branch_commit_count.command import (
+    branch_commit_count_command,
+)
 from workstack_dev.commands.clean_cache.command import clean_cache_command
 from workstack_dev.commands.codex_review.command import codex_review_command
 from workstack_dev.commands.completion.command import completion_command
-from workstack_dev.commands.create_agents_symlinks.command import create_agents_symlinks_command
+from workstack_dev.commands.create_agents_symlinks.command import (
+    create_agents_symlinks_command,
+)
 from workstack_dev.commands.publish_to_pypi.command import publish_to_pypi_command
-from workstack_dev.commands.reserve_pypi_name.command import reserve_pypi_name_command
+from workstack_dev.commands.reserve_pypi_name.command import (
+    reserve_pypi_name_command,
+)
 from workstack_dev.commands.slash_command.command import slash_command_command
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])

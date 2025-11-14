@@ -9,6 +9,7 @@ from dataclasses import asdict
 import click
 
 from workstack.cli.core import discover_repo_context
+from workstack.cli.output import user_output
 from workstack.core.context import WorkstackContext
 from workstack.core.tree_utils import format_branches_as_tree
 
@@ -79,17 +80,15 @@ def graphite_branches_cmd(ctx: WorkstackContext, format: str, stack: str | None)
     """
     # Check if graphite is enabled
     if not (ctx.global_config and ctx.global_config.use_graphite):
-        click.echo(
+        user_output(
             "Error: Graphite not enabled. Run 'workstack config set use_graphite true'",
-            err=True,
         )
         raise SystemExit(1)
 
     # Check if --stack is used without tree format
     if stack is not None and format != "tree":
-        click.echo(
+        user_output(
             "Error: --stack option can only be used with --format tree",
-            err=True,
         )
         raise SystemExit(1)
 
@@ -103,7 +102,7 @@ def graphite_branches_cmd(ctx: WorkstackContext, format: str, stack: str | None)
         # Convert to list of dicts for JSON output
         branches_list = [asdict(metadata) for metadata in branches_dict.values()]
         output = {"branches": branches_list}
-        click.echo(json.dumps(output, indent=2))
+        user_output(json.dumps(output, indent=2))
     elif format == "tree":
         # Tree format: hierarchical display with commit info
         # Collect commit messages for all branches
@@ -115,8 +114,8 @@ def graphite_branches_cmd(ctx: WorkstackContext, format: str, stack: str | None)
                     commit_messages[metadata.commit_sha] = msg
 
         output = format_branches_as_tree(branches_dict, commit_messages, root_branch=stack)
-        click.echo(output)
+        user_output(output)
     else:
         # Text format: simple list of branch names
         for branch_name in sorted(branches_dict.keys()):
-            click.echo(branch_name)
+            user_output(branch_name)

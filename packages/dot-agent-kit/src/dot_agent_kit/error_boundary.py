@@ -11,6 +11,7 @@ from typing import Any, TypeVar
 
 import click
 
+from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.sources.exceptions import DotAgentNonIdealStateException
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -48,18 +49,17 @@ def cli_error_boundary[T: Callable[..., Any]](func: T) -> T:
             # Check if debug mode is enabled
             if debug:
                 # In debug mode, show full traceback for any exception
-                click.echo(traceback.format_exc(), err=True)
+                user_output(traceback.format_exc())
                 raise SystemExit(1) from None
 
             # Check if this is a custom DotAgentNonIdealStateException
             if isinstance(e, DotAgentNonIdealStateException):
                 # Custom exceptions get clean error messages
-                click.echo(f"Error: {e}", err=True)
+                user_output(f"Error: {e}")
             else:
                 # External/unexpected exceptions show internal error hint
-                click.echo(
-                    f"Internal error: {type(e).__name__}. Run with --debug for full details.",
-                    err=True,
+                user_output(
+                    f"Internal error: {type(e).__name__}. Run with --debug for full details."
                 )
 
             raise SystemExit(1) from None

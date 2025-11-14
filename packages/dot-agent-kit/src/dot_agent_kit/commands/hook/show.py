@@ -7,6 +7,7 @@ from pathlib import Path
 import click
 from pydantic import ValidationError
 
+from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.hooks.settings import extract_kit_id_from_command, get_all_hooks, load_settings
 
 
@@ -19,18 +20,16 @@ def show_hook(hook_spec: str) -> None:
     """
     # Validate format
     if ":" not in hook_spec:
-        click.echo(
+        user_output(
             f"Error: Invalid hook spec '{hook_spec}'. Expected format: kit-id:hook-id",
-            err=True,
         )
         raise SystemExit(1)
 
     # Parse spec
     parts = hook_spec.split(":", 1)
     if len(parts) != 2:
-        click.echo(
+        user_output(
             f"Error: Invalid hook spec '{hook_spec}'. Expected format: kit-id:hook-id",
-            err=True,
         )
         raise SystemExit(1)
 
@@ -40,13 +39,13 @@ def show_hook(hook_spec: str) -> None:
     settings_path = Path.cwd() / ".claude" / "settings.json"
 
     if not settings_path.exists():
-        click.echo(f"Error: Hook '{hook_spec}' not found.", err=True)
+        user_output(f"Error: Hook '{hook_spec}' not found.")
         raise SystemExit(1)
 
     try:
         settings = load_settings(settings_path)
     except (json.JSONDecodeError, ValidationError) as e:
-        click.echo(f"Error loading settings.json: {e}", err=True)
+        user_output(f"Error loading settings.json: {e}")
         raise SystemExit(1) from None
 
     # Find matching hook
@@ -63,13 +62,13 @@ def show_hook(hook_spec: str) -> None:
                 break
 
     if not found:
-        click.echo(f"Error: Hook '{hook_spec}' not found.", err=True)
+        user_output(f"Error: Hook '{hook_spec}' not found.")
         raise SystemExit(1)
 
     # Display hook details
     lifecycle, matcher, entry = found
-    click.echo(f"Hook: {kit_id}:{hook_id}", err=False)
-    click.echo(f"Lifecycle: {lifecycle}", err=False)
-    click.echo(f"Matcher: {matcher}", err=False)
-    click.echo(f"Timeout: {entry.timeout}s", err=False)
-    click.echo(f"Command: {entry.command}", err=False)
+    user_output(f"Hook: {kit_id}:{hook_id}")
+    user_output(f"Lifecycle: {lifecycle}")
+    user_output(f"Matcher: {matcher}")
+    user_output(f"Timeout: {entry.timeout}s")
+    user_output(f"Command: {entry.command}")

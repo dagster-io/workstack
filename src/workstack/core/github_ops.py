@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, NamedTuple
 
-import click
+from workstack.cli.output import user_output
 
 PRState = Literal["OPEN", "MERGED", "CLOSED", "NONE"]
 
@@ -345,7 +345,7 @@ class RealGitHubOps(GitHubOps):
             ]
 
             if debug:
-                click.echo(f"$ {' '.join(cmd)}")
+                user_output(f"$ {' '.join(cmd)}")
 
             stdout = self._execute(cmd, repo_root)
             return parse_github_pr_status(stdout)
@@ -451,7 +451,7 @@ class RealGitHubOps(GitHubOps):
 
         # Show output in verbose mode
         if verbose and result.stdout:
-            click.echo(result.stdout)
+            user_output(result.stdout)
 
 
 # ============================================================================

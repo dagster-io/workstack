@@ -6,8 +6,7 @@ Business logic has been extracted to workstack.core.tree_utils.
 
 from pathlib import Path
 
-import click
-
+from workstack.cli.output import user_output
 from workstack.core.context import WorkstackContext
 from workstack.core.tree_utils import (
     BranchGraph,
@@ -49,10 +48,9 @@ def build_workstack_tree(
     # Step 2: Load Graphite cache (REQUIRED - hard fail if missing)
     branch_graph = _load_graphite_branch_graph(ctx, repo_root)
     if branch_graph is None:
-        click.echo(
+        user_output(
             "Error: Graphite cache not found. The 'tree' command requires Graphite.\n"
-            "Make sure Graphite is enabled: workstack config set use-graphite true",
-            err=True,
+            "Make sure Graphite is enabled: workstack config set use-graphite true"
         )
         raise SystemExit(1)
 

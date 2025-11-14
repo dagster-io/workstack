@@ -3,6 +3,7 @@ import click
 from workstack.cli.commands.create import make_env_content, sanitize_worktree_name
 from workstack.cli.commands.switch import complete_worktree_names
 from workstack.cli.core import discover_repo_context, worktree_path_for
+from workstack.cli.output import user_output
 from workstack.core.context import WorkstackContext, create_context
 from workstack.core.repo_discovery import ensure_workstacks_dir
 
@@ -39,12 +40,12 @@ def rename_cmd(ctx: WorkstackContext, old_name: str, new_name: str, dry_run: boo
 
     # Validate old worktree exists
     if not ctx.git_ops.path_exists(old_path):
-        click.echo(f"Worktree not found: {old_path}", err=True)
+        user_output(f"Worktree not found: {old_path}")
         raise SystemExit(1)
 
     # Validate new path doesn't already exist
     if ctx.git_ops.path_exists(new_path):
-        click.echo(f"Destination already exists: {new_path}", err=True)
+        user_output(f"Destination already exists: {new_path}")
         raise SystemExit(1)
 
     # Move via git worktree move
@@ -59,9 +60,9 @@ def rename_cmd(ctx: WorkstackContext, old_name: str, new_name: str, dry_run: boo
     # Write .env file (dry-run vs real)
     env_file = new_path / ".env"
     if ctx.dry_run:
-        click.echo(f"[DRY RUN] Would write .env file: {env_file}", err=True)
+        user_output(f"[DRY RUN] Would write .env file: {env_file}")
     else:
         env_file.write_text(env_content, encoding="utf-8")
 
-    click.echo(f"Renamed worktree: {old_name} -> {sanitized_new_name}")
-    click.echo(str(new_path))
+    user_output(f"Renamed worktree: {old_name} -> {sanitized_new_name}")
+    user_output(str(new_path))

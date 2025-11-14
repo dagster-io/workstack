@@ -6,6 +6,8 @@ from pathlib import Path
 
 import click
 
+from workstack_dev.cli.output import user_output
+
 PROMPT_FILENAME = "prompt.txt"
 
 
@@ -49,7 +51,7 @@ def generate_output_filename(current_branch: str, custom_output: str | None) -> 
 def load_prompt_template(template_path: Path) -> str:
     """Load the Codex prompt template from disk."""
     if not template_path.exists():
-        click.echo(f"✗ Prompt template not found: {template_path}", err=True)
+        user_output(f"✗ Prompt template not found: {template_path}")
         raise SystemExit(1)
 
     return template_path.read_text(encoding="utf-8")
@@ -88,8 +90,8 @@ def run_codex_review(base_branch: str | None, output: str | None, option_base: s
     base = detect_base_branch(option_base or base_branch)
     output_file = generate_output_filename(current, output)
 
-    click.echo(f"Reviewing: {current} vs {base}")
-    click.echo(f"Output: {output_file}\n")
+    user_output(f"Reviewing: {current} vs {base}")
+    user_output(f"Output: {output_file}\n")
 
     template_path = Path(__file__).parent / PROMPT_FILENAME
     template = load_prompt_template(template_path)
@@ -101,7 +103,7 @@ def run_codex_review(base_branch: str | None, output: str | None, option_base: s
     )
 
     if result.returncode == 0:
-        click.echo(f"\n✓ Review complete! Saved to {output_file}")
+        user_output(f"\n✓ Review complete! Saved to {output_file}")
 
 
 @click.command(name="codex-review")
@@ -113,5 +115,5 @@ def codex_review_command(base_branch: str | None, base: str | None, output: str 
     try:
         run_codex_review(base_branch, output, base)
     except KeyboardInterrupt:
-        click.echo("\n✗ Interrupted by user", err=True)
+        user_output("\n✗ Interrupted by user")
         raise SystemExit(130) from None

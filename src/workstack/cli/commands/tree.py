@@ -3,6 +3,7 @@
 import click
 
 from workstack.cli.core import discover_repo_context
+from workstack.cli.output import user_output
 from workstack.cli.tree import build_workstack_tree
 from workstack.core.context import WorkstackContext
 from workstack.core.tree_utils import render_tree
@@ -35,9 +36,9 @@ def tree_cmd(ctx: WorkstackContext) -> None:
     roots = build_workstack_tree(ctx, repo.root)
 
     if not roots:
-        click.echo("No worktrees found", err=True)
+        user_output("No worktrees found")
         raise SystemExit(1)
 
     # Render and display
     tree_output = render_tree(roots)
-    click.echo(tree_output)
+    user_output(tree_output)

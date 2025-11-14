@@ -3,6 +3,7 @@
 import click
 
 from workstack.cli.core import discover_repo_context
+from workstack.cli.output import user_output
 from workstack.core.context import WorkstackContext
 from workstack.core.parallel_task_runner import RealParallelTaskRunner
 from workstack.status.collectors.git import GitStatusCollector
@@ -35,7 +36,7 @@ def status_cmd(ctx: WorkstackContext) -> None:
                 break
 
     if current_worktree_path is None:
-        click.echo("Error: Not in a git worktree", err=True)
+        user_output("Error: Not in a git worktree")
         raise SystemExit(1)
 
     # Create collectors

@@ -4,6 +4,8 @@ import subprocess
 
 import click
 
+from workstack_dev.cli.output import machine_output, user_output
+
 
 @click.command(name="branch-commit-count")
 def branch_commit_count_command() -> None:
@@ -18,10 +20,9 @@ def branch_commit_count_command() -> None:
 
     # Check for errors (LBYL pattern)
     if result.returncode != 0 or not result.stdout.strip():
-        click.echo(
+        user_output(
             "Error: No Graphite parent found. "
-            "Use 'gt parent' to verify branch is tracked by Graphite.",
-            err=True,
+            "Use 'gt parent' to verify branch is tracked by Graphite."
         )
         raise SystemExit(1)
 
@@ -43,4 +44,4 @@ def branch_commit_count_command() -> None:
     ).stdout.strip()
 
     # Output result
-    click.echo(count)
+    machine_output(count)

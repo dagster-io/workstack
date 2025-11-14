@@ -4,6 +4,7 @@ from pathlib import Path
 import click
 
 from workstack.cli.core import discover_repo_context
+from workstack.cli.output import user_output
 from workstack.core.context import WorkstackContext
 from workstack.core.global_config import GlobalConfig
 from workstack.core.init_utils import (
@@ -79,18 +80,18 @@ def print_shell_setup_instructions(
         completion_line: The completion command to add (e.g., "source <(workstack completion zsh)")
         wrapper_content: The full wrapper function content to add
     """
-    click.echo("\n" + "━" * 60)
-    click.echo("Shell Integration Setup")
-    click.echo("━" * 60)
-    click.echo(f"\nDetected shell: {shell} ({rc_file})")
-    click.echo("\nAdd the following to your rc file:\n")
-    click.echo("# Workstack completion")
-    click.echo(f"{completion_line}\n")
-    click.echo("# Workstack shell integration")
-    click.echo(wrapper_content)
-    click.echo("\nThen reload your shell:")
-    click.echo(f"  source {rc_file}")
-    click.echo("━" * 60)
+    user_output("\n" + "━" * 60)
+    user_output("Shell Integration Setup")
+    user_output("━" * 60)
+    user_output(f"\nDetected shell: {shell} ({rc_file})")
+    user_output("\nAdd the following to your rc file:\n")
+    user_output("# Workstack completion")
+    user_output(f"{completion_line}\n")
+    user_output("# Workstack shell integration")
+    user_output(wrapper_content)
+    user_output("\nThen reload your shell:")
+    user_output(f"  source {rc_file}")
+    user_output("━" * 60)
 
 
 def perform_shell_setup(shell_ops: ShellOps) -> bool:
@@ -100,7 +101,7 @@ def perform_shell_setup(shell_ops: ShellOps) -> bool:
     """
     shell_info = shell_ops.detect_shell()
     if not shell_info:
-        click.echo("Unable to detect shell. Skipping shell integration setup.")
+        user_output("Unable to detect shell. Skipping shell integration setup.")
         return False
 
     shell, rc_file = shell_info
@@ -109,13 +110,13 @@ def perform_shell_setup(shell_ops: ShellOps) -> bool:
     if rc_file.exists():
         rc_file = rc_file.resolve()
 
-    click.echo(f"\nDetected shell: {shell}")
-    click.echo("Shell integration provides:")
-    click.echo("  - Tab completion for workstack commands")
-    click.echo("  - Automatic worktree activation on 'workstack switch'")
+    user_output(f"\nDetected shell: {shell}")
+    user_output("Shell integration provides:")
+    user_output("  - Tab completion for workstack commands")
+    user_output("  - Automatic worktree activation on 'workstack switch'")
 
     if not click.confirm("\nShow shell integration setup instructions?", default=True):
-        click.echo("Skipping shell integration. You can run 'workstack init --shell' later.")
+        user_output("Skipping shell integration. You can run 'workstack init --shell' later.")
         return False
 
     # Generate the instructions
@@ -170,10 +171,8 @@ def init_cmd(
     if shell:
         if ctx.global_config is None:
             config_path = ctx.global_config_ops.path()
-            click.echo(f"Global config not found at {config_path}", err=True)
-            click.echo(
-                "Run 'workstack init' without --shell to create global config first.", err=True
-            )
+            user_output(f"Global config not found at {config_path}")
+            user_output("Run 'workstack init' without --shell to create global config first.")
             raise SystemExit(1)
 
         setup_complete = perform_shell_setup(ctx.shell_ops)
@@ -196,14 +195,14 @@ def init_cmd(
 
     # Handle --list-presets flag
     if list_presets:
-        click.echo("Available presets:")
+        user_output("Available presets:")
         for p in available_presets:
-            click.echo(f"  - {p}")
+            user_output(f"  - {p}")
         return
 
     # Validate preset choice
     if preset not in valid_choices:
-        click.echo(f"Invalid preset '{preset}'. Available options: {', '.join(valid_choices)}")
+        user_output(f"Invalid preset '{preset}'. Available options: {', '.join(valid_choices)}")
         raise SystemExit(1)
 
     # Track if this is the first time init is run
@@ -213,27 +212,27 @@ def init_cmd(
     if not repo and not ctx.global_config_ops.exists():
         first_time_init = True
         config_path = ctx.global_config_ops.path()
-        click.echo(f"Global config not found at {config_path}")
-        click.echo("Please provide the path where you want to store all worktrees.")
-        click.echo("(This directory will contain subdirectories for each repository)")
+        user_output(f"Global config not found at {config_path}")
+        user_output("Please provide the path where you want to store all worktrees.")
+        user_output("(This directory will contain subdirectories for each repository)")
         workstacks_root = click.prompt("Worktrees root directory", type=Path)
         workstacks_root = workstacks_root.expanduser().resolve()
         config = create_and_save_global_config(ctx, workstacks_root, shell_setup_complete=False)
         # Update context with newly created config
         ctx = dataclasses.replace(ctx, global_config=config)
-        click.echo(f"Created global config at {config_path}")
+        user_output(f"Created global config at {config_path}")
         # Show graphite status on first init
         has_graphite = detect_graphite(ctx.shell_ops)
         if has_graphite:
-            click.echo("Graphite (gt) detected - will use 'gt create' for new branches")
+            user_output("Graphite (gt) detected - will use 'gt create' for new branches")
         else:
-            click.echo("Graphite (gt) not detected - will use 'git' for branch creation")
+            user_output("Graphite (gt) not detected - will use 'git' for branch creation")
 
     # When --repo is set, verify that global config exists
     if repo and not ctx.global_config_ops.exists():
         config_path = ctx.global_config_ops.path()
-        click.echo(f"Global config not found at {config_path}", err=True)
-        click.echo("Run 'workstack init' without --repo to create global config first.", err=True)
+        user_output(f"Global config not found at {config_path}")
+        user_output("Run 'workstack init' without --repo to create global config first.")
         raise SystemExit(1)
 
     # Now proceed with repo-specific setup
@@ -249,7 +248,7 @@ def init_cmd(
         cfg_path = workstacks_dir / "config.toml"
 
     if cfg_path.exists() and not force:
-        click.echo(f"Config already exists: {cfg_path}. Use --force to overwrite.")
+        user_output(f"Config already exists: {cfg_path}. Use --force to overwrite.")
         raise SystemExit(1)
 
     effective_preset: str | None
@@ -261,7 +260,7 @@ def init_cmd(
 
     content = render_config_template(presets_dir, effective_preset)
     cfg_path.write_text(content, encoding="utf-8")
-    click.echo(f"Wrote {cfg_path}")
+    user_output(f"Wrote {cfg_path}")
 
     # Check for .gitignore and add .PLAN.md and .env
     gitignore_path = repo_context.root / ".gitignore"
@@ -291,7 +290,7 @@ def init_cmd(
         # Write if modified
         if modified:
             gitignore_path.write_text(gitignore_content, encoding="utf-8")
-            click.echo(f"Updated {gitignore_path}")
+            user_output(f"Updated {gitignore_path}")
 
     # On first-time init, offer shell setup if not already completed
     if first_time_init:

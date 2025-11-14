@@ -9,6 +9,8 @@ from pathlib import Path
 
 import click
 
+from workstack_dev.cli.output import user_output
+
 # PyPI CDN propagation typically takes 3-5 seconds
 PYPI_PROPAGATION_WAIT_SECONDS = 5
 
@@ -39,25 +41,25 @@ def run_command(cmd: list[str], cwd: Path | None = None, description: str = "") 
         )
         return result.stdout.strip()
     except subprocess.CalledProcessError as error:
-        click.echo(f"✗ Failed: {description}", err=True)
-        click.echo(f"  Command: {' '.join(cmd)}", err=True)
-        click.echo(f"  Error: {error.stderr}", err=True)
+        user_output(f"✗ Failed: {description}")
+        user_output(f"  Command: {' '.join(cmd)}")
+        user_output(f"  Error: {error.stderr}")
         raise SystemExit(1) from error
 
 
 def run_git_pull(repo_root: Path, dry_run: bool) -> None:
     """Pull latest changes from remote."""
     if dry_run:
-        click.echo("[DRY RUN] Would run: git pull")
+        user_output("[DRY RUN] Would run: git pull")
         return
     run_command(["git", "pull"], cwd=repo_root, description="git pull")
-    click.echo("✓ Pulled latest changes")
+    user_output("✓ Pulled latest changes")
 
 
 def ensure_branch_is_in_sync(repo_root: Path, dry_run: bool) -> None:
     """Validate that the current branch tracks its upstream and is up to date."""
     if dry_run:
-        click.echo("[DRY RUN] Would run: git fetch --prune")
+        user_output("[DRY RUN] Would run: git fetch --prune")
     else:
         run_command(
             ["git", "fetch", "--prune"],
@@ -80,8 +82,8 @@ def ensure_branch_is_in_sync(repo_root: Path, dry_run: bool) -> None:
 
     branch_summary = first_line[3:]
     if "..." not in branch_summary:
-        click.echo("✗ Current branch is not tracking a remote upstream", err=True)
-        click.echo("  Run `git push -u origin <branch>` before publishing", err=True)
+        user_output("✗ Current branch is not tracking a remote upstream")
+        user_output("  Run `git push -u origin <branch>` before publishing")
         raise SystemExit(1)
 
     local_branch, remote_section = branch_summary.split("...", 1)
@@ -110,27 +112,21 @@ def ensure_branch_is_in_sync(repo_root: Path, dry_run: bool) -> None:
                 remote_gone = True
 
     if remote_gone:
-        click.echo("✗ Upstream branch is gone", err=True)
-        click.echo(f"  Local branch: {local_branch}", err=True)
-        click.echo(f"  Last known upstream: {remote_name}", err=True)
-        click.echo("  Re-create or change the upstream before publishing", err=True)
+        user_output("✗ Upstream branch is gone")
+        user_output(f"  Local branch: {local_branch}")
+        user_output(f"  Last known upstream: {remote_name}")
+        user_output("  Re-create or change the upstream before publishing")
         raise SystemExit(1)
 
     if behind > 0:
-        click.echo("✗ Current branch is behind its upstream", err=True)
-        click.echo(f"  Local branch: {local_branch}", err=True)
-        click.echo(f"  Upstream: {remote_name}", err=True)
+        user_output("✗ Current branch is behind its upstream")
+        user_output(f"  Local branch: {local_branch}")
+        user_output(f"  Upstream: {remote_name}")
         if ahead > 0:
-            click.echo(
-                f"  Diverged by ahead {ahead} / behind {behind} commit(s)",
-                err=True,
-            )
+            user_output(f"  Diverged by ahead {ahead} / behind {behind} commit(s)")
         else:
-            click.echo(f"  Behind by {behind} commit(s)", err=True)
-        click.echo(
-            "  Pull and reconcile changes (e.g., `git pull --rebase`) before publishing",
-            err=True,
-        )
+            user_output(f"  Behind by {behind} commit(s)")
+        user_output("  Pull and reconcile changes (e.g., `git pull --rebase`) before publishing")
         raise SystemExit(1)
 
 
@@ -151,7 +147,7 @@ def get_workspace_packages(repo_root: Path) -> list[PackageInfo]:
 
     for pkg in packages:
         if not pkg.pyproject_path.exists():
-            click.echo(f"✗ Package not found: {pkg.name} at {pkg.path}", err=True)
+            user_output(f"✗ Package not found: {pkg.name} at {pkg.path}")
             raise SystemExit(1)
 
     return packages
@@ -160,14 +156,14 @@ def get_workspace_packages(repo_root: Path) -> list[PackageInfo]:
 def get_current_version(pyproject_path: Path) -> str:
     """Parse current version from pyproject.toml."""
     if not pyproject_path.exists():
-        click.echo(f"✗ pyproject.toml not found at {pyproject_path}", err=True)
+        user_output(f"✗ pyproject.toml not found at {pyproject_path}")
         raise SystemExit(1)
 
     content = pyproject_path.read_text(encoding="utf-8")
     match = re.search(r'^version\s*=\s*"([^"]+)"', content, re.MULTILINE)
 
     if not match:
-        click.echo("✗ Could not find version in pyproject.toml", err=True)
+        user_output("✗ Could not find version in pyproject.toml")
         raise SystemExit(1)
 
     return match.group(1)
@@ -177,11 +173,11 @@ def bump_patch_version(version: str) -> str:
     """Increment the patch version number."""
     parts = version.split(".")
     if len(parts) != 3:
-        click.echo(f"✗ Invalid version format: {version}", err=True)
+        user_output(f"✗ Invalid version format: {version}")
         raise SystemExit(1)
 
     if not parts[2].isdigit():
-        click.echo(f"✗ Invalid patch version: {parts[2]}", err=True)
+        user_output(f"✗ Invalid patch version: {parts[2]}")
         raise SystemExit(1)
 
     parts[2] = str(int(parts[2]) + 1)
@@ -195,11 +191,11 @@ def update_version(pyproject_path: Path, old_version: str, new_version: str, dry
     new_line = f'version = "{new_version}"'
 
     if old_line not in content:
-        click.echo(f"✗ Could not find version line in pyproject.toml: {old_line}", err=True)
+        user_output(f"✗ Could not find version line in pyproject.toml: {old_line}")
         raise SystemExit(1)
 
     if dry_run:
-        click.echo(f"[DRY RUN] Would update {pyproject_path.name}: {old_line} -> {new_line}")
+        user_output(f"[DRY RUN] Would update {pyproject_path.name}: {old_line} -> {new_line}")
         return
 
     updated_content = content.replace(old_line, new_line)
@@ -224,7 +220,7 @@ def update_version_py(
         return False
 
     if dry_run:
-        click.echo(f"[DRY RUN] Would update {version_py_path.name}: {old_line} -> {new_line}")
+        user_output(f"[DRY RUN] Would update {version_py_path.name}: {old_line} -> {new_line}")
         return True
 
     updated_content = content.replace(old_line, new_line)
@@ -240,9 +236,9 @@ def validate_version_consistency(packages: list[PackageInfo]) -> str:
 
     unique_versions = set(versions.values())
     if len(unique_versions) > 1:
-        click.echo("✗ Version mismatch across packages:", err=True)
+        user_output("✗ Version mismatch across packages:")
         for name, version in versions.items():
-            click.echo(f"  {name}: {version}", err=True)
+            user_output(f"  {name}: {version}")
         raise SystemExit(1)
 
     return list(unique_versions)[0]
@@ -259,7 +255,7 @@ def synchronize_versions(
         # Update pyproject.toml
         update_version(pkg.pyproject_path, old_version, new_version, dry_run)
         if not dry_run:
-            click.echo(f"  ✓ Updated {pkg.name}: {old_version} → {new_version}")
+            user_output(f"  ✓ Updated {pkg.name}: {old_version} → {new_version}")
 
         # Update version.py if it exists
         package_name = pkg.name.replace("-", "_")
@@ -267,22 +263,22 @@ def synchronize_versions(
 
         if update_version_py(version_py_path, old_version, new_version, dry_run):
             if not dry_run:
-                click.echo(f"  ✓ Updated {version_py_path.name} for {pkg.name}")
+                user_output(f"  ✓ Updated {version_py_path.name} for {pkg.name}")
 
 
 def run_uv_sync(repo_root: Path, dry_run: bool) -> None:
     """Update lockfile with uv sync."""
     if dry_run:
-        click.echo("[DRY RUN] Would run: uv sync")
+        user_output("[DRY RUN] Would run: uv sync")
         return
     run_command(["uv", "sync"], cwd=repo_root, description="uv sync")
-    click.echo("✓ Dependencies synced")
+    user_output("✓ Dependencies synced")
 
 
 def build_package(package: PackageInfo, out_dir: Path, dry_run: bool) -> None:
     """Build a specific package in the workspace."""
     if dry_run:
-        click.echo(f"[DRY RUN] Would run: uv build --package {package.name} -o {out_dir}")
+        user_output(f"[DRY RUN] Would run: uv build --package {package.name} -o {out_dir}")
         return
 
     run_command(
@@ -308,10 +304,10 @@ def build_all_packages(
     elif not dry_run:
         staging_dir.mkdir(parents=True, exist_ok=True)
 
-    click.echo("\nBuilding packages...")
+    user_output("\nBuilding packages...")
     for pkg in packages:
         build_package(pkg, staging_dir, dry_run)
-        click.echo(f"  ✓ Built {pkg.name}")
+        user_output(f"  ✓ Built {pkg.name}")
 
     return staging_dir
 
@@ -324,7 +320,7 @@ def validate_build_artifacts(
 ) -> None:
     """Verify all expected artifacts exist."""
     if dry_run:
-        click.echo("[DRY RUN] Would validate artifacts exist")
+        user_output("[DRY RUN] Would validate artifacts exist")
         return
 
     for pkg in packages:
@@ -333,26 +329,26 @@ def validate_build_artifacts(
         sdist = staging_dir / f"{normalized}-{version}.tar.gz"
 
         if not wheel.exists():
-            click.echo(f"✗ Missing wheel: {wheel}", err=True)
+            user_output(f"✗ Missing wheel: {wheel}")
             raise SystemExit(1)
         if not sdist.exists():
-            click.echo(f"✗ Missing sdist: {sdist}", err=True)
+            user_output(f"✗ Missing sdist: {sdist}")
             raise SystemExit(1)
 
-    click.echo("  ✓ All artifacts validated")
+    user_output("  ✓ All artifacts validated")
 
 
 def publish_package(package: PackageInfo, staging_dir: Path, version: str, dry_run: bool) -> None:
     """Publish a single package to PyPI."""
     if dry_run:
-        click.echo(f"[DRY RUN] Would publish {package.name} to PyPI")
+        user_output(f"[DRY RUN] Would publish {package.name} to PyPI")
         return
 
     normalized = normalize_package_name(package.name)
     artifacts = list(staging_dir.glob(f"{normalized}-{version}*"))
 
     if not artifacts:
-        click.echo(f"✗ No artifacts found for {package.name} {version}", err=True)
+        user_output(f"✗ No artifacts found for {package.name} {version}")
         raise SystemExit(1)
 
     run_command(
@@ -365,10 +361,10 @@ def publish_package(package: PackageInfo, staging_dir: Path, version: str, dry_r
 def wait_for_pypi_availability(package: PackageInfo, version: str, dry_run: bool) -> None:
     """Wait for package to be available on PyPI."""
     if dry_run:
-        click.echo(f"[DRY RUN] Would wait for {package.name} {version} on PyPI")
+        user_output(f"[DRY RUN] Would wait for {package.name} {version} on PyPI")
         return
 
-    click.echo(f"  ⏳ Waiting {PYPI_PROPAGATION_WAIT_SECONDS}s for PyPI propagation...")
+    user_output(f"  ⏳ Waiting {PYPI_PROPAGATION_WAIT_SECONDS}s for PyPI propagation...")
     time.sleep(PYPI_PROPAGATION_WAIT_SECONDS)
 
 
@@ -379,11 +375,11 @@ def publish_all_packages(
     dry_run: bool,
 ) -> None:
     """Publish all packages in dependency order."""
-    click.echo("\nPublishing to PyPI...")
+    user_output("\nPublishing to PyPI...")
 
     for index, pkg in enumerate(packages):
         publish_package(pkg, staging_dir, version, dry_run)
-        click.echo(f"  ✓ Published {pkg.name} {version}")
+        user_output(f"  ✓ Published {pkg.name} {version}")
 
         if index < len(packages) - 1:
             wait_for_pypi_availability(pkg, version, dry_run)
@@ -413,8 +409,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>"""
             files_to_add.append(str(version_py_path.relative_to(repo_root)))
 
     if dry_run:
-        click.echo(f"[DRY RUN] Would run: git add {' '.join(files_to_add)}")
-        click.echo(f'[DRY RUN] Would run: git commit -m "Published {version}..."')
+        user_output(f"[DRY RUN] Would run: git add {' '.join(files_to_add)}")
+        user_output(f'[DRY RUN] Would run: git commit -m "Published {version}..."')
         return "abc123f"
 
     run_command(
@@ -439,7 +435,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"""
 def push_to_remote(repo_root: Path, dry_run: bool) -> None:
     """Push commits to remote repository."""
     if dry_run:
-        click.echo("[DRY RUN] Would run: git push")
+        user_output("[DRY RUN] Would run: git push")
         return
     run_command(["git", "push"], cwd=repo_root, description="git push")
 
@@ -467,17 +463,17 @@ def filter_git_status(status: str, excluded_files: set[str]) -> list[str]:
 def publish_workflow(dry_run: bool) -> None:
     """Execute the synchronized multi-package publishing workflow."""
     if dry_run:
-        click.echo("[DRY RUN MODE - No changes will be made]\n")
+        user_output("[DRY RUN MODE - No changes will be made]\n")
 
     repo_root = Path.cwd()
     if not (repo_root / "pyproject.toml").exists():
-        click.echo("✗ Not in repository root (pyproject.toml not found)", err=True)
-        click.echo("  Run this command from the repository root directory", err=True)
+        user_output("✗ Not in repository root (pyproject.toml not found)")
+        user_output("  Run this command from the repository root directory")
         raise SystemExit(1)
 
-    click.echo("Discovering workspace packages...")
+    user_output("Discovering workspace packages...")
     packages = get_workspace_packages(repo_root)
-    click.echo(f"  ✓ Found {len(packages)} packages: {', '.join(pkg.name for pkg in packages)}")
+    user_output(f"  ✓ Found {len(packages)} packages: {', '.join(pkg.name for pkg in packages)}")
 
     status = get_git_status(repo_root)
     if status:
@@ -489,21 +485,21 @@ def publish_workflow(dry_run: bool) -> None:
         lines = filter_git_status(status, excluded_files)
 
         if lines:
-            click.echo("✗ Working directory has uncommitted changes:", err=True)
+            user_output("✗ Working directory has uncommitted changes:")
             for line in lines:
-                click.echo(f"  {line}", err=True)
+                user_output(f"  {line}")
             raise SystemExit(1)
 
-    click.echo("\nStarting synchronized publish workflow...\n")
+    user_output("\nStarting synchronized publish workflow...\n")
 
     ensure_branch_is_in_sync(repo_root, dry_run)
     run_git_pull(repo_root, dry_run)
 
     old_version = validate_version_consistency(packages)
-    click.echo(f"  ✓ Current version: {old_version} (consistent)")
+    user_output(f"  ✓ Current version: {old_version} (consistent)")
 
     new_version = bump_patch_version(old_version)
-    click.echo(f"\nBumping version: {old_version} → {new_version}")
+    user_output(f"\nBumping version: {old_version} → {new_version}")
     synchronize_versions(packages, old_version, new_version, dry_run)
 
     run_uv_sync(repo_root, dry_run)
@@ -514,14 +510,14 @@ def publish_workflow(dry_run: bool) -> None:
     publish_all_packages(packages, staging_dir, new_version, dry_run)
 
     sha = commit_changes(repo_root, packages, new_version, dry_run)
-    click.echo(f'\n✓ Committed: {sha} "Published {new_version}"')
+    user_output(f'\n✓ Committed: {sha} "Published {new_version}"')
 
     push_to_remote(repo_root, dry_run)
-    click.echo("✓ Pushed to origin")
+    user_output("✓ Pushed to origin")
 
-    click.echo("\n✅ Successfully published:")
+    user_output("\n✅ Successfully published:")
     for pkg in packages:
-        click.echo(f"  • {pkg.name} {new_version}")
+        user_output(f"  • {pkg.name} {new_version}")
 
 
 def run_pep723_script(dry_run: bool) -> None:
@@ -536,5 +532,5 @@ def publish_to_pypi_command(dry_run: bool) -> None:
     try:
         run_pep723_script(dry_run)
     except KeyboardInterrupt:
-        click.echo("\n✗ Interrupted by user", err=True)
+        user_output("\n✗ Interrupted by user")
         raise SystemExit(130) from None

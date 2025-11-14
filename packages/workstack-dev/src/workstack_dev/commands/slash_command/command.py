@@ -6,6 +6,8 @@ from pathlib import Path
 
 import click
 
+from workstack_dev.cli.output import user_output
+
 
 def find_command_file(command_name: str) -> Path | None:
     """
@@ -82,8 +84,8 @@ def process_arguments(prompt: str, arguments: list[str]) -> str:
     if not arguments:
         # If no arguments provided but $ARGUMENTS exists, warn user
         if "$ARGUMENTS" in prompt:
-            click.echo("Warning: Command expects arguments but none provided", err=True)
-            click.echo("The $ARGUMENTS placeholder will be replaced with empty string", err=True)
+            user_output("Warning: Command expects arguments but none provided")
+            user_output("The $ARGUMENTS placeholder will be replaced with empty string")
             return prompt.replace("$ARGUMENTS", "")
         return prompt
 
@@ -128,23 +130,23 @@ def slash_command_command(
     command_file = find_command_file(command_name)
 
     if command_file is None:
-        click.echo(f"Error: Command '{command_name}' not found", err=True)
-        click.echo("\nSearched in:", err=True)
-        click.echo(f"  - {Path.cwd() / '.claude' / 'commands'}", err=True)
-        click.echo(f"  - {Path.home() / '.claude' / 'commands'}", err=True)
+        user_output(f"Error: Command '{command_name}' not found")
+        user_output("\nSearched in:")
+        user_output(f"  - {Path.cwd() / '.claude' / 'commands'}")
+        user_output(f"  - {Path.home() / '.claude' / 'commands'}")
         raise SystemExit(1)
 
     # Read and process the command file
     content = command_file.read_text(encoding="utf-8")
 
     if not content:
-        click.echo(f"Error: Command file '{command_file}' is empty", err=True)
+        user_output(f"Error: Command file '{command_file}' is empty")
         raise SystemExit(1)
 
     prompt = strip_frontmatter(content)
 
     if not prompt:
-        click.echo(f"Error: Command file '{command_file}' contains only frontmatter", err=True)
+        user_output(f"Error: Command file '{command_file}' contains only frontmatter")
         raise SystemExit(1)
 
     # Process arguments
@@ -166,7 +168,7 @@ def slash_command_command(
     try:
         subprocess.run(["which", "claude"], capture_output=True, check=True)
     except subprocess.CalledProcessError as e:
-        click.echo("Error: 'claude' command not found. Is Claude Code installed?", err=True)
+        user_output("Error: 'claude' command not found. Is Claude Code installed?")
         raise SystemExit(1) from e
 
     # Execute claude command

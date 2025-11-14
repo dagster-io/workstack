@@ -1,5 +1,6 @@
 import click
 
+from workstack.cli.output import user_output
 from workstack.core.context import WorkstackContext
 
 
@@ -33,7 +34,7 @@ def completion_bash(ctx: WorkstackContext) -> None:
     You will need to start a new shell for this setup to take effect.
     """
     script = ctx.completion_ops.generate_bash()
-    click.echo(script, nl=False)
+    user_output(script, nl=False)
 
 
 @completion_group.command("zsh")
@@ -60,7 +61,7 @@ def completion_zsh(ctx: WorkstackContext) -> None:
     You will need to start a new shell for this setup to take effect.
     """
     script = ctx.completion_ops.generate_zsh()
-    click.echo(script, nl=False)
+    user_output(script, nl=False)
 
 
 @completion_group.command("fish")
@@ -85,4 +86,4 @@ def completion_fish(ctx: WorkstackContext) -> None:
     You will need to start a new shell for this setup to take effect.
     """
     script = ctx.completion_ops.generate_fish()
-    click.echo(script, nl=False)
+    user_output(script, nl=False)

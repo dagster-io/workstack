@@ -1,6 +1,7 @@
 """Core landing sequence execution for land-stack command."""
 
 import subprocess
+from collections.abc import Callable
 from pathlib import Path
 
 import click
@@ -9,6 +10,44 @@ from workstack.cli.commands.land_stack.discovery import _get_all_children
 from workstack.cli.commands.land_stack.models import BranchPR
 from workstack.cli.commands.land_stack.output import _emit, _format_cli_command, _format_description
 from workstack.core.context import WorkstackContext
+
+
+def _execute_and_emit(
+    operation: Callable[[], None] | None,
+    cli_command: str,
+    *,
+    dry_run: bool,
+    script_mode: bool,
+) -> None:
+    """Execute operation (if not dry_run) and emit CLI command.
+
+    Args:
+        operation: Operation to execute (None to only emit)
+        cli_command: CLI command string to display
+        dry_run: If True, skip operation execution
+        script_mode: True when running in --script mode (output to stderr)
+    """
+    if operation and not dry_run:
+        operation()
+    check = click.style("✓", fg="green")
+    _emit(_format_cli_command(cli_command, check), script_mode=script_mode)
+
+
+def _execute_sequence(
+    operations: list[tuple[Callable[[], None], str]],
+    *,
+    dry_run: bool,
+    script_mode: bool,
+) -> None:
+    """Execute sequence of operations and emit corresponding commands.
+
+    Args:
+        operations: List of (operation, cli_command) tuples
+        dry_run: If True, skip operation execution
+        script_mode: True when running in --script mode (output to stderr)
+    """
+    for operation, cli_cmd in operations:
+        _execute_and_emit(operation, cli_cmd, dry_run=dry_run, script_mode=script_mode)
 
 
 def _execute_checkout_phase(
@@ -28,20 +67,24 @@ def _execute_checkout_phase(
         dry_run: If True, show what would be done without executing
         script_mode: True when running in --script mode (output to stderr)
     """
-    check = click.style("✓", fg="green")
-
     if dry_run:
-        _emit(_format_cli_command(f"git checkout {branch}", check), script_mode=script_mode)
+        # Dry-run: always show checkout command
+        _execute_and_emit(None, f"git checkout {branch}", dry_run=dry_run, script_mode=script_mode)
     else:
         # Check if we're already on the target branch (LBYL)
         # This handles the case where we're in a linked worktree on the branch being landed
         current_branch = ctx.git_ops.get_current_branch(Path.cwd())
         if current_branch != branch:
             # Only checkout if we're not already on the branch
-            ctx.git_ops.checkout_branch(repo_root, branch)
-            _emit(_format_cli_command(f"git checkout {branch}", check), script_mode=script_mode)
+            _execute_and_emit(
+                lambda: ctx.git_ops.checkout_branch(repo_root, branch),
+                f"git checkout {branch}",
+                dry_run=dry_run,
+                script_mode=script_mode,
+            )
         else:
             # Already on branch, display as already done
+            check = click.style("✓", fg="green")
             already_msg = f"already on {branch}"
             _emit(_format_description(already_msg, check), script_mode=script_mode)
 
@@ -65,12 +108,9 @@ def _execute_merge_phase(
         dry_run: If True, show what would be done without executing
         script_mode: True when running in --script mode (output to stderr)
     """
-    check = click.style("✓", fg="green")
     merge_cmd = f"gh pr merge {pr_number} --squash"
 
-    if dry_run:
-        _emit(_format_cli_command(merge_cmd, check), script_mode=script_mode)
-    else:
+    def merge_pr() -> None:
         # Use gh pr merge with squash strategy (Graphite's default)
         cmd = ["gh", "pr", "merge", str(pr_number), "--squash"]
         result = subprocess.run(
@@ -83,7 +123,7 @@ def _execute_merge_phase(
         if verbose:
             _emit(result.stdout, script_mode=script_mode)
 
-        _emit(_format_cli_command(merge_cmd, check), script_mode=script_mode)
+    _execute_and_emit(merge_pr, merge_cmd, dry_run=dry_run, script_mode=script_mode)
 
 
 def _execute_sync_trunk_phase(
@@ -105,30 +145,26 @@ def _execute_sync_trunk_phase(
         dry_run: If True, show what would be done without executing
         script_mode: True when running in --script mode (output to stderr)
     """
-    check = click.style("✓", fg="green")
-
-    if dry_run:
-        _emit(_format_cli_command(f"git fetch origin {parent}", check), script_mode=script_mode)
-        _emit(_format_cli_command(f"git checkout {parent}", check), script_mode=script_mode)
-        _emit(
-            _format_cli_command(f"git pull --ff-only origin {parent}", check),
-            script_mode=script_mode,
-        )
-        _emit(_format_cli_command(f"git checkout {branch}", check), script_mode=script_mode)
-    else:
-        # Sync trunk to include just-merged PR commits
-        ctx.git_ops.fetch_branch(repo_root, "origin", parent)
-        ctx.git_ops.checkout_branch(repo_root, parent)
-        ctx.git_ops.pull_branch(repo_root, "origin", parent, ff_only=True)
-        ctx.git_ops.checkout_branch(repo_root, branch)
-
-        _emit(_format_cli_command(f"git fetch origin {parent}", check), script_mode=script_mode)
-        _emit(_format_cli_command(f"git checkout {parent}", check), script_mode=script_mode)
-        _emit(
-            _format_cli_command(f"git pull --ff-only origin {parent}", check),
-            script_mode=script_mode,
-        )
-        _emit(_format_cli_command(f"git checkout {branch}", check), script_mode=script_mode)
+    # Sync trunk to include just-merged PR commits
+    operations = [
+        (
+            lambda: ctx.git_ops.fetch_branch(repo_root, "origin", parent),
+            f"git fetch origin {parent}",
+        ),
+        (
+            lambda: ctx.git_ops.checkout_branch(repo_root, parent),
+            f"git checkout {parent}",
+        ),
+        (
+            lambda: ctx.git_ops.pull_branch(repo_root, "origin", parent, ff_only=True),
+            f"git pull --ff-only origin {parent}",
+        ),
+        (
+            lambda: ctx.git_ops.checkout_branch(repo_root, branch),
+            f"git checkout {branch}",
+        ),
+    ]
+    _execute_sequence(operations, dry_run=dry_run, script_mode=script_mode)
 
 
 def _execute_restack_phase(
@@ -148,13 +184,12 @@ def _execute_restack_phase(
         dry_run: If True, show what would be done without executing
         script_mode: True when running in --script mode (output to stderr)
     """
-    check = click.style("✓", fg="green")
-
-    if dry_run:
-        _emit(_format_cli_command("gt sync -f", check), script_mode=script_mode)
-    else:
-        ctx.graphite_ops.sync(repo_root, force=True, quiet=not verbose)
-        _emit(_format_cli_command("gt sync -f", check), script_mode=script_mode)
+    _execute_and_emit(
+        lambda: ctx.graphite_ops.sync(repo_root, force=True, quiet=not verbose),
+        "gt sync -f",
+        dry_run=dry_run,
+        script_mode=script_mode,
+    )
 
 
 def _force_push_upstack_branches(
@@ -184,19 +219,19 @@ def _force_push_upstack_branches(
     Returns:
         List of upstack branch names that were force-pushed
     """
-    check = click.style("✓", fg="green")
-    upstack_branches: list[str] = []
-
     # Get all children of the current branch recursively
     upstack_branches = _get_all_children(branch, all_branches_metadata)
 
     for upstack_branch in upstack_branches:
         submit_cmd = f"gt submit --branch {upstack_branch} --no-edit"
-        if dry_run:
-            _emit(_format_cli_command(submit_cmd, check), script_mode=script_mode)
-        else:
-            ctx.graphite_ops.submit_branch(repo_root, upstack_branch, quiet=not verbose)
-            _emit(_format_cli_command(submit_cmd, check), script_mode=script_mode)
+        _execute_and_emit(
+            lambda b=upstack_branch: ctx.graphite_ops.submit_branch(
+                repo_root, b, quiet=not verbose
+            ),
+            submit_cmd,
+            dry_run=dry_run,
+            script_mode=script_mode,
+        )
 
     return upstack_branches
 
@@ -231,8 +266,6 @@ def _update_upstack_pr_bases(
         dry_run: If True, show what would be done without executing
         script_mode: True when running in --script mode (output to stderr)
     """
-    check = click.style("✓", fg="green")
-
     for upstack_branch in upstack_branches:
         # Get updated parent from Graphite metadata (should be correct after sync)
         branch_metadata = all_branches_metadata.get(upstack_branch)
@@ -265,11 +298,14 @@ def _update_upstack_pr_bases(
                 _emit(msg, script_mode=script_mode)
 
             edit_cmd = f"gh pr edit {pr_number} --base {expected_parent}"
-            if dry_run:
-                _emit(_format_cli_command(edit_cmd, check), script_mode=script_mode)
-            else:
-                ctx.github_ops.update_pr_base_branch(repo_root, pr_number, expected_parent)
-                _emit(_format_cli_command(edit_cmd, check), script_mode=script_mode)
+            _execute_and_emit(
+                lambda pr=pr_number, parent=expected_parent: ctx.github_ops.update_pr_base_branch(
+                    repo_root, pr, parent
+                ),
+                edit_cmd,
+                dry_run=dry_run,
+                script_mode=script_mode,
+            )
         elif verbose:
             _emit(
                 f"  PR #{pr_number} base already correct: {current_base}",

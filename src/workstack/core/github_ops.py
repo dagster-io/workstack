@@ -503,3 +503,19 @@ class DryRunGitHubOps(GitHubOps):
     def get_pr_mergeability(self, repo_root: Path, pr_number: int) -> PRMergeability | None:
         """Delegate read operation to wrapped implementation."""
         return self._wrapped.get_pr_mergeability(repo_root, pr_number)
+
+    def merge_pr(
+        self,
+        repo_root: Path,
+        pr_number: int,
+        *,
+        squash: bool = True,
+        verbose: bool = False,
+    ) -> None:
+        """Print dry-run message for PR merge."""
+        import click
+
+        cmd = f"gh pr merge {pr_number}"
+        if squash:
+            cmd += " --squash"
+        click.echo(f"  {cmd}")

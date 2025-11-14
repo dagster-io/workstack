@@ -31,6 +31,22 @@ artifacts = [
     ".claude/docs/workstack/EXAMPLES.md",
 ]
 
+[kits.dignified-python-313]
+kit_id = "dignified-python-313"
+source_type = "bundled"
+version = "0.1.0"
+artifacts = [
+    ".claude/skills/dignified-python/SKILL.md",
+]
+
+[[kits.dignified-python-313.hooks]]
+id = "dignified-python-reminder-hook"
+lifecycle = "UserPromptSubmit"
+matcher = "*.py"
+invocation = "dot-agent run dignified-python-313 dignified-python-reminder-hook"
+description = "Output dignified-python compliance reminder when Python files are in context"
+timeout = 30
+
 [kits.devrun]
 kit_id = "devrun"
 source_type = "bundled"
@@ -51,20 +67,4 @@ lifecycle = "UserPromptSubmit"
 matcher = "*"
 invocation = "dot-agent run devrun devrun-reminder-hook"
 description = "Output devrun agent reminder on every prompt"
-timeout = 30
-
-[kits.dignified-python-313]
-kit_id = "dignified-python-313"
-source_type = "bundled"
-version = "0.1.0"
-artifacts = [
-    ".claude/skills/dignified-python/SKILL.md",
-]
-
-[[kits.dignified-python-313.hooks]]
-id = "dignified-python-reminder-hook"
-lifecycle = "UserPromptSubmit"
-matcher = "*.py"
-invocation = "dot-agent run dignified-python-313 dignified-python-reminder-hook"
-description = "Output dignified-python compliance reminder when Python files are in context"
 timeout = 30

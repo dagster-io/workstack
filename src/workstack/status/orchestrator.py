@@ -114,10 +114,8 @@ class StatusOrchestrator:
         Returns:
             WorktreeDisplayInfo with basic information
         """
-        # Check paths exist before resolution to avoid OSError
-        is_root = False
-        if worktree_path.exists() and repo_root.exists():
-            is_root = worktree_path.resolve() == repo_root.resolve()
+        # Check if this is the root worktree
+        is_root = worktree_path.resolve() == repo_root.resolve()
 
         name = "root" if is_root else worktree_path.name
         branch = ctx.git_ops.get_current_branch(worktree_path)
@@ -158,9 +156,7 @@ class StatusOrchestrator:
                 continue
 
             # Determine if this is the root worktree
-            is_root = False
-            if repo_root.exists():
-                is_root = wt_resolved == repo_root.resolve()
+            is_root = wt_resolved == repo_root.resolve()
 
             name = "root" if is_root else wt.path.name
 

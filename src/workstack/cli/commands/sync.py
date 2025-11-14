@@ -131,7 +131,7 @@ def sync_cmd(
 
     # Step 3: Switch to root (only if not already at root)
     # In pure test mode with sentinel paths, os.chdir() will fail gracefully
-    if ctx.cwd.resolve() != repo.root:
+    if ctx.cwd.resolve() != repo.root.resolve():
         try:
             os.chdir(repo.root)
             ctx = regenerate_context(ctx)

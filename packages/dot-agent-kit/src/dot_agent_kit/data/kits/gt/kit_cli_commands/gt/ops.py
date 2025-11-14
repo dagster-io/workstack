@@ -74,6 +74,17 @@ class GitGtKitOps(ABC):
             Number of commits, 0 if command fails
         """
 
+    @abstractmethod
+    def get_trunk_branch(self) -> str:
+        """Get the trunk branch name for the repository.
+
+        Detects the trunk branch by checking git's remote HEAD reference,
+        falling back to common trunk branch names if detection fails.
+
+        Returns:
+            Trunk branch name (e.g., 'main', 'master')
+        """
+
 
 class GraphiteGtKitOps(ABC):
     """Graphite (gt) operations interface for GT kit commands."""

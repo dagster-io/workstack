@@ -1,6 +1,5 @@
 """Application context with dependency injection."""
 
-import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -50,7 +49,16 @@ class WorkstackContext:
     local_config: LoadedConfig
     repo: RepoContext | NoRepoSentinel
     dry_run: bool
-    trunk_branch: str | None
+
+    @property
+    def trunk_branch(self) -> str | None:
+        """Get the trunk branch name from git detection.
+
+        Returns None if not in a repository, otherwise uses git_ops to detect trunk.
+        """
+        if isinstance(self.repo, NoRepoSentinel):
+            return None
+        return self.git_ops.get_trunk_branch(self.repo.root)
 
     @staticmethod
     def minimal(git_ops: GitOps, cwd: Path, dry_run: bool = False) -> "WorkstackContext":
@@ -114,7 +122,6 @@ class WorkstackContext:
             local_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
             repo=NoRepoSentinel(),
             dry_run=dry_run,
-            trunk_branch=None,
         )
 
     @staticmethod
@@ -131,7 +138,6 @@ class WorkstackContext:
         local_config: LoadedConfig | None = None,
         repo: RepoContext | NoRepoSentinel | None = None,
         dry_run: bool = False,
-        trunk_branch: str | None = None,
     ) -> "WorkstackContext":
         """Create test context with optional pre-configured ops.
 
@@ -156,7 +162,6 @@ class WorkstackContext:
             local_config: Optional LoadedConfig. If None, uses empty defaults.
             repo: Optional RepoContext or NoRepoSentinel. If None, uses NoRepoSentinel().
             dry_run: Whether to enable dry-run mode (default False).
-            trunk_branch: Optional trunk branch name. If None, no trunk configured.
 
         Returns:
             WorkstackContext configured with provided values and test defaults
@@ -243,42 +248,7 @@ class WorkstackContext:
             local_config=local_config,
             repo=repo,
             dry_run=dry_run,
-            trunk_branch=trunk_branch,
         )
-
-
-def read_trunk_from_pyproject(repo_root: Path, git_ops: GitOps | None = None) -> str | None:
-    """Read trunk branch configuration from pyproject.toml.
-
-    Args:
-        repo_root: Path to the repository root directory
-        git_ops: Optional GitOps interface for path checking (uses .exists() if None)
-
-    Returns:
-        Configured trunk branch name, or None if not configured
-    """
-    pyproject_path = repo_root / "pyproject.toml"
-
-    # Check existence using git_ops if available (for test compatibility)
-    if git_ops is not None:
-        path_exists = git_ops.path_exists(pyproject_path)
-    else:
-        path_exists = pyproject_path.exists()
-    if not path_exists:
-        return None
-
-    with pyproject_path.open("rb") as f:
-        data = tomllib.load(f)
-
-    tool_section = data.get("tool")
-    if tool_section is None:
-        return None
-
-    workstack_section = tool_section.get("workstack")
-    if workstack_section is None:
-        return None
-
-    return workstack_section.get("trunk_branch")
 
 
 def write_trunk_to_pyproject(repo_root: Path, trunk: str, git_ops: GitOps | None = None) -> None:
@@ -323,7 +293,7 @@ def write_trunk_to_pyproject(repo_root: Path, trunk: str, git_ops: GitOps | None
         tomlkit.dump(doc, f)
 
 
-def create_context(*, dry_run: bool, repo_root: Path | None = None) -> WorkstackContext:
+def create_context(*, dry_run: bool) -> WorkstackContext:
     """Create production context with real implementations.
 
     Called at CLI entry point to create the context for the entire
@@ -332,8 +302,6 @@ def create_context(*, dry_run: bool, repo_root: Path | None = None) -> Workstack
     Args:
         dry_run: If True, wrap all dependencies with dry-run wrappers that
                  print intended actions without executing them
-        repo_root: Optional path to repository root for reading trunk configuration.
-                   If None, trunk_branch will be None (to be determined later).
 
     Returns:
         WorkstackContext with real implementations, wrapped in dry-run
@@ -381,10 +349,7 @@ def create_context(*, dry_run: bool, repo_root: Path | None = None) -> Workstack
         graphite_ops = DryRunGraphiteOps(graphite_ops)
         github_ops = DryRunGitHubOps(github_ops)
 
-    # 8. Load trunk branch config if in a repo
-    trunk_branch = read_trunk_from_pyproject(repo_root) if repo_root else None
-
-    # 9. Create context with all values
+    # 8. Create context with all values
     return WorkstackContext(
         git_ops=git_ops,
         github_ops=github_ops,
@@ -398,18 +363,14 @@ def create_context(*, dry_run: bool, repo_root: Path | None = None) -> Workstack
         local_config=local_config,
         repo=repo,
         dry_run=dry_run,
-        trunk_branch=trunk_branch,
     )
 
 
-def regenerate_context(
-    existing_ctx: WorkstackContext, *, repo_root: Path | None = None
-) -> WorkstackContext:
-    """Regenerate context with fresh cwd and trunk_branch.
+def regenerate_context(existing_ctx: WorkstackContext) -> WorkstackContext:
+    """Regenerate context with fresh cwd.
 
     Creates a new WorkstackContext with:
     - Current working directory (Path.cwd())
-    - Fresh trunk_branch from pyproject.toml (if repo_root provided)
     - Preserved dry_run state and operation instances
 
     Use this after mutations like os.chdir() or worktree removal
@@ -417,15 +378,12 @@ def regenerate_context(
 
     Args:
         existing_ctx: Current context to preserve settings from
-        repo_root: Optional path to repo for trunk_branch lookup.
-                   If None, trunk_branch will be None.
 
     Returns:
         New WorkstackContext with regenerated state
 
     Example:
         # After os.chdir() or worktree removal
-        repo = discover_repo_context(ctx, Path.cwd())
-        ctx = regenerate_context(ctx, repo_root=repo.root)
+        ctx = regenerate_context(ctx)
     """
-    return create_context(dry_run=existing_ctx.dry_run, repo_root=repo_root)
+    return create_context(dry_run=existing_ctx.dry_run)

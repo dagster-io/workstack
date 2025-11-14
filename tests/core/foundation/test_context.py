@@ -11,6 +11,7 @@ from tests.fakes.shell_ops import FakeShellOps
 from tests.test_utils import sentinel_path
 from workstack.core.context import WorkstackContext
 from workstack.core.global_config import GlobalConfig
+from workstack.core.repo_discovery import RepoContext
 
 
 def test_context_initialization_and_attributes() -> None:
@@ -142,7 +143,15 @@ def test_for_test_factory_accepts_custom_ops() -> None:
 
 
 def test_for_test_factory_accepts_trunk_branch() -> None:
-    """WorkstackContext.for_test() respects trunk_branch parameter."""
-    ctx = WorkstackContext.for_test(trunk_branch="develop")
+    """WorkstackContext.for_test() computes trunk_branch from git_ops."""
+    git_ops = FakeGitOps(trunk_branches={Path("/repo"): "develop"})
+    ctx = WorkstackContext.for_test(
+        git_ops=git_ops,
+        repo=RepoContext(
+            root=Path("/repo"),
+            repo_name="repo",
+            workstacks_dir=Path("/repo/.workstacks"),
+        ),
+    )
 
     assert ctx.trunk_branch == "develop"

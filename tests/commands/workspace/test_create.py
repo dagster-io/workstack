@@ -715,6 +715,7 @@ def test_create_from_current_branch_on_master_fails() -> None:
             git_common_dirs={env.cwd: env.git_dir},
             default_branches={env.cwd: "master"},
             current_branches={env.cwd: "master"},
+            trunk_branches={env.cwd: "master"},
         )
 
         test_ctx = env.build_context(git_ops=git_ops)

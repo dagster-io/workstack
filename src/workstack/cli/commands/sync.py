@@ -131,7 +131,7 @@ def sync_cmd(
     if ctx.cwd.resolve() != repo.root:
         try:
             os.chdir(repo.root)
-            ctx = regenerate_context(ctx, repo_root=repo.root)
+            ctx = regenerate_context(ctx)
         except OSError:
             # Path doesn't exist (sentinel path in tests), skip chdir
             # Context remains unchanged, which is fine for pure test mode

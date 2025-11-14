@@ -1,9 +1,9 @@
 """Land a single PR from Graphite stack without affecting upstack branches.
 
 This script safely lands a single branch from a Graphite stack by:
-1. Validating the branch is exactly one level up from main
+1. Validating the branch is exactly one level up from trunk
 2. Checking an open pull request exists
-3. Squash-merging the PR to main
+3. Squash-merging the PR to trunk
 4. Navigating to the child branch if exactly one exists (skips navigation if multiple children)
 
 Usage:
@@ -24,7 +24,7 @@ Output:
     Error:
     {
       "success": false,
-      "error_type": "parent_not_main",
+      "error_type": "parent_not_trunk",
       "message": "Detailed error message...",
       "details": {...}
     }
@@ -34,7 +34,7 @@ Exit Codes:
     1: Error (validation failed or merge failed)
 
 Error Types:
-    - parent_not_main: Branch parent is not "main"
+    - parent_not_trunk: Branch parent is not trunk branch
     - no_pr_found: No PR exists for this branch
     - pr_not_open: PR exists but is not in OPEN state
     - merge_failed: PR merge operation failed
@@ -54,7 +54,7 @@ from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.ops import GtKitOps
 from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops import RealGtKitOps
 
 ErrorType = Literal[
-    "parent_not_main",
+    "parent_not_trunk",
     "no_pr_found",
     "pr_not_open",
     "merge_failed",
@@ -98,21 +98,22 @@ def execute_land_branch(ops: GtKitOps | None = None) -> LandBranchSuccess | Land
     if parent is None:
         return LandBranchError(
             success=False,
-            error_type="parent_not_main",
+            error_type="parent_not_trunk",
             message=f"Could not determine parent branch for: {branch_name}",
             details={"current_branch": branch_name},
         )
 
-    # Step 3: Validate parent is main
-    if parent != "main":
+    # Step 3: Validate parent is trunk
+    trunk = ops.git().get_trunk_branch()
+    if parent != trunk:
         return LandBranchError(
             success=False,
-            error_type="parent_not_main",
+            error_type="parent_not_trunk",
             message=(
-                f"Branch must be exactly one level up from main\n"
+                f"Branch must be exactly one level up from {trunk}\n"
                 f"Current branch: {branch_name}\n"
-                f"Parent branch: {parent} (expected: main)\n\n"
-                f"Please navigate to a branch that branches directly from main."
+                f"Parent branch: {parent} (expected: {trunk})\n\n"
+                f"Please navigate to a branch that branches directly from {trunk}."
             ),
             details={
                 "current_branch": branch_name,

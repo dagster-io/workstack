@@ -6,7 +6,7 @@ import click
 
 from workstack.cli.commands.switch import complete_worktree_names
 from workstack.cli.core import discover_repo_context, worktree_path_for
-from workstack.core.context import WorkstackContext, read_trunk_from_pyproject
+from workstack.core.context import WorkstackContext
 from workstack.core.repo_discovery import ensure_workstacks_dir
 from workstack.core.worktree_utils import (
     MoveOperationType,
@@ -282,7 +282,7 @@ def move_cmd(
     # Discover repository context
     repo = discover_repo_context(ctx, ctx.cwd)
     workstacks_dir = ensure_workstacks_dir(repo)
-    trunk_branch = read_trunk_from_pyproject(repo.root, ctx.git_ops)
+    trunk_branch = ctx.trunk_branch
 
     # Resolve source worktree
     source_wt = resolve_source_worktree(

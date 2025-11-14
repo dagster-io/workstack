@@ -69,6 +69,7 @@ class FakeGitOps(GitOps):
         worktrees: dict[Path, list[WorktreeInfo]] | None = None,
         current_branches: dict[Path, str | None] | None = None,
         default_branches: dict[Path, str] | None = None,
+        trunk_branches: dict[Path, str] | None = None,
         git_common_dirs: dict[Path, Path] | None = None,
         branch_heads: dict[str, str] | None = None,
         commit_messages: dict[str, str] | None = None,
@@ -85,6 +86,7 @@ class FakeGitOps(GitOps):
             worktrees: Mapping of repo_root -> list of worktrees
             current_branches: Mapping of cwd -> current branch
             default_branches: Mapping of repo_root -> default branch
+            trunk_branches: Mapping of repo_root -> trunk branch name
             git_common_dirs: Mapping of cwd -> git common directory
             branch_heads: Mapping of branch name -> commit SHA
             commit_messages: Mapping of commit SHA -> commit message
@@ -98,6 +100,7 @@ class FakeGitOps(GitOps):
         self._worktrees = worktrees or {}
         self._current_branches = current_branches or {}
         self._default_branches = default_branches or {}
+        self._trunk_branches = trunk_branches or {}
         self._git_common_dirs = git_common_dirs or {}
         self._branch_heads = branch_heads or {}
         self._commit_messages = commit_messages or {}
@@ -150,6 +153,13 @@ class FakeGitOps(GitOps):
             return self._default_branches[repo_root]
         click.echo("Error: Could not find 'main' or 'master' branch.", err=True)
         raise SystemExit(1)
+
+    def get_trunk_branch(self, repo_root: Path) -> str:
+        """Get the trunk branch name for the repository."""
+        if repo_root in self._trunk_branches:
+            return self._trunk_branches[repo_root]
+        # Default to "main" if not configured
+        return "main"
 
     def get_git_common_dir(self, cwd: Path) -> Path | None:
         """Get the common git directory."""

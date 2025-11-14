@@ -206,6 +206,7 @@ def test_current_handles_nested_worktrees(tmp_path: Path) -> None:
             target_dir: repo_root / ".git",
         },
         existing_paths={repo_root, parent_wt, nested_wt, target_dir, repo_root / ".git"},
+        trunk_branches={repo_root: "main"},
     )
 
     # Create global config
@@ -223,7 +224,6 @@ def test_current_handles_nested_worktrees(tmp_path: Path) -> None:
         git_ops=git_ops,
         global_config_ops=global_config_ops,
         global_config=global_config,
-        trunk_branch="main",
     )
 
     runner = CliRunner()

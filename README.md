@@ -435,6 +435,19 @@ workstack init  # Auto-detects gt
 
 Disable in `~/.workstack/config.toml`: `use_graphite = false`
 
+### Agent Integration
+
+**DevRun Agent Dependency:**
+
+Workstack commands that implement plans (`/workstack:implement-plan`) have a dependency on the **devrun** agent for CI/testing verification. The devrun agent provides:
+
+- Structured execution of development CLI tools (pytest, pyright, ruff, make, etc.)
+- Context-aware reporting with diagnostic and minimal modes
+- Status signals for parent agents to make proceed/stop decisions
+- Exit code interpretation and fixability detection
+
+When using workstack's plan-based development workflow with AI assistants, ensure the devrun agent is available for final verification steps.
+
 ### Repository Presets
 
 **Dagster:**

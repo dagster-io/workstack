@@ -249,6 +249,58 @@ For each `FAILED` line in "short test summary info":
 **Summary**: "No tests collected"
 **Include**: Possible reasons (empty test files, wrong directory, -k filter matched nothing)
 
+## Minimal Context Output
+
+Keep current output templates as-is for minimal context mode (the default).
+
+## Diagnostic Context Output
+
+### All Tests Passing
+
+**Command**: pytest tests/
+**Exit Code**: 0 (all tests passed)
+**Summary**: All tests passed
+**Details**:
+
+- Tests run: 156
+- Passed: 156
+- Failed: 0
+- Skipped: 0
+- Duration: 4.21s
+  **Status**: ✅ Safe to proceed
+
+### Partial Failures
+
+**Command**: pytest tests/unit/
+**Exit Code**: 1 (test failures detected)
+**Summary**: Test failures detected
+**Details**:
+
+- Tests run: 156
+- Passed: 154 (98.7%)
+- Failed: 2 (1.3%)
+- Skipped: 0
+- Duration: 4.18s
+
+**Failures**:
+
+1. tests/test_auth.py::test_login_valid:42
+   AssertionError: Expected True, got False
+
+2. tests/test_user.py::test_create:23
+   TypeError: Missing required argument 'email'
+
+**Fixability**: Requires code changes (not auto-fixable)
+**Status**: ⛔ Must fix before continuing
+
+### Collection Errors
+
+**Command**: pytest tests/
+**Exit Code**: 5 (no tests collected)
+**Summary**: Test collection failed
+**Details**: No tests found or import errors prevented collection
+**Status**: ⛔ Tool error - check test discovery and imports
+
 ## Best Practices
 
 1. **Always check exit code first** - it's the most reliable indicator

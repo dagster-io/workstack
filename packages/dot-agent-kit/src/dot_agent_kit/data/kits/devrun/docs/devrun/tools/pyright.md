@@ -243,6 +243,52 @@ Common pyright error rules:
 - Which files attempted the imports
 - Suggestion to check dependencies
 
+## Minimal Context Output
+
+Keep current output templates as-is for minimal context mode (the default).
+
+## Diagnostic Context Output
+
+### No Errors
+
+**Command**: pyright src/
+**Exit Code**: 0 (no errors found)
+**Summary**: Type checking passed
+**Details**:
+
+- Files analyzed: 32
+- Errors: 0
+- Warnings: 0
+- Informations: 0
+- Duration: 2.4s
+  **Status**: ✅ Safe to proceed
+
+### Type Errors Found
+
+**Command**: pyright src/models/
+**Exit Code**: 1 (type errors detected)
+**Summary**: Type errors detected
+**Details**:
+
+- Files analyzed: 8
+- Errors: 3
+- Warnings: 0
+- Informations: 0
+
+**Errors**:
+
+1. src/models/user.py:45:12
+   reportAssignmentType: Type "str | None" cannot be assigned to declared type "str"
+
+2. src/models/auth.py:89:20
+   reportArgumentType: Argument type "int" incompatible with parameter type "str"
+
+3. src/models/db.py:102:5
+   reportReturnType: Return type "None" incompatible with declared type "User"
+
+**Fixability**: Requires code changes (not auto-fixable)
+**Status**: ⛔ Must fix before continuing
+
 ## Best Practices
 
 1. **Always check exit code** - most reliable success indicator

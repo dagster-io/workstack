@@ -318,6 +318,65 @@ While ruff doesn't have explicit severity levels, rules can be categorized:
 - Count of reformatted files
 - Count of unchanged files
 
+## Minimal Context Output
+
+Keep current output templates as-is for minimal context mode (the default).
+
+## Diagnostic Context Output
+
+### No Violations
+
+**Command**: ruff check src/
+**Exit Code**: 0 (no violations found)
+**Summary**: All lint checks passed
+**Details**:
+
+- Files checked: 47
+- Violations: 0
+- Duration: 0.8s
+  **Status**: ✅ Safe to proceed
+
+### Fixable Violations
+
+**Command**: ruff check src/
+**Exit Code**: 1 (violations found)
+**Summary**: Lint violations detected (auto-fixable)
+**Details**:
+
+- Files checked: 47
+- Violations: 12
+- Fixable: 12 (100%)
+
+**Violations**:
+
+- F841: Local variable assigned but never used (8 files)
+- I001: Import block is unsorted (4 files)
+
+**Fixability**: All violations auto-fixable with `ruff check --fix`
+**Status**: 🔧 Auto-fixable - re-run with --fix
+
+### Non-Fixable Violations
+
+**Command**: ruff check src/
+**Exit Code**: 1 (violations found)
+**Summary**: Lint violations detected
+**Details**:
+
+- Files checked: 47
+- Violations: 5
+- Fixable: 0
+
+**Violations**:
+
+1. src/auth.py:123:5
+   E501: Line too long (120 > 100 characters)
+
+2. src/models/user.py:45:9
+   N806: Variable in function should be lowercase
+
+**Fixability**: Requires manual code changes
+**Status**: ⛔ Must fix before continuing
+
 ## Best Practices
 
 1. **Check exit code** - reliable success indicator

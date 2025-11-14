@@ -541,23 +541,13 @@ class DryRunGraphiteOps(GraphiteOps):
     # Destructive operations: print dry-run message instead of executing
 
     def sync(self, repo_root: Path, *, force: bool, quiet: bool) -> None:
-        """Print dry-run message instead of running gt sync."""
-        import click
-
-        cmd = ["gt", "sync"]
-        if force:
-            cmd.append("-f")
-        if quiet:
-            cmd.append("--quiet")
-
-        click.echo(f"[DRY RUN] Would run: {' '.join(cmd)}")
+        """Dry-run no-op for gt sync (execution layer handles output)."""
+        # Do nothing - prevents actual gt sync execution
+        # The execution layer is responsible for printing dry-run output
+        pass
 
     def submit_branch(self, repo_root: Path, branch_name: str, *, quiet: bool) -> None:
-        """Print dry-run message instead of running gt submit."""
-        import click
-
-        cmd = ["gt", "submit", "--branch", branch_name, "--no-edit"]
-        if quiet:
-            cmd.append("--quiet")
-
-        click.echo(f"[DRY RUN] Would run: {' '.join(cmd)}")
+        """Dry-run no-op for gt submit (execution layer handles output)."""
+        # Do nothing - prevents actual gt submit execution
+        # The execution layer is responsible for printing dry-run output
+        pass

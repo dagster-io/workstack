@@ -29,6 +29,11 @@ from workstack.core.repo_discovery import ensure_workstacks_dir
     help="Show what would be removed without executing",
 )
 @click.option(
+    "--down",
+    is_flag=True,
+    help="Only consolidate downstack (trunk to current branch). Default is entire stack.",
+)
+@click.option(
     "--script",
     is_flag=True,
     hidden=True,
@@ -41,33 +46,40 @@ def consolidate_cmd(
     name: str | None,
     force: bool,
     dry_run: bool,
+    down: bool,
     script: bool,
 ) -> None:
     """Consolidate stack branches into a single worktree.
 
-    This command removes other worktrees that contain branches from the current
-    stack, ensuring branches exist in only one worktree. This is useful before
+    By default, consolidates full stack (trunk to leaf). With --down, consolidates
+    only downstack branches (trunk to current).
+
+    This command removes other worktrees that contain branches from the stack,
+    ensuring branches exist in only one worktree. This is useful before
     stack-wide operations like 'gt restack'.
 
     BRANCH: Optional branch name. If provided, consolidate only from trunk up to
-    this branch (partial consolidation). If omitted, consolidate entire stack.
+    this branch (partial consolidation). Cannot be used with --down.
 
     \b
     Examples:
-      # Consolidate entire stack into current worktree
+      # Consolidate full stack into current worktree (default)
       $ workstack consolidate
+
+      # Consolidate only downstack (trunk to current)
+      $ workstack consolidate --down
 
       # Consolidate trunk → feat-2 only (leaves feat-3+ in separate worktrees)
       $ workstack consolidate feat-2
 
-      # Create new worktree "my-stack" and consolidate entire stack into it
+      # Create new worktree "my-stack" and consolidate full stack into it
       $ workstack consolidate --name my-stack
 
-      # Consolidate trunk → feat-2 into new worktree "my-partial"
-      $ workstack consolidate feat-2 --name my-partial
+      # Consolidate downstack into new worktree
+      $ workstack consolidate --down --name my-partial
 
       # Preview changes without executing
-      $ workstack consolidate feat-2 --dry-run
+      $ workstack consolidate --dry-run
 
       # Skip confirmation prompt
       $ workstack consolidate --force
@@ -81,6 +93,19 @@ def consolidate_cmd(
     # During dry-run, always show output regardless of shell integration
     if dry_run:
         script = False
+
+    # Validate that --down and BRANCH are not used together
+    if down and branch is not None:
+        click.echo(
+            click.style("❌ Error: Cannot use --down with BRANCH argument", fg="red"),
+            err=True,
+        )
+        click.echo(
+            "Use either --down (consolidate trunk to current) or "
+            "BRANCH (consolidate trunk to BRANCH)",
+            err=True,
+        )
+        raise SystemExit(1)
 
     # Get current worktree and branch
     current_worktree = ctx.cwd
@@ -142,7 +167,9 @@ def consolidate_cmd(
             raise SystemExit(1)
 
     # Calculate stack range early (needed for safety check)
-    stack_to_consolidate = calculate_stack_range(stack_branches, branch)
+    # If --down is set, force end_branch to be current_branch
+    end_branch = current_branch if down else branch
+    stack_to_consolidate = calculate_stack_range(stack_branches, end_branch)
 
     # Check worktrees in stack for uncommitted changes (including current)
     worktrees_with_changes: list[Path] = []
@@ -224,10 +251,11 @@ def consolidate_cmd(
         target_worktree_path = current_worktree
 
     # Create consolidation plan using utility function
+    # Use the same end_branch logic as calculated above
     plan = create_consolidation_plan(
         all_worktrees=all_worktrees,
         stack_branches=stack_branches,
-        end_branch=branch,
+        end_branch=end_branch,
         target_worktree_path=target_worktree_path,
         source_worktree_path=current_worktree if name is not None else None,
     )

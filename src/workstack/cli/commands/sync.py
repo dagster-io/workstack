@@ -142,6 +142,7 @@ def sync_cmd(
     if force:
         cmd.append("-f")
 
+    # For external commands like gt sync, check dry_run to avoid subprocess execution
     if not dry_run:
         if verbose:
             _emit(f"Running: {' '.join(cmd)}", script_mode=script)
@@ -230,6 +231,7 @@ def sync_cmd(
                 _emit(f"✓ Removed: {wt.name} [{wt.branch}]", script_mode=script)
 
         # Step 6.5: Automatically run second gt sync -f to delete branches (when force=True)
+        # For external commands like gt sync, check dry_run to avoid subprocess execution
         if force and not dry_run and deletable:
             ctx.graphite_ops.sync(repo.root, force=True, quiet=not verbose)
             _emit("✓ Deleted merged branches", script_mode=script)

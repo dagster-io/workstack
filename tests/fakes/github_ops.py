@@ -5,8 +5,9 @@ in its constructor. Construct instances directly with keyword arguments.
 """
 
 from pathlib import Path
+from typing import cast
 
-from workstack.core.github_ops import GitHubOps, PRInfo, PRMergeability, PullRequestInfo
+from workstack.core.github_ops import GitHubOps, PRInfo, PRMergeability, PRState, PullRequestInfo
 
 
 class FakeGitHubOps(GitHubOps):
@@ -48,6 +49,12 @@ class FakeGitHubOps(GitHubOps):
         self._pr_bases = pr_bases or {}
         self._pr_mergeability = pr_mergeability or {}
         self._updated_pr_bases: list[tuple[int, str]] = []
+        self._merged_prs: list[int] = []
+
+    @property
+    def merged_prs(self) -> list[int]:
+        """List of PR numbers that were merged."""
+        return self._merged_prs
 
     def get_prs_for_repo(
         self, repo_root: Path, *, include_checks: bool
@@ -74,7 +81,7 @@ class FakeGitHubOps(GitHubOps):
             # Convert None state to "NONE" for consistency
             if state is None:
                 state = "NONE"
-            return PRInfo(state, pr_number, title)
+            return PRInfo(cast(PRState, state), pr_number, title)
 
         pr = self._prs.get(branch)
         if pr is None:
@@ -82,7 +89,7 @@ class FakeGitHubOps(GitHubOps):
         # PullRequestInfo has: number, state, url, is_draft, checks_passing
         # But get_pr_status expects: state, number, title
         # Using url as title since PullRequestInfo doesn't have a title field
-        return PRInfo(pr.state, pr.number, pr.url)
+        return PRInfo(cast(PRState, pr.state), pr.number, pr.url)
 
     def get_pr_base_branch(self, repo_root: Path, pr_number: int) -> str | None:
         """Get current base branch of a PR from configured state.
@@ -104,6 +111,17 @@ class FakeGitHubOps(GitHubOps):
             return self._pr_mergeability[pr_number]
         # Default to MERGEABLE if not configured
         return PRMergeability(mergeable="MERGEABLE", merge_state_status="CLEAN")
+
+    def merge_pr(
+        self,
+        repo_root: Path,
+        pr_number: int,
+        *,
+        squash: bool = True,
+        verbose: bool = False,
+    ) -> None:
+        """Record PR merge in mutation tracking list."""
+        self._merged_prs.append(pr_number)
 
     @property
     def updated_pr_bases(self) -> list[tuple[int, str]]:

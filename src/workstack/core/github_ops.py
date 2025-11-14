@@ -18,6 +18,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, NamedTuple
 
+import click
+
 PRState = Literal["OPEN", "MERGED", "CLOSED", "NONE"]
 
 
@@ -253,6 +255,25 @@ class GitHubOps(ABC):
         """
         ...
 
+    @abstractmethod
+    def merge_pr(
+        self,
+        repo_root: Path,
+        pr_number: int,
+        *,
+        squash: bool = True,
+        verbose: bool = False,
+    ) -> None:
+        """Merge a pull request on GitHub.
+
+        Args:
+            repo_root: Repository root directory
+            pr_number: PR number to merge
+            squash: If True, use squash merge strategy (default: True)
+            verbose: If True, show detailed output
+        """
+        ...
+
 
 class RealGitHubOps(GitHubOps):
     """Production implementation using gh CLI.
@@ -324,8 +345,6 @@ class RealGitHubOps(GitHubOps):
             ]
 
             if debug:
-                import click
-
                 click.echo(f"$ {' '.join(cmd)}")
 
             stdout = self._execute(cmd, repo_root)
@@ -409,6 +428,31 @@ class RealGitHubOps(GitHubOps):
         ):
             return None
 
+    def merge_pr(
+        self,
+        repo_root: Path,
+        pr_number: int,
+        *,
+        squash: bool = True,
+        verbose: bool = False,
+    ) -> None:
+        """Merge a pull request on GitHub via gh CLI."""
+        cmd = ["gh", "pr", "merge", str(pr_number)]
+        if squash:
+            cmd.append("--squash")
+
+        result = subprocess.run(
+            cmd,
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        # Show output in verbose mode
+        if verbose and result.stdout:
+            click.echo(result.stdout)
+
 
 # ============================================================================
 # Dry-Run Wrapper
@@ -450,10 +494,22 @@ class DryRunGitHubOps(GitHubOps):
 
     def update_pr_base_branch(self, repo_root: Path, pr_number: int, new_base: str) -> None:
         """Print dry-run message for PR base branch update."""
-        import click
-
         click.echo(f"  gh pr edit {pr_number} --base {new_base}")
 
     def get_pr_mergeability(self, repo_root: Path, pr_number: int) -> PRMergeability | None:
         """Delegate read operation to wrapped implementation."""
         return self._wrapped.get_pr_mergeability(repo_root, pr_number)
+
+    def merge_pr(
+        self,
+        repo_root: Path,
+        pr_number: int,
+        *,
+        squash: bool = True,
+        verbose: bool = False,
+    ) -> None:
+        """Print dry-run message for PR merge."""
+        cmd = f"gh pr merge {pr_number}"
+        if squash:
+            cmd += " --squash"
+        click.echo(f"  {cmd}")

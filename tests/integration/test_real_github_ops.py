@@ -8,6 +8,8 @@ import json
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from tests.conftest import load_fixture
 from workstack.core.github_ops import RealGitHubOps
 
@@ -417,5 +419,90 @@ def test_get_pr_mergeability_file_not_found() -> None:
         result = ops.get_pr_mergeability(repo_root, 123)
 
         assert result is None
+    finally:
+        subprocess.run = original_run
+
+
+# ============================================================================
+# merge_pr() Tests
+# ============================================================================
+
+
+def test_merge_pr_with_squash() -> None:
+    """Test merge_pr calls gh pr merge with squash strategy."""
+    repo_root = Path("/repo")
+    pr_number = 123
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        # Verify correct command is called
+        assert cmd == ["gh", "pr", "merge", "123", "--squash"]
+        assert kwargs["cwd"] == repo_root
+        assert kwargs["capture_output"] is True
+        assert kwargs["text"] is True
+        assert kwargs["check"] is True
+
+        # Return mock successful result
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="✓ Merged pull request #123\n",
+            stderr="",
+        )
+
+    original_run = subprocess.run
+    try:
+        subprocess.run = mock_run
+
+        ops = RealGitHubOps()
+        # Should not raise
+        ops.merge_pr(repo_root, pr_number, squash=True, verbose=False)
+    finally:
+        subprocess.run = original_run
+
+
+def test_merge_pr_without_squash() -> None:
+    """Test merge_pr can be called without squash strategy."""
+    repo_root = Path("/repo")
+    pr_number = 456
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        # Verify squash flag is NOT included when squash=False
+        assert cmd == ["gh", "pr", "merge", "456"]
+        assert "--squash" not in cmd
+
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="✓ Merged pull request #456\n",
+            stderr="",
+        )
+
+    original_run = subprocess.run
+    try:
+        subprocess.run = mock_run
+
+        ops = RealGitHubOps()
+        ops.merge_pr(repo_root, pr_number, squash=False, verbose=False)
+    finally:
+        subprocess.run = original_run
+
+
+def test_merge_pr_raises_on_failure() -> None:
+    """Test merge_pr raises CalledProcessError when gh pr merge fails."""
+    repo_root = Path("/repo")
+    pr_number = 789
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        raise subprocess.CalledProcessError(1, cmd, stderr="PR not found")
+
+    original_run = subprocess.run
+    try:
+        subprocess.run = mock_run
+
+        ops = RealGitHubOps()
+
+        # Should raise CalledProcessError
+        with pytest.raises(subprocess.CalledProcessError):
+            ops.merge_pr(repo_root, pr_number, squash=True, verbose=False)
     finally:
         subprocess.run = original_run

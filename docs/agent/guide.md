@@ -15,6 +15,7 @@ The documentation is organized by audience and purpose:
 
 - [glossary.md](glossary.md) - Project terminology and definitions
 - [testing.md](testing.md) - Testing architecture with fakes and ops patterns
+- [cli-architecture.md](cli-architecture.md) - CLI command architecture and dry-run implementation
 
 ### For Humans
 
@@ -39,6 +40,7 @@ The documentation is organized by audience and purpose:
 ```
 docs/
 ├── agent/                      # Agent-focused reference
+│   ├── cli-architecture.md    # CLI command architecture
 │   ├── glossary.md            # Workstack terminology
 │   ├── guide.md               # This file
 │   └── testing.md             # Testing patterns
@@ -53,5 +55,6 @@ docs/
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | Understanding workstack terminology | [glossary.md](glossary.md)                                                                                     |
 | Writing tests with fakes/ops        | [testing.md](testing.md)                                                                                       |
+| Implementing CLI commands           | [cli-architecture.md](cli-architecture.md)                                                                     |
 | Python coding standards             | Load `dignified-python` skill                                                                                  |
 | Understanding agentic programming   | [../writing/agentic-programming/agentic-programming.md](../writing/agentic-programming/agentic-programming.md) |

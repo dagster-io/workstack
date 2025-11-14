@@ -35,7 +35,7 @@ def rebuild() -> None:
         user_output("✓ Registry rebuilt successfully")
     except Exception as e:
         user_output(f"Error: Failed to rebuild registry: {e!s}")
-        raise SystemExit(1)
+        raise SystemExit(1) from e
 
 
 @registry.command()
@@ -103,7 +103,9 @@ def validate() -> None:
         )
 
     if extra_in_registry:
-        issues.append(f"Registry entries for uninstalled kits: {', '.join(sorted(extra_in_registry))}")
+        issues.append(
+            f"Registry entries for uninstalled kits: {', '.join(sorted(extra_in_registry))}"
+        )
 
     # Check that registry entry files exist
     for kit_id in registry_kits:

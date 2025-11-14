@@ -91,7 +91,7 @@ def generate_registry_entry(
 
     if "agent" in manifest.artifacts and manifest.artifacts["agent"]:
         agent_name = manifest.artifacts["agent"][0].split("/")[1]  # Extract name from path
-        usage_examples.append(f"- Use Task tool with subagent_type=\"{agent_name}\"")
+        usage_examples.append(f'- Use Task tool with subagent_type="{agent_name}"')
 
     if "command" in manifest.artifacts and manifest.artifacts["command"]:
         cmd_name = manifest.artifacts["command"][0].split("/")[1]  # Extract name from path
@@ -209,14 +209,12 @@ def remove_kit_from_registry(kit_id: str, project_dir: Path) -> None:
         # Remove the line and any preceding blank line
         lines = content.split("\n")
         filtered_lines = []
-        skip_next_blank = False
 
-        for i, line in enumerate(lines):
+        for line in lines:
             if line == include_line:
                 # Remove this line and any preceding blank line
                 if filtered_lines and not filtered_lines[-1].strip():
                     filtered_lines.pop()
-                skip_next_blank = False
                 continue
             filtered_lines.append(line)
 
@@ -281,4 +279,4 @@ def rebuild_registry(project_dir: Path, config: ProjectConfig) -> None:
             failures.append(f"{kit_id}: {e!s}")
 
     if failures:
-        raise Exception(f"Failed to regenerate registry for some kits:\n" + "\n".join(failures))
+        raise Exception("Failed to regenerate registry for some kits:\n" + "\n".join(failures))

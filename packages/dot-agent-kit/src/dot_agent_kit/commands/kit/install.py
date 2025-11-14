@@ -156,7 +156,9 @@ def _process_update_result(
         try:
             from dot_agent_kit.io.registry import create_kit_registry_file, generate_registry_entry
 
-            entry_content = generate_registry_entry(kit_id, updated_kit.version, manifest, updated_kit)
+            entry_content = generate_registry_entry(
+                kit_id, updated_kit.version, manifest, updated_kit
+            )
             create_kit_registry_file(kit_id, entry_content, project_dir)
             # No need to call add_kit_to_registry - @-include already exists
         except Exception as e:
@@ -234,7 +236,9 @@ def _handle_fresh_install(
             generate_registry_entry,
         )
 
-        entry_content = generate_registry_entry(kit_id, installed_kit.version, manifest, installed_kit)
+        entry_content = generate_registry_entry(
+            kit_id, installed_kit.version, manifest, installed_kit
+        )
         create_kit_registry_file(kit_id, entry_content, project_dir)
         add_kit_to_registry(kit_id, project_dir)
     except Exception as e:

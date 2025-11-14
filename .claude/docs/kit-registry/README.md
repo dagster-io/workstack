@@ -44,6 +44,7 @@ The registry uses a two-level structure to minimize context window usage:
 2. **Kit entries** (`.agent/kits/<kit-id>/registry-entry.md`): Contain 15-20 line summaries
 
 This design ensures that:
+
 - Main agent loads only a compact index at startup
 - Full kit documentation is loaded on-demand when needed
 - Registry stays synchronized with installed kits automatically
@@ -65,10 +66,12 @@ Example:
 **Purpose**: Consolidated development tool runner agent with integrated tool documentation
 
 **Artifacts**:
+
 - agent: agents/devrun/devrun.md
 - doc: docs/devrun/tools/pytest.md, docs/devrun/tools/pyright.md, ...
 
 **Usage**:
+
 - Use Task tool with subagent_type="devrun"
 ```
 
@@ -79,6 +82,7 @@ Manual registry management is available via CLI commands:
 ### `dot-agent kit registry rebuild`
 
 Regenerate the entire registry from installed kits. Useful if:
+
 - Registry gets out of sync
 - Migrating from older dot-agent version
 - Recovering from manual edits
@@ -104,6 +108,7 @@ dot-agent kit registry validate
 ```
 
 Checks:
+
 - All installed kits have registry entries
 - No orphaned registry entries
 - Registry entry files exist and are readable

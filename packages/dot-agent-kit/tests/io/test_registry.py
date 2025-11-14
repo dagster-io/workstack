@@ -2,8 +2,6 @@
 
 from pathlib import Path
 
-import pytest
-
 from dot_agent_kit.io.registry import (
     add_kit_to_registry,
     create_kit_registry_file,

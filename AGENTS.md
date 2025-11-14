@@ -590,6 +590,14 @@ Time-based estimates have no basis in reality for AI-assisted development and sh
 - [docs/writing/agentic-programming/agentic-programming.md](docs/writing/agentic-programming/agentic-programming.md) - Agentic programming patterns
 - [README.md](README.md) - Project overview
 
+## Installed Kit Documentation
+
+For a complete index of installed kit documentation (agents, commands, skills, and reference docs), see:
+
+@.claude/docs/kit-registry.md
+
+This registry is automatically updated when kits are installed, updated, or removed.
+
 ## Skills and Agents
 
 ### Graphite Workflow

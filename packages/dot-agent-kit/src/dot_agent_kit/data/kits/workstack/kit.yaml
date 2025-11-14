@@ -4,6 +4,7 @@ description: Workstack implementation workflow commands for creating worktrees f
 license: MIT
 artifacts:
   command:
+    - commands/workstack/persist-plan.md
     - commands/workstack/create-planned-stack.md
     - commands/workstack/implement-plan.md
   doc:

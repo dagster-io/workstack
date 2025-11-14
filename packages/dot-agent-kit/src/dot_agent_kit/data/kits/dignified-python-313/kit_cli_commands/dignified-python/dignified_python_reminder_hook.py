@@ -10,7 +10,7 @@ import click
 
 
 @click.command()
-def compliance_reminder_hook() -> None:
+def dignified_python_reminder_hook() -> None:
     """Output dignified-python compliance reminder for UserPromptSubmit hook."""
     click.echo("<reminder>")
     click.echo(
@@ -25,4 +25,4 @@ def compliance_reminder_hook() -> None:
 
 
 if __name__ == "__main__":
-    compliance_reminder_hook()
+    dignified_python_reminder_hook()

@@ -27,13 +27,13 @@
 | `from .module import`                                            | → Use absolute imports only                                                                          |
 | `print(...)` in CLI code                                         | → Use `click.echo()`                                                                                 |
 | `subprocess.run(...)`                                            | → Add `check=True`                                                                                   |
-| `make ...` or user says "make"                                   | → Use runner agent (Task tool) instead of Bash; loads devrun/make skill                              |
-| `pyright` or `uv run pyright`                                    | → Use runner agent (Task tool); target paths directly, never `cd`                                    |
-| `pytest` or `uv run pytest`                                      | → Use runner agent (Task tool) for running tests                                                     |
-| `ruff` or `uv run ruff`                                          | → Use runner agent (Task tool) for linting/formatting                                                |
-| Prettier formatting issues                                       | → Use `make prettier` (via runner agent with Task tool)                                              |
+| `make ...` or user says "make"                                   | → Use devrun agent (Task tool) instead of Bash; loads devrun/make skill                              |
+| `pyright` or `uv run pyright`                                    | → Use devrun agent (Task tool); target paths directly, never `cd`                                    |
+| `pytest` or `uv run pytest`                                      | → Use devrun agent (Task tool) for running tests                                                     |
+| `ruff` or `uv run ruff`                                          | → Use devrun agent (Task tool) for linting/formatting                                                |
+| Prettier formatting issues                                       | → Use `make prettier` (via devrun agent with Task tool)                                              |
 | Submitting a branch with Graphite                                | → Use /gt:submit-branch command (delegates to gt-branch-submitter agent)                             |
-| `gt ...` or user says "gt" or "graphite"                         | → Use runner agent (Task tool, devrun subagent) for execution, graphite skill for knowledge          |
+| `gt ...` or user says "gt" or "graphite"                         | → Use devrun agent (Task tool) for execution, graphite skill for knowledge                           |
 | Systematic Python changes (migrate calls, rename, batch updates) | → Use libcst-refactor agent (Task tool); for multi-file transformations                              |
 | Stack traversal or "upstack"/"downstack"                         | → [Graphite Stack Terminology](#-graphite-stack-terminology-critical) - main is at BOTTOM            |
 | 4+ levels of indentation                                         | → Extract helper functions                                                                           |
@@ -95,8 +95,8 @@ The `docs/agent/` folder contains only workstack-specific documentation (termino
 
 | Tool Type                                       | Agent                 | Example                                                                              |
 | ----------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------ |
-| `make`, `pytest`, `pyright`, `ruff`, `prettier` | `runner`              | Task(subagent_type="runner", prompt="Execute: make all-ci")                          |
-| `gt` commands (Graphite)                        | `runner`              | Task(subagent_type="runner", prompt="Execute: gt submit")                            |
+| `make`, `pytest`, `pyright`, `ruff`, `prettier` | `devrun`              | Task(subagent_type="devrun", prompt="Execute: make all-ci")                          |
+| `gt` commands (Graphite)                        | `devrun`              | Task(subagent_type="devrun", prompt="Execute: gt submit")                            |
 | Graphite branch submission workflow             | `gt-branch-submitter` | Task(subagent_type="gt-branch-submitter", prompt="Execute submit-branch workflow")   |
 | Python refactoring with LibCST                  | `libcst-refactor`     | Task(subagent_type="libcst-refactor", prompt="Rename function old_func to new_func") |
 
@@ -104,7 +104,7 @@ The `docs/agent/` folder contains only workstack-specific documentation (termino
 
 ```python
 Task(
-    subagent_type="runner",  # or "gt-branch-submitter", etc.
+    subagent_type="devrun",  # or "gt-branch-submitter", etc.
     description="Brief description of task",
     prompt="Execute: <command>"
 )
@@ -118,10 +118,10 @@ Bash("make all-ci")
 Bash("uv run pytest tests/")
 Bash("gt submit --publish")
 
-# ✅ CORRECT: Use runner agent
-Task(subagent_type="runner", description="Run CI checks", prompt="Execute: make all-ci")
-Task(subagent_type="runner", description="Run tests", prompt="Execute: uv run pytest tests/")
-Task(subagent_type="runner", description="Submit branch", prompt="Execute: gt submit --publish")
+# ✅ CORRECT: Use devrun agent
+Task(subagent_type="devrun", description="Run CI checks", prompt="Execute: make all-ci")
+Task(subagent_type="devrun", description="Run tests", prompt="Execute: uv run pytest tests/")
+Task(subagent_type="devrun", description="Submit branch", prompt="Execute: gt submit --publish")
 
 # ❌ WRONG: Manual branch submission
 result = Bash("gt submit --publish")
@@ -580,13 +580,13 @@ Time-based estimates have no basis in reality for AI-assisted development and sh
 - Command reference and examples
 - When to use which commands
 
-**For executing gt commands:** Use `gt-runner` agent (Task tool)
+**For executing gt commands:** Use `devrun` agent (Task tool)
 
 - Cost-optimized execution with Haiku model
 - Parses command output automatically
 - Returns structured results
 
-**Pattern:** Load skill first for understanding, then use agent for execution.
+**Pattern:** Load skill first for understanding, then use devrun agent for execution.
 
 ### Other Tools
 

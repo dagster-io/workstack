@@ -345,8 +345,6 @@ class RealGitHubOps(GitHubOps):
             ]
 
             if debug:
-                import click
-
                 click.echo(f"$ {' '.join(cmd)}")
 
             stdout = self._execute(cmd, repo_root)
@@ -496,8 +494,6 @@ class DryRunGitHubOps(GitHubOps):
 
     def update_pr_base_branch(self, repo_root: Path, pr_number: int, new_base: str) -> None:
         """Print dry-run message for PR base branch update."""
-        import click
-
         click.echo(f"  gh pr edit {pr_number} --base {new_base}")
 
     def get_pr_mergeability(self, repo_root: Path, pr_number: int) -> PRMergeability | None:
@@ -513,8 +509,6 @@ class DryRunGitHubOps(GitHubOps):
         verbose: bool = False,
     ) -> None:
         """Print dry-run message for PR merge."""
-        import click
-
         cmd = f"gh pr merge {pr_number}"
         if squash:
             cmd += " --squash"

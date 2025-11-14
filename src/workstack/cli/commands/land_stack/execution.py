@@ -232,7 +232,7 @@ def _update_upstack_pr_bases(
 
         # Update base if stale
         if current_base != expected_parent:
-            if verbose or dry_run:
+            if verbose:
                 msg = f"  Updating PR #{pr_number} base: {current_base} → {expected_parent}"
                 _emit(msg, script_mode=script_mode)
 

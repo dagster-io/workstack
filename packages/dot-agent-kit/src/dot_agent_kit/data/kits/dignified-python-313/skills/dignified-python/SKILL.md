@@ -112,7 +112,40 @@ class MyOps(Protocol):
 - Runtime validation of implementations
 - Better IDE support
 
-### 5. Imports - Absolute Only 🟡
+### 5. Imports - Module-Level and Absolute 🔴
+
+**ALWAYS place imports at module level, NEVER inline imports**
+
+```python
+# ✅ CORRECT: Module-level imports
+import click
+from pathlib import Path
+
+def my_function() -> None:
+    click.echo("Hello")
+
+# ❌ WRONG: Inline imports
+def my_function() -> None:
+    import click  # NEVER do this
+    click.echo("Hello")
+```
+
+**Exceptions where inline imports are acceptable:**
+
+1. **Circular dependency resolution** (rare)
+2. **Performance optimization** - When packages have long initialization times:
+
+```python
+# ✅ ACCEPTABLE: Delayed import for expensive package
+def analyze_data(data: dict) -> Report:
+    """Analyze data using heavy ML library (only import when called)."""
+    import tensorflow as tf  # Expensive import - defer until needed
+
+    model = tf.load_model("model.h5")
+    return model.predict(data)
+```
+
+**Use absolute imports, not relative:**
 
 ```python
 # ✅ CORRECT: Absolute imports

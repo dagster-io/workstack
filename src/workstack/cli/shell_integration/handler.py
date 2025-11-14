@@ -99,9 +99,9 @@ def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellInt
         script_exists = Path(script_path).exists()
         debug_log(f"Handler: Script exists? {script_exists}")
 
-    # Warn if command succeeded but produced no output
+    # Note when command completed successfully but no directory change is needed
     if exit_code == 0 and (script_path is None or not script_path):
-        user_output(f"Note: '{command_name}' completed but produced no output")
+        user_output(f"Note: '{command_name}' completed (no directory change needed)")
 
     return ShellIntegrationResult(passthrough=False, script=script_path, exit_code=exit_code)
 

@@ -43,4 +43,3 @@ In addition to making callsites more clear, keyword-only arguments can also be r
 That means you can always make keyword-only arguments positional later, but changing a positional argument to keyword-only argument is breaking.
 
 Therefore, when in doubt, _make the argument keyword-only_. It is a so-called "two-way door". We can always make arguments positional later as a non-breaking change.
-

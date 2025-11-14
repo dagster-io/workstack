@@ -26,7 +26,7 @@ def takes_int_or_string(num: Optional[int], string: Optional[str]) -> None:
 
 Better would be:
 
-```python    
+```python
 def takes_union(num_or_string: Union[str, int]) -> None:
     if isinstance(num_or_string, int):
         num = num_or_string
@@ -68,7 +68,7 @@ Instead when we added `asset_selection` we could have added a new object such as
 
 ```python
 class ExecutionSelection:
-    # * Violating this rule once is better than doing it N times. 
+    # * Violating this rule once is better than doing it N times.
     # * Idiomatically, AbstractSet[AssetKey] and Iterable[str] not distinct enough to use Union.
     # * Neither defaults to None so callsites must be explicit.
     def __init__(self, asset_selection: Optional[AbstractSet[AssetKey]], op_selection: Optional[Iterable[str]]):

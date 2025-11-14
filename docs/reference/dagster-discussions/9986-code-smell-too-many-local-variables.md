@@ -18,9 +18,9 @@ However, there are certain heuristics that indicate that things have "gone off t
 
 Local parameters are more problematic in Python than in other programming languages, as their rules are less strict.
 
-* Variables are not declared up front. 
-* Python code can reference variables that have not been assigned yet, and only report errors at runtime.
-* Python variables shadow variables in their parent scope
+- Variables are not declared up front.
+- Python code can reference variables that have not been assigned yet, and only report errors at runtime.
+- Python variables shadow variables in their parent scope
 
 These rules can both cause strange behavior but also limit how much work tooling can do over on your behalf:
 
@@ -34,14 +34,15 @@ def foo() -> int:
         return bar["val"]
 
     print(f"before: {bar['val']}")
-    return_value = baz() 
+    return_value = baz()
     print(f"after: {bar['val']}")
-    return return_value 
+    return return_value
 
 foo()
 ```
 
 Since the dictionary here has reference semantics the call to `baz` mutates `bar`:
+
 ```
 > python example.py
 before: 1
@@ -50,12 +51,11 @@ after: 2
 
 Now this might seem trivial because this code is simple and short. But imagine large inner functions placed within very large outer functions, and this gets problematic quickly. We have many such examples in our codebase.
 
-Code with too many local variables always tends to become more complex and difficult to understand, as there is too much state and  too many downstream consequences within one scope. Mutating one variable can cause a bug by impacting the value of another variable in a non-obvious way. Engineers also get naming fatigue as obvious variable names get "taken" within the scope, tempting people to just add an underscore or an alternative spelling, compounding the problem.
-
+Code with too many local variables always tends to become more complex and difficult to understand, as there is too much state and too many downstream consequences within one scope. Mutating one variable can cause a bug by impacting the value of another variable in a non-obvious way. Engineers also get naming fatigue as obvious variable names get "taken" within the scope, tempting people to just add an underscore or an alternative spelling, compounding the problem.
 
 ### Case study `multi_asset`
 
-What inspired this code smell was the state of `multi_asset` at the [time](https://github.com/dagster-io/dagster/blob/3e4af271159587fa912f6a73fabeb06bb6f70bf3/python_modules/dagster/dagster/_core/definitions/decorators/asset_decorator.py#L519) of this article. 
+What inspired this code smell was the state of `multi_asset` at the [time](https://github.com/dagster-io/dagster/blob/3e4af271159587fa912f6a73fabeb06bb6f70bf3/python_modules/dagster/dagster/_core/definitions/decorators/asset_decorator.py#L519) of this article.
 
 It had over 200 lines of non-commented code, 37 local variables, 17 of which were in a large inner function dynamically declared in scope.
 
@@ -89,11 +89,11 @@ class FooState:
     @cached_property
     def var_one(self) -> TypeOne:
         return get_one()
-    
+
     @cached_property
     def var_two(self) -> TypeTwo:
         return get_two()
-    
+
     @cached_property
     def var_three(self) -> TypeThree
         return combine(self.var_one, self.var_two)

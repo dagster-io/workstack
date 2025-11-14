@@ -16,7 +16,7 @@ They serve a very useful purprose. They indicate where code is meant to be execu
 
 ```python
 # `some_function` is called in the AssetDaemonContext. Good to know!
-# We can also test lots of scenarios by creating AssetDaemonContext objects 
+# We can also test lots of scenarios by creating AssetDaemonContext objects
 def some_function(context: AssetDaemonContext): ...
 ```
 
@@ -35,7 +35,7 @@ class SomeContext:
 
 def some_entry_point(context: SomeContext):
     overly_specific_add(context)
-    
+
 # Overly specific. No reason to use context object
 # Someone might add more state the context and some
 # engineer might be tempted to use it, and now
@@ -49,7 +49,7 @@ Instead imagine the ability to reuse a more generic function.
 ```python
 def some_entry_point(context: SomeContext):
     overly_specific_add(context.num_one, context.num_two)
-    
+
 def generic_add(num_one: int, num_two: int) -> int:
     return num_one + num_two
 ```

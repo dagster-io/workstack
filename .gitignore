@@ -16,8 +16,7 @@ activate.sh
 .workstack
 
 # Local planning and configuration (not tracked in git)
-# Agent-tracked implementation plans (local-only, see docs/agent/guide.md)
-.plan/    # Plan folder format
+.plan/
 .env
 
 CLAUDE.local.md

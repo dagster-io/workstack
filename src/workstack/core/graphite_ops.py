@@ -499,17 +499,27 @@ class RealGraphiteOps(GraphiteOps):
 
 
 class DryRunGraphiteOps(GraphiteOps):
-    """Wrapper that prints dry-run messages instead of executing destructive operations.
+    """Wrapper that prints dry-run messages and prevents execution of destructive operations.
 
-    This wrapper intercepts destructive graphite operations and prints what would happen
-    instead of executing. Read-only operations are delegated to the wrapped implementation.
+    This wrapper intercepts destructive operations, prints what would be executed,
+    and prevents actual execution. Callers don't need to check ctx.dry_run - they
+    just call operations normally and the wrapper handles dry-run behavior.
+
+    Read-only operations are delegated to the wrapped implementation.
+
+    Architecture:
+    - Wrapper responsibility: Print dry-run output AND prevent execution
+    - Caller responsibility: Just call operations (no ctx.dry_run checks)
+    - Consistent pattern across GitOps, GraphiteOps, and GitHubOps
 
     Usage:
         real_ops = RealGraphiteOps()
         dry_run_ops = DryRunGraphiteOps(real_ops)
 
-        # Prints message instead of running gt sync
-        dry_run_ops.sync(repo_root, force=False)
+        # Caller just calls the operation
+        dry_run_ops.sync(repo_root, force=False, quiet=False)
+        # Prints: [DRY RUN] Would run: gt sync
+        # No actual execution happens
     """
 
     def __init__(self, wrapped: GraphiteOps) -> None:
@@ -541,13 +551,10 @@ class DryRunGraphiteOps(GraphiteOps):
     # Destructive operations: print dry-run message instead of executing
 
     def sync(self, repo_root: Path, *, force: bool, quiet: bool) -> None:
-        """Dry-run no-op for gt sync (execution layer handles output)."""
-        # Do nothing - prevents actual gt sync execution
-        # The execution layer is responsible for printing dry-run output
-        pass
+        """Print dry-run message instead of running gt sync."""
+        force_flag = "-f " if force else ""
+        click.echo(f"[DRY RUN] Would run gt sync {force_flag}".strip(), err=True)
 
     def submit_branch(self, repo_root: Path, branch_name: str, *, quiet: bool) -> None:
-        """Dry-run no-op for gt submit (execution layer handles output)."""
-        # Do nothing - prevents actual gt submit execution
-        # The execution layer is responsible for printing dry-run output
-        pass
+        """Print dry-run message instead of running gt submit."""
+        click.echo(f"[DRY RUN] Would run: gt submit --branch {branch_name} --no-edit", err=True)

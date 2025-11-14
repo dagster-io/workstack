@@ -105,6 +105,20 @@ def sync_cmd(
     7. Without -f: show deletable worktrees and prompt for confirmation
     8. Return to original worktree (if it still exists)
     """
+    # Wrap ops with dry-run versions if requested
+    if dry_run:
+        import dataclasses
+
+        from workstack.core.github_ops import DryRunGitHubOps
+        from workstack.core.gitops import DryRunGitOps
+        from workstack.core.graphite_ops import DryRunGraphiteOps
+
+        ctx = dataclasses.replace(
+            ctx,
+            git_ops=DryRunGitOps(ctx.git_ops),
+            github_ops=DryRunGitHubOps(ctx.github_ops),
+            graphite_ops=DryRunGraphiteOps(ctx.graphite_ops),
+        )
 
     # Step 1: Verify Graphite is enabled
     use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
@@ -144,30 +158,26 @@ def sync_cmd(
     if force:
         cmd.append("-f")
 
-    # For external commands like gt sync, check dry_run to avoid subprocess execution
-    if not dry_run:
-        if verbose:
-            _emit(f"Running: {' '.join(cmd)}", script_mode=script)
-        try:
-            ctx.graphite_ops.sync(repo.root, force=force, quiet=not verbose)
-        except subprocess.CalledProcessError as e:
-            error_detail = e.stderr.strip() if e.stderr else f"exit code {e.returncode}"
-            _emit(
-                f"Error: gt sync failed: {error_detail}",
-                script_mode=script,
-                error=True,
-            )
-            raise SystemExit(e.returncode) from e
-        except FileNotFoundError as e:
-            _emit(
-                "Error: 'gt' command not found. Install Graphite CLI: "
-                "brew install withgraphite/tap/graphite",
-                script_mode=script,
-                error=True,
-            )
-            raise SystemExit(1) from e
-    else:
-        _emit(f"[DRY RUN] Would run {' '.join(cmd)}", script_mode=script)
+    if verbose:
+        _emit(f"Running: {' '.join(cmd)}", script_mode=script)
+    try:
+        ctx.graphite_ops.sync(repo.root, force=force, quiet=not verbose)
+    except subprocess.CalledProcessError as e:
+        error_detail = e.stderr.strip() if e.stderr else f"exit code {e.returncode}"
+        _emit(
+            f"Error: gt sync failed: {error_detail}",
+            script_mode=script,
+            error=True,
+        )
+        raise SystemExit(e.returncode) from e
+    except FileNotFoundError as e:
+        _emit(
+            "Error: 'gt' command not found. Install Graphite CLI: "
+            "brew install withgraphite/tap/graphite",
+            script_mode=script,
+            error=True,
+        )
+        raise SystemExit(1) from e
 
     # Step 5: Identify deletable workstacks
     worktrees = ctx.git_ops.list_worktrees(repo.root)
@@ -233,10 +243,10 @@ def sync_cmd(
                 _emit(f"✓ Removed: {wt.name} [{wt.branch}]", script_mode=script)
 
         # Step 6.5: Automatically run second gt sync -f to delete branches (when force=True)
-        # For external commands like gt sync, check dry_run to avoid subprocess execution
-        if force and not dry_run and deletable:
+        if force and deletable:
             ctx.graphite_ops.sync(repo.root, force=True, quiet=not verbose)
-            _emit("✓ Deleted merged branches", script_mode=script)
+            if not dry_run:
+                _emit("✓ Deleted merged branches", script_mode=script)
 
         # Only show manual instruction if force was not used
         if not force:

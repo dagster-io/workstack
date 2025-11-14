@@ -460,14 +460,27 @@ class RealGitHubOps(GitHubOps):
 
 
 class DryRunGitHubOps(GitHubOps):
-    """Dry-run wrapper for GitHub operations.
+    """Wrapper that prints dry-run messages and prevents execution of destructive GitHub operations.
 
-    Read operations are delegated to the wrapped implementation.
-    Write operations (when added) will print dry-run messages instead of executing.
+    This wrapper intercepts destructive operations, prints what would be executed,
+    and prevents actual execution. Callers don't need to check ctx.dry_run - they
+    just call operations normally and the wrapper handles dry-run behavior.
 
-    This wrapper currently delegates all operations since GitHubOps only has
-    read operations. It's included for consistency with the three-implementations
-    pattern and to prepare for future write operations (e.g., create PR, update status).
+    Read-only operations are delegated to the wrapped implementation.
+
+    Architecture:
+    - Wrapper responsibility: Print dry-run output AND prevent execution
+    - Caller responsibility: Just call operations (no ctx.dry_run checks)
+    - Consistent pattern across GitOps, GraphiteOps, and GitHubOps
+
+    Usage:
+        real_ops = RealGitHubOps()
+        dry_run_ops = DryRunGitHubOps(real_ops)
+
+        # Caller just calls the operation
+        dry_run_ops.merge_pr(repo_root, 123, squash=True, verbose=False)
+        # Prints: [DRY RUN] Would run: gh pr merge 123 --squash
+        # No actual execution happens
     """
 
     def __init__(self, wrapped: GitHubOps) -> None:
@@ -493,10 +506,8 @@ class DryRunGitHubOps(GitHubOps):
         return self._wrapped.get_pr_base_branch(repo_root, pr_number)
 
     def update_pr_base_branch(self, repo_root: Path, pr_number: int, new_base: str) -> None:
-        """Dry-run no-op for PR base branch update (execution layer handles output)."""
-        # Do nothing - prevents actual PR base update
-        # The execution layer is responsible for printing dry-run output
-        pass
+        """Print dry-run message instead of updating PR base."""
+        click.echo(f"[DRY RUN] Would run: gh pr edit {pr_number} --base {new_base}", err=True)
 
     def get_pr_mergeability(self, repo_root: Path, pr_number: int) -> PRMergeability | None:
         """Delegate read operation to wrapped implementation."""
@@ -510,7 +521,6 @@ class DryRunGitHubOps(GitHubOps):
         squash: bool = True,
         verbose: bool = False,
     ) -> None:
-        """Dry-run no-op for PR merge (execution layer handles output)."""
-        # Do nothing - prevents actual PR merge
-        # The execution layer is responsible for printing dry-run output
-        pass
+        """Print dry-run message instead of merging PR."""
+        squash_flag = "--squash " if squash else ""
+        click.echo(f"[DRY RUN] Would run: gh pr merge {pr_number} {squash_flag}".strip(), err=True)

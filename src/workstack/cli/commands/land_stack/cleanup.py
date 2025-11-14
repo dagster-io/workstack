@@ -14,6 +14,7 @@ def _cleanup_and_navigate(
     ctx: WorkstackContext,
     repo_root: Path,
     merged_branches: list[str],
+    trunk_branch: str,
     *,
     verbose: bool,
     dry_run: bool,
@@ -25,6 +26,7 @@ def _cleanup_and_navigate(
         ctx: WorkstackContext with access to operations
         repo_root: Repository root directory
         merged_branches: List of successfully merged branch names
+        trunk_branch: Name of the trunk branch (e.g., "main" or "master")
         verbose: If True, show detailed output
         dry_run: If True, show what would be done without executing
         script_mode: True when running in --script mode (output to stderr)
@@ -52,11 +54,11 @@ def _cleanup_and_navigate(
             # Sentinel path in pure test mode - skip chdir
             pass
 
-    # Step 1: Checkout main
+    # Step 1: Checkout trunk branch
     if not dry_run:
-        ctx.git_ops.checkout_branch(repo_root, "main")
-    _emit(_format_cli_command("git checkout main", check), script_mode=script_mode)
-    final_branch = "main"
+        ctx.git_ops.checkout_branch(repo_root, trunk_branch)
+    _emit(_format_cli_command(f"git checkout {trunk_branch}", check), script_mode=script_mode)
+    final_branch = trunk_branch
 
     # Step 2: Sync worktrees
     base_cmd = "workstack sync -f"
@@ -84,7 +86,7 @@ def _cleanup_and_navigate(
             error_msg = e.stderr.strip() if e.stderr else str(e)
             _emit(f"Warning: Cleanup sync failed: {error_msg}", script_mode=script_mode, error=True)
 
-    # Step 3: Navigate to next branch or stay on main
+    # Step 3: Navigate to next branch or stay on trunk
     # Check if last merged branch had unmerged children
     if last_merged:
         all_branches = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo_root)
@@ -108,5 +110,5 @@ def _cleanup_and_navigate(
                         final_branch = child
                         return final_branch
 
-    # No unmerged children, stay on main (already checked out above)
+    # No unmerged children, stay on trunk (already checked out above)
     return final_branch

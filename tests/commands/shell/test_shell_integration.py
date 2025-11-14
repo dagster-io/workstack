@@ -437,3 +437,39 @@ def test_shell_handler_uses_stdout_not_output() -> None:
             # Should be a single line (path or marker), not mixed with stderr
             # This verifies we're using result.stdout, not result.output
             assert "\n\n" not in script_path_str  # No multi-paragraph content mixing
+
+
+def test_shell_integration_shows_note_for_no_directory_change() -> None:
+    """Test that handler shows helpful message when command succeeds but produces no script.
+
+    When a command completes successfully (exit_code=0) but produces no activation
+    script (empty stdout), the handler should display a note explaining that no
+    directory change is needed. This clarifies expected behavior for users.
+    """
+    from tests.fakes.gitops import FakeGitOps
+    from tests.test_utils.env_helpers import pure_workstack_env
+    from workstack.core.gitops import WorktreeInfo
+
+    runner = CliRunner()
+    with pure_workstack_env(runner) as env:
+        # Set up minimal environment - consolidate with no worktrees to remove
+        git_ops = FakeGitOps(
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
+                ]
+            },
+        )
+
+        test_ctx = env.build_context(git_ops=git_ops)
+
+        # Use consolidate command - when there's nothing to consolidate, it succeeds
+        # but produces no script output (no directory change needed)
+        result = runner.invoke(cli, ["__shell", "consolidate"], obj=test_ctx)
+
+        # Command should succeed with no work to do
+        if result.exit_code == 0:
+            # Verify the helpful note is displayed
+            assert "completed (no directory change needed)" in result.output

@@ -85,7 +85,7 @@ def consolidate_cmd(
       $ workstack consolidate --force
 
     Safety checks:
-    - Aborts if any worktree in the stack has uncommitted changes
+    - Aborts if any worktree being consolidated has uncommitted changes
     - Preserves the current worktree (or creates new one with --name)
     - Shows preview before removal (unless --force)
     - Never removes root worktree
@@ -160,10 +160,17 @@ def consolidate_cmd(
     end_branch = current_branch if down else branch
     stack_to_consolidate = calculate_stack_range(stack_branches, end_branch)
 
-    # Check worktrees in stack for uncommitted changes (including current)
+    # Check worktrees in stack for uncommitted changes
+    # Only check worktrees that will actually be removed (skip root and current)
     worktrees_with_changes: list[Path] = []
     for wt in all_worktrees:
-        if wt.branch not in stack_branches:
+        if wt.branch not in stack_to_consolidate:
+            continue
+        # Skip root worktree (never removed)
+        if wt.is_root:
+            continue
+        # Skip current worktree (consolidation target, never removed)
+        if wt.path.resolve() == current_worktree.resolve():
             continue
         if ctx.git_ops.path_exists(wt.path) and ctx.git_ops.has_uncommitted_changes(wt.path):
             worktrees_with_changes.append(wt.path)

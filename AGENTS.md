@@ -15,26 +15,26 @@
 
 **NOTE: `.plan/` folders are NOT tracked in git and should never be committed**
 
-| If you're about to write...                                      | STOP! Check this instead                                                                             |
-| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `try:` or `except:`                                              | → [Exception Handling](#exception-handling) - Default: let exceptions bubble                         |
-| `from __future__ import annotations`                             | → **FORBIDDEN** - Python 3.13+ doesn't need it                                                       |
-| `List[...]`, `Dict[...]`, `Union[...]`                           | → Use `list[...]`, `dict[...]`, `X \| Y`                                                             |
-| `typing.Protocol`                                                | → Use `abc.ABC` instead                                                                              |
-| `dict[key]` without checking                                     | → Use `if key in dict:` or `.get()`                                                                  |
-| `path.resolve()` or `path.is_relative_to()`                      | → Check `path.exists()` first                                                                        |
-| Function with default argument                                   | → Make explicit at call sites                                                                        |
-| `from .module import`                                            | → Use absolute imports only                                                                          |
-| `print(...)` in CLI code                                         | → Use `click.echo()`                                                                                 |
-| `subprocess.run(...)`                                            | → Add `check=True`                                                                                   |
-| Submitting a branch with Graphite                                | → Use /gt:submit-branch command (delegates to gt-branch-submitter agent)                             |
-| Systematic Python changes (migrate calls, rename, batch updates) | → Use libcst-refactor agent (Task tool); for multi-file transformations                              |
-| Stack traversal or "upstack"/"downstack"                         | → [Graphite Stack Terminology](#-graphite-stack-terminology-critical) - main is at BOTTOM            |
-| 4+ levels of indentation                                         | → Extract helper functions                                                                           |
-| Code in `__init__.py`                                            | → Keep empty or docstring-only (except package entry points)                                         |
-| Tests for speculative features                                   | → **FORBIDDEN** - Only test actively implemented code (TDD is fine)                                  |
-| Creating `.claude/` artifacts                                    | → Use `kebab-case` (hyphens) NOT `snake_case` (underscores)                                          |
-| `Path("/test/...")` or hardcoded paths                           | → **CATASTROPHIC** - Use `env.cwd` or `tmp_path` fixture - [Test Isolation](#6-test-isolation--must) |
+| If you're about to write...                                      | STOP! Check this instead                                                                          |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `try:` or `except:`                                              | → [Exception Handling](#exception-handling) - Default: let exceptions bubble                      |
+| `from __future__ import annotations`                             | → **FORBIDDEN** - Python 3.13+ doesn't need it                                                    |
+| `List[...]`, `Dict[...]`, `Union[...]`                           | → Use `list[...]`, `dict[...]`, `X \| Y`                                                          |
+| `typing.Protocol`                                                | → Use `abc.ABC` instead                                                                           |
+| `dict[key]` without checking                                     | → Use `if key in dict:` or `.get()`                                                               |
+| `path.resolve()` or `path.is_relative_to()`                      | → Check `path.exists()` first                                                                     |
+| Function with default argument                                   | → Make explicit at call sites                                                                     |
+| `from .module import`                                            | → Use absolute imports only                                                                       |
+| `print(...)` in CLI code                                         | → Use `click.echo()`                                                                              |
+| `subprocess.run(...)`                                            | → Add `check=True`                                                                                |
+| Submitting a branch with Graphite                                | → Use /gt:submit-branch command (delegates to gt-branch-submitter agent)                          |
+| Systematic Python changes (migrate calls, rename, batch updates) | → Use libcst-refactor agent (Task tool); for multi-file transformations                           |
+| Stack traversal or "upstack"/"downstack"                         | → [Graphite Stack Terminology](#-graphite-stack-terminology-critical) - main is at BOTTOM         |
+| 4+ levels of indentation                                         | → Extract helper functions                                                                        |
+| Code in `__init__.py`                                            | → Keep empty or docstring-only (except package entry points)                                      |
+| Tests for speculative features                                   | → **FORBIDDEN** - Only test actively implemented code (TDD is fine)                               |
+| Creating `.claude/` artifacts                                    | → Use `kebab-case` (hyphens) NOT `snake_case` (underscores)                                       |
+| `Path("/test/...")` or hardcoded paths                           | → **CATASTROPHIC** - Use `pure_workstack_env` fixture - [Test Isolation](#6-test-isolation--must) |
 
 ## 📚 Quick Reference
 
@@ -142,7 +142,11 @@ class MyOps(ABC):  # ✅ Not Protocol
 cwd=Path("/test/default/cwd")
 cwd=Path("/some/hardcoded/path")
 
-# ✅ CORRECT - Use simulated environment
+# ✅ CORRECT - Use pure environment (PREFERRED)
+with pure_workstack_env(runner) as env:
+    ctx = WorkstackContext(..., cwd=env.cwd)
+
+# ✅ CORRECT - Use simulated environment (when filesystem I/O needed)
 with simulated_workstack_env(runner) as env:
     ctx = WorkstackContext(..., cwd=env.cwd)
 
@@ -150,6 +154,19 @@ with simulated_workstack_env(runner) as env:
 def test_something(tmp_path: Path) -> None:
     ctx = WorkstackContext(..., cwd=tmp_path)
 ```
+
+**Test Fixture Preference:**
+
+🟢 **PREFER `pure_workstack_env`** - Completely in-memory, zero filesystem I/O
+
+- Uses sentinel paths that throw errors on filesystem operations
+- Faster and enforces complete test isolation
+- Use for tests verifying command logic and output
+
+🟡 **USE `simulated_workstack_env`** - When real directories needed
+
+- Creates actual temp directories with `isolated_filesystem()`
+- Use for testing filesystem-dependent features
 
 **Why hardcoded paths are catastrophic:**
 

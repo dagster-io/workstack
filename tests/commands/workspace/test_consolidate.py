@@ -700,3 +700,90 @@ def test_consolidate_outputs_to_stderr() -> None:
         # With the fix, all output should appear in result.output
         # (which captures both streams by default)
         # The key test is that output DOES appear (not suppressed by --script flag)
+
+
+def test_consolidate_allows_uncommitted_changes_in_protected_worktrees() -> None:
+    """Test consolidate succeeds when protected worktrees have uncommitted changes.
+
+    Protected worktrees are those that won't be removed during consolidation:
+    - Root worktree (never removed)
+    - Current worktree (consolidation target)
+    - Non-consolidated branches in the stack (upstack from consolidation point)
+
+    This test verifies the fix for the issue where root worktree uncommitted changes
+    incorrectly blocked consolidation from linked worktrees.
+    """
+    runner = CliRunner()
+    with pure_workstack_env(runner) as env:
+        # Configure graphite with stack (main -> feat-1 -> feat-2 -> feat-3 -> feat-4)
+        graphite_ops = FakeGraphiteOps(
+            stacks={"feat-4": ["main", "feat-1", "feat-2", "feat-3", "feat-4"]}
+        )
+
+        # Create worktree directories
+        # Root worktree is env.cwd (on main branch)
+        main_worktree = env.cwd
+        workstacks_dir = env.workstacks_root / env.cwd.name
+        wt1_path = workstacks_dir / "wt1"  # feat-1 (will be consolidated)
+        wt2_path = workstacks_dir / "wt2"  # feat-2 (will be consolidated)
+        wt3_path = workstacks_dir / "wt3"  # feat-3 (will NOT be consolidated, has uncommitted)
+        wt4_path = workstacks_dir / "wt4"  # feat-4 (current, consolidation target)
+
+        # Set up worktrees:
+        # - Root worktree on main (protected, has uncommitted changes)
+        # - feat-1 worktree (will be removed, must be clean)
+        # - feat-2 worktree (will be removed, must be clean)
+        # - feat-3 worktree (protected, not in consolidation range, has uncommitted changes)
+        # - feat-4 worktree (current, consolidation target)
+        worktrees = {
+            main_worktree: [
+                WorktreeInfo(path=main_worktree, branch="main", is_root=True),
+                WorktreeInfo(path=wt1_path, branch="feat-1", is_root=False),
+                WorktreeInfo(path=wt2_path, branch="feat-2", is_root=False),
+                WorktreeInfo(path=wt3_path, branch="feat-3", is_root=False),
+                WorktreeInfo(path=wt4_path, branch="feat-4", is_root=False),
+            ]
+        }
+
+        # Simulate uncommitted changes in protected worktrees only
+        file_statuses = {
+            main_worktree: ([], [], ["uncommitted.txt"]),  # Root worktree has changes (OK)
+            # wt1_path is clean (required, will be removed)
+            # wt2_path is clean (required, will be removed)
+            wt3_path: ([], ["modified.txt"], []),  # feat-3 has changes (OK, not consolidated)
+            # wt4_path is current (can have changes)
+        }
+
+        test_ctx = _create_test_context(
+            env,
+            worktrees,
+            "feat-4",
+            graphite_ops,
+            cwd=wt4_path,
+            git_dir=env.git_dir,
+            file_statuses=file_statuses,
+        )
+
+        # Override git_common_dirs for all worktrees
+        test_ctx.git_ops._git_common_dirs[wt1_path] = env.git_dir
+        test_ctx.git_ops._git_common_dirs[wt2_path] = env.git_dir
+        test_ctx.git_ops._git_common_dirs[wt3_path] = env.git_dir
+        test_ctx.git_ops._git_common_dirs[wt4_path] = env.git_dir
+
+        # Consolidate feat-2 (from current=feat-4)
+        # This consolidates main → feat-1 → feat-2, but NOT feat-3 or feat-4
+        # Should succeed despite uncommitted changes in root and feat-3
+        result = runner.invoke(cli, ["consolidate", "feat-2", "-f"], obj=test_ctx)
+
+        # Command should succeed
+        assert result.exit_code == 0, result.output
+
+        # feat-1 and feat-2 worktrees should be removed
+        assert len(test_ctx.git_ops.removed_worktrees) == 2
+        assert wt1_path in test_ctx.git_ops.removed_worktrees
+        assert wt2_path in test_ctx.git_ops.removed_worktrees
+
+        # Protected worktrees should NOT be removed
+        assert main_worktree not in test_ctx.git_ops.removed_worktrees  # Root
+        assert wt3_path not in test_ctx.git_ops.removed_worktrees  # Not consolidated
+        assert wt4_path not in test_ctx.git_ops.removed_worktrees  # Current

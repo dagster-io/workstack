@@ -1152,6 +1152,10 @@ class PrintingGitOps(PrintingOpsBase, GitOps):
         """Check if path is directory (read-only, no printing)."""
         return self._wrapped.is_dir(path)
 
+    def safe_chdir(self, path: Path) -> bool:
+        """Change directory (delegates to wrapped)."""
+        return self._wrapped.safe_chdir(path)
+
     def find_worktree_for_branch(self, repo_root: Path, branch: str) -> Path | None:
         """Find worktree for branch (read-only, no printing)."""
         return self._wrapped.find_worktree_for_branch(repo_root, branch)

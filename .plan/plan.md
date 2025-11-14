@@ -49,6 +49,7 @@ Fix the `workstack land-stack --down` error message to properly suggest `--down`
 #### Planning Artifacts
 
 **Code Examined:**
+
 - Looked at validation.py lines 116-138 for error message generation
 - Reviewed command.py line 54 for `down` flag availability
 - Checked consolidate.py lines 33-35 for flag support
@@ -56,6 +57,7 @@ Fix the `workstack land-stack --down` error message to properly suggest `--down`
 #### Implementation Risks
 
 **Testing Coverage:**
+
 - Existing test only checks for basic error message presence
 - Need to add test case for --down variant
 

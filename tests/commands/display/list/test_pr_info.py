@@ -226,6 +226,6 @@ def test_list_with_stacks_uses_graphite_url() -> None:
         assert result.exit_code == 0, result.output
 
         # Output should contain OSC 8 escape sequence with Graphite URL
-        # Graphite URL format: https://app.graphite.dev/github/pr/owner/repo/number
-        expected_url = "https://app.graphite.dev/github/pr/testowner/testrepo/100"
+        # Graphite URL format: https://app.graphite.com/github/pr/owner/repo/number
+        expected_url = "https://app.graphite.com/github/pr/testowner/testrepo/100"
         assert expected_url in result.output

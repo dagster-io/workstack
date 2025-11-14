@@ -1363,7 +1363,7 @@ else:
 - **GitHub Repository**: https://github.com/dagster-io/workstack
 - **Issues**: https://github.com/dagster-io/workstack/issues
 - **Git Worktree Docs**: https://git-scm.com/docs/git-worktree
-- **Graphite CLI**: https://graphite.dev/
+- **Graphite CLI**: https://graphite.com/
 - **GitHub CLI**: https://cli.github.com/
 
 ### Internal Documentation (for contributors)

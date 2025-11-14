@@ -47,7 +47,7 @@ class FakeGraphiteOps(GraphiteOps):
 
     def get_graphite_url(self, owner: str, repo: str, pr_number: int) -> str:
         """Get Graphite PR URL (constructs URL directly)."""
-        return f"https://app.graphite.dev/github/pr/{owner}/{repo}/{pr_number}"
+        return f"https://app.graphite.com/github/pr/{owner}/{repo}/{pr_number}"
 
     def sync(self, repo_root: Path, *, force: bool, quiet: bool) -> None:
         """Fake sync operation.

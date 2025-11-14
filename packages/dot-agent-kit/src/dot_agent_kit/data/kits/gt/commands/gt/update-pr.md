@@ -108,7 +108,7 @@ Running update-pr command...
 ✅ PR updated successfully
 
 - **PR #**: 235
-- **URL**: https://app.graphite.dev/github/pr/dagster-io/workstack/235
+- **URL**: https://app.graphite.com/github/pr/dagster-io/workstack/235
 - **Branch**: gt-update-pr-command
 - **Changes Committed**: Yes
 ```
@@ -122,7 +122,7 @@ Running update-pr command...
 ✅ PR updated successfully
 
 - **PR #**: 235
-- **URL**: https://app.graphite.dev/github/pr/dagster-io/workstack/235
+- **URL**: https://app.graphite.com/github/pr/dagster-io/workstack/235
 - **Branch**: gt-update-pr-command
 - **Changes Committed**: No
 ```

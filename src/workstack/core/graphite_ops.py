@@ -17,12 +17,11 @@ from pathlib import Path
 from subprocess import DEVNULL
 from typing import Any
 
-import click
-
 from workstack.cli.output import user_output
 from workstack.core.branch_metadata import BranchMetadata
 from workstack.core.github_ops import PullRequestInfo, _parse_github_pr_url
 from workstack.core.gitops import GitOps
+from workstack.core.printing_ops_base import PrintingOpsBase
 
 
 def read_graphite_json_file(file_path: Path, description: str) -> dict[str, Any]:
@@ -557,7 +556,7 @@ class NoopGraphiteOps(GraphiteOps):
 # ============================================================================
 
 
-class PrintingGraphiteOps(GraphiteOps):
+class PrintingGraphiteOps(PrintingOpsBase, GraphiteOps):
     """Wrapper that prints operations before delegating to inner implementation.
 
     This wrapper prints styled output for operations, then delegates to the
@@ -572,38 +571,7 @@ class PrintingGraphiteOps(GraphiteOps):
         printing_ops = PrintingGraphiteOps(noop_inner, script_mode=False, dry_run=True)
     """
 
-    def __init__(
-        self, wrapped: GraphiteOps, *, script_mode: bool = False, dry_run: bool = False
-    ) -> None:
-        """Create a printing wrapper around a GraphiteOps implementation.
-
-        Args:
-            wrapped: The GraphiteOps implementation to wrap
-            script_mode: True when running in --script mode (output to stderr)
-            dry_run: True when running in --dry-run mode (adds indicator to output)
-        """
-        self._wrapped = wrapped
-        self._script_mode = script_mode
-        self._dry_run = dry_run
-
-    def _emit(self, message: str) -> None:
-        """Emit message based on script mode."""
-        if self._script_mode:
-            user_output(message)
-        else:
-            # In non-script mode, use click.echo directly for stdout
-            click.echo(message)
-
-    def _format_command(self, cmd: str) -> str:
-        """Format a command for display with optional dry-run indicator."""
-        styled_cmd = click.style(f"  {cmd}", dim=True)
-        if self._dry_run:
-            dry_run_marker = click.style(" (dry run)", fg="bright_black")
-            checkmark = click.style(" ✓", fg="green")
-            return styled_cmd + dry_run_marker + checkmark
-        else:
-            checkmark = click.style(" ✓", fg="green")
-            return styled_cmd + checkmark
+    # Inherits __init__, _emit, and _format_command from PrintingOpsBase
 
     # Read-only operations: delegate without printing
 

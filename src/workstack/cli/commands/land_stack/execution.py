@@ -105,7 +105,9 @@ def _execute_sync_trunk_phase(
 
     # Pull parent branch
     ctx.git_ops.pull_branch(repo_root, "origin", parent, ff_only=True)
-    _emit(_format_cli_command(f"git pull --ff-only origin {parent}", check), script_mode=script_mode)
+    _emit(
+        _format_cli_command(f"git pull --ff-only origin {parent}", check), script_mode=script_mode
+    )
 
     # Checkout branch if not already checked out elsewhere
     branch_checked_out = ctx.git_ops.is_branch_checked_out(repo_root, branch)

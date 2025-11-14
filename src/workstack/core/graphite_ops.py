@@ -542,17 +542,100 @@ class DryRunGraphiteOps(GraphiteOps):
     # Destructive operations: print dry-run message instead of executing
 
     def sync(self, repo_root: Path, *, force: bool, quiet: bool) -> None:
-        """Print dry-run message instead of running gt sync."""
-        cmd = "gt sync -f" if force else "gt sync"
-        styled_cmd = click.style(f"  {cmd}", dim=True)
-        dry_run_marker = click.style(" (dry run)", fg="bright_black")
-        checkmark = click.style(" ✓", fg="green")
-        user_output(styled_cmd + dry_run_marker + checkmark)
+        """No-op for gt sync in dry-run mode."""
+        # Do nothing - prevents actual gt sync execution
+        pass
 
     def submit_branch(self, repo_root: Path, branch_name: str, *, quiet: bool) -> None:
-        """Print dry-run message instead of running gt submit."""
-        cmd = f"gt submit --branch {branch_name} --no-edit"
+        """No-op for gt submit in dry-run mode."""
+        # Do nothing - prevents actual gt submit execution
+        pass
+
+
+# ============================================================================
+# Printing Wrapper Implementation
+# ============================================================================
+
+
+class PrintingGraphiteOps(GraphiteOps):
+    """Wrapper that prints operations before delegating to inner implementation.
+
+    This wrapper prints styled output for operations, then delegates to the
+    wrapped implementation (which could be Real or DryRun).
+
+    Usage:
+        # For production
+        printing_ops = PrintingGraphiteOps(real_ops, script_mode=False, dry_run=False)
+
+        # For dry-run
+        dry_run_inner = DryRunGraphiteOps(real_ops)
+        printing_ops = PrintingGraphiteOps(dry_run_inner, script_mode=False, dry_run=True)
+    """
+
+    def __init__(
+        self, wrapped: GraphiteOps, *, script_mode: bool = False, dry_run: bool = False
+    ) -> None:
+        """Create a printing wrapper around a GraphiteOps implementation.
+
+        Args:
+            wrapped: The GraphiteOps implementation to wrap
+            script_mode: True when running in --script mode (output to stderr)
+            dry_run: True when running in --dry-run mode (adds indicator to output)
+        """
+        self._wrapped = wrapped
+        self._script_mode = script_mode
+        self._dry_run = dry_run
+
+    def _emit(self, message: str) -> None:
+        """Emit message based on script mode."""
+        if self._script_mode:
+            user_output(message)
+        else:
+            # In non-script mode, use click.echo directly for stdout
+            click.echo(message)
+
+    def _format_command(self, cmd: str) -> str:
+        """Format a command for display with optional dry-run indicator."""
         styled_cmd = click.style(f"  {cmd}", dim=True)
-        dry_run_marker = click.style(" (dry run)", fg="bright_black")
-        checkmark = click.style(" ✓", fg="green")
-        user_output(styled_cmd + dry_run_marker + checkmark)
+        if self._dry_run:
+            dry_run_marker = click.style(" (dry run)", fg="bright_black")
+            checkmark = click.style(" ✓", fg="green")
+            return styled_cmd + dry_run_marker + checkmark
+        else:
+            checkmark = click.style(" ✓", fg="green")
+            return styled_cmd + checkmark
+
+    # Read-only operations: delegate without printing
+
+    def get_graphite_url(self, owner: str, repo: str, pr_number: int) -> str:
+        """Get Graphite URL (read-only, no printing)."""
+        return self._wrapped.get_graphite_url(owner, repo, pr_number)
+
+    def get_prs_from_graphite(self, git_ops: GitOps, repo_root: Path) -> dict[str, PullRequestInfo]:
+        """Get PRs from Graphite (read-only, no printing)."""
+        return self._wrapped.get_prs_from_graphite(git_ops, repo_root)
+
+    def get_all_branches(self, git_ops: GitOps, repo_root: Path) -> dict[str, BranchMetadata]:
+        """Get all branches (read-only, no printing)."""
+        return self._wrapped.get_all_branches(git_ops, repo_root)
+
+    def get_branch_stack(self, git_ops: GitOps, repo_root: Path, branch: str) -> list[str] | None:
+        """Get branch stack (read-only, no printing)."""
+        return self._wrapped.get_branch_stack(git_ops, repo_root, branch)
+
+    def get_parent_branch(self, git_ops: GitOps, repo_root: Path, branch: str) -> str | None:
+        """Get parent branch (read-only, no printing)."""
+        return self._wrapped.get_parent_branch(git_ops, repo_root, branch)
+
+    # Operations that need printing
+
+    def sync(self, repo_root: Path, *, force: bool, quiet: bool) -> None:
+        """Sync with printed output."""
+        cmd = "gt sync -f" if force else "gt sync"
+        self._emit(self._format_command(cmd))
+        self._wrapped.sync(repo_root, force=force, quiet=quiet)
+
+    def submit_branch(self, repo_root: Path, branch_name: str, *, quiet: bool) -> None:
+        """Submit branch with printed output."""
+        self._emit(self._format_command(f"gt submit --branch {branch_name} --no-edit"))
+        self._wrapped.submit_branch(repo_root, branch_name, quiet=quiet)

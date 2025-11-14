@@ -495,12 +495,9 @@ class DryRunGitHubOps(GitHubOps):
         return self._wrapped.get_pr_base_branch(repo_root, pr_number)
 
     def update_pr_base_branch(self, repo_root: Path, pr_number: int, new_base: str) -> None:
-        """Print dry-run message instead of updating PR base branch."""
-        cmd = f"gh pr edit {pr_number} --base {new_base}"
-        styled_cmd = click.style(f"  {cmd}", dim=True)
-        dry_run_marker = click.style(" (dry run)", fg="bright_black")
-        checkmark = click.style(" ✓", fg="green")
-        user_output(styled_cmd + dry_run_marker + checkmark)
+        """No-op for updating PR base branch in dry-run mode."""
+        # Do nothing - prevents actual PR base update
+        pass
 
     def get_pr_mergeability(self, repo_root: Path, pr_number: int) -> PRMergeability | None:
         """Delegate read operation to wrapped implementation."""
@@ -514,10 +511,100 @@ class DryRunGitHubOps(GitHubOps):
         squash: bool = True,
         verbose: bool = False,
     ) -> None:
-        """Print dry-run message instead of merging PR."""
-        merge_type = "--squash" if squash else "--merge"
-        cmd = f"gh pr merge {pr_number} {merge_type}"
+        """No-op for merging PR in dry-run mode."""
+        # Do nothing - prevents actual PR merge
+        pass
+
+
+# ============================================================================
+# Printing Wrapper Implementation
+# ============================================================================
+
+
+class PrintingGitHubOps(GitHubOps):
+    """Wrapper that prints operations before delegating to inner implementation.
+
+    This wrapper prints styled output for operations, then delegates to the
+    wrapped implementation (which could be Real or DryRun).
+
+    Usage:
+        # For production
+        printing_ops = PrintingGitHubOps(real_ops, script_mode=False, dry_run=False)
+
+        # For dry-run
+        dry_run_inner = DryRunGitHubOps(real_ops)
+        printing_ops = PrintingGitHubOps(dry_run_inner, script_mode=False, dry_run=True)
+    """
+
+    def __init__(
+        self, wrapped: GitHubOps, *, script_mode: bool = False, dry_run: bool = False
+    ) -> None:
+        """Create a printing wrapper around a GitHubOps implementation.
+
+        Args:
+            wrapped: The GitHubOps implementation to wrap
+            script_mode: True when running in --script mode (output to stderr)
+            dry_run: True when running in --dry-run mode (adds indicator to output)
+        """
+        self._wrapped = wrapped
+        self._script_mode = script_mode
+        self._dry_run = dry_run
+
+    def _emit(self, message: str) -> None:
+        """Emit message based on script mode."""
+        if self._script_mode:
+            user_output(message)
+        else:
+            # In non-script mode, use click.echo directly for stdout
+            click.echo(message)
+
+    def _format_command(self, cmd: str) -> str:
+        """Format a command for display with optional dry-run indicator."""
         styled_cmd = click.style(f"  {cmd}", dim=True)
-        dry_run_marker = click.style(" (dry run)", fg="bright_black")
-        checkmark = click.style(" ✓", fg="green")
-        user_output(styled_cmd + dry_run_marker + checkmark)
+        if self._dry_run:
+            dry_run_marker = click.style(" (dry run)", fg="bright_black")
+            checkmark = click.style(" ✓", fg="green")
+            return styled_cmd + dry_run_marker + checkmark
+        else:
+            checkmark = click.style(" ✓", fg="green")
+            return styled_cmd + checkmark
+
+    # Read-only operations: delegate without printing
+
+    def get_prs_for_repo(
+        self, repo_root: Path, *, include_checks: bool
+    ) -> dict[str, PullRequestInfo]:
+        """Get PRs (read-only, no printing)."""
+        return self._wrapped.get_prs_for_repo(repo_root, include_checks=include_checks)
+
+    def get_pr_status(self, repo_root: Path, branch: str, *, debug: bool) -> PRInfo:
+        """Get PR status (read-only, no printing)."""
+        return self._wrapped.get_pr_status(repo_root, branch, debug=debug)
+
+    def get_pr_base_branch(self, repo_root: Path, pr_number: int) -> str | None:
+        """Get PR base branch (read-only, no printing)."""
+        return self._wrapped.get_pr_base_branch(repo_root, pr_number)
+
+    def get_pr_mergeability(self, repo_root: Path, pr_number: int) -> PRMergeability | None:
+        """Get PR mergeability (read-only, no printing)."""
+        return self._wrapped.get_pr_mergeability(repo_root, pr_number)
+
+    # Operations that need printing
+
+    def update_pr_base_branch(self, repo_root: Path, pr_number: int, new_base: str) -> None:
+        """Update PR base branch with printed output."""
+        self._emit(self._format_command(f"gh pr edit {pr_number} --base {new_base}"))
+        self._wrapped.update_pr_base_branch(repo_root, pr_number, new_base)
+
+    def merge_pr(
+        self,
+        repo_root: Path,
+        pr_number: int,
+        *,
+        squash: bool = True,
+        verbose: bool = False,
+    ) -> None:
+        """Merge PR with printed output."""
+        merge_type = "--squash" if squash else "--merge"
+        self._emit(self._format_command(f"gh pr merge {pr_number} {merge_type}"))
+        self._wrapped.merge_pr(repo_root, pr_number, squash=squash, verbose=verbose)

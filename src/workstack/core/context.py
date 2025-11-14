@@ -3,9 +3,11 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+import click
 import tomlkit
 
 from workstack.cli.config import LoadedConfig, load_config
+from workstack.cli.output import user_output
 from workstack.core.completion_ops import CompletionOps, RealCompletionOps
 from workstack.core.github_ops import GitHubOps, NoopGitHubOps, RealGitHubOps
 from workstack.core.gitops import GitOps, NoopGitOps, RealGitOps
@@ -293,6 +295,30 @@ def write_trunk_to_pyproject(repo_root: Path, trunk: str, git_ops: GitOps | None
         tomlkit.dump(doc, f)
 
 
+def safe_cwd() -> tuple[Path | None, str | None]:
+    """Get current working directory, detecting if it no longer exists.
+
+    Uses LBYL approach: checks if the operation will succeed before attempting it.
+
+    Returns:
+        tuple[Path | None, str | None]: (path, error_message)
+        - If successful: (Path, None)
+        - If directory deleted: (None, error_message)
+
+    Note:
+        This is an acceptable use of try/except since we're wrapping a third-party
+        API (Path.cwd()) that provides no way to check the condition first.
+    """
+    try:
+        cwd_path = Path.cwd()
+        return (cwd_path, None)
+    except (FileNotFoundError, OSError):
+        return (
+            None,
+            "Current working directory no longer exists",
+        )
+
+
 def create_context(*, dry_run: bool) -> WorkstackContext:
     """Create production context with real implementations.
 
@@ -313,7 +339,16 @@ def create_context(*, dry_run: bool) -> WorkstackContext:
         >>> workstacks_root = ctx.global_config.workstacks_root
     """
     # 1. Capture cwd (no deps)
-    cwd = Path.cwd()
+    cwd_result, error_msg = safe_cwd()
+    if cwd_result is None:
+        assert error_msg is not None
+        # Emit clear error and exit
+        user_output(click.style("Error: ", fg="red") + error_msg)
+        user_output("\nThe directory you're running from has been deleted.")
+        user_output("Please change to a valid directory and try again.")
+        raise SystemExit(1)
+
+    cwd = cwd_result
 
     # 2. Create global config ops
     global_config_ops = FilesystemGlobalConfigOps()

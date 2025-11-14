@@ -1,6 +1,5 @@
 import json
 import shlex
-import shutil
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 
@@ -18,6 +17,7 @@ from workstack.core.naming_utils import (
     sanitize_worktree_name,
     strip_plan_from_filename,
 )
+from workstack.core.plan_folder import create_plan_folder
 from workstack.core.repo_discovery import ensure_workstacks_dir
 
 
@@ -188,7 +188,7 @@ def _create_json_response(
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
     help=(
         "Path to a plan markdown file. Will derive worktree name from filename "
-        "and move to .PLAN.md in the worktree. "
+        "and create .plan/ folder with plan.md in the worktree. "
         "Worktree names are automatically suffixed with the current date (-YY-MM-DD) "
         "and versioned if duplicates exist."
     ),
@@ -248,8 +248,8 @@ def create(
     """Create a worktree and write a .env file.
 
     Reads config.toml for env templates and post-create commands (if present).
-    If --plan is provided, derives name from the plan filename and moves it to
-    .PLAN.md in the worktree.
+    If --plan is provided, derives name from the plan filename and creates
+    .plan/ folder in the worktree.
     If --from-current-branch is provided, moves the current branch to the new worktree.
     If --from-branch is provided, creates a worktree from an existing branch.
     """
@@ -356,13 +356,15 @@ def create(
     if ctx.git_ops.path_exists(wt_path):
         if output_json:
             # For JSON output, emit a status: "exists" response with available info
+            from workstack.core.plan_folder import get_plan_path
+
             existing_branch = ctx.git_ops.get_current_branch(wt_path)
-            plan_file_path = wt_path / ".PLAN.md"
+            plan_path = get_plan_path(wt_path, git_ops=ctx.git_ops)
             json_response = _create_json_response(
                 worktree_name=name,
                 worktree_path=wt_path,
                 branch_name=existing_branch,
-                plan_file_path=plan_file_path if ctx.git_ops.path_exists(plan_file_path) else None,
+                plan_file_path=plan_path,
                 status="exists",
             )
             user_output(json_response)
@@ -459,19 +461,24 @@ def create(
     env_content = make_env_content(cfg, worktree_path=wt_path, repo_root=repo.root, name=name)
     (wt_path / ".env").write_text(env_content, encoding="utf-8")
 
-    # Move or copy plan file if provided
-    # Track plan file destination: set to .PLAN.md path only if --plan was provided
-    plan_file_destination: Path | None = None
+    # Create plan folder if plan file provided
+    # Track plan folder destination: set to .plan/ path only if --plan was provided
+    plan_folder_destination: Path | None = None
     if plan_file:
-        plan_file_destination = wt_path / ".PLAN.md"
+        # Read plan content from source file
+        plan_content = plan_file.read_text(encoding="utf-8")
+
+        # Create .plan/ folder in new worktree
+        plan_folder_destination = create_plan_folder(wt_path, plan_content)
+
+        # Handle --keep-plan flag
         if keep_plan:
-            shutil.copy2(str(plan_file), str(plan_file_destination))
             if not script and not output_json:
-                user_output(f"Copied plan to {plan_file_destination}")
+                user_output(f"Copied plan to {plan_folder_destination}")
         else:
-            shutil.move(str(plan_file), str(plan_file_destination))
+            plan_file.unlink()  # Remove source file
             if not script and not output_json:
-                user_output(f"Moved plan to {plan_file_destination}")
+                user_output(f"Moved plan to {plan_folder_destination}")
 
     # Post-create commands (suppress output if JSON mode)
     if not no_post and cfg.post_create_commands:
@@ -501,7 +508,7 @@ def create(
             worktree_name=name,
             worktree_path=wt_path,
             branch_name=branch,
-            plan_file_path=plan_file_destination,
+            plan_file_path=plan_folder_destination,
             status="created",
         )
         user_output(json_response)

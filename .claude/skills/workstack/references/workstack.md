@@ -69,7 +69,9 @@ Workstack organizes worktrees in a predictable hierarchy:
 │   ├── config.toml                      ← Repo-specific config
 │   ├── feature-a/                       ← Individual workstack
 │   │   ├── .env                         ← Auto-generated env vars
-│   │   ├── .PLAN.md                     ← Optional plan file (gitignored)
+│   │   ├── .plan/                       ← Optional plan folder (gitignored)
+│   │   │   ├── plan.md                  ← Immutable implementation plan
+│   │   │   └── progress.md              ← Mutable progress tracking
 │   │   └── ... (source code)
 │   └── feature-b/                       ← Another workstack
 └── other-repo/                          ← Work dir for another repo
@@ -133,18 +135,18 @@ workstack status    # Shows: "feature-a [feature-a]"
 
 ### Core Concepts
 
-| Term                | Definition                                              | Example                              |
-| ------------------- | ------------------------------------------------------- | ------------------------------------ |
-| **Worktree**        | Git's native feature for multiple working directories   | Created by `git worktree add`        |
-| **Workstack**       | A configured worktree with environment setup            | Created by `workstack create`        |
-| **Repo Root**       | Original git repository directory containing `.git/`    | `/Users/you/projects/workstack`      |
-| **Work Dir**        | Directory containing all workstacks for a specific repo | `~/worktrees/workstack/`             |
-| **Workstacks Root** | Top-level directory for all configured repos            | `~/worktrees/`                       |
-| **Worktree Path**   | Absolute path to a specific workstack                   | `~/worktrees/workstack/my-feature/`  |
-| **Trunk Branch**    | Default branch of the repository (main/master)          | `main`                               |
-| **Stack**           | Graphite concept: linear chain of dependent branches    | main → feature-1 → feature-1-part-2  |
-| **Plan File**       | Markdown file containing implementation plans           | `.PLAN.md` (gitignored)              |
-| **Root Worktree**   | Special name for the original repo root directory       | Accessed via `workstack switch root` |
+| Term                | Definition                                              | Example                                                |
+| ------------------- | ------------------------------------------------------- | ------------------------------------------------------ |
+| **Worktree**        | Git's native feature for multiple working directories   | Created by `git worktree add`                          |
+| **Workstack**       | A configured worktree with environment setup            | Created by `workstack create`                          |
+| **Repo Root**       | Original git repository directory containing `.git/`    | `/Users/you/projects/workstack`                        |
+| **Work Dir**        | Directory containing all workstacks for a specific repo | `~/worktrees/workstack/`                               |
+| **Workstacks Root** | Top-level directory for all configured repos            | `~/worktrees/`                                         |
+| **Worktree Path**   | Absolute path to a specific workstack                   | `~/worktrees/workstack/my-feature/`                    |
+| **Trunk Branch**    | Default branch of the repository (main/master)          | `main`                                                 |
+| **Stack**           | Graphite concept: linear chain of dependent branches    | main → feature-1 → feature-1-part-2                    |
+| **Plan Folder**     | Folder containing implementation plan and progress      | `.plan/` with `plan.md` and `progress.md` (gitignored) |
+| **Root Worktree**   | Special name for the original repo root directory       | Accessed via `workstack switch root`                   |
 
 ### Resource Identifiers
 
@@ -296,7 +298,7 @@ workstack init --force
 1. Creates `~/.workstack/config.toml` (if not exists)
 2. Creates `{work_dir}/config.toml` (repo-specific)
 3. Sets up shell integration (optional)
-4. Adds `.PLAN.md` to `.gitignore`
+4. Adds `.plan/` to `.gitignore`
 
 #### `workstack config`
 
@@ -371,13 +373,15 @@ workstack create my-feature --ref develop
 - `create --from-branch BRANCH`: Uses existing branch `BRANCH`
 - `create --from-current-branch`: Moves current branch to worktree
 
-**Plan file behavior:**
+**Plan folder behavior:**
 
 ```bash
 workstack create --plan plan.md my-feature
 # 1. Creates worktree ~/worktrees/repo/my-feature/
-# 2. Moves plan.md → ~/worktrees/repo/my-feature/.PLAN.md
-# 3. .PLAN.md is gitignored (not committed)
+# 2. Creates .plan/ folder with:
+#    - plan.md (immutable - original plan content)
+#    - progress.md (mutable - checkboxes for tracking)
+# 3. .plan/ is gitignored (not committed)
 ```
 
 #### `workstack jump`
@@ -716,16 +720,17 @@ workstack switch root
 # 2. Create worktree from plan
 workstack create --plan Add_User_Auth.md
 # Creates worktree "add-user-auth"
-# Moves plan to ~/worktrees/repo/add-user-auth/.PLAN.md
+# Creates .plan/ folder with plan.md and progress.md
 
 # 3. Switch and implement
 workstack switch add-user-auth
-# Your plan is at .PLAN.md for reference during implementation
+# Your plan is at .plan/plan.md for reference during implementation
+# Progress tracked in .plan/progress.md
 
 # 4. Commit only code (not plan)
 git add .
 git commit -m "Implement user authentication"
-# .PLAN.md stays local (gitignored)
+# .plan/ stays local (gitignored)
 ```
 
 **Why this works:**
@@ -1045,7 +1050,8 @@ workstack create --plan Add_Authentication.md
 
 # 3. Implement
 ws add-authentication
-cat .PLAN.md              # Reference plan
+cat .plan/plan.md         # Reference plan
+cat .plan/progress.md     # Check progress
 # ... implement ...
 git commit -m "Add authentication"
 

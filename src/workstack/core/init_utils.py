@@ -152,18 +152,18 @@ def add_gitignore_entry(content: str, entry: str) -> str:
 
     Args:
         content: Current gitignore content
-        entry: Entry to add (e.g., ".PLAN.md")
+        entry: Entry to add (e.g., ".env")
 
     Returns:
         Updated gitignore content (original if entry already present)
 
     Example:
         >>> content = "*.pyc\\n"
-        >>> new_content = add_gitignore_entry(content, ".PLAN.md")
-        >>> ".PLAN.md" in new_content
+        >>> new_content = add_gitignore_entry(content, ".env")
+        >>> ".env" in new_content
         True
         >>> # Calling again should be idempotent
-        >>> newer_content = add_gitignore_entry(new_content, ".PLAN.md")
+        >>> newer_content = add_gitignore_entry(new_content, ".env")
         >>> newer_content == new_content
         True
     """

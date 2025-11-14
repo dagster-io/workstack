@@ -306,29 +306,43 @@ class DryRunGitOps(GitOps):
 
 ## Command-Specific Terms
 
-### Plan File
+### Plan Folder
 
-A markdown file containing implementation plans for a feature.
+A `.plan/` folder containing implementation plans and progress tracking for a feature.
 
 **Usage**: `workstack create --plan my-plan.md my-feature`
 
 **Behavior**:
 
-- Plan file is moved to `.PLAN.md` in the new worktree
-- `.PLAN.md` is gitignored (not committed)
+- Plan file is converted to `.plan/` folder structure in the new worktree
+- Contains two files:
+  - `plan.md` - Immutable implementation plan
+  - `progress.md` - Mutable progress tracking with checkboxes
+- `.plan/` is gitignored (not committed)
 - Useful for keeping implementation notes with the working code
+
+**Benefits**:
+
+- Separation of concerns: plan content vs progress tracking
+- No risk of corrupting plan while updating progress
+- Progress visible in `workstack status` output
 
 **Example**:
 
 ```bash
 # Create plan
-echo "## Implementation Plan\n- Step 1\n- Step 2" > plan.md
+echo "## Implementation Plan\n1. Step 1\n2. Step 2" > plan.md
 
 # Create worktree from plan
 workstack create --plan plan.md my-feature
 
-# Plan is now at: ~/worktrees/workstack/my-feature/.PLAN.md
+# Plan structure created:
+# ~/worktrees/workstack/my-feature/.plan/
+#   ├── plan.md        (immutable)
+#   └── progress.md    (mutable, with checkboxes)
 ```
+
+**Legacy Format**: Old worktrees may still use `.PLAN.md` single-file format. These will continue to work but won't show progress tracking.
 
 ### Dry Run
 

@@ -13,7 +13,7 @@
 
 **CRITICAL: NEVER search, read, or access `/Users/schrockn/.claude` directory**
 
-**NOTE: `.PLAN.md` files are NOT tracked in git and should never be committed**
+**NOTE: `.plan/` folders are NOT tracked in git and should never be committed**
 
 | If you're about to write...                                      | STOP! Check this instead                                                                             |
 | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |

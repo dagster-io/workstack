@@ -17,7 +17,7 @@ activate.sh
 
 # Local planning and configuration (not tracked in git)
 # Agent-tracked implementation plans (local-only, see docs/agent/guide.md)
-.PLAN.md
+.plan/    # Plan folder format
 .env
 
 CLAUDE.local.md

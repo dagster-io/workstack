@@ -66,7 +66,7 @@ class SimpleRenderer:
         user_output()
 
     def _render_plan(self, status: StatusData) -> None:
-        """Render plan file section if available.
+        """Render plan folder section if available.
 
         Args:
             status: Status data
@@ -74,7 +74,12 @@ class SimpleRenderer:
         if status.plan is None or not status.plan.exists:
             return
 
-        user_output(click.style("Plan:", fg="bright_magenta", bold=True))
+        # Plan title with progress if available
+        plan_header = "Plan:"
+        if status.plan.progress_summary:
+            plan_header += f" ({click.style(status.plan.progress_summary, fg='green')})"
+
+        user_output(click.style(plan_header, fg="bright_magenta", bold=True))
 
         if status.plan.first_lines:
             for line in status.plan.first_lines:
@@ -82,7 +87,7 @@ class SimpleRenderer:
 
         user_output(
             click.style(
-                f"  ({status.plan.line_count} lines in .PLAN.md)",
+                f"  ({status.plan.line_count} lines in plan.md)",
                 fg="white",
                 dim=True,
             )

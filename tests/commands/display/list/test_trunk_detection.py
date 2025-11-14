@@ -12,10 +12,10 @@ This file trusts that unit layer and only tests CLI integration.
 import pytest
 from click.testing import CliRunner
 
-from tests.commands.display.list import strip_ansi
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.output_helpers import strip_ansi
 from workstack.cli.cli import cli
 from workstack.core.gitops import WorktreeInfo
 from workstack.core.graphite_ops import BranchMetadata

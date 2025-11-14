@@ -2,7 +2,7 @@
 
 ## Overview
 
-The kit documentation registry provides a lightweight indexing system for installed kit artifacts. It requires only a ONE-TIME edit to AGENTS.md and automatically maintains synchronization with kit installations.
+The kit documentation registry provides a lightweight indexing system for installed kit artifacts. It is automatically configured during `dot-agent init` and maintains synchronization with kit installations.
 
 ## Architecture
 
@@ -12,9 +12,9 @@ The kit documentation registry provides a lightweight indexing system for instal
 
 ## How It Works
 
-### ONE-TIME Setup
+### Automatic Setup
 
-The system requires a single addition to AGENTS.md (already done):
+The registry reference is automatically added to AGENTS.md by `dot-agent init`:
 
 ```markdown
 ## Installed Kit Documentation
@@ -26,7 +26,7 @@ For a complete index of installed kit documentation (agents, commands, skills, a
 This registry is automatically updated when kits are installed, updated, or removed.
 ```
 
-After this ONE-TIME edit, no further manual intervention is needed.
+After initialization, no further manual intervention is needed.
 
 ### Automatic Maintenance
 

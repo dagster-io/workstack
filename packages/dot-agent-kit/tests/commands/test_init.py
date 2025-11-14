@@ -107,3 +107,128 @@ def test_init_preserves_existing_claude_directory(tmp_project: Path, cli_runner:
         assert test_file.read_text(encoding="utf-8") == "test content"
     finally:
         os.chdir(original_cwd)
+
+
+def test_init_creates_agents_md(tmp_project: Path, cli_runner: CliRunner) -> None:
+    """Test that init creates AGENTS.md with registry reference when missing."""
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(tmp_project)
+        result = cli_runner.invoke(init, [], catch_exceptions=False, obj={})
+
+        assert result.exit_code == 0
+
+        # Verify AGENTS.md was created
+        agents_md = tmp_project / "AGENTS.md"
+        assert agents_md.exists()
+
+        # Verify it contains required content
+        content = agents_md.read_text(encoding="utf-8")
+        assert "@.claude/docs/kit-registry.md" in content
+        assert "## Installed Kit Documentation" in content
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_init_creates_registry_file(tmp_project: Path, cli_runner: CliRunner) -> None:
+    """Test that init creates .claude/docs/kit-registry.md with proper structure."""
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(tmp_project)
+        result = cli_runner.invoke(init, [], catch_exceptions=False, obj={})
+
+        assert result.exit_code == 0
+
+        # Verify registry file exists
+        registry_file = tmp_project / ".claude" / "docs" / "kit-registry.md"
+        assert registry_file.exists()
+
+        # Verify it has proper structure
+        content = registry_file.read_text(encoding="utf-8")
+        assert "BEGIN_ENTRIES" in content
+        assert "END_ENTRIES" in content
+        assert "REGISTRY_VERSION: 1" in content
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_init_preserves_existing_agents_md(tmp_project: Path, cli_runner: CliRunner) -> None:
+    """Test that init preserves existing AGENTS.md content and appends registry reference."""
+    # Create AGENTS.md with custom content
+    agents_md = tmp_project / "AGENTS.md"
+    custom_content = "# My Custom Project\n\nThis is my existing content.\n"
+    agents_md.write_text(custom_content, encoding="utf-8")
+
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(tmp_project)
+        result = cli_runner.invoke(init, [], catch_exceptions=False, obj={})
+
+        assert result.exit_code == 0
+
+        # Verify original content is still present
+        content = agents_md.read_text(encoding="utf-8")
+        assert "# My Custom Project" in content
+        assert "This is my existing content." in content
+
+        # Verify registry reference was appended
+        assert "@.claude/docs/kit-registry.md" in content
+        assert "## Installed Kit Documentation" in content
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_init_skips_if_reference_exists(tmp_project: Path, cli_runner: CliRunner) -> None:
+    """Test that init is idempotent and doesn't add duplicate references."""
+    # Create AGENTS.md with registry reference already present
+    agents_md = tmp_project / "AGENTS.md"
+    content_with_reference = """# Project Docs
+
+## Installed Kit Documentation
+
+@.claude/docs/kit-registry.md
+"""
+    agents_md.write_text(content_with_reference, encoding="utf-8")
+
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(tmp_project)
+        result = cli_runner.invoke(init, [], catch_exceptions=False, obj={})
+
+        assert result.exit_code == 0
+
+        # Verify file content is unchanged
+        final_content = agents_md.read_text(encoding="utf-8")
+        assert final_content == content_with_reference
+
+        # Verify no duplicate references
+        assert final_content.count("@.claude/docs/kit-registry.md") == 1
+    finally:
+        os.chdir(original_cwd)
+
+
+def test_init_creates_registry_with_proper_structure(
+    tmp_project: Path, cli_runner: CliRunner
+) -> None:
+    """Test that init creates registry file with all required markers and metadata."""
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(tmp_project)
+        result = cli_runner.invoke(init, [], catch_exceptions=False, obj={})
+
+        assert result.exit_code == 0
+
+        # Read registry file
+        registry_file = tmp_project / ".claude" / "docs" / "kit-registry.md"
+        content = registry_file.read_text(encoding="utf-8")
+
+        # Verify all required markers present
+        assert "# Kit Documentation Registry" in content
+        assert "AUTO-GENERATED" in content
+        assert "DO NOT EDIT" in content
+        assert "REGISTRY_VERSION: 1" in content
+        assert "GENERATED_AT:" in content
+        assert "<!-- BEGIN_ENTRIES -->" in content
+        assert "<!-- END_ENTRIES -->" in content
+    finally:
+        os.chdir(original_cwd)

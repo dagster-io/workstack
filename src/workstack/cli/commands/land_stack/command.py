@@ -113,7 +113,7 @@ def land_stack(
 
     # Validate preconditions
     _validate_landing_preconditions(
-        ctx, repo.root, current_branch, branches_to_land, script_mode=script
+        ctx, repo.root, current_branch, branches_to_land, down, script_mode=script
     )
 
     # Validate all branches have open PRs

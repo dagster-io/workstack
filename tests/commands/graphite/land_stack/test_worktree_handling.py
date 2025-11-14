@@ -14,6 +14,70 @@ from workstack.core.global_config import GlobalConfig
 from workstack.core.graphite_ops import BranchMetadata
 
 
+def test_land_stack_with_down_flag_includes_flag_in_error_suggestions() -> None:
+    """Test that land-stack --down includes --down in consolidate and retry suggestions."""
+    runner = CliRunner()
+    with pure_workstack_env(runner) as env:
+        # Create linked worktrees (automatically tracked) - only for downstack branches
+        env.create_linked_worktree(name="feat-1", branch="feat-1", chdir=False)
+        env.create_linked_worktree(name="feat-2", branch="feat-2", chdir=False)
+        # Start from feat-3
+        env.create_linked_worktree(name="feat-3", branch="feat-3", chdir=True)
+
+        # Build both ops (automatically includes all created worktrees)
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
+                "feat-1": BranchMetadata.branch(
+                    "feat-1", "main", children=["feat-2"], commit_sha="def456"
+                ),
+                "feat-2": BranchMetadata.branch(
+                    "feat-2", "feat-1", children=["feat-3"], commit_sha="ghi789"
+                ),
+                "feat-3": BranchMetadata.branch("feat-3", "feat-2", commit_sha="jkl012"),
+            },
+            current_branch="feat-3",
+        )
+
+        global_config_ops = GlobalConfig(
+            workstacks_root=env.workstacks_root,
+            use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+            show_pr_checks=False,
+        )
+
+        github_ops = FakeGitHubOps(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Feature 1"),
+                "feat-2": ("OPEN", 200, "Feature 2"),
+                "feat-3": ("OPEN", 300, "Feature 3"),
+            }
+        )
+
+        test_ctx = WorkstackContext.for_test(
+            git_ops=git_ops,
+            global_config=global_config_ops,
+            graphite_ops=graphite_ops,
+            github_ops=github_ops,
+            shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
+            cwd=env.cwd,
+            dry_run=False,
+        )
+
+        result = runner.invoke(cli, ["land-stack", "--down"], obj=test_ctx)
+
+        # Should fail with multi-worktree error including --down flag
+        assert result.exit_code == 1
+        assert "Cannot land stack - branches are checked out in multiple worktrees" in result.output
+        assert "feat-1" in result.output
+        assert "feat-2" in result.output
+        # Key assertion: both suggestions should include --down
+        assert "workstack consolidate --down" in result.output
+        assert "workstack land-stack --down" in result.output
+
+
 def test_land_stack_fails_when_branches_in_multiple_worktrees() -> None:
     """Test that land-stack fails when stack branches are checked out in multiple worktrees."""
     runner = CliRunner()
@@ -72,7 +136,12 @@ def test_land_stack_fails_when_branches_in_multiple_worktrees() -> None:
         assert "Cannot land stack - branches are checked out in multiple worktrees" in result.output
         assert "feat-1" in result.output
         assert "feat-2" in result.output
+        # Key assertion: suggestions should NOT include --down when flag wasn't used
         assert "workstack consolidate" in result.output
+        assert "workstack land-stack" in result.output
+        # Verify --down is NOT included
+        assert "workstack consolidate --down" not in result.output
+        assert "workstack land-stack --down" not in result.output
 
 
 def test_land_stack_succeeds_when_all_branches_in_current_worktree() -> None:

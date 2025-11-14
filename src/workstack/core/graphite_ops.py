@@ -499,7 +499,7 @@ class RealGraphiteOps(GraphiteOps):
 
 
 class DryRunGraphiteOps(GraphiteOps):
-    """Wrapper that prints dry-run messages and prevents execution of destructive graphite operations.
+    """Wrapper that prints dry-run messages and prevents execution of destructive operations.
 
     This wrapper intercepts destructive operations, prints what would be executed,
     and prevents actual execution. Callers don't need to check ctx.dry_run - they

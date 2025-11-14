@@ -16,7 +16,7 @@ When working with bundled kits in dev mode, changes must be synchronized across 
 
 ### When to Use This
 
-- Changing a command name (e.g., `/create-from-plan` → `/create-planned-stack`)
+- Changing a command name (e.g., `/create-from-plan` → `/persist-plan`)
 - Standardizing naming conventions
 - Improving clarity or consistency
 
@@ -36,7 +36,8 @@ Edit `packages/dot-agent-kit/src/dot_agent_kit/data/kits/<kit-name>/kit.yaml`:
 ```yaml
 artifacts:
   command:
-    - commands/workstack/create-from-plan.md # OLD
+    - commands/workstack/create-planned-stack.md # OLD (deleted)
+    - commands/workstack/persist-plan.md # NEW
     - commands/workstack/create-planned-stack.md # NEW
 ```
 
@@ -80,21 +81,22 @@ Should show: `✅ All checks passed!`
 
 If you see "Missing artifacts", check that kit.yaml paths match actual files.
 
-### Real Example: create-from-plan → create-planned-stack
+### Real Example: create-planned-stack split into persist-plan + create-planned-stack
 
-From commit a623d24d, here's what needed to be updated:
+This refactoring split one command into two separate commands:
 
 ```bash
-# 1. File was renamed
-git mv commands/workstack/create-from-plan.md \
-       commands/workstack/create-planned-stack.md
+# 1. Files created/modified
+# - Created: commands/workstack/persist-plan.md
+# - Rewrote: commands/workstack/create-planned-stack.md (simplified version)
 
 # 2. kit.yaml updated
-# Line 7: create-from-plan.md → create-planned-stack.md
+# Changed single entry to two entries:
+#   - commands/workstack/persist-plan.md
+#   - commands/workstack/create-planned-stack.md
 
 # 3. Cross-references updated in implement-plan.md
-# Line 7:  "/workstack:create-from-plan" → "/workstack:create-planned-stack"
-# Line 55: "/workstack:create-from-plan" → "/workstack:create-planned-stack"
+# Updated references to new two-step workflow
 
 # 4. Reinstall
 dot-agent kit remove workstack

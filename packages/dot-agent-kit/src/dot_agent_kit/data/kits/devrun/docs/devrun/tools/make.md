@@ -382,6 +382,59 @@ When a make command fails, include:
 5. **Relevant context** (error type, expected vs actual values, exit code)
 6. **Structured data** for parent agent to assess root cause and apply fixes
 
+## Auto-Adaptive Output
+
+The devrun agent automatically adapts its reporting based on exit code:
+
+- **Exit Code 0 (Success)**: Minimal reporting
+- **Exit Code Non-Zero (Failure)**: Diagnostic reporting with breakdown
+
+### Minimal Output (Success Cases)
+
+For exit code 0, keep it brief:
+
+```
+**Summary**: All CI checks passed. Ran ruff, pyright, and pytest - all clean.
+```
+
+### Diagnostic Output (Failure Cases)
+
+For non-zero exit codes, provide full diagnostics with breakdown:
+
+#### Partial Failure
+
+```
+**Command**: make test
+**Exit Code**: 1 (pytest failed)
+**Summary**: Some checks failed
+
+**Breakdown**:
+  ✅ ruff check: 0 violations (47 files)
+  ✅ pyright: 0 errors (32 files)
+  ❌ pytest: 2/156 failed (1.3% failure rate)
+
+**Details**: See pytest failure details above
+
+**Status**: ⛔ Must fix before continuing
+```
+
+#### With Auto-Fixable Issues
+
+```
+**Command**: make lint
+**Exit Code**: 1 (ruff found violations)
+**Summary**: Lint violations detected (auto-fixable)
+
+**Breakdown**:
+  ❌ ruff check: 12 violations (all fixable)
+  ✅ ruff format --check: All files formatted
+
+**Details**: 12 violations in 8 files, all auto-fixable
+
+**Fixability**: Run `make lint-fix` or `ruff check --fix`
+**Status**: 🔧 Auto-fixable - re-run with --fix
+```
+
 ## Best Practices
 
 1. **Check exit code first** - distinguishes success from failure

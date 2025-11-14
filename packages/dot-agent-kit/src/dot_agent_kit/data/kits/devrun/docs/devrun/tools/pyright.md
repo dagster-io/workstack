@@ -243,6 +243,49 @@ Common pyright error rules:
 - Which files attempted the imports
 - Suggestion to check dependencies
 
+## Auto-Adaptive Output
+
+The devrun agent automatically adapts its reporting based on exit code:
+
+- **Exit Code 0 (Success)**: Minimal reporting
+- **Exit Code Non-Zero (Failure)**: Diagnostic reporting
+
+### Minimal Output (Success Cases)
+
+For exit code 0, keep it brief:
+
+```
+**Summary**: Type checking passed (32 files analyzed, 0 errors)
+```
+
+### Diagnostic Output (Failure Cases)
+
+For non-zero exit codes, provide full diagnostics:
+
+```
+**Command**: pyright src/models/
+**Exit Code**: 1 (type errors detected)
+**Summary**: Type errors detected
+**Details**:
+  - Files analyzed: 8
+  - Errors: 3
+  - Warnings: 0
+  - Informations: 0
+
+**Errors**:
+  1. src/models/user.py:45:12
+     reportAssignmentType: Type "str | None" cannot be assigned to declared type "str"
+
+  2. src/models/auth.py:89:20
+     reportArgumentType: Argument type "int" incompatible with parameter type "str"
+
+  3. src/models/db.py:102:5
+     reportReturnType: Return type "None" incompatible with declared type "User"
+
+**Fixability**: Requires code changes (not auto-fixable)
+**Status**: ⛔ Must fix before continuing
+```
+
 ## Best Practices
 
 1. **Always check exit code** - most reliable success indicator

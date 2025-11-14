@@ -212,17 +212,28 @@ After completing all implementation steps:
    - If found, read these files for CI/testing instructions
    - Follow any specific commands or workflows documented there
 
-2. **Run project-specific CI checks**:
-   - If documentation specifies CI commands, use those
-   - Otherwise, run common checks if tools are available:
-     - Linting: `ruff check .` or equivalent
-     - Type checking: `pyright` or equivalent
-     - Tests: `pytest` or equivalent
-     - Formatting: `ruff format .` or equivalent
+2. **Run project-specific CI checks using devrun agent**:
 
-3. **Verify all tests pass** before considering implementation complete
+   Delegate to devrun (automatically provides detailed diagnostics on failures):
 
-4. **Address any failures** by returning to relevant implementation steps
+   ```
+   Task(
+       subagent_type="devrun",
+       description="Run CI checks",
+       prompt="Execute: make all-ci"
+   )
+   ```
+
+   If documentation specifies different commands, use those instead.
+
+3. **Interpret devrun results**:
+   - **Success**: Minimal output means all checks passed
+   - **Failure**: Automatic diagnostic reporting provides:
+     - **✅ Safe to proceed**: All checks passed
+     - **🔧 Auto-fixable**: Re-run with --fix flag via devrun
+     - **⛔ Must fix**: Review failure details and fix issues
+
+4. **For failures**: Return to relevant implementation steps to fix issues
 
 ### Step 9: Output Format
 

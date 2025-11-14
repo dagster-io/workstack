@@ -2,11 +2,23 @@
 
 import re
 import shutil
+from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 import yaml
 
 from dot_agent_kit.models import InstalledKit, KitManifest, ProjectConfig, RegistryEntry
+
+
+@dataclass(frozen=True)
+class DocRegistryEntry:
+    """Documentation registry entry with metadata."""
+
+    kit_id: str
+    version: str
+    source_type: str
+    include_path: str
 
 
 def load_registry() -> list[RegistryEntry]:
@@ -29,6 +41,88 @@ def load_registry() -> list[RegistryEntry]:
         )
         for kit in data["kits"]
     ]
+
+
+def parse_doc_registry_entries(content: str) -> list[DocRegistryEntry]:
+    """Parse documentation registry entries from content.
+
+    Args:
+        content: Registry file content
+
+    Returns:
+        List of parsed registry entries
+    """
+    entries = []
+
+    # Pattern matches: <!-- ENTRY_START ... --> \n @path \n <!-- ENTRY_END -->
+    pattern = r"<!-- ENTRY_START (.*?) -->\s*\n@(.+?)\s*\n<!-- ENTRY_END -->"
+
+    for match in re.finditer(pattern, content, re.DOTALL):
+        # Extract metadata: kit_id="devrun" version="0.1.0" source="bundled"
+        metadata_str = match.group(1)
+        include_path = match.group(2).strip()
+
+        # Parse key="value" pairs
+        metadata = dict(re.findall(r'(\w+)="([^"]+)"', metadata_str))
+
+        # Validate required fields exist
+        if "kit_id" not in metadata or "version" not in metadata:
+            continue  # Skip malformed entries
+
+        entries.append(
+            DocRegistryEntry(
+                kit_id=metadata["kit_id"],
+                version=metadata["version"],
+                source_type=metadata.get("source", "unknown"),
+                include_path=include_path,
+            )
+        )
+
+    return entries
+
+
+def generate_doc_registry_content(entries: list[DocRegistryEntry]) -> str:
+    """Generate registry content from entries.
+
+    Args:
+        entries: List of registry entries (will be sorted alphabetically)
+
+    Returns:
+        Complete registry markdown content
+    """
+    # Sort entries alphabetically by kit_id
+    sorted_entries = sorted(entries, key=lambda e: e.kit_id)
+
+    # Generate timestamp
+    timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+
+    # Build registry content
+    lines = [
+        "# Kit Documentation Registry",
+        "",
+        "<!-- AUTO-GENERATED: This file is managed by dot-agent kit commands -->",
+        "<!-- DO NOT EDIT: Changes will be overwritten. Use 'dot-agent kit registry rebuild' -->",
+        "",
+        "<!-- REGISTRY_VERSION: 1 -->",
+        f"<!-- GENERATED_AT: {timestamp} -->",
+        "",
+        "<!-- BEGIN_ENTRIES -->",
+    ]
+
+    for entry in sorted_entries:
+        lines.append("")
+        lines.append(
+            f'<!-- ENTRY_START kit_id="{entry.kit_id}" '
+            f'version="{entry.version}" source="{entry.source_type}" -->'
+        )
+        lines.append(f"@{entry.include_path}")
+        lines.append("<!-- ENTRY_END -->")
+
+    lines.append("")
+    lines.append("<!-- END_ENTRIES -->")
+    lines.append("")
+
+    return "\n".join(lines)
 
 
 def _validate_registry_entry(entry: str) -> None:
@@ -146,47 +240,71 @@ def create_kit_registry_file(kit_id: str, entry_content: str, project_dir: Path)
     return registry_file
 
 
-def add_kit_to_registry(kit_id: str, project_dir: Path) -> None:
-    """Add kit @-include to kit-registry.md.
+def add_kit_to_registry(kit_id: str, project_dir: Path, version: str, source_type: str) -> None:
+    """Add kit to registry with structured format.
 
     Args:
         kit_id: Kit identifier
         project_dir: Project root directory
+        version: Kit version
+        source_type: Source type (bundled, standalone, etc.)
 
     Raises:
         IOError: If registry file cannot be written
     """
+    from dot_agent_kit.io import load_project_config
+
     registry_path = project_dir / ".claude" / "docs" / "kit-registry.md"
 
     # Create registry file if it doesn't exist
     if not registry_path.exists():
         registry_path.parent.mkdir(parents=True, exist_ok=True)
-        registry_path.write_text(
-            "# Kit Documentation Registry\n\n"
-            "<!-- AUTO-GENERATED: This file is managed by dot-agent kit commands -->\n"
-            "<!-- Aggregates all installed kit documentation pointers via @-includes -->\n\n",
-            encoding="utf-8",
-        )
+        # Create empty registry with new format
+        content = generate_doc_registry_content([])
+        registry_path.write_text(content, encoding="utf-8")
 
     # Read current content
     content = registry_path.read_text(encoding="utf-8")
 
-    # Check if @-include already exists
-    include_line = f"@.agent/kits/{kit_id}/registry-entry.md"
-    if include_line in content:
+    # Check if this is old format (no BEGIN_ENTRIES marker)
+    if "<!-- BEGIN_ENTRIES -->" not in content:
+        # Migrate to new format by rebuilding from dot-agent.toml
+        config = load_project_config(project_dir)
+        entries = []
+        if config is not None:
+            for kit_id_iter, installed_kit in config.kits.items():
+                entries.append(
+                    DocRegistryEntry(
+                        kit_id=kit_id_iter,
+                        version=installed_kit.version,
+                        source_type=installed_kit.source_type,
+                        include_path=f".agent/kits/{kit_id_iter}/registry-entry.md",
+                    )
+                )
+        content = generate_doc_registry_content(entries)
+        registry_path.write_text(content, encoding="utf-8")
+        # Continue to add the new kit after migration
+        # Fall through to parsing and adding logic below
+
+    # Parse existing entries
+    entries = parse_doc_registry_entries(content)
+
+    # Check if kit already exists
+    if any(e.kit_id == kit_id for e in entries):
         return  # Already present
 
-    # Append @-include with blank line before it
-    if not content.endswith("\n\n"):
-        if content.endswith("\n"):
-            content += "\n"
-        else:
-            content += "\n\n"
+    # Add new entry
+    new_entry = DocRegistryEntry(
+        kit_id=kit_id,
+        version=version,
+        source_type=source_type,
+        include_path=f".agent/kits/{kit_id}/registry-entry.md",
+    )
+    entries.append(new_entry)
 
-    content += f"{include_line}\n"
-
-    # Write updated content
-    registry_path.write_text(content, encoding="utf-8")
+    # Regenerate registry (will be sorted alphabetically)
+    new_content = generate_doc_registry_content(entries)
+    registry_path.write_text(new_content, encoding="utf-8")
 
 
 def remove_kit_from_registry(kit_id: str, project_dir: Path) -> None:
@@ -195,30 +313,37 @@ def remove_kit_from_registry(kit_id: str, project_dir: Path) -> None:
     Args:
         kit_id: Kit identifier
         project_dir: Project root directory
-
-    Note:
-        Logs warning if registry line not found but continues with directory deletion
     """
     registry_path = project_dir / ".claude" / "docs" / "kit-registry.md"
 
-    # Remove @-include line from registry if it exists
+    # Remove entry from registry if it exists
     if registry_path.exists():
         content = registry_path.read_text(encoding="utf-8")
-        include_line = f"@.agent/kits/{kit_id}/registry-entry.md"
 
-        # Remove the line and any preceding blank line
-        lines = content.split("\n")
-        filtered_lines = []
+        # Check if new structured format
+        if "<!-- BEGIN_ENTRIES -->" in content:
+            # Parse entries and filter out removed kit
+            entries = parse_doc_registry_entries(content)
+            entries = [e for e in entries if e.kit_id != kit_id]
 
-        for line in lines:
-            if line == include_line:
-                # Remove this line and any preceding blank line
-                if filtered_lines and not filtered_lines[-1].strip():
-                    filtered_lines.pop()
-                continue
-            filtered_lines.append(line)
+            # Regenerate registry
+            new_content = generate_doc_registry_content(entries)
+            registry_path.write_text(new_content, encoding="utf-8")
+        else:
+            # Old format - simple line removal
+            include_line = f"@.agent/kits/{kit_id}/registry-entry.md"
+            lines = content.split("\n")
+            filtered_lines = []
 
-        registry_path.write_text("\n".join(filtered_lines), encoding="utf-8")
+            for line in lines:
+                if line == include_line:
+                    # Remove this line and any preceding blank line
+                    if filtered_lines and not filtered_lines[-1].strip():
+                        filtered_lines.pop()
+                    continue
+                filtered_lines.append(line)
+
+            registry_path.write_text("\n".join(filtered_lines), encoding="utf-8")
 
     # Delete kit registry directory
     kit_registry_dir = project_dir / ".agent" / "kits" / kit_id
@@ -227,7 +352,7 @@ def remove_kit_from_registry(kit_id: str, project_dir: Path) -> None:
 
 
 def rebuild_registry(project_dir: Path, config: ProjectConfig) -> None:
-    """Rebuild entire registry from installed kits.
+    """Rebuild entire registry from installed kits using new structured format.
 
     Args:
         project_dir: Project root directory
@@ -241,26 +366,14 @@ def rebuild_registry(project_dir: Path, config: ProjectConfig) -> None:
 
     registry_path = project_dir / ".claude" / "docs" / "kit-registry.md"
 
-    # Delete existing registry
-    if registry_path.exists():
-        registry_path.unlink()
-
-    # Create fresh registry with header
-    registry_path.parent.mkdir(parents=True, exist_ok=True)
-    registry_path.write_text(
-        "# Kit Documentation Registry\n\n"
-        "<!-- AUTO-GENERATED: This file is managed by dot-agent kit commands -->\n"
-        "<!-- Aggregates all installed kit documentation pointers via @-includes -->\n\n",
-        encoding="utf-8",
-    )
-
     failures = []
+    entries = []
 
     # Create resolver to locate kit manifests
     sources = [BundledKitSource(), StandalonePackageSource()]
     resolver = KitResolver(sources)
 
-    # Regenerate entry for each installed kit
+    # Generate registry entry file for each installed kit
     for kit_id, installed_kit in config.kits.items():
         try:
             # Resolve kit to get manifest path
@@ -270,13 +383,29 @@ def rebuild_registry(project_dir: Path, config: ProjectConfig) -> None:
                 continue
 
             manifest = load_kit_manifest(resolved.manifest_path)
+
+            # Generate and write registry entry file
             entry_content = generate_registry_entry(
                 kit_id, installed_kit.version, manifest, installed_kit
             )
             create_kit_registry_file(kit_id, entry_content, project_dir)
-            add_kit_to_registry(kit_id, project_dir)
+
+            # Add to entries list for main registry
+            entries.append(
+                DocRegistryEntry(
+                    kit_id=kit_id,
+                    version=installed_kit.version,
+                    source_type=installed_kit.source_type,
+                    include_path=f".agent/kits/{kit_id}/registry-entry.md",
+                )
+            )
         except Exception as e:
             failures.append(f"{kit_id}: {e!s}")
 
     if failures:
         raise Exception("Failed to regenerate registry for some kits:\n" + "\n".join(failures))
+
+    # Generate new registry file with structured format
+    registry_path.parent.mkdir(parents=True, exist_ok=True)
+    content = generate_doc_registry_content(entries)
+    registry_path.write_text(content, encoding="utf-8")

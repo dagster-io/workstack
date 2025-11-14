@@ -87,8 +87,8 @@ def test_create_kit_registry_file(tmp_path: Path) -> None:
 
 
 def test_add_kit_to_registry_new_file(tmp_path: Path) -> None:
-    """Test adding kit @-include to new registry."""
-    add_kit_to_registry("test-kit", tmp_path)
+    """Test adding kit to new registry with structured format."""
+    add_kit_to_registry("test-kit", tmp_path, "1.0.0", "bundled")
 
     registry_path = tmp_path / ".claude" / "docs" / "kit-registry.md"
 
@@ -100,28 +100,32 @@ def test_add_kit_to_registry_new_file(tmp_path: Path) -> None:
     # Verify header present
     assert "# Kit Documentation Registry" in content
     assert "AUTO-GENERATED" in content
+    assert "BEGIN_ENTRIES" in content
+    assert "END_ENTRIES" in content
 
-    # Verify @-include added
+    # Verify structured entry added
+    assert 'ENTRY_START kit_id="test-kit"' in content
     assert "@.agent/kits/test-kit/registry-entry.md" in content
 
 
 def test_add_kit_to_registry_existing_file(tmp_path: Path) -> None:
-    """Test appending kit @-include to existing registry."""
+    """Test adding kit to existing registry (new structured format)."""
+    # First add creates registry
+    add_kit_to_registry("existing-kit", tmp_path, "1.0.0", "bundled")
+
+    # Add new kit to existing registry
+    add_kit_to_registry("new-kit", tmp_path, "2.0.0", "bundled")
+
     registry_path = tmp_path / ".claude" / "docs" / "kit-registry.md"
-    registry_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Create existing registry
-    registry_path.write_text(
-        "# Kit Documentation Registry\n\n@.agent/kits/existing-kit/registry-entry.md\n",
-        encoding="utf-8",
-    )
-
-    # Add new kit
-    add_kit_to_registry("new-kit", tmp_path)
-
     content = registry_path.read_text(encoding="utf-8")
 
-    # Verify both kits present
+    # Verify structured format
+    assert "BEGIN_ENTRIES" in content
+    assert "END_ENTRIES" in content
+
+    # Verify both kits present with metadata
+    assert 'ENTRY_START kit_id="existing-kit"' in content
+    assert 'ENTRY_START kit_id="new-kit"' in content
     assert "@.agent/kits/existing-kit/registry-entry.md" in content
     assert "@.agent/kits/new-kit/registry-entry.md" in content
 
@@ -129,13 +133,13 @@ def test_add_kit_to_registry_existing_file(tmp_path: Path) -> None:
 def test_add_kit_to_registry_duplicate(tmp_path: Path) -> None:
     """Test adding same kit twice (should be idempotent)."""
     # Add kit once
-    add_kit_to_registry("test-kit", tmp_path)
+    add_kit_to_registry("test-kit", tmp_path, "1.0.0", "bundled")
 
     registry_path = tmp_path / ".claude" / "docs" / "kit-registry.md"
     content_after_first = registry_path.read_text(encoding="utf-8")
 
     # Add same kit again
-    add_kit_to_registry("test-kit", tmp_path)
+    add_kit_to_registry("test-kit", tmp_path, "1.0.0", "bundled")
 
     content_after_second = registry_path.read_text(encoding="utf-8")
 
@@ -143,7 +147,7 @@ def test_add_kit_to_registry_duplicate(tmp_path: Path) -> None:
     assert content_after_first == content_after_second
 
     # Should only appear once
-    assert content_after_second.count("@.agent/kits/test-kit/registry-entry.md") == 1
+    assert content_after_second.count('kit_id="test-kit"') == 1
 
 
 def test_remove_kit_from_registry(tmp_path: Path) -> None:
@@ -234,3 +238,125 @@ def test_generate_registry_entry_with_skill() -> None:
 
     # Verify skill usage example
     assert "Load `test-skill` skill" in entry
+
+
+def test_parse_doc_registry_entries() -> None:
+    """Test parsing structured registry entries."""
+    from dot_agent_kit.io.registry import parse_doc_registry_entries
+
+    content = """# Kit Documentation Registry
+
+<!-- BEGIN_ENTRIES -->
+
+<!-- ENTRY_START kit_id="devrun" version="0.1.0" source="bundled" -->
+@.agent/kits/devrun/registry-entry.md
+<!-- ENTRY_END -->
+
+<!-- ENTRY_START kit_id="gt" version="0.2.0" source="standalone" -->
+@.agent/kits/gt/registry-entry.md
+<!-- ENTRY_END -->
+
+<!-- END_ENTRIES -->
+"""
+
+    entries = parse_doc_registry_entries(content)
+
+    # Should parse both entries
+    assert len(entries) == 2
+
+    # Check first entry
+    assert entries[0].kit_id == "devrun"
+    assert entries[0].version == "0.1.0"
+    assert entries[0].source_type == "bundled"
+    assert entries[0].include_path == ".agent/kits/devrun/registry-entry.md"
+
+    # Check second entry
+    assert entries[1].kit_id == "gt"
+    assert entries[1].version == "0.2.0"
+    assert entries[1].source_type == "standalone"
+
+
+def test_generate_doc_registry_content() -> None:
+    """Test generating registry content from entries."""
+    from dot_agent_kit.io.registry import DocRegistryEntry, generate_doc_registry_content
+
+    entries = [
+        DocRegistryEntry(
+            kit_id="kit-b",
+            version="2.0.0",
+            source_type="bundled",
+            include_path=".agent/kits/kit-b/registry-entry.md",
+        ),
+        DocRegistryEntry(
+            kit_id="kit-a",
+            version="1.0.0",
+            source_type="standalone",
+            include_path=".agent/kits/kit-a/registry-entry.md",
+        ),
+    ]
+
+    content = generate_doc_registry_content(entries)
+
+    # Should have structured format
+    assert "BEGIN_ENTRIES" in content
+    assert "END_ENTRIES" in content
+    assert "REGISTRY_VERSION: 1" in content
+    assert "GENERATED_AT:" in content
+
+    # Should be sorted alphabetically (kit-a before kit-b)
+    kit_a_pos = content.find('kit_id="kit-a"')
+    kit_b_pos = content.find('kit_id="kit-b"')
+    assert kit_a_pos < kit_b_pos  # kit-a should come before kit-b
+
+    # Should have metadata
+    assert 'version="1.0.0"' in content
+    assert 'source="standalone"' in content
+
+
+def test_old_format_migration() -> None:
+    """Test migration from old format to new format."""
+    from dot_agent_kit.io import save_project_config
+    from dot_agent_kit.models import ProjectConfig
+
+    tmp_path = Path("/tmp/test_migration")
+    tmp_path.mkdir(exist_ok=True)
+
+    try:
+        # Create old format registry
+        registry_path = tmp_path / ".claude" / "docs" / "kit-registry.md"
+        registry_path.parent.mkdir(parents=True, exist_ok=True)
+        registry_path.write_text(
+            "# Kit Documentation Registry\n\n@.agent/kits/old-kit/registry-entry.md\n",
+            encoding="utf-8",
+        )
+
+        # Create dot-agent.toml with kit info
+        config = ProjectConfig(
+            version="1",
+            kits={
+                "old-kit": InstalledKit(
+                    kit_id="old-kit",
+                    source_type="bundled",
+                    version="1.0.0",
+                    artifacts=[],
+                )
+            },
+        )
+        save_project_config(tmp_path, config)
+
+        # Add another kit - should trigger migration
+        add_kit_to_registry("new-kit", tmp_path, "2.0.0", "bundled")
+
+        content = registry_path.read_text(encoding="utf-8")
+
+        # Should have migrated to new format
+        assert "BEGIN_ENTRIES" in content
+        assert "END_ENTRIES" in content
+        assert 'kit_id="old-kit"' in content
+        assert 'kit_id="new-kit"' in content
+    finally:
+        # Cleanup
+        if tmp_path.exists():
+            import shutil
+
+            shutil.rmtree(tmp_path)

@@ -78,15 +78,34 @@ def validate() -> None:
 
     # Read registry content
     content = registry_path.read_text(encoding="utf-8")
-    registry_lines = [line.strip() for line in content.split("\n") if line.startswith("@")]
 
-    # Extract kit IDs from registry @-includes
-    registry_kits = set()
-    for line in registry_lines:
-        # Parse: @.agent/kits/{kit_id}/registry-entry.md
-        if line.startswith("@.agent/kits/") and line.endswith("/registry-entry.md"):
-            kit_id = line.split("/")[2]
-            registry_kits.add(kit_id)
+    # Check if new structured format
+    if "<!-- BEGIN_ENTRIES -->" in content:
+        from dot_agent_kit.io.registry import parse_doc_registry_entries
+
+        # Use structured parsing
+        entries = parse_doc_registry_entries(content)
+        registry_kits = {e.kit_id for e in entries}
+
+        # Also validate versions match
+        version_mismatches = []
+        for entry in entries:
+            if entry.kit_id in config.kits:
+                installed = config.kits[entry.kit_id]
+                if entry.version != installed.version:
+                    version_mismatches.append(
+                        f"{entry.kit_id}: version mismatch "
+                        f"(registry={entry.version}, installed={installed.version})"
+                    )
+    else:
+        # Old format - fallback to simple parsing
+        registry_lines = [line.strip() for line in content.split("\n") if line.startswith("@")]
+        registry_kits = set()
+        for line in registry_lines:
+            if line.startswith("@.agent/kits/") and line.endswith("/registry-entry.md"):
+                kit_id = line.split("/")[2]
+                registry_kits.add(kit_id)
+        version_mismatches = []
 
     # Get installed kit IDs
     installed_kits = set(config.kits.keys())
@@ -106,6 +125,9 @@ def validate() -> None:
         issues.append(
             f"Registry entries for uninstalled kits: {', '.join(sorted(extra_in_registry))}"
         )
+
+    # Add version mismatches to issues
+    issues.extend(version_mismatches)
 
     # Check that registry entry files exist
     for kit_id in registry_kits:

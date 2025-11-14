@@ -240,7 +240,7 @@ def _handle_fresh_install(
             kit_id, installed_kit.version, manifest, installed_kit
         )
         create_kit_registry_file(kit_id, entry_content, project_dir)
-        add_kit_to_registry(kit_id, project_dir)
+        add_kit_to_registry(kit_id, project_dir, installed_kit.version, installed_kit.source_type)
     except Exception as e:
         user_output(f"  Warning: Failed to update registry: {e!s}")
 

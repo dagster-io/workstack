@@ -97,13 +97,13 @@ def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellInt
     if script_path:
         # Check for obvious non-path indicators
         is_likely_path = (
-            '\n' not in script_path and  # Paths don't contain newlines
-            len(script_path) < 4096 and  # Path length limit on most systems
-            not script_path.startswith('✓') and  # Not a success message
-            not script_path.startswith('✅') and  # Not a success message
-            not script_path.startswith('❌') and  # Not an error message
-            not script_path.startswith('Note:') and  # Not an info message
-            '/' in script_path  # Paths typically contain directory separators
+            "\n" not in script_path  # Paths don't contain newlines
+            and len(script_path) < 4096  # Path length limit on most systems
+            and not script_path.startswith("✓")  # Not a success message
+            and not script_path.startswith("✅")  # Not a success message
+            and not script_path.startswith("❌")  # Not an error message
+            and not script_path.startswith("Note:")  # Not an info message
+            and "/" in script_path  # Paths typically contain directory separators
         )
 
         if is_likely_path:

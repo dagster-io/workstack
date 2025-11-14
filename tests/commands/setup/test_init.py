@@ -521,46 +521,6 @@ def test_init_fails_without_force_when_exists() -> None:
         assert "Use --force to overwrite" in result.output
 
 
-def test_init_adds_plan_md_to_gitignore() -> None:
-    """Test that init offers to add .PLAN.md to .gitignore.
-
-    NOTE: Uses simulated_workstack_env because this test verifies actual
-    .gitignore file content on disk. Cannot migrate to pure mode without
-    abstracting file operations in production code.
-    """
-    runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        # Create .gitignore
-        gitignore = env.cwd / ".gitignore"
-        gitignore.write_text("*.pyc\n", encoding="utf-8")
-
-        workstacks_root = env.cwd / "workstacks"
-
-        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config = GlobalConfig(
-            workstacks_root=workstacks_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-            show_pr_checks=False,
-        )
-        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
-
-        test_ctx = env.build_context(
-            git_ops=git_ops,
-            global_config_ops=global_config_ops,
-            global_config=global_config,
-        )
-
-        # Accept both prompts (y for .PLAN.md, y for .env)
-
-        result = runner.invoke(cli, ["init"], obj=test_ctx, input="y\ny\n")
-
-        assert result.exit_code == 0, result.output
-        gitignore_content = gitignore.read_text(encoding="utf-8")
-        assert ".PLAN.md" in gitignore_content
-
-
 def test_init_adds_env_to_gitignore() -> None:
     """Test that init offers to add .env to .gitignore.
 
@@ -592,9 +552,9 @@ def test_init_adds_env_to_gitignore() -> None:
             global_config=global_config,
         )
 
-        # Accept both prompts (y for .PLAN.md, y for .env)
+        # Accept prompt for .env
 
-        result = runner.invoke(cli, ["init"], obj=test_ctx, input="y\ny\n")
+        result = runner.invoke(cli, ["init"], obj=test_ctx, input="y\n")
 
         assert result.exit_code == 0, result.output
         gitignore_content = gitignore.read_text(encoding="utf-8")
@@ -602,7 +562,7 @@ def test_init_adds_env_to_gitignore() -> None:
 
 
 def test_init_skips_gitignore_entries_if_declined() -> None:
-    """Test that init skips gitignore entries if user declines.
+    """Test that init skips .env gitignore entry if user declines.
 
     NOTE: Uses simulated_workstack_env because this test verifies actual
     .gitignore file content on disk. Cannot migrate to pure mode without
@@ -632,12 +592,11 @@ def test_init_skips_gitignore_entries_if_declined() -> None:
             global_config=global_config,
         )
 
-        # Decline both prompts
-        result = runner.invoke(cli, ["init"], obj=test_ctx, input="n\nn\n")
+        # Decline prompt
+        result = runner.invoke(cli, ["init"], obj=test_ctx, input="n\n")
 
         assert result.exit_code == 0, result.output
         gitignore_content = gitignore.read_text(encoding="utf-8")
-        assert ".PLAN.md" not in gitignore_content
         assert ".env" not in gitignore_content
 
 
@@ -708,17 +667,16 @@ def test_init_preserves_gitignore_formatting() -> None:
             global_config=global_config,
         )
 
-        # Accept both prompts (y for .PLAN.md, y for .env)
+        # Accept prompt for .env
 
-        result = runner.invoke(cli, ["init"], obj=test_ctx, input="y\ny\n")
+        result = runner.invoke(cli, ["init"], obj=test_ctx, input="y\n")
 
         assert result.exit_code == 0, result.output
         gitignore_content = gitignore.read_text(encoding="utf-8")
         # Original content should be preserved
         assert "# Python" in gitignore_content
         assert "*.pyc" in gitignore_content
-        # New entries should be added
-        assert ".PLAN.md" in gitignore_content
+        # New entry should be added
         assert ".env" in gitignore_content
 
 

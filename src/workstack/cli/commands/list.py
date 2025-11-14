@@ -17,7 +17,7 @@ from workstack.core.worktree_utils import find_current_worktree
 
 
 def _format_plan_summary(worktree_path: Path, ctx: WorkstackContext) -> str | None:
-    """Extract plan title from .PLAN.md if it exists.
+    """Extract plan title from .plan/plan.md if it exists.
 
     Args:
         worktree_path: Path to the worktree directory
@@ -27,8 +27,13 @@ def _format_plan_summary(worktree_path: Path, ctx: WorkstackContext) -> str | No
         Plan title string, or None if no plan file
     """
     from workstack.core.file_utils import extract_plan_title
+    from workstack.core.plan_folder import get_plan_path
 
-    plan_path = worktree_path / ".PLAN.md"
+    # Check for new .plan/ folder format only
+    plan_path = get_plan_path(worktree_path, git_ops=ctx.git_ops)
+    if plan_path is None:
+        return None
+
     return extract_plan_title(plan_path, git_ops=ctx.git_ops)
 
 

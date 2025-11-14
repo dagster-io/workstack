@@ -13,7 +13,7 @@ def extract_plan_title(plan_path: Path, git_ops: GitOps | None = None) -> str | 
     Common prefixes like "Implementation Plan: " are stripped from the title.
 
     Args:
-        plan_path: Path to the .PLAN.md file
+        plan_path: Path to the plan markdown file (e.g., .plan/plan.md)
         git_ops: Optional GitOps interface for path checking (uses .exists() if None)
 
     Returns:
@@ -54,3 +54,33 @@ def extract_plan_title(plan_path: Path, git_ops: GitOps | None = None) -> str | 
                 return title
 
     return None
+
+
+def extract_plan_title_from_folder(folder_path: Path, git_ops: GitOps | None = None) -> str | None:
+    """Extract the first heading from plan.md within a .plan/ folder.
+
+    Args:
+        folder_path: Path to the .plan/ directory
+        git_ops: Optional GitOps interface for path checking (uses .exists() if None)
+
+    Returns:
+        The heading text (without the # prefix and common prefixes), or None if
+        not found or folder/file doesn't exist
+    """
+    if git_ops is not None:
+        folder_exists = git_ops.path_exists(folder_path)
+    else:
+        folder_exists = folder_path.exists()
+    if not folder_exists:
+        return None
+
+    plan_file = folder_path / "plan.md"
+    if git_ops is not None:
+        plan_file_exists = git_ops.path_exists(plan_file)
+    else:
+        plan_file_exists = plan_file.exists()
+    if not plan_file_exists:
+        return None
+
+    # Delegate to existing title extraction logic
+    return extract_plan_title(plan_file, git_ops)

@@ -122,7 +122,7 @@ def test_renderer_with_plan_file() -> None:
 
     plan = PlanStatus(
         exists=True,
-        path=Path("/tmp/test/.PLAN.md"),
+        path=Path("/tmp/test/.plan"),
         summary="Test plan summary",
         line_count=42,
         first_lines=[
@@ -132,6 +132,8 @@ def test_renderer_with_plan_file() -> None:
             "",
             "This is a test plan.",
         ],
+        progress_summary="5/10 steps completed",
+        format="folder",
     )
 
     git_status = GitStatus.clean_status("feature")
@@ -157,7 +159,7 @@ def test_renderer_with_plan_file() -> None:
     assert "# Test Plan" in output
     assert "## Overview" in output
     assert "This is a test plan." in output
-    assert "(42 lines in .PLAN.md)" in output
+    assert "(42 lines in plan.md)" in output
 
 
 def test_renderer_without_plan_file() -> None:
@@ -168,10 +170,12 @@ def test_renderer_without_plan_file() -> None:
     # Plan exists but file not found
     plan = PlanStatus(
         exists=False,
-        path=Path("/tmp/test/.PLAN.md"),
+        path=None,
         summary=None,
         line_count=0,
         first_lines=[],
+        progress_summary=None,
+        format="none",
     )
 
     git_status = GitStatus.clean_status("feature")
@@ -652,10 +656,12 @@ def test_renderer_full_status() -> None:
 
     plan = PlanStatus(
         exists=True,
-        path=Path("/tmp/test/.PLAN.md"),
+        path=Path("/tmp/test/.plan"),
         summary="Implementation plan",
         line_count=20,
         first_lines=["# Implementation Plan"],
+        progress_summary="3/5 steps completed",
+        format="folder",
     )
 
     related_worktrees = [

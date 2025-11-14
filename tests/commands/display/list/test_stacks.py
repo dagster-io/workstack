@@ -567,116 +567,8 @@ def test_list_with_stacks_corrupted_cache() -> None:
                 runner.invoke(cli, ["list", "--stacks"], obj=test_ctx, catch_exceptions=False)
 
 
-def test_list_with_stacks_shows_plan_summary() -> None:
-    """Test that plan summary appears between worktree header and stack."""
-    runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        # Create graphite cache
-        graphite_cache = {
-            "branches": [
-                ["main", {"validationResult": "TRUNK", "children": ["feature"]}],
-                ["feature", {"parentBranchName": "main", "children": []}],
-            ]
-        }
-        (env.git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache))
-
-        # Create worktree with .PLAN.md
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        feature_wt = workstacks_dir / "feature"
-        feature_wt.mkdir(parents=True)
-
-        # Create .PLAN.md with frontmatter and heading
-        plan_content = """---
-title: Feature Implementation
-date: 2025-01-15
----
-
-# Implement OAuth2 integration
-
-Some description here.
-
-## Details
-More content.
-"""
-        (feature_wt / ".PLAN.md").write_text(plan_content, encoding="utf-8")
-
-        # Set up fakes
-        git_ops = FakeGitOps(
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=feature_wt, branch="feature"),
-                ],
-            },
-            git_common_dirs={env.cwd: env.git_dir, feature_wt: env.git_dir},
-            current_branches={env.cwd: "main", feature_wt: "feature"},
-        )
-
-        test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=RealGraphiteOps(), use_graphite=True
-        )
-
-        result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
-        assert result.exit_code == 0, result.output
-
-        # Strip ANSI codes for easier assertion
-        output = strip_ansi(result.output)
-
-        # Plan title should appear
-        assert "Implement OAuth2 integration" in output
-
-        # Verify plan appears on the feature header line
-        lines = output.splitlines()
-        feature_header_idx = None
-
-        for i, line in enumerate(lines):
-            if line.startswith("feature"):
-                feature_header_idx = i
-                break
-
-        assert feature_header_idx is not None
-        # Plan should now appear ON the feature header line
-        assert "Implement OAuth2 integration" in lines[feature_header_idx]
-
-
-def test_list_without_stacks_shows_plan_summary() -> None:
-    """Test that plan summary now appears on main line (not just with --stacks)."""
-    runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        # Create worktree with .PLAN.md
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        feature_wt = workstacks_dir / "feature"
-        feature_wt.mkdir(parents=True)
-
-        # Create .PLAN.md
-        (feature_wt / ".PLAN.md").write_text("# Test Plan\n\nContent.", encoding="utf-8")
-
-        # Set up fakes
-        git_ops = FakeGitOps(
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=feature_wt, branch="feature"),
-                ],
-            },
-            git_common_dirs={env.cwd: env.git_dir, feature_wt: env.git_dir},
-        )
-
-        test_ctx = env.build_context(
-            git_ops=git_ops,
-            use_graphite=False,
-        )
-
-        result = runner.invoke(cli, ["list"], obj=test_ctx)
-        assert result.exit_code == 0, result.output
-        output = strip_ansi(result.output)
-
-        # Plan title SHOULD appear on the main line now
-        assert "Test Plan" in output
-
-
 def test_list_with_stacks_no_plan_file() -> None:
-    """Test that missing .PLAN.md doesn't cause errors."""
+    """Test that missing .plan/ folder doesn't cause errors."""
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
         # Create graphite cache
@@ -688,7 +580,7 @@ def test_list_with_stacks_no_plan_file() -> None:
         }
         (env.git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache))
 
-        # Create worktree WITHOUT .PLAN.md
+        # Create worktree WITHOUT .plan/ folder
         workstacks_dir = env.workstacks_root / env.cwd.name
         feature_wt = workstacks_dir / "feature"
         feature_wt.mkdir(parents=True)
@@ -719,11 +611,11 @@ def test_list_with_stacks_no_plan_file() -> None:
         assert "◉  feature" in output
 
 
-def test_list_with_stacks_plan_without_frontmatter() -> None:
-    """Test parsing plan with heading as first line."""
+def test_list_stacks_shows_plan_title_from_plan_folder() -> None:
+    """Test that list --stacks displays plan title from .plan/plan.md (new format)."""
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
-        # Create graphite cache
+        # Mock Graphite cache with simple stack: main → feature
         graphite_cache = {
             "branches": [
                 ["main", {"validationResult": "TRUNK", "children": ["feature"]}],
@@ -732,12 +624,95 @@ def test_list_with_stacks_plan_without_frontmatter() -> None:
         }
         (env.git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache))
 
-        # Create worktree with .PLAN.md (no frontmatter)
+        # Create worktree with .plan/ folder (new format)
         workstacks_dir = env.workstacks_root / env.cwd.name
         feature_wt = workstacks_dir / "feature"
         feature_wt.mkdir(parents=True)
 
-        plan_content = "# Simple feature implementation\n\nContent here."
+        # Create .plan/ folder structure
+        plan_folder = feature_wt / ".plan"
+        plan_folder.mkdir()
+
+        plan_content = """---
+title: OAuth2 Integration Plan
+date: 2025-01-15
+---
+
+# Implement OAuth2 integration
+
+Detailed implementation plan for OAuth2.
+
+## Steps
+
+1. Set up OAuth provider
+2. Implement auth flow
+3. Add token management
+"""
+        (plan_folder / "plan.md").write_text(plan_content, encoding="utf-8")
+
+        # Create progress.md as well (part of new format)
+        progress_content = """# Implementation Progress
+
+- [ ] Set up OAuth provider
+- [ ] Implement auth flow
+- [ ] Add token management
+"""
+        (plan_folder / "progress.md").write_text(progress_content, encoding="utf-8")
+
+        # Set up fakes
+        git_ops = FakeGitOps(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
+                    WorktreeInfo(path=feature_wt, branch="feature"),
+                ],
+            },
+            git_common_dirs={env.cwd: env.git_dir, feature_wt: env.git_dir},
+            current_branches={env.cwd: "main", feature_wt: "feature"},
+        )
+
+        test_ctx = env.build_context(
+            git_ops=git_ops, graphite_ops=RealGraphiteOps(), use_graphite=True
+        )
+
+        result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
+        assert result.exit_code == 0, result.output
+
+        # Strip ANSI codes for easier assertion
+        output = strip_ansi(result.output)
+
+        # Plan title (first # heading) from .plan/plan.md should appear
+        assert "Implement OAuth2 integration" in output
+
+
+def test_list_stacks_ignores_legacy_plan_md() -> None:
+    """Test that list --stacks does NOT display plan title from .PLAN.md (old format)."""
+    runner = CliRunner()
+    with simulated_workstack_env(runner) as env:
+        # Mock Graphite cache with simple stack: main → feature
+        graphite_cache = {
+            "branches": [
+                ["main", {"validationResult": "TRUNK", "children": ["feature"]}],
+                ["feature", {"parentBranchName": "main", "children": []}],
+            ]
+        }
+        (env.git_dir / ".graphite_cache_persist").write_text(json.dumps(graphite_cache))
+
+        # Create worktree with .PLAN.md (old format)
+        workstacks_dir = env.workstacks_root / env.cwd.name
+        feature_wt = workstacks_dir / "feature"
+        feature_wt.mkdir(parents=True)
+
+        # Create .PLAN.md with old format
+        plan_content = """---
+title: Legacy Plan Format
+date: 2025-01-15
+---
+
+# Old format plan
+
+This should NOT be displayed.
+"""
         (feature_wt / ".PLAN.md").write_text(plan_content, encoding="utf-8")
 
         # Set up fakes
@@ -759,5 +734,8 @@ def test_list_with_stacks_plan_without_frontmatter() -> None:
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
         assert result.exit_code == 0, result.output
 
+        # Strip ANSI codes for easier assertion
         output = strip_ansi(result.output)
-        assert "Simple feature implementation" in output
+
+        # Legacy plan title should NOT appear
+        assert "Legacy Plan Format" not in output

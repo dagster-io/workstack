@@ -50,7 +50,7 @@ def _add_gitignore_entry_with_prompt(
 
     Args:
         content: Current gitignore content
-        entry: Entry to add (e.g., ".PLAN.md")
+        entry: Entry to add (e.g., ".env")
         prompt_message: Message to show user when confirming
 
     Returns:
@@ -262,22 +262,13 @@ def init_cmd(
     cfg_path.write_text(content, encoding="utf-8")
     user_output(f"Wrote {cfg_path}")
 
-    # Check for .gitignore and add .PLAN.md and .env
+    # Check for .gitignore and add .env
     gitignore_path = repo_context.root / ".gitignore"
     if not gitignore_path.exists():
         # Early return: no gitignore file
         pass
     else:
         gitignore_content = gitignore_path.read_text(encoding="utf-8")
-        modified = False
-
-        # Add .PLAN.md
-        gitignore_content, plan_added = _add_gitignore_entry_with_prompt(
-            gitignore_content,
-            ".PLAN.md",
-            "Add .PLAN.md to .gitignore?",
-        )
-        modified = modified or plan_added
 
         # Add .env
         gitignore_content, env_added = _add_gitignore_entry_with_prompt(
@@ -285,10 +276,9 @@ def init_cmd(
             ".env",
             "Add .env to .gitignore?",
         )
-        modified = modified or env_added
 
         # Write if modified
-        if modified:
+        if env_added:
             gitignore_path.write_text(gitignore_content, encoding="utf-8")
             user_output(f"Updated {gitignore_path}")
 

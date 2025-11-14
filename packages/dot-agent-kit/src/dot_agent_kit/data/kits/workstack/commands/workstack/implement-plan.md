@@ -1,10 +1,10 @@
 ---
-description: Execute the implementation plan from .PLAN.md in current directory
+description: Execute the implementation plan from .plan/ folder in current directory
 ---
 
 # /workstack:implement-plan
 
-This command reads and executes the `.PLAN.md` file from the current directory. It is designed to be run after switching to a worktree created by `/persist-plan` and `/create-planned-stack`.
+This command reads and executes the `.plan/plan.md` file from the current directory. It is designed to be run after switching to a worktree created by `/persist-plan` and `/create-planned-stack`.
 
 ## Usage
 
@@ -14,19 +14,20 @@ This command reads and executes the `.PLAN.md` file from the current directory. 
 
 ## Prerequisites
 
-- Must be in a worktree directory that contains `.PLAN.md`
+- Must be in a worktree directory that contains `.plan/` folder
 - Typically run after `workstack switch <worktree-name>`
-- `.PLAN.md` should contain a valid implementation plan
+- `.plan/plan.md` should contain a valid implementation plan
 
 ## What Happens
 
 When you run this command:
 
-1. Verifies `.PLAN.md` exists in the current directory
+1. Verifies `.plan/plan.md` exists in the current directory
 2. Reads and parses the implementation plan
 3. Creates todo list for tracking progress
 4. Executes each phase of the plan sequentially
-5. Provides progress updates and summary
+5. Updates `.plan/progress.md` with step completions
+6. Provides progress updates and summary
 
 ## Expected Outcome
 
@@ -40,16 +41,16 @@ When you run this command:
 
 You are executing the `/workstack:implement-plan` command. Follow these steps carefully:
 
-### Step 1: Verify .PLAN.md Exists
+### Step 1: Verify .plan/plan.md Exists
 
-Check that `.PLAN.md` exists in the current directory.
+Check that `.plan/plan.md` exists in the current directory.
 
 If not found:
 
 ```
-❌ Error: No .PLAN.md file found in current directory
+❌ Error: No plan folder found in current directory
 
-This command must be run from a worktree directory that contains a .PLAN.md file.
+This command must be run from a worktree directory that contains a .plan/ folder with plan.md.
 
 To create a worktree with a plan:
 1. Run /persist-plan to save your enhanced plan to disk
@@ -60,7 +61,7 @@ To create a worktree with a plan:
 
 ### Step 2: Read the Plan File
 
-Read `.PLAN.md` from the current directory to get the full implementation plan.
+Read `.plan/plan.md` from the current directory to get the full implementation plan.
 
 Parse the plan to understand:
 
@@ -144,20 +145,26 @@ For each phase in the plan:
 
 **IMPORTANT - Progress Tracking:**
 
-The `.PLAN.md` file has two distinct sections:
+The new `.plan/` folder structure separates concerns:
 
-1. **Main body (static reference material)**: Contains Objective, Context & Understanding, Implementation Steps/Phases, Testing. This section should NEVER be edited during implementation.
+1. **`.plan/plan.md` (immutable reference)**: Contains Objective, Context & Understanding, Implementation Steps/Phases, Testing. This file should NEVER be edited during implementation.
 
-2. **Progress Tracking section** (at the bottom): Contains Current Status, Last Updated, phase/step checkboxes, and overall progress metrics. This is the ONLY section that should be updated during implementation.
+2. **`.plan/progress.md` (mutable tracking)**: Contains checkboxes for all steps extracted from plan.md. This is the ONLY file that should be updated during implementation.
 
 When updating progress:
 
-- Only edit the "Progress Tracking" section at the bottom of `.PLAN.md`
-- Update "Current Status" field with current phase/step
-- Update "Last Updated" timestamp
+- Only edit `.plan/progress.md` - never touch `.plan/plan.md`
 - Mark checkboxes as completed: `- [x]` instead of `- [ ]`
-- Update "Overall Progress" metrics
-- NEVER modify the main plan body (Objective, Context, Implementation Steps, etc.)
+- Simple find-replace operation: no risk of corrupting the plan
+- Progress format example:
+
+  ```markdown
+  # Progress Tracking
+
+  - [ ] 1. Create module
+  - [x] 2. Add tests
+  - [ ] 3. Update documentation
+  ```
 
 ### Step 5: Follow Workstack Coding Standards
 

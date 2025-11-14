@@ -128,10 +128,13 @@ def test_status_cmd_displays_all_collector_sections(tmp_path: Path) -> None:
         .with_graphite_stack(["main", "feature"])
     )
 
-    # Create .PLAN.md file
-    plan_file = scenario.workstacks_dir / "feature" / ".PLAN.md"
-    plan_file.parent.mkdir(parents=True, exist_ok=True)
+    # Create .plan/ folder with plan.md and progress.md
+    plan_folder = scenario.workstacks_dir / "feature" / ".plan"
+    plan_folder.mkdir(parents=True, exist_ok=True)
+    plan_file = plan_folder / "plan.md"
     plan_file.write_text("# Feature Plan\n## Overview\nImplement new feature", encoding="utf-8")
+    progress_file = plan_folder / "progress.md"
+    progress_file.write_text("# Progress Tracking\n\n- [ ] Step 1\n- [ ] Step 2", encoding="utf-8")
 
     scenario = scenario.build()
 

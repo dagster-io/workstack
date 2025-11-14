@@ -493,8 +493,10 @@ class DryRunGitHubOps(GitHubOps):
         return self._wrapped.get_pr_base_branch(repo_root, pr_number)
 
     def update_pr_base_branch(self, repo_root: Path, pr_number: int, new_base: str) -> None:
-        """Print dry-run message for PR base branch update."""
-        click.echo(f"  gh pr edit {pr_number} --base {new_base}")
+        """Dry-run no-op for PR base branch update (execution layer handles output)."""
+        # Do nothing - prevents actual PR base update
+        # The execution layer is responsible for printing dry-run output
+        pass
 
     def get_pr_mergeability(self, repo_root: Path, pr_number: int) -> PRMergeability | None:
         """Delegate read operation to wrapped implementation."""
@@ -508,8 +510,7 @@ class DryRunGitHubOps(GitHubOps):
         squash: bool = True,
         verbose: bool = False,
     ) -> None:
-        """Print dry-run message for PR merge."""
-        cmd = f"gh pr merge {pr_number}"
-        if squash:
-            cmd += " --squash"
-        click.echo(f"  {cmd}")
+        """Dry-run no-op for PR merge (execution layer handles output)."""
+        # Do nothing - prevents actual PR merge
+        # The execution layer is responsible for printing dry-run output
+        pass

@@ -1,5 +1,6 @@
 """CLI command entry point for land-stack."""
 
+import dataclasses
 import subprocess
 
 import click
@@ -90,6 +91,19 @@ def land_stack(
     """
     # Discover repository context
     repo = discover_repo_context(ctx, ctx.cwd)
+
+    # Wrap ops with dry-run versions if requested
+    if dry_run:
+        from workstack.core.github_ops import DryRunGitHubOps
+        from workstack.core.gitops import DryRunGitOps
+        from workstack.core.graphite_ops import DryRunGraphiteOps
+
+        ctx = dataclasses.replace(
+            ctx,
+            git_ops=DryRunGitOps(ctx.git_ops),
+            github_ops=DryRunGitHubOps(ctx.github_ops),
+            graphite_ops=DryRunGraphiteOps(ctx.graphite_ops),
+        )
 
     # Get current branch
     current_branch = ctx.git_ops.get_current_branch(ctx.cwd)

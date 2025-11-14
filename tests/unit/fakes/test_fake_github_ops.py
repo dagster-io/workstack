@@ -346,3 +346,52 @@ def test_fake_github_ops_full_workflow() -> None:
     # Verify configured state unchanged
     assert ops.get_pr_base_branch(sentinel_path(), 123) == "main"
     assert ops.get_pr_base_branch(sentinel_path(), 456) == "feature-1"
+
+
+def test_fake_github_ops_merge_pr_single() -> None:
+    """Test merge_pr tracks single PR merge."""
+    ops = FakeGitHubOps()
+
+    ops.merge_pr(sentinel_path(), 123, squash=True, verbose=False)
+
+    assert ops.merged_prs == [123]
+
+
+def test_fake_github_ops_merge_pr_multiple() -> None:
+    """Test merge_pr tracks multiple PR merges in order."""
+    ops = FakeGitHubOps()
+
+    ops.merge_pr(sentinel_path(), 123, squash=True, verbose=False)
+    ops.merge_pr(sentinel_path(), 456, squash=True, verbose=False)
+    ops.merge_pr(sentinel_path(), 789, squash=False, verbose=True)
+
+    assert ops.merged_prs == [123, 456, 789]
+
+
+def test_fake_github_ops_merge_pr_same_pr_twice() -> None:
+    """Test merge_pr tracks same PR merged multiple times."""
+    ops = FakeGitHubOps()
+
+    ops.merge_pr(sentinel_path(), 123, squash=True, verbose=False)
+    ops.merge_pr(sentinel_path(), 123, squash=True, verbose=False)
+
+    # Both merges should be tracked
+    assert ops.merged_prs == [123, 123]
+
+
+def test_fake_github_ops_merged_prs_empty_initially() -> None:
+    """Test merged_prs property is empty list initially."""
+    ops = FakeGitHubOps()
+
+    assert ops.merged_prs == []
+
+
+def test_fake_github_ops_merged_prs_read_only() -> None:
+    """Test merged_prs property returns list that can be read."""
+    ops = FakeGitHubOps()
+    ops.merge_pr(sentinel_path(), 123, squash=True, verbose=False)
+
+    # Should be able to read the list
+    merges = ops.merged_prs
+    assert len(merges) == 1
+    assert merges[0] == 123

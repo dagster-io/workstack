@@ -211,7 +211,7 @@ def test_github_pr_collector_prefers_graphite_data(tmp_path: Path) -> None:
     """Graphite data should win over GitHub when both sources have PR info."""
     graphite_pr = make_pr(
         number=1001,
-        url="https://app.graphite.dev/github/pr/owner/repo/1001",
+        url="https://app.graphite.com/github/pr/owner/repo/1001",
         checks_passing=None,
     )
     github_pr = make_pr(
@@ -230,7 +230,7 @@ def test_github_pr_collector_prefers_graphite_data(tmp_path: Path) -> None:
     result = collector.collect(ctx, worktree_path, repo_root)
     assert result is not None
     assert result.number == 1001
-    assert result.url == "https://app.graphite.dev/github/pr/owner/repo/1001"
+    assert result.url == "https://app.graphite.com/github/pr/owner/repo/1001"
 
 
 def test_github_pr_collector_falls_back_to_github(tmp_path: Path) -> None:

@@ -424,7 +424,7 @@ Always exported when switching:
 
 ### Graphite Integration
 
-If [Graphite CLI](https://graphite.dev/) is installed, `workstack` automatically uses `gt create` for proper stack tracking.
+If [Graphite CLI](https://graphite.com/) is installed, `workstack` automatically uses `gt create` for proper stack tracking.
 
 ```bash
 brew install withgraphite/tap/graphite

@@ -205,7 +205,7 @@ def test_fake_graphite_ops_get_graphite_url() -> None:
 
     url = ops.get_graphite_url("testowner", "testrepo", 456)
 
-    assert url == "https://app.graphite.dev/github/pr/testowner/testrepo/456"
+    assert url == "https://app.graphite.com/github/pr/testowner/testrepo/456"
 
 
 def test_fake_graphite_ops_branches_only_config() -> None:

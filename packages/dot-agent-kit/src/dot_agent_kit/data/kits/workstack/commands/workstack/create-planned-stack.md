@@ -28,8 +28,9 @@ When you run this command, these steps occur:
 
 1. **Verify Scope** - Confirm we're in a git repository with workstack available
 2. **Detect Plan File** - Find and select most recent `*-plan.md` at repo root
-3. **Create Worktree** - Run `workstack create --plan` command
-4. **Display Next Steps** - Show plan content (from disk) and implementation command
+3. **Read Plan Content** - Read plan file before it gets moved by workstack
+4. **Create Worktree** - Run `workstack create --plan` command
+5. **Display Next Steps** - Show plan content and implementation command
 
 ## Usage
 
@@ -114,8 +115,9 @@ Suggested action: [1-3 concrete steps to resolve]
 
 1. Detect plan file at repository root
 2. Validate plan file (exists, readable, not empty)
-3. Run `workstack create --plan <file>`
-4. Display plan content from disk and next steps
+3. Read plan content from disk (BEFORE it gets moved)
+4. Run `workstack create --plan <file>`
+5. Display plan content and next steps
 
 **FORBIDDEN ACTIONS:**
 
@@ -191,7 +193,15 @@ Suggested action:
   3. Check if .git directory exists
 ```
 
-### Step 2: Create Worktree with Plan
+### Step 2: Read Plan Content (Before It Gets Moved)
+
+**IMPORTANT:** Read the plan content NOW, before running `workstack create`, because workstack will move the file from the repository root to the new worktree.
+
+Read the plan file: `plan_content = Path(plan_file_path).read_text(encoding="utf-8")`
+
+Store this content for display in Step 4.
+
+### Step 3: Create Worktree with Plan
 
 Execute: `workstack create --plan <plan-file-path> --json --stay`
 
@@ -284,16 +294,9 @@ Suggested action:
 
 **Use the JSON output directly** for all worktree information.
 
-### Step 3: Display Next Steps
+### Step 4: Display Next Steps
 
-After successful worktree creation, provide clear instructions.
-
-**IMPORTANT:** Read plan content from disk to capture user edits.
-
-**Before displaying:**
-
-1. Read file from disk: `plan_content = Path(plan_file_path).read_text(encoding="utf-8")`
-2. This ensures manual edits made by user are shown in output
+After successful worktree creation, **you MUST output the following formatted display**:
 
 **Display format:**
 
@@ -312,11 +315,13 @@ Location: `<worktree-path>`
 `workstack switch <worktree_name> && claude --permission-mode acceptEdits "/workstack:implement-plan"`
 ```
 
+**CRITICAL:** You MUST output this complete formatted message. Do not skip the plan content or the command.
+
 **Template Variable Clarification:**
 
-- `<full-plan-content-from-disk>` refers to the plan markdown read from disk in step 3.1
+- `<full-plan-content-from-disk>` refers to the plan markdown read from disk in Step 2
 - Output the complete plan text verbatim (all headers, sections, steps)
-- This is the file that was passed to `workstack create --plan`
+- This is the file content that was read BEFORE being moved by workstack
 - Preserve all markdown formatting (headers, lists, code blocks)
 - Do not truncate or summarize the plan
 

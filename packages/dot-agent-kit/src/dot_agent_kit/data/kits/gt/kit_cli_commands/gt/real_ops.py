@@ -290,7 +290,7 @@ class RealGitHubGtKitOps(GitHubGtKitOps):
         owner = data["owner"]["login"]
         repo = data["name"]
 
-        return f"https://app.graphite.dev/github/pr/{owner}/{repo}/{pr_number}"
+        return f"https://app.graphite.com/github/pr/{owner}/{repo}/{pr_number}"
 
 
 class RealGtKitOps(GtKitOps):

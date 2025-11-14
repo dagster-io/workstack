@@ -262,7 +262,7 @@ def test_dryrun_graphite_operations(tmp_path: Path) -> None:
     # Test read operations work (they delegate to wrapped implementation)
     url = ctx.graphite_ops.get_graphite_url("owner", "repo", 123)
     assert isinstance(url, str)
-    assert "graphite.dev" in url
+    assert "graphite.com" in url
 
     # Test get_prs_from_graphite (read operation)
     from workstack.core.gitops import RealGitOps

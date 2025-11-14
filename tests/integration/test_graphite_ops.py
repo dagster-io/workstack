@@ -198,4 +198,4 @@ def test_graphite_url_construction():
     ops = RealGraphiteOps()
     url = ops.get_graphite_url("dagster-io", "workstack", 42)
 
-    assert url == "https://app.graphite.dev/github/pr/dagster-io/workstack/42"
+    assert url == "https://app.graphite.com/github/pr/dagster-io/workstack/42"

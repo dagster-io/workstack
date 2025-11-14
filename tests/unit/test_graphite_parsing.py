@@ -175,11 +175,11 @@ def test_parse_graphite_cache_invalid_data():
 def test_graphite_url_to_github_url():
     """Test converting Graphite URLs to GitHub URLs."""
     # Standard Graphite URL
-    url = _graphite_url_to_github_url("https://app.graphite.dev/github/pr/dagster-io/workstack/42")
+    url = _graphite_url_to_github_url("https://app.graphite.com/github/pr/dagster-io/workstack/42")
     assert url == "https://github.com/dagster-io/workstack/pull/42"
 
     # Different org/repo
-    url = _graphite_url_to_github_url("https://app.graphite.dev/github/pr/facebook/react/999")
+    url = _graphite_url_to_github_url("https://app.graphite.com/github/pr/facebook/react/999")
     assert url == "https://github.com/facebook/react/pull/999"
 
     # Not a Graphite URL - should return unchanged
@@ -191,5 +191,5 @@ def test_graphite_url_to_github_url():
     assert url == "https://example.com/something"
 
     # Short URL - should return unchanged
-    url = _graphite_url_to_github_url("https://app.graphite.dev/pr/123")
-    assert url == "https://app.graphite.dev/pr/123"
+    url = _graphite_url_to_github_url("https://app.graphite.com/pr/123")
+    assert url == "https://app.graphite.com/pr/123"

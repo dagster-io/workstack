@@ -1,6 +1,6 @@
 ---
 description: "Graphite CLI for stacked pull requests"
-url: "https://graphite.dev/"
+url: "https://graphite.com/"
 __dot_agent:
   kit_id: gt
   kit_version: 0.1.0
@@ -201,7 +201,7 @@ gt stores all metadata in the `.git` directory (shared across worktrees).
       "body": "...",
       "state": "OPEN",
       "reviewDecision": "REVIEW_REQUIRED",
-      "url": "https://app.graphite.dev/github/pr/owner/repo/66",
+      "url": "https://app.graphite.com/github/pr/owner/repo/66",
       "headRefName": "feature-ideas",
       "baseRefName": "main",
       "isDraft": false,
@@ -317,7 +317,7 @@ git rev-parse --git-common-dir
 Authenticate with Graphite for PR management.
 
 ```bash
-# Get token from https://app.graphite.dev/settings/cli
+# Get token from https://app.graphite.com/settings/cli
 gt auth --token <your-token>
 ```
 
@@ -541,7 +541,7 @@ gt log long                       # Detailed view
 │  ◯ feature-ideas
 │  │ 8 hours ago
 │  │ PR #66 (Ready to merge) Feature ideas
-│  │ https://app.graphite.dev/github/pr/schrockn/workstack/66
+│  │ https://app.graphite.com/github/pr/schrockn/workstack/66
 │  │
 │  │  ◯ status-command-implementation
 │  │  │ 8 minutes ago
@@ -576,7 +576,7 @@ Branch: feature-branch
 Parent: main
 Children: feature-child-1, feature-child-2
 Commit: abc1234567890abcdef1234567890abcdef12
-PR: #123 (https://app.graphite.dev/github/pr/owner/repo/123)
+PR: #123 (https://app.graphite.com/github/pr/owner/repo/123)
 ```
 
 **Key insight**: The "Parent:" line provides explicit, machine-readable parent branch information without requiring tree visualization parsing or heuristics. This is the most reliable way to determine a branch's parent.
@@ -1464,10 +1464,10 @@ def get_stack_for_branch(branches: dict, branch: str) -> list[str]:
 
 ## Additional Resources
 
-- **Official Docs**: https://graphite.dev/docs
-- **Cheatsheet**: https://graphite.dev/docs/cheatsheet
+- **Official Docs**: https://graphite.com/docs
+- **Cheatsheet**: https://graphite.com/docs/cheatsheet
 - **Tutorial Videos**: https://www.youtube.com/@withgraphite
-- **Community Slack**: https://community.graphite.dev
+- **Community Slack**: https://community.graphite.com
 
 ---
 

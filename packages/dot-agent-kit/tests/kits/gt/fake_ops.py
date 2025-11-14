@@ -57,6 +57,7 @@ class GitHubState:
     pr_bodies: dict[int, str] = field(default_factory=dict)
     merge_success: bool = True
     pr_update_success: bool = True
+    pr_delay_attempts_until_visible: int = 0
 
 
 class FakeGitGtKitOps(GitGtKitOps):
@@ -174,6 +175,7 @@ class FakeGitHubGtKitOps(GitHubGtKitOps):
         """Initialize with optional initial state."""
         self._state = state if state is not None else GitHubState()
         self._current_branch = "main"
+        self._pr_info_attempt_count = 0
 
     def set_current_branch(self, branch: str) -> None:
         """Set current branch (needed for context)."""
@@ -185,6 +187,12 @@ class FakeGitHubGtKitOps(GitHubGtKitOps):
 
     def get_pr_info(self) -> tuple[int, str] | None:
         """Get PR number and URL for current branch."""
+        # Simulate PR delay if configured
+        if self._state.pr_delay_attempts_until_visible > 0:
+            self._pr_info_attempt_count += 1
+            if self._pr_info_attempt_count <= self._state.pr_delay_attempts_until_visible:
+                return None
+
         if self._current_branch not in self._state.pr_numbers:
             return None
 
@@ -422,4 +430,21 @@ class FakeGtKitOps(GtKitOps):
         """
         gh_state = self._github.get_state()
         self._github._state = replace(gh_state, pr_update_success=False)
+        return self
+
+    def with_pr_delay(self, attempts_until_visible: int) -> "FakeGtKitOps":
+        """Configure PR to appear only after N get_pr_info() attempts.
+
+        Simulates GitHub API delay where PR is not immediately visible after creation.
+
+        Args:
+            attempts_until_visible: Number of attempts that return None before PR appears
+
+        Returns:
+            Self for chaining
+        """
+        gh_state = self._github.get_state()
+        self._github._state = replace(
+            gh_state, pr_delay_attempts_until_visible=attempts_until_visible
+        )
         return self

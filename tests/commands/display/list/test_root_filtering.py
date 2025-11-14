@@ -23,10 +23,10 @@ These tests would have failed with the old implementation, catching the regressi
 
 from click.testing import CliRunner
 
-from tests.commands.display.list import strip_ansi
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.output_helpers import strip_ansi
 from workstack.cli.cli import cli
 from workstack.core.branch_metadata import BranchMetadata
 from workstack.core.gitops import WorktreeInfo

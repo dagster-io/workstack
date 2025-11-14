@@ -4,6 +4,7 @@ import json
 import subprocess
 import tempfile
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 import pytest
 from click.testing import CliRunner
@@ -297,6 +298,31 @@ class TestPostAnalysisExecution:
         assert result.success is False
         assert result.error_type == "pr_update_failed"
         assert "failed to update PR #123 metadata" in result.message
+
+    @patch("dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch.time.sleep")
+    def test_post_analysis_pr_info_delayed(self, mock_sleep: Mock) -> None:
+        """Test that PR metadata update succeeds even when PR info is delayed."""
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_pr(123)
+            .with_pr_delay(attempts_until_visible=2)  # PR appears on 3rd attempt
+        )
+
+        result = execute_post_analysis(
+            commit_message="Add feature\n\nFull description",
+            ops=ops,
+        )
+
+        assert isinstance(result, PostAnalysisResult)
+        assert result.success is True
+        assert result.pr_number == 123
+        assert "Updated PR #123" in result.message
+        # Verify sleep was called with expected delays
+        assert mock_sleep.call_count == 2
+        mock_sleep.assert_any_call(0.5)
+        mock_sleep.assert_any_call(1.0)
 
 
 class TestSubmitBranchCLI:

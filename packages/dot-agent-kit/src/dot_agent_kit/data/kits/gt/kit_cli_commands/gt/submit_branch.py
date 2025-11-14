@@ -49,6 +49,7 @@ Examples:
 """
 
 import json
+import time
 from dataclasses import asdict, dataclass
 from typing import Literal, NamedTuple
 
@@ -294,8 +295,17 @@ def execute_post_analysis(
             },
         )
 
-    # Step 4: Check if PR exists
-    pr_info = ops.github().get_pr_info()
+    # Step 4: Check if PR exists (with retry for GitHub API delay)
+    pr_info = None
+    max_retries = 5
+    retry_delays = [0.5, 1.0, 2.0, 4.0, 8.0]
+
+    for attempt in range(max_retries):
+        pr_info = ops.github().get_pr_info()
+        if pr_info is not None:
+            break
+        if attempt < max_retries - 1:
+            time.sleep(retry_delays[attempt])
 
     # Step 5: Update PR metadata if PR exists
     pr_number = None

@@ -336,8 +336,13 @@ def consolidate_cmd(
 
     user_output(f"\n{click.style('✅ Consolidation complete', fg='green', bold=True)}")
 
+    # Early return when no worktree switch (consolidating into current worktree)
+    # Makes it explicit that no script is needed in this case
+    if name is None:
+        return  # No script needed when not switching worktrees
+
     # Shell integration: generate script to activate new worktree
-    if name is not None and script and not dry_run:
+    if script and not dry_run:
         script_content = render_activation_script(
             worktree_path=target_worktree_path,
             final_message='echo "✓ Switched to consolidated worktree."',
@@ -349,7 +354,7 @@ def consolidate_cmd(
             comment=f"activate {name}",
         )
         machine_output(str(result.path), nl=False)
-    elif name is not None and not dry_run:
+    elif not dry_run:
         # Manual cd instruction when not in script mode
         user_output(f"Switching to worktree: {click.style(name, fg='cyan', bold=True)}")
         user_output(f"\n{click.style('ℹ️', fg='blue')} Run this command to switch:")

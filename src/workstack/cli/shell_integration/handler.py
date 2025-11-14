@@ -92,9 +92,27 @@ def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellInt
     script_path = result.output.strip() if result.output else None
 
     debug_log(f"Handler: Got script_path={script_path}, exit_code={exit_code}")
+
+    # Validate script_path before attempting Path operations (LBYL pattern)
     if script_path:
-        script_exists = Path(script_path).exists()
-        debug_log(f"Handler: Script exists? {script_exists}")
+        # Check for obvious non-path indicators
+        is_likely_path = (
+            '\n' not in script_path and  # Paths don't contain newlines
+            len(script_path) < 4096 and  # Path length limit on most systems
+            not script_path.startswith('✓') and  # Not a success message
+            not script_path.startswith('✅') and  # Not a success message
+            not script_path.startswith('❌') and  # Not an error message
+            not script_path.startswith('Note:') and  # Not an info message
+            '/' in script_path  # Paths typically contain directory separators
+        )
+
+        if is_likely_path:
+            script_exists = Path(script_path).exists()
+            debug_log(f"Handler: Script exists? {script_exists}")
+        else:
+            # Invalid path-like output, treat as no script
+            debug_log("Handler: Output doesn't look like a path, treating as no script")
+            script_path = None
 
     # Warn if command succeeded but produced no output
     if exit_code == 0 and (script_path is None or not script_path):

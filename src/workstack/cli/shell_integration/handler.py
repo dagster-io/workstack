@@ -75,6 +75,7 @@ def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellInt
         script_args,
         obj=create_context(dry_run=False),
         standalone_mode=False,
+        mix_stderr=False,
     )
 
     exit_code = int(result.exit_code)
@@ -89,30 +90,15 @@ def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellInt
         user_output(result.stderr, nl=False)
 
     # Output is now a file path, not script content
+    # With mix_stderr=False, result.output contains only stdout
     script_path = result.output.strip() if result.output else None
 
     debug_log(f"Handler: Got script_path={script_path}, exit_code={exit_code}")
 
-    # Validate script_path before attempting Path operations (LBYL pattern)
+    # Check if the script exists (only if we have a path)
     if script_path:
-        # Check for obvious non-path indicators
-        is_likely_path = (
-            "\n" not in script_path  # Paths don't contain newlines
-            and len(script_path) < 4096  # Path length limit on most systems
-            and not script_path.startswith("✓")  # Not a success message
-            and not script_path.startswith("✅")  # Not a success message
-            and not script_path.startswith("❌")  # Not an error message
-            and not script_path.startswith("Note:")  # Not an info message
-            and "/" in script_path  # Paths typically contain directory separators
-        )
-
-        if is_likely_path:
-            script_exists = Path(script_path).exists()
-            debug_log(f"Handler: Script exists? {script_exists}")
-        else:
-            # Invalid path-like output, treat as no script
-            debug_log("Handler: Output doesn't look like a path, treating as no script")
-            script_path = None
+        script_exists = Path(script_path).exists()
+        debug_log(f"Handler: Script exists? {script_exists}")
 
     # Warn if command succeeded but produced no output
     if exit_code == 0 and (script_path is None or not script_path):

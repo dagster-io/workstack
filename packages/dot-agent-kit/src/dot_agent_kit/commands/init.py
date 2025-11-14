@@ -23,7 +23,13 @@ def init(force: bool) -> None:
     """Initialize dot-agent.toml configuration file.
 
     Creates a new dot-agent.toml configuration file in the current directory.
-    Also creates .claude/ directory if it doesn't exist.
+    Also creates .claude/ directory, kit registry, and AGENTS.md with registry reference.
+
+    What gets created:
+    - dot-agent.toml: Configuration file for tracking installed kits
+    - .claude/: Directory for Claude Code artifacts
+    - .claude/docs/kit-registry.md: Empty kit documentation registry
+    - AGENTS.md: Agent instructions file with registry reference (or updates existing)
 
     Use --force to overwrite an existing configuration.
     """

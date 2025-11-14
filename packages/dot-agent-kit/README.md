@@ -37,6 +37,17 @@ dot-agent kit install <kit-name>
 dot-agent kit list
 ```
 
+### What `dot-agent init` Sets Up
+
+Running `dot-agent init` automatically configures your project for kit management:
+
+1. **Creates `dot-agent.toml`** - Configuration file tracking installed kits
+2. **Creates `.claude/` directory** - Location for Claude Code artifacts
+3. **Creates kit registry** - Empty registry file at `.claude/docs/kit-registry.md`
+4. **Creates or updates `AGENTS.md`** - Adds kit registry reference for agent discovery
+
+The registry reference in `AGENTS.md` allows Claude Code agents to automatically discover all installed kit documentation. After initialization, simply install kits and they'll be immediately available to agents.
+
 ## Creating Kits
 
 ### Understanding Command Types

@@ -79,7 +79,6 @@ def _get_worktree_mapping(
         WorktreeMapping with all active worktrees and their branches
     """
     worktrees = ctx.git_ops.list_worktrees(repo_root)
-    # ctx.cwd is guaranteed to exist by get_safe_cwd() in context creation
     current_path = ctx.cwd.resolve()
 
     branch_to_worktree: dict[str, str] = {}

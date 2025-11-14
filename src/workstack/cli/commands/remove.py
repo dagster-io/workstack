@@ -10,10 +10,14 @@ from workstack.cli.core import (
     worktree_path_for,
 )
 from workstack.cli.output import user_output
-from workstack.core.context import WorkstackContext, create_context
+from workstack.core.context import WorkstackContext, create_context, regenerate_context
 from workstack.core.gitops import GitOps
 from workstack.core.repo_discovery import ensure_workstacks_dir
-from workstack.core.worktree_utils import filter_non_trunk_branches, get_worktree_branch
+from workstack.core.worktree_utils import (
+    filter_non_trunk_branches,
+    find_worktree_containing_path,
+    get_worktree_branch,
+)
 
 
 def _try_git_worktree_remove(git_ops: GitOps, repo_root: Path, wt_path: Path) -> bool:
@@ -85,9 +89,9 @@ def _remove_worktree(
     # Validate worktree name before any operations
     validate_worktree_name_for_removal(name)
 
-    # Use ctx.cwd which is kept up-to-date by regenerate_context() after os.chdir()
+    # Use ctx.cwd which is kept up-to-date by regenerate_context() after directory changes.
     # In pure test mode, ctx.cwd is a sentinel path; in production, it's updated
-    # by regenerate_context() to match the actual OS cwd after directory changes.
+    # by regenerate_context() to match the actual OS cwd after safe_chdir() calls.
     repo = discover_repo_context(ctx, ctx.cwd)
     workstacks_dir = ensure_workstacks_dir(repo)
     wt_path = worktree_path_for(workstacks_dir, name)
@@ -96,6 +100,30 @@ def _remove_worktree(
     if not ctx.git_ops.path_exists(wt_path):
         user_output(f"Worktree not found: {wt_path}")
         raise SystemExit(1)
+
+    # LBYL: Check if user is currently in the worktree being removed
+    # If so, change to repository root before removal to prevent
+    # shell from being in deleted directory
+    if ctx.git_ops.path_exists(ctx.cwd):
+        current_dir = ctx.cwd.resolve()
+        worktrees = ctx.git_ops.list_worktrees(repo.root)
+        current_worktree_path = find_worktree_containing_path(worktrees, current_dir)
+
+        if (
+            current_worktree_path is not None
+            and current_worktree_path.resolve() == wt_path.resolve()
+        ):
+            # Change to repository root before removal
+            safe_dir = repo.root
+            user_output(
+                click.style("ℹ️  ", fg="blue", bold=True)
+                + f"Changing directory to repository root: {click.style(str(safe_dir), fg='cyan')}"
+            )
+
+            # Change directory using safe_chdir which handles both real and sentinel paths
+            if not dry_run and ctx.git_ops.safe_chdir(safe_dir):
+                # Regenerate context with new cwd (context is immutable)
+                ctx = regenerate_context(ctx)
 
     # Step 1: Collect all operations to perform
     branches_to_delete: list[str] = []

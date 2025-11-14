@@ -1,6 +1,5 @@
 """Application context with dependency injection."""
 
-import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -28,96 +27,6 @@ from workstack.core.shell_ops import RealShellOps, ShellOps
 
 
 @dataclass(frozen=True)
-class RecoveryInfo:
-    """Information about CWD recovery when original path no longer exists."""
-
-    deleted_path: Path  # The original path that no longer exists
-    fallback_path: Path  # The fallback path being used instead
-
-
-def _attempt_get_cwd() -> Path | None:
-    """Attempt to get current working directory.
-
-    Returns None if the directory has been deleted.
-
-    This helper encapsulates the unavoidable exception when checking
-    if the current directory still exists. There is no way to check
-    if cwd exists without calling Path.cwd() which raises on deleted dirs.
-    """
-    try:
-        return Path.cwd()
-    except (FileNotFoundError, OSError):
-        # Current directory has been deleted
-        return None
-
-
-def _find_git_repository_root(start_path: Path, git_ops: GitOps) -> Path | None:
-    """Find the nearest git repository root by walking up from start_path.
-
-    Args:
-        start_path: Path to start searching from
-        git_ops: GitOps interface for path checking
-
-    Returns:
-        Path to repository root if found, None otherwise
-    """
-    check_path = start_path
-
-    # Walk up the directory tree looking for .git
-    while check_path != check_path.parent:
-        git_dir = check_path / ".git"
-        if git_ops.path_exists(git_dir):
-            return check_path
-        check_path = check_path.parent
-
-    return None
-
-
-def get_safe_cwd() -> tuple[Path, RecoveryInfo | None]:
-    """Get current working directory with fallback if deleted.
-
-    Attempts to get the current working directory. If it has been deleted,
-    falls back to repository root (if available) or home directory.
-
-    Returns:
-        Tuple of (working_directory, recovery_info).
-        recovery_info is None if no fallback was needed, otherwise contains
-        information about the deleted path and chosen fallback.
-    """
-    # Attempt to get current working directory
-    cwd = _attempt_get_cwd()
-
-    # If cwd is available, return it directly
-    if cwd is not None:
-        return (cwd, None)
-
-    # Current directory has been deleted, need to find a fallback
-    # Get the cached path from environment (shells usually cache PWD)
-    pwd_env = os.environ.get("PWD")
-    deleted_path = Path(pwd_env) if pwd_env else Path("/unknown")
-
-    # Try to find a suitable fallback directory
-    fallback_path: Path | None = None
-
-    # First attempt: Find repository root by walking up from parent of deleted path
-    # This might work if we're in a deleted worktree subdirectory
-    if deleted_path != Path("/unknown"):
-        parent = deleted_path.parent
-        if parent.exists():
-            git_ops = RealGitOps()
-            fallback_path = _find_git_repository_root(parent, git_ops)
-
-    # Second fallback: Use home directory
-    if fallback_path is None:
-        fallback_path = Path.home()
-
-    # Change to the fallback directory
-    os.chdir(fallback_path)
-
-    return (fallback_path, RecoveryInfo(deleted_path=deleted_path, fallback_path=fallback_path))
-
-
-@dataclass(frozen=True)
 class WorkstackContext:
     """Immutable context holding all dependencies for workstack operations.
 
@@ -140,7 +49,6 @@ class WorkstackContext:
     local_config: LoadedConfig
     repo: RepoContext | NoRepoSentinel
     dry_run: bool
-    recovery_info: RecoveryInfo | None = None  # Info about CWD recovery if fallback was used
 
     @property
     def trunk_branch(self) -> str | None:
@@ -404,8 +312,8 @@ def create_context(*, dry_run: bool) -> WorkstackContext:
         >>> worktrees = ctx.git_ops.list_worktrees(Path("/repo"))
         >>> workstacks_root = ctx.global_config.workstacks_root
     """
-    # 1. Capture cwd safely with fallback if deleted
-    cwd, recovery_info = get_safe_cwd()
+    # 1. Capture cwd (no deps)
+    cwd = Path.cwd()
 
     # 2. Create global config ops
     global_config_ops = FilesystemGlobalConfigOps()
@@ -455,7 +363,6 @@ def create_context(*, dry_run: bool) -> WorkstackContext:
         local_config=local_config,
         repo=repo,
         dry_run=dry_run,
-        recovery_info=recovery_info,
     )
 
 

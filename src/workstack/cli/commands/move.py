@@ -28,7 +28,6 @@ def _resolve_current_worktree(ctx: WorkstackContext, repo_root: Path) -> Path:
         user_output("Error: Not in a git repository")
         raise SystemExit(1)
 
-    # ctx.cwd is guaranteed to exist by get_safe_cwd() in context creation
     cwd = ctx.cwd.resolve()
     worktrees = ctx.git_ops.list_worktrees(repo_root)
     wt_path = find_worktree_containing_path(worktrees, cwd)

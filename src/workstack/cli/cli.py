@@ -35,15 +35,6 @@ def cli(ctx: click.Context) -> None:
     if ctx.obj is None:
         ctx.obj = create_context(dry_run=False)
 
-        # Emit warning if CWD recovery occurred
-        if ctx.obj.recovery_info is not None:
-            click.echo(
-                click.style("⚠️  Warning: ", fg="yellow", bold=True)
-                + f"Current directory '{ctx.obj.recovery_info.deleted_path}' no longer exists.\n"
-                f"   Falling back to: {ctx.obj.recovery_info.fallback_path}",
-                err=True,
-            )
-
 
 # Register all commands
 cli.add_command(completion_group)

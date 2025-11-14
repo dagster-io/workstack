@@ -454,6 +454,28 @@ class FakeGitOps(GitOps):
         # (worktrees would have .git as a file, which wouldn't be in existing_paths)
         return True
 
+    def safe_chdir(self, path: Path) -> bool:
+        """Change directory if path exists, handling sentinel paths.
+
+        For sentinel paths (pure test mode), returns False without changing directory.
+        For real filesystem paths, changes directory if path exists and returns True.
+        """
+        import os
+
+        from tests.test_utils.paths import SentinelPath
+
+        # Check if path should be treated as existing
+        if not self.path_exists(path):
+            return False
+
+        # Don't try to chdir to sentinel paths - they're not real filesystem paths
+        if isinstance(path, SentinelPath):
+            return False
+
+        # For real filesystem paths, change directory
+        os.chdir(path)
+        return True
+
     def read_file(self, path: Path) -> str:
         """Read file content from in-memory store.
 

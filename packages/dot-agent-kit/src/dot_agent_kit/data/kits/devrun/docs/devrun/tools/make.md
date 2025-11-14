@@ -382,55 +382,58 @@ When a make command fails, include:
 5. **Relevant context** (error type, expected vs actual values, exit code)
 6. **Structured data** for parent agent to assess root cause and apply fixes
 
-## Minimal Context Output
+## Auto-Adaptive Output
 
-Keep current output templates as-is for minimal context mode (the default).
+The devrun agent automatically adapts its reporting based on exit code:
 
-## Diagnostic Context Output
+- **Exit Code 0 (Success)**: Minimal reporting
+- **Exit Code Non-Zero (Failure)**: Diagnostic reporting with breakdown
 
-### All Sub-commands Passing
+### Minimal Output (Success Cases)
 
-**Command**: make all-ci
-**Exit Code**: 0 (all checks passed)
-**Summary**: All CI checks passed
+For exit code 0, keep it brief:
 
-**Breakdown**:
-✅ ruff check: 0 violations (47 files)
-✅ ruff format --check: All files formatted
-✅ pyright: 0 errors (32 files)
-✅ pytest: 156/156 passed (4.2s)
+```
+**Summary**: All CI checks passed. Ran ruff, pyright, and pytest - all clean.
+```
 
-**Status**: ✅ Safe to proceed
+### Diagnostic Output (Failure Cases)
 
-### Partial Failure
+For non-zero exit codes, provide full diagnostics with breakdown:
 
+#### Partial Failure
+
+```
 **Command**: make test
 **Exit Code**: 1 (pytest failed)
 **Summary**: Some checks failed
 
 **Breakdown**:
-✅ ruff check: 0 violations (47 files)
-✅ pyright: 0 errors (32 files)
-❌ pytest: 2/156 failed (1.3% failure rate)
+  ✅ ruff check: 0 violations (47 files)
+  ✅ pyright: 0 errors (32 files)
+  ❌ pytest: 2/156 failed (1.3% failure rate)
 
 **Details**: See pytest failure details above
 
 **Status**: ⛔ Must fix before continuing
+```
 
-### With Auto-Fixable Issues
+#### With Auto-Fixable Issues
 
+```
 **Command**: make lint
 **Exit Code**: 1 (ruff found violations)
 **Summary**: Lint violations detected (auto-fixable)
 
 **Breakdown**:
-❌ ruff check: 12 violations (all fixable)
-✅ ruff format --check: All files formatted
+  ❌ ruff check: 12 violations (all fixable)
+  ✅ ruff format --check: All files formatted
 
 **Details**: 12 violations in 8 files, all auto-fixable
 
 **Fixability**: Run `make lint-fix` or `ruff check --fix`
 **Status**: 🔧 Auto-fixable - re-run with --fix
+```
 
 ## Best Practices
 

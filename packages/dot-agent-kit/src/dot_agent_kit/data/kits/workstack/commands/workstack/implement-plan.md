@@ -214,22 +214,24 @@ After completing all implementation steps:
 
 2. **Run project-specific CI checks using devrun agent**:
 
-   Delegate to devrun with diagnostic reporting for detailed diagnostics:
+   Delegate to devrun (automatically provides detailed diagnostics on failures):
 
    ```
    Task(
        subagent_type="devrun",
        description="Run CI checks",
-       prompt="Execute with diagnostic reporting: make all-ci"
+       prompt="Execute: make all-ci"
    )
    ```
 
    If documentation specifies different commands, use those instead.
 
 3. **Interpret devrun results**:
-   - **✅ Safe to proceed**: All checks passed, implementation complete
-   - **🔧 Auto-fixable**: Re-run with --fix flag via devrun
-   - **⛔ Must fix**: Review failure details and fix issues before completing
+   - **Success**: Minimal output means all checks passed
+   - **Failure**: Automatic diagnostic reporting provides:
+     - **✅ Safe to proceed**: All checks passed
+     - **🔧 Auto-fixable**: Re-run with --fix flag via devrun
+     - **⛔ Must fix**: Review failure details and fix issues
 
 4. **For failures**: Return to relevant implementation steps to fix issues
 

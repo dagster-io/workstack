@@ -249,57 +249,56 @@ For each `FAILED` line in "short test summary info":
 **Summary**: "No tests collected"
 **Include**: Possible reasons (empty test files, wrong directory, -k filter matched nothing)
 
-## Minimal Context Output
+## Auto-Adaptive Output
 
-Keep current output templates as-is for minimal context mode (the default).
+The devrun agent automatically adapts its reporting based on exit code:
 
-## Diagnostic Context Output
+- **Exit Code 0 (Success)**: Minimal reporting
+- **Exit Code Non-Zero (Failure)**: Diagnostic reporting
 
-### All Tests Passing
+### Minimal Output (Success Cases)
 
-**Command**: pytest tests/
-**Exit Code**: 0 (all tests passed)
-**Summary**: All tests passed
-**Details**:
+For exit code 0, keep it brief:
 
-- Tests run: 156
-- Passed: 156
-- Failed: 0
-- Skipped: 0
-- Duration: 4.21s
-  **Status**: ✅ Safe to proceed
+```
+**Summary**: All tests passed (156 tests in 4.2s)
+```
 
-### Partial Failures
+### Diagnostic Output (Failure Cases)
 
+For non-zero exit codes, provide full diagnostics:
+
+```
 **Command**: pytest tests/unit/
 **Exit Code**: 1 (test failures detected)
 **Summary**: Test failures detected
 **Details**:
-
-- Tests run: 156
-- Passed: 154 (98.7%)
-- Failed: 2 (1.3%)
-- Skipped: 0
-- Duration: 4.18s
+  - Tests run: 156
+  - Passed: 154 (98.7%)
+  - Failed: 2 (1.3%)
+  - Skipped: 0
+  - Duration: 4.18s
 
 **Failures**:
+  1. tests/test_auth.py::test_login_valid:42
+     AssertionError: Expected True, got False
 
-1. tests/test_auth.py::test_login_valid:42
-   AssertionError: Expected True, got False
-
-2. tests/test_user.py::test_create:23
-   TypeError: Missing required argument 'email'
+  2. tests/test_user.py::test_create:23
+     TypeError: Missing required argument 'email'
 
 **Fixability**: Requires code changes (not auto-fixable)
 **Status**: ⛔ Must fix before continuing
+```
 
-### Collection Errors
+#### Collection Errors
 
+```
 **Command**: pytest tests/
 **Exit Code**: 5 (no tests collected)
 **Summary**: Test collection failed
 **Details**: No tests found or import errors prevented collection
 **Status**: ⛔ Tool error - check test discovery and imports
+```
 
 ## Best Practices
 

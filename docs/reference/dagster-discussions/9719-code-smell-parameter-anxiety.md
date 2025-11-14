@@ -16,7 +16,7 @@ The feeling you are experiencing is **parameter anxiety**. From from irrational,
 
 ### Not all parameters are the same
 
-This doesn't happen *every* time. For example, there are perfectly valid reasons to have a database row with a ton of columns. A data class that backs each row will have a lot of properties. When you interact that class you don't feel anxiety. 
+This doesn't happen _every_ time. For example, there are perfectly valid reasons to have a database row with a ton of columns. A data class that backs each row will have a lot of properties. When you interact that class you don't feel anxiety.
 
 The reason is that these parameters do not impact behavior or control flow, and therefore to do not meaningfully contribute to the complexity of the program in that context.
 
@@ -37,7 +37,7 @@ def get_prev_partition_window(
 
 I've commented everything out except the only `if` statement in this function for clarity. As you can see the cyclomatic complexity increased by one when `respect_bounds` was added, since there are two "paths" execution can go through.
 
-This can quickly spin out of control. Let's restrict our analysis to required boolean arguments for the sake of simplicity. With every additional boolean argument, it's likely that the cyclomatic complexity is on the order of `O(2^N)` of the number of parameters. It grows expotentially. 
+This can quickly spin out of control. Let's restrict our analysis to required boolean arguments for the sake of simplicity. With every additional boolean argument, it's likely that the cyclomatic complexity is on the order of `O(2^N)` of the number of parameters. It grows expotentially.
 
 We can explain this with code. In the following contrived function we can build binary representation from "000" to "111" using three booleans. This shows there are eight possible code paths. The number of code paths is `2^3` which is `8`.
 
@@ -49,17 +49,17 @@ def build_binary_rep(option_one: bool, option_two: bool, option_three) -> str:
         binary_rep += "0"
     else:
         binary_rep += "1"
-        
+
     if option_two:
         binary_rep += "0"
     else:
         binary_rep += "1"        ...
-        
+
     if option_three:
         binary_rep += "0"
     else:
-        binary_rep += "1"  
-    
+        binary_rep += "1"
+
     return binary_rep
 ```
 
@@ -67,7 +67,7 @@ This explicit property explains your instinctive parameter anxiety. It's quite r
 
 ### Alternative approach: Composition and pushing complexity to call sites
 
-An alternative approach is to decompose logic into functions and force callsites to put together their logic. 
+An alternative approach is to decompose logic into functions and force callsites to put together their logic.
 
 Here's a simple example:
 
@@ -96,9 +96,9 @@ call_other_function(s1)
 call_other_function(s2.capitalize())
 ```
 
-We have eliminated a function with a cyclomatic complexity of one, at the expense of forcing users to know about the `capitalize` method of `str`. 
+We have eliminated a function with a cyclomatic complexity of one, at the expense of forcing users to know about the `capitalize` method of `str`.
 
-There are real tradeoffs here. Too much composition can cause more complexity than a boolean parameter, and there is a judgement here. In example above regarding capitalization it is fairly obvious that this is the right move, since `capitalize` is a built-in. In other cases it is not so obvious (importing a new symbol is a real cost, for example). 
+There are real tradeoffs here. Too much composition can cause more complexity than a boolean parameter, and there is a judgement here. In example above regarding capitalization it is fairly obvious that this is the right move, since `capitalize` is a built-in. In other cases it is not so obvious (importing a new symbol is a real cost, for example).
 
 Keep the exponential growth with respect to the number of parameters in mind. The more parameters, the more likely it is worth it to expel a parameter from a function, because of this exponential effect.
 

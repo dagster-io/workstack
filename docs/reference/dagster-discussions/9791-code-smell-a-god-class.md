@@ -10,7 +10,7 @@ category: Python Code Smells and Anti-Patterns
 
 ## Do not let classes or functions grow to be too large and assume too many responsibilities
 
-Classes and functions should not be too large or assume too many responsibilities. We know this, but we violate this rule sometimes. 
+Classes and functions should not be too large or assume too many responsibilities. We know this, but we violate this rule sometimes.
 
 It is convenient to have a single object. You can pass it around. You can centralize a bunch of capabilites and when you press "dot" in your IDE all of them are right there. You only have to pass a single object to a class, and the entire system appears at your fingertips. You justify to it to yourself because at least you do not have global state.
 
@@ -18,7 +18,7 @@ But at some point it spins out of control. Engineers swoop in to add "just" one 
 
 You have built a God class (a.k.a [God object](https://en.wikipedia.org/wiki/God_object)). No single person understands it or claims to. Everyone fears to defy it and challenge it. It is all-knowing and in our daily lives.
 
-God classes are extremely dangerous because they are so central to a system and so difficult to unwind. Engineers are always never incentived to fix them, and are almost always incentives to add to them, as it is the only way to add features. 
+God classes are extremely dangerous because they are so central to a system and so difficult to unwind. Engineers are always never incentived to fix them, and are almost always incentives to add to them, as it is the only way to add features.
 
 ### `DagsterInstance` is the Emporer God King Class of Dagster
 
@@ -30,23 +30,23 @@ _Loving when it works; Vengeful when it doesn't_
 
 It has multiple overlapping properties that make it particularly difficult to change and manage. It is:
 
-* The main interface to our metastore and event log, the most critical data structures in our product.
-* The shim layer to call hosted commercial product
-    * This violates ["Operations that mislead about their performance characteristics"](https://github.com/dagster-io/internal/discussions/9541)  and it presents as a class that accesses a local database, but can instead does API calls over the public Internet.
-* Constructed and configured via a bespoke, problematic configuration system.
-* Ubiquitous in our code base and public APIs.
-* Subclassed by several classes across several GitHub repos.
-* Depended on by external users for direct API access for critical, advanced use cases.
+- The main interface to our metastore and event log, the most critical data structures in our product.
+- The shim layer to call hosted commercial product
+  - This violates ["Operations that mislead about their performance characteristics"](https://github.com/dagster-io/internal/discussions/9541) and it presents as a class that accesses a local database, but can instead does API calls over the public Internet.
+- Constructed and configured via a bespoke, problematic configuration system.
+- Ubiquitous in our code base and public APIs.
+- Subclassed by several classes across several GitHub repos.
+- Depended on by external users for direct API access for critical, advanced use cases.
 
 These properties complect and make `DagsterInstance` both highly resistant to change and dangerous to change. Bringing this under control will be an [architectural challenge](https://github.com/dagster-io/internal/discussions/9790) going forward.
 
 ### Mitigations
 
-Taming the God class typically requires a two-prong approach. You must consider how to break up the implementation and how to subdivide and evolve the interface from the standpoint of callers. 
+Taming the God class typically requires a two-prong approach. You must consider how to break up the implementation and how to subdivide and evolve the interface from the standpoint of callers.
 
 #### The God Class is unknowable
 
-Once the system has a God class no one understands it. Many engineers have authored code within it, and it has no owner. Therefore is no single person that understands the interdependencies and implicit assumptions. Effectively the complexity is _unknowable_, which is one reason why the God Class is so dangerous. 
+Once the system has a God class no one understands it. Many engineers have authored code within it, and it has no owner. Therefore is no single person that understands the interdependencies and implicit assumptions. Effectively the complexity is _unknowable_, which is one reason why the God Class is so dangerous.
 
 Frustratingly, this situation often defies upfront analysis. Instead it is only act of refactoring and re-architecturing itself that can begin to unveil the truth. Simply put, you just have to start doing stuff and seeing how it feels, what breaks, and what the consequences are. Defying the God Class is not for the feint of heart.
 

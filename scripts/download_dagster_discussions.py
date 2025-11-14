@@ -14,23 +14,28 @@ import subprocess
 import unicodedata
 from pathlib import Path
 
-
 OWNER = "dagster-io"
 REPO = "internal"
 CATEGORY_NAME = "Python Code Smells and Anti-Patterns"
 OUTPUT_DIR = Path("docs/reference/dagster-discussions")
 
 
-def run_gh_graphql(query: str, variables: dict[str, str] | None = None, paginate: bool = False) -> dict:
+def run_gh_graphql(
+    query: str, variables: dict[str, str] | None = None, paginate: bool = False
+) -> dict:
     """
     Execute GitHub GraphQL query using gh CLI.
 
     CRITICAL: Requires -H 'GraphQL-Features: discussions_api' header for discussions.
     """
     cmd = [
-        "gh", "api", "graphql",
-        "-H", "GraphQL-Features: discussions_api",
-        "-f", f"query={query}",
+        "gh",
+        "api",
+        "graphql",
+        "-H",
+        "GraphQL-Features: discussions_api",
+        "-f",
+        f"query={query}",
     ]
 
     if variables:
@@ -106,9 +111,7 @@ def list_discussions(owner: str, repo: str, category_id: str) -> list[dict]:
     """
 
     response = run_gh_graphql(
-        query,
-        {"owner": owner, "repo": repo, "categoryId": category_id},
-        paginate=True
+        query, {"owner": owner, "repo": repo, "categoryId": category_id}, paginate=True
     )
 
     return response["data"]["repository"]["discussions"]["nodes"]
@@ -271,7 +274,7 @@ def main() -> None:
     # Step 4: Create index
     print("Creating index file...")
     create_index(discussions, OUTPUT_DIR)
-    print(f"  ✓ README.md")
+    print("  ✓ README.md")
 
     print(f"\n✅ Successfully downloaded {len(discussions)} discussions to {OUTPUT_DIR}/")
 

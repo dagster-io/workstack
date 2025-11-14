@@ -12,15 +12,15 @@ category: Python Code Smells and Anti-Patterns
 
 Sometimes it is tempting or seems necessary to assign a Python `contextmanager` return value to a temporary variable or instance, only to be called with `with` (or perhaps even directly using the `contentmanager` protocol with `__enter__` and `__exit__` layer).
 
-While this isn’t *always* a bad thing, it should be viewed with suspicion. This can usually be refactored to use functional decomposition to accomplish the same thing, and the result is safer, more reliable code.
+While this isn’t _always_ a bad thing, it should be viewed with suspicion. This can usually be refactored to use functional decomposition to accomplish the same thing, and the result is safer, more reliable code.
 
 ### Case Study:
 
-Take https://github.com/dagster-io/dagster/pull/28341 as an example. This is a problem in the logic where a temporary workspace (a heavyweight operation) always occurred.  The means `dg check defs` launched a code server unncessarily and the command is noisier and slower than it should have been.
+Take https://github.com/dagster-io/dagster/pull/28341 as an example. This is a problem in the logic where a temporary workspace (a heavyweight operation) always occurred. The means `dg check defs` launched a code server unncessarily and the command is noisier and slower than it should have been.
 
 The bug blamed to https://github.com/dagster-io/dagster/pull/28172 but the code pattern originated in https://github.com/dagster-io/dagster/pull/27873.
 
-You’ll note that `temp_workspace_file_cm` is assigned and then only *later* is it passed to `with`.
+You’ll note that `temp_workspace_file_cm` is assigned and then only _later_ is it passed to `with`.
 
 ```python
   # In a code location context, we can just run `dagster definitions validate` directly, using `dagster` from the
@@ -51,7 +51,7 @@ You’ll note that `temp_workspace_file_cm` is assigned and then only *later* is
 
   with pushd(dg_context.root_path), temp_workspace_file_cm as workspace_file:
       print(f"Using {cmd_location}")  # noqa: T201
-            
+
       if workspace_file:  # only non-None deployment context
           cmd.extend(["--workspace", workspace_file])
 
@@ -69,7 +69,7 @@ This is a recipe for problems:
 
 ### Tactics for resolving
 
-In most cases, the most straightforward solution is to extract the logic into another function that is itself a `contextmanager` and compose the logic. They are designed to compose. Take advantage of that. 
+In most cases, the most straightforward solution is to extract the logic into another function that is itself a `contextmanager` and compose the logic. They are designed to compose. Take advantage of that.
 
 It generally results in a little more code, but is more obvious, easier to read, and harder to screw up. This is a tradeoff that you should take every time. Do not sacrifice correctness for brevity.
 

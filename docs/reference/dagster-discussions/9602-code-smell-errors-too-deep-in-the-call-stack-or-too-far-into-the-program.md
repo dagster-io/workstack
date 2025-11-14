@@ -48,9 +48,9 @@ TypeError: can only concatenate str (not "int") to str
 ```
 
 In order to debug this you have to inspect the code and understand the state of process when the error was thrown.
-    
+
 Now instead let's add a check:
-    
+
 ```python
 from dagster import _check as check
 
@@ -61,7 +61,7 @@ def a_func(an_int) -> None:
 ```
 
 When running this program you get the following error:
-    
+
 ```
 > python test.py
 Traceback (most recent call last):
@@ -75,13 +75,13 @@ dagster._check.ParameterCheckError: Param "an_int" is not a int. Got '1' which i
 ```
 
 This is obvious and easy to fix. You can assess the error and craft a resolution by inspecting the call stack alone. You don't need to understand the entire program.
-    
+
 If you do not catch errors early, bug investigations and resolution are much more likely to be:
-    
-* Dependent on the state of the process
-* Far away, both temporally and physically, from the actual source of the error.
-* Non-deterministic
-    
+
+- Dependent on the state of the process
+- Far away, both temporally and physically, from the actual source of the error.
+- Non-deterministic
+
 Fixing error with the above characteristics are often orders of magnitude more expensive than errors that are function of localized code.
 
 ## Case Study: check calls at every public API entry point
@@ -93,9 +93,9 @@ The reasons:
 1. While we use typehinting in our code base and catch typing errors in CI, not all of our users do. Therefore we cannot trust anything passed in our system to actually abide our type checks.
 2. If we let values into the system that violate type checks, it will "infect" the whole system. We would encounter issues all the time where unmodified user-provided values make it appear that the type system is lying. That would cause systematic distrust in the type system throughout the entire codebase.
 3. Errors are clearly communicated to users. This is a better user experience and reduces our support burden. Imagine a world where users continually reported inscrutable errors deep in our callstack. It would be a nightmare.
-    
+
 That is why a class like `AssetSpec` has a `__new__` function like so:
-    
+
 ```python
     def __new__(
     cls,
@@ -140,8 +140,7 @@ That is why a class like `AssetSpec` has a `__new__` function like so:
         tags=validate_tags_strict(tags),
     )
 ```
-    
-While annoying to write initially catching errors early and with obvious error messages saves us enormous pain later.
-    
-Note: A good project would be to make this less boilerplate-y and then write lint rules to make sure that *all* of our public APIs do runtime parameter checking. We are quite inconsitent at the moment, which is understandable, given that it is somewhat annoying to write all of these checks.
 
+While annoying to write initially catching errors early and with obvious error messages saves us enormous pain later.
+
+Note: A good project would be to make this less boilerplate-y and then write lint rules to make sure that _all_ of our public APIs do runtime parameter checking. We are quite inconsitent at the moment, which is understandable, given that it is somewhat annoying to write all of these checks.

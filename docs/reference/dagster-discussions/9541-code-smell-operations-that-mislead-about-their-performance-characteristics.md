@@ -22,10 +22,10 @@ class ListWrapper:
     @property
     def size(self) -> int:
         return len(self._some_list)
-        
+
 print(ListWrapper([1, 2, 3]).size)
 ```
- 
+
 While convenient this can be dangerous. The code backing this property can do anything: I/O, computationally expensive things, etc. Engineers reasonably assume that property access is cheap (a modest number of assembly instructions) and wouldn't expect that to be expensive. Further more they expect them to be cached if they are even moderately expensive, and therefore wouldn't think twice about accessing them in a loop.
 
 We do not follow this advice all the time, and it can cause unexpected performance problems.
@@ -47,10 +47,9 @@ For example in `AssetSubset` there is a size property than in turn calls `len` o
 
 _Note: `get_partitions_key` is another instance of the [Dangerous Default Value for Parameter](https://github.com/dagster-io/internal/discussions/9509) smell as the `current_time` is not required (as of this writing on 2024-05-02). Once can call this function without supplying the correct current time, and it will dutifully create a new datetime object via `now`, leading to multiple representations of current time in the same process._
 
-In the case of time-based partitioning, we are also in bad shape. In the case of `TimeWindowPartitionsSubset` this will lead materializing _all_ the partition keys via `get_partition_keys_in_time_window` on its underlying `PartitionsDefinition`. For a customer like Discord, this means 10s of 1000s of partition keys iterated through using the `cron_string_iterator` function. This can be *extremely* expensive And all this work is done in the service of a _single_ call to the seemingly innocuous and inexpensive-looking `size` property. This kind of sloppiness leads to real product consequences. We have limits on time-based partitioning (we say we support only up to 25K partitions) and these unforced errors are a contributing factor as to why.
+In the case of time-based partitioning, we are also in bad shape. In the case of `TimeWindowPartitionsSubset` this will lead materializing _all_ the partition keys via `get_partition_keys_in_time_window` on its underlying `PartitionsDefinition`. For a customer like Discord, this means 10s of 1000s of partition keys iterated through using the `cron_string_iterator` function. This can be _extremely_ expensive And all this work is done in the service of a _single_ call to the seemingly innocuous and inexpensive-looking `size` property. This kind of sloppiness leads to real product consequences. We have limits on time-based partitioning (we say we support only up to 25K partitions) and these unforced errors are a contributing factor as to why.
 
 ### Guidelines
 
 1. Cheap-looking operations, in the common case, should never (except in unusual circumstances) lead to I/O or similarly expensive operations.
-2. If access is moderately expensive, strongly consider the use of [`cached_property`](https://docs.python.org/3/library/functools.html#functools.cached_property). You can classify "moderately expensive" as "it would meaningful show up in a profiler if accessed many times."  _Note: Cached properties are only truly safe when used on an immutable class, so as a general rule do not use them against mutable classes._
-
+2. If access is moderately expensive, strongly consider the use of [`cached_property`](https://docs.python.org/3/library/functools.html#functools.cached_property). You can classify "moderately expensive" as "it would meaningful show up in a profiler if accessed many times." _Note: Cached properties are only truly safe when used on an immutable class, so as a general rule do not use them against mutable classes._

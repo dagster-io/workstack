@@ -33,7 +33,7 @@ def _logged_execute_job(
 ) -> JobExecutionResult:
 ```
 
-There is *no* reason why `asset_selection` should default to `None`. It is brittle and dangerous because the behavior `None` signifies that one should execute *everything* that is in scope. This "pattern" is everywhere in the codebase.
+There is _no_ reason why `asset_selection` should default to `None`. It is brittle and dangerous because the behavior `None` signifies that one should execute _everything_ that is in scope. This "pattern" is everywhere in the codebase.
 
 This means that is someone adds a call site they can easily make the mistake of _omitting_ the selection parameters and then executing everything. This is a dangerous mistake to make, and we have made it. We have through casual oversight forgotten to thread through a selection from the UI all the way to our core framework, missed a single function call, ignoring the passed in user selection, and instead executed everything. This is a very, very bad bug that is all too easy to introduce in these code paths.
 

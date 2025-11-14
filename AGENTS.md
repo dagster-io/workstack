@@ -28,9 +28,9 @@
 | `print(...)` in CLI code                                         | → Use `click.echo()`                                                                                 |
 | `subprocess.run(...)`                                            | → Add `check=True`                                                                                   |
 | `make ...` or user says "make"                                   | → Use devrun agent (Task tool) instead of Bash; loads devrun/make skill                              |
-| `pyright` or `uv run pyright`                                    | → Use devrun agent (Task tool); target paths directly, never `cd`                                    |
-| `pytest` or `uv run pytest`                                      | → Use devrun agent (Task tool) for running tests                                                     |
-| `ruff` or `uv run ruff`                                          | → Use devrun agent (Task tool) for linting/formatting                                                |
+| `pyright`, `uv run pyright`, or any pyright invocation           | → Use devrun agent (Task tool); target paths directly, never `cd`                                    |
+| `pytest`, `uv run pytest`, or any pytest invocation              | → Use devrun agent (Task tool) for running tests                                                     |
+| `ruff`, `uv run ruff`, or any ruff invocation                    | → Use devrun agent (Task tool) for linting/formatting                                                |
 | Prettier formatting issues                                       | → Use `make prettier` (via devrun agent with Task tool)                                              |
 | Submitting a branch with Graphite                                | → Use /gt:submit-branch command (delegates to gt-branch-submitter agent)                             |
 | `gt ...` or user says "gt" or "graphite"                         | → Use devrun agent (Task tool) for execution, graphite skill for knowledge                           |
@@ -41,6 +41,8 @@
 | Tests for speculative features                                   | → **FORBIDDEN** - Only test actively implemented code (TDD is fine)                                  |
 | Creating `.claude/` artifacts                                    | → Use `kebab-case` (hyphens) NOT `snake_case` (underscores)                                          |
 | `Path("/test/...")` or hardcoded paths                           | → **CATASTROPHIC** - Use `env.cwd` or `tmp_path` fixture - [Test Isolation](#6-test-isolation--must) |
+
+**Note on CLI Tool Routing:** The critical rule is **routing through the devrun agent**, not the specific command syntax. Whether you use `pytest`, `uv run pytest`, or `python -m pytest`, all variants should route through the devrun agent. The agent executes commands as-is without transformation.
 
 ## 📚 Quick Reference
 
@@ -93,12 +95,12 @@ The `docs/agent/` folder contains only workstack-specific documentation (termino
 
 **ALWAYS use the Task tool with appropriate agent for:**
 
-| Tool Type                                       | Agent                 | Example                                                                              |
-| ----------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------ |
-| `make`, `pytest`, `pyright`, `ruff`, `prettier` | `devrun`              | Task(subagent_type="devrun", prompt="Execute: make all-ci")                          |
-| `gt` commands (Graphite)                        | `devrun`              | Task(subagent_type="devrun", prompt="Execute: gt submit")                            |
-| Graphite branch submission workflow             | `gt-branch-submitter` | Task(subagent_type="gt-branch-submitter", prompt="Execute submit-branch workflow")   |
-| Python refactoring with LibCST                  | `libcst-refactor`     | Task(subagent_type="libcst-refactor", prompt="Rename function old_func to new_func") |
+| Tool Type                                                                  | Agent                 | Example                                                                              |
+| -------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------ |
+| `make`, `pytest`, `pyright`, `ruff`, `prettier` (with or without `uv run`) | `devrun`              | Task(subagent_type="devrun", prompt="Execute: make all-ci")                          |
+| `gt` commands (Graphite)                                                   | `devrun`              | Task(subagent_type="devrun", prompt="Execute: gt submit")                            |
+| Graphite branch submission workflow                                        | `gt-branch-submitter` | Task(subagent_type="gt-branch-submitter", prompt="Execute submit-branch workflow")   |
+| Python refactoring with LibCST                                             | `libcst-refactor`     | Task(subagent_type="libcst-refactor", prompt="Rename function old_func to new_func") |
 
 ### Agent Invocation Pattern
 
@@ -110,17 +112,35 @@ Task(
 )
 ```
 
+**Command Syntax Flexibility:**
+
+The devrun agent accepts commands in any form and executes them verbatim. The critical rule is **routing through the agent**, not the specific command syntax:
+
+- Use `pytest tests/` OR `uv run pytest tests/` - both work equally
+- Use `pyright src/` OR `uv run pyright src/` - both work equally
+- Use `ruff check .` OR `uv run ruff check .` - both work equally
+- The agent doesn't add or remove prefixes - it runs exactly what you provide
+- Choose whichever form is natural for your context
+
+The key insight: Cost optimization and context isolation benefits apply regardless of invocation syntax. Just route all CLI tool invocations through the devrun agent.
+
 ### Common Mistakes
 
 ```python
-# ❌ WRONG: Direct Bash for CLI tools
+# ❌ WRONG: Direct Bash for CLI tools (regardless of syntax)
 Bash("make all-ci")
+Bash("pytest tests/")
 Bash("uv run pytest tests/")
+Bash("pyright src/")
+Bash("uv run pyright src/")
 Bash("gt submit --publish")
 
-# ✅ CORRECT: Use devrun agent
+# ✅ CORRECT: Use devrun agent (works with any syntax variant)
 Task(subagent_type="devrun", description="Run CI checks", prompt="Execute: make all-ci")
+Task(subagent_type="devrun", description="Run tests", prompt="Execute: pytest tests/")
 Task(subagent_type="devrun", description="Run tests", prompt="Execute: uv run pytest tests/")
+Task(subagent_type="devrun", description="Type check", prompt="Execute: pyright src/")
+Task(subagent_type="devrun", description="Type check", prompt="Execute: uv run pyright src/")
 Task(subagent_type="devrun", description="Submit branch", prompt="Execute: gt submit --publish")
 
 # ❌ WRONG: Manual branch submission
@@ -137,7 +157,7 @@ Git operations (read-only): `git status`, `git log`, `git diff`, `git branch`, e
 File system operations: `ls`, `cat`, `find`, etc.
 Simple shell commands: `echo`, `pwd`, etc.
 
-🔴 **CRITICAL**: Using Bash directly for CLI tools (`make`, `pytest`, `ruff`, `gt`) wastes tokens, pollutes context, and bypasses cost optimization. This is expensive and inefficient.
+🔴 **CRITICAL**: Using Bash directly for CLI tools (`make`, `pytest`, `pyright`, `ruff`, `gt`) wastes tokens, pollutes context, and bypasses cost optimization. This is expensive and inefficient. This applies **regardless of invocation syntax** - whether you use `pytest`, `uv run pytest`, or `python -m pytest`, all variants must route through the devrun agent.
 
 ---
 

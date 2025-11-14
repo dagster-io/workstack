@@ -166,11 +166,8 @@ def _force_push_upstack_branches(
 
     for upstack_branch in upstack_branches:
         ctx.graphite_ops.submit_branch(repo_root, upstack_branch, quiet=not verbose)
-        check = click.style("✓", fg="green")
-        _emit(
-            _format_cli_command(f"gt submit --branch {upstack_branch} --no-edit", check),
-            script_mode=script_mode,
-        )
+        # Note: Output handled by ops implementation (RealGraphiteOps shows subprocess output,
+        # DryRunGraphiteOps prints dry-run message, FakeGraphiteOps is silent for tests)
 
     return upstack_branches
 

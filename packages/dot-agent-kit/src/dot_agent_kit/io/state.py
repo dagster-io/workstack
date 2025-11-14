@@ -7,6 +7,7 @@ import tomli
 import tomli_w
 from pydantic import ValidationError
 
+from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.hooks.models import HookDefinition
 from dot_agent_kit.models import InstalledKit, ProjectConfig
 
@@ -198,7 +199,7 @@ def require_project_config(project_dir: Path) -> ProjectConfig:
     config = load_project_config(project_dir)
     if config is None:
         msg = "Error: No dot-agent.toml found. Run 'dot-agent init' to create one."
-        click.echo(msg, err=True)
+        user_output(msg)
         raise SystemExit(1)
     return config
 

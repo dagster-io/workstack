@@ -3,6 +3,7 @@
 import click
 
 from workstack.cli.core import discover_repo_context
+from workstack.cli.output import user_output
 from workstack.core.context import WorkstackContext
 from workstack.core.repo_discovery import RepoContext
 from workstack.core.worktree_utils import find_current_worktree, is_root_worktree
@@ -28,6 +29,6 @@ def current_cmd(ctx: WorkstackContext) -> None:
         raise SystemExit(1)
 
     if is_root_worktree(wt_info.path, repo.root):
-        click.echo("root")
+        user_output("root")
     else:
-        click.echo(wt_info.path.name)
+        user_output(wt_info.path.name)

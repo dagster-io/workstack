@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
-import click
 from click.testing import CliRunner
 
 from workstack.cli.commands.consolidate import consolidate_cmd
@@ -15,6 +14,7 @@ from workstack.cli.commands.prepare_cwd_recovery import generate_recovery_script
 from workstack.cli.commands.switch import switch_cmd
 from workstack.cli.commands.up import up_cmd
 from workstack.cli.debug import debug_log
+from workstack.cli.output import user_output
 from workstack.cli.shell_utils import (
     STALE_SCRIPT_MAX_AGE_SECONDS,
     cleanup_stale_scripts,
@@ -86,7 +86,7 @@ def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellInt
 
     # Forward stderr messages to user (only for successful commands)
     if result.stderr:
-        click.echo(result.stderr, err=True, nl=False)
+        user_output(result.stderr, nl=False)
 
     # Output is now a file path, not script content
     script_path = result.output.strip() if result.output else None
@@ -98,10 +98,7 @@ def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellInt
 
     # Warn if command succeeded but produced no output
     if exit_code == 0 and (script_path is None or not script_path):
-        click.echo(
-            f"Note: '{command_name}' completed but produced no output",
-            err=True,
-        )
+        user_output(f"Note: '{command_name}' completed but produced no output")
 
     return ShellIntegrationResult(passthrough=False, script=script_path, exit_code=exit_code)
 

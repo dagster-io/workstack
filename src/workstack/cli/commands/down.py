@@ -7,6 +7,7 @@ from workstack.cli.commands.switch import (
     _resolve_down_navigation,
 )
 from workstack.cli.core import discover_repo_context
+from workstack.cli.output import user_output
 from workstack.core.context import WorkstackContext
 
 
@@ -38,7 +39,7 @@ def down_cmd(ctx: WorkstackContext, script: bool) -> None:
     # Get current branch
     current_branch = ctx.git_ops.get_current_branch(ctx.cwd)
     if current_branch is None:
-        click.echo("Error: Not currently on a branch (detached HEAD)", err=True)
+        user_output("Error: Not currently on a branch (detached HEAD)")
         raise SystemExit(1)
 
     # Get all worktrees for checking if target has a worktree
@@ -56,9 +57,8 @@ def down_cmd(ctx: WorkstackContext, script: bool) -> None:
     if target_wt_path is None:
         # This should not happen because _resolve_down_navigation already checks
         # But include defensive error handling
-        click.echo(
+        user_output(
             f"Error: Branch '{target_name}' has no worktree. This should not happen.",
-            err=True,
         )
         raise SystemExit(1)
 

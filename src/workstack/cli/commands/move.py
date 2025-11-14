@@ -6,6 +6,7 @@ import click
 
 from workstack.cli.commands.switch import complete_worktree_names
 from workstack.cli.core import discover_repo_context, worktree_path_for
+from workstack.cli.output import user_output
 from workstack.core.context import WorkstackContext
 from workstack.core.repo_discovery import ensure_workstacks_dir
 from workstack.core.worktree_utils import (
@@ -24,18 +25,17 @@ def _resolve_current_worktree(ctx: WorkstackContext, repo_root: Path) -> Path:
     """
     git_common_dir = ctx.git_ops.get_git_common_dir(ctx.cwd)
     if git_common_dir is None:
-        click.echo("Error: Not in a git repository", err=True)
+        user_output("Error: Not in a git repository")
         raise SystemExit(1)
 
     cwd = ctx.cwd.resolve()
     worktrees = ctx.git_ops.list_worktrees(repo_root)
     wt_path = find_worktree_containing_path(worktrees, cwd)
     if wt_path is None:
-        click.echo(
+        user_output(
             f"Error: Current directory ({cwd}) is not in any worktree.\n"
             f"Either run this from within a worktree, or use --worktree or "
-            f"--branch to specify the source.",
-            err=True,
+            f"--branch to specify the source."
         )
         raise SystemExit(1)
     return wt_path
@@ -59,9 +59,7 @@ def resolve_source_worktree(
     flag_count = sum([current, branch is not None, worktree is not None])
 
     if flag_count > 1:
-        click.echo(
-            "Error: Only one of --current, --branch, or --worktree can be specified", err=True
-        )
+        user_output("Error: Only one of --current, --branch, or --worktree can be specified")
         raise SystemExit(1)
 
     if flag_count == 0 or current:
@@ -73,7 +71,7 @@ def resolve_source_worktree(
         worktrees = ctx.git_ops.list_worktrees(repo_root)
         wt = find_worktree_with_branch(worktrees, branch)
         if wt is None:
-            click.echo(f"Error: Branch '{branch}' not found in any worktree", err=True)
+            user_output(f"Error: Branch '{branch}' not found in any worktree")
             raise SystemExit(1)
         return wt
 
@@ -82,11 +80,11 @@ def resolve_source_worktree(
         wt_path = worktree_path_for(workstacks_dir, worktree)
         # Validate that the worktree exists
         if not ctx.git_ops.path_exists(wt_path):
-            click.echo(f"Error: Worktree '{worktree}' does not exist", err=True)
+            user_output(f"Error: Worktree '{worktree}' does not exist")
             raise SystemExit(1)
         return wt_path
 
-    click.echo("Error: Invalid state - no source specified", err=True)
+    user_output("Error: Invalid state - no source specified")
     raise SystemExit(1)
 
 
@@ -119,15 +117,14 @@ def execute_move(
     worktrees = ctx.git_ops.list_worktrees(repo_root)
     source_branch = get_worktree_branch(worktrees, source_wt)
     if source_branch is None:
-        click.echo("Error: Source worktree is in detached HEAD state", err=True)
+        user_output("Error: Source worktree is in detached HEAD state")
         raise SystemExit(1)
 
     # Check for uncommitted changes in source
     if ctx.git_ops.has_uncommitted_changes(source_wt) and not force:
-        click.echo(
+        user_output(
             f"Error: Uncommitted changes in source worktree '{source_wt.name}'.\n"
-            f"Commit, stash, or use --force to override.",
-            err=True,
+            f"Commit, stash, or use --force to override."
         )
         raise SystemExit(1)
 
@@ -138,16 +135,15 @@ def execute_move(
     # 1. Detach HEAD in source worktree (frees up source_branch)
     # 2. Create/checkout source_branch in target worktree
     # 3. Checkout fallback_ref in source worktree
-    click.echo(f"Moving '{source_branch}' from '{source_wt.name}' to '{target_wt.name}'")
+    user_output(f"Moving '{source_branch}' from '{source_wt.name}' to '{target_wt.name}'")
     ctx.git_ops.checkout_detached(source_wt, source_branch)
 
     if target_exists:
         # Target exists - check for uncommitted changes
         if ctx.git_ops.has_uncommitted_changes(target_wt) and not force:
-            click.echo(
+            user_output(
                 f"Error: Uncommitted changes in target worktree '{target_wt.name}'.\n"
-                f"Commit, stash, or use --force to override.",
-                err=True,
+                f"Commit, stash, or use --force to override."
             )
             raise SystemExit(1)
 
@@ -168,7 +164,7 @@ def execute_move(
     # Switch source to fallback branch
     ctx.git_ops.checkout_branch(source_wt, fallback_ref)
 
-    click.echo(f"✓ Moved '{source_branch}' from '{source_wt.name}' to '{target_wt.name}'")
+    user_output(f"✓ Moved '{source_branch}' from '{source_wt.name}' to '{target_wt.name}'")
 
 
 def execute_swap(
@@ -188,7 +184,7 @@ def execute_swap(
     target_branch = get_worktree_branch(worktrees, target_wt)
 
     if source_branch is None or target_branch is None:
-        click.echo("Error: Both worktrees must have branches checked out for swap", err=True)
+        user_output("Error: Both worktrees must have branches checked out for swap")
         raise SystemExit(1)
 
     # Check for uncommitted changes
@@ -196,23 +192,22 @@ def execute_swap(
         target_wt
     ):
         if not force:
-            click.echo(
+            user_output(
                 "Error: Uncommitted changes detected in one or more worktrees.\n"
-                "Commit, stash, or use --force to override.",
-                err=True,
+                "Commit, stash, or use --force to override."
             )
             raise SystemExit(1)
 
     # Confirm swap unless --force
     if not force:
-        click.echo("This will swap branches between worktrees:")
-        click.echo(f"  '{source_wt.name}': '{source_branch}' → '{target_branch}'")
-        click.echo(f"  '{target_wt.name}': '{target_branch}' → '{source_branch}'")
+        user_output("This will swap branches between worktrees:")
+        user_output(f"  '{source_wt.name}': '{source_branch}' → '{target_branch}'")
+        user_output(f"  '{target_wt.name}': '{target_branch}' → '{source_branch}'")
         if not click.confirm("Continue?"):
-            click.echo("Swap cancelled")
+            user_output("Swap cancelled")
             raise SystemExit(0)
 
-    click.echo(f"Swapping branches between '{source_wt.name}' and '{target_wt.name}'")
+    user_output(f"Swapping branches between '{source_wt.name}' and '{target_wt.name}'")
 
     # To swap branches between worktrees, we need to avoid having the same branch
     # checked out in two places simultaneously. Strategy:
@@ -223,7 +218,7 @@ def execute_swap(
     ctx.git_ops.checkout_branch(target_wt, source_branch)
     ctx.git_ops.checkout_branch(source_wt, target_branch)
 
-    click.echo(f"✓ Swapped '{source_branch}' ↔ '{target_branch}'")
+    user_output(f"✓ Swapped '{source_branch}' ↔ '{target_branch}'")
 
 
 @click.command("move")
@@ -303,7 +298,7 @@ def move_cmd(
 
     # Validate source and target are different
     if source_wt.resolve() == target_wt.resolve():
-        click.echo("Error: Source and target worktrees are the same", err=True)
+        user_output("Error: Source and target worktrees are the same")
         raise SystemExit(1)
 
     # Detect operation type

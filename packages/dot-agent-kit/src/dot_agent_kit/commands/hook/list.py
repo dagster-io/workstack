@@ -7,6 +7,7 @@ from pathlib import Path
 import click
 from pydantic import ValidationError
 
+from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.hooks.settings import extract_kit_id_from_command, get_all_hooks, load_settings
 
 
@@ -16,22 +17,22 @@ def _list_hooks_impl() -> None:
     settings_path = Path.cwd() / ".claude" / "settings.json"
 
     if not settings_path.exists():
-        click.echo("No hooks installed.", err=False)
-        click.echo("Total: 0 hook(s)", err=False)
+        user_output("No hooks installed.")
+        user_output("Total: 0 hook(s)")
         raise SystemExit(0)
 
     try:
         settings = load_settings(settings_path)
     except (json.JSONDecodeError, ValidationError) as e:
-        click.echo(f"Error loading settings.json: {e}", err=True)
+        user_output(f"Error loading settings.json: {e}")
         raise SystemExit(1) from None
 
     # Extract all hooks
     hooks = get_all_hooks(settings)
 
     if not hooks:
-        click.echo("No hooks installed.", err=False)
-        click.echo("Total: 0 hook(s)", err=False)
+        user_output("No hooks installed.")
+        user_output("Total: 0 hook(s)")
         raise SystemExit(0)
 
     # Display hooks
@@ -45,9 +46,9 @@ def _list_hooks_impl() -> None:
         else:
             # Local hook without kit metadata - show command
             hook_spec = f"local: {entry.command[:50]}"
-        click.echo(f"{hook_spec} [{lifecycle} / {matcher}]", err=False)
+        user_output(f"{hook_spec} [{lifecycle} / {matcher}]")
 
-    click.echo(f"Total: {len(hooks)} hook(s)", err=False)
+    user_output(f"\nTotal: {len(hooks)} hook(s)")
 
 
 @click.command(name="list")

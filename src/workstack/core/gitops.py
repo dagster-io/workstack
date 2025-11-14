@@ -14,7 +14,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 
-import click
+from workstack.cli.output import user_output
 
 
 @dataclass(frozen=True)
@@ -429,10 +429,9 @@ class RealGitOps(GitOps):
             )
             if result.returncode == 0:
                 return configured
-            click.echo(
+            user_output(
                 f"Error: Configured trunk branch '{configured}' does not exist in repository.\n"
-                f"Update your configuration in pyproject.toml or create the branch.",
-                err=True,
+                f"Update your configuration in pyproject.toml or create the branch."
             )
             raise SystemExit(1)
 
@@ -462,7 +461,7 @@ class RealGitOps(GitOps):
             if result.returncode == 0:
                 return candidate
 
-        click.echo("Error: Could not find 'main' or 'master' branch.", err=True)
+        user_output("Error: Could not find 'main' or 'master' branch.")
         raise SystemExit(1)
 
     def get_trunk_branch(self, repo_root: Path) -> str:
@@ -878,12 +877,12 @@ class DryRunGitOps(GitOps):
 
     def create_branch(self, cwd: Path, branch_name: str, start_point: str) -> None:
         """Print dry-run message instead of creating branch."""
-        click.echo(f"[DRY RUN] Would run: git branch {branch_name} {start_point}", err=True)
+        user_output(f"[DRY RUN] Would run: git branch {branch_name} {start_point}")
 
     def delete_branch(self, cwd: Path, branch_name: str, *, force: bool) -> None:
         """Print dry-run message instead of deleting branch."""
         flag = "-D" if force else "-d"
-        click.echo(f"[DRY RUN] Would run: git branch {flag} {branch_name}", err=True)
+        user_output(f"[DRY RUN] Would run: git branch {flag} {branch_name}")
 
     # Destructive operations: print dry-run message instead of executing
 
@@ -907,33 +906,30 @@ class DryRunGitOps(GitOps):
         """Print dry-run message instead of adding worktree."""
         if branch and create_branch:
             base_ref = ref or "HEAD"
-            click.echo(
-                f"[DRY RUN] Would run: git worktree add -b {branch} {path} {base_ref}",
-                err=True,
-            )
+            user_output(f"[DRY RUN] Would run: git worktree add -b {branch} {path} {base_ref}")
         elif branch:
-            click.echo(f"[DRY RUN] Would run: git worktree add {path} {branch}", err=True)
+            user_output(f"[DRY RUN] Would run: git worktree add {path} {branch}")
         else:
             base_ref = ref or "HEAD"
-            click.echo(f"[DRY RUN] Would run: git worktree add {path} {base_ref}", err=True)
+            user_output(f"[DRY RUN] Would run: git worktree add {path} {base_ref}")
 
     def move_worktree(self, repo_root: Path, old_path: Path, new_path: Path) -> None:
         """Print dry-run message instead of moving worktree."""
-        click.echo(f"[DRY RUN] Would run: git worktree move {old_path} {new_path}", err=True)
+        user_output(f"[DRY RUN] Would run: git worktree move {old_path} {new_path}")
 
     def remove_worktree(self, repo_root: Path, path: Path, *, force: bool) -> None:
         """Print dry-run message instead of removing worktree."""
         force_flag = "--force " if force else ""
-        click.echo(f"[DRY RUN] Would run: git worktree remove {force_flag}{path}", err=True)
+        user_output(f"[DRY RUN] Would run: git worktree remove {force_flag}{path}")
 
     def delete_branch_with_graphite(self, repo_root: Path, branch: str, *, force: bool) -> None:
         """Print dry-run message instead of deleting branch."""
         force_flag = "-f " if force else ""
-        click.echo(f"[DRY RUN] Would run: gt delete {force_flag}{branch}", err=True)
+        user_output(f"[DRY RUN] Would run: gt delete {force_flag}{branch}")
 
     def prune_worktrees(self, repo_root: Path) -> None:
         """Print dry-run message instead of pruning worktrees."""
-        click.echo("[DRY RUN] Would run: git worktree prune", err=True)
+        user_output("[DRY RUN] Would run: git worktree prune")
 
     def path_exists(self, path: Path) -> bool:
         """Check if path exists (read-only, delegates to wrapped)."""
@@ -973,9 +969,9 @@ class DryRunGitOps(GitOps):
 
     def fetch_branch(self, repo_root: Path, remote: str, branch: str) -> None:
         """Print dry-run message instead of fetching branch."""
-        click.echo(f"[DRY RUN] Would run: git fetch {remote} {branch}", err=True)
+        user_output(f"[DRY RUN] Would run: git fetch {remote} {branch}")
 
     def pull_branch(self, repo_root: Path, remote: str, branch: str, *, ff_only: bool) -> None:
         """Print dry-run message instead of pulling branch."""
         ff_flag = " --ff-only" if ff_only else ""
-        click.echo(f"[DRY RUN] Would run: git pull{ff_flag} {remote} {branch}", err=True)
+        user_output(f"[DRY RUN] Would run: git pull{ff_flag} {remote} {branch}")

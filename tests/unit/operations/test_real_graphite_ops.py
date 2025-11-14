@@ -99,7 +99,7 @@ def test_real_graphite_ops_submit_branch_stderr_handling() -> None:
         mock_run.assert_called_once()
 
         # Verify stderr was echoed in verbose mode (quiet=False)
-        mock_echo.assert_called_once_with("Submitted PR #123\n", err=True, nl=False)
+        mock_echo.assert_called_once_with("Submitted PR #123\n", nl=False, err=True, color=None)
 
 
 def test_real_graphite_ops_submit_branch_quiet_no_stderr_output() -> None:

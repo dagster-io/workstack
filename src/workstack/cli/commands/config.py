@@ -5,6 +5,7 @@ import click
 
 from workstack.cli.config import LoadedConfig
 from workstack.cli.core import discover_repo_context
+from workstack.cli.output import machine_output, user_output
 from workstack.core.context import WorkstackContext, write_trunk_to_pyproject
 from workstack.core.global_config import GlobalConfig
 
@@ -15,14 +16,14 @@ def _get_env_value(cfg: LoadedConfig, parts: list[str], key: str) -> None:
     Prints the value or exits with error if key not found.
     """
     if len(parts) != 2:
-        click.echo(f"Invalid key: {key}", err=True)
+        user_output(f"Invalid key: {key}")
         raise SystemExit(1)
 
     if parts[1] not in cfg.env:
-        click.echo(f"Key not found: {key}", err=True)
+        user_output(f"Key not found: {key}")
         raise SystemExit(1)
 
-    click.echo(cfg.env[parts[1]])
+    machine_output(cfg.env[parts[1]])
 
 
 def _get_post_create_value(cfg: LoadedConfig, parts: list[str], key: str) -> None:
@@ -31,25 +32,25 @@ def _get_post_create_value(cfg: LoadedConfig, parts: list[str], key: str) -> Non
     Prints the value or exits with error if key not found.
     """
     if len(parts) != 2:
-        click.echo(f"Invalid key: {key}", err=True)
+        user_output(f"Invalid key: {key}")
         raise SystemExit(1)
 
     # Handle shell subkey
     if parts[1] == "shell":
         if not cfg.post_create_shell:
-            click.echo(f"Key not found: {key}", err=True)
+            user_output(f"Key not found: {key}")
             raise SystemExit(1)
-        click.echo(cfg.post_create_shell)
+        machine_output(cfg.post_create_shell)
         return
 
     # Handle commands subkey
     if parts[1] == "commands":
         for cmd in cfg.post_create_commands:
-            click.echo(cmd)
+            machine_output(cmd)
         return
 
     # Unknown subkey
-    click.echo(f"Key not found: {key}", err=True)
+    user_output(f"Key not found: {key}")
     raise SystemExit(1)
 
 
@@ -63,33 +64,33 @@ def config_group() -> None:
 def config_list(ctx: WorkstackContext) -> None:
     """Print a list of configuration keys and values."""
     # Display global config
-    click.echo(click.style("Global configuration:", bold=True))
+    user_output(click.style("Global configuration:", bold=True))
     if ctx.global_config:
-        click.echo(f"  workstacks_root={ctx.global_config.workstacks_root}")
-        click.echo(f"  use_graphite={str(ctx.global_config.use_graphite).lower()}")
-        click.echo(f"  show_pr_info={str(ctx.global_config.show_pr_info).lower()}")
-        click.echo(f"  show_pr_checks={str(ctx.global_config.show_pr_checks).lower()}")
+        user_output(f"  workstacks_root={ctx.global_config.workstacks_root}")
+        user_output(f"  use_graphite={str(ctx.global_config.use_graphite).lower()}")
+        user_output(f"  show_pr_info={str(ctx.global_config.show_pr_info).lower()}")
+        user_output(f"  show_pr_checks={str(ctx.global_config.show_pr_checks).lower()}")
     else:
-        click.echo("  (not configured - run 'workstack init' to create)")
+        user_output("  (not configured - run 'workstack init' to create)")
 
     # Display local config
-    click.echo(click.style("\nRepository configuration:", bold=True))
+    user_output(click.style("\nRepository configuration:", bold=True))
     from workstack.core.repo_discovery import NoRepoSentinel
 
     if isinstance(ctx.repo, NoRepoSentinel):
-        click.echo("  (not in a git repository)")
+        user_output("  (not in a git repository)")
     else:
         trunk_branch = ctx.trunk_branch
         cfg = ctx.local_config
         if trunk_branch:
-            click.echo(f"  trunk-branch={trunk_branch}")
+            user_output(f"  trunk-branch={trunk_branch}")
         if cfg.env:
             for key, value in cfg.env.items():
-                click.echo(f"  env.{key}={value}")
+                user_output(f"  env.{key}={value}")
         if cfg.post_create_shell:
-            click.echo(f"  post_create.shell={cfg.post_create_shell}")
+            user_output(f"  post_create.shell={cfg.post_create_shell}")
         if cfg.post_create_commands:
-            click.echo(f"  post_create.commands={cfg.post_create_commands}")
+            user_output(f"  post_create.commands={cfg.post_create_commands}")
 
         has_no_config = (
             not trunk_branch
@@ -98,7 +99,7 @@ def config_list(ctx: WorkstackContext) -> None:
             and not cfg.post_create_commands
         )
         if has_no_config:
-            click.echo("  (no configuration - run 'workstack init --repo' to create)")
+            user_output("  (no configuration - run 'workstack init --repo' to create)")
 
 
 @config_group.command("get")
@@ -112,32 +113,32 @@ def config_get(ctx: WorkstackContext, key: str) -> None:
     if parts[0] in ("workstacks_root", "use_graphite", "show_pr_info", "show_pr_checks"):
         if ctx.global_config is None:
             config_path = ctx.global_config_ops.path()
-            click.echo(f"Global config not found at {config_path}", err=True)
+            user_output(f"Global config not found at {config_path}")
             raise SystemExit(1)
 
         if parts[0] == "workstacks_root":
-            click.echo(str(ctx.global_config.workstacks_root))
+            machine_output(str(ctx.global_config.workstacks_root))
         elif parts[0] == "use_graphite":
-            click.echo(str(ctx.global_config.use_graphite).lower())
+            machine_output(str(ctx.global_config.use_graphite).lower())
         elif parts[0] == "show_pr_info":
-            click.echo(str(ctx.global_config.show_pr_info).lower())
+            machine_output(str(ctx.global_config.show_pr_info).lower())
         elif parts[0] == "show_pr_checks":
-            click.echo(str(ctx.global_config.show_pr_checks).lower())
+            machine_output(str(ctx.global_config.show_pr_checks).lower())
         return
 
     # Handle repo config keys
     from workstack.core.repo_discovery import NoRepoSentinel
 
     if isinstance(ctx.repo, NoRepoSentinel):
-        click.echo("Not in a git repository", err=True)
+        user_output("Not in a git repository")
         raise SystemExit(1)
 
     if parts[0] == "trunk-branch":
         trunk_branch = ctx.trunk_branch
         if trunk_branch:
-            click.echo(trunk_branch)
+            machine_output(trunk_branch)
         else:
-            click.echo("not configured (will auto-detect)", err=True)
+            user_output("not configured (will auto-detect)")
         return
 
     cfg = ctx.local_config
@@ -150,7 +151,7 @@ def config_get(ctx: WorkstackContext, key: str) -> None:
         _get_post_create_value(cfg, parts, key)
         return
 
-    click.echo(f"Invalid key: {key}", err=True)
+    user_output(f"Invalid key: {key}")
     raise SystemExit(1)
 
 
@@ -167,8 +168,8 @@ def config_set(ctx: WorkstackContext, key: str, value: str) -> None:
     if parts[0] in ("workstacks_root", "use_graphite", "show_pr_info", "show_pr_checks"):
         if ctx.global_config is None:
             config_path = ctx.global_config_ops.path()
-            click.echo(f"Global config not found at {config_path}", err=True)
-            click.echo("Run 'workstack init' to create it.", err=True)
+            user_output(f"Global config not found at {config_path}")
+            user_output("Run 'workstack init' to create it.")
             raise SystemExit(1)
 
         # Create new config with updated value
@@ -182,7 +183,7 @@ def config_set(ctx: WorkstackContext, key: str, value: str) -> None:
             )
         elif parts[0] == "use_graphite":
             if value.lower() not in ("true", "false"):
-                click.echo(f"Invalid boolean value: {value}", err=True)
+                user_output(f"Invalid boolean value: {value}")
                 raise SystemExit(1)
             new_config = GlobalConfig(
                 workstacks_root=ctx.global_config.workstacks_root,
@@ -193,7 +194,7 @@ def config_set(ctx: WorkstackContext, key: str, value: str) -> None:
             )
         elif parts[0] == "show_pr_info":
             if value.lower() not in ("true", "false"):
-                click.echo(f"Invalid boolean value: {value}", err=True)
+                user_output(f"Invalid boolean value: {value}")
                 raise SystemExit(1)
             new_config = GlobalConfig(
                 workstacks_root=ctx.global_config.workstacks_root,
@@ -204,7 +205,7 @@ def config_set(ctx: WorkstackContext, key: str, value: str) -> None:
             )
         elif parts[0] == "show_pr_checks":
             if value.lower() not in ("true", "false"):
-                click.echo(f"Invalid boolean value: {value}", err=True)
+                user_output(f"Invalid boolean value: {value}")
                 raise SystemExit(1)
             new_config = GlobalConfig(
                 workstacks_root=ctx.global_config.workstacks_root,
@@ -214,11 +215,11 @@ def config_set(ctx: WorkstackContext, key: str, value: str) -> None:
                 show_pr_checks=value.lower() == "true",
             )
         else:
-            click.echo(f"Invalid key: {key}", err=True)
+            user_output(f"Invalid key: {key}")
             raise SystemExit(1)
 
         ctx.global_config_ops.save(new_config)
-        click.echo(f"Set {key}={value}")
+        user_output(f"Set {key}={value}")
         return
 
     # Handle repo config keys
@@ -235,18 +236,17 @@ def config_set(ctx: WorkstackContext, key: str, value: str) -> None:
             check=False,
         )
         if result.returncode != 0:
-            click.echo(
+            user_output(
                 f"Error: Branch '{value}' does not exist in repository.\n"
-                f"Create the branch first before configuring it as trunk.",
-                err=True,
+                f"Create the branch first before configuring it as trunk."
             )
             raise SystemExit(1)
 
         # Write configuration
         write_trunk_to_pyproject(repo.root, value)
-        click.echo(f"Set trunk-branch={value}")
+        user_output(f"Set trunk-branch={value}")
         return
 
     # Other repo config keys not implemented yet
-    click.echo("Setting repo config keys not yet implemented", err=True)
+    user_output("Setting repo config keys not yet implemented")
     raise SystemExit(1)

@@ -4,6 +4,7 @@ from pathlib import Path
 
 import click
 
+from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.io import create_default_config, save_project_config
 
 
@@ -28,19 +29,19 @@ def init(force: bool) -> None:
 
     # Check if config already exists
     if config_path.exists() and not force:
-        click.echo("Error: dot-agent.toml already exists", err=True)
-        click.echo("Use --force to overwrite", err=True)
+        user_output("Error: dot-agent.toml already exists")
+        user_output("Use --force to overwrite")
         raise SystemExit(1)
 
     # Create .claude directory if it doesn't exist
     if not claude_dir.exists():
         claude_dir.mkdir(parents=True)
-        click.echo(f"Created {claude_dir}/")
+        user_output(f"Created {claude_dir}/")
 
     # Create default config
     config = create_default_config()
     save_project_config(project_dir, config)
 
-    click.echo(f"Created {config_path}")
-    click.echo("\nYou can now install kits using:")
-    click.echo("  dot-agent kit install <kit-name>")
+    user_output(f"Created {config_path}")
+    user_output("\nYou can now install kits using:")
+    user_output("  dot-agent kit install <kit-name>")

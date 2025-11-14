@@ -9,6 +9,7 @@ from workstack.cli.core import (
     validate_worktree_name_for_removal,
     worktree_path_for,
 )
+from workstack.cli.output import user_output
 from workstack.core.context import WorkstackContext, create_context
 from workstack.core.gitops import GitOps
 from workstack.core.repo_discovery import ensure_workstacks_dir
@@ -93,7 +94,7 @@ def _remove_worktree(
 
     # Check if worktree exists using git operations (works with both real and sentinel paths)
     if not ctx.git_ops.path_exists(wt_path):
-        click.echo(f"Worktree not found: {wt_path}")
+        user_output(f"Worktree not found: {wt_path}")
         raise SystemExit(1)
 
     # Step 1: Collect all operations to perform
@@ -101,10 +102,9 @@ def _remove_worktree(
     if delete_stack:
         use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
         if not use_graphite:
-            click.echo(
+            user_output(
                 "Error: --delete-stack requires Graphite to be enabled. "
                 "Run 'workstack config set use-graphite true'",
-                err=True,
             )
             raise SystemExit(1)
 
@@ -113,18 +113,16 @@ def _remove_worktree(
         worktree_branch = get_worktree_branch(worktrees, wt_path)
 
         if worktree_branch is None:
-            click.echo(
+            user_output(
                 f"Warning: Worktree {name} is in detached HEAD state. "
                 "Cannot delete stack without a branch.",
-                err=True,
             )
         else:
             stack = ctx.graphite_ops.get_branch_stack(ctx.git_ops, repo.root, worktree_branch)
             if stack is None:
-                click.echo(
+                user_output(
                     f"Warning: Branch {worktree_branch} is not tracked by Graphite. "
                     "Cannot delete stack.",
-                    err=True,
                 )
             else:
                 # Get all branches and filter to non-trunk branches
@@ -134,25 +132,25 @@ def _remove_worktree(
                 branches_to_delete = filter_non_trunk_branches(all_branches, stack)
 
                 if not branches_to_delete:
-                    click.echo("No branches to delete (all branches in stack are trunk branches).")
+                    user_output("No branches to delete (all branches in stack are trunk branches).")
 
     # Step 2: Display all planned operations
     if not quiet:  # Only show planning if not in quiet mode
         if branches_to_delete or True:
-            click.echo(click.style("📋 Planning to perform the following operations:", bold=True))
+            user_output(click.style("📋 Planning to perform the following operations:", bold=True))
             worktree_text = click.style(str(wt_path), fg="cyan")
-            click.echo(f"  1. 🗑️  Remove worktree: {worktree_text}")
+            user_output(f"  1. 🗑️  Remove worktree: {worktree_text}")
             if branches_to_delete:
-                click.echo("  2. 🌳 Delete branches in stack:")
+                user_output("  2. 🌳 Delete branches in stack:")
                 for branch in branches_to_delete:
                     branch_text = click.style(branch, fg="yellow")
-                    click.echo(f"     - {branch_text}")
+                    user_output(f"     - {branch_text}")
 
     # Step 3: Single confirmation prompt (unless --force or --dry-run)
     if not force and not dry_run:
         prompt_text = click.style("Proceed with these operations?", fg="yellow", bold=True)
         if not click.confirm(f"\n{prompt_text}", default=False):
-            click.echo(click.style("⭕ Aborted.", fg="red", bold=True))
+            user_output(click.style("⭕ Aborted.", fg="red", bold=True))
             return
 
     # Step 4: Execute operations
@@ -166,7 +164,7 @@ def _remove_worktree(
     # Use git_ops.path_exists() instead of .exists() to work with both real and sentinel paths
     if ctx.git_ops.path_exists(wt_path):
         if ctx.dry_run:
-            click.echo(f"[DRY RUN] Would delete directory: {wt_path}", err=True)
+            user_output(f"[DRY RUN] Would delete directory: {wt_path}")
         else:
             # Only call shutil.rmtree() if we're on a real filesystem
             # In pure test mode, we skip the actual deletion since it's a sentinel path
@@ -187,11 +185,11 @@ def _remove_worktree(
             ctx.git_ops.delete_branch_with_graphite(repo.root, branch, force=force)
             if not dry_run:
                 branch_text = click.style(branch, fg="green")
-                click.echo(f"✅ Deleted branch: {branch_text}")
+                user_output(f"✅ Deleted branch: {branch_text}")
 
     if not dry_run:
         path_text = click.style(str(wt_path), fg="green")
-        click.echo(f"✅ {path_text}")
+        user_output(f"✅ {path_text}")
 
 
 @click.command("remove")

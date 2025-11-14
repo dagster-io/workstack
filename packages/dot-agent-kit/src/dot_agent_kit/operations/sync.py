@@ -4,8 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import NamedTuple
 
-import click
-
+from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.io import load_kit_manifest
 from dot_agent_kit.models import InstalledKit, ProjectConfig
 from dot_agent_kit.operations.artifact_operations import create_artifact_operations
@@ -133,9 +132,9 @@ def sync_kit(
 
     # Report skipped artifacts
     if skipped:
-        click.echo("  Skipping symlinked artifacts in dev mode:", err=True)
+        user_output("  Skipping symlinked artifacts in dev mode:")
         for artifact_path in skipped:
-            click.echo(f"    {artifact_path}", err=True)
+            user_output(f"    {artifact_path}")
 
     # Install new version with overwrite enabled
     new_installed = install_kit(

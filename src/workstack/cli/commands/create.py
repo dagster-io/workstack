@@ -8,6 +8,7 @@ import click
 
 from workstack.cli.config import LoadedConfig
 from workstack.cli.core import discover_repo_context, worktree_path_for
+from workstack.cli.output import user_output
 from workstack.cli.shell_utils import render_cd_script
 from workstack.cli.subprocess_utils import run_with_error_reporting
 from workstack.core.context import WorkstackContext
@@ -46,14 +47,13 @@ def add_worktree(
         # Validate branch is not already checked out
         existing_path = ctx.git_ops.is_branch_checked_out(repo_root, branch)
         if existing_path:
-            click.echo(
+            user_output(
                 f"Error: Branch '{branch}' is already checked out at {existing_path}\n"
                 f"Git doesn't allow the same branch to be checked out in multiple worktrees.\n\n"
                 f"Options:\n"
                 f"  • Use a different branch name\n"
                 f"  • Create a new branch instead: workstack create {path.name}\n"
                 f"  • Switch to that worktree: workstack switch {path.name}",
-                err=True,
             )
             raise SystemExit(1)
 
@@ -65,7 +65,7 @@ def add_worktree(
             if original_branch is None:
                 raise ValueError("Cannot create graphite branch from detached HEAD")
             if ctx.git_ops.has_staged_changes(repo_root):
-                click.echo(
+                user_output(
                     "Error: Staged changes detected. "
                     "Graphite cannot create a branch while staged changes are present.\n"
                     "`gt create --no-interactive` attempts to commit staged files but fails when "
@@ -75,7 +75,6 @@ def add_worktree(
                     "  • Unstage them: git reset\n"
                     "  • Stash them: git stash\n"
                     "  • Disable Graphite: workstack config set use_graphite false",
-                    err=True,
                 )
                 raise SystemExit(1)
             run_with_error_reporting(
@@ -258,17 +257,17 @@ def create(
     # Validate mutually exclusive options
     flags_set = sum([from_current_branch, from_branch is not None, plan_file is not None])
     if flags_set > 1:
-        click.echo("Cannot use multiple of: --from-current-branch, --from-branch, --plan")
+        user_output("Cannot use multiple of: --from-current-branch, --from-branch, --plan")
         raise SystemExit(1)
 
     # Validate --json and --script are mutually exclusive
     if output_json and script:
-        click.echo("Error: Cannot use both --json and --script", err=True)
+        user_output("Error: Cannot use both --json and --script")
         raise SystemExit(1)
 
     # Validate --keep-plan requires --plan
     if keep_plan and not plan_file:
-        click.echo("Error: --keep-plan requires --plan", err=True)
+        user_output("Error: --keep-plan requires --plan")
         raise SystemExit(1)
 
     # Handle --from-current-branch flag
@@ -276,12 +275,12 @@ def create(
         # Get the current branch
         current_branch = ctx.git_ops.get_current_branch(ctx.cwd)
         if current_branch is None:
-            click.echo("Error: HEAD is detached (not on a branch)", err=True)
+            user_output("Error: HEAD is detached (not on a branch)")
             raise SystemExit(1)
 
         # Set branch to current branch and derive name if not provided
         if branch:
-            click.echo("Cannot specify --branch with --from-current-branch (uses current branch).")
+            user_output("Cannot specify --branch with --from-current-branch (uses current branch).")
             raise SystemExit(1)
         branch = current_branch
 
@@ -291,7 +290,7 @@ def create(
     # Handle --from-branch flag
     elif from_branch:
         if branch:
-            click.echo("Cannot specify --branch with --from-branch (uses the specified branch).")
+            user_output("Cannot specify --branch with --from-branch (uses the specified branch).")
             raise SystemExit(1)
         branch = from_branch
 
@@ -301,7 +300,7 @@ def create(
     # Handle --plan flag
     elif plan_file:
         if name:
-            click.echo("Cannot specify both NAME and --plan. Use one or the other.")
+            user_output("Cannot specify both NAME and --plan. Use one or the other.")
             raise SystemExit(1)
         # Derive name from plan filename (strip extension)
         plan_stem = plan_file.stem  # filename without extension
@@ -313,7 +312,7 @@ def create(
     # Regular create (no special flags)
     else:
         if not name:
-            click.echo(
+            user_output(
                 "Must provide NAME or --plan or --from-branch or --from-current-branch option."
             )
             raise SystemExit(1)
@@ -331,16 +330,15 @@ def create(
 
     # Validate that name is not a reserved word
     if name.lower() == "root":
-        click.echo('Error: "root" is a reserved name and cannot be used for a worktree.', err=True)
+        user_output('Error: "root" is a reserved name and cannot be used for a worktree.')
         raise SystemExit(1)
 
     # Validate that name is not main or master (common branch names that should use root)
     if name.lower() in ("main", "master"):
-        click.echo(
+        user_output(
             f'Error: "{name}" cannot be used as a worktree name.\n'
             f"To switch to the {name} branch in the root repository, use:\n"
             f"  workstack switch root",
-            err=True,
         )
         raise SystemExit(1)
 
@@ -367,10 +365,10 @@ def create(
                 plan_file_path=plan_file_path if ctx.git_ops.path_exists(plan_file_path) else None,
                 status="exists",
             )
-            click.echo(json_response)
+            user_output(json_response)
             raise SystemExit(1)
         else:
-            click.echo(f"Worktree path already exists: {wt_path}")
+            user_output(f"Worktree path already exists: {wt_path}")
             raise SystemExit(1)
 
     # Handle from-current-branch logic: switch current worktree first
@@ -378,7 +376,7 @@ def create(
     if from_current_branch:
         current_branch = ctx.git_ops.get_current_branch(ctx.cwd)
         if current_branch is None:
-            click.echo("Error: Unable to determine current branch", err=True)
+            user_output("Error: Unable to determine current branch")
             raise SystemExit(1)
 
         # Determine preferred branch to checkout (prioritize Graphite parent)
@@ -400,14 +398,13 @@ def create(
 
         # Check for edge case: can't move main to worktree then switch to main
         if current_branch == to_branch:
-            click.echo(
+            user_output(
                 f"Error: Cannot use --from-current-branch when on '{current_branch}'.\n"
                 f"The current branch cannot be moved to a worktree and then checked out again.\n\n"
                 f"Alternatives:\n"
                 f"  • Create a new branch: workstack create {name}\n"
                 f"  • Switch to a feature branch first, then use --from-current-branch\n"
                 f"  • Use --from-branch to create from a different existing branch",
-                err=True,
             )
             raise SystemExit(1)
 
@@ -470,16 +467,16 @@ def create(
         if keep_plan:
             shutil.copy2(str(plan_file), str(plan_file_destination))
             if not script and not output_json:
-                click.echo(f"Copied plan to {plan_file_destination}")
+                user_output(f"Copied plan to {plan_file_destination}")
         else:
             shutil.move(str(plan_file), str(plan_file_destination))
             if not script and not output_json:
-                click.echo(f"Moved plan to {plan_file_destination}")
+                user_output(f"Moved plan to {plan_file_destination}")
 
     # Post-create commands (suppress output if JSON mode)
     if not no_post and cfg.post_create_commands:
         if not output_json:
-            click.echo("Running post-create commands...")
+            user_output("Running post-create commands...")
         run_commands_in_worktree(
             commands=cfg.post_create_commands,
             worktree_path=wt_path,
@@ -497,7 +494,7 @@ def create(
             command_name="create",
             comment=f"cd to {name}",
         )
-        click.echo(str(result.path), nl=False)
+        user_output(str(result.path), nl=False)
     elif output_json:
         # Output JSON with worktree information
         json_response = _create_json_response(
@@ -507,10 +504,10 @@ def create(
             plan_file_path=plan_file_destination,
             status="created",
         )
-        click.echo(json_response)
+        user_output(json_response)
     else:
-        click.echo(f"Created workstack at {wt_path} checked out at branch '{branch}'")
-        click.echo(f"\nworkstack switch {name}")
+        user_output(f"Created workstack at {wt_path} checked out at branch '{branch}'")
+        user_output(f"\nworkstack switch {name}")
 
 
 def run_commands_in_worktree(

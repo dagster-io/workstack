@@ -4,6 +4,7 @@ from pathlib import Path
 
 import click
 
+from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.hooks.installer import remove_hooks
 from dot_agent_kit.io import require_project_config, save_project_config
 from dot_agent_kit.models import ProjectConfig
@@ -21,8 +22,8 @@ def _remove_kit_impl(kit_id: str) -> None:
 
     # Check if kit is installed
     if kit_id not in config.kits:
-        click.echo(
-            f"Error: Kit '{kit_id}' not installed in project directory (./.claude)", err=True
+        user_output(
+            f"Error: Kit '{kit_id}' not installed in project directory (./.claude)",
         )
         raise SystemExit(1)
 
@@ -57,14 +58,16 @@ def _remove_kit_impl(kit_id: str) -> None:
     save_project_config(project_dir, updated_config)
 
     # Show success message
-    click.echo(f"✓ Removed {kit_id} v{installed.version}")
-    click.echo(f"  Deleted {removed_count} artifact(s)")
+    user_output(f"✓ Removed {kit_id} v{installed.version}")
+    user_output(f"  Deleted {removed_count} artifact(s)")
 
     if hooks_removed > 0:
-        click.echo(f"  Removed {hooks_removed} hook(s)")
+        user_output(f"  Removed {hooks_removed} hook(s)")
 
     if failed_count > 0:
-        click.echo(f"  Note: {failed_count} artifact(s) were already removed", err=True)
+        user_output(
+            f"  Note: {failed_count} artifact(s) were already removed",
+        )
 
 
 @click.command()

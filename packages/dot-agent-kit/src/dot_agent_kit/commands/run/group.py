@@ -7,6 +7,7 @@ from typing import Any
 
 import click
 
+from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.io import load_kit_manifest
 from dot_agent_kit.models.kit import KitManifest
 from dot_agent_kit.sources.bundled import BundledKitSource
@@ -92,7 +93,7 @@ class LazyKitGroup(click.Group):
                 error_msg = f"Invalid command '{cmd_name}' in kit '{kit_name}':\n"
                 for error in validation_errors:
                     error_msg += f"  - {error}\n"
-                click.echo(error_msg, err=True)
+                user_output(error_msg)
                 if debug:
                     raise click.ClickException(error_msg)
                 continue
@@ -104,7 +105,7 @@ class LazyKitGroup(click.Group):
                     f"Warning: Command file not found for '{command_def.name}' "
                     f"in kit '{self._manifest.name}': {command_file}\n"
                 )
-                click.echo(error_msg, err=True)
+                user_output(error_msg)
                 if debug:
                     raise click.ClickException(error_msg)
                 continue
@@ -123,9 +124,9 @@ class LazyKitGroup(click.Group):
                     f"Warning: Failed to import command '{command_def.name}' "
                     f"from kit '{self._manifest.name}': {e}\n"
                 )
-                click.echo(error_msg, err=True)
+                user_output(error_msg)
                 if debug:
-                    click.echo(traceback.format_exc(), err=True)
+                    user_output(traceback.format_exc())
                 continue
 
             # Get the command function (convert hyphenated name to snake_case)
@@ -136,7 +137,7 @@ class LazyKitGroup(click.Group):
                     f"does not have expected function '{function_name}' "
                     f"in module {full_module_path}\n"
                 )
-                click.echo(error_msg, err=True)
+                user_output(error_msg)
                 if debug:
                     raise click.ClickException(error_msg)
                 continue
@@ -153,7 +154,7 @@ class LazyKitGroup(click.Group):
                 f"Warning: Kit '{self._manifest.name}' loaded 0 commands "
                 f"(all {len(self._manifest.kit_cli_commands)} command(s) failed to load)\n"
             )
-            click.echo(warning, err=True)
+            user_output(warning)
 
 
 def _load_single_kit_commands(
@@ -178,7 +179,7 @@ def _load_single_kit_commands(
         # Validate kit directory exists
         if not kit_dir.exists():
             error_msg = f"Warning: Kit directory not found: {kit_dir}\n"
-            click.echo(error_msg, err=True)
+            user_output(error_msg)
             if debug:
                 raise click.ClickException(error_msg)
             return None
@@ -197,9 +198,9 @@ def _load_single_kit_commands(
 
     except Exception as e:
         error_msg = f"Warning: Failed to load kit '{manifest.name}': {e}\n"
-        click.echo(error_msg, err=True)
+        user_output(error_msg)
         if debug:
-            click.echo(traceback.format_exc(), err=True)
+            user_output(traceback.format_exc())
             raise
         return None
 
@@ -211,7 +212,7 @@ def _load_kit_commands() -> None:
 
     # Check data directory exists
     if not KITS_DATA_DIR.exists():
-        click.echo(f"Warning: Kits data directory not found: {KITS_DATA_DIR}\n", err=True)
+        user_output(f"Warning: Kits data directory not found: {KITS_DATA_DIR}\n")
         return
 
     for kit_name in available_kits:
@@ -239,7 +240,7 @@ def _load_kit_commands() -> None:
         except Exception as e:
             # Isolate individual kit failures - continue processing other kits
             error_msg = f"Warning: Failed to load kit '{kit_name}': {e}\n"
-            click.echo(error_msg, err=True)
+            user_output(error_msg)
             # Note: Debug mode tracebacks handled by _load_single_kit_commands
             continue
 

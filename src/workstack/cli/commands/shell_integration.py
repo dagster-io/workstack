@@ -1,5 +1,6 @@
 import click
 
+from workstack.cli.output import machine_output
 from workstack.cli.shell_integration.handler import (
     PASSTHROUGH_MARKER,
     ShellIntegrationResult,
@@ -19,10 +20,10 @@ def hidden_shell_cmd(args: tuple[str, ...]) -> None:
     result: ShellIntegrationResult = handle_shell_request(args)
 
     if result.passthrough:
-        click.echo(PASSTHROUGH_MARKER)
+        machine_output(PASSTHROUGH_MARKER)
         raise SystemExit(result.exit_code)
 
     if result.script:
-        click.echo(result.script, nl=False)
+        machine_output(result.script, nl=False)
 
     raise SystemExit(result.exit_code)

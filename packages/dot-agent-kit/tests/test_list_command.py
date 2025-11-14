@@ -25,7 +25,7 @@ def test_list_no_artifacts(capsys: CaptureFixture[str]) -> None:
     _list_artifacts(config, project_dir, repository)
 
     captured = capsys.readouterr()
-    assert "No artifacts installed" in captured.out
+    assert "No artifacts installed" in captured.err
 
 
 def test_list_skills(capsys: CaptureFixture[str]) -> None:
@@ -60,13 +60,13 @@ def test_list_skills(capsys: CaptureFixture[str]) -> None:
 
     captured = capsys.readouterr()
     # Check for kit-grouped format
-    assert "[devrun] (v0.1.0):" in captured.out
-    assert "Skills (1):" in captured.out
-    assert "devrun-make" in captured.out
-    assert "skills/devrun-make/" in captured.out
-    assert "[local]:" in captured.out
-    assert "gh" in captured.out
-    assert "skills/gh/" in captured.out
+    assert "[devrun] (v0.1.0):" in captured.err
+    assert "Skills (1):" in captured.err
+    assert "devrun-make" in captured.err
+    assert "skills/devrun-make/" in captured.err
+    assert "[local]:" in captured.err
+    assert "gh" in captured.err
+    assert "skills/gh/" in captured.err
 
 
 def test_list_commands(capsys: CaptureFixture[str]) -> None:
@@ -100,13 +100,13 @@ def test_list_commands(capsys: CaptureFixture[str]) -> None:
 
     captured = capsys.readouterr()
     # Check for kit-grouped format
-    assert "[gt] (v0.1.0):" in captured.out
-    assert "Commands (1):" in captured.out
-    assert "gt:submit-branch" in captured.out
-    assert "commands/gt/submit-branch.md" in captured.out
-    assert "[local]:" in captured.out
-    assert "codex-review" in captured.out
-    assert "commands/codex-review.md" in captured.out
+    assert "[gt] (v0.1.0):" in captured.err
+    assert "Commands (1):" in captured.err
+    assert "gt:submit-branch" in captured.err
+    assert "commands/gt/submit-branch.md" in captured.err
+    assert "[local]:" in captured.err
+    assert "codex-review" in captured.err
+    assert "commands/codex-review.md" in captured.err
 
 
 def test_list_agents(capsys: CaptureFixture[str]) -> None:
@@ -140,13 +140,13 @@ def test_list_agents(capsys: CaptureFixture[str]) -> None:
 
     captured = capsys.readouterr()
     # Check for kit-grouped format
-    assert "[devrun] (v0.1.0):" in captured.out
-    assert "Agents (1):" in captured.out
-    assert "runner" in captured.out
-    assert "agents/devrun/runner.md" in captured.out
-    assert "[local]:" in captured.out
-    assert "spec-creator" in captured.out
-    assert "agents/spec-creator.md" in captured.out
+    assert "[devrun] (v0.1.0):" in captured.err
+    assert "Agents (1):" in captured.err
+    assert "runner" in captured.err
+    assert "agents/devrun/runner.md" in captured.err
+    assert "[local]:" in captured.err
+    assert "spec-creator" in captured.err
+    assert "agents/spec-creator.md" in captured.err
 
 
 def test_list_hooks(capsys: CaptureFixture[str]) -> None:
@@ -180,13 +180,13 @@ def test_list_hooks(capsys: CaptureFixture[str]) -> None:
 
     captured = capsys.readouterr()
     # Check for kit-grouped format
-    assert "[devrun] (v0.1.0):" in captured.out
-    assert "Hooks (1):" in captured.out
-    assert "devrun:suggest-dignified-python" in captured.out
-    assert "hooks/devrun/suggest-dignified-python.py" in captured.out
-    assert "[local]:" in captured.out
-    assert "custom-kit:my-hook" in captured.out
-    assert "hooks/custom-kit/my-hook.sh" in captured.out
+    assert "[devrun] (v0.1.0):" in captured.err
+    assert "Hooks (1):" in captured.err
+    assert "devrun:suggest-dignified-python" in captured.err
+    assert "hooks/devrun/suggest-dignified-python.py" in captured.err
+    assert "[local]:" in captured.err
+    assert "custom-kit:my-hook" in captured.err
+    assert "hooks/custom-kit/my-hook.sh" in captured.err
 
 
 def test_list_mixed_artifacts(capsys: CaptureFixture[str]) -> None:
@@ -266,18 +266,18 @@ def test_list_mixed_artifacts(capsys: CaptureFixture[str]) -> None:
     captured = capsys.readouterr()
 
     # Check kit-grouped format - devrun kit
-    assert "[devrun] (v0.1.0):" in captured.out
-    assert "Skills (1):" in captured.out
-    assert "devrun-make" in captured.out
-    assert "Agents (1):" in captured.out
-    assert "runner" in captured.out
+    assert "[devrun] (v0.1.0):" in captured.err
+    assert "Skills (1):" in captured.err
+    assert "devrun-make" in captured.err
+    assert "Agents (1):" in captured.err
+    assert "runner" in captured.err
 
     # Check local artifacts
-    assert "[local]:" in captured.out
-    assert "gt-graphite" in captured.out
-    assert "gh" in captured.out
-    assert "codex-review" in captured.out
-    assert "test-kit:test-hook" in captured.out
+    assert "[local]:" in captured.err
+    assert "gt-graphite" in captured.err
+    assert "gh" in captured.err
+    assert "codex-review" in captured.err
+    assert "test-kit:test-hook" in captured.err
 
 
 def test_list_column_alignment(capsys: CaptureFixture[str]) -> None:
@@ -313,10 +313,10 @@ def test_list_column_alignment(capsys: CaptureFixture[str]) -> None:
 
     # Just verify the output contains expected kit groupings and artifact names
     # Column alignment is handled by the implementation's width calculations
-    assert "[long-kit-name] (v1.2.3):" in captured.out
-    assert "very-long-skill-name-here" in captured.out
-    assert "[local]:" in captured.out
-    assert "short" in captured.out
+    assert "[long-kit-name] (v1.2.3):" in captured.err
+    assert "very-long-skill-name-here" in captured.err
+    assert "[local]:" in captured.err
+    assert "short" in captured.err
 
 
 def test_list_command_cli(tmp_project: Path) -> None:
@@ -377,13 +377,13 @@ def test_list_docs(capsys: CaptureFixture[str]) -> None:
 
     captured = capsys.readouterr()
     # Check for kit-grouped format
-    assert "[devrun] (v0.1.0):" in captured.out
-    assert "Docs (1):" in captured.out
-    assert "tools/pytest.md" in captured.out
-    assert "docs/devrun/tools/pytest.md" in captured.out
-    assert "[local]:" in captured.out
-    assert "guide.md" in captured.out
-    assert "docs/my-kit/guide.md" in captured.out
+    assert "[devrun] (v0.1.0):" in captured.err
+    assert "Docs (1):" in captured.err
+    assert "tools/pytest.md" in captured.err
+    assert "docs/devrun/tools/pytest.md" in captured.err
+    assert "[local]:" in captured.err
+    assert "guide.md" in captured.err
+    assert "docs/my-kit/guide.md" in captured.err
 
 
 def test_list_docs_with_mixed_artifacts(capsys: CaptureFixture[str]) -> None:
@@ -419,8 +419,8 @@ def test_list_docs_with_mixed_artifacts(capsys: CaptureFixture[str]) -> None:
 
     captured = capsys.readouterr()
     # Both should appear under the same kit group
-    assert "[test-kit] (v1.0.0):" in captured.out
-    assert "Skills (1):" in captured.out
-    assert "my-skill" in captured.out
-    assert "Docs (1):" in captured.out
-    assert "overview.md" in captured.out
+    assert "[test-kit] (v1.0.0):" in captured.err
+    assert "Skills (1):" in captured.err
+    assert "my-skill" in captured.err
+    assert "Docs (1):" in captured.err
+    assert "overview.md" in captured.err

@@ -7,6 +7,8 @@ import sys
 
 import click
 
+from workstack_dev.cli.output import machine_output, user_output
+
 
 def workstack_dev_command() -> list[str]:
     """Determine how to invoke workstack-dev for completion generation."""
@@ -31,9 +33,9 @@ def emit_completion_script(shell: str) -> None:
     )
 
     if result.stdout:
-        click.echo(result.stdout, nl=False)
+        machine_output(result.stdout, nl=False)
     if result.stderr:
-        click.echo(result.stderr, err=True, nl=False)
+        user_output(result.stderr, nl=False)
 
     if result.returncode != 0:
         raise SystemExit(result.returncode)

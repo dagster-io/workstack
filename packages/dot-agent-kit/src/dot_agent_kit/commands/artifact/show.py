@@ -4,6 +4,7 @@ from pathlib import Path
 
 import click
 
+from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.commands.artifact.formatting import format_artifact_header, format_hook_metadata
 from dot_agent_kit.io.state import load_project_config
 from dot_agent_kit.models.config import ProjectConfig
@@ -43,14 +44,14 @@ def show_artifact(name: str, artifact_type: str | None) -> None:
 
     # Handle no matches
     if not matching:
-        click.echo(f"No artifact found with name '{name}'", err=True)
-        click.echo("\nTip: Use 'dot-agent artifact list' to see all available artifacts", err=True)
+        user_output(f"No artifact found with name '{name}'")
+        user_output("\nTip: Use 'dot-agent artifact list' to see all available artifacts")
         raise SystemExit(1)
 
     # Display all matches (handles both single and multiple matches)
     for i, artifact in enumerate(matching):
         if i > 0:
-            click.echo("\n" + "=" * 60 + "\n")
+            user_output("\n" + "=" * 60 + "\n")
 
         # Compute absolute path for display
         if artifact.level.value == "user":
@@ -62,15 +63,15 @@ def show_artifact(name: str, artifact_type: str | None) -> None:
         absolute_path = artifact_path.resolve() if artifact_path.exists() else None
 
         # Display metadata header
-        click.echo(format_artifact_header(artifact, absolute_path))
+        user_output(format_artifact_header(artifact, absolute_path))
 
         # Add hook-specific metadata
         if artifact.artifact_type == "hook":
             hook_meta = format_hook_metadata(artifact)
             if hook_meta:
-                click.echo(hook_meta)
+                user_output(hook_meta)
 
-        click.echo("\n" + "-" * 60 + "\n")
+        user_output("\n" + "-" * 60 + "\n")
 
         # Display file content
         # Construct absolute path based on level
@@ -83,6 +84,6 @@ def show_artifact(name: str, artifact_type: str | None) -> None:
 
         if file_path.exists():
             content = file_path.read_text(encoding="utf-8")
-            click.echo(content)
+            user_output(content)
         else:
-            click.echo(f"Warning: File not found at {file_path}", err=True)
+            user_output(f"Warning: File not found at {file_path}")

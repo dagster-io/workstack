@@ -17,8 +17,7 @@ from pathlib import Path
 from subprocess import DEVNULL
 from typing import Any
 
-import click
-
+from workstack.cli.output import user_output
 from workstack.core.branch_metadata import BranchMetadata
 from workstack.core.github_ops import PullRequestInfo, _parse_github_pr_url
 from workstack.core.gitops import GitOps
@@ -356,7 +355,7 @@ class RealGraphiteOps(GraphiteOps):
 
         # Display stderr in verbose mode after successful execution
         if not quiet and result.stderr:
-            click.echo(result.stderr, err=True, nl=False)
+            user_output(result.stderr, nl=False)
 
         # Invalidate branches cache - gt sync modifies Graphite metadata
         self._branches_cache = None
@@ -495,7 +494,7 @@ class RealGraphiteOps(GraphiteOps):
 
         # Display stderr in verbose mode after successful execution
         if not quiet and result.stderr:
-            click.echo(result.stderr, err=True, nl=False)
+            user_output(result.stderr, nl=False)
 
 
 class DryRunGraphiteOps(GraphiteOps):

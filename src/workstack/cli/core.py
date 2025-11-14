@@ -1,7 +1,6 @@
 from pathlib import Path
 
-import click
-
+from workstack.cli.output import user_output
 from workstack.core.context import WorkstackContext
 from workstack.core.repo_discovery import RepoContext, discover_repo_or_sentinel
 
@@ -54,21 +53,21 @@ def validate_worktree_name_for_removal(name: str) -> None:
     Raises SystemExit(1) with error message if validation fails.
     """
     if not name or not name.strip():
-        click.echo("Error: Worktree name cannot be empty", err=True)
+        user_output("Error: Worktree name cannot be empty")
         raise SystemExit(1)
 
     if name in (".", ".."):
-        click.echo(f"Error: Cannot remove '{name}' - directory references not allowed", err=True)
+        user_output(f"Error: Cannot remove '{name}' - directory references not allowed")
         raise SystemExit(1)
 
     if name == "root":
-        click.echo("Error: Cannot remove 'root' - root worktree name not allowed", err=True)
+        user_output("Error: Cannot remove 'root' - root worktree name not allowed")
         raise SystemExit(1)
 
     if name.startswith("/"):
-        click.echo(f"Error: Cannot remove '{name}' - absolute paths not allowed", err=True)
+        user_output(f"Error: Cannot remove '{name}' - absolute paths not allowed")
         raise SystemExit(1)
 
     if "/" in name:
-        click.echo(f"Error: Cannot remove '{name}' - path separators not allowed", err=True)
+        user_output(f"Error: Cannot remove '{name}' - path separators not allowed")
         raise SystemExit(1)

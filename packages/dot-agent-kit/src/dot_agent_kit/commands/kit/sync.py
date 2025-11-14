@@ -4,6 +4,7 @@ from pathlib import Path
 
 import click
 
+from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.io import require_project_config, save_project_config
 from dot_agent_kit.operations import check_for_updates, sync_all_kits, sync_kit
 from dot_agent_kit.sources import BundledKitSource, KitResolver, StandalonePackageSource
@@ -45,7 +46,7 @@ def sync(kit_id: str | None, verbose: bool, force: bool) -> None:
     config = require_project_config(project_dir)
 
     if len(config.kits) == 0:
-        click.echo("No kits installed")
+        user_output("No kits installed")
         return
 
     resolver = KitResolver(sources=[BundledKitSource(), StandalonePackageSource()])
@@ -53,7 +54,7 @@ def sync(kit_id: str | None, verbose: bool, force: bool) -> None:
     # Sync specific kit or all kits
     if kit_id is not None:
         if kit_id not in config.kits:
-            click.echo(f"Error: Kit '{kit_id}' not installed", err=True)
+            user_output(f"Error: Kit '{kit_id}' not installed")
             raise SystemExit(1)
 
         installed = config.kits[kit_id]
@@ -61,19 +62,19 @@ def sync(kit_id: str | None, verbose: bool, force: bool) -> None:
 
         if check_result.error_message:
             error_msg = f"Error: Failed to check for updates: {check_result.error_message}"
-            click.echo(error_msg, err=True)
+            user_output(error_msg)
             raise SystemExit(1)
 
         if not check_result.has_update or check_result.resolved is None:
-            click.echo(f"Kit '{kit_id}' is up to date")
+            user_output(f"Kit '{kit_id}' is up to date")
             return
 
         result = sync_kit(kit_id, installed, check_result.resolved, project_dir, force=force)
 
         if result.was_updated:
-            click.echo(f"✓ Updated {kit_id}: {result.old_version} → {result.new_version}")
+            user_output(f"✓ Updated {kit_id}: {result.old_version} → {result.new_version}")
             if verbose:
-                click.echo(f"  Artifacts: {result.artifacts_updated}")
+                user_output(f"  Artifacts: {result.artifacts_updated}")
 
             # Save updated config
             if result.updated_kit is not None:
@@ -89,9 +90,9 @@ def sync(kit_id: str | None, verbose: bool, force: bool) -> None:
         if verbose or updated_count > 0:
             for result in results:
                 if result.was_updated:
-                    click.echo(f"✓ {result.kit_id}: {result.old_version} → {result.new_version}")
+                    user_output(f"✓ {result.kit_id}: {result.old_version} → {result.new_version}")
                 elif verbose:
-                    click.echo(f"  {result.kit_id}: up to date")
+                    user_output(f"  {result.kit_id}: up to date")
 
         # Save updated config if any kits were updated
         if updated_count > 0:
@@ -102,6 +103,6 @@ def sync(kit_id: str | None, verbose: bool, force: bool) -> None:
             save_project_config(project_dir, updated_config)
 
         if updated_count == 0:
-            click.echo("All kits are up to date")
+            user_output("All kits are up to date")
         else:
-            click.echo(f"\nUpdated {updated_count} kit(s)")
+            user_output(f"\nUpdated {updated_count} kit(s)")

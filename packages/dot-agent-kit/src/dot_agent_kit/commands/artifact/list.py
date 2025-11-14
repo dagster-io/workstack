@@ -4,6 +4,7 @@ from pathlib import Path
 
 import click
 
+from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.commands.artifact.formatting import format_compact_list, format_verbose_list
 from dot_agent_kit.io.state import load_project_config
 from dot_agent_kit.models.artifact import ArtifactLevel, ArtifactSource
@@ -92,7 +93,7 @@ def _list_artifacts_impl(
 
     # Display results
     if not all_artifacts and not bundled_kits:
-        click.echo("No artifacts found.", err=True)
+        user_output("No artifacts found.")
         raise SystemExit(1)
 
     if verbose:
@@ -100,7 +101,7 @@ def _list_artifacts_impl(
     else:
         output = format_compact_list(all_artifacts, bundled_kits)
 
-    click.echo(output)
+    user_output(output)
 
 
 def _apply_options(func):

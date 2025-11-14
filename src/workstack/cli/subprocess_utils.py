@@ -4,7 +4,7 @@ import subprocess
 from collections.abc import Sequence
 from pathlib import Path
 
-import click
+from workstack.cli.output import user_output
 
 
 def run_with_error_reporting(
@@ -48,7 +48,7 @@ def run_with_error_reporting(
             for tip in troubleshooting:
                 message_parts.append(f"  • {tip}")
 
-        click.echo("\n".join(message_parts), err=True)
+        user_output("\n".join(message_parts))
         raise SystemExit(1)
 
     return result

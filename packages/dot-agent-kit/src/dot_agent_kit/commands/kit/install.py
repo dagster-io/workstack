@@ -7,6 +7,7 @@ from pathlib import Path
 
 import click
 
+from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.hooks.installer import install_hooks, remove_hooks
 from dot_agent_kit.hooks.settings import load_settings, save_settings
 from dot_agent_kit.io import (
@@ -77,33 +78,35 @@ def _handle_update_workflow(
     """
     # Skip reinstall if artifacts are already symlinks (dev_mode)
     if _all_artifacts_are_symlinks(installed, project_dir):
-        click.echo(f"ℹ Kit '{kit_id}' already installed as symlinks (dev_mode)", err=True)
-        click.echo("  No action needed - edits to .claude/ already affect source", err=True)
+        user_output(
+            f"ℹ Kit '{kit_id}' already installed as symlinks (dev_mode)",
+        )
+        user_output("  No action needed - edits to .claude/ already affect source")
         return
 
     check_result = check_for_updates(installed, resolver, force=force)
 
     # Handle resolution errors - fail loudly rather than assuming up-to-date
     if check_result.error_message:
-        click.echo(f"Error: Failed to check for updates: {check_result.error_message}", err=True)
+        user_output(f"Error: Failed to check for updates: {check_result.error_message}")
         raise SystemExit(1)
 
     # No update available and not forcing - report and exit
     if not check_result.has_update:
-        click.echo(f"Kit '{kit_id}' is already up to date (v{installed.version})")
+        user_output(f"Kit '{kit_id}' is already up to date (v{installed.version})")
         return
 
     # resolved must be non-None at this point (error_message would be set otherwise)
     if check_result.resolved is None:
-        click.echo("Error: Internal error - resolved kit is None", err=True)
+        user_output("Error: Internal error - resolved kit is None")
         raise SystemExit(1)
 
     # Update the kit using sync
-    click.echo(f"Updating {kit_id} to v{check_result.resolved.version}...")
+    user_output(f"Updating {kit_id} to v{check_result.resolved.version}...")
     result = sync_kit(kit_id, installed, check_result.resolved, project_dir, force=force)
 
     if not result.was_updated:
-        click.echo(f"Kit '{kit_id}' was already up to date")
+        user_output(f"Kit '{kit_id}' was already up to date")
         return
 
     # Process successful update
@@ -126,8 +129,8 @@ def _process_update_result(
         config: Project configuration
         project_dir: Project root directory
     """
-    click.echo(f"✓ Updated {kit_id}: {result.old_version} → {result.new_version}")
-    click.echo(f"  Artifacts: {result.artifacts_updated}")
+    user_output(f"✓ Updated {kit_id}: {result.old_version} → {result.new_version}")
+    user_output(f"  Artifacts: {result.artifacts_updated}")
 
     # Handle hooks atomically
     manifest = load_kit_manifest(resolved.manifest_path)
@@ -147,7 +150,7 @@ def _process_update_result(
         save_project_config(project_dir, updated_config)
 
         if hooks_count > 0:
-            click.echo(f"  Installed {hooks_count} hook(s)")
+            user_output(f"  Installed {hooks_count} hook(s)")
 
 
 def _handle_fresh_install(
@@ -173,14 +176,14 @@ def _handle_fresh_install(
     """
     resolved = resolver.resolve(kit_id)
     if resolved is None:
-        click.echo(f"Error: Kit '{kit_id}' not found", err=True)
+        user_output(f"Error: Kit '{kit_id}' not found")
         raise SystemExit(1)
 
     # Load manifest
     manifest = load_kit_manifest(resolved.manifest_path)
 
     # Install the kit
-    click.echo(f"Installing {kit_id} v{resolved.version} to {context.get_claude_dir()}...")
+    user_output(f"Installing {kit_id} v{resolved.version} to {context.get_claude_dir()}...")
     installed_kit = install_kit_to_project(
         resolved,
         context,
@@ -206,12 +209,12 @@ def _handle_fresh_install(
 
     # Show success message
     artifact_count = len(installed_kit.artifacts)
-    click.echo(f"✓ Installed {kit_id} v{installed_kit.version} ({artifact_count} artifacts)")
+    user_output(f"✓ Installed {kit_id} v{installed_kit.version} ({artifact_count} artifacts)")
 
     if hooks_count > 0:
-        click.echo(f"  Installed {hooks_count} hook(s)")
+        user_output(f"  Installed {hooks_count} hook(s)")
 
-    click.echo(f"  Location: {context.get_claude_dir()}")
+    user_output(f"  Location: {context.get_claude_dir()}")
 
 
 def _perform_atomic_hook_update(
@@ -272,8 +275,8 @@ def _perform_atomic_hook_update(
 
             except Exception as e:
                 # Rollback on failure
-                click.echo(f"  Hook installation failed: {e}", err=True)
-                click.echo("  Attempting to restore previous hooks...", err=True)
+                user_output(f"  Hook installation failed: {e}")
+                user_output("  Attempting to restore previous hooks...")
 
                 # Restore settings if we have a backup
                 if original_settings is not None:
@@ -284,7 +287,7 @@ def _perform_atomic_hook_update(
                     if hooks_dir.exists():
                         shutil.rmtree(hooks_dir)
                     shutil.copytree(hooks_backup, hooks_dir)
-                    click.echo("  Previous hooks restored successfully", err=True)
+                    user_output("  Previous hooks restored successfully")
 
                 # Re-raise the original exception
                 raise

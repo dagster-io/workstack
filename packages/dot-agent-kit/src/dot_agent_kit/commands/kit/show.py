@@ -4,6 +4,7 @@ from pathlib import Path
 
 import click
 
+from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.io import load_kit_manifest, load_project_config, load_registry
 from dot_agent_kit.sources.bundled import BundledKitSource
 
@@ -36,15 +37,14 @@ def show(kit_id: str) -> None:
             break
 
     if registry_entry is None:
-        click.echo(f"Error: Kit '{kit_id}' not found in registry", err=True)
+        user_output(f"Error: Kit '{kit_id}' not found in registry")
         raise SystemExit(1)
 
     # Load kit manifest
     bundled_source = BundledKitSource()
     if not bundled_source.can_resolve(registry_entry.kit_id):
-        click.echo(
+        user_output(
             f"Error: Cannot resolve kit '{kit_id}' from bundled source",
-            err=True,
         )
         raise SystemExit(1)
 
@@ -67,20 +67,20 @@ def show(kit_id: str) -> None:
 
 def _display_metadata(manifest, kit_id: str) -> None:
     """Display metadata section."""
-    click.echo(f"{manifest.name}")
-    click.echo("=" * len(manifest.name))
-    click.echo()
-    click.echo(f"ID:          {kit_id}")
-    click.echo(f"Version:     {manifest.version}")
-    click.echo(f"Description: {manifest.description}")
+    user_output(f"{manifest.name}")
+    user_output("=" * len(manifest.name))
+    user_output()
+    user_output(f"ID:          {kit_id}")
+    user_output(f"Version:     {manifest.version}")
+    user_output(f"Description: {manifest.description}")
 
     if manifest.license is not None:
-        click.echo(f"License:     {manifest.license}")
+        user_output(f"License:     {manifest.license}")
 
     if manifest.homepage is not None:
-        click.echo(f"Homepage:    {manifest.homepage}")
+        user_output(f"Homepage:    {manifest.homepage}")
 
-    click.echo()
+    user_output()
 
 
 def _display_artifacts(manifest) -> None:
@@ -88,8 +88,8 @@ def _display_artifacts(manifest) -> None:
     if not manifest.artifacts:
         return
 
-    click.echo("Artifacts:")
-    click.echo("-" * 50)
+    user_output("Artifacts:")
+    user_output("-" * 50)
 
     # Group and display artifacts by type
     for artifact_type, paths in manifest.artifacts.items():
@@ -98,7 +98,7 @@ def _display_artifacts(manifest) -> None:
 
         # Display type header
         type_display = artifact_type.capitalize()
-        click.echo(f"\n{type_display} ({len(paths)}):")
+        user_output(f"\n{type_display} ({len(paths)}):")
 
         # Display each artifact
         for path in paths:
@@ -116,10 +116,10 @@ def _display_artifacts(manifest) -> None:
                 # For directories or other files, use the name
                 display_name = path_obj.name
 
-            click.echo(f"  • {display_name}")
-            click.echo(f"    {path}")
+            user_output(f"  • {display_name}")
+            user_output(f"    {path}")
 
-    click.echo()
+    user_output()
 
 
 def _display_hooks(manifest) -> None:
@@ -127,40 +127,40 @@ def _display_hooks(manifest) -> None:
     if not manifest.hooks:
         return
 
-    click.echo("Hooks:")
-    click.echo("-" * 50)
+    user_output("Hooks:")
+    user_output("-" * 50)
 
     for hook in manifest.hooks:
-        click.echo(f"\n{hook.id}")
-        click.echo(f"  Lifecycle:   {hook.lifecycle}")
+        user_output(f"\n{hook.id}")
+        user_output(f"  Lifecycle:   {hook.lifecycle}")
 
         if hook.matcher is not None:
-            click.echo(f"  Matcher:     {hook.matcher}")
+            user_output(f"  Matcher:     {hook.matcher}")
 
-        click.echo(f"  Invocation:  {hook.invocation}")
-        click.echo(f"  Description: {hook.description}")
-        click.echo(f"  Timeout:     {hook.timeout}s")
+        user_output(f"  Invocation:  {hook.invocation}")
+        user_output(f"  Description: {hook.description}")
+        user_output(f"  Timeout:     {hook.timeout}s")
 
-    click.echo()
+    user_output()
 
 
 def _display_installation_status(manifest, installed_kit) -> None:
     """Display installation status section."""
-    click.echo("Installation Status:")
-    click.echo("-" * 50)
+    user_output("Installation Status:")
+    user_output("-" * 50)
 
     if installed_kit is None:
-        click.echo("Not installed")
+        user_output("Not installed")
     else:
-        click.echo(f"Installed:        {installed_kit.version}")
-        click.echo(f"Available:        {manifest.version}")
+        user_output(f"Installed:        {installed_kit.version}")
+        user_output(f"Available:        {manifest.version}")
 
         # Check for version mismatch
         if installed_kit.version != manifest.version:
-            click.echo(
+            user_output(
                 f"\n⚠️  Version mismatch: installed={installed_kit.version}, "
                 f"available={manifest.version}"
             )
-            click.echo("   Run 'dot-agent kit sync' to update")
+            user_output("   Run 'dot-agent kit sync' to update")
 
-    click.echo()
+    user_output()

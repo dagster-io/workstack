@@ -3,8 +3,7 @@
 import shutil
 from pathlib import Path
 
-import click
-
+from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.hooks.installer import install_hooks
 from dot_agent_kit.io import load_kit_manifest
 from dot_agent_kit.models import InstalledKit
@@ -85,14 +84,14 @@ def install_kit(
                 else:
                     # Handle directory removal if needed
                     shutil.rmtree(target)
-                click.echo(f"  Overwriting: {target.name}", err=True)
+                user_output(f"  Overwriting: {target.name}")
 
             # Install artifact using strategy
             mode_indicator = operations.install_artifact(source, target)
 
             # Log installation with namespace visibility
             relative_path = target.relative_to(claude_dir)
-            click.echo(f"  Installed {artifact_type}: {relative_path}{mode_indicator}", err=True)
+            user_output(f"  Installed {artifact_type}: {relative_path}{mode_indicator}")
 
             # Track installation
             installed_artifacts.append(str(target.relative_to(project_dir)))

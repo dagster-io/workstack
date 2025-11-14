@@ -27,7 +27,7 @@ Hooks are automated triggers that run commands at specific lifecycle events in C
 3. **Execution**: When lifecycle event fires, Claude Code:
    - Runs the invocation command
    - Captures output
-   - Displays as `<reminder>` block to the assistant
+   - Displays output to the assistant
 
 ### Hook Flow Diagram
 
@@ -80,9 +80,7 @@ import click
 @click.command()
 def {function_name}() -> None:
     """Output {kit-name} reminder for UserPromptSubmit hook."""
-    click.echo("<reminder>")
     click.echo("Your reminder text here")
-    click.echo("</reminder>")
 
 
 if __name__ == "__main__":
@@ -92,9 +90,9 @@ if __name__ == "__main__":
 **Critical Requirements**:
 
 - Function name MUST match file name (snake_case)
-- MUST output `<reminder>` tags for Claude to display properly
 - Use `click.echo()` not `print()`
 - Keep logic simple - hooks run on every matching event
+- Keep reminder text concise
 
 ### Step 3: Configure kit.yaml
 
@@ -222,9 +220,7 @@ Currently supported:
 uv run dot-agent run {kit-name} {hook-name}
 
 # Should output:
-# <reminder>
 # Your reminder text
-# </reminder>
 ```
 
 ### Verification Checklist
@@ -232,7 +228,7 @@ uv run dot-agent run {kit-name} {hook-name}
 - [ ] Hook appears in `dot-agent kit show {kit-name}`
 - [ ] Hook ID in `dot-agent.toml` matches kit.yaml
 - [ ] Hook configuration in `.claude/settings.json`
-- [ ] Direct execution produces `<reminder>` output
+- [ ] Direct execution produces expected output
 - [ ] Function name matches file name
 
 ### Testing in Claude Code
@@ -252,9 +248,7 @@ Most common pattern - provides contextual reminders:
 @click.command()
 def devrun_reminder_hook() -> None:
     """Output devrun agent reminder for UserPromptSubmit hook."""
-    click.echo("<reminder>")
     click.echo("🛠️ Use devrun agent for pytest, pyright, ruff, prettier, make, gt commands")
-    click.echo("</reminder>")
 ```
 
 ### Conditional Output
@@ -266,14 +260,12 @@ For more complex scenarios:
 @click.option('--verbose', is_flag=True, help='Show detailed reminder')
 def conditional_hook(verbose: bool) -> None:
     """Output conditional reminder based on context."""
-    click.echo("<reminder>")
     if verbose:
         click.echo("Detailed reminder with multiple lines")
         click.echo("• Point 1")
         click.echo("• Point 2")
     else:
         click.echo("Brief reminder")
-    click.echo("</reminder>")
 ```
 
 ### Multi-Kit Coordination
@@ -315,7 +307,7 @@ uv run dot-agent kit install {kit-name}
 | `No such command '{hook-name}'` | Function name mismatch  | Ensure function matches file name |
 | `Missing artifact`              | kit.yaml path incorrect | Verify path in kit_cli_commands   |
 | `Hook not in settings.json`     | Installation failed     | Remove and reinstall kit          |
-| `No <reminder> output`          | Missing tags in output  | Add `<reminder>` tags             |
+| `No output from hook`           | Missing echo statements | Add `click.echo()` calls          |
 
 ## Best Practices
 
@@ -333,7 +325,7 @@ uv run dot-agent kit install {kit-name}
 - ❌ Forget either kit_cli_commands or hooks section
 - ❌ Include complex logic in hooks
 - ❌ Make network calls or slow operations
-- ❌ Output without `<reminder>` tags
+- ❌ Output verbose or multi-line reminders unnecessarily
 
 ## Related Documentation
 

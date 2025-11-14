@@ -236,11 +236,12 @@ def test_dry_run_shows_all_operations() -> None:
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
         # Assert: Output shows all expected operations
-        # Note: Execution layer prints these, not DryRunOps (which just prevents execution)
+        # Note: DryRunOps now prints styled output, execution layer skips output for dry-run
         output = result.output
         assert "gh pr merge 101" in output or "gh pr merge" in output, (
             "Should show PR merge operations"
         )
+        assert "(dry run)" in output, "Should show dry run indicators"
         assert "gt sync" in output, "Should show sync operation"
         assert "gt submit" in output, "Should show submit operations for remaining branches"
 
@@ -297,7 +298,7 @@ def test_dry_run_does_not_delete_branches() -> None:
         # Assert: Command succeeded
         assert result.exit_code == 0
 
-        # Assert: No branches were deleted (DryRunGitOps prevents this)
+        # Assert: No branches were deleted (NoopGitOps prevents this)
         assert len(git_ops.deleted_branches) == 0, "No branches should be deleted in dry-run mode"
 
 

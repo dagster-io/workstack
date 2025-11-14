@@ -11,7 +11,7 @@ from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from tests.test_utils.env_helpers import pure_workstack_env
 from workstack.cli.cli import cli
-from workstack.core.gitops import DryRunGitOps
+from workstack.core.gitops import NoopGitOps
 from workstack.core.repo_discovery import RepoContext
 
 
@@ -134,7 +134,7 @@ def test_rename_dry_run() -> None:
         old_wt = work_dir / "old-name"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        git_ops = DryRunGitOps(git_ops)
+        git_ops = NoopGitOps(git_ops)
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,

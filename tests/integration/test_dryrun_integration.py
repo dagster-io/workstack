@@ -16,10 +16,10 @@ from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from workstack.cli.cli import cli
 from workstack.core.context import WorkstackContext, create_context
-from workstack.core.github_ops import DryRunGitHubOps
-from workstack.core.gitops import DryRunGitOps, WorktreeInfo
+from workstack.core.github_ops import NoopGitHubOps
+from workstack.core.gitops import NoopGitOps, WorktreeInfo
 from workstack.core.global_config import GlobalConfig
-from workstack.core.graphite_ops import DryRunGraphiteOps
+from workstack.core.graphite_ops import NoopGraphiteOps
 
 
 def init_git_repo(repo_path: Path, default_branch: str = "main") -> None:
@@ -58,16 +58,16 @@ show_pr_checks = false
     ctx = create_context(dry_run=True)
 
     assert ctx.dry_run is True
-    # The context should have DryRun-wrapped implementations
+    # The context should have Noop-wrapped implementations
     # We verify this by checking the class names
-    assert "DryRun" in type(ctx.git_ops).__name__
+    assert "Noop" in type(ctx.git_ops).__name__
     # global_config should now be loaded from our test config
     assert ctx.global_config is not None
     assert type(ctx.global_config).__name__ == "GlobalConfig"
     # Config loading resolves paths, so compare resolved paths
     assert ctx.global_config.workstacks_root == workstacks_root.resolve()
-    assert "DryRun" in type(ctx.github_ops).__name__
-    assert "DryRun" in type(ctx.graphite_ops).__name__
+    assert "Noop" in type(ctx.github_ops).__name__
+    assert "Noop" in type(ctx.graphite_ops).__name__
 
 
 def test_dryrun_read_operations_still_work(tmp_path: Path) -> None:
@@ -94,10 +94,10 @@ def test_dryrun_read_operations_still_work(tmp_path: Path) -> None:
 
     # Wrap fakes in dry-run wrappers
     ctx = WorkstackContext.for_test(
-        git_ops=DryRunGitOps(git_ops),
+        git_ops=NoopGitOps(git_ops),
         global_config=global_config_ops,
-        github_ops=DryRunGitHubOps(FakeGitHubOps()),
-        graphite_ops=DryRunGraphiteOps(FakeGraphiteOps()),
+        github_ops=NoopGitHubOps(FakeGitHubOps()),
+        graphite_ops=NoopGraphiteOps(FakeGraphiteOps()),
         shell_ops=FakeShellOps(),
         cwd=repo,
         dry_run=True,

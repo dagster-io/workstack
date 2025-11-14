@@ -92,18 +92,30 @@ def land_stack(
     # Discover repository context
     repo = discover_repo_context(ctx, ctx.cwd)
 
-    # Wrap ops with dry-run versions if requested
-    if dry_run:
-        from workstack.core.github_ops import DryRunGitHubOps
-        from workstack.core.gitops import DryRunGitOps
-        from workstack.core.graphite_ops import DryRunGraphiteOps
+    # Wrap ops with printing versions (and dry-run if requested)
+    from workstack.core.github_ops import NoopGitHubOps, PrintingGitHubOps
+    from workstack.core.gitops import NoopGitOps, PrintingGitOps
+    from workstack.core.graphite_ops import NoopGraphiteOps, PrintingGraphiteOps
 
-        ctx = dataclasses.replace(
-            ctx,
-            git_ops=DryRunGitOps(ctx.git_ops),
-            github_ops=DryRunGitHubOps(ctx.github_ops),
-            graphite_ops=DryRunGraphiteOps(ctx.graphite_ops),
-        )
+    # First: Choose inner implementation based on dry-run mode
+    if dry_run:
+        # Wrap with Noop (makes operations no-op)
+        inner_git_ops = NoopGitOps(ctx.git_ops)
+        inner_github_ops = NoopGitHubOps(ctx.github_ops)
+        inner_graphite_ops = NoopGraphiteOps(ctx.graphite_ops)
+    else:
+        # Use real implementations
+        inner_git_ops = ctx.git_ops
+        inner_github_ops = ctx.github_ops
+        inner_graphite_ops = ctx.graphite_ops
+
+    # Then: Always wrap with Printing layer (adds output for all operations)
+    ctx = dataclasses.replace(
+        ctx,
+        git_ops=PrintingGitOps(inner_git_ops, script_mode=script, dry_run=dry_run),
+        github_ops=PrintingGitHubOps(inner_github_ops, script_mode=script, dry_run=dry_run),
+        graphite_ops=PrintingGraphiteOps(inner_graphite_ops, script_mode=script, dry_run=dry_run),
+    )
 
     # Get current branch
     current_branch = ctx.git_ops.get_current_branch(ctx.cwd)

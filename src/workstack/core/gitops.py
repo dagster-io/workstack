@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from workstack.cli.output import user_output
+from workstack.core.printing_ops_base import PrintingOpsBase
 
 
 @dataclass(frozen=True)
@@ -819,22 +820,23 @@ class RealGitOps(GitOps):
 
 
 # ============================================================================
-# Dry-Run Wrapper
+# No-op Wrapper
 # ============================================================================
 
 
-class DryRunGitOps(GitOps):
-    """Wrapper that prints dry-run messages instead of executing destructive operations.
+class NoopGitOps(GitOps):
+    """No-op wrapper that prevents execution of destructive operations.
 
-    This wrapper intercepts destructive git operations and prints what would happen
-    instead of executing. Read-only operations are delegated to the wrapped implementation.
+    This wrapper intercepts destructive git operations and either returns without
+    executing (for land-stack operations) or prints what would happen (for other
+    operations). Read-only operations are delegated to the wrapped implementation.
 
     Usage:
         real_ops = RealGitOps()
-        dry_run_ops = DryRunGitOps(real_ops)
+        noop_ops = NoopGitOps(real_ops)
 
-        # Prints message instead of deleting
-        dry_run_ops.remove_worktree(repo_root, path, force=False)
+        # No-op or prints message instead of deleting
+        noop_ops.remove_worktree(repo_root, path, force=False)
     """
 
     def __init__(self, wrapped: GitOps) -> None:
@@ -968,10 +970,168 @@ class DryRunGitOps(GitOps):
         return self._wrapped.get_recent_commits(cwd, limit=limit)
 
     def fetch_branch(self, repo_root: Path, remote: str, branch: str) -> None:
-        """Print dry-run message instead of fetching branch."""
-        user_output(f"[DRY RUN] Would run: git fetch {remote} {branch}")
+        """No-op for fetching branch in dry-run mode."""
+        # Do nothing - prevents actual fetch execution
+        pass
 
     def pull_branch(self, repo_root: Path, remote: str, branch: str, *, ff_only: bool) -> None:
-        """Print dry-run message instead of pulling branch."""
+        """No-op for pulling branch in dry-run mode."""
+        # Do nothing - prevents actual pull execution
+        pass
+
+
+# ============================================================================
+# Printing Wrapper Implementation
+# ============================================================================
+
+
+class PrintingGitOps(PrintingOpsBase, GitOps):
+    """Wrapper that prints operations before delegating to inner implementation.
+
+    This wrapper prints styled output for operations, then delegates to the
+    wrapped implementation (which could be Real or Noop).
+
+    Usage:
+        # For production
+        printing_ops = PrintingGitOps(real_ops, script_mode=False, dry_run=False)
+
+        # For dry-run
+        noop_inner = NoopGitOps(real_ops)
+        printing_ops = PrintingGitOps(noop_inner, script_mode=False, dry_run=True)
+    """
+
+    # Inherits __init__, _emit, and _format_command from PrintingOpsBase
+
+    # Read-only operations: delegate without printing
+
+    def list_worktrees(self, repo_root: Path) -> list[WorktreeInfo]:
+        """List all worktrees (read-only, no printing)."""
+        return self._wrapped.list_worktrees(repo_root)
+
+    def get_current_branch(self, cwd: Path) -> str | None:
+        """Get current branch (read-only, no printing)."""
+        return self._wrapped.get_current_branch(cwd)
+
+    def detect_default_branch(self, repo_root: Path, configured: str | None = None) -> str:
+        """Detect default branch (read-only, no printing)."""
+        return self._wrapped.detect_default_branch(repo_root, configured)
+
+    def get_trunk_branch(self, repo_root: Path) -> str:
+        """Get trunk branch (read-only, no printing)."""
+        return self._wrapped.get_trunk_branch(repo_root)
+
+    def get_git_common_dir(self, cwd: Path) -> Path | None:
+        """Get git common directory (read-only, no printing)."""
+        return self._wrapped.get_git_common_dir(cwd)
+
+    def has_staged_changes(self, repo_root: Path) -> bool:
+        """Check for staged changes (read-only, no printing)."""
+        return self._wrapped.has_staged_changes(repo_root)
+
+    def has_uncommitted_changes(self, cwd: Path) -> bool:
+        """Check for uncommitted changes (read-only, no printing)."""
+        return self._wrapped.has_uncommitted_changes(cwd)
+
+    def is_branch_checked_out(self, repo_root: Path, branch: str) -> Path | None:
+        """Check if branch is checked out (read-only, no printing)."""
+        return self._wrapped.is_branch_checked_out(repo_root, branch)
+
+    def get_ahead_behind(self, cwd: Path, branch: str) -> tuple[int, int]:
+        """Get ahead/behind counts (read-only, no printing)."""
+        return self._wrapped.get_ahead_behind(cwd, branch)
+
+    def get_recent_commits(self, cwd: Path, *, limit: int = 5) -> list[dict[str, str]]:
+        """Get recent commits (read-only, no printing)."""
+        return self._wrapped.get_recent_commits(cwd, limit=limit)
+
+    # Operations that need printing
+
+    def checkout_branch(self, cwd: Path, branch: str) -> None:
+        """Checkout branch with printed output."""
+        self._emit(self._format_command(f"git checkout {branch}"))
+        self._wrapped.checkout_branch(cwd, branch)
+
+    def checkout_detached(self, cwd: Path, ref: str) -> None:
+        """Checkout detached HEAD (delegates without printing for now)."""
+        # No printing for detached HEAD in land-stack
+        self._wrapped.checkout_detached(cwd, ref)
+
+    def create_branch(self, cwd: Path, branch_name: str, start_point: str) -> None:
+        """Create branch (delegates without printing for now)."""
+        # Not used in land-stack
+        self._wrapped.create_branch(cwd, branch_name, start_point)
+
+    def delete_branch(self, cwd: Path, branch_name: str, *, force: bool) -> None:
+        """Delete branch (delegates without printing for now)."""
+        # Not used in land-stack
+        self._wrapped.delete_branch(cwd, branch_name, force=force)
+
+    def add_worktree(
+        self,
+        repo_root: Path,
+        path: Path,
+        *,
+        branch: str | None,
+        ref: str | None,
+        create_branch: bool,
+    ) -> None:
+        """Add worktree (delegates without printing for now)."""
+        # Not used in land-stack
+        self._wrapped.add_worktree(
+            repo_root, path, branch=branch, ref=ref, create_branch=create_branch
+        )
+
+    def move_worktree(self, repo_root: Path, old_path: Path, new_path: Path) -> None:
+        """Move worktree (delegates without printing for now)."""
+        # Not used in land-stack
+        self._wrapped.move_worktree(repo_root, old_path, new_path)
+
+    def remove_worktree(self, repo_root: Path, path: Path, *, force: bool) -> None:
+        """Remove worktree (delegates without printing for now)."""
+        # Not used in land-stack
+        self._wrapped.remove_worktree(repo_root, path, force=force)
+
+    def delete_branch_with_graphite(self, repo_root: Path, branch: str, *, force: bool) -> None:
+        """Delete branch with graphite (delegates without printing for now)."""
+        # Not used in land-stack
+        self._wrapped.delete_branch_with_graphite(repo_root, branch, force=force)
+
+    def fetch_branch(self, repo_root: Path, remote: str, branch: str) -> None:
+        """Fetch branch with printed output."""
+        self._emit(self._format_command(f"git fetch {remote} {branch}"))
+        self._wrapped.fetch_branch(repo_root, remote, branch)
+
+    def pull_branch(self, repo_root: Path, remote: str, branch: str, *, ff_only: bool) -> None:
+        """Pull branch with printed output."""
         ff_flag = " --ff-only" if ff_only else ""
-        user_output(f"[DRY RUN] Would run: git pull{ff_flag} {remote} {branch}")
+        self._emit(self._format_command(f"git pull{ff_flag} {remote} {branch}"))
+        self._wrapped.pull_branch(repo_root, remote, branch, ff_only=ff_only)
+
+    def prune_worktrees(self, repo_root: Path) -> None:
+        """Prune worktrees (delegates without printing for now)."""
+        # Not used in land-stack
+        self._wrapped.prune_worktrees(repo_root)
+
+    def path_exists(self, path: Path) -> bool:
+        """Check if path exists (read-only, no printing)."""
+        return self._wrapped.path_exists(path)
+
+    def is_dir(self, path: Path) -> bool:
+        """Check if path is directory (read-only, no printing)."""
+        return self._wrapped.is_dir(path)
+
+    def find_worktree_for_branch(self, repo_root: Path, branch: str) -> Path | None:
+        """Find worktree for branch (read-only, no printing)."""
+        return self._wrapped.find_worktree_for_branch(repo_root, branch)
+
+    def get_branch_head(self, repo_root: Path, branch: str) -> str | None:
+        """Get branch head (read-only, no printing)."""
+        return self._wrapped.get_branch_head(repo_root, branch)
+
+    def get_commit_message(self, repo_root: Path, commit_sha: str) -> str | None:
+        """Get commit message (read-only, no printing)."""
+        return self._wrapped.get_commit_message(repo_root, commit_sha)
+
+    def get_file_status(self, cwd: Path) -> tuple[list[str], list[str], list[str]]:
+        """Get file status (read-only, no printing)."""
+        return self._wrapped.get_file_status(cwd)

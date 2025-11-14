@@ -11,7 +11,7 @@ from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from tests.test_utils.env_helpers import pure_workstack_env
 from workstack.cli.cli import cli
-from workstack.core.gitops import DryRunGitOps, WorktreeInfo
+from workstack.core.gitops import NoopGitOps, WorktreeInfo
 from workstack.core.graphite_ops import BranchMetadata
 
 
@@ -30,7 +30,7 @@ def _create_test_context(env, use_graphite: bool = False, dry_run: bool = False,
     git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
 
     if dry_run:
-        git_ops = DryRunGitOps(git_ops)
+        git_ops = NoopGitOps(git_ops)
 
     return env.build_context(
         use_graphite=use_graphite,
@@ -102,7 +102,7 @@ def test_rm_dry_run_with_delete_stack() -> None:
             worktrees={env.cwd: [WorktreeInfo(path=wt, branch="feature-2")]},
             git_common_dirs={env.cwd: env.git_dir},
         )
-        git_ops = DryRunGitOps(fake_git_ops)
+        git_ops = NoopGitOps(fake_git_ops)
 
         # Build graphite ops with branch metadata
         branches = {

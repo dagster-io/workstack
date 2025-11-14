@@ -6,7 +6,7 @@ import click
 
 from workstack.cli.commands.land_stack.discovery import _get_all_children
 from workstack.cli.commands.land_stack.models import BranchPR
-from workstack.cli.commands.land_stack.output import _emit, _format_cli_command, _format_description
+from workstack.cli.commands.land_stack.output import _emit, _format_description
 from workstack.core.context import WorkstackContext
 
 
@@ -40,8 +40,6 @@ def _execute_checkout_phase(
         else:
             # Only checkout if we're not already on the branch and it's not checked out elsewhere
             ctx.git_ops.checkout_branch(repo_root, branch)
-            check = click.style("✓", fg="green")
-            _emit(_format_cli_command(f"git checkout {branch}", check), script_mode=script_mode)
     else:
         # Already on branch, display as already done
         check = click.style("✓", fg="green")
@@ -67,8 +65,6 @@ def _execute_merge_phase(
         script_mode: True when running in --script mode (output to stderr)
     """
     ctx.github_ops.merge_pr(repo_root, pr_number, squash=True, verbose=verbose)
-    check = click.style("✓", fg="green")
-    _emit(_format_cli_command(f"gh pr merge {pr_number} --squash", check), script_mode=script_mode)
 
 
 def _execute_sync_trunk_phase(
@@ -91,29 +87,22 @@ def _execute_sync_trunk_phase(
     # Sync trunk to include just-merged PR commits
     # Note: Skip checkouts if branches are already checked out in linked worktrees
     # to avoid "already checked out" errors
-    check = click.style("✓", fg="green")
 
     # Fetch parent branch
     ctx.git_ops.fetch_branch(repo_root, "origin", parent)
-    _emit(_format_cli_command(f"git fetch origin {parent}", check), script_mode=script_mode)
 
     # Checkout parent if not already checked out elsewhere
     parent_checked_out = ctx.git_ops.is_branch_checked_out(repo_root, parent)
     if not parent_checked_out:
         ctx.git_ops.checkout_branch(repo_root, parent)
-        _emit(_format_cli_command(f"git checkout {parent}", check), script_mode=script_mode)
 
     # Pull parent branch
     ctx.git_ops.pull_branch(repo_root, "origin", parent, ff_only=True)
-    _emit(
-        _format_cli_command(f"git pull --ff-only origin {parent}", check), script_mode=script_mode
-    )
 
     # Checkout branch if not already checked out elsewhere
     branch_checked_out = ctx.git_ops.is_branch_checked_out(repo_root, branch)
     if not branch_checked_out:
         ctx.git_ops.checkout_branch(repo_root, branch)
-        _emit(_format_cli_command(f"git checkout {branch}", check), script_mode=script_mode)
 
 
 def _execute_restack_phase(
@@ -132,8 +121,6 @@ def _execute_restack_phase(
         script_mode: True when running in --script mode (output to stderr)
     """
     ctx.graphite_ops.sync(repo_root, force=True, quiet=not verbose)
-    check = click.style("✓", fg="green")
-    _emit(_format_cli_command("gt sync -f", check), script_mode=script_mode)
 
 
 def _force_push_upstack_branches(
@@ -166,11 +153,6 @@ def _force_push_upstack_branches(
 
     for upstack_branch in upstack_branches:
         ctx.graphite_ops.submit_branch(repo_root, upstack_branch, quiet=not verbose)
-        check = click.style("✓", fg="green")
-        _emit(
-            _format_cli_command(f"gt submit --branch {upstack_branch} --no-edit", check),
-            script_mode=script_mode,
-        )
 
     return upstack_branches
 
@@ -237,11 +219,6 @@ def _update_upstack_pr_bases(
                 _emit(msg, script_mode=script_mode)
 
             ctx.github_ops.update_pr_base_branch(repo_root, pr_number, expected_parent)
-            check = click.style("✓", fg="green")
-            _emit(
-                _format_cli_command(f"gh pr edit {pr_number} --base {expected_parent}", check),
-                script_mode=script_mode,
-            )
         elif verbose:
             _emit(
                 f"  PR #{pr_number} base already correct: {current_base}",

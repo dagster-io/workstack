@@ -91,47 +91,27 @@ def _execute_sync_trunk_phase(
     # Sync trunk to include just-merged PR commits
     # Note: Skip checkouts if branches are already checked out in linked worktrees
     # to avoid "already checked out" errors
-    operations = [
-        (
-            lambda: ctx.git_ops.fetch_branch(repo_root, "origin", parent),
-            f"git fetch origin {parent}",
-        ),
-    ]
+    check = click.style("✓", fg="green")
 
-    # Only checkout parent if not already checked out elsewhere
+    # Fetch parent branch
+    ctx.git_ops.fetch_branch(repo_root, "origin", parent)
+    _emit(_format_cli_command(f"git fetch origin {parent}", check), script_mode=script_mode)
+
+    # Checkout parent if not already checked out elsewhere
     parent_checked_out = ctx.git_ops.is_branch_checked_out(repo_root, parent)
     if not parent_checked_out:
-        operations.append(
-            (
-                lambda: ctx.git_ops.checkout_branch(repo_root, parent),
-                f"git checkout {parent}",
-            )
-        )
+        ctx.git_ops.checkout_branch(repo_root, parent)
+        _emit(_format_cli_command(f"git checkout {parent}", check), script_mode=script_mode)
 
-    operations.extend(
-        [
-            (
-                lambda: ctx.git_ops.pull_branch(repo_root, "origin", parent, ff_only=True),
-                f"git pull --ff-only origin {parent}",
-            ),
-        ]
-    )
+    # Pull parent branch
+    ctx.git_ops.pull_branch(repo_root, "origin", parent, ff_only=True)
+    _emit(_format_cli_command(f"git pull --ff-only origin {parent}", check), script_mode=script_mode)
 
-    # Only checkout branch if not already checked out elsewhere
+    # Checkout branch if not already checked out elsewhere
     branch_checked_out = ctx.git_ops.is_branch_checked_out(repo_root, branch)
     if not branch_checked_out:
-        operations.append(
-            (
-                lambda: ctx.git_ops.checkout_branch(repo_root, branch),
-                f"git checkout {branch}",
-            )
-        )
-
-    # Execute sequence and emit corresponding commands
-    for operation, cli_cmd in operations:
-        operation()
-        check = click.style("✓", fg="green")
-        _emit(_format_cli_command(cli_cmd, check), script_mode=script_mode)
+        ctx.git_ops.checkout_branch(repo_root, branch)
+        _emit(_format_cli_command(f"git checkout {branch}", check), script_mode=script_mode)
 
 
 def _execute_restack_phase(

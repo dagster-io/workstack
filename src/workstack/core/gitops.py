@@ -9,6 +9,7 @@ Architecture:
 - Standalone functions: Convenience wrappers delegating to module singleton
 """
 
+import os
 import subprocess
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -232,6 +233,23 @@ class GitOps(ABC):
 
         Returns:
             True if path is a directory, False otherwise
+        """
+        ...
+
+    @abstractmethod
+    def safe_chdir(self, path: Path) -> bool:
+        """Change current directory if path exists on real filesystem.
+
+        Used when removing worktrees or switching contexts to prevent shell from
+        being in a deleted directory. In production (RealGitOps), checks if path
+        exists then changes directory. In tests (FakeGitOps), handles sentinel
+        paths by returning False without changing directory.
+
+        Args:
+            path: Directory to change to
+
+        Returns:
+            True if directory change succeeded, False otherwise
         """
         ...
 
@@ -647,6 +665,13 @@ class RealGitOps(GitOps):
         """Check if a path is a directory."""
         return path.is_dir()
 
+    def safe_chdir(self, path: Path) -> bool:
+        """Change current directory if path exists on real filesystem."""
+        if not path.exists():
+            return False
+        os.chdir(path)
+        return True
+
     def is_branch_checked_out(self, repo_root: Path, branch: str) -> Path | None:
         """Check if a branch is already checked out in any worktree."""
         worktrees = self.list_worktrees(repo_root)
@@ -941,6 +966,13 @@ class NoopGitOps(GitOps):
         """Check if path is directory (read-only, delegates to wrapped)."""
         return self._wrapped.is_dir(path)
 
+    def safe_chdir(self, path: Path) -> bool:
+        """Print dry-run message instead of changing directory."""
+        would_succeed = self._wrapped.path_exists(path)
+        if would_succeed:
+            user_output(f"[DRY RUN] Would run: cd {path}")
+        return False  # Never actually change directory in dry-run
+
     def is_branch_checked_out(self, repo_root: Path, branch: str) -> Path | None:
         """Check if branch is checked out (read-only, delegates to wrapped)."""
         return self._wrapped.is_branch_checked_out(repo_root, branch)
@@ -1119,6 +1151,10 @@ class PrintingGitOps(PrintingOpsBase, GitOps):
     def is_dir(self, path: Path) -> bool:
         """Check if path is directory (read-only, no printing)."""
         return self._wrapped.is_dir(path)
+
+    def safe_chdir(self, path: Path) -> bool:
+        """Change directory (delegates to wrapped)."""
+        return self._wrapped.safe_chdir(path)
 
     def find_worktree_for_branch(self, repo_root: Path, branch: str) -> Path | None:
         """Find worktree for branch (read-only, no printing)."""

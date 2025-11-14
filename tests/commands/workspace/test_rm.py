@@ -177,3 +177,36 @@ def test_rm_rejects_root_name() -> None:
         assert result.exit_code == 1
         assert "Error: Cannot remove 'root'" in result.output
         assert "root worktree name not allowed" in result.output
+
+
+def test_rm_changes_directory_when_in_target_worktree() -> None:
+    """Test that rm automatically changes to repo root when user is in target worktree."""
+    runner = CliRunner()
+    with pure_workstack_env(runner) as env:
+        repo_name = env.cwd.name
+        wt_path = env.workstacks_root / repo_name / "feature"
+
+        # Set up worktree paths
+        git_ops = FakeGitOps(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
+                    WorktreeInfo(path=wt_path, branch="feature", is_root=False),
+                ]
+            },
+            git_common_dirs={env.cwd: env.git_dir, wt_path: env.git_dir},
+            current_branches={env.cwd: "main", wt_path: "feature"},
+        )
+
+        # Build context with cwd set to the worktree being removed
+        test_ctx = env.build_context(git_ops=git_ops, cwd=wt_path, existing_paths={wt_path})
+
+        # Execute remove command with --force to skip confirmation
+        result = runner.invoke(cli, ["rm", "feature", "-f"], obj=test_ctx)
+
+        # Should succeed
+        assert result.exit_code == 0, result.output
+
+        # Should show directory change message
+        assert "Changing directory to repository root" in result.output
+        assert str(env.cwd) in result.output

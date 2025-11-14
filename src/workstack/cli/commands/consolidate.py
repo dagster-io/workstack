@@ -1,6 +1,5 @@
 """Consolidate worktrees by removing others containing branches from current stack."""
 
-import os
 import time
 from pathlib import Path
 
@@ -219,13 +218,10 @@ def consolidate_cmd(
 
             # Change to new worktree directory BEFORE removing source worktree
             # This prevents the shell from being in a deleted directory
-            if not script:
-                os.chdir(new_worktree_path)
-
-            # Regenerate context with new cwd (context is immutable)
-            ctx = create_context(dry_run=ctx.dry_run)
-
-            user_output(click.style("✅ Changed directory to new worktree", fg="green"))
+            if not script and ctx.git_ops.safe_chdir(new_worktree_path):
+                # Regenerate context with new cwd (context is immutable)
+                ctx = create_context(dry_run=ctx.dry_run)
+                user_output(click.style("✅ Changed directory to new worktree", fg="green"))
 
             target_worktree_path = new_worktree_path
         else:

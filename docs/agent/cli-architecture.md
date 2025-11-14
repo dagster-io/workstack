@@ -84,6 +84,7 @@ def _format_command(self, command: str) -> str:
 ```
 
 When `dry_run=True`, output automatically shows:
+
 ```
   git checkout main (dry run) ✓
 ```
@@ -100,6 +101,7 @@ ctx.git_ops.checkout_branch(repo_root, branch)
 ```
 
 **Why this works:**
+
 - If `dry_run=False`: Executes real checkout and prints formatted output
 - If `dry_run=True`: Noop prevents mutation, printing adds "(dry run)" marker
 - No manual `dry_run` checks needed in command code
@@ -116,12 +118,14 @@ _emit(_format_cli_command(f"git checkout {trunk_branch}", check), script_mode=sc
 ```
 
 **Why this was wrong:**
+
 1. Manual `if not dry_run` check duplicates wrapper logic
 2. Direct `_emit()` call bypasses PrintingOps formatting
 3. No automatic dry-run marker in output
 4. Violates the abstraction layer
 
 **After fix (cleanup.py:58-59):**
+
 ```python
 ctx.git_ops.checkout_branch(repo_root, trunk_branch)
 ```
@@ -150,6 +154,7 @@ else:
 ```
 
 **When to use this pattern:**
+
 - Only when calling external commands (other workstack commands, non-git tools)
 - Never for operations that have corresponding ctx.ops methods
 - Must manually replicate PrintingOps formatting for consistency
@@ -161,6 +166,7 @@ else:
 **Problem:** Directly checking `dry_run` and calling ops or skipping operations
 
 **Example:**
+
 ```python
 # ❌ WRONG
 if not dry_run:
@@ -168,6 +174,7 @@ if not dry_run:
 ```
 
 **Solution:** Trust the wrappers
+
 ```python
 # ✅ CORRECT
 ctx.git_ops.do_something()
@@ -178,6 +185,7 @@ ctx.git_ops.do_something()
 **Problem:** Using `_emit()` or `click.echo()` to print command output manually
 
 **Example:**
+
 ```python
 # ❌ WRONG
 ctx.git_ops.checkout_branch(repo_root, branch)
@@ -185,6 +193,7 @@ _emit(f"Checked out {branch}")  # Custom formatting
 ```
 
 **Solution:** Let PrintingOps handle output
+
 ```python
 # ✅ CORRECT
 ctx.git_ops.checkout_branch(repo_root, branch)
@@ -196,6 +205,7 @@ ctx.git_ops.checkout_branch(repo_root, branch)
 **Problem:** When subprocess is necessary, forgetting dry-run marker or using wrong style
 
 **Example:**
+
 ```python
 # ❌ WRONG
 if dry_run:
@@ -203,6 +213,7 @@ if dry_run:
 ```
 
 **Solution:** Match PrintingOps pattern exactly
+
 ```python
 # ✅ CORRECT
 if dry_run:
@@ -232,11 +243,13 @@ When implementing or testing dry-run functionality:
 ## Reference Implementations
 
 ### Good Examples
+
 - `src/workstack/cli/commands/land_stack/execution.py` - Correctly uses wrapped ops throughout
 - `src/workstack/cli/commands/land_stack/command.py:100-118` - Proper wrapper setup
 - `src/workstack/ops/printing_ops_base.py:45-54` - Automatic dry-run marker formatting
 
 ### Cautionary Example
+
 - `src/workstack/cli/commands/land_stack/cleanup.py` (before fix) - Shows what happens when bypassing the abstraction
 
 ## Related Documentation

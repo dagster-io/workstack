@@ -69,6 +69,14 @@ def _remove_kit_impl(kit_id: str) -> None:
             f"  Note: {failed_count} artifact(s) were already removed",
         )
 
+    # Remove from registry (non-blocking)
+    try:
+        from dot_agent_kit.io.registry import remove_kit_from_registry
+
+        remove_kit_from_registry(kit_id, project_dir)
+    except Exception as e:
+        user_output(f"  Warning: Failed to update registry: {e!s}")
+
 
 @click.command()
 @kit_id_argument

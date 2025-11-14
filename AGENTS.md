@@ -27,13 +27,7 @@
 | `from .module import`                                            | → Use absolute imports only                                                                          |
 | `print(...)` in CLI code                                         | → Use `click.echo()`                                                                                 |
 | `subprocess.run(...)`                                            | → Add `check=True`                                                                                   |
-| `make ...` or user says "make"                                   | → Use devrun agent (Task tool) instead of Bash; loads devrun/make skill                              |
-| `pyright`, `uv run pyright`, or any pyright invocation           | → Use devrun agent (Task tool); target paths directly, never `cd`                                    |
-| `pytest`, `uv run pytest`, or any pytest invocation              | → Use devrun agent (Task tool) for running tests                                                     |
-| `ruff`, `uv run ruff`, or any ruff invocation                    | → Use devrun agent (Task tool) for linting/formatting                                                |
-| Prettier formatting issues                                       | → Use `make prettier` (via devrun agent with Task tool)                                              |
 | Submitting a branch with Graphite                                | → Use /gt:submit-branch command (delegates to gt-branch-submitter agent)                             |
-| `gt ...` or user says "gt" or "graphite"                         | → Use devrun agent (Task tool) for execution, graphite skill for knowledge                           |
 | Systematic Python changes (migrate calls, rename, batch updates) | → Use libcst-refactor agent (Task tool); for multi-file transformations                              |
 | Stack traversal or "upstack"/"downstack"                         | → [Graphite Stack Terminology](#-graphite-stack-terminology-critical) - main is at BOTTOM            |
 | 4+ levels of indentation                                         | → Extract helper functions                                                                           |
@@ -41,8 +35,6 @@
 | Tests for speculative features                                   | → **FORBIDDEN** - Only test actively implemented code (TDD is fine)                                  |
 | Creating `.claude/` artifacts                                    | → Use `kebab-case` (hyphens) NOT `snake_case` (underscores)                                          |
 | `Path("/test/...")` or hardcoded paths                           | → **CATASTROPHIC** - Use `env.cwd` or `tmp_path` fixture - [Test Isolation](#6-test-isolation--must) |
-
-**Note on CLI Tool Routing:** The critical rule is **routing through the devrun agent**, not the specific command syntax. Whether you use `pytest`, `uv run pytest`, or `python -m pytest`, all variants should route through the devrun agent. The agent executes commands as-is without transformation.
 
 ## 📚 Quick Reference
 
@@ -76,88 +68,6 @@ To access Python coding standards, load the skill:
 - Code style patterns
 
 The `docs/agent/` folder contains only workstack-specific documentation (terminology, testing, navigation).
-
----
-
-## 🟢 AGENT EXECUTION (Cost & Context Optimization)
-
-**This codebase uses specialized agents for CLI tool execution and code analysis. These agents are cost-optimized and preserve context better than direct execution.**
-
-### Why Use Agents?
-
-- **Token Efficiency**: Subagent contexts don't pollute parent agent's context
-- **Cost Optimization**: Uses Haiku model for command execution (cheaper than Sonnet)
-- **Output Parsing**: Automatically parses tool output into structured format
-- **Context Isolation**: Large command outputs stay in subagent, not main conversation
-- **Skill Loading**: Automatically loads tool-specific skills for better results
-
-### When to Use Agents
-
-**ALWAYS use the Task tool with appropriate agent for:**
-
-| Tool Type                                                                  | Agent                 | Example                                                                              |
-| -------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------ |
-| `make`, `pytest`, `pyright`, `ruff`, `prettier` (with or without `uv run`) | `devrun`              | Task(subagent_type="devrun", prompt="Execute: make all-ci")                          |
-| `gt` commands (Graphite)                                                   | `devrun`              | Task(subagent_type="devrun", prompt="Execute: gt submit")                            |
-| Graphite branch submission workflow                                        | `gt-branch-submitter` | Task(subagent_type="gt-branch-submitter", prompt="Execute submit-branch workflow")   |
-| Python refactoring with LibCST                                             | `libcst-refactor`     | Task(subagent_type="libcst-refactor", prompt="Rename function old_func to new_func") |
-
-### Agent Invocation Pattern
-
-```python
-Task(
-    subagent_type="devrun",  # or "gt-branch-submitter", etc.
-    description="Brief description of task",
-    prompt="Execute: <command>"
-)
-```
-
-**Command Syntax Flexibility:**
-
-The devrun agent accepts commands in any form and executes them verbatim. The critical rule is **routing through the agent**, not the specific command syntax:
-
-- Use `pytest tests/` OR `uv run pytest tests/` - both work equally
-- Use `pyright src/` OR `uv run pyright src/` - both work equally
-- Use `ruff check .` OR `uv run ruff check .` - both work equally
-- The agent doesn't add or remove prefixes - it runs exactly what you provide
-- Choose whichever form is natural for your context
-
-The key insight: Cost optimization and context isolation benefits apply regardless of invocation syntax. Just route all CLI tool invocations through the devrun agent.
-
-### Common Mistakes
-
-```python
-# ❌ WRONG: Direct Bash for CLI tools (regardless of syntax)
-Bash("make all-ci")
-Bash("pytest tests/")
-Bash("uv run pytest tests/")
-Bash("pyright src/")
-Bash("uv run pyright src/")
-Bash("gt submit --publish")
-
-# ✅ CORRECT: Use devrun agent (works with any syntax variant)
-Task(subagent_type="devrun", description="Run CI checks", prompt="Execute: make all-ci")
-Task(subagent_type="devrun", description="Run tests", prompt="Execute: pytest tests/")
-Task(subagent_type="devrun", description="Run tests", prompt="Execute: uv run pytest tests/")
-Task(subagent_type="devrun", description="Type check", prompt="Execute: pyright src/")
-Task(subagent_type="devrun", description="Type check", prompt="Execute: uv run pyright src/")
-Task(subagent_type="devrun", description="Submit branch", prompt="Execute: gt submit --publish")
-
-# ❌ WRONG: Manual branch submission
-result = Bash("gt submit --publish")
-# ...manually handle commit messages and PR metadata...
-
-# ✅ CORRECT: Use gt-branch-submitter agent via /gt:submit-branch command
-# The command delegates to the agent automatically
-```
-
-### What Can Use Bash Directly?
-
-Git operations (read-only): `git status`, `git log`, `git diff`, `git branch`, etc.
-File system operations: `ls`, `cat`, `find`, etc.
-Simple shell commands: `echo`, `pwd`, etc.
-
-🔴 **CRITICAL**: Using Bash directly for CLI tools (`make`, `pytest`, `pyright`, `ruff`, `gt`) wastes tokens, pollutes context, and bypasses cost optimization. This is expensive and inefficient. This applies **regardless of invocation syntax** - whether you use `pytest`, `uv run pytest`, or `python -m pytest`, all variants must route through the devrun agent.
 
 ---
 
@@ -590,25 +500,23 @@ Time-based estimates have no basis in reality for AI-assisted development and sh
 - [docs/writing/agentic-programming/agentic-programming.md](docs/writing/agentic-programming/agentic-programming.md) - Agentic programming patterns
 - [README.md](README.md) - Project overview
 
+## Installed Kit Documentation
+
+🔴 **CRITICAL: ALWAYS load this registry before working with kits, agents, commands, or skills.**
+
+The kit documentation registry contains the complete index of ALL installed kit documentation in this project. This includes:
+
+- Agent definitions and capabilities
+- Available slash commands
+- Skills and their purposes
+- Reference documentation
+
+**MUST LOAD:** Before answering questions about available kits, agents, commands, or skills, ALWAYS reference:
+
+@.claude/docs/kit-registry.md
+
+This registry is automatically maintained and updated when kits are installed, updated, or removed. It is the single source of truth for what kit functionality is available in this project.
+
 ## Skills and Agents
 
-### Graphite Workflow
-
-**For understanding gt concepts:** Use `graphite` skill (Skill tool)
-
-- Mental model, terminology, workflow patterns
-- Command reference and examples
-- When to use which commands
-
-**For executing gt commands:** Use `devrun` agent (Task tool)
-
-- Cost-optimized execution with Haiku model
-- Parses command output automatically
-- Returns structured results
-
-**Pattern:** Load skill first for understanding, then use devrun agent for execution.
-
-### Other Tools
-
-- **GitHub (gh)**: Use `gh` skill for GitHub CLI operations
-- **Workstack**: Use `workstack` skill for worktree management
+See the kit registry for complete documentation on available agents, commands, and skills. The registry is loaded automatically and provides usage guidance for all installed kits.

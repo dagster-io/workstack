@@ -6,6 +6,7 @@ import click
 
 from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.io import require_project_config, save_project_config
+from dot_agent_kit.io.registry import rebuild_registry
 from dot_agent_kit.operations import check_for_updates, sync_all_kits, sync_kit
 from dot_agent_kit.sources import BundledKitSource, KitResolver, StandalonePackageSource
 
@@ -25,21 +26,25 @@ from dot_agent_kit.sources import BundledKitSource, KitResolver, StandalonePacka
     help="Force reinstall even if versions match",
 )
 def sync(kit_id: str | None, verbose: bool, force: bool) -> None:
-    """Sync installed kits with their sources.
+    """Sync installed kits with their sources and rebuild registry.
 
-    This command updates one or all installed kits to their latest versions.
-    Use 'install' for installing/updating a specific kit, and 'sync' for
-    bulk update operations across all installed kits.
+    This command updates one or all installed kits to their latest versions
+    and automatically rebuilds the kit documentation registry. Use 'install'
+    for installing/updating a specific kit, and 'sync' for bulk update
+    operations across all installed kits or for repairing registry state.
 
     Examples:
-        # Sync all installed kits
+        # Sync all installed kits and rebuild registry
         dot-agent kit sync
 
-        # Sync a specific kit
+        # Sync a specific kit and update registry
         dot-agent kit sync github-workflows
 
         # Force sync all kits (reinstall even if up to date)
         dot-agent kit sync --force
+
+        # Repair registry (sync with no updates)
+        dot-agent kit sync
     """
     project_dir = Path.cwd()
 
@@ -81,6 +86,11 @@ def sync(kit_id: str | None, verbose: bool, force: bool) -> None:
                 updated_config = config.update_kit(result.updated_kit)
                 save_project_config(project_dir, updated_config)
 
+                # Rebuild registry to reflect updated kit
+                rebuild_registry(project_dir, updated_config)
+                if verbose:
+                    user_output("  Registry updated")
+
     else:
         # Sync all kits
         results = sync_all_kits(config, project_dir, resolver, force=force)
@@ -95,12 +105,17 @@ def sync(kit_id: str | None, verbose: bool, force: bool) -> None:
                     user_output(f"  {result.kit_id}: up to date")
 
         # Save updated config if any kits were updated
+        updated_config = config
         if updated_count > 0:
-            updated_config = config
             for result in results:
                 if result.was_updated and result.updated_kit is not None:
                     updated_config = updated_config.update_kit(result.updated_kit)
             save_project_config(project_dir, updated_config)
+
+        # Always rebuild registry (useful for repairing registry state)
+        rebuild_registry(project_dir, updated_config)
+        if verbose:
+            user_output("Registry rebuilt")
 
         if updated_count == 0:
             user_output("All kits are up to date")

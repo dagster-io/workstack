@@ -8,6 +8,7 @@ import click
 from workstack.cli.activation import render_activation_script
 from workstack.cli.core import discover_repo_context
 from workstack.cli.graphite import find_worktrees_containing_branch
+from workstack.cli.output import machine_output, user_output
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
 from workstack.core.repo_discovery import RepoContext
@@ -69,8 +70,8 @@ def _perform_jump(
         if not script:
             stack = ctx.graphite_ops.get_branch_stack(ctx.git_ops, repo_root, branch)
             if stack:
-                click.echo(f"Stack: {' -> '.join(stack)}")
-            click.echo(f"Checked out '{branch}' in worktree")
+                user_output(f"Stack: {' -> '.join(stack)}")
+            user_output(f"Checked out '{branch}' in worktree")
 
     # Generate activation script
     if script:
@@ -90,14 +91,14 @@ def _perform_jump(
             command_name="jump",
             comment=f"jump to {branch}",
         )
-        click.echo(str(result.path), nl=False)
+        machine_output(str(result.path), nl=False)
     else:
         # No shell integration available, show manual instructions
-        click.echo(
+        user_output(
             "Shell integration not detected. "
             "Run 'workstack init --shell' to set up automatic activation."
         )
-        click.echo(f"\nOr use: source <(workstack jump {branch} --script)")
+        user_output(f"\nOr use: source <(workstack jump {branch} --script)")
 
 
 @click.command("jump")
@@ -135,11 +136,10 @@ def jump_cmd(ctx: WorkstackContext, branch: str, script: bool) -> None:
     # Handle three cases: no match, one match, multiple matches
     if len(matching_worktrees) == 0:
         # No worktrees have this branch checked out
-        click.echo(
+        user_output(
             f"Error: Branch '{branch}' is not checked out in any worktree.\n"
             f"To create a worktree with this branch, run:\n"
-            f"  workstack create --from-branch {branch}",
-            err=True,
+            f"  workstack create --from-branch {branch}"
         )
         raise SystemExit(1)
 
@@ -160,9 +160,9 @@ def jump_cmd(ctx: WorkstackContext, branch: str, script: bool) -> None:
         else:
             # Zero or multiple worktrees have it directly checked out
             # Show error message listing all options
-            click.echo(f"Branch '{branch}' exists in multiple worktrees:", err=True)
+            user_output(f"Branch '{branch}' exists in multiple worktrees:")
             for wt in matching_worktrees:
-                click.echo(_format_worktree_info(wt, repo.root), err=True)
+                user_output(_format_worktree_info(wt, repo.root))
 
-            click.echo("\nUse 'workstack switch' to choose a specific worktree first.", err=True)
+            user_output("\nUse 'workstack switch' to choose a specific worktree first.")
             raise SystemExit(1)

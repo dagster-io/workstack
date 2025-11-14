@@ -7,6 +7,7 @@ import click
 from workstack.cli.activation import render_activation_script
 from workstack.cli.commands.remove import _remove_worktree
 from workstack.cli.core import discover_repo_context, worktree_path_for
+from workstack.cli.output import machine_output, user_output
 from workstack.cli.shell_utils import render_cd_script
 from workstack.core.context import WorkstackContext, regenerate_context
 from workstack.core.repo_discovery import ensure_workstacks_dir
@@ -27,7 +28,8 @@ def _emit(message: str, *, script_mode: bool, error: bool = False) -> None:
         script_mode: True when running in --script mode (all output to stderr).
         error: Force stderr output in non-script mode (ignored in script mode).
     """
-    click.echo(message, err=error or script_mode)
+    # Always route to stderr for consistent behavior
+    user_output(message)
 
 
 def _return_to_original_worktree(
@@ -287,4 +289,4 @@ def sync_cmd(
 
     # Output temp file path for shell wrapper
     if script and script_output_path:
-        click.echo(str(script_output_path), nl=False)
+        machine_output(str(script_output_path), nl=False)

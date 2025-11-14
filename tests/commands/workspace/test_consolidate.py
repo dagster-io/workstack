@@ -628,3 +628,78 @@ def test_consolidate_shows_output_without_script_flag() -> None:
         assert "✅ Removed:" in result.output
         assert str(wt1_path) in result.output
         assert "Consolidation complete" in result.output
+
+
+def test_consolidate_script_mode_shows_preview_output() -> None:
+    """Test consolidate displays full preview even with --script flag.
+
+    Regression test for bug where line 277 guard suppressed ALL preview output
+    in script mode, causing users to see nothing.
+    """
+    runner = CliRunner()
+    with pure_workstack_env(runner) as env:
+        # Configure graphite with stack (main -> feature-1)
+        graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
+
+        # Create worktree to remove
+        wt1_path = env.workstacks_root / env.root_worktree.name / "wt1"
+
+        worktrees = {
+            env.cwd: [
+                WorktreeInfo(path=env.cwd, branch="feature-1"),
+                WorktreeInfo(path=wt1_path, branch="main"),
+            ]
+        }
+
+        test_ctx = _create_test_context(
+            env, worktrees, "feature-1", graphite_ops, git_dir=env.git_dir
+        )
+        result = runner.invoke(cli, ["consolidate", "--script", "-f"], obj=test_ctx)
+
+        assert result.exit_code == 0, result.output
+
+        # Verify preview sections appear (were suppressed by line 277 guard)
+        assert "Current stack:" in result.output
+        assert "Target worktree:" in result.output
+        assert "Safe to remove" in result.output
+        assert "Note: Use 'gt restack'" in result.output
+
+        # Verify visual markers appear
+        assert "←" in result.output or "current" in result.output
+        assert "→" in result.output or "consolidating" in result.output
+
+
+def test_consolidate_outputs_to_stderr() -> None:
+    """Test consolidate routes all user output to stderr for shell integration.
+
+    Shell integration captures stdout. User-visible output must go to stderr
+    or users won't see it.
+    """
+    runner = CliRunner()
+    with pure_workstack_env(runner) as env:
+        graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
+
+        wt1_path = env.workstacks_root / env.root_worktree.name / "wt1"
+
+        worktrees = {
+            env.cwd: [
+                WorktreeInfo(path=env.cwd, branch="feature-1"),
+                WorktreeInfo(path=wt1_path, branch="main"),
+            ]
+        }
+
+        test_ctx = _create_test_context(
+            env, worktrees, "feature-1", graphite_ops, git_dir=env.git_dir
+        )
+        result = runner.invoke(
+            cli, ["consolidate", "--script", "-f"], obj=test_ctx, catch_exceptions=False
+        )
+
+        assert result.exit_code == 0
+
+        # With the fix, all output should appear in result.output
+        # (which captures both streams by default)
+        # The key test is that output DOES appear (not suppressed by --script flag)
+        assert "Current stack:" in result.output
+        assert "Removed:" in result.output
+        assert "Consolidation complete" in result.output

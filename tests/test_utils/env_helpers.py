@@ -413,6 +413,10 @@ class SimulatedWorkstackEnv:
         if "workstacks_root" in kwargs:
             kwargs.pop("workstacks_root")
 
+        # Filter out trunk_branch - it's now a computed property based on git_ops
+        if "trunk_branch" in kwargs:
+            kwargs.pop("trunk_branch")
+
         return WorkstackContext.for_test(
             git_ops=git_ops,
             graphite_ops=graphite_ops,
@@ -701,6 +705,10 @@ class PureWorkstackEnv:
         # Tests shouldn't override it via kwargs
         if "workstacks_root" in kwargs:
             kwargs.pop("workstacks_root")
+
+        # Filter out trunk_branch - it's now a computed property based on git_ops
+        if "trunk_branch" in kwargs:
+            kwargs.pop("trunk_branch")
 
         return WorkstackContext.for_test(
             git_ops=git_ops,

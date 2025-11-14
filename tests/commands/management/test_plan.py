@@ -144,7 +144,6 @@ def test_create_with_both_name_and_plan_fails() -> None:
             global_config=global_config,
             script_writer=env.script_writer,
             cwd=env.root_worktree,
-            trunk_branch="main",
         )
 
         # Run workstack create with both NAME and --plan
@@ -188,7 +187,6 @@ def test_create_rejects_reserved_name_root() -> None:
             global_config=global_config,
             script_writer=env.script_writer,
             cwd=env.root_worktree,
-            trunk_branch="main",
         )
 
         # Try to create a worktree named "root"
@@ -238,7 +236,6 @@ def test_create_rejects_reserved_name_root_case_insensitive() -> None:
             global_config=global_config,
             script_writer=env.script_writer,
             cwd=env.root_worktree,
-            trunk_branch="main",
         )
 
         # Test various cases of "root"
@@ -287,7 +284,6 @@ def test_create_rejects_main_as_worktree_name() -> None:
             global_config=global_config,
             script_writer=env.script_writer,
             cwd=env.root_worktree,
-            trunk_branch="main",
         )
 
         # Try to create a worktree named "main"
@@ -336,7 +332,6 @@ def test_create_rejects_master_as_worktree_name() -> None:
             global_config=global_config,
             script_writer=env.script_writer,
             cwd=env.root_worktree,
-            trunk_branch="main",
         )
 
         # Try to create a worktree named "master"

@@ -30,6 +30,7 @@ class GitState:
     commits: list[str] = field(default_factory=list)
     branch_parents: dict[str, str] = field(default_factory=dict)
     add_success: bool = True
+    trunk_branch: str = "main"
 
 
 @dataclass(frozen=True)
@@ -107,6 +108,10 @@ class FakeGitGtKitOps(GitGtKitOps):
         track per-branch commit history in detail.
         """
         return len(self._state.commits)
+
+    def get_trunk_branch(self) -> str:
+        """Get the trunk branch name for the repository."""
+        return self._state.trunk_branch
 
 
 class FakeGraphiteGtKitOps(GraphiteGtKitOps):

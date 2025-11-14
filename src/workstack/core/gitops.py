@@ -82,6 +82,21 @@ class GitOps(ABC):
         ...
 
     @abstractmethod
+    def get_trunk_branch(self, repo_root: Path) -> str:
+        """Get the trunk branch name for the repository.
+
+        Detects trunk by checking git's remote HEAD reference. Falls back to
+        checking for existence of common trunk branch names if detection fails.
+
+        Args:
+            repo_root: Path to the repository root
+
+        Returns:
+            Trunk branch name (e.g., 'main', 'master')
+        """
+        ...
+
+    @abstractmethod
     def get_git_common_dir(self, cwd: Path) -> Path | None:
         """Get the common git directory."""
         ...
@@ -450,6 +465,40 @@ class RealGitOps(GitOps):
         click.echo("Error: Could not find 'main' or 'master' branch.", err=True)
         raise SystemExit(1)
 
+    def get_trunk_branch(self, repo_root: Path) -> str:
+        """Get the trunk branch name for the repository.
+
+        Detects trunk by checking git's remote HEAD reference. Falls back to
+        checking for existence of common trunk branch names if detection fails.
+        """
+        # 1. Try git symbolic-ref to detect default branch
+        result = subprocess.run(
+            ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            # Parse "refs/remotes/origin/master" -> "master"
+            ref = result.stdout.strip()
+            if ref.startswith("refs/remotes/origin/"):
+                return ref.replace("refs/remotes/origin/", "")
+
+        # 2. Fallback: try 'main' then 'master', use first that exists
+        for candidate in ["main", "master"]:
+            result = subprocess.run(
+                ["git", "show-ref", "--verify", f"refs/heads/{candidate}"],
+                cwd=repo_root,
+                capture_output=True,
+                check=False,
+            )
+            if result.returncode == 0:
+                return candidate
+
+        # 3. Final fallback: 'main'
+        return "main"
+
     def get_git_common_dir(self, cwd: Path) -> Path | None:
         """Get the common git directory."""
         result = subprocess.run(
@@ -810,6 +859,10 @@ class DryRunGitOps(GitOps):
     def detect_default_branch(self, repo_root: Path, configured: str | None = None) -> str:
         """Detect default branch (read-only, delegates to wrapped)."""
         return self._wrapped.detect_default_branch(repo_root, configured)
+
+    def get_trunk_branch(self, repo_root: Path) -> str:
+        """Get trunk branch (read-only, delegates to wrapped)."""
+        return self._wrapped.get_trunk_branch(repo_root)
 
     def get_git_common_dir(self, cwd: Path) -> Path | None:
         """Get git common directory (read-only, delegates to wrapped)."""

@@ -208,7 +208,7 @@ def consolidate_cmd(
             os.chdir(new_worktree_path)
 
             # Regenerate context with new cwd (context is immutable)
-            ctx = create_context(dry_run=ctx.dry_run, repo_root=repo.root)
+            ctx = create_context(dry_run=ctx.dry_run)
 
             if not script:
                 click.echo(click.style("✅ Changed directory to new worktree", fg="green"))

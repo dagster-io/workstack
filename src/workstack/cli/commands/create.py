@@ -10,7 +10,7 @@ from workstack.cli.config import LoadedConfig
 from workstack.cli.core import discover_repo_context, worktree_path_for
 from workstack.cli.shell_utils import render_cd_script
 from workstack.cli.subprocess_utils import run_with_error_reporting
-from workstack.core.context import WorkstackContext, read_trunk_from_pyproject
+from workstack.core.context import WorkstackContext
 from workstack.core.naming_utils import (
     default_branch_for_worktree,
     ensure_unique_worktree_name,
@@ -347,7 +347,7 @@ def create(
     repo = discover_repo_context(ctx, ctx.cwd)
     workstacks_dir = ensure_workstacks_dir(repo)
     cfg = ctx.local_config
-    trunk_branch = read_trunk_from_pyproject(repo.root, ctx.git_ops)
+    trunk_branch = ctx.trunk_branch
 
     # Apply date prefix and uniqueness for plan-derived names
     if is_plan_derived:

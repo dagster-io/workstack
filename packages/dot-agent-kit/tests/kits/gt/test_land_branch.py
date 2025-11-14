@@ -71,16 +71,16 @@ class TestLandBranchExecution:
         assert "Multiple children detected" in result.message
         assert "feature-a, feature-b" in result.message
 
-    def test_land_branch_error_parent_not_main(self) -> None:
-        """Test error when branch parent is not main."""
-        # Setup: feature branch with parent other than main
+    def test_land_branch_error_parent_not_trunk(self) -> None:
+        """Test error when branch parent is not trunk."""
+        # Setup: feature branch with parent other than trunk (main)
         ops = FakeGtKitOps().with_branch("feature-branch", parent="develop")
 
         result = execute_land_branch(ops)
 
         assert isinstance(result, LandBranchError)
         assert result.success is False
-        assert result.error_type == "parent_not_main"
+        assert result.error_type == "parent_not_trunk"
         assert "must be exactly one level up from main" in result.message
         assert result.details["parent_branch"] == "develop"
 
@@ -97,7 +97,7 @@ class TestLandBranchExecution:
 
         assert isinstance(result, LandBranchError)
         assert result.success is False
-        assert result.error_type == "parent_not_main"
+        assert result.error_type == "parent_not_trunk"
         assert "Could not determine parent branch" in result.message
 
     def test_land_branch_error_no_pr(self) -> None:
@@ -145,6 +145,37 @@ class TestLandBranchExecution:
         assert result.success is False
         assert result.error_type == "merge_failed"
         assert "Failed to merge PR #123" in result.message
+
+    def test_land_branch_with_master_trunk(self) -> None:
+        """Test successfully landing a branch when trunk is 'master' instead of 'main'."""
+        # Setup: feature branch on master with open PR, configure trunk as "master"
+        ops = (
+            FakeGtKitOps().with_branch("feature-branch", parent="master").with_pr(123, state="OPEN")
+        )
+        # Configure git ops to return "master" as trunk
+        ops.git()._state = replace(ops.git().get_state(), trunk_branch="master")
+
+        result = execute_land_branch(ops)
+
+        assert isinstance(result, LandBranchSuccess)
+        assert result.success is True
+        assert result.pr_number == 123
+        assert result.branch_name == "feature-branch"
+
+    def test_land_branch_error_parent_not_trunk_with_master(self) -> None:
+        """Test error when branch parent is not trunk, with master as trunk."""
+        # Setup: feature branch with parent "main" when trunk is "master"
+        ops = FakeGtKitOps().with_branch("feature-branch", parent="main")
+        # Configure git ops to return "master" as trunk
+        ops.git()._state = replace(ops.git().get_state(), trunk_branch="master")
+
+        result = execute_land_branch(ops)
+
+        assert isinstance(result, LandBranchError)
+        assert result.success is False
+        assert result.error_type == "parent_not_trunk"
+        assert "must be exactly one level up from master" in result.message
+        assert result.details["parent_branch"] == "main"
 
 
 class TestLandBranchCLI:

@@ -104,6 +104,38 @@ class RealGitGtKitOps(GitGtKitOps):
 
         return int(count_str)
 
+    def get_trunk_branch(self) -> str:
+        """Get the trunk branch name for the repository.
+
+        Detects trunk by checking git's remote HEAD reference. Falls back to
+        checking for existence of common trunk branch names if detection fails.
+        """
+        # 1. Try git symbolic-ref to detect default branch
+        result = subprocess.run(
+            ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            # Parse "refs/remotes/origin/master" -> "master"
+            ref = result.stdout.strip()
+            if ref.startswith("refs/remotes/origin/"):
+                return ref.replace("refs/remotes/origin/", "")
+
+        # 2. Fallback: try 'main' then 'master', use first that exists
+        for candidate in ["main", "master"]:
+            result = subprocess.run(
+                ["git", "show-ref", "--verify", f"refs/heads/{candidate}"],
+                capture_output=True,
+                check=False,
+            )
+            if result.returncode == 0:
+                return candidate
+
+        # 3. Final fallback: 'main'
+        return "main"
+
 
 class RealGraphiteGtKitOps(GraphiteGtKitOps):
     """Real Graphite operations using subprocess."""

@@ -170,6 +170,147 @@ def test_detect_default_branch_neither_exists(
         git_ops.detect_default_branch(repo)
 
 
+def test_get_trunk_branch_with_symbolic_ref_main(tmp_path: Path) -> None:
+    """Test get_trunk_branch detects main via symbolic-ref."""
+    from tests.integration.conftest import init_git_repo
+    from workstack.core.gitops import RealGitOps
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init_git_repo(repo, "main")
+
+    # Set up remote HEAD to point to main
+    subprocess.run(
+        ["git", "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main"],
+        cwd=repo,
+        check=True,
+    )
+
+    git_ops = RealGitOps()
+    trunk = git_ops.get_trunk_branch(repo)
+
+    assert trunk == "main"
+
+
+def test_get_trunk_branch_with_symbolic_ref_master(tmp_path: Path) -> None:
+    """Test get_trunk_branch detects master via symbolic-ref."""
+    from tests.integration.conftest import init_git_repo
+    from workstack.core.gitops import RealGitOps
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init_git_repo(repo, "master")
+
+    # Set up remote HEAD to point to master
+    subprocess.run(
+        ["git", "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/master"],
+        cwd=repo,
+        check=True,
+    )
+
+    git_ops = RealGitOps()
+    trunk = git_ops.get_trunk_branch(repo)
+
+    assert trunk == "master"
+
+
+def test_get_trunk_branch_with_symbolic_ref_custom(tmp_path: Path) -> None:
+    """Test get_trunk_branch detects custom trunk name via symbolic-ref."""
+    from tests.integration.conftest import init_git_repo
+    from workstack.core.gitops import RealGitOps
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init_git_repo(repo, "trunk")
+
+    # Set up remote HEAD to point to custom trunk name
+    subprocess.run(
+        ["git", "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/trunk"],
+        cwd=repo,
+        check=True,
+    )
+
+    git_ops = RealGitOps()
+    trunk = git_ops.get_trunk_branch(repo)
+
+    assert trunk == "trunk"
+
+
+def test_get_trunk_branch_fallback_to_main(tmp_path: Path) -> None:
+    """Test get_trunk_branch falls back to main when symbolic-ref fails."""
+    from tests.integration.conftest import init_git_repo
+    from workstack.core.gitops import RealGitOps
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init_git_repo(repo, "main")
+
+    # Don't set up remote HEAD - test fallback logic
+    git_ops = RealGitOps()
+    trunk = git_ops.get_trunk_branch(repo)
+
+    assert trunk == "main"
+
+
+def test_get_trunk_branch_fallback_to_master(tmp_path: Path) -> None:
+    """Test get_trunk_branch falls back to master when main doesn't exist."""
+    from tests.integration.conftest import init_git_repo
+    from workstack.core.gitops import RealGitOps
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    # Initialize with master instead of main
+    init_git_repo(repo, "master")
+
+    # Don't set up remote HEAD - test fallback logic
+    git_ops = RealGitOps()
+    trunk = git_ops.get_trunk_branch(repo)
+
+    assert trunk == "master"
+
+
+def test_get_trunk_branch_both_branches_prefers_main(tmp_path: Path) -> None:
+    """Test get_trunk_branch prefers main when both main and master exist."""
+    from tests.integration.conftest import init_git_repo
+    from workstack.core.gitops import RealGitOps
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init_git_repo(repo, "main")
+
+    # Create master branch as well
+    subprocess.run(["git", "branch", "master"], cwd=repo, check=True)
+
+    # Don't set up remote HEAD - test fallback logic prefers main
+    git_ops = RealGitOps()
+    trunk = git_ops.get_trunk_branch(repo)
+
+    assert trunk == "main"
+
+
+def test_get_trunk_branch_final_fallback(tmp_path: Path) -> None:
+    """Test get_trunk_branch returns 'main' when neither main nor master exist."""
+    from tests.integration.conftest import init_git_repo
+    from workstack.core.gitops import RealGitOps
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    # Initialize with custom trunk name
+    init_git_repo(repo, "trunk")
+
+    # Delete the trunk branch to simulate neither main nor master existing
+    subprocess.run(["git", "checkout", "--detach"], cwd=repo, check=True)
+    subprocess.run(["git", "branch", "-D", "trunk"], cwd=repo, check=True)
+
+    git_ops = RealGitOps()
+    trunk = git_ops.get_trunk_branch(repo)
+
+    # Per implementation, final fallback returns "main"
+    assert trunk == "main"
+
+
 def test_get_git_common_dir_from_main_repo(git_ops: GitOpsSetup) -> None:
     """Test getting git common dir from main repository."""
     git_dir = git_ops.git_ops.get_git_common_dir(git_ops.repo)

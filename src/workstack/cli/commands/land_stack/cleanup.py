@@ -47,7 +47,7 @@ def _cleanup_and_navigate(
     if ctx.cwd.resolve() != repo_root:
         try:
             os.chdir(repo_root)
-            ctx = regenerate_context(ctx, repo_root=repo_root)
+            ctx = regenerate_context(ctx)
         except (FileNotFoundError, OSError):
             # Sentinel path in pure test mode - skip chdir
             pass

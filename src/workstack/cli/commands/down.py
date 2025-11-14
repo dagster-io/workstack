@@ -7,7 +7,7 @@ from workstack.cli.commands.switch import (
     _resolve_down_navigation,
 )
 from workstack.cli.core import discover_repo_context
-from workstack.core.context import WorkstackContext, read_trunk_from_pyproject
+from workstack.core.context import WorkstackContext
 
 
 @click.command("down")
@@ -33,7 +33,7 @@ def down_cmd(ctx: WorkstackContext, script: bool) -> None:
     """
     _ensure_graphite_enabled(ctx)
     repo = discover_repo_context(ctx, ctx.cwd)
-    trunk_branch = read_trunk_from_pyproject(repo.root, ctx.git_ops)
+    trunk_branch = ctx.trunk_branch
 
     # Get current branch
     current_branch = ctx.git_ops.get_current_branch(ctx.cwd)

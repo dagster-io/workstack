@@ -349,7 +349,7 @@ def test_switch_rejects_master_as_worktree_name() -> None:
         )
 
         # Create test context using env helper (override trunk_branch)
-        test_ctx = env.build_context(git_ops=git_ops, repo=repo, trunk_branch="master")
+        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
 
         # Try to switch to "master"
         result = runner.invoke(cli, ["switch", "master"], obj=test_ctx)

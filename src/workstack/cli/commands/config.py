@@ -5,11 +5,7 @@ import click
 
 from workstack.cli.config import LoadedConfig
 from workstack.cli.core import discover_repo_context
-from workstack.core.context import (
-    WorkstackContext,
-    read_trunk_from_pyproject,
-    write_trunk_to_pyproject,
-)
+from workstack.core.context import WorkstackContext, write_trunk_to_pyproject
 from workstack.core.global_config import GlobalConfig
 
 
@@ -83,7 +79,7 @@ def config_list(ctx: WorkstackContext) -> None:
     if isinstance(ctx.repo, NoRepoSentinel):
         click.echo("  (not in a git repository)")
     else:
-        trunk_branch = read_trunk_from_pyproject(ctx.repo.root, ctx.git_ops)
+        trunk_branch = ctx.trunk_branch
         cfg = ctx.local_config
         if trunk_branch:
             click.echo(f"  trunk-branch={trunk_branch}")
@@ -137,7 +133,7 @@ def config_get(ctx: WorkstackContext, key: str) -> None:
         raise SystemExit(1)
 
     if parts[0] == "trunk-branch":
-        trunk_branch = read_trunk_from_pyproject(ctx.repo.root, ctx.git_ops)
+        trunk_branch = ctx.trunk_branch
         if trunk_branch:
             click.echo(trunk_branch)
         else:

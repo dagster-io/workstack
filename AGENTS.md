@@ -325,9 +325,9 @@ if removed_current_worktree:
 | Current/active branches  | `bright_green`   | Yes  | `click.style(branch, fg="bright_green", bold=True)` |
 | Paths (after completion) | `green`          | No   | `click.style(str(path), fg="green")`                |
 | Paths (metadata)         | `white`          | Dim  | `click.style(str(path), fg="white", dim=True)`      |
-| Error states             | `red`            | No   | `click.style("Error", fg="red")`                    |
-| Dry run markers          | `bright_black`   | No   | `click.style("(dry run)", fg="bright_black")`       |
-| Worktree/stack names     | `cyan`           | Yes  | `click.style(name, fg="cyan", bold=True)`           |
+| Error states             | `red`            | No   | `click.style("Error", fg="red")`                          |
+| Dry run markers          | `bright_cyan`    | Yes  | `click.style("(dry run)", fg="bright_cyan", bold=True)`   |
+| Worktree/stack names     | `cyan`           | Yes  | `click.style(name, fg="cyan", bold=True)`                 |
 
 **Emoji conventions:**
 

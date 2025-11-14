@@ -136,7 +136,13 @@ def land_stack(
 
     # All succeeded - run cleanup operations
     final_branch = _cleanup_and_navigate(
-        ctx, repo.root, merged_branches, verbose=verbose, dry_run=dry_run, script_mode=script
+        ctx,
+        repo.root,
+        merged_branches,
+        trunk_branch,
+        verbose=verbose,
+        dry_run=dry_run,
+        script_mode=script,
     )
 
     # Show final state

@@ -12,6 +12,11 @@ This package implements the core functionality for Claude Code artifact and kit 
 
 - **[DEVELOPING.md](DEVELOPING.md)**: Development workflow and patterns
 
+- **[HOOKS.md](docs/HOOKS.md)**: Hook development and configuration
+  - Creating and modifying hooks
+  - Hook architecture and lifecycle
+  - Testing and troubleshooting
+
 ## Quick Reference
 
 ### Important Terminology

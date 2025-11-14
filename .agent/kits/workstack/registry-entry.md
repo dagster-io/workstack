@@ -4,7 +4,7 @@
 
 **Artifacts**:
 
-- command: commands/workstack/create-planned-stack.md, commands/workstack/implement-plan.md
+- command: commands/workstack/persist-plan.md, commands/workstack/create-planned-stack.md, commands/workstack/implement-plan.md
 - doc: docs/workstack/EXAMPLES.md
 
 **Usage**:

@@ -256,5 +256,6 @@ See [docs/KIT_CLI_COMMANDS.md](docs/KIT_CLI_COMMANDS.md) for:
 ## Related Documentation
 
 - [README.md](README.md) - Kit structure and creation guide
+- [docs/HOOKS.md](docs/HOOKS.md) - Hook development and configuration guide
 - [docs/KIT_CLI_COMMANDS.md](docs/KIT_CLI_COMMANDS.md) - Kit CLI command development guide
 - [../../docs/WORKSTACK_DEV.md](../../docs/WORKSTACK_DEV.md) - workstack-dev CLI architecture

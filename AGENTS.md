@@ -315,19 +315,19 @@ if removed_current_worktree:
 
 **Use consistent colors and styling for CLI output via `click.style()`:**
 
-| Element                  | Color            | Bold | Example                                             |
-| ------------------------ | ---------------- | ---- | --------------------------------------------------- |
-| Branch names             | `yellow`         | No   | `click.style(branch, fg="yellow")`                  |
-| PR numbers               | `cyan`           | No   | `click.style(f"PR #{pr}", fg="cyan")`               |
-| PR titles                | `bright_magenta` | No   | `click.style(title, fg="bright_magenta")`           |
-| Success messages (✓)     | `green`          | No   | `click.style("✓ Done", fg="green")`                 |
-| Section headers          | -                | Yes  | `click.style(header, bold=True)`                    |
-| Current/active branches  | `bright_green`   | Yes  | `click.style(branch, fg="bright_green", bold=True)` |
-| Paths (after completion) | `green`          | No   | `click.style(str(path), fg="green")`                |
-| Paths (metadata)         | `white`          | Dim  | `click.style(str(path), fg="white", dim=True)`      |
-| Error states             | `red`            | No   | `click.style("Error", fg="red")`                    |
-| Dry run markers          | `bright_black`   | No   | `click.style("(dry run)", fg="bright_black")`       |
-| Worktree/stack names     | `cyan`           | Yes  | `click.style(name, fg="cyan", bold=True)`           |
+| Element                  | Color            | Bold | Example                                                 |
+| ------------------------ | ---------------- | ---- | ------------------------------------------------------- |
+| Branch names             | `yellow`         | No   | `click.style(branch, fg="yellow")`                      |
+| PR numbers               | `cyan`           | No   | `click.style(f"PR #{pr}", fg="cyan")`                   |
+| PR titles                | `bright_magenta` | No   | `click.style(title, fg="bright_magenta")`               |
+| Success messages (✓)     | `green`          | No   | `click.style("✓ Done", fg="green")`                     |
+| Section headers          | -                | Yes  | `click.style(header, bold=True)`                        |
+| Current/active branches  | `bright_green`   | Yes  | `click.style(branch, fg="bright_green", bold=True)`     |
+| Paths (after completion) | `green`          | No   | `click.style(str(path), fg="green")`                    |
+| Paths (metadata)         | `white`          | Dim  | `click.style(str(path), fg="white", dim=True)`          |
+| Error states             | `red`            | No   | `click.style("Error", fg="red")`                        |
+| Dry run markers          | `bright_cyan`    | Yes  | `click.style("(dry run)", fg="bright_cyan", bold=True)` |
+| Worktree/stack names     | `cyan`           | Yes  | `click.style(name, fg="cyan", bold=True)`               |
 
 **Emoji conventions:**
 

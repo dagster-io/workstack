@@ -46,7 +46,7 @@ class PrintingOpsBase:
         """Format a command for display with optional dry-run indicator."""
         styled_cmd = click.style(f"  {cmd}", dim=True)
         if self._dry_run:
-            dry_run_marker = click.style(" (dry run)", fg="bright_black")
+            dry_run_marker = click.style(" (dry run)", fg="bright_cyan", bold=True)
             checkmark = click.style(" ✓", fg="green")
             return styled_cmd + dry_run_marker + checkmark
         else:

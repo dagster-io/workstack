@@ -31,7 +31,7 @@ def _show_landing_plan(
     # Display header
     header = "📋 Summary"
     if dry_run:
-        header += click.style(" (dry run)", fg="bright_black")
+        header += click.style(" (dry run)", fg="bright_cyan", bold=True)
     _emit(click.style(f"\n{header}", bold=True), script_mode=script_mode)
     _emit("", script_mode=script_mode)
 
@@ -86,7 +86,7 @@ def _show_final_state(
     pr_text = "PR" if len(merged_branches) == 1 else "PRs"
     success_msg = f"✅ Successfully landed {len(merged_branches)} {pr_text}"
     if dry_run:
-        success_msg += click.style(" (dry run)", fg="bright_black")
+        success_msg += click.style(" (dry run)", fg="bright_cyan", bold=True)
     _emit(f"  {success_msg}", script_mode=script_mode)
 
     # Current branch

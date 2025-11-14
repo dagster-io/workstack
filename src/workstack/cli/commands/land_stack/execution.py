@@ -1,6 +1,5 @@
 """Core landing sequence execution for land-stack command."""
 
-import subprocess
 from collections.abc import Callable
 from pathlib import Path
 
@@ -13,7 +12,7 @@ from workstack.core.context import WorkstackContext
 
 
 def _execute_and_emit(
-    operation: Callable[[], None] | None,
+    operation: Callable[[], None],
     cli_command: str,
     *,
     dry_run: bool,
@@ -22,12 +21,12 @@ def _execute_and_emit(
     """Execute operation (if not dry_run) and emit CLI command.
 
     Args:
-        operation: Operation to execute (None to only emit)
+        operation: Operation to execute
         cli_command: CLI command string to display
         dry_run: If True, skip operation execution
         script_mode: True when running in --script mode (output to stderr)
     """
-    if operation and not dry_run:
+    if not dry_run:
         operation()
     check = click.style("✓", fg="green")
     _emit(_format_cli_command(cli_command, check), script_mode=script_mode)
@@ -67,26 +66,23 @@ def _execute_checkout_phase(
         dry_run: If True, show what would be done without executing
         script_mode: True when running in --script mode (output to stderr)
     """
-    if dry_run:
-        # Dry-run: always show checkout command
-        _execute_and_emit(None, f"git checkout {branch}", dry_run=dry_run, script_mode=script_mode)
+    # Check if we're already on the target branch (LBYL)
+    # This handles the case where we're in a linked worktree on the branch being landed
+    current_branch = ctx.git_ops.get_current_branch(Path.cwd())
+
+    if current_branch != branch:
+        # Only checkout if we're not already on the branch
+        _execute_and_emit(
+            lambda: ctx.git_ops.checkout_branch(repo_root, branch),
+            f"git checkout {branch}",
+            dry_run=dry_run,
+            script_mode=script_mode,
+        )
     else:
-        # Check if we're already on the target branch (LBYL)
-        # This handles the case where we're in a linked worktree on the branch being landed
-        current_branch = ctx.git_ops.get_current_branch(Path.cwd())
-        if current_branch != branch:
-            # Only checkout if we're not already on the branch
-            _execute_and_emit(
-                lambda: ctx.git_ops.checkout_branch(repo_root, branch),
-                f"git checkout {branch}",
-                dry_run=dry_run,
-                script_mode=script_mode,
-            )
-        else:
-            # Already on branch, display as already done
-            check = click.style("✓", fg="green")
-            already_msg = f"already on {branch}"
-            _emit(_format_description(already_msg, check), script_mode=script_mode)
+        # Already on branch, display as already done
+        check = click.style("✓", fg="green")
+        already_msg = f"already on {branch}"
+        _emit(_format_description(already_msg, check), script_mode=script_mode)
 
 
 def _execute_merge_phase(
@@ -110,20 +106,12 @@ def _execute_merge_phase(
     """
     merge_cmd = f"gh pr merge {pr_number} --squash"
 
-    def merge_pr() -> None:
-        # Use gh pr merge with squash strategy (Graphite's default)
-        cmd = ["gh", "pr", "merge", str(pr_number), "--squash"]
-        result = subprocess.run(
-            cmd,
-            cwd=repo_root,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        if verbose:
-            _emit(result.stdout, script_mode=script_mode)
-
-    _execute_and_emit(merge_pr, merge_cmd, dry_run=dry_run, script_mode=script_mode)
+    _execute_and_emit(
+        lambda: ctx.github_ops.merge_pr(repo_root, pr_number, squash=True, verbose=verbose),
+        merge_cmd,
+        dry_run=dry_run,
+        script_mode=script_mode,
+    )
 
 
 def _execute_sync_trunk_phase(

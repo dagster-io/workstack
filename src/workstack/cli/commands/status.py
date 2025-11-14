@@ -20,6 +20,7 @@ def status_cmd(ctx: WorkstackContext) -> None:
     """Show comprehensive status of current worktree."""
     # Discover repository context
     repo = discover_repo_context(ctx, ctx.cwd)
+    # ctx.cwd is guaranteed to exist by get_safe_cwd() in context creation
     current_dir = ctx.cwd.resolve()
 
     # Find which worktree we're in

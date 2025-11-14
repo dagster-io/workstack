@@ -27,6 +27,64 @@ from workstack.core.shell_ops import RealShellOps, ShellOps
 
 
 @dataclass(frozen=True)
+class RecoveryInfo:
+    """Information about CWD recovery when original path no longer exists."""
+
+    deleted_path: Path  # The original path that no longer exists
+    fallback_path: Path  # The fallback path being used instead
+
+
+def get_safe_cwd() -> tuple[Path, RecoveryInfo | None]:
+    """Get current working directory with fallback if deleted.
+
+    Attempts to get the current working directory. If it has been deleted,
+    falls back to repository root (if available) or home directory.
+
+    Returns:
+        Tuple of (working_directory, recovery_info).
+        recovery_info is None if no fallback was needed, otherwise contains
+        information about the deleted path and chosen fallback.
+    """
+    # Try to get current working directory
+    try:
+        cwd = Path.cwd()
+        return (cwd, None)
+    except (FileNotFoundError, OSError):
+        # Current directory has been deleted, need to fall back
+        # Try to get cached path from environment (shells usually have this)
+        import os
+
+        deleted_path = Path(os.environ.get("PWD", "/unknown"))
+
+        # First try: Find repository root by walking up from parent paths
+        # This might work if we're in a deleted worktree subdirectory
+        fallback_path: Path | None = None
+
+        # Check if we can find a git repo in parent directories
+        # Start from parent of deleted path if it exists
+        if deleted_path != Path("/unknown") and deleted_path.parent.exists():
+            check_path = deleted_path.parent
+            git_ops = RealGitOps()
+
+            # Walk up the tree looking for .git
+            while check_path != check_path.parent:
+                git_dir = check_path / ".git"
+                if git_ops.path_exists(git_dir):
+                    fallback_path = check_path
+                    break
+                check_path = check_path.parent
+
+        # Second fallback: Use home directory
+        if fallback_path is None:
+            fallback_path = Path.home()
+
+        # Change to the fallback directory
+        os.chdir(fallback_path)
+
+        return (fallback_path, RecoveryInfo(deleted_path=deleted_path, fallback_path=fallback_path))
+
+
+@dataclass(frozen=True)
 class WorkstackContext:
     """Immutable context holding all dependencies for workstack operations.
 
@@ -49,6 +107,7 @@ class WorkstackContext:
     local_config: LoadedConfig
     repo: RepoContext | NoRepoSentinel
     dry_run: bool
+    recovery_info: RecoveryInfo | None = None  # Info about CWD recovery if fallback was used
 
     @property
     def trunk_branch(self) -> str | None:
@@ -312,8 +371,8 @@ def create_context(*, dry_run: bool) -> WorkstackContext:
         >>> worktrees = ctx.git_ops.list_worktrees(Path("/repo"))
         >>> workstacks_root = ctx.global_config.workstacks_root
     """
-    # 1. Capture cwd (no deps)
-    cwd = Path.cwd()
+    # 1. Capture cwd safely with fallback if deleted
+    cwd, recovery_info = get_safe_cwd()
 
     # 2. Create global config ops
     global_config_ops = FilesystemGlobalConfigOps()
@@ -363,6 +422,7 @@ def create_context(*, dry_run: bool) -> WorkstackContext:
         local_config=local_config,
         repo=repo,
         dry_run=dry_run,
+        recovery_info=recovery_info,
     )
 
 

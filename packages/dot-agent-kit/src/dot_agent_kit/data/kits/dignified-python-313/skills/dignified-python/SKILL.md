@@ -22,7 +22,7 @@ Write explicit, predictable code that fails fast at proper boundaries.
 | `from .module import`                         | → Use absolute imports only                                                                              |
 | `print(...)` in CLI code                      | → Use `click.echo()`                                                                                     |
 | `subprocess.run(...)`                         | → Add `check=True`                                                                                       |
-| `@property` with I/O or expensive computation | → See references/code-smells-dagster.md                                                                  |
+| `@property` with I/O or expensive computation | → See references/core-standards.md#performance-expectations                                              |
 | Function with many optional parameters        | → See references/code-smells-dagster.md                                                                  |
 | `repr()` for sorting or hashing               | → See references/code-smells-dagster.md                                                                  |
 | Context object passed everywhere              | → See references/code-smells-dagster.md                                                                  |
@@ -142,13 +142,13 @@ result = primary_method()
 - Working with CLI code (Click patterns)
 - Using dataclasses and immutability
 - Avoiding anti-patterns (silent fallback, exception swallowing)
+- Implementing `@property` or `__len__` (performance expectations)
 
 ### Load `references/code-smells-dagster.md` when:
 
 - Designing function APIs (default parameters, keyword arguments)
 - Managing parameter complexity (parameter anxiety, invalid combinations)
 - Refactoring large functions/classes (god classes, local variables)
-- Implementing `@property` or `__len__` (performance expectations)
 - Working with context managers (assignment patterns)
 - Using `repr()` programmatically (string representation abuse)
 - Passing context objects (context coupling)

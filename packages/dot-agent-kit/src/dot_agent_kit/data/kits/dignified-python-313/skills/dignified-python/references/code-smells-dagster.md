@@ -4,16 +4,15 @@
 
 ## Quick Reference Guide
 
-| If you're about to write...                   | Check this section                                                   |
-| --------------------------------------------- | -------------------------------------------------------------------- |
-| `@property` with I/O or expensive computation | [Performance Expectations](#3-performance-expectations-property-len) |
-| Function with many optional parameters        | [Parameter Design](#5-parameter-design-keyword-arguments)            |
-| `repr()` for sorting or hashing               | [String Representation Abuse](#1-string-representation-abuse-repr)   |
-| Try/except without explicit error             | [Error Boundaries](#4-error-boundaries-early-validation)             |
-| Context object passed everywhere              | [Context Coupling](#8-context-coupling)                              |
-| Function with 10+ local variables             | [Complexity Management](#10-complexity-management-local-variables)   |
-| Class with 50+ methods                        | [God Classes](#9-god-classes)                                        |
-| Context manager assigned to variable          | [Context Manager Patterns](#11-context-manager-patterns)             |
+| If you're about to write...            | Check this section                                                 |
+| -------------------------------------- | ------------------------------------------------------------------ |
+| Function with many optional parameters | [Parameter Design](#4-parameter-design-keyword-arguments)          |
+| `repr()` for sorting or hashing        | [String Representation Abuse](#1-string-representation-abuse-repr) |
+| Try/except without explicit error      | [Error Boundaries](#3-error-boundaries-early-validation)           |
+| Context object passed everywhere       | [Context Coupling](#7-context-coupling)                            |
+| Function with 10+ local variables      | [Complexity Management](#9-complexity-management-local-variables)  |
+| Class with 50+ methods                 | [God Classes](#8-god-classes)                                      |
+| Context manager assigned to variable   | [Context Manager Patterns](#10-context-manager-patterns)           |
 
 ## Table of Contents
 
@@ -21,28 +20,27 @@
 
 1. [String Representation Abuse (`repr`)](#1-string-representation-abuse-repr)
 2. [Default Parameter Values](#2-default-parameter-values)
-3. [Performance Expectations (`@property`, `__len__`)](#3-performance-expectations-property-len)
-4. [Error Boundaries (Early Validation)](#4-error-boundaries-early-validation)
+3. [Error Boundaries (Early Validation)](#3-error-boundaries-early-validation)
 
 ### Parameter Design
 
-5. [Keyword Arguments](#5-parameter-design-keyword-arguments)
-6. [Invalid Parameter Combinations](#6-invalid-parameter-combinations)
-7. [Parameter Anxiety](#7-parameter-anxiety)
+4. [Keyword Arguments](#4-parameter-design-keyword-arguments)
+5. [Invalid Parameter Combinations](#5-invalid-parameter-combinations)
+6. [Parameter Anxiety](#6-parameter-anxiety)
 
 ### Code Organization
 
-8. [Context Coupling](#8-context-coupling)
-9. [God Classes](#9-god-classes)
-10. [Complexity Management (Local Variables)](#10-complexity-management-local-variables)
+7. [Context Coupling](#7-context-coupling)
+8. [God Classes](#8-god-classes)
+9. [Complexity Management (Local Variables)](#9-complexity-management-local-variables)
 
 ### Python-Specific
 
-11. [Context Manager Patterns](#11-context-manager-patterns)
+10. [Context Manager Patterns](#10-context-manager-patterns)
 
 ### Meta-Principles
 
-12. [Understanding Code Smells](#12-understanding-code-smells)
+11. [Understanding Code Smells](#11-understanding-code-smells)
 
 ---
 
@@ -126,60 +124,7 @@ execute_job(job, instance, asset_selection=job.all_assets)
 
 ---
 
-### 3. Performance Expectations (`@property`, `__len__`)
-
-**DON'T** hide expensive operations behind cheap-looking interfaces:
-
-```python
-# ❌ WRONG - Property doing I/O
-class DataSet:
-    @property
-    def size(self) -> int:
-        # Fetches from database!
-        return self._fetch_count_from_db()
-
-# ❌ WRONG - __len__ doing expensive computation
-class PartitionSubset:
-    def __len__(self) -> int:
-        # Materializes ALL partition keys!
-        return len(list(self._generate_all_partitions()))
-```
-
-**DO** make cost explicit or cache results:
-
-```python
-# ✅ CORRECT - Method name indicates cost
-class DataSet:
-    def fetch_size_from_db(self) -> int:
-        return self._fetch_count_from_db()
-
-# ✅ CORRECT - Cached for immutable objects
-from functools import cached_property
-
-@frozen
-class PartitionSubset:
-    @cached_property
-    def size(self) -> int:
-        # Computed once, cached forever (immutable)
-        return len(list(self._generate_all_partitions()))
-
-# ✅ CORRECT - Precomputed
-class EfficientSubset:
-    def __init__(self, partitions: Sequence[str]):
-        self._partitions = partitions
-        self._count = len(partitions)  # Precompute
-
-    def __len__(self) -> int:
-        return self._count  # O(1)
-```
-
-**Rationale**: Engineers assume `@property` and `__len__` are cheap. They'll use them in loops without thinking.
-
-**Real Bug**: Customer on Discord - `AssetSubset.size` property triggered 10,000+ partition key materializations via expensive cron parsing.
-
----
-
-### 4. Error Boundaries (Early Validation)
+### 3. Error Boundaries (Early Validation)
 
 **DON'T** let invalid values propagate:
 
@@ -223,7 +168,7 @@ class AssetSpec:
 
 ## Parameter Design
 
-### 5. Parameter Design (Keyword Arguments)
+### 4. Parameter Design (Keyword Arguments)
 
 **DON'T** use positional arguments for non-obvious parameters:
 
@@ -269,7 +214,7 @@ range(10, 20)
 
 ---
 
-### 6. Invalid Parameter Combinations
+### 5. Invalid Parameter Combinations
 
 **DON'T** create functions with invalid parameter states:
 
@@ -320,7 +265,7 @@ def configure_without_cache():
 
 ---
 
-### 7. Parameter Anxiety
+### 6. Parameter Anxiety
 
 **DON'T** add too many behavioral parameters:
 
@@ -383,7 +328,7 @@ def process_data(data: str, config: ProcessingConfig):
 
 ## Code Organization
 
-### 8. Context Coupling
+### 7. Context Coupling
 
 **DON'T** pass context objects to generic code:
 
@@ -423,7 +368,7 @@ def format_output(prefix: str, total: int) -> str:
 
 ---
 
-### 9. God Classes
+### 8. God Classes
 
 **DON'T** let classes accumulate unbounded responsibilities:
 
@@ -496,7 +441,7 @@ class UserAPI:
 
 ---
 
-### 10. Complexity Management (Local Variables)
+### 9. Complexity Management (Local Variables)
 
 **DON'T** let functions accumulate many local variables:
 
@@ -573,7 +518,7 @@ def process_complex_data():
 
 ## Python-Specific
 
-### 11. Context Manager Patterns
+### 10. Context Manager Patterns
 
 **DON'T** assign context managers to variables:
 
@@ -636,7 +581,7 @@ with maybe_lock(needs_lock):
 
 ---
 
-## 12. Understanding Code Smells
+## 11. Understanding Code Smells
 
 ### What Are Code Smells?
 

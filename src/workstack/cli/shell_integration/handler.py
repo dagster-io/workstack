@@ -75,7 +75,6 @@ def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellInt
         script_args,
         obj=create_context(dry_run=False),
         standalone_mode=False,
-        mix_stderr=False,
     )
 
     exit_code = int(result.exit_code)
@@ -90,8 +89,8 @@ def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellInt
         user_output(result.stderr, nl=False)
 
     # Output is now a file path, not script content
-    # With mix_stderr=False, result.output contains only stdout
-    script_path = result.output.strip() if result.output else None
+    # Click 8.2+ separates streams; result.stdout contains only stdout
+    script_path = result.stdout.strip() if result.stdout else None
 
     debug_log(f"Handler: Got script_path={script_path}, exit_code={exit_code}")
 

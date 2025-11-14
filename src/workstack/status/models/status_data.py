@@ -291,13 +291,15 @@ class DependencyStatus:
 
 @dataclass(frozen=True)
 class PlanStatus:
-    """Status of .PLAN.md file."""
+    """Status of .plan/ folder."""
 
     exists: bool
     path: Path | None
     summary: str | None
     line_count: int
     first_lines: list[str]
+    progress_summary: str | None  # e.g., "3/10 steps completed"
+    format: str  # "folder" or "none"
 
 
 @dataclass(frozen=True)

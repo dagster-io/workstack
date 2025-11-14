@@ -60,7 +60,7 @@ workstack create login --from-branch feature/login # Creates worktree 'login' fr
 workstack create --from-current-branch             # Move current branch to new worktree
 
 # From a plan file
-workstack create --plan Add_Auth.md                # Creates worktree, moves plan to .PLAN.md
+workstack create --plan Add_Auth.md                # Creates worktree with .plan/ folder
 ```
 
 ### Managing Worktrees
@@ -299,20 +299,22 @@ workstack switch root
 workstack create --plan Add_User_Auth.md
 # This automatically:
 #   - Creates worktree named 'add-user-auth'
-#   - Moves Add_User_Auth.md to worktree as .PLAN.md
-#   - .PLAN.md is already in .gitignore (added by workstack init)
+#   - Creates .plan/ folder with plan.md (immutable) and progress.md (mutable)
+#   - .plan/ is already in .gitignore (added by workstack init)
 
 # 4. Switch and execute
 workstack switch add-user-auth
-# Your plan is now at .PLAN.md for reference during implementation
+# Your plan is now at .plan/plan.md for reference during implementation
+# Progress tracking in .plan/progress.md shows step completion
 ```
 
 **Why this works:**
 
-- Plans don't clutter PR reviews (`.PLAN.md` in `.gitignore`)
+- Plans don't clutter PR reviews (`.plan/` in `.gitignore`)
 - Each worktree has its own plan context
 - Clean separation between thinking and doing
-- Workflow guides user to start implementation with clean context with just the .PLAN.md.
+- Progress tracking separates plan content from completion status
+- Workflow guides user to start implementation with clean context and progress visibility
 
 This workflow emerged from experience - checking in planning documents created noise in reviews and maintenance overhead without clear benefits.
 

@@ -104,8 +104,10 @@ def test_create_with_plan_file() -> None:
         date_suffix = datetime.now().strftime("%y-%m-%d")
         wt_path = workstacks_dir / f"my-feature-{date_suffix}"
         assert wt_path.exists()
-        # Plan file should be moved to .PLAN.md
-        assert (wt_path / ".PLAN.md").exists()
+        # Plan folder should be created with plan.md and progress.md
+        assert (wt_path / ".plan").exists()
+        assert (wt_path / ".plan" / "plan.md").exists()
+        assert (wt_path / ".plan" / "progress.md").exists()
         assert not plan_file.exists()
 
 
@@ -160,7 +162,8 @@ def test_create_with_plan_file_removes_plan_word() -> None:
             expected_worktree_name = f"{expected_worktree_base}-{date_suffix}"
             wt_path = workstacks_dir / expected_worktree_name
             assert wt_path.exists(), f"Expected worktree at {wt_path} for {plan_filename}"
-            assert (wt_path / ".PLAN.md").exists()
+            assert (wt_path / ".plan" / "plan.md").exists()
+            assert (wt_path / ".plan" / "progress.md").exists()
             assert not plan_file.exists()
 
             # Clean up for next test
@@ -768,8 +771,9 @@ def test_create_with_keep_plan_flag() -> None:
         date_suffix = datetime.now().strftime("%y-%m-%d")
         wt_path = workstacks_dir / f"my-feature-{date_suffix}"
         assert wt_path.exists()
-        # Plan file should be copied to .PLAN.md
-        assert (wt_path / ".PLAN.md").exists()
+        # Plan folder should be created with plan.md and progress.md
+        assert (wt_path / ".plan" / "plan.md").exists()
+        assert (wt_path / ".plan" / "progress.md").exists()
         # Original plan file should still exist (copied, not moved)
         assert plan_file.exists()
         assert "Copied plan to" in result.output
@@ -1195,12 +1199,13 @@ def test_create_with_json_and_plan_file() -> None:
         expected_name = f"test-feature-{date_suffix}"
         assert output_data["worktree_name"] == expected_name
         wt_path = workstacks_dir / expected_name
-        expected_plan_path = wt_path / ".PLAN.md"
-        assert output_data["plan_file"] == str(expected_plan_path)
+        expected_plan_folder = wt_path / ".plan"
+        assert output_data["plan_file"] == str(expected_plan_folder)
         assert output_data["status"] == "created"
 
-        # Verify plan file was moved
-        assert expected_plan_path.exists()
+        # Verify plan folder was created
+        assert (expected_plan_folder / "plan.md").exists()
+        assert (expected_plan_folder / "progress.md").exists()
         assert not plan_file.exists()  # Original should be moved, not copied
 
 
@@ -1329,8 +1334,9 @@ def test_create_with_stay_and_plan() -> None:
         date_suffix = datetime.now().strftime("%y-%m-%d")
         wt_path = workstacks_dir / f"test-feature-{date_suffix}"
         assert wt_path.exists()
-        # Plan file should be moved
-        assert (wt_path / ".PLAN.md").exists()
+        # Plan folder should be created
+        assert (wt_path / ".plan" / "plan.md").exists()
+        assert (wt_path / ".plan" / "progress.md").exists()
         assert not plan_file.exists()
         # When --stay is used, output should contain "workstack switch" message
         assert "workstack switch" in result.output
@@ -1424,7 +1430,7 @@ def test_create_with_plan_ensures_uniqueness() -> None:
         expected_name1 = f"my-feature-{date_suffix}"
         wt_path1 = workstacks_dir / expected_name1
         assert wt_path1.exists(), f"Expected first worktree at {wt_path1}"
-        assert (wt_path1 / ".PLAN.md").exists()
+        assert (wt_path1 / ".plan" / "plan.md").exists()
 
         # Recreate plan file for second worktree
         plan_file.write_text("# My Feature Plan - Round 2\n", encoding="utf-8")
@@ -1437,7 +1443,7 @@ def test_create_with_plan_ensures_uniqueness() -> None:
         expected_name2 = f"my-feature-2-{date_suffix}"
         wt_path2 = workstacks_dir / expected_name2
         assert wt_path2.exists(), f"Expected second worktree at {wt_path2}"
-        assert (wt_path2 / ".PLAN.md").exists()
+        assert (wt_path2 / ".plan" / "plan.md").exists()
 
         # Verify both worktrees exist
         assert wt_path1.exists()

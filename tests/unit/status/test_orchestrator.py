@@ -43,8 +43,11 @@ def test_orchestrator_collects_all_data(tmp_path: Path) -> None:
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
 
-    # Create a plan file
-    (worktree_path / ".PLAN.md").write_text("# Test Plan", encoding="utf-8")
+    # Create plan folder with plan.md and progress.md
+    plan_folder = worktree_path / ".plan"
+    plan_folder.mkdir()
+    (plan_folder / "plan.md").write_text("# Test Plan", encoding="utf-8")
+    (plan_folder / "progress.md").write_text("# Progress\n\n- [ ] Step 1", encoding="utf-8")
 
     git_ops = FakeGitOps(
         current_branches={worktree_path: "test-branch"},
@@ -310,7 +313,10 @@ def test_orchestrator_parallel_execution(tmp_path: Path) -> None:
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
 
-    (worktree_path / ".PLAN.md").write_text("# Plan", encoding="utf-8")
+    plan_folder = worktree_path / ".plan"
+    plan_folder.mkdir()
+    (plan_folder / "plan.md").write_text("# Plan", encoding="utf-8")
+    (plan_folder / "progress.md").write_text("# Progress\n\n- [ ] Step 1", encoding="utf-8")
 
     git_ops = FakeGitOps(
         current_branches={worktree_path: "branch"},
@@ -514,10 +520,12 @@ def test_orchestrator_multiple_collector_types(tmp_path: Path) -> None:
         def collect(self, ctx: WorkstackContext, worktree_path: Path, repo_root: Path) -> object:
             return PlanStatus(
                 exists=True,
-                path=worktree_path / ".PLAN.md",
+                path=worktree_path / ".plan",
                 line_count=5,
                 first_lines=["# Plan"],
                 summary="Test plan",
+                progress_summary="2/3 steps completed",
+                format="folder",
             )
 
     collectors = [GitCollector(), PlanCollector()]

@@ -128,7 +128,7 @@ This command succeeds when ALL of the following are true:
 **File & Worktree Creation:**
 ✅ Plan saved to `<worktree-root>/<filename>-plan.md`
 ✅ Worktree created with `workstack create --plan`
-✅ Worktree contains `.PLAN.md` file (moved by workstack)
+✅ Worktree contains `.plan/` folder with `plan.md` and `progress.md`
 ✅ Worktree listed in `workstack list`
 
 **Next Steps:**
@@ -177,7 +177,7 @@ This command succeeds when ALL of the following are true:
 
 - Be specific in responses to clarifying questions
 - Use clear action words: "Fix:", "Add:", "Change:", "Reorder:"
-- Or skip enhancement and edit the .PLAN.md file after creation
+- Or skip enhancement and edit the `.plan/plan.md` file after creation
 
 ---
 
@@ -1240,7 +1240,7 @@ Expected JSON structure:
   "worktree_name": "feature-name",
   "worktree_path": "/path/to/worktree",
   "branch_name": "feature-branch",
-  "plan_file": "/path/to/.PLAN.md",
+  "plan_file": "/path/to/.plan",
   "status": "created"
 }
 ```
@@ -1250,7 +1250,7 @@ Expected JSON structure:
 - `worktree_name` (string, non-empty)
 - `worktree_path` (string, valid path)
 - `branch_name` (string, non-empty)
-- `plan_file` (string, path to .PLAN.md)
+- `plan_file` (string, path to .plan folder)
 - `status` (string: "created" or "exists")
 
 **Handle errors:**

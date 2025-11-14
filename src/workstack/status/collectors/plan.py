@@ -3,12 +3,13 @@
 from pathlib import Path
 
 from workstack.core.context import WorkstackContext
+from workstack.core.plan_folder import get_plan_path, get_progress_path
 from workstack.status.collectors.base import StatusCollector
 from workstack.status.models.status_data import PlanStatus
 
 
 class PlanFileCollector(StatusCollector):
-    """Collects information about .PLAN.md file."""
+    """Collects information about .plan/ folder."""
 
     @property
     def name(self) -> str:
@@ -16,22 +17,24 @@ class PlanFileCollector(StatusCollector):
         return "plan"
 
     def is_available(self, ctx: WorkstackContext, worktree_path: Path) -> bool:
-        """Check if .PLAN.md exists.
+        """Check if .plan/plan.md exists.
 
         Args:
             ctx: Workstack context
             worktree_path: Path to worktree
 
         Returns:
-            True if .PLAN.md exists
+            True if .plan/plan.md exists
         """
-        plan_path = worktree_path / ".PLAN.md"
+        plan_path = get_plan_path(worktree_path)
+        if plan_path is None:
+            return False
         return ctx.git_ops.path_exists(plan_path)
 
     def collect(
         self, ctx: WorkstackContext, worktree_path: Path, repo_root: Path
     ) -> PlanStatus | None:
-        """Collect plan file information.
+        """Collect plan folder information.
 
         Args:
             ctx: Workstack context
@@ -39,20 +42,22 @@ class PlanFileCollector(StatusCollector):
             repo_root: Repository root path
 
         Returns:
-            PlanStatus with file information or None if collection fails
+            PlanStatus with folder information or None if collection fails
         """
-        plan_path = worktree_path / ".PLAN.md"
+        plan_path = get_plan_path(worktree_path)
 
-        if not ctx.git_ops.path_exists(plan_path):
+        if plan_path is None or not ctx.git_ops.path_exists(plan_path):
             return PlanStatus(
                 exists=False,
                 path=None,
                 summary=None,
                 line_count=0,
                 first_lines=[],
+                progress_summary=None,
+                format="none",
             )
 
-        # Read the file
+        # Read plan.md
         content = plan_path.read_text(encoding="utf-8")
         lines = content.splitlines()
         line_count = len(lines)
@@ -75,10 +80,44 @@ class PlanFileCollector(StatusCollector):
         if summary and len(summary) > 100:
             summary = summary[:97] + "..."
 
+        # Calculate progress from progress.md
+        progress_summary = self._calculate_progress(worktree_path)
+
+        # Return folder path, not plan.md file path
+        plan_folder = worktree_path / ".plan"
+
         return PlanStatus(
             exists=True,
-            path=plan_path,
+            path=plan_folder,
             summary=summary,
             line_count=line_count,
             first_lines=first_lines,
+            progress_summary=progress_summary,
+            format="folder",
         )
+
+    def _calculate_progress(self, worktree_path: Path) -> str | None:
+        """Calculate progress from progress.md checkboxes.
+
+        Args:
+            worktree_path: Path to worktree
+
+        Returns:
+            Progress string like "3/10 steps completed" or None if no progress file
+        """
+        progress_path = get_progress_path(worktree_path)
+        if progress_path is None:
+            return None
+
+        content = progress_path.read_text(encoding="utf-8")
+        lines = content.splitlines()
+
+        # Count checked and unchecked boxes
+        checked = sum(1 for line in lines if line.strip().startswith("- [x]"))
+        unchecked = sum(1 for line in lines if line.strip().startswith("- [ ]"))
+        total = checked + unchecked
+
+        if total == 0:
+            return None
+
+        return f"{checked}/{total} steps completed"

@@ -1,10 +1,10 @@
 # Ephemeral LibCST Pro: Surgical Python Refactoring
 
-> **🔴 Agent trigger:** If you think "I should write a Python script to..." for code transformation → STOP and invoke this skill instead. It provides the patterns you need.
+> **🔴 Agent trigger:** If you think "I should write a Python script to..." for code transformation → STOP and invoke the libcst-refactor agent via the Task tool instead. It provides the patterns you need.
 
 ## Philosophy
 
-This skill teaches battle-tested patterns for creating **throwaway LibCST scripts** that perform precise Python refactoring across multiple files. These are surgical, one-time transformations—not permanent codemods.
+This guide teaches battle-tested patterns for creating **throwaway LibCST scripts** that perform precise Python refactoring across multiple files. These are surgical, one-time transformations—not permanent codemods.
 
 **The Problem This Solves:**
 
@@ -19,11 +19,11 @@ This skill teaches battle-tested patterns for creating **throwaway LibCST script
 - Matcher-based pattern recognition
 - Surgical precision for complex Python refactoring
 
-## When to Activate This Skill
+## When to Use This Guide
 
 **Primary trigger:** Whenever you think "I should write a script to transform this Python code"
 
-Use this skill for:
+Use this guide for:
 
 - ✅ Any systematic Python transformation across multiple files
 - ✅ Batch refactoring operations (rename, replace, remove patterns)
@@ -32,7 +32,7 @@ Use this skill for:
 - ✅ Function/class call replacements across files
 - ✅ Any code transformation you'd manually repeat 3+ times
 
-**Don't use this skill when:**
+**Don't use this guide when:**
 
 - ❌ Simple string find-replace across files (use sed/grep)
 - ❌ Single file edit (just edit it directly)
@@ -378,7 +378,7 @@ Before running a LibCST script on your codebase:
 
 ## Integration with Claude Code
 
-When Claude Code activates this skill:
+When the libcst-refactor agent is invoked via the Task tool:
 
 1. **Understand the transformation** - Ask clarifying questions about edge cases
 2. **Visualize first** - Show the LibCST tree structure for sample code

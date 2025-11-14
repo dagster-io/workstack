@@ -18,6 +18,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, NamedTuple
 
+import click
+
 from workstack.cli.output import user_output
 
 PRState = Literal["OPEN", "MERGED", "CLOSED", "NONE"]
@@ -493,10 +495,12 @@ class DryRunGitHubOps(GitHubOps):
         return self._wrapped.get_pr_base_branch(repo_root, pr_number)
 
     def update_pr_base_branch(self, repo_root: Path, pr_number: int, new_base: str) -> None:
-        """Dry-run no-op for PR base branch update (execution layer handles output)."""
-        # Do nothing - prevents actual PR base update
-        # The execution layer is responsible for printing dry-run output
-        pass
+        """Print dry-run message instead of updating PR base branch."""
+        cmd = f"gh pr edit {pr_number} --base {new_base}"
+        styled_cmd = click.style(f"  {cmd}", dim=True)
+        dry_run_marker = click.style(" (dry run)", fg="bright_black")
+        checkmark = click.style(" ✓", fg="green")
+        user_output(styled_cmd + dry_run_marker + checkmark)
 
     def get_pr_mergeability(self, repo_root: Path, pr_number: int) -> PRMergeability | None:
         """Delegate read operation to wrapped implementation."""
@@ -510,7 +514,10 @@ class DryRunGitHubOps(GitHubOps):
         squash: bool = True,
         verbose: bool = False,
     ) -> None:
-        """Dry-run no-op for PR merge (execution layer handles output)."""
-        # Do nothing - prevents actual PR merge
-        # The execution layer is responsible for printing dry-run output
-        pass
+        """Print dry-run message instead of merging PR."""
+        merge_type = "--squash" if squash else "--merge"
+        cmd = f"gh pr merge {pr_number} {merge_type}"
+        styled_cmd = click.style(f"  {cmd}", dim=True)
+        dry_run_marker = click.style(" (dry run)", fg="bright_black")
+        checkmark = click.style(" ✓", fg="green")
+        user_output(styled_cmd + dry_run_marker + checkmark)

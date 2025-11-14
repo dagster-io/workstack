@@ -17,6 +17,8 @@ from pathlib import Path
 from subprocess import DEVNULL
 from typing import Any
 
+import click
+
 from workstack.cli.output import user_output
 from workstack.core.branch_metadata import BranchMetadata
 from workstack.core.github_ops import PullRequestInfo, _parse_github_pr_url
@@ -540,13 +542,17 @@ class DryRunGraphiteOps(GraphiteOps):
     # Destructive operations: print dry-run message instead of executing
 
     def sync(self, repo_root: Path, *, force: bool, quiet: bool) -> None:
-        """Dry-run no-op for gt sync (execution layer handles output)."""
-        # Do nothing - prevents actual gt sync execution
-        # The execution layer is responsible for printing dry-run output
-        pass
+        """Print dry-run message instead of running gt sync."""
+        cmd = "gt sync -f" if force else "gt sync"
+        styled_cmd = click.style(f"  {cmd}", dim=True)
+        dry_run_marker = click.style(" (dry run)", fg="bright_black")
+        checkmark = click.style(" ✓", fg="green")
+        user_output(styled_cmd + dry_run_marker + checkmark)
 
     def submit_branch(self, repo_root: Path, branch_name: str, *, quiet: bool) -> None:
-        """Dry-run no-op for gt submit (execution layer handles output)."""
-        # Do nothing - prevents actual gt submit execution
-        # The execution layer is responsible for printing dry-run output
-        pass
+        """Print dry-run message instead of running gt submit."""
+        cmd = f"gt submit --branch {branch_name} --no-edit"
+        styled_cmd = click.style(f"  {cmd}", dim=True)
+        dry_run_marker = click.style(" (dry run)", fg="bright_black")
+        checkmark = click.style(" ✓", fg="green")
+        user_output(styled_cmd + dry_run_marker + checkmark)

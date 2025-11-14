@@ -14,6 +14,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 
+import click
+
 from workstack.cli.output import user_output
 
 
@@ -969,9 +971,17 @@ class DryRunGitOps(GitOps):
 
     def fetch_branch(self, repo_root: Path, remote: str, branch: str) -> None:
         """Print dry-run message instead of fetching branch."""
-        user_output(f"[DRY RUN] Would run: git fetch {remote} {branch}")
+        cmd = f"git fetch {remote} {branch}"
+        styled_cmd = click.style(f"  {cmd}", dim=True)
+        dry_run_marker = click.style(" (dry run)", fg="bright_black")
+        checkmark = click.style(" ✓", fg="green")
+        user_output(styled_cmd + dry_run_marker + checkmark)
 
     def pull_branch(self, repo_root: Path, remote: str, branch: str, *, ff_only: bool) -> None:
         """Print dry-run message instead of pulling branch."""
         ff_flag = " --ff-only" if ff_only else ""
-        user_output(f"[DRY RUN] Would run: git pull{ff_flag} {remote} {branch}")
+        cmd = f"git pull{ff_flag} {remote} {branch}"
+        styled_cmd = click.style(f"  {cmd}", dim=True)
+        dry_run_marker = click.style(" (dry run)", fg="bright_black")
+        checkmark = click.style(" ✓", fg="green")
+        user_output(styled_cmd + dry_run_marker + checkmark)

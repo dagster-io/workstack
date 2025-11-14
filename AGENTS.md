@@ -592,11 +592,20 @@ Time-based estimates have no basis in reality for AI-assisted development and sh
 
 ## Installed Kit Documentation
 
-For a complete index of installed kit documentation (agents, commands, skills, and reference docs), see:
+🔴 **CRITICAL: ALWAYS load this registry before working with kits, agents, commands, or skills.**
+
+The kit documentation registry contains the complete index of ALL installed kit documentation in this project. This includes:
+
+- Agent definitions and capabilities
+- Available slash commands
+- Skills and their purposes
+- Reference documentation
+
+**MUST LOAD:** Before answering questions about available kits, agents, commands, or skills, ALWAYS reference:
 
 @.claude/docs/kit-registry.md
 
-This registry is automatically updated when kits are installed, updated, or removed.
+This registry is automatically maintained and updated when kits are installed, updated, or removed. It is the single source of truth for what kit functionality is available in this project.
 
 ## Skills and Agents
 

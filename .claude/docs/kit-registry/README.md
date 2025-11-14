@@ -79,16 +79,16 @@ Example:
 
 Manual registry management is available via CLI commands:
 
-### `dot-agent kit registry rebuild`
+### `dot-agent kit sync`
 
-Regenerate the entire registry from installed kits. Useful if:
+Sync all installed kits and rebuild the registry. Useful if:
 
 - Registry gets out of sync
 - Migrating from older dot-agent version
 - Recovering from manual edits
 
 ```bash
-dot-agent kit registry rebuild
+dot-agent kit sync
 ```
 
 ### `dot-agent kit registry show`
@@ -119,21 +119,21 @@ Checks:
 
 **Symptom**: Validation fails or registry doesn't match installed kits
 
-**Solution**: Run rebuild command
+**Solution**: Run sync command to rebuild registry
 
 ```bash
-dot-agent kit registry rebuild
+dot-agent kit sync
 ```
 
 ### Missing registry entry
 
 **Symptom**: Kit installed but no registry entry exists
 
-**Solution**: Rebuild registry or reinstall kit
+**Solution**: Sync to rebuild registry or reinstall kit
 
 ```bash
-# Option 1: Rebuild entire registry
-dot-agent kit registry rebuild
+# Option 1: Sync all kits and rebuild registry
+dot-agent kit sync
 
 # Option 2: Reinstall specific kit
 dot-agent kit install <kit-id> --force
@@ -143,10 +143,10 @@ dot-agent kit install <kit-id> --force
 
 **Symptom**: `.claude/docs/kit-registry.md` doesn't exist
 
-**Solution**: Run rebuild command - it will create the file
+**Solution**: Run sync command - it will create the file
 
 ```bash
-dot-agent kit registry rebuild
+dot-agent kit sync
 ```
 
 ## Design Rationale

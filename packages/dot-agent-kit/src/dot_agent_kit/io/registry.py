@@ -101,7 +101,7 @@ def generate_doc_registry_content(entries: list[DocRegistryEntry]) -> str:
         "# Kit Documentation Registry",
         "",
         "<!-- AUTO-GENERATED: This file is managed by dot-agent kit commands -->",
-        "<!-- DO NOT EDIT: Changes will be overwritten. Use 'dot-agent kit registry rebuild' -->",
+        "<!-- DO NOT EDIT: Changes will be overwritten. Use 'dot-agent kit sync' -->",
         "",
         "<!-- REGISTRY_VERSION: 1 -->",
         f"<!-- GENERATED_AT: {timestamp} -->",

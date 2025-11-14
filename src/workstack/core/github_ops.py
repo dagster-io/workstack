@@ -457,19 +457,18 @@ class RealGitHubOps(GitHubOps):
 
 
 # ============================================================================
-# Dry-Run Wrapper
+# No-op Wrapper
 # ============================================================================
 
 
-class DryRunGitHubOps(GitHubOps):
-    """Dry-run wrapper for GitHub operations.
+class NoopGitHubOps(GitHubOps):
+    """No-op wrapper for GitHub operations.
 
     Read operations are delegated to the wrapped implementation.
-    Write operations (when added) will print dry-run messages instead of executing.
+    Write operations return without executing (no-op behavior).
 
-    This wrapper currently delegates all operations since GitHubOps only has
-    read operations. It's included for consistency with the three-implementations
-    pattern and to prepare for future write operations (e.g., create PR, update status).
+    This wrapper prevents destructive GitHub operations from executing in dry-run mode,
+    while still allowing read operations for validation.
     """
 
     def __init__(self, wrapped: GitHubOps) -> None:
@@ -525,15 +524,15 @@ class PrintingGitHubOps(GitHubOps):
     """Wrapper that prints operations before delegating to inner implementation.
 
     This wrapper prints styled output for operations, then delegates to the
-    wrapped implementation (which could be Real or DryRun).
+    wrapped implementation (which could be Real or Noop).
 
     Usage:
         # For production
         printing_ops = PrintingGitHubOps(real_ops, script_mode=False, dry_run=False)
 
         # For dry-run
-        dry_run_inner = DryRunGitHubOps(real_ops)
-        printing_ops = PrintingGitHubOps(dry_run_inner, script_mode=False, dry_run=True)
+        noop_inner = NoopGitHubOps(real_ops)
+        printing_ops = PrintingGitHubOps(noop_inner, script_mode=False, dry_run=True)
     """
 
     def __init__(

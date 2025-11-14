@@ -499,18 +499,18 @@ class RealGraphiteOps(GraphiteOps):
             user_output(result.stderr, nl=False)
 
 
-class DryRunGraphiteOps(GraphiteOps):
-    """Wrapper that prints dry-run messages instead of executing destructive operations.
+class NoopGraphiteOps(GraphiteOps):
+    """No-op wrapper that prevents execution of destructive operations.
 
-    This wrapper intercepts destructive graphite operations and prints what would happen
-    instead of executing. Read-only operations are delegated to the wrapped implementation.
+    This wrapper intercepts destructive graphite operations and returns without
+    executing (no-op behavior). Read-only operations are delegated to the wrapped implementation.
 
     Usage:
         real_ops = RealGraphiteOps()
-        dry_run_ops = DryRunGraphiteOps(real_ops)
+        noop_ops = NoopGraphiteOps(real_ops)
 
-        # Prints message instead of running gt sync
-        dry_run_ops.sync(repo_root, force=False)
+        # No-op instead of running gt sync
+        noop_ops.sync(repo_root, force=False)
     """
 
     def __init__(self, wrapped: GraphiteOps) -> None:
@@ -561,15 +561,15 @@ class PrintingGraphiteOps(GraphiteOps):
     """Wrapper that prints operations before delegating to inner implementation.
 
     This wrapper prints styled output for operations, then delegates to the
-    wrapped implementation (which could be Real or DryRun).
+    wrapped implementation (which could be Real or Noop).
 
     Usage:
         # For production
         printing_ops = PrintingGraphiteOps(real_ops, script_mode=False, dry_run=False)
 
         # For dry-run
-        dry_run_inner = DryRunGraphiteOps(real_ops)
-        printing_ops = PrintingGraphiteOps(dry_run_inner, script_mode=False, dry_run=True)
+        noop_inner = NoopGraphiteOps(real_ops)
+        printing_ops = PrintingGraphiteOps(noop_inner, script_mode=False, dry_run=True)
     """
 
     def __init__(

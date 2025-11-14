@@ -7,15 +7,15 @@ import tomlkit
 
 from workstack.cli.config import LoadedConfig, load_config
 from workstack.core.completion_ops import CompletionOps, RealCompletionOps
-from workstack.core.github_ops import DryRunGitHubOps, GitHubOps, RealGitHubOps
-from workstack.core.gitops import DryRunGitOps, GitOps, RealGitOps
+from workstack.core.github_ops import GitHubOps, NoopGitHubOps, RealGitHubOps
+from workstack.core.gitops import GitOps, NoopGitOps, RealGitOps
 from workstack.core.global_config import (
     FilesystemGlobalConfigOps,
     GlobalConfig,
     GlobalConfigOps,
     InMemoryGlobalConfigOps,
 )
-from workstack.core.graphite_ops import DryRunGraphiteOps, GraphiteOps, RealGraphiteOps
+from workstack.core.graphite_ops import GraphiteOps, NoopGraphiteOps, RealGraphiteOps
 from workstack.core.repo_discovery import (
     NoRepoSentinel,
     RepoContext,
@@ -231,9 +231,9 @@ class WorkstackContext:
 
         # Apply dry-run wrappers if needed (matching production behavior)
         if dry_run:
-            git_ops = DryRunGitOps(git_ops)
-            graphite_ops = DryRunGraphiteOps(graphite_ops)
-            github_ops = DryRunGitHubOps(github_ops)
+            git_ops = NoopGitOps(git_ops)
+            graphite_ops = NoopGraphiteOps(graphite_ops)
+            github_ops = NoopGitHubOps(github_ops)
 
         return WorkstackContext(
             git_ops=git_ops,
@@ -345,9 +345,9 @@ def create_context(*, dry_run: bool) -> WorkstackContext:
 
     # 7. Apply dry-run wrappers if needed
     if dry_run:
-        git_ops = DryRunGitOps(git_ops)
-        graphite_ops = DryRunGraphiteOps(graphite_ops)
-        github_ops = DryRunGitHubOps(github_ops)
+        git_ops = NoopGitOps(git_ops)
+        graphite_ops = NoopGraphiteOps(graphite_ops)
+        github_ops = NoopGitHubOps(github_ops)
 
     # 8. Create context with all values
     return WorkstackContext(

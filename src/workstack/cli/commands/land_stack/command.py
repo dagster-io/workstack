@@ -93,16 +93,16 @@ def land_stack(
     repo = discover_repo_context(ctx, ctx.cwd)
 
     # Wrap ops with printing versions (and dry-run if requested)
-    from workstack.core.github_ops import DryRunGitHubOps, PrintingGitHubOps
-    from workstack.core.gitops import DryRunGitOps, PrintingGitOps
-    from workstack.core.graphite_ops import DryRunGraphiteOps, PrintingGraphiteOps
+    from workstack.core.github_ops import NoopGitHubOps, PrintingGitHubOps
+    from workstack.core.gitops import NoopGitOps, PrintingGitOps
+    from workstack.core.graphite_ops import NoopGraphiteOps, PrintingGraphiteOps
 
     # First: Choose inner implementation based on dry-run mode
     if dry_run:
-        # Wrap with DryRun (makes operations no-op)
-        inner_git_ops = DryRunGitOps(ctx.git_ops)
-        inner_github_ops = DryRunGitHubOps(ctx.github_ops)
-        inner_graphite_ops = DryRunGraphiteOps(ctx.graphite_ops)
+        # Wrap with Noop (makes operations no-op)
+        inner_git_ops = NoopGitOps(ctx.git_ops)
+        inner_github_ops = NoopGitHubOps(ctx.github_ops)
+        inner_graphite_ops = NoopGraphiteOps(ctx.graphite_ops)
     else:
         # Use real implementations
         inner_git_ops = ctx.git_ops

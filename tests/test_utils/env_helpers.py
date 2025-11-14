@@ -347,9 +347,9 @@ class SimulatedWorkstackEnv:
         else:
             # git_ops was provided - ensure it has necessary existing paths
             # for discover_repo_context to work correctly
-            from workstack.core.gitops import DryRunGitOps
+            from workstack.core.gitops import NoopGitOps
 
-            unwrapped_ops = git_ops._wrapped if isinstance(git_ops, DryRunGitOps) else git_ops
+            unwrapped_ops = git_ops._wrapped if isinstance(git_ops, NoopGitOps) else git_ops
 
             # Add core paths to existing_paths if they're actually git repos
             # Only add paths that are in git_common_dirs (actual repos)
@@ -648,10 +648,10 @@ class PureWorkstackEnv:
             )
         else:
             # git_ops was provided - extract worktree paths and merge with existing_paths
-            # Unwrap DryRunGitOps if needed to access underlying FakeGitOps
-            from workstack.core.gitops import DryRunGitOps
+            # Unwrap NoopGitOps if needed to access underlying FakeGitOps
+            from workstack.core.gitops import NoopGitOps
 
-            unwrapped_ops = git_ops._wrapped if isinstance(git_ops, DryRunGitOps) else git_ops
+            unwrapped_ops = git_ops._wrapped if isinstance(git_ops, NoopGitOps) else git_ops
             worktree_paths = {
                 wt.path for worktrees in unwrapped_ops._worktrees.values() for wt in worktrees
             }

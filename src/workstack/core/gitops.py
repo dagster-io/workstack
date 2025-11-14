@@ -821,22 +821,23 @@ class RealGitOps(GitOps):
 
 
 # ============================================================================
-# Dry-Run Wrapper
+# No-op Wrapper
 # ============================================================================
 
 
-class DryRunGitOps(GitOps):
-    """Wrapper that prints dry-run messages instead of executing destructive operations.
+class NoopGitOps(GitOps):
+    """No-op wrapper that prevents execution of destructive operations.
 
-    This wrapper intercepts destructive git operations and prints what would happen
-    instead of executing. Read-only operations are delegated to the wrapped implementation.
+    This wrapper intercepts destructive git operations and either returns without
+    executing (for land-stack operations) or prints what would happen (for other
+    operations). Read-only operations are delegated to the wrapped implementation.
 
     Usage:
         real_ops = RealGitOps()
-        dry_run_ops = DryRunGitOps(real_ops)
+        noop_ops = NoopGitOps(real_ops)
 
-        # Prints message instead of deleting
-        dry_run_ops.remove_worktree(repo_root, path, force=False)
+        # No-op or prints message instead of deleting
+        noop_ops.remove_worktree(repo_root, path, force=False)
     """
 
     def __init__(self, wrapped: GitOps) -> None:
@@ -989,15 +990,15 @@ class PrintingGitOps(GitOps):
     """Wrapper that prints operations before delegating to inner implementation.
 
     This wrapper prints styled output for operations, then delegates to the
-    wrapped implementation (which could be Real or DryRun).
+    wrapped implementation (which could be Real or Noop).
 
     Usage:
         # For production
         printing_ops = PrintingGitOps(real_ops, script_mode=False, dry_run=False)
 
         # For dry-run
-        dry_run_inner = DryRunGitOps(real_ops)
-        printing_ops = PrintingGitOps(dry_run_inner, script_mode=False, dry_run=True)
+        noop_inner = NoopGitOps(real_ops)
+        printing_ops = PrintingGitOps(noop_inner, script_mode=False, dry_run=True)
     """
 
     def __init__(

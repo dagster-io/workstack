@@ -14,6 +14,7 @@ def _validate_landing_preconditions(
     repo_root: Path,
     current_branch: str | None,
     branches_to_land: list[str],
+    down: bool,
     *,
     script_mode: bool,
 ) -> None:
@@ -24,6 +25,7 @@ def _validate_landing_preconditions(
         repo_root: Repository root directory
         current_branch: Current branch name (None if detached HEAD)
         branches_to_land: List of branches to land
+        down: True to include --down flag in error suggestions
         script_mode: True when running in --script mode (output to stderr)
 
     Raises:
@@ -129,9 +131,9 @@ def _validate_landing_preconditions(
             "in another worktree. To land this stack, you need to consolidate all\n"
             "branches into the current worktree first.\n\n"
             "To fix:\n"
-            "  • Run: workstack consolidate\n"
+            f"  • Run: workstack consolidate{' --down' if down else ''}\n"
             "  • This will remove other worktrees for branches in this stack\n"
-            "  • Then retry: workstack land-stack",
+            f"  • Then retry: workstack land-stack{' --down' if down else ''}",
             script_mode=script_mode,
             error=True,
         )

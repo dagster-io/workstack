@@ -409,3 +409,66 @@ def rebuild_registry(project_dir: Path, config: ProjectConfig) -> None:
     registry_path.parent.mkdir(parents=True, exist_ok=True)
     content = generate_doc_registry_content(entries)
     registry_path.write_text(content, encoding="utf-8")
+
+
+def ensure_agents_md_has_registry_reference(project_dir: Path) -> str:
+    """Ensure AGENTS.md contains the kit registry reference.
+
+    If AGENTS.md does not exist, creates it with minimal template.
+    If AGENTS.md exists but lacks the registry reference, appends it.
+    If AGENTS.md already has the reference, returns without modification.
+
+    Args:
+        project_dir: Project root directory
+
+    Returns:
+        Status string: "created", "updated", or "exists"
+    """
+    agents_md_path = project_dir / "AGENTS.md"
+    registry_reference_marker = "@.claude/docs/kit-registry.md"
+
+    # Template for new AGENTS.md
+    minimal_template = """# Project Documentation
+
+## Installed Kit Documentation
+
+For a complete index of installed kit documentation (agents, commands, skills, and reference
+docs), see:
+
+@.claude/docs/kit-registry.md
+
+This registry is automatically updated when kits are installed, updated, or removed.
+"""
+
+    # Registry section to append to existing files
+    registry_section = """
+## Installed Kit Documentation
+
+For a complete index of installed kit documentation (agents, commands, skills, and reference
+docs), see:
+
+@.claude/docs/kit-registry.md
+
+This registry is automatically updated when kits are installed, updated, or removed.
+"""
+
+    # Case 1: AGENTS.md does not exist - create with minimal template
+    if not agents_md_path.exists():
+        agents_md_path.write_text(minimal_template, encoding="utf-8")
+        return "created"
+
+    # Case 2: AGENTS.md exists - check for registry reference
+    content = agents_md_path.read_text(encoding="utf-8")
+
+    # Case 2a: Reference already present - no-op
+    if registry_reference_marker in content:
+        return "exists"
+
+    # Case 2b: Reference missing - append
+    # Ensure content ends with newline before appending
+    if not content.endswith("\n"):
+        content += "\n"
+
+    content += registry_section
+    agents_md_path.write_text(content, encoding="utf-8")
+    return "updated"

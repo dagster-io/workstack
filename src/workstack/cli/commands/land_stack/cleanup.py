@@ -55,9 +55,7 @@ def _cleanup_and_navigate(
             pass
 
     # Step 1: Checkout trunk branch
-    if not dry_run:
-        ctx.git_ops.checkout_branch(repo_root, trunk_branch)
-    _emit(_format_cli_command(f"git checkout {trunk_branch}", check), script_mode=script_mode)
+    ctx.git_ops.checkout_branch(repo_root, trunk_branch)
     final_branch = trunk_branch
 
     # Step 2: Sync worktrees
@@ -66,7 +64,11 @@ def _cleanup_and_navigate(
         base_cmd += " --verbose"
 
     if dry_run:
-        _emit(_format_cli_command(base_cmd, check), script_mode=script_mode)
+        # Add bright cyan "(dry run)" marker to match PrintingOps pattern
+        styled_cmd = click.style(f"  {base_cmd}", dim=True)
+        dry_run_marker = click.style(" (dry run)", fg="bright_cyan", bold=True)
+        checkmark = click.style(" ✓", fg="green")
+        _emit(styled_cmd + dry_run_marker + checkmark, script_mode=script_mode)
     else:
         try:
             # This will remove merged worktrees and delete branches

@@ -226,9 +226,9 @@ After submission, provide a clear summary using the Graphite URL from the JSON o
 
 ### What Was Done
 
-- Created commit with AI-generated message
-- Submitted branch to Graphite
-- Updated PR #<pr_number> metadata
+✓ Created commit with AI-generated message
+✓ Submitted branch to Graphite
+✓ Updated PR #<pr_number> metadata
 
 ### View PR
 
@@ -239,10 +239,11 @@ After submission, provide a clear summary using the Graphite URL from the JSON o
 
 - Use `##` for main heading
 - Use `###` for section headings
-- List actions taken under "What Was Done" as bullet points
+- List actions taken under "What Was Done" as checkmark bullets (✓), with EACH item on its OWN line
 - Place the Graphite URL at the end under "View PR" section
 - Display the URL as plain text (not a bullet point, not bold)
 - Each section must be separated by a blank line
+- Each bullet point must have a newline after it
 
 **CRITICAL**: The Graphite URL MUST be the absolute last line of your output. Do not add any text, confirmations, follow-up questions, or messages after displaying the URL.
 

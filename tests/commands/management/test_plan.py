@@ -136,7 +136,6 @@ def test_create_with_both_name_and_plan_fails() -> None:
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
         global_config_ops = InMemoryGlobalConfigOps(config=global_config)
 
@@ -179,7 +178,6 @@ def test_create_rejects_reserved_name_root() -> None:
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
         global_config_ops = InMemoryGlobalConfigOps(config=global_config)
 
@@ -228,7 +226,6 @@ def test_create_rejects_reserved_name_root_case_insensitive() -> None:
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
         global_config_ops = InMemoryGlobalConfigOps(config=global_config)
 
@@ -276,7 +273,6 @@ def test_create_rejects_main_as_worktree_name() -> None:
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
         global_config_ops = InMemoryGlobalConfigOps(config=global_config)
 
@@ -324,7 +320,6 @@ def test_create_rejects_master_as_worktree_name() -> None:
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
         global_config_ops = InMemoryGlobalConfigOps(config=global_config)
 

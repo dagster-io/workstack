@@ -288,7 +288,6 @@ class SimulatedWorkstackEnv:
         *,
         use_graphite: bool = False,
         show_pr_info: bool = True,
-        show_pr_checks: bool = False,
         git_ops: FakeGitOps | None = None,
         graphite_ops: FakeGraphiteOps | None = None,
         github_ops: FakeGitHubOps | None = None,
@@ -304,7 +303,6 @@ class SimulatedWorkstackEnv:
         Args:
             use_graphite: Enable Graphite integration (default: False)
             show_pr_info: Show PR information (default: True)
-            show_pr_checks: Show PR check status (default: False)
             git_ops: Custom FakeGitOps (default: minimal git_common_dirs setup)
             graphite_ops: Custom FakeGraphiteOps (default: empty)
             github_ops: Custom FakeGitHubOps (default: empty)
@@ -325,7 +323,7 @@ class SimulatedWorkstackEnv:
                 ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops)
 
                 # Enable Graphite with custom config
-                ctx = env.build_context(use_graphite=True, show_pr_checks=True)
+                ctx = env.build_context(use_graphite=True)
             ```
         """
         # Determine repo to use (either provided or default)
@@ -396,7 +394,6 @@ class SimulatedWorkstackEnv:
             global_config = GlobalConfig(
                 use_graphite=use_graphite,
                 show_pr_info=show_pr_info,
-                show_pr_checks=show_pr_checks,
                 shell_setup_complete=False,
                 workstacks_root=self.workstacks_root,
             )
@@ -577,7 +574,6 @@ class PureWorkstackEnv:
         *,
         use_graphite: bool = False,
         show_pr_info: bool = True,
-        show_pr_checks: bool = False,
         git_ops: FakeGitOps | None = None,
         graphite_ops: FakeGraphiteOps | None = None,
         github_ops: FakeGitHubOps | None = None,
@@ -595,7 +591,6 @@ class PureWorkstackEnv:
         Args:
             use_graphite: Enable Graphite integration (default: False)
             show_pr_info: Show PR information (default: True)
-            show_pr_checks: Show PR check status (default: False)
             git_ops: Custom FakeGitOps (default: minimal git_common_dirs setup)
             graphite_ops: Custom FakeGraphiteOps (default: empty)
             github_ops: Custom FakeGitHubOps (default: empty)
@@ -614,7 +609,7 @@ class PureWorkstackEnv:
                 ctx = env.build_context()
 
                 # Enable Graphite with custom config
-                ctx = env.build_context(use_graphite=True, show_pr_checks=True)
+                ctx = env.build_context(use_graphite=True)
 
                 # With existing paths for pure mode testing
                 ctx = env.build_context(
@@ -689,7 +684,6 @@ class PureWorkstackEnv:
             global_config = GlobalConfig(
                 use_graphite=use_graphite,
                 show_pr_info=show_pr_info,
-                show_pr_checks=show_pr_checks,
                 shell_setup_complete=False,
                 workstacks_root=self.workstacks_root,
             )

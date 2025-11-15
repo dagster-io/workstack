@@ -35,7 +35,6 @@ def build_ctx(
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=True,
-        show_pr_checks=False,
     )
     return create_test_context(
         git_ops=git_ops,

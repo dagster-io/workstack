@@ -44,7 +44,6 @@ def test_sync_requires_graphite() -> None:
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=True,
-        show_pr_checks=False,
     )
 
     graphite_ops = FakeGraphiteOps()

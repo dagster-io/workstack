@@ -25,7 +25,6 @@ def test_context_initialization_and_attributes() -> None:
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=True,
-        show_pr_checks=False,
     )
 
     ctx = WorkstackContext.for_test(
@@ -53,7 +52,6 @@ def test_context_is_frozen() -> None:
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=True,
-        show_pr_checks=False,
     )
     ctx = WorkstackContext.for_test(
         git_ops=FakeGitOps(),

@@ -51,7 +51,6 @@ def test_land_stack_skips_base_update_when_already_correct() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         test_ctx = WorkstackContext.for_test(
@@ -146,7 +145,6 @@ def test_land_stack_updates_pr_bases_after_force_push() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         test_ctx = WorkstackContext.for_test(
@@ -207,7 +205,6 @@ def test_land_stack_dry_run_shows_trunk_sync_commands() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         test_ctx = WorkstackContext.for_test(

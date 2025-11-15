@@ -110,7 +110,7 @@ def _display_branch_stack(
         user_output(line)
 
 
-def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool) -> None:
+def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, offline: bool) -> None:
     """Internal function to list worktrees."""
     # Use ctx.repo if it's a valid RepoContext, otherwise discover
     if isinstance(ctx.repo, RepoContext):
@@ -143,7 +143,7 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
     prs: dict[str, PullRequestInfo] | None = None
     if ctx.global_config and ctx.global_config.show_pr_info:
         # Determine if we need CI check status
-        need_checks = show_checks or ctx.global_config.show_pr_checks
+        need_checks = not offline
 
         if need_checks:
             # Fetch from GitHub with check status (slower)
@@ -285,21 +285,25 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, show_checks: bool)
 @click.command("list")
 @click.option("--stacks", "-s", is_flag=True, help="Show graphite stacks for each worktree")
 @click.option(
-    "--checks", "-c", is_flag=True, help="Show CI check status (requires GitHub API call)"
+    "--offline", is_flag=True, help="Skip GitHub API calls for faster output (no CI check status)"
 )
 @click.pass_obj
-def list_cmd(ctx: WorkstackContext, stacks: bool, checks: bool) -> None:
-    """List worktrees with activation hints (alias: ls)."""
-    _list_worktrees(ctx, show_stacks=stacks, show_checks=checks)
+def list_cmd(ctx: WorkstackContext, stacks: bool, offline: bool) -> None:
+    """List worktrees with branches, PR status (including CI checks), and plans.
+
+    Use --offline to skip GitHub API calls for faster output."""
+    _list_worktrees(ctx, show_stacks=stacks, offline=offline)
 
 
 # Register ls as a hidden alias (won't show in help)
 @click.command("ls", hidden=True)
 @click.option("--stacks", "-s", is_flag=True, help="Show graphite stacks for each worktree")
 @click.option(
-    "--checks", "-c", is_flag=True, help="Show CI check status (requires GitHub API call)"
+    "--offline", is_flag=True, help="Skip GitHub API calls for faster output (no CI check status)"
 )
 @click.pass_obj
-def ls_cmd(ctx: WorkstackContext, stacks: bool, checks: bool) -> None:
-    """List worktrees with activation hints (alias of 'list')."""
-    _list_worktrees(ctx, show_stacks=stacks, show_checks=checks)
+def ls_cmd(ctx: WorkstackContext, stacks: bool, offline: bool) -> None:
+    """List worktrees with branches, PR status (including CI checks), and plans (alias of 'list').
+
+    Use --offline to skip GitHub API calls for faster output."""
+    _list_worktrees(ctx, show_stacks=stacks, offline=offline)

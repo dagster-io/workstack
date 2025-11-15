@@ -69,7 +69,6 @@ def config_list(ctx: WorkstackContext) -> None:
         user_output(f"  workstacks_root={ctx.global_config.workstacks_root}")
         user_output(f"  use_graphite={str(ctx.global_config.use_graphite).lower()}")
         user_output(f"  show_pr_info={str(ctx.global_config.show_pr_info).lower()}")
-        user_output(f"  show_pr_checks={str(ctx.global_config.show_pr_checks).lower()}")
     else:
         user_output("  (not configured - run 'workstack init' to create)")
 
@@ -110,7 +109,7 @@ def config_get(ctx: WorkstackContext, key: str) -> None:
     parts = key.split(".")
 
     # Handle global config keys
-    if parts[0] in ("workstacks_root", "use_graphite", "show_pr_info", "show_pr_checks"):
+    if parts[0] in ("workstacks_root", "use_graphite", "show_pr_info"):
         if ctx.global_config is None:
             config_path = ctx.global_config_ops.path()
             user_output(f"Global config not found at {config_path}")
@@ -122,8 +121,6 @@ def config_get(ctx: WorkstackContext, key: str) -> None:
             machine_output(str(ctx.global_config.use_graphite).lower())
         elif parts[0] == "show_pr_info":
             machine_output(str(ctx.global_config.show_pr_info).lower())
-        elif parts[0] == "show_pr_checks":
-            machine_output(str(ctx.global_config.show_pr_checks).lower())
         return
 
     # Handle repo config keys
@@ -165,7 +162,7 @@ def config_set(ctx: WorkstackContext, key: str, value: str) -> None:
     parts = key.split(".")
 
     # Handle global config keys
-    if parts[0] in ("workstacks_root", "use_graphite", "show_pr_info", "show_pr_checks"):
+    if parts[0] in ("workstacks_root", "use_graphite", "show_pr_info"):
         if ctx.global_config is None:
             config_path = ctx.global_config_ops.path()
             user_output(f"Global config not found at {config_path}")
@@ -179,7 +176,6 @@ def config_set(ctx: WorkstackContext, key: str, value: str) -> None:
                 use_graphite=ctx.global_config.use_graphite,
                 shell_setup_complete=ctx.global_config.shell_setup_complete,
                 show_pr_info=ctx.global_config.show_pr_info,
-                show_pr_checks=ctx.global_config.show_pr_checks,
             )
         elif parts[0] == "use_graphite":
             if value.lower() not in ("true", "false"):
@@ -190,7 +186,6 @@ def config_set(ctx: WorkstackContext, key: str, value: str) -> None:
                 use_graphite=value.lower() == "true",
                 shell_setup_complete=ctx.global_config.shell_setup_complete,
                 show_pr_info=ctx.global_config.show_pr_info,
-                show_pr_checks=ctx.global_config.show_pr_checks,
             )
         elif parts[0] == "show_pr_info":
             if value.lower() not in ("true", "false"):
@@ -201,18 +196,6 @@ def config_set(ctx: WorkstackContext, key: str, value: str) -> None:
                 use_graphite=ctx.global_config.use_graphite,
                 shell_setup_complete=ctx.global_config.shell_setup_complete,
                 show_pr_info=value.lower() == "true",
-                show_pr_checks=ctx.global_config.show_pr_checks,
-            )
-        elif parts[0] == "show_pr_checks":
-            if value.lower() not in ("true", "false"):
-                user_output(f"Invalid boolean value: {value}")
-                raise SystemExit(1)
-            new_config = GlobalConfig(
-                workstacks_root=ctx.global_config.workstacks_root,
-                use_graphite=ctx.global_config.use_graphite,
-                shell_setup_complete=ctx.global_config.shell_setup_complete,
-                show_pr_info=ctx.global_config.show_pr_info,
-                show_pr_checks=value.lower() == "true",
             )
         else:
             user_output(f"Invalid key: {key}")

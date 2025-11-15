@@ -29,7 +29,6 @@ def test_graphite_branches_text_format(tmp_path: Path) -> None:
         use_graphite=True,
         shell_setup_complete=False,
         show_pr_info=True,
-        show_pr_checks=False,
     )
     git_ops = FakeGitOps(
         git_common_dirs={tmp_path: tmp_path / ".git"},
@@ -67,7 +66,6 @@ def test_graphite_branches_json_format(tmp_path: Path) -> None:
         use_graphite=True,
         shell_setup_complete=False,
         show_pr_info=True,
-        show_pr_checks=False,
     )
     git_ops = FakeGitOps(
         git_common_dirs={tmp_path: tmp_path / ".git"},
@@ -118,7 +116,6 @@ def test_graphite_branches_empty(tmp_path: Path) -> None:
         use_graphite=True,
         shell_setup_complete=False,
         show_pr_info=True,
-        show_pr_checks=False,
     )
     git_ops = FakeGitOps(
         git_common_dirs={tmp_path: tmp_path / ".git"},
@@ -150,7 +147,6 @@ def test_graphite_branches_graphite_disabled(tmp_path: Path) -> None:
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=True,
-        show_pr_checks=False,
     )
     git_ops = FakeGitOps()
 
@@ -185,7 +181,6 @@ def test_graphite_branches_multiple_children(tmp_path: Path) -> None:
         use_graphite=True,
         shell_setup_complete=False,
         show_pr_info=True,
-        show_pr_checks=False,
     )
     git_ops = FakeGitOps(git_common_dirs={tmp_path: tmp_path / ".git"})
 
@@ -226,7 +221,6 @@ def test_graphite_branches_linear_stack(tmp_path: Path) -> None:
         use_graphite=True,
         shell_setup_complete=False,
         show_pr_info=True,
-        show_pr_checks=False,
     )
     git_ops = FakeGitOps(git_common_dirs={tmp_path: tmp_path / ".git"})
 

@@ -36,7 +36,6 @@ def test_land_stack_requires_graphite() -> None:
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         test_ctx = WorkstackContext.for_test(
@@ -77,7 +76,6 @@ def test_land_stack_fails_on_detached_head() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps()
@@ -120,7 +118,6 @@ def test_land_stack_fails_with_uncommitted_changes() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps(
@@ -192,7 +189,6 @@ def test_land_stack_ignores_root_worktree_changes_on_unrelated_branch() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps(
@@ -264,7 +260,6 @@ def test_land_stack_fails_on_trunk_branch() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps(
@@ -313,7 +308,6 @@ def test_land_stack_fails_when_branch_not_tracked() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         # Branch not in graphite stack
@@ -361,7 +355,6 @@ def test_land_stack_fails_when_pr_missing() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps(
@@ -425,7 +418,6 @@ def test_land_stack_fails_when_pr_closed() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         graphite_ops = FakeGraphiteOps(

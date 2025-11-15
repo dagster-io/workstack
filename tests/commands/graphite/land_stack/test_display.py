@@ -47,7 +47,6 @@ def test_land_stack_verbose_flag_shows_detailed_output() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         test_ctx = WorkstackContext.for_test(
@@ -108,7 +107,6 @@ def test_land_stack_dry_run_shows_submit_commands() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         test_ctx = WorkstackContext.for_test(

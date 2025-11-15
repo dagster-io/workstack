@@ -34,7 +34,6 @@ def test_land_stack_gets_branches_to_land_correctly() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         # Stack: main → feat-1 → feat-2 → feat-3
@@ -111,7 +110,6 @@ def test_land_stack_from_top_of_stack_lands_all_branches() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         # Stack: main → feat-1 → feat-2 → feat-3 → feat-4
@@ -197,7 +195,6 @@ def test_land_stack_refreshes_metadata_after_sync() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         # Stack: main → feat-1 → feat-2

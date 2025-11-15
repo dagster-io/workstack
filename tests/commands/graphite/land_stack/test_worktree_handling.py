@@ -44,7 +44,6 @@ def test_land_stack_with_down_flag_includes_flag_in_error_suggestions() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         github_ops = FakeGitHubOps(
@@ -107,7 +106,6 @@ def test_land_stack_fails_when_branches_in_multiple_worktrees() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         github_ops = FakeGitHubOps(
@@ -166,7 +164,6 @@ def test_land_stack_succeeds_when_all_branches_in_current_worktree() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         # Stack: main → feat-1 → feat-2
@@ -245,7 +242,6 @@ def test_land_stack_from_linked_worktree_on_branch_being_landed() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         github_ops = FakeGitHubOps(

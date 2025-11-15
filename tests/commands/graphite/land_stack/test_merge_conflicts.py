@@ -35,7 +35,6 @@ def test_land_stack_fails_when_first_pr_has_conflict() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         # Stack: main → feat-1 → feat-2
@@ -104,7 +103,6 @@ def test_land_stack_fails_when_middle_pr_has_conflict() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         # Stack: main → feat-1 → feat-2 → feat-3
@@ -177,7 +175,6 @@ def test_land_stack_fails_when_last_pr_has_conflict() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         # Stack: main → feat-1 → feat-2
@@ -245,7 +242,6 @@ def test_land_stack_succeeds_with_unknown_mergeability() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         # Simple stack: main → feat-1
@@ -307,7 +303,6 @@ def test_land_stack_succeeds_when_all_prs_mergeable() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         # Stack: main → feat-1 → feat-2

@@ -47,7 +47,6 @@ def test_dryrun_context_creation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 use_graphite = false
 shell_setup_complete = false
 show_pr_info = true
-show_pr_checks = false
 """,
         encoding="utf-8",
     )
@@ -89,7 +88,6 @@ def test_dryrun_read_operations_still_work(tmp_path: Path) -> None:
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=True,
-        show_pr_checks=False,
     )
 
     # Wrap fakes in dry-run wrappers

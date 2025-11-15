@@ -219,7 +219,6 @@ class WorkstackContext:
                 use_graphite=False,
                 shell_setup_complete=False,
                 show_pr_info=True,
-                show_pr_checks=False,
             )
 
         if global_config_ops is None:

@@ -55,7 +55,6 @@ def test_land_stack_force_pushes_remaining_branches_after_sync() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         test_ctx = WorkstackContext.for_test(
@@ -135,7 +134,6 @@ def test_land_stack_force_pushes_after_each_pr_landed() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         test_ctx = WorkstackContext.for_test(
@@ -223,7 +221,6 @@ def test_land_stack_no_submit_when_landing_top_branch() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         test_ctx = WorkstackContext.for_test(
@@ -316,7 +313,6 @@ def test_land_stack_switches_to_root_when_run_from_linked_worktree() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         github_ops = FakeGitHubOps(
@@ -377,7 +373,6 @@ def test_land_stack_merge_command_excludes_auto_flag() -> None:
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         test_ctx = WorkstackContext.for_test(

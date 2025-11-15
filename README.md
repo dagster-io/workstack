@@ -483,6 +483,34 @@ Core documentation for contributors:
 - **[tests/AGENTS.md](tests/AGENTS.md)** - Testing patterns and practices
 - **[docs/PUBLISHING.md](docs/PUBLISHING.md)** - Publishing to PyPI guide
 
+#### Shell Integration Output Pattern
+
+Commands that generate activation scripts should use the self-documenting `ScriptResult` API:
+
+```python
+# Generate activation script
+result = ctx.script_writer.write_activation_script(
+    script_content,
+    command_name="mycommand",
+    comment="description",
+)
+
+# Output for shell integration (--script flag)
+result.output_for_shell_integration()  # ✓ Routes to stdout
+
+# OR output for user visibility (rarely needed)
+if verbose:
+    result.output_path_for_user()  # Routes to stderr
+
+# OR defer output (advanced pattern)
+script_result = result  # Save for later
+# ... more logic ...
+if should_output:
+    script_result.output_for_shell_integration()
+```
+
+This prevents bugs where script paths are written to the wrong stream (stderr instead of stdout), causing shell integration to fail. See `src/workstack/core/script_writer.py` for detailed documentation.
+
 #### Workspace Structure
 
 This project uses a uv workspace to organize the codebase:

@@ -7,7 +7,7 @@ import click
 
 from workstack.cli.activation import render_activation_script
 from workstack.cli.core import discover_repo_context, worktree_path_for
-from workstack.cli.output import machine_output, user_output
+from workstack.cli.output import user_output
 from workstack.core.consolidation_utils import calculate_stack_range, create_consolidation_plan
 from workstack.core.context import WorkstackContext, create_context
 from workstack.core.repo_discovery import ensure_workstacks_dir
@@ -356,7 +356,7 @@ def consolidate_cmd(
             command_name="consolidate",
             comment=f"activate {name}",
         )
-        machine_output(str(result.path), nl=False)
+        result.output_for_shell_integration()
     elif not dry_run:
         # Manual cd instruction when not in script mode
         user_output(f"Switching to worktree: {click.style(name, fg='cyan', bold=True)}")

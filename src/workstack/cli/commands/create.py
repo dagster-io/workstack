@@ -501,7 +501,7 @@ def create(
             command_name="create",
             comment=f"cd to {name}",
         )
-        user_output(str(result.path), nl=False)
+        result.output_for_shell_integration()
     elif output_json:
         # Output JSON with worktree information
         json_response = _create_json_response(

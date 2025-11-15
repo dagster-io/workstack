@@ -107,7 +107,7 @@ def _activate_worktree(
         debug_log(f"{command_name.capitalize()}: Script content:\n{activation_script}")
         debug_log(f"{command_name.capitalize()}: File exists? {result.path.exists()}")
 
-        machine_output(str(result.path), nl=False)
+        result.output_for_shell_integration()
     else:
         user_output(
             "Shell integration not detected. "

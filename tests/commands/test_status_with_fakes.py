@@ -95,7 +95,6 @@ def test_status_cmd_in_subdirectory_of_worktree(tmp_path: Path) -> None:
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=False,
-        show_pr_checks=False,
     )
     ctx = create_test_context(git_ops=git_ops, global_config=global_config, cwd=subdir)
 
@@ -183,7 +182,6 @@ def test_status_cmd_not_in_git_repo(tmp_path: Path) -> None:
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=True,
-        show_pr_checks=False,
     )
 
     ctx = create_test_context(git_ops=git_ops, global_config=global_config)

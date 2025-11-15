@@ -42,7 +42,6 @@ def test_config_list_displays_global_config() -> None:
         assert "workstacks_root=" in result.output
         assert "use_graphite=true" in result.output
         assert "show_pr_info=true" in result.output
-        assert "show_pr_checks=false" in result.output
 
 
 def test_config_list_displays_repo_config() -> None:
@@ -119,7 +118,6 @@ def test_config_list_not_in_git_repo() -> None:
             workstacks_root=Path("/fake/workstacks"),
             use_graphite=False,
             show_pr_info=True,
-            show_pr_checks=False,
             shell_setup_complete=False,
         )
 

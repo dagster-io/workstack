@@ -386,7 +386,6 @@ class WorktreeScenario:
             use_graphite=self._use_graphite,
             shell_setup_complete=False,
             show_pr_info=self._show_pr_info,
-            show_pr_checks=False,
         )
 
         self.shell_ops = FakeShellOps()

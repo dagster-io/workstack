@@ -72,7 +72,6 @@ def create_test_context(
         ...     use_graphite=False,
         ...     shell_setup_complete=False,
         ...     show_pr_info=True,
-        ...     show_pr_checks=False,
         ... )
         >>> ctx = create_test_context(global_config=config)
 

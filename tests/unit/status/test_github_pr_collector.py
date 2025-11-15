@@ -66,7 +66,6 @@ def setup_collector(
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=show_pr_info,
-        show_pr_checks=False,
     )
     ctx = create_test_context(
         git_ops=git_ops,
@@ -271,7 +270,6 @@ def test_github_pr_collector_is_available(
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=show_pr_info,
-        show_pr_checks=False,
     )
     ctx = create_test_context(global_config=global_config)
     collector = GitHubPRCollector()

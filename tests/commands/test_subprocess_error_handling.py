@@ -82,7 +82,6 @@ def test_sync_displays_stderr_on_gt_sync_failure(tmp_path: Path) -> None:
         use_graphite=True,
         shell_setup_complete=False,
         show_pr_info=True,
-        show_pr_checks=False,
     )
 
     ctx = WorkstackContext.for_test(
@@ -145,7 +144,6 @@ def test_sync_shows_exit_code_when_stderr_empty(tmp_path: Path) -> None:
         use_graphite=True,
         shell_setup_complete=False,
         show_pr_info=True,
-        show_pr_checks=False,
     )
 
     ctx = WorkstackContext.for_test(

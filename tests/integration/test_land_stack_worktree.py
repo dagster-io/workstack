@@ -144,7 +144,6 @@ def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> No
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
-            show_pr_checks=False,
         )
 
         test_ctx = WorkstackContext.for_test(

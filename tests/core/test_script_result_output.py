@@ -4,6 +4,8 @@ import sys
 from io import StringIO
 from pathlib import Path
 
+import pytest
+
 from workstack.core.script_writer import ScriptResult
 
 
@@ -53,29 +55,52 @@ def test_output_path_for_user_routes_to_stderr() -> None:
         sys.stderr = old_stderr
 
 
-def test_idempotency_prevents_duplicate_output() -> None:
-    """Test that calling output methods multiple times only outputs once."""
+def test_output_for_shell_integration_raises_on_duplicate_call() -> None:
+    """Test that calling output_for_shell_integration() twice raises ValueError."""
     # Arrange
     result = ScriptResult(
         path=Path("/tmp/test_script.sh"),
         content="#!/bin/bash\necho 'test'",
     )
 
-    # Capture stdout
+    # First call should succeed
     old_stdout = sys.stdout
     sys.stdout = StringIO()
-
     try:
-        # Act - call twice
         result.output_for_shell_integration()
-        result.output_for_shell_integration()
-
-        # Assert - only one output
-        output = sys.stdout.getvalue()
-        assert output == "/tmp/test_script.sh"
-        assert output.count("/tmp/test_script.sh") == 1
     finally:
         sys.stdout = old_stdout
+
+    # Second call should raise ValueError
+    with pytest.raises(ValueError) as exc_info:
+        result.output_for_shell_integration()
+
+    assert "already called" in str(exc_info.value)
+    assert "output_for_shell_integration" in str(exc_info.value)
+
+
+def test_output_path_for_user_raises_on_duplicate_call() -> None:
+    """Test that calling output_path_for_user() twice raises ValueError."""
+    # Arrange
+    result = ScriptResult(
+        path=Path("/tmp/test_script.sh"),
+        content="#!/bin/bash\necho 'test'",
+    )
+
+    # First call should succeed
+    old_stderr = sys.stderr
+    sys.stderr = StringIO()
+    try:
+        result.output_path_for_user()
+    finally:
+        sys.stderr = old_stderr
+
+    # Second call should raise ValueError
+    with pytest.raises(ValueError) as exc_info:
+        result.output_path_for_user()
+
+    assert "already called" in str(exc_info.value)
+    assert "output_path_for_user" in str(exc_info.value)
 
 
 def test_path_access_still_works() -> None:

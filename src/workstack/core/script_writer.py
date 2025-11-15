@@ -135,8 +135,8 @@ class ScriptResult:
         support the --script flag should call this method after generating an
         activation script.
 
-        The method is idempotent - calling it multiple times will only output once
-        and log a debug warning on subsequent calls.
+        Each ScriptResult should output exactly once. Calling this method multiple
+        times on the same instance will raise ValueError.
 
         Examples:
             # Immediate output pattern (most common):
@@ -152,17 +152,17 @@ class ScriptResult:
             # ... more logic ...
             if should_activate:
                 script_result.output_for_shell_integration()
+
+        Raises:
+            ValueError: If output has already been performed for this ScriptResult.
         """
         # Idempotency check
         if self._output_performed:
-            # Lazy import to avoid circular dependency
-            from workstack.cli.debug import debug_log
-
-            debug_log(
-                "Warning: output_for_shell_integration() called multiple times. "
-                "Ignoring duplicate call."
+            raise ValueError(
+                "output_for_shell_integration() was already called for this ScriptResult. "
+                "Each ScriptResult should output exactly once. "
+                "If you need deferred output, save the result and call the method only when ready."
             )
-            return
 
         # Lazy import to avoid circular dependency (cli depends on core)
         from workstack.cli.output import machine_output
@@ -181,24 +181,25 @@ class ScriptResult:
         needed - most commands either use shell integration (stdout) or don't
         output the path at all.
 
-        The method is idempotent - calling it multiple times will only output once
-        and log a debug warning on subsequent calls.
+        Each ScriptResult should output exactly once. Calling this method multiple
+        times on the same instance will raise ValueError.
 
         Examples:
             # Verbose mode showing script location:
             result = ctx.script_writer.write_activation_script(...)
             if verbose:
                 result.output_path_for_user()
+
+        Raises:
+            ValueError: If output has already been performed for this ScriptResult.
         """
         # Idempotency check
         if self._output_performed:
-            # Lazy import to avoid circular dependency
-            from workstack.cli.debug import debug_log
-
-            debug_log(
-                "Warning: output_path_for_user() called multiple times. Ignoring duplicate call."
+            raise ValueError(
+                "output_path_for_user() was already called for this ScriptResult. "
+                "Each ScriptResult should output exactly once. "
+                "If you need deferred output, save the result and call the method only when ready."
             )
-            return
 
         # Lazy import to avoid circular dependency (cli depends on core)
         from workstack.cli.output import user_output

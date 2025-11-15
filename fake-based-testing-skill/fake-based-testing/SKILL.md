@@ -24,6 +24,7 @@ To determine the testing approach:
 ### Step 1: Identify External Dependencies
 
 Scan the code for external I/O operations:
+
 - HTTP/REST API calls
 - Database queries
 - Email/SMS sending
@@ -46,6 +47,7 @@ class EmailOps(ABC):
 ### Step 3: Implement Real and Fake Versions
 
 Create both Real (production) and Fake (testing) implementations:
+
 - **RealOps**: Performs actual I/O operations
 - **FakeOps**: In-memory simulation with mutation tracking
 
@@ -81,13 +83,13 @@ def test_real_email_ops():
 
 ## When to Use Fakes vs Mocks
 
-| Use Fakes for | Use Mocks for |
-|---------------|---------------|
-| Business logic testing | Verifying Real implementation calls |
-| State change verification | Exact argument verification |
-| Error condition testing | Call count/order verification |
-| Integration testing | Testing interaction patterns |
-| Fast, deterministic tests | Simulating specific failures |
+| Use Fakes for             | Use Mocks for                       |
+| ------------------------- | ----------------------------------- |
+| Business logic testing    | Verifying Real implementation calls |
+| State change verification | Exact argument verification         |
+| Error condition testing   | Call count/order verification       |
+| Integration testing       | Testing interaction patterns        |
+| Fast, deterministic tests | Simulating specific failures        |
 
 ## Testing Patterns
 

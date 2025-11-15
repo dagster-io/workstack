@@ -1,6 +1,7 @@
 """Jump command - find and switch to a worktree by branch name."""
 
 import shlex
+import subprocess
 from pathlib import Path
 
 import click
@@ -145,17 +146,37 @@ def jump_cmd(ctx: WorkstackContext, branch: str, script: bool) -> None:
 
     # Handle three cases: no match, one match, multiple matches
     if len(matching_worktrees) == 0:
-        # No worktrees have this branch checked out - check if branch exists in git
+        # No worktrees have this branch checked out - check if branch exists
         local_branches = ctx.git_ops.list_local_branches(repo.root)
 
         if branch not in local_branches:
-            # Branch doesn't exist in git - error with helpful message
-            user_output(
-                f"Error: Branch '{branch}' does not exist.\n"
-                f"To create a new branch and worktree, run:\n"
-                f"  workstack create --branch {branch}"
-            )
-            raise SystemExit(1)
+            # Not a local branch - check if remote branch exists
+            remote_branches = ctx.git_ops.list_remote_branches(repo.root)
+            remote_ref = f"origin/{branch}"
+
+            if remote_ref not in remote_branches:
+                # Branch doesn't exist locally or on origin
+                user_output(
+                    f"Error: Branch '{branch}' does not exist.\n"
+                    f"To create a new branch and worktree, run:\n"
+                    f"  workstack create --branch {branch}"
+                )
+                raise SystemExit(1)
+
+            # Remote branch exists - create local tracking branch
+            user_output(f"Branch '{branch}' exists on origin, creating local tracking branch...")
+            try:
+                ctx.git_ops.create_tracking_branch(repo.root, branch, remote_ref)
+            except subprocess.CalledProcessError as e:
+                user_output(
+                    f"Error: Failed to create local tracking branch from {remote_ref}\n"
+                    f"Details: {e.stderr}\n"
+                    f"Suggested action:\n"
+                    f"  1. Check git status and resolve any issues\n"
+                    f"  2. Manually create branch: git branch --track {branch} {remote_ref}\n"
+                    f"  3. Or use: workstack create --branch {branch}"
+                )
+                raise SystemExit(1) from e
 
         # Branch exists but not checked out - auto-create worktree
         user_output(f"Branch '{branch}' not checked out, creating worktree...")

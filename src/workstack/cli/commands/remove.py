@@ -227,7 +227,8 @@ def _remove_worktree(
                 if e.returncode == 1 and not force:
                     # User declined - this is expected behavior, not an error
                     user_output(
-                        f"⭕ Skipped deletion of branch: {branch_text} (user declined or not eligible)"
+                        f"⭕ Skipped deletion of branch: {branch_text} "
+                        f"(user declined or not eligible)"
                     )
                     user_output("Remaining branches in stack were not deleted.")
                     break  # Stop processing remaining branches
@@ -235,17 +236,18 @@ def _remove_worktree(
                     # Other error (branch doesn't exist, git failure, etc.)
                     error_detail = e.stderr.strip() if e.stderr else f"exit code {e.returncode}"
                     user_output(
-                        click.style("Error: ", fg="red") +
-                        f"Failed to delete branch {branch_text}: {error_detail}"
+                        click.style("Error: ", fg="red")
+                        + f"Failed to delete branch {branch_text}: {error_detail}"
                     )
                     raise SystemExit(1) from e
             except FileNotFoundError:
                 # gt command not found
                 user_output(
-                    click.style("Error: ", fg="red") +
-                    "'gt' command not found. Install Graphite CLI: brew install withgraphite/tap/graphite"
+                    click.style("Error: ", fg="red")
+                    + "'gt' command not found. Install Graphite CLI: "
+                    "brew install withgraphite/tap/graphite"
                 )
-                raise SystemExit(1)
+                raise SystemExit(1) from None
 
     if not dry_run:
         path_text = click.style(str(wt_path), fg="green")

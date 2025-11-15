@@ -80,6 +80,7 @@ class FakeGitOps(GitOps):
         existing_paths: set[Path] | None = None,
         file_contents: dict[Path, str] | None = None,
         delete_branch_raises: dict[str, Exception] | None = None,
+        local_branches: dict[Path, list[str]] | None = None,
     ) -> None:
         """Create FakeGitOps with pre-configured state.
 
@@ -98,6 +99,7 @@ class FakeGitOps(GitOps):
             existing_paths: Set of paths that should be treated as existing (for pure mode)
             file_contents: Mapping of path -> file content (for commands that read files)
             delete_branch_raises: Mapping of branch name -> exception to raise on delete
+            local_branches: Mapping of repo_root -> list of local branch names
         """
         self._worktrees = worktrees or {}
         self._current_branches = current_branches or {}
@@ -113,6 +115,7 @@ class FakeGitOps(GitOps):
         self._existing_paths = existing_paths or set()
         self._file_contents = file_contents or {}
         self._delete_branch_raises = delete_branch_raises or {}
+        self._local_branches = local_branches or {}
 
         # Mutation tracking
         self._deleted_branches: list[str] = []
@@ -163,6 +166,10 @@ class FakeGitOps(GitOps):
             return self._trunk_branches[repo_root]
         # Default to "main" if not configured
         return "main"
+
+    def list_local_branches(self, repo_root: Path) -> list[str]:
+        """List all local branch names in the repository."""
+        return self._local_branches.get(repo_root, [])
 
     def get_git_common_dir(self, cwd: Path) -> Path | None:
         """Get the common git directory."""

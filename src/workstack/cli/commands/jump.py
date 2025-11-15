@@ -6,12 +6,22 @@ from pathlib import Path
 import click
 
 from workstack.cli.activation import render_activation_script
-from workstack.cli.core import discover_repo_context
+from workstack.cli.commands.create import (
+    add_worktree,
+    make_env_content,
+    run_commands_in_worktree,
+)
+from workstack.cli.config import LoadedConfig
+from workstack.cli.core import discover_repo_context, worktree_path_for
 from workstack.cli.graphite import find_worktrees_containing_branch
 from workstack.cli.output import user_output
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
-from workstack.core.repo_discovery import RepoContext
+from workstack.core.naming_utils import (
+    ensure_unique_worktree_name,
+    sanitize_worktree_name,
+)
+from workstack.core.repo_discovery import RepoContext, ensure_workstacks_dir
 
 
 def _format_worktree_info(wt: WorktreeInfo, repo_root: Path) -> str:
@@ -135,13 +145,72 @@ def jump_cmd(ctx: WorkstackContext, branch: str, script: bool) -> None:
 
     # Handle three cases: no match, one match, multiple matches
     if len(matching_worktrees) == 0:
-        # No worktrees have this branch checked out
-        user_output(
-            f"Error: Branch '{branch}' is not checked out in any worktree.\n"
-            f"To create a worktree with this branch, run:\n"
-            f"  workstack create --from-branch {branch}"
+        # No worktrees have this branch checked out - check if branch exists in git
+        local_branches = ctx.git_ops.list_local_branches(repo.root)
+
+        if branch not in local_branches:
+            # Branch doesn't exist in git - error with helpful message
+            user_output(
+                f"Error: Branch '{branch}' does not exist.\n"
+                f"To create a new branch and worktree, run:\n"
+                f"  workstack create --branch {branch}"
+            )
+            raise SystemExit(1)
+
+        # Branch exists but not checked out - auto-create worktree
+        user_output(f"Branch '{branch}' not checked out, creating worktree...")
+
+        # Load local config for .env template and post-create commands
+        config = (
+            ctx.local_config
+            if ctx.local_config is not None
+            else LoadedConfig(env={}, post_create_commands=[], post_create_shell=None)
         )
-        raise SystemExit(1)
+
+        # Ensure workstacks directory exists
+        workstacks_dir = ensure_workstacks_dir(repo)
+
+        # Generate and ensure unique worktree name
+        name = sanitize_worktree_name(branch)
+        name = ensure_unique_worktree_name(name, workstacks_dir)
+
+        # Calculate worktree path
+        wt_path = worktree_path_for(workstacks_dir, name)
+
+        # Create worktree from existing branch
+        add_worktree(
+            ctx,
+            repo.root,
+            wt_path,
+            branch=branch,
+            ref=None,
+            use_existing_branch=True,
+            use_graphite=False,
+        )
+
+        user_output(click.style(f"✓ Created worktree: {name}", fg="green"))
+
+        # Write .env file if template exists
+        env_content = make_env_content(
+            config, worktree_path=wt_path, repo_root=repo.root, name=name
+        )
+        if env_content:
+            env_path = wt_path / ".env"
+            env_path.write_text(env_content, encoding="utf-8")
+
+        # Run post-create commands
+        if config.post_create_commands:
+            run_commands_in_worktree(
+                commands=config.post_create_commands,
+                worktree_path=wt_path,
+                shell=config.post_create_shell,
+            )
+
+        # Refresh worktree list to include the newly created worktree
+        worktrees = ctx.git_ops.list_worktrees(repo.root)
+        matching_worktrees = find_worktrees_containing_branch(ctx, repo.root, worktrees, branch)
+
+        # Fall through to jump to the newly created worktree
 
     if len(matching_worktrees) == 1:
         # Exactly one worktree contains this branch

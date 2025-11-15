@@ -5,7 +5,7 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from tests.fakes.gitops import FakeGitOps
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import pure_workstack_env, simulated_workstack_env
 from workstack.cli.cli import cli
 from workstack.core.gitops import WorktreeInfo
 from workstack.core.repo_discovery import RepoContext
@@ -66,7 +66,7 @@ def test_jump_to_branch_in_single_worktree() -> None:
 
 
 def test_jump_to_branch_not_found() -> None:
-    """Test jumping to a branch that is not checked out in any worktree."""
+    """Test jumping to a branch that doesn't exist in git."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         work_dir = env.workstacks_root / env.cwd.name
@@ -80,6 +80,8 @@ def test_jump_to_branch_not_found() -> None:
             },
             current_branches={env.cwd: "main"},
             git_common_dirs={env.cwd: env.git_dir},
+            # nonexistent-branch is NOT in this list
+            local_branches={env.cwd: ["main", "feature-1"]},
         )
 
         # Create RepoContext to avoid filesystem checks
@@ -97,32 +99,27 @@ def test_jump_to_branch_not_found() -> None:
         )
 
         assert result.exit_code == 1
-        assert "is not checked out in any worktree" in result.stderr
-        assert "workstack create --from-branch nonexistent-branch" in result.stderr
+        assert "does not exist" in result.stderr
+        assert "workstack create --branch nonexistent-branch" in result.stderr
 
 
-def test_jump_to_branch_in_stack_but_not_checked_out() -> None:
-    """Test that jump fails when branch exists in repo but is not checked out.
-
-    With exact-match behavior, branches that exist in Graphite stacks but are not
-    directly checked out should fail with appropriate error message.
-    """
+def test_jump_creates_worktree_for_unchecked_branch() -> None:
+    """Test that jump auto-creates worktree when branch exists but is not checked out."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with simulated_workstack_env(runner) as env:
         work_dir = env.workstacks_root / env.cwd.name
-        wt1 = work_dir / "feature-1-wt"
 
-        # feature-1 is checked out, but feature-base is not
-        # (even though it might exist in the stack)
+        # Branch 'existing-branch' exists in git but is not checked out
         git_ops = FakeGitOps(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=wt1, branch="feature-1"),
                 ]
             },
             current_branches={env.cwd: "main"},
             git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main", "existing-branch"]},  # exists in git
+            default_branches={env.cwd: "main"},
         )
 
         # Create RepoContext to avoid filesystem checks
@@ -134,11 +131,81 @@ def test_jump_to_branch_in_stack_but_not_checked_out() -> None:
 
         test_ctx = env.build_context(git_ops=git_ops, repo=repo)
 
-        # Jump to feature-base which exists in repo but is not checked out in any worktree
-        result = runner.invoke(cli, ["jump", "feature-base"], obj=test_ctx, catch_exceptions=False)
+        # Jump to branch that exists but is not checked out
+        result = runner.invoke(
+            cli, ["jump", "existing-branch", "--script"], obj=test_ctx, catch_exceptions=False
+        )
 
-        assert result.exit_code == 1
-        assert "is not checked out in any worktree" in result.stderr
+        if result.exit_code != 0:
+            print(f"stderr: {result.stderr}")
+            print(f"stdout: {result.stdout}")
+
+        # Should succeed and create worktree
+        assert result.exit_code == 0
+        assert "creating worktree" in result.stderr
+        assert "✓ Created worktree" in result.stderr
+
+        # Verify worktree was created
+        assert len(git_ops.added_worktrees) == 1
+        added_wt_path, added_wt_branch = git_ops.added_worktrees[0]
+        assert added_wt_branch == "existing-branch"
+
+        # Should generate activation script (output path to stdout)
+        assert result.stdout.strip() != ""
+        script_path = Path(result.stdout.strip())
+        assert script_path.exists()
+
+
+def test_jump_to_branch_in_stack_but_not_checked_out() -> None:
+    """Test that jump auto-creates worktree when branch exists in repo but is not checked out.
+
+    With auto-creation behavior, branches that exist in Graphite stacks but are not
+    directly checked out will have a worktree created automatically.
+    """
+    runner = CliRunner()
+    with simulated_workstack_env(runner) as env:
+        work_dir = env.workstacks_root / env.cwd.name
+        wt1 = work_dir / "feature-1-wt"
+
+        # feature-1 is checked out, but feature-base is not
+        # (even though it exists in git)
+        git_ops = FakeGitOps(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
+                    WorktreeInfo(path=wt1, branch="feature-1"),
+                ]
+            },
+            current_branches={env.cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main", "feature-1", "feature-base"]},  # feature-base exists
+            default_branches={env.cwd: "main"},
+        )
+
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=work_dir,
+        )
+
+        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
+
+        # Jump to feature-base which exists in repo but is not checked out
+        result = runner.invoke(
+            cli, ["jump", "feature-base", "--script"], obj=test_ctx, catch_exceptions=False
+        )
+
+        if result.exit_code != 0:
+            print(f"stderr: {result.stderr}")
+            print(f"stdout: {result.stdout}")
+
+        # Should succeed and create worktree
+        assert result.exit_code == 0
+        assert "creating worktree" in result.stderr
+
+        # Verify worktree was created
+        assert len(git_ops.added_worktrees) == 1
 
 
 def test_jump_works_without_graphite() -> None:

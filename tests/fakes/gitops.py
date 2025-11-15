@@ -81,6 +81,7 @@ class FakeGitOps(GitOps):
         file_contents: dict[Path, str] | None = None,
         delete_branch_raises: dict[str, Exception] | None = None,
         local_branches: dict[Path, list[str]] | None = None,
+        remote_branches: dict[Path, list[str]] | None = None,
     ) -> None:
         """Create FakeGitOps with pre-configured state.
 
@@ -100,6 +101,8 @@ class FakeGitOps(GitOps):
             file_contents: Mapping of path -> file content (for commands that read files)
             delete_branch_raises: Mapping of branch name -> exception to raise on delete
             local_branches: Mapping of repo_root -> list of local branch names
+            remote_branches: Mapping of repo_root -> list of remote branch names
+                (with prefix like 'origin/branch-name')
         """
         self._worktrees = worktrees or {}
         self._current_branches = current_branches or {}
@@ -116,6 +119,7 @@ class FakeGitOps(GitOps):
         self._file_contents = file_contents or {}
         self._delete_branch_raises = delete_branch_raises or {}
         self._local_branches = local_branches or {}
+        self._remote_branches = remote_branches or {}
 
         # Mutation tracking
         self._deleted_branches: list[str] = []
@@ -170,6 +174,18 @@ class FakeGitOps(GitOps):
     def list_local_branches(self, repo_root: Path) -> list[str]:
         """List all local branch names in the repository."""
         return self._local_branches.get(repo_root, [])
+
+    def list_remote_branches(self, repo_root: Path) -> list[str]:
+        """List all remote branch names in the repository (fake implementation)."""
+        return self._remote_branches.get(repo_root, [])
+
+    def create_tracking_branch(self, repo_root: Path, branch: str, remote_ref: str) -> None:
+        """Create a local tracking branch from a remote branch (fake implementation)."""
+        # In the fake, we simulate branch creation by adding to local branches
+        if repo_root not in self._local_branches:
+            self._local_branches[repo_root] = []
+        if branch not in self._local_branches[repo_root]:
+            self._local_branches[repo_root].append(branch)
 
     def get_git_common_dir(self, cwd: Path) -> Path | None:
         """Get the common git directory."""

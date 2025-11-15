@@ -111,6 +111,35 @@ class GitOps(ABC):
         ...
 
     @abstractmethod
+    def list_remote_branches(self, repo_root: Path) -> list[str]:
+        """List all remote branch names in the repository.
+
+        Returns branch names in format 'origin/branch-name', 'upstream/feature', etc.
+        Only includes refs from configured remotes, not local branches.
+
+        Args:
+            repo_root: Path to the repository root
+
+        Returns:
+            List of remote branch names with remote prefix (e.g., 'origin/main')
+        """
+        ...
+
+    @abstractmethod
+    def create_tracking_branch(self, repo_root: Path, branch: str, remote_ref: str) -> None:
+        """Create a local tracking branch from a remote branch.
+
+        Args:
+            repo_root: Path to the repository root
+            branch: Name for the local branch (e.g., 'feature-remote')
+            remote_ref: Remote reference to track (e.g., 'origin/feature-remote')
+
+        Raises:
+            subprocess.CalledProcessError: If git command fails
+        """
+        ...
+
+    @abstractmethod
     def get_git_common_dir(self, cwd: Path) -> Path | None:
         """Get the common git directory."""
         ...
@@ -541,6 +570,27 @@ class RealGitOps(GitOps):
         branches = [line.strip() for line in result.stdout.strip().split("\n") if line.strip()]
         return branches
 
+    def list_remote_branches(self, repo_root: Path) -> list[str]:
+        """List all remote branch names in the repository."""
+        result = subprocess.run(
+            ["git", "branch", "-r", "--format=%(refname:short)"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return [line.strip() for line in result.stdout.strip().split("\n") if line.strip()]
+
+    def create_tracking_branch(self, repo_root: Path, branch: str, remote_ref: str) -> None:
+        """Create a local tracking branch from a remote branch."""
+        subprocess.run(
+            ["git", "branch", "--track", branch, remote_ref],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
     def get_git_common_dir(self, cwd: Path) -> Path | None:
         """Get the common git directory."""
         result = subprocess.run(
@@ -918,6 +968,14 @@ class NoopGitOps(GitOps):
         """List local branches (read-only, delegates to wrapped)."""
         return self._wrapped.list_local_branches(repo_root)
 
+    def list_remote_branches(self, repo_root: Path) -> list[str]:
+        """List remote branches (read-only, delegates to wrapped)."""
+        return self._wrapped.list_remote_branches(repo_root)
+
+    def create_tracking_branch(self, repo_root: Path, branch: str, remote_ref: str) -> None:
+        """Create tracking branch (delegates to wrapped - considered read-only for dry-run)."""
+        return self._wrapped.create_tracking_branch(repo_root, branch, remote_ref)
+
     def get_git_common_dir(self, cwd: Path) -> Path | None:
         """Get git common directory (read-only, delegates to wrapped)."""
         return self._wrapped.get_git_common_dir(cwd)
@@ -1083,6 +1141,14 @@ class PrintingGitOps(PrintingOpsBase, GitOps):
     def list_local_branches(self, repo_root: Path) -> list[str]:
         """List local branches (read-only, no printing)."""
         return self._wrapped.list_local_branches(repo_root)
+
+    def list_remote_branches(self, repo_root: Path) -> list[str]:
+        """List remote branches (read-only, no printing)."""
+        return self._wrapped.list_remote_branches(repo_root)
+
+    def create_tracking_branch(self, repo_root: Path, branch: str, remote_ref: str) -> None:
+        """Create tracking branch (read-only, no printing)."""
+        return self._wrapped.create_tracking_branch(repo_root, branch, remote_ref)
 
     def get_git_common_dir(self, cwd: Path) -> Path | None:
         """Get git common directory (read-only, no printing)."""

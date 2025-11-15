@@ -371,3 +371,98 @@ def test_jump_with_multiple_worktrees_same_branch() -> None:
         # Should show error about multiple worktrees
         assert result.exit_code == 1
         assert "exists in multiple worktrees" in result.stderr
+
+
+def test_jump_creates_worktree_for_remote_only_branch() -> None:
+    """Test jump auto-creates worktree when branch exists only on origin."""
+    runner = CliRunner()
+    with simulated_workstack_env(runner) as env:
+        work_dir = env.workstacks_root / env.cwd.name
+
+        # Branch exists on origin but not locally
+        git_ops = FakeGitOps(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
+                ]
+            },
+            current_branches={env.cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},  # feature-remote NOT here
+            remote_branches={env.cwd: ["origin/main", "origin/feature-remote"]},  # But here
+            default_branches={env.cwd: "main"},
+        )
+
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=work_dir,
+        )
+
+        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
+
+        # Jump to remote branch
+        result = runner.invoke(
+            cli, ["jump", "feature-remote", "--script"], obj=test_ctx, catch_exceptions=False
+        )
+
+        if result.exit_code != 0:
+            print(f"stderr: {result.stderr}")
+            print(f"stdout: {result.stdout}")
+
+        # Should succeed with worktree creation
+        assert result.exit_code == 0, f"Expected success, got: {result.stderr}"
+        assert "exists on origin, creating local tracking branch" in result.stderr
+        assert "creating worktree" in result.stderr
+        assert "✓ Created worktree" in result.stderr
+
+        # Verify worktree was created
+        assert len(git_ops.added_worktrees) == 1
+        added_wt_path, added_wt_branch = git_ops.added_worktrees[0]
+        assert added_wt_branch == "feature-remote"
+
+        # Should generate activation script (output path to stdout)
+        assert result.stdout.strip() != ""
+        script_path = Path(result.stdout.strip())
+        assert script_path.exists()
+
+
+def test_jump_fails_when_branch_not_on_origin() -> None:
+    """Test jump shows error when branch doesn't exist locally or on origin."""
+    runner = CliRunner()
+    with pure_workstack_env(runner) as env:
+        work_dir = env.workstacks_root / env.cwd.name
+
+        # Branch doesn't exist locally or remotely
+        git_ops = FakeGitOps(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
+                ]
+            },
+            current_branches={env.cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            remote_branches={env.cwd: ["origin/main"]},  # nonexistent-branch NOT here
+            default_branches={env.cwd: "main"},
+        )
+
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=work_dir,
+        )
+
+        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
+
+        # Jump to nonexistent branch
+        result = runner.invoke(
+            cli, ["jump", "nonexistent-branch", "--script"], obj=test_ctx, catch_exceptions=False
+        )
+
+        # Should fail with error message
+        assert result.exit_code == 1
+        assert "does not exist" in result.stderr
+        assert "workstack create --branch nonexistent-branch" in result.stderr

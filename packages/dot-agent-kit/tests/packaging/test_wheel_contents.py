@@ -10,11 +10,12 @@ from pathlib import Path
 import pytest
 
 
-@pytest.fixture
-def build_wheel(tmp_path: Path) -> Path:
-    """Build the wheel in a temporary directory and return wheel path."""
+@pytest.fixture(scope="session")
+def build_wheel(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Build the wheel once per test session and return wheel path."""
     # Get the package directory (dot-agent-kit)
     package_dir = Path(__file__).parent.parent.parent
+    tmp_path = tmp_path_factory.mktemp("wheel_build")
     dist_dir = tmp_path / "dist"
     dist_dir.mkdir()
 

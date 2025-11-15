@@ -1,5 +1,88 @@
 # Test Architecture: Coarse-Grained Dependency Injection
 
+## Running Tests
+
+### Quick Start
+
+```bash
+# Fast unit tests (recommended for development iteration)
+make test
+
+# Integration tests only (slower, real I/O)
+make test-integration
+
+# All tests (unit + integration, comprehensive validation)
+make test-all
+```
+
+### Test Targets Explained
+
+| Target                      | What It Runs                                                         | Speed       | Use Case                                                          |
+| --------------------------- | -------------------------------------------------------------------- | ----------- | ----------------------------------------------------------------- |
+| **`make test`**             | Unit tests only<br>(`tests/unit/`, `tests/commands/`, `tests/core/`) | ⚡⚡⚡ Fast | **Default for development**<br>Quick feedback during coding       |
+| **`make test-integration`** | Integration tests only<br>(`tests/integration/`)                     | 🐌 Slower   | Verify external tool integration<br>(git, filesystem, subprocess) |
+| **`make test-all`**         | Both unit + integration<br>(comprehensive)                           | 🐌 Slowest  | Pre-commit validation<br>CI runs this target                      |
+
+### Test Categories
+
+#### Unit Tests (~90-95% of test suite)
+
+**Characteristics:**
+
+- ⚡ Very fast (in-memory, uses fakes)
+- Uses `FakeGitOps`, `FakeGraphiteOps`, `FakeGitHubOps`, `FakeShellOps`
+- Uses `CliRunner` for CLI tests (NOT subprocess)
+- Uses `pure_workstack_env()` (sentinel paths) or `simulated_workstack_env()` (isolated filesystem)
+- No external system calls
+
+**Locations:**
+
+- `tests/unit/` - Unit tests of core components
+- `tests/commands/` - CLI command tests using fakes
+- `tests/core/` - Business logic tests using fakes
+
+**Run with:** `make test`
+
+#### Integration Tests (~5-10% of test suite)
+
+**Characteristics:**
+
+- 🐌 Slower (real filesystem I/O, subprocess calls)
+- Uses `RealGitOps`, `RealGraphiteOps`, etc.
+- Uses `tmp_path` pytest fixture for real directories
+- Calls actual git commands via `subprocess.run()`
+- Tests that abstraction layers correctly wrap external tools
+
+**Location:** `tests/integration/`
+
+**Run with:** `make test-integration`
+
+### CI Configuration
+
+**CI runs comprehensive validation:**
+
+```bash
+make all-ci  # Runs: lint, format-check, prettier-check, md-check, pyright, test-all, check
+```
+
+This ensures both unit and integration tests pass before merging.
+
+### Directory-Based Filtering
+
+Tests are organized by type using directory structure (no pytest markers needed):
+
+```
+tests/
+├── unit/              # Unit tests (fakes, in-memory)
+├── integration/       # Integration tests (real I/O)
+├── commands/          # CLI command tests (unit tests with fakes)
+└── core/              # Core logic tests (unit tests with fakes)
+```
+
+**Rationale:** Directory-based filtering is simpler and doesn't require modifying test files with markers. The test organization already reflects the unit/integration split.
+
+---
+
 ## 🔴 CRITICAL: NEVER Use Hardcoded Paths in Tests
 
 **ABSOLUTELY FORBIDDEN** patterns in test code:
@@ -641,7 +724,7 @@ def test_dryrun_prevents_mutations() -> None:
 
 **Benefits:**
 
-- 3-5× faster execution (no subprocess overhead)
+- Faster execution (no subprocess overhead)
 - Better error messages (Python stack traces)
 - Easier debugging (single process)
 - Works with dependency injection and fakes
@@ -856,14 +939,14 @@ def test_cli_installation(tmp_path: Path) -> None:
 **❌ Using subprocess for command tests:**
 
 ```python
-# SLOW - Spawns Python interpreter for each call (0.1-0.2s overhead each)
+# SLOW - Spawns Python interpreter for each call
 subprocess.run(["uv", "run", "workstack", "create", "feature"])
 ```
 
 **✅ Using CliRunner for command tests:**
 
 ```python
-# FAST - Direct function call with Click harness (3-5× faster)
+# FAST - Direct function call with Click harness
 runner.invoke(cli, ["create", "feature"])
 ```
 
@@ -902,22 +985,6 @@ with simulated_workstack_env(runner) as env:
     test_ctx = WorkstackContext.for_test(git_ops=git_ops, cwd=env.cwd)
 ```
 
-### Performance Comparison
-
-**Before optimization (subprocess pattern):**
-
-- `test_complete_worktree_names_without_context`: 0.47s
-- `test_create_rejects_reserved_name`: 0.44s
-- `test_current_returns_worktree_name`: 0.33s
-- Top 30 tests: ~7-8 seconds combined
-
-**After optimization (CliRunner pattern):**
-
-- `test_complete_worktree_names_without_context`: ~0.12s (75% faster)
-- `test_create_rejects_reserved_name`: ~0.10s (77% faster)
-- `test_current_returns_worktree_name`: ~0.10s (70% faster)
-- Top 30 tests: ~2-3 seconds combined (60-70% faster)
-
 ### Migration Checklist
 
 When converting tests from subprocess to CliRunner:
@@ -934,7 +1001,7 @@ When converting tests from subprocess to CliRunner:
 - [ ] Replace `subprocess.run([...])` with `runner.invoke(cli, [...], obj=test_ctx)`
 - [ ] Replace `result.returncode` with `result.exit_code`
 - [ ] Replace stdout/stderr parsing with `result.output`
-- [ ] Run tests and verify performance improvement with `pytest --durations=10`
+- [ ] Run tests and verify behavior with `pytest`
 
 **Alternative approach (using cli_test_repo() for real git):**
 

@@ -143,7 +143,7 @@ class DataProcessor:
     Capabilities:
     - Input: CSV files up to 100MB
     - Output: JSON summary statistics
-    - Performance: ~1000 rows/second
+    - Performance: Suitable for batch processing
     """
 ```
 

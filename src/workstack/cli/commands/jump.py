@@ -8,7 +8,7 @@ import click
 from workstack.cli.activation import render_activation_script
 from workstack.cli.core import discover_repo_context
 from workstack.cli.graphite import find_worktrees_containing_branch
-from workstack.cli.output import machine_output, user_output
+from workstack.cli.output import user_output
 from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
 from workstack.core.repo_discovery import RepoContext
@@ -91,7 +91,7 @@ def _perform_jump(
             command_name="jump",
             comment=f"jump to {branch}",
         )
-        machine_output(str(result.path), nl=False)
+        result.output_for_shell_integration()
     else:
         # No shell integration available, show manual instructions
         user_output(

@@ -12,9 +12,9 @@ import click
 @click.command()
 def devrun_reminder_hook() -> None:
     """Output devrun agent reminder for UserPromptSubmit hook."""
-    click.echo("<reminder>")
-    click.echo("🛠️ Use devrun agent for pytest, pyright, ruff, prettier, make, gt commands")
-    click.echo("</reminder>")
+    click.echo(
+        "🛠️ Use devrun agent for: pytest, pyright, ruff, prettier, make, gt (with or without uv run)"
+    )
 
 
 if __name__ == "__main__":

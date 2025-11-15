@@ -98,24 +98,29 @@ Find and switch to a worktree by branch name:
 ```bash
 workstack jump feature/user-auth    # Finds worktree containing this branch
 workstack jump hotfix/critical-bug  # Works with any branch in your stacks
+workstack jump origin-branch        # Auto-creates from remote if not local
 ```
 
 **How it works:**
 
 - Searches all worktrees to find which one contains the target branch in its Graphite stack
-- Automatically switches to that worktree and checks out the branch
+- If not found in any worktree, checks if branch exists locally
+- If not local, checks if `origin/branch` exists remotely
+- Automatically creates tracking branch and worktree if needed
 - No need to remember which worktree has which branch
 
 **Requirements:**
 
-- Graphite must be enabled (`workstack config set use_graphite true`)
-- Branch must exist in at least one worktree's stack
+- Graphite must be enabled for stack-based search (`workstack config set use_graphite true`)
+- Branch auto-creation works without Graphite
 
 **Behavior:**
 
-- **One match**: Switches to the worktree and checks out the branch
-- **Multiple matches**: Shows all worktrees containing the branch (choose manually with `workstack switch`)
-- **No match**: Shows error with suggestion to create worktree
+- **Branch checked out in one worktree**: Switches to that worktree and checks out the branch
+- **Branch checked out in multiple worktrees**: Shows all worktrees (choose manually with `workstack switch`)
+- **Branch exists locally but not checked out**: Auto-creates worktree for the branch
+- **Branch exists on origin but not locally**: Auto-creates tracking branch and worktree
+- **Branch doesn't exist anywhere**: Shows error with suggestion to create new branch
 
 Example workflow:
 
@@ -124,8 +129,15 @@ Example workflow:
 # - worktree "feature-work": main -> feature-1 -> feature-2 -> feature-3
 # - worktree "bugfix-work": main -> bugfix-1 -> bugfix-2
 
+# Jump to existing branch in worktree
 workstack jump feature-2    # → Switches to "feature-work" and checks out feature-2
 workstack jump bugfix-1     # → Switches to "bugfix-work" and checks out bugfix-1
+
+# Jump to unchecked local branch
+workstack jump feature-4    # → Auto-creates worktree for feature-4
+
+# Jump to remote-only branch (like git checkout origin/branch)
+workstack jump hotfix-123   # → Creates tracking branch + worktree from origin/hotfix-123
 ```
 
 #### Stack Navigation with Switch

@@ -121,14 +121,18 @@ def _perform_jump(
 def jump_cmd(ctx: WorkstackContext, branch: str, script: bool) -> None:
     """Jump to BRANCH by finding and switching to its worktree.
 
-    This command finds which worktree has the specified branch
-    checked out and switches to it.
+    This command finds which worktree has the specified branch checked out
+    and switches to it. If the branch exists but isn't checked out anywhere,
+    a worktree is automatically created. If the branch exists on origin but
+    not locally, a tracking branch and worktree are created automatically.
 
     Examples:
 
-        workstack jump feature/user-auth
+        workstack jump feature/user-auth      # Jump to existing worktree
 
-        workstack jump hotfix/critical-bug
+        workstack jump unchecked-branch       # Auto-create worktree
+
+        workstack jump origin-only-branch     # Create tracking branch + worktree
 
     If multiple worktrees contain the branch, all options are shown.
     """

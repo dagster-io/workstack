@@ -418,3 +418,33 @@ def test_fake_gitops_detached_checkouts_tracking() -> None:
     assert (cwd, "abc123") in git_ops.detached_checkouts
     assert (cwd, "def456") in git_ops.detached_checkouts
     assert len(git_ops.detached_checkouts) == 2
+
+
+def test_fake_gitops_delete_branch_with_graphite_raises() -> None:
+    """Test that FakeGitOps can raise configured exceptions on delete."""
+    import subprocess
+
+    import pytest
+
+    error = subprocess.CalledProcessError(
+        returncode=1,
+        cmd=["gt", "delete", "test-branch"],
+        stderr=None,
+    )
+
+    git_ops = FakeGitOps(
+        delete_branch_raises={"test-branch": error},
+    )
+
+    repo_root = Path("/fake/repo")
+
+    # Should raise the configured exception
+    with pytest.raises(subprocess.CalledProcessError) as exc_info:
+        git_ops.delete_branch_with_graphite(repo_root, "test-branch", force=False)
+
+    assert exc_info.value.returncode == 1
+    assert "test-branch" in exc_info.value.cmd
+
+    # Other branches should not raise
+    git_ops.delete_branch_with_graphite(repo_root, "other-branch", force=False)
+    assert "other-branch" in git_ops.deleted_branches

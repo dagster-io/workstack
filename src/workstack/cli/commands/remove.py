@@ -1,4 +1,5 @@
 import shutil
+import subprocess
 from pathlib import Path
 
 import click
@@ -208,12 +209,43 @@ def _remove_worktree(
     _prune_worktrees_safe(ctx.git_ops, repo.root)
 
     # 4c. Delete stack branches (now that worktree is removed)
+    # Exception handling here is acceptable because:
+    # 1. gt delete prompts for user confirmation, which can be declined (exit 1)
+    # 2. There's no LBYL way to predict user's response to interactive prompt
+    # 3. This is a CLI error boundary - appropriate place per AGENTS.md
     if branches_to_delete:
         for branch in branches_to_delete:
-            ctx.git_ops.delete_branch_with_graphite(repo.root, branch, force=force)
-            if not dry_run:
-                branch_text = click.style(branch, fg="green")
-                user_output(f"✅ Deleted branch: {branch_text}")
+            try:
+                ctx.git_ops.delete_branch_with_graphite(repo.root, branch, force=force)
+                if not dry_run:
+                    branch_text = click.style(branch, fg="green")
+                    user_output(f"✅ Deleted branch: {branch_text}")
+            except subprocess.CalledProcessError as e:
+                # User declined deletion or branch doesn't exist
+                # Exit code 1 typically means user said "no" to confirmation prompt
+                branch_text = click.style(branch, fg="yellow")
+                if e.returncode == 1 and not force:
+                    # User declined - this is expected behavior, not an error
+                    user_output(
+                        f"⭕ Skipped deletion of branch: {branch_text} (user declined or not eligible)"
+                    )
+                    user_output("Remaining branches in stack were not deleted.")
+                    break  # Stop processing remaining branches
+                else:
+                    # Other error (branch doesn't exist, git failure, etc.)
+                    error_detail = e.stderr.strip() if e.stderr else f"exit code {e.returncode}"
+                    user_output(
+                        click.style("Error: ", fg="red") +
+                        f"Failed to delete branch {branch_text}: {error_detail}"
+                    )
+                    raise SystemExit(1) from e
+            except FileNotFoundError:
+                # gt command not found
+                user_output(
+                    click.style("Error: ", fg="red") +
+                    "'gt' command not found. Install Graphite CLI: brew install withgraphite/tap/graphite"
+                )
+                raise SystemExit(1)
 
     if not dry_run:
         path_text = click.style(str(wt_path), fg="green")

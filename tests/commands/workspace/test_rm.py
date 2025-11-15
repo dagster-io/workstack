@@ -210,3 +210,85 @@ def test_rm_changes_directory_when_in_target_worktree() -> None:
         # Should show directory change message
         assert "Changing directory to repository root" in result.output
         assert str(env.cwd) in result.output
+
+
+def test_rm_with_delete_stack_handles_user_decline() -> None:
+    """Test that rm -s gracefully handles user declining gt delete prompt."""
+    import subprocess
+
+    runner = CliRunner()
+    with pure_workstack_env(runner) as env:
+        repo_name = env.cwd.name
+        wt = env.workstacks_root / repo_name / "test-stack"
+
+        # Build fake git ops with worktree info and configured exception
+        fake_git_ops = FakeGitOps(
+            worktrees={env.cwd: [WorktreeInfo(path=wt, branch="feature-2")]},
+            git_common_dirs={env.cwd: env.git_dir},
+            delete_branch_raises={
+                "feature-1": subprocess.CalledProcessError(
+                    returncode=1,
+                    cmd=["gt", "delete", "feature-1"],
+                    stderr=None,  # User decline doesn't produce stderr
+                )
+            },
+        )
+
+        # Build graphite ops with branch metadata
+        branches = {
+            "main": BranchMetadata.trunk("main", children=["feature-1"]),
+            "feature-1": BranchMetadata.branch("feature-1", "main", children=["feature-2"]),
+            "feature-2": BranchMetadata.branch("feature-2", "feature-1"),
+        }
+
+        test_ctx = env.build_context(
+            use_graphite=True,
+            git_ops=fake_git_ops,
+            github_ops=FakeGitHubOps(),
+            graphite_ops=FakeGraphiteOps(branches=branches),
+            shell_ops=FakeShellOps(),
+            existing_paths={wt},
+        )
+
+        result = runner.invoke(cli, ["rm", "test-stack", "-s"], obj=test_ctx, input="y\n")
+
+        # Should NOT crash - should exit gracefully
+        assert result.exit_code == 0, result.output
+        assert "Skipped deletion" in result.output or "user declined" in result.output.lower()
+        assert "feature-2" not in fake_git_ops.deleted_branches  # Remaining branch not deleted
+
+
+def test_rm_with_delete_stack_handles_gt_not_found() -> None:
+    """Test that rm -s shows installation instructions when gt not found."""
+    runner = CliRunner()
+    with pure_workstack_env(runner) as env:
+        repo_name = env.cwd.name
+        wt = env.workstacks_root / repo_name / "test-stack"
+
+        fake_git_ops = FakeGitOps(
+            worktrees={env.cwd: [WorktreeInfo(path=wt, branch="feature-1")]},
+            git_common_dirs={env.cwd: env.git_dir},
+            delete_branch_raises={
+                "feature-1": FileNotFoundError("gt command not found"),
+            },
+        )
+
+        branches = {
+            "main": BranchMetadata.trunk("main", children=["feature-1"]),
+            "feature-1": BranchMetadata.branch("feature-1", "main"),
+        }
+
+        test_ctx = env.build_context(
+            use_graphite=True,
+            git_ops=fake_git_ops,
+            github_ops=FakeGitHubOps(),
+            graphite_ops=FakeGraphiteOps(branches=branches),
+            shell_ops=FakeShellOps(),
+            existing_paths={wt},
+        )
+
+        result = runner.invoke(cli, ["rm", "test-stack", "-f", "-s"], obj=test_ctx)
+
+        assert result.exit_code == 1, result.output
+        assert "gt" in result.output.lower()
+        assert "install" in result.output.lower() or "brew" in result.output.lower()

@@ -79,6 +79,7 @@ class FakeGitOps(GitOps):
         recent_commits: dict[Path, list[dict[str, str]]] | None = None,
         existing_paths: set[Path] | None = None,
         file_contents: dict[Path, str] | None = None,
+        delete_branch_raises: dict[str, Exception] | None = None,
     ) -> None:
         """Create FakeGitOps with pre-configured state.
 
@@ -96,6 +97,7 @@ class FakeGitOps(GitOps):
             recent_commits: Mapping of cwd -> list of commit info dicts
             existing_paths: Set of paths that should be treated as existing (for pure mode)
             file_contents: Mapping of path -> file content (for commands that read files)
+            delete_branch_raises: Mapping of branch name -> exception to raise on delete
         """
         self._worktrees = worktrees or {}
         self._current_branches = current_branches or {}
@@ -110,6 +112,7 @@ class FakeGitOps(GitOps):
         self._recent_commits = recent_commits or {}
         self._existing_paths = existing_paths or set()
         self._file_contents = file_contents or {}
+        self._delete_branch_raises = delete_branch_raises or {}
 
         # Mutation tracking
         self._deleted_branches: list[str] = []
@@ -269,7 +272,14 @@ class FakeGitOps(GitOps):
         pass
 
     def delete_branch_with_graphite(self, repo_root: Path, branch: str, *, force: bool) -> None:
-        """Track which branches were deleted (mutates internal state)."""
+        """Track which branches were deleted (mutates internal state).
+
+        Raises configured exception if branch is in delete_branch_raises mapping.
+        """
+        # Check if we should raise an exception for this branch
+        if branch in self._delete_branch_raises:
+            raise self._delete_branch_raises[branch]
+
         self._deleted_branches.append(branch)
 
     def prune_worktrees(self, repo_root: Path) -> None:

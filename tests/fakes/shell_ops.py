@@ -58,6 +58,7 @@ class FakeShellOps(ShellOps):
         """
         self._detected_shell = detected_shell
         self._installed_tools = installed_tools or {}
+        self._sync_calls: list[tuple[Path, bool, bool]] = []
 
     def detect_shell(self) -> tuple[str, Path] | None:
         """Return the shell configured at construction time."""
@@ -66,3 +67,21 @@ class FakeShellOps(ShellOps):
     def get_installed_tool_path(self, tool_name: str) -> str | None:
         """Return the tool path if configured, None otherwise."""
         return self._installed_tools.get(tool_name)
+
+    def run_workstack_sync(self, repo_root: Path, *, force: bool, verbose: bool) -> None:
+        """Track call to run_workstack_sync without executing anything.
+
+        This method records the call parameters for test assertions.
+        It does not execute any actual subprocess operations.
+        """
+        self._sync_calls.append((repo_root, force, verbose))
+
+    @property
+    def sync_calls(self) -> list[tuple[Path, bool, bool]]:
+        """Get the list of run_workstack_sync() calls that were made.
+
+        Returns list of (repo_root, force, verbose) tuples.
+
+        This property is for test assertions only.
+        """
+        return self._sync_calls.copy()

@@ -1,13 +1,12 @@
 """Cleanup and navigation operations for land-stack command."""
 
-import os
 import subprocess
 from pathlib import Path
 
 import click
 
 from workstack.cli.commands.land_stack.output import _emit, _format_cli_command
-from workstack.core.context import WorkstackContext, regenerate_context
+from workstack.core.context import WorkstackContext
 
 
 def _cleanup_and_navigate(
@@ -43,17 +42,6 @@ def _cleanup_and_navigate(
     # Get last merged branch to find next unmerged child
     last_merged = merged_branches[-1] if merged_branches else None
 
-    # Step 0: Switch to root worktree before cleanup
-    # This prevents shell from being left in a destroyed worktree directory
-    # Pattern mirrors sync.py:123-125
-    if ctx.cwd.resolve() != repo_root:
-        try:
-            os.chdir(repo_root)
-            ctx = regenerate_context(ctx)
-        except (FileNotFoundError, OSError):
-            # Sentinel path in pure test mode - skip chdir
-            pass
-
     # Step 1: Checkout trunk branch
     if not dry_run:
         ctx.git_ops.checkout_branch(repo_root, trunk_branch)
@@ -70,21 +58,19 @@ def _cleanup_and_navigate(
     else:
         try:
             # This will remove merged worktrees and delete branches
-            cmd = ["workstack", "sync", "-f"]
-            if verbose:
-                cmd.append("--verbose")
-
-            subprocess.run(
-                cmd,
-                cwd=repo_root,
-                check=True,
-                capture_output=not verbose,
-                text=True,
+            ctx.shell_ops.run_workstack_sync(
+                repo_root,
+                force=True,
+                verbose=verbose,
             )
             _emit(_format_cli_command(base_cmd, check), script_mode=script_mode)
         except subprocess.CalledProcessError as e:
             error_msg = e.stderr.strip() if e.stderr else str(e)
-            _emit(f"Warning: Cleanup sync failed: {error_msg}", script_mode=script_mode, error=True)
+            _emit(
+                f"Warning: Cleanup sync failed: {error_msg}",
+                script_mode=script_mode,
+                error=True,
+            )
 
     # Step 3: Navigate to next branch or stay on trunk
     # Check if last merged branch had unmerged children

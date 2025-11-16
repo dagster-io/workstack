@@ -22,7 +22,7 @@ from workstack.cli.shell_utils import (
 from workstack.core.context import create_context
 
 PASSTHROUGH_MARKER: Final[str] = "__WORKSTACK_PASSTHROUGH__"
-PASSTHROUGH_COMMANDS: Final[set[str]] = {"sync", "land-stack"}
+PASSTHROUGH_COMMANDS: Final[set[str]] = {"sync"}
 
 
 @dataclass(frozen=True)

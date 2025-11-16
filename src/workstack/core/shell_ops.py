@@ -7,6 +7,7 @@ enables dependency injection for testing without mock.patch.
 
 import os
 import shutil
+import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -81,6 +82,23 @@ class ShellOps(ABC):
         """
         ...
 
+    @abstractmethod
+    def run_workstack_sync(self, repo_root: Path, *, force: bool, verbose: bool) -> None:
+        """Run workstack sync command as subprocess.
+
+        This is used by commands that need to invoke workstack sync
+        to clean up worktrees and branches (e.g., land-stack cleanup phase).
+
+        Args:
+            repo_root: Repository root directory to run command in
+            force: If True, pass -f flag for force sync
+            verbose: If True, pass --verbose flag for detailed output
+
+        Raises:
+            subprocess.CalledProcessError: If workstack sync command fails
+        """
+        ...
+
 
 class RealShellOps(ShellOps):
     """Production implementation using system environment and PATH."""
@@ -99,3 +117,23 @@ class RealShellOps(ShellOps):
     def get_installed_tool_path(self, tool_name: str) -> str | None:
         """Check if tool is in PATH using shutil.which."""
         return shutil.which(tool_name)
+
+    def run_workstack_sync(self, repo_root: Path, *, force: bool, verbose: bool) -> None:
+        """Run workstack sync command as subprocess.
+
+        Executes workstack sync in the specified repository directory.
+        Output is shown in verbose mode, captured otherwise.
+        """
+        cmd = ["workstack", "sync"]
+        if force:
+            cmd.append("-f")
+        if verbose:
+            cmd.append("--verbose")
+
+        subprocess.run(
+            cmd,
+            cwd=repo_root,
+            check=True,
+            capture_output=not verbose,
+            text=True,
+        )

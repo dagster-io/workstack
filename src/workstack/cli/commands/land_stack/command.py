@@ -202,3 +202,21 @@ def land_stack(
     # Show final state
     _emit("", script_mode=script)
     _show_final_state(merged_branches, final_branch, dry_run=dry_run, script_mode=script)
+
+    # Generate activation script for shell integration
+    if script:
+        from workstack.cli.shell_utils import render_cd_script
+
+        # After cleanup, we're at trunk worktree on main branch
+        # Generate activation script to switch shell to trunk worktree
+        script_content = render_cd_script(
+            repo.root,
+            comment=f"land-stack: switch to {final_branch}",
+            success_message=f"✓ Switched to {final_branch} at {repo.root}",
+        )
+        result = ctx.script_writer.write_activation_script(
+            script_content,
+            command_name="land-stack",
+            comment=f"switch to {final_branch}",
+        )
+        result.output_for_shell_integration()

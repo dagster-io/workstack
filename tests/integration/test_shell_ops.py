@@ -8,6 +8,9 @@ via the detect_shell_from_env() function.
 """
 
 import os
+import subprocess
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 from workstack.core.shell_ops import RealShellOps
 
@@ -58,3 +61,96 @@ def test_real_shell_ops_get_installed_tool_path_python():
         result = ops.get_installed_tool_path("python")
 
     assert result is not None  # Some form of Python should be found
+
+
+def test_real_shell_ops_run_workstack_sync_calls_subprocess():
+    """Test that run_workstack_sync calls subprocess.run with correct parameters.
+
+    This integration test verifies RealShellOps correctly constructs and
+    executes the subprocess command with appropriate parameters.
+    """
+    ops = RealShellOps()
+    repo_root = Path("/test/repo")
+
+    # Mock subprocess.run to verify the call without actually running workstack
+    with patch("workstack.core.shell_ops.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(returncode=0)
+
+        # Call with force=True, verbose=False
+        ops.run_workstack_sync(repo_root, force=True, verbose=False)
+
+        # Verify subprocess.run was called once
+        assert mock_run.call_count == 1
+
+        # Verify command structure
+        call_args = mock_run.call_args
+        cmd = call_args[0][0]
+        assert cmd == ["workstack", "sync", "-f"]
+
+        # Verify kwargs
+        kwargs = call_args[1]
+        assert kwargs["cwd"] == repo_root
+        assert kwargs["check"] is True
+        assert kwargs["capture_output"] is True
+        assert kwargs["text"] is True
+
+
+def test_real_shell_ops_run_workstack_sync_verbose_mode():
+    """Test that run_workstack_sync handles verbose mode correctly."""
+    ops = RealShellOps()
+    repo_root = Path("/test/repo")
+
+    with patch("workstack.core.shell_ops.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(returncode=0)
+
+        # Call with force=True, verbose=True
+        ops.run_workstack_sync(repo_root, force=True, verbose=True)
+
+        # Verify command includes --verbose
+        call_args = mock_run.call_args
+        cmd = call_args[0][0]
+        assert cmd == ["workstack", "sync", "-f", "--verbose"]
+
+        # Verify capture_output is False in verbose mode
+        kwargs = call_args[1]
+        assert kwargs["capture_output"] is False
+
+
+def test_real_shell_ops_run_workstack_sync_without_force():
+    """Test that run_workstack_sync works without force flag."""
+    ops = RealShellOps()
+    repo_root = Path("/test/repo")
+
+    with patch("workstack.core.shell_ops.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(returncode=0)
+
+        # Call with force=False
+        ops.run_workstack_sync(repo_root, force=False, verbose=False)
+
+        # Verify command does not include -f
+        call_args = mock_run.call_args
+        cmd = call_args[0][0]
+        assert cmd == ["workstack", "sync"]
+        assert "-f" not in cmd
+
+
+def test_real_shell_ops_run_workstack_sync_propagates_error():
+    """Test that CalledProcessError is propagated from subprocess.run."""
+    ops = RealShellOps()
+    repo_root = Path("/test/repo")
+
+    with patch("workstack.core.shell_ops.subprocess.run") as mock_run:
+        # Simulate subprocess failure
+        mock_run.side_effect = subprocess.CalledProcessError(
+            returncode=1,
+            cmd=["workstack", "sync", "-f"],
+            stderr="sync failed",
+        )
+
+        # Verify exception is propagated
+        try:
+            ops.run_workstack_sync(repo_root, force=True, verbose=False)
+            raise AssertionError("Expected CalledProcessError to be raised")
+        except subprocess.CalledProcessError as e:
+            assert e.returncode == 1
+            assert e.stderr == "sync failed"

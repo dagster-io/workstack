@@ -617,18 +617,84 @@ def process_data(data, format):
         format = detect_format(data)
 ```
 
-### Code in `__init__.py`
+### Code in `__init__.py` and `__all__` Exports
+
+**Core Principle:** One canonical location for every import.
+
+Module code and `__all__` exports in `__init__.py` files violate this principle by creating multiple import paths for the same symbol. This anti-pattern damages codebase maintainability through reduced grepability, broken refactoring tools, and confused import analysis.
 
 ```python
 # ❌ WRONG: Code in __init__.py
 """Configuration module."""
 from workstack.config.loader import load_config
 from workstack.config.writer import write_config
+
+# ❌ WRONG: __all__ exports create duplicate import paths
 __all__ = ["load_config", "write_config"]
+
+# Now these symbols can be imported two ways:
+# from workstack.config import load_config  # Via __init__.py
+# from workstack.config.loader import load_config  # Direct import
+# This duplication breaks the "one canonical location" principle
 
 # ✅ CORRECT: Empty __init__.py
 # (file is completely empty or docstring-only)
 ```
+
+#### Why `__all__` Exports Are Prohibited
+
+**1. Breaks Grepability**
+When searching for where `load_config` is defined:
+
+- `grep -r "def load_config"` finds the real definition
+- But imports can come from multiple locations
+- Refactoring tools can't reliably find all usage sites
+- IDE "Find Usages" misses indirect imports through `__all__`
+
+**2. Confuses Static Analysis**
+
+- Type checkers may resolve imports differently
+- Import cycles become harder to detect
+- Dependency graphs show false relationships
+- Tool confusion leads to missed errors
+
+**3. Impairs Refactoring Safety**
+When renaming or moving a function:
+
+- Direct imports are easy to find and update
+- `__all__` exports create hidden dependencies
+- Automated refactoring tools miss re-export sites
+- Manual refactoring becomes error-prone
+
+**4. Violates Explicit > Implicit**
+
+- Import source should be immediately clear
+- `from workstack.config import load_config` hides the real location
+- `from workstack.config.loader import load_config` shows exactly where it lives
+- Explicit imports improve code navigation and understanding
+
+#### The Right Way: Direct Imports Only
+
+```python
+# ✅ CORRECT: Import directly from the module that defines it
+from workstack.config.loader import load_config
+from workstack.config.writer import write_config
+
+# Each symbol has ONE canonical import path
+# Grep finds all usages reliably
+# Refactoring tools work correctly
+# Code navigation is predictable
+```
+
+#### Exception: Top-Level Public API Exports
+
+For library packages that need to provide a clean public API to external consumers, controlled exports at the package's top level may be appropriate. This exception applies only when:
+
+- The package is designed for external consumption
+- API stability is a primary concern
+- The exports define the public contract
+
+This exception does not apply to internal application code or most project modules.
 
 ### Speculative Tests
 

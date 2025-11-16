@@ -33,7 +33,7 @@
 | `pytest`, `pyright`, `ruff`, `prettier`, `make`, `gt` commands   | → Use devrun agent (Task tool) - specialized parsing, cost efficiency                                |
 | Stack traversal or "upstack"/"downstack"                         | → [Graphite Stack Terminology](#-graphite-stack-terminology-critical) - main is at BOTTOM            |
 | 4+ levels of indentation                                         | → Extract helper functions                                                                           |
-| Code in `__init__.py`                                            | → Keep empty or docstring-only (except package entry points)                                         |
+| Code in `__init__.py`                                            | → Keep empty or docstring-only (except top-level public API exports)                                 |
 | Tests for speculative features                                   | → **FORBIDDEN** - Only test actively implemented code (TDD is fine)                                  |
 | Creating `.claude/` artifacts                                    | → Use `kebab-case` (hyphens) NOT `snake_case` (underscores)                                          |
 | `Path("/test/...")` or hardcoded paths                           | → **CATASTROPHIC** - Use `pure_workstack_env` fixture - [Test Isolation](#6-test-isolation--must)    |

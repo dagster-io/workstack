@@ -109,7 +109,7 @@ def test_build_batch_pr_query_has_contexts_nodes_wrapper() -> None:
 
     # Verify the structure order in the fragment: contexts -> nodes -> fragments
     # This ensures nodes comes between contexts and the inline fragments
-    fragment_start = query.index("fragment PRCICheckFields")
+    fragment_start = query.index("fragment PRFields")
     contexts_idx = query.index("contexts(last: 100)", fragment_start)
     nodes_idx = query.index("nodes {", contexts_idx)
     status_context_idx = query.index("... on StatusContext", nodes_idx)
@@ -125,7 +125,7 @@ def test_build_batch_pr_query_structure() -> None:
     query = ops._build_batch_pr_query([123, 456], "test-owner", "test-repo")
 
     # Validate fragment definition is present
-    assert "fragment PRCICheckFields on PullRequest {" in query
+    assert "fragment PRFields on PullRequest {" in query
 
     # Validate basic GraphQL syntax
     assert "query {" in query
@@ -134,11 +134,13 @@ def test_build_batch_pr_query_structure() -> None:
     # Validate PR aliases are present with fragment spread
     assert "pr_123: pullRequest(number: 123) {" in query
     assert "pr_456: pullRequest(number: 456) {" in query
-    assert "...PRCICheckFields" in query
+    assert "...PRFields" in query
 
     # Validate required fields are in the fragment definition (only once)
     assert query.count("commits(last: 1)") == 1  # Only in fragment definition
     assert query.count("statusCheckRollup") == 1  # Only in fragment definition
+    assert query.count("mergeable") == 1  # Only in fragment definition
+    assert query.count("mergeStateStatus") == 1  # Only in fragment definition
 
     # Validate inline fragments for both types (in the fragment definition)
     assert "... on StatusContext {" in query
@@ -150,7 +152,7 @@ def test_build_batch_pr_query_structure() -> None:
     assert "state" in query  # StatusContext and statusCheckRollup
 
     # Validate fragment spread is used for each PR
-    assert query.count("...PRCICheckFields") == 2  # One for each PR
+    assert query.count("...PRFields") == 2  # One for each PR
 
 
 def test_build_batch_pr_query_multiple_prs() -> None:
@@ -173,7 +175,7 @@ def test_build_batch_pr_query_multiple_prs() -> None:
     assert query.count("statusCheckRollup") == 1  # Only in fragment definition
 
     # Each PR should use the fragment spread
-    assert query.count("...PRCICheckFields") == len(pr_numbers)
+    assert query.count("...PRFields") == len(pr_numbers)
 
 
 def test_parse_pr_ci_status_handles_missing_nodes() -> None:
@@ -290,3 +292,75 @@ def test_parse_pr_ci_status_with_pending_checks() -> None:
     # Parser should detect incomplete check
     result = ops._parse_pr_ci_status(response)
     assert result is False
+
+
+def test_parse_pr_fields_with_conflicts() -> None:
+    """Test that parser correctly identifies PR with conflicts."""
+    ops = RealGitHubOps()
+
+    response = {
+        "mergeable": "CONFLICTING",
+        "mergeStateStatus": "DIRTY",
+        "commits": {"nodes": [{"commit": {"statusCheckRollup": {"contexts": {"nodes": []}}}}]},
+    }
+
+    # Parser should detect conflicts
+    ci_status, has_conflicts = ops._parse_pr_fields(response)
+    assert ci_status is None  # No checks
+    assert has_conflicts is True  # Has conflicts
+
+
+def test_parse_pr_fields_mergeable() -> None:
+    """Test that parser correctly identifies mergeable PR."""
+    ops = RealGitHubOps()
+
+    response = {
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "commits": {
+            "nodes": [
+                {
+                    "commit": {
+                        "statusCheckRollup": {
+                            "state": "SUCCESS",
+                            "contexts": {
+                                "nodes": [{"status": "COMPLETED", "conclusion": "SUCCESS"}]
+                            },
+                        }
+                    }
+                }
+            ]
+        },
+    }
+
+    # Parser should detect mergeable state
+    ci_status, has_conflicts = ops._parse_pr_fields(response)
+    assert ci_status is True  # Checks passing
+    assert has_conflicts is False  # No conflicts
+
+
+def test_parse_pr_fields_unknown() -> None:
+    """Test that parser correctly handles unknown mergeable state."""
+    ops = RealGitHubOps()
+
+    response = {"mergeable": "UNKNOWN", "mergeStateStatus": "UNKNOWN", "commits": {"nodes": []}}
+
+    # Parser should handle unknown state
+    ci_status, has_conflicts = ops._parse_pr_fields(response)
+    assert ci_status is None  # No commits
+    assert has_conflicts is None  # Unknown state
+
+
+def test_parse_pr_fields_missing_mergeable() -> None:
+    """Test that parser handles missing mergeable field gracefully."""
+    ops = RealGitHubOps()
+
+    response = {
+        # No mergeable field
+        "commits": {"nodes": [{"commit": {"statusCheckRollup": {"contexts": {"nodes": []}}}}]}
+    }
+
+    # Parser should handle missing field
+    ci_status, has_conflicts = ops._parse_pr_fields(response)
+    assert ci_status is None  # No checks
+    assert has_conflicts is None  # No mergeable field

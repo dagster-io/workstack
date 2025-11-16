@@ -271,20 +271,20 @@ class GitHubOps(ABC):
         ...
 
     @abstractmethod
-    def enrich_prs_with_ci_status_batch(
+    def enrich_prs_batch(
         self, prs: dict[str, PullRequestInfo], repo_root: Path
     ) -> dict[str, PullRequestInfo]:
-        """Enrich PR information with CI check status using batched GraphQL query.
+        """Enrich PR information with CI status and mergeability using batched GraphQL query.
 
-        Fetches CI status for all PRs in a single GraphQL API call, dramatically
-        improving performance over serial fetching.
+        Fetches CI status and mergeability for all PRs in a single GraphQL API call,
+        dramatically improving performance over serial fetching.
 
         Args:
-            prs: Mapping of branch name to PullRequestInfo (without CI status)
+            prs: Mapping of branch name to PullRequestInfo (without enrichment)
             repo_root: Repository root directory
 
         Returns:
-            Mapping of branch name to PullRequestInfo (with CI status enriched)
+            Mapping of branch name to PullRequestInfo (with CI status and mergeability enriched)
         """
         ...
 
@@ -473,8 +473,10 @@ class RealGitHubOps(GitHubOps):
             GraphQL query string
         """
         # Define the fragment once at the top of the query
-        fragment_definition = """fragment PRCICheckFields on PullRequest {
+        fragment_definition = """fragment PRFields on PullRequest {
   number
+  mergeable
+  mergeStateStatus
   commits(last: 1) {
     nodes {
       commit {
@@ -501,7 +503,7 @@ class RealGitHubOps(GitHubOps):
         pr_queries = []
         for pr_num in pr_numbers:
             pr_query = f"""    pr_{pr_num}: pullRequest(number: {pr_num}) {{
-      ...PRCICheckFields
+      ...PRFields
     }}"""
             pr_queries.append(pr_query)
 
@@ -528,6 +530,32 @@ query {{
         cmd = ["gh", "api", "graphql", "-f", f"query={query}"]
         stdout = self._execute(cmd, repo_root)
         return json.loads(stdout)
+
+    def _parse_pr_fields(self, pr_data: dict[str, Any] | None) -> tuple[bool | None, bool | None]:
+        """Parse CI status and mergeability from GraphQL PR response.
+
+        Args:
+            pr_data: GraphQL response data for single PR (may be None)
+
+        Returns:
+            Tuple of (checks_passing, has_conflicts)
+            - checks_passing: True if all checks passing, False if any failing, None if no checks
+            - has_conflicts: True if PR has conflicts, False if mergeable, None if unknown
+        """
+        # Get CI status using existing method
+        ci_status = self._parse_pr_ci_status(pr_data)
+
+        # Parse mergeability
+        has_conflicts = None
+        if pr_data is not None:
+            mergeable = pr_data.get("mergeable")
+            if mergeable == "CONFLICTING":
+                has_conflicts = True
+            elif mergeable == "MERGEABLE":
+                has_conflicts = False
+            # If mergeable is "UNKNOWN" or None, has_conflicts remains None
+
+        return ci_status, has_conflicts
 
     def _parse_pr_ci_status(self, pr_data: dict[str, Any] | None) -> bool | None:
         """Parse CI status from GraphQL PR response.
@@ -577,13 +605,13 @@ query {{
         # Call existing logic to determine status
         return _determine_checks_status(nodes)
 
-    def enrich_prs_with_ci_status_batch(
+    def enrich_prs_batch(
         self, prs: dict[str, PullRequestInfo], repo_root: Path
     ) -> dict[str, PullRequestInfo]:
-        """Enrich PR information with CI check status using batched GraphQL query.
+        """Enrich PR information with CI status and mergeability using batched GraphQL query.
 
-        Fetches CI status for all PRs in a single GraphQL API call, dramatically
-        improving performance over serial fetching.
+        Fetches CI status and mergeability for all PRs in a single GraphQL API call,
+        dramatically improving performance over serial fetching.
         """
         # Early exit for empty input
         if not prs:
@@ -609,11 +637,11 @@ query {{
             alias = f"pr_{pr.number}"
             pr_data = repo_data.get(alias)
 
-            # Parse CI status (handles None/missing data gracefully)
-            ci_status = self._parse_pr_ci_status(pr_data)
+            # Parse both CI status and mergeability (handles None/missing data gracefully)
+            ci_status, has_conflicts = self._parse_pr_fields(pr_data)
 
-            # Create enriched PR with updated CI status
-            enriched_pr = replace(pr, checks_passing=ci_status)
+            # Create enriched PR with both updated fields
+            enriched_pr = replace(pr, checks_passing=ci_status, has_conflicts=has_conflicts)
             enriched_prs[branch] = enriched_pr
 
         return enriched_prs
@@ -690,11 +718,11 @@ class NoopGitHubOps(GitHubOps):
         """Delegate read operation to wrapped implementation."""
         return self._wrapped.get_pr_mergeability(repo_root, pr_number)
 
-    def enrich_prs_with_ci_status_batch(
+    def enrich_prs_batch(
         self, prs: dict[str, PullRequestInfo], repo_root: Path
     ) -> dict[str, PullRequestInfo]:
         """Delegate read operation to wrapped implementation."""
-        return self._wrapped.enrich_prs_with_ci_status_batch(prs, repo_root)
+        return self._wrapped.enrich_prs_batch(prs, repo_root)
 
     def merge_pr(
         self,
@@ -751,11 +779,11 @@ class PrintingGitHubOps(PrintingOpsBase, GitHubOps):
         """Get PR mergeability (read-only, no printing)."""
         return self._wrapped.get_pr_mergeability(repo_root, pr_number)
 
-    def enrich_prs_with_ci_status_batch(
+    def enrich_prs_batch(
         self, prs: dict[str, PullRequestInfo], repo_root: Path
     ) -> dict[str, PullRequestInfo]:
-        """Enrich PRs with CI status (read-only, no printing)."""
-        return self._wrapped.enrich_prs_with_ci_status_batch(prs, repo_root)
+        """Enrich PRs with CI status and mergeability (read-only, no printing)."""
+        return self._wrapped.enrich_prs_batch(prs, repo_root)
 
     # Operations that need printing
 

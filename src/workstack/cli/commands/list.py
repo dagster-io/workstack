@@ -159,9 +159,9 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, ci: bool) -> None:
             )
             raise SystemExit(1)
 
-        # If --ci flag set, enrich with CI status (slower, opt-in)
+        # If --ci flag set, enrich with CI status using batched GraphQL query
         if ci:
-            prs = ctx.github_ops.enrich_prs_with_ci_status(prs, repo.root)
+            prs = ctx.github_ops.enrich_prs_with_ci_status_batch(prs, repo.root)
 
     # Calculate maximum widths for alignment
     # First, collect all names, branches, and PR info to display

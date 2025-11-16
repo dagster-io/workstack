@@ -14,9 +14,9 @@ import json
 import re
 import subprocess
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Literal, NamedTuple
+from typing import Any, Literal, NamedTuple
 
 from workstack.cli.output import user_output
 from workstack.core.printing_ops_base import PrintingOpsBase
@@ -46,7 +46,19 @@ def execute_gh_command(cmd: list[str], cwd: Path) -> str:
         subprocess.CalledProcessError: If command fails
         FileNotFoundError: If gh is not installed
     """
-    result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=True)
+    # Acceptable exception use: Third-party subprocess API forces exception handling
+    # We catch to add context and re-raise with GitHub error details
+    result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=False)
+
+    if result.returncode != 0:
+        # Extract error details from stderr for better diagnostics
+        error_msg = f"GitHub CLI command failed with exit code {result.returncode}"
+        if result.stderr:
+            error_msg += f"\nError output: {result.stderr.strip()}"
+        raise subprocess.CalledProcessError(
+            result.returncode, cmd, output=result.stdout, stderr=result.stderr
+        )
+
     return result.stdout
 
 
@@ -257,13 +269,13 @@ class GitHubOps(ABC):
         ...
 
     @abstractmethod
-    def enrich_prs_with_ci_status(
+    def enrich_prs_with_ci_status_batch(
         self, prs: dict[str, PullRequestInfo], repo_root: Path
     ) -> dict[str, PullRequestInfo]:
-        """Enrich PR information with CI check status from GitHub.
+        """Enrich PR information with CI check status using batched GraphQL query.
 
-        Fetches CI check status for each PR individually via gh pr view.
-        This avoids pagination issues by fetching PRs one at a time.
+        Fetches CI status for all PRs in a single GraphQL API call, dramatically
+        improving performance over serial fetching.
 
         Args:
             prs: Mapping of branch name to PullRequestInfo (without CI status)
@@ -447,57 +459,160 @@ class RealGitHubOps(GitHubOps):
         ):
             return None
 
-    def enrich_prs_with_ci_status(
+    def _build_batch_pr_query(self, pr_numbers: list[int], owner: str, repo: str) -> str:
+        """Build GraphQL query with aliases for multiple PRs using named fragments.
+
+        Args:
+            pr_numbers: List of PR numbers to query
+            owner: Repository owner
+            repo: Repository name
+
+        Returns:
+            GraphQL query string
+        """
+        # Define the fragment once at the top of the query
+        fragment_definition = """fragment PRCICheckFields on PullRequest {
+  number
+  commits(last: 1) {
+    nodes {
+      commit {
+        statusCheckRollup {
+          state
+          contexts(last: 100) {
+            nodes {
+              ... on StatusContext {
+                state
+              }
+              ... on CheckRun {
+                status
+                conclusion
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}"""
+
+        # Build aliased PR queries using the fragment spread
+        pr_queries = []
+        for pr_num in pr_numbers:
+            pr_query = f"""    pr_{pr_num}: pullRequest(number: {pr_num}) {{
+      ...PRCICheckFields
+    }}"""
+            pr_queries.append(pr_query)
+
+        # Combine fragment definition and query
+        query = f"""{fragment_definition}
+
+query {{
+  repository(owner: "{owner}", name: "{repo}") {{
+{chr(10).join(pr_queries)}
+  }}
+}}"""
+        return query
+
+    def _execute_batch_pr_query(self, query: str, repo_root: Path) -> dict[str, Any]:
+        """Execute batched GraphQL query via gh CLI.
+
+        Args:
+            query: GraphQL query string
+            repo_root: Repository root directory
+
+        Returns:
+            Parsed JSON response
+        """
+        cmd = ["gh", "api", "graphql", "-f", f"query={query}"]
+        stdout = self._execute(cmd, repo_root)
+        return json.loads(stdout)
+
+    def _parse_pr_ci_status(self, pr_data: dict[str, Any] | None) -> bool | None:
+        """Parse CI status from GraphQL PR response.
+
+        Args:
+            pr_data: GraphQL response data for single PR (may be None)
+
+        Returns:
+            True if all checks passing, False if any failing, None if no checks or error
+        """
+        # Check if PR data is missing (not found or error)
+        if pr_data is None:
+            return None
+
+        # Extract commits
+        commits = pr_data.get("commits")
+        if commits is None:
+            return None
+
+        # Check for empty commits nodes
+        nodes = commits.get("nodes", [])
+        if not nodes:
+            return None
+
+        # Extract statusCheckRollup from first commit
+        commit = nodes[0].get("commit")
+        if commit is None:
+            return None
+
+        status_check_rollup = commit.get("statusCheckRollup")
+        if status_check_rollup is None:
+            return None
+
+        # Extract contexts connection
+        contexts = status_check_rollup.get("contexts")
+        if contexts is None:
+            return None
+
+        # Validate contexts is a dict (connection object) not a list
+        # This handles cases where query structure is wrong or API changes
+        if not isinstance(contexts, dict):
+            return None
+
+        # Extract nodes array from contexts connection
+        nodes = contexts.get("nodes", [])
+
+        # Call existing logic to determine status
+        return _determine_checks_status(nodes)
+
+    def enrich_prs_with_ci_status_batch(
         self, prs: dict[str, PullRequestInfo], repo_root: Path
     ) -> dict[str, PullRequestInfo]:
-        """Enrich PR information with CI check status from GitHub.
+        """Enrich PR information with CI check status using batched GraphQL query.
 
-        Note: Uses try/except as an acceptable error boundary for handling gh CLI
-        availability and authentication. Individual PR fetch failures are handled
-        gracefully to avoid cascading failures.
+        Fetches CI status for all PRs in a single GraphQL API call, dramatically
+        improving performance over serial fetching.
         """
+        # Early exit for empty input
+        if not prs:
+            return {}
+
+        # Extract PR numbers and owner/repo from first PR
+        pr_numbers = [pr.number for pr in prs.values()]
+        first_pr = next(iter(prs.values()))
+        owner = first_pr.owner
+        repo = first_pr.repo
+
+        # Build and execute batched GraphQL query
+        query = self._build_batch_pr_query(pr_numbers, owner, repo)
+        response = self._execute_batch_pr_query(query, repo_root)
+
+        # Extract repository data from response
+        repo_data = response["data"]["repository"]
+
+        # Enrich each PR with CI status
         enriched_prs = {}
-
         for branch, pr in prs.items():
-            try:
-                # Fetch CI status for this specific PR
-                cmd = [
-                    "gh",
-                    "pr",
-                    "view",
-                    str(pr.number),
-                    "--json",
-                    "statusCheckRollup",
-                ]
-                stdout = self._execute(cmd, repo_root)
-                data = json.loads(stdout)
+            # Get PR data from GraphQL response using alias
+            alias = f"pr_{pr.number}"
+            pr_data = repo_data.get(alias)
 
-                # Parse CI status
-                status_check_rollup = data.get("statusCheckRollup")
-                checks_passing = None
-                if status_check_rollup is not None:
-                    checks_passing = _determine_checks_status(status_check_rollup)
+            # Parse CI status (handles None/missing data gracefully)
+            ci_status = self._parse_pr_ci_status(pr_data)
 
-                # Create new PullRequestInfo with CI status
-                enriched_pr = PullRequestInfo(
-                    number=pr.number,
-                    state=pr.state,
-                    url=pr.url,
-                    is_draft=pr.is_draft,
-                    checks_passing=checks_passing,
-                    owner=pr.owner,
-                    repo=pr.repo,
-                )
-                enriched_prs[branch] = enriched_pr
-
-            except (
-                subprocess.CalledProcessError,
-                FileNotFoundError,
-                json.JSONDecodeError,
-                KeyError,
-            ):
-                # Individual PR fetch failed - keep original PR info without CI status
-                enriched_prs[branch] = pr
+            # Create enriched PR with updated CI status
+            enriched_pr = replace(pr, checks_passing=ci_status)
+            enriched_prs[branch] = enriched_pr
 
         return enriched_prs
 
@@ -573,11 +688,11 @@ class NoopGitHubOps(GitHubOps):
         """Delegate read operation to wrapped implementation."""
         return self._wrapped.get_pr_mergeability(repo_root, pr_number)
 
-    def enrich_prs_with_ci_status(
+    def enrich_prs_with_ci_status_batch(
         self, prs: dict[str, PullRequestInfo], repo_root: Path
     ) -> dict[str, PullRequestInfo]:
         """Delegate read operation to wrapped implementation."""
-        return self._wrapped.enrich_prs_with_ci_status(prs, repo_root)
+        return self._wrapped.enrich_prs_with_ci_status_batch(prs, repo_root)
 
     def merge_pr(
         self,
@@ -634,11 +749,11 @@ class PrintingGitHubOps(PrintingOpsBase, GitHubOps):
         """Get PR mergeability (read-only, no printing)."""
         return self._wrapped.get_pr_mergeability(repo_root, pr_number)
 
-    def enrich_prs_with_ci_status(
+    def enrich_prs_with_ci_status_batch(
         self, prs: dict[str, PullRequestInfo], repo_root: Path
     ) -> dict[str, PullRequestInfo]:
         """Enrich PRs with CI status (read-only, no printing)."""
-        return self._wrapped.enrich_prs_with_ci_status(prs, repo_root)
+        return self._wrapped.enrich_prs_with_ci_status_batch(prs, repo_root)
 
     # Operations that need printing
 

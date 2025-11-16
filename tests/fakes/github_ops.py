@@ -112,10 +112,10 @@ class FakeGitHubOps(GitHubOps):
         # Default to MERGEABLE if not configured
         return PRMergeability(mergeable="MERGEABLE", merge_state_status="CLEAN")
 
-    def enrich_prs_with_ci_status(
+    def enrich_prs_with_ci_status_batch(
         self, prs: dict[str, PullRequestInfo], repo_root: Path
     ) -> dict[str, PullRequestInfo]:
-        """Enrich PRs with CI status (fake just returns the PRs as-is).
+        """Enrich PRs with CI status using batched query (fake just returns the PRs as-is).
 
         In the fake implementation, we assume PRs already have CI status if configured.
         This method is a no-op that returns the input unchanged.

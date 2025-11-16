@@ -4,15 +4,15 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
+from erk.cli.cli import cli
+from erk.cli.config import LoadedConfig
+from erk.core.context import WorkstackContext
+from erk.core.global_config import GlobalConfig
+from erk.core.repo_discovery import RepoContext
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.test_utils.env_helpers import pure_workstack_env
-from workstack.cli.cli import cli
-from workstack.cli.config import LoadedConfig
-from workstack.core.context import WorkstackContext
-from workstack.core.global_config import GlobalConfig
-from workstack.core.repo_discovery import RepoContext
 
 
 def test_config_list_displays_global_config() -> None:

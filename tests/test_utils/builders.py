@@ -31,13 +31,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from erk.core.context import WorkstackContext
+from erk.core.github_ops import PullRequestInfo
+from erk.core.global_config import GlobalConfig
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps, WorktreeInfo
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
-from workstack.core.context import WorkstackContext
-from workstack.core.github_ops import PullRequestInfo
-from workstack.core.global_config import GlobalConfig
 
 
 class GraphiteCacheBuilder:

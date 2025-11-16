@@ -30,13 +30,13 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
+from erk.cli.commands.sync import sync_cmd
+from erk.core.context import WorkstackContext
+from erk.core.gitops import WorktreeInfo
+from erk.core.global_config import GlobalConfig
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
-from workstack.cli.commands.sync import sync_cmd
-from workstack.core.context import WorkstackContext
-from workstack.core.gitops import WorktreeInfo
-from workstack.core.global_config import GlobalConfig
 
 # Tests for sync command error handling
 

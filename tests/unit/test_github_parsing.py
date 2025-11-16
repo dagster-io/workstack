@@ -1,11 +1,11 @@
 """Unit tests for GitHub parsing functions with JSON fixtures."""
 
-from tests.conftest import load_fixture
-from workstack.core.github_ops import (
+from erk.core.github_ops import (
     _determine_checks_status,
     parse_github_pr_list,
     parse_github_pr_status,
 )
+from tests.conftest import load_fixture
 
 
 def test_parse_github_pr_list_with_checks():

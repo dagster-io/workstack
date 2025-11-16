@@ -5,13 +5,13 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
+from erk.cli.commands.gt import graphite_branches_cmd
+from erk.core.branch_metadata import BranchMetadata
+from erk.core.global_config import GlobalConfig
 from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.test_utils import sentinel_path
-from workstack.cli.commands.gt import graphite_branches_cmd
-from workstack.core.branch_metadata import BranchMetadata
-from workstack.core.global_config import GlobalConfig
 
 
 def test_graphite_branches_text_format(tmp_path: Path) -> None:

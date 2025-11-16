@@ -13,7 +13,7 @@ wheels/
 # Virtual environments
 .venv
 activate.sh
-.workstack
+.erk
 
 # Local planning and configuration (not tracked in git)
 .plan/

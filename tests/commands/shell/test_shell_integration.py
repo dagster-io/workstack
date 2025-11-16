@@ -4,7 +4,7 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from workstack.cli.cli import cli
+from erk.cli.cli import cli
 
 
 def test_shell_integration_with_switch() -> None:
@@ -193,9 +193,9 @@ def test_shell_integration_switch_invokes_successfully() -> None:
     """
     from pathlib import Path
 
+    from erk.core.gitops import WorktreeInfo
     from tests.fakes.gitops import FakeGitOps
     from tests.test_utils.env_helpers import simulated_workstack_env
-    from workstack.core.gitops import WorktreeInfo
 
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
@@ -240,9 +240,9 @@ def test_shell_integration_switch_invokes_successfully() -> None:
 def test_shell_integration_jump_invokes_successfully() -> None:
     """Test that __shell jump invokes command successfully."""
 
+    from erk.core.gitops import WorktreeInfo
     from tests.fakes.gitops import FakeGitOps
     from tests.test_utils.env_helpers import simulated_workstack_env
-    from workstack.core.gitops import WorktreeInfo
 
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
@@ -277,8 +277,8 @@ def test_shell_integration_jump_invokes_successfully() -> None:
 def test_shell_integration_up_invokes_successfully() -> None:
     """Test that __shell up invokes command successfully with Graphite stack."""
 
+    from erk.core.graphite_ops import BranchMetadata
     from tests.test_utils.env_helpers import simulated_workstack_env
-    from workstack.core.graphite_ops import BranchMetadata
 
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
@@ -307,8 +307,8 @@ def test_shell_integration_up_invokes_successfully() -> None:
 def test_shell_integration_down_invokes_successfully() -> None:
     """Test that __shell down invokes command successfully with Graphite stack."""
 
+    from erk.core.graphite_ops import BranchMetadata
     from tests.test_utils.env_helpers import simulated_workstack_env
-    from workstack.core.graphite_ops import BranchMetadata
 
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
@@ -337,9 +337,9 @@ def test_shell_integration_down_invokes_successfully() -> None:
 def test_shell_integration_create_invokes_successfully() -> None:
     """Test that __shell create invokes command successfully."""
 
+    from erk.core.gitops import WorktreeInfo
     from tests.fakes.gitops import FakeGitOps
     from tests.test_utils.env_helpers import simulated_workstack_env
-    from workstack.core.gitops import WorktreeInfo
 
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
@@ -363,9 +363,9 @@ def test_shell_integration_create_invokes_successfully() -> None:
 
 def test_shell_integration_consolidate_invokes_successfully() -> None:
     """Test that __shell consolidate invokes command successfully."""
+    from erk.core.gitops import WorktreeInfo
     from tests.fakes.gitops import FakeGitOps
     from tests.test_utils.env_helpers import simulated_workstack_env
-    from workstack.core.gitops import WorktreeInfo
 
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
@@ -395,9 +395,9 @@ def test_shell_handler_uses_stdout_not_output() -> None:
     to avoid mixing stderr messages with the script path.
     """
 
+    from erk.core.gitops import WorktreeInfo
     from tests.fakes.gitops import FakeGitOps
     from tests.test_utils.env_helpers import simulated_workstack_env
-    from workstack.core.gitops import WorktreeInfo
 
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
@@ -446,9 +446,9 @@ def test_shell_integration_shows_note_for_no_directory_change() -> None:
     script (empty stdout), the handler should display a note explaining that no
     directory change is needed. This clarifies expected behavior for users.
     """
+    from erk.core.gitops import WorktreeInfo
     from tests.fakes.gitops import FakeGitOps
     from tests.test_utils.env_helpers import pure_workstack_env
-    from workstack.core.gitops import WorktreeInfo
 
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
@@ -485,9 +485,9 @@ def test_shell_integration_create_from_current_branch_returns_script_path() -> N
 
     See: https://github.com/anthropics/workstack/issues/XXX
     """
+    from erk.core.gitops import WorktreeInfo
     from tests.fakes.gitops import FakeGitOps
     from tests.test_utils.env_helpers import simulated_workstack_env
-    from workstack.core.gitops import WorktreeInfo
 
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
@@ -554,8 +554,8 @@ def test_shell_integration_land_stack_invokes_successfully() -> None:
     Verifies that land-stack is registered in the shell integration handler's command_map,
     which enables it to receive the --script flag for directory switching after landing PRs.
     """
+    from erk.core.graphite_ops import BranchMetadata
     from tests.test_utils.env_helpers import simulated_workstack_env
-    from workstack.core.graphite_ops import BranchMetadata
 
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:

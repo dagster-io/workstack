@@ -1,6 +1,6 @@
 """Helper functions for creating test commits."""
 
-from workstack.status.models.status_data import CommitInfo
+from erk.status.models.status_data import CommitInfo
 
 
 def make_test_commits(count: int = 3) -> list[CommitInfo]:

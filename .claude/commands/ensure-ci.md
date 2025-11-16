@@ -145,7 +145,7 @@ Use TodoWrite to track your progress:
 ```
 Iteration 1: Fixing lint errors
 Iteration 2: Fixing format errors
-Iteration 3: Fixing type errors in src/workstack/cli/commands/switch.py
+Iteration 3: Fixing type errors in src/erk/cli/commands/switch.py
 Iteration 4: All checks passed
 ```
 

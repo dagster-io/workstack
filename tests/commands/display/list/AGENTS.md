@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `workstack list` command is the most complex display command, supporting multiple modes (default, stacks, verbose) and showing PR information, stack hierarchies, and filtering options.
+The `erk list` command is the most complex display command, supporting multiple modes (default, stacks, verbose) and showing PR information, stack hierarchies, and filtering options.
 
 ## Test Files in This Directory
 
@@ -17,7 +17,7 @@ The `workstack list` command is the most complex display command, supporting mul
 ### Default Mode
 
 ```python
-from workstack.commands.list import list as list_cmd
+from erk.commands.list import list as list_cmd
 
 def test_list_default() -> None:
     git_ops = FakeGitOps(
@@ -26,7 +26,7 @@ def test_list_default() -> None:
     )
 
     runner = CliRunner()
-    result = runner.invoke(list_cmd, [], obj=WorkstackContext(git_ops=git_ops))
+    result = runner.invoke(list_cmd, [], obj=ErkContext(git_ops=git_ops))
 
     assert result.exit_code == 0
     assert "feature/a" in result.output
@@ -45,7 +45,7 @@ def test_list_stacks() -> None:
     graphite_ops = FakeGraphiteOps()
     graphite_ops.add_stack("parent", ["parent/child"])
 
-    ctx = WorkstackContext(git_ops=git_ops, graphite_ops=graphite_ops)
+    ctx = ErkContext(git_ops=git_ops, graphite_ops=graphite_ops)
     runner = CliRunner()
 
     result = runner.invoke(list_cmd, ["--stacks"], obj=ctx)
@@ -92,7 +92,7 @@ def test_list_with_pr_info() -> None:
         title="Add new feature"
     )
 
-    ctx = WorkstackContext(git_ops=git_ops, github_ops=github_ops)
+    ctx = ErkContext(git_ops=git_ops, github_ops=github_ops)
     runner = CliRunner()
 
     result = runner.invoke(list_cmd, [], obj=ctx)
@@ -143,7 +143,7 @@ def test_list_stack_hierarchy() -> None:
     graphite_ops.add_stack("level1", ["level1/level2"])
     graphite_ops.add_stack("level1/level2", ["level1/level2/level3"])
 
-    ctx = WorkstackContext(git_ops=git_ops, graphite_ops=graphite_ops)
+    ctx = ErkContext(git_ops=git_ops, graphite_ops=graphite_ops)
     runner = CliRunner()
 
     result = runner.invoke(list_cmd, ["--stacks"], obj=ctx)
@@ -207,7 +207,7 @@ def test_list_github_api_failure() -> None:
     github_ops = FakeGitHubOps()
     github_ops.set_error("API rate limit exceeded")
 
-    ctx = WorkstackContext(git_ops=git_ops, github_ops=github_ops)
+    ctx = ErkContext(git_ops=git_ops, github_ops=github_ops)
     runner = CliRunner()
 
     result = runner.invoke(list_cmd, [], obj=ctx)

@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-from workstack.core.gitops import WorktreeInfo
-from workstack.core.worktree_utils import find_worktree_containing_path
+from erk.core.gitops import WorktreeInfo
+from erk.core.worktree_utils import find_worktree_containing_path
 
 
 def test_finds_exact_match() -> None:

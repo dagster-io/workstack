@@ -46,7 +46,7 @@ def test_wheel_contains_registry(build_wheel: Path) -> None:
 
 @pytest.mark.parametrize(
     "kit_name",
-    ["gt", "devrun", "dignified-python-310", "dignified-python-313", "workstack"],
+    ["gt", "devrun", "dignified-python-310", "dignified-python-313", "erk"],
 )
 def test_wheel_contains_kit_yaml(build_wheel: Path, kit_name: str) -> None:
     """Test that each kit's kit.yaml is included in the wheel."""
@@ -130,7 +130,7 @@ def test_wheel_contains_all_init_files(build_wheel: Path) -> None:
         "dot_agent_kit/data/kits/devrun/__init__.py",
         "dot_agent_kit/data/kits/dignified-python-310/__init__.py",
         "dot_agent_kit/data/kits/dignified-python-313/__init__.py",
-        "dot_agent_kit/data/kits/workstack/__init__.py",
+        "dot_agent_kit/data/kits/erk/__init__.py",
     ]
 
     with zipfile.ZipFile(build_wheel) as wheel:

@@ -55,7 +55,7 @@ Section Header:
 ```
 Claude Artifacts:
   Skills:
-    [P] workstack [workstack@0.1.0]
+    [P] erk [erk@0.1.0]
     [U] custom-skill [local]
 ```
 
@@ -77,10 +77,10 @@ Section Header:
 ```
 Claude Artifacts:
   Skills:
-    [P] workstack [workstack@0.1.0]
-        → Use workstack for git worktree management
-        Kit: workstack@0.1.0
-        Path: skills/workstack.md
+    [P] erk [erk@0.1.0]
+        → Use erk for git worktree management
+        Kit: erk@0.1.0
+        Path: skills/erk.md
 ```
 
 ### 4. Badge Indicators
@@ -139,7 +139,7 @@ Claude Artifacts:
 ### Before: Plain Text Hook List
 
 ```
-workstack:gt-submit-hook [UserPromptSubmit / command_name:gt:submit-branch]
+erk:gt-submit-hook [UserPromptSubmit / command_name:gt:submit-branch]
 dignified-python:type-checker [UserPromptSubmit / *]
 ```
 
@@ -148,7 +148,7 @@ dignified-python:type-checker [UserPromptSubmit / *]
 ```
 Hooks by Lifecycle:
   UserPromptSubmit:
-    [P] workstack:gt-submit-hook [workstack@0.1.0]
+    [P] erk:gt-submit-hook [erk@0.1.0]
         Matcher: command_name:gt:submit-branch
     [U] dignified-python:type-checker [local]
         Matcher: *

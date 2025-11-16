@@ -1,6 +1,6 @@
 """Tests for add_gitignore_entry function."""
 
-from workstack.core.init_utils import add_gitignore_entry
+from erk.core.init_utils import add_gitignore_entry
 
 
 def test_adds_entry_to_empty_content() -> None:

@@ -5,7 +5,7 @@ from pathlib import Path
 import click
 from click.testing import CliRunner
 
-from workstack.status.models.status_data import (
+from erk.status.models.status_data import (
     CommitInfo,
     GitStatus,
     PlanStatus,
@@ -14,7 +14,7 @@ from workstack.status.models.status_data import (
     StatusData,
     WorktreeDisplayInfo,
 )
-from workstack.status.renderers.simple import SimpleRenderer
+from erk.status.renderers.simple import SimpleRenderer
 
 
 def capture_renderer_output(renderer: SimpleRenderer, status_data: StatusData) -> str:

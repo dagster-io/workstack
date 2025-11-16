@@ -4,7 +4,7 @@ This fake enables testing completion-related functionality without
 requiring subprocess execution or actual Click completion generation.
 """
 
-from workstack.core.completion_ops import CompletionOps
+from erk.core.completion_ops import CompletionOps
 
 
 class FakeCompletionOps(CompletionOps):
@@ -20,7 +20,7 @@ class FakeCompletionOps(CompletionOps):
     When to Use:
     - Testing completion commands (bash, zsh, fish)
     - Verifying correct shell-specific script generation
-    - Testing workstack path detection logic
+    - Testing erk path detection logic
 
     Examples:
         # Test basic bash completion generation
@@ -41,12 +41,12 @@ class FakeCompletionOps(CompletionOps):
         >>> zsh = completion_ops.generate_zsh()
         >>> assert completion_ops.generation_calls == ["bash", "zsh"]
 
-        # Test custom workstack path
+        # Test custom erk path
         >>> completion_ops = FakeCompletionOps(
-        ...     workstack_path="/custom/path/workstack"
+        ...     erk_path="/custom/path/erk"
         ... )
-        >>> path = completion_ops.get_workstack_path()
-        >>> assert path == "/custom/path/workstack"
+        >>> path = completion_ops.get_erk_path()
+        >>> assert path == "/custom/path/erk"
     """
 
     def __init__(
@@ -55,7 +55,7 @@ class FakeCompletionOps(CompletionOps):
         bash_script: str = "# bash completion script",
         zsh_script: str = "# zsh completion script",
         fish_script: str = "# fish completion script",
-        workstack_path: str = "/usr/local/bin/workstack",
+        erk_path: str = "/usr/local/bin/erk",
     ) -> None:
         """Initialize fake with predetermined completion scripts.
 
@@ -63,12 +63,12 @@ class FakeCompletionOps(CompletionOps):
             bash_script: Script to return from generate_bash()
             zsh_script: Script to return from generate_zsh()
             fish_script: Script to return from generate_fish()
-            workstack_path: Path to return from get_workstack_path()
+            erk_path: Path to return from get_erk_path()
         """
         self._bash_script = bash_script
         self._zsh_script = zsh_script
         self._fish_script = fish_script
-        self._workstack_path = workstack_path
+        self._erk_path = erk_path
         self._generation_calls: list[str] = []
 
     def generate_bash(self) -> str:
@@ -86,9 +86,9 @@ class FakeCompletionOps(CompletionOps):
         self._generation_calls.append("fish")
         return self._fish_script
 
-    def get_workstack_path(self) -> str:
-        """Return pre-configured workstack executable path."""
-        return self._workstack_path
+    def get_erk_path(self) -> str:
+        """Return pre-configured erk executable path."""
+        return self._erk_path
 
     @property
     def generation_calls(self) -> list[str]:

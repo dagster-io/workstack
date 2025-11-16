@@ -9,17 +9,17 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
+from erk.cli.cli import cli
+from erk.cli.tree import (
+    _get_worktree_mapping,
+    _load_graphite_branch_graph,
+)
+from erk.core.branch_metadata import BranchMetadata
 from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps, WorktreeInfo
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.test_utils import sentinel_path
 from tests.test_utils.env_helpers import pure_workstack_env
-from workstack.cli.cli import cli
-from workstack.cli.tree import (
-    _get_worktree_mapping,
-    _load_graphite_branch_graph,
-)
-from workstack.core.branch_metadata import BranchMetadata
 
 # ===========================
 # Helper Function Tests

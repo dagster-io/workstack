@@ -5,13 +5,13 @@ from typing import Any
 
 import pytest
 
+from erk.core.github_ops import PullRequestInfo
+from erk.core.global_config import GlobalConfig
+from erk.status.collectors.github import GitHubPRCollector
 from tests.fakes.context import create_test_context
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
-from workstack.core.github_ops import PullRequestInfo
-from workstack.core.global_config import GlobalConfig
-from workstack.status.collectors.github import GitHubPRCollector
 
 
 def make_pr(

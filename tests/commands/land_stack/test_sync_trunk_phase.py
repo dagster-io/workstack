@@ -4,12 +4,12 @@ Tests verify that trunk sync works correctly when trunk is checked out in a work
 This is a regression test for the bug where trunk was not updated after landing PRs.
 """
 
+from erk.cli.commands.land_stack.execution import _execute_sync_trunk_phase
+from erk.core.context import WorkstackContext
+from erk.core.gitops import WorktreeInfo
+from erk.core.repo_discovery import RepoContext
 from tests.fakes.gitops import FakeGitOps
 from tests.test_utils.paths import SentinelPath
-from workstack.cli.commands.land_stack.execution import _execute_sync_trunk_phase
-from workstack.core.context import WorkstackContext
-from workstack.core.gitops import WorktreeInfo
-from workstack.core.repo_discovery import RepoContext
 
 
 def test_sync_trunk_in_worktree_pulls_at_worktree_location() -> None:

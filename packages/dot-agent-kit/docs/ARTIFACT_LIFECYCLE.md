@@ -36,9 +36,9 @@ Edit `packages/dot-agent-kit/src/dot_agent_kit/data/kits/<kit-name>/kit.yaml`:
 ```yaml
 artifacts:
   command:
-    - commands/workstack/create-planned-stack.md # OLD (deleted)
-    - commands/workstack/persist-plan.md # NEW
-    - commands/workstack/create-planned-stack.md # NEW
+    - commands/erk/create-planned-stack.md # OLD (deleted)
+    - commands/erk/persist-plan.md # NEW
+    - commands/erk/create-planned-stack.md # NEW
 ```
 
 **3. Update cross-references**
@@ -57,7 +57,7 @@ grep -r "create-from-plan" packages/dot-agent-kit/src/dot_agent_kit/data/kits/
 
 Update references:
 
-- Command invocations: `/workstack:old-name` → `/workstack:new-name`
+- Command invocations: `/erk:old-name` → `/erk:new-name`
 - File references: `old-name.md` → `new-name.md`
 - Descriptions mentioning the command
 
@@ -87,20 +87,20 @@ This refactoring split one command into two separate commands:
 
 ```bash
 # 1. Files created/modified
-# - Created: commands/workstack/persist-plan.md
-# - Rewrote: commands/workstack/create-planned-stack.md (simplified version)
+# - Created: commands/erk/persist-plan.md
+# - Rewrote: commands/erk/create-planned-stack.md (simplified version)
 
 # 2. kit.yaml updated
 # Changed single entry to two entries:
-#   - commands/workstack/persist-plan.md
-#   - commands/workstack/create-planned-stack.md
+#   - commands/erk/persist-plan.md
+#   - commands/erk/create-planned-stack.md
 
 # 3. Cross-references updated in implement-plan.md
 # Updated references to new two-step workflow
 
 # 4. Reinstall
-dot-agent kit remove workstack
-dot-agent kit install bundled:workstack --force
+dot-agent kit remove erk
+dot-agent kit install bundled:erk --force
 
 # 5. Verify
 dot-agent check
@@ -135,8 +135,8 @@ Edit `kit.yaml` and remove the artifact entry:
 ```yaml
 artifacts:
   command:
-    - commands/workstack/keep-this.md
-    - commands/workstack/delete-this.md # REMOVE THIS LINE
+    - commands/erk/keep-this.md
+    - commands/erk/delete-this.md # REMOVE THIS LINE
 ```
 
 **3. Update cross-references**
@@ -178,7 +178,7 @@ From commit f967aff2:
 ```bash
 # 1. Files deleted
 git rm commands/gt/view-pr.md
-git rm commands/workstack/view-plan.md
+git rm commands/erk/view-plan.md
 
 # 2. kit.yaml entries removed from respective kits
 
@@ -187,8 +187,8 @@ git rm commands/workstack/view-plan.md
 # 4. Reinstall both kits
 dot-agent kit remove gt
 dot-agent kit install bundled:gt --force
-dot-agent kit remove workstack
-dot-agent kit install bundled:workstack --force
+dot-agent kit remove erk
+dot-agent kit install bundled:erk --force
 
 # 5. Verify
 dot-agent check
@@ -300,7 +300,7 @@ ls -la .claude/commands/<namespace>/
 
 ```
 Missing artifacts (in manifest but not installed):
-  - .claude/commands/workstack/artifact-name.md
+  - .claude/commands/erk/artifact-name.md
 ```
 
 **Diagnosis:**
@@ -317,7 +317,7 @@ Diagnosis:
 
 ```bash
 # Check what symlink points to
-readlink .claude/commands/workstack/artifact-name.md
+readlink .claude/commands/erk/artifact-name.md
 
 # Should point to existing file, not deleted/renamed file
 ```

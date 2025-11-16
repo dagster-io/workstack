@@ -110,8 +110,8 @@ class MyOps(Protocol):
 
 ```python
 # ✅ CORRECT: Absolute imports
-from workstack.config import load_config
-from workstack.core import discover_repo_context
+from erk.config import load_config
+from erk.core import discover_repo_context
 
 # ❌ WRONG: Relative imports
 from .config import load_config
@@ -157,7 +157,7 @@ except KeyError:
 from pathlib import Path
 
 # ✅ CORRECT: pathlib operations
-config_path = Path.home() / ".workstack" / "config.toml"
+config_path = Path.home() / ".erk" / "config.toml"
 content = config_path.read_text(encoding="utf-8")
 
 if config_path.exists():
@@ -169,7 +169,7 @@ expanded_path = Path("~/.config").expanduser()
 
 # ❌ WRONG: os.path operations
 import os
-config_path = os.path.join(os.path.expanduser("~"), ".workstack", "config.toml")
+config_path = os.path.join(os.path.expanduser("~"), ".erk", "config.toml")
 ```
 
 **Always specify `encoding="utf-8"`** when reading/writing files.
@@ -258,13 +258,13 @@ from pathlib import Path
 
 @dataclass(frozen=True)
 class GlobalConfig:
-    workstacks_root: Path
+    erks_root: Path
     use_graphite: bool
     show_pr_info: bool
 
 # Usage - cannot be modified after creation
 config = GlobalConfig(
-    workstacks_root=Path("/home/user/workstacks"),
+    erks_root=Path("/home/user/erks"),
     use_graphite=True,
     show_pr_info=False,
 )
@@ -360,16 +360,16 @@ process_data(data, format=None)  # Explicitly choosing auto-detection
 ```python
 # ❌ WRONG: Code in __init__.py
 """Configuration module."""
-from workstack.config.loader import load_config
-from workstack.config.writer import write_config
+from erk.config.loader import load_config
+from erk.config.writer import write_config
 __all__ = ["load_config", "write_config"]
 
 # ✅ CORRECT: Empty __init__.py
 # (file is completely empty or docstring-only)
 
 # ✅ Use absolute imports instead
-from workstack.config import load_config
-from workstack.core import discover_repo_context
+from erk.config import load_config
+from erk.core import discover_repo_context
 ```
 
 **Exception**: Package entry points may contain minimal initialization code.
@@ -509,7 +509,7 @@ def process_data(data: dict[str, Any]) -> Result:
 # ✅ ACCEPTABLE: CLI command error boundary
 @click.command("create")
 @click.pass_obj
-def create(ctx: WorkstackContext, name: str) -> None:
+def create(ctx: ErkContext, name: str) -> None:
     """Create a worktree."""
     try:
         create_worktree(ctx, name)

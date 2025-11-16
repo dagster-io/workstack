@@ -10,7 +10,7 @@ from typing import NamedTuple
 
 import pytest
 
-from workstack.core.gitops import GitOps, RealGitOps
+from erk.core.gitops import GitOps, RealGitOps
 
 
 class GitOpsSetup(NamedTuple):

@@ -22,13 +22,13 @@ from unittest import mock
 
 from click.testing import CliRunner
 
+from erk.cli.cli import cli
+from erk.core.global_config import GlobalConfig, InMemoryGlobalConfigOps
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from tests.test_utils.env_helpers import simulated_workstack_env
-from workstack.cli.cli import cli
-from workstack.core.global_config import GlobalConfig, InMemoryGlobalConfigOps
 
 
 def test_init_creates_global_config_first_time() -> None:
@@ -188,7 +188,7 @@ def test_init_fails_repo_flag_without_global_config() -> None:
 
         assert result.exit_code == 1
         assert "Global config not found" in result.output
-        assert "Run 'workstack init' without --repo" in result.output
+        assert "Run 'erk init' without --repo" in result.output
 
 
 def test_init_auto_preset_detects_dagster() -> None:
@@ -888,8 +888,8 @@ def test_init_prints_completion_instructions() -> None:
         assert result.exit_code == 0, result.output
         # Verify instructions are printed, not file written
         assert "Shell Integration Setup" in result.output
-        assert "# Workstack completion" in result.output
-        assert "source <(workstack completion bash)" in result.output
+        assert "# Erk completion" in result.output
+        assert "source <(erk completion bash)" in result.output
 
 
 def test_init_prints_wrapper_instructions() -> None:
@@ -925,8 +925,8 @@ def test_init_prints_wrapper_instructions() -> None:
         assert result.exit_code == 0, result.output
         # Verify wrapper instructions are printed
         assert "Shell Integration Setup" in result.output
-        assert "# Workstack shell integration" in result.output
-        assert "workstack()" in result.output
+        assert "# Erk shell integration" in result.output
+        assert "erk()" in result.output
 
 
 def test_init_skips_shell_if_declined() -> None:

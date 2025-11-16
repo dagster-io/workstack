@@ -21,12 +21,12 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
+from erk.cli.commands.status import status_cmd
+from erk.core.context import WorkstackContext
+from erk.core.global_config import GlobalConfig
 from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps, WorktreeInfo
 from tests.test_utils.builders import WorktreeScenario
-from workstack.cli.commands.status import status_cmd
-from workstack.core.context import WorkstackContext
-from workstack.core.global_config import GlobalConfig
 
 
 def test_status_cmd_in_root_worktree(simple_repo: WorktreeScenario) -> None:

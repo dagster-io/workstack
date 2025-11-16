@@ -18,7 +18,7 @@ Topics to explore in agentic programming articles.
 
 7. **Packaged run commands in .agent** - Using `.agent/` directory to bundle execution scripts alongside skills and commands, creating portable agent toolkits
 
-8. **Planning workflow with workstack enrichment** - How to plan implementations, create worktrees from plans, and customize the enrichment step to inject project-specific context before autonomous execution
+8. **Planning workflow with erk enrichment** - How to plan implementations, create worktrees from plans, and customize the enrichment step to inject project-specific context before autonomous execution
 
 9. **Always run Claude in verbose mode** - Why enabling verbose output is essential for understanding agent reasoning, debugging workflows, and building trust in agentic development
 

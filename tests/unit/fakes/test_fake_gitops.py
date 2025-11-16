@@ -6,8 +6,8 @@ tracks mutations, and provides reliable test doubles for CLI tests.
 
 from pathlib import Path
 
+from erk.core.gitops import WorktreeInfo
 from tests.fakes.gitops import FakeGitOps
-from workstack.core.gitops import WorktreeInfo
 
 
 def test_fake_gitops_list_worktrees() -> None:

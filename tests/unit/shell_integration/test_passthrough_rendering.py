@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from workstack.cli.shell_integration.handler import (
+from erk.cli.shell_integration.handler import (
     _quote_fish,
     _render_fish_passthrough,
     _render_posix_passthrough,

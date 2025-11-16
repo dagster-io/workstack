@@ -1,6 +1,6 @@
 """Tests for GitHub operations."""
 
-from workstack.core.github_ops import RealGitHubOps, _parse_github_pr_url
+from erk.core.github_ops import RealGitHubOps, _parse_github_pr_url
 
 
 def test_parse_github_pr_url_valid_urls() -> None:

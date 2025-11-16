@@ -7,7 +7,7 @@ For comprehensive testing patterns and architecture, see:
 
 Run all tests: `uv run pytest`
 Run specific test: `uv run pytest tests/commands/workspace/test_rm.py::test_rm_force_removes_directory`
-Run with coverage: `uv run pytest --cov=workstack`
+Run with coverage: `uv run pytest --cov=erk`
 
 ## Important: Directory Structure Requirements
 
@@ -104,7 +104,7 @@ CLI layer tests using fakes. Tests user-facing command behavior.
 
 **When to add tests here:** When adding/modifying CLI commands.
 
-**Key principle:** Uses `CliRunner` + `WorkstackContext` injection with fakes. May use `isolated_filesystem()` when fakes create directories.
+**Key principle:** Uses `CliRunner` + `ErkContext` injection with fakes. May use `isolated_filesystem()` when fakes create directories.
 
 ### Layer 4: Core Tests (tests/core/)
 
@@ -198,7 +198,7 @@ Each subdirectory has targeted CLAUDE.md files with domain-specific patterns:
 
 ## Testing Principles
 
-1. **Use dependency injection** - All tests inject fakes via WorkstackContext
+1. **Use dependency injection** - All tests inject fakes via ErkContext
 2. **No mock.patch** - Use FakeShellOps, FakeGitOps, etc. instead
 3. **Constructor injection** - All fake state configured at construction
 4. **Mutation tracking** - Use read-only properties for assertions (e.g., `git_ops.deleted_branches`)

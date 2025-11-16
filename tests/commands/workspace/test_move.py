@@ -2,10 +2,10 @@
 
 from click.testing import CliRunner
 
+from erk.cli.cli import cli
+from erk.core.gitops import WorktreeInfo
 from tests.fakes.gitops import FakeGitOps
 from tests.test_utils.env_helpers import pure_workstack_env
-from workstack.cli.cli import cli
-from workstack.core.gitops import WorktreeInfo
 
 
 def test_move_from_current_to_new_worktree() -> None:

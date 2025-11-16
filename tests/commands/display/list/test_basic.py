@@ -1,11 +1,11 @@
 from click.testing import CliRunner
 
+from erk.cli.cli import cli
+from erk.core.gitops import WorktreeInfo
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.test_utils.env_helpers import pure_workstack_env
 from tests.test_utils.output_helpers import strip_ansi
-from workstack.cli.cli import cli
-from workstack.core.gitops import WorktreeInfo
 
 
 def test_list_outputs_names_not_paths() -> None:

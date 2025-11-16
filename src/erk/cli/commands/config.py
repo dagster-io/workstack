@@ -1,0 +1,235 @@
+import subprocess
+from pathlib import Path
+
+import click
+
+from erk.cli.config import LoadedConfig
+from erk.cli.core import discover_repo_context
+from erk.cli.output import machine_output, user_output
+from erk.core.context import WorkstackContext, write_trunk_to_pyproject
+from erk.core.global_config import GlobalConfig
+
+
+def _get_env_value(cfg: LoadedConfig, parts: list[str], key: str) -> None:
+    """Handle env.* configuration keys.
+
+    Prints the value or exits with error if key not found.
+    """
+    if len(parts) != 2:
+        user_output(f"Invalid key: {key}")
+        raise SystemExit(1)
+
+    if parts[1] not in cfg.env:
+        user_output(f"Key not found: {key}")
+        raise SystemExit(1)
+
+    machine_output(cfg.env[parts[1]])
+
+
+def _get_post_create_value(cfg: LoadedConfig, parts: list[str], key: str) -> None:
+    """Handle post_create.* configuration keys.
+
+    Prints the value or exits with error if key not found.
+    """
+    if len(parts) != 2:
+        user_output(f"Invalid key: {key}")
+        raise SystemExit(1)
+
+    # Handle shell subkey
+    if parts[1] == "shell":
+        if not cfg.post_create_shell:
+            user_output(f"Key not found: {key}")
+            raise SystemExit(1)
+        machine_output(cfg.post_create_shell)
+        return
+
+    # Handle commands subkey
+    if parts[1] == "commands":
+        for cmd in cfg.post_create_commands:
+            machine_output(cmd)
+        return
+
+    # Unknown subkey
+    user_output(f"Key not found: {key}")
+    raise SystemExit(1)
+
+
+@click.group("config")
+def config_group() -> None:
+    """Manage workstack configuration."""
+
+
+@config_group.command("list")
+@click.pass_obj
+def config_list(ctx: WorkstackContext) -> None:
+    """Print a list of configuration keys and values."""
+    # Display global config
+    user_output(click.style("Global configuration:", bold=True))
+    if ctx.global_config:
+        user_output(f"  workstacks_root={ctx.global_config.workstacks_root}")
+        user_output(f"  use_graphite={str(ctx.global_config.use_graphite).lower()}")
+        user_output(f"  show_pr_info={str(ctx.global_config.show_pr_info).lower()}")
+    else:
+        user_output("  (not configured - run 'workstack init' to create)")
+
+    # Display local config
+    user_output(click.style("\nRepository configuration:", bold=True))
+    from erk.core.repo_discovery import NoRepoSentinel
+
+    if isinstance(ctx.repo, NoRepoSentinel):
+        user_output("  (not in a git repository)")
+    else:
+        trunk_branch = ctx.trunk_branch
+        cfg = ctx.local_config
+        if trunk_branch:
+            user_output(f"  trunk-branch={trunk_branch}")
+        if cfg.env:
+            for key, value in cfg.env.items():
+                user_output(f"  env.{key}={value}")
+        if cfg.post_create_shell:
+            user_output(f"  post_create.shell={cfg.post_create_shell}")
+        if cfg.post_create_commands:
+            user_output(f"  post_create.commands={cfg.post_create_commands}")
+
+        has_no_config = (
+            not trunk_branch
+            and not cfg.env
+            and not cfg.post_create_shell
+            and not cfg.post_create_commands
+        )
+        if has_no_config:
+            user_output("  (no configuration - run 'workstack init --repo' to create)")
+
+
+@config_group.command("get")
+@click.argument("key", metavar="KEY")
+@click.pass_obj
+def config_get(ctx: WorkstackContext, key: str) -> None:
+    """Print the value of a given configuration key."""
+    parts = key.split(".")
+
+    # Handle global config keys
+    if parts[0] in ("workstacks_root", "use_graphite", "show_pr_info"):
+        if ctx.global_config is None:
+            config_path = ctx.global_config_ops.path()
+            user_output(f"Global config not found at {config_path}")
+            raise SystemExit(1)
+
+        if parts[0] == "workstacks_root":
+            machine_output(str(ctx.global_config.workstacks_root))
+        elif parts[0] == "use_graphite":
+            machine_output(str(ctx.global_config.use_graphite).lower())
+        elif parts[0] == "show_pr_info":
+            machine_output(str(ctx.global_config.show_pr_info).lower())
+        return
+
+    # Handle repo config keys
+    from erk.core.repo_discovery import NoRepoSentinel
+
+    if isinstance(ctx.repo, NoRepoSentinel):
+        user_output("Not in a git repository")
+        raise SystemExit(1)
+
+    if parts[0] == "trunk-branch":
+        trunk_branch = ctx.trunk_branch
+        if trunk_branch:
+            machine_output(trunk_branch)
+        else:
+            user_output("not configured (will auto-detect)")
+        return
+
+    cfg = ctx.local_config
+
+    if parts[0] == "env":
+        _get_env_value(cfg, parts, key)
+        return
+
+    if parts[0] == "post_create":
+        _get_post_create_value(cfg, parts, key)
+        return
+
+    user_output(f"Invalid key: {key}")
+    raise SystemExit(1)
+
+
+@config_group.command("set")
+@click.argument("key", metavar="KEY")
+@click.argument("value", metavar="VALUE")
+@click.pass_obj
+def config_set(ctx: WorkstackContext, key: str, value: str) -> None:
+    """Update configuration with a value for the given key."""
+    # Parse key into parts
+    parts = key.split(".")
+
+    # Handle global config keys
+    if parts[0] in ("workstacks_root", "use_graphite", "show_pr_info"):
+        if ctx.global_config is None:
+            config_path = ctx.global_config_ops.path()
+            user_output(f"Global config not found at {config_path}")
+            user_output("Run 'workstack init' to create it.")
+            raise SystemExit(1)
+
+        # Create new config with updated value
+        if parts[0] == "workstacks_root":
+            new_config = GlobalConfig(
+                workstacks_root=Path(value).expanduser().resolve(),
+                use_graphite=ctx.global_config.use_graphite,
+                shell_setup_complete=ctx.global_config.shell_setup_complete,
+                show_pr_info=ctx.global_config.show_pr_info,
+            )
+        elif parts[0] == "use_graphite":
+            if value.lower() not in ("true", "false"):
+                user_output(f"Invalid boolean value: {value}")
+                raise SystemExit(1)
+            new_config = GlobalConfig(
+                workstacks_root=ctx.global_config.workstacks_root,
+                use_graphite=value.lower() == "true",
+                shell_setup_complete=ctx.global_config.shell_setup_complete,
+                show_pr_info=ctx.global_config.show_pr_info,
+            )
+        elif parts[0] == "show_pr_info":
+            if value.lower() not in ("true", "false"):
+                user_output(f"Invalid boolean value: {value}")
+                raise SystemExit(1)
+            new_config = GlobalConfig(
+                workstacks_root=ctx.global_config.workstacks_root,
+                use_graphite=ctx.global_config.use_graphite,
+                shell_setup_complete=ctx.global_config.shell_setup_complete,
+                show_pr_info=value.lower() == "true",
+            )
+        else:
+            user_output(f"Invalid key: {key}")
+            raise SystemExit(1)
+
+        ctx.global_config_ops.save(new_config)
+        user_output(f"Set {key}={value}")
+        return
+
+    # Handle repo config keys
+    if parts[0] == "trunk-branch":
+        # discover_repo_context checks for git repository and raises FileNotFoundError
+        repo = discover_repo_context(ctx, Path.cwd())
+
+        # Validate that the branch exists before writing
+        result = subprocess.run(
+            ["git", "rev-parse", "--verify", value],
+            cwd=repo.root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            user_output(
+                f"Error: Branch '{value}' does not exist in repository.\n"
+                f"Create the branch first before configuring it as trunk."
+            )
+            raise SystemExit(1)
+
+        # Write configuration
+        write_trunk_to_pyproject(repo.root, value)
+        user_output(f"Set trunk-branch={value}")
+        return
+
+    # Other repo config keys not implemented yet
+    user_output("Setting repo config keys not yet implemented")
+    raise SystemExit(1)

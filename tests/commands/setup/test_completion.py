@@ -9,9 +9,9 @@ see tests/integration/test_completion_e2e.py.
 
 from click.testing import CliRunner
 
+from erk.cli.commands.completion import completion_bash, completion_fish, completion_zsh
 from tests.fakes.completion_ops import FakeCompletionOps
 from tests.fakes.context import create_test_context
-from workstack.cli.commands.completion import completion_bash, completion_fish, completion_zsh
 
 # Unit tests using FakeCompletionOps
 
@@ -20,15 +20,13 @@ def test_bash_cmd_generation() -> None:
     """Test bash completion command generation."""
     # Setup fake with bash completion script
     bash_script = (
-        "_workstack_completion() {\n"
+        "_erk_completion() {\n"
         "    COMPREPLY=()\n"
         "    local word\n"
-        "    complete -F _workstack_completion workstack\n"
+        "    complete -F _erk_completion erk\n"
         "}"
     )
-    completion_ops = FakeCompletionOps(
-        bash_script=bash_script, workstack_path="/usr/local/bin/workstack"
-    )
+    completion_ops = FakeCompletionOps(bash_script=bash_script, erk_path="/usr/local/bin/erk")
 
     ctx = create_test_context(completion_ops=completion_ops)
     runner = CliRunner()
@@ -36,7 +34,7 @@ def test_bash_cmd_generation() -> None:
 
     # Verify command executed successfully
     assert result.exit_code == 0
-    assert "_workstack_completion" in result.output
+    assert "_erk_completion" in result.output
     assert "COMPREPLY" in result.output
 
     # Verify generation was called
@@ -47,17 +45,17 @@ def test_bash_cmd_includes_all_commands() -> None:
     """Test bash completion includes all commands."""
     # Simulate a more complete bash completion output
     completion_script = """
-_workstack_completion() {
+_erk_completion() {
     local IFS=$'\t'
     local response
 
-    response=$(env COMP_WORDS="${COMP_WORDS[*]}" _WORKSTACK_COMPLETE=bash_complete workstack)
+    response=$(env COMP_WORDS="${COMP_WORDS[*]}" _ERK_COMPLETE=bash_complete erk)
 
     local commands="create list status switch up down rm rename move gc"
     COMPREPLY=($(compgen -W "$commands" -- "${COMP_WORDS[COMP_CWORD]}"))
 }
 
-complete -F _workstack_completion workstack
+complete -F _erk_completion erk
 """
     completion_ops = FakeCompletionOps(bash_script=completion_script)
     ctx = create_test_context(completion_ops=completion_ops)
@@ -69,20 +67,20 @@ complete -F _workstack_completion workstack
     # Check for common commands in the output
     assert "create" in result.output
     assert "switch" in result.output
-    assert "complete -F _workstack_completion workstack" in result.output
+    assert "complete -F _erk_completion erk" in result.output
 
 
 def test_bash_cmd_handles_special_chars() -> None:
     """Test bash completion handles special characters properly."""
     # Test with script containing special chars that need escaping
     completion_script = """
-_workstack_completion() {
+_erk_completion() {
     local word="${COMP_WORDS[COMP_CWORD]}"
     # Handle branch names with special chars
     local branches="feature/test feature-123 bug#456"
     COMPREPLY=($(compgen -W "$branches" -- "$word"))
 }
-complete -F _workstack_completion workstack
+complete -F _erk_completion erk
 """
     completion_ops = FakeCompletionOps(bash_script=completion_script)
     ctx = create_test_context(completion_ops=completion_ops)
@@ -97,8 +95,8 @@ complete -F _workstack_completion workstack
 
 def test_zsh_cmd_generation() -> None:
     """Test zsh completion command generation."""
-    zsh_completion = """#compdef workstack
-_workstack() {
+    zsh_completion = """#compdef erk
+_erk() {
     local -a commands
     commands=(
         'create:Create a new workspace'
@@ -107,7 +105,7 @@ _workstack() {
     )
     _describe 'command' commands
 }
-compdef _workstack workstack
+compdef _erk erk
 """
     completion_ops = FakeCompletionOps(zsh_script=zsh_completion)
     ctx = create_test_context(completion_ops=completion_ops)
@@ -116,8 +114,8 @@ compdef _workstack workstack
     result = runner.invoke(completion_zsh, obj=ctx)
 
     assert result.exit_code == 0
-    assert "#compdef workstack" in result.output
-    assert "_workstack" in result.output
+    assert "#compdef erk" in result.output
+    assert "_erk" in result.output
     assert "compdef" in result.output
 
     # Verify generation was called
@@ -126,8 +124,8 @@ compdef _workstack workstack
 
 def test_zsh_cmd_includes_descriptions() -> None:
     """Test zsh completion includes command descriptions."""
-    zsh_completion = """#compdef workstack
-_workstack() {
+    zsh_completion = """#compdef erk
+_erk() {
     local -a commands
     commands=(
         'create:Create a new workspace with an optional branch'
@@ -151,8 +149,8 @@ _workstack() {
 
 def test_zsh_cmd_handles_options() -> None:
     """Test zsh completion handles command options."""
-    zsh_completion = """#compdef workstack
-_workstack() {
+    zsh_completion = """#compdef erk
+_erk() {
     local context state state_descr line
     typeset -A opt_args
 
@@ -164,7 +162,7 @@ _workstack() {
 
     case $state in
         args)
-            _workstack_commands
+            _erk_commands
             ;;
     esac
 }
@@ -183,10 +181,10 @@ _workstack() {
 def test_fish_cmd_generation() -> None:
     """Test fish completion command generation."""
     fish_completion = """
-complete -c workstack -n "__fish_use_subcommand" -a create -d "Create a new workspace"
-complete -c workstack -n "__fish_use_subcommand" -a list -d "List all workspaces"
-complete -c workstack -n "__fish_use_subcommand" -a status -d "Show workspace status"
-complete -c workstack -l help -d "Show help message"
+complete -c erk -n "__fish_use_subcommand" -a create -d "Create a new workspace"
+complete -c erk -n "__fish_use_subcommand" -a list -d "List all workspaces"
+complete -c erk -n "__fish_use_subcommand" -a status -d "Show workspace status"
+complete -c erk -l help -d "Show help message"
 """
     completion_ops = FakeCompletionOps(fish_script=fish_completion)
     ctx = create_test_context(completion_ops=completion_ops)
@@ -195,7 +193,7 @@ complete -c workstack -l help -d "Show help message"
     result = runner.invoke(completion_fish, obj=ctx)
 
     assert result.exit_code == 0
-    assert "complete -c workstack" in result.output
+    assert "complete -c erk" in result.output
     assert "__fish_use_subcommand" in result.output
 
     # Verify generation was called
@@ -206,12 +204,12 @@ def test_fish_cmd_includes_subcommands() -> None:
     """Test fish completion includes subcommands."""
     fish_completion = """
 # Main commands
-complete -c workstack -n "__fish_use_subcommand" -a create -d "Create a new workspace"
-complete -c workstack -n "__fish_use_subcommand" -a switch -d "Switch to a workspace"
+complete -c erk -n "__fish_use_subcommand" -a create -d "Create a new workspace"
+complete -c erk -n "__fish_use_subcommand" -a switch -d "Switch to a workspace"
 
 # Subcommands for 'create'
-complete -c workstack -n "__fish_seen_subcommand_from create" -s f -l force -d "Force creation"
-complete -c workstack -n "__fish_seen_subcommand_from create" -s b -l branch -d "Specify branch"
+complete -c erk -n "__fish_seen_subcommand_from create" -s f -l force -d "Force creation"
+complete -c erk -n "__fish_seen_subcommand_from create" -s b -l branch -d "Specify branch"
 """
     completion_ops = FakeCompletionOps(fish_script=fish_completion)
     ctx = create_test_context(completion_ops=completion_ops)
@@ -254,43 +252,37 @@ def test_completion_subprocess_error_handling() -> None:
 
 
 def test_bash_cmd_with_custom_path() -> None:
-    """Test bash completion with custom workstack path."""
-    completion_ops = FakeCompletionOps(
-        bash_script="completion script", workstack_path="/custom/path/workstack"
-    )
+    """Test bash completion with custom erk path."""
+    completion_ops = FakeCompletionOps(bash_script="completion script", erk_path="/custom/path/erk")
     ctx = create_test_context(completion_ops=completion_ops)
 
     runner = CliRunner()
     result = runner.invoke(completion_bash, obj=ctx)
 
     assert result.exit_code == 0
-    # Verify path is available via get_workstack_path()
-    assert completion_ops.get_workstack_path() == "/custom/path/workstack"
+    # Verify path is available via get_erk_path()
+    assert completion_ops.get_erk_path() == "/custom/path/erk"
 
 
 def test_zsh_cmd_with_custom_path() -> None:
-    """Test zsh completion with custom workstack path."""
-    completion_ops = FakeCompletionOps(
-        zsh_script="#compdef workstack", workstack_path="/usr/bin/workstack"
-    )
+    """Test zsh completion with custom erk path."""
+    completion_ops = FakeCompletionOps(zsh_script="#compdef erk", erk_path="/usr/bin/erk")
     ctx = create_test_context(completion_ops=completion_ops)
 
     runner = CliRunner()
     result = runner.invoke(completion_zsh, obj=ctx)
 
     assert result.exit_code == 0
-    assert completion_ops.get_workstack_path() == "/usr/bin/workstack"
+    assert completion_ops.get_erk_path() == "/usr/bin/erk"
 
 
 def test_fish_cmd_with_custom_path() -> None:
-    """Test fish completion with custom workstack path."""
-    completion_ops = FakeCompletionOps(
-        fish_script="complete -c workstack", workstack_path="./workstack"
-    )
+    """Test fish completion with custom erk path."""
+    completion_ops = FakeCompletionOps(fish_script="complete -c erk", erk_path="./erk")
     ctx = create_test_context(completion_ops=completion_ops)
 
     runner = CliRunner()
     result = runner.invoke(completion_fish, obj=ctx)
 
     assert result.exit_code == 0
-    assert completion_ops.get_workstack_path() == "./workstack"
+    assert completion_ops.get_erk_path() == "./erk"

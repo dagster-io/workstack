@@ -142,7 +142,7 @@ Completed in 1.123sec
 
 ```
 /path/to/src/main.py
-  /path/to/src/main.py:5:24 - error: Import "workstack.missing" could not be resolved (reportMissingImport)
+  /path/to/src/main.py:5:24 - error: Import "erk.missing" could not be resolved (reportMissingImport)
 
 1 error, 0 warnings, 0 informations
 Completed in 0.234sec

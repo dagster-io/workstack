@@ -51,7 +51,7 @@ except KeyError:
 # ✅ ACCEPTABLE: CLI command error boundary
 @click.command("create")
 @click.pass_obj
-def create(ctx: WorkstackContext, name: str) -> None:
+def create(ctx: ErkContext, name: str) -> None:
     """Create a worktree."""
     try:
         create_worktree(ctx, name)
@@ -200,7 +200,7 @@ except (OSError, ValueError):
 from pathlib import Path
 
 # ✅ CORRECT: pathlib operations
-config_path = Path.home() / ".workstack" / "config.toml"
+config_path = Path.home() / ".erk" / "config.toml"
 if config_path.exists():
     content = config_path.read_text(encoding="utf-8")
     data = tomllib.loads(content)
@@ -214,7 +214,7 @@ file_extension = config_path.suffix
 
 # ❌ WRONG: os.path operations
 import os
-config_path = os.path.join(os.path.expanduser("~"), ".workstack", "config.toml")
+config_path = os.path.join(os.path.expanduser("~"), ".erk", "config.toml")
 ```
 
 ### File Operations
@@ -336,7 +336,7 @@ class FakeStore(DataStore):
 import json
 import click
 from pathlib import Path
-from workstack.config import load_config
+from erk.config import load_config
 
 def my_function() -> None:
     data = json.loads(content)
@@ -379,9 +379,9 @@ def analyze_data(data: dict) -> Report:
 
 ```python
 # ✅ CORRECT: Absolute imports
-from workstack.config import load_config
-from workstack.core import discover_repo_context
-from workstack.utils.git import get_current_branch
+from erk.config import load_config
+from erk.core import discover_repo_context
+from erk.utils.git import get_current_branch
 
 # ❌ WRONG: Relative imports
 from .config import load_config
@@ -406,9 +406,9 @@ import yaml
 from pydantic import BaseModel
 
 # Local application
-from workstack.config import Config
-from workstack.core import Context
-from workstack.utils import helpers
+from erk.config import Config
+from erk.core import Context
+from erk.utils import helpers
 ```
 
 ---
@@ -626,15 +626,15 @@ Module code and `__all__` exports in `__init__.py` files violate this principle 
 ```python
 # ❌ WRONG: Code in __init__.py
 """Configuration module."""
-from workstack.config.loader import load_config
-from workstack.config.writer import write_config
+from erk.config.loader import load_config
+from erk.config.writer import write_config
 
 # ❌ WRONG: __all__ exports create duplicate import paths
 __all__ = ["load_config", "write_config"]
 
 # Now these symbols can be imported two ways:
-# from workstack.config import load_config  # Via __init__.py
-# from workstack.config.loader import load_config  # Direct import
+# from erk.config import load_config  # Via __init__.py
+# from erk.config.loader import load_config  # Direct import
 # This duplication breaks the "one canonical location" principle
 
 # ✅ CORRECT: Empty __init__.py
@@ -669,16 +669,16 @@ When renaming or moving a function:
 **4. Violates Explicit > Implicit**
 
 - Import source should be immediately clear
-- `from workstack.config import load_config` hides the real location
-- `from workstack.config.loader import load_config` shows exactly where it lives
+- `from erk.config import load_config` hides the real location
+- `from erk.config.loader import load_config` shows exactly where it lives
 - Explicit imports improve code navigation and understanding
 
 #### The Right Way: Direct Imports Only
 
 ```python
 # ✅ CORRECT: Import directly from the module that defines it
-from workstack.config.loader import load_config
-from workstack.config.writer import write_config
+from erk.config.loader import load_config
+from erk.config.writer import write_config
 
 # Each symbol has ONE canonical import path
 # Grep finds all usages reliably

@@ -3,12 +3,12 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
+from erk.cli.cli import cli
+from erk.cli.commands.shell_integration import hidden_shell_cmd
+from erk.core.gitops import WorktreeInfo
+from erk.core.repo_discovery import RepoContext
 from tests.fakes.gitops import FakeGitOps
 from tests.test_utils.env_helpers import pure_workstack_env
-from workstack.cli.cli import cli
-from workstack.cli.commands.shell_integration import hidden_shell_cmd
-from workstack.core.gitops import WorktreeInfo
-from workstack.core.repo_discovery import RepoContext
 
 
 def strip_ansi(text: str) -> str:
@@ -223,8 +223,8 @@ def test_complete_worktree_names_without_context() -> None:
     """
     import click
 
-    from workstack.cli.cli import cli
-    from workstack.cli.commands.switch import complete_worktree_names
+    from erk.cli.cli import cli
+    from erk.cli.commands.switch import complete_worktree_names
 
     runner = CliRunner()
     with pure_workstack_env(runner) as env:

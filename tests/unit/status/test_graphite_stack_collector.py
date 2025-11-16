@@ -5,12 +5,12 @@ from typing import Any
 
 import pytest
 
+from erk.core.branch_metadata import BranchMetadata
+from erk.core.global_config import GlobalConfig
+from erk.status.collectors.graphite import GraphiteStackCollector
 from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
-from workstack.core.branch_metadata import BranchMetadata
-from workstack.core.global_config import GlobalConfig
-from workstack.status.collectors.graphite import GraphiteStackCollector
 
 
 def setup_stack_collector(

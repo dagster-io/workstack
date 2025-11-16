@@ -1,12 +1,12 @@
 from pathlib import Path
 
-from workstack.core.init_utils import render_config_template
+from erk.core.init_utils import render_config_template
 
 
 def _get_presets_dir() -> Path:
     """Get the path to the presets directory."""
-    # Navigate from tests/core/foundation to src/workstack/cli/presets
-    return Path(__file__).parent.parent.parent.parent / "src" / "workstack" / "cli" / "presets"
+    # Navigate from tests/core/foundation to src/erk/cli/presets
+    return Path(__file__).parent.parent.parent.parent / "src" / "erk" / "cli" / "presets"
 
 
 def test_render_config_template_default() -> None:

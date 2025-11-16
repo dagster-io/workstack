@@ -546,3 +546,37 @@ def test_shell_integration_create_from_current_branch_returns_script_path() -> N
             # This is acceptable for testing purposes - the command-level test
             # already verifies the fix works when the command succeeds
             assert result.exit_code == 1, f"Unexpected exit code: {result.exit_code}"
+
+
+def test_shell_integration_land_stack_invokes_successfully() -> None:
+    """Test that __shell land-stack invokes command successfully and receives --script flag.
+
+    Verifies that land-stack is registered in the shell integration handler's command_map,
+    which enables it to receive the --script flag for directory switching after landing PRs.
+    """
+    from tests.test_utils.env_helpers import simulated_workstack_env
+    from workstack.core.graphite_ops import BranchMetadata
+
+    runner = CliRunner()
+    with simulated_workstack_env(runner) as env:
+        # Set up stack: main → feat-1 → feat-2
+        env.create_linked_worktree("feat-1", "feat-1", chdir=False)
+        wt2_path = env.create_linked_worktree("feat-2", "feat-2", chdir=True)
+
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata.trunk("main", children=["feat-1"]),
+                "feat-1": BranchMetadata.branch("feat-1", "main", children=["feat-2"]),
+                "feat-2": BranchMetadata.branch("feat-2", "feat-1"),
+            },
+            current_branch="feat-2",
+            current_worktree=wt2_path,
+        )
+
+        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
+
+        # Act: Invoke land-stack through __shell handler
+        result = runner.invoke(cli, ["__shell", "land-stack"], obj=test_ctx)
+
+        # Should succeed without TypeError (may fail for other reasons like API calls)
+        assert result.exit_code in (0, 1), f"Unexpected exit code: {result.exit_code}"

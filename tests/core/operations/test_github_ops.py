@@ -301,19 +301,7 @@ def test_parse_pr_fields_with_conflicts() -> None:
     response = {
         "mergeable": "CONFLICTING",
         "mergeStateStatus": "DIRTY",
-        "commits": {
-            "nodes": [
-                {
-                    "commit": {
-                        "statusCheckRollup": {
-                            "contexts": {
-                                "nodes": []
-                            }
-                        }
-                    }
-                }
-            ]
-        }
+        "commits": {"nodes": [{"commit": {"statusCheckRollup": {"contexts": {"nodes": []}}}}]},
     }
 
     # Parser should detect conflicts
@@ -336,18 +324,13 @@ def test_parse_pr_fields_mergeable() -> None:
                         "statusCheckRollup": {
                             "state": "SUCCESS",
                             "contexts": {
-                                "nodes": [
-                                    {
-                                        "status": "COMPLETED",
-                                        "conclusion": "SUCCESS"
-                                    }
-                                ]
-                            }
+                                "nodes": [{"status": "COMPLETED", "conclusion": "SUCCESS"}]
+                            },
                         }
                     }
                 }
             ]
-        }
+        },
     }
 
     # Parser should detect mergeable state
@@ -360,13 +343,7 @@ def test_parse_pr_fields_unknown() -> None:
     """Test that parser correctly handles unknown mergeable state."""
     ops = RealGitHubOps()
 
-    response = {
-        "mergeable": "UNKNOWN",
-        "mergeStateStatus": "UNKNOWN",
-        "commits": {
-            "nodes": []
-        }
-    }
+    response = {"mergeable": "UNKNOWN", "mergeStateStatus": "UNKNOWN", "commits": {"nodes": []}}
 
     # Parser should handle unknown state
     ci_status, has_conflicts = ops._parse_pr_fields(response)
@@ -380,19 +357,7 @@ def test_parse_pr_fields_missing_mergeable() -> None:
 
     response = {
         # No mergeable field
-        "commits": {
-            "nodes": [
-                {
-                    "commit": {
-                        "statusCheckRollup": {
-                            "contexts": {
-                                "nodes": []
-                            }
-                        }
-                    }
-                }
-            ]
-        }
+        "commits": {"nodes": [{"commit": {"statusCheckRollup": {"contexts": {"nodes": []}}}}]}
     }
 
     # Parser should handle missing field

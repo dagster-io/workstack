@@ -117,8 +117,8 @@ class FakeGitHubOps(GitHubOps):
     ) -> dict[str, PullRequestInfo]:
         """Enrich PRs with CI status and mergeability using batched query.
 
-        In the fake implementation, we assume PRs already have CI status and mergeability if configured.
-        This method is a no-op that returns the input unchanged.
+        In the fake implementation, we assume PRs already have CI status and mergeability
+        if configured. This method is a no-op that returns the input unchanged.
         """
         return prs
 

@@ -370,7 +370,7 @@ Creating a CLI skill follows a systematic seven-step process that gathers compre
    - Workflow patterns 1-N
    - Configuration, integration, and troubleshooting sections
 
-   Follow the patterns from existing CLI skills like gh, graphite, and workstack.
+   Follow the patterns from existing CLI skills like gh, graphite, and erk.
    ```
 
 3. **Review generated skill**
@@ -626,7 +626,7 @@ Create a skill for <cli-tool> using the following material:
 [Complete structured brief]
 
 Use [workflow-based/command-based/hybrid] structure.
-Follow patterns from gh/graphite/workstack skills.
+Follow patterns from gh/graphite/erk skills.
 
 ```
 
@@ -693,7 +693,7 @@ Before finalizing CLI skill:
 - [ ] Verified commands actually work
 - [ ] Noted CLI version documented
 - [ ] Linked to authoritative documentation
-- [ ] Followed structure of gh/graphite/workstack skills
+- [ ] Followed structure of gh/graphite/erk skills
 - [ ] skill.md is concise (<300 lines)
 - [ ] references/ contains comprehensive details
 

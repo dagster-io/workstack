@@ -4,14 +4,14 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
+from erk.cli.cli import cli
+from erk.cli.commands.shell_integration import hidden_shell_cmd
+from erk.cli.shell_utils import render_cd_script
+from erk.core.context import WorkstackContext
+from erk.core.gitops import WorktreeInfo
+from erk.core.global_config import GlobalConfig, InMemoryGlobalConfigOps
 from tests.fakes.gitops import FakeGitOps
 from tests.test_utils.env_helpers import simulated_workstack_env
-from workstack.cli.cli import cli
-from workstack.cli.commands.shell_integration import hidden_shell_cmd
-from workstack.cli.shell_utils import render_cd_script
-from workstack.core.context import WorkstackContext
-from workstack.core.gitops import WorktreeInfo
-from workstack.core.global_config import GlobalConfig, InMemoryGlobalConfigOps
 
 
 def test_create_with_plan_file() -> None:

@@ -45,7 +45,7 @@ Tests that verify fake implementations work correctly:
 ```python
 from pathlib import Path
 from tests.fakes.gitops import FakeGitOps
-from workstack.core.gitops import WorktreeInfo
+from erk.core.gitops import WorktreeInfo
 
 def test_fake_gitops_tracks_mutations() -> None:
     """Test that FakeGitOps correctly tracks state changes."""

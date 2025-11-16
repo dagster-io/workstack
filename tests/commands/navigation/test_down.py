@@ -4,13 +4,13 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
+from erk.cli.cli import cli
+from erk.core.branch_metadata import BranchMetadata
+from erk.core.gitops import WorktreeInfo
+from erk.core.repo_discovery import RepoContext
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.test_utils.env_helpers import pure_workstack_env
-from workstack.cli.cli import cli
-from workstack.core.branch_metadata import BranchMetadata
-from workstack.core.gitops import WorktreeInfo
-from workstack.core.repo_discovery import RepoContext
 
 
 def test_down_with_existing_worktree() -> None:

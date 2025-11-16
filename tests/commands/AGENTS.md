@@ -2,7 +2,7 @@
 
 ## Overview
 
-All CLI command tests use dependency injection via WorkstackContext with fake implementations. Tests use Click's `CliRunner` to simulate command execution without actual filesystem or git operations.
+All CLI command tests use dependency injection via ErkContext with fake implementations. Tests use Click's `CliRunner` to simulate command execution without actual filesystem or git operations.
 
 ## Subdirectory Organization
 
@@ -19,8 +19,8 @@ All CLI command tests use dependency injection via WorkstackContext with fake im
 
 ```python
 from click.testing import CliRunner
-from workstack.commands.create import create
-from workstack.context import WorkstackContext
+from erk.commands.create import create
+from erk.context import ErkContext
 from tests.fakes.fake_gitops import FakeGitOps
 
 def test_command_behavior() -> None:
@@ -30,7 +30,7 @@ def test_command_behavior() -> None:
         all_branches=["main", "feature"]
     )
 
-    ctx = WorkstackContext(
+    ctx = ErkContext(
         git_ops=git_ops,
         # ... other dependencies
     )
@@ -54,14 +54,14 @@ def test_command_behavior() -> None:
 
 🔴 **CRITICAL: Use `env.build_context()` helper instead of manual construction**
 
-The `simulated_workstack_env()` context manager provides an `env.build_context()` helper method that eliminates boilerplate when constructing `WorkstackContext` for tests.
+The `simulated_erk_env()` context manager provides an `env.build_context()` helper method that eliminates boilerplate when constructing `ErkContext` for tests.
 
 ### Anti-Pattern (DO NOT USE)
 
 ```python
 # ❌ WRONG - Manual GlobalConfig construction with 5+ parameters
-from workstack.core.global_config import GlobalConfig
-from workstack.core.context import WorkstackContext
+from erk.core.global_config import GlobalConfig
+from erk.core.context import ErkContext
 
 git_ops = FakeGitOps(
     git_common_dirs={env.cwd: env.git_dir},
@@ -69,14 +69,14 @@ git_ops = FakeGitOps(
 )
 
 global_config = GlobalConfig(
-    workstacks_root=env.workstacks_root,
+    erks_root=env.erks_root,
     use_graphite=False,
     shell_setup_complete=False,
     show_pr_info=True,
     show_pr_checks=False,
 )
 
-test_ctx = WorkstackContext.for_test(
+test_ctx = ErkContext.for_test(
     git_ops=git_ops,
     global_config=global_config,
     script_writer=env.script_writer,
@@ -211,7 +211,7 @@ def test_command_with_invalid_input() -> None:
         all_branches=["main", "existing-branch"]
     )
 
-    ctx = WorkstackContext(git_ops=git_ops)
+    ctx = ErkContext(git_ops=git_ops)
     runner = CliRunner()
 
     # Act: Try to create duplicate branch
@@ -236,7 +236,7 @@ shell_ops.add_command_result(
     stdout="clean working tree"
 )
 
-ctx = WorkstackContext(shell_ops=shell_ops)
+ctx = ErkContext(shell_ops=shell_ops)
 ```
 
 ## Test File Organization

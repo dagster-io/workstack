@@ -1,1 +1,0 @@
-../../../packages/dot-agent-kit/src/dot_agent_kit/data/kits/workstack/commands/workstack/persist-plan.md

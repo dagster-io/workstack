@@ -1,11 +1,11 @@
 """Unit tests for Graphite parsing functions with JSON fixtures."""
 
-from tests.conftest import load_fixture
-from workstack.core.graphite_ops import (
+from erk.core.graphite_ops import (
     _graphite_url_to_github_url,
     parse_graphite_cache,
     parse_graphite_pr_info,
 )
+from tests.conftest import load_fixture
 
 
 def test_parse_graphite_pr_info():

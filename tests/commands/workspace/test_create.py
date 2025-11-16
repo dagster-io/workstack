@@ -4,13 +4,13 @@ import json
 
 from click.testing import CliRunner
 
+from erk.cli.cli import cli
+from erk.cli.config import LoadedConfig
+from erk.core.gitops import WorktreeInfo
+from erk.core.repo_discovery import RepoContext
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.test_utils.env_helpers import pure_workstack_env, simulated_workstack_env
-from workstack.cli.cli import cli
-from workstack.cli.config import LoadedConfig
-from workstack.core.gitops import WorktreeInfo
-from workstack.core.repo_discovery import RepoContext
 
 
 def test_create_basic_worktree() -> None:
@@ -822,7 +822,7 @@ def test_from_current_branch_with_main_in_use_prefers_graphite_parent() -> None:
         )
 
         # Set up Graphite stack: main -> feature-1 -> feature-2
-        from workstack.core.branch_metadata import BranchMetadata
+        from erk.core.branch_metadata import BranchMetadata
 
         branch_metadata = {
             "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
@@ -900,7 +900,7 @@ def test_from_current_branch_with_parent_in_use_falls_back_to_detached_head() ->
         config_toml.write_text("", encoding="utf-8")
 
         # Set up Graphite stack: main -> feature-1 -> feature-2
-        from workstack.core.branch_metadata import BranchMetadata
+        from erk.core.branch_metadata import BranchMetadata
 
         {
             "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
@@ -967,7 +967,7 @@ def test_from_current_branch_without_graphite_falls_back_to_main() -> None:
         config_toml.write_text("", encoding="utf-8")
 
         # Set up minimal Graphite stack (standalone-feature not in it)
-        from workstack.core.branch_metadata import BranchMetadata
+        from erk.core.branch_metadata import BranchMetadata
 
         {
             "main": BranchMetadata.trunk("main", commit_sha="abc123"),
@@ -1024,7 +1024,7 @@ def test_from_current_branch_no_graphite_main_in_use_uses_detached_head() -> Non
         config_toml.write_text("", encoding="utf-8")
 
         # Set up minimal Graphite stack (standalone-feature not in it)
-        from workstack.core.branch_metadata import BranchMetadata
+        from erk.core.branch_metadata import BranchMetadata
 
         {
             "main": BranchMetadata.trunk("main", commit_sha="abc123"),

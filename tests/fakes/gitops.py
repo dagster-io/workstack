@@ -8,7 +8,7 @@ from pathlib import Path
 
 import click
 
-from workstack.core.gitops import GitOps, WorktreeInfo
+from erk.core.gitops import GitOps, WorktreeInfo
 
 
 class FakeGitOps(GitOps):

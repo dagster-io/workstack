@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from workstack.core.init_utils import detect_root_project_name
+from erk.core.init_utils import detect_root_project_name
 
 
 def test_detects_name_from_pyproject_toml(tmp_path: Path) -> None:

@@ -62,7 +62,7 @@ if not valid_input:
 ### Output Abstraction Pattern
 
 ```python
-from workstack.cli.output import user_output, machine_output
+from erk.cli.output import user_output, machine_output
 
 # User-facing messages go to stderr
 user_output("✓ Operation complete")

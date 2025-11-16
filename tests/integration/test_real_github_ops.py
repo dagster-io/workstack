@@ -10,8 +10,8 @@ from pathlib import Path
 
 import pytest
 
+from erk.core.github_ops import RealGitHubOps
 from tests.conftest import load_fixture
-from workstack.core.github_ops import RealGitHubOps
 
 # ============================================================================
 # get_prs_for_repo() Tests

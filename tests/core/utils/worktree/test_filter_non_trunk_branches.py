@@ -1,6 +1,6 @@
 """Tests for filter_non_trunk_branches function."""
 
-from workstack.core.worktree_utils import filter_non_trunk_branches
+from erk.core.worktree_utils import filter_non_trunk_branches
 
 
 def test_filters_out_trunk_branches() -> None:

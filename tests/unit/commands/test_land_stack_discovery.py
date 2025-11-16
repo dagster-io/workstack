@@ -6,12 +6,12 @@ the down_only flag.
 
 from pathlib import Path
 
+from erk.cli.commands.land_stack.discovery import _get_branches_to_land
+from erk.core.branch_metadata import BranchMetadata
+from erk.core.context import WorkstackContext
+from erk.core.global_config import GlobalConfig
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
-from workstack.cli.commands.land_stack.discovery import _get_branches_to_land
-from workstack.core.branch_metadata import BranchMetadata
-from workstack.core.context import WorkstackContext
-from workstack.core.global_config import GlobalConfig
 
 
 def test_get_branches_to_land_full_stack_default() -> None:

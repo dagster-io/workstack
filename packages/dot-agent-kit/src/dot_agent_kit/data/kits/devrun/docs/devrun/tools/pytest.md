@@ -151,8 +151,8 @@ FAILED tests/test_user.py::test_user_create - TypeError: create_user() missing 1
 ---------- coverage: platform darwin, python 3.13.0-final-0 ----------
 Name                     Stmts   Miss  Cover
 --------------------------------------------
-src/workstack/config.py     45      3    93%
-src/workstack/paths.py      32      0   100%
+src/erk/config.py     45      3    93%
+src/erk/paths.py      32      0   100%
 --------------------------------------------
 TOTAL                       77      3    96%
 ```
@@ -167,7 +167,7 @@ TOTAL                       77      3    96%
 
 ```
 ============================= test session starts ==============================
-ERROR tests/test_broken.py - ImportError: cannot import name 'foo' from 'workstack'
+ERROR tests/test_broken.py - ImportError: cannot import name 'foo' from 'erk'
 !!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
 =============================== 1 error in 0.12s ===============================
 ```

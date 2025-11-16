@@ -2,7 +2,7 @@
 
 import pytest
 
-from workstack.core.file_utils import extract_plan_title
+from erk.core.file_utils import extract_plan_title
 
 PLAN_CASES = [
     pytest.param(

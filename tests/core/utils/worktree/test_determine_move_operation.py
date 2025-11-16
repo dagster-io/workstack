@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from workstack.core.gitops import WorktreeInfo
-from workstack.core.worktree_utils import MoveOperationType, determine_move_operation
+from erk.core.gitops import WorktreeInfo
+from erk.core.worktree_utils import MoveOperationType, determine_move_operation
 
 
 def test_create_operation_when_target_doesnt_exist() -> None:

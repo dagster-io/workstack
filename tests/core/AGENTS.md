@@ -2,7 +2,7 @@
 
 ## Overview
 
-This directory contains unit tests for core workstack components - the business logic layer that sits below CLI commands. Tests here focus on pure logic without CLI integration.
+This directory contains unit tests for core erk components - the business logic layer that sits below CLI commands. Tests here focus on pure logic without CLI integration.
 
 ## Subdirectory Organization
 
@@ -33,7 +33,7 @@ This directory contains unit tests for core workstack components - the business 
 ## Standard Core Test Pattern
 
 ```python
-from workstack.core.operations.gitops import GitOps
+from erk.core.operations.gitops import GitOps
 from tests.fakes.fake_gitops import FakeGitOps
 
 def test_core_logic() -> None:
@@ -57,7 +57,7 @@ Core components use constructor injection:
 
 ```python
 from dataclasses import dataclass
-from workstack.core.operations.gitops_abc import GitOpsABC
+from erk.core.operations.gitops_abc import GitOpsABC
 
 @dataclass(frozen=True)
 class WorkspaceManager:
@@ -84,7 +84,7 @@ Core tests don't use `CliRunner`:
 from click.testing import CliRunner
 
 # ✅ DO: Call functions directly
-from workstack.core.naming import sanitize_branch_name
+from erk.core.naming import sanitize_branch_name
 
 def test_sanitize_branch_name() -> None:
     result = sanitize_branch_name("Feature/Test Branch")
@@ -157,7 +157,7 @@ See `utils/` - Testing utility functions like file operations, naming convention
 
 ### Foundation Tests
 
-See `foundation/` - Testing core infrastructure like WorkstackContext, setup templates.
+See `foundation/` - Testing core infrastructure like ErkContext, setup templates.
 
 ## Testing Strategies
 

@@ -8,14 +8,14 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
+from erk.cli.cli import cli
+from erk.core.context import WorkstackContext
+from erk.core.gitops import WorktreeInfo
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from tests.test_utils.env_helpers import pure_workstack_env
-from workstack.cli.cli import cli
-from workstack.core.context import WorkstackContext
-from workstack.core.gitops import WorktreeInfo
 
 
 def _create_test_context(

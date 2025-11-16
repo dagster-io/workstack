@@ -85,16 +85,16 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
+from erk.core.context import WorkstackContext
+from erk.core.gitops import WorktreeInfo
+from erk.core.global_config import GlobalConfig
+from erk.core.graphite_ops import BranchMetadata
+from erk.core.repo_discovery import RepoContext
+from erk.core.script_writer import RealScriptWriterOps
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.script_writer import FakeScriptWriterOps
-from workstack.core.context import WorkstackContext
-from workstack.core.gitops import WorktreeInfo
-from workstack.core.global_config import GlobalConfig
-from workstack.core.graphite_ops import BranchMetadata
-from workstack.core.repo_discovery import RepoContext
-from workstack.core.script_writer import RealScriptWriterOps
 
 
 class SimulatedWorkstackEnv:
@@ -345,7 +345,7 @@ class SimulatedWorkstackEnv:
         else:
             # git_ops was provided - ensure it has necessary existing paths
             # for discover_repo_context to work correctly
-            from workstack.core.gitops import NoopGitOps
+            from erk.core.gitops import NoopGitOps
 
             unwrapped_ops = git_ops._wrapped if isinstance(git_ops, NoopGitOps) else git_ops
 
@@ -644,7 +644,7 @@ class PureWorkstackEnv:
         else:
             # git_ops was provided - extract worktree paths and merge with existing_paths
             # Unwrap NoopGitOps if needed to access underlying FakeGitOps
-            from workstack.core.gitops import NoopGitOps
+            from erk.core.gitops import NoopGitOps
 
             unwrapped_ops = git_ops._wrapped if isinstance(git_ops, NoopGitOps) else git_ops
             worktree_paths = {

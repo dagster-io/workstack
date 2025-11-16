@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-from workstack.core.gitops import WorktreeInfo
-from workstack.core.worktree_utils import find_worktree_with_branch
+from erk.core.gitops import WorktreeInfo
+from erk.core.worktree_utils import find_worktree_with_branch
 
 
 def test_finds_worktree_with_branch() -> None:

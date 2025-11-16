@@ -8,9 +8,9 @@ from pathlib import Path
 
 import pytest
 
+from erk.core.github_ops import PRInfo, PullRequestInfo
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.test_utils import sentinel_path
-from workstack.core.github_ops import PRInfo, PullRequestInfo
 
 
 def test_fake_github_ops_initialization() -> None:

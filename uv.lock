@@ -9,8 +9,8 @@ resolution-markers = [
 [manifest]
 members = [
     "dot-agent-kit",
-    "workstack",
-    "workstack-dev",
+    "erk",
+    "erk-dev",
 ]
 
 [[package]]
@@ -128,6 +128,58 @@ requires-dist = [
     { name = "tomli", specifier = ">=2.0" },
     { name = "tomli-w", specifier = ">=1.0" },
 ]
+
+[[package]]
+name = "erk"
+version = "0.1.26"
+source = { editable = "." }
+dependencies = [
+    { name = "click" },
+    { name = "python-frontmatter" },
+    { name = "tomlkit" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "dot-agent-kit" },
+    { name = "erk-dev" },
+    { name = "libcst" },
+    { name = "pyright" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "pytest-xdist" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "click", specifier = ">=8.1.7" },
+    { name = "python-frontmatter", specifier = ">=1.0.0" },
+    { name = "tomlkit", specifier = ">=0.12.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "dot-agent-kit", editable = "packages/dot-agent-kit" },
+    { name = "erk-dev", editable = "packages/erk-dev" },
+    { name = "libcst", specifier = ">=1.8.6" },
+    { name = "pyright", specifier = ">=1.1.406" },
+    { name = "pytest", specifier = ">=8.0.0" },
+    { name = "pytest-cov", specifier = ">=5.0.0" },
+    { name = "pytest-xdist", specifier = ">=3.8.0" },
+    { name = "ruff", specifier = ">=0.5.0" },
+]
+
+[[package]]
+name = "erk-dev"
+version = "0.1.10"
+source = { editable = "packages/erk-dev" }
+dependencies = [
+    { name = "click" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "click", specifier = ">=8.1.7" }]
 
 [[package]]
 name = "execnet"
@@ -525,55 +577,3 @@ sdist = { url = "https://files.pythonhosted.org/packages/55/e3/70399cb7dd41c10ac
 wheels = [
     { url = "https://files.pythonhosted.org/packages/dc/9b/47798a6c91d8bdb567fe2698fe81e0c6b7cb7ef4d13da4114b41d239f65d/typing_inspection-0.4.2-py3-none-any.whl", hash = "sha256:4ed1cacbdc298c220f1bd249ed5287caa16f34d44ef4e9c3d0cbad5b521545e7", size = 14611, upload-time = "2025-10-01T02:14:40.154Z" },
 ]
-
-[[package]]
-name = "workstack"
-version = "0.1.26"
-source = { editable = "." }
-dependencies = [
-    { name = "click" },
-    { name = "python-frontmatter" },
-    { name = "tomlkit" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "dot-agent-kit" },
-    { name = "libcst" },
-    { name = "pyright" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "pytest-xdist" },
-    { name = "ruff" },
-    { name = "workstack-dev" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "click", specifier = ">=8.1.7" },
-    { name = "python-frontmatter", specifier = ">=1.0.0" },
-    { name = "tomlkit", specifier = ">=0.12.0" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "dot-agent-kit", editable = "packages/dot-agent-kit" },
-    { name = "libcst", specifier = ">=1.8.6" },
-    { name = "pyright", specifier = ">=1.1.406" },
-    { name = "pytest", specifier = ">=8.0.0" },
-    { name = "pytest-cov", specifier = ">=5.0.0" },
-    { name = "pytest-xdist", specifier = ">=3.8.0" },
-    { name = "ruff", specifier = ">=0.5.0" },
-    { name = "workstack-dev", editable = "packages/workstack-dev" },
-]
-
-[[package]]
-name = "workstack-dev"
-version = "0.1.10"
-source = { editable = "packages/workstack-dev" }
-dependencies = [
-    { name = "click" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "click", specifier = ">=8.1.7" }]

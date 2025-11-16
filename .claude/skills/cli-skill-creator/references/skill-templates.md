@@ -716,7 +716,7 @@ The gh skill demonstrates:
 - Core Concepts explaining three-layer architecture
 - Progressive loading strategy for large reference docs
 - Workflow patterns numbered for easy reference
-- Integration sections for workstack and git
+- Integration sections for erk and git
 - GraphQL as specialized subdomain with own reference
 
 ### graphite Skill Structure
@@ -727,12 +727,12 @@ The graphite skill demonstrates:
 - Essential Commands table for quick lookup
 - Workflow Patterns with numbered steps
 - Common Mistakes section (anti-patterns)
-- Integration section for workstack
+- Integration section for erk
 - Quick Decision Tree for when to use what
 
-### workstack Skill Structure
+### erk Skill Structure
 
-The workstack skill demonstrates:
+The erk skill demonstrates:
 - Core Concepts distinguishing related terms
 - Directory structure visualization
 - Loading Strategy for reference docs

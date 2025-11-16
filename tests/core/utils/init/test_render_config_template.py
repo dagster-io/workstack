@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from workstack.core.init_utils import render_config_template
+from erk.core.init_utils import render_config_template
 
 
 def test_renders_specified_preset(tmp_path: Path) -> None:

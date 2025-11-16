@@ -5,19 +5,19 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
+from erk.cli.cli import cli
+from erk.cli.commands.shell_integration import hidden_shell_cmd
+from erk.cli.commands.sync import sync_cmd
+from erk.cli.shell_utils import render_cd_script
+from erk.core.context import WorkstackContext
+from erk.core.gitops import WorktreeInfo
+from erk.core.global_config import GlobalConfig
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from tests.test_utils import sentinel_path
 from tests.test_utils.env_helpers import pure_workstack_env
-from workstack.cli.cli import cli
-from workstack.cli.commands.shell_integration import hidden_shell_cmd
-from workstack.cli.commands.sync import sync_cmd
-from workstack.cli.shell_utils import render_cd_script
-from workstack.core.context import WorkstackContext
-from workstack.core.gitops import WorktreeInfo
-from workstack.core.global_config import GlobalConfig
 
 
 def test_sync_requires_graphite() -> None:
@@ -549,7 +549,7 @@ def test_sync_original_worktree_deleted() -> None:
 
 def test_render_return_to_root_script() -> None:
     """Return-to-root script now uses activation script with environment setup."""
-    from workstack.cli.activation import render_activation_script
+    from erk.cli.activation import render_activation_script
 
     root = Path("/example/repo/root")
     script = render_activation_script(

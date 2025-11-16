@@ -1,6 +1,6 @@
 # Command Examples
 
-This document provides complete, real-world examples of slash commands from the workstack project. Use these as references when creating new commands.
+This document provides complete, real-world examples of slash commands from the erk project. Use these as references when creating new commands.
 
 ## Example 1: submit-stack (Workflow Automation Pattern)
 
@@ -277,7 +277,7 @@ Use TodoWrite to track your progress:
 \`\`\`
 Iteration 1: Fixing lint errors
 Iteration 2: Fixing format errors
-Iteration 3: Fixing type errors in src/workstack/cli/commands/switch.py
+Iteration 3: Fixing type errors in src/erk/cli/commands/switch.py
 Iteration 4: All checks passed
 \`\`\`
 

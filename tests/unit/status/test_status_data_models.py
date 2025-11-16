@@ -2,13 +2,13 @@
 
 from pathlib import Path
 
-from tests.helpers.commits import make_test_commits
-from workstack.status.models.status_data import (
+from erk.status.models.status_data import (
     CommitInfo,
     GitStatus,
     StatusData,
     WorktreeDisplayInfo,
 )
+from tests.helpers.commits import make_test_commits
 
 
 def test_worktree_display_info_root_factory() -> None:

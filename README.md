@@ -1,4 +1,4 @@
-# `workstack`
+# `erk`
 
 **Effortless `git` worktree management for parallel development.**
 
@@ -8,10 +8,10 @@ Create, switch, and manage multiple worktrees from a centralized location with a
 
 ```bash
 # With uv (recommended)
-uv tool install workstack
+uv tool install erk
 
 # From source
-uv tool install git+https://github.com/dagster-io/workstack.git
+uv tool install git+https://github.com/dagster-io/erk.git
 ```
 
 ## Quick Start
@@ -19,25 +19,25 @@ uv tool install git+https://github.com/dagster-io/workstack.git
 ```bash
 # Initialize in your repo
 cd /path/to/your/repo
-workstack init
+erk init
 source ~/.zshrc  # or ~/.bashrc
 
 # Create and switch to a worktree
-workstack create user-auth
-workstack switch user-auth
+erk create user-auth
+erk switch user-auth
 
 # Switch back and clean up
-workstack switch root
-workstack rm user-auth
+erk switch root
+erk rm user-auth
 ```
 
 ## Overview
 
-`workstack` solves the pain of managing multiple `git` worktrees for parallel agenetic coding sessions.
+`erk` solves the pain of managing multiple `git` worktrees for parallel agenetic coding sessions.
 
 **Key features:**
 
-- Centralized worktrees in `~/worktrees/<repo>/<feature>/`
+- Centralized worktrees in `~/erks/<repo>/<feature>/`
 - Automatic environment setup (`.env`, virtual environments, activation scripts)
 - Simple CLI: `create`, `switch`, `rm`, `ls`
 - Plan-based development workflow
@@ -49,36 +49,36 @@ workstack rm user-auth
 
 ```bash
 # New feature branch
-workstack create feature-x                          # Creates worktree 'feature-x' with branch 'feature-x'
-workstack create fix --branch hotfix/bug           # Creates worktree 'fix' with branch 'hotfix/bug'
+erk create feature-x                          # Creates worktree 'feature-x' with branch 'feature-x'
+erk create fix --branch hotfix/bug           # Creates worktree 'fix' with branch 'hotfix/bug'
 
 # From existing branch
-workstack create --from-branch feature/login       # Creates worktree from existing branch 'feature/login'
-workstack create login --from-branch feature/login # Creates worktree 'login' from branch 'feature/login'
+erk create --from-branch feature/login       # Creates worktree from existing branch 'feature/login'
+erk create login --from-branch feature/login # Creates worktree 'login' from branch 'feature/login'
 
 # Move current work
-workstack create --from-current-branch             # Move current branch to new worktree
+erk create --from-current-branch             # Move current branch to new worktree
 
 # From a plan file
-workstack create --plan Add_Auth.md                # Creates worktree with .plan/ folder
+erk create --plan Add_Auth.md                # Creates worktree with .plan/ folder
 ```
 
 ### Managing Worktrees
 
 ```bash
-workstack switch NAME            # Switch between worktrees (or 'root' for repo root)
-workstack switch --up            # Navigate to child branch in Graphite stack
-workstack switch --down          # Navigate to parent branch in Graphite stack
-workstack jump BRANCH            # Jump to branch (finds worktree automatically)
-workstack status                 # Show status of current worktree
-workstack list                   # List all worktrees (alias: ls)
-workstack list --stacks          # List with graphite stacks and PR status
-workstack tree                   # Show tree of worktrees with dependencies
-workstack rename OLD NEW         # Rename a worktree
-workstack rm NAME                # Remove worktree
-workstack sync                   # Sync with Graphite, show cleanup candidates
-workstack sync --dry-run         # Show safe-to-delete worktrees (merged PRs)
-workstack sync -f                # Sync and auto-remove merged workstacks
+erk switch NAME            # Switch between worktrees (or 'root' for repo root)
+erk switch --up            # Navigate to child branch in Graphite stack
+erk switch --down          # Navigate to parent branch in Graphite stack
+erk jump BRANCH            # Jump to branch (finds worktree automatically)
+erk status                 # Show status of current worktree
+erk list                   # List all worktrees (alias: ls)
+erk list --stacks          # List with graphite stacks and PR status
+erk tree                   # Show tree of worktrees with dependencies
+erk rename OLD NEW         # Rename a worktree
+erk rm NAME                # Remove worktree
+erk sync                   # Sync with Graphite, show cleanup candidates
+erk sync --dry-run         # Show safe-to-delete worktrees (merged PRs)
+erk sync -f                # Sync and auto-remove merged workstacks
 ```
 
 ### Stack Navigation
@@ -86,9 +86,9 @@ workstack sync -f                # Sync and auto-remove merged workstacks
 With Graphite enabled, navigate your stacks directly:
 
 ```bash
-workstack switch --up       # Move to child branch in stack
-workstack switch --down     # Move to parent branch in stack
-workstack jump BRANCH       # Jump to any branch in a stack (finds worktree automatically)
+erk switch --up       # Move to child branch in stack
+erk switch --down     # Move to parent branch in stack
+erk jump BRANCH       # Jump to any branch in a stack (finds worktree automatically)
 ```
 
 #### Jump to Branch
@@ -96,9 +96,9 @@ workstack jump BRANCH       # Jump to any branch in a stack (finds worktree auto
 Find and switch to a worktree by branch name:
 
 ```bash
-workstack jump feature/user-auth    # Finds worktree containing this branch
-workstack jump hotfix/critical-bug  # Works with any branch in your stacks
-workstack jump origin-branch        # Auto-creates from remote if not local
+erk jump feature/user-auth    # Finds worktree containing this branch
+erk jump hotfix/critical-bug  # Works with any branch in your stacks
+erk jump origin-branch        # Auto-creates from remote if not local
 ```
 
 **How it works:**
@@ -111,13 +111,13 @@ workstack jump origin-branch        # Auto-creates from remote if not local
 
 **Requirements:**
 
-- Graphite must be enabled for stack-based search (`workstack config set use_graphite true`)
+- Graphite must be enabled for stack-based search (`erk config set use_graphite true`)
 - Branch auto-creation works without Graphite
 
 **Behavior:**
 
 - **Branch checked out in one worktree**: Switches to that worktree and checks out the branch
-- **Branch checked out in multiple worktrees**: Shows all worktrees (choose manually with `workstack switch`)
+- **Branch checked out in multiple worktrees**: Shows all worktrees (choose manually with `erk switch`)
 - **Branch exists locally but not checked out**: Auto-creates worktree for the branch
 - **Branch exists on origin but not locally**: Auto-creates tracking branch and worktree
 - **Branch doesn't exist anywhere**: Shows error with suggestion to create new branch
@@ -130,14 +130,14 @@ Example workflow:
 # - worktree "bugfix-work": main -> bugfix-1 -> bugfix-2
 
 # Jump to existing branch in worktree
-workstack jump feature-2    # → Switches to "feature-work" and checks out feature-2
-workstack jump bugfix-1     # → Switches to "bugfix-work" and checks out bugfix-1
+erk jump feature-2    # → Switches to "feature-work" and checks out feature-2
+erk jump bugfix-1     # → Switches to "bugfix-work" and checks out bugfix-1
 
 # Jump to unchecked local branch
-workstack jump feature-4    # → Auto-creates worktree for feature-4
+erk jump feature-4    # → Auto-creates worktree for feature-4
 
 # Jump to remote-only branch (like git checkout origin/branch)
-workstack jump hotfix-123   # → Creates tracking branch + worktree from origin/hotfix-123
+erk jump hotfix-123   # → Creates tracking branch + worktree from origin/hotfix-123
 ```
 
 #### Stack Navigation with Switch
@@ -148,17 +148,17 @@ Example workflow:
 # Current stack: main -> feature-1 -> feature-2 -> feature-3
 # You are in: feature-2
 
-workstack switch --up       # → feature-3
-workstack switch --down     # → feature-2
-workstack switch --down     # → feature-1
-workstack switch --down     # → root (main)
+erk switch --up       # → feature-3
+erk switch --down     # → feature-2
+erk switch --down     # → feature-1
+erk switch --down     # → root (main)
 ```
 
 **Requirements:**
 
-- Graphite must be enabled (`workstack config set use_graphite true`)
+- Graphite must be enabled (`erk config set use_graphite true`)
 - Target branch must have an existing worktree
-- If no worktree exists, shows helpful message: `workstack create <branch>`
+- If no worktree exists, shows helpful message: `erk create <branch>`
 
 **Behavior:**
 
@@ -172,21 +172,21 @@ workstack switch --down     # → root (main)
 Move or swap branches between worktrees:
 
 ```bash
-workstack move target-wt                      # Move from current to new worktree
-workstack move --worktree old-wt new-wt       # Move from specific source to target
-workstack move --current existing-wt          # Swap branches between worktrees
-workstack move --branch feature-x new-wt      # Auto-detect source from branch name
+erk move target-wt                      # Move from current to new worktree
+erk move --worktree old-wt new-wt       # Move from specific source to target
+erk move --current existing-wt          # Swap branches between worktrees
+erk move --branch feature-x new-wt      # Auto-detect source from branch name
 ```
 
 Example output:
 
 ```bash
-$ workstack list
+$ erk list
 root [master]
 feature-a [feature-a]
 feature-b [work/feature-b]
 
-$ workstack list --stacks
+$ erk list --stacks
 root [master]
   ◉  master
 
@@ -208,18 +208,18 @@ feature-b [work/feature-b]
 - ⭕ Closed
 - ◯ Open (no checks)
 
-Note: The repository root is displayed as `root` and can be accessed with `workstack switch root`.
+Note: The repository root is displayed as `root` and can be accessed with `erk switch root`.
 
 ### Visualizing Worktrees
 
 ```bash
-workstack tree               # Show tree of worktrees with dependencies
+erk tree               # Show tree of worktrees with dependencies
 ```
 
 Example output:
 
 ```bash
-$ workstack tree
+$ erk tree
 main [@root]
 ├─ feature-a [@feature-a]
 │  └─ feature-a-2 [@feature-a-2]
@@ -238,27 +238,27 @@ The `tree` command shows:
 ### Configuration
 
 ```bash
-workstack init                   # Initialize in repository
-workstack init --shell           # Show shell integration setup instructions
-workstack init --list-presets    # List available config presets
-workstack init --repo            # Initialize repo config only (skip global)
-workstack config list            # Show all configuration
-workstack config get KEY         # Get config value
-workstack config set KEY VALUE   # Set config value
-workstack completion bash/zsh/fish  # Generate shell completion script
+erk init                   # Initialize in repository
+erk init --shell           # Show shell integration setup instructions
+erk init --list-presets    # List available config presets
+erk init --repo            # Initialize repo config only (skip global)
+erk config list            # Show all configuration
+erk config get KEY         # Get config value
+erk config set KEY VALUE   # Set config value
+erk completion bash/zsh/fish  # Generate shell completion script
 ```
 
 ## Configuration Files
 
-**Global** (`~/.workstack/config.toml`):
+**Global** (`~/.erk/config.toml`):
 
 ```toml
-workstacks_root = "/Users/you/worktrees"
+erks_root = "/Users/you/erks"
 use_graphite = true     # Auto-detected if gt CLI installed
 show_pr_info = true     # Display PR status in list --stacks (requires gh CLI)
 ```
 
-**Per-Repository** (`~/worktrees/<repo>/config.toml`):
+**Per-Repository** (`~/erks/<repo>/config.toml`):
 
 ```toml
 [env]
@@ -278,20 +278,20 @@ commands = [
 ### Parallel Feature Development
 
 ```bash
-workstack create feature-a
-workstack switch feature-a
+erk create feature-a
+erk switch feature-a
 # ... work on feature A ...
 
-workstack create feature-b
-workstack switch feature-b
+erk create feature-b
+erk switch feature-b
 # ... work on feature B ...
 
-workstack switch feature-a  # Instantly back to feature A
+erk switch feature-a  # Instantly back to feature A
 ```
 
 ### Plan-Based Development
 
-`workstack` promotes an opinionated workflow that separates planning from implementation:
+`erk` promotes an opinionated workflow that separates planning from implementation:
 
 **Core principles:**
 
@@ -303,19 +303,19 @@ workstack switch feature-a  # Instantly back to feature A
 
 ```bash
 # 1. Stay in root repo for planning
-workstack switch root
+erk switch root
 
 # 2. Create your plan and save it to disk (e.g. Add_User_Auth.md)
 
 # 3. Create worktree from plan
-workstack create --plan Add_User_Auth.md
+erk create --plan Add_User_Auth.md
 # This automatically:
 #   - Creates worktree named 'add-user-auth'
 #   - Creates .plan/ folder with plan.md (immutable) and progress.md (mutable)
-#   - .plan/ is already in .gitignore (added by workstack init)
+#   - .plan/ is already in .gitignore (added by erk init)
 
 # 4. Switch and execute
-workstack switch add-user-auth
+erk switch add-user-auth
 # Your plan is now at .plan/plan.md for reference during implementation
 # Progress tracking in .plan/progress.md shows step completion
 ```
@@ -334,7 +334,7 @@ This workflow emerged from experience - checking in planning documents created n
 
 ```bash
 # Started work on main by accident?
-workstack create --from-current-branch
+erk create --from-current-branch
 # Creates worktree with current branch, switches you back to root
 ```
 
@@ -343,7 +343,7 @@ workstack create --from-current-branch
 After merging PRs, sync your local branches and clean up:
 
 ```bash
-workstack sync
+erk sync
 # This will:
 # 1. Switch to root (avoiding git conflicts)
 # 2. Run gt sync to update branch tracking
@@ -352,15 +352,15 @@ workstack sync
 # 5. Switch back to your original worktree
 
 # Or use -f to skip confirmation:
-workstack sync -f
+erk sync -f
 ```
 
 Options:
 
 ```bash
-workstack sync                   # Sync and show cleanup candidates
-workstack sync -f                # Force gt sync and auto-remove merged workstacks
-workstack sync --dry-run         # Preview without executing
+erk sync                   # Sync and show cleanup candidates
+erk sync -f                # Force gt sync and auto-remove merged erks
+erk sync --dry-run         # Preview without executing
 ```
 
 Requires Graphite CLI (`gt`) and GitHub CLI (`gh`) installed.
@@ -438,14 +438,14 @@ Always exported when switching:
 
 ### Graphite Integration
 
-If [Graphite CLI](https://graphite.com/) is installed, `workstack` automatically uses `gt create` for proper stack tracking.
+If [Graphite CLI](https://graphite.com/) is installed, `erk` automatically uses `gt create` for proper stack tracking.
 
 ```bash
 brew install withgraphite/tap/graphite
-workstack init  # Auto-detects gt
+erk init  # Auto-detects gt
 ```
 
-Disable in `~/.workstack/config.toml`: `use_graphite = false`
+Disable in `~/.erk/config.toml`: `use_graphite = false`
 
 ### Repository Presets
 
@@ -464,25 +464,25 @@ commands = ["uv venv", "uv run make dev_install"]
 Find and clean up merged/closed PR branches:
 
 ```bash
-workstack sync --dry-run
+erk sync --dry-run
 # Output:
 #   feature-x [work/feature-x] - merged (PR #123)
 #   feature-y [work/feature-y] - closed (PR #456)
 
-workstack sync -f  # Clean up automatically
+erk sync -f  # Clean up automatically
 ```
 
 Requires GitHub CLI (`gh`) installed and authenticated.
 
 ## FAQ
 
-**Q: How is this different from `git worktree`?**  
+**Q: How is this different from `git worktree`?**
 A: Adds centralized management, automatic environment setup, and seamless switching.
 
-**Q: Does it work with non-Python projects?**  
+**Q: Does it work with non-Python projects?**
 A: Yes! Configure `post_create` commands for any stack.
 
-**Q: What if I don't use Graphite?**  
+**Q: What if I don't use Graphite?**
 A: Works perfectly with standard git commands.
 
 ## Documentation
@@ -521,24 +521,24 @@ if should_output:
     script_result.output_for_shell_integration()
 ```
 
-This prevents bugs where script paths are written to the wrong stream (stderr instead of stdout), causing shell integration to fail. See `src/workstack/core/script_writer.py` for detailed documentation.
+This prevents bugs where script paths are written to the wrong stream (stderr instead of stdout), causing shell integration to fail. See `src/erk/core/script_writer.py` for detailed documentation.
 
 #### Workspace Structure
 
 This project uses a uv workspace to organize the codebase:
 
 ```
-workstack/                    # Root workspace
-├── src/workstack/            # Main workstack package
+erk/                    # Root workspace
+├── src/erk/            # Main erk package
 ├── packages/
-│   └── workstack-dev/        # Development tools package
-│       ├── src/workstack_dev/ # Development CLI commands
+│   └── erk-dev/        # Development tools package
+│       ├── src/erk_dev/ # Development CLI commands
 │       ├── tests/            # Dev CLI tests
 │       └── pyproject.toml    # Package metadata
 └── pyproject.toml            # Workspace configuration
 ```
 
-**workstack-dev** is an independent package containing development tools for workstack. It provides commands for publishing to PyPI, code review, cache management, and more. It is installed as a dev dependency.
+**erk-dev** is an independent package containing development tools for erk. It provides commands for publishing to PyPI, code review, cache management, and more. It is installed as a dev dependency.
 
 ### For AI Assistants
 
@@ -550,14 +550,14 @@ Comprehensive, agent-optimized documentation is available in the `.agent/` direc
 - **[Module Map](.agent/docs/MODULE_MAP.md)** - Module structure and exports
 - **[Coding Patterns](docs/PATTERNS.md)** - Detailed implementation patterns with examples
 - **[Exception Handling](docs/EXCEPTION_HANDLING.md)** - Complete exception handling guide
-- **[workstack-dev CLI](docs/WORKSTACK_DEV.md)** - Development CLI architecture and design
+- **[erk-dev CLI](docs/ERK_DEV.md)** - Development CLI architecture and design
 
 See [`.agent/README.md`](.agent/README.md) for more details.
 
 ## Links
 
-- **GitHub:** https://github.com/dagster-io/workstack
-- **Issues:** https://github.com/dagster-io/workstack/issues
+- **GitHub:** https://github.com/dagster-io/erk
+- **Issues:** https://github.com/dagster-io/erk/issues
 
 ## License
 

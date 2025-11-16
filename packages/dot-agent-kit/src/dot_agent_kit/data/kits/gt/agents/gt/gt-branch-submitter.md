@@ -274,8 +274,8 @@ When parent branches have been merged but those commits aren't in the local `mai
 # Sync main and restack everything
 gt sync -f
 
-# If you're using workstack
-workstack sync -f
+# If you're using erk
+erk sync -f
 ```
 
 This will:

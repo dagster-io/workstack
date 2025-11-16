@@ -6,9 +6,9 @@ This directory contains tests for commands that display information about worksp
 
 ## Commands in This Directory
 
-- `test_status.py` - Tests for `workstack status` command
-- `test_tree.py` - Tests for `workstack tree` command
-- `list/` - Tests for `workstack list` command and variants
+- `test_status.py` - Tests for `erk status` command
+- `test_tree.py` - Tests for `erk tree` command
+- `list/` - Tests for `erk list` command and variants
 
 ## Common Test Setup
 
@@ -16,8 +16,8 @@ Display commands typically read state but don't modify it:
 
 ```python
 from click.testing import CliRunner
-from workstack.commands.status import status
-from workstack.context import WorkstackContext
+from erk.commands.status import status
+from erk.context import ErkContext
 from tests.fakes.fake_gitops import FakeGitOps
 from tests.fakes.fake_github_ops import FakeGitHubOps
 
@@ -31,7 +31,7 @@ def test_display_command() -> None:
     github_ops = FakeGitHubOps()
     github_ops.add_pr("feature/test", number=123, state="open")
 
-    ctx = WorkstackContext(
+    ctx = ErkContext(
         git_ops=git_ops,
         github_ops=github_ops
     )
@@ -106,7 +106,7 @@ github_ops.add_pr(
     url="https://github.com/org/repo/pull/456"
 )
 
-ctx = WorkstackContext(
+ctx = ErkContext(
     git_ops=git_ops,
     github_ops=github_ops
 )
@@ -189,7 +189,7 @@ Display commands should be fast and not modify state:
 def test_display_no_side_effects() -> None:
     git_ops = FakeGitOps(current_branch="main", all_branches=["main"])
 
-    ctx = WorkstackContext(git_ops=git_ops)
+    ctx = ErkContext(git_ops=git_ops)
     runner = CliRunner()
 
     result = runner.invoke(status, [], obj=ctx)

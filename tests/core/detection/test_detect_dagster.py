@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from workstack.core.init_utils import detect_root_project_name, is_repo_named
+from erk.core.init_utils import detect_root_project_name, is_repo_named
 
 
 def test_detects_by_root_pyproject(tmp_path: Path) -> None:

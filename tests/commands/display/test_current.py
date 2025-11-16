@@ -8,12 +8,12 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
+from erk.cli.cli import cli
+from erk.core.context import WorkstackContext
+from erk.core.gitops import WorktreeInfo
+from erk.core.global_config import GlobalConfig, InMemoryGlobalConfigOps
 from tests.fakes.gitops import FakeGitOps
 from tests.test_utils.env_helpers import pure_workstack_env
-from workstack.cli.cli import cli
-from workstack.core.context import WorkstackContext
-from workstack.core.gitops import WorktreeInfo
-from workstack.core.global_config import GlobalConfig, InMemoryGlobalConfigOps
 
 
 def test_current_returns_worktree_name() -> None:

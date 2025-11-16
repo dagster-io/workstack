@@ -10,16 +10,16 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
+from erk.cli.cli import cli
+from erk.core.context import WorkstackContext, create_context
+from erk.core.github_ops import NoopGitHubOps
+from erk.core.gitops import NoopGitOps, WorktreeInfo
+from erk.core.global_config import GlobalConfig
+from erk.core.graphite_ops import NoopGraphiteOps
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
-from workstack.cli.cli import cli
-from workstack.core.context import WorkstackContext, create_context
-from workstack.core.github_ops import NoopGitHubOps
-from workstack.core.gitops import NoopGitOps, WorktreeInfo
-from workstack.core.global_config import GlobalConfig
-from workstack.core.graphite_ops import NoopGraphiteOps
 
 
 def init_git_repo(repo_path: Path, default_branch: str = "main") -> None:
@@ -38,7 +38,7 @@ def init_git_repo(repo_path: Path, default_branch: str = "main") -> None:
 def test_dryrun_context_creation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that create_context with dry_run=True creates wrapped implementations."""
     # Set up a temporary config file to make the test deterministic
-    config_dir = tmp_path / ".workstack"
+    config_dir = tmp_path / ".erk"
     config_dir.mkdir()
     config_file = config_dir / "config.toml"
     workstacks_root = tmp_path / "workstacks"
@@ -137,7 +137,7 @@ def test_dryrun_git_delete_branch_prints_message(tmp_path: Path) -> None:
     assert "feature-branch" in result.stdout
 
     # Try to delete via dry-run context
-    from workstack.core.gitops import RealGitOps
+    from erk.core.gitops import RealGitOps
 
     real_ops = RealGitOps()
     git_dir = real_ops.get_git_common_dir(repo)
@@ -171,7 +171,7 @@ def test_dryrun_git_add_worktree_prints_message(tmp_path: Path) -> None:
     assert not new_wt.exists()
 
     # Verify git doesn't know about the worktree
-    from workstack.core.gitops import RealGitOps
+    from erk.core.gitops import RealGitOps
 
     real_ops = RealGitOps()
     worktrees = real_ops.list_worktrees(repo)
@@ -202,7 +202,7 @@ def test_dryrun_git_remove_worktree_prints_message(tmp_path: Path) -> None:
     assert wt.exists()
 
     # Verify git still knows about it
-    from workstack.core.gitops import RealGitOps
+    from erk.core.gitops import RealGitOps
 
     real_ops = RealGitOps()
     worktrees = real_ops.list_worktrees(repo)
@@ -220,7 +220,7 @@ def test_dryrun_git_checkout_branch_is_allowed(tmp_path: Path) -> None:
     subprocess.run(["git", "branch", "feature"], cwd=repo, check=True)
 
     # Verify we're on main
-    from workstack.core.gitops import RealGitOps
+    from erk.core.gitops import RealGitOps
 
     real_ops = RealGitOps()
     assert real_ops.get_current_branch(repo) == "main"
@@ -263,7 +263,7 @@ def test_dryrun_graphite_operations(tmp_path: Path) -> None:
     assert "graphite.com" in url
 
     # Test get_prs_from_graphite (read operation)
-    from workstack.core.gitops import RealGitOps
+    from erk.core.gitops import RealGitOps
 
     git_ops = RealGitOps()
     prs = ctx.graphite_ops.get_prs_from_graphite(git_ops, repo)

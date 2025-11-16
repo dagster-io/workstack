@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from workstack.core.shell_ops import detect_shell_from_env
+from erk.core.shell_ops import detect_shell_from_env
 
 
 def test_detect_shell_from_env_zsh():

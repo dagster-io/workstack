@@ -13,8 +13,10 @@ import click
 def dignified_python_reminder_hook() -> None:
     """Output dignified-python compliance reminder for UserPromptSubmit hook."""
     click.echo(
-        "🔴 Load dignified-python-313 skill when editing Python "
-        "(LBYL: check conditions first, never try/except for control flow)"
+        "🔴 CRITICAL: LOAD dignified-python skill NOW before editing Python\n"
+        "\n"
+        "WHY: Ensures LBYL compliance, Python 3.13+ types, ABC interfaces\n"
+        "NOTE: Checklist rules are EXCERPTS - skill contains complete philosophy & rationale"
     )
 
 

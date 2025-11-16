@@ -15,35 +15,38 @@
 
 **NOTE: `.plan/` folders are NOT tracked in git and should never be committed**
 
-| If you're about to write...                                      | STOP! Check this instead                                                                          |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `try:` or `except:`                                              | → [Exception Handling](#exception-handling) - Default: let exceptions bubble                      |
-| `from __future__ import annotations`                             | → **FORBIDDEN** - Python 3.13+ doesn't need it                                                    |
-| `List[...]`, `Dict[...]`, `Union[...]`                           | → Use `list[...]`, `dict[...]`, `X \| Y`                                                          |
-| `typing.Protocol`                                                | → Use `abc.ABC` instead                                                                           |
-| `dict[key]` without checking                                     | → Use `if key in dict:` or `.get()`                                                               |
-| `path.resolve()` or `path.is_relative_to()`                      | → Check `path.exists()` first                                                                     |
-| Function with default argument                                   | → Make explicit at call sites                                                                     |
-| `from .module import`                                            | → Use absolute imports only                                                                       |
-| `print(...)` in CLI code                                         | → Use `click.echo()`                                                                              |
-| `subprocess.run(...)`                                            | → Add `check=True`                                                                                |
-| Submitting a branch with Graphite                                | → Use /gt:submit-branch command (delegates to gt-branch-submitter agent)                          |
-| Systematic Python changes (migrate calls, rename, batch updates) | → Use libcst-refactor agent (Task tool); for multi-file transformations                           |
-| Stack traversal or "upstack"/"downstack"                         | → [Graphite Stack Terminology](#-graphite-stack-terminology-critical) - main is at BOTTOM         |
-| 4+ levels of indentation                                         | → Extract helper functions                                                                        |
-| Code in `__init__.py`                                            | → Keep empty or docstring-only (except package entry points)                                      |
-| Tests for speculative features                                   | → **FORBIDDEN** - Only test actively implemented code (TDD is fine)                               |
-| Creating `.claude/` artifacts                                    | → Use `kebab-case` (hyphens) NOT `snake_case` (underscores)                                       |
-| `Path("/test/...")` or hardcoded paths                           | → **CATASTROPHIC** - Use `pure_workstack_env` fixture - [Test Isolation](#6-test-isolation--must) |
+| If you're about to write...                                      | STOP! Check this instead                                                                             |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Writing or editing Python code                                   | → **🔴 LOAD dignified-python skill FIRST** - Complete LBYL philosophy (checklist rules are excerpts) |
+| `try:` or `except:`                                              | → [Exception Handling](#exception-handling) - Default: let exceptions bubble                         |
+| `from __future__ import annotations`                             | → **FORBIDDEN** - Python 3.13+ doesn't need it                                                       |
+| `List[...]`, `Dict[...]`, `Union[...]`                           | → Use `list[...]`, `dict[...]`, `X \| Y`                                                             |
+| `typing.Protocol`                                                | → Use `abc.ABC` instead                                                                              |
+| `dict[key]` without checking                                     | → Use `if key in dict:` or `.get()`                                                                  |
+| `path.resolve()` or `path.is_relative_to()`                      | → Check `path.exists()` first                                                                        |
+| Function with default argument                                   | → Make explicit at call sites                                                                        |
+| `from .module import`                                            | → Use absolute imports only                                                                          |
+| `print(...)` in CLI code                                         | → Use `click.echo()`                                                                                 |
+| `subprocess.run(...)`                                            | → Add `check=True`                                                                                   |
+| Submitting a branch with Graphite                                | → Use /gt:submit-branch command (delegates to gt-branch-submitter agent)                             |
+| Systematic Python changes (migrate calls, rename, batch updates) | → Use libcst-refactor agent (Task tool); for multi-file transformations                              |
+| `pytest`, `pyright`, `ruff`, `prettier`, `make`, `gt` commands   | → Use devrun agent (Task tool) - specialized parsing, cost efficiency                                |
+| Stack traversal or "upstack"/"downstack"                         | → [Graphite Stack Terminology](#-graphite-stack-terminology-critical) - main is at BOTTOM            |
+| 4+ levels of indentation                                         | → Extract helper functions                                                                           |
+| Code in `__init__.py`                                            | → Keep empty or docstring-only (except package entry points)                                         |
+| Tests for speculative features                                   | → **FORBIDDEN** - Only test actively implemented code (TDD is fine)                                  |
+| Creating `.claude/` artifacts                                    | → Use `kebab-case` (hyphens) NOT `snake_case` (underscores)                                          |
+| `Path("/test/...")` or hardcoded paths                           | → **CATASTROPHIC** - Use `pure_workstack_env` fixture - [Test Isolation](#6-test-isolation--must)    |
+| ⚠️ Python patterns above                                         | → These are EXCERPTS ONLY - Load dignified-python skill for complete guidance                        |
 
 ## 📚 Quick Reference
 
-| Need help with...     | See documentation                                |
-| --------------------- | ------------------------------------------------ |
-| **Python standards**  | Load dignified-python skill                      |
-| **Project terms**     | [docs/agent/glossary.md](docs/agent/glossary.md) |
-| **Documentation nav** | [docs/agent/guide.md](docs/agent/guide.md)       |
-| **Testing patterns**  | [docs/agent/testing.md](docs/agent/testing.md)   |
+| Need help with...     | See documentation                                                            |
+| --------------------- | ---------------------------------------------------------------------------- |
+| **Python standards**  | **🔴 LOAD dignified-python skill FIRST** - Checklist rules are excerpts only |
+| **Project terms**     | [docs/agent/glossary.md](docs/agent/glossary.md)                             |
+| **Documentation nav** | [docs/agent/guide.md](docs/agent/guide.md)                                   |
+| **Testing patterns**  | [docs/agent/testing.md](docs/agent/testing.md)                               |
 
 ## Documentation Structure
 
@@ -54,6 +57,21 @@ The `docs/` folder is organized by audience:
 - Package-specific documentation lives in each package's README (e.g., `packages/workstack-dev/README.md`)
 
 ## Python Coding Standards
+
+🔴 **CRITICAL: Load dignified-python skill BEFORE writing Python code.**
+
+**The checklist below contains quick references, but you MUST load the skill for:**
+
+- Complete LBYL philosophy and rationale
+- WHY behind each rule (not just WHAT)
+- Anti-patterns and code smells from production use
+- Progressive disclosure with detailed references
+
+**The rules in this document are NOT sufficient on their own.**
+
+To load: Use Skill tool with command "dignified-python"
+
+---
 
 **All Python coding standards are maintained in the `dignified-python` skill.**
 
@@ -71,7 +89,7 @@ The `docs/agent/` folder contains only workstack-specific documentation (termino
 
 ---
 
-## 🔴 TOP 6 CRITICAL RULES (Most Violated)
+## 🔴 TOP 8 CRITICAL RULES (Most Violated)
 
 ### 1. Exception Handling 🔴 MUST
 
@@ -177,6 +195,77 @@ def test_something(tmp_path: Path) -> None:
 **If you see `Path("/` in test code, STOP and use fixtures.**
 
 **Full guide**: [docs/agent/testing.md#critical-never-use-hardcoded-paths-in-tests](docs/agent/testing.md#critical-never-use-hardcoded-paths-in-tests)
+
+### 7. dignified-python Skill Loading 🔴 MUST
+
+**ALWAYS load dignified-python skill BEFORE editing Python code**
+
+The checklist above contains quick-reference excerpts of Python rules. **This is NOT sufficient on their own.**
+
+**The dignified-python skill contains:**
+
+- Complete LBYL philosophy and rationale (WHY, not just WHAT)
+- Anti-patterns and code smells from production systems (Dagster Labs)
+- Progressive disclosure with detailed references
+- Unified philosophy connecting all the rules
+
+```python
+# ❌ WRONG: Following checklist rules without loading skill
+# You implement code based only on checklist excerpts
+# Missing: WHY behind rules, anti-patterns, unified philosophy
+
+# ✅ CORRECT: Load skill first
+# Use Skill tool with command: "dignified-python"
+# Then implement code with complete understanding
+```
+
+**WHY this matters:**
+
+- Individual rules without context lead to cargo-cult programming
+- The checklist shows WHAT to do, the skill explains WHY
+- Anti-patterns and code smells prevent specific production bugs
+- Progressive disclosure provides references when you need deeper guidance
+
+**Note**: The rules in this document are NOT sufficient on their own. Always load the skill.
+
+### 8. Development Tool Execution 🔴 MUST
+
+**NEVER execute dev tools directly via Bash. ALWAYS use devrun agent.**
+
+```python
+# ❌ WRONG: Direct Bash execution
+Bash("pytest tests/")
+Bash("uv run pyright")
+Bash("make test-unit")
+
+# ✅ CORRECT: Use devrun agent with Task tool
+Task(
+    subagent_type="devrun",
+    description="Run unit tests",
+    prompt="Run pytest tests/"
+)
+```
+
+**WHY this matters:**
+
+- **Specialized output parsing**: devrun understands tool-specific output formats
+- **Cost efficiency**: Optimized token usage for test results and linter output
+- **Consistent error handling**: Unified interface across all dev tools
+
+**Covered tools:**
+
+- `pytest` - Python test runner
+- `pyright` - Python type checker
+- `ruff` - Python linter and formatter
+- `prettier` - Code formatter (markdown, JSON, etc.)
+- `make` - Build automation
+- `gt` - Graphite CLI for stacked PRs
+
+**When to use devrun:**
+
+- ANY time you need to run one of these tools
+- With or without `uv run` prefix
+- For single commands or CI workflows (like `/ensure-ci`)
 
 ---
 

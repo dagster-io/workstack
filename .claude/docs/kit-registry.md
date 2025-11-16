@@ -4,7 +4,7 @@
 <!-- DO NOT EDIT: Changes will be overwritten. Use 'dot-agent kit sync' -->
 
 <!-- REGISTRY_VERSION: 1 -->
-<!-- GENERATED_AT: 2025-11-14T14:52:36 -->
+<!-- GENERATED_AT: 2025-11-16T06:23:35 -->
 
 <!-- BEGIN_ENTRIES -->
 
@@ -29,6 +29,12 @@
 <!-- ENTRY_START kit_id="gt" version="0.1.0" source="bundled" -->
 
 @.agent/kits/gt/registry-entry.md
+
+<!-- ENTRY_END -->
+
+<!-- ENTRY_START kit_id="layered-testing" version="0.1.0" source="bundled" -->
+
+@.agent/kits/layered-testing/registry-entry.md
 
 <!-- ENTRY_END -->
 

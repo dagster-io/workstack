@@ -7,11 +7,13 @@ from pathlib import Path
 import click
 
 from workstack.cli.activation import render_activation_script
-from workstack.cli.commands.create import (
-    add_worktree,
+from workstack.cli.commands.create.post_creation import (
     make_env_content,
-    run_commands_in_worktree,
 )
+from workstack.cli.commands.create.post_creation import (
+    run_post_create_commands as run_commands_in_worktree,
+)
+from workstack.cli.commands.create.worktree_ops import add_worktree
 from workstack.cli.config import LoadedConfig
 from workstack.cli.core import discover_repo_context, worktree_path_for
 from workstack.cli.graphite import find_worktrees_containing_branch

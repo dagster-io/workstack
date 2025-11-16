@@ -224,7 +224,7 @@ def extract_trailing_number(name: str) -> tuple[str, int | None]:
     return (name, None)
 
 
-def ensure_unique_worktree_name(base_name: str, workstacks_dir: Path) -> str:
+def ensure_unique_worktree_name(base_name: str, worktrees_dir: Path) -> str:
     """Ensure unique worktree name with date suffix and smart versioning.
 
     Adds date suffix in format -YY-MM-DD to the base name.
@@ -233,7 +233,7 @@ def ensure_unique_worktree_name(base_name: str, workstacks_dir: Path) -> str:
 
     Args:
         base_name: Sanitized worktree base name (without date suffix)
-        workstacks_dir: Directory containing worktrees
+        worktrees_dir: Directory containing worktrees
 
     Returns:
         Guaranteed unique worktree name with date suffix
@@ -247,14 +247,14 @@ def ensure_unique_worktree_name(base_name: str, workstacks_dir: Path) -> str:
     candidate_name = f"{base_name}-{date_suffix}"
 
     # Check if the base candidate exists
-    if not (workstacks_dir / candidate_name).exists():
+    if not (worktrees_dir / candidate_name).exists():
         return candidate_name
 
     # Name exists, find next available number
     counter = 2
     while True:
         versioned_name = f"{base_name}-{counter}-{date_suffix}"
-        if not (workstacks_dir / versioned_name).exists():
+        if not (worktrees_dir / versioned_name).exists():
             return versioned_name
         counter += 1
 

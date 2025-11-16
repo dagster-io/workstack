@@ -30,7 +30,7 @@ def test_land_stack_gets_branches_to_land_correctly() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -110,7 +110,7 @@ def test_land_stack_from_top_of_stack_lands_all_branches() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -201,7 +201,7 @@ def test_land_stack_refreshes_metadata_after_sync() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,

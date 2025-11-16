@@ -283,8 +283,8 @@ class WorktreeScenario:
         """Initialize directory structure and internal state."""
         self.repo_root = self.base_path / self.repo_name
         self.git_dir = self.repo_root / ".git"
-        self.workstacks_root = self.base_path / "workstacks"
-        self.workstacks_dir = self.workstacks_root / self.repo_name
+        self.erk_root = self.base_path / "workstacks"
+        self.repo_dir = self.erk_root / self.repo_name
 
         self._worktrees: dict[Path, list[WorktreeInfo]] = {}
         self._git_common_dirs: dict[Path, Path] = {}
@@ -324,7 +324,7 @@ class WorktreeScenario:
         Returns:
             Self for method chaining
         """
-        worktree_path = self.workstacks_dir / name
+        worktree_path = self.repo_dir / name
         worktree_path.mkdir(parents=True, exist_ok=True)
 
         self._worktrees.setdefault(self.repo_root, []).append(
@@ -394,7 +394,7 @@ class WorktreeScenario:
         self.graphite_ops = FakeGraphiteOps(stacks=self._graphite_stacks, pr_info=self._prs)
 
         global_config = GlobalConfig(
-            workstacks_root=self.workstacks_root,
+            erk_root=self.erk_root,
             use_graphite=self._use_graphite,
             shell_setup_complete=False,
             show_pr_info=self._show_pr_info,

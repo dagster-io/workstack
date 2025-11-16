@@ -18,26 +18,26 @@ def discover_repo_context(ctx: ErkContext, start: Path) -> RepoContext:
     if ctx.global_config is None:
         raise FileNotFoundError("Global config not found. Run 'erk init' to create it.")
 
-    result = discover_repo_or_sentinel(start, ctx.global_config.workstacks_root, ctx.git_ops)
+    result = discover_repo_or_sentinel(start, ctx.global_config.erk_root, ctx.git_ops)
     if isinstance(result, RepoContext):
         return result
     raise FileNotFoundError(result.message)
 
 
-def worktree_path_for(workstacks_dir: Path, name: str) -> Path:
-    """Return the absolute path for a named worktree within workstacks_dir.
+def worktree_path_for(worktrees_dir: Path, name: str) -> Path:
+    """Return the absolute path for a named worktree within worktrees directory.
 
     Note: Does not handle 'root' as a special case. Commands that support
     'root' must check for it explicitly and use repo.root directly.
 
     Args:
-        workstacks_dir: The directory containing all workstacks for this repo
+        worktrees_dir: The directory containing all worktrees for this repo
         name: The worktree name (e.g., 'feature-a')
 
     Returns:
-        Absolute path to the worktree (e.g., ~/worktrees/myrepo/feature-a/)
+        Absolute path to the worktree (e.g., ~/.erk/repos/myrepo/worktrees/feature-a/)
     """
-    return (workstacks_dir / name).resolve()
+    return (worktrees_dir / name).resolve()
 
 
 def validate_worktree_name_for_removal(name: str) -> None:

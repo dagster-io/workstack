@@ -142,7 +142,7 @@ def test_create_split_plan_full_stack() -> None:
     trunk_branch = "main"
     current_branch = "main"
     all_worktrees = [WorktreeInfo(Path("/repo"), "main", is_root=True)]
-    workstacks_dir = Path("/repo/workstacks")
+    repo_dir = Path("/repo/workstacks")
 
     def sanitize_name(name: str) -> str:
         return name.lower().replace("/", "-")
@@ -152,7 +152,7 @@ def test_create_split_plan_full_stack() -> None:
         trunk_branch,
         current_branch,
         all_worktrees,
-        workstacks_dir,
+        repo_dir,
         sanitize_name,
         Path("/repo"),
         Path("/repo"),  # repo_root
@@ -175,7 +175,7 @@ def test_create_split_plan_with_exclusions() -> None:
         WorktreeInfo(Path("/repo/workstacks/feat-1"), "feat-1", is_root=False),
         WorktreeInfo(Path("/repo/workstacks/feat-2"), "feat-2", is_root=False),
     ]
-    workstacks_dir = Path("/repo/workstacks")
+    repo_dir = Path("/repo/workstacks")
 
     def sanitize_name(name: str) -> str:
         return name
@@ -185,7 +185,7 @@ def test_create_split_plan_with_exclusions() -> None:
         trunk_branch,
         current_branch,
         all_worktrees,
-        workstacks_dir,
+        repo_dir,
         sanitize_name,
         Path("/repo/workstacks/feat-2"),
         Path("/repo"),  # repo_root
@@ -202,7 +202,7 @@ def test_create_split_plan_generates_correct_paths() -> None:
     trunk_branch = "main"
     current_branch = "main"
     all_worktrees = [WorktreeInfo(Path("/repo"), "main", is_root=True)]
-    workstacks_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.workstacks")
 
     def sanitize_name(name: str) -> str:
         # Simulate actual sanitization
@@ -213,7 +213,7 @@ def test_create_split_plan_generates_correct_paths() -> None:
         trunk_branch,
         current_branch,
         all_worktrees,
-        workstacks_dir,
+        repo_dir,
         sanitize_name,
         Path("/repo"),
         Path("/repo"),  # repo_root
@@ -232,7 +232,7 @@ def test_create_split_plan_empty_branches_to_split() -> None:
         WorktreeInfo(Path("/repo"), "main", is_root=True),
         WorktreeInfo(Path("/repo/workstacks/feat-1"), "feat-1", is_root=False),
     ]
-    workstacks_dir = Path("/repo/workstacks")
+    repo_dir = Path("/repo/workstacks")
 
     def sanitize_name(name: str) -> str:
         return name
@@ -242,7 +242,7 @@ def test_create_split_plan_empty_branches_to_split() -> None:
         trunk_branch,
         current_branch,
         all_worktrees,
-        workstacks_dir,
+        repo_dir,
         sanitize_name,
         Path("/repo/workstacks/feat-1"),
         Path("/repo"),  # repo_root

@@ -34,7 +34,7 @@ def identify_deletable_worktrees(
     worktrees: list[WorktreeInfo],
     pr_statuses: dict[str, PRStatus],
     repo_root: Path,
-    workstacks_dir: Path,
+    repo_dir: Path,
 ) -> list[DeletableWorktree]:
     """Identify worktrees that are safe to delete based on PR state.
 
@@ -81,7 +81,7 @@ def identify_deletable_worktrees(
             continue
 
         # Skip non-managed worktrees
-        if wt.path.parent != workstacks_dir:
+        if wt.path.parent != repo_dir:
             continue
 
         # Check if we have PR status for this branch

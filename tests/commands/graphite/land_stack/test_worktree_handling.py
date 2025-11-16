@@ -40,7 +40,7 @@ def test_land_stack_with_down_flag_includes_flag_in_error_suggestions() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -78,8 +78,8 @@ def test_land_stack_with_down_flag_includes_flag_in_error_suggestions() -> None:
         assert "feat-1" in result.output
         assert "feat-2" in result.output
         # Key assertion: both suggestions should include --down
-        assert "workstack consolidate --down" in result.output
-        assert "workstack land-stack --down" in result.output
+        assert "erk consolidate --down" in result.output
+        assert "erk land-stack --down" in result.output
 
 
 def test_land_stack_fails_when_branches_in_multiple_worktrees() -> None:
@@ -107,7 +107,7 @@ def test_land_stack_fails_when_branches_in_multiple_worktrees() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -145,11 +145,11 @@ def test_land_stack_fails_when_branches_in_multiple_worktrees() -> None:
         assert "feat-1" in result.output
         assert "feat-2" in result.output
         # Key assertion: suggestions should NOT include --down when flag wasn't used
-        assert "workstack consolidate" in result.output
-        assert "workstack land-stack" in result.output
+        assert "erk consolidate" in result.output
+        assert "erk land-stack" in result.output
         # Verify --down is NOT included
-        assert "workstack consolidate --down" not in result.output
-        assert "workstack land-stack --down" not in result.output
+        assert "erk consolidate --down" not in result.output
+        assert "erk land-stack --down" not in result.output
 
 
 def test_land_stack_succeeds_when_all_branches_in_current_worktree() -> None:
@@ -170,7 +170,7 @@ def test_land_stack_succeeds_when_all_branches_in_current_worktree() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -252,7 +252,7 @@ def test_land_stack_from_linked_worktree_on_branch_being_landed() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,

@@ -68,7 +68,7 @@ def create_test_context(
         # With pre-configured global config
         >>> from workstack.core.global_config import GlobalConfig
         >>> config = GlobalConfig(
-        ...     workstacks_root=Path("/tmp/workstacks"),
+        ...     erk_root=Path("/tmp/workstacks"),
         ...     use_graphite=False,
         ...     shell_setup_complete=False,
         ...     show_pr_info=True,

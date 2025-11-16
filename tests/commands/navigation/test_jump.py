@@ -18,7 +18,7 @@ def test_jump_to_branch_in_single_worktree() -> None:
     """
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / env.cwd.name
 
         # Use sentinel paths (no mkdir() needed in pure mode)
         feature_wt = work_dir / "feature-wt"
@@ -41,7 +41,8 @@ def test_jump_to_branch_in_single_worktree() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name="repo",
-            workstacks_dir=env.workstacks_root / "repo",
+            repo_dir=env.erk_root / "repo",
+            worktrees_dir=env.erk_root / "repo" / "worktrees",
         )
 
         test_ctx = env.build_context(git_ops=git_ops, repo=repo)
@@ -69,7 +70,7 @@ def test_jump_to_branch_not_found() -> None:
     """Test jumping to a branch that doesn't exist in git."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / env.cwd.name
 
         git_ops = FakeGitOps(
             worktrees={
@@ -88,7 +89,8 @@ def test_jump_to_branch_not_found() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=work_dir,
+            repo_dir=work_dir,
+            worktrees_dir=work_dir / "worktrees",
         )
 
         test_ctx = env.build_context(git_ops=git_ops, repo=repo)
@@ -107,7 +109,7 @@ def test_jump_creates_worktree_for_unchecked_branch() -> None:
     """Test that jump auto-creates worktree when branch exists but is not checked out."""
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / env.cwd.name
 
         # Branch 'existing-branch' exists in git but is not checked out
         git_ops = FakeGitOps(
@@ -126,7 +128,8 @@ def test_jump_creates_worktree_for_unchecked_branch() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=work_dir,
+            repo_dir=work_dir,
+            worktrees_dir=work_dir / "worktrees",
         )
 
         test_ctx = env.build_context(git_ops=git_ops, repo=repo)
@@ -169,7 +172,7 @@ def test_jump_to_branch_in_stack_but_not_checked_out() -> None:
     """
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / env.cwd.name
         wt1 = work_dir / "feature-1-wt"
 
         # feature-1 is checked out, but feature-base is not
@@ -191,7 +194,8 @@ def test_jump_to_branch_in_stack_but_not_checked_out() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=work_dir,
+            repo_dir=work_dir,
+            worktrees_dir=work_dir / "worktrees",
         )
 
         test_ctx = env.build_context(git_ops=git_ops, repo=repo)
@@ -217,7 +221,7 @@ def test_jump_works_without_graphite() -> None:
     """Test that jump works without Graphite enabled."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / env.cwd.name
         feature_wt = work_dir / "feature-1-wt"
 
         git_ops = FakeGitOps(
@@ -235,7 +239,8 @@ def test_jump_works_without_graphite() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=work_dir,
+            repo_dir=work_dir,
+            worktrees_dir=work_dir / "worktrees",
         )
 
         # Graphite is NOT enabled - jump should still work
@@ -261,7 +266,7 @@ def test_jump_already_on_target_branch() -> None:
     """
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / env.cwd.name
         feature_wt = work_dir / "feature-1-wt"
 
         git_ops = FakeGitOps(
@@ -280,7 +285,8 @@ def test_jump_already_on_target_branch() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=work_dir,
+            repo_dir=work_dir,
+            worktrees_dir=work_dir / "worktrees",
         )
 
         # CRITICAL: Set cwd to feature_wt to simulate already being in target location
@@ -318,7 +324,7 @@ def test_jump_succeeds_when_branch_exactly_checked_out() -> None:
     """Test that jump succeeds when branch is exactly checked out in a worktree."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / env.cwd.name
         feature_wt = work_dir / "feature-wt"
         other_wt = work_dir / "other-wt"
 
@@ -337,7 +343,8 @@ def test_jump_succeeds_when_branch_exactly_checked_out() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=work_dir,
+            repo_dir=work_dir,
+            worktrees_dir=work_dir / "worktrees",
         )
 
         test_ctx = env.build_context(git_ops=git_ops, repo=repo)
@@ -364,7 +371,7 @@ def test_jump_with_multiple_worktrees_same_branch() -> None:
     """
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / env.cwd.name
         wt1 = work_dir / "wt1"
         wt2 = work_dir / "wt2"
 
@@ -385,7 +392,8 @@ def test_jump_with_multiple_worktrees_same_branch() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=work_dir,
+            repo_dir=work_dir,
+            worktrees_dir=work_dir / "worktrees",
         )
 
         test_ctx = env.build_context(git_ops=git_ops, repo=repo)
@@ -404,7 +412,7 @@ def test_jump_creates_worktree_for_remote_only_branch() -> None:
     """Test jump auto-creates worktree when branch exists only on origin."""
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / env.cwd.name
 
         # Branch exists on origin but not locally
         git_ops = FakeGitOps(
@@ -424,7 +432,8 @@ def test_jump_creates_worktree_for_remote_only_branch() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=work_dir,
+            repo_dir=work_dir,
+            worktrees_dir=work_dir / "worktrees",
         )
 
         test_ctx = env.build_context(git_ops=git_ops, repo=repo)
@@ -464,7 +473,7 @@ def test_jump_fails_when_branch_not_on_origin() -> None:
     """Test jump shows error when branch doesn't exist locally or on origin."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / env.cwd.name
 
         # Branch doesn't exist locally or remotely
         git_ops = FakeGitOps(
@@ -484,7 +493,8 @@ def test_jump_fails_when_branch_not_on_origin() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=work_dir,
+            repo_dir=work_dir,
+            worktrees_dir=work_dir / "worktrees",
         )
 
         test_ctx = env.build_context(git_ops=git_ops, repo=repo)

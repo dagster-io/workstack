@@ -13,15 +13,15 @@ def test_list_outputs_names_not_paths() -> None:
     with pure_workstack_env(runner) as env:
         # Create worktrees in the location determined by global config
         repo_name = env.cwd.name
-        workstacks_dir = env.workstacks_root / repo_name
+        repo_dir = env.erk_root / repo_name
 
         # Build fake git ops with worktree info
         git_ops = FakeGitOps(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=workstacks_dir / "foo", branch="foo"),
-                    WorktreeInfo(path=workstacks_dir / "bar", branch="feature/bar"),
+                    WorktreeInfo(path=repo_dir / "foo", branch="foo"),
+                    WorktreeInfo(path=repo_dir / "bar", branch="feature/bar"),
                 ],
             },
             git_common_dirs={env.cwd: env.git_dir},

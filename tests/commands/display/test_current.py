@@ -21,7 +21,7 @@ def test_current_returns_worktree_name() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         # Construct sentinel paths (no filesystem operations needed)
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / env.cwd.name
         feature_x_path = work_dir / "feature-x"
 
         # Configure FakeGitOps with worktrees - feature-x is current
@@ -113,7 +113,7 @@ def test_current_works_from_subdirectory() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         # Construct sentinel paths (no filesystem operations needed)
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / env.cwd.name
         feature_y_path = work_dir / "feature-y"
         subdir = feature_y_path / "src" / "nested"
 
@@ -151,14 +151,14 @@ def test_current_handles_missing_git_gracefully(tmp_path: Path) -> None:
     """Test that current exits with code 1 when not in a git repository."""
     non_git_dir = tmp_path / "not-git"
     non_git_dir.mkdir()
-    workstacks_root = tmp_path / "workstacks"
+    erk_root = tmp_path / "workstacks"
 
     # No git_common_dir configured = not in git repo
     git_ops = FakeGitOps(git_common_dirs={})
 
     # Create global config
     global_config = GlobalConfig(
-        workstacks_root=workstacks_root,
+        erk_root=erk_root,
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=True,
@@ -184,8 +184,8 @@ def test_current_handles_nested_worktrees(tmp_path: Path) -> None:
     """Test that current returns deepest worktree for nested structures."""
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
-    workstacks_root = tmp_path / "workstacks"
-    parent_wt = workstacks_root / "repo" / "parent"
+    erk_root = tmp_path / "workstacks"
+    parent_wt = erk_root / "repo" / "parent"
     parent_wt.mkdir(parents=True)
     nested_wt = parent_wt / "nested"
     nested_wt.mkdir()
@@ -210,7 +210,7 @@ def test_current_handles_nested_worktrees(tmp_path: Path) -> None:
 
     # Create global config
     global_config = GlobalConfig(
-        workstacks_root=workstacks_root,
+        erk_root=erk_root,
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=True,

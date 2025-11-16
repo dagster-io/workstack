@@ -49,7 +49,7 @@ def test_find_worktrees_containing_branch_no_match(tmp_path: Path) -> None:
     ctx = ErkContext.for_test(
         git_ops=git_ops,
         global_config=GlobalConfig(
-            workstacks_root=Path("/fake/workstacks"),
+            erk_root=Path("/fake/workstacks"),
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,

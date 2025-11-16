@@ -1,4 +1,4 @@
-"""Tree visualization utilities for workstack.
+"""Tree visualization utilities for worktrees.
 
 This module contains pure business logic for building and rendering tree structures
 showing worktrees and their Graphite dependency relationships. All functions are

@@ -130,7 +130,7 @@ def test_split_preserves_existing_worktrees() -> None:
         stack_branches = ["main", "feat-1", "feat-2"]
         existing_worktrees = [
             WorktreeInfo(path=env.cwd, branch="main", is_root=True),
-            WorktreeInfo(path=env.workstacks_root / "feat-1", branch="feat-1", is_root=False),
+            WorktreeInfo(path=env.erk_root / "feat-1", branch="feat-1", is_root=False),
         ]
         test_ctx = _create_test_context_for_split(env, stack_branches, "main", existing_worktrees)
 
@@ -322,7 +322,7 @@ def test_split_all_branches_have_worktrees() -> None:
         stack_branches = ["main", "feat-1"]
         existing_worktrees = [
             WorktreeInfo(path=env.cwd, branch="main", is_root=True),
-            WorktreeInfo(path=env.workstacks_root / "feat-1", branch="feat-1", is_root=False),
+            WorktreeInfo(path=env.erk_root / "feat-1", branch="feat-1", is_root=False),
         ]
         test_ctx = _create_test_context_for_split(env, stack_branches, "main", existing_worktrees)
 
@@ -343,8 +343,8 @@ def test_split_output_formatting() -> None:
         stack_branches = ["main", "feat-1", "feat-2", "feat-3"]
         existing_worktrees = [
             WorktreeInfo(path=env.cwd, branch="feat-2", is_root=False),  # Current is feat-2
-            WorktreeInfo(path=env.workstacks_root / "main", branch="main", is_root=True),
-            WorktreeInfo(path=env.workstacks_root / "feat-1", branch="feat-1", is_root=False),
+            WorktreeInfo(path=env.erk_root / "main", branch="main", is_root=True),
+            WorktreeInfo(path=env.erk_root / "feat-1", branch="feat-1", is_root=False),
         ]
         test_ctx = _create_test_context_for_split(
             env,

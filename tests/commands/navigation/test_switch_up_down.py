@@ -17,14 +17,14 @@ def test_switch_up_with_existing_worktree() -> None:
     """Test --up navigation when child branch has a worktree."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
+        repo_dir = env.erk_root / "repos" / env.cwd.name
 
         git_ops = FakeGitOps(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=workstacks_dir / "feature-1", branch="feature-1"),
-                    WorktreeInfo(path=workstacks_dir / "feature-2", branch="feature-2"),
+                    WorktreeInfo(path=repo_dir / "feature-1", branch="feature-1"),
+                    WorktreeInfo(path=repo_dir / "feature-2", branch="feature-2"),
                 ]
             },
             current_branches={
@@ -51,7 +51,8 @@ def test_switch_up_with_existing_worktree() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
         )
 
         test_ctx = env.build_context(
@@ -70,20 +71,20 @@ def test_switch_up_with_existing_worktree() -> None:
         script_path = Path(result.stdout.strip())
         script_content = env.script_writer.get_script_content(script_path)
         assert script_content is not None
-        assert str(workstacks_dir / "feature-2") in script_content
+        assert str(repo_dir / "feature-2") in script_content
 
 
 def test_switch_up_at_top_of_stack() -> None:
     """Test --up navigation when at the top of stack (no children)."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
+        repo_dir = env.erk_root / "repos" / env.cwd.name
 
         git_ops = FakeGitOps(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=workstacks_dir / "feature-2", branch="feature-2"),
+                    WorktreeInfo(path=repo_dir / "feature-2", branch="feature-2"),
                 ]
             },
             current_branches={env.cwd: "feature-2"},  # Simulate being in feature-2 worktree
@@ -113,14 +114,14 @@ def test_switch_up_child_has_no_worktree() -> None:
     """Test --up navigation when child branch exists but has no worktree."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
+        repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Only feature-1 has a worktree, feature-2 does not
         git_ops = FakeGitOps(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=workstacks_dir / "feature-1", branch="feature-1"),
+                    WorktreeInfo(path=repo_dir / "feature-1", branch="feature-1"),
                 ]
             },
             current_branches={env.cwd: "feature-1"},  # Simulate being in feature-1 worktree
@@ -152,14 +153,14 @@ def test_switch_down_with_existing_worktree() -> None:
     """Test --down navigation when parent branch has a worktree."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
+        repo_dir = env.erk_root / "repos" / env.cwd.name
 
         git_ops = FakeGitOps(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=workstacks_dir / "feature-1", branch="feature-1"),
-                    WorktreeInfo(path=workstacks_dir / "feature-2", branch="feature-2"),
+                    WorktreeInfo(path=repo_dir / "feature-1", branch="feature-1"),
+                    WorktreeInfo(path=repo_dir / "feature-2", branch="feature-2"),
                 ]
             },
             current_branches={env.cwd: "feature-2"},  # Simulate being in feature-2 worktree
@@ -182,7 +183,8 @@ def test_switch_down_with_existing_worktree() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
         )
 
         test_ctx = env.build_context(
@@ -198,21 +200,21 @@ def test_switch_down_with_existing_worktree() -> None:
         script_path = Path(result.stdout.strip())
         script_content = env.script_writer.get_script_content(script_path)
         assert script_content is not None
-        assert str(workstacks_dir / "feature-1") in script_content
+        assert str(repo_dir / "feature-1") in script_content
 
 
 def test_switch_down_to_trunk_root() -> None:
     """Test --down navigation when parent is trunk checked out in root."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
+        repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Main is checked out in root, feature-1 has its own worktree
         git_ops = FakeGitOps(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=workstacks_dir / "feature-1", branch="feature-1"),
+                    WorktreeInfo(path=repo_dir / "feature-1", branch="feature-1"),
                 ]
             },
             current_branches={env.cwd: "feature-1"},  # Simulate being in feature-1 worktree
@@ -232,7 +234,8 @@ def test_switch_down_to_trunk_root() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
         )
 
         test_ctx = env.build_context(
@@ -284,14 +287,14 @@ def test_switch_down_parent_has_no_worktree() -> None:
     """Test --down navigation when parent branch exists but has no worktree."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
+        repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Only feature-2 has a worktree, feature-1 does not
         git_ops = FakeGitOps(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=workstacks_dir / "feature-2", branch="feature-2"),
+                    WorktreeInfo(path=repo_dir / "feature-2", branch="feature-2"),
                 ]
             },
             current_branches={env.cwd: "feature-2"},  # Simulate being in feature-2 worktree
@@ -424,7 +427,7 @@ def test_switch_up_with_mismatched_worktree_name() -> None:
     """
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
+        repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Worktree directories use different naming than branch names
         # Branch: feature/db -> Worktree: db-refactor
@@ -433,9 +436,9 @@ def test_switch_up_with_mismatched_worktree_name() -> None:
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=workstacks_dir / "db-refactor", branch="feature/db"),
+                    WorktreeInfo(path=repo_dir / "db-refactor", branch="feature/db"),
                     WorktreeInfo(
-                        path=workstacks_dir / "db-tests-implementation",
+                        path=repo_dir / "db-tests-implementation",
                         branch="feature/db-tests",
                     ),
                 ]
@@ -462,7 +465,8 @@ def test_switch_up_with_mismatched_worktree_name() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
         )
 
         test_ctx = env.build_context(
@@ -485,7 +489,7 @@ def test_switch_up_with_mismatched_worktree_name() -> None:
         script_path = Path(result.stdout.strip())
         script_content = env.script_writer.get_script_content(script_path)
         assert script_content is not None
-        assert str(workstacks_dir / "db-tests-implementation") in script_content
+        assert str(repo_dir / "db-tests-implementation") in script_content
 
 
 def test_switch_down_with_mismatched_worktree_name() -> None:
@@ -497,7 +501,7 @@ def test_switch_down_with_mismatched_worktree_name() -> None:
     """
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
+        repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Worktree directories use different naming than branch names
         # Branch: feature/api -> Worktree: api-work
@@ -506,8 +510,8 @@ def test_switch_down_with_mismatched_worktree_name() -> None:
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=workstacks_dir / "api-work", branch="feature/api"),
-                    WorktreeInfo(path=workstacks_dir / "api-v2-work", branch="feature/api-v2"),
+                    WorktreeInfo(path=repo_dir / "api-work", branch="feature/api"),
+                    WorktreeInfo(path=repo_dir / "api-v2-work", branch="feature/api-v2"),
                 ]
             },
             # Simulate being in feature/api-v2 worktree
@@ -533,7 +537,8 @@ def test_switch_down_with_mismatched_worktree_name() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
         )
 
         test_ctx = env.build_context(
@@ -556,4 +561,4 @@ def test_switch_down_with_mismatched_worktree_name() -> None:
         script_path = Path(result.stdout.strip())
         script_content = env.script_writer.get_script_content(script_path)
         assert script_content is not None
-        assert str(workstacks_dir / "api-work") in script_content
+        assert str(repo_dir / "api-work") in script_content

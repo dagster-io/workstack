@@ -10,10 +10,10 @@ from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps
 
 
-def build_ctx(repo_root: Path | None, workstacks_root: Path, cwd: Path | None = None) -> ErkContext:
+def build_ctx(repo_root: Path | None, erk_root: Path, cwd: Path | None = None) -> ErkContext:
     """Create a ErkContext with test fakes and real script writer for integration testing."""
     git_common_dirs: dict[Path, Path] = {}
-    existing_paths: set[Path] = {workstacks_root}
+    existing_paths: set[Path] = {erk_root}
 
     if repo_root is not None:
         git_common_dirs[repo_root] = repo_root / ".git"
@@ -25,7 +25,7 @@ def build_ctx(repo_root: Path | None, workstacks_root: Path, cwd: Path | None = 
 
     git_ops = FakeGitOps(git_common_dirs=git_common_dirs, existing_paths=existing_paths)
     global_config_ops = GlobalConfig(
-        workstacks_root=workstacks_root,
+        erk_root=erk_root,
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=True,
@@ -34,7 +34,7 @@ def build_ctx(repo_root: Path | None, workstacks_root: Path, cwd: Path | None = 
         git_ops=git_ops,
         global_config=global_config_ops,
         script_writer=RealScriptWriterOps(),  # Use real script writer for integration tests
-        cwd=cwd or repo_root or workstacks_root,
+        cwd=cwd or repo_root or erk_root,
         dry_run=False,
     )
 
@@ -48,10 +48,10 @@ def test_returns_script_path_when_in_repo(tmp_path: Path) -> None:
     repo.mkdir()
     (repo / ".git").mkdir()
 
-    workstacks_root = tmp_path / "workstacks"
-    workstacks_root.mkdir()
+    erk_root = tmp_path / "workstacks"
+    erk_root.mkdir()
 
-    ctx = build_ctx(repo, workstacks_root, cwd=repo)
+    ctx = build_ctx(repo, erk_root, cwd=repo)
 
     result = generate_recovery_script(ctx)
 
@@ -65,11 +65,11 @@ def test_returns_script_path_when_in_repo(tmp_path: Path) -> None:
 
 def test_returns_none_when_not_in_repo(tmp_path: Path) -> None:
     """Function returns None when cwd is not inside a repository."""
-    workstacks_root = tmp_path / "workstacks"
-    workstacks_root.mkdir()
+    erk_root = tmp_path / "workstacks"
+    erk_root.mkdir()
 
     # No repo_root = not in a git repo
-    ctx = build_ctx(None, workstacks_root, cwd=tmp_path)
+    ctx = build_ctx(None, erk_root, cwd=tmp_path)
 
     result = generate_recovery_script(ctx)
 
@@ -78,13 +78,13 @@ def test_returns_none_when_not_in_repo(tmp_path: Path) -> None:
 
 def test_returns_none_when_cwd_missing(tmp_path: Path) -> None:
     """Function returns None when cwd doesn't exist."""
-    workstacks_root = tmp_path / "workstacks"
-    workstacks_root.mkdir()
+    erk_root = tmp_path / "workstacks"
+    erk_root.mkdir()
 
     vanished = tmp_path / "vanished"
     # Don't create vanished directory - it doesn't exist
 
-    ctx = build_ctx(None, workstacks_root, cwd=vanished)
+    ctx = build_ctx(None, erk_root, cwd=vanished)
 
     result = generate_recovery_script(ctx)
 
@@ -97,10 +97,10 @@ def test_script_contains_cd_command(tmp_path: Path) -> None:
     repo.mkdir()
     (repo / ".git").mkdir()
 
-    workstacks_root = tmp_path / "workstacks"
-    workstacks_root.mkdir()
+    erk_root = tmp_path / "workstacks"
+    erk_root.mkdir()
 
-    ctx = build_ctx(repo, workstacks_root, cwd=repo)
+    ctx = build_ctx(repo, erk_root, cwd=repo)
 
     result = generate_recovery_script(ctx)
 
@@ -120,10 +120,10 @@ def test_script_is_executable(tmp_path: Path) -> None:
     repo.mkdir()
     (repo / ".git").mkdir()
 
-    workstacks_root = tmp_path / "workstacks"
-    workstacks_root.mkdir()
+    erk_root = tmp_path / "workstacks"
+    erk_root.mkdir()
 
-    ctx = build_ctx(repo, workstacks_root, cwd=repo)
+    ctx = build_ctx(repo, erk_root, cwd=repo)
 
     result = generate_recovery_script(ctx)
 
@@ -145,11 +145,11 @@ def test_handles_nested_directory_in_repo(tmp_path: Path) -> None:
     nested = repo / "src" / "subdir"
     nested.mkdir(parents=True)
 
-    workstacks_root = tmp_path / "workstacks"
-    workstacks_root.mkdir()
+    erk_root = tmp_path / "workstacks"
+    erk_root.mkdir()
 
     # cwd is nested inside repo
-    ctx = build_ctx(repo, workstacks_root, cwd=nested)
+    ctx = build_ctx(repo, erk_root, cwd=nested)
 
     result = generate_recovery_script(ctx)
 
@@ -166,10 +166,10 @@ def test_multiple_calls_create_unique_scripts(tmp_path: Path) -> None:
     repo.mkdir()
     (repo / ".git").mkdir()
 
-    workstacks_root = tmp_path / "workstacks"
-    workstacks_root.mkdir()
+    erk_root = tmp_path / "workstacks"
+    erk_root.mkdir()
 
-    ctx = build_ctx(repo, workstacks_root, cwd=repo)
+    ctx = build_ctx(repo, erk_root, cwd=repo)
 
     result1 = generate_recovery_script(ctx)
     result2 = generate_recovery_script(ctx)

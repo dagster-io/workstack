@@ -5,7 +5,7 @@ from erk.cli.commands.switch import complete_worktree_names
 from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output
 from erk.core.context import ErkContext, create_context
-from erk.core.repo_discovery import ensure_workstacks_dir
+from erk.core.repo_discovery import ensure_repo_dir
 
 
 @click.command("rename")
@@ -33,10 +33,10 @@ def rename_cmd(ctx: ErkContext, old_name: str, new_name: str, dry_run: bool) -> 
     sanitized_new_name = sanitize_worktree_name(new_name)
 
     repo = discover_repo_context(ctx, ctx.cwd)
-    workstacks_dir = ensure_workstacks_dir(repo)
+    ensure_repo_dir(repo)
 
-    old_path = worktree_path_for(workstacks_dir, old_name)
-    new_path = worktree_path_for(workstacks_dir, sanitized_new_name)
+    old_path = worktree_path_for(repo.worktrees_dir, old_name)
+    new_path = worktree_path_for(repo.worktrees_dir, sanitized_new_name)
 
     # Validate old worktree exists
     if not ctx.git_ops.path_exists(old_path):

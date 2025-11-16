@@ -13,10 +13,10 @@ from tests.fakes.gitops import FakeGitOps
 from tests.fakes.script_writer import FakeScriptWriterOps
 
 
-def build_ctx(repo_root: Path | None, workstacks_root: Path, cwd: Path | None = None) -> ErkContext:
+def build_ctx(repo_root: Path | None, erk_root: Path, cwd: Path | None = None) -> ErkContext:
     """Create a ErkContext with test fakes."""
     git_common_dirs: dict[Path, Path] = {}
-    existing_paths: set[Path] = {workstacks_root}
+    existing_paths: set[Path] = {erk_root}
 
     if repo_root is not None:
         git_common_dirs[repo_root] = repo_root / ".git"
@@ -29,7 +29,7 @@ def build_ctx(repo_root: Path | None, workstacks_root: Path, cwd: Path | None = 
     git_ops = FakeGitOps(git_common_dirs=git_common_dirs, existing_paths=existing_paths)
     script_writer = FakeScriptWriterOps()
     global_config_ops = GlobalConfig(
-        workstacks_root=workstacks_root,
+        erk_root=erk_root,
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=True,
@@ -38,7 +38,7 @@ def build_ctx(repo_root: Path | None, workstacks_root: Path, cwd: Path | None = 
         git_ops=git_ops,
         script_writer=script_writer,
         global_config=global_config_ops,
-        cwd=cwd or repo_root or workstacks_root,
+        cwd=cwd or repo_root or erk_root,
         dry_run=False,
     )
 
@@ -49,10 +49,10 @@ def test_prepare_cwd_recovery_outputs_script(tmp_path: Path) -> None:
     repo.mkdir()
     (repo / ".git").mkdir()
 
-    workstacks_root = tmp_path / "workstacks"
-    workstacks_root.mkdir()
+    erk_root = tmp_path / "workstacks"
+    erk_root.mkdir()
 
-    ctx = build_ctx(repo, workstacks_root, cwd=repo)
+    ctx = build_ctx(repo, erk_root, cwd=repo)
 
     runner = CliRunner()
 
@@ -71,10 +71,10 @@ def test_prepare_cwd_recovery_outputs_script(tmp_path: Path) -> None:
 
 def test_prepare_cwd_recovery_no_repo(tmp_path: Path) -> None:
     """Command should emit nothing outside a repository."""
-    workstacks_root = tmp_path / "workstacks"
-    workstacks_root.mkdir()
+    erk_root = tmp_path / "workstacks"
+    erk_root.mkdir()
 
-    ctx = build_ctx(None, workstacks_root)
+    ctx = build_ctx(None, erk_root)
 
     runner = CliRunner()
 

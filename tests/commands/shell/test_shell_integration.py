@@ -80,7 +80,7 @@ def test_shell_integration_sync_generates_posix_passthrough_script(tmp_path: Pat
     script_path = Path(script_output)
     try:
         content = script_path.read_text(encoding="utf-8")
-        assert "command workstack sync" in content
+        assert "command erk sync" in content
         assert "__workstack_exit=$?" in content
     finally:
         script_path.unlink(missing_ok=True)
@@ -96,7 +96,7 @@ def test_shell_integration_sync_generates_fish_passthrough_script(tmp_path: Path
     script_path = Path(script_output)
     try:
         content = script_path.read_text(encoding="utf-8")
-        assert 'command workstack "sync"' in content
+        assert 'command erk "sync"' in content
         assert "set __workstack_exit $status" in content
     finally:
         script_path.unlink(missing_ok=True)
@@ -118,7 +118,7 @@ def test_shell_integration_fish_escapes_special_characters(tmp_path: Path) -> No
     script_path = Path(script_output)
     try:
         content = script_path.read_text(encoding="utf-8")
-        assert 'command workstack "sync" "\\$branch\\;rm" "\\(test\\)"' in content
+        assert 'command erk "sync" "\\$branch\\;rm" "\\(test\\)"' in content
     finally:
         script_path.unlink(missing_ok=True)
 

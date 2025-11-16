@@ -19,7 +19,7 @@ def test_basic_command_no_args_no_recovery() -> None:
         recovery_path=None,
     )
 
-    assert "command workstack sync" in script
+    assert "command erk sync" in script
     assert "__workstack_exit=$?" in script
     assert "__workstack_recovery=''" in script
     assert 'if [ -n "$__workstack_recovery" ] && [ -f "$__workstack_recovery" ]; then' in script
@@ -37,7 +37,7 @@ def test_command_with_recovery_path() -> None:
         recovery_path=recovery,
     )
 
-    assert "command workstack sync" in script
+    assert "command erk sync" in script
     # shlex.quote may or may not add quotes depending on the path
     assert "__workstack_recovery=" in script
     assert "/tmp/recovery.sh" in script
@@ -53,7 +53,7 @@ def test_command_with_simple_args() -> None:
         recovery_path=None,
     )
 
-    assert "command workstack sync --force branch-name" in script
+    assert "command erk sync --force branch-name" in script
 
 
 def test_command_with_special_chars_in_args() -> None:
@@ -65,7 +65,7 @@ def test_command_with_special_chars_in_args() -> None:
     )
 
     # shlex.quote should escape these properly
-    assert "command workstack sync" in script
+    assert "command erk sync" in script
     assert "'$branch'" in script or '"$branch"' in script
     assert "'file with spaces'" in script
     assert "'test;rm'" in script or '"test;rm"' in script
@@ -225,7 +225,7 @@ def test_basic_command_no_args_no_recovery_fish() -> None:
         recovery_path=None,
     )
 
-    assert 'command workstack "sync"' in script
+    assert 'command erk "sync"' in script
     assert "set __workstack_exit $status" in script
     assert 'set __workstack_recovery ""' in script
     assert 'if test -n "$__workstack_recovery"' in script
@@ -243,7 +243,7 @@ def test_command_with_recovery_path_fish() -> None:
         recovery_path=recovery,
     )
 
-    assert 'command workstack "sync"' in script
+    assert 'command erk "sync"' in script
     assert 'set __workstack_recovery "/tmp/recovery.fish"' in script
     assert '            source "$__workstack_recovery"' in script
     assert '            rm -f "$__workstack_recovery"' in script
@@ -257,7 +257,7 @@ def test_command_with_simple_args_fish() -> None:
         recovery_path=None,
     )
 
-    assert 'command workstack "sync" "--force" "branch-name"' in script
+    assert 'command erk "sync" "--force" "branch-name"' in script
 
 
 def test_command_with_special_chars_in_args_fish() -> None:
@@ -269,7 +269,7 @@ def test_command_with_special_chars_in_args_fish() -> None:
     )
 
     # Fish escaping should be applied
-    assert 'command workstack "sync"' in script
+    assert 'command erk "sync"' in script
     assert '"\\$branch"' in script
     assert '"\\(test\\)"' in script
 

@@ -246,7 +246,7 @@ def _list_worktrees(ctx: WorkstackContext, ci: bool) -> None:
         user_output(click.style("## Local branches without worktrees", bold=True))
         user_output()
         for branch in sorted(local_without_worktrees):
-            user_output(f"  {click.style(branch, fg='yellow')}")
+            user_output(click.style(branch, fg='yellow'))
 
 
 @click.command("list")

@@ -96,8 +96,8 @@ def test_list_with_stacks_pr_visibility(show_pr_info: bool, expected_visible: bo
         ("OPEN", False, False, "❌"),  # Open PR with failing checks
         ("OPEN", False, None, "◯"),  # Open PR with no checks
         ("OPEN", True, None, "🚧"),  # Draft PR
-        ("MERGED", False, True, "🟣"),  # Merged PR
-        ("CLOSED", False, None, "⭕"),  # Closed (not merged) PR
+        ("MERGED", False, True, "🔀"),  # Merged PR
+        ("CLOSED", False, None, "⛔"),  # Closed (not merged) PR
     ],
 )
 def test_list_pr_emoji_mapping(

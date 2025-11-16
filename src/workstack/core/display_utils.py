@@ -40,9 +40,9 @@ def get_pr_status_emoji(pr: PullRequestInfo) -> str:
     if pr.is_draft:
         return "🚧"
     if pr.state == "MERGED":
-        return "🟣"
+        return "🔀"
     if pr.state == "CLOSED":
-        return "⭕"
+        return "⛔"
     if pr.checks_passing is True:
         return "✅"
     if pr.checks_passing is False:
@@ -90,7 +90,7 @@ def format_branch_without_worktree(
 ) -> str:
     """Format a branch without a worktree for display.
 
-    Returns a line like: "  branch-name PR #123 ✅"
+    Returns a line like: "branch-name PR #123 ✅"
 
     Args:
         branch_name: Name of the branch
@@ -100,7 +100,7 @@ def format_branch_without_worktree(
         Formatted string with branch name and PR info
     """
     # Format branch name in yellow (same as worktree branches)
-    line = f"  {click.style(branch_name, fg='yellow')}"
+    line = click.style(branch_name, fg='yellow')
 
     # Add PR info if available
     if pr_info:

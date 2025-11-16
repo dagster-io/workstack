@@ -4,6 +4,12 @@ from pathlib import Path
 
 import click
 
+from dot_agent_kit.cli.list_formatting import (
+    format_item_name,
+    format_kit_reference,
+    format_metadata,
+    format_section_header,
+)
 from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.io import discover_installed_artifacts, require_project_config
 
@@ -32,32 +38,38 @@ def _show_status(verbose: bool) -> None:
     unmanaged_kits = all_installed - managed_kits
 
     # Display managed kits section
-    user_output("Managed Kits:")
+    user_output(format_section_header("Managed Kits:"))
     if managed_kits and project_config:
         for kit_id in sorted(managed_kits):
             kit = project_config.kits[kit_id]
-            user_output(f"  {kit_id} v{kit.version} ({kit.source_type})")
+            kit_name = format_item_name(kit_id)
+            version_ref = format_kit_reference(kit_id, kit.version)
+            source = format_metadata(f"({kit.source_type})")
+            user_output(f"  {kit_name} {version_ref} {source}")
             if verbose:
                 artifact_types = discovered.get(kit_id, set())
                 if artifact_types:
-                    types_str = ", ".join(sorted(artifact_types))
+                    types_str = format_metadata(", ".join(sorted(artifact_types)))
                     user_output(f"    Artifacts: {types_str}")
     else:
-        user_output("  (none)")
+        user_output(f"  {format_metadata('(none)')}")
 
     user_output()
 
     # Display unmanaged artifacts section
-    user_output("Unmanaged Artifacts:")
+    user_output(format_section_header("Unmanaged Artifacts:"))
     if unmanaged_kits:
         for kit_id in sorted(unmanaged_kits):
             artifact_types = discovered[kit_id]
-            types_str = ", ".join(sorted(artifact_types))
-            user_output(f"  {kit_id} ({types_str})")
+            types_str = format_metadata(", ".join(sorted(artifact_types)))
+            kit_name = format_item_name(kit_id)
+            user_output(f"  {kit_name} ({types_str})")
     else:
-        user_output("  (none)")
+        user_output(f"  {format_metadata('(none)')}")
 
-    user_output("\nUse 'dot-agent artifact list' for detailed artifact inspection")
+    user_output(
+        f"\n{format_metadata('Use dot-agent artifact list for detailed artifact inspection')}"
+    )
 
 
 @click.command()

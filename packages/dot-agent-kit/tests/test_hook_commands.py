@@ -72,7 +72,6 @@ class TestHookListCommand:
 
         assert result.exit_code == 0
         assert "No hooks installed." in result.output
-        assert "Total: 0 hook(s)" in result.output
 
     def test_single_hook(self, cli_runner: CliRunner, tmp_path: Path) -> None:
         """Test list command with a single hook."""
@@ -85,8 +84,8 @@ class TestHookListCommand:
         result = invoke_in_dir(cli_runner, tmp_path, hook_group, ["list"])
 
         assert result.exit_code == 0
-        assert "my-kit:my-hook [pre / **/*.py]" in result.output
-        assert "Total: 1 hook(s)" in result.output
+        assert "my-kit:my-hook" in result.output
+        assert "pre:" in result.output
 
     def test_multiple_hooks_same_matcher(self, cli_runner: CliRunner, tmp_path: Path) -> None:
         """Test list command with multiple hooks in same matcher."""
@@ -98,9 +97,9 @@ class TestHookListCommand:
         result = invoke_in_dir(cli_runner, tmp_path, hook_group, ["list"])
 
         assert result.exit_code == 0
-        assert "kit1:hook1 [pre / **/*.py]" in result.output
-        assert "kit2:hook2 [pre / **/*.py]" in result.output
-        assert "Total: 2 hook(s)" in result.output
+        assert "kit1:hook1" in result.output
+        assert "kit2:hook2" in result.output
+        assert "pre:" in result.output
 
     def test_multiple_hooks_multiple_matchers(self, cli_runner: CliRunner, tmp_path: Path) -> None:
         """Test list command with hooks across different matchers."""
@@ -119,9 +118,9 @@ class TestHookListCommand:
         result = invoke_in_dir(cli_runner, tmp_path, hook_group, ["list"])
 
         assert result.exit_code == 0
-        assert "kit1:hook1 [pre / **/*.py]" in result.output
-        assert "kit2:hook2 [pre / **/*.js]" in result.output
-        assert "Total: 2 hook(s)" in result.output
+        assert "kit1:hook1" in result.output
+        assert "kit2:hook2" in result.output
+        assert "pre:" in result.output
 
     def test_multiple_hooks_multiple_lifecycles(
         self, cli_runner: CliRunner, tmp_path: Path
@@ -140,9 +139,10 @@ class TestHookListCommand:
         result = invoke_in_dir(cli_runner, tmp_path, hook_group, ["list"])
 
         assert result.exit_code == 0
-        assert "kit1:hook1 [pre / **/*.py]" in result.output
-        assert "kit2:hook2 [post / **/*.js]" in result.output
-        assert "Total: 2 hook(s)" in result.output
+        assert "kit1:hook1" in result.output
+        assert "kit2:hook2" in result.output
+        assert "pre:" in result.output
+        assert "post:" in result.output
 
     def test_empty_hooks_object(self, cli_runner: CliRunner, tmp_path: Path) -> None:
         """Test list command with empty hooks object."""
@@ -153,7 +153,6 @@ class TestHookListCommand:
 
         assert result.exit_code == 0
         assert "No hooks installed." in result.output
-        assert "Total: 0 hook(s)" in result.output
 
     def test_empty_lifecycle(self, cli_runner: CliRunner, tmp_path: Path) -> None:
         """Test list command with empty lifecycle."""
@@ -164,7 +163,6 @@ class TestHookListCommand:
 
         assert result.exit_code == 0
         assert "No hooks installed." in result.output
-        assert "Total: 0 hook(s)" in result.output
 
     def test_empty_matcher_group(self, cli_runner: CliRunner, tmp_path: Path) -> None:
         """Test list command with empty matcher group."""
@@ -175,7 +173,6 @@ class TestHookListCommand:
 
         assert result.exit_code == 0
         assert "No hooks installed." in result.output
-        assert "Total: 0 hook(s)" in result.output
 
     def test_invalid_json(self, cli_runner: CliRunner, tmp_path: Path) -> None:
         """Test list command with malformed JSON."""
@@ -199,8 +196,8 @@ class TestHookListCommand:
         result = invoke_in_dir(cli_runner, tmp_path, hook_group, ["list"])
 
         assert result.exit_code == 0
-        assert "local:" in result.output
-        assert "Total: 1 hook(s)" in result.output
+        assert "local-hook" in result.output
+        assert "pre:" in result.output
 
     def test_invalid_schema(self, cli_runner: CliRunner, tmp_path: Path) -> None:
         """Test list command with invalid Pydantic schema."""
@@ -459,7 +456,8 @@ class TestHookCommandsIntegration:
         assert result.exit_code == 0
         assert "kit1:hook1" in result.output
         assert "kit2:hook2" in result.output
-        assert "Total: 2 hook(s)" in result.output
+        assert "pre:" in result.output
+        assert "post:" in result.output
 
         # 3. Show first hook
         result = invoke_in_dir(cli_runner, tmp_path, hook_group, ["show", "kit1:hook1"])

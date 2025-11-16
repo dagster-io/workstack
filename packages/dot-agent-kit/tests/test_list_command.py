@@ -60,7 +60,7 @@ def test_list_skills(capsys: CaptureFixture[str]) -> None:
 
     captured = capsys.readouterr()
     # Check for kit-grouped format
-    assert "[devrun] (v0.1.0):" in captured.err
+    assert "devrun devrun@0.1.0:" in captured.err
     assert "Skills (1):" in captured.err
     assert "devrun-make" in captured.err
     assert "skills/devrun-make/" in captured.err
@@ -100,7 +100,7 @@ def test_list_commands(capsys: CaptureFixture[str]) -> None:
 
     captured = capsys.readouterr()
     # Check for kit-grouped format
-    assert "[gt] (v0.1.0):" in captured.err
+    assert "gt gt@0.1.0:" in captured.err
     assert "Commands (1):" in captured.err
     assert "gt:submit-branch" in captured.err
     assert "commands/gt/submit-branch.md" in captured.err
@@ -140,7 +140,7 @@ def test_list_agents(capsys: CaptureFixture[str]) -> None:
 
     captured = capsys.readouterr()
     # Check for kit-grouped format
-    assert "[devrun] (v0.1.0):" in captured.err
+    assert "devrun devrun@0.1.0:" in captured.err
     assert "Agents (1):" in captured.err
     assert "runner" in captured.err
     assert "agents/devrun/runner.md" in captured.err
@@ -180,7 +180,7 @@ def test_list_hooks(capsys: CaptureFixture[str]) -> None:
 
     captured = capsys.readouterr()
     # Check for kit-grouped format
-    assert "[devrun] (v0.1.0):" in captured.err
+    assert "devrun devrun@0.1.0:" in captured.err
     assert "Hooks (1):" in captured.err
     assert "devrun:suggest-dignified-python" in captured.err
     assert "hooks/devrun/suggest-dignified-python.py" in captured.err
@@ -266,7 +266,7 @@ def test_list_mixed_artifacts(capsys: CaptureFixture[str]) -> None:
     captured = capsys.readouterr()
 
     # Check kit-grouped format - devrun kit
-    assert "[devrun] (v0.1.0):" in captured.err
+    assert "devrun devrun@0.1.0:" in captured.err
     assert "Skills (1):" in captured.err
     assert "devrun-make" in captured.err
     assert "Agents (1):" in captured.err
@@ -313,7 +313,7 @@ def test_list_column_alignment(capsys: CaptureFixture[str]) -> None:
 
     # Just verify the output contains expected kit groupings and artifact names
     # Column alignment is handled by the implementation's width calculations
-    assert "[long-kit-name] (v1.2.3):" in captured.err
+    assert "long-kit-name long-kit-name@1.2.3:" in captured.err
     assert "very-long-skill-name-here" in captured.err
     assert "[local]:" in captured.err
     assert "short" in captured.err
@@ -377,7 +377,7 @@ def test_list_docs(capsys: CaptureFixture[str]) -> None:
 
     captured = capsys.readouterr()
     # Check for kit-grouped format
-    assert "[devrun] (v0.1.0):" in captured.err
+    assert "devrun devrun@0.1.0:" in captured.err
     assert "Docs (1):" in captured.err
     assert "tools/pytest.md" in captured.err
     assert "docs/devrun/tools/pytest.md" in captured.err
@@ -419,7 +419,7 @@ def test_list_docs_with_mixed_artifacts(capsys: CaptureFixture[str]) -> None:
 
     captured = capsys.readouterr()
     # Both should appear under the same kit group
-    assert "[test-kit] (v1.0.0):" in captured.err
+    assert "test-kit test-kit@1.0.0:" in captured.err
     assert "Skills (1):" in captured.err
     assert "my-skill" in captured.err
     assert "Docs (1):" in captured.err

@@ -36,7 +36,7 @@ def test_list_installed_kits_with_data() -> None:
         result = runner.invoke(list_installed_kits)
 
         assert result.exit_code == 0
-        assert "Installed 2 kit(s):" in result.output
+        assert "Installed Kits (2):" in result.output
         # Check devrun line
         assert "devrun" in result.output
         assert "0.1.0" in result.output
@@ -93,7 +93,7 @@ def test_list_single_kit() -> None:
         result = runner.invoke(list_installed_kits)
 
         assert result.exit_code == 0
-        assert "Installed 1 kit(s):" in result.output
+        assert "Installed Kits (1):" in result.output
         assert "workstack" in result.output
         assert "2.0.0" in result.output
         assert "package" in result.output

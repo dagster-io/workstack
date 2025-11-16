@@ -10,6 +10,7 @@ from workstack.cli.commands.consolidate import consolidate_cmd
 from workstack.cli.commands.create import create
 from workstack.cli.commands.down import down_cmd
 from workstack.cli.commands.jump import jump_cmd
+from workstack.cli.commands.land_stack import land_stack
 from workstack.cli.commands.prepare_cwd_recovery import generate_recovery_script
 from workstack.cli.commands.switch import switch_cmd
 from workstack.cli.commands.up import up_cmd
@@ -53,6 +54,7 @@ def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellInt
         "up": up_cmd,
         "down": down_cmd,
         "consolidate": consolidate_cmd,
+        "land-stack": land_stack,
     }
 
     command = command_map.get(command_name)

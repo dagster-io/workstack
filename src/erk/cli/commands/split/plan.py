@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from erk.cli.output import user_output
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.gitops import WorktreeInfo
 
 
@@ -35,7 +35,7 @@ class SplitPlan:
 
 
 def get_stack_branches(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     repo_root: Path,
     current_branch: str | None,
     trunk_branch: str,

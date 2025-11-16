@@ -1,4 +1,4 @@
-"""Graphite integration commands for workstack.
+"""Graphite integration commands for erk.
 
 Provides machine-readable access to Graphite metadata for scripting and automation.
 """
@@ -10,13 +10,13 @@ import click
 
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.tree_utils import format_branches_as_tree
 
 
 @click.group("graphite")
 @click.pass_obj
-def graphite_group(ctx: WorkstackContext) -> None:
+def graphite_group(ctx: ErkContext) -> None:
     """Graphite integration commands for machine-readable metadata.
 
     Requires use-graphite enabled.
@@ -38,7 +38,7 @@ def graphite_group(ctx: WorkstackContext) -> None:
     help="Show only this branch and its descendants (tree format only)",
 )
 @click.pass_obj
-def graphite_branches_cmd(ctx: WorkstackContext, format: str, stack: str | None) -> None:
+def graphite_branches_cmd(ctx: ErkContext, format: str, stack: str | None) -> None:
     """List all Graphite-tracked branches with machine-readable metadata.
 
     By default, outputs a simple list of branch names (one per line).
@@ -81,7 +81,7 @@ def graphite_branches_cmd(ctx: WorkstackContext, format: str, stack: str | None)
     # Check if graphite is enabled
     if not (ctx.global_config and ctx.global_config.use_graphite):
         user_output(
-            "Error: Graphite not enabled. Run 'workstack config set use_graphite true'",
+            "Error: Graphite not enabled. Run 'erk config set use_graphite true'",
         )
         raise SystemExit(1)
 

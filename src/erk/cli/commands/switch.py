@@ -6,16 +6,16 @@ from erk.cli.activation import render_activation_script
 from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.debug import debug_log
 from erk.cli.output import machine_output, user_output
-from erk.core.context import WorkstackContext, create_context
+from erk.core.context import ErkContext, create_context
 from erk.core.gitops import WorktreeInfo
 from erk.core.repo_discovery import RepoContext, ensure_workstacks_dir
 
 
-def _ensure_graphite_enabled(ctx: WorkstackContext) -> None:
+def _ensure_graphite_enabled(ctx: ErkContext) -> None:
     """Validate that Graphite is enabled.
 
     Args:
-        ctx: Workstack context
+        ctx: Erk context
 
     Raises:
         SystemExit: If Graphite is not enabled
@@ -29,12 +29,12 @@ def _ensure_graphite_enabled(ctx: WorkstackContext) -> None:
 
 
 def _activate_root_repo(
-    ctx: WorkstackContext, repo: RepoContext, script: bool, command_name: str
+    ctx: ErkContext, repo: RepoContext, script: bool, command_name: str
 ) -> None:
     """Activate the root repository and exit.
 
     Args:
-        ctx: Workstack context (for script_writer)
+        ctx: Erk context (for script_writer)
         repo: Repository context
         script: Whether to output script path or user message
         command_name: Name of the command (for script generation)
@@ -59,17 +59,17 @@ def _activate_root_repo(
         user_output(f"Switched to root repo: {root_path}")
         user_output(
             "\nShell integration not detected. "
-            "Run 'workstack init --shell' to set up automatic activation."
+            "Run 'erk init --shell' to set up automatic activation."
         )
         if command_name == "switch":
-            user_output("Or use: source <(workstack switch root --script)")
+            user_output("Or use: source <(erk switch root --script)")
         else:
-            user_output(f"Or use: source <(workstack {command_name} --script)")
+            user_output(f"Or use: source <(erk {command_name} --script)")
     raise SystemExit(0)
 
 
 def _activate_worktree(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     repo: RepoContext,
     target_path: Path,
     script: bool,
@@ -78,7 +78,7 @@ def _activate_worktree(
     """Activate a worktree and exit.
 
     Args:
-        ctx: Workstack context (for script_writer)
+        ctx: Erk context (for script_writer)
         repo: Repository context
         target_path: Path to the target worktree directory
         script: Whether to output script path or user message
@@ -110,23 +110,22 @@ def _activate_worktree(
         result.output_for_shell_integration()
     else:
         user_output(
-            "Shell integration not detected. "
-            "Run 'workstack init --shell' to set up automatic activation."
+            "Shell integration not detected. Run 'erk init --shell' to set up automatic activation."
         )
         if command_name == "switch":
-            user_output(f"\nOr use: source <(workstack switch {worktree_name} --script)")
+            user_output(f"\nOr use: source <(erk switch {worktree_name} --script)")
         else:
-            user_output(f"\nOr use: source <(workstack {command_name} --script)")
+            user_output(f"\nOr use: source <(erk {command_name} --script)")
     raise SystemExit(0)
 
 
 def _resolve_up_navigation(
-    ctx: WorkstackContext, repo: RepoContext, current_branch: str, worktrees: list[WorktreeInfo]
+    ctx: ErkContext, repo: RepoContext, current_branch: str, worktrees: list[WorktreeInfo]
 ) -> str:
     """Resolve --up navigation to determine target branch name.
 
     Args:
-        ctx: Workstack context
+        ctx: Erk context
         repo: Repository context
         current_branch: Current branch name
         worktrees: List of worktrees from git_ops.list_worktrees()
@@ -150,7 +149,7 @@ def _resolve_up_navigation(
         children_list = ", ".join(f"'{child}'" for child in children)
         user_output(
             f"Error: Branch '{current_branch}' has multiple children: {children_list}.\n"
-            f"Please create worktree for specific child: workstack create <branch-name>"
+            f"Please create worktree for specific child: erk create <branch-name>"
         )
         raise SystemExit(1)
 
@@ -164,7 +163,7 @@ def _resolve_up_navigation(
             f"Branch '{target_branch}' is the next branch up in the stack "
             f"but has no worktree.\n"
             f"To create a worktree for it, run:\n"
-            f"  workstack create {target_branch}"
+            f"  erk create {target_branch}"
         )
         raise SystemExit(1)
 
@@ -172,7 +171,7 @@ def _resolve_up_navigation(
 
 
 def _resolve_down_navigation(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     repo: RepoContext,
     current_branch: str,
     worktrees: list[WorktreeInfo],
@@ -181,7 +180,7 @@ def _resolve_down_navigation(
     """Resolve --down navigation to determine target branch name.
 
     Args:
-        ctx: Workstack context
+        ctx: Erk context
         repo: Repository context
         current_branch: Current branch name
         worktrees: List of worktrees from git_ops.list_worktrees()
@@ -219,7 +218,7 @@ def _resolve_down_navigation(
                 user_output(
                     f"Branch '{parent_branch}' is the parent branch but has no worktree.\n"
                     f"To switch to the root repository, run:\n"
-                    f"  workstack switch root"
+                    f"  erk switch root"
                 )
                 raise SystemExit(1)
             return parent_branch
@@ -230,7 +229,7 @@ def _resolve_down_navigation(
             user_output(
                 f"Branch '{parent_branch}' is the parent branch but has no worktree.\n"
                 f"To create a worktree for it, run:\n"
-                f"  workstack create {parent_branch}"
+                f"  erk create {parent_branch}"
             )
             raise SystemExit(1)
         return parent_branch
@@ -288,19 +287,19 @@ def complete_worktree_names(
     "--down", is_flag=True, help="Move to parent branch in Graphite stack (requires Graphite)."
 )
 @click.pass_obj
-def switch_cmd(ctx: WorkstackContext, name: str | None, script: bool, up: bool, down: bool) -> None:
+def switch_cmd(ctx: ErkContext, name: str | None, script: bool, up: bool, down: bool) -> None:
     """Switch to a worktree and activate its environment.
 
     With shell integration (recommended):
-      workstack switch NAME
-      workstack switch --up
-      workstack switch --down
+      erk switch NAME
+      erk switch --up
+      erk switch --down
 
     The shell wrapper function automatically activates the worktree.
-    Run 'workstack init --shell' to set up shell integration.
+    Run 'erk init --shell' to set up shell integration.
 
     Without shell integration:
-      source <(workstack switch NAME --script)
+      source <(erk switch NAME --script)
 
     NAME can be a worktree name, or 'root' to switch to the root repo.
     Use --up to navigate to the child branch in the Graphite stack.
@@ -333,7 +332,7 @@ def switch_cmd(ctx: WorkstackContext, name: str | None, script: bool, up: bool, 
         user_output(
             f'Error: "{name}" cannot be used as a worktree name.\n'
             f"To switch to the {name} branch in the root repository, use:\n"
-            f"  workstack switch root"
+            f"  erk switch root"
         )
         raise SystemExit(1)
 

@@ -3,7 +3,7 @@
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.global_config import GlobalConfig
 from erk.core.graphite_ops import BranchMetadata
 from tests.fakes.github_ops import FakeGitHubOps
@@ -62,7 +62,7 @@ def test_land_stack_force_pushes_remaining_branches_after_sync() -> None:
             show_pr_info=True,
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
@@ -147,7 +147,7 @@ def test_land_stack_force_pushes_after_each_pr_landed() -> None:
             show_pr_info=True,
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
@@ -239,7 +239,7 @@ def test_land_stack_no_submit_when_landing_top_branch() -> None:
             show_pr_info=True,
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
@@ -340,7 +340,7 @@ def test_land_stack_switches_to_root_when_run_from_linked_worktree() -> None:
             },
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
@@ -397,7 +397,7 @@ def test_land_stack_merge_command_excludes_auto_flag() -> None:
             show_pr_info=True,
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,

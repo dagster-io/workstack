@@ -6,7 +6,7 @@ import click
 from erk.cli.config import LoadedConfig
 from erk.cli.core import discover_repo_context
 from erk.cli.output import machine_output, user_output
-from erk.core.context import WorkstackContext, write_trunk_to_pyproject
+from erk.core.context import ErkContext, write_trunk_to_pyproject
 from erk.core.global_config import GlobalConfig
 
 
@@ -61,7 +61,7 @@ def config_group() -> None:
 
 @config_group.command("list")
 @click.pass_obj
-def config_list(ctx: WorkstackContext) -> None:
+def config_list(ctx: ErkContext) -> None:
     """Print a list of configuration keys and values."""
     # Display global config
     user_output(click.style("Global configuration:", bold=True))
@@ -70,7 +70,7 @@ def config_list(ctx: WorkstackContext) -> None:
         user_output(f"  use_graphite={str(ctx.global_config.use_graphite).lower()}")
         user_output(f"  show_pr_info={str(ctx.global_config.show_pr_info).lower()}")
     else:
-        user_output("  (not configured - run 'workstack init' to create)")
+        user_output("  (not configured - run 'erk init' to create)")
 
     # Display local config
     user_output(click.style("\nRepository configuration:", bold=True))
@@ -98,13 +98,13 @@ def config_list(ctx: WorkstackContext) -> None:
             and not cfg.post_create_commands
         )
         if has_no_config:
-            user_output("  (no configuration - run 'workstack init --repo' to create)")
+            user_output("  (no configuration - run 'erk init --repo' to create)")
 
 
 @config_group.command("get")
 @click.argument("key", metavar="KEY")
 @click.pass_obj
-def config_get(ctx: WorkstackContext, key: str) -> None:
+def config_get(ctx: ErkContext, key: str) -> None:
     """Print the value of a given configuration key."""
     parts = key.split(".")
 
@@ -156,7 +156,7 @@ def config_get(ctx: WorkstackContext, key: str) -> None:
 @click.argument("key", metavar="KEY")
 @click.argument("value", metavar="VALUE")
 @click.pass_obj
-def config_set(ctx: WorkstackContext, key: str, value: str) -> None:
+def config_set(ctx: ErkContext, key: str, value: str) -> None:
     """Update configuration with a value for the given key."""
     # Parse key into parts
     parts = key.split(".")
@@ -166,7 +166,7 @@ def config_set(ctx: WorkstackContext, key: str, value: str) -> None:
         if ctx.global_config is None:
             config_path = ctx.global_config_ops.path()
             user_output(f"Global config not found at {config_path}")
-            user_output("Run 'workstack init' to create it.")
+            user_output("Run 'erk init' to create it.")
             raise SystemExit(1)
 
         # Create new config with updated value

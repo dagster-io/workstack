@@ -14,7 +14,7 @@ from pathlib import Path
 class GlobalConfig:
     """Immutable global configuration data.
 
-    Loaded once at CLI entry point and stored in WorkstackContext.
+    Loaded once at CLI entry point and stored in ErkContext.
     All fields are read-only after construction.
     """
 

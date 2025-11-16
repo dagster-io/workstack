@@ -7,7 +7,7 @@ from click.testing import CliRunner
 from erk.cli.cli import cli
 from erk.cli.commands.shell_integration import hidden_shell_cmd
 from erk.cli.shell_utils import render_cd_script
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.gitops import WorktreeInfo
 from erk.core.global_config import GlobalConfig, InMemoryGlobalConfigOps
 from tests.fakes.gitops import FakeGitOps
@@ -140,7 +140,7 @@ def test_create_with_both_name_and_plan_fails() -> None:
         global_config_ops = InMemoryGlobalConfigOps(config=global_config)
 
         # Create test context
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
@@ -182,7 +182,7 @@ def test_create_rejects_reserved_name_root() -> None:
         global_config_ops = InMemoryGlobalConfigOps(config=global_config)
 
         # Create test context
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
@@ -230,7 +230,7 @@ def test_create_rejects_reserved_name_root_case_insensitive() -> None:
         global_config_ops = InMemoryGlobalConfigOps(config=global_config)
 
         # Create test context
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
@@ -277,7 +277,7 @@ def test_create_rejects_main_as_worktree_name() -> None:
         global_config_ops = InMemoryGlobalConfigOps(config=global_config)
 
         # Create test context
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,
@@ -324,7 +324,7 @@ def test_create_rejects_master_as_worktree_name() -> None:
         global_config_ops = InMemoryGlobalConfigOps(config=global_config)
 
         # Create test context
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config_ops=global_config_ops,
             global_config=global_config,

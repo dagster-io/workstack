@@ -31,12 +31,12 @@ See workstack.core.graphite_ops for the abstraction interface.
 
 from pathlib import Path
 
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.gitops import WorktreeInfo
 
 
 def find_worktrees_containing_branch(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     repo_root: Path,
     worktrees: list[WorktreeInfo],
     target_branch: str,
@@ -44,7 +44,7 @@ def find_worktrees_containing_branch(
     """Find all worktrees that have target_branch checked out (exact match only).
 
     Args:
-        ctx: Workstack context with git operations
+        ctx: Erk context with git operations
         repo_root: Path to the repository root
         worktrees: List of all worktrees from list_worktrees()
         target_branch: Branch name to search for

@@ -88,7 +88,7 @@ def test_load_global_config_missing_workstacks_root(
 
 def test_create_global_config_creates_parent_directory(tmp_path: Path) -> None:
     # Test that create_and_save_global_config creates parent directory
-    from erk.core.context import WorkstackContext
+    from erk.core.context import ErkContext
     from erk.core.global_config import InMemoryGlobalConfigOps
 
     config_file = tmp_path / ".workstack" / "config.toml"
@@ -96,7 +96,7 @@ def test_create_global_config_creates_parent_directory(tmp_path: Path) -> None:
 
     # Create test context with InMemoryGlobalConfigOps
     global_config_ops = InMemoryGlobalConfigOps(config=None)
-    ctx = WorkstackContext.for_test(
+    ctx = ErkContext.for_test(
         shell_ops=FakeShellOps(),
         global_config_ops=global_config_ops,
         global_config=None,

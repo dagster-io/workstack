@@ -22,7 +22,7 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from erk.cli.commands.status import status_cmd
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.global_config import GlobalConfig
 from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps, WorktreeInfo
@@ -139,7 +139,7 @@ def test_status_cmd_displays_all_collector_sections(tmp_path: Path) -> None:
 
     # Update context with correct cwd for feature worktree
     feature_dir = scenario.workstacks_dir / "feature"
-    ctx = WorkstackContext.for_test(
+    ctx = ErkContext.for_test(
         git_ops=scenario.ctx.git_ops,
         global_config=scenario.ctx.global_config,
         github_ops=scenario.ctx.github_ops,

@@ -1,7 +1,7 @@
 import click
 
 from erk.cli.output import machine_output
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 
 
 @click.group("completion")
@@ -11,7 +11,7 @@ def completion_group() -> None:
 
 @completion_group.command("bash")
 @click.pass_obj
-def completion_bash(ctx: WorkstackContext) -> None:
+def completion_bash(ctx: ErkContext) -> None:
     """Generate bash completion script.
 
     \b
@@ -39,7 +39,7 @@ def completion_bash(ctx: WorkstackContext) -> None:
 
 @completion_group.command("zsh")
 @click.pass_obj
-def completion_zsh(ctx: WorkstackContext) -> None:
+def completion_zsh(ctx: ErkContext) -> None:
     """Generate zsh completion script.
 
     \b
@@ -66,7 +66,7 @@ def completion_zsh(ctx: WorkstackContext) -> None:
 
 @completion_group.command("fish")
 @click.pass_obj
-def completion_fish(ctx: WorkstackContext) -> None:
+def completion_fish(ctx: ErkContext) -> None:
     """Generate fish completion script.
 
     \b

@@ -9,7 +9,7 @@ from erk.cli.activation import render_activation_script
 from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output
 from erk.core.consolidation_utils import calculate_stack_range, create_consolidation_plan
-from erk.core.context import WorkstackContext, create_context
+from erk.core.context import ErkContext, create_context
 from erk.core.repo_discovery import ensure_workstacks_dir
 
 
@@ -41,7 +41,7 @@ from erk.core.repo_discovery import ensure_workstacks_dir
 )
 @click.pass_obj
 def consolidate_cmd(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     branch: str | None,
     name: str | None,
     force: bool,
@@ -151,8 +151,8 @@ def consolidate_cmd(
             user_output(click.style(f"❌ Error: Worktree '{name}' already exists", fg="red"))
             user_output("\nSuggested action:")
             user_output("  1. Use a different name")
-            user_output(f"  2. Remove existing worktree: workstack remove {name}")
-            user_output(f"  3. Switch to existing: workstack switch {name}")
+            user_output(f"  2. Remove existing worktree: erk remove {name}")
+            user_output(f"  3. Switch to existing: erk switch {name}")
             raise SystemExit(1)
 
     # Calculate stack range early (needed for safety check)

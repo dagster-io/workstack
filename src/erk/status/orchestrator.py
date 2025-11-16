@@ -4,7 +4,7 @@ import logging
 from collections.abc import Callable
 from pathlib import Path
 
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.parallel_task_runner import ParallelTaskRunner
 from erk.status.collectors.base import StatusCollector
 from erk.status.models.status_data import StatusData, WorktreeDisplayInfo
@@ -37,16 +37,14 @@ class StatusOrchestrator:
         self.timeout_seconds = timeout_seconds
         self.runner = runner
 
-    def collect_status(
-        self, ctx: WorkstackContext, worktree_path: Path, repo_root: Path
-    ) -> StatusData:
+    def collect_status(self, ctx: ErkContext, worktree_path: Path, repo_root: Path) -> StatusData:
         """Collect all status information in parallel.
 
         Each collector runs in its own thread with a timeout. Failed or slow
         collectors will return None for their section.
 
         Args:
-            ctx: Workstack context with operations
+            ctx: Erk context with operations
             worktree_path: Path to the worktree
             repo_root: Path to repository root
 
@@ -102,12 +100,12 @@ class StatusOrchestrator:
         )
 
     def _get_worktree_info(
-        self, ctx: WorkstackContext, worktree_path: Path, repo_root: Path
+        self, ctx: ErkContext, worktree_path: Path, repo_root: Path
     ) -> WorktreeDisplayInfo:
         """Get basic worktree information.
 
         Args:
-            ctx: Workstack context
+            ctx: Erk context
             worktree_path: Path to worktree
             repo_root: Path to repository root
 
@@ -125,12 +123,12 @@ class StatusOrchestrator:
         return WorktreeDisplayInfo(name=name, path=worktree_path, branch=branch, is_root=is_root)
 
     def _get_related_worktrees(
-        self, ctx: WorkstackContext, repo_root: Path, current_path: Path
+        self, ctx: ErkContext, repo_root: Path, current_path: Path
     ) -> list[WorktreeDisplayInfo]:
         """Get list of other worktrees in the repository.
 
         Args:
-            ctx: Workstack context
+            ctx: Erk context
             repo_root: Path to repository root
             current_path: Path to current worktree (excluded from results)
 

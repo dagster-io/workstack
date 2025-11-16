@@ -17,7 +17,7 @@ from erk.cli.commands.split.plan import (
 )
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.naming_utils import sanitize_worktree_name
 from erk.core.repo_discovery import ensure_workstacks_dir
 
@@ -51,7 +51,7 @@ def validate_trunk_branch(trunk_branch: str | None) -> None:
 
 
 def check_uncommitted_changes(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     current_worktree: Path,
     force: bool,
     dry_run: bool,
@@ -137,7 +137,7 @@ def apply_stack_filter(
 )
 @click.pass_obj
 def split_cmd(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     force: bool,
     dry_run: bool,
     up: bool,

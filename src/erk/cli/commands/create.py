@@ -10,7 +10,7 @@ from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output
 from erk.cli.shell_utils import render_cd_script
 from erk.cli.subprocess_utils import run_with_error_reporting
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.naming_utils import (
     default_branch_for_worktree,
     ensure_unique_worktree_name,
@@ -22,7 +22,7 @@ from erk.core.repo_discovery import ensure_workstacks_dir
 
 
 def add_worktree(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     repo_root: Path,
     path: Path,
     *,
@@ -52,8 +52,8 @@ def add_worktree(
                 f"Git doesn't allow the same branch to be checked out in multiple worktrees.\n\n"
                 f"Options:\n"
                 f"  • Use a different branch name\n"
-                f"  • Create a new branch instead: workstack create {path.name}\n"
-                f"  • Switch to that worktree: workstack switch {path.name}",
+                f"  • Create a new branch instead: erk create {path.name}\n"
+                f"  • Switch to that worktree: erk switch {path.name}",
             )
             raise SystemExit(1)
 
@@ -70,7 +70,7 @@ def add_worktree(
                     "Graphite cannot create a branch while staged changes are present.\n"
                     "`gt create --no-interactive` attempts to commit staged files but fails when "
                     "no commit message is provided.\n\n"
-                    "Resolve the staged changes before running `workstack create`:\n"
+                    "Resolve the staged changes before running `erk create`:\n"
                     '  • Commit them: git commit -m "message"\n'
                     "  • Unstage them: git reset\n"
                     "  • Stash them: git stash\n"
@@ -232,7 +232,7 @@ def _create_json_response(
 )
 @click.pass_obj
 def create(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     name: str | None,
     branch: str | None,
     ref: str | None,
@@ -338,7 +338,7 @@ def create(
         user_output(
             f'Error: "{name}" cannot be used as a worktree name.\n'
             f"To switch to the {name} branch in the root repository, use:\n"
-            f"  workstack switch root",
+            f"  erk switch root",
         )
         raise SystemExit(1)
 
@@ -402,7 +402,7 @@ def create(
                 f"Error: Cannot use --from-current-branch when on '{current_branch}'.\n"
                 f"The current branch cannot be moved to a worktree and then checked out again.\n\n"
                 f"Alternatives:\n"
-                f"  • Create a new branch: workstack create {name}\n"
+                f"  • Create a new branch: erk create {name}\n"
                 f"  • Switch to a feature branch first, then use --from-current-branch\n"
                 f"  • Use --from-branch to create from a different existing branch",
             )
@@ -511,8 +511,8 @@ def create(
         )
         user_output(json_response)
     else:
-        user_output(f"Created workstack at {wt_path} checked out at branch '{branch}'")
-        user_output(f"\nworkstack switch {name}")
+        user_output(f"Created worktree at {wt_path} checked out at branch '{branch}'")
+        user_output(f"\nerk switch {name}")
 
 
 def run_commands_in_worktree(

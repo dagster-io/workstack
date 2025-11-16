@@ -25,7 +25,7 @@ def _create_test_context(env, use_graphite: bool = False, dry_run: bool = False,
         **kwargs: Additional arguments to pass to env.build_context()
 
     Returns:
-        WorkstackContext configured for testing
+        ErkContext configured for testing
     """
     git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
 

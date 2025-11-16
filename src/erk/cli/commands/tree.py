@@ -5,13 +5,13 @@ import click
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
 from erk.cli.tree import build_workstack_tree
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.tree_utils import render_tree
 
 
 @click.command("tree")
 @click.pass_obj
-def tree_cmd(ctx: WorkstackContext) -> None:
+def tree_cmd(ctx: ErkContext) -> None:
     """Display tree of worktrees with their dependencies.
 
     Shows ONLY branches that have active worktrees, organized

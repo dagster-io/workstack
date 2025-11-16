@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from erk.cli.config import LoadedConfig
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.global_config import GlobalConfig
 from erk.core.repo_discovery import NoRepoSentinel, RepoContext
 from erk.core.script_writer import ScriptWriterOps
@@ -26,11 +26,11 @@ def create_test_context(
     local_config: LoadedConfig | None = None,
     repo: RepoContext | NoRepoSentinel | None = None,
     dry_run: bool = False,
-) -> WorkstackContext:
+) -> ErkContext:
     """Create test context with optional pre-configured ops.
 
-    This is a convenience wrapper around WorkstackContext.for_test() for backward
-    compatibility. New code should use WorkstackContext.for_test() directly.
+    This is a convenience wrapper around ErkContext.for_test() for backward
+    compatibility. New code should use ErkContext.for_test() directly.
 
     Args:
         git_ops: Optional FakeGitOps with test configuration.
@@ -44,7 +44,7 @@ def create_test_context(
         completion_ops: Optional FakeCompletionOps with test configuration.
                        If None, creates empty FakeCompletionOps.
         script_writer: Optional ScriptWriterOps (Real or Fake) for test context.
-                      If None, defaults to FakeScriptWriterOps in WorkstackContext.for_test.
+                      If None, defaults to FakeScriptWriterOps in ErkContext.for_test.
                       Pass RealScriptWriterOps() for integration tests that need real scripts.
         cwd: Optional current working directory path for test context.
             If None, defaults to Path("/test/default/cwd") to prevent accidental use
@@ -58,7 +58,7 @@ def create_test_context(
         dry_run: Whether to set dry_run mode
 
     Returns:
-        Frozen WorkstackContext for use in tests
+        Frozen ErkContext for use in tests
 
     Example:
         # With pre-configured git ops
@@ -78,7 +78,7 @@ def create_test_context(
         # Without any ops (empty fakes)
         >>> ctx = create_test_context()
     """
-    return WorkstackContext.for_test(
+    return ErkContext.for_test(
         git_ops=git_ops,
         github_ops=github_ops,
         graphite_ops=graphite_ops,

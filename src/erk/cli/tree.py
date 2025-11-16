@@ -7,7 +7,7 @@ Business logic has been extracted to workstack.core.tree_utils.
 from pathlib import Path
 
 from erk.cli.output import user_output
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.tree_utils import (
     BranchGraph,
     TreeNode,
@@ -19,7 +19,7 @@ from erk.core.tree_utils import (
 
 
 def build_workstack_tree(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     repo_root: Path,
 ) -> list[TreeNode]:
     """Build tree structure of ONLY branches with active worktrees.
@@ -33,7 +33,7 @@ def build_workstack_tree(
     6. Return list of root nodes (typically just "main")
 
     Args:
-        ctx: Workstack context with git operations
+        ctx: Erk context with git operations
         repo_root: Path to repository root
 
     Returns:
@@ -50,7 +50,7 @@ def build_workstack_tree(
     if branch_graph is None:
         user_output(
             "Error: Graphite cache not found. The 'tree' command requires Graphite.\n"
-            "Make sure Graphite is enabled: workstack config set use-graphite true"
+            "Make sure Graphite is enabled: erk config set use-graphite true"
         )
         raise SystemExit(1)
 
@@ -63,7 +63,7 @@ def build_workstack_tree(
 
 
 def _get_worktree_mapping(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     repo_root: Path,
 ) -> WorktreeMapping:
     """Get mapping of branches to worktrees.
@@ -72,7 +72,7 @@ def _get_worktree_mapping(
     worktree names, and filesystem paths. Detects the current worktree.
 
     Args:
-        ctx: Workstack context with git operations
+        ctx: Erk context with git operations
         repo_root: Path to repository root
 
     Returns:
@@ -116,7 +116,7 @@ def _get_worktree_mapping(
 
 
 def _load_graphite_branch_graph(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     repo_root: Path,
 ) -> BranchGraph | None:
     """Load branch graph from Graphite cache using GraphiteOps abstraction.
@@ -125,7 +125,7 @@ def _load_graphite_branch_graph(
     into the BranchGraph structure needed for tree display.
 
     Args:
-        ctx: Workstack context with git operations
+        ctx: Erk context with git operations
         repo_root: Path to repository root
 
     Returns:

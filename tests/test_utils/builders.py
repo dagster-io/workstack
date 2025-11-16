@@ -31,7 +31,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.github_ops import PullRequestInfo
 from erk.core.global_config import GlobalConfig
 from tests.fakes.github_ops import FakeGitHubOps
@@ -250,7 +250,7 @@ class WorktreeScenario:
     This builder creates a full test environment including:
     - Directory structure (repo root, workstacks directory)
     - Fake operations (git, github, graphite, shell, config)
-    - WorkstackContext ready for CLI testing
+    - ErkContext ready for CLI testing
 
     Use this when you need a complete test setup. For simpler cases, consider
     using pytest fixtures instead.
@@ -402,7 +402,7 @@ class WorktreeScenario:
 
         self.shell_ops = FakeShellOps()
 
-        self.ctx = WorkstackContext.for_test(
+        self.ctx = ErkContext.for_test(
             git_ops=self.git_ops,
             global_config=global_config,
             github_ops=self.github_ops,

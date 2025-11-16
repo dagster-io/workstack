@@ -5,7 +5,7 @@ This is a regression test for the bug where trunk was not updated after landing 
 """
 
 from erk.cli.commands.land_stack.execution import _execute_sync_trunk_phase
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.gitops import WorktreeInfo
 from erk.core.repo_discovery import RepoContext
 from tests.fakes.gitops import FakeGitOps
@@ -43,7 +43,7 @@ def test_sync_trunk_in_worktree_pulls_at_worktree_location() -> None:
         workstacks_dir=SentinelPath("/test/workstacks"),
     )
 
-    ctx = WorkstackContext.for_test(
+    ctx = ErkContext.for_test(
         git_ops=git_ops,
         cwd=repo_root,
         repo=repo_ctx,
@@ -106,7 +106,7 @@ def test_sync_trunk_not_checked_out_uses_repo_root() -> None:
         workstacks_dir=SentinelPath("/test/workstacks"),
     )
 
-    ctx = WorkstackContext.for_test(
+    ctx = ErkContext.for_test(
         git_ops=git_ops,
         cwd=repo_root,
         repo=repo_ctx,
@@ -170,7 +170,7 @@ def test_sync_trunk_in_root_worktree_still_pulls() -> None:
         workstacks_dir=SentinelPath("/test/workstacks"),
     )
 
-    ctx = WorkstackContext.for_test(
+    ctx = ErkContext.for_test(
         git_ops=git_ops,
         cwd=repo_root,
         repo=repo_ctx,

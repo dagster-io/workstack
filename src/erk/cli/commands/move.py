@@ -7,7 +7,7 @@ import click
 from erk.cli.commands.switch import complete_worktree_names
 from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.repo_discovery import ensure_workstacks_dir
 from erk.core.worktree_utils import (
     MoveOperationType,
@@ -18,7 +18,7 @@ from erk.core.worktree_utils import (
 )
 
 
-def _resolve_current_worktree(ctx: WorkstackContext, repo_root: Path) -> Path:
+def _resolve_current_worktree(ctx: ErkContext, repo_root: Path) -> Path:
     """Find worktree containing current directory.
 
     Raises SystemExit if not in a git repository or not in any worktree.
@@ -42,7 +42,7 @@ def _resolve_current_worktree(ctx: WorkstackContext, repo_root: Path) -> Path:
 
 
 def resolve_source_worktree(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     repo_root: Path,
     *,
     current: bool,
@@ -89,7 +89,7 @@ def resolve_source_worktree(
 
 
 def detect_operation_type(
-    source_wt: Path, target_wt: Path, ctx: WorkstackContext, repo_root: Path
+    source_wt: Path, target_wt: Path, ctx: ErkContext, repo_root: Path
 ) -> MoveOperationType:
     """Determine whether to move, swap, or create based on target existence.
 
@@ -101,7 +101,7 @@ def detect_operation_type(
 
 
 def execute_move(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     repo_root: Path,
     source_wt: Path,
     target_wt: Path,
@@ -168,7 +168,7 @@ def execute_move(
 
 
 def execute_swap(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     repo_root: Path,
     source_wt: Path,
     target_wt: Path,
@@ -230,7 +230,7 @@ def execute_swap(
 @click.argument("target", required=True, shell_complete=complete_worktree_names)
 @click.pass_obj
 def move_cmd(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     current: bool,
     branch: str | None,
     worktree: str | None,
@@ -244,35 +244,35 @@ def move_cmd(
 
         \b
         # Move current branch back to repository root
-        workstack move root
+        erk move root
 
         \b
         # Move from current worktree to new worktree
-        workstack move target-wt
+        erk move target-wt
 
         \b
         # Move from current worktree (explicit)
-        workstack move --current target-wt
+        erk move --current target-wt
 
         \b
         # Auto-detect source from branch name
-        workstack move --branch feature-x new-wt
+        erk move --branch feature-x new-wt
 
         \b
         # Move from specific source to target
-        workstack move --worktree old-wt new-wt
+        erk move --worktree old-wt new-wt
 
         \b
         # Swap branches between current and another worktree
-        workstack move --current existing-wt
+        erk move --current existing-wt
 
         \b
         # Force operation without prompts (for scripts)
-        workstack move --current target-wt --force
+        erk move --current target-wt --force
 
         \b
         # Specify custom fallback branch
-        workstack move --current new-wt --ref develop
+        erk move --current new-wt --ref develop
     """
     # Discover repository context
     repo = discover_repo_context(ctx, ctx.cwd)

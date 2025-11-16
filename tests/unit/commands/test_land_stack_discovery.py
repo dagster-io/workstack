@@ -8,7 +8,7 @@ from pathlib import Path
 
 from erk.cli.commands.land_stack.discovery import _get_branches_to_land
 from erk.core.branch_metadata import BranchMetadata
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.global_config import GlobalConfig
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
@@ -52,7 +52,7 @@ def test_get_branches_to_land_full_stack_default() -> None:
         },
     )
 
-    ctx = WorkstackContext.for_test(
+    ctx = ErkContext.for_test(
         cwd=Path("/test"),
         git_ops=git_ops,
         graphite_ops=graphite_ops,
@@ -109,7 +109,7 @@ def test_get_branches_to_land_down_only_true() -> None:
         },
     )
 
-    ctx = WorkstackContext.for_test(
+    ctx = ErkContext.for_test(
         cwd=Path("/test"),
         git_ops=git_ops,
         graphite_ops=graphite_ops,
@@ -166,7 +166,7 @@ def test_get_branches_to_land_at_leaf_full_stack() -> None:
         },
     )
 
-    ctx = WorkstackContext.for_test(
+    ctx = ErkContext.for_test(
         cwd=Path("/test"),
         git_ops=git_ops,
         graphite_ops=graphite_ops,
@@ -223,7 +223,7 @@ def test_get_branches_to_land_at_leaf_down_only() -> None:
         },
     )
 
-    ctx = WorkstackContext.for_test(
+    ctx = ErkContext.for_test(
         cwd=Path("/test"),
         git_ops=git_ops,
         graphite_ops=graphite_ops,
@@ -280,7 +280,7 @@ def test_get_branches_to_land_first_branch_full_stack() -> None:
         },
     )
 
-    ctx = WorkstackContext.for_test(
+    ctx = ErkContext.for_test(
         cwd=Path("/test"),
         git_ops=git_ops,
         graphite_ops=graphite_ops,
@@ -337,7 +337,7 @@ def test_get_branches_to_land_first_branch_down_only() -> None:
         },
     )
 
-    ctx = WorkstackContext.for_test(
+    ctx = ErkContext.for_test(
         cwd=Path("/test"),
         git_ops=git_ops,
         graphite_ops=graphite_ops,
@@ -371,7 +371,7 @@ def test_get_branches_to_land_no_stack() -> None:
         },
     )
 
-    ctx = WorkstackContext.for_test(
+    ctx = ErkContext.for_test(
         cwd=Path("/test"),
         git_ops=git_ops,
         graphite_ops=graphite_ops,
@@ -414,7 +414,7 @@ def test_get_branches_to_land_excludes_trunk() -> None:
         },
     )
 
-    ctx = WorkstackContext.for_test(
+    ctx = ErkContext.for_test(
         cwd=Path("/test"),
         git_ops=git_ops,
         graphite_ops=graphite_ops,

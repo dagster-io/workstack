@@ -29,8 +29,8 @@ from erk.core.shell_ops import RealShellOps, ShellOps
 
 
 @dataclass(frozen=True)
-class WorkstackContext:
-    """Immutable context holding all dependencies for workstack operations.
+class ErkContext:
+    """Immutable context holding all dependencies for erk operations.
 
     Created at CLI entry point and threaded through the application.
     Frozen to prevent accidental modification at runtime.
@@ -63,7 +63,7 @@ class WorkstackContext:
         return self.git_ops.get_trunk_branch(self.repo.root)
 
     @staticmethod
-    def minimal(git_ops: GitOps, cwd: Path, dry_run: bool = False) -> "WorkstackContext":
+    def minimal(git_ops: GitOps, cwd: Path, dry_run: bool = False) -> "ErkContext":
         """Create minimal context with only git_ops configured, rest are test defaults.
 
         Useful for simple tests that only need git operations. Other ops
@@ -75,7 +75,7 @@ class WorkstackContext:
             dry_run: Whether to enable dry-run mode (default False)
 
         Returns:
-            WorkstackContext with git_ops configured and other dependencies using test defaults
+            ErkContext with git_ops configured and other dependencies using test defaults
 
         Example:
             Before (7 lines):
@@ -83,7 +83,7 @@ class WorkstackContext:
             >>> from tests.fakes.github_ops import FakeGitHubOps
             >>> from tests.fakes.graphite_ops import FakeGraphiteOps
             >>> from tests.fakes.shell_ops import FakeShellOps
-            >>> ctx = WorkstackContext(
+            >>> ctx = ErkContext(
             ...     git_ops=git_ops,
             ...     github_ops=FakeGitHubOps(),
             ...     graphite_ops=FakeGraphiteOps(),
@@ -99,11 +99,11 @@ class WorkstackContext:
             ... )
 
             After (1 line):
-            >>> ctx = WorkstackContext.minimal(git_ops, cwd)
+            >>> ctx = ErkContext.minimal(git_ops, cwd)
 
         Note:
             For more complex test setup with custom configs or multiple ops,
-            use WorkstackContext.for_test() instead.
+            use ErkContext.for_test() instead.
         """
         from tests.fakes.completion_ops import FakeCompletionOps
         from tests.fakes.github_ops import FakeGitHubOps
@@ -111,7 +111,7 @@ class WorkstackContext:
         from tests.fakes.script_writer import FakeScriptWriterOps
         from tests.fakes.shell_ops import FakeShellOps
 
-        return WorkstackContext(
+        return ErkContext(
             git_ops=git_ops,
             github_ops=FakeGitHubOps(),
             graphite_ops=FakeGraphiteOps(),
@@ -140,7 +140,7 @@ class WorkstackContext:
         local_config: LoadedConfig | None = None,
         repo: RepoContext | NoRepoSentinel | None = None,
         dry_run: bool = False,
-    ) -> "WorkstackContext":
+    ) -> "ErkContext":
         """Create test context with optional pre-configured ops.
 
         Provides full control over all context parameters with sensible test defaults
@@ -166,25 +166,25 @@ class WorkstackContext:
             dry_run: Whether to enable dry-run mode (default False).
 
         Returns:
-            WorkstackContext configured with provided values and test defaults
+            ErkContext configured with provided values and test defaults
 
         Example:
             Simple case (use .minimal() instead):
             >>> git_ops = FakeGitOps(default_branches={Path("/repo"): "main"})
-            >>> ctx = WorkstackContext.for_test(git_ops=git_ops)
+            >>> ctx = ErkContext.for_test(git_ops=git_ops)
 
             Complex case with multiple ops:
             >>> git_ops = FakeGitOps(default_branches={Path("/repo"): "main"})
             >>> github_ops = FakeGitHubOps(prs={123: PR(...)})
             >>> graphite_ops = FakeGraphiteOps(stack_info={"feature": StackInfo(...)})
-            >>> ctx = WorkstackContext.for_test(
+            >>> ctx = ErkContext.for_test(
             ...     git_ops=git_ops,
             ...     github_ops=github_ops,
             ...     graphite_ops=graphite_ops,
             ... )
 
         Note:
-            For simple cases that only need git_ops, use WorkstackContext.minimal()
+            For simple cases that only need git_ops, use ErkContext.minimal()
             which is more concise.
         """
         from tests.fakes.completion_ops import FakeCompletionOps
@@ -236,7 +236,7 @@ class WorkstackContext:
             graphite_ops = NoopGraphiteOps(graphite_ops)
             github_ops = NoopGitHubOps(github_ops)
 
-        return WorkstackContext(
+        return ErkContext(
             git_ops=git_ops,
             github_ops=github_ops,
             graphite_ops=graphite_ops,
@@ -318,7 +318,7 @@ def safe_cwd() -> tuple[Path | None, str | None]:
         )
 
 
-def create_context(*, dry_run: bool) -> WorkstackContext:
+def create_context(*, dry_run: bool) -> ErkContext:
     """Create production context with real implementations.
 
     Called at CLI entry point to create the context for the entire
@@ -329,7 +329,7 @@ def create_context(*, dry_run: bool) -> WorkstackContext:
                  print intended actions without executing them
 
     Returns:
-        WorkstackContext with real implementations, wrapped in dry-run
+        ErkContext with real implementations, wrapped in dry-run
         wrappers if dry_run=True
 
     Example:
@@ -384,7 +384,7 @@ def create_context(*, dry_run: bool) -> WorkstackContext:
         github_ops = NoopGitHubOps(github_ops)
 
     # 8. Create context with all values
-    return WorkstackContext(
+    return ErkContext(
         git_ops=git_ops,
         github_ops=github_ops,
         graphite_ops=graphite_ops,
@@ -400,10 +400,10 @@ def create_context(*, dry_run: bool) -> WorkstackContext:
     )
 
 
-def regenerate_context(existing_ctx: WorkstackContext) -> WorkstackContext:
+def regenerate_context(existing_ctx: ErkContext) -> ErkContext:
     """Regenerate context with fresh cwd.
 
-    Creates a new WorkstackContext with:
+    Creates a new ErkContext with:
     - Current working directory (Path.cwd())
     - Preserved dry_run state and operation instances
 
@@ -414,7 +414,7 @@ def regenerate_context(existing_ctx: WorkstackContext) -> WorkstackContext:
         existing_ctx: Current context to preserve settings from
 
     Returns:
-        New WorkstackContext with regenerated state
+        New ErkContext with regenerated state
 
     Example:
         # After os.chdir() or worktree removal

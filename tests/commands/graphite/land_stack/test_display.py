@@ -39,7 +39,11 @@ def test_land_stack_verbose_flag_shows_detailed_output() -> None:
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Feature 1"),
                 "feat-2": ("OPEN", 200, "Feature 2"),
-            }
+            },
+            pr_bases={
+                100: "main",
+                200: "main",
+            },
         )
 
         global_config_ops = GlobalConfig(
@@ -99,7 +103,11 @@ def test_land_stack_dry_run_shows_submit_commands() -> None:
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Feature 1"),
                 "feat-2": ("OPEN", 200, "Feature 2"),
-            }
+            },
+            pr_bases={
+                100: "main",
+                200: "main",
+            },
         )
 
         global_config_ops = GlobalConfig(

@@ -51,7 +51,12 @@ def test_land_stack_with_down_flag_includes_flag_in_error_suggestions() -> None:
                 "feat-1": ("OPEN", 100, "Feature 1"),
                 "feat-2": ("OPEN", 200, "Feature 2"),
                 "feat-3": ("OPEN", 300, "Feature 3"),
-            }
+            },
+            pr_bases={
+                100: "main",  # feat-1 base is main
+                200: "main",  # feat-2 base is main (after feat-1 lands and restacks)
+                300: "main",  # feat-3 base is main (after feat-2 lands and restacks)
+            },
         )
 
         test_ctx = WorkstackContext.for_test(
@@ -113,7 +118,12 @@ def test_land_stack_fails_when_branches_in_multiple_worktrees() -> None:
                 "feat-1": ("OPEN", 100, "Feature 1"),
                 "feat-2": ("OPEN", 200, "Feature 2"),
                 "feat-3": ("OPEN", 300, "Feature 3"),
-            }
+            },
+            pr_bases={
+                100: "main",  # feat-1 base is main
+                200: "main",  # feat-2 base is main (after feat-1 lands and restacks)
+                300: "main",  # feat-3 base is main (after feat-2 lands and restacks)
+            },
         )
 
         test_ctx = WorkstackContext.for_test(
@@ -186,7 +196,11 @@ def test_land_stack_succeeds_when_all_branches_in_current_worktree() -> None:
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Feature 1"),
                 "feat-2": ("OPEN", 200, "Feature 2"),
-            }
+            },
+            pr_bases={
+                100: "main",  # feat-1 base is main
+                200: "main",  # feat-2 base is main (after feat-1 lands and restacks)
+            },
         )
 
         test_ctx = WorkstackContext.for_test(
@@ -247,7 +261,10 @@ def test_land_stack_from_linked_worktree_on_branch_being_landed() -> None:
         github_ops = FakeGitHubOps(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Add feature 1"),
-            }
+            },
+            pr_bases={
+                100: "main",  # feat-1 base is main
+            },
         )
 
         test_ctx = WorkstackContext.for_test(

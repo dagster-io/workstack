@@ -91,7 +91,10 @@ def test_land_stack_ignores_root_worktree_changes_on_unrelated_branch() -> None:
             github_ops=FakeGitHubOps(
                 pr_statuses={
                     "feat-1": ("OPEN", 123, "Add feature 1"),
-                }
+                },
+                pr_bases={
+                    123: "main",
+                },
             ),
             shell_ops=FakeShellOps(),
             cwd=current_path,  # Current worktree is clean
@@ -123,7 +126,12 @@ def test_land_stack_script_mode_accepts_flag() -> None:
         )
 
         # Setup GitHub ops with an open PR
-        github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("OPEN", 123, "Feature 1")})
+        github_ops = FakeGitHubOps(
+            pr_statuses={"feature-1": ("OPEN", 123, "Feature 1")},
+            pr_bases={
+                123: "main",
+            },
+        )
 
         global_config_ops = GlobalConfig(
             workstacks_root=env.workstacks_root,

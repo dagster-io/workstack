@@ -47,7 +47,12 @@ def test_land_stack_force_pushes_remaining_branches_after_sync() -> None:
                 "feat-1": ("OPEN", 100, "Feature 1"),
                 "feat-2": ("OPEN", 200, "Feature 2"),
                 "feat-3": ("OPEN", 300, "Feature 3"),
-            }
+            },
+            pr_bases={
+                100: "main",
+                200: "main",
+                300: "main",
+            },
         )
 
         global_config_ops = GlobalConfig(
@@ -126,7 +131,13 @@ def test_land_stack_force_pushes_after_each_pr_landed() -> None:
                 "feat-2": ("OPEN", 200, "Feature 2"),
                 "feat-3": ("OPEN", 300, "Feature 3"),
                 "feat-4": ("OPEN", 400, "Feature 4"),
-            }
+            },
+            pr_bases={
+                100: "main",
+                200: "main",
+                300: "main",
+                400: "main",
+            },
         )
 
         global_config_ops = GlobalConfig(
@@ -213,7 +224,12 @@ def test_land_stack_no_submit_when_landing_top_branch() -> None:
                 "feat-1": ("OPEN", 100, "Feature 1"),
                 "feat-2": ("OPEN", 200, "Feature 2"),
                 "feat-3": ("OPEN", 300, "Feature 3"),
-            }
+            },
+            pr_bases={
+                100: "main",
+                200: "main",
+                300: "main",
+            },
         )
 
         global_config_ops = GlobalConfig(
@@ -318,7 +334,10 @@ def test_land_stack_switches_to_root_when_run_from_linked_worktree() -> None:
         github_ops = FakeGitHubOps(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Add feature 1"),
-            }
+            },
+            pr_bases={
+                100: "main",
+            },
         )
 
         test_ctx = WorkstackContext.for_test(
@@ -365,7 +384,10 @@ def test_land_stack_merge_command_excludes_auto_flag() -> None:
         github_ops = FakeGitHubOps(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Feature 1"),
-            }
+            },
+            pr_bases={
+                100: "main",
+            },
         )
 
         global_config_ops = GlobalConfig(

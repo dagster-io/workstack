@@ -19,6 +19,7 @@ class FakeScriptWriterOps(ScriptWriterOps):
     def __init__(self) -> None:
         """Initialize empty script storage."""
         self._scripts: dict[Path, str] = {}
+        self.last_script: ScriptResult | None = None
 
     def write_activation_script(
         self,
@@ -60,7 +61,11 @@ class FakeScriptWriterOps(ScriptWriterOps):
         # Store in memory
         self._scripts[script_path] = full_content
 
-        return ScriptResult(path=script_path, content=full_content)
+        # Track last script for test assertions
+        result = ScriptResult(path=script_path, content=full_content)
+        self.last_script = result
+
+        return result
 
     def get_script_content(self, path: Path) -> str | None:
         """Get stored script content for test assertions.

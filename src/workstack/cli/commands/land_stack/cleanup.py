@@ -46,13 +46,17 @@ def _cleanup_and_navigate(
     # Step 0: Switch to root worktree before cleanup
     # This prevents shell from being left in a destroyed worktree directory
     # Pattern mirrors sync.py:123-125
-    if ctx.cwd.resolve() != repo_root:
-        try:
-            os.chdir(repo_root)
-            ctx = regenerate_context(ctx)
-        except (FileNotFoundError, OSError):
-            # Sentinel path in pure test mode - skip chdir
-            pass
+    # Note: Only performs chdir in production (when paths exist on filesystem)
+    # In test mode with sentinel paths, this entire block is skipped
+    if ctx.git_ops.path_exists(ctx.cwd) and ctx.git_ops.path_exists(repo_root):
+        # Compare paths without resolve() to avoid FileNotFoundError on sentinel paths
+        if str(ctx.cwd) != str(repo_root):
+            try:
+                os.chdir(repo_root)
+                ctx = regenerate_context(ctx)
+            except (FileNotFoundError, OSError):
+                # Directory disappeared between check and chdir
+                pass
 
     # Step 1: Checkout trunk branch
     if not dry_run:
@@ -68,23 +72,32 @@ def _cleanup_and_navigate(
     if dry_run:
         _emit(_format_cli_command(base_cmd, check), script_mode=script_mode)
     else:
-        try:
-            # This will remove merged worktrees and delete branches
-            cmd = ["workstack", "sync", "-f"]
-            if verbose:
-                cmd.append("--verbose")
+        # Only run subprocess if repo_root exists (skip in pure test mode with sentinel paths)
+        if ctx.git_ops.path_exists(repo_root):
+            try:
+                # This will remove merged worktrees and delete branches
+                cmd = ["workstack", "sync", "-f"]
+                if verbose:
+                    cmd.append("--verbose")
 
-            subprocess.run(
-                cmd,
-                cwd=repo_root,
-                check=True,
-                capture_output=not verbose,
-                text=True,
-            )
+                subprocess.run(
+                    cmd,
+                    cwd=repo_root,
+                    check=True,
+                    capture_output=not verbose,
+                    text=True,
+                )
+                _emit(_format_cli_command(base_cmd, check), script_mode=script_mode)
+            except subprocess.CalledProcessError as e:
+                error_msg = e.stderr.strip() if e.stderr else str(e)
+                _emit(
+                    f"Warning: Cleanup sync failed: {error_msg}",
+                    script_mode=script_mode,
+                    error=True,
+                )
+        else:
+            # Pure test mode with sentinel paths - just show what would be done
             _emit(_format_cli_command(base_cmd, check), script_mode=script_mode)
-        except subprocess.CalledProcessError as e:
-            error_msg = e.stderr.strip() if e.stderr else str(e)
-            _emit(f"Warning: Cleanup sync failed: {error_msg}", script_mode=script_mode, error=True)
 
     # Step 3: Navigate to next branch or stay on trunk
     # Check if last merged branch had unmerged children

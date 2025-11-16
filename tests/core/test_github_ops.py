@@ -5,7 +5,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from workstack.core.github_ops import PullRequestInfo, RealGitHubOps
+from erk.core.github_ops import PullRequestInfo, RealGitHubOps
 
 
 @pytest.fixture

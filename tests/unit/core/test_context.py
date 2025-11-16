@@ -3,7 +3,7 @@
 import os
 from pathlib import Path
 
-from workstack.core.context import create_context, regenerate_context
+from erk.core.context import create_context, regenerate_context
 
 
 def test_regenerate_context_updates_cwd(tmp_path: Path) -> None:

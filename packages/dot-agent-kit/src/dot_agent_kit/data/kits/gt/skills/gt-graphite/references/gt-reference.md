@@ -24,7 +24,7 @@ A comprehensive guide to understanding Graphite's mental model, command structur
 - [Metadata Storage](#metadata-storage)
 - [Command Reference](#command-reference)
 - [Workflow Patterns](#workflow-patterns)
-- [Workstack Integration](#workstack-integration)
+- [Erk Integration](#erk-integration)
 - [Practical Examples](#practical-examples)
 
 ---
@@ -304,7 +304,7 @@ git rev-parse --git-common-dir
 # Worktree:      /path/to/repo/.git/  (same!)
 ```
 
-**Important**: Because metadata is in the shared `.git` directory, **all worktrees see the same gt metadata**. This is how workstack can read stack information from any worktree.
+**Important**: Because metadata is in the shared `.git` directory, **all worktrees see the same gt metadata**. This is how erk can read stack information from any worktree.
 
 ---
 
@@ -541,7 +541,7 @@ gt log long                       # Detailed view
 │  ◯ feature-ideas
 │  │ 8 hours ago
 │  │ PR #66 (Ready to merge) Feature ideas
-│  │ https://app.graphite.com/github/pr/schrockn/workstack/66
+│  │ https://app.graphite.com/github/pr/schrockn/erk/66
 │  │
 │  │  ◯ status-command-implementation
 │  │  │ 8 minutes ago
@@ -990,18 +990,18 @@ gt submit --stack
 
 ---
 
-## Workstack Integration
+## Erk Integration
 
-### How Workstack Uses gt
+### How Erk Uses gt
 
-Workstack integrates with Graphite to enhance the worktree workflow:
+Erk integrates with Graphite to enhance the worktree workflow:
 
 #### 1. Stack Visualization
 
-**File**: `src/workstack/cli/graphite.py`
+**File**: `src/erk/cli/graphite.py`
 
 ```python
-def get_branch_stack(ctx: WorkstackContext, repo_root: Path, branch: str) -> list[str] | None:
+def get_branch_stack(ctx: ErkContext, repo_root: Path, branch: str) -> list[str] | None:
     """Get the linear stack for a branch by reading .graphite_cache_persist."""
 ```
 
@@ -1014,12 +1014,12 @@ def get_branch_stack(ctx: WorkstackContext, repo_root: Path, branch: str) -> lis
 
 **Used by**:
 
-- `workstack list --stacks`: Shows stack relationships
-- `workstack tree`: Displays tree visualization
+- `erk list --stacks`: Shows stack relationships
+- `erk tree`: Displays tree visualization
 
 #### 2. PR Information Cache
 
-**File**: `src/workstack/core/graphite_ops.py`
+**File**: `src/erk/core/graphite_ops.py`
 
 ```python
 def get_prs_from_graphite(git_ops: GitOps, repo_root: Path) -> dict[str, PullRequestInfo]:
@@ -1034,12 +1034,12 @@ def get_prs_from_graphite(git_ops: GitOps, repo_root: Path) -> dict[str, PullReq
 
 **Used by**:
 
-- `workstack list --stacks`: Shows PR status
-- `workstack sync`: Identifies merged PRs
+- `erk list --stacks`: Shows PR status
+- `erk sync`: Identifies merged PRs
 
 #### 3. Sync Integration
 
-**File**: `src/workstack/core/graphite_ops.py`
+**File**: `src/erk/core/graphite_ops.py`
 
 ```python
 def sync(repo_root: Path, *, force: bool) -> None:
@@ -1051,11 +1051,11 @@ def sync(repo_root: Path, *, force: bool) -> None:
 
 - Executes `gt sync` subprocess
 - Passes through stdout/stderr
-- Used by `workstack sync` command
+- Used by `erk sync` command
 
 #### 4. Branch Tracking
 
-**Workstack assumes**:
+**Erk assumes**:
 
 - All branches are tracked by gt
 - `.graphite_cache_persist` exists
@@ -1069,7 +1069,7 @@ def sync(repo_root: Path, *, force: bool) -> None:
 
 ### Configuration
 
-**Global config** (`~/.workstack/config.toml`):
+**Global config** (`~/.erk/config.toml`):
 
 ```toml
 use_graphite = true     # Auto-detected if gt CLI installed
@@ -1077,9 +1077,9 @@ use_graphite = true     # Auto-detected if gt CLI installed
 
 **When enabled**:
 
-- `workstack list --stacks` shows stack relationships
-- `workstack tree` visualizes stacks
-- `workstack sync` runs `gt sync`
+- `erk list --stacks` shows stack relationships
+- `erk tree` visualizes stacks
+- `erk sync` runs `gt sync`
 
 **When disabled**:
 
@@ -1276,7 +1276,7 @@ gt log short
 # Stack is now shorter, bottom branches merged!
 ```
 
-### Example 6: Using gt with Workstack Worktrees
+### Example 6: Using gt with Erk Worktrees
 
 **Scenario**: Managing multiple stacks in different worktrees.
 
@@ -1289,10 +1289,10 @@ gt create auth-service
 
 # Want to work on unrelated feature in parallel
 # Create new worktree
-workstack create billing-stack
+erk create billing-stack
 
 # Switch to new worktree
-workstack switch billing-stack
+erk switch billing-stack
 
 # In billing worktree: Create billing stack
 gt create billing-model
@@ -1313,7 +1313,7 @@ gt log
 # Metadata is shared via .git directory!
 
 # List worktrees with stack info
-workstack list --stacks
+erk list --stacks
 # Output:
 # root [main]
 # auth-stack [auth-service]

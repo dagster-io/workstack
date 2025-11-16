@@ -19,7 +19,7 @@ A comprehensive guide to understanding GitHub CLI's mental model, command struct
 - [Authentication & Configuration](#authentication--configuration)
 - [Command Reference](#command-reference)
 - [Workflow Patterns](#workflow-patterns)
-- [Workstack Integration](#workstack-integration)
+- [Erk Integration](#erk-integration)
 - [Practical Examples](#practical-examples)
 - [Key Insights for AI Agents](#key-insights-for-ai-agents)
 - [Additional Resources](#additional-resources)
@@ -1014,15 +1014,15 @@ gh pr merge $PR_NUMBER --squash --auto
 
 ---
 
-## Workstack Integration
+## Erk Integration
 
-### How Workstack Uses `gh`
+### How Erk Uses `gh`
 
-Workstack integrates with GitHub CLI to enhance the worktree workflow by providing PR status information directly in the worktree listing.
+Erk integrates with GitHub CLI to enhance the worktree workflow by providing PR status information directly in the worktree listing.
 
 #### 1. PR Information Retrieval
 
-**File**: `src/workstack/github_ops.py:GitHubOps.get_prs()`
+**File**: `src/erk/github_ops.py:GitHubOps.get_prs()`
 
 **Command executed:**
 
@@ -1052,11 +1052,11 @@ gh pr list --state all --json number,headRefName,url,state,isDraft,statusCheckRo
 }
 ```
 
-#### 2. Display in `workstack ls`
+#### 2. Display in `erk ls`
 
-**File**: `src/workstack/commands/list.py`
+**File**: `src/erk/commands/list.py`
 
-When you run `workstack ls`, you see:
+When you run `erk ls`, you see:
 
 ```
 feature-1    feature/amazing-feature      PR #123 ✓
@@ -1073,9 +1073,9 @@ feature-3    feature/experimental         (no PR)
 - `(closed)` - Closed PR
 - `(merged)` - Merged PR
 
-#### 3. Cleanup with Sync (`workstack sync`)
+#### 3. Cleanup with Sync (`erk sync`)
 
-**File**: `src/workstack/commands/sync.py`
+**File**: `src/erk/commands/sync.py`
 
 Uses PR state to identify cleanup candidates:
 
@@ -1083,28 +1083,28 @@ Uses PR state to identify cleanup candidates:
 - Worktrees with closed PRs → Prompt user
 - Worktrees without PRs → Skip
 
-Use `workstack sync --dry-run` to preview cleanup candidates without removal.
+Use `erk sync --dry-run` to preview cleanup candidates without removal.
 
 #### 4. Error Handling
 
-Workstack gracefully handles `gh` unavailability:
+Erk gracefully handles `gh` unavailability:
 
 - If `gh` not installed → Silent fallback (no PR info shown)
 - If not authenticated → Silent fallback
 - If API fails → Continue without PR data
 
-This ensures `workstack` works even without GitHub CLI.
+This ensures `erk` works even without GitHub CLI.
 
 #### 5. Authentication Requirements
 
-Workstack relies on existing `gh` authentication:
+Erk relies on existing `gh` authentication:
 
 ```bash
 # User must authenticate first
 gh auth login
 
-# Then workstack automatically uses those credentials
-workstack ls
+# Then erk automatically uses those credentials
+erk ls
 ```
 
 No separate authentication needed - leverages `gh` token storage.

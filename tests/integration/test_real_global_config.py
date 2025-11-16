@@ -3,11 +3,11 @@ from unittest import mock
 
 import pytest
 
+from erk.cli.commands.create import make_env_content
+from erk.cli.commands.init import create_and_save_global_config
+from erk.cli.config import load_config
+from erk.core.init_utils import discover_presets
 from tests.fakes.shell_ops import FakeShellOps
-from workstack.cli.commands.create import make_env_content
-from workstack.cli.commands.init import create_and_save_global_config
-from workstack.cli.config import load_config
-from workstack.core.init_utils import discover_presets
 
 
 def test_load_config_defaults(tmp_path: Path) -> None:
@@ -61,18 +61,18 @@ def test_load_global_config_missing_workstacks_root(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Test that FilesystemGlobalConfigOps validates required fields
-    from workstack.core.global_config import FilesystemGlobalConfigOps
+    from erk.core.global_config import FilesystemGlobalConfigOps
 
     config_file = tmp_path / "config.toml"
     config_file.write_text("use_graphite = true\n", encoding="utf-8")
 
-    # Patch Path.home to return tmp_path so ops looks in tmp_path/.workstack/
+    # Patch Path.home to return tmp_path so ops looks in tmp_path/.erk/
     monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
 
-    # Create .workstack dir and write config there
-    workstack_dir = tmp_path / ".workstack"
-    workstack_dir.mkdir()
-    (workstack_dir / "config.toml").write_text("use_graphite = true\n", encoding="utf-8")
+    # Create .erk dir and write config there
+    erk_dir = tmp_path / ".erk"
+    erk_dir.mkdir()
+    (erk_dir / "config.toml").write_text("use_graphite = true\n", encoding="utf-8")
 
     ops = FilesystemGlobalConfigOps()
     with pytest.raises(ValueError, match="Missing 'workstacks_root'"):
@@ -88,8 +88,8 @@ def test_load_global_config_missing_workstacks_root(
 
 def test_create_global_config_creates_parent_directory(tmp_path: Path) -> None:
     # Test that create_and_save_global_config creates parent directory
-    from workstack.core.context import WorkstackContext
-    from workstack.core.global_config import InMemoryGlobalConfigOps
+    from erk.core.context import WorkstackContext
+    from erk.core.global_config import InMemoryGlobalConfigOps
 
     config_file = tmp_path / ".workstack" / "config.toml"
     assert not config_file.parent.exists()
@@ -104,8 +104,8 @@ def test_create_global_config_creates_parent_directory(tmp_path: Path) -> None:
     )
 
     with (
-        mock.patch("workstack.cli.commands.init.detect_graphite", return_value=False),
-        mock.patch("workstack.core.global_config.Path.home", return_value=tmp_path),
+        mock.patch("erk.cli.commands.init.detect_graphite", return_value=False),
+        mock.patch("erk.core.global_config.Path.home", return_value=tmp_path),
     ):
         create_and_save_global_config(ctx, Path("/tmp/workstacks"), shell_setup_complete=False)
 

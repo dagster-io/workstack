@@ -1,4 +1,4 @@
-# Workstack Coding Standards
+# Erk Coding Standards
 
 > **Note**: This is unreleased, completely private software. We can break backwards
 > compatibility completely at will based on preferences of the engineer developing
@@ -36,7 +36,7 @@
 | Code in `__init__.py`                                            | → Keep empty or docstring-only (except top-level public API exports)                                 |
 | Tests for speculative features                                   | → **FORBIDDEN** - Only test actively implemented code (TDD is fine)                                  |
 | Creating `.claude/` artifacts                                    | → Use `kebab-case` (hyphens) NOT `snake_case` (underscores)                                          |
-| `Path("/test/...")` or hardcoded paths                           | → **CATASTROPHIC** - Use `pure_workstack_env` fixture - [Test Isolation](#6-test-isolation--must)    |
+| `Path("/test/...")` or hardcoded paths                           | → **CATASTROPHIC** - Use `pure_erk_env` fixture - [Test Isolation](#6-test-isolation--must)          |
 | ⚠️ Python patterns above                                         | → These are EXCERPTS ONLY - Load dignified-python skill for complete guidance                        |
 
 ## 📚 Quick Reference
@@ -54,7 +54,7 @@ The `docs/` folder is organized by audience:
 
 - **docs/agent/**: Agent-focused navigation and coding standards (quick references, patterns, rules)
 - **docs/writing/**: Human-readable guides (agentic programming, writing style guides)
-- Package-specific documentation lives in each package's README (e.g., `packages/workstack-dev/README.md`)
+- Package-specific documentation lives in each package's README (e.g., `packages/erk-dev/README.md`)
 
 ## Python Coding Standards
 
@@ -85,7 +85,7 @@ To access Python coding standards, load the skill:
 - CLI development
 - Code style patterns
 
-The `docs/agent/` folder contains only workstack-specific documentation (terminology, testing, navigation).
+The `docs/agent/` folder contains only erk-specific documentation (terminology, testing, navigation).
 
 ---
 
@@ -147,7 +147,7 @@ class MyOps(ABC):  # ✅ Not Protocol
 **Top-level absolute imports only**
 
 ```python
-# ✅ from workstack.config import load_config
+# ✅ from erk.config import load_config
 # ❌ from .config import load_config
 ```
 
@@ -161,34 +161,34 @@ cwd=Path("/test/default/cwd")
 cwd=Path("/some/hardcoded/path")
 
 # ✅ CORRECT - Use pure environment (PREFERRED)
-with pure_workstack_env(runner) as env:
-    ctx = WorkstackContext(..., cwd=env.cwd)
+with pure_erk_env(runner) as env:
+    ctx = ErkContext(..., cwd=env.cwd)
 
 # ✅ CORRECT - Use simulated environment (when filesystem I/O needed)
-with simulated_workstack_env(runner) as env:
-    ctx = WorkstackContext(..., cwd=env.cwd)
+with simulated_erk_env(runner) as env:
+    ctx = ErkContext(..., cwd=env.cwd)
 
 # ✅ CORRECT - Use tmp_path fixture
 def test_something(tmp_path: Path) -> None:
-    ctx = WorkstackContext(..., cwd=tmp_path)
+    ctx = ErkContext(..., cwd=tmp_path)
 ```
 
 **Test Fixture Preference:**
 
-🟢 **PREFER `pure_workstack_env`** - Completely in-memory, zero filesystem I/O
+🟢 **PREFER `pure_erk_env`** - Completely in-memory, zero filesystem I/O
 
 - Uses sentinel paths that throw errors on filesystem operations
 - Faster and enforces complete test isolation
 - Use for tests verifying command logic and output
 
-🟡 **USE `simulated_workstack_env`** - When real directories needed
+🟡 **USE `simulated_erk_env`** - When real directories needed
 
 - Creates actual temp directories with `isolated_filesystem()`
 - Use for testing filesystem-dependent features
 
 **Why hardcoded paths are catastrophic:**
 
-- **Global config mutation**: Code may write `.workstack` files at hardcoded paths, polluting real filesystem
+- **Global config mutation**: Code may write `.erk` files at hardcoded paths, polluting real filesystem
 - **False isolation**: Tests appear isolated but share state through hardcoded paths
 - **Security risk**: Creating files at system paths can be exploited
 
@@ -328,7 +328,7 @@ Given stack: `main → feat-1 → feat-2 → feat-3`
 
 ### Project Structure
 
-- Source: `src/workstack/`
+- Source: `src/erk/`
 - Tests: `tests/`
 - Config: `pyproject.toml`
 
@@ -428,10 +428,10 @@ After filesystem mutations that invalidate `ctx.cwd`:
 
 **How to regenerate:**
 
-Use `regenerate_context()` from `workstack.core.context`:
+Use `regenerate_context()` from `erk.core.context`:
 
 ```python
-from workstack.core.context import regenerate_context
+from erk.core.context import regenerate_context
 
 # After os.chdir()
 os.chdir(new_directory)
@@ -498,7 +498,7 @@ if removed_current_worktree:
 - `user_output()` - Routes to stderr for user-facing messages
 - `machine_output()` - Routes to stdout for shell integration data
 
-**Import:** `from workstack.cli.output import user_output, machine_output`
+**Import:** `from erk.cli.output import user_output, machine_output`
 
 **When to use each:**
 
@@ -515,7 +515,7 @@ if removed_current_worktree:
 **Example:**
 
 ```python
-from workstack.cli.output import user_output, machine_output
+from erk.cli.output import user_output, machine_output
 
 # User-facing messages
 user_output(f"✓ Created worktree {name}")
@@ -528,9 +528,9 @@ machine_output(str(activation_path))
 
 **Reference implementations:**
 
-- `src/workstack/cli/commands/sync.py` - Uses custom `_emit()` helper
-- `src/workstack/cli/commands/jump.py` - Uses both user_output() and machine_output()
-- `src/workstack/cli/commands/consolidate.py` - Uses both abstractions
+- `src/erk/cli/commands/sync.py` - Uses custom `_emit()` helper
+- `src/erk/cli/commands/jump.py` - Uses both user_output() and machine_output()
+- `src/erk/cli/commands/consolidate.py` - Uses both abstractions
 
 ### Code Style
 

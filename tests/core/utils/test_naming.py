@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from workstack.core.naming_utils import (
+from erk.core.naming_utils import (
     default_branch_for_worktree,
     ensure_unique_worktree_name,
     extract_trailing_number,

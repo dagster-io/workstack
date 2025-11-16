@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from workstack.core.script_writer import ScriptResult
+from erk.core.script_writer import ScriptResult
 
 
 def test_output_for_shell_integration_routes_to_stdout() -> None:

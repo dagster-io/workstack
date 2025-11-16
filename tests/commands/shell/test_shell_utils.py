@@ -5,7 +5,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from workstack.cli.shell_utils import cleanup_stale_scripts, write_script_to_temp
+from erk.cli.shell_utils import cleanup_stale_scripts, write_script_to_temp
 
 
 def test_write_script_to_temp() -> None:

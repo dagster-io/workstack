@@ -2,9 +2,9 @@
 
 from pathlib import Path
 
+from erk.status.collectors.git import GitStatusCollector
 from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps
-from workstack.status.collectors.git import GitStatusCollector
 
 
 def test_git_status_collector_clean_working_directory(tmp_path: Path) -> None:

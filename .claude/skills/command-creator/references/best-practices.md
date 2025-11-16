@@ -69,7 +69,7 @@ Provide realistic examples, not placeholders like foo/bar.
 
 - "Example: `git commit -m 'Add user authentication with OAuth2'`"
 - "Example: `/submit-stack 'Implement caching for API responses'`"
-- "If error shows: `src/workstack/cli/commands/init.py:45: Type error`"
+- "If error shows: `src/erk/cli/commands/init.py:45: Type error`"
 
 ❌ WRONG:
 

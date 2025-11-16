@@ -7,7 +7,7 @@ in its constructor. Construct instances directly with keyword arguments.
 from pathlib import Path
 from typing import cast
 
-from workstack.core.github_ops import GitHubOps, PRInfo, PRMergeability, PRState, PullRequestInfo
+from erk.core.github_ops import GitHubOps, PRInfo, PRMergeability, PRState, PullRequestInfo
 
 
 class FakeGitHubOps(GitHubOps):

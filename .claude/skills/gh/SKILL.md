@@ -20,7 +20,7 @@ Invoke this skill when users:
 - Request guidance on GitHub automation or scripting
 - Ask about GitHub API access through gh
 - Need help with gh authentication or configuration
-- Request integration patterns between gh, git, and other tools (like workstack)
+- Request integration patterns between gh, git, and other tools (like erk)
 
 ## Core Concepts
 
@@ -55,7 +55,7 @@ This reference contains:
 - Full command reference for PRs, issues, repos, releases, and more
 - Authentication and configuration patterns
 - Workflow patterns for common scenarios
-- Integration details (workstack, git, CI/CD)
+- Integration details (erk, git, CI/CD)
 - GitHub API access patterns
 - Practical examples for daily development
 
@@ -70,7 +70,7 @@ This reference contains:
   - `gh api` - API access patterns
   - `Pattern [0-9]:` - Workflow patterns
   - `Authentication` - Auth setup
-  - `workstack Integration` - Integration with workstack
+  - `erk Integration` - Integration with erk
 
 ## Common Operations
 
@@ -180,15 +180,15 @@ When users need auth or config help:
 
 ## Integration Guidance
 
-### Workstack Integration
+### Erk Integration
 
-When users mention workstack or worktree workflows:
+When users mention erk or worktree workflows:
 
-- Load the Workstack Integration section from `references/gh.md`
+- Load the Erk Integration section from `references/gh.md`
 - Explain how gh detects repos in worktrees
 - Show PR operations across multiple worktrees
 - Guide on using `--repo` flag when needed
-- Reference workstack documentation for worktree-specific patterns
+- Reference erk documentation for worktree-specific patterns
 
 ### Git Integration
 
@@ -329,7 +329,7 @@ When users ask "what can gh do?":
 - `gh.md` - Comprehensive GitHub CLI mental model and command reference (~1480 lines)
   - Load for all standard gh command guidance
   - Full workflow patterns and examples
-  - Integration patterns (workstack, git, CI/CD)
+  - Integration patterns (erk, git, CI/CD)
 
 - `graphql.md` - GitHub GraphQL API comprehensive guide (~1000 lines)
   - Load when porcelain commands are insufficient

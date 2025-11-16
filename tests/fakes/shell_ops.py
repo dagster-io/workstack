@@ -6,7 +6,7 @@ requiring specific shell configurations or installed tools.
 
 from pathlib import Path
 
-from workstack.core.shell_ops import ShellOps
+from erk.core.shell_ops import ShellOps
 
 
 class FakeShellOps(ShellOps):

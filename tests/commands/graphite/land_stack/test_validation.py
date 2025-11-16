@@ -4,17 +4,17 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
+from erk.cli.cli import cli
+from erk.core.context import WorkstackContext
+from erk.core.github_ops import PullRequestInfo
+from erk.core.gitops import WorktreeInfo
+from erk.core.global_config import GlobalConfig
+from erk.core.graphite_ops import BranchMetadata
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from tests.test_utils.env_helpers import pure_workstack_env
-from workstack.cli.cli import cli
-from workstack.core.context import WorkstackContext
-from workstack.core.github_ops import PullRequestInfo
-from workstack.core.gitops import WorktreeInfo
-from workstack.core.global_config import GlobalConfig
-from workstack.core.graphite_ops import BranchMetadata
 
 
 def test_land_stack_requires_graphite() -> None:

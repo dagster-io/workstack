@@ -8,12 +8,12 @@ from pathlib import Path
 
 import pytest
 
-from workstack.core.consolidation_utils import (
+from erk.core.consolidation_utils import (
     calculate_stack_range,
     create_consolidation_plan,
     identify_removable_worktrees,
 )
-from workstack.core.gitops import WorktreeInfo
+from erk.core.gitops import WorktreeInfo
 
 # Tests for calculate_stack_range function
 

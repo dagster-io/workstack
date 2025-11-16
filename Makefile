@@ -26,41 +26,41 @@ upgrade-pyright:
 
 # === Package-specific test targets ===
 
-test-workstack-dev:
-	cd packages/workstack-dev && uv run pytest -n auto
+test-erk-dev:
+	cd packages/erk-dev && uv run pytest -n auto
 
 test-dot-agent-kit:
 	cd packages/dot-agent-kit && uv run pytest -n auto
 
-# === Workstack test targets ===
+# === Erk test targets ===
 
 # Unit tests: Fast, in-memory tests using fakes (tests/unit/, tests/commands/, tests/core/)
 # These provide quick feedback for development iteration
-test-unit-workstack:
+test-unit-erk:
 	uv run pytest tests/unit/ tests/commands/ tests/core/ -n auto
 
 # Integration tests: Slower tests with real I/O and subprocess calls (tests/integration/)
 # These verify that abstraction layers correctly wrap external tools
-test-integration-workstack:
+test-integration-erk:
 	uv run pytest tests/integration/ -n auto
 
-# All workstack tests (unit + integration)
-test-all-workstack: test-unit-workstack test-integration-workstack
+# All erk tests (unit + integration)
+test-all-erk: test-unit-erk test-integration-erk
 
-# Backward compatibility: test-workstack now runs unit tests only
-test-workstack: test-unit-workstack
+# Backward compatibility: test-erk now runs unit tests only
+test-erk: test-unit-erk
 
 # === Combined test targets ===
 
 # Default 'make test': Run unit tests only (fast feedback loop for development)
-# Includes: workstack unit tests + all workstack-dev tests + all dot-agent-kit tests
-test: test-unit-workstack test-workstack-dev test-dot-agent-kit
+# Includes: erk unit tests + all erk-dev tests + all dot-agent-kit tests
+test: test-unit-erk test-erk-dev test-dot-agent-kit
 
 # Integration tests: Run only integration tests across all packages
-test-integration: test-integration-workstack
+test-integration: test-integration-erk
 
 # All tests: Run both unit and integration tests (comprehensive validation)
-test-all: test-all-workstack test-workstack-dev test-dot-agent-kit
+test-all: test-all-erk test-erk-dev test-dot-agent-kit
 
 check:
 	uv run dot-agent check
@@ -86,12 +86,12 @@ all-ci: lint format-check prettier-check md-check pyright test-all check
 clean:
 	rm -rf dist/*.whl dist/*.tar.gz
 
-# Build workstack and dot-agent-kit packages
+# Build erk and dot-agent-kit packages
 build: clean
 	uv build --package dot-agent-kit -o dist
-	uv build --package workstack -o dist
+	uv build --package erk -o dist
 
 # Publish packages to PyPI
-# Use workstack-dev publish-to-pypi command instead (recommended)
+# Use erk-dev publish-to-pypi command instead (recommended)
 publish: build
-	workstack-dev publish-to-pypi
+	erk-dev publish-to-pypi

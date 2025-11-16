@@ -1,10 +1,10 @@
 # Kit Development Workflow
 
-Guide for workstack repository developers editing bundled kits.
+Guide for erk repository developers editing bundled kits.
 
 ## Overview
 
-This document describes the workflow for editing kit files that are bundled with dot-agent-kit. This workflow is **only relevant for developers working in the workstack repository** who are modifying the kits in `packages/dot-agent-kit/src/dot_agent_kit/data/kits/`.
+This document describes the workflow for editing kit files that are bundled with dot-agent-kit. This workflow is **only relevant for developers working in the erk repository** who are modifying the kits in `packages/dot-agent-kit/src/dot_agent_kit/data/kits/`.
 
 For creating new kits from scratch, see [README.md](README.md).
 
@@ -22,11 +22,11 @@ For creating new kits from scratch, see [README.md](README.md).
 
 ## The Development Workflow
 
-When editing bundled kits in the workstack repository, follow this symlink-based workflow:
+When editing bundled kits in the erk repository, follow this symlink-based workflow:
 
 ### 1. Enable Dev Mode (One-Time Setup)
 
-Add the following to your `pyproject.toml` in the workstack repository root:
+Add the following to your `pyproject.toml` in the erk repository root:
 
 ```toml
 [tool.dot-agent]
@@ -192,11 +192,11 @@ This reverts to copying files instead of creating symlinks.
 
 ## When This Workflow Matters
 
-This workflow is **only necessary for workstack repository developers** editing bundled kits.
+This workflow is **only necessary for erk repository developers** editing bundled kits.
 
 **You need this workflow if:**
 
-- You're working in the workstack repository
+- You're working in the erk repository
 - You're editing kits in `packages/dot-agent-kit/src/dot_agent_kit/data/kits/`
 - You're modifying bundled skills, agents, or commands
 
@@ -258,4 +258,4 @@ See [docs/KIT_CLI_COMMANDS.md](docs/KIT_CLI_COMMANDS.md) for:
 - [README.md](README.md) - Kit structure and creation guide
 - [docs/HOOKS.md](docs/HOOKS.md) - Hook development and configuration guide
 - [docs/KIT_CLI_COMMANDS.md](docs/KIT_CLI_COMMANDS.md) - Kit CLI command development guide
-- [../../docs/WORKSTACK_DEV.md](../../docs/WORKSTACK_DEV.md) - workstack-dev CLI architecture
+- [../../docs/WORKSTACK_DEV.md](../../docs/WORKSTACK_DEV.md) - erk-dev CLI architecture

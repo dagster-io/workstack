@@ -2,7 +2,7 @@
 
 ## Overview
 
-Tests for the `workstack sync` command, which synchronizes Graphite stacks
+Tests for the `erk sync` command, which synchronizes Graphite stacks
 and manages worktree navigation.
 
 ## Command Responsibilities
@@ -21,8 +21,8 @@ from click.testing import CliRunner
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.global_config_ops import FakeGlobalConfigOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
-from workstack.cli.cli import cli
-from workstack.core.context import WorkstackContext
+from erk.cli.cli import cli
+from erk.core.context import ErkContext
 
 def test_sync_command() -> None:
     runner = CliRunner()
@@ -32,7 +32,7 @@ def test_sync_command() -> None:
         git_ops = FakeGitOps(git_common_dirs={cwd: cwd / ".git"})
         config_ops = FakeGlobalConfigOps(use_graphite=True, ...)
 
-        ctx = WorkstackContext(
+        ctx = ErkContext(
             git_ops=git_ops,
             global_config_ops=config_ops,
             graphite_ops=FakeGraphiteOps(),

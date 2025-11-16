@@ -12,13 +12,13 @@ This file trusts that unit layer and only tests CLI integration.
 import pytest
 from click.testing import CliRunner
 
+from erk.cli.cli import cli
+from erk.core.gitops import WorktreeInfo
+from erk.core.graphite_ops import BranchMetadata
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.test_utils.env_helpers import pure_workstack_env
 from tests.test_utils.output_helpers import strip_ansi
-from workstack.cli.cli import cli
-from workstack.core.gitops import WorktreeInfo
-from workstack.core.graphite_ops import BranchMetadata
 
 
 @pytest.mark.parametrize("trunk_branch", ["main", "master"])

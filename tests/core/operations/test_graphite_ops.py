@@ -1,9 +1,9 @@
 """Tests for GraphiteOps helper methods."""
 
+from erk.core.branch_metadata import BranchMetadata
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.test_utils import sentinel_path
-from workstack.core.branch_metadata import BranchMetadata
 
 
 def test_fake_graphite_ops_initialization() -> None:

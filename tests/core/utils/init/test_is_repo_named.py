@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from workstack.core.init_utils import is_repo_named
+from erk.core.init_utils import is_repo_named
 
 
 def test_returns_true_for_matching_name(tmp_path: Path) -> None:

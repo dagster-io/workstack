@@ -12,7 +12,7 @@ import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from workstack.core.shell_ops import RealShellOps
+from erk.core.shell_ops import RealShellOps
 
 
 def test_real_shell_ops_detect_shell_with_current_environment():
@@ -73,7 +73,7 @@ def test_real_shell_ops_run_workstack_sync_calls_subprocess():
     repo_root = Path("/test/repo")
 
     # Mock subprocess.run to verify the call without actually running workstack
-    with patch("workstack.core.shell_ops.subprocess.run") as mock_run:
+    with patch("erk.core.shell_ops.subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(returncode=0)
 
         # Call with force=True, verbose=False
@@ -100,7 +100,7 @@ def test_real_shell_ops_run_workstack_sync_verbose_mode():
     ops = RealShellOps()
     repo_root = Path("/test/repo")
 
-    with patch("workstack.core.shell_ops.subprocess.run") as mock_run:
+    with patch("erk.core.shell_ops.subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(returncode=0)
 
         # Call with force=True, verbose=True
@@ -121,7 +121,7 @@ def test_real_shell_ops_run_workstack_sync_without_force():
     ops = RealShellOps()
     repo_root = Path("/test/repo")
 
-    with patch("workstack.core.shell_ops.subprocess.run") as mock_run:
+    with patch("erk.core.shell_ops.subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(returncode=0)
 
         # Call with force=False
@@ -139,7 +139,7 @@ def test_real_shell_ops_run_workstack_sync_propagates_error():
     ops = RealShellOps()
     repo_root = Path("/test/repo")
 
-    with patch("workstack.core.shell_ops.subprocess.run") as mock_run:
+    with patch("erk.core.shell_ops.subprocess.run") as mock_run:
         # Simulate subprocess failure
         mock_run.side_effect = subprocess.CalledProcessError(
             returncode=1,

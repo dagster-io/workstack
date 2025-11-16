@@ -11,7 +11,7 @@ to follow proper test layer discipline.
 
 from pathlib import Path
 
-from workstack.core.tree_utils import (
+from erk.core.tree_utils import (
     BranchGraph,
     TreeNode,
     WorktreeMapping,

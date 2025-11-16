@@ -5,12 +5,12 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
+from erk.cli.commands.prepare_cwd_recovery import prepare_cwd_recovery_cmd
+from erk.core.context import WorkstackContext
+from erk.core.global_config import GlobalConfig
 from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.script_writer import FakeScriptWriterOps
-from workstack.cli.commands.prepare_cwd_recovery import prepare_cwd_recovery_cmd
-from workstack.core.context import WorkstackContext
-from workstack.core.global_config import GlobalConfig
 
 
 def build_ctx(

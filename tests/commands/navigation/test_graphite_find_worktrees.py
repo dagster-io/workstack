@@ -2,15 +2,15 @@
 
 from pathlib import Path
 
+from erk.cli.graphite import find_worktrees_containing_branch
+from erk.core.context import WorkstackContext
+from erk.core.gitops import WorktreeInfo, find_worktree_for_branch
+from erk.core.global_config import GlobalConfig
+from erk.core.graphite_ops import RealGraphiteOps
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.shell_ops import FakeShellOps
 from tests.test_utils.graphite_helpers import setup_graphite_stack
-from workstack.cli.graphite import find_worktrees_containing_branch
-from workstack.core.context import WorkstackContext
-from workstack.core.gitops import WorktreeInfo, find_worktree_for_branch
-from workstack.core.global_config import GlobalConfig
-from workstack.core.graphite_ops import RealGraphiteOps
 
 
 def test_find_worktrees_containing_branch_no_match(tmp_path: Path) -> None:

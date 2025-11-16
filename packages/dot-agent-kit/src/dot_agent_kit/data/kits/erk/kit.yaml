@@ -1,0 +1,11 @@
+name: erk
+version: 0.1.0
+description: Erk implementation workflow commands for creating worktrees from plans (.PLAN.md) and executing implementation. Includes commands for plan creation, execution, and quick access.
+license: MIT
+artifacts:
+  command:
+    - commands/erk/persist-plan.md
+    - commands/erk/create-planned-stack.md
+    - commands/erk/implement-plan.md
+  doc:
+    - docs/erk/EXAMPLES.md

@@ -22,13 +22,13 @@ from unittest import mock
 
 from click.testing import CliRunner
 
+from erk.cli.cli import cli
+from erk.core.global_config import GlobalConfig, InMemoryGlobalConfigOps
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from tests.test_utils.env_helpers import simulated_workstack_env
-from workstack.cli.cli import cli
-from workstack.core.global_config import GlobalConfig, InMemoryGlobalConfigOps
 
 
 def test_init_creates_global_config_first_time() -> None:
@@ -925,8 +925,8 @@ def test_init_prints_wrapper_instructions() -> None:
         assert result.exit_code == 0, result.output
         # Verify wrapper instructions are printed
         assert "Shell Integration Setup" in result.output
-        assert "# Workstack shell integration" in result.output
-        assert "workstack()" in result.output
+        assert "# Erk shell integration" in result.output
+        assert "erk()" in result.output
 
 
 def test_init_skips_shell_if_declined() -> None:

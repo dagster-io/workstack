@@ -113,7 +113,7 @@ All matched files use Prettier code style!
 ```
 Checking formatting...
 .claude/agents/runner.md
-src/workstack/config.py
+src/erk/config.py
 tests/test_paths.py
 Code style issues found in 3 files. Run Prettier with --write to fix.
 ```
@@ -128,7 +128,7 @@ Code style issues found in 3 files. Run Prettier with --write to fix.
 
 ```
 .claude/agents/runner.md 123ms
-src/workstack/config.py 45ms
+src/erk/config.py 45ms
 tests/test_paths.py 67ms
 ```
 
@@ -153,7 +153,7 @@ All matched files use Prettier code style!
 
 ```
 .claude/agents/runner.md
-src/workstack/config.py
+src/erk/config.py
 tests/test_paths.py
 ```
 

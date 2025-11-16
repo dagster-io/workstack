@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-from workstack.core.gitops import WorktreeInfo
-from workstack.core.worktree_utils import find_current_worktree
+from erk.core.gitops import WorktreeInfo
+from erk.core.worktree_utils import find_current_worktree
 
 
 def test_finds_current_worktree() -> None:

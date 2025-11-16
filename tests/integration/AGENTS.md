@@ -71,7 +71,7 @@ def test_real_filesystem_io(tmp_path: Path) -> None:
 
     # Write real config file
     config_file = tmp_path / "config.toml"
-    config_file.write_text("[workstack]\nroot = /tmp/ws\n")
+    config_file.write_text("[erk]\nroot = /tmp/ws\n")
 
     # Load and verify
     config = config_ops.load_from_path(config_file)

@@ -60,7 +60,7 @@ git add tests/commands/
 
 ```bash
 # Convert to factory method
-sed -i '' 's/WorkstackContext(/WorkstackContext.for_test(/g' tests/commands/**/*.py
+sed -i '' 's/ErkContext(/ErkContext.for_test(/g' tests/commands/**/*.py
 git add tests/commands/
 ```
 
@@ -92,12 +92,12 @@ git rebase --continue
 
 ## Critical Knowledge
 
-### WorkstackContext API Evolution
+### ErkContext API Evolution
 
 **OLD API** (❌ Don't use):
 
 ```python
-test_ctx = WorkstackContext(
+test_ctx = ErkContext(
     git_ops=git_ops,
     global_config_ops=global_config_ops,  # ❌ Wrong parameter name
     cwd=Path("/test/default/cwd"),        # ❌ Hardcoded path
@@ -107,7 +107,7 @@ test_ctx = WorkstackContext(
 **NEW API** (✅ Use this):
 
 ```python
-test_ctx = WorkstackContext.for_test(  # ✅ Factory method
+test_ctx = ErkContext.for_test(  # ✅ Factory method
     git_ops=git_ops,
     global_config=global_config,        # ✅ Renamed parameter
     cwd=env.cwd,                        # ✅ Actual environment path
@@ -123,20 +123,20 @@ test_ctx = WorkstackContext.for_test(  # ✅ Factory method
 
 ### Test Environment Patterns
 
-#### Pattern 1: simulated_workstack_env (Preferred)
+#### Pattern 1: simulated_erk_env (Preferred)
 
 ```python
-from tests.test_utils.env_helpers import simulated_workstack_env
+from tests.test_utils.env_helpers import simulated_erk_env
 
 def test_something() -> None:
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        # env provides: cwd, git_dir, root_worktree, workstacks_root
+    with simulated_erk_env(runner) as env:
+        # env provides: cwd, git_dir, root_worktree, erks_root
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        global_config = GlobalConfig(workstacks_root=env.workstacks_root, ...)
+        global_config = GlobalConfig(erks_root=env.erks_root, ...)
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config,
             cwd=env.cwd,  # ✅ Use env.cwd
@@ -156,9 +156,9 @@ def test_something() -> None:
         git_dir.mkdir()
 
         git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
-        global_config = GlobalConfig(workstacks_root=cwd / "workstacks", ...)
+        global_config = GlobalConfig(erks_root=cwd / "erks", ...)
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config,
             cwd=cwd,  # ✅ Use local cwd variable
@@ -171,21 +171,21 @@ def test_something() -> None:
 
 ```python
 # ❌ WRONG - Hardcoded path breaks in CI
-test_ctx = WorkstackContext.for_test(
+test_ctx = ErkContext.for_test(
     cwd=Path("/test/default/cwd"),  # This path doesn't exist!
     ...
 )
 ```
 
-### SimulatedWorkstackEnv Requirements
+### SimulatedErkEnv Requirements
 
-If you encounter a **local** `SimulatedWorkstackEnv` class (defined in the test file, not imported):
+If you encounter a **local** `SimulatedErkEnv` class (defined in the test file, not imported):
 
 ```python
-class SimulatedWorkstackEnv:
-    def __init__(self, root_worktree: Path, workstacks_root: Path) -> None:
+class SimulatedErkEnv:
+    def __init__(self, root_worktree: Path, erks_root: Path) -> None:
         self.root_worktree = root_worktree
-        self.workstacks_root = workstacks_root
+        self.erks_root = erks_root
         self.cwd = root_worktree  # ✅ Must have this attribute
         self._linked_worktrees: dict[str, Path] = {}
 
@@ -204,7 +204,7 @@ class SimulatedWorkstackEnv:
 ### BranchMetadata API
 
 ```python
-from workstack.core.graphite_ops import BranchMetadata
+from erk.core.graphite_ops import BranchMetadata
 
 # ✅ Trunk branch
 metadata = BranchMetadata.trunk(
@@ -237,7 +237,7 @@ github_ops = FakeGitHubOps(
 
 ## Troubleshooting
 
-### ImportError: cannot import name 'simulated_workstack_env'
+### ImportError: cannot import name 'simulated_erk_env'
 
 **Cause**: File `tests/test_utils/env_helpers.py` doesn't exist
 
@@ -252,14 +252,14 @@ git add tests/test_utils/env_helpers.py
 
 ---
 
-### TypeError: WorkstackContext.**init**() missing 3 required positional arguments
+### TypeError: ErkContext.**init**() missing 3 required positional arguments
 
 **Cause**: Direct constructor call instead of factory method
 
 **Solution**:
 
 ```bash
-sed -i '' 's/WorkstackContext(/WorkstackContext.for_test(/g' tests/commands/**/*.py
+sed -i '' 's/ErkContext(/ErkContext.for_test(/g' tests/commands/**/*.py
 git add tests/commands/
 ```
 
@@ -284,14 +284,14 @@ git add tests/commands/
 
 **Solution**:
 
-In `simulated_workstack_env`:
+In `simulated_erk_env`:
 
 ```python
 # ❌ WRONG
 cwd=Path("/test/default/cwd")
 
 # ✅ RIGHT
-with simulated_workstack_env(runner) as env:
+with simulated_erk_env(runner) as env:
     cwd=env.cwd
 ```
 
@@ -309,17 +309,17 @@ with runner.isolated_filesystem():
 
 ---
 
-### AttributeError: 'SimulatedWorkstackEnv' object has no attribute 'cwd'
+### AttributeError: 'SimulatedErkEnv' object has no attribute 'cwd'
 
-**Cause**: Local `SimulatedWorkstackEnv` class missing `cwd` attribute
+**Cause**: Local `SimulatedErkEnv` class missing `cwd` attribute
 
 **Solution**:
 
 ```python
-class SimulatedWorkstackEnv:
-    def __init__(self, root_worktree: Path, workstacks_root: Path) -> None:
+class SimulatedErkEnv:
+    def __init__(self, root_worktree: Path, erks_root: Path) -> None:
         self.root_worktree = root_worktree
-        self.workstacks_root = workstacks_root
+        self.erks_root = erks_root
         self.cwd = root_worktree  # ✅ Add this line
 
     def create_linked_worktree(self, name: str, branch: str, *, chdir: bool) -> Path:
@@ -329,7 +329,7 @@ class SimulatedWorkstackEnv:
             self.cwd = linked_wt  # ✅ Add this line
 ```
 
-**Better**: Use centralized `tests.test_utils.env_helpers.simulated_workstack_env` instead
+**Better**: Use centralized `tests.test_utils.env_helpers.simulated_erk_env` instead
 
 ---
 
@@ -360,7 +360,7 @@ github_ops = FakeGitHubOps(pr_statuses={"feat": ("OPEN", 123, "Title")})
 
 ```python
 # Instead of checking exact message:
-assert "Workstacks safe to delete:" in result.output  # ❌ Brittle
+assert "Erks safe to delete:" in result.output  # ❌ Brittle
 
 # Check for content/behavior:
 assert "feature-1" in result.output  # ✅ More resilient
@@ -431,7 +431,7 @@ def fix_test_file(filepath: Path) -> None:
 
     for line in lines:
         # Track context
-        if 'simulated_workstack_env(runner)' in line:
+        if 'simulated_erk_env(runner)' in line:
             in_simulated_env = True
             in_isolated_fs = False
         elif 'runner.isolated_filesystem()' in line:
@@ -456,17 +456,17 @@ fix_test_file(Path('tests/commands/graphite/test_land_stack.py'))
 
 - **`tests/test_utils/env_helpers.py`**
   - Centralized simulated environment helper
-  - Provides `simulated_workstack_env()` context manager
+  - Provides `simulated_erk_env()` context manager
   - Added in commit `c6516290`
 
 - **`tests/test_utils/builders.py`**
   - Test data builders (GraphiteCacheBuilder, PullRequestInfoBuilder, etc.)
 
-- **`src/workstack/core/context.py`**
-  - `WorkstackContext` class
-  - `WorkstackContext.for_test()` factory method
+- **`src/erk/core/context.py`**
+  - `ErkContext` class
+  - `ErkContext.for_test()` factory method
 
-- **`src/workstack/core/branch_metadata.py`**
+- **`src/erk/core/branch_metadata.py`**
   - `BranchMetadata` class
   - Factory methods: `.trunk()`, `.branch()`
 
@@ -474,7 +474,7 @@ fix_test_file(Path('tests/commands/graphite/test_land_stack.py'))
 
 - **`GlobalConfig`** - Global configuration (not `GlobalConfigOps`)
 - **`LoadedConfig`** - Repository-specific configuration
-- **`RepoContext`** - Repository context (root, name, workstacks_dir)
+- **`RepoContext`** - Repository context (root, name, erks_dir)
 
 ## Dependency Chain
 
@@ -529,9 +529,9 @@ dfead85f - Migrates tests to use env_helpers.py
 
 ### When Writing Tests
 
-1. **Always use factory methods**: `WorkstackContext.for_test()`
+1. **Always use factory methods**: `ErkContext.for_test()`
 2. **Never hardcode paths**: Use `env.cwd` or `Path.cwd()`
-3. **Import from centralized helpers**: Don't create local `SimulatedWorkstackEnv`
+3. **Import from centralized helpers**: Don't create local `SimulatedErkEnv`
 4. **Check parameter names**: Match current API (use IDE autocomplete)
 5. **Test for behavior, not exact output**: Content over formatting
 
@@ -561,7 +561,7 @@ dfead85f - Migrates tests to use env_helpers.py
 **Most valuable discoveries**:
 
 1. Dependency extraction from parent commits (saved 20 min)
-2. WorkstackContext evolution guide (saved 30 min)
+2. ErkContext evolution guide (saved 30 min)
 3. Test environment patterns reference (saved 45 min)
 
 ---

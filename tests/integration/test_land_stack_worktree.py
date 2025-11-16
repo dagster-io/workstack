@@ -10,14 +10,14 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
+from erk.cli.cli import cli
+from erk.core.branch_metadata import BranchMetadata
+from erk.core.context import WorkstackContext
+from erk.core.gitops import RealGitOps
+from erk.core.global_config import GlobalConfig
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
-from workstack.cli.cli import cli
-from workstack.core.branch_metadata import BranchMetadata
-from workstack.core.context import WorkstackContext
-from workstack.core.gitops import RealGitOps
-from workstack.core.global_config import GlobalConfig
 
 
 def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> None:

@@ -6,10 +6,10 @@ in its constructor. Construct instances directly with keyword arguments.
 
 from pathlib import Path
 
-from workstack.core.branch_metadata import BranchMetadata
-from workstack.core.github_ops import PullRequestInfo
-from workstack.core.gitops import GitOps
-from workstack.core.graphite_ops import GraphiteOps
+from erk.core.branch_metadata import BranchMetadata
+from erk.core.github_ops import PullRequestInfo
+from erk.core.gitops import GitOps
+from erk.core.graphite_ops import GraphiteOps
 
 
 class FakeGraphiteOps(GraphiteOps):

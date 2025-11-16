@@ -2,12 +2,12 @@
 
 from pathlib import Path
 
+from erk.cli.commands.prepare_cwd_recovery import generate_recovery_script
+from erk.core.context import WorkstackContext
+from erk.core.global_config import GlobalConfig
+from erk.core.script_writer import RealScriptWriterOps
 from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps
-from workstack.cli.commands.prepare_cwd_recovery import generate_recovery_script
-from workstack.core.context import WorkstackContext
-from workstack.core.global_config import GlobalConfig
-from workstack.core.script_writer import RealScriptWriterOps
 
 
 def build_ctx(

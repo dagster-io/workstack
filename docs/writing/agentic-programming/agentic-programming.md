@@ -58,9 +58,9 @@ Key terminology used throughout this document. For detailed explanations, see th
 
 **Token Efficiency** - Optimizing information architecture to maximize useful content within context limits.
 
-**Worktree** - Git feature enabling multiple working directories from one repository. See [Parallel Development](#parallel-development-with-worktrees-and-workstack).
+**Worktree** - Git feature enabling multiple working directories from one repository. See [Parallel Development](#parallel-development-with-worktrees-and-erk).
 
-**Workstack** - Orchestration tool providing simplified worktree lifecycle management, standardized conventions, and automatic plan document integration for parallel agentic development. See [Parallel Development](#parallel-development-with-worktrees-and-workstack).
+**Erk** - Orchestration tool providing simplified worktree lifecycle management, standardized conventions, and automatic plan document integration for parallel agentic development. See [Parallel Development](#parallel-development-with-worktrees-and-erk).
 
 ---
 
@@ -78,7 +78,7 @@ Key terminology used throughout this document. For detailed explanations, see th
 
 5. [Advanced: Custom Tooling](#advanced-custom-tooling) - Custom development tools that amplify agentic programming capabilities:
    - [Dev-Only CLIs: Flat Script Architecture](#dev-only-clis-flat-script-architecture) - Build development CLIs as collections of self-contained PEP 723 scripts for maximum agent compatibility.
-   - [Parallel Development with Worktrees and Workstack](#parallel-development-with-worktrees-and-workstack) - Enable parallel agentic sessions using Git worktrees and plan-based development workflows.
+   - [Parallel Development with Worktrees and Erk](#parallel-development-with-worktrees-and-erk) - Enable parallel agentic sessions using Git worktrees and plan-based development workflows.
 
 6. [Test Architecture: Coarse-Grained Dependency Injection](#test-architecture-coarse-grained-dependency-injection) - Structure tests using injectable dependencies with stateful fakes for efficient agent test authoring and fast feedback loops.
 
@@ -580,9 +580,9 @@ def command(region: str, dry_run: bool) -> None:
     """Deploy application to AWS.
 
     Examples:
-        workstack-dev deploy-aws
-        workstack-dev deploy-aws --region us-west-2
-        workstack-dev deploy-aws --dry-run
+        erk-dev deploy-aws
+        erk-dev deploy-aws --region us-west-2
+        erk-dev deploy-aws --dry-run
     """
     script_path = Path(__file__).parent / "script.py"
 
@@ -616,9 +616,9 @@ def command(region: str, dry_run: bool) -> None:
 
 The `command.py` file merely defines the CLI interface and delegates to `script.py`. All logic lives in the script, maintaining complete independence.
 
-#### Practical Example: workstack-dev
+#### Practical Example: erk-dev
 
-The `workstack-dev` CLI demonstrates this pattern effectively. Each developer tool is a standalone script:
+The `erk-dev` CLI demonstrates this pattern effectively. Each developer tool is a standalone script:
 
 - **codex-review**: Performs AI-powered code review with Graphite integration
 - **clean-cache**: Removes temporary files and caches
@@ -737,7 +737,7 @@ def validate_azure_credentials(): ...
 
 The moment you create shared utilities, you couple the scripts together. Future changes must consider all consumers. Agents must load multiple files. The simplicity that makes the pattern valuable disappears. Resist the urge to abstract until the duplication genuinely hurts maintainability—and even then, question whether the pain justifies the complexity.
 
-### Parallel Development with Worktrees and Workstack
+### Parallel Development with Worktrees and Erk
 
 #### Core Principle
 
@@ -749,27 +749,27 @@ Git worktrees solve a fundamental problem in parallel development: the need for 
 
 Each worktree provides a complete, independent working directory. Agents operating in different worktrees can work simultaneously without conflicts, check out different branches independently, and maintain separate build states and dependencies. Since agents are stateless between sessions, each worktree becomes a persistent workspace for a specific task. An agent can return to its worktree and resume work without needing to understand the state of other parallel efforts.
 
-#### Workstack: Orchestrating Parallel Development
+#### Erk: Orchestrating Parallel Development
 
-While Git provides worktree functionality natively through commands like `git worktree add`, managing multiple worktrees for parallel development introduces complexity. Workstack provides an orchestration layer that simplifies worktree lifecycle management, standardizes naming and organization conventions, and integrates planning documents with worktrees automatically.
+While Git provides worktree functionality natively through commands like `git worktree add`, managing multiple worktrees for parallel development introduces complexity. Erk provides an orchestration layer that simplifies worktree lifecycle management, standardizes naming and organization conventions, and integrates planning documents with worktrees automatically.
 
-The tool addresses specific pain points in parallel development: tracking which worktree corresponds to which feature, maintaining consistent branch naming across worktrees, and ensuring plan documents are available in the working directory. By providing consistent commands and conventions, Workstack ensures that agents can reliably create, navigate, and manage parallel development environments.
+The tool addresses specific pain points in parallel development: tracking which worktree corresponds to which feature, maintaining consistent branch naming across worktrees, and ensuring plan documents are available in the working directory. By providing consistent commands and conventions, Erk ensures that agents can reliably create, navigate, and manage parallel development environments.
 
 #### Key Pattern: Plan-Based Development
 
-Parallel agent work requires comprehensive planning. Without detailed plans, agents cannot operate autonomously for extended periods. Plan-based development creates a contract between the human architect and the executing agents. When you use `workstack create --plan`, the tool automatically copies your plan document into the worktree as `.PLAN.md`. This file is gitignored but remains accessible to agents and tools, providing immediate context for the task at hand.
+Parallel agent work requires comprehensive planning. Without detailed plans, agents cannot operate autonomously for extended periods. Plan-based development creates a contract between the human architect and the executing agents. When you use `erk create --plan`, the tool automatically copies your plan document into the worktree as `.PLAN.md`. This file is gitignored but remains accessible to agents and tools, providing immediate context for the task at hand.
 
-#### Workstack Best Practices
+#### Erk Best Practices
 
 ##### Keep the Root Repository Clean
 
-When using this planning workflow in workstack, the root repository should never have direct commits. It serves as the coordination point and planning center. This approach prevents conflicts between planning and execution, maintains a clean workspace for creating new plans, and ensures the root always reflects the main branch state.
+When using this planning workflow in erk, the root repository should never have direct commits. It serves as the coordination point and planning center. This approach prevents conflicts between planning and execution, maintains a clean workspace for creating new plans, and ensures the root always reflects the main branch state.
 
 ```bash
 # Create plans in root, execute in worktrees
 cd ~/repository/main
 echo "Implementation plan..." > plans/new-feature.md
-workstack create --plan plans/new-feature.md new-feature
+erk create --plan plans/new-feature.md new-feature
 
 # It's best to avoid making changes directly in root
 # Prefer not to checkout branches or edit files in the root directory
@@ -781,10 +781,10 @@ Plan files serve as executable specifications for agents containing clear succes
 
 ##### Leverage Plan-Based Worktree Creation
 
-Workstack's `--plan` flag automates the workflow of creating a worktree with embedded context:
+Erk's `--plan` flag automates the workflow of creating a worktree with embedded context:
 
 ```bash
-workstack create --plan plans/auth-feature.md auth-feature
+erk create --plan plans/auth-feature.md auth-feature
 ```
 
 This command creates a new worktree for the feature, copies the plan to `.PLAN.md` in the worktree, checks out a new branch, and provides agents with immediate context. The `.PLAN.md` file is gitignored but accessible to tools, allowing agents to understand their mission without additional context.
@@ -804,9 +804,9 @@ echo "API v2 migration plan..." > plans/api-v2.md
 echo "Performance optimization plan..." > plans/perf-opt.md
 
 # Create worktrees with embedded plans
-workstack create --plan plans/user-auth.md user-auth
-workstack create --plan plans/api-v2.md api-v2
-workstack create --plan plans/perf-opt.md perf-opt
+erk create --plan plans/user-auth.md user-auth
+erk create --plan plans/api-v2.md api-v2
+erk create --plan plans/perf-opt.md perf-opt
 
 # Three agents can now work in parallel
 # Agent 1: cd user-auth && implement based on .PLAN.md
@@ -822,10 +822,10 @@ Worktrees should be treated as temporary workspaces. Once a feature is merged, r
 
 ```bash
 # After merging the authentication feature
-workstack remove user-auth
+erk remove user-auth
 
 # List active worktrees to review parallel work
-workstack list
+erk list
 ```
 
 This lifecycle management prevents accumulation of stale worktrees and maintains clarity about active development efforts.

@@ -1,6 +1,6 @@
-# Workstack Glossary
+# Erk Glossary
 
-Definitive terminology reference for the workstack project.
+Definitive terminology reference for the erk project.
 
 **Purpose**: Eliminate confusion about domain-specific terms. When in doubt about terminology, consult this document.
 
@@ -20,23 +20,23 @@ Git's native feature for creating additional working directories for a repositor
 git worktree add ../feature-branch feature-branch
 ```
 
-### Workstack
+### Erk
 
-A **managed worktree** created and maintained by the workstack tool.
+A **managed worktree** created and maintained by the erk tool.
 
 **Distinction from worktree**:
 
 - **Worktree** = git's feature (any directory managed by git worktree)
-- **Workstack** = worktree + configuration + environment setup + lifecycle management
+- **Erk** = worktree + configuration + environment setup + lifecycle management
 
 **Features**:
 
-- Stored in standardized location (`~/worktrees/<repo>/<name>`)
+- Stored in standardized location (`~/erks/<repo>/<name>`)
 - Automatic `.env` file generation
 - Post-creation hook execution
 - Integration with graphite/GitHub
 
-**Example**: `workstack create my-feature` creates both a git worktree and a workstack.
+**Example**: `erk create my-feature` creates both a git worktree and an erk.
 
 ### Repo Root
 
@@ -44,54 +44,54 @@ The main git repository directory containing `.git/` directory.
 
 **Location**: Where you originally cloned the repository.
 
-**Example**: If you cloned to `/Users/you/projects/workstack`, that's the repo root.
+**Example**: If you cloned to `/Users/you/projects/erk`, that's the repo root.
 
 **Note**: In a worktree, `git rev-parse --git-common-dir` points back to the repo root's `.git` directory.
 
-### Workstacks Dir
+### Erks Dir
 
-The directory containing all workstacks for a specific repository.
+The directory containing all erks for a specific repository.
 
-**Path structure**: `{workstacks_root}/{repo_name}/`
+**Path structure**: `{erks_root}/{repo_name}/`
 
-**Example**: If `workstacks_root = ~/worktrees` and repo is named `workstack`, then `workstacks_dir = ~/worktrees/workstack/`
+**Example**: If `erks_root = ~/erks` and repo is named `erk`, then `erks_dir = ~/erks/erk/`
 
 **Contents**:
 
-- Individual workstack directories
+- Individual erk directories
 - `config.toml` (repo-specific configuration)
 
-### Workstacks Root
+### Erks Root
 
-The top-level directory containing all managed repositories' workstack directories.
+The top-level directory containing all managed repositories' erk directories.
 
-**Configuration**: Set in `~/.workstack/config.toml`:
+**Configuration**: Set in `~/.erk/config.toml`:
 
 ```toml
-workstacks_root = "/Users/you/worktrees"
+erks_root = "/Users/you/erks"
 ```
 
 **Structure**:
 
 ```
-~/worktrees/                    ← workstacks root
-  ├── workstack/                ← workstacks dir for "workstack" repo
-  │   ├── feature-a/           ← individual workstack
-  │   ├── feature-b/           ← individual workstack
+~/erks/                    ← erks root
+  ├── erk/                ← erks dir for "erk" repo
+  │   ├── feature-a/           ← individual erk
+  │   ├── feature-b/           ← individual erk
   │   └── config.toml
-  ├── other-project/            ← workstacks dir for another repo
+  ├── other-project/            ← erks dir for another repo
   │   └── ...
 ```
 
 ### Worktree Path
 
-The absolute path to a specific workstack directory.
+The absolute path to a specific erk directory.
 
-**Construction**: `{workstacks_dir}/{worktree_name}`
+**Construction**: `{erks_dir}/{worktree_name}`
 
-**Example**: `~/worktrees/workstack/my-feature/`
+**Example**: `~/erks/erk/my-feature/`
 
-**Code**: `worktree_path_for(repo.workstacks_dir, "my-feature")`
+**Code**: `worktree_path_for(repo.erks_dir, "my-feature")`
 
 ---
 
@@ -132,16 +132,16 @@ See: [Trunk Branch](#trunk-branch)
 
 ### Global Config
 
-Configuration stored in `~/.workstack/config.toml`.
+Configuration stored in `~/.erk/config.toml`.
 
-**Scope**: Applies to all repositories managed by workstack.
+**Scope**: Applies to all repositories managed by erk.
 
-**Location**: `~/.workstack/config.toml`
+**Location**: `~/.erk/config.toml`
 
 **Contents**:
 
 ```toml
-workstacks_root = "/Users/you/worktrees"
+erks_root = "/Users/you/worktrees"
 use_graphite = true
 show_pr_info = true
 shell_setup_complete = true
@@ -151,11 +151,11 @@ shell_setup_complete = true
 
 ### Repo Config
 
-Configuration stored in `{workstacks_dir}/config.toml`.
+Configuration stored in `{erks_dir}/config.toml`.
 
-**Scope**: Applies to all workstacks for a specific repository.
+**Scope**: Applies to all erks for a specific repository.
 
-**Location**: `{workstacks_root}/{repo_name}/config.toml`
+**Location**: `{erks_root}/{repo_name}/config.toml`
 
 **Contents**:
 
@@ -169,7 +169,7 @@ command = ["uv", "sync"]
 working_dir = "."
 ```
 
-**Access**: Via `load_config(workstacks_dir)` function.
+**Access**: Via `load_config(erks_dir)` function.
 
 ---
 
@@ -186,14 +186,14 @@ A frozen dataclass containing repository information.
 class RepoContext:
     root: Path        # Repo root directory
     repo_name: str    # Repository name
-    workstacks_dir: Path    # Workstacks directory for this repo
+    erks_dir: Path    # Erks directory for this repo
 ```
 
 **Creation**: `discover_repo_context(ctx, Path.cwd())`
 
-**File**: `src/workstack/cli/core.py`
+**File**: `src/erk/cli/core.py`
 
-### Workstack Context
+### Erk Context
 
 A frozen dataclass containing all injected dependencies.
 
@@ -201,7 +201,7 @@ A frozen dataclass containing all injected dependencies.
 
 ```python
 @dataclass(frozen=True)
-class WorkstackContext:
+class ErkContext:
     git_ops: GitOps
     global_config_ops: GlobalConfigOps
     github_ops: GitHubOps
@@ -211,11 +211,11 @@ class WorkstackContext:
 
 **Purpose**: Dependency injection container passed to all commands.
 
-**Creation**: `create_context(dry_run=False)` in `src/workstack/core/context.py`
+**Creation**: `create_context(dry_run=False)` in `src/erk/core/context.py`
 
 **Usage**: Commands receive via `@click.pass_obj` decorator.
 
-**File**: `src/workstack/core/context.py`
+**File**: `src/erk/core/context.py`
 
 ---
 
@@ -310,7 +310,7 @@ class DryRunGitOps(GitOps):
 
 A `.plan/` folder containing implementation plans and progress tracking for a feature.
 
-**Usage**: `workstack create --plan my-plan.md my-feature`
+**Usage**: `erk create --plan my-plan.md my-feature`
 
 **Behavior**:
 
@@ -325,7 +325,7 @@ A `.plan/` folder containing implementation plans and progress tracking for a fe
 
 - Separation of concerns: plan content vs progress tracking
 - No risk of corrupting plan while updating progress
-- Progress visible in `workstack status` output
+- Progress visible in `erk status` output
 
 **Example**:
 
@@ -334,10 +334,10 @@ A `.plan/` folder containing implementation plans and progress tracking for a fe
 echo "## Implementation Plan\n1. Step 1\n2. Step 2" > plan.md
 
 # Create worktree from plan
-workstack create --plan plan.md my-feature
+erk create --plan plan.md my-feature
 
 # Plan structure created:
-# ~/worktrees/workstack/my-feature/.plan/
+# ~/erks/erk/my-feature/.plan/
 #   ├── plan.md        (immutable)
 #   └── progress.md    (mutable, with checkboxes)
 ```
@@ -358,8 +358,8 @@ Mode where commands print what they would do without executing destructive opera
 **Example**:
 
 ```bash
-workstack rm my-feature --dry-run
-# Output: [DRY RUN] Would remove worktree: /Users/you/worktrees/workstack/my-feature
+erk rm my-feature --dry-run
+# Output: [DRY RUN] Would remove worktree: /Users/you/worktrees/erk/my-feature
 ```
 
 ---

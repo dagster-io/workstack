@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from workstack.core.init_utils import get_shell_wrapper_content
+from erk.core.init_utils import get_shell_wrapper_content
 
 
 def test_loads_fish_wrapper(tmp_path: Path) -> None:

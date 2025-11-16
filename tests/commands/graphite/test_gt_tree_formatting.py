@@ -4,10 +4,10 @@ This module tests the tree visualization functions used by the GT command
 to display branch hierarchies in a tree format.
 """
 
+from erk.core.branch_metadata import BranchMetadata
+from erk.core.tree_utils import format_branch_recursive, format_branches_as_tree
 from tests.fakes.gitops import FakeGitOps
 from tests.test_utils import sentinel_path
-from workstack.core.branch_metadata import BranchMetadata
-from workstack.core.tree_utils import format_branch_recursive, format_branches_as_tree
 
 
 def _collect_commit_messages(

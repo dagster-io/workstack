@@ -1,0 +1,266 @@
+"""Simple text-based status renderer."""
+
+import click
+
+from erk.cli.output import user_output
+from erk.status.models.status_data import StatusData
+
+
+class SimpleRenderer:
+    """Renders status information as simple formatted text."""
+
+    def render(self, status: StatusData) -> None:
+        """Render status data to console.
+
+        Args:
+            status: Status data to render
+        """
+        self._render_header(status)
+        self._render_plan(status)
+        self._render_stack(status)
+        self._render_pr_status(status)
+        self._render_git_status(status)
+        self._render_related_worktrees(status)
+
+    def _render_file_list(self, files: list[str], *, max_files: int = 3) -> None:
+        """Render a list of files with truncation.
+
+        Args:
+            files: List of file paths
+            max_files: Maximum number of files to display
+        """
+        for file in files[:max_files]:
+            user_output(f"      {file}")
+
+        if len(files) > max_files:
+            remaining = len(files) - max_files
+            user_output(
+                click.style(
+                    f"      ... and {remaining} more",
+                    fg="white",
+                    dim=True,
+                )
+            )
+
+    def _render_header(self, status: StatusData) -> None:
+        """Render worktree header section.
+
+        Args:
+            status: Status data
+        """
+        wt = status.worktree_info
+
+        # Title
+        name_color = "green" if wt.is_root else "cyan"
+        user_output(click.style(f"Worktree: {wt.name}", fg=name_color, bold=True))
+
+        # Location
+        user_output(click.style(f"Location: {wt.path}", fg="white", dim=True))
+
+        # Branch
+        if wt.branch:
+            user_output(click.style(f"Branch:   {wt.branch}", fg="yellow"))
+        else:
+            user_output(click.style("Branch:   (detached HEAD)", fg="red", dim=True))
+
+        user_output()
+
+    def _render_plan(self, status: StatusData) -> None:
+        """Render plan folder section if available.
+
+        Args:
+            status: Status data
+        """
+        if status.plan is None or not status.plan.exists:
+            return
+
+        # Plan title with progress if available
+        plan_header = "Plan:"
+        if status.plan.progress_summary:
+            plan_header += f" ({click.style(status.plan.progress_summary, fg='green')})"
+
+        user_output(click.style(plan_header, fg="bright_magenta", bold=True))
+
+        if status.plan.first_lines:
+            for line in status.plan.first_lines:
+                user_output(f"  {line}")
+
+        user_output(
+            click.style(
+                f"  ({status.plan.line_count} lines in plan.md)",
+                fg="white",
+                dim=True,
+            )
+        )
+        user_output()
+
+    def _render_stack(self, status: StatusData) -> None:
+        """Render Graphite stack section if available.
+
+        Args:
+            status: Status data
+        """
+        if status.stack_position is None:
+            return
+
+        stack = status.stack_position
+
+        user_output(click.style("Stack Position:", fg="blue", bold=True))
+
+        # Show position in stack
+        if stack.is_trunk:
+            user_output("  This is a trunk branch")
+        else:
+            if stack.parent_branch:
+                parent = click.style(stack.parent_branch, fg="yellow")
+                user_output(f"  Parent: {parent}")
+
+            if stack.children_branches:
+                children = ", ".join(click.style(c, fg="yellow") for c in stack.children_branches)
+                user_output(f"  Children: {children}")
+
+        # Show stack visualization
+        if len(stack.stack) > 1:
+            user_output()
+            user_output(click.style("  Stack:", fg="white", dim=True))
+            for branch in reversed(stack.stack):
+                is_current = branch == stack.current_branch
+
+                if is_current:
+                    marker = click.style("◉", fg="bright_green")
+                    branch_text = click.style(branch, fg="bright_green", bold=True)
+                else:
+                    marker = click.style("◯", fg="bright_black")
+                    branch_text = branch
+
+                user_output(f"    {marker}  {branch_text}")
+
+        user_output()
+
+    def _render_pr_status(self, status: StatusData) -> None:
+        """Render PR status section if available.
+
+        Args:
+            status: Status data
+        """
+        if status.pr_status is None:
+            return
+
+        pr = status.pr_status
+
+        user_output(click.style("Pull Request:", fg="blue", bold=True))
+
+        # PR number and state
+        pr_link = click.style(f"#{pr.number}", fg="cyan")
+        state_color = (
+            "green" if pr.state == "OPEN" else "red" if pr.state == "CLOSED" else "magenta"
+        )
+        state_text = click.style(pr.state, fg=state_color)
+        user_output(f"  {pr_link} {state_text}")
+
+        # Draft status
+        if pr.is_draft:
+            user_output(click.style("  Draft PR", fg="yellow"))
+
+        # Checks status
+        if pr.checks_passing is not None:
+            if pr.checks_passing:
+                user_output(click.style("  Checks: passing", fg="green"))
+            else:
+                user_output(click.style("  Checks: failing", fg="red"))
+
+        # Ready to merge
+        if pr.ready_to_merge:
+            user_output(click.style("  ✓ Ready to merge", fg="green", bold=True))
+
+        # URL
+        user_output(click.style(f"  {pr.url}", fg="white", dim=True))
+
+        user_output()
+
+    def _render_git_status(self, status: StatusData) -> None:
+        """Render git status section.
+
+        Args:
+            status: Status data
+        """
+        if status.git_status is None:
+            return
+
+        git = status.git_status
+
+        user_output(click.style("Git Status:", fg="blue", bold=True))
+
+        # Clean/dirty status
+        if git.clean:
+            user_output(click.style("  Working tree clean", fg="green"))
+        else:
+            user_output(click.style("  Working tree has changes:", fg="yellow"))
+
+            if git.staged_files:
+                user_output(click.style("    Staged:", fg="green"))
+                self._render_file_list(git.staged_files, max_files=3)
+
+            if git.modified_files:
+                user_output(click.style("    Modified:", fg="yellow"))
+                self._render_file_list(git.modified_files, max_files=3)
+
+            if git.untracked_files:
+                user_output(click.style("    Untracked:", fg="red"))
+                self._render_file_list(git.untracked_files, max_files=3)
+
+        # Ahead/behind
+        if git.ahead > 0 or git.behind > 0:
+            parts = []
+            if git.ahead > 0:
+                parts.append(click.style(f"{git.ahead} ahead", fg="green"))
+            if git.behind > 0:
+                parts.append(click.style(f"{git.behind} behind", fg="red"))
+
+            user_output(f"  Branch: {', '.join(parts)}")
+
+        # Recent commits
+        if git.recent_commits:
+            user_output()
+            user_output(click.style("  Recent commits:", fg="white", dim=True))
+            for commit in git.recent_commits[:3]:
+                sha = click.style(commit.sha, fg="yellow")
+                message = commit.message[:60]
+                if len(commit.message) > 60:
+                    message += "..."
+                user_output(f"    {sha} {message}")
+
+        user_output()
+
+    def _render_related_worktrees(self, status: StatusData) -> None:
+        """Render related worktrees section.
+
+        Args:
+            status: Status data
+        """
+        if not status.related_worktrees:
+            return
+
+        user_output(click.style("Related Worktrees:", fg="blue", bold=True))
+
+        for wt in status.related_worktrees[:5]:
+            name_color = "green" if wt.is_root else "cyan"
+            name_part = click.style(wt.name, fg=name_color)
+
+            if wt.branch:
+                branch_part = click.style(f"[{wt.branch}]", fg="yellow", dim=True)
+                user_output(f"  {name_part} {branch_part}")
+            else:
+                user_output(f"  {name_part}")
+
+        if len(status.related_worktrees) > 5:
+            remaining = len(status.related_worktrees) - 5
+            user_output(
+                click.style(
+                    f"  ... and {remaining} more",
+                    fg="white",
+                    dim=True,
+                )
+            )
+
+        user_output()

@@ -4,14 +4,14 @@ from pathlib import Path
 
 import pytest
 
+from erk.core.context import WorkstackContext
+from erk.core.global_config import GlobalConfig
+from erk.core.repo_discovery import RepoContext
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from tests.test_utils import sentinel_path
-from workstack.core.context import WorkstackContext
-from workstack.core.global_config import GlobalConfig
-from workstack.core.repo_discovery import RepoContext
 
 
 def test_context_initialization_and_attributes() -> None:

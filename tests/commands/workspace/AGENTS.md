@@ -6,10 +6,10 @@ This directory contains tests for commands that create, rename, remove, and move
 
 ## Commands in This Directory
 
-- `test_create.py` - Tests for `workstack create` command
-- `test_rename.py` - Tests for `workstack rename` command
-- `test_rm.py` - Tests for `workstack rm` command
-- `test_move.py` - Tests for `workstack move` command
+- `test_create.py` - Tests for `erk create` command
+- `test_rename.py` - Tests for `erk rename` command
+- `test_rm.py` - Tests for `erk rm` command
+- `test_move.py` - Tests for `erk move` command
 
 ## Common Test Setup
 
@@ -17,8 +17,8 @@ All workspace manipulation tests follow this pattern:
 
 ```python
 from click.testing import CliRunner
-from workstack.commands.create import create
-from workstack.context import WorkstackContext
+from erk.commands.create import create
+from erk.context import ErkContext
 from tests.fakes.fake_gitops import FakeGitOps
 from tests.fakes.fake_graphite_ops import FakeGraphiteOps
 
@@ -32,7 +32,7 @@ def test_workspace_operation() -> None:
 
     graphite_ops = FakeGraphiteOps()
 
-    ctx = WorkstackContext(
+    ctx = ErkContext(
         git_ops=git_ops,
         graphite_ops=graphite_ops,
         cwd="/fake/workspace"
@@ -133,7 +133,7 @@ Commands may need to interact with Graphite stacks:
 graphite_ops = FakeGraphiteOps()
 graphite_ops.add_stack("feature/parent", ["feature/child1", "feature/child2"])
 
-ctx = WorkstackContext(
+ctx = ErkContext(
     git_ops=git_ops,
     graphite_ops=graphite_ops
 )

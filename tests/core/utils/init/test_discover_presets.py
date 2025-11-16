@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from workstack.core.init_utils import discover_presets
+from erk.core.init_utils import discover_presets
 
 
 def test_discovers_preset_files(tmp_path: Path) -> None:

@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from workstack.core.worktree_utils import is_root_worktree
+from erk.core.worktree_utils import is_root_worktree
 
 
 def test_returns_true_for_root_worktree() -> None:

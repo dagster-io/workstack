@@ -1,6 +1,6 @@
 ---
 name: dignified-python-313
-description: This skill should be used when editing Python code in the workstack codebase. Use when writing, reviewing, or refactoring Python to ensure adherence to LBYL exception handling patterns, Python 3.13+ type syntax (list[str], str | None), pathlib operations, ABC-based interfaces, absolute imports, and explicit error boundaries at CLI level. Also provides production-tested code smell patterns from Dagster Labs for API design, parameter complexity, and code organization. Essential for maintaining workstack's dignified Python standards.
+description: This skill should be used when editing Python code in the erk codebase. Use when writing, reviewing, or refactoring Python to ensure adherence to LBYL exception handling patterns, Python 3.13+ type syntax (list[str], str | None), pathlib operations, ABC-based interfaces, absolute imports, and explicit error boundaries at CLI level. Also provides production-tested code smell patterns from Dagster Labs for API design, parameter complexity, and code organization. Essential for maintaining erk's dignified Python standards.
 ---
 
 # Dignified Python - Python 3.13+ Coding Standards
@@ -108,13 +108,13 @@ from typing import Protocol
 
 ```python
 # ✅ CORRECT: Module-level, absolute imports
-from workstack.config import load_config
+from erk.config import load_config
 from pathlib import Path
 import click
 
 # ❌ WRONG: Inline imports (unless for circular import prevention)
 def my_function():
-    from workstack.config import load_config  # WRONG unless circular import
+    from erk.config import load_config  # WRONG unless circular import
     return load_config()
 
 # ❌ WRONG: Relative imports

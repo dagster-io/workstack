@@ -2,11 +2,11 @@
 members = ["packages/*"]
 
 [tool.uv.sources]
-workstack-dev = { workspace = true }
+erk-dev = { workspace = true }
 dot-agent-kit = { workspace = true }
 
 [project]
-name = "workstack"
+name = "erk"
 version = "0.1.26"
 description = "Add your description here"
 readme = "README.md"
@@ -21,12 +21,11 @@ dependencies = [
 ]
 
 [project.scripts]
-workstack = "workstack.cli.cli:main"
-erk = "workstack.cli.cli:main"
+erk = "erk.cli.cli:main"
 
 [dependency-groups]
 dev = [
-    "workstack-dev",
+    "erk-dev",
     "dot-agent-kit",
     "ruff>=0.5.0",
     "pytest>=8.0.0",
@@ -56,12 +55,12 @@ select = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["workstack", "workstack_dev", "dot_agent_kit"]
+known-first-party = ["erk", "erk_dev", "dot_agent_kit"]
 
 [tool.pyright]
 pythonVersion = "3.13"
 typeCheckingMode = "standard"
-include = ["src", "packages/workstack-dev/src", "packages/dot-agent-kit/src", "packages/dot-agent-kit/tests"]
+include = ["src", "packages/erk-dev/src", "packages/dot-agent-kit/src", "packages/dot-agent-kit/tests"]
 exclude = [".claude/skills/"]
 venvPath = "."
 venv = ".venv"
@@ -69,7 +68,7 @@ reportMissingImports = "warning"
 
 [tool.pytest.ini_options]
 addopts = "-q"
-testpaths = ["tests", "packages/workstack-dev/tests", "packages/dot-agent-kit/tests"]
+testpaths = ["tests", "packages/erk-dev/tests", "packages/dot-agent-kit/tests"]
 
 [tool.dot-agent]
 dev_mode = true

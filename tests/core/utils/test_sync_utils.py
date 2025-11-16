@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from workstack.core.gitops import WorktreeInfo
-from workstack.core.sync_utils import (
+from erk.core.gitops import WorktreeInfo
+from erk.core.sync_utils import (
     DeletableWorktree,
     PRStatus,
     identify_deletable_worktrees,

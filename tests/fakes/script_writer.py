@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-from workstack.core.script_writer import ScriptResult, ScriptWriterOps
+from erk.core.script_writer import ScriptResult, ScriptWriterOps
 
 
 class FakeScriptWriterOps(ScriptWriterOps):

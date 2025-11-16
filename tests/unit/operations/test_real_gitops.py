@@ -7,7 +7,7 @@ for external tools (git) without actually executing them.
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from workstack.core.gitops import RealGitOps
+from erk.core.gitops import RealGitOps
 
 
 def test_list_remote_branches() -> None:

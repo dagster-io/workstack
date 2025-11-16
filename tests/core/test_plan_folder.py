@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from workstack.core.plan_folder import (
+from erk.core.plan_folder import (
     create_plan_folder,
     extract_steps_from_plan,
     get_plan_path,

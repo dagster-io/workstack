@@ -4,7 +4,7 @@ This fake enables testing completion-related functionality without
 requiring subprocess execution or actual Click completion generation.
 """
 
-from workstack.core.completion_ops import CompletionOps
+from erk.core.completion_ops import CompletionOps
 
 
 class FakeCompletionOps(CompletionOps):

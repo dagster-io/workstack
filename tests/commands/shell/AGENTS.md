@@ -13,7 +13,7 @@ This directory contains tests for shell integration features, including shell wr
 
 ## Shell Integration Overview
 
-Workstack integrates with shells (bash, zsh, fish) to provide:
+Erk integrates with shells (bash, zsh, fish) to provide:
 
 1. Command wrappers that preserve shell state
 2. Working directory recovery after commands
@@ -21,21 +21,21 @@ Workstack integrates with shells (bash, zsh, fish) to provide:
 
 ## Testing Shell Wrapper Generation
 
-Shell wrappers allow workstack commands to affect the parent shell:
+Shell wrappers allow erk commands to affect the parent shell:
 
 ```python
-from workstack.commands.shell import prepare_shell_integration
+from erk.commands.shell import prepare_shell_integration
 
 def test_shell_wrapper_generation() -> None:
     shell_ops = FakeShellOps()
 
-    ctx = WorkstackContext(shell_ops=shell_ops)
+    ctx = ErkContext(shell_ops=shell_ops)
     runner = CliRunner()
 
     result = runner.invoke(prepare_shell_integration, ["bash"], obj=ctx)
 
     assert result.exit_code == 0
-    assert "function workstack" in result.output or "workstack()" in result.output
+    assert "function erk" in result.output or "erk()" in result.output
 ```
 
 ## Testing Different Shell Types
@@ -59,7 +59,7 @@ def test_fish_wrapper() -> None:
 
     assert result.exit_code == 0
     # Check for fish-specific syntax
-    assert "function workstack" in result.output
+    assert "function erk" in result.output
 ```
 
 ## CWD Recovery Testing
@@ -68,7 +68,7 @@ Commands that change directories need to restore CWD:
 
 ```python
 def test_cwd_recovery() -> None:
-    from workstack.shell.cwd_recovery import prepare_cwd_recovery
+    from erk.shell.cwd_recovery import prepare_cwd_recovery
 
     initial_cwd = "/initial/path"
     target_cwd = "/target/path"
@@ -76,7 +76,7 @@ def test_cwd_recovery() -> None:
     shell_ops = FakeShellOps()
     git_ops = FakeGitOps(current_branch="main")
 
-    ctx = WorkstackContext(
+    ctx = ErkContext(
         shell_ops=shell_ops,
         git_ops=git_ops,
         cwd=initial_cwd
@@ -107,7 +107,7 @@ def test_shell_command_execution() -> None:
         stdout="On branch main\nnothing to commit"
     )
 
-    ctx = WorkstackContext(shell_ops=shell_ops)
+    ctx = ErkContext(shell_ops=shell_ops)
 
     # Execute command that runs subprocess
     result = runner.invoke(status, [], obj=ctx)
@@ -131,7 +131,7 @@ def test_subprocess_calls() -> None:
         stdout="main\n"
     )
 
-    ctx = WorkstackContext(shell_ops=shell_ops)
+    ctx = ErkContext(shell_ops=shell_ops)
     runner = CliRunner()
 
     result = runner.invoke(status, [], obj=ctx)
@@ -156,7 +156,7 @@ def test_shell_output_processing() -> None:
         stdout="  main\n* feature/test\n  feature/other\n"
     )
 
-    ctx = WorkstackContext(shell_ops=shell_ops)
+    ctx = ErkContext(shell_ops=shell_ops)
 
     # Command processes branch list
     result = runner.invoke(list_cmd, [], obj=ctx)
@@ -180,7 +180,7 @@ def test_shell_command_failure() -> None:
         stderr="fatal: not a git repository"
     )
 
-    ctx = WorkstackContext(shell_ops=shell_ops)
+    ctx = ErkContext(shell_ops=shell_ops)
     runner = CliRunner()
 
     result = runner.invoke(status, [], obj=ctx)
@@ -199,7 +199,7 @@ def test_shell_environment() -> None:
     shell_ops = FakeShellOps()
     shell_ops.set_env("WORKSTACK_HOME", "/custom/path")
 
-    ctx = WorkstackContext(shell_ops=shell_ops)
+    ctx = ErkContext(shell_ops=shell_ops)
 
     # Command should respect environment
     result = runner.invoke(init, [], obj=ctx)
@@ -233,7 +233,7 @@ def test_command_with_shell_wrapper() -> None:
     )
     shell_ops = FakeShellOps()
 
-    ctx = WorkstackContext(
+    ctx = ErkContext(
         git_ops=git_ops,
         shell_ops=shell_ops,
         cwd="/workspace"

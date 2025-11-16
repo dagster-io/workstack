@@ -622,7 +622,7 @@ The key is being conscious about trade-offs and documenting them.
 ## Related Skills
 
 - **dignified-python**: Core Python standards (LBYL, type annotations, imports)
-- **workstack**: Project-specific standards and workflows
+- **erk**: Project-specific standards and workflows
 
 ## References
 

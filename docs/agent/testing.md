@@ -32,7 +32,7 @@ make test-all
 - ⚡ Very fast (in-memory, uses fakes)
 - Uses `FakeGitOps`, `FakeGraphiteOps`, `FakeGitHubOps`, `FakeShellOps`
 - Uses `CliRunner` for CLI tests (NOT subprocess)
-- Uses `pure_workstack_env()` (sentinel paths) or `simulated_workstack_env()` (isolated filesystem)
+- Uses `pure_erk_env()` (sentinel paths) or `simulated_erk_env()` (isolated filesystem)
 - No external system calls
 
 **Locations:**
@@ -95,7 +95,7 @@ cwd=Path("/some/hardcoded/path")
 
 **Why this is catastrophic:**
 
-1. **Global Config Mutation Risk**: If any code tries to write `.workstack` config relative to a hardcoded path, it could pollute the REAL filesystem or global config
+1. **Global Config Mutation Risk**: If any code tries to write `.erk` config relative to a hardcoded path, it could pollute the REAL filesystem or global config
 2. **False Test Isolation**: Tests appear isolated but may share state through hardcoded paths
 3. **Unpredictable Failures**: Tests fail in CI/different environments where paths don't exist
 4. **Security Risk**: Creating files at hardcoded system paths can be exploited
@@ -104,12 +104,12 @@ cwd=Path("/some/hardcoded/path")
 
 ```python
 # ✅ CORRECT - Use simulated environment
-with simulated_workstack_env(runner) as env:
-    ctx = WorkstackContext(..., cwd=env.cwd)
+with simulated_erk_env(runner) as env:
+    ctx = ErkContext(..., cwd=env.cwd)
 
 # ✅ CORRECT - Use tmp_path fixture
 def test_something(tmp_path: Path) -> None:
-    ctx = WorkstackContext(..., cwd=tmp_path)
+    ctx = ErkContext(..., cwd=tmp_path)
 
 # ✅ CORRECT - Use env from simulated helper
 ctx = _create_test_context(env, ...)  # env.cwd used internally
@@ -223,7 +223,7 @@ tests/core/utils/worktree/
 
 | Change Type               | Test Requirement         | Test Layer          | Example                                                         |
 | ------------------------- | ------------------------ | ------------------- | --------------------------------------------------------------- |
-| **New Feature**           | MUST have tests          | Fake layer          | Adding `workstack merge` command → Test with FakeGitOps         |
+| **New Feature**           | MUST have tests          | Fake layer          | Adding `erk merge` command → Test with FakeGitOps               |
 | **Bug Fix**               | MUST reproduce then fix  | Fake layer          | Fixing branch detection → Test that reproduces bug, then passes |
 | **Business Logic Change** | MUST have tests          | Fake layer          | Changing worktree naming logic → Test new behavior with fakes   |
 | **New Ops Method**        | MUST test implementation | Mock stateful calls | Adding `GitOps.cherry_pick()` → Mock git subprocess, test paths |
@@ -266,7 +266,7 @@ tests/core/utils/worktree/
 **Example: Adding a new GitOps method**
 
 ```python
-# In src/workstack/core/git_ops.py
+# In src/erk/core/git_ops.py
 class GitOps(ABC):
     @abstractmethod
     def stash_changes(self, repo_path: Path, message: str) -> None:
@@ -491,7 +491,7 @@ assert "feature" in git_ops.deleted_branches
 ```python
 FakeGlobalConfigOps(
     exists: bool = True,
-    workstacks_root: Path | None = None,
+    erks_root: Path | None = None,
     use_graphite: bool = False,
     shell_setup_complete: bool = False,
     show_pr_info: bool = True,
@@ -505,7 +505,7 @@ FakeGlobalConfigOps(
 # Pattern 1: Config exists with values
 config_ops = FakeGlobalConfigOps(
     exists=True,
-    workstacks_root=Path("/tmp/workstacks"),
+    erks_root=Path("/tmp/erks"),
     use_graphite=True,
 )
 
@@ -514,8 +514,8 @@ config_ops = FakeGlobalConfigOps(exists=False)
 
 # Pattern 3: Test config mutations
 config_ops = FakeGlobalConfigOps(exists=False)
-config_ops.set(workstacks_root=Path("/tmp/ws"), use_graphite=True)
-assert config_ops.get_workstacks_root() == Path("/tmp/ws")
+config_ops.set(erks_root=Path("/tmp/ws"), use_graphite=True)
+assert config_ops.get_erks_root() == Path("/tmp/ws")
 ```
 
 ### 3. GitHubOps - GitHub API Interactions
@@ -539,7 +539,7 @@ FakeGitHubOps(
 github_ops = FakeGitHubOps()
 
 # Pattern 2: Pre-configured PRs
-from workstack.core.github_ops import PullRequestInfo
+from erk.core.github_ops import PullRequestInfo
 
 github_ops = FakeGitHubOps(
     prs={
@@ -639,12 +639,12 @@ def test_command_behavior() -> None:
         # Configure fakes with initial state
         git_ops = FakeGitOps(git_common_dirs={cwd: cwd / ".git"})
         config_ops = FakeGlobalConfigOps(
-            workstacks_root=cwd / "workstacks",
+            erks_root=cwd / "erks",
             use_graphite=False,
         )
 
         # Create context with all dependencies
-        test_ctx = WorkstackContext(
+        test_ctx = ErkContext(
             git_ops=git_ops,
             global_config_ops=config_ops,
             github_ops=FakeGitHubOps(),
@@ -733,7 +733,7 @@ def test_dryrun_prevents_mutations() -> None:
 
 - Testing full CLI installation and packaging
 - Testing shell integration (completion, environment)
-- Verifying actual `uv run workstack` behavior
+- Verifying actual `uv run erk` behavior
 - True end-to-end acceptance tests
 
 **Benefits:**
@@ -744,32 +744,32 @@ def test_dryrun_prevents_mutations() -> None:
 
 ### CliRunner Pattern (PREFERRED)
 
-#### Using simulated_workstack_env() (Recommended)
+#### Using simulated_erk_env() (Recommended)
 
-**For most CLI tests, use the `simulated_workstack_env()` helper:**
+**For most CLI tests, use the `simulated_erk_env()` helper:**
 
 ```python
 from click.testing import CliRunner
-from workstack.cli.cli import cli
-from tests.test_utils.env_helpers import simulated_workstack_env
+from erk.cli.cli import cli
+from tests.test_utils.env_helpers import simulated_erk_env
 from tests.fakes.gitops import FakeGitOps
-from workstack.core.context import WorkstackContext
-from workstack.core.global_config import GlobalConfig
+from erk.core.context import ErkContext
+from erk.core.global_config import GlobalConfig
 
 def test_create_command() -> None:
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with simulated_erk_env(runner) as env:
         # Set up configuration and test context
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             default_branches={env.cwd: "main"},
         )
         global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erks_root=env.erks_root,
             use_graphite=False,
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config,
             cwd=env.cwd,
@@ -780,17 +780,17 @@ def test_create_command() -> None:
         assert "Created worktree" in result.output
 ```
 
-**What `simulated_workstack_env()` provides:**
+**What `simulated_erk_env()` provides:**
 
 - `env.cwd`: Current working directory (root worktree)
 - `env.git_dir`: Path to .git directory
 - `env.root_worktree`: Root worktree with .git/ directory
-- `env.workstacks_root`: Workstacks directory (parallel to root)
+- `env.erks_root`: Erks directory (parallel to root)
 - `env.create_linked_worktree()`: Helper to create additional worktrees
 - Automatic `runner.isolated_filesystem()` management
-- Directory structure setup (repo/ and workstacks/ directories)
+- Directory structure setup (repo/ and erks/ directories)
 
-**Why use `simulated_workstack_env()`:**
+**Why use `simulated_erk_env()`:**
 
 - Complete isolation via `runner.isolated_filesystem()`
 - Works with FakeGitOps (faster than real git)
@@ -804,7 +804,7 @@ def test_create_command() -> None:
 
 ```python
 from click.testing import CliRunner
-from workstack.cli.cli import cli
+from erk.cli.cli import cli
 from tests.test_utils.cli_helpers import cli_test_repo
 
 def test_git_hook_integration(tmp_path: Path) -> None:
@@ -828,17 +828,17 @@ def test_git_hook_integration(tmp_path: Path) -> None:
 **What `cli_test_repo()` provides:**
 
 - `test_env.repo`: Real git repository with initial commit
-- `test_env.workstacks_root`: Configured workstacks directory
-- `test_env.tmp_path`: Test root with isolated .workstack config
+- `test_env.erks_root`: Configured erks directory
+- `test_env.tmp_path`: Test root with isolated .erk config
 
-**When to use `cli_test_repo()` over `simulated_workstack_env()`:**
+**When to use `cli_test_repo()` over `simulated_erk_env()`:**
 
 - Testing git hooks or git worktree edge cases
 - Testing actual filesystem permissions
 - Testing real subprocess interactions
 - Integration tests requiring actual git behavior
 
-**For 95% of CLI tests, use `simulated_workstack_env()` instead.**
+**For 95% of CLI tests, use `simulated_erk_env()` instead.**
 
 #### Manual Setup (For Custom Requirements)
 
@@ -846,15 +846,15 @@ def test_git_hook_integration(tmp_path: Path) -> None:
 
 ```python
 from click.testing import CliRunner
-from workstack.cli.cli import cli
+from erk.cli.cli import cli
 
 def test_create_command(tmp_path: Path) -> None:
     # Set up isolated global config
-    global_config_dir = tmp_path / ".workstack"
+    global_config_dir = tmp_path / ".erk"
     global_config_dir.mkdir()
-    workstacks_root = tmp_path / "workstacks"
+    erks_root = tmp_path / "erks"
     (global_config_dir / "config.toml").write_text(
-        f'workstacks_root = "{workstacks_root}"\nuse_graphite = false\n'
+        f'erks_root = "{erks_root}"\nuse_graphite = false\n'
     )
 
     # Set up real git repo
@@ -893,10 +893,10 @@ def test_create_command(tmp_path: Path) -> None:
 
 **Key components:**
 
-**For `simulated_workstack_env()` pattern (recommended):**
+**For `simulated_erk_env()` pattern (recommended):**
 
 - `runner = CliRunner()`: Click's test harness
-- `simulated_workstack_env(runner)`: Context manager providing isolated environment
+- `simulated_erk_env(runner)`: Context manager providing isolated environment
 - `runner.invoke(cli, ["command"], obj=test_ctx)`: Pass context explicitly via `obj=`
 - `result.exit_code`: Command exit code (0 = success)
 - `result.output`: Combined stdout/stderr output
@@ -920,7 +920,7 @@ import subprocess
 def test_cli_installation(tmp_path: Path) -> None:
     # Test actual CLI invocation
     result = subprocess.run(
-        ["uv", "run", "workstack", "create", "feature"],
+        ["uv", "run", "erk", "create", "feature"],
         cwd=tmp_path,
         capture_output=True,
         text=True,
@@ -930,7 +930,7 @@ def test_cli_installation(tmp_path: Path) -> None:
 
 **When subprocess is required:**
 
-- Testing `uv run workstack` actually works
+- Testing `uv run erk` actually works
 - Verifying package installation
 - Shell completion integration tests
 
@@ -940,7 +940,7 @@ def test_cli_installation(tmp_path: Path) -> None:
 
 ```python
 # SLOW - Spawns Python interpreter for each call
-subprocess.run(["uv", "run", "workstack", "create", "feature"])
+subprocess.run(["uv", "run", "erk", "create", "feature"])
 ```
 
 **✅ Using CliRunner for command tests:**
@@ -954,7 +954,7 @@ runner.invoke(cli, ["create", "feature"])
 
 ```python
 # WRONG - Context not created properly
-from workstack.cli.commands.create import create
+from erk.cli.commands.create import create
 runner.invoke(create, ["feature"])  # AttributeError: 'NoneType' object has no attribute 'cwd'
 ```
 
@@ -962,11 +962,11 @@ runner.invoke(create, ["feature"])  # AttributeError: 'NoneType' object has no a
 
 ```python
 # CORRECT - CLI group creates context from environment
-from workstack.cli.cli import cli
+from erk.cli.cli import cli
 runner.invoke(cli, ["create", "feature"])
 ```
 
-**❌ Not using simulated_workstack_env():**
+**❌ Not using simulated_erk_env():**
 
 ```python
 # HARDER TO MAINTAIN - Manual setup with real git
@@ -974,30 +974,30 @@ runner = CliRunner()
 # ... 20+ lines of git setup, config creation, env vars, os.chdir ...
 ```
 
-**✅ Using simulated_workstack_env():**
+**✅ Using simulated_erk_env():**
 
 ```python
 # CLEAN AND SIMPLE - Helper provides everything
 runner = CliRunner()
-with simulated_workstack_env(runner) as env:
+with simulated_erk_env(runner) as env:
     # Ready to test immediately
     git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-    test_ctx = WorkstackContext.for_test(git_ops=git_ops, cwd=env.cwd)
+    test_ctx = ErkContext.for_test(git_ops=git_ops, cwd=env.cwd)
 ```
 
 ### Migration Checklist
 
 When converting tests from subprocess to CliRunner:
 
-**Recommended approach (using simulated_workstack_env()):**
+**Recommended approach (using simulated_erk_env()):**
 
 - [ ] Import `CliRunner` from `click.testing`
-- [ ] Import `simulated_workstack_env` from `tests.test_utils.env_helpers`
-- [ ] Import `cli` from `workstack.cli.cli`
+- [ ] Import `simulated_erk_env` from `tests.test_utils.env_helpers`
+- [ ] Import `cli` from `erk.cli.cli`
 - [ ] Set up `runner = CliRunner()`
-- [ ] Use `with simulated_workstack_env(runner) as env:` context manager
+- [ ] Use `with simulated_erk_env(runner) as env:` context manager
 - [ ] Create `FakeGitOps` with `git_common_dirs={env.cwd: env.git_dir}`
-- [ ] Create `WorkstackContext.for_test()` with fakes and `cwd=env.cwd`
+- [ ] Create `ErkContext.for_test()` with fakes and `cwd=env.cwd`
 - [ ] Replace `subprocess.run([...])` with `runner.invoke(cli, [...], obj=test_ctx)`
 - [ ] Replace `result.returncode` with `result.exit_code`
 - [ ] Replace stdout/stderr parsing with `result.output`
@@ -1007,7 +1007,7 @@ When converting tests from subprocess to CliRunner:
 
 - [ ] Import `CliRunner` from `click.testing`
 - [ ] Import `cli_test_repo` from `tests.test_utils.cli_helpers`
-- [ ] Import `cli` from `workstack.cli.cli`
+- [ ] Import `cli` from `erk.cli.cli`
 - [ ] Use `with cli_test_repo(tmp_path) as test_env:` context manager
 - [ ] Set up isolated HOME with `env_vars["HOME"] = str(test_env.tmp_path)`
 - [ ] Use `CliRunner(env=env_vars)` to isolate HOME directory
@@ -1034,7 +1034,7 @@ def test_bad(monkeypatch):
 # DO THIS
 def test_good():
     fake_ops = FakeShellOps(installed_tools={"tool": "/path"})
-    ctx = WorkstackContext(..., shell_ops=fake_ops, ...)
+    ctx = ErkContext(..., shell_ops=fake_ops, ...)
     result = function_under_test(ctx)
 ```
 
@@ -1068,7 +1068,7 @@ def test_bad():
 ```python
 # DO THIS
 def test_good():
-    test_ctx = create_test_context(...)  # Or WorkstackContext(...)
+    test_ctx = create_test_context(...)  # Or ErkContext(...)
     result = runner.invoke(cli, ["command"], obj=test_ctx)
 ```
 
@@ -1076,7 +1076,7 @@ def test_good():
 
 ### Prefer Fakes (Default Approach)
 
-Fakes simulate entire subsystems in-memory and are the preferred testing approach for workstack.
+Fakes simulate entire subsystems in-memory and are the preferred testing approach for erk.
 
 **Benefits:**
 
@@ -1102,7 +1102,7 @@ def test_with_fake():
     # Clear test setup: configure fake state via constructor
     completion_ops = FakeCompletionOps(
         bash_script="# bash completion code",
-        workstack_path="/usr/local/bin/workstack"
+        erk_path="/usr/local/bin/erk"
     )
     ctx = create_test_context(completion_ops=completion_ops)
 
@@ -1179,15 +1179,15 @@ This codebase has successfully migrated from 100+ mock patches to fake-based tes
 
 ```python
 from unittest.mock import patch
-from workstack.cli.core import RepoContext
+from erk.cli.core import RepoContext
 
 def test_graphite_branches_json_format(tmp_path: Path) -> None:
     git_ops = FakeGitOps(git_common_dirs={tmp_path: tmp_path / ".git"})
     ctx = create_test_context(git_ops=git_ops, graphite_ops=graphite_ops)
-    repo = RepoContext(root=tmp_path, repo_name="test-repo", workstacks_dir=tmp_path / "workstacks")
+    repo = RepoContext(root=tmp_path, repo_name="test-repo", erks_dir=tmp_path / "erks")
 
     runner = CliRunner()
-    with patch("workstack.cli.commands.gt.discover_repo_context", return_value=repo):
+    with patch("erk.cli.commands.gt.discover_repo_context", return_value=repo):
         with runner.isolated_filesystem(temp_dir=tmp_path):
             result = runner.invoke(graphite_branches_cmd, ["--format", "json"], obj=ctx)
 ```
@@ -1397,7 +1397,7 @@ Need to test CLI command?
 ├─ Unit test (fast, isolated logic)
 │  └─ Use Fake* classes
 │     └─ Configure state via constructor
-│        └─ Inject via WorkstackContext
+│        └─ Inject via ErkContext
 │           └─ Pass as obj= to runner.invoke()
 │
 └─ Integration test (verify real system behavior)
@@ -1427,7 +1427,7 @@ ctx = create_test_context(
 # Custom config_ops
 ctx = create_test_context(
     global_config_ops=FakeGlobalConfigOps(
-        workstacks_root=Path("/tmp/ws")
+        erks_root=Path("/tmp/ws")
     )
 )
 
@@ -1449,7 +1449,7 @@ def fake_repo(tmp_path: Path) -> Path:
     return repo
 
 @pytest.fixture
-def test_context() -> WorkstackContext:
+def test_context() -> ErkContext:
     """Create minimal test context with all fakes."""
     return create_test_context()
 ```

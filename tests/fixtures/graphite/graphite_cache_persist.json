@@ -1,24 +1,36 @@
 {
   "branches": [
-    ["main", {
-      "validationResult": "TRUNK",
-      "parentBranchName": null,
-      "children": ["feature-1", "feature-2"]
-    }],
-    ["feature-1", {
-      "validationResult": "VALID",
-      "parentBranchName": "main",
-      "children": ["feature-1-sub"]
-    }],
-    ["feature-1-sub", {
-      "validationResult": "VALID",
-      "parentBranchName": "feature-1",
-      "children": []
-    }],
-    ["feature-2", {
-      "validationResult": "VALID",
-      "parentBranchName": "main",
-      "children": []
-    }]
+    [
+      "main",
+      {
+        "validationResult": "TRUNK",
+        "parentBranchName": null,
+        "children": ["feature-1", "feature-2"]
+      }
+    ],
+    [
+      "feature-1",
+      {
+        "validationResult": "VALID",
+        "parentBranchName": "main",
+        "children": ["feature-1-sub"]
+      }
+    ],
+    [
+      "feature-1-sub",
+      {
+        "validationResult": "VALID",
+        "parentBranchName": "feature-1",
+        "children": []
+      }
+    ],
+    [
+      "feature-2",
+      {
+        "validationResult": "VALID",
+        "parentBranchName": "main",
+        "children": []
+      }
+    ]
   ]
 }

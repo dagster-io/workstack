@@ -1,10 +1,11 @@
 import click
 
-from workstack.cli.commands.create import make_env_content, sanitize_worktree_name
+from workstack.cli.commands.create.post_creation import make_env_content
 from workstack.cli.commands.switch import complete_worktree_names
 from workstack.cli.core import discover_repo_context, worktree_path_for
 from workstack.cli.output import user_output
 from workstack.core.context import WorkstackContext, create_context
+from workstack.core.naming_utils import sanitize_worktree_name
 from workstack.core.repo_discovery import ensure_workstacks_dir
 
 

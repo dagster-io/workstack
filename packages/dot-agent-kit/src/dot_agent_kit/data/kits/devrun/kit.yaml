@@ -1,5 +1,5 @@
 name: devrun
-version: 0.1.0
+version: 0.2.0
 description: Consolidated development tool runner agent with integrated tool documentation
   for pytest, pyright, ruff, prettier, make, and gt
 license: MIT
@@ -17,10 +17,19 @@ kit_cli_commands:
   - name: devrun-reminder-hook
     path: kit_cli_commands/devrun/devrun_reminder_hook.py
     description: Output devrun agent reminder for UserPromptSubmit hook
+  - name: bash-validator-hook
+    path: kit_cli_commands/devrun/bash_validator_hook.py
+    description: Block direct Bash usage of dev tools
 hooks:
   - id: devrun-reminder-hook
     lifecycle: UserPromptSubmit
     matcher: "*"
     invocation: dot-agent run devrun devrun-reminder-hook
     description: Output devrun agent reminder on every prompt
+    timeout: 30
+  - id: bash-validator-hook
+    lifecycle: PreToolUse
+    matcher: "Bash"
+    invocation: dot-agent run devrun bash-validator-hook
+    description: Block direct dev tool usage, enforce devrun agent
     timeout: 30

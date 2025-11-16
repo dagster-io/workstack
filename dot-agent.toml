@@ -34,7 +34,7 @@ artifacts = [
 [kits.devrun]
 kit_id = "devrun"
 source_type = "bundled"
-version = "0.1.0"
+version = "0.2.0"
 artifacts = [
     ".claude/agents/devrun/devrun.md",
     ".claude/docs/devrun/tools/gt.md",
@@ -51,6 +51,14 @@ lifecycle = "UserPromptSubmit"
 matcher = "*"
 invocation = "dot-agent run devrun devrun-reminder-hook"
 description = "Output devrun agent reminder on every prompt"
+timeout = 30
+
+[[kits.devrun.hooks]]
+id = "bash-validator-hook"
+lifecycle = "PreToolUse"
+matcher = "Bash"
+invocation = "dot-agent run devrun bash-validator-hook"
+description = "Block direct dev tool usage, enforce devrun agent"
 timeout = 30
 
 [kits.dignified-python-313]

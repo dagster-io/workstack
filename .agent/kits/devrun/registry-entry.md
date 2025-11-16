@@ -1,4 +1,4 @@
-### devrun (v0.1.0)
+### devrun (v0.2.0)
 
 **Purpose**: Consolidated development tool runner agent with integrated tool documentation for pytest, pyright, ruff, prettier, make, and gt
 

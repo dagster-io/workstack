@@ -1,13 +1,4 @@
 {
-  "permissions": {
-    "allow": [
-      "Bash(workstack-dev:*)",
-      "Bash(uv run python:*)",
-      "Bash(python:*)"
-    ],
-    "deny": [],
-    "ask": []
-  },
   "hooks": {
     "UserPromptSubmit": [
       {
@@ -16,16 +7,6 @@
           {
             "type": "command",
             "command": "DOT_AGENT_KIT_ID=devrun DOT_AGENT_HOOK_ID=devrun-reminder-hook dot-agent run devrun devrun-reminder-hook",
-            "timeout": 30
-          }
-        ]
-      },
-      {
-        "matcher": "*.py",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "DOT_AGENT_KIT_ID=dignified-python-313 DOT_AGENT_HOOK_ID=dignified-python-reminder-hook dot-agent run dignified-python-313 dignified-python-reminder-hook",
             "timeout": 30
           }
         ]

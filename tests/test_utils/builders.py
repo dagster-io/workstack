@@ -169,6 +169,7 @@ class PullRequestInfoBuilder:
         self.checks_passing: bool | None = None
         self.owner = "owner"
         self.repo = "repo"
+        self.has_conflicts: bool | None = None
 
     def with_passing_checks(self) -> "PullRequestInfoBuilder":
         """Configure PR with passing checks.
@@ -215,6 +216,15 @@ class PullRequestInfoBuilder:
         self.state = "CLOSED"
         return self
 
+    def with_conflicts(self) -> "PullRequestInfoBuilder":
+        """Configure PR as having merge conflicts.
+
+        Returns:
+            Self for method chaining
+        """
+        self.has_conflicts = True
+        return self
+
     def build(self) -> PullRequestInfo:
         """Build PullRequestInfo object.
 
@@ -229,6 +239,7 @@ class PullRequestInfoBuilder:
             checks_passing=self.checks_passing,
             owner=self.owner,
             repo=self.repo,
+            has_conflicts=self.has_conflicts,
         )
 
 

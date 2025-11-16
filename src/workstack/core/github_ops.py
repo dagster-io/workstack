@@ -186,6 +186,8 @@ class PullRequestInfo:
     checks_passing: bool | None  # None if no checks, True if all pass, False if any fail
     owner: str  # GitHub repo owner (e.g., "schrockn")
     repo: str  # GitHub repo name (e.g., "workstack")
+    # True if CONFLICTING, False if MERGEABLE, None if UNKNOWN or not fetched
+    has_conflicts: bool | None = None
 
 
 @dataclass(frozen=True)

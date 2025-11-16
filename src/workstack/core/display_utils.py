@@ -35,20 +35,30 @@ def get_pr_status_emoji(pr: PullRequestInfo) -> str:
         pr: Pull request information
 
     Returns:
-        Emoji character representing the PR's current state
+        Emoji character representing the PR's current state,
+        with 💥 appended if there are merge conflicts
     """
+    # Determine base emoji based on PR state
     if pr.is_draft:
-        return "🚧"
-    if pr.state == "MERGED":
-        return "🔀"
-    if pr.state == "CLOSED":
-        return "⛔"
-    if pr.checks_passing is True:
-        return "✅"
-    if pr.checks_passing is False:
-        return "❌"
-    # Open PR with no checks
-    return "◯"
+        emoji = "🚧"
+    elif pr.state == "MERGED":
+        emoji = "🎉"
+    elif pr.state == "CLOSED":
+        emoji = "⛔"
+    elif pr.checks_passing is True:
+        emoji = "✅"
+    elif pr.checks_passing is False:
+        emoji = "❌"
+    else:
+        # Open PR with no checks
+        emoji = "👀"
+
+    # Append conflict indicator if PR has merge conflicts
+    # Only for open PRs (published or draft)
+    if pr.has_conflicts and pr.state == "OPEN":
+        emoji += "💥"
+
+    return emoji
 
 
 def format_pr_info(
@@ -100,7 +110,7 @@ def format_branch_without_worktree(
         Formatted string with branch name and PR info
     """
     # Format branch name in yellow (same as worktree branches)
-    line = click.style(branch_name, fg='yellow')
+    line = click.style(branch_name, fg="yellow")
 
     # Add PR info if available
     if pr_info:

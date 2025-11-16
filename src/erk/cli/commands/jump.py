@@ -1,6 +1,5 @@
 """Jump command - find and switch to a worktree by branch name."""
 
-import shlex
 import subprocess
 from pathlib import Path
 
@@ -50,6 +49,7 @@ def _perform_jump(
     target_worktree: WorktreeInfo,
     branch: str,
     script: bool,
+    is_newly_created: bool = False,
 ) -> None:
     """Perform the actual jump to a worktree.
 
@@ -59,6 +59,7 @@ def _perform_jump(
         target_worktree: The worktree to jump to
         branch: Target branch name
         script: Whether to output only the activation script
+        is_newly_created: Whether the worktree was just created (default False)
     """
     target_path = target_worktree.path
     current_branch_in_worktree = target_worktree.branch
@@ -82,14 +83,39 @@ def _perform_jump(
     # Generate activation script
     if script:
         # Script mode: always generate script (for shell integration or manual sourcing)
-        # Use shlex.quote() for branch name security (defense-in-depth)
-        safe_branch = shlex.quote(branch)
-        # Determine if we're switching locations (not whether git checkout was needed)
         is_switching_location = current_cwd != target_path
-        if is_switching_location:
-            jump_message = f'echo "Jumped to worktree for branch {safe_branch}: $(pwd)"'
+
+        # Determine worktree name from path
+        worktree_name = target_path.name
+
+        # Four-case message logic:
+        if is_newly_created:
+            # Case 4: Jumped to newly created worktree
+            styled_wt = click.style(worktree_name, fg="cyan", bold=True)
+            jump_message = f'echo "Jumped to new worktree {styled_wt}"'
+        elif not is_switching_location:
+            # Case 1: Already on target branch in current worktree
+            styled_branch = click.style(branch, fg="yellow")
+            styled_wt = click.style(worktree_name, fg="cyan", bold=True)
+            jump_message = f'echo "Already on branch {styled_branch} in worktree {styled_wt}"'
+        elif not need_checkout:
+            # Case 2: Jumped to existing worktree with branch already checked out
+            styled_wt = click.style(worktree_name, fg="cyan", bold=True)
+            if worktree_name == branch:
+                # Standard naming
+                jump_message = f'echo "Jumped to worktree {styled_wt}"'
+            else:
+                # Edge case: non-standard naming
+                styled_branch = click.style(branch, fg="yellow")
+                jump_message = f'echo "Jumped to worktree {styled_wt} (branch {styled_branch})"'
         else:
-            jump_message = f'echo "Already in worktree for branch {safe_branch}: $(pwd)"'
+            # Case 3: Jumped to existing worktree and checked out branch
+            styled_wt = click.style(worktree_name, fg="cyan", bold=True)
+            styled_branch = click.style(branch, fg="yellow")
+            jump_message = (
+                f'echo "Jumped to worktree {styled_wt} and checked out branch {styled_branch}"'
+            )
+
         script_content = render_activation_script(
             worktree_path=target_path, final_message=jump_message
         )
@@ -101,11 +127,31 @@ def _perform_jump(
         )
         result.output_for_shell_integration()
     else:
-        # No shell integration available, show manual instructions
-        user_output(
-            "Shell integration not detected. Run 'erk init --shell' to set up automatic activation."
-        )
-        user_output(f"\nOr use: source <(erk jump {branch} --script)")
+        # Non-script mode: Apply same four-case logic with user_output()
+        worktree_name = target_path.name
+
+        if is_newly_created:
+            styled_wt = click.style(worktree_name, fg="cyan", bold=True)
+            user_output(f"Jumped to new worktree {styled_wt}")
+        elif ctx.cwd == target_path:
+            styled_branch = click.style(branch, fg="yellow")
+            styled_wt = click.style(worktree_name, fg="cyan", bold=True)
+            user_output(f"Already on branch {styled_branch} in worktree {styled_wt}")
+        elif current_branch_in_worktree == branch:
+            styled_wt = click.style(worktree_name, fg="cyan", bold=True)
+            if worktree_name == branch:
+                user_output(f"Jumped to worktree {styled_wt}")
+            else:
+                styled_branch = click.style(branch, fg="yellow")
+                user_output(f"Jumped to worktree {styled_wt} (branch {styled_branch})")
+        else:
+            styled_wt = click.style(worktree_name, fg="cyan", bold=True)
+            styled_branch = click.style(branch, fg="yellow")
+            user_output(f"Jumped to worktree {styled_wt} and checked out branch {styled_branch}")
+
+        # Show manual instructions
+        user_output("\nShell integration not detected. Run 'erk init --shell' to set up.")
+        user_output(f"Or use: source <(erk jump {branch} --script)")
 
 
 @click.command("jump")
@@ -143,6 +189,9 @@ def jump_cmd(ctx: ErkContext, branch: str, script: bool) -> None:
 
     # Find worktrees containing the target branch
     matching_worktrees = find_worktrees_containing_branch(ctx, repo.root, worktrees, branch)
+
+    # Track whether we're creating a new worktree
+    is_newly_created = False
 
     # Handle three cases: no match, one match, multiple matches
     if len(matching_worktrees) == 0:
@@ -231,12 +280,15 @@ def jump_cmd(ctx: ErkContext, branch: str, script: bool) -> None:
         worktrees = ctx.git_ops.list_worktrees(repo.root)
         matching_worktrees = find_worktrees_containing_branch(ctx, repo.root, worktrees, branch)
 
+        # Mark that we just created this worktree
+        is_newly_created = True
+
         # Fall through to jump to the newly created worktree
 
     if len(matching_worktrees) == 1:
         # Exactly one worktree contains this branch
         target_worktree = matching_worktrees[0]
-        _perform_jump(ctx, repo.root, target_worktree, branch, script)
+        _perform_jump(ctx, repo.root, target_worktree, branch, script, is_newly_created)
 
     else:
         # Multiple worktrees contain this branch
@@ -246,7 +298,7 @@ def jump_cmd(ctx: ErkContext, branch: str, script: bool) -> None:
         if len(directly_checked_out) == 1:
             # Exactly one worktree has the branch directly checked out - jump to it
             target_worktree = directly_checked_out[0]
-            _perform_jump(ctx, repo.root, target_worktree, branch, script)
+            _perform_jump(ctx, repo.root, target_worktree, branch, script, is_newly_created)
         else:
             # Zero or multiple worktrees have it directly checked out
             # Show error message listing all options

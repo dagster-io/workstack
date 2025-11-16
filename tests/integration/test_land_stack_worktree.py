@@ -139,7 +139,7 @@ def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> No
             },
             pr_bases={
                 100: "main",
-            }
+            },
         )
 
         global_config_ops = GlobalConfig(
@@ -288,7 +288,7 @@ def test_land_stack_with_trunk_in_worktree(tmp_path: Path) -> None:
             },
             pr_bases={
                 100: "main",
-            }
+            },
         )
 
         global_config_ops = GlobalConfig(

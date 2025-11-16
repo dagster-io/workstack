@@ -155,6 +155,11 @@ def test_jump_creates_worktree_for_unchecked_branch() -> None:
         script_path = Path(result.stdout.strip())
         assert script_path.exists()
 
+        # Verify "Jumped to new worktree" message in activation script
+        script_content = script_path.read_text(encoding="utf-8")
+        assert "Jumped to new worktree" in script_content
+        assert "existing-branch" in script_content
+
 
 def test_jump_to_branch_in_stack_but_not_checked_out() -> None:
     """Test that jump auto-creates worktree when branch exists in repo but is not checked out.
@@ -300,9 +305,11 @@ def test_jump_already_on_target_branch() -> None:
         script_content = env.script_writer.get_script_content(script_path)
         assert script_content is not None
 
-        # CRITICAL: Message should say "Already in worktree" since we're already in target location
-        assert "Already in worktree for branch" in script_content
+        # CRITICAL: Message should say "Already on branch" since we're already in target location
+        # Message format: "Already on branch {branch} in worktree {name}"
+        assert "Already on branch" in script_content
         assert "feature-1" in script_content
+        assert "feature-1-wt" in script_content
         # Should NOT say "Jumped" since we didn't switch locations
         assert "Jumped" not in script_content
 
@@ -447,6 +454,11 @@ def test_jump_creates_worktree_for_remote_only_branch() -> None:
         script_path = Path(result.stdout.strip())
         assert script_path.exists()
 
+        # Verify "Jumped to new worktree" message in activation script
+        script_content = script_path.read_text(encoding="utf-8")
+        assert "Jumped to new worktree" in script_content
+        assert "feature-remote" in script_content
+
 
 def test_jump_fails_when_branch_not_on_origin() -> None:
     """Test jump shows error when branch doesn't exist locally or on origin."""
@@ -543,8 +555,9 @@ def test_jump_message_when_switching_worktrees() -> None:
         # CRITICAL: Message should say "Jumped to worktree"
         # NOT "Already on branch" or "Already in worktree"
         # Because user is switching from env.cwd to feature_wt
-        assert "Jumped to worktree for branch" in script_content
-        assert "feature-branch" in script_content
+        # Message format: "Jumped to worktree {name}" (when name matches branch)
+        assert "Jumped to worktree" in script_content
+        assert "feature-wt" in script_content
         assert str(feature_wt) in script_content
 
         # Should NOT contain "Already" since we're switching locations

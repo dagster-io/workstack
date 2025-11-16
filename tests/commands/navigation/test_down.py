@@ -178,7 +178,7 @@ def test_down_parent_has_no_worktree() -> None:
         assert result.exit_code == 1
         assert "feature-1" in result.stderr or "parent branch" in result.stderr
         assert "no worktree" in result.stderr
-        assert "workstack create feature-1" in result.stderr
+        assert "erk create feature-1" in result.stderr
 
 
 def test_down_graphite_not_enabled() -> None:

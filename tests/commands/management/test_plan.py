@@ -291,7 +291,7 @@ def test_create_rejects_main_as_worktree_name() -> None:
         # Should fail with error suggesting to use root
         assert result.exit_code != 0
         assert "main" in result.output.lower()
-        assert "workstack switch root" in result.output
+        assert "erk switch root" in result.output
 
         # Verify worktree was not created
         worktree_path = env.workstacks_root / "repo" / "main"
@@ -338,7 +338,7 @@ def test_create_rejects_master_as_worktree_name() -> None:
         # Should fail with error suggesting to use root
         assert result.exit_code != 0
         assert "master" in result.output.lower()
-        assert "workstack switch root" in result.output
+        assert "erk switch root" in result.output
 
         # Verify worktree was not created
         worktree_path = env.workstacks_root / "repo" / "master"
@@ -391,7 +391,7 @@ def test_create_with_script_flag() -> None:
         # Output should be a temp file path
         script_path = Path(result.output.strip())
         assert script_path.exists()
-        assert script_path.name.startswith("workstack-create-")
+        assert script_path.name.startswith("erk-create-")
         assert script_path.name.endswith(".sh")
 
         # Verify script content contains the cd command

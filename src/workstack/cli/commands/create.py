@@ -17,7 +17,7 @@ from workstack.core.naming_utils import (
     sanitize_worktree_name,
     strip_plan_from_filename,
 )
-from workstack.core.plan_folder import create_plan_folder
+from workstack.core.plan_folder import create_plan_folder, get_plan_path
 from workstack.core.repo_discovery import ensure_workstacks_dir
 
 
@@ -356,8 +356,6 @@ def create(
     if ctx.git_ops.path_exists(wt_path):
         if output_json:
             # For JSON output, emit a status: "exists" response with available info
-            from workstack.core.plan_folder import get_plan_path
-
             existing_branch = ctx.git_ops.get_current_branch(wt_path)
             plan_path = get_plan_path(wt_path, git_ops=ctx.git_ops)
             json_response = _create_json_response(

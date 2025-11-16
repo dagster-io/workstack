@@ -104,12 +104,29 @@ from typing import Protocol
 
 ### 5. Imports - Module-Level and Absolute 🔴
 
-```python
-# ✅ CORRECT: Module-level, absolute
-from workstack.config import load_config
+**ALL imports must be at module level unless preventing circular imports**
 
-# ❌ WRONG: Relative or inline
+```python
+# ✅ CORRECT: Module-level, absolute imports
+from workstack.config import load_config
+from pathlib import Path
+import click
+
+# ❌ WRONG: Inline imports (unless for circular import prevention)
+def my_function():
+    from workstack.config import load_config  # WRONG unless circular import
+    return load_config()
+
+# ❌ WRONG: Relative imports
 from .config import load_config
+```
+
+**Exception**: Inline imports are ONLY acceptable when preventing circular imports. Always document why:
+```python
+def create_context():
+    # Inline import to avoid circular dependency with tests
+    from tests.fakes.gitops import FakeGitOps
+    return FakeGitOps()
 ```
 
 **Details**: See `references/core-standards.md#imports`

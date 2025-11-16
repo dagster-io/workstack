@@ -1,14 +1,11 @@
-"""Pure business logic for worktree split operations.
-
-This module contains the core logic for determining which worktrees need to be
-created when splitting a Graphite stack from a single worktree into individual
-worktrees per branch. All functions are pure and testable without filesystem I/O.
-"""
+"""Split command planning logic - models, branch identification, plan creation, and execution."""
 
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from workstack.cli.output import user_output
+from workstack.core.context import WorkstackContext
 from workstack.core.gitops import WorktreeInfo
 
 
@@ -35,6 +32,41 @@ class SplitPlan:
     repo_root: Path
     skipped_current: bool
     skipped_trunk: bool
+
+
+def get_stack_branches(
+    ctx: WorkstackContext,
+    repo_root: Path,
+    current_branch: str | None,
+    trunk_branch: str,
+) -> list[str]:
+    """Get the Graphite stack for the current or trunk branch.
+
+    Handles detached HEAD state by falling back to trunk branch stack.
+
+    Returns:
+        List of branches in the stack (trunk to leaf)
+
+    Raises:
+        SystemExit: If branch is not tracked by Graphite
+    """
+    if current_branch is None:
+        # In detached HEAD state, get the full stack from trunk
+        stack_branches = ctx.graphite_ops.get_branch_stack(ctx.git_ops, repo_root, trunk_branch)
+        if stack_branches is None:
+            user_output(f"Error: Trunk branch '{trunk_branch}' is not tracked by Graphite")
+            raise SystemExit(1)
+    else:
+        # Get current branch's stack
+        stack_branches = ctx.graphite_ops.get_branch_stack(ctx.git_ops, repo_root, current_branch)
+        if stack_branches is None:
+            user_output(f"Error: Branch '{current_branch}' is not tracked by Graphite")
+            user_output(
+                "Run 'gt repo init' to initialize Graphite, or use 'gt track' to track this branch"
+            )
+            raise SystemExit(1)
+
+    return stack_branches
 
 
 def identify_splittable_branches(

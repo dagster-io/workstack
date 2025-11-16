@@ -1,4 +1,4 @@
-"""Tests for split utility functions.
+"""Tests for split planning functions.
 
 These tests verify the pure business logic for worktree split operations.
 All tests are fast and don't require filesystem I/O.
@@ -6,12 +6,13 @@ All tests are fast and don't require filesystem I/O.
 
 from pathlib import Path
 
-from workstack.core.gitops import WorktreeInfo
-from workstack.core.split_utils import (
+from workstack.cli.commands.split.plan import (
+    SplitPlan,
     create_split_plan,
     execute_split_plan,
     identify_splittable_branches,
 )
+from workstack.core.gitops import WorktreeInfo
 
 # Tests for identify_splittable_branches function
 
@@ -258,7 +259,7 @@ def test_create_split_plan_empty_branches_to_split() -> None:
 
 def test_execute_split_plan_creates_worktrees() -> None:
     """Normal execution creates worktrees."""
-    from workstack.core.split_utils import SplitPlan
+    from workstack.cli.commands.split.plan import SplitPlan
 
     # Create fake git ops
     class FakeGitOps:
@@ -299,7 +300,7 @@ def test_execute_split_plan_creates_worktrees() -> None:
 
 def test_execute_split_plan_with_noop_ops() -> None:
     """NoopGitOps doesn't create actual worktrees."""
-    from workstack.core.split_utils import SplitPlan
+    from workstack.cli.commands.split.plan import SplitPlan
 
     class NoopGitOps:
         """Simulates NoopGitOps behavior for testing."""
@@ -332,7 +333,7 @@ def test_execute_split_plan_with_noop_ops() -> None:
 
 def test_execute_split_plan_empty_plan() -> None:
     """Handle empty plan with no branches to split."""
-    from workstack.core.split_utils import SplitPlan
+    from workstack.cli.commands.split.plan import SplitPlan
 
     class FakeGitOps:
         def __init__(self):

@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import frontmatter
+
 from workstack.core.gitops import GitOps
 
 
@@ -23,8 +25,6 @@ def extract_plan_title(plan_path: Path, git_ops: GitOps | None = None) -> str | 
     path_exists = git_ops.path_exists(plan_path) if git_ops is not None else plan_path.exists()
     if not path_exists:
         return None
-
-    import frontmatter
 
     # Parse file with frontmatter library (handles YAML frontmatter properly)
     post = frontmatter.load(str(plan_path))

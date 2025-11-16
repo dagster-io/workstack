@@ -66,7 +66,7 @@ def config_list(ctx: ErkContext) -> None:
     # Display global config
     user_output(click.style("Global configuration:", bold=True))
     if ctx.global_config:
-        user_output(f"  workstacks_root={ctx.global_config.workstacks_root}")
+        user_output(f"  erk_root={ctx.global_config.erk_root}")
         user_output(f"  use_graphite={str(ctx.global_config.use_graphite).lower()}")
         user_output(f"  show_pr_info={str(ctx.global_config.show_pr_info).lower()}")
     else:
@@ -109,14 +109,14 @@ def config_get(ctx: ErkContext, key: str) -> None:
     parts = key.split(".")
 
     # Handle global config keys
-    if parts[0] in ("workstacks_root", "use_graphite", "show_pr_info"):
+    if parts[0] in ("erk_root", "use_graphite", "show_pr_info"):
         if ctx.global_config is None:
             config_path = ctx.global_config_ops.path()
             user_output(f"Global config not found at {config_path}")
             raise SystemExit(1)
 
-        if parts[0] == "workstacks_root":
-            machine_output(str(ctx.global_config.workstacks_root))
+        if parts[0] == "erk_root":
+            machine_output(str(ctx.global_config.erk_root))
         elif parts[0] == "use_graphite":
             machine_output(str(ctx.global_config.use_graphite).lower())
         elif parts[0] == "show_pr_info":
@@ -162,7 +162,7 @@ def config_set(ctx: ErkContext, key: str, value: str) -> None:
     parts = key.split(".")
 
     # Handle global config keys
-    if parts[0] in ("workstacks_root", "use_graphite", "show_pr_info"):
+    if parts[0] in ("erk_root", "use_graphite", "show_pr_info"):
         if ctx.global_config is None:
             config_path = ctx.global_config_ops.path()
             user_output(f"Global config not found at {config_path}")
@@ -170,9 +170,9 @@ def config_set(ctx: ErkContext, key: str, value: str) -> None:
             raise SystemExit(1)
 
         # Create new config with updated value
-        if parts[0] == "workstacks_root":
+        if parts[0] == "erk_root":
             new_config = GlobalConfig(
-                workstacks_root=Path(value).expanduser().resolve(),
+                erk_root=Path(value).expanduser().resolve(),
                 use_graphite=ctx.global_config.use_graphite,
                 shell_setup_complete=ctx.global_config.shell_setup_complete,
                 show_pr_info=ctx.global_config.show_pr_info,
@@ -182,7 +182,7 @@ def config_set(ctx: ErkContext, key: str, value: str) -> None:
                 user_output(f"Invalid boolean value: {value}")
                 raise SystemExit(1)
             new_config = GlobalConfig(
-                workstacks_root=ctx.global_config.workstacks_root,
+                erk_root=ctx.global_config.erk_root,
                 use_graphite=value.lower() == "true",
                 shell_setup_complete=ctx.global_config.shell_setup_complete,
                 show_pr_info=ctx.global_config.show_pr_info,
@@ -192,7 +192,7 @@ def config_set(ctx: ErkContext, key: str, value: str) -> None:
                 user_output(f"Invalid boolean value: {value}")
                 raise SystemExit(1)
             new_config = GlobalConfig(
-                workstacks_root=ctx.global_config.workstacks_root,
+                erk_root=ctx.global_config.erk_root,
                 use_graphite=ctx.global_config.use_graphite,
                 shell_setup_complete=ctx.global_config.shell_setup_complete,
                 show_pr_info=value.lower() == "true",

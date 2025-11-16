@@ -134,7 +134,7 @@ def create_split_plan(
     trunk_branch: str,
     current_branch: str | None,
     all_worktrees: list[WorktreeInfo],
-    workstacks_dir: Path,
+    worktrees_dir: Path,
     sanitize_worktree_name: Callable[[str], str],
     source_worktree_path: Path,
     repo_root: Path,
@@ -146,7 +146,7 @@ def create_split_plan(
         trunk_branch: The trunk branch name (main or master)
         current_branch: Currently checked out branch (None if detached)
         all_worktrees: All existing worktrees in the repository
-        workstacks_dir: Base directory for workstack worktrees
+        worktrees_dir: Directory containing worktrees
         sanitize_worktree_name: Function to convert branch name to valid worktree name
         source_worktree_path: Path to the current worktree we're splitting from
         repo_root: Path to the repository root
@@ -163,7 +163,7 @@ def create_split_plan(
     target_paths = {}
     for branch in branches_to_split:
         worktree_name = sanitize_worktree_name(branch)
-        target_paths[branch] = workstacks_dir / worktree_name
+        target_paths[branch] = worktrees_dir / worktree_name
 
     return SplitPlan(
         stack_branches=stack_branches,

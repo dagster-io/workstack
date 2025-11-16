@@ -16,7 +16,8 @@ class RepoContext:
 
     root: Path
     repo_name: str
-    workstacks_dir: Path
+    repo_dir: Path  # ~/.erk/repos/<repo-name>
+    worktrees_dir: Path  # ~/.erk/repos/<repo-name>/worktrees
 
 
 @dataclass(frozen=True)
@@ -32,7 +33,7 @@ class NoRepoSentinel:
 
 
 def discover_repo_or_sentinel(
-    cwd: Path, workstacks_root: Path, git_ops: GitOps | None = None
+    cwd: Path, erk_root: Path, git_ops: GitOps | None = None
 ) -> RepoContext | NoRepoSentinel:
     """Walk up from `cwd` to find a directory containing `.git`.
 
@@ -44,7 +45,7 @@ def discover_repo_or_sentinel(
 
     Args:
         cwd: Current working directory to start search from
-        workstacks_root: Global workstacks root directory (from config)
+        erk_root: Global workstacks root directory (from config)
         git_ops: Git operations interface (defaults to RealGitOps)
 
     Returns:
@@ -75,12 +76,16 @@ def discover_repo_or_sentinel(
         return NoRepoSentinel(message="Not inside a git repository (no .git found up the tree)")
 
     repo_name = root.name
-    workstacks_dir = workstacks_root / repo_name
+    repo_dir = erk_root / "repos" / repo_name
+    worktrees_dir = repo_dir / "worktrees"
 
-    return RepoContext(root=root, repo_name=repo_name, workstacks_dir=workstacks_dir)
+    return RepoContext(
+        root=root, repo_name=repo_name, repo_dir=repo_dir, worktrees_dir=worktrees_dir
+    )
 
 
-def ensure_workstacks_dir(repo: RepoContext) -> Path:
-    """Ensure the workstacks directory exists and return it."""
-    repo.workstacks_dir.mkdir(parents=True, exist_ok=True)
-    return repo.workstacks_dir
+def ensure_repo_dir(repo: RepoContext) -> Path:
+    """Ensure the repo directory and worktrees subdirectory exist."""
+    repo.repo_dir.mkdir(parents=True, exist_ok=True)
+    repo.worktrees_dir.mkdir(parents=True, exist_ok=True)
+    return repo.repo_dir

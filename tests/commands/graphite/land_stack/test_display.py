@@ -47,7 +47,7 @@ def test_land_stack_verbose_flag_shows_detailed_output() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -111,7 +111,7 @@ def test_land_stack_dry_run_shows_submit_commands() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,

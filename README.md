@@ -4,6 +4,17 @@
 
 Create, switch, and manage multiple worktrees from a centralized location with automatic environment setup.
 
+## Philosophy
+
+erk makes git worktrees lightweight and disposable:
+
+- **One branch per worktree** - No more `git checkout` conflicts. Each feature gets its own working directory.
+- **Lightweight and ephemeral** - Create and destroy worktrees freely. Branches persist, worktrees don't.
+- **Automatic environment setup** - Each worktree gets .env files, virtual environments, and activation scripts.
+- **Organized in ~/.erk/repos/<repo>/worktrees/** - All worktrees for a repository in one predictable location.
+
+Think of worktrees as "working directories for branches" rather than "branches you switch between."
+
 ## Installation
 
 ```bash
@@ -37,7 +48,7 @@ erk rm user-auth
 
 **Key features:**
 
-- Centralized worktrees in `~/erks/<repo>/<feature>/`
+- Centralized worktrees in `~/.erk/repos/<repo>/worktrees/<feature>/`
 - Automatic environment setup (`.env`, virtual environments, activation scripts)
 - Simple CLI: `create`, `switch`, `rm`, `ls`
 - Plan-based development workflow
@@ -78,7 +89,7 @@ erk rename OLD NEW         # Rename a worktree
 erk rm NAME                # Remove worktree
 erk sync                   # Sync with Graphite, show cleanup candidates
 erk sync --dry-run         # Show safe-to-delete worktrees (merged PRs)
-erk sync -f                # Sync and auto-remove merged workstacks
+erk sync -f                # Sync and auto-remove merged worktrees
 ```
 
 ### Stack Navigation
@@ -253,12 +264,12 @@ erk completion bash/zsh/fish  # Generate shell completion script
 **Global** (`~/.erk/config.toml`):
 
 ```toml
-erks_root = "/Users/you/erks"
-use_graphite = true     # Auto-detected if gt CLI installed
-show_pr_info = true     # Display PR status in list --stacks (requires gh CLI)
+erk_root = "/Users/you/.erk"  # Defaults to ~/.erk
+use_graphite = true            # Auto-detected if gt CLI installed
+show_pr_info = true            # Display PR status in list --stacks (requires gh CLI)
 ```
 
-**Per-Repository** (`~/erks/<repo>/config.toml`):
+**Per-Repository** (`~/.erk/repos/<repo>/config.toml`):
 
 ```toml
 [env]

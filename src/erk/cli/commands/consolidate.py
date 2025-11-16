@@ -10,7 +10,7 @@ from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output
 from erk.core.consolidation_utils import calculate_stack_range, create_consolidation_plan
 from erk.core.context import ErkContext, create_context
-from erk.core.repo_discovery import ensure_workstacks_dir
+from erk.core.repo_discovery import ensure_repo_dir
 
 
 @click.command("consolidate")
@@ -64,25 +64,25 @@ def consolidate_cmd(
     \b
     Examples:
       # Consolidate full stack into current worktree (default)
-      $ workstack consolidate
+      $ erk consolidate
 
       # Consolidate only downstack (trunk to current)
-      $ workstack consolidate --down
+      $ erk consolidate --down
 
       # Consolidate trunk → feat-2 only (leaves feat-3+ in separate worktrees)
-      $ workstack consolidate feat-2
+      $ erk consolidate feat-2
 
       # Create new worktree "my-stack" and consolidate full stack into it
-      $ workstack consolidate --name my-stack
+      $ erk consolidate --name my-stack
 
       # Consolidate downstack into new worktree
-      $ workstack consolidate --down --name my-partial
+      $ erk consolidate --down --name my-partial
 
       # Preview changes without executing
-      $ workstack consolidate --dry-run
+      $ erk consolidate --dry-run
 
       # Skip confirmation prompt
-      $ workstack consolidate --force
+      $ erk consolidate --force
 
     Safety checks:
     - Aborts if any worktree being consolidated has uncommitted changes
@@ -114,6 +114,7 @@ def consolidate_cmd(
 
     # Get repository root
     repo = discover_repo_context(ctx, current_worktree)
+    ensure_repo_dir(repo)
 
     # Get current branch's stack
     stack_branches = ctx.graphite_ops.get_branch_stack(ctx.git_ops, repo.root, current_branch)
@@ -201,8 +202,7 @@ def consolidate_cmd(
             temp_branch_name = f"temp-consolidate-{int(time.time())}"
 
             # Use proper workstacks directory path resolution
-            workstacks_dir = ensure_workstacks_dir(repo)
-            new_worktree_path = worktree_path_for(workstacks_dir, name)
+            new_worktree_path = worktree_path_for(repo.worktrees_dir, name)
 
             # Create temporary branch on current commit (doesn't checkout)
             # GitOps operations use check=True, so failures raise CalledProcessError

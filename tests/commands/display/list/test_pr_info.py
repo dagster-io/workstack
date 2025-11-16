@@ -52,8 +52,8 @@ def test_list_with_stacks_pr_visibility(show_pr_info: bool, expected_visible: bo
 
         # Create worktree directory for branch so it appears in the stack
         repo_name = env.cwd.name
-        workstacks_dir = env.workstacks_root / repo_name
-        feature_worktree = workstacks_dir / branch_name
+        repo_dir = env.erk_root / repo_name
+        feature_worktree = repo_dir / branch_name
 
         # Build fake git ops with worktree for branch
         git_ops = FakeGitOps(
@@ -126,8 +126,8 @@ def test_list_pr_emoji_mapping(
 
         # Create worktree directory for branch so it appears in the stack
         repo_name = env.cwd.name
-        workstacks_dir = env.workstacks_root / repo_name
-        feature_worktree = workstacks_dir / branch_name
+        repo_dir = env.erk_root / repo_name
+        feature_worktree = repo_dir / branch_name
 
         # Build fake git ops with worktree for branch
         git_ops = FakeGitOps(
@@ -189,8 +189,8 @@ def test_list_with_stacks_uses_graphite_url() -> None:
 
         # Create worktree directory for branch so it appears in the stack
         repo_name = env.cwd.name
-        workstacks_dir = env.workstacks_root / repo_name
-        feature_worktree = workstacks_dir / branch_name
+        repo_dir = env.erk_root / repo_name
+        feature_worktree = repo_dir / branch_name
 
         # Build fake git ops with worktree for branch
         git_ops = FakeGitOps(
@@ -252,8 +252,8 @@ def test_list_pr_with_merge_conflicts() -> None:
 
         # Create worktree directory
         repo_name = env.cwd.name
-        workstacks_dir = env.workstacks_root / repo_name
-        feature_worktree = workstacks_dir / branch_name
+        repo_dir = env.erk_root / repo_name
+        feature_worktree = repo_dir / branch_name
 
         # Build fake git ops
         git_ops = FakeGitOps(

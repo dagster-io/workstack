@@ -21,7 +21,7 @@ def test_context_initialization_and_attributes() -> None:
     graphite_ops = FakeGraphiteOps()
     shell_ops = FakeShellOps()
     global_config = GlobalConfig(
-        workstacks_root=Path("/tmp"),
+        erk_root=Path("/tmp"),
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=True,
@@ -48,7 +48,7 @@ def test_context_initialization_and_attributes() -> None:
 def test_context_is_frozen() -> None:
     """ErkContext is a frozen dataclass."""
     global_config = GlobalConfig(
-        workstacks_root=Path("/tmp"),
+        erk_root=Path("/tmp"),
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=True,
@@ -148,7 +148,8 @@ def test_for_test_factory_accepts_trunk_branch() -> None:
         repo=RepoContext(
             root=Path("/repo"),
             repo_name="repo",
-            workstacks_dir=Path("/repo/.workstacks"),
+            repo_dir=Path("/repo/.workstacks"),
+            worktrees_dir=Path("/repo/.workstacks") / "worktrees",
         ),
     )
 

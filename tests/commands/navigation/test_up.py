@@ -17,7 +17,7 @@ def test_up_with_existing_worktree() -> None:
     """Test up command when child branch has a worktree."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
+        repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # The test runs from cwd, so we simulate being in feature-1 by setting
         # cwd's current branch to feature-1
@@ -25,8 +25,8 @@ def test_up_with_existing_worktree() -> None:
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=workstacks_dir / "feature-1", branch="feature-1"),
-                    WorktreeInfo(path=workstacks_dir / "feature-2", branch="feature-2"),
+                    WorktreeInfo(path=repo_dir / "feature-1", branch="feature-1"),
+                    WorktreeInfo(path=repo_dir / "feature-2", branch="feature-2"),
                 ]
             },
             current_branches={
@@ -53,7 +53,8 @@ def test_up_with_existing_worktree() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
         )
 
         test_ctx = env.build_context(
@@ -71,20 +72,20 @@ def test_up_with_existing_worktree() -> None:
         script_path = Path(result.stdout.strip())
         script_content = env.script_writer.get_script_content(script_path)
         assert script_content is not None
-        assert str(workstacks_dir / "feature-2") in script_content
+        assert str(repo_dir / "feature-2") in script_content
 
 
 def test_up_at_top_of_stack() -> None:
     """Test up command when at the top of stack (no children)."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
+        repo_dir = env.erk_root / "repos" / env.cwd.name
 
         git_ops = FakeGitOps(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=workstacks_dir / "feature-2", branch="feature-2"),
+                    WorktreeInfo(path=repo_dir / "feature-2", branch="feature-2"),
                 ]
             },
             current_branches={env.cwd: "feature-2"},  # Simulate being in feature-2 worktree
@@ -106,7 +107,8 @@ def test_up_at_top_of_stack() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
         )
 
         test_ctx = env.build_context(git_ops=git_ops, repo=repo, use_graphite=True)
@@ -121,14 +123,14 @@ def test_up_child_has_no_worktree() -> None:
     """Test up command when child branch exists but has no worktree."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
+        repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Only feature-1 has a worktree, feature-2 does not
         git_ops = FakeGitOps(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=workstacks_dir / "feature-1", branch="feature-1"),
+                    WorktreeInfo(path=repo_dir / "feature-1", branch="feature-1"),
                 ]
             },
             current_branches={env.cwd: "feature-1"},  # Simulate being in feature-1 worktree
@@ -150,7 +152,8 @@ def test_up_child_has_no_worktree() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
         )
 
         test_ctx = env.build_context(
@@ -169,7 +172,7 @@ def test_up_graphite_not_enabled() -> None:
     """Test up command requires Graphite to be enabled."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
+        repo_dir = env.erk_root / "repos" / env.cwd.name
 
         git_ops = FakeGitOps(
             worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch="main")]},
@@ -181,7 +184,8 @@ def test_up_graphite_not_enabled() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
         )
 
         # Graphite is NOT enabled
@@ -198,7 +202,7 @@ def test_up_detached_head() -> None:
     """Test up command fails gracefully on detached HEAD."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
+        repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Current branch is None (detached HEAD)
         git_ops = FakeGitOps(
@@ -211,7 +215,8 @@ def test_up_detached_head() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
         )
 
         test_ctx = env.build_context(git_ops=git_ops, repo=repo, use_graphite=True)
@@ -227,14 +232,14 @@ def test_up_script_flag() -> None:
     """Test up command with --script flag generates activation script."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
+        repo_dir = env.erk_root / "repos" / env.cwd.name
 
         git_ops = FakeGitOps(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=workstacks_dir / "feature-1", branch="feature-1"),
-                    WorktreeInfo(path=workstacks_dir / "feature-2", branch="feature-2"),
+                    WorktreeInfo(path=repo_dir / "feature-1", branch="feature-1"),
+                    WorktreeInfo(path=repo_dir / "feature-2", branch="feature-2"),
                 ]
             },
             current_branches={env.cwd: "feature-1"},  # Simulate being in feature-1 worktree
@@ -257,7 +262,8 @@ def test_up_script_flag() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
         )
 
         test_ctx = env.build_context(
@@ -272,14 +278,14 @@ def test_up_script_flag() -> None:
         script_content = env.script_writer.get_script_content(script_path)
         assert script_content is not None
         # Verify script contains the target worktree path
-        assert str(workstacks_dir / "feature-2") in script_content
+        assert str(repo_dir / "feature-2") in script_content
 
 
 def test_up_multiple_children_fails_explicitly() -> None:
     """Test up command fails when branch has multiple children."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
+        repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Set up stack: main -> feature-1 -> [feature-2a, feature-2b]
         # feature-1 has TWO children
@@ -287,9 +293,9 @@ def test_up_multiple_children_fails_explicitly() -> None:
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=workstacks_dir / "feature-1", branch="feature-1"),
-                    WorktreeInfo(path=workstacks_dir / "feature-2a", branch="feature-2a"),
-                    WorktreeInfo(path=workstacks_dir / "feature-2b", branch="feature-2b"),
+                    WorktreeInfo(path=repo_dir / "feature-1", branch="feature-1"),
+                    WorktreeInfo(path=repo_dir / "feature-2a", branch="feature-2a"),
+                    WorktreeInfo(path=repo_dir / "feature-2b", branch="feature-2b"),
                 ]
             },
             current_branches={env.cwd: "feature-1"},
@@ -311,7 +317,8 @@ def test_up_multiple_children_fails_explicitly() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
         )
 
         test_ctx = env.build_context(
@@ -336,7 +343,7 @@ def test_up_with_mismatched_worktree_name() -> None:
     """
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
+        repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Worktree directories use different naming than branch names
         # Branch: feature/auth -> Worktree: auth-work
@@ -346,10 +353,8 @@ def test_up_with_mismatched_worktree_name() -> None:
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=workstacks_dir / "auth-work", branch="feature/auth"),
-                    WorktreeInfo(
-                        path=workstacks_dir / "auth-tests-work", branch="feature/auth-tests"
-                    ),
+                    WorktreeInfo(path=repo_dir / "auth-work", branch="feature/auth"),
+                    WorktreeInfo(path=repo_dir / "auth-tests-work", branch="feature/auth-tests"),
                 ]
             },
             current_branches={env.cwd: "feature/auth"},  # Simulate being in feature/auth worktree
@@ -377,7 +382,8 @@ def test_up_with_mismatched_worktree_name() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
         )
 
         test_ctx = env.build_context(
@@ -398,4 +404,4 @@ def test_up_with_mismatched_worktree_name() -> None:
         script_path = Path(result.stdout.strip())
         script_content = env.script_writer.get_script_content(script_path)
         assert script_content is not None
-        assert str(workstacks_dir / "auth-tests-work") in script_content
+        assert str(repo_dir / "auth-tests-work") in script_content

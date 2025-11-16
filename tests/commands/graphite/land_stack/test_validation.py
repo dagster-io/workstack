@@ -32,7 +32,7 @@ def test_land_stack_requires_graphite() -> None:
 
         # use_graphite=False: Test that graphite is required
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -72,7 +72,7 @@ def test_land_stack_fails_on_detached_head() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -114,7 +114,7 @@ def test_land_stack_fails_with_uncommitted_changes() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -185,7 +185,7 @@ def test_land_stack_ignores_root_worktree_changes_on_unrelated_branch() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -256,7 +256,7 @@ def test_land_stack_fails_on_trunk_branch() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -304,7 +304,7 @@ def test_land_stack_fails_when_branch_not_tracked() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -351,7 +351,7 @@ def test_land_stack_fails_when_pr_missing() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -414,7 +414,7 @@ def test_land_stack_fails_when_pr_closed() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,

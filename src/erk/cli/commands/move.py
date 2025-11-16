@@ -8,7 +8,7 @@ from erk.cli.commands.switch import complete_worktree_names
 from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output
 from erk.core.context import ErkContext
-from erk.core.repo_discovery import ensure_workstacks_dir
+from erk.core.repo_discovery import ensure_repo_dir
 from erk.core.worktree_utils import (
     MoveOperationType,
     determine_move_operation,
@@ -48,7 +48,7 @@ def resolve_source_worktree(
     current: bool,
     branch: str | None,
     worktree: str | None,
-    workstacks_dir: Path,
+    worktrees_dir: Path,
 ) -> Path:
     """Determine source worktree from flags.
 
@@ -77,7 +77,7 @@ def resolve_source_worktree(
 
     if worktree:
         # Resolve worktree name to path
-        wt_path = worktree_path_for(workstacks_dir, worktree)
+        wt_path = worktree_path_for(worktrees_dir, worktree)
         # Validate that the worktree exists
         if not ctx.git_ops.path_exists(wt_path):
             user_output(f"Error: Worktree '{worktree}' does not exist")
@@ -276,7 +276,7 @@ def move_cmd(
     """
     # Discover repository context
     repo = discover_repo_context(ctx, ctx.cwd)
-    workstacks_dir = ensure_workstacks_dir(repo)
+    ensure_repo_dir(repo)
     trunk_branch = ctx.trunk_branch
 
     # Resolve source worktree
@@ -286,7 +286,7 @@ def move_cmd(
         current=current,
         branch=branch,
         worktree=worktree,
-        workstacks_dir=workstacks_dir,
+        worktrees_dir=repo.worktrees_dir,
     )
 
     # Resolve target worktree path
@@ -294,7 +294,7 @@ def move_cmd(
     if target == "root":
         target_wt = repo.root
     else:
-        target_wt = worktree_path_for(workstacks_dir, target)
+        target_wt = worktree_path_for(repo.worktrees_dir, target)
 
     # Validate source and target are different
     if source_wt.resolve() == target_wt.resolve():

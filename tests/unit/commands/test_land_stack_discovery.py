@@ -57,7 +57,7 @@ def test_get_branches_to_land_full_stack_default() -> None:
         git_ops=git_ops,
         graphite_ops=graphite_ops,
         global_config=GlobalConfig(
-            workstacks_root=Path("/test/workstacks"),
+            erk_root=Path("/test/workstacks"),
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -114,7 +114,7 @@ def test_get_branches_to_land_down_only_true() -> None:
         git_ops=git_ops,
         graphite_ops=graphite_ops,
         global_config=GlobalConfig(
-            workstacks_root=Path("/test/workstacks"),
+            erk_root=Path("/test/workstacks"),
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -171,7 +171,7 @@ def test_get_branches_to_land_at_leaf_full_stack() -> None:
         git_ops=git_ops,
         graphite_ops=graphite_ops,
         global_config=GlobalConfig(
-            workstacks_root=Path("/test/workstacks"),
+            erk_root=Path("/test/workstacks"),
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -228,7 +228,7 @@ def test_get_branches_to_land_at_leaf_down_only() -> None:
         git_ops=git_ops,
         graphite_ops=graphite_ops,
         global_config=GlobalConfig(
-            workstacks_root=Path("/test/workstacks"),
+            erk_root=Path("/test/workstacks"),
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -285,7 +285,7 @@ def test_get_branches_to_land_first_branch_full_stack() -> None:
         git_ops=git_ops,
         graphite_ops=graphite_ops,
         global_config=GlobalConfig(
-            workstacks_root=Path("/test/workstacks"),
+            erk_root=Path("/test/workstacks"),
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -342,7 +342,7 @@ def test_get_branches_to_land_first_branch_down_only() -> None:
         git_ops=git_ops,
         graphite_ops=graphite_ops,
         global_config=GlobalConfig(
-            workstacks_root=Path("/test/workstacks"),
+            erk_root=Path("/test/workstacks"),
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -376,7 +376,7 @@ def test_get_branches_to_land_no_stack() -> None:
         git_ops=git_ops,
         graphite_ops=graphite_ops,
         global_config=GlobalConfig(
-            workstacks_root=Path("/test/workstacks"),
+            erk_root=Path("/test/workstacks"),
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -419,7 +419,7 @@ def test_get_branches_to_land_excludes_trunk() -> None:
         git_ops=git_ops,
         graphite_ops=graphite_ops,
         global_config=GlobalConfig(
-            workstacks_root=Path("/test/workstacks"),
+            erk_root=Path("/test/workstacks"),
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,

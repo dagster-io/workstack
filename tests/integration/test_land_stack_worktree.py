@@ -104,9 +104,9 @@ def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> No
     )
 
     # Create linked worktree for feat-1
-    workstacks_dir = tmp_path / "workstacks" / "repo"
-    workstacks_dir.mkdir(parents=True)
-    worktree_path = workstacks_dir / "feat-1-work"
+    repo_dir = tmp_path / "workstacks" / "repo"
+    repo_dir.mkdir(parents=True)
+    worktree_path = repo_dir / "feat-1-work"
 
     subprocess.run(
         ["git", "worktree", "add", str(worktree_path), "feat-1"],
@@ -143,7 +143,7 @@ def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> No
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_dir.parent,
+            erk_root=repo_dir.parent,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -252,9 +252,9 @@ def test_land_stack_with_trunk_in_worktree(tmp_path: Path) -> None:
     )
 
     # Create linked worktree for main (this is the key setup for the bug)
-    workstacks_dir = tmp_path / "workstacks" / "repo"
-    workstacks_dir.mkdir(parents=True)
-    main_worktree = workstacks_dir / "main-work"
+    repo_dir = tmp_path / "workstacks" / "repo"
+    repo_dir.mkdir(parents=True)
+    main_worktree = repo_dir / "main-work"
 
     subprocess.run(
         ["git", "worktree", "add", str(main_worktree), "main"],
@@ -292,7 +292,7 @@ def test_land_stack_with_trunk_in_worktree(tmp_path: Path) -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=workstacks_dir.parent,
+            erk_root=repo_dir.parent,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,

@@ -62,12 +62,7 @@ def _perform_jump(
     """
     target_path = target_worktree.path
     current_branch_in_worktree = target_worktree.branch
-
-    # Check if we're already on the target branch in the target worktree
     current_cwd = ctx.cwd
-    if current_cwd == target_path and current_branch_in_worktree == branch:
-        # Already in the right place - activation script will show the message
-        return
 
     # Check if branch is already checked out in the worktree
     need_checkout = current_branch_in_worktree != branch
@@ -89,10 +84,12 @@ def _perform_jump(
         # Script mode: always generate script (for shell integration or manual sourcing)
         # Use shlex.quote() for branch name security (defense-in-depth)
         safe_branch = shlex.quote(branch)
-        if need_checkout:
-            jump_message = f'echo "Jumped to branch {safe_branch}: $(pwd)"'
+        # Determine if we're switching locations (not whether git checkout was needed)
+        is_switching_location = current_cwd != target_path
+        if is_switching_location:
+            jump_message = f'echo "Jumped to worktree for branch {safe_branch}: $(pwd)"'
         else:
-            jump_message = f'echo "Already on branch {safe_branch}: $(pwd)"'
+            jump_message = f'echo "Already in worktree for branch {safe_branch}: $(pwd)"'
         script_content = render_activation_script(
             worktree_path=target_path, final_message=jump_message
         )

@@ -249,22 +249,26 @@ def test_jump_works_without_graphite() -> None:
 
 
 def test_jump_already_on_target_branch() -> None:
-    """Test jumping when the target branch is already checked out in a single worktree."""
+    """Test jumping when already in the target worktree on the target branch.
+
+    This test validates the TRUE 'already there' case where ctx.cwd matches the target worktree.
+    Should show 'Already in worktree' message, NOT 'Jumped to worktree'.
+    """
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         work_dir = env.workstacks_root / env.cwd.name
         feature_wt = work_dir / "feature-1-wt"
-        other_wt = work_dir / "other-wt"
 
         git_ops = FakeGitOps(
             worktrees={
                 env.cwd: [
-                    WorktreeInfo(path=other_wt, branch="other-feature"),
-                    WorktreeInfo(path=feature_wt, branch="feature-1"),  # Already on feature-1
+                    WorktreeInfo(path=env.cwd, branch="main"),
+                    WorktreeInfo(path=feature_wt, branch="feature-1"),
                 ]
             },
-            current_branches={env.cwd: "other-feature"},
+            current_branches={env.cwd: "main"},
             git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
         )
 
         # Create RepoContext to avoid filesystem checks
@@ -274,17 +278,33 @@ def test_jump_already_on_target_branch() -> None:
             workstacks_dir=work_dir,
         )
 
-        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
+        # CRITICAL: Set cwd to feature_wt to simulate already being in target location
+        test_ctx = env.build_context(git_ops=git_ops, repo=repo, cwd=feature_wt)
 
-        # Jump to feature-1 which is already checked out
+        # Jump to feature-1 while already in feature_wt
         result = runner.invoke(
             cli, ["jump", "feature-1", "--script"], obj=test_ctx, catch_exceptions=False
         )
+
+        if result.exit_code != 0:
+            print(f"stderr: {result.stderr}")
+            print(f"stdout: {result.stdout}")
 
         # Should succeed without checking out (already on the branch)
         assert result.exit_code == 0
         # Should not have checked out (it's already checked out)
         assert len(git_ops.checked_out_branches) == 0
+
+        # Verify activation script was generated
+        script_path = Path(result.stdout.strip())
+        script_content = env.script_writer.get_script_content(script_path)
+        assert script_content is not None
+
+        # CRITICAL: Message should say "Already in worktree" since we're already in target location
+        assert "Already in worktree for branch" in script_content
+        assert "feature-1" in script_content
+        # Should NOT say "Jumped" since we didn't switch locations
+        assert "Jumped" not in script_content
 
 
 def test_jump_succeeds_when_branch_exactly_checked_out() -> None:
@@ -466,3 +486,69 @@ def test_jump_fails_when_branch_not_on_origin() -> None:
         assert result.exit_code == 1
         assert "does not exist" in result.stderr
         assert "erk create --branch nonexistent-branch" in result.stderr
+
+
+def test_jump_message_when_switching_worktrees() -> None:
+    """Test that jump shows 'Jumped to worktree' when switching from different location.
+
+    This validates that message logic checks location change, not whether git checkout is needed.
+    Regression test for bug where 'Already on branch X' was shown when switching worktrees even
+    when the branch was already checked out in the target worktree.
+    """
+    runner = CliRunner()
+    with pure_workstack_env(runner) as env:
+        work_dir = env.workstacks_root / env.cwd.name
+        # Set up two worktrees: root on main, secondary on feature-branch
+        feature_wt = work_dir / "feature-wt"
+
+        git_ops = FakeGitOps(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
+                    # Branch already checked out in target worktree
+                    WorktreeInfo(path=feature_wt, branch="feature-branch"),
+                ]
+            },
+            current_branches={env.cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
+        )
+
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            workstacks_dir=work_dir,
+        )
+
+        # Build context with cwd=env.cwd (root worktree)
+        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
+
+        # Jump to feature-branch from root worktree
+        result = runner.invoke(
+            cli, ["jump", "feature-branch", "--script"], obj=test_ctx, catch_exceptions=False
+        )
+
+        if result.exit_code != 0:
+            print(f"stderr: {result.stderr}")
+            print(f"stdout: {result.stdout}")
+
+        assert result.exit_code == 0
+
+        # Verify activation script was generated
+        script_path = Path(result.stdout.strip())
+        script_content = env.script_writer.get_script_content(script_path)
+        assert script_content is not None
+
+        # CRITICAL: Message should say "Jumped to worktree"
+        # NOT "Already on branch" or "Already in worktree"
+        # Because user is switching from env.cwd to feature_wt
+        assert "Jumped to worktree for branch" in script_content
+        assert "feature-branch" in script_content
+        assert str(feature_wt) in script_content
+
+        # Should NOT contain "Already" since we're switching locations
+        assert "Already" not in script_content
+
+        # Should not checkout (branch already checked out in target worktree)
+        assert len(git_ops.checked_out_branches) == 0

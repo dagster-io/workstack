@@ -15,14 +15,14 @@ dot-agent artifact ls [OPTIONS]  # Alias
 
 ## Options
 
-| Option | Short | Values | Default | Description |
-|--------|-------|--------|---------|-------------|
-| `--user` | `-u` | flag | - | Show only user-level artifacts (~/.claude/) |
-| `--project` | `-p` | flag | - | Show only project-level artifacts (./.claude/) |
-| `--all` | `-a` | flag | ✓ | Show artifacts from both levels |
-| `--type` | - | skill, command, agent, hook, doc | all | Filter by artifact type |
-| `--verbose` | `-v` | flag | - | Show detailed information (descriptions, paths) |
-| `--managed` | - | flag | - | Show only kit-managed artifacts (in dot-agent.toml) |
+| Option      | Short | Values                           | Default | Description                                         |
+| ----------- | ----- | -------------------------------- | ------- | --------------------------------------------------- |
+| `--user`    | `-u`  | flag                             | -       | Show only user-level artifacts (~/.claude/)         |
+| `--project` | `-p`  | flag                             | -       | Show only project-level artifacts (./.claude/)      |
+| `--all`     | `-a`  | flag                             | ✓       | Show artifacts from both levels                     |
+| `--type`    | -     | skill, command, agent, hook, doc | all     | Filter by artifact type                             |
+| `--verbose` | `-v`  | flag                             | -       | Show detailed information (descriptions, paths)     |
+| `--managed` | -     | flag                             | -       | Show only kit-managed artifacts (in dot-agent.toml) |
 
 ## Output Format
 
@@ -43,6 +43,7 @@ Installed Items:
 ```
 
 **Structure**:
+
 - Two main sections: "Claude Artifacts" and "Installed Items"
 - Subsections grouped by artifact type
 - One line per artifact: `[level] name [source]`
@@ -51,6 +52,7 @@ Installed Items:
 - 4-space indent for items
 
 **Badge meanings**:
+
 - `[P]` - Project-level (green, bold) - Located in `./.claude/`
 - `[U]` - User-level (blue, bold) - Located in `~/.claude/`
 - `[kit@version]` - Managed by kit (cyan) - Tracked in dot-agent.toml
@@ -72,6 +74,7 @@ Claude Artifacts:
 ```
 
 **Additions in verbose mode**:
+
 - Description line with `→` prefix (6-space indent)
 - Kit reference line (if managed by kit)
 - File path line (absolute path)
@@ -166,6 +169,7 @@ from dot_agent_kit.cli.list_formatting import (
 ```
 
 These shared functions are used internally by `format_compact_list()` and `format_verbose_list()`:
+
 - `format_level_indicator(level)` - Returns `[P]` or `[U]` with colors
 - `format_source_indicator(kit_id, version)` - Returns `[kit@version]` or `[local]` with colors
 - `format_section_header(text)` - Bold white text for sections
@@ -231,11 +235,13 @@ Within each section, artifacts are further grouped by type.
 Formatting differs based on view mode:
 
 **Compact**: Uses `format_compact_list()`
+
 - One line per artifact
 - Shows level badge, name, source badge
 - No blank lines between items
 
 **Verbose**: Uses `format_verbose_list()`
+
 - Multi-line per artifact
 - Adds description (→ prefix)
 - Adds kit reference (if applicable)
@@ -245,6 +251,7 @@ Formatting differs based on view mode:
 ### 5. Output
 
 All output goes to stderr via `user_output()`:
+
 ```python
 user_output(formatted_output)  # stderr, not stdout
 ```
@@ -254,11 +261,13 @@ user_output(formatted_output)  # stderr, not stdout
 ### Why Two Main Sections?
 
 **Claude Artifacts** (skills, commands, agents, hooks):
+
 - First-class extensions that modify Claude's behavior
 - Invoked by Claude during conversations
 - Define new capabilities
 
 **Installed Items** (docs, kit CLI commands):
+
 - Supporting resources
 - Referenced but don't extend Claude directly
 - Provide context and tooling
@@ -268,6 +277,7 @@ This separation helps users understand which artifacts actively extend Claude vs
 ### Why Extensive Filtering?
 
 Users need to filter artifacts by:
+
 - **Level** (user vs project) - Understand scope and precedence
 - **Type** (skill, command, etc.) - Focus on specific artifact category
 - **Source** (managed vs local) - See what's tracked by kit system
@@ -277,6 +287,7 @@ Multiple independent filters provide flexibility without overwhelming output.
 ### Why stderr for Output?
 
 Routing to stderr keeps stdout clean for:
+
 - Machine-readable data
 - Command composition in scripts
 - Piping to other tools
@@ -286,6 +297,7 @@ This allows: `dot-agent artifact list | grep foo` to work as expected.
 ### Why Both list and ls?
 
 Provides flexibility:
+
 - `list` - Explicit, clear intent
 - `ls` - Shorter, familiar to Unix users
 
@@ -377,6 +389,7 @@ dot-agent artifact list --managed --type skill
 **Test file**: `tests/commands/artifact/test_list.py`
 
 **Key test scenarios**:
+
 1. Level filtering (--user, --project, --all)
 2. Type filtering (each artifact type individually)
 3. Managed-only filtering
@@ -389,16 +402,20 @@ dot-agent artifact list --managed --type skill
 ## Related Files
 
 **Same directory**:
+
 - [formatting.md](formatting.md) - Artifact-specific formatters (5 functions)
 
 **Similar commands**:
+
 - [../hook/list.md](../hook/list.md) - Groups by lifecycle event instead of type
 - [../kit/list.md](../kit/list.md) - Lists kits with optional artifact details
 
 **Shared utilities**:
+
 - [../../cli/list_formatting.md](../../cli/list_formatting.md) - 8 shared formatting functions
 
 **Parent context**:
+
 - [INDEX.md](INDEX.md) - Artifact commands overview
 - [../INDEX.md](../INDEX.md) - All commands overview
 - [../../INDEX.md](../../INDEX.md) - Package overview

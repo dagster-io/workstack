@@ -17,22 +17,27 @@ def format_level_indicator(level: str) -> str
 Returns a colored badge indicating the artifact level.
 
 **Parameters**:
+
 - `level` (str): Level identifier - "user" or "project"
 
 **Returns**:
+
 - `str`: Formatted badge string with ANSI color codes
 
 **Output**:
+
 - `[U]` - Blue, bold (user-level, ~/.claude/)
 - `[P]` - Green, bold (project-level, ./.claude/)
 
 **Example**:
+
 ```python
 format_level_indicator("project")  # → "[P]" (green, bold)
 format_level_indicator("user")     # → "[U]" (blue, bold)
 ```
 
 **Usage in commands**:
+
 ```python
 level_badge = format_level_indicator(artifact.level)
 line = f"    {level_badge} {artifact.name} {source_badge}"
@@ -49,23 +54,28 @@ def format_source_indicator(kit_id: str, version: str) -> str
 Returns a colored badge indicating the artifact source.
 
 **Parameters**:
+
 - `kit_id` (str): Kit identifier (or None for local)
 - `version` (str): Kit version (or None for local)
 
 **Returns**:
+
 - `str`: Formatted badge string with ANSI color codes
 
 **Output**:
+
 - `[kit-id@version]` - Cyan (managed by kit)
 - `[local]` - Yellow (locally created)
 
 **Example**:
+
 ```python
 format_source_indicator("workstack", "0.1.0")  # → "[workstack@0.1.0]" (cyan)
 format_source_indicator(None, None)            # → "[local]" (yellow)
 ```
 
 **Usage in commands**:
+
 ```python
 source_badge = format_source_indicator(artifact.kit_id, artifact.version)
 line = f"    {level_badge} {artifact.name} {source_badge}"
@@ -82,18 +92,22 @@ def format_section_header(text: str) -> str
 Returns a formatted section header.
 
 **Parameters**:
+
 - `text` (str): Header text
 
 **Returns**:
+
 - `str`: Bold, white text (0-space indent)
 
 **Example**:
+
 ```python
 format_section_header("Claude Artifacts")  # → "Claude Artifacts" (bold, white)
 format_section_header("Installed Items")   # → "Installed Items" (bold, white)
 ```
 
 **Usage in commands**:
+
 ```python
 output = []
 output.append(format_section_header("Claude Artifacts"))
@@ -102,6 +116,7 @@ output.append("")  # Blank line after header
 ```
 
 **Design notes**:
+
 - Always at 0-space indent (left-aligned)
 - Bold for visual hierarchy
 - Typically followed by blank line
@@ -117,13 +132,16 @@ def format_subsection_header(text: str, count: int = None) -> str
 Returns a formatted subsection header with optional count.
 
 **Parameters**:
+
 - `text` (str): Subsection text (e.g., "Skills", "Commands")
 - `count` (int, optional): Number of items in subsection
 
 **Returns**:
+
 - `str`: Bold, white text with 2-space indent and optional count
 
 **Example**:
+
 ```python
 format_subsection_header("Skills")        # → "  Skills" (bold, white)
 format_subsection_header("Skills", 3)     # → "  Skills (3)" (bold, white)
@@ -131,6 +149,7 @@ format_subsection_header("Commands", 0)   # → "  Commands (0)" (bold, white)
 ```
 
 **Usage in commands**:
+
 ```python
 output.append(format_section_header("Claude Artifacts"))
 output.append(format_subsection_header("Skills", len(skills)))
@@ -139,6 +158,7 @@ for skill in skills:
 ```
 
 **Design notes**:
+
 - 2-space indent under section headers
 - Count in parentheses helps users understand section size
 - Bold for visual hierarchy
@@ -154,19 +174,23 @@ def format_item_name(name: str, bold: bool = True) -> str
 Returns a formatted item name.
 
 **Parameters**:
+
 - `name` (str): Item name
 - `bold` (bool, optional): Whether to bold the text (default: True)
 
 **Returns**:
+
 - `str`: Formatted name with optional bold styling
 
 **Example**:
+
 ```python
 format_item_name("workstack")              # → "workstack" (bold, white)
 format_item_name("custom-skill", bold=False)  # → "custom-skill" (white, no bold)
 ```
 
 **Usage in commands**:
+
 ```python
 level_badge = format_level_indicator(artifact.level)
 item_name = format_item_name(artifact.name)
@@ -176,6 +200,7 @@ line = f"    {level_badge} {item_name} {source_badge}"
 ```
 
 **Design notes**:
+
 - Typically bold for emphasis
 - Can be non-bold for de-emphasized items
 - White color for primary content
@@ -191,19 +216,23 @@ def format_metadata(text: str, dim: bool = True) -> str
 Returns formatted metadata text (secondary information).
 
 **Parameters**:
+
 - `text` (str): Metadata text
 - `dim` (bool, optional): Whether to dim the text (default: True)
 
 **Returns**:
+
 - `str`: Formatted text with optional dimming
 
 **Example**:
+
 ```python
 format_metadata("Path: /path/to/file")              # → "Path: /path/to/file" (dimmed, white)
 format_metadata("Description text", dim=False)      # → "Description text" (white, no dim)
 ```
 
 **Usage in commands** (verbose mode):
+
 ```python
 if verbose:
     output.append(f"    {level_badge} {item_name} {source_badge}")
@@ -212,6 +241,7 @@ if verbose:
 ```
 
 **Design notes**:
+
 - Dimmed to de-emphasize secondary information
 - Used for descriptions, paths, additional metadata
 - Typically 6+ space indent in verbose mode
@@ -227,19 +257,23 @@ def format_kit_reference(kit_id: str, version: str) -> str
 Returns a formatted kit reference (without brackets).
 
 **Parameters**:
+
 - `kit_id` (str): Kit identifier
 - `version` (str): Kit version
 
 **Returns**:
+
 - `str`: Formatted kit reference in cyan
 
 **Example**:
+
 ```python
 format_kit_reference("workstack", "0.1.0")  # → "workstack@0.1.0" (cyan)
 format_kit_reference("ai-toolkit", "1.2.0")  # → "ai-toolkit@1.2.0" (cyan)
 ```
 
 **Usage in commands** (verbose mode):
+
 ```python
 if artifact.kit_id:
     kit_ref = format_kit_reference(artifact.kit_id, artifact.version)
@@ -247,6 +281,7 @@ if artifact.kit_id:
 ```
 
 **Design notes**:
+
 - No brackets (unlike `format_source_indicator`)
 - Used in verbose mode to show kit provenance
 - Cyan color for kit references
@@ -262,12 +297,15 @@ def get_visible_length(text: str) -> int
 Calculates the visible length of a string by stripping ANSI color codes.
 
 **Parameters**:
+
 - `text` (str): Text with potential ANSI codes
 
 **Returns**:
+
 - `int`: Visible character count
 
 **Example**:
+
 ```python
 text_with_color = "\033[1m\033[32m[P]\033[0m workstack"
 get_visible_length(text_with_color)  # → 13 (strips ANSI codes)
@@ -277,6 +315,7 @@ get_visible_length(plain_text)  # → 13 (no codes to strip)
 ```
 
 **Usage in commands** (alignment):
+
 ```python
 # Calculate padding for column alignment
 items = [...]
@@ -288,6 +327,7 @@ for item in items:
 ```
 
 **Design notes**:
+
 - Essential for proper text alignment when using colors
 - ANSI codes add invisible characters that affect string length
 - Use this instead of `len()` when calculating display width
@@ -296,14 +336,14 @@ for item in items:
 
 ## Color Scheme Reference
 
-| Element | Color | ANSI Code | Usage |
-|---------|-------|-----------|-------|
-| Project level [P] | Green (bold) | `\033[1m\033[32m` | Project-level artifacts |
-| User level [U] | Blue (bold) | `\033[1m\033[34m` | User-level artifacts |
-| Kit references | Cyan | `\033[36m` | [kit@version], kit references |
-| Local sources | Yellow | `\033[33m` | [local] badges |
-| Primary content | White (bold) | `\033[1m\033[37m` | Headers, item names |
-| Secondary content | White (dim) | `\033[2m\033[37m` | Metadata, descriptions |
+| Element           | Color        | ANSI Code         | Usage                         |
+| ----------------- | ------------ | ----------------- | ----------------------------- |
+| Project level [P] | Green (bold) | `\033[1m\033[32m` | Project-level artifacts       |
+| User level [U]    | Blue (bold)  | `\033[1m\033[34m` | User-level artifacts          |
+| Kit references    | Cyan         | `\033[36m`        | [kit@version], kit references |
+| Local sources     | Yellow       | `\033[33m`        | [local] badges                |
+| Primary content   | White (bold) | `\033[1m\033[37m` | Headers, item names           |
+| Secondary content | White (dim)  | `\033[2m\033[37m` | Metadata, descriptions        |
 
 ## Implementation Pattern
 
@@ -372,6 +412,7 @@ def format_verbose_list(items):
 ### Single Source of Truth
 
 All formatting decisions live in this module:
+
 - Colors are defined once
 - Badge formats are consistent
 - Indentation levels are standard
@@ -381,6 +422,7 @@ All formatting decisions live in this module:
 ### Composability
 
 Functions are small and focused:
+
 - Each does one thing well
 - Can be combined in different ways
 - Easy to test independently
@@ -388,6 +430,7 @@ Functions are small and focused:
 ### Terminal-Native
 
 Uses ANSI codes for colors:
+
 - No external dependencies
 - Works in all modern terminals
 - Automatically stripped in non-TTY contexts
@@ -453,6 +496,7 @@ print("\n".join(output))
 **Test file**: `tests/cli/test_list_formatting.py`
 
 **Key test scenarios**:
+
 1. Each function produces correct output
 2. ANSI codes are included in terminal context
 3. Colors match specification
@@ -463,6 +507,7 @@ print("\n".join(output))
 ## Related Files
 
 **Used by**:
+
 - [commands/artifact/list.md](../commands/artifact/list.md)
 - [commands/artifact/formatting.md](../commands/artifact/formatting.md)
 - [commands/hook/list.md](../commands/hook/list.md)
@@ -470,10 +515,12 @@ print("\n".join(output))
 - [commands/kit/search.md](../commands/kit/search.md)
 
 **Related utilities**:
+
 - `cli/output.py` - Output routing (stderr vs stdout)
 - `cli/colors.py` - Color constant definitions
 
 **Parent context**:
+
 - [INDEX.md](INDEX.md) - CLI utilities overview
 - [../INDEX.md](../INDEX.md) - Package overview
 

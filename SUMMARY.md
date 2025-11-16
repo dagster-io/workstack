@@ -10,6 +10,7 @@ This directory contains a **working example** of automatically generated documen
 **Output**: Hierarchical, spatially-aware documentation skill
 
 **Session knowledge extracted**:
+
 - 4 list commands with detailed features
 - 8 shared formatting functions
 - Consistent implementation patterns
@@ -23,7 +24,7 @@ dot-agent-kit/
 └── docs/
     ├── INDEX.md                                ← Package overview
     ├── commands/
-    │   ├── INDEX.md                            ← Commands overview  
+    │   ├── INDEX.md                            ← Commands overview
     │   └── artifact/
     │       ├── INDEX.md                        ← Directory overview
     │       └── list.md                         ← File documentation
@@ -35,6 +36,7 @@ dot-agent-kit/
 ## Key Innovation: Hierarchical INDEX Files
 
 Every directory has an INDEX.md that provides:
+
 1. Overview of what's at this level
 2. Quick reference for common needs
 3. Navigation to deeper content
@@ -47,8 +49,9 @@ This solves the "chicken and egg" problem - agents know where to navigate withou
 **Traditional monolithic docs**: 15-30K tokens (always loaded)
 
 **This system**:
+
 - Working on single file: ~4K tokens
-- Adding new feature: ~10K tokens  
+- Adding new feature: ~10K tokens
 - Unrelated work: ~1.5K tokens
 
 **Savings**: 60-95% reduction in typical cases
@@ -123,6 +126,7 @@ Agent learns incrementally, not all at once
 ## The Vision
 
 Every Claude Code session becomes an opportunity to:
+
 1. Extract discovered knowledge
 2. Map to code structure
 3. Update documentation automatically

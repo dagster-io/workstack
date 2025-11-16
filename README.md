@@ -33,4 +33,3 @@ dot-agent-kit/                          ← One skill per package
 - Unrelated work: ~1.5K tokens (just SKILL.md)
 
 Compare to monolithic docs: 15-30K tokens always loaded.
-

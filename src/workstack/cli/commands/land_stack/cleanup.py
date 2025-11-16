@@ -56,26 +56,21 @@ def _cleanup_and_navigate(
     if dry_run:
         _emit(_format_cli_command(base_cmd, check), script_mode=script_mode)
     else:
-        # Only run sync if repo_root exists (skip in pure test mode with sentinel paths)
-        if ctx.git_ops.path_exists(repo_root):
-            try:
-                # This will remove merged worktrees and delete branches
-                ctx.shell_ops.run_workstack_sync(
-                    repo_root,
-                    force=True,
-                    verbose=verbose,
-                )
-                _emit(_format_cli_command(base_cmd, check), script_mode=script_mode)
-            except subprocess.CalledProcessError as e:
-                error_msg = e.stderr.strip() if e.stderr else str(e)
-                _emit(
-                    f"Warning: Cleanup sync failed: {error_msg}",
-                    script_mode=script_mode,
-                    error=True,
-                )
-        else:
-            # Pure test mode with sentinel paths - just show what would be done
+        try:
+            # This will remove merged worktrees and delete branches
+            ctx.shell_ops.run_workstack_sync(
+                repo_root,
+                force=True,
+                verbose=verbose,
+            )
             _emit(_format_cli_command(base_cmd, check), script_mode=script_mode)
+        except subprocess.CalledProcessError as e:
+            error_msg = e.stderr.strip() if e.stderr else str(e)
+            _emit(
+                f"Warning: Cleanup sync failed: {error_msg}",
+                script_mode=script_mode,
+                error=True,
+            )
 
     # Step 3: Navigate to next branch or stay on trunk
     # Check if last merged branch had unmerged children

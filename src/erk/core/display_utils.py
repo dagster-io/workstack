@@ -97,6 +97,8 @@ def format_pr_info(
 def format_branch_without_worktree(
     branch_name: str,
     pr_info: str | None,
+    max_branch_len: int = 0,
+    max_pr_info_len: int = 0,
 ) -> str:
     """Format a branch without a worktree for display.
 
@@ -105,16 +107,35 @@ def format_branch_without_worktree(
     Args:
         branch_name: Name of the branch
         pr_info: Formatted PR info string (e.g., "✅ #23") or None
+        max_branch_len: Maximum branch name length for alignment (0 disables)
+        max_pr_info_len: Maximum PR info length for alignment (0 disables)
 
     Returns:
         Formatted string with branch name and PR info
     """
     # Format branch name in yellow (same as worktree branches)
-    line = click.style(branch_name, fg="yellow")
+    branch_styled = click.style(branch_name, fg="yellow")
+
+    # Add padding to branch name if alignment is enabled
+    if max_branch_len > 0:
+        branch_padding = max_branch_len - len(branch_name)
+        branch_styled += " " * branch_padding
+
+    line = branch_styled
 
     # Add PR info if available
     if pr_info:
-        line += f" {pr_info}"
+        # Calculate visible length for alignment
+        pr_info_visible_len = get_visible_length(pr_info)
+
+        # Add padding to PR info if alignment is enabled
+        if max_pr_info_len > 0:
+            pr_info_padding = max_pr_info_len - pr_info_visible_len
+            pr_info_padded = pr_info + (" " * pr_info_padding)
+        else:
+            pr_info_padded = pr_info
+
+        line += f" {pr_info_padded}"
 
     return line
 

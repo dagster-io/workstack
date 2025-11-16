@@ -7,6 +7,7 @@ import click
 from erk.cli.commands.land_stack.discovery import _get_all_children
 from erk.cli.commands.land_stack.models import BranchPR
 from erk.cli.commands.land_stack.output import _emit, _format_description
+from erk.cli.commands.land_stack.retry import retry_with_backoff
 from erk.core.context import WorkstackContext
 
 
@@ -45,6 +46,85 @@ def _execute_checkout_phase(
         check = click.style("✓", fg="green")
         already_msg = f"already on {branch}"
         _emit(_format_description(already_msg, check), script_mode=script_mode)
+
+
+def _verify_and_update_pr_base(
+    ctx: WorkstackContext,
+    repo_root: Path,
+    branch: str,
+    expected_parent: str,
+    pr_number: int,
+    *,
+    verbose: bool,
+    script_mode: bool,
+) -> None:
+    """Verify PR base matches expected parent, update if stale.
+
+    [CRITICAL: Must be called BEFORE merge to prevent orphaned commits]
+
+    This function implements Phase 2.5 of the landing sequence. It verifies that
+    the PR's base branch on GitHub matches the expected parent (typically trunk
+    after previous iteration's restack). If the base is stale (e.g., points to
+    a deleted parent branch), it updates the base to the expected parent BEFORE
+    attempting to merge.
+
+    This prevents the race condition where:
+    1. Parent PR merges and deletes its branch (e.g., feat-1)
+    2. Child PR's base on GitHub still points to deleted branch
+    3. Child PR merges into deleted branch, creating orphaned commit
+
+    Args:
+        ctx: WorkstackContext with access to operations
+        repo_root: Repository root directory
+        branch: Current branch name
+        expected_parent: Expected base branch (should be trunk after restack)
+        pr_number: PR number to verify
+        verbose: If True, show detailed output
+        script_mode: True when running in --script mode
+
+    Raises:
+        RuntimeError: If PR base retrieval or update fails after retries
+    """
+    check = click.style("✓", fg="green")
+
+    # Get current PR base from GitHub (with retry for transient failures)
+    @retry_with_backoff(max_attempts=3, base_delay=1.0)
+    def get_pr_base_with_retry() -> str | None:
+        return ctx.github_ops.get_pr_base_branch(repo_root, pr_number)
+
+    current_base = get_pr_base_with_retry()
+
+    # Check if base retrieval failed
+    if current_base is None:
+        msg = f"Failed to get PR #{pr_number} base from GitHub"
+        raise RuntimeError(msg)
+
+    # Check if base matches expected parent
+    if current_base != expected_parent:
+        # Base is stale - update it
+        if verbose:
+            msg = f"  PR #{pr_number} base stale: {current_base} → {expected_parent}"
+            _emit(msg, script_mode=script_mode)
+
+        # Update PR base (with retry for transient failures)
+        @retry_with_backoff(max_attempts=3, base_delay=1.0)
+        def update_pr_base_with_retry() -> None:
+            ctx.github_ops.update_pr_base_branch(repo_root, pr_number, expected_parent)
+
+        update_pr_base_with_retry()
+
+        # Show completion message
+        desc = _format_description(f"update PR #{pr_number} base to {expected_parent}", check)
+        _emit(desc, script_mode=script_mode)
+    else:
+        # Base is already correct
+        if verbose:
+            msg = f"  PR #{pr_number} base already correct: {current_base}"
+            _emit(msg, script_mode=script_mode)
+        else:
+            # Show concise verification message
+            desc = _format_description(f"verify PR #{pr_number} base is {expected_parent}", check)
+            _emit(desc, script_mode=script_mode)
 
 
 def _execute_merge_phase(
@@ -288,6 +368,24 @@ def land_branch_sequence(
         trunk_name = parent if parent else "trunk"
         desc = _format_description(f"verify {branch} parent is {trunk_name}", check)
         _emit(desc, script_mode=script_mode)
+
+        # Phase 2.5: Verify and update PR base [CRITICAL]
+        # This phase must run BEFORE merge to prevent race condition where:
+        # - Parent PR merges and deletes its branch
+        # - Child PR's base on GitHub is stale (still points to deleted parent)
+        # - Child PR merges into deleted branch, creating orphaned commit
+        #
+        # Only verify/update if parent is known (verified in Phase 2)
+        if parent is not None:
+            _verify_and_update_pr_base(
+                ctx,
+                repo_root,
+                branch,
+                parent,  # expected_parent (trunk after restack)
+                pr_number,
+                verbose=verbose,
+                script_mode=script_mode,
+            )
 
         # Phase 3: Merge PR
         _execute_merge_phase(ctx, repo_root, pr_number, verbose=verbose, script_mode=script_mode)

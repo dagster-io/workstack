@@ -29,13 +29,13 @@ Erk land-stack command: Land stacked PRs sequentially from bottom to top.
 
 For each branch from bottom to top:
 
-1. Checkout branch (or verify already on branch)
-2. Verify stack integrity (parent is trunk after previous restacks)
-3. Update PR base branch on GitHub if stale
-4. Merge PR via `gh pr merge --squash --auto`
-5. Sync trunk with remote (fetch + checkout + pull --ff-only + checkout back)
-6. Restack remaining branches via `gt sync -f`
-7. Submit updated PRs to GitHub
+1. **Checkout** branch (or verify already on branch)
+2. **Verify stack integrity** - parent is trunk after previous restacks
+3. **Verify and update PR base** [Phase 2.5] - Check PR base on GitHub matches expected parent (trunk), update if stale
+4. **Merge PR** via `gh pr merge --squash --auto`
+5. **Sync trunk** with remote (fetch + checkout + pull --ff-only + checkout back)
+6. **Restack** remaining branches via `gt sync -f`
+7. **Submit** updated PRs to GitHub
 
 ### Phase 4: Cleanup
 
@@ -47,6 +47,30 @@ For each branch from bottom to top:
 
 - Display what was accomplished
 - Show current branch and merged branches
+
+## Phase 2.5: PR Base Verification (Race Condition Prevention)
+
+**Problem:** When landing stacked PRs, a race condition can occur where:
+
+1. Parent PR (feat-1) merges and deletes its branch
+2. Child PR (feat-2) base on GitHub still points to deleted feat-1
+3. Child PR merges into deleted branch, creating orphaned commit that never reaches main
+
+**Solution:** Phase 2.5 runs BEFORE merge to verify and update PR bases:
+
+- **Check PR base** on GitHub via `gh pr view --json baseRefName`
+- **Compare** to expected parent (trunk after previous restack)
+- **Update if stale** via GitHub API
+- **Include retry logic** with exponential backoff for transient API failures
+
+**Timing:** Phase 2.5 must run BEFORE Phase 4 (merge) to eliminate the race condition window. Previous implementations updated bases AFTER merge, which left a timing window where the base could be stale.
+
+**Retry Logic:** GitHub API calls include exponential backoff retry (max 3 attempts, 1s base delay) to handle:
+
+- Network timeouts
+- Rate limiting
+- Temporary API unavailability
+- Connection issues
 
 ## Key Concepts
 
@@ -84,3 +108,48 @@ All errors include:
 - Clear description of what failed
 - Context (branch names, paths, PR numbers)
 - Concrete fix steps ("To fix: ...")
+
+## Troubleshooting
+
+### Stale PR Base Scenarios
+
+**Symptom:** PR merges but commit doesn't appear in trunk branch history
+
+**Cause:** PR was merged into a deleted parent branch instead of trunk
+
+**Prevention:** Phase 2.5 automatically detects and fixes stale bases before merge
+
+**Manual Fix (if it happens):**
+
+```bash
+# 1. Find the orphaned merge commit
+gh pr view <pr-number> --json mergeCommit
+
+# 2. Cherry-pick to trunk
+git checkout main
+git cherry-pick <merge-commit-sha>
+git push origin main
+
+# 3. Close and reopen PR (or create new PR)
+```
+
+### GitHub API Failures
+
+**Symptom:** "Failed to get PR base from GitHub" or "Failed to update PR base"
+
+**Cause:** Transient network issues, rate limiting, or API unavailability
+
+**Automatic Retry:** Phase 2.5 includes exponential backoff retry (3 attempts, 1s → 2s → 4s delays)
+
+**Manual Retry:**
+
+```bash
+# Wait a few seconds and retry the land-stack command
+workstack land-stack
+```
+
+**Check Rate Limits:**
+
+```bash
+gh api rate_limit
+```

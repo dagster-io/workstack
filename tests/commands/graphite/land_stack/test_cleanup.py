@@ -42,7 +42,10 @@ def test_land_stack_cleanup_respects_master_trunk() -> None:
         github_ops = FakeGitHubOps(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Feature 1"),
-            }
+            },
+            pr_bases={
+                100: "main",
+            },
         )
 
         global_config_ops = GlobalConfig(

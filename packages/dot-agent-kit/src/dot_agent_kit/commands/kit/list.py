@@ -7,6 +7,14 @@ from pathlib import Path
 import click
 import pathspec
 
+from dot_agent_kit.cli.list_formatting import (
+    format_item_name,
+    format_kit_reference,
+    format_metadata,
+    format_section_header,
+    format_source_indicator,
+    format_subsection_header,
+)
 from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.io import require_project_config
 from dot_agent_kit.models.artifact import (
@@ -47,13 +55,8 @@ def _format_source(artifact: InstalledArtifact) -> str:
         Formatted source string like "[devrun@0.1.0]" or "[local]"
     """
     if artifact.source == ArtifactSource.LOCAL:
-        return "[local]"
-    elif artifact.kit_id and artifact.kit_version:
-        return f"[{artifact.kit_id}@{artifact.kit_version}]"
-    elif artifact.kit_id:
-        return f"[{artifact.kit_id}]"
-    else:
-        return "[unknown]"
+        return format_source_indicator(None, None)
+    return format_source_indicator(artifact.kit_id, artifact.kit_version)
 
 
 def _find_project_root(start_path: Path) -> Path:
@@ -279,59 +282,60 @@ def _list_artifacts(
 
         # Display kit header
         if kit_key == "local":
-            user_output("[local]:")
+            user_output(format_section_header("[local]:"))
         else:
             # Extract kit_id and version from key
             if "@" in kit_key:
                 kit_id, version = kit_key.split("@", 1)
-                user_output(f"[{kit_id}] (v{version}):")
+                header = f"{format_item_name(kit_id)} {format_kit_reference(kit_id, version)}"
+                user_output(format_section_header(header + ":"))
             else:
-                user_output(f"[{kit_key}]:")
+                user_output(format_section_header(f"{format_item_name(kit_key)}:"))
 
         # Display skills for this kit
         kit_skills_data = skills_data_by_kit.get(kit_key, [])
         if kit_skills_data:
-            user_output(f"  Skills ({len(kit_skills_data)}):")
+            user_output(format_subsection_header("  Skills", len(kit_skills_data)) + ":")
             for data in sorted(kit_skills_data, key=lambda d: d.artifact.artifact_name):
-                name = data.artifact.artifact_name.ljust(max_name_len)
-                folder_path = data.folder_path.ljust(max_folder_len)
-                file_counts = data.file_counts
+                name = format_item_name(data.artifact.artifact_name).ljust(max_name_len)
+                folder_path = format_metadata(data.folder_path).ljust(max_folder_len)
+                file_counts = format_metadata(data.file_counts)
                 user_output(f"    {name} {folder_path} {file_counts}")
 
         # Display commands for this kit
         kit_commands = artifact_types["commands"]
         if kit_commands:
-            user_output(f"  Commands ({len(kit_commands)}):")
+            user_output(format_subsection_header("  Commands", len(kit_commands)) + ":")
             for command in sorted(kit_commands, key=lambda a: a.artifact_name):
-                name = command.artifact_name.ljust(max_name_len)
-                file_path = str(command.file_path)
+                name = format_item_name(command.artifact_name).ljust(max_name_len)
+                file_path = format_metadata(str(command.file_path))
                 user_output(f"    {name} {file_path}")
 
         # Display agents for this kit
         kit_agents = artifact_types["agents"]
         if kit_agents:
-            user_output(f"  Agents ({len(kit_agents)}):")
+            user_output(format_subsection_header("  Agents", len(kit_agents)) + ":")
             for agent in sorted(kit_agents, key=lambda a: a.artifact_name):
-                name = agent.artifact_name.ljust(max_name_len)
-                file_path = str(agent.file_path)
+                name = format_item_name(agent.artifact_name).ljust(max_name_len)
+                file_path = format_metadata(str(agent.file_path))
                 user_output(f"    {name} {file_path}")
 
         # Display hooks for this kit
         kit_hooks = artifact_types["hooks"]
         if kit_hooks:
-            user_output(f"  Hooks ({len(kit_hooks)}):")
+            user_output(format_subsection_header("  Hooks", len(kit_hooks)) + ":")
             for hook in sorted(kit_hooks, key=lambda a: a.artifact_name):
-                name = hook.artifact_name.ljust(max_name_len)
-                file_path = str(hook.file_path)
+                name = format_item_name(hook.artifact_name).ljust(max_name_len)
+                file_path = format_metadata(str(hook.file_path))
                 user_output(f"    {name} {file_path}")
 
         # Display docs for this kit
         kit_docs = artifact_types["docs"]
         if kit_docs:
-            user_output(f"  Docs ({len(kit_docs)}):")
+            user_output(format_subsection_header("  Docs", len(kit_docs)) + ":")
             for doc in sorted(kit_docs, key=lambda a: a.artifact_name):
-                name = doc.artifact_name.ljust(max_name_len)
-                file_path = str(doc.file_path)
+                name = format_item_name(doc.artifact_name).ljust(max_name_len)
+                file_path = format_metadata(str(doc.file_path))
                 user_output(f"    {name} {file_path}")
 
         # Add spacing between kits
@@ -356,11 +360,14 @@ def _list_kits_impl(artifacts: bool) -> None:
         return
 
     # Default kit-level view
-    user_output(f"Installed {len(config.kits)} kit(s):\n")
+    user_output(format_section_header(f"Installed Kits ({len(config.kits)}):"))
+    user_output()
 
     for kit_id, installed_kit in config.kits.items():
-        line = f"  {kit_id:<20} {installed_kit.version:<10} {installed_kit.source_type:<10}"
-        user_output(line)
+        name = format_item_name(kit_id).ljust(25)
+        version = format_kit_reference(kit_id, installed_kit.version).ljust(20)
+        source_type = format_metadata(installed_kit.source_type)
+        user_output(f"  {name} {version} {source_type}")
 
 
 @click.command(name="list")

@@ -2,6 +2,12 @@
 
 import click
 
+from dot_agent_kit.cli.list_formatting import (
+    format_item_name,
+    format_kit_reference,
+    format_metadata,
+    format_section_header,
+)
 from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.io import load_kit_manifest, load_registry
 from dot_agent_kit.models.types import SOURCE_TYPE_BUNDLED
@@ -52,9 +58,11 @@ def search(query: str | None) -> None:
 
     # Display results
     if query:
-        user_output(f"Found {len(filtered)} kit(s) matching '{query}':\n")
+        user_output(format_section_header(f"Found {len(filtered)} kit(s) matching '{query}':"))
     else:
-        user_output(f"Available kits ({len(filtered)}):\n")
+        user_output(format_section_header(f"Available kits ({len(filtered)}):"))
+
+    user_output()
 
     bundled_source = BundledKitSource()
 
@@ -67,7 +75,7 @@ def search(query: str | None) -> None:
             resolved = bundled_source.resolve(entry.kit_id)
             manifest = load_kit_manifest(resolved.manifest_path)
 
-            version_str = f" (v{manifest.version})"
+            version_str = f" {format_kit_reference(entry.kit_id, manifest.version)}"
 
             # Count artifacts by type
             artifact_counts = []
@@ -87,8 +95,10 @@ def search(query: str | None) -> None:
                     artifact_counts.append(f"{count} {type_name}")
 
             if artifact_counts:
-                artifacts_str = f" • {', '.join(artifact_counts)}"
+                artifacts_str = f" • {format_metadata(', '.join(artifact_counts))}"
 
-        user_output(f"  [{entry.kit_id}]{version_str}")
-        user_output(f"  └─ {entry.description}{artifacts_str}")
+        kit_name = format_item_name(entry.kit_id)
+        user_output(f"  {kit_name}{version_str}")
+        description = format_metadata(entry.description)
+        user_output(f"    → {description}{artifacts_str}")
         user_output()

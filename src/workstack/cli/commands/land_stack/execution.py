@@ -85,23 +85,20 @@ def _execute_sync_trunk_phase(
         script_mode: True when running in --script mode (output to stderr)
     """
     # Sync trunk to include just-merged PR commits
-    # Note: Skip checkouts if branches are already checked out in linked worktrees
-    # to avoid "already checked out" errors
+    # Pull in the correct worktree location if branch is checked out elsewhere
 
     # Fetch parent branch
     ctx.git_ops.fetch_branch(repo_root, "origin", parent)
 
-    # Checkout parent if not already checked out elsewhere
-    parent_checked_out = ctx.git_ops.is_branch_checked_out(repo_root, parent)
-    if not parent_checked_out:
+    # Check if parent is checked out in a worktree
+    parent_worktree = ctx.git_ops.find_worktree_for_branch(repo_root, parent)
+    if parent_worktree is not None:
+        # Parent is in a worktree - pull there
+        ctx.git_ops.pull_branch(parent_worktree, "origin", parent, ff_only=True)
+    else:
+        # Parent is not checked out - safe to checkout in repo_root
         ctx.git_ops.checkout_branch(repo_root, parent)
-
-    # Pull parent branch
-    ctx.git_ops.pull_branch(repo_root, "origin", parent, ff_only=True)
-
-    # Checkout branch if not already checked out elsewhere
-    branch_checked_out = ctx.git_ops.is_branch_checked_out(repo_root, branch)
-    if not branch_checked_out:
+        ctx.git_ops.pull_branch(repo_root, "origin", parent, ff_only=True)
         ctx.git_ops.checkout_branch(repo_root, branch)
 
 

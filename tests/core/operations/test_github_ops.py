@@ -80,7 +80,7 @@ def test_parse_github_pr_url_edge_cases() -> None:
 
 
 def test_build_batch_pr_query_has_contexts_nodes_wrapper() -> None:
-    """Test that contexts field has nodes wrapper (regression test for bug).
+    """Test that contexts field has nodes wrapper in fragment definition (regression test for bug).
 
     This is a regression test for a bug where the GraphQL query was missing the
     'nodes' wrapper around the inline fragments in the contexts field. The contexts
@@ -103,13 +103,14 @@ def test_build_batch_pr_query_has_contexts_nodes_wrapper() -> None:
 
     query = ops._build_batch_pr_query([123], "owner", "repo")
 
-    # Critical: contexts must have nodes wrapper
+    # Critical: contexts must have nodes wrapper (in the fragment definition)
     assert "contexts(last: 100) {" in query
     assert "nodes {" in query
 
-    # Verify the structure order: contexts -> nodes -> fragments
+    # Verify the structure order in the fragment: contexts -> nodes -> fragments
     # This ensures nodes comes between contexts and the inline fragments
-    contexts_idx = query.index("contexts(last: 100)")
+    fragment_start = query.index("fragment PRCICheckFields")
+    contexts_idx = query.index("contexts(last: 100)", fragment_start)
     nodes_idx = query.index("nodes {", contexts_idx)
     status_context_idx = query.index("... on StatusContext", nodes_idx)
 
@@ -118,24 +119,28 @@ def test_build_batch_pr_query_has_contexts_nodes_wrapper() -> None:
 
 
 def test_build_batch_pr_query_structure() -> None:
-    """Test that GraphQL query has correct overall structure."""
+    """Test that GraphQL query has correct overall structure with named fragments."""
     ops = RealGitHubOps()
 
     query = ops._build_batch_pr_query([123, 456], "test-owner", "test-repo")
+
+    # Validate fragment definition is present
+    assert "fragment PRCICheckFields on PullRequest {" in query
 
     # Validate basic GraphQL syntax
     assert "query {" in query
     assert 'repository(owner: "test-owner", name: "test-repo")' in query
 
-    # Validate PR aliases are present
-    assert "pr_123: pullRequest(number: 123)" in query
-    assert "pr_456: pullRequest(number: 456)" in query
+    # Validate PR aliases are present with fragment spread
+    assert "pr_123: pullRequest(number: 123) {" in query
+    assert "pr_456: pullRequest(number: 456) {" in query
+    assert "...PRCICheckFields" in query
 
-    # Validate required fields at various levels
-    assert "commits(last: 1)" in query
-    assert "statusCheckRollup" in query
+    # Validate required fields are in the fragment definition (only once)
+    assert query.count("commits(last: 1)") == 1  # Only in fragment definition
+    assert query.count("statusCheckRollup") == 1  # Only in fragment definition
 
-    # Validate inline fragments for both types
+    # Validate inline fragments for both types (in the fragment definition)
     assert "... on StatusContext {" in query
     assert "... on CheckRun {" in query
 
@@ -144,9 +149,12 @@ def test_build_batch_pr_query_structure() -> None:
     assert "conclusion" in query  # Both StatusContext and CheckRun
     assert "state" in query  # StatusContext and statusCheckRollup
 
+    # Validate fragment spread is used for each PR
+    assert query.count("...PRCICheckFields") == 2  # One for each PR
+
 
 def test_build_batch_pr_query_multiple_prs() -> None:
-    """Test that query correctly handles multiple PRs with unique aliases."""
+    """Test that query correctly handles multiple PRs with unique aliases and fragments."""
     ops = RealGitHubOps()
 
     pr_numbers = [100, 200, 300]
@@ -160,9 +168,12 @@ def test_build_batch_pr_query_multiple_prs() -> None:
     # Verify all PRs are in the same repository query
     assert query.count('repository(owner: "owner", name: "repo")') == 1
 
-    # Verify each PR gets the full structure (commits, statusCheckRollup, etc.)
-    assert query.count("commits(last: 1)") == len(pr_numbers)
-    assert query.count("statusCheckRollup") == len(pr_numbers)
+    # With fragments, the structure is defined once in the fragment definition
+    assert query.count("commits(last: 1)") == 1  # Only in fragment definition
+    assert query.count("statusCheckRollup") == 1  # Only in fragment definition
+
+    # Each PR should use the fragment spread
+    assert query.count("...PRCICheckFields") == len(pr_numbers)
 
 
 def test_parse_pr_ci_status_handles_missing_nodes() -> None:

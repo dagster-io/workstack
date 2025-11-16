@@ -460,7 +460,7 @@ class RealGitHubOps(GitHubOps):
             return None
 
     def _build_batch_pr_query(self, pr_numbers: list[int], owner: str, repo: str) -> str:
-        """Build GraphQL query with aliases for multiple PRs.
+        """Build GraphQL query with aliases for multiple PRs using named fragments.
 
         Args:
             pr_numbers: List of PR numbers to query
@@ -470,40 +470,47 @@ class RealGitHubOps(GitHubOps):
         Returns:
             GraphQL query string
         """
-        # Build query fragment for each PR
-        fragments = []
-        for pr_num in pr_numbers:
-            fragment = f"""pr_{pr_num}: pullRequest(number: {pr_num}) {{
-      number
-      commits(last: 1) {{
-        nodes {{
-          commit {{
-            statusCheckRollup {{
-              state
-              contexts(last: 100) {{
-                nodes {{
-                  ... on StatusContext {{
-                    state
-                  }}
-                  ... on CheckRun {{
-                    status
-                    conclusion
-                  }}
-                }}
-              }}
-            }}
-          }}
-        }}
-      }}
-    }}"""
-            fragments.append(fragment)
+        # Define the fragment once at the top of the query
+        fragment_definition = """fragment PRCICheckFields on PullRequest {
+  number
+  commits(last: 1) {
+    nodes {
+      commit {
+        statusCheckRollup {
+          state
+          contexts(last: 100) {
+            nodes {
+              ... on StatusContext {
+                state
+              }
+              ... on CheckRun {
+                status
+                conclusion
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}"""
 
-        # Join fragments into single query
-        query = f'''query {{
+        # Build aliased PR queries using the fragment spread
+        pr_queries = []
+        for pr_num in pr_numbers:
+            pr_query = f"""    pr_{pr_num}: pullRequest(number: {pr_num}) {{
+      ...PRCICheckFields
+    }}"""
+            pr_queries.append(pr_query)
+
+        # Combine fragment definition and query
+        query = f"""{fragment_definition}
+
+query {{
   repository(owner: "{owner}", name: "{repo}") {{
-    {chr(10).join(fragments)}
+{chr(10).join(pr_queries)}
   }}
-}}'''
+}}"""
         return query
 
     def _execute_batch_pr_query(self, query: str, repo_root: Path) -> dict[str, Any]:

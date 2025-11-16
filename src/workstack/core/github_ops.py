@@ -274,17 +274,17 @@ class GitHubOps(ABC):
     def enrich_prs_with_ci_status_batch(
         self, prs: dict[str, PullRequestInfo], repo_root: Path
     ) -> dict[str, PullRequestInfo]:
-        """Enrich PR information with CI check status using batched GraphQL query.
+        """Enrich PR information with CI check status and mergeability using batched GraphQL query.
 
-        Fetches CI status for all PRs in a single GraphQL API call, dramatically
-        improving performance over serial fetching.
+        Fetches both CI status and mergeability for all PRs in a single GraphQL API call,
+        dramatically improving performance over serial fetching.
 
         Args:
-            prs: Mapping of branch name to PullRequestInfo (without CI status)
+            prs: Mapping of branch name to PullRequestInfo (without CI status or mergeability)
             repo_root: Repository root directory
 
         Returns:
-            Mapping of branch name to PullRequestInfo (with CI status enriched)
+            Mapping of branch name to PullRequestInfo (with CI status and has_conflicts enriched)
         """
         ...
 
@@ -475,6 +475,8 @@ class RealGitHubOps(GitHubOps):
         # Define the fragment once at the top of the query
         fragment_definition = """fragment PRCICheckFields on PullRequest {
   number
+  mergeable
+  mergeStateStatus
   commits(last: 1) {
     nodes {
       commit {
@@ -577,13 +579,39 @@ query {{
         # Call existing logic to determine status
         return _determine_checks_status(nodes)
 
+    def _parse_pr_mergeability(self, pr_data: dict[str, Any] | None) -> bool | None:
+        """Parse mergeability status from GraphQL PR data.
+
+        Args:
+            pr_data: PR data from GraphQL response (may be None for missing PRs)
+
+        Returns:
+            True if PR has conflicts, False if mergeable, None if unknown/unavailable
+        """
+        if pr_data is None:
+            return None
+
+        if "mergeable" not in pr_data:
+            return None
+
+        mergeable = pr_data["mergeable"]
+
+        # Convert GitHub's mergeable status to has_conflicts boolean
+        if mergeable == "CONFLICTING":
+            return True
+        if mergeable == "MERGEABLE":
+            return False
+
+        # UNKNOWN or other states
+        return None
+
     def enrich_prs_with_ci_status_batch(
         self, prs: dict[str, PullRequestInfo], repo_root: Path
     ) -> dict[str, PullRequestInfo]:
-        """Enrich PR information with CI check status using batched GraphQL query.
+        """Enrich PR information with CI check status and mergeability using batched GraphQL query.
 
-        Fetches CI status for all PRs in a single GraphQL API call, dramatically
-        improving performance over serial fetching.
+        Fetches both CI status and mergeability for all PRs in a single GraphQL API call,
+        dramatically improving performance over serial fetching.
         """
         # Early exit for empty input
         if not prs:
@@ -602,7 +630,7 @@ query {{
         # Extract repository data from response
         repo_data = response["data"]["repository"]
 
-        # Enrich each PR with CI status
+        # Enrich each PR with CI status and mergeability
         enriched_prs = {}
         for branch, pr in prs.items():
             # Get PR data from GraphQL response using alias
@@ -612,8 +640,11 @@ query {{
             # Parse CI status (handles None/missing data gracefully)
             ci_status = self._parse_pr_ci_status(pr_data)
 
-            # Create enriched PR with updated CI status
-            enriched_pr = replace(pr, checks_passing=ci_status)
+            # Parse mergeability status
+            has_conflicts = self._parse_pr_mergeability(pr_data)
+
+            # Create enriched PR with updated CI status and mergeability
+            enriched_pr = replace(pr, checks_passing=ci_status, has_conflicts=has_conflicts)
             enriched_prs[branch] = enriched_pr
 
         return enriched_prs
@@ -754,7 +785,7 @@ class PrintingGitHubOps(PrintingOpsBase, GitHubOps):
     def enrich_prs_with_ci_status_batch(
         self, prs: dict[str, PullRequestInfo], repo_root: Path
     ) -> dict[str, PullRequestInfo]:
-        """Enrich PRs with CI status (read-only, no printing)."""
+        """Enrich PRs with CI status and mergeability (read-only, no printing)."""
         return self._wrapped.enrich_prs_with_ci_status_batch(prs, repo_root)
 
     # Operations that need printing

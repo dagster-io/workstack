@@ -40,14 +40,18 @@ def test_list_outputs_names_not_paths() -> None:
         output = strip_ansi(result.output)
         lines = output.strip().splitlines()
 
-        # First line should be root with branch, PR placeholder, and plan placeholder
-        assert lines[0].startswith("root")
-        assert "(main)" in lines[0]
-        assert "[no PR]" in lines[0]
-        assert "[no plan]" in lines[0]
+        # First line should be "## Worktrees" header
+        assert lines[0] == "## Worktrees"
 
-        # Remaining lines should be worktrees with PR/plan info, sorted by name
-        worktree_lines = sorted(lines[1:])
+        # Skip empty line after header (line 1)
+        # Line 2 should be root with branch, PR placeholder, and plan placeholder
+        assert lines[2].startswith("root")
+        assert "(main)" in lines[2]
+        assert "[no PR]" in lines[2]
+        assert "[no plan]" in lines[2]
+
+        # Remaining worktree lines should show PR/plan info, sorted by name
+        worktree_lines = sorted(lines[3:])
         # Each line should contain: name (branch) [no PR] [no plan]
         assert len(worktree_lines) == 2
         assert worktree_lines[0].startswith("bar")

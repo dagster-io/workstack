@@ -94,10 +94,10 @@ def test_list_with_stacks_pr_visibility(show_pr_info: bool, expected_visible: bo
     [
         ("OPEN", False, True, "✅"),  # Open PR with passing checks
         ("OPEN", False, False, "❌"),  # Open PR with failing checks
-        ("OPEN", False, None, "◯"),  # Open PR with no checks
+        ("OPEN", False, None, "👀"),  # Open PR with no checks
         ("OPEN", True, None, "🚧"),  # Draft PR
-        ("MERGED", False, True, "🟣"),  # Merged PR
-        ("CLOSED", False, None, "⭕"),  # Closed (not merged) PR
+        ("MERGED", False, True, "🎉"),  # Merged PR
+        ("CLOSED", False, None, "⛔"),  # Closed (not merged) PR
     ],
 )
 def test_list_pr_emoji_mapping(
@@ -219,3 +219,63 @@ def test_list_with_stacks_uses_graphite_url() -> None:
         # Graphite URL format: https://app.graphite.com/github/pr/owner/repo/number
         expected_url = "https://app.graphite.com/github/pr/testowner/testrepo/100"
         assert expected_url in result.output
+
+
+# ===========================
+# Merge Conflict Tests
+# ===========================
+
+
+def test_list_pr_with_merge_conflicts() -> None:
+    """Test that PRs with merge conflicts show the conflict emoji 💥."""
+    runner = CliRunner()
+    with pure_workstack_env(runner) as env:
+        branch_name = "conflict-branch"
+
+        # Create PR with conflicts
+        pr = PullRequestInfo(
+            number=200,
+            state="OPEN",
+            url="https://github.com/testowner/testrepo/pull/200",
+            is_draft=False,
+            checks_passing=True,
+            owner="testowner",
+            repo="testrepo",
+            has_conflicts=True,  # This PR has merge conflicts
+        )
+
+        # Create branch metadata
+        branches = {
+            "main": BranchMetadata.trunk("main", children=[branch_name]),
+            branch_name: BranchMetadata.branch(branch_name, "main", children=[]),
+        }
+
+        # Create worktree directory
+        repo_name = env.cwd.name
+        workstacks_dir = env.workstacks_root / repo_name
+        feature_worktree = workstacks_dir / branch_name
+
+        # Build fake git ops
+        git_ops = FakeGitOps(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
+                    WorktreeInfo(path=feature_worktree, branch=branch_name),
+                ]
+            },
+            git_common_dirs={env.cwd: env.git_dir, feature_worktree: env.git_dir},
+            current_branches={env.cwd: "main", feature_worktree: branch_name},
+        )
+
+        test_ctx = env.build_context(
+            git_ops=git_ops,
+            graphite_ops=FakeGraphiteOps(branches=branches, pr_info={branch_name: pr}),
+            use_graphite=True,
+        )
+
+        result = runner.invoke(cli, ["list"], obj=test_ctx)
+        assert result.exit_code == 0, result.output
+
+        # Verify both the base emoji and conflict emoji appear
+        assert "✅💥" in result.output  # PR with passing checks and conflicts
+        assert "#200" in result.output

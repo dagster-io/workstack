@@ -154,7 +154,7 @@ def _render_posix_passthrough(
     quoted_args = " ".join(shlex.quote(part) for part in (command_name, *args))
     recovery_literal = shlex.quote(str(recovery_path)) if recovery_path is not None else "''"
     lines = [
-        f"command workstack {quoted_args}",
+        f"command erk {quoted_args}",
         "__workstack_exit=$?",
         f"__workstack_recovery={recovery_literal}",
         'if [ -n "$__workstack_recovery" ] && [ -f "$__workstack_recovery" ]; then',
@@ -216,7 +216,7 @@ def _render_fish_passthrough(
     command_parts = " ".join(_quote_fish(part) for part in (command_name, *args))
     recovery_literal = _quote_fish(str(recovery_path)) if recovery_path is not None else '""'
     lines = [
-        f"command workstack {command_parts}",
+        f"command erk {command_parts}",
         "set __workstack_exit $status",
         f"set __workstack_recovery {recovery_literal}",
         'if test -n "$__workstack_recovery"',

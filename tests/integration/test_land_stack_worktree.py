@@ -136,6 +136,9 @@ def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> No
         github_ops = FakeGitHubOps(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Add feature 1"),
+            },
+            pr_bases={
+                100: "main",
             }
         )
 
@@ -282,6 +285,9 @@ def test_land_stack_with_trunk_in_worktree(tmp_path: Path) -> None:
         github_ops = FakeGitHubOps(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Add feature 1"),
+            },
+            pr_bases={
+                100: "main",
             }
         )
 

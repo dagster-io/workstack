@@ -85,7 +85,7 @@ def test_real_shell_ops_run_workstack_sync_calls_subprocess():
         # Verify command structure
         call_args = mock_run.call_args
         cmd = call_args[0][0]
-        assert cmd == ["workstack", "sync", "-f"]
+        assert cmd == ["erk", "sync", "-f"]
 
         # Verify kwargs
         kwargs = call_args[1]
@@ -109,7 +109,7 @@ def test_real_shell_ops_run_workstack_sync_verbose_mode():
         # Verify command includes --verbose
         call_args = mock_run.call_args
         cmd = call_args[0][0]
-        assert cmd == ["workstack", "sync", "-f", "--verbose"]
+        assert cmd == ["erk", "sync", "-f", "--verbose"]
 
         # Verify capture_output is False in verbose mode
         kwargs = call_args[1]
@@ -130,7 +130,7 @@ def test_real_shell_ops_run_workstack_sync_without_force():
         # Verify command does not include -f
         call_args = mock_run.call_args
         cmd = call_args[0][0]
-        assert cmd == ["workstack", "sync"]
+        assert cmd == ["erk", "sync"]
         assert "-f" not in cmd
 
 

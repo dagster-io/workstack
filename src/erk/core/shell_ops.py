@@ -124,7 +124,7 @@ class RealShellOps(ShellOps):
         Executes workstack sync in the specified repository directory.
         Output is shown in verbose mode, captured otherwise.
         """
-        cmd = ["workstack", "sync"]
+        cmd = ["erk", "sync"]
         if force:
             cmd.append("-f")
         if verbose:

@@ -1,6 +1,7 @@
 from click.testing import CliRunner
 
 from tests.fakes.gitops import FakeGitOps
+from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.test_utils.env_helpers import pure_workstack_env
 from tests.test_utils.output_helpers import strip_ansi
 from workstack.cli.cli import cli
@@ -28,6 +29,8 @@ def test_list_outputs_names_not_paths() -> None:
 
         test_ctx = env.build_context(
             git_ops=git_ops,
+            graphite_ops=FakeGraphiteOps(pr_info={}),
+            show_pr_info=False,  # Don't require PR info for this test
         )
 
         result = runner.invoke(cli, ["list"], obj=test_ctx)

@@ -87,7 +87,7 @@ def test_dryrun_read_operations_still_work(tmp_path: Path) -> None:
         workstacks_root=tmp_path / "workstacks",
         use_graphite=False,
         shell_setup_complete=False,
-        show_pr_info=True,
+        show_pr_info=False,  # This test is about dry-run operations, not PR info
     )
 
     # Wrap fakes in dry-run wrappers

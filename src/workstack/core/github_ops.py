@@ -257,6 +257,24 @@ class GitHubOps(ABC):
         ...
 
     @abstractmethod
+    def enrich_prs_with_ci_status(
+        self, prs: dict[str, PullRequestInfo], repo_root: Path
+    ) -> dict[str, PullRequestInfo]:
+        """Enrich PR information with CI check status from GitHub.
+
+        Fetches CI check status for each PR individually via gh pr view.
+        This avoids pagination issues by fetching PRs one at a time.
+
+        Args:
+            prs: Mapping of branch name to PullRequestInfo (without CI status)
+            repo_root: Repository root directory
+
+        Returns:
+            Mapping of branch name to PullRequestInfo (with CI status enriched)
+        """
+        ...
+
+    @abstractmethod
     def merge_pr(
         self,
         repo_root: Path,
@@ -429,6 +447,60 @@ class RealGitHubOps(GitHubOps):
         ):
             return None
 
+    def enrich_prs_with_ci_status(
+        self, prs: dict[str, PullRequestInfo], repo_root: Path
+    ) -> dict[str, PullRequestInfo]:
+        """Enrich PR information with CI check status from GitHub.
+
+        Note: Uses try/except as an acceptable error boundary for handling gh CLI
+        availability and authentication. Individual PR fetch failures are handled
+        gracefully to avoid cascading failures.
+        """
+        enriched_prs = {}
+
+        for branch, pr in prs.items():
+            try:
+                # Fetch CI status for this specific PR
+                cmd = [
+                    "gh",
+                    "pr",
+                    "view",
+                    str(pr.number),
+                    "--json",
+                    "statusCheckRollup",
+                ]
+                stdout = self._execute(cmd, repo_root)
+                data = json.loads(stdout)
+
+                # Parse CI status
+                status_check_rollup = data.get("statusCheckRollup")
+                checks_passing = None
+                if status_check_rollup is not None:
+                    checks_passing = _determine_checks_status(status_check_rollup)
+
+                # Create new PullRequestInfo with CI status
+                enriched_pr = PullRequestInfo(
+                    number=pr.number,
+                    state=pr.state,
+                    url=pr.url,
+                    is_draft=pr.is_draft,
+                    checks_passing=checks_passing,
+                    owner=pr.owner,
+                    repo=pr.repo,
+                )
+                enriched_prs[branch] = enriched_pr
+
+            except (
+                subprocess.CalledProcessError,
+                FileNotFoundError,
+                json.JSONDecodeError,
+                KeyError,
+            ):
+                # Individual PR fetch failed - keep original PR info without CI status
+                enriched_prs[branch] = pr
+
+        return enriched_prs
+
     def merge_pr(
         self,
         repo_root: Path,
@@ -501,6 +573,12 @@ class NoopGitHubOps(GitHubOps):
         """Delegate read operation to wrapped implementation."""
         return self._wrapped.get_pr_mergeability(repo_root, pr_number)
 
+    def enrich_prs_with_ci_status(
+        self, prs: dict[str, PullRequestInfo], repo_root: Path
+    ) -> dict[str, PullRequestInfo]:
+        """Delegate read operation to wrapped implementation."""
+        return self._wrapped.enrich_prs_with_ci_status(prs, repo_root)
+
     def merge_pr(
         self,
         repo_root: Path,
@@ -555,6 +633,12 @@ class PrintingGitHubOps(PrintingOpsBase, GitHubOps):
     def get_pr_mergeability(self, repo_root: Path, pr_number: int) -> PRMergeability | None:
         """Get PR mergeability (read-only, no printing)."""
         return self._wrapped.get_pr_mergeability(repo_root, pr_number)
+
+    def enrich_prs_with_ci_status(
+        self, prs: dict[str, PullRequestInfo], repo_root: Path
+    ) -> dict[str, PullRequestInfo]:
+        """Enrich PRs with CI status (read-only, no printing)."""
+        return self._wrapped.enrich_prs_with_ci_status(prs, repo_root)
 
     # Operations that need printing
 

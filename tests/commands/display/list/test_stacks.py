@@ -58,7 +58,10 @@ def test_list_with_stacks_flag() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=FakeGraphiteOps(branches=branches), use_graphite=True
+            git_ops=git_ops,
+            graphite_ops=FakeGraphiteOps(branches=branches, pr_info={}),
+            use_graphite=True,
+            show_pr_info=False,
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
@@ -135,7 +138,10 @@ def test_list_with_stacks_no_graphite_cache() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=FakeGraphiteOps(branches={}), use_graphite=True
+            git_ops=git_ops,
+            graphite_ops=FakeGraphiteOps(branches={}, pr_info={}),
+            use_graphite=True,
+            show_pr_info=False,
         )
 
         # Should succeed but not show stack info (graceful degradation)
@@ -202,7 +208,10 @@ def test_list_with_stacks_highlights_current_branch_not_worktree_branch() -> Non
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=FakeGraphiteOps(branches=branches), use_graphite=True
+            git_ops=git_ops,
+            graphite_ops=FakeGraphiteOps(branches=branches, pr_info={}),
+            use_graphite=True,
+            show_pr_info=False,
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
@@ -269,7 +278,10 @@ def test_list_with_stacks_root_repo_does_not_duplicate_branch() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=FakeGraphiteOps(branches=branches), use_graphite=True
+            git_ops=git_ops,
+            graphite_ops=FakeGraphiteOps(branches=branches, pr_info={}),
+            use_graphite=True,
+            show_pr_info=False,
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
@@ -335,7 +347,10 @@ def test_list_with_stacks_shows_descendants_with_worktrees() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=FakeGraphiteOps(branches=branches), use_graphite=True
+            git_ops=git_ops,
+            graphite_ops=FakeGraphiteOps(branches=branches, pr_info={}),
+            use_graphite=True,
+            show_pr_info=False,
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
@@ -410,7 +425,10 @@ def test_list_with_stacks_hides_descendants_without_worktrees() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=FakeGraphiteOps(branches=branches), use_graphite=True
+            git_ops=git_ops,
+            graphite_ops=FakeGraphiteOps(branches=branches, pr_info={}),
+            use_graphite=True,
+            show_pr_info=False,
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
@@ -482,7 +500,10 @@ def test_list_with_stacks_shows_descendants_with_gaps() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=FakeGraphiteOps(branches=branches), use_graphite=True
+            git_ops=git_ops,
+            graphite_ops=FakeGraphiteOps(branches=branches, pr_info={}),
+            use_graphite=True,
+            show_pr_info=False,
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
@@ -557,6 +578,7 @@ def test_list_with_stacks_corrupted_cache() -> None:
             github_ops=FakeGitHubOps(),
             shell_ops=FakeShellOps(),
             use_graphite=True,
+            show_pr_info=False,
             dry_run=False,
         )
 
@@ -598,7 +620,7 @@ def test_list_with_stacks_no_plan_file() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=RealGraphiteOps(), use_graphite=True
+            git_ops=git_ops, graphite_ops=RealGraphiteOps(), use_graphite=True, show_pr_info=False
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
@@ -672,7 +694,7 @@ Detailed implementation plan for OAuth2.
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=RealGraphiteOps(), use_graphite=True
+            git_ops=git_ops, graphite_ops=RealGraphiteOps(), use_graphite=True, show_pr_info=False
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
@@ -728,7 +750,7 @@ This should NOT be displayed.
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=RealGraphiteOps(), use_graphite=True
+            git_ops=git_ops, graphite_ops=RealGraphiteOps(), use_graphite=True, show_pr_info=False
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)

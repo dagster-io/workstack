@@ -50,12 +50,12 @@ class GitHubPRCollector(StatusCollector):
         if branch is None:
             return None
 
-        # Try Graphite first (fast - no CI status)
+        # Always use Graphite (fast, no pagination issues)
         prs = ctx.graphite_ops.get_prs_from_graphite(ctx.git_ops, repo_root)
 
-        # If Graphite data not available, fall back to GitHub
+        # Fail fast if Graphite cache unavailable - no fallback to GitHub
         if not prs:
-            prs = ctx.github_ops.get_prs_for_repo(repo_root, include_checks=True)
+            return None
 
         # Find PR for current branch
         pr = prs.get(branch)

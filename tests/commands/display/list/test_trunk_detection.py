@@ -45,7 +45,8 @@ def test_list_with_trunk_branch(trunk_branch: str) -> None:
             branches={
                 trunk_branch: BranchMetadata.trunk(trunk_branch, children=["feature"]),
                 "feature": BranchMetadata.branch("feature", trunk_branch, children=[]),
-            }
+            },
+            pr_info={},  # Empty PR cache - these tests don't require PR data
         )
 
         ctx = env.build_context(
@@ -53,6 +54,7 @@ def test_list_with_trunk_branch(trunk_branch: str) -> None:
             graphite_ops=graphite_ops,
             repo=env.repo,
             use_graphite=True,
+            show_pr_info=False,
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=ctx)

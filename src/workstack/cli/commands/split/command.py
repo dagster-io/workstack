@@ -21,7 +21,6 @@ from workstack.core.context import WorkstackContext
 from workstack.core.naming_utils import sanitize_worktree_name
 from workstack.core.repo_discovery import ensure_workstacks_dir
 
-
 # Validation functions
 
 

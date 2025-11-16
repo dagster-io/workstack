@@ -17,6 +17,7 @@ Split takes a consolidated worktree (where multiple branches exist in one worktr
 ### Exclusions
 
 The split command automatically excludes:
+
 - **Trunk branch** (main/master) - stays in the root worktree
 - **Current branch** - already checked out, can't have duplicate worktrees
 - **Existing worktrees** - idempotent operation, preserves existing worktrees
@@ -57,6 +58,7 @@ workstack split --force
 ## Integration
 
 The split command integrates with:
+
 - **Graphite** - Uses gt to determine stack structure
 - **Git worktrees** - Creates standard git worktrees
 - **Workstacks directory** - Places worktrees in `.workstacks/`

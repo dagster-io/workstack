@@ -259,7 +259,6 @@ def test_create_split_plan_empty_branches_to_split() -> None:
 
 def test_execute_split_plan_creates_worktrees() -> None:
     """Normal execution creates worktrees."""
-    from workstack.cli.commands.split.plan import SplitPlan
 
     # Create fake git ops
     class FakeGitOps:
@@ -300,7 +299,6 @@ def test_execute_split_plan_creates_worktrees() -> None:
 
 def test_execute_split_plan_with_noop_ops() -> None:
     """NoopGitOps doesn't create actual worktrees."""
-    from workstack.cli.commands.split.plan import SplitPlan
 
     class NoopGitOps:
         """Simulates NoopGitOps behavior for testing."""
@@ -333,7 +331,6 @@ def test_execute_split_plan_with_noop_ops() -> None:
 
 def test_execute_split_plan_empty_plan() -> None:
     """Handle empty plan with no branches to split."""
-    from workstack.cli.commands.split.plan import SplitPlan
 
     class FakeGitOps:
         def __init__(self):

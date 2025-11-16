@@ -122,6 +122,7 @@ from .config import load_config
 ```
 
 **Exception**: Inline imports are ONLY acceptable when preventing circular imports. Always document why:
+
 ```python
 def create_context():
     # Inline import to avoid circular dependency with tests

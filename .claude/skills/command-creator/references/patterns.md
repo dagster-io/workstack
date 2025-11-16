@@ -258,11 +258,11 @@ Otherwise:
 **Pattern:**
 
 ```markdown
-**IMPORTANT:** Always use makefile-runner agent for make commands
+**IMPORTANT:** Always use devrun agent for pytest/pyright/ruff/prettier/make/gt commands
 
-1. Use Task tool with subagent_type="makefile-runner"
-   - Pass the make target: "make all-ci"
-   - Do NOT use Bash tool for make commands
+1. Use Task tool with subagent_type="devrun"
+   - Pass the command: "make all-ci", "pytest tests/", "pyright", etc.
+   - Do NOT use Bash tool for these dev tools
    - Agent will handle execution and output
 
 2. Process results from agent

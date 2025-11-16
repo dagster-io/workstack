@@ -78,7 +78,7 @@ def test_sync_displays_stderr_on_gt_sync_failure(tmp_path: Path) -> None:
     )
 
     global_config = GlobalConfig(
-        workstacks_root=tmp_path / "workstacks",
+        erk_root=tmp_path / "workstacks",
         use_graphite=True,
         shell_setup_complete=False,
         show_pr_info=True,
@@ -140,7 +140,7 @@ def test_sync_shows_exit_code_when_stderr_empty(tmp_path: Path) -> None:
     )
 
     global_config = GlobalConfig(
-        workstacks_root=tmp_path / "workstacks",
+        erk_root=tmp_path / "workstacks",
         use_graphite=True,
         shell_setup_complete=False,
         show_pr_info=True,

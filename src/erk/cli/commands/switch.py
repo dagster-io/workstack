@@ -8,7 +8,7 @@ from erk.cli.debug import debug_log
 from erk.cli.output import machine_output, user_output
 from erk.core.context import ErkContext, create_context
 from erk.core.gitops import WorktreeInfo
-from erk.core.repo_discovery import RepoContext, ensure_workstacks_dir
+from erk.core.repo_discovery import RepoContext, ensure_repo_dir
 
 
 def _ensure_graphite_enabled(ctx: ErkContext) -> None:
@@ -257,6 +257,7 @@ def complete_worktree_names(
             workstack_ctx = create_context(dry_run=False)
 
         repo = discover_repo_context(workstack_ctx, workstack_ctx.cwd)
+        ensure_repo_dir(repo)
 
         names = ["root"] if "root".startswith(incomplete) else []
 
@@ -325,6 +326,7 @@ def switch_cmd(ctx: ErkContext, name: str | None, script: bool, up: bool, down: 
         _ensure_graphite_enabled(ctx)
 
     repo = discover_repo_context(ctx, ctx.cwd)
+    ensure_repo_dir(repo)
     trunk_branch = ctx.trunk_branch
 
     # Check if user is trying to switch to main/master (should use root instead)
@@ -377,7 +379,6 @@ def switch_cmd(ctx: ErkContext, name: str | None, script: bool, up: bool, down: 
             _activate_root_repo(ctx, repo, script, "switch")
 
         # For explicit name, use worktree_path_for since user provided the worktree name
-        workstacks_dir = ensure_workstacks_dir(repo)
-        wt_path = worktree_path_for(workstacks_dir, target_name)
+        wt_path = worktree_path_for(repo.worktrees_dir, target_name)
 
         _activate_worktree(ctx, repo, wt_path, script, "switch")

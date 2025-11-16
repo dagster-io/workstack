@@ -48,7 +48,7 @@ def test_rm_force_removes_directory() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         repo_name = env.cwd.name
-        wt = env.workstacks_root / repo_name / "foo"
+        wt = env.erk_root / "repos" / repo_name / "worktrees" / "foo"
 
         test_ctx = _create_test_context(env, existing_paths={wt})
         result = runner.invoke(cli, ["rm", "foo", "-f"], obj=test_ctx)
@@ -62,7 +62,7 @@ def test_rm_prompts_and_aborts_on_no() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         repo_name = env.cwd.name
-        wt = env.workstacks_root / repo_name / "bar"
+        wt = env.erk_root / "repos" / repo_name / "worktrees" / "bar"
 
         test_ctx = _create_test_context(env, existing_paths={wt})
         result = runner.invoke(cli, ["rm", "bar"], input="n\n", obj=test_ctx)
@@ -77,7 +77,7 @@ def test_rm_dry_run_does_not_delete() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         repo_name = env.cwd.name
-        wt = env.workstacks_root / repo_name / "test-stack"
+        wt = env.erk_root / "repos" / repo_name / "worktrees" / "test-stack"
 
         test_ctx = _create_test_context(env, dry_run=True, existing_paths={wt})
         result = runner.invoke(cli, ["rm", "test-stack", "-f"], obj=test_ctx)
@@ -95,7 +95,7 @@ def test_rm_dry_run_with_delete_stack() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         repo_name = env.cwd.name
-        wt = env.workstacks_root / repo_name / "test-stack"
+        wt = env.erk_root / "repos" / repo_name / "worktrees" / "test-stack"
 
         # Build fake git ops with worktree info
         fake_git_ops = FakeGitOps(
@@ -184,7 +184,7 @@ def test_rm_changes_directory_when_in_target_worktree() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         repo_name = env.cwd.name
-        wt_path = env.workstacks_root / repo_name / "feature"
+        wt_path = env.erk_root / "repos" / repo_name / "worktrees" / "feature"
 
         # Set up worktree paths
         git_ops = FakeGitOps(
@@ -219,7 +219,7 @@ def test_rm_with_delete_stack_handles_user_decline() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         repo_name = env.cwd.name
-        wt = env.workstacks_root / repo_name / "test-stack"
+        wt = env.erk_root / "repos" / repo_name / "worktrees" / "test-stack"
 
         # Build fake git ops with worktree info and configured exception
         fake_git_ops = FakeGitOps(
@@ -263,7 +263,7 @@ def test_rm_with_delete_stack_handles_gt_not_found() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         repo_name = env.cwd.name
-        wt = env.workstacks_root / repo_name / "test-stack"
+        wt = env.erk_root / "repos" / repo_name / "worktrees" / "test-stack"
 
         fake_git_ops = FakeGitOps(
             worktrees={env.cwd: [WorktreeInfo(path=wt, branch="feature-1")]},

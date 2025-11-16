@@ -23,8 +23,8 @@ Usage Pattern:
             cwd = Path.cwd()
             git_dir = cwd / ".git"
             git_dir.mkdir()
-            workstacks_root = cwd / "workstacks"
-            workstacks_root.mkdir()
+            erk_root = cwd / "workstacks"
+            erk_root.mkdir()
 
             git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
             global_config_ops = GlobalConfig(...)
@@ -109,26 +109,27 @@ class SimulatedWorkstackEnv:
         cwd: Current working directory (initially root_worktree)
         git_dir: Path to .git directory (root_worktree / ".git")
         root_worktree: Path to root worktree (has .git/ directory)
-        workstacks_root: Path to workstacks directory (parallel to root)
+        erk_root: Path to workstacks directory (parallel to root)
         script_writer: RealScriptWriterOps for creating actual temp files
-        repo: RepoContext computed from root_worktree and workstacks_root
+        repo: RepoContext computed from root_worktree and erk_root
     """
 
-    def __init__(self, root_worktree: Path, workstacks_root: Path) -> None:
+    def __init__(self, root_worktree: Path, erk_root: Path) -> None:
         """Initialize test environment.
 
         Args:
             root_worktree: Path to root worktree (has .git/ directory)
-            workstacks_root: Path to workstacks directory (parallel to root)
+            erk_root: Path to workstacks directory (parallel to root)
         """
         self.root_worktree = root_worktree
-        self.workstacks_root = workstacks_root
+        self.erk_root = erk_root
         self.script_writer = RealScriptWriterOps()
         self._linked_worktrees: dict[str, Path] = {}  # Track branch -> worktree path
         self._repo = RepoContext(
             root=root_worktree,
             repo_name=root_worktree.name,
-            workstacks_dir=workstacks_root / root_worktree.name,
+            repo_dir=erk_root / root_worktree.name,
+            worktrees_dir=erk_root / root_worktree.name / "worktrees",
         )
 
     @property
@@ -168,7 +169,7 @@ class SimulatedWorkstackEnv:
             ```
         """
         # Create linked worktree directory
-        linked_wt = self.workstacks_root / "repo" / name
+        linked_wt = self.erk_root / "repo" / name
         linked_wt.mkdir(parents=True)
 
         # Create .git file pointing to root worktree
@@ -337,9 +338,9 @@ class SimulatedWorkstackEnv:
                 existing_paths={
                     self.cwd,
                     self.git_dir,
-                    self.workstacks_root,
+                    self.erk_root,
                     repo.root,
-                    repo.workstacks_dir,
+                    repo.repo_dir,
                 },
             )
         else:
@@ -362,8 +363,8 @@ class SimulatedWorkstackEnv:
                 core_paths = {
                     self.cwd,
                     effective_cwd,
-                    self.workstacks_root,
-                    repo.workstacks_dir,
+                    self.erk_root,
+                    repo.repo_dir,
                 }
 
                 # Only add git_dir and repo.root if this is actually a git repo
@@ -395,7 +396,7 @@ class SimulatedWorkstackEnv:
                 use_graphite=use_graphite,
                 show_pr_info=show_pr_info,
                 shell_setup_complete=False,
-                workstacks_root=self.workstacks_root,
+                erk_root=self.erk_root,
             )
 
         # Build and return context
@@ -407,8 +408,8 @@ class SimulatedWorkstackEnv:
 
         # Filter out workstacks_root - it's already set in global_config above
         # Tests shouldn't override it via kwargs
-        if "workstacks_root" in kwargs:
-            kwargs.pop("workstacks_root")
+        if "erk_root" in kwargs:
+            kwargs.pop("erk_root")
 
         # Filter out trunk_branch - it's now a computed property based on git_ops
         if "trunk_branch" in kwargs:
@@ -506,15 +507,15 @@ def simulated_workstack_env(runner: CliRunner) -> Generator[SimulatedWorkstackEn
         (root_worktree / ".git").mkdir()
 
         # Create workstacks directory
-        workstacks_root = base / "workstacks"
-        workstacks_root.mkdir()
+        erk_root = base / "workstacks"
+        erk_root.mkdir()
 
         # Default to root worktree
         os.chdir(root_worktree)
 
         yield SimulatedWorkstackEnv(
             root_worktree=root_worktree,
-            workstacks_root=workstacks_root,
+            erk_root=erk_root,
         )
 
 
@@ -528,16 +529,16 @@ class PureWorkstackEnv:
     Attributes:
         cwd: Sentinel path representing current working directory
         git_dir: Sentinel path representing .git directory
-        workstacks_root: Sentinel path for workstacks directory
+        erk_root: Sentinel path for workstacks directory
         script_writer: FakeScriptWriterOps for in-memory script verification
-        repo: RepoContext computed from cwd and workstacks_root
+        repo: RepoContext computed from cwd and erk_root
     """
 
     def __init__(
         self,
         cwd: Path,
         git_dir: Path,
-        workstacks_root: Path,
+        erk_root: Path,
         script_writer: FakeScriptWriterOps,
     ) -> None:
         """Initialize pure test environment.
@@ -545,18 +546,20 @@ class PureWorkstackEnv:
         Args:
             cwd: Sentinel path for current working directory
             git_dir: Sentinel path for .git directory
-            workstacks_root: Sentinel path for workstacks directory
+            erk_root: Sentinel path for workstacks directory
             script_writer: FakeScriptWriterOps instance for script verification
         """
         self.cwd = cwd
         self.git_dir = git_dir
-        self.workstacks_root = workstacks_root
+        self.erk_root = erk_root
         self.script_writer = script_writer
         self._linked_worktrees: dict[str, Path] = {}  # Track branch -> worktree path
+        repo_dir = erk_root / "repos" / cwd.name
         self._repo = RepoContext(
             root=cwd,
             repo_name=cwd.name,
-            workstacks_dir=workstacks_root / cwd.name,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
         )
 
     @property
@@ -630,9 +633,9 @@ class PureWorkstackEnv:
             core_paths = {
                 self.cwd,
                 self.git_dir,
-                self.workstacks_root,
+                self.erk_root,
                 repo.root,
-                repo.workstacks_dir,
+                repo.repo_dir,
             }
             all_existing = core_paths | (existing_paths or set())
 
@@ -657,9 +660,9 @@ class PureWorkstackEnv:
                 self.cwd,
                 effective_cwd,
                 self.git_dir,
-                self.workstacks_root,
+                self.erk_root,
                 repo.root,
-                repo.workstacks_dir,
+                repo.repo_dir,
             }
             all_existing = core_paths | worktree_paths | (existing_paths or set())
 
@@ -685,7 +688,7 @@ class PureWorkstackEnv:
                 use_graphite=use_graphite,
                 show_pr_info=show_pr_info,
                 shell_setup_complete=False,
-                workstacks_root=self.workstacks_root,
+                erk_root=self.erk_root,
             )
 
         # Build and return context
@@ -697,8 +700,8 @@ class PureWorkstackEnv:
 
         # Filter out workstacks_root - it's already set in global_config above
         # Tests shouldn't override it via kwargs
-        if "workstacks_root" in kwargs:
-            kwargs.pop("workstacks_root")
+        if "erk_root" in kwargs:
+            kwargs.pop("erk_root")
 
         # Filter out trunk_branch - it's now a computed property based on git_ops
         if "trunk_branch" in kwargs:
@@ -725,7 +728,7 @@ class PureWorkstackEnv:
             Sentinel path for the worktree
         """
         # Create sentinel path (no mkdir needed)
-        linked_wt = self.workstacks_root / self.cwd.name / name
+        linked_wt = self.erk_root / self.cwd.name / name
         # Track it
         self._linked_worktrees[branch] = linked_wt
         return linked_wt
@@ -891,7 +894,7 @@ def pure_workstack_env(
     # Use sentinel paths that throw on filesystem operations
     cwd = sentinel_path("/test/repo")
     git_dir = sentinel_path("/test/repo/.git")
-    workstacks_root = sentinel_path("/test/workstacks")
+    erk_root = sentinel_path("/test/workstacks")
 
     # Create in-memory script writer
     script_writer = FakeScriptWriterOps()
@@ -901,7 +904,7 @@ def pure_workstack_env(
         yield PureWorkstackEnv(
             cwd=cwd,
             git_dir=git_dir,
-            workstacks_root=workstacks_root,
+            erk_root=erk_root,
             script_writer=script_writer,
         )
     finally:

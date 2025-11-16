@@ -1,10 +1,10 @@
-"""Tree visualization command for workstack."""
+"""Tree visualization command for worktrees."""
 
 import click
 
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
-from erk.cli.tree import build_workstack_tree
+from erk.cli.tree import build_worktree_tree
 from erk.core.context import ErkContext
 from erk.core.tree_utils import render_tree
 
@@ -20,7 +20,7 @@ def tree_cmd(ctx: ErkContext) -> None:
     Requires Graphite to be enabled and configured.
 
     Example:
-        $ workstack tree
+        $ erk tree
         main [@root]
         ├─ feature-a [@feature-a]
         │  └─ feature-a-2 [@feature-a-2]
@@ -33,7 +33,7 @@ def tree_cmd(ctx: ErkContext) -> None:
     repo = discover_repo_context(ctx, ctx.cwd)
 
     # Build tree structure (will exit with error if Graphite cache missing)
-    roots = build_workstack_tree(ctx, repo.root)
+    roots = build_worktree_tree(ctx, repo.root)
 
     if not roots:
         user_output("No worktrees found")

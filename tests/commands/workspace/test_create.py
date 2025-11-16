@@ -17,11 +17,12 @@ def test_create_basic_worktree() -> None:
     """Test creating a basic worktree."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
         # Create minimal config
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
@@ -43,10 +44,11 @@ def test_create_with_custom_branch_name() -> None:
     """Test creating a worktree with a custom branch name."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
@@ -72,8 +74,9 @@ def test_create_with_plan_file() -> None:
         plan_file = env.cwd / "my-feature-plan.md"
         plan_file.write_text("# My Feature Plan\n", encoding="utf-8")
 
-        workstacks_dir = env.workstacks_root / env.root_worktree.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.root_worktree.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
         # Pass local config directly
         local_config = LoadedConfig(
@@ -90,7 +93,8 @@ def test_create_with_plan_file() -> None:
         repo = RepoContext(
             root=env.root_worktree,
             repo_name=env.root_worktree.name,
-            workstacks_dir=workstacks_dir,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
         )
 
         test_ctx = env.build_context(git_ops=git_ops, local_config=local_config, repo=repo)
@@ -102,7 +106,7 @@ def test_create_with_plan_file() -> None:
         from datetime import datetime
 
         date_suffix = datetime.now().strftime("%y-%m-%d")
-        wt_path = workstacks_dir / f"my-feature-{date_suffix}"
+        wt_path = repo_dir / "worktrees" / f"my-feature-{date_suffix}"
         assert wt_path.exists()
         # Plan folder should be created with plan.md and progress.md
         assert (wt_path / ".plan").exists()
@@ -115,8 +119,9 @@ def test_create_with_plan_file_removes_plan_word() -> None:
     """Test that --plan flag removes 'plan' from worktree names."""
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.root_worktree.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.root_worktree.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
         # Pass local config directly
         local_config = LoadedConfig(
@@ -133,7 +138,8 @@ def test_create_with_plan_file_removes_plan_word() -> None:
         repo = RepoContext(
             root=env.root_worktree,
             repo_name=env.root_worktree.name,
-            workstacks_dir=workstacks_dir,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
         )
 
         test_ctx = env.build_context(git_ops=git_ops, local_config=local_config, repo=repo)
@@ -160,7 +166,7 @@ def test_create_with_plan_file_removes_plan_word() -> None:
             assert result.exit_code == 0, f"Failed for {plan_filename}: {result.output}"
             # Worktree name includes date suffix
             expected_worktree_name = f"{expected_worktree_base}-{date_suffix}"
-            wt_path = workstacks_dir / expected_worktree_name
+            wt_path = repo_dir / "worktrees" / expected_worktree_name
             assert wt_path.exists(), f"Expected worktree at {wt_path} for {plan_filename}"
             assert (wt_path / ".plan" / "plan.md").exists()
             assert (wt_path / ".plan" / "progress.md").exists()
@@ -176,10 +182,11 @@ def test_create_sanitizes_worktree_name() -> None:
     """Test that worktree names are sanitized."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
@@ -201,10 +208,11 @@ def test_create_sanitizes_branch_name() -> None:
     """Test that branch names are sanitized."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
@@ -224,10 +232,11 @@ def test_create_detects_default_branch() -> None:
     """Test that create detects the default branch when needed."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
@@ -255,10 +264,10 @@ def test_create_from_current_branch_in_worktree() -> None:
         current_worktree = env.root_worktree.parent / "wt-current"
         current_worktree.mkdir()
 
-        workstacks_dir = env.workstacks_root / repo_root.name
-        workstacks_dir.mkdir()
+        repo_dir = env.erk_root / "repos" / repo_root.name
+        repo_dir.mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
@@ -281,7 +290,7 @@ def test_create_from_current_branch_in_worktree() -> None:
 
         assert result.exit_code == 0, result.output
 
-        expected_worktree = workstacks_dir / "feature"
+        expected_worktree = repo_dir / "worktrees" / "feature"
         assert (current_worktree, "main") in git_ops.checked_out_branches
         assert (repo_root, "main") not in git_ops.checked_out_branches
         assert (expected_worktree, "feature") in git_ops.added_worktrees
@@ -291,14 +300,15 @@ def test_create_fails_if_worktree_exists() -> None:
     """Test that create fails if worktree already exists."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         # Create existing worktree directory
-        wt_path = workstacks_dir / "test-feature"
+        wt_path = repo_dir / "worktrees" / "test-feature"
 
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
@@ -318,8 +328,9 @@ def test_create_runs_post_create_commands() -> None:
     """Test that create runs post-create commands."""
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.root_worktree.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.root_worktree.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
         # Pass local config directly with post_create commands
         local_config = LoadedConfig(
@@ -336,7 +347,8 @@ def test_create_runs_post_create_commands() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
         )
 
         test_ctx = env.build_context(git_ops=git_ops, local_config=local_config, repo=repo)
@@ -351,8 +363,9 @@ def test_create_sets_env_variables() -> None:
     """Test that create sets environment variables in .env file."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
         # Pass local config directly with env vars
         local_config = LoadedConfig(
@@ -369,7 +382,8 @@ def test_create_sets_env_variables() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
         )
 
         test_ctx = env.build_context(git_ops=git_ops, local_config=local_config, repo=repo)
@@ -377,7 +391,7 @@ def test_create_sets_env_variables() -> None:
         result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
-        wt_path = workstacks_dir / "test-feature"
+        wt_path = repo_dir / "worktrees" / "test-feature"
         env_file = wt_path / ".env"
         env_content = env_file.read_text(encoding="utf-8")
         assert "MY_VAR" in env_content
@@ -396,8 +410,9 @@ def test_create_uses_graphite_when_enabled() -> None:
     """
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
         # Pass local config directly
         local_config = LoadedConfig(
@@ -416,7 +431,8 @@ def test_create_uses_graphite_when_enabled() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
         )
 
         test_ctx = env.build_context(
@@ -430,15 +446,16 @@ def test_create_uses_graphite_when_enabled() -> None:
 
         assert result.exit_code == 0, result.output
         # Verify worktree was created successfully
-        workstacks_dir / "test-feature"
+        repo_dir / "test-feature"
 
 
 def test_create_blocks_when_staged_changes_present_with_graphite_enabled() -> None:
     """Ensure the command fails fast when staged changes exist and graphite is enabled."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
         # Pass local config directly
         local_config = LoadedConfig(
@@ -457,7 +474,8 @@ def test_create_blocks_when_staged_changes_present_with_graphite_enabled() -> No
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
         )
 
         test_ctx = env.build_context(
@@ -479,10 +497,11 @@ def test_create_uses_git_when_graphite_disabled() -> None:
     """Test that create uses git when graphite is disabled."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
@@ -501,9 +520,10 @@ def test_create_allows_staged_changes_when_graphite_disabled() -> None:
     """Graphite disabled path should ignore staged changes and continue."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        workstacks_dir.mkdir(parents=True)
-        (workstacks_dir / "config.toml").write_text("", encoding="utf-8")
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
+        (repo_dir / "config.toml").write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
@@ -560,11 +580,12 @@ def test_create_no_post_flag_skips_commands() -> None:
     """Test that --no-post flag skips post-create commands."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
         # Create config with post_create commands
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text(
             '[post_create]\ncommands = ["echo hello"]\n',
             encoding="utf-8",
@@ -587,10 +608,11 @@ def test_create_from_current_branch() -> None:
     """Test creating worktree from current branch."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
@@ -610,10 +632,11 @@ def test_create_from_branch() -> None:
     """Test creating worktree from an existing branch."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
@@ -648,10 +671,11 @@ def test_create_from_current_branch_on_main_fails() -> None:
     """Test that --from-current-branch fails with helpful message when on main."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
@@ -672,14 +696,15 @@ def test_create_detects_branch_already_checked_out() -> None:
     """Test that create detects when branch is already checked out."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         # Setup: feature-branch is already checked out in an existing worktree
-        existing_wt_path = workstacks_dir / "existing-feature"
+        existing_wt_path = repo_dir / "worktrees" / "existing-feature"
         existing_wt_path.mkdir(parents=True)
 
         git_ops = FakeGitOps(
@@ -708,10 +733,11 @@ def test_create_from_current_branch_on_master_fails() -> None:
     """Test that --from-current-branch fails when on master branch too."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
@@ -737,8 +763,9 @@ def test_create_with_keep_plan_flag() -> None:
         plan_file = env.cwd / "my-feature-plan.md"
         plan_file.write_text("# My Feature Plan\n", encoding="utf-8")
 
-        workstacks_dir = env.workstacks_root / env.root_worktree.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.root_worktree.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
         # Pass local config directly
         local_config = LoadedConfig(
@@ -755,7 +782,8 @@ def test_create_with_keep_plan_flag() -> None:
         repo = RepoContext(
             root=env.root_worktree,
             repo_name=env.root_worktree.name,
-            workstacks_dir=workstacks_dir,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
         )
 
         test_ctx = env.build_context(git_ops=git_ops, local_config=local_config, repo=repo)
@@ -769,7 +797,7 @@ def test_create_with_keep_plan_flag() -> None:
         from datetime import datetime
 
         date_suffix = datetime.now().strftime("%y-%m-%d")
-        wt_path = workstacks_dir / f"my-feature-{date_suffix}"
+        wt_path = repo_dir / "worktrees" / f"my-feature-{date_suffix}"
         assert wt_path.exists()
         # Plan folder should be created with plan.md and progress.md
         assert (wt_path / ".plan" / "plan.md").exists()
@@ -811,8 +839,8 @@ def test_from_current_branch_with_main_in_use_prefers_graphite_parent() -> None:
         current_worktree = env.cwd.parent / "wt-current"
         current_worktree.mkdir()
 
-        workstacks_dir = env.workstacks_root / repo_root.name
-        workstacks_dir.mkdir()
+        repo_dir = env.erk_root / "repos" / repo_root.name
+        repo_dir.mkdir(parents=True)
 
         # Pass local config directly
         local_config = LoadedConfig(
@@ -854,7 +882,8 @@ def test_from_current_branch_with_main_in_use_prefers_graphite_parent() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=workstacks_dir,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
         )
 
         test_ctx = env.build_context(
@@ -893,10 +922,10 @@ def test_from_current_branch_with_parent_in_use_falls_back_to_detached_head() ->
         other_worktree = env.cwd.parent / "wt-other"
         other_worktree.mkdir()
 
-        workstacks_dir = env.workstacks_root / repo_root.name
-        workstacks_dir.mkdir()
+        repo_dir = env.erk_root / "repos" / repo_root.name
+        repo_dir.mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         # Set up Graphite stack: main -> feature-1 -> feature-2
@@ -960,10 +989,10 @@ def test_from_current_branch_without_graphite_falls_back_to_main() -> None:
         current_worktree = env.cwd.parent / "wt-current"
         current_worktree.mkdir()
 
-        workstacks_dir = env.workstacks_root / repo_root.name
-        workstacks_dir.mkdir()
+        repo_dir = env.erk_root / "repos" / repo_root.name
+        repo_dir.mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         # Set up minimal Graphite stack (standalone-feature not in it)
@@ -1017,10 +1046,10 @@ def test_from_current_branch_no_graphite_main_in_use_uses_detached_head() -> Non
         current_worktree = env.cwd.parent / "wt-current"
         current_worktree.mkdir()
 
-        workstacks_dir = env.workstacks_root / repo_root.name
-        workstacks_dir.mkdir()
+        repo_dir = env.erk_root / "repos" / repo_root.name
+        repo_dir.mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         # Set up minimal Graphite stack (standalone-feature not in it)
@@ -1063,10 +1092,11 @@ def test_create_with_json_output() -> None:
     """Test creating a worktree with JSON output."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
@@ -1083,27 +1113,28 @@ def test_create_with_json_output() -> None:
         # Verify JSON output
         output_data = json.loads(result.output)
         assert output_data["worktree_name"] == "test-feature"
-        assert output_data["worktree_path"] == str(workstacks_dir / "test-feature")
+        assert output_data["worktree_path"] == str(repo_dir / "worktrees" / "test-feature")
         assert output_data["branch_name"] == "test-feature"
         assert output_data["plan_file"] is None
         assert output_data["status"] == "created"
 
         # Verify worktree was actually created
-        workstacks_dir / "test-feature"
+        repo_dir / "test-feature"
 
 
 def test_create_existing_worktree_with_json() -> None:
     """Test creating a worktree that already exists with JSON output."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         # Create existing worktree
-        existing_wt = workstacks_dir / "existing-feature"
+        existing_wt = repo_dir / "worktrees" / "existing-feature"
 
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
@@ -1130,10 +1161,11 @@ def test_create_json_and_script_mutually_exclusive() -> None:
     """Test that --json and --script flags are mutually exclusive."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
@@ -1154,8 +1186,9 @@ def test_create_with_json_and_plan_file() -> None:
     """Test creating a worktree with JSON output and plan file."""
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.root_worktree.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.root_worktree.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
         # Pass local config directly
         local_config = LoadedConfig(
@@ -1176,7 +1209,8 @@ def test_create_with_json_and_plan_file() -> None:
         repo = RepoContext(
             root=env.root_worktree,
             repo_name=env.root_worktree.name,
-            workstacks_dir=workstacks_dir,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
         )
 
         test_ctx = env.build_context(git_ops=git_ops, local_config=local_config, repo=repo)
@@ -1198,7 +1232,7 @@ def test_create_with_json_and_plan_file() -> None:
         date_suffix = datetime.now().strftime("%y-%m-%d")
         expected_name = f"test-feature-{date_suffix}"
         assert output_data["worktree_name"] == expected_name
-        wt_path = workstacks_dir / expected_name
+        wt_path = repo_dir / "worktrees" / expected_name
         expected_plan_folder = wt_path / ".plan"
         assert output_data["plan_file"] == str(expected_plan_folder)
         assert output_data["status"] == "created"
@@ -1213,10 +1247,11 @@ def test_create_with_json_no_plan() -> None:
     """Test that JSON output has null plan_file when no plan is provided."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
@@ -1240,10 +1275,11 @@ def test_create_with_stay_prevents_script_generation() -> None:
     """Test that --stay flag prevents script generation."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
@@ -1260,17 +1296,18 @@ def test_create_with_stay_prevents_script_generation() -> None:
         # The output should contain the normal message with "erk switch"
         assert "erk switch" in result.output
         # Should still create the worktree
-        workstacks_dir / "test-feature"
+        repo_dir / "test-feature"
 
 
 def test_create_with_stay_and_json() -> None:
     """Test that --stay works with --json output mode."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
@@ -1289,7 +1326,7 @@ def test_create_with_stay_and_json() -> None:
         assert output_data["worktree_name"] == "test-feature"
         assert output_data["status"] == "created"
         # Verify worktree was created
-        workstacks_dir / "test-feature"
+        repo_dir / "test-feature"
 
 
 def test_create_with_stay_and_plan() -> None:
@@ -1300,8 +1337,9 @@ def test_create_with_stay_and_plan() -> None:
         plan_file = env.cwd / "test-feature-plan.md"
         plan_file.write_text("# Test Feature Plan\n", encoding="utf-8")
 
-        workstacks_dir = env.workstacks_root / env.root_worktree.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.root_worktree.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
         # Pass local config directly
         local_config = LoadedConfig(
@@ -1318,7 +1356,8 @@ def test_create_with_stay_and_plan() -> None:
         repo = RepoContext(
             root=env.root_worktree,
             repo_name=env.root_worktree.name,
-            workstacks_dir=workstacks_dir,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
         )
 
         test_ctx = env.build_context(git_ops=git_ops, local_config=local_config, repo=repo)
@@ -1332,7 +1371,7 @@ def test_create_with_stay_and_plan() -> None:
         from datetime import datetime
 
         date_suffix = datetime.now().strftime("%y-%m-%d")
-        wt_path = workstacks_dir / f"test-feature-{date_suffix}"
+        wt_path = repo_dir / "worktrees" / f"test-feature-{date_suffix}"
         assert wt_path.exists()
         # Plan folder should be created
         assert (wt_path / ".plan" / "plan.md").exists()
@@ -1346,10 +1385,11 @@ def test_create_default_behavior_generates_script() -> None:
     """Test that default behavior (without --stay) still generates script."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
@@ -1365,17 +1405,18 @@ def test_create_default_behavior_generates_script() -> None:
         # Should generate script path in output
         assert "/tmp/" in result.output or "workstack-" in result.output
         # Verify worktree was created
-        workstacks_dir / "test-feature"
+        repo_dir / "test-feature"
 
 
 def test_create_with_long_name_truncation() -> None:
     """Test that worktree base names exceeding 30 characters are truncated before date suffix."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
@@ -1394,7 +1435,7 @@ def test_create_with_long_name_truncation() -> None:
         # Note: worktree name doesn't include sanitize_worktree_name truncation in this flow
         # as create without --plan uses sanitize_worktree_name which truncates to 30
         expected_truncated = "this-is-a-very-long-worktree-n"  # 30 chars
-        workstacks_dir / expected_truncated
+        repo_dir / expected_truncated
         assert len(expected_truncated) == 30, "Truncated base name should be exactly 30 chars"
 
 
@@ -1406,10 +1447,11 @@ def test_create_with_plan_ensures_uniqueness() -> None:
         plan_file = env.cwd / "my-feature-plan.md"
         plan_file.write_text("# My Feature Plan\n", encoding="utf-8")
 
-        workstacks_dir = env.workstacks_root / env.root_worktree.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.root_worktree.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
-        config_toml = workstacks_dir / "config.toml"
+        config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
         git_ops = FakeGitOps(
@@ -1428,7 +1470,7 @@ def test_create_with_plan_ensures_uniqueness() -> None:
 
         date_suffix = datetime.now().strftime("%y-%m-%d")
         expected_name1 = f"my-feature-{date_suffix}"
-        wt_path1 = workstacks_dir / expected_name1
+        wt_path1 = repo_dir / "worktrees" / expected_name1
         assert wt_path1.exists(), f"Expected first worktree at {wt_path1}"
         assert (wt_path1 / ".plan" / "plan.md").exists()
 
@@ -1441,7 +1483,7 @@ def test_create_with_plan_ensures_uniqueness() -> None:
 
         # Check that second worktree has -2 before date suffix
         expected_name2 = f"my-feature-2-{date_suffix}"
-        wt_path2 = workstacks_dir / expected_name2
+        wt_path2 = repo_dir / "worktrees" / expected_name2
         assert wt_path2.exists(), f"Expected second worktree at {wt_path2}"
         assert (wt_path2 / ".plan" / "plan.md").exists()
 
@@ -1471,8 +1513,9 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
         plan_file = env.cwd / long_plan_name
         plan_file.write_text("# Fix Branch Worktree Name Mismatch\n", encoding="utf-8")
 
-        workstacks_dir = env.workstacks_root / env.root_worktree.name
-        workstacks_dir.mkdir(parents=True)
+        repo_dir = env.erk_root / "repos" / env.root_worktree.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
 
         # Pass local config directly
         local_config = LoadedConfig(
@@ -1489,7 +1532,8 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
         repo = RepoContext(
             root=env.root_worktree,
             repo_name=env.root_worktree.name,
-            workstacks_dir=workstacks_dir,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
         )
 
         test_ctx = env.build_context(git_ops=git_ops, local_config=local_config, repo=repo)
@@ -1498,8 +1542,9 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
         result = runner.invoke(cli, ["create", "--plan", str(plan_file)], obj=test_ctx)
         assert result.exit_code == 0, result.output
 
-        # Get the created worktree (should be only directory in workstacks_dir)
-        worktrees = [d for d in workstacks_dir.iterdir() if d.is_dir()]
+        # Get the created worktree (should be only directory in worktrees_dir)
+        worktrees_dir = repo_dir / "worktrees"
+        worktrees = [d for d in worktrees_dir.iterdir() if d.is_dir()]
         assert len(worktrees) == 1, f"Expected exactly 1 worktree, found {len(worktrees)}"
 
         actual_worktree_path = worktrees[0]

@@ -49,7 +49,7 @@ def test_status_cmd_in_root_worktree(simple_repo: WorktreeScenario) -> None:
 def test_status_cmd_in_feature_worktree(repo_with_feature: WorktreeScenario) -> None:
     """Test status command when in a feature worktree (CLI layer)."""
     runner = CliRunner()
-    worktree_path = repo_with_feature.workstacks_dir / "feature"
+    worktree_path = repo_with_feature.repo_dir / "feature"
     original_dir = os.getcwd()
     os.chdir(worktree_path)
 
@@ -91,7 +91,7 @@ def test_status_cmd_in_subdirectory_of_worktree(tmp_path: Path) -> None:
         recent_commits={worktree_path: [], subdir: []},
     )
     global_config = GlobalConfig(
-        workstacks_root=tmp_path / "workstacks",
+        erk_root=tmp_path / "workstacks",
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=False,
@@ -128,7 +128,7 @@ def test_status_cmd_displays_all_collector_sections(tmp_path: Path) -> None:
     )
 
     # Create .plan/ folder with plan.md and progress.md
-    plan_folder = scenario.workstacks_dir / "feature" / ".plan"
+    plan_folder = scenario.repo_dir / "feature" / ".plan"
     plan_folder.mkdir(parents=True, exist_ok=True)
     plan_file = plan_folder / "plan.md"
     plan_file.write_text("# Feature Plan\n## Overview\nImplement new feature", encoding="utf-8")
@@ -138,7 +138,7 @@ def test_status_cmd_displays_all_collector_sections(tmp_path: Path) -> None:
     scenario = scenario.build()
 
     # Update context with correct cwd for feature worktree
-    feature_dir = scenario.workstacks_dir / "feature"
+    feature_dir = scenario.repo_dir / "feature"
     ctx = ErkContext.for_test(
         git_ops=scenario.ctx.git_ops,
         global_config=scenario.ctx.global_config,
@@ -178,7 +178,7 @@ def test_status_cmd_not_in_git_repo(tmp_path: Path) -> None:
     )
 
     global_config = GlobalConfig(
-        workstacks_root=tmp_path / "workstacks",
+        erk_root=tmp_path / "workstacks",
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=True,

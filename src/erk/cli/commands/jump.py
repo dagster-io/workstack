@@ -21,7 +21,7 @@ from erk.core.naming_utils import (
     ensure_unique_worktree_name,
     sanitize_worktree_name,
 )
-from erk.core.repo_discovery import RepoContext, ensure_workstacks_dir
+from erk.core.repo_discovery import RepoContext, ensure_repo_dir
 
 
 def _format_worktree_info(wt: WorktreeInfo, repo_root: Path) -> str:
@@ -183,6 +183,7 @@ def jump_cmd(ctx: ErkContext, branch: str, script: bool) -> None:
         repo = ctx.repo
     else:
         repo = discover_repo_context(ctx, ctx.cwd)
+    ensure_repo_dir(repo)
 
     # Get all worktrees
     worktrees = ctx.git_ops.list_worktrees(repo.root)
@@ -238,14 +239,13 @@ def jump_cmd(ctx: ErkContext, branch: str, script: bool) -> None:
         )
 
         # Ensure workstacks directory exists
-        workstacks_dir = ensure_workstacks_dir(repo)
 
         # Generate and ensure unique worktree name
         name = sanitize_worktree_name(branch)
-        name = ensure_unique_worktree_name(name, workstacks_dir)
+        name = ensure_unique_worktree_name(name, repo.worktrees_dir)
 
         # Calculate worktree path
-        wt_path = worktree_path_for(workstacks_dir, name)
+        wt_path = worktree_path_for(repo.worktrees_dir, name)
 
         # Create worktree from existing branch
         add_worktree(

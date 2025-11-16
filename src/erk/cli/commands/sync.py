@@ -10,7 +10,7 @@ from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output
 from erk.cli.shell_utils import render_cd_script
 from erk.core.context import ErkContext, regenerate_context
-from erk.core.repo_discovery import ensure_workstacks_dir
+from erk.core.repo_discovery import ensure_repo_dir
 from erk.core.script_writer import ScriptResult
 from erk.core.sync_utils import PRStatus, identify_deletable_worktrees
 
@@ -35,7 +35,7 @@ def _emit(message: str, *, script_mode: bool, error: bool = False) -> None:
 
 def _return_to_original_worktree(
     ctx: ErkContext,
-    workstacks_dir: Path,
+    worktrees_dir: Path,
     current_worktree_name: str | None,
     *,
     script_mode: bool,
@@ -48,7 +48,7 @@ def _return_to_original_worktree(
     if current_worktree_name is None:
         return
 
-    wt_path = worktree_path_for(workstacks_dir, current_worktree_name)
+    wt_path = worktree_path_for(worktrees_dir, current_worktree_name)
     if not ctx.git_ops.path_exists(wt_path):
         return
 
@@ -119,13 +119,13 @@ def sync_cmd(
 
     # Step 2: Save current location
     repo = discover_repo_context(ctx, ctx.cwd)
-    workstacks_dir = ensure_workstacks_dir(repo)
+    ensure_repo_dir(repo)
 
     # Determine current worktree (if any)
     current_wt_path = ctx.cwd.resolve()
     current_worktree_name: str | None = None
 
-    if current_wt_path.parent == workstacks_dir:
+    if current_wt_path.parent == repo.worktrees_dir:
         current_worktree_name = current_wt_path.name
 
     # Step 3: Switch to root (only if not already at root)
@@ -184,7 +184,7 @@ def sync_cmd(
             )
 
     # Identify deletable worktrees using pure business logic
-    deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo.root, workstacks_dir)
+    deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo.root, repo.worktrees_dir)
 
     # Step 6: Display and optionally clean
     if not deletable:
@@ -208,7 +208,7 @@ def sync_cmd(
             ):
                 _emit("Cleanup cancelled.", script_mode=script)
                 _return_to_original_worktree(
-                    ctx, workstacks_dir, current_worktree_name, script_mode=script
+                    ctx, repo.worktrees_dir, current_worktree_name, script_mode=script
                 )
                 return
 
@@ -241,7 +241,7 @@ def sync_cmd(
         # Only show manual instruction if force was not used
         if not force:
             _emit(
-                "Next step: Run 'workstack sync -f' to automatically delete the merged branches.",
+                "Next step: Run 'erk sync -f' to automatically delete the merged branches.",
                 script_mode=script,
             )
 
@@ -249,7 +249,7 @@ def sync_cmd(
     script_result: ScriptResult | None = None
 
     if current_worktree_name:
-        wt_path = worktree_path_for(workstacks_dir, current_worktree_name)
+        wt_path = worktree_path_for(repo.worktrees_dir, current_worktree_name)
 
         # Check if worktree still exists
         if ctx.git_ops.path_exists(wt_path):

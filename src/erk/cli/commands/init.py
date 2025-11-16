@@ -14,7 +14,7 @@ from erk.core.init_utils import (
     is_repo_named,
     render_config_template,
 )
-from erk.core.repo_discovery import ensure_workstacks_dir
+from erk.core.repo_discovery import ensure_repo_dir
 from erk.core.shell_ops import ShellOps
 
 
@@ -25,13 +25,13 @@ def detect_graphite(shell_ops: ShellOps) -> bool:
 
 def create_and_save_global_config(
     ctx: ErkContext,
-    workstacks_root: Path,
+    erk_root: Path,
     shell_setup_complete: bool,
 ) -> GlobalConfig:
     """Create and save global config, returning the created config."""
     use_graphite = detect_graphite(ctx.shell_ops)
     config = GlobalConfig(
-        workstacks_root=workstacks_root,
+        erk_root=erk_root,
         use_graphite=use_graphite,
         shell_setup_complete=shell_setup_complete,
         show_pr_info=True,
@@ -178,7 +178,7 @@ def init_cmd(
         if setup_complete:
             # Update global config with shell_setup_complete=True
             new_config = GlobalConfig(
-                workstacks_root=ctx.global_config.workstacks_root,
+                erk_root=ctx.global_config.erk_root,
                 use_graphite=ctx.global_config.use_graphite,
                 shell_setup_complete=True,
                 show_pr_info=ctx.global_config.show_pr_info,
@@ -213,9 +213,9 @@ def init_cmd(
         user_output(f"Global config not found at {config_path}")
         user_output("Please provide the path where you want to store all worktrees.")
         user_output("(This directory will contain subdirectories for each repository)")
-        workstacks_root = click.prompt("Worktrees root directory", type=Path)
-        workstacks_root = workstacks_root.expanduser().resolve()
-        config = create_and_save_global_config(ctx, workstacks_root, shell_setup_complete=False)
+        erk_root = click.prompt("Worktrees root directory", type=Path)
+        erk_root = erk_root.expanduser().resolve()
+        config = create_and_save_global_config(ctx, erk_root, shell_setup_complete=False)
         # Update context with newly created config
         ctx = dataclasses.replace(ctx, global_config=config)
         user_output(f"Created global config at {config_path}")
@@ -242,8 +242,8 @@ def init_cmd(
         cfg_path = repo_context.root / "config.toml"
     else:
         # Worktree-level config goes in workstacks_dir
-        workstacks_dir = ensure_workstacks_dir(repo_context)
-        cfg_path = workstacks_dir / "config.toml"
+        repo_dir = ensure_repo_dir(repo_context)
+        cfg_path = repo_dir / "config.toml"
 
     if cfg_path.exists() and not force:
         user_output(f"Config already exists: {cfg_path}. Use --force to overwrite.")
@@ -289,7 +289,7 @@ def init_cmd(
             if setup_complete:
                 # Update global config with shell_setup_complete=True
                 new_config = GlobalConfig(
-                    workstacks_root=fresh_config.workstacks_root,
+                    erk_root=fresh_config.erk_root,
                     use_graphite=fresh_config.use_graphite,
                     shell_setup_complete=True,
                     show_pr_info=fresh_config.show_pr_info,

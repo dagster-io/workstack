@@ -21,7 +21,7 @@ def test_switch_command() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         # Create repo-specific workstacks directory
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / "repos" / env.cwd.name / "worktrees"
         myfeature_path = work_dir / "myfeature"
 
         # Configure FakeGitOps with worktrees
@@ -43,7 +43,8 @@ def test_switch_command() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=work_dir,
+            repo_dir=work_dir,
+            worktrees_dir=work_dir / "worktrees",
         )
 
         # Create test context using env helper
@@ -72,7 +73,7 @@ def test_switch_nonexistent_worktree() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         # Create repo-specific workstacks directory
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / env.cwd.name
 
         # Configure FakeGitOps with just root worktree
         git_ops = FakeGitOps(
@@ -89,7 +90,8 @@ def test_switch_nonexistent_worktree() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=work_dir,
+            repo_dir=work_dir,
+            worktrees_dir=work_dir / "worktrees",
         )
 
         # Create test context using env helper
@@ -118,7 +120,7 @@ def test_switch_to_root() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         # Create repo-specific workstacks directory
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / env.cwd.name
 
         # Configure FakeGitOps with just the root worktree
         git_ops = FakeGitOps(
@@ -135,7 +137,8 @@ def test_switch_to_root() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=work_dir,
+            repo_dir=work_dir,
+            worktrees_dir=work_dir / "worktrees",
         )
 
         # Create test context using env helper
@@ -171,7 +174,7 @@ def test_list_includes_root() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         # Create repo-specific workstacks directory
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / "repos" / env.cwd.name / "worktrees"
         myfeature_path = work_dir / "myfeature"
 
         # Configure FakeGitOps with worktrees
@@ -193,7 +196,8 @@ def test_list_includes_root() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=work_dir,
+            repo_dir=work_dir,
+            worktrees_dir=work_dir / "worktrees",
         )
 
         # Create test context using env helper
@@ -229,7 +233,7 @@ def test_complete_worktree_names_without_context() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         # Create repo-specific workstacks directory
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / env.cwd.name
         feature_a_path = work_dir / "feature-a"
         feature_b_path = work_dir / "feature-b"
         bugfix_123_path = work_dir / "bugfix-123"
@@ -257,7 +261,8 @@ def test_complete_worktree_names_without_context() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=work_dir,
+            repo_dir=work_dir,
+            worktrees_dir=work_dir / "worktrees",
         )
 
         # Create test context using env helper
@@ -293,7 +298,7 @@ def test_switch_rejects_main_as_worktree_name() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         # Create repo-specific workstacks directory
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / env.cwd.name
 
         # Configure FakeGitOps with just root worktree
         git_ops = FakeGitOps(
@@ -310,7 +315,8 @@ def test_switch_rejects_main_as_worktree_name() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=work_dir,
+            repo_dir=work_dir,
+            worktrees_dir=work_dir / "worktrees",
         )
 
         # Create test context using env helper
@@ -330,7 +336,7 @@ def test_switch_rejects_master_as_worktree_name() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         # Create repo-specific workstacks directory
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / env.cwd.name
 
         # Configure FakeGitOps with master as trunk branch
         git_ops = FakeGitOps(
@@ -347,7 +353,8 @@ def test_switch_rejects_master_as_worktree_name() -> None:
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
-            workstacks_dir=work_dir,
+            repo_dir=work_dir,
+            worktrees_dir=work_dir / "worktrees",
         )
 
         # Create test context using env helper (override trunk_branch)

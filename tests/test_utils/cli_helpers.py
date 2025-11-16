@@ -29,12 +29,12 @@ class CLITestRepo:
 
     Attributes:
         repo: Path to git repository (with initial commit)
-        workstacks_root: Path to workstacks directory
+        erk_root: Path to workstacks directory
         tmp_path: Path to test root directory (contains .workstack config)
     """
 
     repo: Path
-    workstacks_root: Path
+    erk_root: Path
     tmp_path: Path
 
 
@@ -49,7 +49,7 @@ def cli_test_repo(tmp_path: Path) -> Generator[CLITestRepo]:
     Creates a complete test environment with:
     - Isolated .workstack config directory with basic settings
     - REAL git repository with main branch and initial commit (subprocess calls)
-    - workstacks_root directory structure
+    - erk_root directory structure
     - Configured git user (test@example.com / Test User)
 
     This helper handles boilerplate setup for CLI tests requiring REAL git.
@@ -70,7 +70,7 @@ def cli_test_repo(tmp_path: Path) -> Generator[CLITestRepo]:
         tmp_path: Pytest's tmp_path fixture providing isolated test directory
 
     Yields:
-        CLITestRepo with repo path, workstacks_root, and tmp_path
+        CLITestRepo with repo path, erk_root, and tmp_path
 
     Example (real git required):
         ```python
@@ -115,9 +115,9 @@ def cli_test_repo(tmp_path: Path) -> Generator[CLITestRepo]:
     # Set up isolated global config
     global_config_dir = tmp_path / ".workstack"
     global_config_dir.mkdir()
-    workstacks_root = tmp_path / "workstacks"
+    erk_root = tmp_path / "workstacks"
     (global_config_dir / "config.toml").write_text(
-        f'workstacks_root = "{workstacks_root}"\nuse_graphite = false\n',
+        f'workstacks_root = "{erk_root}"\nuse_graphite = false\n',
         encoding="utf-8",
     )
 
@@ -133,4 +133,4 @@ def cli_test_repo(tmp_path: Path) -> Generator[CLITestRepo]:
     subprocess.run(["git", "add", "."], cwd=repo, check=True)
     subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=repo, check=True)
 
-    yield CLITestRepo(repo=repo, workstacks_root=workstacks_root, tmp_path=tmp_path)
+    yield CLITestRepo(repo=repo, erk_root=erk_root, tmp_path=tmp_path)

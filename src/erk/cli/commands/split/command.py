@@ -19,7 +19,6 @@ from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
 from erk.core.context import ErkContext
 from erk.core.naming_utils import sanitize_worktree_name
-from erk.core.repo_discovery import ensure_workstacks_dir
 
 # Validation functions
 
@@ -200,13 +199,12 @@ def split_cmd(
 
     # 6. Create split plan
     all_worktrees = ctx.git_ops.list_worktrees(repo.root)
-    workstacks_dir = ensure_workstacks_dir(repo)
     plan = create_split_plan(
         stack_branches=stack_to_split,
         trunk_branch=trunk_branch,
         current_branch=current_branch,
         all_worktrees=all_worktrees,
-        workstacks_dir=workstacks_dir,
+        worktrees_dir=repo.worktrees_dir,
         sanitize_worktree_name=sanitize_worktree_name,
         source_worktree_path=current_worktree,
         repo_root=repo.root,

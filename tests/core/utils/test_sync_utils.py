@@ -17,11 +17,11 @@ from erk.core.sync_utils import (
 def test_identifies_merged_pr() -> None:
     """Test identification of worktree with merged PR."""
     repo_root = Path("/repo")
-    workstacks_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.workstacks")
 
     worktrees = [
         WorktreeInfo(repo_root, "main", is_root=True),
-        WorktreeInfo(workstacks_dir / "feat-1", "feat-1"),
+        WorktreeInfo(repo_dir / "feat-1", "feat-1"),
     ]
 
     pr_statuses = {
@@ -29,7 +29,7 @@ def test_identifies_merged_pr() -> None:
         "feat-1": PRStatus("feat-1", "MERGED", 123, "Add feature"),
     }
 
-    deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo_root, workstacks_dir)
+    deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo_root, repo_dir)
 
     assert len(deletable) == 1
     assert deletable[0].name == "feat-1"
@@ -41,18 +41,18 @@ def test_identifies_merged_pr() -> None:
 def test_identifies_closed_pr() -> None:
     """Test identification of worktree with closed PR."""
     repo_root = Path("/repo")
-    workstacks_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.workstacks")
 
     worktrees = [
         WorktreeInfo(repo_root, "main", is_root=True),
-        WorktreeInfo(workstacks_dir / "feat-1", "feat-1"),
+        WorktreeInfo(repo_dir / "feat-1", "feat-1"),
     ]
 
     pr_statuses = {
         "feat-1": PRStatus("feat-1", "CLOSED", 123, "Closed feature"),
     }
 
-    deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo_root, workstacks_dir)
+    deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo_root, repo_dir)
 
     assert len(deletable) == 1
     assert deletable[0].pr_state == "CLOSED"
@@ -61,7 +61,7 @@ def test_identifies_closed_pr() -> None:
 def test_skips_root_worktree() -> None:
     """Test that root worktree is never deletable."""
     repo_root = Path("/repo")
-    workstacks_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.workstacks")
 
     worktrees = [
         WorktreeInfo(repo_root, "main", is_root=True),
@@ -71,7 +71,7 @@ def test_skips_root_worktree() -> None:
         "main": PRStatus("main", "MERGED", 100, "Main"),
     }
 
-    deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo_root, workstacks_dir)
+    deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo_root, repo_dir)
 
     assert len(deletable) == 0
 
@@ -79,16 +79,16 @@ def test_skips_root_worktree() -> None:
 def test_skips_detached_head() -> None:
     """Test that worktrees in detached HEAD state are not deletable."""
     repo_root = Path("/repo")
-    workstacks_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.workstacks")
 
     worktrees = [
         WorktreeInfo(repo_root, "main", is_root=True),
-        WorktreeInfo(workstacks_dir / "detached", None),  # Detached HEAD
+        WorktreeInfo(repo_dir / "detached", None),  # Detached HEAD
     ]
 
     pr_statuses = {}
 
-    deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo_root, workstacks_dir)
+    deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo_root, repo_dir)
 
     assert len(deletable) == 0
 
@@ -96,7 +96,7 @@ def test_skips_detached_head() -> None:
 def test_skips_non_managed_worktrees() -> None:
     """Test that worktrees outside workstacks_dir are not deletable."""
     repo_root = Path("/repo")
-    workstacks_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.workstacks")
 
     worktrees = [
         WorktreeInfo(repo_root, "main", is_root=True),
@@ -107,7 +107,7 @@ def test_skips_non_managed_worktrees() -> None:
         "feat-1": PRStatus("feat-1", "MERGED", 123, "Feature"),
     }
 
-    deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo_root, workstacks_dir)
+    deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo_root, repo_dir)
 
     assert len(deletable) == 0
 
@@ -115,18 +115,18 @@ def test_skips_non_managed_worktrees() -> None:
 def test_skips_open_prs() -> None:
     """Test that worktrees with open PRs are not deletable."""
     repo_root = Path("/repo")
-    workstacks_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.workstacks")
 
     worktrees = [
         WorktreeInfo(repo_root, "main", is_root=True),
-        WorktreeInfo(workstacks_dir / "feat-1", "feat-1"),
+        WorktreeInfo(repo_dir / "feat-1", "feat-1"),
     ]
 
     pr_statuses = {
         "feat-1": PRStatus("feat-1", "OPEN", 123, "Work in progress"),
     }
 
-    deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo_root, workstacks_dir)
+    deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo_root, repo_dir)
 
     assert len(deletable) == 0
 
@@ -134,16 +134,16 @@ def test_skips_open_prs() -> None:
 def test_skips_branches_without_pr_status() -> None:
     """Test that worktrees without PR status are not deletable."""
     repo_root = Path("/repo")
-    workstacks_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.workstacks")
 
     worktrees = [
         WorktreeInfo(repo_root, "main", is_root=True),
-        WorktreeInfo(workstacks_dir / "feat-1", "feat-1"),
+        WorktreeInfo(repo_dir / "feat-1", "feat-1"),
     ]
 
     pr_statuses = {}  # No PR status for feat-1
 
-    deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo_root, workstacks_dir)
+    deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo_root, repo_dir)
 
     assert len(deletable) == 0
 
@@ -151,18 +151,18 @@ def test_skips_branches_without_pr_status() -> None:
 def test_skips_merged_pr_without_number() -> None:
     """Test that merged PRs without a PR number are not deletable."""
     repo_root = Path("/repo")
-    workstacks_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.workstacks")
 
     worktrees = [
         WorktreeInfo(repo_root, "main", is_root=True),
-        WorktreeInfo(workstacks_dir / "feat-1", "feat-1"),
+        WorktreeInfo(repo_dir / "feat-1", "feat-1"),
     ]
 
     pr_statuses = {
         "feat-1": PRStatus("feat-1", "MERGED", None, "Merged without PR"),
     }
 
-    deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo_root, workstacks_dir)
+    deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo_root, repo_dir)
 
     assert len(deletable) == 0
 
@@ -170,13 +170,13 @@ def test_skips_merged_pr_without_number() -> None:
 def test_identifies_multiple_deletable_worktrees() -> None:
     """Test identification of multiple deletable worktrees."""
     repo_root = Path("/repo")
-    workstacks_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.workstacks")
 
     worktrees = [
         WorktreeInfo(repo_root, "main", is_root=True),
-        WorktreeInfo(workstacks_dir / "feat-1", "feat-1"),
-        WorktreeInfo(workstacks_dir / "feat-2", "feat-2"),
-        WorktreeInfo(workstacks_dir / "feat-3", "feat-3"),
+        WorktreeInfo(repo_dir / "feat-1", "feat-1"),
+        WorktreeInfo(repo_dir / "feat-2", "feat-2"),
+        WorktreeInfo(repo_dir / "feat-3", "feat-3"),
     ]
 
     pr_statuses = {
@@ -185,7 +185,7 @@ def test_identifies_multiple_deletable_worktrees() -> None:
         "feat-3": PRStatus("feat-3", "OPEN", 125, "Feature 3"),
     }
 
-    deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo_root, workstacks_dir)
+    deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo_root, repo_dir)
 
     assert len(deletable) == 2
     assert deletable[0].name == "feat-1"
@@ -197,16 +197,16 @@ def test_identifies_multiple_deletable_worktrees() -> None:
 def test_mixed_scenarios() -> None:
     """Test complex scenario with multiple conditions."""
     repo_root = Path("/repo")
-    workstacks_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.workstacks")
 
     worktrees = [
         WorktreeInfo(repo_root, "main", is_root=True),  # Root - skip
-        WorktreeInfo(workstacks_dir / "merged-wt", "merged-branch"),  # Merged - deletable
-        WorktreeInfo(workstacks_dir / "open-wt", "open-branch"),  # Open - skip
-        WorktreeInfo(workstacks_dir / "detached-wt", None),  # Detached - skip
+        WorktreeInfo(repo_dir / "merged-wt", "merged-branch"),  # Merged - deletable
+        WorktreeInfo(repo_dir / "open-wt", "open-branch"),  # Open - skip
+        WorktreeInfo(repo_dir / "detached-wt", None),  # Detached - skip
         WorktreeInfo(Path("/other/location"), "external-branch"),  # External - skip
-        WorktreeInfo(workstacks_dir / "closed-wt", "closed-branch"),  # Closed - deletable
-        WorktreeInfo(workstacks_dir / "no-pr-wt", "no-pr-branch"),  # No PR status - skip
+        WorktreeInfo(repo_dir / "closed-wt", "closed-branch"),  # Closed - deletable
+        WorktreeInfo(repo_dir / "no-pr-wt", "no-pr-branch"),  # No PR status - skip
     ]
 
     pr_statuses = {
@@ -216,7 +216,7 @@ def test_mixed_scenarios() -> None:
         "closed-branch": PRStatus("closed-branch", "CLOSED", 103, "Closed"),
     }
 
-    deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo_root, workstacks_dir)
+    deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo_root, repo_dir)
 
     assert len(deletable) == 2
     assert {wt.name for wt in deletable} == {"merged-wt", "closed-wt"}
@@ -225,9 +225,9 @@ def test_mixed_scenarios() -> None:
 def test_empty_worktrees_list() -> None:
     """Test with empty worktrees list."""
     repo_root = Path("/repo")
-    workstacks_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.workstacks")
 
-    deletable = identify_deletable_worktrees([], {}, repo_root, workstacks_dir)
+    deletable = identify_deletable_worktrees([], {}, repo_root, repo_dir)
 
     assert len(deletable) == 0
 
@@ -235,14 +235,14 @@ def test_empty_worktrees_list() -> None:
 def test_empty_pr_statuses() -> None:
     """Test with empty PR statuses dict."""
     repo_root = Path("/repo")
-    workstacks_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.workstacks")
 
     worktrees = [
         WorktreeInfo(repo_root, "main", is_root=True),
-        WorktreeInfo(workstacks_dir / "feat-1", "feat-1"),
+        WorktreeInfo(repo_dir / "feat-1", "feat-1"),
     ]
 
-    deletable = identify_deletable_worktrees(worktrees, {}, repo_root, workstacks_dir)
+    deletable = identify_deletable_worktrees(worktrees, {}, repo_root, repo_dir)
 
     assert len(deletable) == 0
 
@@ -250,18 +250,18 @@ def test_empty_pr_statuses() -> None:
 def test_worktree_name_extraction() -> None:
     """Test that worktree name is correctly extracted from path."""
     repo_root = Path("/repo")
-    workstacks_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.workstacks")
 
     worktrees = [
         WorktreeInfo(repo_root, "main", is_root=True),
-        WorktreeInfo(workstacks_dir / "my-feature-branch", "feat-1"),
+        WorktreeInfo(repo_dir / "my-feature-branch", "feat-1"),
     ]
 
     pr_statuses = {
         "feat-1": PRStatus("feat-1", "MERGED", 123, "Feature"),
     }
 
-    deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo_root, workstacks_dir)
+    deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo_root, repo_dir)
 
     assert len(deletable) == 1
     assert deletable[0].name == "my-feature-branch"

@@ -33,7 +33,7 @@ def setup_stack_collector(
     )
     graphite_ops = FakeGraphiteOps(**(graphite_kwargs or {}))
     global_config = GlobalConfig(
-        workstacks_root=Path("/fake/workstacks"),
+        erk_root=Path("/fake/workstacks"),
         use_graphite=use_graphite,
         shell_setup_complete=False,
         show_pr_info=True,
@@ -229,7 +229,7 @@ def test_graphite_stack_collector_is_available(
         worktree_path.mkdir()
 
     global_config = GlobalConfig(
-        workstacks_root=Path("/fake/workstacks"),
+        erk_root=Path("/fake/workstacks"),
         use_graphite=use_graphite,
         shell_setup_complete=False,
         show_pr_info=True,

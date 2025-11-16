@@ -46,12 +46,12 @@ def graphite_branches_cmd(ctx: ErkContext, format: str, stack: str | None) -> No
     Use --format tree for hierarchical tree visualization.
 
     Examples:
-        $ workstack graphite branches
+        $ erk graphite branches
         main
         feature-1
         feature-2
 
-        $ workstack graphite branches --format json
+        $ erk graphite branches --format json
         {
           "branches": [
             {
@@ -64,13 +64,13 @@ def graphite_branches_cmd(ctx: ErkContext, format: str, stack: str | None) -> No
           ]
         }
 
-        $ workstack graphite branches --format tree
+        $ erk graphite branches --format tree
         main (abc123f) "Initial commit"
         ├─ feature-a (def456g) "Add user authentication"
         │  └─ feature-a-tests (789hij0) "Add tests for auth"
         └─ feature-b (klm123n) "Refactor database layer"
 
-        $ workstack graphite branches --format tree --stack feature-a
+        $ erk graphite branches --format tree --stack feature-a
         feature-a (def456g) "Add user authentication"
         └─ feature-a-tests (789hij0) "Add tests for auth"
 

@@ -1,4 +1,4 @@
-"""Tests for GitHub operations batched mergeability fetching."""
+"""Tests for GitHub operations batched CI status and mergeability fetching."""
 
 from pathlib import Path
 from unittest.mock import Mock
@@ -47,30 +47,38 @@ def sample_prs():
     }
 
 
-def test_enrich_prs_with_mergeability_batch_success(github_ops, mock_execute, sample_prs):
-    """Test successful batch mergeability fetching."""
-    # Mock GraphQL response with mergeability data
+def test_enrich_prs_with_ci_status_batch_includes_mergeability(
+    github_ops, mock_execute, sample_prs
+):
+    """Test CI batch method also enriches mergeability."""
+    # Mock GraphQL response with both CI status and mergeability data
     mock_execute.return_value = """{
         "data": {
             "repository": {
                 "pr_123": {
                     "number": 123,
                     "mergeable": "MERGEABLE",
-                    "mergeStateStatus": "CLEAN"
+                    "mergeStateStatus": "CLEAN",
+                    "commits": {
+                        "nodes": []
+                    }
                 },
                 "pr_456": {
                     "number": 456,
                     "mergeable": "CONFLICTING",
-                    "mergeStateStatus": "DIRTY"
+                    "mergeStateStatus": "DIRTY",
+                    "commits": {
+                        "nodes": []
+                    }
                 }
             }
         }
     }"""
 
     repo_root = Path("/test/repo")
-    result = github_ops.enrich_prs_with_mergeability_batch(sample_prs, repo_root)
+    result = github_ops.enrich_prs_with_ci_status_batch(sample_prs, repo_root)
 
-    # Verify PRs were enriched correctly
+    # Verify PRs were enriched with mergeability
     assert result["feature-1"].has_conflicts is False  # MERGEABLE
     assert result["feature-2"].has_conflicts is True  # CONFLICTING
 
@@ -79,9 +87,9 @@ def test_enrich_prs_with_mergeability_batch_success(github_ops, mock_execute, sa
     assert result["feature-2"].number == 456
 
 
-def test_enrich_prs_with_mergeability_batch_empty(github_ops, mock_execute):
+def test_enrich_prs_with_ci_status_batch_empty(github_ops, mock_execute):
     """Test empty input returns empty dict without API call."""
-    result = github_ops.enrich_prs_with_mergeability_batch({}, Path("/test/repo"))
+    result = github_ops.enrich_prs_with_ci_status_batch({}, Path("/test/repo"))
 
     # Verify no API call made
     mock_execute.assert_not_called()
@@ -90,7 +98,7 @@ def test_enrich_prs_with_mergeability_batch_empty(github_ops, mock_execute):
     assert result == {}
 
 
-def test_enrich_prs_with_mergeability_batch_partial_failure(github_ops, mock_execute, sample_prs):
+def test_enrich_prs_with_ci_status_batch_partial_failure(github_ops, mock_execute, sample_prs):
     """Test partial failures don't break entire batch."""
     # Mock response with one PR missing
     mock_execute.return_value = """{
@@ -99,7 +107,10 @@ def test_enrich_prs_with_mergeability_batch_partial_failure(github_ops, mock_exe
                 "pr_123": {
                     "number": 123,
                     "mergeable": "MERGEABLE",
-                    "mergeStateStatus": "CLEAN"
+                    "mergeStateStatus": "CLEAN",
+                    "commits": {
+                        "nodes": []
+                    }
                 },
                 "pr_456": null
             }
@@ -107,7 +118,7 @@ def test_enrich_prs_with_mergeability_batch_partial_failure(github_ops, mock_exe
     }"""
 
     repo_root = Path("/test/repo")
-    result = github_ops.enrich_prs_with_mergeability_batch(sample_prs, repo_root)
+    result = github_ops.enrich_prs_with_ci_status_batch(sample_prs, repo_root)
 
     # Verify successful PR got mergeability
     assert result["feature-1"].has_conflicts is False
@@ -116,7 +127,7 @@ def test_enrich_prs_with_mergeability_batch_partial_failure(github_ops, mock_exe
     assert result["feature-2"].has_conflicts is None
 
 
-def test_enrich_prs_with_mergeability_batch_unknown_state(github_ops, mock_execute, sample_prs):
+def test_enrich_prs_with_ci_status_batch_unknown_mergeability(github_ops, mock_execute, sample_prs):
     """Test UNKNOWN mergeability state handled correctly."""
     # Mock response with UNKNOWN state
     mock_execute.return_value = """{
@@ -125,19 +136,25 @@ def test_enrich_prs_with_mergeability_batch_unknown_state(github_ops, mock_execu
                 "pr_123": {
                     "number": 123,
                     "mergeable": "UNKNOWN",
-                    "mergeStateStatus": "UNKNOWN"
+                    "mergeStateStatus": "UNKNOWN",
+                    "commits": {
+                        "nodes": []
+                    }
                 },
                 "pr_456": {
                     "number": 456,
                     "mergeable": "MERGEABLE",
-                    "mergeStateStatus": "CLEAN"
+                    "mergeStateStatus": "CLEAN",
+                    "commits": {
+                        "nodes": []
+                    }
                 }
             }
         }
     }"""
 
     repo_root = Path("/test/repo")
-    result = github_ops.enrich_prs_with_mergeability_batch(sample_prs, repo_root)
+    result = github_ops.enrich_prs_with_ci_status_batch(sample_prs, repo_root)
 
     # Verify UNKNOWN state returns None (not True or False)
     assert result["feature-1"].has_conflicts is None
@@ -146,7 +163,7 @@ def test_enrich_prs_with_mergeability_batch_unknown_state(github_ops, mock_execu
     assert result["feature-2"].has_conflicts is False
 
 
-def test_enrich_prs_with_mergeability_batch_missing_mergeable_field(
+def test_enrich_prs_with_ci_status_batch_missing_mergeable_field(
     github_ops, mock_execute, sample_prs
 ):
     """Test missing mergeable field handled gracefully."""
@@ -156,19 +173,25 @@ def test_enrich_prs_with_mergeability_batch_missing_mergeable_field(
             "repository": {
                 "pr_123": {
                     "number": 123,
-                    "mergeStateStatus": "CLEAN"
+                    "mergeStateStatus": "CLEAN",
+                    "commits": {
+                        "nodes": []
+                    }
                 },
                 "pr_456": {
                     "number": 456,
                     "mergeable": "MERGEABLE",
-                    "mergeStateStatus": "CLEAN"
+                    "mergeStateStatus": "CLEAN",
+                    "commits": {
+                        "nodes": []
+                    }
                 }
             }
         }
     }"""
 
     repo_root = Path("/test/repo")
-    result = github_ops.enrich_prs_with_mergeability_batch(sample_prs, repo_root)
+    result = github_ops.enrich_prs_with_ci_status_batch(sample_prs, repo_root)
 
     # Verify missing field returns None
     assert result["feature-1"].has_conflicts is None
@@ -177,25 +200,26 @@ def test_enrich_prs_with_mergeability_batch_missing_mergeable_field(
     assert result["feature-2"].has_conflicts is False
 
 
-def test_build_batch_mergeability_query(github_ops):
-    """Test GraphQL query builder generates correct query."""
+def test_build_batch_pr_query_includes_mergeability(github_ops):
+    """Test GraphQL query builder includes mergeability fields."""
     pr_numbers = [123, 456]
     owner = "test-owner"
     repo = "test-repo"
 
-    query = github_ops._build_batch_mergeability_query(pr_numbers, owner, repo)
+    query = github_ops._build_batch_pr_query(pr_numbers, owner, repo)
 
-    # Verify query contains fragment definition
-    assert "fragment PRMergeabilityFields on PullRequest" in query
+    # Verify query contains fragment definition with both CI and mergeability fields
+    assert "fragment PRCICheckFields on PullRequest" in query
     assert "mergeable" in query
     assert "mergeStateStatus" in query
+    assert "statusCheckRollup" in query
 
     # Verify query contains aliased PR queries
     assert "pr_123: pullRequest(number: 123)" in query
     assert "pr_456: pullRequest(number: 456)" in query
 
     # Verify query contains fragment spreads
-    assert "...PRMergeabilityFields" in query
+    assert "...PRCICheckFields" in query
 
     # Verify repository query
     assert f'repository(owner: "{owner}", name: "{repo}")' in query

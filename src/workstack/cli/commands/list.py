@@ -82,12 +82,9 @@ def _list_worktrees(ctx: WorkstackContext, ci: bool) -> None:
             )
             raise SystemExit(1)
 
-        # If --ci flag set, enrich with CI status using batched GraphQL query
+        # If --ci flag set, enrich with CI status and mergeability using batched GraphQL query
         if ci:
             prs = ctx.github_ops.enrich_prs_with_ci_status_batch(prs, repo.root)
-
-        # Fetch mergeability for all PRs to detect conflicts (batched)
-        prs = ctx.github_ops.enrich_prs_with_mergeability_batch(prs, repo.root)
 
     # Identify branches without worktrees
     branches_with_worktrees = {wt.branch for wt in worktrees if wt.branch is not None}

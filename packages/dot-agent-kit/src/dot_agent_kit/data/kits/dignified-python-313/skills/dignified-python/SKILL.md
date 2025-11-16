@@ -20,6 +20,7 @@ Write explicit, predictable code that fails fast at proper boundaries.
 | `path.resolve()` or `path.is_relative_to()`   | → Check `path.exists()` first                                                                            |
 | `typing.Protocol`                             | → Use `abc.ABC` instead                                                                                  |
 | `from .module import`                         | → Use absolute imports only                                                                              |
+| `__all__ = ["..."]` in `__init__.py`          | → See references/core-standards.md#code-in-**init**py-and-**all**-exports                                |
 | `print(...)` in CLI code                      | → Use `click.echo()`                                                                                     |
 | `subprocess.run(...)`                         | → Add `check=True`                                                                                       |
 | `@property` with I/O or expensive computation | → See references/core-standards.md#performance-expectations                                              |

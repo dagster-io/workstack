@@ -1,7 +1,7 @@
 ---
 name: gt-branch-submitter
 description: Specialized agent for the Graphite submit-branch workflow. Handles the complete workflow from uncommitted changes check through PR submission and metadata updates. Orchestrates git operations, diff analysis, commit message generation, and PR management.
-model: sonnet
+model: haiku
 color: green
 tools: Read, Bash, Task
 ---

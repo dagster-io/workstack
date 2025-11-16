@@ -226,10 +226,13 @@ def _list_worktrees(ctx: WorkstackContext, ci: bool) -> None:
 
     # Section 2: Graphite branches without worktrees
     if graphite_without_worktrees:
-        user_output()
-        user_output(click.style("## Graphite branches without worktrees", bold=True))
-        user_output()
+        # Calculate max widths for alignment (same pattern as worktrees section)
+        graphite_branch_names: list[str] = []
+        graphite_pr_info_list: list[str] = []
+
         for branch in sorted(graphite_without_worktrees):
+            graphite_branch_names.append(branch)
+
             # Get PR info for this branch
             branch_pr_info = None
             if prs:
@@ -237,7 +240,37 @@ def _list_worktrees(ctx: WorkstackContext, ci: bool) -> None:
                 if pr:
                     graphite_url = ctx.graphite_ops.get_graphite_url(pr.owner, pr.repo, pr.number)
                     branch_pr_info = format_pr_info(pr, graphite_url)
-            user_output(format_branch_without_worktree(branch, branch_pr_info))
+
+            if branch_pr_info:
+                graphite_pr_info_list.append(branch_pr_info)
+            else:
+                graphite_pr_info_list.append("")
+
+        # Calculate max widths using visible length for PR info
+        max_graphite_branch_len = (
+            max(len(branch) for branch in graphite_branch_names) if graphite_branch_names else 0
+        )
+        max_graphite_pr_info_len = (
+            max(get_visible_length(pr_info) for pr_info in graphite_pr_info_list if pr_info)
+            if any(graphite_pr_info_list)
+            else 0
+        )
+
+        user_output()
+        user_output(click.style("## Graphite branches without worktrees", bold=True))
+        user_output()
+
+        # Now iterate again to print with alignment
+        for i, branch in enumerate(sorted(graphite_without_worktrees)):
+            branch_pr_info = graphite_pr_info_list[i] if graphite_pr_info_list[i] else None
+            user_output(
+                format_branch_without_worktree(
+                    branch,
+                    branch_pr_info,
+                    max_branch_len=max_graphite_branch_len,
+                    max_pr_info_len=max_graphite_pr_info_len,
+                )
+            )
 
     # Section 3: Local branches without worktrees
     if local_without_worktrees:

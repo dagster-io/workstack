@@ -352,6 +352,7 @@ Given stack: `main → feat-1 → feat-2 → feat-3`
 3. **Explicit > Implicit**: No unexplained defaults
 4. **Fail Fast**: Let exceptions bubble to boundaries
 5. **Testability**: In-memory fakes, no I/O in unit tests
+6. **Dry-Run via Dependency Injection**: Never pass dry_run flags through business logic
 
 ### Exception Handling
 
@@ -369,6 +370,45 @@ Given stack: `main → feat-1 → feat-2 → feat-3`
 3. Adding context before re-raising
 
 **See**: [docs/agent/exception-handling.md](docs/agent/exception-handling.md)
+
+### Dry-Run Pattern
+
+**This codebase uses dependency injection for dry-run mode, NOT boolean flags.**
+
+🔴 **MUST**: Use NoopGitOps wrapper for dry-run mode
+🔴 **MUST NOT**: Pass dry_run flags through business logic functions
+🟡 **SHOULD**: Keep dry-run UI logic at the CLI layer only
+
+**Wrong Pattern:**
+
+```python
+# ❌ WRONG: Passing dry_run flag through business logic
+def execute_plan(plan, git_ops, dry_run=False):
+    if not dry_run:
+        git_ops.add_worktree(...)
+```
+
+**Correct Pattern:**
+
+```python
+# ✅ CORRECT: Rely on injected ops implementation
+def execute_plan(plan, git_ops):
+    # Always execute - behavior depends on git_ops implementation
+    git_ops.add_worktree(...)  # NoopGitOps does nothing, RealGitOps executes
+
+# At the context creation level:
+if dry_run:
+    git_ops = NoopGitOps(real_ops)  # or PrintingGitOps(NoopGitOps(...))
+else:
+    git_ops = real_ops  # or PrintingGitOps(real_ops)
+```
+
+**Rationale:**
+
+- Keeps business logic pure and testable
+- Dry-run behavior is determined by dependency injection
+- No conditional logic scattered throughout the codebase
+- Single responsibility: business logic doesn't know about UI modes
 
 ### File Operations
 

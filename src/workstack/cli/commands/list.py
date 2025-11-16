@@ -11,7 +11,9 @@ from workstack.core.display_utils import (
     format_worktree_line,
     get_visible_length,
 )
+from workstack.core.file_utils import extract_plan_title
 from workstack.core.github_ops import PullRequestInfo
+from workstack.core.plan_folder import get_plan_path
 from workstack.core.repo_discovery import RepoContext
 from workstack.core.worktree_utils import find_current_worktree
 
@@ -26,9 +28,6 @@ def _format_plan_summary(worktree_path: Path, ctx: WorkstackContext) -> str | No
     Returns:
         Plan title string, or None if no plan file
     """
-    from workstack.core.file_utils import extract_plan_title
-    from workstack.core.plan_folder import get_plan_path
-
     # Check for new .plan/ folder format only
     plan_path = get_plan_path(worktree_path, git_ops=ctx.git_ops)
     if plan_path is None:

@@ -13,7 +13,7 @@ import click
 def devrun_reminder_hook() -> None:
     """Output devrun agent reminder for UserPromptSubmit hook."""
     click.echo(
-        '🔴 CRITICAL: For pytest/pyright/ruff/prettier/make/gt → MUST use devrun agent '
+        "🔴 CRITICAL: For pytest/pyright/ruff/prettier/make/gt → MUST use devrun agent "
         '(Task tool with subagent_type="devrun"), NOT direct Bash\n'
         "\n"
         "WHY: Specialized parsing & cost efficiency"

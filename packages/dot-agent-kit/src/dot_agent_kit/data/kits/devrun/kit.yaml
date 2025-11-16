@@ -1,18 +1,19 @@
 name: devrun
 version: 0.1.0
-description: Consolidated development tool runner agent with integrated tool documentation
+description:
+  Consolidated development tool runner agent with integrated tool documentation
   for pytest, pyright, ruff, prettier, make, and gt
 license: MIT
 artifacts:
   agent:
-  - agents/devrun/devrun.md
+    - agents/devrun/devrun.md
   doc:
-  - docs/devrun/tools/gt.md
-  - docs/devrun/tools/make.md
-  - docs/devrun/tools/prettier.md
-  - docs/devrun/tools/pyright.md
-  - docs/devrun/tools/pytest.md
-  - docs/devrun/tools/ruff.md
+    - docs/devrun/tools/gt.md
+    - docs/devrun/tools/make.md
+    - docs/devrun/tools/prettier.md
+    - docs/devrun/tools/pyright.md
+    - docs/devrun/tools/pytest.md
+    - docs/devrun/tools/ruff.md
 kit_cli_commands:
   - name: devrun-reminder-hook
     path: kit_cli_commands/devrun/devrun_reminder_hook.py

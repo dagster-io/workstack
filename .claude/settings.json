@@ -27,6 +27,11 @@
             "type": "command",
             "command": "DOT_AGENT_KIT_ID=dignified-python-313 DOT_AGENT_HOOK_ID=dignified-python-reminder-hook dot-agent run dignified-python-313 dignified-python-reminder-hook",
             "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "DOT_AGENT_KIT_ID=layered-testing DOT_AGENT_HOOK_ID=layered-testing-reminder-hook dot-agent run layered-testing layered-testing-reminder-hook",
+            "timeout": 30
           }
         ]
       }

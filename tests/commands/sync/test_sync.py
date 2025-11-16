@@ -9,7 +9,7 @@ from erk.cli.cli import cli
 from erk.cli.commands.shell_integration import hidden_shell_cmd
 from erk.cli.commands.sync import sync_cmd
 from erk.cli.shell_utils import render_cd_script
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.gitops import WorktreeInfo
 from erk.core.global_config import GlobalConfig
 from tests.fakes.github_ops import FakeGitHubOps
@@ -48,7 +48,7 @@ def test_sync_requires_graphite() -> None:
 
     graphite_ops = FakeGraphiteOps()
 
-    test_ctx = WorkstackContext.for_test(
+    test_ctx = ErkContext.for_test(
         git_ops=git_ops,
         global_config=global_config_ops,
         graphite_ops=graphite_ops,

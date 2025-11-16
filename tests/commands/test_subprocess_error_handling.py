@@ -31,7 +31,7 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from erk.cli.commands.sync import sync_cmd
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.gitops import WorktreeInfo
 from erk.core.global_config import GlobalConfig
 from tests.fakes.github_ops import FakeGitHubOps
@@ -84,7 +84,7 @@ def test_sync_displays_stderr_on_gt_sync_failure(tmp_path: Path) -> None:
         show_pr_info=True,
     )
 
-    ctx = WorkstackContext.for_test(
+    ctx = ErkContext.for_test(
         git_ops=git_ops,
         global_config=global_config,
         graphite_ops=graphite_ops,
@@ -146,7 +146,7 @@ def test_sync_shows_exit_code_when_stderr_empty(tmp_path: Path) -> None:
         show_pr_info=True,
     )
 
-    ctx = WorkstackContext.for_test(
+    ctx = ErkContext.for_test(
         git_ops=git_ops,
         global_config=global_config,
         graphite_ops=graphite_ops,

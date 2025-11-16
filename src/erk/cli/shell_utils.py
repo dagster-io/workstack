@@ -49,16 +49,16 @@ def write_script_to_temp(
     Returns:
         Path to the temp file
 
-    Filename format: workstack-{command}-{uuid}.sh
+    Filename format: erk-{command}-{uuid}.sh
     """
     unique_id = uuid.uuid4().hex[:8]  # 8 chars sufficient (4 billion combinations)
     temp_dir = Path(tempfile.gettempdir())
-    temp_file = temp_dir / f"workstack-{command_name}-{unique_id}.sh"
+    temp_file = temp_dir / f"erk-{command_name}-{unique_id}.sh"
 
     # Add metadata header
     header = [
         "#!/bin/bash",
-        f"# workstack {command_name}",
+        f"# erk {command_name}",
         f"# Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
         f"# UUID: {unique_id}",
         f"# User: {os.getenv('USER', 'unknown')}",
@@ -83,7 +83,7 @@ def write_script_to_temp(
 
 
 def cleanup_stale_scripts(*, max_age_seconds: int = STALE_SCRIPT_MAX_AGE_SECONDS) -> None:
-    """Remove workstack temp scripts older than max_age_seconds.
+    """Remove erk temp scripts older than max_age_seconds.
 
     Args:
         max_age_seconds: Maximum age before cleanup (default 1 hour)
@@ -91,7 +91,7 @@ def cleanup_stale_scripts(*, max_age_seconds: int = STALE_SCRIPT_MAX_AGE_SECONDS
     temp_dir = Path(tempfile.gettempdir())
     cutoff = time.time() - max_age_seconds
 
-    for script_file in temp_dir.glob("workstack-*.sh"):
+    for script_file in temp_dir.glob("erk-*.sh"):
         if script_file.exists():
             try:
                 if script_file.stat().st_mtime < cutoff:

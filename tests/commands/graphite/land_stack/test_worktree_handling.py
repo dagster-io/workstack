@@ -3,7 +3,7 @@
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.gitops import WorktreeInfo
 from erk.core.global_config import GlobalConfig
 from erk.core.graphite_ops import BranchMetadata
@@ -59,7 +59,7 @@ def test_land_stack_with_down_flag_includes_flag_in_error_suggestions() -> None:
             },
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
@@ -126,7 +126,7 @@ def test_land_stack_fails_when_branches_in_multiple_worktrees() -> None:
             },
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
@@ -203,7 +203,7 @@ def test_land_stack_succeeds_when_all_branches_in_current_worktree() -> None:
             },
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
@@ -267,7 +267,7 @@ def test_land_stack_from_linked_worktree_on_branch_being_landed() -> None:
             },
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,

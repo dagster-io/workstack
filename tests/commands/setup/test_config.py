@@ -6,7 +6,7 @@ from click.testing import CliRunner
 
 from erk.cli.cli import cli
 from erk.cli.config import LoadedConfig
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.global_config import GlobalConfig
 from erk.core.repo_discovery import RepoContext
 from tests.fakes.github_ops import FakeGitHubOps
@@ -121,7 +121,7 @@ def test_config_list_not_in_git_repo() -> None:
             shell_setup_complete=False,
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             graphite_ops=FakeGraphiteOps(),
             github_ops=FakeGitHubOps(),

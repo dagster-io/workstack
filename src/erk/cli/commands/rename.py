@@ -4,7 +4,7 @@ from erk.cli.commands.create import make_env_content, sanitize_worktree_name
 from erk.cli.commands.switch import complete_worktree_names
 from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output
-from erk.core.context import WorkstackContext, create_context
+from erk.core.context import ErkContext, create_context
 from erk.core.repo_discovery import ensure_workstacks_dir
 
 
@@ -19,7 +19,7 @@ from erk.core.repo_discovery import ensure_workstacks_dir
     help="Print what would be done without executing destructive operations.",
 )
 @click.pass_obj
-def rename_cmd(ctx: WorkstackContext, old_name: str, new_name: str, dry_run: bool) -> None:
+def rename_cmd(ctx: ErkContext, old_name: str, new_name: str, dry_run: bool) -> None:
     """Rename a worktree directory.
 
     Renames the worktree directory and updates git metadata.

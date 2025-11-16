@@ -11,7 +11,7 @@ from erk.cli.core import (
     worktree_path_for,
 )
 from erk.cli.output import user_output
-from erk.core.context import WorkstackContext, create_context, regenerate_context
+from erk.core.context import ErkContext, create_context, regenerate_context
 from erk.core.gitops import GitOps
 from erk.core.repo_discovery import ensure_workstacks_dir
 from erk.core.worktree_utils import (
@@ -60,7 +60,7 @@ def _prune_worktrees_safe(git_ops: GitOps, repo_root: Path) -> None:
 
 
 def _remove_worktree(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     name: str,
     force: bool,
     delete_stack: bool,
@@ -76,7 +76,7 @@ def _remove_worktree(
     states of partial removal.
 
     Args:
-        ctx: Workstack context with git operations
+        ctx: Erk context with git operations
         name: Name of the worktree to remove
         force: Skip confirmation prompts
         delete_stack: Delete all branches in the Graphite stack (requires Graphite)
@@ -133,7 +133,7 @@ def _remove_worktree(
         if not use_graphite:
             user_output(
                 "Error: --delete-stack requires Graphite to be enabled. "
-                "Run 'workstack config set use-graphite true'",
+                "Run 'erk config set use_graphite true'",
             )
             raise SystemExit(1)
 
@@ -271,9 +271,7 @@ def _remove_worktree(
     help="Print what would be done without executing destructive operations.",
 )
 @click.pass_obj
-def remove_cmd(
-    ctx: WorkstackContext, name: str, force: bool, delete_stack: bool, dry_run: bool
-) -> None:
+def remove_cmd(ctx: ErkContext, name: str, force: bool, delete_stack: bool, dry_run: bool) -> None:
     """Remove the worktree directory (alias: rm).
 
     With `-f/--force`, skips the confirmation prompt.
@@ -300,8 +298,6 @@ def remove_cmd(
     help="Print what would be done without executing destructive operations.",
 )
 @click.pass_obj
-def rm_cmd(
-    ctx: WorkstackContext, name: str, force: bool, delete_stack: bool, dry_run: bool
-) -> None:
+def rm_cmd(ctx: ErkContext, name: str, force: bool, delete_stack: bool, dry_run: bool) -> None:
     """Remove the worktree directory (alias of 'remove')."""
     _remove_worktree(ctx, name, force, delete_stack, dry_run)

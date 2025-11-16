@@ -6,11 +6,11 @@ from pathlib import Path
 import click
 
 from erk.cli.commands.land_stack.output import _emit, _format_cli_command
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 
 
 def _cleanup_and_navigate(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     repo_root: Path,
     merged_branches: list[str],
     trunk_branch: str,
@@ -22,7 +22,7 @@ def _cleanup_and_navigate(
     """Clean up merged worktrees and navigate to appropriate branch.
 
     Args:
-        ctx: WorkstackContext with access to operations
+        ctx: ErkContext with access to operations
         repo_root: Repository root directory
         merged_branches: List of successfully merged branch names
         trunk_branch: Name of the trunk branch (e.g., "main" or "master")

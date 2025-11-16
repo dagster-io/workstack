@@ -2,12 +2,12 @@
 
 from pathlib import Path
 
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.graphite_ops import BranchMetadata
 
 
 def _get_branches_to_land(
-    ctx: WorkstackContext, repo_root: Path, current_branch: str, down_only: bool = False
+    ctx: ErkContext, repo_root: Path, current_branch: str, down_only: bool = False
 ) -> list[str]:
     """Get branches to land from stack.
 
@@ -18,7 +18,7 @@ def _get_branches_to_land(
     as each PR depends on the one below it.
 
     Args:
-        ctx: WorkstackContext with access to graphite operations
+        ctx: ErkContext with access to graphite operations
         repo_root: Repository root directory
         current_branch: Name of the current branch
         down_only: If True, only return branches from trunk to current.

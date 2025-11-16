@@ -5,7 +5,7 @@ import click
 
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.global_config import GlobalConfig
 from erk.core.init_utils import (
     add_gitignore_entry,
@@ -24,7 +24,7 @@ def detect_graphite(shell_ops: ShellOps) -> bool:
 
 
 def create_and_save_global_config(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     workstacks_root: Path,
     shell_setup_complete: bool,
 ) -> GlobalConfig:
@@ -162,7 +162,7 @@ def _get_presets_dir() -> Path:
 )
 @click.pass_obj
 def init_cmd(
-    ctx: WorkstackContext, force: bool, preset: str, list_presets: bool, repo: bool, shell: bool
+    ctx: ErkContext, force: bool, preset: str, list_presets: bool, repo: bool, shell: bool
 ) -> None:
     """Initialize erk for this repo and scaffold config.toml."""
 

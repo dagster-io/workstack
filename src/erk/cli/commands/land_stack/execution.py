@@ -8,11 +8,11 @@ from erk.cli.commands.land_stack.discovery import _get_all_children
 from erk.cli.commands.land_stack.models import BranchPR
 from erk.cli.commands.land_stack.output import _emit, _format_description
 from erk.cli.commands.land_stack.retry import retry_with_backoff
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 
 
 def _execute_checkout_phase(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     repo_root: Path,
     branch: str,
     *,
@@ -21,7 +21,7 @@ def _execute_checkout_phase(
     """Execute checkout phase for landing a branch.
 
     Args:
-        ctx: WorkstackContext with access to operations
+        ctx: ErkContext with access to operations
         repo_root: Repository root directory
         branch: Branch name to checkout
         script_mode: True when running in --script mode (output to stderr)
@@ -49,7 +49,7 @@ def _execute_checkout_phase(
 
 
 def _verify_and_update_pr_base(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     repo_root: Path,
     branch: str,
     expected_parent: str,
@@ -74,7 +74,7 @@ def _verify_and_update_pr_base(
     3. Child PR merges into deleted branch, creating orphaned commit
 
     Args:
-        ctx: WorkstackContext with access to operations
+        ctx: ErkContext with access to operations
         repo_root: Repository root directory
         branch: Current branch name
         expected_parent: Expected base branch (should be trunk after restack)
@@ -128,7 +128,7 @@ def _verify_and_update_pr_base(
 
 
 def _execute_merge_phase(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     repo_root: Path,
     pr_number: int,
     *,
@@ -138,7 +138,7 @@ def _execute_merge_phase(
     """Execute PR merge phase for landing a branch.
 
     Args:
-        ctx: WorkstackContext with access to operations
+        ctx: ErkContext with access to operations
         repo_root: Repository root directory
         pr_number: PR number to merge
         verbose: If True, show detailed output
@@ -148,7 +148,7 @@ def _execute_merge_phase(
 
 
 def _execute_sync_trunk_phase(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     repo_root: Path,
     branch: str,
     parent: str,
@@ -158,7 +158,7 @@ def _execute_sync_trunk_phase(
     """Execute trunk sync phase after PR merge.
 
     Args:
-        ctx: WorkstackContext with access to operations
+        ctx: ErkContext with access to operations
         repo_root: Repository root directory
         branch: Current branch name
         parent: Parent branch name (should be trunk)
@@ -183,7 +183,7 @@ def _execute_sync_trunk_phase(
 
 
 def _execute_restack_phase(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     repo_root: Path,
     *,
     verbose: bool,
@@ -192,7 +192,7 @@ def _execute_restack_phase(
     """Execute restack phase using Graphite sync.
 
     Args:
-        ctx: WorkstackContext with access to operations
+        ctx: ErkContext with access to operations
         repo_root: Repository root directory
         verbose: If True, show detailed output
         script_mode: True when running in --script mode (output to stderr)
@@ -201,7 +201,7 @@ def _execute_restack_phase(
 
 
 def _force_push_upstack_branches(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     repo_root: Path,
     branch: str,
     all_branches_metadata: dict,
@@ -215,7 +215,7 @@ def _force_push_upstack_branches(
     so subsequent PR merges will succeed.
 
     Args:
-        ctx: WorkstackContext with access to operations
+        ctx: ErkContext with access to operations
         repo_root: Repository root directory
         branch: Current branch name
         all_branches_metadata: Graphite branch metadata
@@ -235,7 +235,7 @@ def _force_push_upstack_branches(
 
 
 def _update_upstack_pr_bases(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     repo_root: Path,
     upstack_branches: list[str],
     all_branches_metadata: dict,
@@ -256,7 +256,7 @@ def _update_upstack_pr_bases(
     3. Update base if stale (current base != expected parent)
 
     Args:
-        ctx: WorkstackContext with access to operations
+        ctx: ErkContext with access to operations
         repo_root: Repository root directory
         upstack_branches: List of upstack branches that were force-pushed
         all_branches_metadata: Graphite branch metadata
@@ -304,7 +304,7 @@ def _update_upstack_pr_bases(
 
 
 def land_branch_sequence(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     repo_root: Path,
     branches: list[BranchPR],
     *,
@@ -316,7 +316,7 @@ def land_branch_sequence(
     """Land branches sequentially, one at a time with restack between each.
 
     Args:
-        ctx: WorkstackContext with access to operations
+        ctx: ErkContext with access to operations
         repo_root: Repository root directory
         branches: List of BranchPR to land
         verbose: If True, show detailed output

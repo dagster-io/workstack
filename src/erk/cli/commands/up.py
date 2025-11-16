@@ -7,7 +7,7 @@ from erk.cli.commands.switch import (
 )
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 
 
 @click.command("up")
@@ -15,20 +15,20 @@ from erk.core.context import WorkstackContext
     "--script", is_flag=True, help="Print only the activation script without usage instructions."
 )
 @click.pass_obj
-def up_cmd(ctx: WorkstackContext, script: bool) -> None:
+def up_cmd(ctx: ErkContext, script: bool) -> None:
     """Move to child branch in Graphite stack.
 
     With shell integration (recommended):
-      workstack up
+      erk up
 
     The shell wrapper function automatically activates the worktree.
-    Run 'workstack init --shell' to set up shell integration.
+    Run 'erk init --shell' to set up shell integration.
 
     Without shell integration:
-      source <(workstack up --script)
+      source <(erk up --script)
 
     This will cd to the child branch's worktree, create/activate .venv, and load .env variables.
-    Requires Graphite to be enabled: 'workstack config set use_graphite true'
+    Requires Graphite to be enabled: 'erk config set use_graphite true'
     """
     _ensure_graphite_enabled(ctx)
     repo = discover_repo_context(ctx, ctx.cwd)

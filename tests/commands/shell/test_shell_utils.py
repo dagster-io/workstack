@@ -25,13 +25,13 @@ def test_write_script_to_temp() -> None:
     assert temp_path.parent == Path(tempfile.gettempdir())
 
     # Should have correct pattern
-    assert temp_path.name.startswith("workstack-test-")
+    assert temp_path.name.startswith("erk-test-")
     assert temp_path.name.endswith(".sh")
 
     # Should contain metadata header
     content = temp_path.read_text()
     assert "#!/bin/bash" in content
-    assert "# workstack test" in content
+    assert "# erk test" in content
     assert "# test comment" in content
     assert script_content in content
 
@@ -42,7 +42,7 @@ def test_write_script_to_temp() -> None:
 def test_cleanup_stale_scripts() -> None:
     """Test that old scripts are removed."""
     # Create an old script
-    old_script = Path(tempfile.gettempdir()) / "workstack-old-12345678.sh"
+    old_script = Path(tempfile.gettempdir()) / "erk-old-12345678.sh"
     old_script.write_text("# old script\n")
 
     # Set mtime to 2 hours ago
@@ -50,7 +50,7 @@ def test_cleanup_stale_scripts() -> None:
     os.utime(old_script, (two_hours_ago, two_hours_ago))
 
     # Create a new script
-    new_script = Path(tempfile.gettempdir()) / "workstack-new-87654321.sh"
+    new_script = Path(tempfile.gettempdir()) / "erk-new-87654321.sh"
     new_script.write_text("# new script\n")
 
     # Cleanup scripts older than 1 hour

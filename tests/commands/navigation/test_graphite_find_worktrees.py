@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from erk.cli.graphite import find_worktrees_containing_branch
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.gitops import WorktreeInfo, find_worktree_for_branch
 from erk.core.global_config import GlobalConfig
 from erk.core.graphite_ops import RealGraphiteOps
@@ -46,7 +46,7 @@ def test_find_worktrees_containing_branch_no_match(tmp_path: Path) -> None:
 
     graphite_ops = RealGraphiteOps()
 
-    ctx = WorkstackContext.for_test(
+    ctx = ErkContext.for_test(
         git_ops=git_ops,
         global_config=GlobalConfig(
             workstacks_root=Path("/fake/workstacks"),

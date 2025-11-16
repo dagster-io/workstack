@@ -23,7 +23,7 @@ reliable while still validating the orchestrator's error handling logic.
 import time
 from pathlib import Path
 
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.parallel_task_runner import RealParallelTaskRunner
 from erk.status.collectors.base import StatusCollector
 from erk.status.collectors.git import GitStatusCollector
@@ -141,10 +141,10 @@ def test_orchestrator_collector_exception_handling(tmp_path: Path) -> None:
         def name(self) -> str:
             return "failing"
 
-        def is_available(self, ctx: WorkstackContext, worktree_path: Path) -> bool:
+        def is_available(self, ctx: ErkContext, worktree_path: Path) -> bool:
             return True
 
-        def collect(self, ctx: WorkstackContext, worktree_path: Path, repo_root: Path) -> object:
+        def collect(self, ctx: ErkContext, worktree_path: Path, repo_root: Path) -> object:
             raise AssertionError("Should not be called - fake executor returns configured result")
 
     collectors = [FailingCollector(), PlanFileCollector()]
@@ -182,10 +182,10 @@ def test_orchestrator_with_failing_collector(tmp_path: Path) -> None:
         def name(self) -> str:
             return "plan"  # Use plan name but return wrong type
 
-        def is_available(self, ctx: WorkstackContext, worktree_path: Path) -> bool:
+        def is_available(self, ctx: ErkContext, worktree_path: Path) -> bool:
             return True
 
-        def collect(self, ctx: WorkstackContext, worktree_path: Path, repo_root: Path) -> object:
+        def collect(self, ctx: ErkContext, worktree_path: Path, repo_root: Path) -> object:
             return "This is not a PlanStatus object"  # Wrong type
 
     collectors = [WrongTypeCollector()]
@@ -215,10 +215,10 @@ def test_orchestrator_with_missing_collector(tmp_path: Path) -> None:
         def name(self) -> str:
             return "unavailable"
 
-        def is_available(self, ctx: WorkstackContext, worktree_path: Path) -> bool:
+        def is_available(self, ctx: ErkContext, worktree_path: Path) -> bool:
             return False  # Never available
 
-        def collect(self, ctx: WorkstackContext, worktree_path: Path, repo_root: Path) -> object:
+        def collect(self, ctx: ErkContext, worktree_path: Path, repo_root: Path) -> object:
             raise AssertionError("Should not be called")
 
     collectors = [UnavailableCollector()]
@@ -248,10 +248,10 @@ def test_orchestrator_with_empty_results(tmp_path: Path) -> None:
         def name(self) -> str:
             return "none"
 
-        def is_available(self, ctx: WorkstackContext, worktree_path: Path) -> bool:
+        def is_available(self, ctx: ErkContext, worktree_path: Path) -> bool:
             return True
 
-        def collect(self, ctx: WorkstackContext, worktree_path: Path, repo_root: Path) -> object:
+        def collect(self, ctx: ErkContext, worktree_path: Path, repo_root: Path) -> object:
             return None
 
     collectors = [NoneCollector()]
@@ -283,10 +283,10 @@ def test_orchestrator_timeout_handling(tmp_path: Path) -> None:
         def name(self) -> str:
             return "slow"
 
-        def is_available(self, ctx: WorkstackContext, worktree_path: Path) -> bool:
+        def is_available(self, ctx: ErkContext, worktree_path: Path) -> bool:
             return True
 
-        def collect(self, ctx: WorkstackContext, worktree_path: Path, repo_root: Path) -> object:
+        def collect(self, ctx: ErkContext, worktree_path: Path, repo_root: Path) -> object:
             raise AssertionError("Should not be called - fake executor returns configured result")
 
     collectors = [SlowCollector()]
@@ -331,7 +331,7 @@ def test_orchestrator_parallel_execution(tmp_path: Path) -> None:
     execution_order = []
 
     class TrackedCollector1(GitStatusCollector):
-        def collect(self, ctx: WorkstackContext, worktree_path: Path, repo_root: Path) -> object:
+        def collect(self, ctx: ErkContext, worktree_path: Path, repo_root: Path) -> object:
             execution_order.append("git_start")
             result = super().collect(ctx, worktree_path, repo_root)
             time.sleep(0.05)  # Small delay to ensure parallel execution
@@ -339,7 +339,7 @@ def test_orchestrator_parallel_execution(tmp_path: Path) -> None:
             return result
 
     class TrackedCollector2(PlanFileCollector):
-        def collect(self, ctx: WorkstackContext, worktree_path: Path, repo_root: Path) -> object:
+        def collect(self, ctx: ErkContext, worktree_path: Path, repo_root: Path) -> object:
             execution_order.append("plan_start")
             result = super().collect(ctx, worktree_path, repo_root)
             time.sleep(0.05)  # Small delay to ensure parallel execution
@@ -503,10 +503,10 @@ def test_orchestrator_multiple_collector_types(tmp_path: Path) -> None:
         def name(self) -> str:
             return "git"
 
-        def is_available(self, ctx: WorkstackContext, worktree_path: Path) -> bool:
+        def is_available(self, ctx: ErkContext, worktree_path: Path) -> bool:
             return True
 
-        def collect(self, ctx: WorkstackContext, worktree_path: Path, repo_root: Path) -> object:
+        def collect(self, ctx: ErkContext, worktree_path: Path, repo_root: Path) -> object:
             return GitStatus.clean_status("test")
 
     class PlanCollector(StatusCollector):
@@ -514,10 +514,10 @@ def test_orchestrator_multiple_collector_types(tmp_path: Path) -> None:
         def name(self) -> str:
             return "plan"
 
-        def is_available(self, ctx: WorkstackContext, worktree_path: Path) -> bool:
+        def is_available(self, ctx: ErkContext, worktree_path: Path) -> bool:
             return True
 
-        def collect(self, ctx: WorkstackContext, worktree_path: Path, repo_root: Path) -> object:
+        def collect(self, ctx: ErkContext, worktree_path: Path, repo_root: Path) -> object:
             return PlanStatus(
                 exists=True,
                 path=worktree_path / ".plan",

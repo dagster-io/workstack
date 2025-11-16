@@ -7,7 +7,7 @@ branch in a Graphite stack.
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.gitops import WorktreeInfo
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
@@ -23,7 +23,7 @@ def _create_test_context_for_split(
     existing_worktrees: list[WorktreeInfo] | None = None,
     trunk_branch: str = "main",
     has_uncommitted: bool = False,
-) -> WorkstackContext:
+) -> ErkContext:
     """Helper to create test context for split command tests.
 
     Args:

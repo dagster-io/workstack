@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.plan_folder import get_plan_path, get_progress_path
 from erk.status.collectors.base import StatusCollector
 from erk.status.models.status_data import PlanStatus
@@ -16,11 +16,11 @@ class PlanFileCollector(StatusCollector):
         """Name identifier for this collector."""
         return "plan"
 
-    def is_available(self, ctx: WorkstackContext, worktree_path: Path) -> bool:
+    def is_available(self, ctx: ErkContext, worktree_path: Path) -> bool:
         """Check if .plan/plan.md exists.
 
         Args:
-            ctx: Workstack context
+            ctx: Erk context
             worktree_path: Path to worktree
 
         Returns:
@@ -29,13 +29,11 @@ class PlanFileCollector(StatusCollector):
         plan_path = get_plan_path(worktree_path, git_ops=ctx.git_ops)
         return plan_path is not None
 
-    def collect(
-        self, ctx: WorkstackContext, worktree_path: Path, repo_root: Path
-    ) -> PlanStatus | None:
+    def collect(self, ctx: ErkContext, worktree_path: Path, repo_root: Path) -> PlanStatus | None:
         """Collect plan folder information.
 
         Args:
-            ctx: Workstack context
+            ctx: Erk context
             worktree_path: Path to worktree
             repo_root: Repository root path
 

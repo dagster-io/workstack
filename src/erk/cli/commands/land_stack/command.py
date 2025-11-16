@@ -16,7 +16,7 @@ from erk.cli.commands.land_stack.validation import (
     _validate_pr_mergeability,
 )
 from erk.cli.core import discover_repo_context
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 
 
 @click.command("land-stack")
@@ -51,7 +51,7 @@ from erk.core.context import WorkstackContext
 )
 @click.pass_obj
 def land_stack(
-    ctx: WorkstackContext, force: bool, verbose: bool, dry_run: bool, down: bool, script: bool
+    ctx: ErkContext, force: bool, verbose: bool, dry_run: bool, down: bool, script: bool
 ) -> None:
     """Land all PRs in stack.
 

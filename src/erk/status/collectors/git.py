@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.status.collectors.base import StatusCollector
 from erk.status.models.status_data import CommitInfo, GitStatus
 
@@ -15,11 +15,11 @@ class GitStatusCollector(StatusCollector):
         """Name identifier for this collector."""
         return "git"
 
-    def is_available(self, ctx: WorkstackContext, worktree_path: Path) -> bool:
+    def is_available(self, ctx: ErkContext, worktree_path: Path) -> bool:
         """Check if git operations are available.
 
         Args:
-            ctx: Workstack context
+            ctx: Erk context
             worktree_path: Path to worktree
 
         Returns:
@@ -30,13 +30,11 @@ class GitStatusCollector(StatusCollector):
 
         return True
 
-    def collect(
-        self, ctx: WorkstackContext, worktree_path: Path, repo_root: Path
-    ) -> GitStatus | None:
+    def collect(self, ctx: ErkContext, worktree_path: Path, repo_root: Path) -> GitStatus | None:
         """Collect git status information.
 
         Args:
-            ctx: Workstack context
+            ctx: Erk context
             worktree_path: Path to worktree
             repo_root: Repository root path
 

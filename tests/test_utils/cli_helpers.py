@@ -105,7 +105,7 @@ def cli_test_repo(tmp_path: Path) -> Generator[CLITestRepo]:
             with simulated_workstack_env(runner) as env:
                 # Much simpler! No HOME setup, no os.chdir, uses fakes
                 git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-                test_ctx = WorkstackContext.for_test(git_ops=git_ops, cwd=env.cwd)
+                test_ctx = ErkContext.for_test(git_ops=git_ops, cwd=env.cwd)
                 result = runner.invoke(cli, ["create", "feature"], obj=test_ctx)
         ```
 

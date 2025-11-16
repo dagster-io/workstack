@@ -9,7 +9,7 @@ from erk.cli.commands.remove import _remove_worktree
 from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output
 from erk.cli.shell_utils import render_cd_script
-from erk.core.context import WorkstackContext, regenerate_context
+from erk.core.context import ErkContext, regenerate_context
 from erk.core.repo_discovery import ensure_workstacks_dir
 from erk.core.script_writer import ScriptResult
 from erk.core.sync_utils import PRStatus, identify_deletable_worktrees
@@ -34,7 +34,7 @@ def _emit(message: str, *, script_mode: bool, error: bool = False) -> None:
 
 
 def _return_to_original_worktree(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     workstacks_dir: Path,
     current_worktree_name: str | None,
     *,
@@ -86,7 +86,7 @@ def _return_to_original_worktree(
 )
 @click.pass_obj
 def sync_cmd(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     force: bool,
     dry_run: bool,
     script: bool,
@@ -111,8 +111,7 @@ def sync_cmd(
     use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
     if not use_graphite:
         _emit(
-            "Error: 'workstack sync' requires Graphite. "
-            "Run 'workstack config set use-graphite true'",
+            "Error: 'erk sync' requires Graphite. Run 'erk config set use-graphite true'",
             script_mode=script,
             error=True,
         )

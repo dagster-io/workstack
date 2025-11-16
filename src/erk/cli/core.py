@@ -1,11 +1,11 @@
 from pathlib import Path
 
 from erk.cli.output import user_output
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.repo_discovery import RepoContext, discover_repo_or_sentinel
 
 
-def discover_repo_context(ctx: WorkstackContext, start: Path) -> RepoContext:
+def discover_repo_context(ctx: ErkContext, start: Path) -> RepoContext:
     """Walk up from `start` to find a directory containing `.git`.
 
     Returns a RepoContext pointing to the repo root and the global worktrees directory
@@ -16,7 +16,7 @@ def discover_repo_context(ctx: WorkstackContext, start: Path) -> RepoContext:
     not the worktree's .git file.
     """
     if ctx.global_config is None:
-        raise FileNotFoundError("Global config not found. Run 'workstack init' to create it.")
+        raise FileNotFoundError("Global config not found. Run 'erk init' to create it.")
 
     result = discover_repo_or_sentinel(start, ctx.global_config.workstacks_root, ctx.git_ops)
     if isinstance(result, RepoContext):

@@ -8,7 +8,7 @@ from erk.cli.commands.switch import (
 )
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 
 
 @click.command("down")
@@ -16,17 +16,17 @@ from erk.core.context import WorkstackContext
     "--script", is_flag=True, help="Print only the activation script without usage instructions."
 )
 @click.pass_obj
-def down_cmd(ctx: WorkstackContext, script: bool) -> None:
+def down_cmd(ctx: ErkContext, script: bool) -> None:
     """Move to parent branch in Graphite stack.
 
     With shell integration (recommended):
-      workstack down
+      erk down
 
     The shell wrapper function automatically activates the worktree.
-    Run 'workstack init --shell' to set up shell integration.
+    Run 'erk init --shell' to set up shell integration.
 
     Without shell integration:
-      source <(workstack down --script)
+      source <(erk down --script)
 
     This will cd to the parent branch's worktree (or root repo if parent is trunk),
     create/activate .venv, and load .env variables.

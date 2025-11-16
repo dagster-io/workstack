@@ -4,7 +4,7 @@ import click
 
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.display_utils import (
     format_branch_without_worktree,
     format_pr_info,
@@ -18,12 +18,12 @@ from erk.core.repo_discovery import RepoContext
 from erk.core.worktree_utils import find_current_worktree
 
 
-def _format_plan_summary(worktree_path: Path, ctx: WorkstackContext) -> str | None:
+def _format_plan_summary(worktree_path: Path, ctx: ErkContext) -> str | None:
     """Extract plan title from .plan/plan.md if it exists.
 
     Args:
         worktree_path: Path to the worktree directory
-        ctx: Workstack context with git operations
+        ctx: Erk context with git operations
 
     Returns:
         Plan title string, or None if no plan file
@@ -36,7 +36,7 @@ def _format_plan_summary(worktree_path: Path, ctx: WorkstackContext) -> str | No
     return extract_plan_title(plan_path, git_ops=ctx.git_ops)
 
 
-def _list_worktrees(ctx: WorkstackContext, ci: bool) -> None:
+def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
     """List worktrees with comprehensive branch information.
 
     Shows three sections:
@@ -284,7 +284,7 @@ def _list_worktrees(ctx: WorkstackContext, ci: bool) -> None:
 @click.command("list")
 @click.option("--ci", is_flag=True, help="Fetch CI check status from GitHub (slower)")
 @click.pass_obj
-def list_cmd(ctx: WorkstackContext, ci: bool) -> None:
+def list_cmd(ctx: ErkContext, ci: bool) -> None:
     """List worktrees with comprehensive branch and PR information.
 
     Shows three sections:
@@ -299,6 +299,6 @@ def list_cmd(ctx: WorkstackContext, ci: bool) -> None:
 @click.command("ls", hidden=True)
 @click.option("--ci", is_flag=True, help="Fetch CI check status from GitHub (slower)")
 @click.pass_obj
-def ls_cmd(ctx: WorkstackContext, ci: bool) -> None:
+def ls_cmd(ctx: ErkContext, ci: bool) -> None:
     """List worktrees with comprehensive branch and PR information (alias of 'list')."""
     _list_worktrees(ctx, ci=ci)

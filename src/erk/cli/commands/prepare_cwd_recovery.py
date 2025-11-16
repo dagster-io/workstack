@@ -7,10 +7,10 @@ import click
 from erk.cli.activation import render_activation_script
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 
 
-def generate_recovery_script(ctx: WorkstackContext) -> Path | None:
+def generate_recovery_script(ctx: ErkContext) -> Path | None:
     """Create a recovery script that returns to the repo root if cwd vanishes.
 
     This helper intentionally guards against runtime cwd races:
@@ -31,7 +31,7 @@ def generate_recovery_script(ctx: WorkstackContext) -> Path | None:
 
     script_content = render_activation_script(
         worktree_path=repo.root,
-        comment="workstack passthrough recovery script",
+        comment="erk passthrough recovery script",
         final_message="",
     )
 
@@ -50,7 +50,7 @@ def generate_recovery_script(ctx: WorkstackContext) -> Path | None:
     add_help_option=False,
 )
 @click.pass_obj
-def prepare_cwd_recovery_cmd(ctx: WorkstackContext) -> None:
+def prepare_cwd_recovery_cmd(ctx: ErkContext) -> None:
     """Emit a recovery script if we are inside a managed repository."""
     script_path = generate_recovery_script(ctx)
     if script_path is None:

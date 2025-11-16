@@ -4,7 +4,7 @@ import click
 
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.parallel_task_runner import RealParallelTaskRunner
 from erk.status.collectors.git import GitStatusCollector
 from erk.status.collectors.github import GitHubPRCollector
@@ -16,7 +16,7 @@ from erk.status.renderers.simple import SimpleRenderer
 
 @click.command("status")
 @click.pass_obj
-def status_cmd(ctx: WorkstackContext) -> None:
+def status_cmd(ctx: ErkContext) -> None:
     """Show comprehensive status of current worktree."""
     # Discover repository context
     repo = discover_repo_context(ctx, ctx.cwd)

@@ -11,7 +11,7 @@ import pytest
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.context import WorkstackContext, create_context
+from erk.core.context import ErkContext, create_context
 from erk.core.github_ops import NoopGitHubOps
 from erk.core.gitops import NoopGitOps, WorktreeInfo
 from erk.core.global_config import GlobalConfig
@@ -91,7 +91,7 @@ def test_dryrun_read_operations_still_work(tmp_path: Path) -> None:
     )
 
     # Wrap fakes in dry-run wrappers
-    ctx = WorkstackContext.for_test(
+    ctx = ErkContext.for_test(
         git_ops=NoopGitOps(git_ops),
         global_config=global_config_ops,
         github_ops=NoopGitHubOps(FakeGitHubOps()),

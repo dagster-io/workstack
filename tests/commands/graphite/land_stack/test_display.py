@@ -3,7 +3,7 @@
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.global_config import GlobalConfig
 from erk.core.graphite_ops import BranchMetadata
 from tests.fakes.github_ops import FakeGitHubOps
@@ -53,7 +53,7 @@ def test_land_stack_verbose_flag_shows_detailed_output() -> None:
             show_pr_info=True,
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
@@ -117,7 +117,7 @@ def test_land_stack_dry_run_shows_submit_commands() -> None:
             show_pr_info=True,
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,

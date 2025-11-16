@@ -6,11 +6,11 @@ import click
 
 from erk.cli.commands.land_stack.models import BranchPR
 from erk.cli.commands.land_stack.output import _emit
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 
 
 def _validate_landing_preconditions(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     repo_root: Path,
     current_branch: str | None,
     branches_to_land: list[str],
@@ -21,7 +21,7 @@ def _validate_landing_preconditions(
     """Validate all preconditions for landing are met.
 
     Args:
-        ctx: WorkstackContext with access to operations
+        ctx: ErkContext with access to operations
         repo_root: Repository root directory
         current_branch: Current branch name (None if detached HEAD)
         branches_to_land: List of branches to land
@@ -35,9 +35,9 @@ def _validate_landing_preconditions(
     use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
     if not use_graphite:
         _emit(
-            "Error: 'workstack land-stack' requires Graphite.\n\n"
+            "Error: 'erk land-stack' requires Graphite.\n\n"
             "To fix:\n"
-            "  • Run: workstack config set use-graphite true\n"
+            "  • Run: erk config set use_graphite true\n"
             "  • Install Graphite CLI if needed: brew install withgraphite/tap/graphite",
             script_mode=script_mode,
             error=True,
@@ -141,12 +141,12 @@ def _validate_landing_preconditions(
 
 
 def _validate_branches_have_prs(
-    ctx: WorkstackContext, repo_root: Path, branches: list[str], *, script_mode: bool
+    ctx: ErkContext, repo_root: Path, branches: list[str], *, script_mode: bool
 ) -> list[BranchPR]:
     """Validate all branches have open PRs.
 
     Args:
-        ctx: WorkstackContext with access to GitHub operations
+        ctx: ErkContext with access to GitHub operations
         repo_root: Repository root directory
         branches: List of branch names to validate
         script_mode: True when running in --script mode (output to stderr)
@@ -190,7 +190,7 @@ def _validate_branches_have_prs(
 
 
 def _validate_pr_mergeability(
-    ctx: WorkstackContext,
+    ctx: ErkContext,
     repo_root: Path,
     branches: list[BranchPR],
     *,

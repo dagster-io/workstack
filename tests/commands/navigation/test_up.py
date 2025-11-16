@@ -162,7 +162,7 @@ def test_up_child_has_no_worktree() -> None:
         assert result.exit_code == 1
         assert "feature-2" in result.stderr
         assert "no worktree" in result.stderr
-        assert "workstack create feature-2" in result.stderr
+        assert "erk create feature-2" in result.stderr
 
 
 def test_up_graphite_not_enabled() -> None:
@@ -324,7 +324,7 @@ def test_up_multiple_children_fails_explicitly() -> None:
         assert "Error: Branch 'feature-1' has multiple children" in result.stderr
         assert "'feature-2a'" in result.stderr
         assert "'feature-2b'" in result.stderr
-        assert "workstack create" in result.stderr
+        assert "erk create" in result.stderr
 
 
 def test_up_with_mismatched_worktree_name() -> None:

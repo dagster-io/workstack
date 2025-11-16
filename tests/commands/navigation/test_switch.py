@@ -322,7 +322,7 @@ def test_switch_rejects_main_as_worktree_name() -> None:
         # Should fail with error suggesting to use root
         assert result.exit_code != 0
         assert "main" in result.output.lower()
-        assert "workstack switch root" in result.output
+        assert "erk switch root" in result.output
 
 
 def test_switch_rejects_master_as_worktree_name() -> None:
@@ -359,4 +359,4 @@ def test_switch_rejects_master_as_worktree_name() -> None:
         # Should fail with error suggesting to use root
         assert result.exit_code != 0
         assert "master" in result.output.lower()
-        assert "workstack switch root" in result.output
+        assert "erk switch root" in result.output

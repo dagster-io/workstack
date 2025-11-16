@@ -9,7 +9,7 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.gitops import WorktreeInfo
 from erk.core.global_config import GlobalConfig, InMemoryGlobalConfigOps
 from tests.fakes.gitops import FakeGitOps
@@ -165,7 +165,7 @@ def test_current_handles_missing_git_gracefully(tmp_path: Path) -> None:
     )
     global_config_ops = InMemoryGlobalConfigOps(config=global_config)
 
-    ctx = WorkstackContext.for_test(
+    ctx = ErkContext.for_test(
         cwd=non_git_dir,
         git_ops=git_ops,
         global_config_ops=global_config_ops,
@@ -217,7 +217,7 @@ def test_current_handles_nested_worktrees(tmp_path: Path) -> None:
     )
     global_config_ops = InMemoryGlobalConfigOps(config=global_config)
 
-    ctx = WorkstackContext.for_test(
+    ctx = ErkContext.for_test(
         cwd=target_dir,
         git_ops=git_ops,
         global_config_ops=global_config_ops,

@@ -5,7 +5,7 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.github_ops import PullRequestInfo
 from erk.core.gitops import WorktreeInfo
 from erk.core.global_config import GlobalConfig
@@ -84,7 +84,7 @@ def test_land_stack_ignores_root_worktree_changes_on_unrelated_branch() -> None:
             },
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
@@ -140,7 +140,7 @@ def test_land_stack_script_mode_accepts_flag() -> None:
             show_pr_info=True,
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,

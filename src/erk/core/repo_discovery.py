@@ -1,7 +1,7 @@
 """Repository discovery functionality.
 
 Discovers git repository information from a given path without requiring
-full WorkstackContext (enables config loading before context creation).
+full ErkContext (enables config loading before context creation).
 """
 
 from dataclasses import dataclass

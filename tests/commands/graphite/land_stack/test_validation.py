@@ -5,7 +5,7 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.github_ops import PullRequestInfo
 from erk.core.gitops import WorktreeInfo
 from erk.core.global_config import GlobalConfig
@@ -38,7 +38,7 @@ def test_land_stack_requires_graphite() -> None:
             show_pr_info=True,
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
@@ -80,7 +80,7 @@ def test_land_stack_fails_on_detached_head() -> None:
 
         graphite_ops = FakeGraphiteOps()
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
@@ -130,7 +130,7 @@ def test_land_stack_fails_with_uncommitted_changes() -> None:
             },
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
@@ -215,7 +215,7 @@ def test_land_stack_ignores_root_worktree_changes_on_unrelated_branch() -> None:
             },
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
@@ -271,7 +271,7 @@ def test_land_stack_fails_on_trunk_branch() -> None:
             },
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
@@ -318,7 +318,7 @@ def test_land_stack_fails_when_branch_not_tracked() -> None:
             stacks={},
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
@@ -380,7 +380,7 @@ def test_land_stack_fails_when_pr_missing() -> None:
             }
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
@@ -437,7 +437,7 @@ def test_land_stack_fails_when_pr_closed() -> None:
             }
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,

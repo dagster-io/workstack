@@ -145,7 +145,7 @@ def test_switch_up_child_has_no_worktree() -> None:
         assert result.exit_code == 1
         assert "feature-2" in result.stderr
         assert "no worktree" in result.stderr
-        assert "workstack create feature-2" in result.stderr
+        assert "erk create feature-2" in result.stderr
 
 
 def test_switch_down_with_existing_worktree() -> None:
@@ -317,7 +317,7 @@ def test_switch_down_parent_has_no_worktree() -> None:
         assert result.exit_code == 1
         assert "feature-1" in result.stderr or "parent branch" in result.stderr
         assert "no worktree" in result.stderr
-        assert "workstack create feature-1" in result.stderr
+        assert "erk create feature-1" in result.stderr
 
 
 def test_switch_graphite_not_enabled() -> None:

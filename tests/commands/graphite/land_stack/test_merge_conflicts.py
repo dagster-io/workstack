@@ -3,7 +3,7 @@
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.github_ops import PRMergeability
 from erk.core.gitops import WorktreeInfo
 from erk.core.global_config import GlobalConfig
@@ -63,7 +63,7 @@ def test_land_stack_fails_when_first_pr_has_conflict() -> None:
             },
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
@@ -136,7 +136,7 @@ def test_land_stack_fails_when_middle_pr_has_conflict() -> None:
             },
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
@@ -203,7 +203,7 @@ def test_land_stack_fails_when_last_pr_has_conflict() -> None:
             },
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
@@ -265,7 +265,7 @@ def test_land_stack_succeeds_with_unknown_mergeability() -> None:
             },
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,
@@ -331,7 +331,7 @@ def test_land_stack_succeeds_when_all_prs_mergeable() -> None:
             },
         )
 
-        test_ctx = WorkstackContext.for_test(
+        test_ctx = ErkContext.for_test(
             git_ops=git_ops,
             global_config=global_config_ops,
             graphite_ops=graphite_ops,

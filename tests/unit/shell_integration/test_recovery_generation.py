@@ -3,17 +3,15 @@
 from pathlib import Path
 
 from erk.cli.commands.prepare_cwd_recovery import generate_recovery_script
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.global_config import GlobalConfig
 from erk.core.script_writer import RealScriptWriterOps
 from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps
 
 
-def build_ctx(
-    repo_root: Path | None, workstacks_root: Path, cwd: Path | None = None
-) -> WorkstackContext:
-    """Create a WorkstackContext with test fakes and real script writer for integration testing."""
+def build_ctx(repo_root: Path | None, workstacks_root: Path, cwd: Path | None = None) -> ErkContext:
+    """Create a ErkContext with test fakes and real script writer for integration testing."""
     git_common_dirs: dict[Path, Path] = {}
     existing_paths: set[Path] = {workstacks_root}
 

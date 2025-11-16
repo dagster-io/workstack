@@ -35,7 +35,7 @@ def test_create_basic_worktree() -> None:
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
         # Verify worktree creation from output
-        assert "Created workstack" in result.output
+        assert "Created worktree" in result.output
         assert "test-feature" in result.output
 
 
@@ -194,7 +194,7 @@ def test_create_sanitizes_worktree_name() -> None:
         assert result.exit_code == 0, result.output
         # The actual sanitization is tested in test_naming.py
         # Here we just verify the worktree was created
-        assert "Created workstack" in result.output
+        assert "Created worktree" in result.output
 
 
 def test_create_sanitizes_branch_name() -> None:
@@ -1257,8 +1257,8 @@ def test_create_with_stay_prevents_script_generation() -> None:
 
         assert result.exit_code == 0, result.output
         # When --stay is used, no script path should be output
-        # The output should contain the normal message with "workstack switch"
-        assert "workstack switch" in result.output
+        # The output should contain the normal message with "erk switch"
+        assert "erk switch" in result.output
         # Should still create the worktree
         workstacks_dir / "test-feature"
 
@@ -1338,8 +1338,8 @@ def test_create_with_stay_and_plan() -> None:
         assert (wt_path / ".plan" / "plan.md").exists()
         assert (wt_path / ".plan" / "progress.md").exists()
         assert not plan_file.exists()
-        # When --stay is used, output should contain "workstack switch" message
-        assert "workstack switch" in result.output
+        # When --stay is used, output should contain "erk switch" message
+        assert "erk switch" in result.output
 
 
 def test_create_default_behavior_generates_script() -> None:

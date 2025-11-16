@@ -1,18 +1,18 @@
-"""Current command implementation - displays current workstack name."""
+"""Current command implementation - displays current erk name."""
 
 import click
 
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.repo_discovery import RepoContext
 from erk.core.worktree_utils import find_current_worktree, is_root_worktree
 
 
 @click.command("current", hidden=True)
 @click.pass_obj
-def current_cmd(ctx: WorkstackContext) -> None:
-    """Show current workstack name (hidden command for automation)."""
+def current_cmd(ctx: ErkContext) -> None:
+    """Show current erk name (hidden command for automation)."""
     # Use ctx.repo if it's a valid RepoContext, otherwise discover
     if isinstance(ctx.repo, RepoContext):
         repo = ctx.repo

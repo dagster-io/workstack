@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 
 
 class StatusCollector(ABC):
@@ -25,11 +25,11 @@ class StatusCollector(ABC):
         ...
 
     @abstractmethod
-    def is_available(self, ctx: WorkstackContext, worktree_path: Path) -> bool:
+    def is_available(self, ctx: ErkContext, worktree_path: Path) -> bool:
         """Check if this collector can run in the given worktree.
 
         Args:
-            ctx: Workstack context with operations
+            ctx: Erk context with operations
             worktree_path: Path to the worktree
 
         Returns:
@@ -38,11 +38,11 @@ class StatusCollector(ABC):
         ...
 
     @abstractmethod
-    def collect(self, ctx: WorkstackContext, worktree_path: Path, repo_root: Path) -> Any:
+    def collect(self, ctx: ErkContext, worktree_path: Path, repo_root: Path) -> Any:
         """Collect status information from worktree.
 
         Args:
-            ctx: Workstack context with operations
+            ctx: Erk context with operations
             worktree_path: Path to the worktree
             repo_root: Path to repository root
 

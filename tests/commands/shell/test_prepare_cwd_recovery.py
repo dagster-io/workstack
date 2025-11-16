@@ -6,17 +6,15 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from erk.cli.commands.prepare_cwd_recovery import prepare_cwd_recovery_cmd
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.global_config import GlobalConfig
 from tests.fakes.context import create_test_context
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.script_writer import FakeScriptWriterOps
 
 
-def build_ctx(
-    repo_root: Path | None, workstacks_root: Path, cwd: Path | None = None
-) -> WorkstackContext:
-    """Create a WorkstackContext with test fakes."""
+def build_ctx(repo_root: Path | None, workstacks_root: Path, cwd: Path | None = None) -> ErkContext:
+    """Create a ErkContext with test fakes."""
     git_common_dirs: dict[Path, Path] = {}
     existing_paths: set[Path] = {workstacks_root}
 

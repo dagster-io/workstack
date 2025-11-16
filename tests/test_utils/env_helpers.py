@@ -28,7 +28,7 @@ Usage Pattern:
 
             git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
             global_config_ops = GlobalConfig(...)
-            test_ctx = WorkstackContext.for_test(cwd=cwd, ...)
+            test_ctx = ErkContext.for_test(cwd=cwd, ...)
 
             result = runner.invoke(cli, ["command"], obj=test_ctx)
     ```
@@ -41,7 +41,7 @@ Usage Pattern:
             git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
             global_config_ops = GlobalConfig(...)
             script_writer=env.script_writer,
-            test_ctx = WorkstackContext.for_test(cwd=env.cwd, ...)
+            test_ctx = ErkContext.for_test(cwd=env.cwd, ...)
 
             result = runner.invoke(cli, ["command"], obj=test_ctx)
     ```
@@ -66,7 +66,7 @@ Advanced Usage (complex worktree scenarios):
             )
 
             script_writer=env.script_writer,
-            test_ctx = WorkstackContext.for_test(cwd=env.cwd, git_ops=git_ops, ...)
+            test_ctx = ErkContext.for_test(cwd=env.cwd, git_ops=git_ops, ...)
     ```
 
 Directory Structure Created:
@@ -85,7 +85,7 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.core.gitops import WorktreeInfo
 from erk.core.global_config import GlobalConfig
 from erk.core.graphite_ops import BranchMetadata
@@ -293,8 +293,8 @@ class SimulatedWorkstackEnv:
         github_ops: FakeGitHubOps | None = None,
         repo: RepoContext | None = None,
         **kwargs,
-    ) -> WorkstackContext:
-        """Build WorkstackContext with sensible defaults for testing.
+    ) -> ErkContext:
+        """Build ErkContext with sensible defaults for testing.
 
         This helper eliminates boilerplate by providing default ops and config
         for tests that don't need custom setup. Custom values can be provided
@@ -307,10 +307,10 @@ class SimulatedWorkstackEnv:
             graphite_ops: Custom FakeGraphiteOps (default: empty)
             github_ops: Custom FakeGitHubOps (default: empty)
             repo: Custom RepoContext (default: None)
-            **kwargs: Additional WorkstackContext.for_test() parameters
+            **kwargs: Additional ErkContext.for_test() parameters
 
         Returns:
-            WorkstackContext configured for testing
+            ErkContext configured for testing
 
         Example:
             ```python
@@ -414,7 +414,7 @@ class SimulatedWorkstackEnv:
         if "trunk_branch" in kwargs:
             kwargs.pop("trunk_branch")
 
-        return WorkstackContext.for_test(
+        return ErkContext.for_test(
             git_ops=git_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
@@ -490,7 +490,7 @@ def simulated_workstack_env(runner: CliRunner) -> Generator[SimulatedWorkstackEn
                 # env.git_dir is available (.git directory)
                 # env.script_writer is available (RealScriptWriterOps for temp files)
                 git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-                test_ctx = WorkstackContext.for_test(
+                test_ctx = ErkContext.for_test(
                     cwd=env.cwd,
                     script_writer=env.script_writer,
                     ...
@@ -581,8 +581,8 @@ class PureWorkstackEnv:
         existing_paths: set[Path] | None = None,
         file_contents: dict[Path, str] | None = None,
         **kwargs,
-    ) -> WorkstackContext:
-        """Build WorkstackContext with sensible defaults for testing.
+    ) -> ErkContext:
+        """Build ErkContext with sensible defaults for testing.
 
         This helper eliminates boilerplate by providing default ops and config
         for tests that don't need custom setup. Custom values can be provided
@@ -597,10 +597,10 @@ class PureWorkstackEnv:
             repo: Custom RepoContext (default: None)
             existing_paths: Set of sentinel paths to treat as existing (pure mode only)
             file_contents: Mapping of sentinel paths to file content (pure mode only)
-            **kwargs: Additional WorkstackContext.for_test() parameters
+            **kwargs: Additional ErkContext.for_test() parameters
 
         Returns:
-            WorkstackContext configured for testing
+            ErkContext configured for testing
 
         Example:
             ```python
@@ -704,7 +704,7 @@ class PureWorkstackEnv:
         if "trunk_branch" in kwargs:
             kwargs.pop("trunk_branch")
 
-        return WorkstackContext.for_test(
+        return ErkContext.for_test(
             git_ops=git_ops,
             graphite_ops=graphite_ops,
             github_ops=github_ops,
@@ -873,7 +873,7 @@ def pure_workstack_env(
             with pure_workstack_env(runner) as env:
                 # No filesystem I/O, all operations in-memory
                 git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-                ctx = WorkstackContext.for_test(
+                ctx = ErkContext.for_test(
                     cwd=env.cwd,
                     git_ops=git_ops,
                     script_writer=env.script_writer,

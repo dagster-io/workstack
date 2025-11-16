@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from erk.core.context import WorkstackContext
+from erk.core.context import ErkContext
 from erk.status.collectors.base import StatusCollector
 from erk.status.models.status_data import PullRequestStatus
 
@@ -15,11 +15,11 @@ class GitHubPRCollector(StatusCollector):
         """Name identifier for this collector."""
         return "pr"
 
-    def is_available(self, ctx: WorkstackContext, worktree_path: Path) -> bool:
+    def is_available(self, ctx: ErkContext, worktree_path: Path) -> bool:
         """Check if PR information should be fetched.
 
         Args:
-            ctx: Workstack context
+            ctx: Erk context
             worktree_path: Path to worktree
 
         Returns:
@@ -34,12 +34,12 @@ class GitHubPRCollector(StatusCollector):
         return True
 
     def collect(
-        self, ctx: WorkstackContext, worktree_path: Path, repo_root: Path
+        self, ctx: ErkContext, worktree_path: Path, repo_root: Path
     ) -> PullRequestStatus | None:
         """Collect GitHub PR information.
 
         Args:
-            ctx: Workstack context
+            ctx: Erk context
             worktree_path: Path to worktree
             repo_root: Repository root path
 

@@ -10,6 +10,30 @@ from pathlib import Path
 
 import click
 
+from workstack.cli.commands.create.output import create_json_response, output_result
+from workstack.cli.commands.create.post_creation import run_post_create_commands, write_env_file
+from workstack.cli.commands.create.types import (
+    CreateVariant,
+    CreationRequest,
+    CreationResult,
+    OutputConfig,
+    PlanConfig,
+    WorktreeTarget,
+)
+from workstack.cli.commands.create.validation import (
+    identify_variant,
+    resolve_source_workstack,
+    validate_graphite_enabled,
+    validate_graphite_prerequisites,
+    validate_keep_plan_flag,
+    validate_name,
+    validate_output_flags,
+)
+from workstack.cli.commands.create.variants.from_branch import create_from_branch
+from workstack.cli.commands.create.variants.from_current_branch import create_from_current_branch
+from workstack.cli.commands.create.variants.plan import create_with_plan
+from workstack.cli.commands.create.variants.regular import create_regular
+from workstack.cli.commands.create.variants.with_dot_plan import create_with_dot_plan
 from workstack.cli.core import discover_repo_context, worktree_path_for
 from workstack.cli.output import user_output
 from workstack.core.context import WorkstackContext
@@ -20,31 +44,6 @@ from workstack.core.naming_utils import (
 )
 from workstack.core.plan_folder import get_plan_path
 from workstack.core.repo_discovery import ensure_workstacks_dir
-
-from .output import create_json_response, output_result
-from .post_creation import run_post_create_commands, write_env_file
-from .types import (
-    CreateVariant,
-    CreationRequest,
-    CreationResult,
-    OutputConfig,
-    PlanConfig,
-    WorktreeTarget,
-)
-from .validation import (
-    identify_variant,
-    resolve_source_workstack,
-    validate_graphite_enabled,
-    validate_graphite_prerequisites,
-    validate_keep_plan_flag,
-    validate_name,
-    validate_output_flags,
-)
-from .variants.from_branch import create_from_branch
-from .variants.from_current_branch import create_from_current_branch
-from .variants.plan import create_with_plan
-from .variants.regular import create_regular
-from .variants.with_dot_plan import create_with_dot_plan
 
 
 @click.command("create")
@@ -281,47 +280,52 @@ def _derive_name(
     Raises:
         SystemExit: If required name is missing or conflicting flags
     """
-    if variant == "from_current_branch":
-        current_branch_initial = ctx.git_ops.get_current_branch(ctx.cwd)
-        if current_branch_initial is None:
-            user_output("Error: HEAD is detached (not on a branch)")
-            raise SystemExit(1)
-        if branch:
-            user_output("Cannot specify --branch with --from-current-branch (uses current branch).")
-            raise SystemExit(1)
-        if not name:
-            name = sanitize_worktree_name(current_branch_initial)
+    match variant:
+        case "from_current_branch":
+            current_branch_initial = ctx.git_ops.get_current_branch(ctx.cwd)
+            if current_branch_initial is None:
+                user_output("Error: HEAD is detached (not on a branch)")
+                raise SystemExit(1)
+            if branch:
+                user_output(
+                    "Cannot specify --branch with --from-current-branch (uses current branch)."
+                )
+                raise SystemExit(1)
+            if not name:
+                name = sanitize_worktree_name(current_branch_initial)
 
-    elif variant == "from_branch":
-        if branch:
-            user_output("Cannot specify --branch with --from-branch (uses the specified branch).")
-            raise SystemExit(1)
-        if not name:
-            # from_branch is guaranteed to be non-None for this variant
-            assert from_branch is not None, "from_branch must be set for from_branch variant"
-            name = sanitize_worktree_name(from_branch)
+        case "from_branch":
+            if branch:
+                user_output(
+                    "Cannot specify --branch with --from-branch (uses the specified branch)."
+                )
+                raise SystemExit(1)
+            if not name:
+                # from_branch is guaranteed to be non-None for this variant
+                assert from_branch is not None, "from_branch must be set for from_branch variant"
+                name = sanitize_worktree_name(from_branch)
 
-    elif variant == "plan":
-        if name:
-            user_output("Cannot specify both NAME and --plan. Use one or the other.")
-            raise SystemExit(1)
-        # plan_file is guaranteed to be non-None for this variant
-        assert plan_file is not None, "plan_file must be set for plan variant"
-        plan_stem = plan_file.stem
-        cleaned_stem = strip_plan_from_filename(plan_stem)
-        name = sanitize_worktree_name(cleaned_stem)
+        case "plan":
+            if name:
+                user_output("Cannot specify both NAME and --plan. Use one or the other.")
+                raise SystemExit(1)
+            # plan_file is guaranteed to be non-None for this variant
+            assert plan_file is not None, "plan_file must be set for plan variant"
+            plan_stem = plan_file.stem
+            cleaned_stem = strip_plan_from_filename(plan_stem)
+            name = sanitize_worktree_name(cleaned_stem)
 
-    elif variant == "with_dot_plan":
-        if not name:
-            user_output("Must provide NAME with --with-dot-plan")
-            raise SystemExit(1)
+        case "with_dot_plan":
+            if not name:
+                user_output("Must provide NAME with --with-dot-plan")
+                raise SystemExit(1)
 
-    else:  # regular
-        if not name:
-            user_output(
-                "Must provide NAME or --plan or --from-branch or --from-current-branch option."
-            )
-            raise SystemExit(1)
+        case "regular":
+            if not name:
+                user_output(
+                    "Must provide NAME or --plan or --from-branch or --from-current-branch option."
+                )
+                raise SystemExit(1)
 
     assert name is not None, "name must be set by now"
     return name
@@ -404,15 +408,16 @@ def _execute_variant(
     Raises:
         ValueError: If unknown variant (should never happen)
     """
-    if request.variant == "regular":
-        return create_regular(ctx, request)
-    elif request.variant == "from_current_branch":
-        return create_from_current_branch(ctx, request)
-    elif request.variant == "from_branch":
-        return create_from_branch(ctx, request)
-    elif request.variant == "plan":
-        return create_with_plan(ctx, request)
-    elif request.variant == "with_dot_plan":
-        return create_with_dot_plan(ctx, request)
-    else:
-        raise ValueError(f"Unknown variant: {request.variant}")
+    match request.variant:
+        case "regular":
+            return create_regular(ctx, request)
+        case "from_current_branch":
+            return create_from_current_branch(ctx, request)
+        case "from_branch":
+            return create_from_branch(ctx, request)
+        case "plan":
+            return create_with_plan(ctx, request)
+        case "with_dot_plan":
+            return create_with_dot_plan(ctx, request)
+        case _:
+            raise ValueError(f"Unknown variant: {request.variant}")

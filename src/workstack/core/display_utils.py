@@ -28,68 +28,6 @@ def get_visible_length(text: str) -> int:
     return len(text)
 
 
-def filter_stack_for_worktree(
-    stack: list[str],
-    current_branch: str,
-    all_checked_out_branches: set[str],
-    is_root_worktree: bool,
-) -> list[str]:
-    """Filter a graphite stack to only show branches relevant to the current worktree.
-
-    When displaying a stack for a specific worktree, we want to show:
-    - Root worktree: Current branch + all ancestors (no descendants)
-    - Other worktrees: Ancestors + current + descendants that are checked out somewhere
-
-    This ensures that:
-    - Root worktree shows context from trunk down to current branch
-    - Other worktrees show full context but only "active" descendants with worktrees
-    - Branches without active worktrees don't clutter non-root displays
-
-    Example:
-        Stack: [main, foo, bar, baz]
-        Worktrees:
-          - root on bar
-          - worktree-baz on baz
-
-        Root display: [main, foo, bar]  (ancestors + current, no descendants)
-        Worktree-baz display: [main, foo, bar, baz]  (full context with checked-out descendants)
-
-    Args:
-        stack: The full graphite stack (ordered from trunk to leaf)
-        current_branch: Branch checked out in the current worktree
-        all_checked_out_branches: Set of all branches checked out in any worktree
-        is_root_worktree: True if this is the root repository worktree
-
-    Returns:
-        Filtered stack with only relevant branches
-    """
-    if current_branch not in stack:
-        # If current branch is not in stack (shouldn't happen), return full stack
-        return stack
-
-    # Find the index of the current branch in the stack
-    current_idx = stack.index(current_branch)
-
-    # Filter the stack based on whether this is the root worktree
-    if is_root_worktree:
-        # Root worktree: show only ancestors + current (no descendants)
-        # This keeps the display clean and focused on context
-        return stack[: current_idx + 1]
-    else:
-        # Non-root worktree: show ancestors + current + descendants with worktrees
-        result = []
-        for i, branch in enumerate(stack):
-            if i <= current_idx:
-                # Ancestors and current branch: always keep
-                result.append(branch)
-            else:
-                # Descendants: only keep if checked out in some worktree
-                if branch in all_checked_out_branches:
-                    result.append(branch)
-
-        return result
-
-
 def get_pr_status_emoji(pr: PullRequestInfo) -> str:
     """Determine the emoji to display for a PR based on its status.
 
@@ -144,6 +82,31 @@ def format_pr_info(
         # No URL available - just show colored text without link
         colored_pr_text = click.style(pr_text, fg="cyan")
         return f"{emoji} {colored_pr_text}"
+
+
+def format_branch_without_worktree(
+    branch_name: str,
+    pr_info: str | None,
+) -> str:
+    """Format a branch without a worktree for display.
+
+    Returns a line like: "  branch-name PR #123 ✅"
+
+    Args:
+        branch_name: Name of the branch
+        pr_info: Formatted PR info string (e.g., "✅ #23") or None
+
+    Returns:
+        Formatted string with branch name and PR info
+    """
+    # Format branch name in yellow (same as worktree branches)
+    line = f"  {click.style(branch_name, fg='yellow')}"
+
+    # Add PR info if available
+    if pr_info:
+        line += f" {pr_info}"
+
+    return line
 
 
 def format_worktree_line(

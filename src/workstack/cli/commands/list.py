@@ -6,7 +6,7 @@ from workstack.cli.core import discover_repo_context
 from workstack.cli.output import user_output
 from workstack.core.context import WorkstackContext
 from workstack.core.display_utils import (
-    filter_stack_for_worktree,
+    format_branch_without_worktree,
     format_pr_info,
     format_worktree_line,
     get_visible_length,
@@ -37,81 +37,14 @@ def _format_plan_summary(worktree_path: Path, ctx: WorkstackContext) -> str | No
     return extract_plan_title(plan_path, git_ops=ctx.git_ops)
 
 
-def _display_branch_stack(
-    ctx: WorkstackContext,
-    repo_root: Path,
-    worktree_path: Path,
-    branch: str,
-    all_branches: dict[Path, str | None],
-    is_root_worktree: bool,
-    prs: dict[str, PullRequestInfo] | None = None,  # If None, no PR info displayed
-) -> None:
-    """Display the graphite stack for a worktree with colorization and PR info.
+def _list_worktrees(ctx: WorkstackContext, ci: bool) -> None:
+    """List worktrees with comprehensive branch information.
 
-    Shows branches with colored markers indicating which is currently checked out.
-    Current branch is emphasized with bright green, others are de-emphasized with gray.
-    Also displays PR status and links for branches that have PRs.
-
-    Args:
-        ctx: Workstack context with git operations
-        repo_root: Path to the repository root
-        worktree_path: Path to the current worktree
-        branch: Branch name to display stack for
-        all_branches: Mapping of all worktree paths to their checked-out branches
-        prs: Mapping of branch names to PR information (if None, no PR info displayed)
+    Shows three sections:
+    1. Worktrees (with PR info and plan summaries)
+    2. Graphite branches without worktrees
+    3. Local branches without worktrees
     """
-    stack = ctx.graphite_ops.get_branch_stack(ctx.git_ops, repo_root, branch)
-    if not stack:
-        return
-
-    # Get current branch for filtering
-    current_branch = all_branches.get(worktree_path)
-    if current_branch is None:
-        return
-
-    # Build set of all checked-out branches
-    all_checked_out_branches = {b for b in all_branches.values() if b is not None}
-
-    filtered_stack = filter_stack_for_worktree(
-        stack, current_branch, all_checked_out_branches, is_root_worktree
-    )
-    if not filtered_stack:
-        return
-
-    # Determine which branch to highlight
-    actual_branch = ctx.git_ops.get_current_branch(worktree_path)
-    highlight_branch = actual_branch if actual_branch else branch
-
-    # Display stack with colored markers and PR info
-    for branch_name in reversed(filtered_stack):
-        is_current = branch_name == highlight_branch
-
-        if is_current:
-            # Current branch: bright green marker + bright green bold text
-            marker = click.style("◉", fg="bright_green")
-            branch_text = click.style(branch_name, fg="bright_green", bold=True)
-        else:
-            # Other branches: gray marker + normal text
-            marker = click.style("◯", fg="bright_black")
-            branch_text = branch_name  # Normal white text
-
-        # Add PR info if available
-        if prs:
-            pr = prs.get(branch_name)
-            if pr:
-                graphite_url = ctx.graphite_ops.get_graphite_url(pr.owner, pr.repo, pr.number)
-                pr_info = format_pr_info(pr, graphite_url)
-                line = f"  {marker}  {branch_text} {pr_info}"
-            else:
-                line = f"  {marker}  {branch_text}"
-        else:
-            line = f"  {marker}  {branch_text}"
-
-        user_output(line)
-
-
-def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, ci: bool) -> None:
-    """Internal function to list worktrees."""
     # Use ctx.repo if it's a valid RepoContext, otherwise discover
     if isinstance(ctx.repo, RepoContext):
         repo = ctx.repo
@@ -129,15 +62,6 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, ci: bool) -> None:
     # Determine which worktree the user is currently in
     wt_info = find_current_worktree(worktrees, current_dir)
     current_worktree_path = wt_info.path if wt_info is not None else None
-
-    # Validate graphite is enabled if showing stacks
-    if show_stacks:
-        if not (ctx.global_config and ctx.global_config.use_graphite):
-            user_output(
-                "Error: --stacks requires graphite to be enabled. "
-                "Run 'workstack config set use_graphite true'",
-            )
-            raise SystemExit(1)
 
     # Fetch PR information based on config and flags
     prs: dict[str, PullRequestInfo] | None = None
@@ -162,6 +86,25 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, ci: bool) -> None:
         # If --ci flag set, enrich with CI status using batched GraphQL query
         if ci:
             prs = ctx.github_ops.enrich_prs_with_ci_status_batch(prs, repo.root)
+
+    # Identify branches without worktrees
+    branches_with_worktrees = {wt.branch for wt in worktrees if wt.branch is not None}
+
+    # Get Graphite-tracked branches without worktrees
+    all_graphite_branches = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo.root)
+    graphite_without_worktrees = [
+        branch
+        for branch in all_graphite_branches.keys()
+        if branch not in branches_with_worktrees and not all_graphite_branches[branch].is_trunk
+    ]
+
+    # Get all local branches without worktrees (excluding Graphite-tracked ones)
+    all_local_branches = ctx.git_ops.list_local_branches(repo.root)
+    local_without_worktrees = [
+        branch
+        for branch in all_local_branches
+        if branch not in all_graphite_branches and branch not in branches_with_worktrees
+    ]
 
     # Calculate maximum widths for alignment
     # First, collect all names, branches, and PR info to display
@@ -221,6 +164,10 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, ci: bool) -> None:
         max(get_visible_length(pr_info) for pr_info in all_pr_info) if all_pr_info else 0
     )
 
+    # Section 1: Worktrees
+    user_output(click.style("## Worktrees", bold=True))
+    user_output()
+
     # Show root repo first (display as "root" to distinguish from worktrees)
     is_current_root = repo.root == current_worktree_path
 
@@ -247,18 +194,11 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, ci: bool) -> None:
         )
     )
 
-    if show_stacks and root_branch:
-        _display_branch_stack(ctx, repo.root, repo.root, root_branch, branches, True, prs)
-
     # Show worktrees - iterate over worktrees instead of filesystem
-    for idx, wt in enumerate(non_root_worktrees):
+    for wt in non_root_worktrees:
         name = wt.path.name
         wt_path = wt.path
         wt_branch = wt.branch
-
-        # Add blank line before each worktree (except first) when showing stacks
-        if show_stacks and (root_branch or idx > 0):
-            user_output()
 
         is_current_wt = wt_path == current_worktree_path
 
@@ -285,24 +225,48 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, ci: bool) -> None:
             )
         )
 
-        if show_stacks and wt_branch:
-            _display_branch_stack(ctx, repo.root, wt_path, wt_branch, branches, False, prs)
+    # Section 2: Graphite branches without worktrees
+    if graphite_without_worktrees:
+        user_output()
+        user_output(click.style("## Graphite branches without worktrees", bold=True))
+        user_output()
+        for branch in sorted(graphite_without_worktrees):
+            # Get PR info for this branch
+            branch_pr_info = None
+            if prs:
+                pr = prs.get(branch)
+                if pr:
+                    graphite_url = ctx.graphite_ops.get_graphite_url(pr.owner, pr.repo, pr.number)
+                    branch_pr_info = format_pr_info(pr, graphite_url)
+            user_output(format_branch_without_worktree(branch, branch_pr_info))
+
+    # Section 3: Local branches without worktrees
+    if local_without_worktrees:
+        user_output()
+        user_output(click.style("## Local branches without worktrees", bold=True))
+        user_output()
+        for branch in sorted(local_without_worktrees):
+            user_output(f"  {click.style(branch, fg='yellow')}")
 
 
 @click.command("list")
-@click.option("--stacks", "-s", is_flag=True, help="Show graphite stacks for each worktree")
 @click.option("--ci", is_flag=True, help="Fetch CI check status from GitHub (slower)")
 @click.pass_obj
-def list_cmd(ctx: WorkstackContext, stacks: bool, ci: bool) -> None:
-    """List worktrees with branches, PR status, and plans."""
-    _list_worktrees(ctx, show_stacks=stacks, ci=ci)
+def list_cmd(ctx: WorkstackContext, ci: bool) -> None:
+    """List worktrees with comprehensive branch and PR information.
+
+    Shows three sections:
+    1. Worktrees with their branches, PR status, and plans
+    2. Graphite-tracked branches without worktrees
+    3. Local branches without worktrees
+    """
+    _list_worktrees(ctx, ci=ci)
 
 
 # Register ls as a hidden alias (won't show in help)
 @click.command("ls", hidden=True)
-@click.option("--stacks", "-s", is_flag=True, help="Show graphite stacks for each worktree")
 @click.option("--ci", is_flag=True, help="Fetch CI check status from GitHub (slower)")
 @click.pass_obj
-def ls_cmd(ctx: WorkstackContext, stacks: bool, ci: bool) -> None:
-    """List worktrees with branches, PR status, and plans (alias of 'list')."""
-    _list_worktrees(ctx, show_stacks=stacks, ci=ci)
+def ls_cmd(ctx: WorkstackContext, ci: bool) -> None:
+    """List worktrees with comprehensive branch and PR information (alias of 'list')."""
+    _list_worktrees(ctx, ci=ci)

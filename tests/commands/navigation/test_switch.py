@@ -203,12 +203,14 @@ def test_list_includes_root() -> None:
         result = runner.invoke(cli, ["list"], obj=test_ctx)
         assert result.exit_code == 0
 
-        # Should show root as first entry
+        # Should show worktrees section with root entry
         clean_output = strip_ansi(result.output)
         lines = clean_output.strip().split("\n")
-        assert len(lines) >= 2
-        # Check that first line shows the root worktree
-        assert lines[0].startswith("root")
+        assert len(lines) >= 4  # Header, empty line, root, worktree
+        # First line should be section header
+        assert lines[0] == "## Worktrees"
+        # Third line (after empty line) should show the root worktree
+        assert lines[2].startswith("root")
         # Should also show the created worktree
         assert any("myfeature" in line for line in lines)
 

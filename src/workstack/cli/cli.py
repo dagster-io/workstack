@@ -16,6 +16,7 @@ from workstack.cli.commands.prepare_cwd_recovery import prepare_cwd_recovery_cmd
 from workstack.cli.commands.remove import remove_cmd, rm_cmd
 from workstack.cli.commands.rename import rename_cmd
 from workstack.cli.commands.shell_integration import hidden_shell_cmd
+from workstack.cli.commands.split import split_cmd
 from workstack.cli.commands.status import status_cmd
 from workstack.cli.commands.switch import switch_cmd
 from workstack.cli.commands.sync import sync_cmd
@@ -55,6 +56,7 @@ cli.add_command(remove_cmd)
 cli.add_command(rm_cmd)
 cli.add_command(rename_cmd)
 cli.add_command(config_group)
+cli.add_command(split_cmd)
 cli.add_command(sync_cmd)
 cli.add_command(tree_cmd)
 cli.add_command(graphite_group)

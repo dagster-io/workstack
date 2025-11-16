@@ -110,7 +110,7 @@ def _display_branch_stack(
         user_output(line)
 
 
-def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, offline: bool) -> None:
+def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, ci: bool) -> None:
     """Internal function to list worktrees."""
     # Use ctx.repo if it's a valid RepoContext, otherwise discover
     if isinstance(ctx.repo, RepoContext):
@@ -142,19 +142,26 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, offline: bool) -> 
     # Fetch PR information based on config and flags
     prs: dict[str, PullRequestInfo] | None = None
     if ctx.global_config and ctx.global_config.show_pr_info:
-        # Determine if we need CI check status
-        need_checks = not offline
+        # Always try Graphite first (fast, no pagination issues)
+        prs = ctx.graphite_ops.get_prs_from_graphite(ctx.git_ops, repo.root)
 
-        if need_checks:
-            # Fetch from GitHub with check status (slower)
-            prs = ctx.github_ops.get_prs_for_repo(repo.root, include_checks=True)
-        else:
-            # Try Graphite first (fast - no CI status)
-            prs = ctx.graphite_ops.get_prs_from_graphite(ctx.git_ops, repo.root)
+        # Fail fast if Graphite cache unavailable
+        if not prs:
+            user_output(click.style("❌ Graphite PR cache not found", fg="red"))
+            user_output()
+            user_output("Workstack requires Graphite PR data to list worktrees.")
+            user_output()
+            user_output(click.style("Run: ", fg="white") + click.style("gt sync", fg="yellow"))
+            user_output()
+            user_output(
+                click.style("This will populate the Graphite cache at: ", fg="white")
+                + click.style(".git/.graphite_pr_info", fg="cyan")
+            )
+            raise SystemExit(1)
 
-            # If Graphite data not available, fall back to GitHub without checks
-            if not prs:
-                prs = ctx.github_ops.get_prs_for_repo(repo.root, include_checks=False)
+        # If --ci flag set, enrich with CI status (slower, opt-in)
+        if ci:
+            prs = ctx.github_ops.enrich_prs_with_ci_status(prs, repo.root)
 
     # Calculate maximum widths for alignment
     # First, collect all names, branches, and PR info to display
@@ -284,26 +291,18 @@ def _list_worktrees(ctx: WorkstackContext, show_stacks: bool, offline: bool) -> 
 
 @click.command("list")
 @click.option("--stacks", "-s", is_flag=True, help="Show graphite stacks for each worktree")
-@click.option(
-    "--offline", is_flag=True, help="Skip GitHub API calls for faster output (no CI check status)"
-)
+@click.option("--ci", is_flag=True, help="Fetch CI check status from GitHub (slower)")
 @click.pass_obj
-def list_cmd(ctx: WorkstackContext, stacks: bool, offline: bool) -> None:
-    """List worktrees with branches, PR status (including CI checks), and plans.
-
-    Use --offline to skip GitHub API calls for faster output."""
-    _list_worktrees(ctx, show_stacks=stacks, offline=offline)
+def list_cmd(ctx: WorkstackContext, stacks: bool, ci: bool) -> None:
+    """List worktrees with branches, PR status, and plans."""
+    _list_worktrees(ctx, show_stacks=stacks, ci=ci)
 
 
 # Register ls as a hidden alias (won't show in help)
 @click.command("ls", hidden=True)
 @click.option("--stacks", "-s", is_flag=True, help="Show graphite stacks for each worktree")
-@click.option(
-    "--offline", is_flag=True, help="Skip GitHub API calls for faster output (no CI check status)"
-)
+@click.option("--ci", is_flag=True, help="Fetch CI check status from GitHub (slower)")
 @click.pass_obj
-def ls_cmd(ctx: WorkstackContext, stacks: bool, offline: bool) -> None:
-    """List worktrees with branches, PR status (including CI checks), and plans (alias of 'list').
-
-    Use --offline to skip GitHub API calls for faster output."""
-    _list_worktrees(ctx, show_stacks=stacks, offline=offline)
+def ls_cmd(ctx: WorkstackContext, stacks: bool, ci: bool) -> None:
+    """List worktrees with branches, PR status, and plans (alias of 'list')."""
+    _list_worktrees(ctx, show_stacks=stacks, ci=ci)

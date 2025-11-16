@@ -80,7 +80,10 @@ def test_root_on_trunk_shows_only_trunk() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=FakeGraphiteOps(branches=branches), use_graphite=True
+            git_ops=git_ops,
+            graphite_ops=FakeGraphiteOps(branches=branches, pr_info={}),
+            use_graphite=True,
+            show_pr_info=False,
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
@@ -170,7 +173,10 @@ def test_root_on_non_trunk_shows_ancestors_only() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=FakeGraphiteOps(branches=branches), use_graphite=True
+            git_ops=git_ops,
+            graphite_ops=FakeGraphiteOps(branches=branches, pr_info={}),
+            use_graphite=True,
+            show_pr_info=False,
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)
@@ -270,7 +276,10 @@ def test_non_root_worktree_shows_descendants_with_worktrees() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=FakeGraphiteOps(branches=branches), use_graphite=True
+            git_ops=git_ops,
+            graphite_ops=FakeGraphiteOps(branches=branches, pr_info={}),
+            use_graphite=True,
+            show_pr_info=False,
         )
 
         result = runner.invoke(cli, ["list", "--stacks"], obj=test_ctx)

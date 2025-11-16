@@ -58,7 +58,11 @@ def setup_collector(
         **git_ops_kwargs,
     )
 
+    # PRs now come from Graphite, not GitHub
+    # If prs are provided but no graphite_kwargs with pr_info, use prs for graphite
     graphite_ops_kwargs = graphite_kwargs or {}
+    if prs is not None and "pr_info" not in graphite_ops_kwargs:
+        graphite_ops_kwargs["pr_info"] = prs
     graphite_ops = FakeGraphiteOps(**graphite_ops_kwargs)
 
     global_config = GlobalConfig(
@@ -69,7 +73,7 @@ def setup_collector(
     )
     ctx = create_test_context(
         git_ops=git_ops,
-        github_ops=FakeGitHubOps(prs=prs or {}),
+        github_ops=FakeGitHubOps(),  # No longer provide PRs via GitHub
         graphite_ops=graphite_ops,
         global_config=global_config,
     )
@@ -232,20 +236,20 @@ def test_github_pr_collector_prefers_graphite_data(tmp_path: Path) -> None:
     assert result.url == "https://app.graphite.com/github/pr/owner/repo/1001"
 
 
-def test_github_pr_collector_falls_back_to_github(tmp_path: Path) -> None:
-    """If Graphite has no data, fall back to GitHub PR details."""
+def test_github_pr_collector_returns_none_without_graphite(tmp_path: Path) -> None:
+    """If Graphite has no data, collector returns None (fail-fast, no fallback)."""
     github_pr = make_pr(number=2001, checks_passing=True)
 
     collector, worktree_path, repo_root, ctx = setup_collector(
         tmp_path,
         branch="github-only-branch",
         prs={"github-only-branch": github_pr},
-        graphite_kwargs={"pr_info": {}},
+        graphite_kwargs={"pr_info": {}},  # Empty Graphite cache
     )
 
     result = collector.collect(ctx, worktree_path, repo_root)
-    assert result is not None
-    assert result.number == 2001
+    # New behavior: fail fast, no fallback to GitHub
+    assert result is None
 
 
 @pytest.mark.parametrize(

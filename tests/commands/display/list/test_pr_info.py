@@ -7,7 +7,6 @@ Business logic for PR states is tested in tests/unit/status/test_github_pr_colle
 import pytest
 from click.testing import CliRunner
 
-from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.test_utils.builders import PullRequestInfoBuilder
@@ -68,13 +67,10 @@ def test_list_with_stacks_pr_visibility(show_pr_info: bool, expected_visible: bo
             current_branches={env.cwd: "main", feature_worktree: branch_name},
         )
 
-        # Build fake GitHub ops with PR data
-        github_ops = FakeGitHubOps(prs={branch_name: pr})
-
+        # PR data now comes from Graphite, not GitHub
         test_ctx = env.build_context(
             git_ops=git_ops,
-            github_ops=github_ops,
-            graphite_ops=FakeGraphiteOps(branches=branches),
+            graphite_ops=FakeGraphiteOps(branches=branches, pr_info={branch_name: pr}),
             use_graphite=True,
             show_pr_info=show_pr_info,
         )
@@ -145,13 +141,10 @@ def test_list_pr_emoji_mapping(
             current_branches={env.cwd: "main", feature_worktree: branch_name},
         )
 
-        # Build fake GitHub ops with PR data
-        github_ops = FakeGitHubOps(prs={branch_name: pr})
-
+        # PR data now comes from Graphite, not GitHub
         test_ctx = env.build_context(
             git_ops=git_ops,
-            github_ops=github_ops,
-            graphite_ops=FakeGraphiteOps(branches=branches),
+            graphite_ops=FakeGraphiteOps(branches=branches, pr_info={branch_name: pr}),
             use_graphite=True,
         )
 
@@ -211,13 +204,10 @@ def test_list_with_stacks_uses_graphite_url() -> None:
             current_branches={env.cwd: "main", feature_worktree: branch_name},
         )
 
-        # Build fake GitHub ops with PR data
-        github_ops = FakeGitHubOps(prs={branch_name: pr})
-
+        # PR data now comes from Graphite, not GitHub
         test_ctx = env.build_context(
             git_ops=git_ops,
-            github_ops=github_ops,
-            graphite_ops=FakeGraphiteOps(branches=branches),
+            graphite_ops=FakeGraphiteOps(branches=branches, pr_info={branch_name: pr}),
             use_graphite=True,
         )
 

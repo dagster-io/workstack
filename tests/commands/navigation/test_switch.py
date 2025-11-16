@@ -197,7 +197,7 @@ def test_list_includes_root() -> None:
         )
 
         # Create test context using env helper
-        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
+        test_ctx = env.build_context(git_ops=git_ops, repo=repo, show_pr_info=False)
 
         # List worktrees
         result = runner.invoke(cli, ["list"], obj=test_ctx)

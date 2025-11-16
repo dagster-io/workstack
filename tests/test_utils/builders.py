@@ -379,7 +379,8 @@ class WorktreeScenario:
 
         self.github_ops = FakeGitHubOps(prs=self._prs)
 
-        self.graphite_ops = FakeGraphiteOps(stacks=self._graphite_stacks)
+        # PRs now come from Graphite, not GitHub
+        self.graphite_ops = FakeGraphiteOps(stacks=self._graphite_stacks, pr_info=self._prs)
 
         global_config = GlobalConfig(
             workstacks_root=self.workstacks_root,

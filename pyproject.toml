@@ -22,6 +22,7 @@ dependencies = [
 
 [project.scripts]
 workstack = "workstack.cli.cli:main"
+erk = "workstack.cli.cli:main"
 
 [dependency-groups]
 dev = [

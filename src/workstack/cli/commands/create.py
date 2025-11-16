@@ -1,5 +1,6 @@
 import json
 import shlex
+import shutil
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 
@@ -131,6 +132,27 @@ def quote_env_value(value: str) -> str:
     return f'"{escaped}"'
 
 
+def copy_plan_folder(source_wt: Path, target_wt: Path) -> None:
+    """Copy .plan/ directory from source worktree to target worktree.
+
+    Preserves both plan.md and progress.md files.
+
+    Raises:
+        ValueError: If source .plan/ directory does not exist (programming error)
+    """
+    source_plan_dir = source_wt / ".plan"
+    target_plan_dir = target_wt / ".plan"
+
+    if not source_plan_dir.exists():
+        raise ValueError(
+            f"Source .plan/ directory does not exist at {source_plan_dir}. "
+            "This should have been validated before calling copy_plan_folder()."
+        )
+
+    # Use shutil.copytree to preserve structure and metadata
+    shutil.copytree(source_plan_dir, target_plan_dir)
+
+
 def _create_json_response(
     *,
     worktree_name: str,
@@ -230,6 +252,16 @@ def _create_json_response(
     is_flag=True,
     help="Stay in current directory instead of switching to new worktree.",
 )
+@click.option(
+    "--with-dot-plan",
+    "with_dot_plan_source",
+    default=None,
+    required=False,
+    help=(
+        "Copy .plan/ folder from source workstack. "
+        "Optionally specify source workstack name. If not specified, uses current workstack."
+    ),
+)
 @click.pass_obj
 def create(
     ctx: WorkstackContext,
@@ -244,6 +276,7 @@ def create(
     script: bool,
     output_json: bool,
     stay: bool,
+    with_dot_plan_source: str | None,
 ) -> None:
     """Create a worktree and write a .env file.
 
@@ -255,9 +288,18 @@ def create(
     """
 
     # Validate mutually exclusive options
-    flags_set = sum([from_current_branch, from_branch is not None, plan_file is not None])
+    flags_set = sum(
+        [
+            from_current_branch,
+            from_branch is not None,
+            plan_file is not None,
+            with_dot_plan_source is not None,
+        ]
+    )
     if flags_set > 1:
-        user_output("Cannot use multiple of: --from-current-branch, --from-branch, --plan")
+        user_output(
+            "Cannot use multiple of: --from-current-branch, --from-branch, --plan, --with-dot-plan"
+        )
         raise SystemExit(1)
 
     # Validate --json and --script are mutually exclusive
@@ -346,6 +388,112 @@ def create(
     workstacks_dir = ensure_workstacks_dir(repo)
     cfg = ctx.local_config
     trunk_branch = ctx.trunk_branch
+
+    # Handle --with-dot-plan flag
+    source_wt_path: Path | None = None
+    source_branch: str | None = None
+    parent_branch: str | None = None
+    source_name: str | None = None
+
+    if with_dot_plan_source is not None:
+        # 1. Verify Graphite is enabled
+        if not (ctx.global_config and ctx.global_config.use_graphite):
+            user_output(
+                click.style("Error: ", fg="red") + "--with-dot-plan requires Graphite to be enabled"
+            )
+            user_output("Enable Graphite in your workstack config: ~/.workstack/config.toml")
+            user_output("  [graphite]")
+            user_output("  enabled = true")
+            raise SystemExit(1)
+
+        # 2. Resolve source workstack (explicit or implicit mode)
+        if with_dot_plan_source:  # Non-empty string (explicit mode)
+            source_name = with_dot_plan_source
+        else:  # Empty string (implicit mode - flag used with no argument)
+            # Detect current workstack from ctx.cwd
+            # Must be inside workstacks/ directory
+            if ctx.cwd.is_relative_to(workstacks_dir):
+                # Find the immediate child of workstacks_dir that we're in
+                try:
+                    relative = ctx.cwd.relative_to(workstacks_dir)
+                    source_name = relative.parts[0] if relative.parts else None
+                except ValueError:
+                    source_name = None
+            else:
+                source_name = None
+
+            if source_name is None:
+                user_output(click.style("Error: ", fg="red") + "Cannot determine source workstack")
+                user_output(
+                    "When using --with-dot-plan without an argument, "
+                    "you must be inside a workstack."
+                )
+                user_output("Either:")
+                user_output("  • cd into a workstack directory first")
+                user_output("  • Or specify the source: --with-dot-plan <workstack-name>")
+                raise SystemExit(1)
+
+        # 3. Validate source workstack exists
+        source_wt_path = workstacks_dir / source_name
+        if not ctx.git_ops.path_exists(source_wt_path):
+            user_output(
+                click.style("Error: ", fg="red") + f"Source workstack '{source_name}' not found"
+            )
+            user_output(f"Available workstacks in {workstacks_dir}:")
+            # List available workstacks
+            if ctx.git_ops.path_exists(workstacks_dir):
+                worktrees = [d.name for d in workstacks_dir.iterdir() if d.is_dir()]
+                if worktrees:
+                    for wt in sorted(worktrees):
+                        user_output(f"  • {wt}")
+                else:
+                    user_output("  (none)")
+            raise SystemExit(1)
+
+        # 4. Verify source has .plan/ folder
+        source_plan_path = source_wt_path / ".plan"
+        if not ctx.git_ops.path_exists(source_plan_path):
+            user_output(
+                click.style("Error: ", fg="red")
+                + f"Source workstack '{source_name}' has no .plan/ folder"
+            )
+            user_output("Create a workstack with a plan using:")
+            user_output("  workstack create --plan <plan-file>")
+            raise SystemExit(1)
+
+        # 5. Get source branch name
+        source_branch = ctx.git_ops.get_current_branch(source_wt_path)
+        if source_branch is None:
+            user_output(
+                click.style("Error: ", fg="red")
+                + f"Cannot determine branch for source workstack '{source_name}'"
+            )
+            raise SystemExit(1)
+
+        # 6. Get parent branch via Graphite
+        parent_branch = ctx.graphite_ops.get_parent_branch(ctx.git_ops, repo.root, source_branch)
+
+        if parent_branch is None:
+            user_output(
+                click.style("Error: ", fg="red")
+                + f"Source branch '{source_branch}' has no parent in Graphite"
+            )
+            user_output("This could mean:")
+            user_output(
+                "  • Branch is not tracked by Graphite - run 'gt branch create' or 'gt stack fix'"
+            )
+            user_output("  • Branch is trunk (main/master) - cannot copy plan from trunk branch")
+            raise SystemExit(1)
+
+        # 7. Check for staged changes
+        if ctx.git_ops.has_staged_changes(repo.root):
+            user_output(click.style("Error: ", fg="red") + "Staged changes detected")
+            user_output("Graphite requires a clean staging area.")
+            user_output("Commit or unstage your changes:")
+            user_output("  git commit -m 'Your message'")
+            user_output("  # or")
+            user_output("  git reset")
+            raise SystemExit(1)
 
     # Apply date prefix and uniqueness for plan-derived names
     if is_plan_derived:
@@ -440,6 +588,28 @@ def create(
             use_existing_branch=True,
             use_graphite=False,
         )
+    elif with_dot_plan_source is not None:
+        # Create worktree based on parent branch, using Graphite
+        if branch is None:
+            branch = default_branch_for_worktree(name)
+
+        # Display explanatory output
+        user_output("")
+        user_output(f"Copying plan from {click.style(source_name, fg='cyan', bold=True)}")
+        user_output(f"  Source branch: {click.style(source_branch, fg='yellow')}")
+        user_output(f"  Parent branch: {click.style(parent_branch, fg='yellow')}")
+        user_output("  New worktree will be sibling to source")
+        user_output("")
+
+        add_worktree(
+            ctx,
+            repo.root,
+            wt_path,
+            branch=branch,
+            ref=parent_branch,
+            use_existing_branch=False,
+            use_graphite=True,
+        )
     else:
         # Create worktree via git. If no branch provided, derive a sensible default.
         if branch is None:
@@ -460,6 +630,12 @@ def create(
     # Write .env based on config
     env_content = make_env_content(cfg, worktree_path=wt_path, repo_root=repo.root, name=name)
     (wt_path / ".env").write_text(env_content, encoding="utf-8")
+
+    # Copy plan folder from source if --with-dot-plan was used
+    if with_dot_plan_source is not None and source_wt_path is not None:
+        copy_plan_folder(source_wt_path, wt_path)
+        if not script and not output_json:
+            user_output(click.style("✓", fg="green") + f" Copied .plan/ folder from {source_name}")
 
     # Create plan folder if plan file provided
     # Track plan folder destination: set to .plan/ path only if --plan was provided
@@ -513,8 +689,24 @@ def create(
         )
         user_output(json_response)
     else:
-        user_output(f"Created workstack at {wt_path} checked out at branch '{branch}'")
-        user_output(f"\nworkstack switch {name}")
+        if with_dot_plan_source is not None:
+            user_output("")
+            user_output(
+                click.style("✓", fg="green")
+                + f" Created worktree based on {click.style(parent_branch, fg='yellow')}"
+            )
+            branch_styled = click.style(branch, fg="yellow")
+            source_styled = click.style(source_branch, fg="yellow")
+            user_output(
+                click.style("✓", fg="green")
+                + f" New branch {branch_styled} is sibling to {source_styled}"
+            )
+            user_output("")
+            user_output(f"Worktree path: {click.style(str(wt_path), fg='green')}")
+            user_output(f"\nworkstack switch {name}")
+        else:
+            user_output(f"Created workstack at {wt_path} checked out at branch '{branch}'")
+            user_output(f"\nworkstack switch {name}")
 
 
 def run_commands_in_worktree(

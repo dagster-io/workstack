@@ -122,6 +122,16 @@ class FakeGitHubOps(GitHubOps):
         """
         return prs
 
+    def enrich_prs_with_mergeability_batch(
+        self, prs: dict[str, PullRequestInfo], repo_root: Path
+    ) -> dict[str, PullRequestInfo]:
+        """Enrich PRs with mergeability using batched query (fake just returns the PRs as-is).
+
+        In the fake implementation, we assume PRs already have mergeability if configured.
+        This method is a no-op that returns the input unchanged.
+        """
+        return prs
+
     def merge_pr(
         self,
         repo_root: Path,

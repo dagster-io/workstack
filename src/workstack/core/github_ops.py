@@ -289,6 +289,24 @@ class GitHubOps(ABC):
         ...
 
     @abstractmethod
+    def enrich_prs_with_mergeability_batch(
+        self, prs: dict[str, PullRequestInfo], repo_root: Path
+    ) -> dict[str, PullRequestInfo]:
+        """Enrich PR information with mergeability status using batched GraphQL query.
+
+        Fetches mergeability status for all PRs in a single GraphQL API call,
+        dramatically improving performance over serial fetching.
+
+        Args:
+            prs: Mapping of branch name to PullRequestInfo (without mergeability status)
+            repo_root: Repository root directory
+
+        Returns:
+            Mapping of branch name to PullRequestInfo (with has_conflicts enriched)
+        """
+        ...
+
+    @abstractmethod
     def merge_pr(
         self,
         repo_root: Path,
@@ -515,6 +533,42 @@ query {{
 }}"""
         return query
 
+    def _build_batch_mergeability_query(self, pr_numbers: list[int], owner: str, repo: str) -> str:
+        """Build GraphQL query with aliases for multiple PR mergeability checks.
+
+        Args:
+            pr_numbers: List of PR numbers to query
+            owner: Repository owner
+            repo: Repository name
+
+        Returns:
+            GraphQL query string
+        """
+        # Define fragment for mergeability fields
+        fragment_definition = """fragment PRMergeabilityFields on PullRequest {
+  number
+  mergeable
+  mergeStateStatus
+}"""
+
+        # Build aliased PR queries using the fragment
+        pr_queries = []
+        for pr_num in pr_numbers:
+            pr_query = f"""    pr_{pr_num}: pullRequest(number: {pr_num}) {{
+      ...PRMergeabilityFields
+    }}"""
+            pr_queries.append(pr_query)
+
+        # Combine fragment and query
+        query = f"""{fragment_definition}
+
+query {{
+  repository(owner: "{owner}", name: "{repo}") {{
+{chr(10).join(pr_queries)}
+  }}
+}}"""
+        return query
+
     def _execute_batch_pr_query(self, query: str, repo_root: Path) -> dict[str, Any]:
         """Execute batched GraphQL query via gh CLI.
 
@@ -577,6 +631,32 @@ query {{
         # Call existing logic to determine status
         return _determine_checks_status(nodes)
 
+    def _parse_pr_mergeability(self, pr_data: dict[str, Any] | None) -> bool | None:
+        """Parse mergeability status from GraphQL PR data.
+
+        Args:
+            pr_data: PR data from GraphQL response (may be None for missing PRs)
+
+        Returns:
+            True if PR has conflicts, False if mergeable, None if unknown/unavailable
+        """
+        if pr_data is None:
+            return None
+
+        if "mergeable" not in pr_data:
+            return None
+
+        mergeable = pr_data["mergeable"]
+
+        # Convert GitHub's mergeable status to has_conflicts boolean
+        if mergeable == "CONFLICTING":
+            return True
+        if mergeable == "MERGEABLE":
+            return False
+
+        # UNKNOWN or other states
+        return None
+
     def enrich_prs_with_ci_status_batch(
         self, prs: dict[str, PullRequestInfo], repo_root: Path
     ) -> dict[str, PullRequestInfo]:
@@ -614,6 +694,47 @@ query {{
 
             # Create enriched PR with updated CI status
             enriched_pr = replace(pr, checks_passing=ci_status)
+            enriched_prs[branch] = enriched_pr
+
+        return enriched_prs
+
+    def enrich_prs_with_mergeability_batch(
+        self, prs: dict[str, PullRequestInfo], repo_root: Path
+    ) -> dict[str, PullRequestInfo]:
+        """Enrich PR information with mergeability status using batched GraphQL query.
+
+        Fetches mergeability status for all PRs in a single GraphQL API call,
+        dramatically improving performance over serial fetching.
+        """
+        # Early exit for empty input
+        if not prs:
+            return {}
+
+        # Extract PR numbers and owner/repo from first PR
+        pr_numbers = [pr.number for pr in prs.values()]
+        first_pr = next(iter(prs.values()))
+        owner = first_pr.owner
+        repo = first_pr.repo
+
+        # Build and execute batched GraphQL query
+        query = self._build_batch_mergeability_query(pr_numbers, owner, repo)
+        response = self._execute_batch_pr_query(query, repo_root)
+
+        # Extract repository data from response
+        repo_data = response["data"]["repository"]
+
+        # Enrich each PR with mergeability status
+        enriched_prs = {}
+        for branch, pr in prs.items():
+            # Get PR data from GraphQL response using alias
+            alias = f"pr_{pr.number}"
+            pr_data = repo_data.get(alias)
+
+            # Parse mergeability status
+            has_conflicts = self._parse_pr_mergeability(pr_data)
+
+            # Create enriched PR with updated conflict status
+            enriched_pr = replace(pr, has_conflicts=has_conflicts)
             enriched_prs[branch] = enriched_pr
 
         return enriched_prs
@@ -696,6 +817,12 @@ class NoopGitHubOps(GitHubOps):
         """Delegate read operation to wrapped implementation."""
         return self._wrapped.enrich_prs_with_ci_status_batch(prs, repo_root)
 
+    def enrich_prs_with_mergeability_batch(
+        self, prs: dict[str, PullRequestInfo], repo_root: Path
+    ) -> dict[str, PullRequestInfo]:
+        """Delegate read operation to wrapped implementation."""
+        return self._wrapped.enrich_prs_with_mergeability_batch(prs, repo_root)
+
     def merge_pr(
         self,
         repo_root: Path,
@@ -756,6 +883,12 @@ class PrintingGitHubOps(PrintingOpsBase, GitHubOps):
     ) -> dict[str, PullRequestInfo]:
         """Enrich PRs with CI status (read-only, no printing)."""
         return self._wrapped.enrich_prs_with_ci_status_batch(prs, repo_root)
+
+    def enrich_prs_with_mergeability_batch(
+        self, prs: dict[str, PullRequestInfo], repo_root: Path
+    ) -> dict[str, PullRequestInfo]:
+        """Enrich PRs with mergeability (read-only, no printing)."""
+        return self._wrapped.enrich_prs_with_mergeability_batch(prs, repo_root)
 
     # Operations that need printing
 

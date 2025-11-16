@@ -86,27 +86,8 @@ def _list_worktrees(ctx: WorkstackContext, ci: bool) -> None:
         if ci:
             prs = ctx.github_ops.enrich_prs_with_ci_status_batch(prs, repo.root)
 
-        # Fetch mergeability for each PR to detect conflicts
-        # This adds conflict information to the PR display
-        # Only fetch if not already set (e.g., from test data)
-        for branch, pr in prs.items():
-            if pr.has_conflicts is None:
-                mergeability = ctx.github_ops.get_pr_mergeability(repo.root, pr.number)
-                if mergeability:
-                    # Update PR with conflict status
-                    has_conflicts = mergeability.mergeable == "CONFLICTING"
-                    prs[branch] = PullRequestInfo(
-                        number=pr.number,
-                        state=pr.state,
-                        url=pr.url,
-                        is_draft=pr.is_draft,
-                        checks_passing=pr.checks_passing,
-                        owner=pr.owner,
-                        repo=pr.repo,
-                        has_conflicts=(
-                            has_conflicts if mergeability.mergeable != "UNKNOWN" else None
-                        ),
-                    )
+        # Fetch mergeability for all PRs to detect conflicts (batched)
+        prs = ctx.github_ops.enrich_prs_with_mergeability_batch(prs, repo.root)
 
     # Identify branches without worktrees
     branches_with_worktrees = {wt.branch for wt in worktrees if wt.branch is not None}

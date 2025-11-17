@@ -112,35 +112,34 @@ def land_stack(
     # Discover repository context
     repo = discover_repo_context(ctx, ctx.cwd)
     logger.debug("Repository discovered: root=%s", repo.root if repo else None)
-    from erk.core.git.dry_run import DryRunGit
-    from erk.core.git.printing import PrintingGit
-    from erk.core.github.dry_run import DryRunGitHub
-    from erk.core.github.printing import PrintingGitHub
-    from erk.core.graphite.dry_run import DryRunGraphite
-    from erk.core.graphite.printing import PrintingGraphite
+
+    # Wrap ops with printing versions (and dry-run if requested)
+    from erk.core.github_ops import NoopGitHubOps, PrintingGitHubOps
+    from erk.core.gitops import NoopGitOps, PrintingGitOps
+    from erk.core.graphite_ops import NoopGraphiteOps, PrintingGraphiteOps
 
     # First: Choose inner implementation based on dry-run mode
     if dry_run:
         # Wrap with Noop (makes operations no-op)
-        inner_git_ops = DryRunGit(ctx.git)
-        inner_github_ops = DryRunGitHub(ctx.github)
-        inner_graphite_ops = DryRunGraphite(ctx.graphite)
+        inner_git_ops = NoopGitOps(ctx.git_ops)
+        inner_github_ops = NoopGitHubOps(ctx.github_ops)
+        inner_graphite_ops = NoopGraphiteOps(ctx.graphite_ops)
     else:
         # Use real implementations
-        inner_git_ops = ctx.git
-        inner_github_ops = ctx.github
-        inner_graphite_ops = ctx.graphite
+        inner_git_ops = ctx.git_ops
+        inner_github_ops = ctx.github_ops
+        inner_graphite_ops = ctx.graphite_ops
 
     # Then: Always wrap with Printing layer (adds output for all operations)
     ctx = dataclasses.replace(
         ctx,
-        git=PrintingGit(inner_git_ops, script_mode=script, dry_run=dry_run),
-        github=PrintingGitHub(inner_github_ops, script_mode=script, dry_run=dry_run),
-        graphite=PrintingGraphite(inner_graphite_ops, script_mode=script, dry_run=dry_run),
+        git_ops=PrintingGitOps(inner_git_ops, script_mode=script, dry_run=dry_run),
+        github_ops=PrintingGitHubOps(inner_github_ops, script_mode=script, dry_run=dry_run),
+        graphite_ops=PrintingGraphiteOps(inner_graphite_ops, script_mode=script, dry_run=dry_run),
     )
 
     # Get current branch
-    current_branch = ctx.git.get_current_branch(ctx.cwd)
+    current_branch = ctx.git_ops.get_current_branch(ctx.cwd)
     logger.debug("Current branch detected: %s", current_branch)
 
     # Get branches to land

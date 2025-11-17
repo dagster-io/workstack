@@ -129,7 +129,7 @@ Use this checklist when making structural changes to kits (rename/move/delete/ad
 
 ### Common Mistake: Renaming Without Manifest Update
 
-**Scenario**: You split `create-planned-stack.md` into `persist-plan.md` and `create-planned-stack.md` (rewritten)
+**Scenario**: You split `create-planned-wt.md` into `persist-plan.md` and `create-planned-wt.md` (rewritten)
 
 **What happens without proper steps:**
 

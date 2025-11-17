@@ -3,9 +3,7 @@
 **Purpose**: Fix merge conflicts during git rebase with intelligent conflict analysis
 
 **Artifacts**:
-
-- command: .claude/commands/fix-merge-conflicts/fix-merge-conflicts.md
+- command: commands/fix-merge-conflicts/fix-merge-conflicts.md
 
 **Usage**:
-
 - Run `/fix-merge-conflicts` command

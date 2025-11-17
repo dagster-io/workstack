@@ -125,10 +125,18 @@ def _validate_landing_preconditions(
     # Check no branches in stack are checked out in other worktrees
     worktree_conflicts: list[tuple[str, Path]] = []
 
+    # Get current worktree path to exclude from conflict detection
+    current_worktree_path: Path | None = None
+    if current_branch:
+        current_worktree_path = ctx.git_ops.find_worktree_for_branch(repo_root, current_branch)
+
+    logger.debug("  - Current worktree: %s", current_worktree_path)
     logger.debug("  - Checking worktree conflicts for %d branches", len(branches_to_land))
+
     for branch in branches_to_land:
         worktree_path = ctx.git_ops.is_branch_checked_out(repo_root, branch)
-        if worktree_path:
+        # Only flag as conflict if checked out in a DIFFERENT worktree
+        if worktree_path and worktree_path != current_worktree_path:
             worktree_conflicts.append((branch, worktree_path))
 
     logger.debug("  - Worktree conflicts: %s", len(worktree_conflicts) == 0)

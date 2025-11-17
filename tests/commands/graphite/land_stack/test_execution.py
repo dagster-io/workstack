@@ -282,18 +282,17 @@ def test_land_stack_no_submit_when_landing_top_branch() -> None:
 
 
 def test_land_stack_switches_to_root_when_run_from_linked_worktree() -> None:
-    """Test that land-stack fails when run from a linked worktree.
+    """Test that land-stack succeeds when run from current worktree on branch being landed.
 
-    Scenario: User is in a linked worktree where a branch being landed is checked out.
-    The validation should detect this as a worktree conflict.
+    Scenario: User is in a linked worktree where the current branch is being landed.
+    The validation should EXCLUDE the current branch in the current worktree from conflicts.
 
-    After fix: Validation correctly flags ANY branch checked out in ANY worktree
-    as a conflict, including the current worktree. User must consolidate first or
-    run from root worktree.
+    After fix: Validation correctly excludes the current branch in the current worktree,
+    only flagging branches checked out in OTHER worktrees as conflicts.
 
-    Note: This replaces the previous behavior where land-stack would try to handle
-    execution from linked worktrees. Now we require explicit consolidation for
-    simpler, more predictable behavior.
+    Note: This replaces the previous behavior where validation would incorrectly flag
+    the current branch as a worktree conflict even though it's naturally checked out
+    in the current worktree.
     """
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -351,11 +350,12 @@ def test_land_stack_switches_to_root_when_run_from_linked_worktree() -> None:
         # Run land-stack with --dry-run to avoid subprocess failures
         result = runner.invoke(cli, ["land-stack", "--dry-run"], obj=test_ctx)
 
-        # Should fail with worktree conflict error
-        assert result.exit_code == 1
-        assert "Cannot land stack - branches are checked out in multiple worktrees" in result.output
-        assert "feat-1" in result.output
-        assert "erk consolidate" in result.output
+        # Should succeed - current branch in current worktree is not a conflict
+        assert result.exit_code == 0
+        assert (
+            "Cannot land stack - branches are checked out in multiple worktrees"
+            not in result.output
+        )
 
 
 def test_land_stack_merge_command_excludes_auto_flag() -> None:

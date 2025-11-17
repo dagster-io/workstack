@@ -452,3 +452,134 @@ def test_land_stack_fails_when_pr_closed() -> None:
 
         assert result.exit_code == 1
         assert "closed" in result.output
+
+
+def test_land_stack_excludes_current_branch_from_worktree_conflicts() -> None:
+    """Test that current branch in current worktree is not flagged as conflict."""
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        # Current worktree has feat-1 checked out (which is in the stack)
+        # This should NOT be considered a conflict
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
+                "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
+            },
+            current_branch="feat-1",
+        )
+
+        global_config_ops = GlobalConfig(
+            erk_root=env.erk_root,
+            use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+        )
+
+        github_ops = FakeGitHubOps(
+            pr_statuses={
+                "feat-1": ("OPEN", 123, "Add feature 1"),
+            },
+            pr_bases={
+                123: "main",
+            },
+        )
+
+        test_ctx = ErkContext.for_test(
+            git_ops=git_ops,
+            global_config=global_config_ops,
+            graphite_ops=graphite_ops,
+            github_ops=github_ops,
+            shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
+            cwd=env.cwd,
+            dry_run=True,
+        )
+
+        result = runner.invoke(cli, ["land-stack", "--dry-run"], obj=test_ctx)
+
+        # Should NOT fail with worktree conflict error
+        assert "branches are checked out in multiple worktrees" not in result.output
+
+
+def test_land_stack_detects_worktree_conflicts_in_other_worktrees() -> None:
+    """Test that branches in OTHER worktrees are correctly flagged as conflicts."""
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        # Set up two worktrees:
+        # - Current worktree (env.cwd): feat-1 (current branch, OK)
+        # - Other worktree: feat-2 (conflict!)
+        other_worktree = Path("/other/worktree")
+
+        git_ops = FakeGitOps(
+            git_common_dirs={
+                env.cwd: env.git_dir,
+                other_worktree: env.git_dir,
+            },
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="feat-1", is_root=True),
+                    WorktreeInfo(path=other_worktree, branch="feat-2", is_root=False),
+                ],
+                other_worktree: [
+                    WorktreeInfo(path=env.cwd, branch="feat-1", is_root=True),
+                    WorktreeInfo(path=other_worktree, branch="feat-2", is_root=False),
+                ],
+            },
+            current_branches={
+                env.cwd: "feat-1",
+                other_worktree: "feat-2",
+            },
+            existing_paths={env.cwd, env.git_dir, other_worktree},
+        )
+
+        global_config_ops = GlobalConfig(
+            erk_root=env.erk_root,
+            use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+        )
+
+        graphite_ops = FakeGraphiteOps(
+            branches={
+                "main": BranchMetadata.trunk(
+                    "main", children=["feat-1", "feat-2"], commit_sha="abc123"
+                ),
+                "feat-1": BranchMetadata.branch(
+                    "feat-1", "main", children=["feat-2"], commit_sha="def456"
+                ),
+                "feat-2": BranchMetadata.branch("feat-2", "feat-1", commit_sha="ghi789"),
+            },
+            stacks={
+                "feat-1": ["main", "feat-1", "feat-2"],
+            },
+        )
+
+        test_ctx = ErkContext.for_test(
+            git_ops=git_ops,
+            global_config=global_config_ops,
+            graphite_ops=graphite_ops,
+            github_ops=FakeGitHubOps(),
+            shell_ops=FakeShellOps(),
+            script_writer=env.script_writer,
+            cwd=env.cwd,
+            dry_run=False,
+        )
+
+        result = runner.invoke(cli, ["land-stack"], obj=test_ctx)
+
+        # Should fail with worktree conflict error
+        assert result.exit_code == 1
+        assert "branches are checked out in multiple worktrees" in result.output
+        # Should mention feat-2 (the conflict), but NOT feat-1 (current branch)
+        assert "feat-2" in result.output
+        assert str(other_worktree) in result.output
+        # Make sure feat-1 is NOT listed as a conflict
+        # Check that feat-1 doesn't appear in the conflict listing
+        conflict_section_started = False
+        for line in result.output.split("\n"):
+            if "checked out in other worktrees" in line:
+                conflict_section_started = True
+            if conflict_section_started and "feat-1" in line and "•" in line:
+                # feat-1 should not be listed as a conflict
+                msg = "feat-1 should not be listed as worktree conflict"
+                raise AssertionError(msg)

@@ -21,13 +21,12 @@ from tests.fakes.shell_ops import FakeShellOps
 
 
 def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> None:
-    """Test land-stack fails when run from linked worktree on branch being landed.
+    """Test land-stack succeeds when run from current worktree on branch being landed.
 
-    After validation changes, land-stack requires all branches in the stack to NOT be
-    checked out in worktrees when landing. This test verifies that running land-stack
-    from a worktree where a branch being landed is checked out correctly fails.
+    After validation changes, land-stack EXCLUDES the current branch in the current
+    worktree from conflict detection, only flagging branches in OTHER worktrees.
 
-    Expected behavior: Command should fail with worktree conflict validation error.
+    Expected behavior: Command should succeed without worktree conflict errors.
 
     This test uses:
     - Real git repo and worktrees (to test actual worktree detection)
@@ -164,11 +163,12 @@ def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> No
         # Use --force to skip confirmation, --dry-run to skip subprocess calls
         result = runner.invoke(cli, ["land-stack", "--force", "--dry-run"], obj=test_ctx)
 
-        # Should fail with worktree conflict error
-        assert result.exit_code == 1, f"Expected failure but got: {result.output}"
-        assert "Cannot land stack - branches are checked out in multiple worktrees" in result.output
-        assert "feat-1" in result.output
-        assert "erk consolidate" in result.output
+        # Should succeed - current branch in current worktree is not a conflict
+        assert result.exit_code == 0, f"Expected success but got: {result.output}"
+        assert (
+            "Cannot land stack - branches are checked out in multiple worktrees"
+            not in result.output
+        )
 
     finally:
         # Restore original directory
@@ -176,13 +176,12 @@ def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> No
 
 
 def test_land_stack_with_trunk_in_worktree(tmp_path: Path) -> None:
-    """Test land-stack fails when run from repo root with branch checked out.
+    """Test land-stack succeeds when run from current worktree on branch being landed.
 
-    After validation changes, land-stack requires all branches in the stack to NOT be
-    checked out in worktrees when landing. This test verifies that running land-stack
-    from repo root where a feature branch is checked out correctly fails.
+    After validation changes, land-stack EXCLUDES the current branch in the current
+    worktree from conflict detection, only flagging branches in OTHER worktrees.
 
-    Expected behavior: Command should fail with worktree conflict validation error.
+    Expected behavior: Command should succeed without worktree conflict errors.
 
     This test uses:
     - Real git repo and worktrees (to test actual worktree detection)
@@ -311,11 +310,12 @@ def test_land_stack_with_trunk_in_worktree(tmp_path: Path) -> None:
         # Land feat-1 stack (this will trigger validation)
         result = runner.invoke(cli, ["land-stack", "--force", "--dry-run"], obj=test_ctx)
 
-        # Should fail with worktree conflict error
-        assert result.exit_code == 1, f"Expected failure but got: {result.output}"
-        assert "Cannot land stack - branches are checked out in multiple worktrees" in result.output
-        assert "feat-1" in result.output
-        assert "erk consolidate" in result.output
+        # Should succeed - current branch in current worktree is not a conflict
+        assert result.exit_code == 0, f"Expected success but got: {result.output}"
+        assert (
+            "Cannot land stack - branches are checked out in multiple worktrees"
+            not in result.output
+        )
 
     finally:
         # Restore original directory

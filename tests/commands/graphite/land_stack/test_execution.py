@@ -470,7 +470,8 @@ def test_land_stack_does_not_run_gt_sync() -> None:
         # Verify gt sync was NOT called via mutation tracking
         assert len(graphite_ops.sync_calls) == 0, (
             f"gt sync should NOT be called automatically. "
-            f"Expected 0 sync calls, got {len(graphite_ops.sync_calls)} calls: {graphite_ops.sync_calls}"
+            f"Expected 0 sync calls, got {len(graphite_ops.sync_calls)} calls: "
+            f"{graphite_ops.sync_calls}"
         )
 
         # Verify gt sync command doesn't appear in execution phases

@@ -1,6 +1,6 @@
 [project]
 name = "dot-agent-kit"
-version = "0.1.26"
+version = "0.1.27"
 description = "Kit management for Claude Code"
 readme = "README.md"
 requires-python = ">=3.13"

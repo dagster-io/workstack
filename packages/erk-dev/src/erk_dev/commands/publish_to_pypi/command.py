@@ -139,7 +139,7 @@ def get_workspace_packages(repo_root: Path) -> list[PackageInfo]:
             pyproject_path=repo_root / "packages" / "dot-agent-kit" / "pyproject.toml",
         ),
         PackageInfo(
-            name="workstack",
+            name="erk",
             path=repo_root,
             pyproject_path=repo_root / "pyproject.toml",
         ),
@@ -283,7 +283,7 @@ def build_package(package: PackageInfo, out_dir: Path, dry_run: bool) -> None:
 
     run_command(
         ["uv", "build", "--package", package.name, "-o", str(out_dir)],
-        cwd=package.path if package.name == "workstack" else package.path.parent.parent,
+        cwd=package.path if package.name == "erk" else package.path.parent.parent,
         description=f"build {package.name}",
     )
 

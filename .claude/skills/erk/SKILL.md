@@ -111,7 +111,6 @@ Load `references/erk.md` and search for "erk list" section to provide:
 - Basic listing: `erk ls`
 - With stacks: `erk ls --stacks` (shows Graphite structure)
 - With checks: `erk ls --checks` (shows CI status)
-- Tree view: `erk tree` (dependency visualization)
 
 ### Cleanup and Maintenance
 
@@ -153,7 +152,7 @@ When users mention Graphite or stacked diffs:
 
 - Load the Graphite Integration section from `references/erk.md`
 - Explain stack navigation: `erk up`, `erk down`, `erk jump <branch>`
-- Show stack visualization: `erk list --stacks`, `erk tree`
+- Show stack visualization: `erk list --stacks`
 - Reference the separate Graphite (gt) documentation for deeper gt concepts
 
 ### GitHub Integration

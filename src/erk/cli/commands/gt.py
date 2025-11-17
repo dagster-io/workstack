@@ -11,7 +11,7 @@ import click
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
 from erk.core.context import ErkContext
-from erk.core.tree_utils import format_branches_as_tree
+from erk.core.graphite_tree_utils import format_branches_as_tree
 
 
 @click.group("graphite")

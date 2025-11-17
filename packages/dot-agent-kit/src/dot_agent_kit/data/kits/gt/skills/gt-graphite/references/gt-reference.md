@@ -1015,7 +1015,6 @@ def get_branch_stack(ctx: ErkContext, repo_root: Path, branch: str) -> list[str]
 **Used by**:
 
 - `erk list --stacks`: Shows stack relationships
-- `erk tree`: Displays tree visualization
 
 #### 2. PR Information Cache
 
@@ -1078,7 +1077,6 @@ use_graphite = true     # Auto-detected if gt CLI installed
 **When enabled**:
 
 - `erk list --stacks` shows stack relationships
-- `erk tree` visualizes stacks
 - `erk sync` runs `gt sync`
 
 **When disabled**:

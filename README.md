@@ -84,7 +84,6 @@ erk jump BRANCH            # Jump to branch (finds worktree automatically)
 erk status                 # Show status of current worktree
 erk list                   # List all worktrees (alias: ls)
 erk list --stacks          # List with graphite stacks and PR status
-erk tree                   # Show tree of worktrees with dependencies
 erk rename OLD NEW         # Rename a worktree
 erk rm NAME                # Remove worktree
 erk sync                   # Sync with Graphite, show cleanup candidates
@@ -220,31 +219,6 @@ feature-b [work/feature-b]
 - ◯ Open (no checks)
 
 Note: The repository root is displayed as `root` and can be accessed with `erk switch root`.
-
-### Visualizing Worktrees
-
-```bash
-erk tree               # Show tree of worktrees with dependencies
-```
-
-Example output:
-
-```bash
-$ erk tree
-main [@root]
-├─ feature-a [@feature-a]
-│  └─ feature-a-2 [@feature-a-2]
-└─ feature-b [@feature-b]
-```
-
-The `tree` command shows:
-
-- **Only branches with active worktrees** (not all branches)
-- **Dependency relationships** from Graphite stacks
-- **Current worktree** highlighted in bright green
-- **Worktree names** in brackets `[@name]`
-
-**Note:** Requires Graphite to be enabled.
 
 ### Configuration
 

@@ -287,8 +287,12 @@ def test_land_stack_from_linked_worktree_on_branch_being_landed() -> None:
         assert "feat-1" in result.output
 
         # Verify multi-line explanation
-        assert "Git does not allow checking out a branch that is already checked out" in result.output
-        assert "in another worktree. To land this stack, you need to consolidate all" in result.output
+        assert (
+            "Git does not allow checking out a branch that is already checked out" in result.output
+        )
+        assert (
+            "in another worktree. To land this stack, you need to consolidate all" in result.output
+        )
         assert "branches into the current worktree first." in result.output
 
         # Verify fix instructions

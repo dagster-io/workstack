@@ -19,14 +19,13 @@ from tests.test_utils.env_helpers import erk_isolated_fs_env
 
 
 def test_land_stack_navigates_to_root_worktree() -> None:
-    """Test that land-stack fails when run from a worktree with a branch being landed.
+    """Test that land-stack succeeds when run from current worktree on branch being landed.
 
-    After validation changes, land-stack requires all branches in the stack to NOT be
-    checked out in worktrees when landing. The user must consolidate first or run from
-    root worktree.
+    After validation changes, land-stack EXCLUDES the current branch in the current
+    worktree from conflict detection, only flagging branches in OTHER worktrees.
 
-    This replaces the previous test which verified directory navigation when landing
-    from within a worktree. That scenario is no longer supported.
+    This replaces the previous test which expected failure. The new behavior correctly
+    allows landing from the current worktree without false positive conflicts.
     """
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -85,22 +84,22 @@ def test_land_stack_navigates_to_root_worktree() -> None:
             obj=test_ctx,
         )
 
-        # Should fail with worktree conflict error
-        assert result.exit_code == 1, f"Expected failure but got: {result.output}"
-        assert "Cannot land stack - branches are checked out in multiple worktrees" in result.output
-        assert "feat-branch" in result.output
-        assert "erk consolidate" in result.output
+        # Should succeed - current branch in current worktree is not a conflict
+        assert result.exit_code == 0, f"Expected success but got: {result.output}"
+        assert (
+            "Cannot land stack - branches are checked out in multiple worktrees"
+            not in result.output
+        )
 
 
 def test_land_stack_no_duplicate_checkout_message() -> None:
-    """Test that land-stack fails when run from a worktree with a branch being landed.
+    """Test that land-stack succeeds when run from current worktree on branch being landed.
 
-    After validation changes, land-stack requires all branches in the stack to NOT be
-    checked out in worktrees when landing. The user must consolidate first or run from
-    root worktree.
+    After validation changes, land-stack EXCLUDES the current branch in the current
+    worktree from conflict detection, only flagging branches in OTHER worktrees.
 
-    This replaces the previous test which verified duplicate checkout message prevention
-    when landing from within a worktree. That scenario is no longer supported.
+    This replaces the previous test which expected failure. The new behavior correctly
+    allows landing from the current worktree without false positive conflicts.
     """
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -159,8 +158,9 @@ def test_land_stack_no_duplicate_checkout_message() -> None:
             obj=test_ctx,
         )
 
-        # Should fail with worktree conflict error
-        assert result.exit_code == 1, f"Expected failure but got: {result.output}"
-        assert "Cannot land stack - branches are checked out in multiple worktrees" in result.output
-        assert "feat-branch" in result.output
-        assert "erk consolidate" in result.output
+        # Should succeed - current branch in current worktree is not a conflict
+        assert result.exit_code == 0, f"Expected success but got: {result.output}"
+        assert (
+            "Cannot land stack - branches are checked out in multiple worktrees"
+            not in result.output
+        )

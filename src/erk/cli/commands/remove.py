@@ -4,7 +4,7 @@ from pathlib import Path
 
 import click
 
-from erk.cli.commands.switch import complete_worktree_names
+from erk.cli.commands.navigation_helpers import complete_worktree_names
 from erk.cli.core import (
     discover_repo_context,
     validate_worktree_name_for_removal,

@@ -77,10 +77,10 @@ erk create --plan Add_Auth.md                # Creates worktree with .plan/ fold
 ### Managing Worktrees
 
 ```bash
-erk switch NAME            # Switch between worktrees (or 'root' for repo root)
-erk switch --up            # Navigate to child branch in Graphite stack
-erk switch --down          # Navigate to parent branch in Graphite stack
-erk jump BRANCH            # Jump to branch (finds worktree automatically)
+erk checkout BRANCH        # Checkout branch (finds worktree automatically)
+erk co BRANCH              # Alias for checkout
+erk up                     # Navigate to child branch in Graphite stack
+erk down                   # Navigate to parent branch in Graphite stack
 erk status                 # Show status of current worktree
 erk list                   # List all worktrees (alias: ls)
 erk list --stacks          # List with graphite stacks and PR status
@@ -96,9 +96,9 @@ erk sync -f                # Sync and auto-remove merged worktrees
 With Graphite enabled, navigate your stacks directly:
 
 ```bash
-erk switch --up       # Move to child branch in stack
-erk switch --down     # Move to parent branch in stack
-erk jump BRANCH       # Jump to any branch in a stack (finds worktree automatically)
+erk up                # Move to child branch in stack
+erk down              # Move to parent branch in stack
+erk checkout BRANCH   # Checkout any branch in a stack (finds worktree automatically)
 ```
 
 #### Jump to Branch

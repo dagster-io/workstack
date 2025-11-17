@@ -1,4 +1,4 @@
-"""Jump command - find and switch to a worktree by branch name."""
+"""Checkout command - find and switch to a worktree by branch name."""
 
 import subprocess
 from pathlib import Path
@@ -43,7 +43,7 @@ def _format_worktree_info(wt: WorktreeInfo, repo_root: Path) -> str:
         return f"  - {wt_name} (currently on '{current}')"
 
 
-def _perform_jump(
+def _perform_checkout(
     ctx: ErkContext,
     repo_root: Path,
     target_worktree: WorktreeInfo,
@@ -151,17 +151,17 @@ def _perform_jump(
 
         # Show manual instructions
         user_output("\nShell integration not detected. Run 'erk init --shell' to set up.")
-        user_output(f"Or use: source <(erk jump {branch} --script)")
+        user_output(f"Or use: source <(erk checkout {branch} --script)")
 
 
-@click.command("jump")
+@click.command("checkout")
 @click.argument("branch", metavar="BRANCH")
 @click.option(
     "--script", is_flag=True, help="Print only the activation script without usage instructions."
 )
 @click.pass_obj
-def jump_cmd(ctx: ErkContext, branch: str, script: bool) -> None:
-    """Jump to BRANCH by finding and switching to its worktree.
+def checkout_cmd(ctx: ErkContext, branch: str, script: bool) -> None:
+    """Checkout BRANCH by finding and switching to its worktree.
 
     This command finds which worktree has the specified branch checked out
     and switches to it. If the branch exists but isn't checked out anywhere,
@@ -170,11 +170,11 @@ def jump_cmd(ctx: ErkContext, branch: str, script: bool) -> None:
 
     Examples:
 
-        erk jump feature/user-auth      # Jump to existing worktree
+        erk checkout feature/user-auth      # Checkout existing worktree
 
-        erk jump unchecked-branch       # Auto-create worktree
+        erk checkout unchecked-branch       # Auto-create worktree
 
-        erk jump origin-only-branch     # Create tracking branch + worktree
+        erk checkout origin-only-branch     # Create tracking branch + worktree
 
     If multiple worktrees contain the branch, all options are shown.
     """
@@ -289,7 +289,7 @@ def jump_cmd(ctx: ErkContext, branch: str, script: bool) -> None:
     if len(matching_worktrees) == 1:
         # Exactly one worktree contains this branch
         target_worktree = matching_worktrees[0]
-        _perform_jump(ctx, repo.root, target_worktree, branch, script, is_newly_created)
+        _perform_checkout(ctx, repo.root, target_worktree, branch, script, is_newly_created)
 
     else:
         # Multiple worktrees contain this branch
@@ -299,7 +299,7 @@ def jump_cmd(ctx: ErkContext, branch: str, script: bool) -> None:
         if len(directly_checked_out) == 1:
             # Exactly one worktree has the branch directly checked out - jump to it
             target_worktree = directly_checked_out[0]
-            _perform_jump(ctx, repo.root, target_worktree, branch, script, is_newly_created)
+            _perform_checkout(ctx, repo.root, target_worktree, branch, script, is_newly_created)
         else:
             # Zero or multiple worktrees have it directly checked out
             # Show error message listing all options
@@ -307,5 +307,5 @@ def jump_cmd(ctx: ErkContext, branch: str, script: bool) -> None:
             for wt in matching_worktrees:
                 user_output(_format_worktree_info(wt, repo.root))
 
-            user_output("\nUse 'erk switch' to choose a specific worktree first.")
+            user_output("\nPlease specify which worktree to use.")
             raise SystemExit(1)

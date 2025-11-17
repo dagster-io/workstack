@@ -6,13 +6,12 @@ from typing import Final
 
 from click.testing import CliRunner
 
+from erk.cli.commands.checkout import checkout_cmd
 from erk.cli.commands.consolidate import consolidate_cmd
 from erk.cli.commands.create import create
 from erk.cli.commands.down import down_cmd
-from erk.cli.commands.jump import jump_cmd
 from erk.cli.commands.land_stack import land_stack
 from erk.cli.commands.prepare_cwd_recovery import generate_recovery_script
-from erk.cli.commands.switch import switch_cmd
 from erk.cli.commands.up import up_cmd
 from erk.cli.debug import debug_log
 from erk.cli.output import user_output
@@ -48,9 +47,9 @@ def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellInt
 
     # Map command names to their Click commands
     command_map = {
-        "switch": switch_cmd,
+        "checkout": checkout_cmd,
+        "co": checkout_cmd,  # Alias
         "create": create,
-        "jump": jump_cmd,
         "up": up_cmd,
         "down": down_cmd,
         "consolidate": consolidate_cmd,

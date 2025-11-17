@@ -153,7 +153,7 @@ def consolidate_cmd(
             user_output("\nSuggested action:")
             user_output("  1. Use a different name")
             user_output(f"  2. Remove existing worktree: erk remove {name}")
-            user_output(f"  3. Switch to existing: erk switch {name}")
+            user_output("  3. Switch to existing: erk checkout <branch>")
             raise SystemExit(1)
 
     # Calculate stack range early (needed for safety check)

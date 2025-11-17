@@ -1289,8 +1289,8 @@ gt create auth-service
 # Create new worktree
 erk create billing-stack
 
-# Switch to new worktree
-erk switch billing-stack
+# Navigate to new worktree
+erk checkout billing-stack
 
 # In billing worktree: Create billing stack
 gt create billing-model

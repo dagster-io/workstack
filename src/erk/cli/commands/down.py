@@ -1,6 +1,6 @@
 import click
 
-from erk.cli.commands.switch import (
+from erk.cli.commands.navigation_helpers import (
     _activate_root_repo,
     _activate_worktree,
     _ensure_graphite_enabled,

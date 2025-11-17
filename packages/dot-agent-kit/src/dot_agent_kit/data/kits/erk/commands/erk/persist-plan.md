@@ -24,7 +24,7 @@ This command extracts a plan from conversation context, optionally applies guida
 **What happens AFTER (in separate commands):**
 
 - ⏭️ Create worktree: `/create-planned-stack`
-- ⏭️ Switch and implement: `erk switch <name> && claude --permission-mode acceptEdits "/erk:implement-plan"`
+- ⏭️ Navigate and implement: `erk checkout <branch> && claude --permission-mode acceptEdits "/erk:implement-plan"`
 
 ## What Happens
 

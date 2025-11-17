@@ -69,7 +69,7 @@ This reference contains:
 - The reference is comprehensive (~1200 lines) but optimized for progressive reading
 - Use grep patterns to find specific sections when needed:
   - `erk create` - Creating worktrees
-  - `erk switch` - Switching worktrees
+  - `erk checkout` - Navigating to branches
   - `erk list` - Listing worktrees
   - `Pattern [0-9]:` - Workflow patterns
   - `Graphite Integration` - Graphite-specific features
@@ -94,14 +94,13 @@ Load `references/erk.md` and search for "erk create" section to provide:
 - Environment setup details
 - Post-create command execution
 
-### Switching Between Worktrees
+### Navigating to Branches
 
-Load `references/erk.md` and search for "erk switch" section to provide:
+Load `references/erk.md` and search for "erk checkout" section to provide:
 
-- Basic switching: `erk switch <name>`
-- Stack navigation: `erk up` and `erk down` for Graphite stacks
-- Jump to branch: `erk jump <branch>` to find and switch to a branch
-- Return to root: `erk switch root`
+- Navigate to branch: `erk checkout <branch>` to find and navigate to a branch
+- Navigate with options: `erk checkout <branch> --auto-create` to create worktree if needed
+- Stack navigation: Use Graphite's `gt up` and `gt down` for stack traversal
 - Environment activation details
 
 ### Listing and Viewing
@@ -151,8 +150,9 @@ When users need configuration help:
 When users mention Graphite or stacked diffs:
 
 - Load the Graphite Integration section from `references/erk.md`
-- Explain stack navigation: `erk up`, `erk down`, `erk jump <branch>`
+- Explain stack navigation: Use Graphite's `gt up` and `gt down` commands
 - Show stack visualization: `erk list --stacks`
+- Branch navigation: `erk checkout <branch>` to navigate to any branch in the stack
 - Reference the separate Graphite (gt) documentation for deeper gt concepts
 
 ### GitHub Integration

@@ -113,8 +113,17 @@ def _show_final_state(
     # Next steps
     _emit("", script_mode=script_mode)
     _emit(click.style("Next steps:", bold=True), script_mode=script_mode)
-    _emit("  • Run 'erk sync -f' to remove worktrees for merged branches", script_mode=script_mode)
-    _emit("  • Run 'gt sync -f' to rebase remaining stack branches (if needed)", script_mode=script_mode)
+    _emit(
+        "  • Run 'erk sync -f' to remove worktrees for merged branches",
+        script_mode=script_mode,
+    )
+    _emit(
+        "  • Run 'gt sync -f' to rebase remaining stack branches (if needed)",
+        script_mode=script_mode,
+    )
     _emit("", script_mode=script_mode)
     note_prefix = click.style("Note:", fg="yellow")
-    _emit(f"{note_prefix} These commands are now manual to give you full control", script_mode=script_mode)
+    _emit(
+        f"{note_prefix} These commands are now manual to give you full control",
+        script_mode=script_mode,
+    )

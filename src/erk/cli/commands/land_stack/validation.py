@@ -123,7 +123,6 @@ def _validate_landing_preconditions(
         raise SystemExit(1)
 
     # Check no branches in stack are checked out in other worktrees
-    current_worktree = ctx.cwd.resolve()
     worktree_conflicts: list[tuple[str, Path]] = []
 
     logger.debug("  - Checking worktree conflicts for %d branches", len(branches_to_land))

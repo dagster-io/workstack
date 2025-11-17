@@ -200,9 +200,7 @@ class RealGraphiteGtKitOps(GraphiteGtKitOps):
             check=False,
         )
         return CommandResult(
-            success=result.returncode == 0,
-            stdout=result.stdout,
-            stderr=result.stderr
+            success=result.returncode == 0, stdout=result.stdout, stderr=result.stderr
         )
 
     def submit(self, publish: bool = False, restack: bool = False) -> CommandResult:
@@ -223,9 +221,7 @@ class RealGraphiteGtKitOps(GraphiteGtKitOps):
         )
 
         return CommandResult(
-            success=result.returncode == 0,
-            stdout=result.stdout,
-            stderr=result.stderr
+            success=result.returncode == 0, stdout=result.stdout, stderr=result.stderr
         )
 
     def restack(self) -> bool:

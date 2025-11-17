@@ -23,6 +23,7 @@ class CommandResult(NamedTuple):
         stdout: Standard output from the command
         stderr: Standard error from the command
     """
+
     success: bool
     stdout: str
     stderr: str

@@ -17,6 +17,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.ops import CommandResult
 from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops import (
     RealGitGtKitOps,
     RealGitHubGtKitOps,
@@ -368,12 +369,15 @@ class TestRealGraphiteGtKitOpsSmoke:
 
             # Verify correct command was called
             mock_run.assert_called_once_with(
-                ["gt", "squash"], capture_output=True, text=True, check=False
+                ["gt", "squash", "--no-interactive"],
+                capture_output=True,
+                text=True,
+                check=False,
             )
 
             # Verify return type matches interface contract
-            assert isinstance(result, bool)
-            assert result is True
+            assert isinstance(result, CommandResult)
+            assert result.success is True
 
         # Test failure case
         mock_result.returncode = 1
@@ -383,7 +387,8 @@ class TestRealGraphiteGtKitOpsSmoke:
         ):
             ops = RealGraphiteGtKitOps()
             result = ops.squash_commits()
-            assert result is False
+            assert isinstance(result, CommandResult)
+            assert result.success is False
 
     def test_submit(self) -> None:
         """Test submit returns tuple with 3 elements and calls correct command."""
@@ -408,15 +413,13 @@ class TestRealGraphiteGtKitOpsSmoke:
             )
 
             # Verify return type matches interface contract
-            assert isinstance(result, tuple)
-            assert len(result) == 3
-            success, stdout, stderr = result
-            assert isinstance(success, bool)
-            assert isinstance(stdout, str)
-            assert isinstance(stderr, str)
-            assert success is True
-            assert stdout == "PR created successfully"
-            assert stderr == ""
+            assert isinstance(result, CommandResult)
+            assert isinstance(result.success, bool)
+            assert isinstance(result.stdout, str)
+            assert isinstance(result.stderr, str)
+            assert result.success is True
+            assert result.stdout == "PR created successfully"
+            assert result.stderr == ""
 
         # Test with publish=True, restack=True
         with patch(

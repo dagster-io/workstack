@@ -168,7 +168,10 @@ class TestPreAnalysisExecution:
             .with_commits(3)  # Multiple commits to trigger squash
             .with_squash_failure(
                 stdout="",
-                stderr="error: could not apply abc123... commit message\nCONFLICT (content): Merge conflict in file.txt"
+                stderr=(
+                    "error: could not apply abc123... commit message\n"
+                    "CONFLICT (content): Merge conflict in file.txt"
+                ),
             )
         )
 
@@ -178,7 +181,9 @@ class TestPreAnalysisExecution:
         assert result.success is False
         assert result.error_type == "squash_conflict"
         assert "Merge conflicts detected while squashing commits" in result.message
-        assert "CONFLICT" in result.details["stderr"]
+        stderr = result.details["stderr"]
+        assert isinstance(stderr, str)
+        assert "CONFLICT" in stderr
 
     def test_pre_analysis_squash_conflict_preserves_output(self) -> None:
         """Test that conflict errors include stdout/stderr for debugging."""
@@ -305,7 +310,9 @@ class TestPostAnalysisExecution:
             .with_commits(1)
             .with_submit_failure(
                 stdout="",
-                stderr="error: could not rebase\nCONFLICT (content): Merge conflict in src/main.py"
+                stderr=(
+                    "error: could not rebase\nCONFLICT (content): Merge conflict in src/main.py"
+                ),
             )
         )
 
@@ -318,7 +325,9 @@ class TestPostAnalysisExecution:
         assert result.success is False
         assert result.error_type == "submit_conflict"
         assert "Merge conflicts detected during branch submission" in result.message
-        assert "CONFLICT" in result.details["stderr"]
+        stderr = result.details["stderr"]
+        assert isinstance(stderr, str)
+        assert "CONFLICT" in stderr
 
     def test_post_analysis_conflict_check_is_first(self) -> None:
         """Test that conflict detection happens before other error patterns."""
@@ -330,7 +339,7 @@ class TestPostAnalysisExecution:
             .with_commits(1)
             .with_submit_failure(
                 stdout="Branch updated remotely",  # Would normally trigger submit_diverged
-                stderr="merge conflict in file.txt"  # But conflict should be detected first
+                stderr="merge conflict in file.txt",  # But conflict should be detected first
             )
         )
 

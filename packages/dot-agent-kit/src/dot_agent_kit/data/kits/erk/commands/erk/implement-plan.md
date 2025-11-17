@@ -95,6 +95,47 @@ Pay special attention to:
 - "DO NOT" items in Known Pitfalls - these prevent specific bugs
 - Rejected approaches in Complex Reasoning - these explain what doesn't work
 
+### Step 2.5: Understanding Progress.md Structure
+
+The `.plan/progress.md` file tracks implementation progress using checkboxes AND YAML front matter (for files created after 2025-01-17).
+
+**Front Matter Format:**
+
+```yaml
+---
+completed_steps: N
+total_steps: M
+---
+
+# Progress Tracking
+
+- [ ] 1. First step
+- [x] 2. Second step (completed)
+- [ ] 3. Third step
+```
+
+**Key Points:**
+
+- **Checkboxes are source of truth**: `- [ ]` (incomplete) and `- [x]` (complete)
+- **Front matter must stay synchronized**: The `completed_steps` field must match the count of checked boxes
+- **Progress emoji indicators**: Used by `erk status` to show: ⚪ (0%), 🟡 (1-99%), 🟢 (100%)
+- **Backward compatibility**: Older progress.md files may lack front matter - this is OK, just skip front matter updates for those files
+
+**When to Update Front Matter:**
+
+When marking a step complete, you MUST:
+
+1. Change the checkbox from `- [ ]` to `- [x]`
+2. IF the file starts with `---` (has front matter):
+   - Count the total number of checked boxes in the entire file
+   - Update the `completed_steps:` line with the new count
+   - DO NOT change the `total_steps:` line
+3. IF the file doesn't start with `---` (no front matter):
+   - Skip the front matter update entirely
+   - Just update the checkbox
+
+This keeps progress indicators accurate in real-time during plan execution.
+
 ### Step 3: Create TodoWrite Entries
 
 Create todo list entries for each major phase in the plan to track progress.
@@ -139,7 +180,13 @@ For each phase in the plan:
    - Keep indentation to max 4 levels - extract helpers if deeper
    - If plan mentions tests, follow patterns in project test documentation (if available)
 5. **Verify implementation** against standards
-6. **Mark phase as completed** when done
+6. **Mark phase as completed** when done:
+   - Edit `.plan/progress.md` to change checkbox from `- [ ]` to `- [x]`
+   - If front matter exists (file starts with `---`):
+     - Count total checked boxes in the entire file
+     - Edit the `completed_steps:` line in front matter with new count
+     - Do NOT change the `total_steps:` line
+   - If no front matter exists, skip the front matter update
 7. **Report progress**: what was done and what's next
 8. **Move to next phase**
 
@@ -165,6 +212,42 @@ When updating progress:
   - [x] 2. Add tests
   - [ ] 3. Update documentation
   ```
+
+**Example progress.md update:**
+
+Before:
+
+```yaml
+---
+completed_steps: 2
+total_steps: 5
+---
+
+# Progress Tracking
+
+- [x] 1. Create module
+- [x] 2. Add tests
+- [ ] 3. Update documentation  ← marking this complete
+- [ ] 4. Add integration tests
+- [ ] 5. Update changelog
+```
+
+After:
+
+```yaml
+---
+completed_steps: 3  ← incremented from 2 to 3
+total_steps: 5      ← unchanged
+---
+
+# Progress Tracking
+
+- [x] 1. Create module
+- [x] 2. Add tests
+- [x] 3. Update documentation  ← marked complete
+- [ ] 4. Add integration tests
+- [ ] 5. Update changelog
+```
 
 ### Step 5: Follow Erk Coding Standards
 

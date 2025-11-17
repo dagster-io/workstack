@@ -41,8 +41,6 @@ Default to erk_inmem_env for speed and isolation. Only use erk_isolated_fs_env w
 the code under test performs actual filesystem I/O that cannot be faked.
 """
 
-from pathlib import Path
-
 from click.testing import CliRunner
 
 from erk.cli.commands.create import ensure_worktree_for_branch
@@ -202,7 +200,7 @@ def test_ensure_worktree_fails_for_nonexistent_branch() -> None:
         # Call ensure_worktree_for_branch for nonexistent branch - should raise SystemExit
         try:
             ensure_worktree_for_branch(ctx, repo, "nonexistent-branch")
-            assert False, "Expected SystemExit to be raised"
+            raise AssertionError("Expected SystemExit to be raised")
         except SystemExit as e:
             assert e.code == 1
 
@@ -243,7 +241,7 @@ def test_ensure_worktree_handles_tracking_branch_failure() -> None:
         # Call ensure_worktree_for_branch - should raise SystemExit
         try:
             ensure_worktree_for_branch(ctx, repo, "feature-4")
-            assert False, "Expected SystemExit to be raised"
+            raise AssertionError("Expected SystemExit to be raised")
         except SystemExit as e:
             assert e.code == 1
 

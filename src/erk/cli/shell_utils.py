@@ -7,6 +7,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
+from erk.cli.activation import render_activation_script
 from erk.cli.debug import debug_log
 
 STALE_SCRIPT_MAX_AGE_SECONDS = 3600
@@ -31,6 +32,68 @@ def render_cd_script(path: Path, *, comment: str, success_message: str) -> str:
         f'echo "{success_message}"',
     ]
     return "\n".join(lines) + "\n"
+
+
+def render_navigation_script(
+    target_path: Path,
+    repo_root: Path,
+    *,
+    comment: str,
+    success_message: str,
+) -> str:
+    """Generate navigation script that automatically chooses between simple cd or full activation.
+
+    This function determines whether the target is the root worktree or a non-root worktree
+    and generates the appropriate navigation script:
+
+    - Root worktree (target_path == repo_root): Simple cd script via render_cd_script()
+      - Only changes directory
+      - No venv activation needed (user manages their own environment)
+
+    - Non-root worktree (target_path != repo_root): Full activation script via
+      render_activation_script()
+      - Changes directory
+      - Creates/activates virtual environment
+      - Loads .env file
+      - Required for erk-managed worktrees
+
+    Args:
+        target_path: Directory to navigate to
+        repo_root: Repository root path (used to determine if target is root worktree)
+        comment: Shell comment describing the operation
+        success_message: Message to display after successful navigation
+
+    Returns:
+        Shell script that performs appropriate navigation based on worktree type
+
+    Example:
+        >>> # Navigate to root worktree (simple cd)
+        >>> script = render_navigation_script(
+        ...     Path("/repo"),
+        ...     Path("/repo"),
+        ...     comment="return to root",
+        ...     success_message="At root"
+        ... )
+        >>>
+        >>> # Navigate to non-root worktree (full activation)
+        >>> script = render_navigation_script(
+        ...     Path("/repo/worktrees/feature"),
+        ...     Path("/repo"),
+        ...     comment="switch to feature",
+        ...     success_message="Activated feature"
+        ... )
+    """
+    if target_path == repo_root:
+        return render_cd_script(
+            target_path,
+            comment=comment,
+            success_message=success_message,
+        )
+    return render_activation_script(
+        worktree_path=target_path,
+        final_message=f'echo "{success_message}"',
+        comment=comment,
+    )
 
 
 def write_script_to_temp(

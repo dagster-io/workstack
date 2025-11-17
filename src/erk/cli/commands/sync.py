@@ -4,11 +4,10 @@ from pathlib import Path
 
 import click
 
-from erk.cli.activation import render_activation_script
 from erk.cli.commands.remove import _remove_worktree
 from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output
-from erk.cli.shell_utils import render_cd_script
+from erk.cli.shell_utils import render_navigation_script
 from erk.core.context import ErkContext, regenerate_context
 from erk.core.repo_discovery import ensure_repo_dir
 from erk.core.script_writer import ScriptResult
@@ -245,42 +244,36 @@ def sync_cmd(
     if current_worktree_name:
         wt_path = worktree_path_for(repo.worktrees_dir, current_worktree_name)
 
-        # Check if worktree still exists
+        # Determine return target (worktree if exists, otherwise root)
         if ctx.git_ops.path_exists(wt_path):
+            return_path = wt_path
+            return_location = current_worktree_name
             _emit(f"✓ Returning to: {current_worktree_name}", script_mode=script)
-            if not script:
-                if ctx.git_ops.safe_chdir(wt_path):
-                    ctx = regenerate_context(ctx)
-            else:
-                # Generate cd script for shell wrapper
-                script_content = render_cd_script(
-                    wt_path,
-                    comment=f"return to {current_worktree_name}",
-                    success_message=f"✓ Returned to {current_worktree_name}.",
-                )
-                result = ctx.script_writer.write_activation_script(
-                    script_content,
-                    command_name="sync",
-                    comment=f"return to {current_worktree_name}",
-                )
-                script_result = result
         else:
-            _emit(
-                f"✅ {repo.root}",
-                script_mode=script,
+            return_path = repo.root
+            return_location = "root"
+            _emit(f"✅ {repo.root}", script_mode=script)
+
+        # Navigate to return path
+        if not script:
+            if ctx.git_ops.safe_chdir(return_path):
+                ctx = regenerate_context(ctx)
+        else:
+            # Generate navigation script for shell wrapper
+            script_content = render_navigation_script(
+                return_path,
+                repo.root,
+                comment=f"return to {return_location}",
+                success_message=f"✓ Returned to {return_location}."
+                if return_path != repo.root
+                else f"✓ Switched to: root [{repo.root}]",
             )
-            if script:
-                script_content = render_activation_script(
-                    worktree_path=repo.root,
-                    comment="return to root",
-                    final_message=f'echo "✓ Switched to: root [{repo.root}]"',
-                )
-                result = ctx.script_writer.write_activation_script(
-                    script_content,
-                    command_name="sync",
-                    comment="return to root",
-                )
-                script_result = result
+            result = ctx.script_writer.write_activation_script(
+                script_content,
+                command_name="sync",
+                comment=f"return to {return_location}",
+            )
+            script_result = result
 
     # Output temp file path for shell wrapper
     if script and script_result:

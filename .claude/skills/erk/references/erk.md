@@ -479,22 +479,6 @@ erk status
 # PR: #123 ✅
 ```
 
-#### `erk tree`
-
-Show tree visualization of worktrees with dependencies.
-
-```bash
-erk tree
-
-# Output:
-# main [@root]
-# ├─ feature-a [@feature-a]
-# │  └─ feature-a-2 [@feature-a-2]
-# └─ feature-b [@feature-b]
-```
-
-**Note**: Requires Graphite to be enabled. Shows only branches with active worktrees.
-
 ### Switching Worktrees
 
 #### `erk switch`
@@ -768,7 +752,6 @@ erk down               # Back to feature-base
 
 # View stack structure
 erk list --stacks
-erk tree
 ```
 
 ### Pattern 5: Parallel Development
@@ -884,7 +867,6 @@ erk jump <branch>      # Jump to specific branch
 
 # Stack visualization
 erk list --stacks      # Show stack structure
-erk tree              # Tree view with dependencies
 
 # Sync and cleanup
 erk sync              # Run gt repo sync + cleanup
@@ -1080,9 +1062,7 @@ ws api-v2-auth
 git commit -m "Add authentication to API v2"
 
 # Navigate stack
-erk tree
-# api-v2 [@api-v2]
-# └─ api-v2-auth [@api-v2-auth]
+erk list --stacks
 
 ws api-v2              # Base
 erk up           # → api-v2-auth

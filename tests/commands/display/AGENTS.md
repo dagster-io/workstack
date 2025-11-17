@@ -7,7 +7,6 @@ This directory contains tests for commands that display information about worksp
 ## Commands in This Directory
 
 - `test_status.py` - Tests for `erk status` command
-- `test_tree.py` - Tests for `erk tree` command
 - `list/` - Tests for `erk list` command and variants
 
 ## Common Test Setup

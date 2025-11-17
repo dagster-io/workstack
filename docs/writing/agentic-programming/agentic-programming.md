@@ -822,7 +822,7 @@ Worktrees should be treated as temporary workspaces. Once a feature is merged, r
 
 ```bash
 # After merging the authentication feature
-erk remove user-auth
+erk delete user-auth
 
 # List active worktrees to review parallel work
 erk list

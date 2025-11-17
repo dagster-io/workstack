@@ -8,7 +8,7 @@ This directory contains tests for commands that create, rename, remove, and move
 
 - `test_create.py` - Tests for `erk create` command
 - `test_rename.py` - Tests for `erk rename` command
-- `test_rm.py` - Tests for `erk rm` command
+- `test_delete.py` - Tests for `erk delete` command
 - `test_move.py` - Tests for `erk move` command
 
 ## Common Test Setup
@@ -78,7 +78,7 @@ assert "new-branch" in git_ops.created_branches
 ### Branch Deletion
 
 ```python
-result = runner.invoke(rm, ["old-branch"], obj=ctx)
+result = runner.invoke(delete, ["old-branch"], obj=ctx)
 assert result.exit_code == 0
 assert "old-branch" in git_ops.deleted_branches
 ```
@@ -111,7 +111,7 @@ assert "already exists" in result.output
 
 ```python
 # Test --force flag for destructive operations
-result = runner.invoke(rm, ["--force", "branch-name"], obj=ctx)
+result = runner.invoke(delete, ["--force", "branch-name"], obj=ctx)
 assert result.exit_code == 0
 ```
 
@@ -119,7 +119,7 @@ assert result.exit_code == 0
 
 ```python
 # Test --dry-run doesn't actually mutate
-result = runner.invoke(rm, ["--dry-run", "branch"], obj=ctx)
+result = runner.invoke(delete, ["--dry-run", "branch"], obj=ctx)
 assert result.exit_code == 0
 assert "branch" not in git_ops.deleted_branches
 assert "Would delete" in result.output

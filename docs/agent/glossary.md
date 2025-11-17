@@ -358,8 +358,8 @@ Mode where commands print what they would do without executing destructive opera
 **Example**:
 
 ```bash
-erk rm my-feature --dry-run
-# Output: [DRY RUN] Would remove worktree: /Users/you/worktrees/erk/my-feature
+erk delete my-feature --dry-run
+# Output: [DRY RUN] Would delete worktree: /Users/you/worktrees/erk/my-feature
 ```
 
 ---

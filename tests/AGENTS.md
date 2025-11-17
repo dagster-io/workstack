@@ -6,7 +6,7 @@ For comprehensive testing patterns and architecture, see:
 ## Quick Commands
 
 Run all tests: `uv run pytest`
-Run specific test: `uv run pytest tests/commands/workspace/test_rm.py::test_rm_force_removes_directory`
+Run specific test: `uv run pytest tests/commands/workspace/test_delete.py::test_delete_force_removes_directory`
 Run with coverage: `uv run pytest --cov=erk`
 
 ## Important: Directory Structure Requirements

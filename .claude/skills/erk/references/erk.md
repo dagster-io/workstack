@@ -158,7 +158,7 @@ erk create auth --branch feature/user-authentication
 
 # Operations use branch or worktree names
 erk checkout feature/user-authentication
-erk rm auth
+erk delete auth
 erk rename auth user-auth
 ```
 
@@ -562,22 +562,22 @@ erk rename old-name new-name --dry-run
 
 **Note**: Renames the worktree directory, not the branch.
 
-#### `erk rm` / `erk remove`
+#### `erk delete` / `erk del`
 
-Remove a worktree.
+Delete a worktree.
 
 ```bash
-# Remove single worktree
-erk rm my-feature
+# Delete single worktree
+erk delete my-feature
 
-# Force removal (skip confirmation)
-erk rm my-feature --force
+# Force deletion (skip confirmation)
+erk delete my-feature --force
 
-# Remove worktree and entire Graphite stack
-erk rm my-feature --delete-stack
+# Delete worktree and entire Graphite stack
+erk delete my-feature --delete-stack
 
 # Dry run
-erk rm my-feature --dry-run
+erk delete my-feature --dry-run
 ```
 
 **Safety checks:**
@@ -739,8 +739,8 @@ erk sync --dry-run
 # Auto-cleanup with sync
 erk sync --force
 
-# Manual removal
-erk rm merged-feature
+# Manual deletion
+erk delete merged-feature
 ```
 
 ### Pattern 8: Environment-Specific Worktrees
@@ -787,7 +787,7 @@ Erk uses git's native worktree feature:
 ```bash
 # Erk commands map to git commands:
 erk create feature     # → git worktree add -b feature path
-erk rm feature         # → git worktree remove path
+erk delete feature     # → git worktree remove path
 ```
 
 **Git operations erk uses:**
@@ -979,8 +979,8 @@ erk sync --dry-run
 # feature-b [feature-b] - merged (PR #124)
 
 # Manual cleanup
-erk rm feature-a
-erk rm feature-b
+erk delete feature-a
+erk delete feature-b
 
 # Or automatic cleanup
 erk sync --force

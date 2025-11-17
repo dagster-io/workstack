@@ -290,6 +290,47 @@ gt repo sync
 
 The `-f` flag forces the sync even if there are conflicts or merged branches.
 
+#### `squash_conflict` Error
+
+When commits contain merge conflicts that prevent squashing:
+
+**Issue:** Your commits have conflicting changes that can't be automatically squashed into a single commit.
+
+**Solution:**
+
+```bash
+# Manually resolve conflicts during squash
+gt squash
+
+# This will open an interactive rebase
+# Follow the prompts to resolve conflicts
+# Once resolved, re-run the submit command
+```
+
+#### `submit_conflict` Error
+
+When the branch has merge conflicts with its parent during restack:
+
+**Issue:** Your branch conflicts with changes in the parent branch and can't be automatically rebased.
+
+**Solution:**
+
+```bash
+# Option 1: Manually rebase onto parent
+gt restack
+
+# Follow prompts to resolve conflicts
+# Then re-run the submit command
+
+# Option 2: Sync with trunk first (if parent was updated)
+gt sync -f
+
+# This pulls latest main and restacks everything
+# May still require manual conflict resolution
+```
+
+**Note:** The agent will NEVER attempt to resolve conflicts automatically. Manual resolution is required to ensure correctness.
+
 ## Best Practices
 
 ### Never Change Directory

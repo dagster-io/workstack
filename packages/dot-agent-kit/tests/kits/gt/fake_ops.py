@@ -14,6 +14,7 @@ Design:
 from dataclasses import dataclass, field, replace
 
 from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.ops import (
+    CommandResult,
     GitGtKitOps,
     GitHubGtKitOps,
     GraphiteGtKitOps,
@@ -44,6 +45,8 @@ class GraphiteState:
     submit_stderr: str = ""
     restack_success: bool = True
     squash_success: bool = True
+    squash_stdout: str = ""
+    squash_stderr: str = ""
 
 
 @dataclass(frozen=True)
@@ -158,16 +161,20 @@ class FakeGraphiteGtKitOps(GraphiteGtKitOps):
             return []
         return self._state.branch_children[self._current_branch]
 
-    def squash_commits(self) -> bool:
+    def squash_commits(self) -> CommandResult:
         """Run gt squash with configurable success/failure."""
-        return self._state.squash_success
+        return CommandResult(
+            success=self._state.squash_success,
+            stdout=self._state.squash_stdout,
+            stderr=self._state.squash_stderr,
+        )
 
-    def submit(self, publish: bool = False, restack: bool = False) -> tuple[bool, str, str]:
+    def submit(self, publish: bool = False, restack: bool = False) -> CommandResult:
         """Run gt submit with configurable success/failure."""
-        return (
-            self._state.submit_success,
-            self._state.submit_stdout,
-            self._state.submit_stderr,
+        return CommandResult(
+            success=self._state.submit_success,
+            stdout=self._state.submit_stdout,
+            stderr=self._state.submit_stderr,
         )
 
     def restack(self) -> bool:
@@ -417,14 +424,20 @@ class FakeGtKitOps(GtKitOps):
         self._github._state = replace(gh_state, merge_success=False)
         return self
 
-    def with_squash_failure(self) -> "FakeGtKitOps":
+    def with_squash_failure(self, stdout: str = "", stderr: str = "") -> "FakeGtKitOps":
         """Configure squash to fail.
+
+        Args:
+            stdout: Stdout to return
+            stderr: Stderr to return
 
         Returns:
             Self for chaining
         """
         gt_state = self._graphite.get_state()
-        self._graphite._state = replace(gt_state, squash_success=False)
+        self._graphite._state = replace(
+            gt_state, squash_success=False, squash_stdout=stdout, squash_stderr=stderr
+        )
         return self
 
     def with_add_failure(self) -> "FakeGtKitOps":

@@ -12,6 +12,20 @@ Design:
 """
 
 from abc import ABC, abstractmethod
+from typing import NamedTuple
+
+
+class CommandResult(NamedTuple):
+    """Result from running a subprocess command.
+
+    Attributes:
+        success: True if command exited with code 0, False otherwise
+        stdout: Standard output from the command
+        stderr: Standard error from the command
+    """
+    success: bool
+    stdout: str
+    stderr: str
 
 
 class GitGtKitOps(ABC):
@@ -131,15 +145,15 @@ class GraphiteGtKitOps(ABC):
         """
 
     @abstractmethod
-    def squash_commits(self) -> bool:
+    def squash_commits(self) -> CommandResult:
         """Run gt squash to consolidate commits.
 
         Returns:
-            True on success, False on failure
+            CommandResult with success status and output
         """
 
     @abstractmethod
-    def submit(self, publish: bool = False, restack: bool = False) -> tuple[bool, str, str]:
+    def submit(self, publish: bool = False, restack: bool = False) -> CommandResult:
         """Run gt submit to create or update PR.
 
         Args:
@@ -147,7 +161,7 @@ class GraphiteGtKitOps(ABC):
             restack: Whether to use --restack flag
 
         Returns:
-            Tuple of (success, stdout, stderr)
+            CommandResult with success status and output
         """
 
     @abstractmethod

@@ -30,6 +30,7 @@ def add_worktree(
     ref: str | None,
     use_existing_branch: bool,
     use_graphite: bool,
+    skip_remote_check: bool,
 ) -> None:
     """Create a git worktree.
 
@@ -59,6 +60,28 @@ def add_worktree(
 
         ctx.git_ops.add_worktree(repo_root, path, branch=branch, ref=None, create_branch=False)
     elif branch:
+        # Check if branch name exists on remote origin (only when creating new branches)
+        if not skip_remote_check:
+            try:
+                remote_branches = ctx.git_ops.list_remote_branches(repo_root)
+                remote_ref = f"origin/{branch}"
+
+                if remote_ref in remote_branches:
+                    user_output(
+                        click.style("Error: ", fg="red")
+                        + f"Branch '{branch}' already exists on remote 'origin'\n\n"
+                        + "A branch with this name is already pushed to the remote repository.\n"
+                        + "Please choose a different name for your new branch."
+                    )
+                    raise SystemExit(1)
+            except Exception as e:
+                # Remote unavailable or other error - proceed with warning
+                user_output(
+                    click.style("Warning: ", fg="yellow")
+                    + f"Could not check remote branches: {e}\n"
+                    + "Proceeding with branch creation..."
+                )
+
         if use_graphite:
             cwd = ctx.cwd
             original_branch = ctx.git_ops.get_current_branch(cwd)
@@ -230,6 +253,12 @@ def _create_json_response(
     is_flag=True,
     help="Stay in current directory instead of switching to new worktree.",
 )
+@click.option(
+    "--skip-remote-check",
+    is_flag=True,
+    default=False,
+    help="Skip checking if branch exists on remote (for offline work)",
+)
 @click.pass_obj
 def create(
     ctx: ErkContext,
@@ -244,6 +273,7 @@ def create(
     script: bool,
     output_json: bool,
     stay: bool,
+    skip_remote_check: bool,
 ) -> None:
     """Create a worktree and write a .env file.
 
@@ -252,6 +282,10 @@ def create(
     .plan/ folder in the worktree.
     If --from-current-branch is provided, moves the current branch to the new worktree.
     If --from-branch is provided, creates a worktree from an existing branch.
+
+    By default, the command checks if a branch with the same name already exists on
+    the 'origin' remote. If a conflict is detected, the command fails with an error.
+    Use --skip-remote-check to bypass this validation for offline workflows.
     """
 
     # Validate mutually exclusive options
@@ -426,6 +460,7 @@ def create(
             ref=None,
             use_existing_branch=True,
             use_graphite=False,
+            skip_remote_check=skip_remote_check,
         )
     elif from_branch:
         # Create worktree with existing branch
@@ -437,6 +472,7 @@ def create(
             ref=None,
             use_existing_branch=True,
             use_graphite=False,
+            skip_remote_check=skip_remote_check,
         )
     else:
         # Create worktree via git. If no branch provided, derive a sensible default.
@@ -453,6 +489,7 @@ def create(
             ref=ref,
             use_graphite=use_graphite,
             use_existing_branch=False,
+            skip_remote_check=skip_remote_check,
         )
 
     # Write .env based on config

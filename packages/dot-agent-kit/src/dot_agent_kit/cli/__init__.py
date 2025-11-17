@@ -1,7 +1,6 @@
 import click
 
 from dot_agent_kit.cli.output import user_output
-from dot_agent_kit.error_boundary import cli_error_boundary
 from dot_agent_kit.version import __version__
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
@@ -71,6 +70,8 @@ def cli(ctx: click.Context, debug: bool) -> None:
 
 def main() -> None:
     """Entry point with error boundary."""
+    from dot_agent_kit.error_boundary import cli_error_boundary
+
     cli_error_boundary(cli)()
 
 

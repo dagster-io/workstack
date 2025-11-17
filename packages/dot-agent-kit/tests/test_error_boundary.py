@@ -60,8 +60,8 @@ def test_error_boundary_custom_exception_with_debug() -> None:
     assert "must only contain lowercase" in result.output
 
 
-def test_error_boundary_unexpected_exception_without_debug() -> None:
-    """Test that unexpected exceptions show internal error hint without debug."""
+def test_error_boundary_unexpected_exception_shows_trace() -> None:
+    """Test that unexpected exceptions always show full stack traces."""
 
     @click.command()
     @cli_error_boundary
@@ -72,37 +72,12 @@ def test_error_boundary_unexpected_exception_without_debug() -> None:
     result = runner.invoke(cmd, [])
 
     assert result.exit_code == 1
-    assert "Internal error: RuntimeError" in result.output
-    assert "Run with --debug for full details" in result.output
-    assert "Traceback" not in result.output
-    assert "Something went wrong internally" not in result.output
-
-
-def test_error_boundary_unexpected_exception_with_debug() -> None:
-    """Test that unexpected exceptions show full stack traces with debug mode."""
-
-    @click.group()
-    @click.option("--debug", is_flag=True)
-    @click.pass_context
-    def cli(ctx: click.Context, debug: bool) -> None:
-        ctx.ensure_object(dict)
-        ctx.obj["debug"] = debug
-
-    @cli.command()
-    @cli_error_boundary
-    def cmd() -> None:
-        raise RuntimeError("Something went wrong internally")
-
-    runner = CliRunner()
-    result = runner.invoke(cli, ["--debug", "cmd"])
-
-    assert result.exit_code == 1
     assert "Traceback (most recent call last):" in result.output
     assert "RuntimeError: Something went wrong internally" in result.output
 
 
 def test_error_boundary_debug_flag_propagation_nested_commands() -> None:
-    """Test that --debug flag propagates through nested command groups."""
+    """Test that unexpected exceptions show stack traces in nested command groups."""
 
     @click.group()
     @click.option("--debug", is_flag=True)
@@ -124,13 +99,13 @@ def test_error_boundary_debug_flag_propagation_nested_commands() -> None:
 
     runner = CliRunner()
 
-    # Test without debug
+    # Test without debug - still shows stack trace for unexpected exceptions
     result = runner.invoke(cli, ["subgroup", "nested-cmd"])
     assert result.exit_code == 1
-    assert "Internal error: ValueError" in result.output
-    assert "Traceback" not in result.output
+    assert "Traceback (most recent call last):" in result.output
+    assert "ValueError: Unexpected error in nested command" in result.output
 
-    # Test with debug
+    # Test with debug - also shows stack trace
     result = runner.invoke(cli, ["--debug", "subgroup", "nested-cmd"])
     assert result.exit_code == 1
     assert "Traceback (most recent call last):" in result.output
@@ -140,8 +115,7 @@ def test_error_boundary_debug_flag_propagation_nested_commands() -> None:
 def test_error_boundary_missing_context() -> None:
     """Test error boundary behavior when Click context is missing.
 
-    When context is missing, should default to debug=False and show
-    internal error hints for unexpected exceptions.
+    Unexpected exceptions should show full stack traces regardless of context.
     """
 
     @cli_error_boundary
@@ -246,7 +220,7 @@ def test_error_boundary_multiple_exception_types() -> None:
 def test_error_boundary_context_object_not_dict() -> None:
     """Test error boundary when context object exists but isn't a dict.
 
-    Should gracefully handle this case by defaulting to debug=False.
+    Unexpected exceptions should always show full stack traces.
     """
 
     @click.group()
@@ -264,16 +238,16 @@ def test_error_boundary_context_object_not_dict() -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ["--debug", "cmd"])
 
-    # Should default to non-debug behavior (internal error hint)
+    # Unexpected exceptions always show stack traces
     assert result.exit_code == 1
-    assert "Internal error: ValueError" in result.output
-    assert "Traceback" not in result.output
+    assert "Traceback (most recent call last):" in result.output
+    assert "ValueError: Error with non-dict context" in result.output
 
 
 def test_error_boundary_context_obj_missing_debug_key() -> None:
     """Test error boundary when context object exists but has no 'debug' key.
 
-    Should gracefully handle this case by defaulting to debug=False.
+    Unexpected exceptions should always show full stack traces.
     """
 
     @click.group()
@@ -290,7 +264,7 @@ def test_error_boundary_context_obj_missing_debug_key() -> None:
     runner = CliRunner()
     result = runner.invoke(cli, ["cmd"])
 
-    # Should default to non-debug behavior
+    # Unexpected exceptions always show stack traces
     assert result.exit_code == 1
-    assert "Internal error: ValueError" in result.output
-    assert "Run with --debug for full details" in result.output
+    assert "Traceback (most recent call last):" in result.output
+    assert "ValueError: Error with missing debug key" in result.output

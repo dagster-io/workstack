@@ -11,7 +11,6 @@ from typing import Any, TypeVar
 
 import click
 
-from dot_agent_kit.cli.output import user_output
 from dot_agent_kit.sources.exceptions import DotAgentNonIdealStateException
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -23,10 +22,9 @@ def cli_error_boundary[T: Callable[..., Any]](func: T) -> T:
     This decorator should be applied to CLI command entry points to provide
     user-friendly error messages. It distinguishes between:
     - DotAgentNonIdealStateException and subclasses: Shows clean error messages
-    - External/unexpected exceptions: Shows "internal error" with hint to use --debug
-    - Debug mode: Shows full stack traces for any exception
+    - Unexpected exceptions: Always shows full stack traces for debugging
 
-    The debug flag is accessed from the Click context object.
+    The debug flag is still available in the Click context for potential future use.
 
     Example:
         @click.command()
@@ -37,30 +35,18 @@ def cli_error_boundary[T: Callable[..., Any]](func: T) -> T:
 
     @functools.wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
-        # Get the current Click context to check debug flag
-        ctx = click.get_current_context(silent=True)
-        debug = False
-        if ctx and ctx.obj and "debug" in ctx.obj:
-            debug = ctx.obj["debug"]
+        from dot_agent_kit.cli.output import user_output
 
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            # Check if debug mode is enabled
-            if debug:
-                # In debug mode, show full traceback for any exception
-                user_output(traceback.format_exc())
-                raise SystemExit(1) from None
-
             # Check if this is a custom DotAgentNonIdealStateException
             if isinstance(e, DotAgentNonIdealStateException):
                 # Custom exceptions get clean error messages
                 user_output(f"Error: {e}")
             else:
-                # External/unexpected exceptions show internal error hint
-                user_output(
-                    f"Internal error: {type(e).__name__}. Run with --debug for full details."
-                )
+                # Unexpected exceptions always show full stack trace
+                user_output(traceback.format_exc())
 
             raise SystemExit(1) from None
 

@@ -129,15 +129,9 @@ def sync_cmd(
         current_worktree_name = current_wt_path.name
 
     # Step 3: Switch to root (only if not already at root)
-    # In pure test mode with sentinel paths, os.chdir() will fail gracefully
     if ctx.cwd.resolve() != repo.root:
-        try:
-            os.chdir(repo.root)
+        if ctx.git_ops.safe_chdir(repo.root):
             ctx = regenerate_context(ctx)
-        except OSError:
-            # Path doesn't exist (sentinel path in tests), skip chdir
-            # Context remains unchanged, which is fine for pure test mode
-            pass
 
     # Step 4: Run `gt sync`
     cmd = ["gt", "sync"]
@@ -255,7 +249,8 @@ def sync_cmd(
         if ctx.git_ops.path_exists(wt_path):
             _emit(f"✓ Returning to: {current_worktree_name}", script_mode=script)
             if not script:
-                os.chdir(wt_path)
+                if ctx.git_ops.safe_chdir(wt_path):
+                    ctx = regenerate_context(ctx)
             else:
                 # Generate cd script for shell wrapper
                 script_content = render_cd_script(

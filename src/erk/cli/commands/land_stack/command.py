@@ -189,7 +189,7 @@ def land_stack(
         raise SystemExit(1) from None
 
     # All succeeded - run cleanup operations
-    final_branch = _cleanup_and_navigate(
+    final_branch, final_path = _cleanup_and_navigate(
         ctx,
         repo.root,
         merged_branches,
@@ -207,12 +207,12 @@ def land_stack(
     if script:
         from erk.cli.shell_utils import render_cd_script
 
-        # After cleanup, we're at trunk worktree on main branch
-        # Generate activation script to switch shell to trunk worktree
+        # After cleanup, we're at final worktree (trunk or child)
+        # Generate activation script to switch shell to final worktree
         script_content = render_cd_script(
-            repo.root,
+            final_path,
             comment=f"land-stack: switch to {final_branch}",
-            success_message=f"✓ Switched to {final_branch} at {repo.root}",
+            success_message=f"✓ Switched to {final_branch} at {final_path}",
         )
         result = ctx.script_writer.write_activation_script(
             script_content,

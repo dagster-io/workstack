@@ -85,6 +85,31 @@ class GitGtKitOps(ABC):
             Trunk branch name (e.g., 'main', 'master')
         """
 
+    @abstractmethod
+    def get_repository_root(self) -> str:
+        """Get the absolute path to the repository root.
+
+        Returns:
+            Absolute path to repo root
+
+        Raises:
+            subprocess.CalledProcessError: If not in a git repository
+        """
+
+    @abstractmethod
+    def get_diff_to_parent(self, parent_branch: str) -> str:
+        """Get git diff between parent branch and HEAD.
+
+        Args:
+            parent_branch: Name of the parent branch
+
+        Returns:
+            Full diff output as string
+
+        Raises:
+            subprocess.CalledProcessError: If diff command fails
+        """
+
 
 class GraphiteGtKitOps(ABC):
     """Graphite (gt) operations interface for GT kit commands."""

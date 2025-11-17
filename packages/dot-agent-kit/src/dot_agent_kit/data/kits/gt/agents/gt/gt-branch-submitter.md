@@ -52,29 +52,25 @@ Task(
 **Error handling:**
 If the command fails (exit code 1), parse the error JSON and report to user. Do not continue.
 
-### Step 2: Analyze Changes and Craft Commit Message
+### Step 2: Get Diff Context and Craft Commit Message
 
-Perform comprehensive diff analysis to understand all changes in this branch.
-
-**Step 2a: Get Repository Root**
+Get all context needed for diff analysis using a single command:
 
 ```bash
-git rev-parse --show-toplevel
+dot-agent run gt submit-branch get-diff-context
 ```
 
-Store this to convert all file paths to relative paths.
+**What this returns (JSON):**
 
-**Step 2b: Get Parent Branch for Diff**
+- `repo_root`: Repository root directory (for relative paths)
+- `current_branch`: Current branch name
+- `parent_branch`: Parent branch name
+- `diff`: Full diff output from parent to HEAD
 
-Use the parent branch from Step 1's JSON output to compare against.
+**Parse the JSON** to extract the diff and repo_root for analysis.
 
-**Step 2c: Analyze the Diff**
-
-Run git diff to get all changes:
-
-```bash
-git diff <parent_branch>...HEAD
-```
+**Error handling:**
+If the command fails (exit code 1), parse the error JSON and report to user. Do not continue.
 
 **Analyze the diff following these principles:**
 
@@ -91,7 +87,7 @@ git diff <parent_branch>...HEAD
 - Group related changes together
 - Skip minor refactoring, formatting, or trivial updates
 
-**Step 2d: Structure Analysis Output**
+**Structure Analysis Output:**
 
 Create a compressed analysis with these sections:
 
@@ -128,7 +124,7 @@ Create a compressed analysis with these sections:
 - [1-2 bullets max]
 ```
 
-**Step 2e: Craft Brief Top Summary**
+**Craft Brief Top Summary:**
 
 Create a concise 2-4 sentence summary paragraph that:
 
@@ -136,7 +132,7 @@ Create a concise 2-4 sentence summary paragraph that:
 - Highlights the key changes briefly
 - Uses clear, professional language
 
-**Step 2f: Construct Commit Message**
+**Construct Commit Message:**
 
 Combine the brief summary with the compressed analysis:
 

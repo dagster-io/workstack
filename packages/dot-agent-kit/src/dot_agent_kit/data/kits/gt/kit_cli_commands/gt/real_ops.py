@@ -136,6 +136,26 @@ class RealGitGtKitOps(GitGtKitOps):
         # 3. Final fallback: 'main'
         return "main"
 
+    def get_repository_root(self) -> str:
+        """Get the absolute path to the repository root."""
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout.strip()
+
+    def get_diff_to_parent(self, parent_branch: str) -> str:
+        """Get git diff between parent branch and HEAD."""
+        result = subprocess.run(
+            ["git", "diff", f"{parent_branch}...HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout
+
 
 class RealGraphiteGtKitOps(GraphiteGtKitOps):
     """Real Graphite operations using subprocess."""

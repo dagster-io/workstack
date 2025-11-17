@@ -107,8 +107,8 @@ def test_script_contains_cd_command(tmp_path: Path) -> None:
     assert result is not None
     script_content = result.read_text(encoding="utf-8")
 
-    # Script should cd to repo root
-    assert f"cd {repo}" in script_content or f'cd "{repo}"' in script_content
+    # Script should cd to repo root (with single quotes for shell safety)
+    assert f"cd '{repo}'" in script_content
 
     # Clean up
     result.unlink(missing_ok=True)

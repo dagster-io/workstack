@@ -282,20 +282,18 @@ def test_land_stack_no_submit_when_landing_top_branch() -> None:
 
 
 def test_land_stack_switches_to_root_when_run_from_linked_worktree() -> None:
-    """Test that land-stack switches to root worktree before cleanup.
+    """Test that land-stack fails when run from a linked worktree.
 
-    Scenario: User is in a linked worktree that will be destroyed during land-stack.
-    Without the fix, the user's shell ends up in a destroyed directory.
+    Scenario: User is in a linked worktree where a branch being landed is checked out.
+    The validation should detect this as a worktree conflict.
 
-    Bug: land-stack runs cleanup operations (including erk sync -f) which
-    destroys worktrees. If the current directory is one of those worktrees, the
-    shell is left in a deleted directory.
+    After fix: Validation correctly flags ANY branch checked out in ANY worktree
+    as a conflict, including the current worktree. User must consolidate first or
+    run from root worktree.
 
-    Fix: Before cleanup, check if Path.cwd() != repo.root and call os.chdir(repo.root).
-
-    Note: In pure mode, we test that the command handles linked worktree contexts
-    without filesystem side effects. The actual os.chdir() behavior is tested in
-    integration tests with real filesystem.
+    Note: This replaces the previous behavior where land-stack would try to handle
+    execution from linked worktrees. Now we require explicit consolidation for
+    simpler, more predictable behavior.
     """
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -353,11 +351,11 @@ def test_land_stack_switches_to_root_when_run_from_linked_worktree() -> None:
         # Run land-stack with --dry-run to avoid subprocess failures
         result = runner.invoke(cli, ["land-stack", "--dry-run"], obj=test_ctx)
 
-        # Verify the command completed successfully when run from linked worktree
-        # The actual os.chdir() behavior is tested in integration tests
-        assert result.exit_code == 0
-        assert "Landing 1 PR" in result.output
+        # Should fail with worktree conflict error
+        assert result.exit_code == 1
+        assert "Cannot land stack - branches are checked out in multiple worktrees" in result.output
         assert "feat-1" in result.output
+        assert "erk consolidate" in result.output
 
 
 def test_land_stack_merge_command_excludes_auto_flag() -> None:

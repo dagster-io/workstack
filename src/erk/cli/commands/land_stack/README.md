@@ -18,6 +18,7 @@ Erk land-stack command: Land stacked PRs sequentially from bottom to top.
 
 - Build list of branches from bottom of stack to current branch
 - Check Graphite enabled, clean working directory, not on trunk, no worktree conflicts
+  - **Note:** Worktree conflict validation checks ALL worktrees, including the current worktree. You must run `erk consolidate` if any branches in the stack are checked out in worktrees, or run land-stack from the root worktree.
 - Verify all branches have open PRs
 - Check GitHub for merge conflicts (prevents landing failures)
 
@@ -34,19 +35,23 @@ For each branch from bottom to top:
 3. **Verify and update PR base** [Phase 2.5] - Check PR base on GitHub matches expected parent (trunk), update if stale
 4. **Merge PR** via `gh pr merge --squash --auto`
 5. **Sync trunk** with remote (fetch + checkout + pull --ff-only + checkout back)
-6. **Restack** remaining branches via `gt sync -f`
-7. **Submit** updated PRs to GitHub
+
+**Note:** Restacking (`gt sync -f`) and force-pushing remaining branches (`gt submit`) are NOT run automatically to give users full control. After landing completes, you can manually run these commands if needed.
 
 ### Phase 4: Cleanup
 
-- Remove merged branch worktrees
 - Navigate to safe branch (trunk or next unmerged branch)
 - Regenerate context after directory changes
+
+**Note:** Worktree cleanup (`erk sync -f`) is NOT run automatically. After landing, you can manually run `erk sync -f` to remove worktrees for merged branches.
 
 ### Phase 5: Final State
 
 - Display what was accomplished
 - Show current branch and merged branches
+- Display next steps for manual operations:
+  - Run `erk sync -f` to remove worktrees for merged branches
+  - Run `gt sync -f` to rebase remaining stack branches (if needed)
 
 ## Phase 2.5: PR Base Verification (Race Condition Prevention)
 
@@ -81,12 +86,12 @@ For each branch from bottom to top:
 - Commands like `gt up` / `gt down` navigate this direction
 
 **Restacking:**
-After each PR merge, `gt sync -f` rebases all remaining branches onto the new trunk state. This maintains stack integrity as PRs are landed.
+After PRs are merged, remaining upstack branches need to be rebased onto the new trunk state to maintain stack integrity. This is done manually by running `gt sync -f` after landing completes.
 
-After each PR merge on GitHub, we explicitly sync the local trunk branch with remote (git fetch + pull --ff-only) before running `gt sync -f`. This ensures the local trunk contains the just-merged PR commits, preventing race conditions where Graphite sees merged PRs but stale trunk state.
+**Manual Control:** The land-stack command does NOT automatically run `gt sync -f` or `erk sync -f`. This gives you full control over when restacking and cleanup happen, allowing you to inspect the state between operations.
 
 **Worktree Conflicts:**
-Git prevents checking out a branch in multiple worktrees. Phase 1 validation detects this and suggests `erk consolidate` to fix.
+Git prevents checking out a branch in multiple worktrees. Phase 1 validation detects ANY branch in the stack that is checked out in ANY worktree (including the current worktree) and requires `erk consolidate` to fix. This ensures all landing operations happen from a consistent location (the root worktree).
 
 **Context Regeneration:**
 After `os.chdir()` calls, must regenerate ErkContext to update `ctx.cwd`. This happens in Phase 4 after navigation operations.

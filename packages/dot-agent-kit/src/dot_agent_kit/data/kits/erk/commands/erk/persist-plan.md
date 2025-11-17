@@ -23,7 +23,7 @@ This command extracts a plan from conversation context, optionally applies guida
 
 **What happens AFTER (in separate commands):**
 
-- ⏭️ Create worktree: `/create-planned-wt`
+- ⏭️ Create worktree: `/erk:create-planned-wt`
 - ⏭️ Navigate and implement: `erk checkout <branch> && claude --permission-mode acceptEdits "/erk:implement-plan"`
 
 ## What Happens
@@ -194,7 +194,7 @@ Suggested action: [1-3 concrete steps to resolve]
 - Running ANY commands except `git rev-parse`
 - Implementing ANY part of the plan
 
-This command only saves the plan. Worktree creation happens via `/create-planned-wt`.
+This command only saves the plan. Worktree creation happens via `/erk:create-planned-wt`.
 
 ### Step 1: Detect Implementation Plan in Context
 
@@ -1192,7 +1192,7 @@ Suggested action:
 You can now:
 
 1. Review and edit the plan file if needed
-2. Create the worktree: /create-planned-wt
+2. Create the worktree: /erk:create-planned-wt
 
 ---
 

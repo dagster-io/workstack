@@ -826,76 +826,9 @@ erk sync               # Run gt repo sync + cleanup
 - `gt repo sync` - Sync with remote
 - `gt ls` - List tracked branches
 
+**Recommended practice**: For parent/child relationships and branch metadata, use native `gt` commands (`gt parent`, `gt children`, `gt branch info`). These commands are optimized for scripting contexts and provide machine-readable output that is easy to parse for automation and AI tools.
+
 **Auto-detection**: Erk automatically detects if `gt` CLI is installed and enables Graphite features.
-
-#### `erk graphite` - Machine-Readable Metadata
-
-**Purpose**: Provide structured access to Graphite metadata for scripting and automation.
-
-**Important**: Use native `gt` commands for interactive workflows. Use `erk graphite` only when you need machine-readable output.
-
-```bash
-# List branches (text format - one per line)
-erk graphite branches
-
-# List branches with full metadata (JSON)
-erk graphite branches --format json
-
-# Tree visualization of branch hierarchy
-erk graphite branches --format tree
-
-# Show specific stack subtree
-erk graphite branches --format tree --stack feature-a
-```
-
-**Output formats:**
-
-1. **Text** (default): Simple list of branch names, one per line
-
-   ```
-   main
-   feature-a
-   feature-b
-   ```
-
-2. **JSON**: Full structured metadata for scripting
-
-   ```json
-   {
-     "branches": [
-       {
-         "name": "main",
-         "parent": null,
-         "children": ["feature-a"],
-         "is_trunk": true,
-         "commit_sha": "abc123..."
-       }
-     ]
-   }
-   ```
-
-3. **Tree**: Hierarchical visualization with commit info
-   ```
-   main (abc123f) "Initial commit"
-   ├─ feature-a (def456g) "Add user authentication"
-   │  └─ feature-a-tests (789hij0) "Add tests for auth"
-   └─ feature-b (klm123n) "Refactor database layer"
-   ```
-
-**When to use:**
-
-- Need JSON output for scripts or tools
-- Need full branch metadata across ALL branches simultaneously
-- Building automation that consumes Graphite data
-
-**When NOT to use:**
-
-- Getting parent/child for a single branch → Use `gt parent`, `gt children`, or `gt branch info`
-- Interactive terminal work → Use native `gt` commands instead
-- Creating branches → Use `gt create`
-- Submitting PRs → Use `gt submit`
-
-**Recommended practice**: For parent/child relationships, always prefer `gt parent`, `gt children`, and `gt branch info` over parsing `erk graphite branches` output. They are faster, simpler, and more reliable.
 
 ### GitHub Integration
 

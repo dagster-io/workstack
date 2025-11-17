@@ -882,7 +882,7 @@ def test_init_prints_completion_instructions() -> None:
                 cli,
                 ["init"],
                 obj=test_ctx,
-                input=f"{erk_root}\ny\n",
+                input=f"{erk_root}\ny\ny\n",
             )
 
         assert result.exit_code == 0, result.output
@@ -919,7 +919,7 @@ def test_init_prints_wrapper_instructions() -> None:
                 cli,
                 ["init"],
                 obj=test_ctx,
-                input=f"{erk_root}\ny\n",
+                input=f"{erk_root}\ny\ny\n",
             )
 
         assert result.exit_code == 0, result.output
@@ -995,3 +995,201 @@ def test_init_not_in_git_repo_fails() -> None:
 
         # The command should fail at repo discovery
         assert result.exit_code != 0
+
+
+def test_shell_setup_confirmation_declined_with_shell_flag() -> None:
+    """Test user declining confirmation for global config write (--shell flag)."""
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "erks"
+        bashrc = Path.home() / ".bashrc"
+
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
+        global_config = GlobalConfig(
+            erk_root=erk_root,
+            use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+        )
+
+        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+
+        test_ctx = env.build_context(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            global_config=global_config,
+            shell_ops=FakeShellOps(detected_shell=("bash", bashrc)),
+        )
+
+        # Answer "y" to shell setup, then "n" to config write confirmation
+        with mock.patch.dict(os.environ, {"HOME": str(env.cwd)}):
+            result = runner.invoke(cli, ["init", "--shell"], obj=test_ctx, input="y\nn\n")
+
+        assert result.exit_code == 0, result.output
+        assert "Shell integration instructions were displayed above" in result.output
+        assert "Run 'erk init --shell' again to save this preference" in result.output
+        # Config should NOT have been updated
+        loaded = global_config_ops.load()
+        assert loaded.shell_setup_complete is False
+
+
+def test_shell_setup_confirmation_accepted_with_shell_flag() -> None:
+    """Test user accepting confirmation for global config write (--shell flag)."""
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "erks"
+        bashrc = Path.home() / ".bashrc"
+
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
+        global_config = GlobalConfig(
+            erk_root=erk_root,
+            use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+        )
+
+        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+
+        test_ctx = env.build_context(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            global_config=global_config,
+            shell_ops=FakeShellOps(detected_shell=("bash", bashrc)),
+        )
+
+        # Answer "y" to shell setup, then "y" to config write confirmation
+        with mock.patch.dict(os.environ, {"HOME": str(env.cwd)}):
+            result = runner.invoke(cli, ["init", "--shell"], obj=test_ctx, input="y\ny\n")
+
+        assert result.exit_code == 0, result.output
+        assert "✓ Global config updated" in result.output
+        # Config should have been updated
+        loaded = global_config_ops.load()
+        assert loaded.shell_setup_complete is True
+
+
+def test_shell_setup_confirmation_declined_first_init() -> None:
+    """Test user declining confirmation during first-time init."""
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "erks"
+        bashrc = Path.home() / ".bashrc"
+
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
+        # Config doesn't exist yet (first-time init)
+        global_config_ops = InMemoryGlobalConfigOps(config=None)
+
+        test_ctx = env.build_context(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            global_config=None,
+            shell_ops=FakeShellOps(detected_shell=("bash", bashrc)),
+        )
+
+        # Provide erk_root, decline shell setup instructions, answer confirmation
+        with mock.patch.dict(os.environ, {"HOME": str(env.cwd)}):
+            # Input: erk_root path, "y" for shell setup, "n" for config confirmation
+            result = runner.invoke(cli, ["init"], obj=test_ctx, input=f"{erk_root}\ny\nn\n")
+
+        assert result.exit_code == 0, result.output
+        assert "Shell integration instructions were displayed above" in result.output
+        # Config should exist (created by first-time init)
+        assert global_config_ops.exists()
+        # But shell_setup_complete should be False (user declined)
+        loaded = global_config_ops.load()
+        assert loaded.shell_setup_complete is False
+
+
+def test_shell_setup_permission_error_with_shell_flag() -> None:
+    """Test permission error handling when saving global config (--shell flag)."""
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "erks"
+        bashrc = Path.home() / ".bashrc"
+
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
+        global_config = GlobalConfig(
+            erk_root=erk_root,
+            use_graphite=False,
+            shell_setup_complete=False,
+            show_pr_info=True,
+        )
+
+        # Create a GlobalConfigOps that raises PermissionError on save
+        class PermissionErrorGlobalConfigOps(InMemoryGlobalConfigOps):
+            def save(self, config: GlobalConfig) -> None:
+                raise PermissionError(
+                    f"Cannot write to file: {self.path()}\n"
+                    "The file exists but is not writable.\n\n"
+                    "To fix this manually:\n"
+                    "  1. Make it writable: chmod 644 {self.path()}\n"
+                    "  2. Run erk init --shell again"
+                )
+
+        global_config_ops = PermissionErrorGlobalConfigOps(config=global_config)
+
+        test_ctx = env.build_context(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            global_config=global_config,
+            shell_ops=FakeShellOps(detected_shell=("bash", bashrc)),
+        )
+
+        # Answer "y" to shell setup, then "y" to config write confirmation
+        with mock.patch.dict(os.environ, {"HOME": str(env.cwd)}):
+            result = runner.invoke(cli, ["init", "--shell"], obj=test_ctx, input="y\ny\n")
+
+        assert result.exit_code == 1, result.output
+        assert "❌ Error: Could not save global config" in result.output
+        assert "Cannot write to file" in result.output
+        assert "Shell integration instructions were displayed above" in result.output
+        assert "You can use them now - erk just couldn't save this preference" in result.output
+
+
+def test_shell_setup_permission_error_first_init() -> None:
+    """Test permission error handling during first-time init (doesn't exit)."""
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "erks"
+        bashrc = Path.home() / ".bashrc"
+
+        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
+
+        # Create a GlobalConfigOps that allows first save but fails on second
+        class ConditionalPermissionErrorOps(InMemoryGlobalConfigOps):
+            def __init__(self) -> None:
+                super().__init__(config=None)
+                self.save_count = 0
+
+            def save(self, config: GlobalConfig) -> None:
+                self.save_count += 1
+                if self.save_count == 1:
+                    # First save (creating global config) succeeds
+                    super().save(config)
+                else:
+                    # Second save (shell setup update) fails
+                    raise PermissionError(
+                        f"Cannot write to file: {self.path()}\n"
+                        "Permission denied during write operation."
+                    )
+
+        global_config_ops = ConditionalPermissionErrorOps()
+
+        test_ctx = env.build_context(
+            git_ops=git_ops,
+            global_config_ops=global_config_ops,
+            global_config=None,
+            shell_ops=FakeShellOps(detected_shell=("bash", bashrc)),
+        )
+
+        # Input: erk_root path, "y" for shell setup, "y" for config confirmation
+        with mock.patch.dict(os.environ, {"HOME": str(env.cwd)}):
+            result = runner.invoke(cli, ["init"], obj=test_ctx, input=f"{erk_root}\ny\ny\n")
+
+        # Should NOT exit with error code (first-time init continues)
+        assert result.exit_code == 0, result.output
+        assert "❌ Error: Could not save global config" in result.output
+        assert "Cannot write to file" in result.output
+        assert "Shell integration instructions were displayed above" in result.output
+        # First save succeeded, second failed
+        assert global_config_ops.save_count == 2

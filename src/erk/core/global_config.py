@@ -4,6 +4,7 @@ Provides immutable global config data loaded from ~/.erk/config.toml.
 Replaces lazy-loading GlobalConfigOps pattern with eager loading at entry point.
 """
 
+import os
 import tomllib
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -107,9 +108,47 @@ class FilesystemGlobalConfigOps(GlobalConfigOps):
 
         Args:
             config: GlobalConfig instance to save
+
+        Raises:
+            PermissionError: If directory or file cannot be written
         """
         config_path = self.path()
-        config_path.parent.mkdir(parents=True, exist_ok=True)
+        parent = config_path.parent
+
+        # Check parent directory permissions BEFORE attempting mkdir
+        if parent.exists() and not os.access(parent, os.W_OK):
+            raise PermissionError(
+                f"Cannot write to directory: {parent}\n"
+                f"The directory exists but is not writable.\n\n"
+                f"To fix this manually:\n"
+                f"  1. Create the config file: touch {config_path}\n"
+                f"  2. Edit it with your preferred editor\n"
+                f"  3. Add: shell_setup_complete = true"
+            )
+
+        # Try to create directory structure
+        try:
+            parent.mkdir(parents=True, exist_ok=True)
+        except PermissionError:
+            raise PermissionError(
+                f"Cannot create directory: {parent}\n"
+                f"Check permissions on your home directory.\n\n"
+                f"To fix this manually:\n"
+                f"  1. Create the directory: mkdir -p {parent}\n"
+                f"  2. Ensure it's writable: chmod 755 {parent}\n"
+                f"  3. Run erk init --shell again"
+            ) from None
+
+        # Check file writability BEFORE attempting write
+        if config_path.exists() and not os.access(config_path, os.W_OK):
+            raise PermissionError(
+                f"Cannot write to file: {config_path}\n"
+                f"The file exists but is not writable.\n\n"
+                f"To fix this manually:\n"
+                f"  1. Make it writable: chmod 644 {config_path}\n"
+                f"  2. Run erk init --shell again\n"
+                f"  Or edit the file directly to add: shell_setup_complete = true"
+            )
 
         content = f"""# Global erk configuration
 erk_root = "{config.erk_root}"
@@ -117,7 +156,18 @@ use_graphite = {str(config.use_graphite).lower()}
 shell_setup_complete = {str(config.shell_setup_complete).lower()}
 show_pr_info = {str(config.show_pr_info).lower()}
 """
-        config_path.write_text(content, encoding="utf-8")
+
+        try:
+            config_path.write_text(content, encoding="utf-8")
+        except PermissionError:
+            raise PermissionError(
+                f"Cannot write to file: {config_path}\n"
+                f"Permission denied during write operation.\n\n"
+                f"To fix this manually:\n"
+                f"  1. Check parent directory permissions: ls -ld {parent}\n"
+                f"  2. Ensure directory is writable: chmod 755 {parent}\n"
+                f"  3. Create the file manually with the config content above"
+            ) from None
 
     def path(self) -> Path:
         """Get the path to the global config file.

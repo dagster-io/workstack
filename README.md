@@ -38,8 +38,8 @@ erk create user-auth
 erk switch user-auth
 
 # Switch back and clean up
-erk switch root
-erk rm user-auth
+erk checkout root
+erk delete user-auth
 ```
 
 ## Overview
@@ -50,7 +50,7 @@ erk rm user-auth
 
 - Centralized worktrees in `~/.erk/repos/<repo>/worktrees/<feature>/`
 - Automatic environment setup (`.env`, virtual environments, activation scripts)
-- Simple CLI: `create`, `switch`, `rm`, `ls`
+- Simple CLI: `create`, `checkout`, `delete`, `ls`
 - Plan-based development workflow
 - Optional Graphite integration for stacked diffs
 
@@ -85,7 +85,7 @@ erk status                 # Show status of current worktree
 erk list                   # List all worktrees (alias: ls)
 erk list --stacks          # List with graphite stacks and PR status
 erk rename OLD NEW         # Rename a worktree
-erk rm NAME                # Remove worktree
+erk delete NAME            # Delete worktree
 erk sync                   # Sync with Graphite, show cleanup candidates
 erk sync --dry-run         # Show safe-to-delete worktrees (merged PRs)
 erk sync -f                # Sync and auto-remove merged worktrees
@@ -380,7 +380,7 @@ Requires Graphite CLI (`gt`) and GitHub CLI (`gh`) installed.
 | `--ref REF`       | Fallback branch for source (default: main)  |
 | `-f, --force`     | Skip confirmation prompts                   |
 
-### `remove` / `rm` Options
+### `delete` / `del` Options
 
 | Option               | Description                               |
 | -------------------- | ----------------------------------------- |

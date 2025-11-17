@@ -4,7 +4,7 @@ from pathlib import Path
 
 import click
 
-from erk.cli.commands.remove import _remove_worktree
+from erk.cli.commands.delete import _delete_worktree
 from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output
 from erk.cli.shell_utils import render_navigation_script
@@ -213,8 +213,8 @@ def sync_cmd(
                     script_mode=script,
                 )
             else:
-                # Reuse remove logic from remove.py
-                _remove_worktree(
+                # Reuse delete logic from delete.py
+                _delete_worktree(
                     ctx,
                     wt.name,
                     force=True,  # Already confirmed above

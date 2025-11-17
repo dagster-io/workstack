@@ -89,7 +89,7 @@ This command succeeds when ALL of the following are true:
 **Solution:**
 
 - List worktrees: `erk list`
-- Remove existing: `erk remove <name>`
+- Delete existing: `erk delete <name>`
 - Or navigate to existing: `erk checkout <branch>`
 
 ### "Failed to parse erk output"
@@ -273,7 +273,7 @@ Details: A worktree with this name already exists from a previous plan
 Suggested action:
   1. View existing: erk status <worktree_name>
   2. Navigate to it: erk checkout <branch>
-  3. Or remove it: erk remove <worktree_name>
+  3. Or delete it: erk delete <worktree_name>
   4. Or modify plan title to generate different name
 ```
 

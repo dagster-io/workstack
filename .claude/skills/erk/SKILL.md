@@ -117,7 +117,7 @@ Load `references/erk.md` and search for "erk sync" section to provide:
 
 - Finding merged worktrees: `erk sync --dry-run`
 - Syncing and cleaning with Graphite: `erk sync -f`
-- Manual removal: `erk rm <name>`
+- Manual deletion: `erk delete <name>`
 
 ## Workflow Guidance
 

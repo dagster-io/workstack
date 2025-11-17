@@ -40,8 +40,8 @@ def worktree_path_for(worktrees_dir: Path, name: str) -> Path:
     return (worktrees_dir / name).resolve()
 
 
-def validate_worktree_name_for_removal(name: str) -> None:
-    """Validate that a worktree name is safe for removal.
+def validate_worktree_name_for_deletion(name: str) -> None:
+    """Validate that a worktree name is safe for deletion.
 
     Rejects:
     - Empty strings
@@ -57,17 +57,17 @@ def validate_worktree_name_for_removal(name: str) -> None:
         raise SystemExit(1)
 
     if name in (".", ".."):
-        user_output(f"Error: Cannot remove '{name}' - directory references not allowed")
+        user_output(f"Error: Cannot delete '{name}' - directory references not allowed")
         raise SystemExit(1)
 
     if name == "root":
-        user_output("Error: Cannot remove 'root' - root worktree name not allowed")
+        user_output("Error: Cannot delete 'root' - root worktree name not allowed")
         raise SystemExit(1)
 
     if name.startswith("/"):
-        user_output(f"Error: Cannot remove '{name}' - absolute paths not allowed")
+        user_output(f"Error: Cannot delete '{name}' - absolute paths not allowed")
         raise SystemExit(1)
 
     if "/" in name:
-        user_output(f"Error: Cannot remove '{name}' - path separators not allowed")
+        user_output(f"Error: Cannot delete '{name}' - path separators not allowed")
         raise SystemExit(1)

@@ -7,7 +7,7 @@ import click
 from erk.cli.commands.navigation_helpers import complete_worktree_names
 from erk.cli.core import (
     discover_repo_context,
-    validate_worktree_name_for_removal,
+    validate_worktree_name_for_deletion,
     worktree_path_for,
 )
 from erk.cli.output import user_output
@@ -21,7 +21,7 @@ from erk.core.worktree_utils import (
 )
 
 
-def _try_git_worktree_remove(git_ops: GitOps, repo_root: Path, wt_path: Path) -> bool:
+def _try_git_worktree_delete(git_ops: GitOps, repo_root: Path, wt_path: Path) -> bool:
     """Attempt git worktree remove, returning success status.
 
     This function violates LBYL norms because there's no reliable way to
@@ -59,7 +59,7 @@ def _prune_worktrees_safe(git_ops: GitOps, repo_root: Path) -> None:
         pass
 
 
-def _remove_worktree(
+def _delete_worktree(
     ctx: ErkContext,
     name: str,
     force: bool,
@@ -67,17 +67,17 @@ def _remove_worktree(
     dry_run: bool,
     quiet: bool = False,
 ) -> None:
-    """Internal function to remove a worktree.
+    """Internal function to delete a worktree.
 
     Uses git worktree remove when possible, but falls back to direct rmtree
-    if git fails (e.g., worktree already removed from git metadata but directory exists).
+    if git fails (e.g., worktree already deleted from git metadata but directory exists).
     This is acceptable exception handling because there's no reliable way to check
     a priori if git worktree remove will succeed - the worktree might be in various
-    states of partial removal.
+    states of partial deletion.
 
     Args:
         ctx: Erk context with git operations
-        name: Name of the worktree to remove
+        name: Name of the worktree to delete
         force: Skip confirmation prompts
         delete_stack: Delete all branches in the Graphite stack (requires Graphite)
         dry_run: Print what would be done without executing destructive operations
@@ -88,7 +88,7 @@ def _remove_worktree(
         ctx = create_context(dry_run=True)
 
     # Validate worktree name before any operations
-    validate_worktree_name_for_removal(name)
+    validate_worktree_name_for_deletion(name)
 
     # Use ctx.cwd which is kept up-to-date by regenerate_context() after directory changes.
     # In pure test mode, ctx.cwd is a sentinel path; in production, it's updated
@@ -102,8 +102,8 @@ def _remove_worktree(
         user_output(f"Worktree not found: {wt_path}")
         raise SystemExit(1)
 
-    # LBYL: Check if user is currently in the worktree being removed
-    # If so, change to repository root before removal to prevent
+    # LBYL: Check if user is currently in the worktree being deleted
+    # If so, change to repository root before deletion to prevent
     # shell from being in deleted directory
     if ctx.git_ops.path_exists(ctx.cwd):
         current_dir = ctx.cwd.resolve()
@@ -114,7 +114,7 @@ def _remove_worktree(
             current_worktree_path is not None
             and current_worktree_path.resolve() == wt_path.resolve()
         ):
-            # Change to repository root before removal
+            # Change to repository root before deletion
             safe_dir = repo.root
             user_output(
                 click.style("ℹ️  ", fg="blue", bold=True)
@@ -137,7 +137,7 @@ def _remove_worktree(
             )
             raise SystemExit(1)
 
-        # Get the branches in the stack before removing the worktree
+        # Get the branches in the stack before deleting the worktree
         worktrees = ctx.git_ops.list_worktrees(repo.root)
         worktree_branch = get_worktree_branch(worktrees, wt_path)
 
@@ -168,7 +168,7 @@ def _remove_worktree(
         if branches_to_delete or True:
             user_output(click.style("📋 Planning to perform the following operations:", bold=True))
             worktree_text = click.style(str(wt_path), fg="cyan")
-            user_output(f"  1. 🗑️  Remove worktree: {worktree_text}")
+            user_output(f"  1. 🗑️  Delete worktree: {worktree_text}")
             if branches_to_delete:
                 user_output("  2. 🌳 Delete branches in stack:")
                 for branch in branches_to_delete:
@@ -184,9 +184,9 @@ def _remove_worktree(
 
     # Step 4: Execute operations
 
-    # 4a. Try to remove via git first
+    # 4a. Try to delete via git first
     # This updates git's metadata when possible
-    _try_git_worktree_remove(ctx.git_ops, repo.root, wt_path)
+    _try_git_worktree_delete(ctx.git_ops, repo.root, wt_path)
 
     # 4b. Always manually delete directory if it still exists
     # (git worktree remove may have succeeded or failed, but directory might still be there)
@@ -254,7 +254,7 @@ def _remove_worktree(
         user_output(f"✅ {path_text}")
 
 
-@click.command("remove")
+@click.command("delete")
 @click.argument("name", metavar="NAME", shell_complete=complete_worktree_names)
 @click.option("-f", "--force", is_flag=True, help="Do not prompt for confirmation.")
 @click.option(
@@ -271,17 +271,17 @@ def _remove_worktree(
     help="Print what would be done without executing destructive operations.",
 )
 @click.pass_obj
-def remove_cmd(ctx: ErkContext, name: str, force: bool, delete_stack: bool, dry_run: bool) -> None:
-    """Remove the worktree directory (alias: rm).
+def delete_cmd(ctx: ErkContext, name: str, force: bool, delete_stack: bool, dry_run: bool) -> None:
+    """Delete the worktree directory (alias: del).
 
     With `-f/--force`, skips the confirmation prompt.
     Attempts `git worktree remove` before deleting the directory.
     """
-    _remove_worktree(ctx, name, force, delete_stack, dry_run)
+    _delete_worktree(ctx, name, force, delete_stack, dry_run)
 
 
-# Register rm as a hidden alias (won't show in help)
-@click.command("rm", hidden=True)
+# Register del as a hidden alias (won't show in help)
+@click.command("del", hidden=True)
 @click.argument("name", metavar="NAME", shell_complete=complete_worktree_names)
 @click.option("-f", "--force", is_flag=True, help="Do not prompt for confirmation.")
 @click.option(
@@ -298,6 +298,6 @@ def remove_cmd(ctx: ErkContext, name: str, force: bool, delete_stack: bool, dry_
     help="Print what would be done without executing destructive operations.",
 )
 @click.pass_obj
-def rm_cmd(ctx: ErkContext, name: str, force: bool, delete_stack: bool, dry_run: bool) -> None:
-    """Remove the worktree directory (alias of 'remove')."""
-    _remove_worktree(ctx, name, force, delete_stack, dry_run)
+def del_cmd(ctx: ErkContext, name: str, force: bool, delete_stack: bool, dry_run: bool) -> None:
+    """Delete the worktree directory (alias of 'delete')."""
+    _delete_worktree(ctx, name, force, delete_stack, dry_run)

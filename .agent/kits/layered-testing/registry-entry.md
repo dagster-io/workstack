@@ -4,7 +4,7 @@
 
 **Artifacts**:
 
-- skill: .claude/skills/layered-testing/SKILL.md
+- skill: skills/layered-testing/SKILL.md
 
 **Usage**:
 

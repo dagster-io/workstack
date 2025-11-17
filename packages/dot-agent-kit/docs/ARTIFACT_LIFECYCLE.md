@@ -36,9 +36,9 @@ Edit `packages/dot-agent-kit/src/dot_agent_kit/data/kits/<kit-name>/kit.yaml`:
 ```yaml
 artifacts:
   command:
-    - commands/erk/create-planned-stack.md # OLD (deleted)
+    - commands/erk/create-planned-wt.md # OLD (deleted)
     - commands/erk/persist-plan.md # NEW
-    - commands/erk/create-planned-stack.md # NEW
+    - commands/erk/create-planned-wt.md # NEW
 ```
 
 **3. Update cross-references**
@@ -81,19 +81,19 @@ Should show: `✅ All checks passed!`
 
 If you see "Missing artifacts", check that kit.yaml paths match actual files.
 
-### Real Example: create-planned-stack split into persist-plan + create-planned-stack
+### Real Example: create-planned-wt split into persist-plan + create-planned-wt
 
 This refactoring split one command into two separate commands:
 
 ```bash
 # 1. Files created/modified
 # - Created: commands/erk/persist-plan.md
-# - Rewrote: commands/erk/create-planned-stack.md (simplified version)
+# - Rewrote: commands/erk/create-planned-wt.md (simplified version)
 
 # 2. kit.yaml updated
 # Changed single entry to two entries:
 #   - commands/erk/persist-plan.md
-#   - commands/erk/create-planned-stack.md
+#   - commands/erk/create-planned-wt.md
 
 # 3. Cross-references updated in implement-plan.md
 # Updated references to new two-step workflow

@@ -5,7 +5,7 @@ license: MIT
 artifacts:
   command:
     - commands/erk/persist-plan.md
-    - commands/erk/create-planned-stack.md
+    - commands/erk/create-planned-wt.md
     - commands/erk/implement-plan.md
   doc:
     - docs/erk/EXAMPLES.md

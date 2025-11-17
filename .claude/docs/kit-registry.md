@@ -4,7 +4,7 @@
 <!-- DO NOT EDIT: Changes will be overwritten. Use 'dot-agent kit sync' -->
 
 <!-- REGISTRY_VERSION: 1 -->
-<!-- GENERATED_AT: 2025-11-16T13:51:02 -->
+<!-- GENERATED_AT: 2025-11-17T11:44:17 -->
 
 <!-- BEGIN_ENTRIES -->
 

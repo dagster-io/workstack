@@ -2,7 +2,7 @@
 description: Create worktree from existing plan file on disk
 ---
 
-# /create-planned-stack
+# /create-planned-wt
 
 ⚠️ **CRITICAL: This command ONLY creates the worktree - it does NOT implement code!**
 
@@ -35,7 +35,7 @@ When you run this command, these steps occur:
 ## Usage
 
 ```bash
-/create-planned-stack
+/create-planned-wt
 ```
 
 **No arguments accepted** - This command automatically detects and uses the most recent plan file.
@@ -104,7 +104,7 @@ This command succeeds when ALL of the following are true:
 
 ## Agent Instructions
 
-You are executing the `/create-planned-stack` command. Follow these steps carefully:
+You are executing the `/create-planned-wt` command. Follow these steps carefully:
 
 ### Step 0: Verify Scope and Constraints
 

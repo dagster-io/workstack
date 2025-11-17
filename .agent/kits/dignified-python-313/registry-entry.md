@@ -4,7 +4,7 @@
 
 **Artifacts**:
 
-- skill: .claude/skills/dignified-python/SKILL.md
+- skill: skills/dignified-python/SKILL.md
 
 **Usage**:
 

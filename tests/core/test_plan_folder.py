@@ -9,7 +9,9 @@ from erk.core.plan_folder import (
     extract_steps_from_plan,
     get_plan_path,
     get_progress_path,
+    parse_progress_frontmatter,
     update_progress,
+    update_progress_frontmatter,
 )
 
 
@@ -284,3 +286,141 @@ def test_extract_steps_with_special_characters(tmp_path: Path) -> None:
     assert any("**bold**" in s for s in steps)
     assert any("`code`" in s for s in steps)
     assert any("🎉" in s for s in steps)
+
+
+def test_create_plan_folder_generates_frontmatter(tmp_path: Path) -> None:
+    """Test that creating a plan folder generates YAML front matter in progress.md."""
+    plan_content = """# Test Plan
+
+1. First step
+2. Second step
+3. Third step
+"""
+    plan_folder = create_plan_folder(tmp_path, plan_content)
+    progress_file = plan_folder / "progress.md"
+    progress_content = progress_file.read_text(encoding="utf-8")
+
+    # Verify front matter exists
+    assert progress_content.startswith("---\n")
+    assert "completed_steps: 0" in progress_content
+    assert "total_steps: 3" in progress_content
+    assert "---\n\n" in progress_content
+
+
+def test_parse_progress_frontmatter_valid(tmp_path: Path) -> None:
+    """Test parsing valid YAML front matter."""
+    content = """---
+completed_steps: 3
+total_steps: 10
+---
+
+# Progress Tracking
+
+- [x] 1. Step one
+- [x] 2. Step two
+- [x] 3. Step three
+- [ ] 4. Step four
+"""
+    result = parse_progress_frontmatter(content)
+
+    assert result is not None
+    assert result["completed_steps"] == 3
+    assert result["total_steps"] == 10
+
+
+def test_parse_progress_frontmatter_missing(tmp_path: Path) -> None:
+    """Test parsing progress file without front matter."""
+    content = """# Progress Tracking
+
+- [ ] 1. Step one
+- [ ] 2. Step two
+"""
+    result = parse_progress_frontmatter(content)
+
+    assert result is None
+
+
+def test_parse_progress_frontmatter_invalid_yaml(tmp_path: Path) -> None:
+    """Test parsing progress file with invalid YAML."""
+    content = """---
+completed_steps: [invalid yaml
+total_steps: 10
+---
+
+# Progress Tracking
+"""
+    result = parse_progress_frontmatter(content)
+
+    assert result is None
+
+
+def test_parse_progress_frontmatter_missing_fields(tmp_path: Path) -> None:
+    """Test parsing front matter with missing required fields."""
+    content = """---
+completed_steps: 3
+---
+
+# Progress Tracking
+"""
+    result = parse_progress_frontmatter(content)
+
+    assert result is None
+
+
+def test_update_progress_frontmatter_replaces_existing(tmp_path: Path) -> None:
+    """Test updating existing front matter preserves checkbox content."""
+    plan_content = "# Test\n\n1. Step one\n2. Step two"
+    create_plan_folder(tmp_path, plan_content)
+
+    # Manually mark first checkbox as completed
+    progress_file = tmp_path / ".plan" / "progress.md"
+    content = progress_file.read_text(encoding="utf-8")
+    content = content.replace("- [ ] 1. Step one", "- [x] 1. Step one")
+    progress_file.write_text(content, encoding="utf-8")
+
+    # Update front matter to reflect 1/2 completed
+    update_progress_frontmatter(tmp_path, 1, 2)
+
+    # Verify front matter updated
+    updated_content = progress_file.read_text(encoding="utf-8")
+    assert "completed_steps: 1" in updated_content
+    assert "total_steps: 2" in updated_content
+
+    # Verify checkboxes preserved
+    assert "- [x] 1. Step one" in updated_content
+    assert "- [ ] 2. Step two" in updated_content
+
+
+def test_update_progress_frontmatter_adds_if_missing(tmp_path: Path) -> None:
+    """Test adding front matter to file that doesn't have it."""
+    # Create progress file without front matter
+    plan_folder = tmp_path / ".plan"
+    plan_folder.mkdir()
+    progress_file = plan_folder / "progress.md"
+    progress_file.write_text(
+        """# Progress Tracking
+
+- [x] 1. Step one
+- [ ] 2. Step two
+""",
+        encoding="utf-8",
+    )
+
+    # Add front matter
+    update_progress_frontmatter(tmp_path, 1, 2)
+
+    # Verify front matter added
+    updated_content = progress_file.read_text(encoding="utf-8")
+    assert updated_content.startswith("---\n")
+    assert "completed_steps: 1" in updated_content
+    assert "total_steps: 2" in updated_content
+
+    # Verify checkboxes preserved
+    assert "- [x] 1. Step one" in updated_content
+    assert "- [ ] 2. Step two" in updated_content
+
+
+def test_update_progress_frontmatter_no_file(tmp_path: Path) -> None:
+    """Test updating front matter when file doesn't exist does nothing."""
+    # Should not raise error
+    update_progress_frontmatter(tmp_path, 1, 2)

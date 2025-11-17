@@ -230,3 +230,137 @@ def test_current_handles_nested_worktrees(tmp_path: Path) -> None:
     # Should return the deepest (most specific) worktree
     assert result.exit_code == 0
     assert result.output.strip() == "nested"
+
+
+def test_current_json_output_for_worktree() -> None:
+    """Test that current --json outputs correct JSON structure in named worktree."""
+    import json
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        # Construct sentinel paths (no filesystem operations needed)
+        work_dir = env.erk_root / env.cwd.name
+        feature_x_path = work_dir / "feature-x"
+
+        # Configure FakeGitOps with worktrees - feature-x is current
+        git_ops = FakeGitOps(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
+                    WorktreeInfo(path=feature_x_path, branch="feature-x", is_root=False),
+                ]
+            },
+            current_branches={
+                env.cwd: "main",
+                feature_x_path: "feature-x",
+            },
+            git_common_dirs={
+                env.cwd: env.git_dir,
+                feature_x_path: env.git_dir,
+            },
+            default_branches={env.cwd: "main"},
+        )
+
+        # Use env.build_context() helper to eliminate boilerplate
+        test_ctx = env.build_context(git_ops=git_ops, cwd=feature_x_path, repo=env.repo)
+
+        # Run current command with --json flag
+        result = runner.invoke(cli, ["current", "--json"], obj=test_ctx)
+
+        assert result.exit_code == 0
+
+        # Parse JSON output
+        data = json.loads(result.output)
+
+        # Verify JSON structure
+        assert data["name"] == "feature-x"
+        assert data["path"] == str(feature_x_path)
+        assert data["is_root"] is False
+
+
+def test_current_json_output_for_root() -> None:
+    """Test that current --json outputs correct JSON for root worktree."""
+    import json
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        # Configure FakeGitOps with just root worktree
+        git_ops = FakeGitOps(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
+                ]
+            },
+            current_branches={env.cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
+        )
+
+        # Use env.build_context() helper to eliminate boilerplate
+        test_ctx = env.build_context(git_ops=git_ops, cwd=env.cwd, repo=env.repo)
+
+        # Run current command with --json flag
+        result = runner.invoke(cli, ["current", "--json"], obj=test_ctx)
+
+        assert result.exit_code == 0
+
+        # Parse JSON output
+        data = json.loads(result.output)
+
+        # Verify JSON structure for root worktree
+        assert data["name"] == "root"
+        assert data["path"] == str(env.cwd)
+        assert data["is_root"] is True
+
+
+def test_current_json_validates_schema() -> None:
+    """Test that current --json output validates against expected schema."""
+    import json
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        # Construct sentinel paths
+        work_dir = env.erk_root / env.cwd.name
+        test_path = work_dir / "test-worktree"
+
+        # Configure FakeGitOps
+        git_ops = FakeGitOps(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
+                    WorktreeInfo(path=test_path, branch="test", is_root=False),
+                ]
+            },
+            current_branches={
+                env.cwd: "main",
+                test_path: "test",
+            },
+            git_common_dirs={
+                env.cwd: env.git_dir,
+                test_path: env.git_dir,
+            },
+            default_branches={env.cwd: "main"},
+        )
+
+        test_ctx = env.build_context(git_ops=git_ops, cwd=test_path, repo=env.repo)
+
+        # Run current command with --json flag
+        result = runner.invoke(cli, ["current", "--json"], obj=test_ctx)
+
+        assert result.exit_code == 0
+
+        # Parse JSON output
+        data = json.loads(result.output)
+
+        # Validate all expected keys are present
+        assert "name" in data
+        assert "path" in data
+        assert "is_root" in data
+
+        # Validate types
+        assert isinstance(data["name"], str)
+        assert isinstance(data["path"], str)
+        assert isinstance(data["is_root"], bool)
+
+        # Validate path is absolute
+        assert Path(data["path"]).is_absolute()

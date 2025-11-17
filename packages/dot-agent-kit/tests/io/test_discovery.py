@@ -78,10 +78,10 @@ def test_discover_unmanaged_skills(tmp_project: Path) -> None:
     dignified_skill.mkdir()
     (dignified_skill / "SKILL.md").write_text("# Dignified Python", encoding="utf-8")
 
-    # Create workstack skill (no matching prefix)
-    workstack_skill = skills_dir / "workstack"
-    workstack_skill.mkdir()
-    (workstack_skill / "SKILL.md").write_text("# Workstack", encoding="utf-8")
+    # Create example-kit skill (no matching prefix)
+    example_skill = skills_dir / "example-kit"
+    example_skill.mkdir()
+    (example_skill / "SKILL.md").write_text("# Example Kit", encoding="utf-8")
 
     # Discover
     discovered = discover_installed_artifacts(tmp_project, config)
@@ -89,8 +89,8 @@ def test_discover_unmanaged_skills(tmp_project: Path) -> None:
     # These should be detected as separate "kits" (unmanaged)
     assert "dignified-python" in discovered
     assert "skill" in discovered["dignified-python"]
-    assert "workstack" in discovered
-    assert "skill" in discovered["workstack"]
+    assert "example-kit" in discovered
+    assert "skill" in discovered["example-kit"]
 
 
 def test_discover_direct_command_files(tmp_project: Path) -> None:

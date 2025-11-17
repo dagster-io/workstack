@@ -332,7 +332,7 @@ erk sync
 # This will:
 # 1. Switch to root (avoiding git conflicts)
 # 2. Run gt sync to update branch tracking
-# 3. Identify merged/closed PR workstacks
+# 3. Identify merged/closed PR worktrees
 # 4. Prompt for confirmation before removing them
 # 5. Switch back to your original worktree
 
@@ -396,10 +396,10 @@ Requires Graphite CLI (`gt`) and GitHub CLI (`gh`) installed.
 
 ### `sync` Options
 
-| Option        | Description                                     |
-| ------------- | ----------------------------------------------- |
-| `-f, --force` | Force gt sync and auto-remove merged workstacks |
-| `--dry-run`   | Show what would be done without executing       |
+| Option        | Description                                    |
+| ------------- | ---------------------------------------------- |
+| `-f, --force` | Force gt sync and auto-remove merged worktrees |
+| `--dry-run`   | Show what would be done without executing      |
 
 ### `init` Options
 

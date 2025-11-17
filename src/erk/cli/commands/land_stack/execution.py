@@ -9,6 +9,7 @@ from erk.cli.commands.land_stack.models import BranchPR
 from erk.cli.commands.land_stack.output import _emit, _format_description
 from erk.cli.commands.land_stack.retry import retry_with_backoff
 from erk.core.context import ErkContext
+from erk.core.gitops import find_worktree_for_branch
 
 
 def _execute_checkout_phase(
@@ -233,8 +234,18 @@ def _force_push_upstack_branches(
     # Get all children of the current branch recursively
     upstack_branches = _get_all_children(branch, all_branches_metadata)
 
+    # Get list of worktrees to check branch locations (LBYL)
+    worktrees = ctx.git_ops.list_worktrees(repo_root)
+
     for upstack_branch in upstack_branches:
-        ctx.graphite_ops.submit_branch(repo_root, upstack_branch, quiet=not verbose)
+        # Check if branch is checked out in a worktree
+        worktree_path = find_worktree_for_branch(worktrees, upstack_branch)
+
+        # If branch is in a worktree, run from there; otherwise use repo_root
+        if worktree_path is not None:
+            ctx.graphite_ops.submit_branch(worktree_path, upstack_branch, quiet=not verbose)
+        else:
+            ctx.graphite_ops.submit_branch(repo_root, upstack_branch, quiet=not verbose)
 
     return upstack_branches
 

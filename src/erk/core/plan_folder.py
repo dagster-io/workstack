@@ -7,6 +7,9 @@ This module handles the .plan/ folder structure:
 
 import re
 from pathlib import Path
+from typing import Any
+
+import yaml
 
 
 def create_plan_folder(worktree_path: Path, plan_content: str) -> Path:
@@ -130,19 +133,93 @@ def extract_steps_from_plan(plan_content: str) -> list[str]:
     return steps
 
 
+def parse_progress_frontmatter(content: str) -> dict[str, Any] | None:
+    """Parse YAML front matter from progress.md content.
+
+    Args:
+        content: Full progress.md file content
+
+    Returns:
+        Dictionary with 'completed_steps' and 'total_steps', or None if missing/invalid
+    """
+    # Try to extract front matter (between --- delimiters)
+    front_matter_pattern = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
+    match = front_matter_pattern.match(content)
+
+    if not match:
+        return None
+
+    yaml_content = match.group(1)
+
+    # Parse YAML with error handling (never throw exceptions)
+    if not yaml_content:
+        return None
+
+    # Gracefully handle YAML parsing errors (third-party API exception handling)
+    try:
+        parsed = yaml.safe_load(yaml_content)
+    except yaml.YAMLError:
+        return None
+
+    if not isinstance(parsed, dict):
+        return None
+    if "completed_steps" not in parsed or "total_steps" not in parsed:
+        return None
+    return parsed
+
+
+def update_progress_frontmatter(worktree_path: Path, completed: int, total: int) -> None:
+    """Update YAML front matter in progress.md with current progress.
+
+    Replaces or adds front matter section while preserving all checkbox content.
+
+    Args:
+        worktree_path: Path to the worktree directory
+        completed: Number of completed steps
+        total: Total number of steps
+    """
+    progress_file = worktree_path / ".plan" / "progress.md"
+
+    # Check if file exists before reading
+    if not progress_file.exists():
+        return
+
+    content = progress_file.read_text(encoding="utf-8")
+
+    # Generate new front matter
+    new_front_matter = f"---\ncompleted_steps: {completed}\ntotal_steps: {total}\n---\n\n"
+
+    # Check if existing front matter exists
+    front_matter_pattern = re.compile(r"^---\s*\n.*?\n---\s*\n\n", re.DOTALL)
+    match = front_matter_pattern.match(content)
+
+    if match:
+        # Replace existing front matter
+        updated_content = front_matter_pattern.sub(new_front_matter, content)
+    else:
+        # Add front matter at the beginning
+        updated_content = new_front_matter + content
+
+    progress_file.write_text(updated_content, encoding="utf-8")
+
+
 def _generate_progress_content(steps: list[str]) -> str:
-    """Generate progress.md content with pre-populated checkboxes.
+    """Generate progress.md content with YAML front matter and checkboxes.
 
     Args:
         steps: List of step descriptions
 
     Returns:
-        Formatted progress markdown with unchecked boxes
+        Formatted progress markdown with front matter and unchecked boxes
     """
     if not steps:
         return "# Progress Tracking\n\nNo steps detected in plan.\n"
 
-    lines = ["# Progress Tracking\n"]
+    # Generate YAML front matter
+    total_steps = len(steps)
+    front_matter = f"---\ncompleted_steps: 0\ntotal_steps: {total_steps}\n---\n\n"
+
+    lines = [front_matter + "# Progress Tracking\n"]
 
     for step in steps:
         # Create checkbox: - [ ] Step description

@@ -22,6 +22,21 @@ class SimpleRenderer:
         self._render_git_status(status)
         self._render_related_worktrees(status)
 
+    def _get_progress_emoji(self, percentage: int) -> str:
+        """Get progress emoji based on completion percentage.
+
+        Args:
+            percentage: Completion percentage (0-100)
+
+        Returns:
+            Emoji indicator: ⚪ (0%), 🟡 (1-99%), or 🟢 (100%)
+        """
+        if percentage == 0:
+            return "⚪"
+        if percentage == 100:
+            return "🟢"
+        return "🟡"
+
     def _render_file_list(self, files: list[str], *, max_files: int = 3) -> None:
         """Render a list of files with truncation.
 
@@ -74,10 +89,17 @@ class SimpleRenderer:
         if status.plan is None or not status.plan.exists:
             return
 
-        # Plan title with progress if available
+        # Plan title with emoji progress indicator if front matter exists
         plan_header = "Plan:"
-        if status.plan.progress_summary:
-            plan_header += f" ({click.style(status.plan.progress_summary, fg='green')})"
+
+        if status.plan.completion_percentage is not None:
+            # New format with emoji: "Plan: 🟡 7/10"
+            emoji = self._get_progress_emoji(status.plan.completion_percentage)
+            # Extract fraction from progress_summary (e.g., "3/10" from "3/10 steps completed")
+            if status.plan.progress_summary:
+                fraction = status.plan.progress_summary.split(" ")[0]  # Get "3/10" part
+                plan_header += f" {emoji} {fraction}"
+        # No progress display for files without front matter (backward compatibility)
 
         user_output(click.style(plan_header, fg="bright_magenta", bold=True))
 

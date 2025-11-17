@@ -170,10 +170,13 @@ def test_extract_trailing_number(
 
 def test_ensure_unique_worktree_name_first_time(tmp_path: Path) -> None:
     """Test first-time worktree creation gets only date suffix."""
+    from erk.core.gitops import RealGitOps
+
     repo_dir = tmp_path / "erks"
     repo_dir.mkdir()
 
-    result = ensure_unique_worktree_name("my-feature", repo_dir)
+    git_ops = RealGitOps()
+    result = ensure_unique_worktree_name("my-feature", repo_dir, git_ops)
 
     # Should have date suffix in format -YY-MM-DD
     date_suffix = datetime.now().strftime("%y-%m-%d")
@@ -182,7 +185,9 @@ def test_ensure_unique_worktree_name_first_time(tmp_path: Path) -> None:
 
 
 def test_ensure_unique_worktree_name_duplicate_same_day(tmp_path: Path) -> None:
-    """Test duplicate worktree on same day adds -2 before date suffix."""
+    """Test duplicate worktree on same day adds -2 after date suffix."""
+    from erk.core.gitops import RealGitOps
+
     repo_dir = tmp_path / "erks"
     repo_dir.mkdir()
 
@@ -190,41 +195,48 @@ def test_ensure_unique_worktree_name_duplicate_same_day(tmp_path: Path) -> None:
     existing_name = f"my-feature-{date_suffix}"
     (repo_dir / existing_name).mkdir()
 
-    result = ensure_unique_worktree_name("my-feature", repo_dir)
+    git_ops = RealGitOps()
+    result = ensure_unique_worktree_name("my-feature", repo_dir, git_ops)
 
-    assert result == f"my-feature-2-{date_suffix}"
+    assert result == f"my-feature-{date_suffix}-2"
     assert not (repo_dir / result).exists()
     assert (repo_dir / existing_name).exists()
 
 
 def test_ensure_unique_worktree_name_multiple_duplicates(tmp_path: Path) -> None:
     """Test multiple duplicates increment correctly."""
+    from erk.core.gitops import RealGitOps
+
     repo_dir = tmp_path / "erks"
     repo_dir.mkdir()
 
     date_suffix = datetime.now().strftime("%y-%m-%d")
     (repo_dir / f"my-feature-{date_suffix}").mkdir()
-    (repo_dir / f"my-feature-2-{date_suffix}").mkdir()
-    (repo_dir / f"my-feature-3-{date_suffix}").mkdir()
+    (repo_dir / f"my-feature-{date_suffix}-2").mkdir()
+    (repo_dir / f"my-feature-{date_suffix}-3").mkdir()
 
-    result = ensure_unique_worktree_name("my-feature", repo_dir)
+    git_ops = RealGitOps()
+    result = ensure_unique_worktree_name("my-feature", repo_dir, git_ops)
 
-    assert result == f"my-feature-4-{date_suffix}"
+    assert result == f"my-feature-{date_suffix}-4"
 
 
 def test_ensure_unique_worktree_name_with_existing_number(tmp_path: Path) -> None:
     """Test name with existing number in base preserves it."""
+    from erk.core.gitops import RealGitOps
+
     repo_dir = tmp_path / "erks"
     repo_dir.mkdir()
 
+    git_ops = RealGitOps()
     date_suffix = datetime.now().strftime("%y-%m-%d")
-    result = ensure_unique_worktree_name("fix-v3", repo_dir)
+    result = ensure_unique_worktree_name("fix-v3", repo_dir, git_ops)
 
     # Base name has number, should preserve it in date-suffixed name
     assert result == f"fix-v3-{date_suffix}"
 
     # Create it and try again
     (repo_dir / result).mkdir()
-    result2 = ensure_unique_worktree_name("fix-v3", repo_dir)
+    result2 = ensure_unique_worktree_name("fix-v3", repo_dir, git_ops)
 
-    assert result2 == f"fix-v3-2-{date_suffix}"
+    assert result2 == f"fix-v3-{date_suffix}-2"

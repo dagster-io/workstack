@@ -96,7 +96,7 @@ def ensure_worktree_for_branch(
 
     # Generate and ensure unique worktree name
     name = sanitize_worktree_name(branch)
-    name = ensure_unique_worktree_name(name, repo.worktrees_dir)
+    name = ensure_unique_worktree_name(name, repo.worktrees_dir, ctx.git_ops)
 
     # Calculate worktree path
     wt_path = worktree_path_for(repo.worktrees_dir, name)
@@ -494,7 +494,7 @@ def create(
 
     # Apply date prefix and uniqueness for plan-derived names
     if is_plan_derived:
-        name = ensure_unique_worktree_name(name, repo.worktrees_dir)
+        name = ensure_unique_worktree_name(name, repo.worktrees_dir, ctx.git_ops)
 
     wt_path = worktree_path_for(repo.worktrees_dir, name)
 

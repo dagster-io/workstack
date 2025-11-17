@@ -228,7 +228,9 @@ def consolidate_cmd(
 
             # Change to new worktree directory BEFORE removing source worktree
             # This prevents the shell from being in a deleted directory
-            if not script and ctx.git_ops.safe_chdir(new_worktree_path):
+            # Always change directory regardless of script mode to ensure we're not in
+            # the source worktree when it gets deleted
+            if ctx.git_ops.safe_chdir(new_worktree_path):
                 # Regenerate context with new cwd (context is immutable)
                 ctx = create_context(dry_run=ctx.dry_run)
                 user_output(click.style("✅ Changed directory to new worktree", fg="green"))

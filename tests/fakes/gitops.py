@@ -129,6 +129,7 @@ class FakeGitOps(GitOps):
         self._detached_checkouts: list[tuple[Path, str]] = []
         self._fetched_branches: list[tuple[str, str]] = []
         self._pulled_branches: list[tuple[str, str, bool]] = []
+        self._chdir_history: list[Path] = []
 
     def list_worktrees(self, repo_root: Path) -> list[WorktreeInfo]:
         """List all worktrees in the repository."""
@@ -216,6 +217,8 @@ class FakeGitOps(GitOps):
         self._worktrees[repo_root].append(WorktreeInfo(path=path, branch=branch, is_root=False))
         # Create the worktree directory to simulate git worktree add behavior
         path.mkdir(parents=True, exist_ok=True)
+        # Add to existing paths for pure mode tests
+        self._existing_paths.add(path)
         # Track the addition
         self._added_worktrees.append((path, branch))
 
@@ -415,6 +418,15 @@ class FakeGitOps(GitOps):
         """
         return self._pulled_branches.copy()
 
+    @property
+    def chdir_history(self) -> list[Path]:
+        """Get list of directories changed to during test.
+
+        Returns list of Path objects passed to safe_chdir().
+        This property is for test assertions only.
+        """
+        return self._chdir_history.copy()
+
     def _is_parent(self, parent: Path, child: Path) -> bool:
         """Check if parent is an ancestor of child."""
         try:
@@ -492,6 +504,8 @@ class FakeGitOps(GitOps):
 
         For sentinel paths (pure test mode), returns False without changing directory.
         For real filesystem paths, changes directory if path exists and returns True.
+
+        Tracks successful directory changes in chdir_history for test assertions.
         """
         import os
 
@@ -503,10 +517,13 @@ class FakeGitOps(GitOps):
 
         # Don't try to chdir to sentinel paths - they're not real filesystem paths
         if isinstance(path, SentinelPath):
+            # Track the attempt even for sentinel paths (tests need to verify intent)
+            self._chdir_history.append(path)
             return False
 
         # For real filesystem paths, change directory
         os.chdir(path)
+        self._chdir_history.append(path)
         return True
 
     def read_file(self, path: Path) -> str:

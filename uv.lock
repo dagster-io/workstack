@@ -106,7 +106,7 @@ wheels = [
 
 [[package]]
 name = "dot-agent-kit"
-version = "0.1.26"
+version = "0.1.27"
 source = { editable = "packages/dot-agent-kit" }
 dependencies = [
     { name = "click" },
@@ -131,7 +131,7 @@ requires-dist = [
 
 [[package]]
 name = "erk"
-version = "0.1.26"
+version = "0.1.27"
 source = { editable = "." }
 dependencies = [
     { name = "click" },

@@ -128,6 +128,68 @@ class PostAnalysisError:
     details: dict[str, str]
 
 
+@dataclass
+class DiffContextResult:
+    """Result of getting diff context for AI analysis."""
+
+    success: bool
+    repo_root: str
+    current_branch: str
+    parent_branch: str
+    diff: str
+
+    def model_dump(self) -> dict[str, str | bool]:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "success": self.success,
+            "repo_root": self.repo_root,
+            "current_branch": self.current_branch,
+            "parent_branch": self.parent_branch,
+            "diff": self.diff,
+        }
+
+
+def get_diff_context(ops: GtKitOps | None = None) -> DiffContextResult:
+    """Get all context needed for AI diff analysis.
+
+    Args:
+        ops: Optional ops implementation for testing
+
+    Returns:
+        DiffContextResult with repo root, branches, and diff
+
+    Raises:
+        ValueError: If no parent branch found
+        subprocess.CalledProcessError: If git operations fail
+    """
+    if ops is None:
+        ops = RealGtKitOps()
+
+    # Get repository root
+    repo_root = ops.git().get_repository_root()
+
+    # Get current branch
+    current_branch = ops.git().get_current_branch()
+    if current_branch is None:
+        raise ValueError("Could not determine current branch")
+
+    # Get parent branch
+    parent_branch = ops.graphite().get_parent_branch()
+    if parent_branch is None:
+        raise ValueError("No parent branch found - not in a Graphite stack")
+
+    # Get full diff
+    diff = ops.git().get_diff_to_parent(parent_branch)
+
+    return DiffContextResult(
+        success=True,
+        repo_root=repo_root,
+        current_branch=current_branch,
+        parent_branch=parent_branch,
+        diff=diff,
+    )
+
+
 def execute_pre_analysis(ops: GtKitOps | None = None) -> PreAnalysisResult | PreAnalysisError:
     """Execute the pre-analysis phase. Returns success or error result."""
     if ops is None:
@@ -395,6 +457,31 @@ def post_analysis(commit_message: str) -> None:
         raise SystemExit(1) from None
 
 
+@click.command()
+def get_diff_context_cmd() -> None:
+    """Get all context needed for AI diff analysis.
+
+    Returns JSON with:
+    - repo_root: Absolute path to repository root
+    - current_branch: Name of current branch
+    - parent_branch: Name of parent branch
+    - diff: Full diff output from parent to HEAD
+    """
+    try:
+        result = get_diff_context()
+        click.echo(json.dumps(result.model_dump()))
+
+    except Exception as e:
+        error_result = {
+            "success": False,
+            "error_type": "diff_context_failed",
+            "message": str(e),
+        }
+        click.echo(json.dumps(error_result))
+        raise SystemExit(1) from None
+
+
 # Register subcommands
 submit_branch.add_command(pre_analysis)
 submit_branch.add_command(post_analysis)
+submit_branch.add_command(get_diff_context_cmd, name="get-diff-context")

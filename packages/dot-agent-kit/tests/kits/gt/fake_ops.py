@@ -114,6 +114,21 @@ class FakeGitGtKitOps(GitGtKitOps):
         """Get the trunk branch name for the repository."""
         return self._state.trunk_branch
 
+    def get_repository_root(self) -> str:
+        """Fake repository root."""
+        return "/fake/repo/root"
+
+    def get_diff_to_parent(self, parent_branch: str) -> str:
+        """Fake diff output."""
+        return (
+            "diff --git a/file.py b/file.py\n"
+            "--- a/file.py\n"
+            "+++ b/file.py\n"
+            "@@ -1,1 +1,1 @@\n"
+            "-old\n"
+            "+new"
+        )
+
 
 class FakeGraphiteGtKitOps(GraphiteGtKitOps):
     """Fake Graphite operations with in-memory state."""

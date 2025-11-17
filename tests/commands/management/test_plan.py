@@ -6,7 +6,6 @@ from click.testing import CliRunner
 
 from erk.cli.cli import cli
 from erk.cli.commands.shell_integration import hidden_shell_cmd
-from erk.cli.activation import render_activation_script
 from erk.cli.shell_utils import render_cd_script
 from erk.core.context import ErkContext
 from erk.core.gitops import WorktreeInfo

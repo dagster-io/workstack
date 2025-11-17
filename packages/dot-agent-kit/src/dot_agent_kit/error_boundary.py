@@ -9,8 +9,6 @@ import traceback
 from collections.abc import Callable
 from typing import Any, TypeVar
 
-import click
-
 from dot_agent_kit.sources.exceptions import DotAgentNonIdealStateException
 
 F = TypeVar("F", bound=Callable[..., Any])

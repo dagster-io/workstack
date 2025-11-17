@@ -2,7 +2,7 @@
 
 I'm going to do an agentic engineering series that will serve as a practical guide for mastering Agentic Engineering. I'm testing the messaging internally before talking about it externally. This is the first piece.
 
-I've been building in my spare time––and in gaps between meetings––CLI tools for agentic programming called `workstack` and `dot-agent`. They are useful tools for agentic engineering and my goal is to make their [codebase](https://github.com/dagster-io/workstack) a showcase and laboratory for these techniques. I've also started to use these in the Compass codebase and want to bring them to OSS, Internal, and other repositories as well.
+I've been building in my spare time––and in gaps between meetings––CLI tools for agentic programming called `erk` (formerly `workstack`) and `dot-agent`. They are useful tools for agentic engineering and my goal is to make their [codebase](https://github.com/dagster-io/workstack) a showcase and laboratory for these techniques. I've also started to use these in the Compass codebase and want to bring them to OSS, Internal, and other repositories as well.
 
 _Note: This guide will be exclusively focused on Claude Code because that's what I use, but it applies to any agentic programming tool like Cursor or Codex._
 

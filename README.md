@@ -35,10 +35,10 @@ source ~/.zshrc  # or ~/.bashrc
 
 # Create and switch to a worktree
 erk create user-auth
-erk switch user-auth
+erk checkout user-auth
 
 # Switch back and clean up
-erk switch root
+erk checkout root
 erk rm user-auth
 ```
 
@@ -101,14 +101,14 @@ erk down              # Move to parent branch in stack
 erk checkout BRANCH   # Checkout any branch in a stack (finds worktree automatically)
 ```
 
-#### Jump to Branch
+#### Navigate to Branch
 
 Find and switch to a worktree by branch name:
 
 ```bash
-erk jump feature/user-auth    # Finds worktree containing this branch
-erk jump hotfix/critical-bug  # Works with any branch in your stacks
-erk jump origin-branch        # Auto-creates from remote if not local
+erk checkout feature/user-auth    # Finds worktree containing this branch
+erk checkout hotfix/critical-bug  # Works with any branch in your stacks
+erk checkout origin-branch        # Auto-creates from remote if not local
 ```
 
 **How it works:**
@@ -127,7 +127,7 @@ erk jump origin-branch        # Auto-creates from remote if not local
 **Behavior:**
 
 - **Branch checked out in one worktree**: Switches to that worktree and checks out the branch
-- **Branch checked out in multiple worktrees**: Shows all worktrees (choose manually with `erk switch`)
+- **Branch checked out in multiple worktrees**: Shows all worktrees (choose manually with `erk checkout`)
 - **Branch exists locally but not checked out**: Auto-creates worktree for the branch
 - **Branch exists on origin but not locally**: Auto-creates tracking branch and worktree
 - **Branch doesn't exist anywhere**: Shows error with suggestion to create new branch
@@ -139,43 +139,42 @@ Example workflow:
 # - worktree "feature-work": main -> feature-1 -> feature-2 -> feature-3
 # - worktree "bugfix-work": main -> bugfix-1 -> bugfix-2
 
-# Jump to existing branch in worktree
-erk jump feature-2    # → Switches to "feature-work" and checks out feature-2
-erk jump bugfix-1     # → Switches to "bugfix-work" and checks out bugfix-1
+# Navigate to existing branch in worktree
+erk checkout feature-2    # → Switches to "feature-work" and checks out feature-2
+erk checkout bugfix-1     # → Switches to "bugfix-work" and checks out bugfix-1
 
-# Jump to unchecked local branch
-erk jump feature-4    # → Auto-creates worktree for feature-4
+# Navigate to unchecked local branch
+erk checkout feature-4    # → Auto-creates worktree for feature-4
 
-# Jump to remote-only branch (like git checkout origin/branch)
-erk jump hotfix-123   # → Creates tracking branch + worktree from origin/hotfix-123
+# Navigate to remote-only branch (like git checkout origin/branch)
+erk checkout hotfix-123   # → Creates tracking branch + worktree from origin/hotfix-123
 ```
 
-#### Stack Navigation with Switch
+#### Stack Navigation Within Worktree
 
-Example workflow:
+For navigating up and down within a Graphite stack in the current worktree, use Graphite's native commands:
 
 ```bash
 # Current stack: main -> feature-1 -> feature-2 -> feature-3
 # You are in: feature-2
 
-erk switch --up       # → feature-3
-erk switch --down     # → feature-2
-erk switch --down     # → feature-1
-erk switch --down     # → root (main)
+gt up         # → feature-3 (child branch, up the stack)
+gt down       # → feature-1 (parent branch, down toward trunk)
+gt down       # → main (trunk)
 ```
+
+**Navigation Model:**
+
+- **`erk checkout <branch>`**: Navigate **across worktrees** - finds and switches to the worktree containing the branch
+- **`gt up` / `gt down`**: Navigate **within worktree** - moves between branches in the current worktree's stack
+
+This separation provides better clarity: erk manages worktrees, Graphite manages stacks.
 
 **Requirements:**
 
-- Graphite must be enabled (`erk config set use_graphite true`)
-- Target branch must have an existing worktree
-- If no worktree exists, shows helpful message: `erk create <branch>`
-
-**Behavior:**
-
-- `--up`: Navigates to child branch (up the stack)
-- `--down`: Navigates to parent branch (down toward trunk)
-- At stack boundaries, shows clear error messages
-- Cannot be combined with NAME argument
+- Graphite must be installed and enabled (`erk config set use_graphite true`)
+- Target branch must be in the current worktree's stack
+- Use `erk checkout <branch>` if the branch is in a different worktree
 
 ### Moving Branches
 
@@ -218,7 +217,7 @@ feature-b [work/feature-b]
 - ⭕ Closed
 - ◯ Open (no checks)
 
-Note: The repository root is displayed as `root` and can be accessed with `erk switch root`.
+Note: The repository root is displayed as `root` and can be accessed with `erk checkout root`.
 
 ### Configuration
 
@@ -264,14 +263,14 @@ commands = [
 
 ```bash
 erk create feature-a
-erk switch feature-a
+erk checkout feature-a
 # ... work on feature A ...
 
 erk create feature-b
-erk switch feature-b
+erk checkout feature-b
 # ... work on feature B ...
 
-erk switch feature-a  # Instantly back to feature A
+erk checkout feature-a  # Instantly back to feature A
 ```
 
 ### Plan-Based Development
@@ -288,7 +287,7 @@ erk switch feature-a  # Instantly back to feature A
 
 ```bash
 # 1. Stay in root repo for planning
-erk switch root
+erk checkout root
 
 # 2. Create your plan and save it to disk (e.g. Add_User_Auth.md)
 
@@ -300,7 +299,7 @@ erk create --plan Add_User_Auth.md
 #   - .plan/ is already in .gitignore (added by erk init)
 
 # 4. Switch and execute
-erk switch add-user-auth
+erk checkout add-user-auth
 # Your plan is now at .plan/plan.md for reference during implementation
 # Progress tracking in .plan/progress.md shows step completion
 ```
@@ -332,7 +331,7 @@ erk sync
 # This will:
 # 1. Switch to root (avoiding git conflicts)
 # 2. Run gt sync to update branch tracking
-# 3. Identify merged/closed PR workstacks
+# 3. Identify merged/closed PR worktrees
 # 4. Prompt for confirmation before removing them
 # 5. Switch back to your original worktree
 
@@ -344,7 +343,7 @@ Options:
 
 ```bash
 erk sync                   # Sync and show cleanup candidates
-erk sync -f                # Force gt sync and auto-remove merged erks
+erk sync -f                # Force gt sync and auto-remove merged worktrees
 erk sync --dry-run         # Preview without executing
 ```
 
@@ -396,10 +395,10 @@ Requires Graphite CLI (`gt`) and GitHub CLI (`gh`) installed.
 
 ### `sync` Options
 
-| Option        | Description                                     |
-| ------------- | ----------------------------------------------- |
-| `-f, --force` | Force gt sync and auto-remove merged workstacks |
-| `--dry-run`   | Show what would be done without executing       |
+| Option        | Description                                    |
+| ------------- | ---------------------------------------------- |
+| `-f, --force` | Force gt sync and auto-remove merged worktrees |
+| `--dry-run`   | Show what would be done without executing      |
 
 ### `init` Options
 
@@ -478,7 +477,7 @@ Core documentation for contributors:
 
 - **[AGENTS.md](AGENTS.md)** - Coding standards and conventions (required reading)
 - **[tests/AGENTS.md](tests/AGENTS.md)** - Testing patterns and practices
-- **[docs/PUBLISHING.md](docs/PUBLISHING.md)** - Publishing to PyPI guide
+- **[packages/erk-dev/README.md](packages/erk-dev/README.md)** - Development tools including publishing
 
 #### Shell Integration Output Pattern
 

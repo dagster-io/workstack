@@ -486,13 +486,13 @@ def test_land_stack_does_not_run_gt_sync() -> None:
 
 
 def test_land_stack_does_not_run_erk_sync() -> None:
-    """Test that erk sync -f is NOT run automatically after landing.
+    """Test that gt sync -f is NOT run automatically after landing.
 
-    After behavior change (cleanup.py:144), erk sync -f is manual, not automatic.
+    After behavior change (cleanup.py:143), gt sync -f is manual, not automatic.
     This test verifies that shell_ops.run_erk_sync() is never called, and worktrees
     remain after landing completes.
 
-    Rationale: Automatic erk sync -f removed worktrees without user control.
+    Rationale: Automatic gt sync -f removed worktrees without user control.
     Now users must run it manually after landing.
     """
     runner = CliRunner()
@@ -532,15 +532,15 @@ def test_land_stack_does_not_run_erk_sync() -> None:
         # Should succeed
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
-        # Verify erk sync was NOT called via mutation tracking
+        # Verify gt sync was NOT called via mutation tracking
         assert len(shell_ops.sync_calls) == 0, (
-            f"erk sync should NOT be called automatically. "
+            f"gt sync should NOT be called automatically. "
             f"Expected 0 sync calls, got {len(shell_ops.sync_calls)} calls: {shell_ops.sync_calls}"
         )
 
-        # Verify output shows suggestion to run erk sync manually
-        assert "Run 'erk sync -f' to remove worktrees" in result.output, (
-            f"Expected manual erk sync suggestion in output.\nActual output:\n{result.output}"
+        # Verify output shows suggestion to run gt sync manually
+        assert "Run 'gt sync -f' to remove worktrees" in result.output, (
+            f"Expected manual gt sync suggestion in output.\nActual output:\n{result.output}"
         )
 
 
@@ -549,8 +549,8 @@ def test_final_state_shows_next_steps() -> None:
 
     After landing (display.py:113-129), user should see:
     - "Next steps:" header
-    - Suggestion to run 'erk sync -f'
-    - Suggestion to run 'gt sync -f'
+    - Suggestion to run 'gt sync -f' to remove worktrees
+    - Suggestion to run 'gt sync -f' to rebase remaining branches
     - Note about manual control
 
     This ensures users are informed about follow-up actions after landing.
@@ -594,9 +594,9 @@ def test_final_state_shows_next_steps() -> None:
             f"Expected 'Next steps:' header in output.\nActual output:\n{result.output}"
         )
 
-        # Verify erk sync suggestion
-        assert "Run 'erk sync -f' to remove worktrees" in result.output, (
-            f"Expected erk sync suggestion in output.\nActual output:\n{result.output}"
+        # Verify gt sync suggestion for removing worktrees
+        assert "Run 'gt sync -f' to remove worktrees" in result.output, (
+            f"Expected gt sync suggestion in output.\nActual output:\n{result.output}"
         )
 
         # Verify gt sync suggestion

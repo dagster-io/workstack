@@ -4,8 +4,8 @@
 
 **Artifacts**:
 
-- agent: agents/devrun/devrun.md
-- doc: docs/devrun/tools/gt.md, docs/devrun/tools/make.md, docs/devrun/tools/prettier.md, docs/devrun/tools/pyright.md, docs/devrun/tools/pytest.md, docs/devrun/tools/ruff.md
+- agent: .claude/agents/devrun/devrun.md
+- doc: .claude/docs/devrun/tools/gt.md, .claude/docs/devrun/tools/make.md, .claude/docs/devrun/tools/prettier.md, .claude/docs/devrun/tools/pyright.md, .claude/docs/devrun/tools/pytest.md, .claude/docs/devrun/tools/ruff.md
 
 **Usage**:
 

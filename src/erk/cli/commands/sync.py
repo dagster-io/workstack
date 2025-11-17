@@ -234,7 +234,7 @@ def sync_cmd(
         # Only show manual instruction if force was not used
         if not force:
             _emit(
-                "Next step: Run 'erk sync -f' to automatically delete the merged branches.",
+                "Next step: Run 'gt sync -f' to automatically delete the merged branches.",
                 script_mode=script,
             )
 

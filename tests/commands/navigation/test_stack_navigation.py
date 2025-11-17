@@ -1,4 +1,4 @@
-"""Tests for erk switch --up and --down navigation."""
+"""Tests for erk up and erk down navigation."""
 
 from pathlib import Path
 
@@ -13,8 +13,8 @@ from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
-def test_switch_up_with_existing_worktree() -> None:
-    """Test --up navigation when child branch has a worktree."""
+def test_up_with_existing_worktree() -> None:
+    """Test 'erk up' navigation when child branch has a worktree."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
@@ -59,9 +59,7 @@ def test_switch_up_with_existing_worktree() -> None:
             git_ops=git_ops, graphite_ops=graphite_ops, repo=repo, use_graphite=True
         )
 
-        result = runner.invoke(
-            cli, ["switch", "--up", "--script"], obj=test_ctx, catch_exceptions=False
-        )
+        result = runner.invoke(cli, ["up", "--script"], obj=test_ctx, catch_exceptions=False)
 
         if result.exit_code != 0:
             print(f"stderr: {result.stderr}")
@@ -74,8 +72,8 @@ def test_switch_up_with_existing_worktree() -> None:
         assert str(repo_dir / "feature-2") in script_content
 
 
-def test_switch_up_at_top_of_stack() -> None:
-    """Test --up navigation when at the top of stack (no children)."""
+def test_up_at_top_of_stack() -> None:
+    """Test 'erk up' navigation when at the top of stack (no children)."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
@@ -104,14 +102,14 @@ def test_switch_up_at_top_of_stack() -> None:
 
         test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
 
-        result = runner.invoke(cli, ["switch", "--up"], obj=test_ctx, catch_exceptions=False)
+        result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
 
         assert result.exit_code == 1
         assert "Already at the top of the stack" in result.stderr
 
 
-def test_switch_up_child_has_no_worktree() -> None:
-    """Test --up navigation when child branch exists but has no worktree."""
+def test_up_child_has_no_worktree() -> None:
+    """Test 'erk up' navigation when child branch exists but has no worktree."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
@@ -141,7 +139,7 @@ def test_switch_up_child_has_no_worktree() -> None:
 
         test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
 
-        result = runner.invoke(cli, ["switch", "--up"], obj=test_ctx, catch_exceptions=False)
+        result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
 
         assert result.exit_code == 1
         assert "feature-2" in result.stderr
@@ -149,8 +147,8 @@ def test_switch_up_child_has_no_worktree() -> None:
         assert "erk create feature-2" in result.stderr
 
 
-def test_switch_down_with_existing_worktree() -> None:
-    """Test --down navigation when parent branch has a worktree."""
+def test_down_with_existing_worktree() -> None:
+    """Test 'erk down' navigation when parent branch has a worktree."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
@@ -191,9 +189,7 @@ def test_switch_down_with_existing_worktree() -> None:
             git_ops=git_ops, graphite_ops=graphite_ops, repo=repo, use_graphite=True
         )
 
-        result = runner.invoke(
-            cli, ["switch", "--down", "--script"], obj=test_ctx, catch_exceptions=False
-        )
+        result = runner.invoke(cli, ["down", "--script"], obj=test_ctx, catch_exceptions=False)
 
         assert result.exit_code == 0
         # Should generate script for feature-1
@@ -203,8 +199,8 @@ def test_switch_down_with_existing_worktree() -> None:
         assert str(repo_dir / "feature-1") in script_content
 
 
-def test_switch_down_to_trunk_root() -> None:
-    """Test --down navigation when parent is trunk checked out in root."""
+def test_down_to_trunk_root() -> None:
+    """Test 'erk down' navigation when parent is trunk checked out in root."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
@@ -243,9 +239,7 @@ def test_switch_down_to_trunk_root() -> None:
         )
 
         # Switch down from feature-1 to root (main)
-        result = runner.invoke(
-            cli, ["switch", "--down", "--script"], obj=test_ctx, catch_exceptions=False
-        )
+        result = runner.invoke(cli, ["down", "--script"], obj=test_ctx, catch_exceptions=False)
 
         assert result.exit_code == 0
         # Should generate script for root
@@ -256,8 +250,8 @@ def test_switch_down_to_trunk_root() -> None:
         assert "root" in script_content.lower()
 
 
-def test_switch_down_at_trunk() -> None:
-    """Test --down navigation when already at trunk."""
+def test_down_at_trunk() -> None:
+    """Test 'erk down' navigation when already at trunk."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
@@ -276,15 +270,15 @@ def test_switch_down_at_trunk() -> None:
 
         test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
 
-        result = runner.invoke(cli, ["switch", "--down"], obj=test_ctx, catch_exceptions=False)
+        result = runner.invoke(cli, ["down"], obj=test_ctx, catch_exceptions=False)
 
         assert result.exit_code == 1
         assert "Already at the bottom of the stack" in result.stderr
         assert "trunk branch 'main'" in result.stderr
 
 
-def test_switch_down_parent_has_no_worktree() -> None:
-    """Test --down navigation when parent branch exists but has no worktree."""
+def test_down_parent_has_no_worktree() -> None:
+    """Test 'erk down' navigation when parent branch exists but has no worktree."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
@@ -315,7 +309,7 @@ def test_switch_down_parent_has_no_worktree() -> None:
 
         test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
 
-        result = runner.invoke(cli, ["switch", "--down"], obj=test_ctx, catch_exceptions=False)
+        result = runner.invoke(cli, ["down"], obj=test_ctx, catch_exceptions=False)
 
         assert result.exit_code == 1
         assert "feature-1" in result.stderr or "parent branch" in result.stderr
@@ -323,8 +317,8 @@ def test_switch_down_parent_has_no_worktree() -> None:
         assert "erk create feature-1" in result.stderr
 
 
-def test_switch_graphite_not_enabled() -> None:
-    """Test --up/--down require Graphite to be enabled."""
+def test_up_down_graphite_not_enabled() -> None:
+    """Test 'erk up' and 'erk down' require Graphite to be enabled."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
@@ -338,66 +332,22 @@ def test_switch_graphite_not_enabled() -> None:
 
         test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops)
 
-        # Try --up
-        result = runner.invoke(cli, ["switch", "--up"], obj=test_ctx, catch_exceptions=False)
+        # Try 'erk up'
+        result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
 
         assert result.exit_code == 1
         assert "requires Graphite to be enabled" in result.stderr
         assert "erk config set use_graphite true" in result.stderr
 
-        # Try --down
-        result = runner.invoke(cli, ["switch", "--down"], obj=test_ctx, catch_exceptions=False)
+        # Try 'erk down'
+        result = runner.invoke(cli, ["down"], obj=test_ctx, catch_exceptions=False)
 
         assert result.exit_code == 1
         assert "requires Graphite to be enabled" in result.stderr
 
 
-def test_switch_up_and_down_mutually_exclusive() -> None:
-    """Test that --up and --down cannot be used together."""
-    runner = CliRunner()
-    with erk_inmem_env(runner) as env:
-        git_ops = FakeGitOps(
-            worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch="main")]},
-            current_branches={env.cwd: "main"},
-            git_common_dirs={env.cwd: env.git_dir},
-        )
-
-        graphite_ops = FakeGraphiteOps()
-
-        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
-
-        result = runner.invoke(
-            cli, ["switch", "--up", "--down"], obj=test_ctx, catch_exceptions=False
-        )
-
-        assert result.exit_code == 1
-        assert "Cannot use both --up and --down" in result.stderr
-
-
-def test_switch_name_with_up_mutually_exclusive() -> None:
-    """Test that NAME and --up cannot be used together."""
-    runner = CliRunner()
-    with erk_inmem_env(runner) as env:
-        git_ops = FakeGitOps(
-            worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch="main")]},
-            current_branches={env.cwd: "main"},
-            git_common_dirs={env.cwd: env.git_dir},
-        )
-
-        graphite_ops = FakeGraphiteOps()
-
-        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
-
-        result = runner.invoke(
-            cli, ["switch", "feature-1", "--up"], obj=test_ctx, catch_exceptions=False
-        )
-
-        assert result.exit_code == 1
-        assert "Cannot specify NAME with --up or --down" in result.stderr
-
-
-def test_switch_detached_head() -> None:
-    """Test --up/--down fail gracefully on detached HEAD."""
+def test_up_detached_head() -> None:
+    """Test 'erk up' fails gracefully on detached HEAD."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Current branch is None (detached HEAD)
@@ -411,15 +361,15 @@ def test_switch_detached_head() -> None:
 
         test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
 
-        result = runner.invoke(cli, ["switch", "--up"], obj=test_ctx, catch_exceptions=False)
+        result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
 
         assert result.exit_code == 1
         assert "Not currently on a branch" in result.stderr
         assert "detached HEAD" in result.stderr
 
 
-def test_switch_up_with_mismatched_worktree_name() -> None:
-    """Test switch --up when worktree directory name differs from branch name.
+def test_up_with_mismatched_worktree_name() -> None:
+    """Test 'erk up' when worktree directory name differs from branch name.
 
     This is a regression test for the bug where branch names from Graphite navigation
     were passed directly to _activate_worktree(), which expects worktree paths.
@@ -473,12 +423,10 @@ def test_switch_up_with_mismatched_worktree_name() -> None:
             git_ops=git_ops, graphite_ops=graphite_ops, repo=repo, use_graphite=True
         )
 
-        # Navigate up from feature/db to feature/db-tests using switch --up
+        # Navigate up from feature/db to feature/db-tests using 'erk up'
         # This would fail before the fix because it would try to find a worktree named
         # "feature/db-tests" instead of resolving to "db-tests-implementation"
-        result = runner.invoke(
-            cli, ["switch", "--up", "--script"], obj=test_ctx, catch_exceptions=False
-        )
+        result = runner.invoke(cli, ["up", "--script"], obj=test_ctx, catch_exceptions=False)
 
         if result.exit_code != 0:
             print(f"stderr: {result.stderr}")
@@ -492,8 +440,8 @@ def test_switch_up_with_mismatched_worktree_name() -> None:
         assert str(repo_dir / "db-tests-implementation") in script_content
 
 
-def test_switch_down_with_mismatched_worktree_name() -> None:
-    """Test switch --down when worktree directory name differs from branch name.
+def test_down_with_mismatched_worktree_name() -> None:
+    """Test 'erk down' when worktree directory name differs from branch name.
 
     This is a regression test for the bug where branch names from Graphite navigation
     were passed directly to _activate_worktree(), which expects worktree paths.
@@ -545,12 +493,10 @@ def test_switch_down_with_mismatched_worktree_name() -> None:
             git_ops=git_ops, graphite_ops=graphite_ops, repo=repo, use_graphite=True
         )
 
-        # Navigate down from feature/api-v2 to feature/api using switch --down
+        # Navigate down from feature/api-v2 to feature/api using 'erk down'
         # This would fail before the fix because it would try to find a worktree named
         # "feature/api" instead of resolving to "api-work"
-        result = runner.invoke(
-            cli, ["switch", "--down", "--script"], obj=test_ctx, catch_exceptions=False
-        )
+        result = runner.invoke(cli, ["down", "--script"], obj=test_ctx, catch_exceptions=False)
 
         if result.exit_code != 0:
             print(f"stderr: {result.stderr}")

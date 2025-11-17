@@ -20,7 +20,7 @@ This command detects plan files at the repository root, selects the most recent 
 
 **What happens AFTER (in separate command):**
 
-- ⏭️ Switch and implement: `erk switch <name> && claude --permission-mode acceptEdits "/erk:implement-plan"`
+- ⏭️ Navigate and implement: `erk checkout <branch> && claude --permission-mode acceptEdits "/erk:implement-plan"`
 
 ## What Happens
 
@@ -61,7 +61,7 @@ This command succeeds when ALL of the following are true:
 
 **Next Steps:**
 ✅ Plan content displayed (including user edits)
-✅ Next command displayed: `erk switch <name> && claude --permission-mode acceptEdits "/erk:implement-plan"`
+✅ Next command displayed: `erk checkout <branch> && claude --permission-mode acceptEdits "/erk:implement-plan"`
 
 ## Troubleshooting
 
@@ -90,7 +90,7 @@ This command succeeds when ALL of the following are true:
 
 - List worktrees: `erk list`
 - Remove existing: `erk remove <name>`
-- Or switch to existing: `erk switch <name>`
+- Or navigate to existing: `erk checkout <branch>`
 
 ### "Failed to parse erk output"
 
@@ -272,7 +272,7 @@ Details: A worktree with this name already exists from a previous plan
 
 Suggested action:
   1. View existing: erk status <worktree_name>
-  2. Switch to it: erk switch <worktree_name>
+  2. Navigate to it: erk checkout <branch>
   3. Or remove it: erk remove <worktree_name>
   4. Or modify plan title to generate different name
 ```
@@ -320,7 +320,7 @@ Location: `<worktree-path>`
 
 **Next step:**
 
-`erk switch <worktree_name> && claude --permission-mode acceptEdits "/erk:implement-plan"`
+`erk checkout <branch-name> && claude --permission-mode acceptEdits "/erk:implement-plan"`
 ```
 
 **CRITICAL:** You MUST output this complete formatted message. Do not skip the plan content or the command.
@@ -343,6 +343,6 @@ Location: `<worktree-path>`
 - Reads plan content from disk to show any manual edits
 - All errors follow consistent template with details and suggested actions
 - This command does NOT switch directories or execute the plan
-- User must manually run `erk switch` and `/erk:implement-plan` to begin implementation
+- User must manually run `erk checkout` and `/erk:implement-plan` to begin implementation
 - The `--permission-mode acceptEdits` flag is included to automatically accept edits during implementation
 - Always provide clear feedback at each step

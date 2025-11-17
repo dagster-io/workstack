@@ -15,7 +15,7 @@ This command reads and executes the `.plan/plan.md` file from the current direct
 ## Prerequisites
 
 - Must be in a worktree directory that contains `.plan/` folder
-- Typically run after `erk switch <worktree-name>`
+- Typically run after `erk checkout <branch>`
 - `.plan/plan.md` should contain a valid implementation plan
 
 ## What Happens
@@ -55,7 +55,7 @@ This command must be run from a worktree directory that contains a .plan/ folder
 To create a worktree with a plan:
 1. Run /persist-plan to save your enhanced plan to disk
 2. Run /create-planned-stack to create a worktree from the plan
-3. Run: erk switch <worktree-name>
+3. Run: erk checkout <branch>
 4. Then run: claude --permission-mode acceptEdits "/erk:implement-plan"
 ```
 

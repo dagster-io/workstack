@@ -105,8 +105,8 @@ Repository Root
 # Create worktree named "auth" with branch "feature/user-auth"
 erk create auth --branch feature/user-auth
 
-# Switch using the worktree name
-erk switch auth
+# Navigate to the branch
+erk checkout feature/user-auth
 ```
 
 ### Context Resolution
@@ -146,7 +146,7 @@ erk status    # Shows: "feature-a [feature-a]"
 | **Trunk Branch**  | Default branch of the repository (main/master)        | `main`                                                 |
 | **Stack**         | Graphite concept: linear chain of dependent branches  | main → feature-1 → feature-1-part-2                    |
 | **Plan Folder**   | Folder containing implementation plan and progress    | `.plan/` with `plan.md` and `progress.md` (gitignored) |
-| **Root Worktree** | Special name for the original repo root directory     | Accessed via `erk switch root`                         |
+| **Root Worktree** | Special name for the original repo root directory     | Original clone at `/Users/you/projects/erk`            |
 
 ### Resource Identifiers
 
@@ -156,8 +156,8 @@ Worktrees are identified by **name** (not branch):
 # Create worktree with custom name and branch
 erk create auth --branch feature/user-authentication
 
-# Operations use worktree name
-erk switch auth
+# Operations use branch or worktree names
+erk checkout feature/user-authentication
 erk rm auth
 erk rename auth user-auth
 ```
@@ -384,38 +384,41 @@ erk create --plan plan.md my-feature
 # 3. .plan/ is gitignored (not committed)
 ```
 
-#### `erk jump`
+#### `erk checkout`
 
-Jump to a branch by finding which worktree contains it.
+Navigate to a branch by finding which worktree contains it and checking it out.
 
 ```bash
-# Jump to a branch (finds the worktree containing it)
-erk jump feature/user-auth
+# Navigate to a branch (finds the worktree containing it)
+erk checkout feature/user-auth
+
+# Auto-create worktree if branch not found locally
+erk checkout my-feature --auto-create
 
 # With script output for shell integration
-erk jump my-feature --script
+erk checkout my-feature --script
 ```
 
 **How it works:**
 
 1. Searches all worktrees for the specified branch in their Graphite stack lineage
-2. If exactly one worktree contains the branch, switches to it and checks out the branch
-3. If multiple worktrees contain the branch:
+2. If exactly one worktree contains the branch, navigates to it and checks out the branch
+3. If branch not found locally but exists on remote (with `--auto-create`), creates new worktree
+4. If multiple worktrees contain the branch:
    - If exactly one has it directly checked out, uses that one
    - Otherwise, shows disambiguation error
 
 **Requirements:**
 
-- Graphite must be enabled
-- Branch must exist in at least one worktree's stack
+- Graphite must be enabled (for stack lineage search)
+- Branch must exist in at least one worktree's stack (or on remote with `--auto-create`)
 
 **Use cases:**
 
 - "I know the branch name, find me the right worktree"
 - Quick navigation when you don't remember which worktree has a branch
-- Switching between features by branch name rather than worktree name
-
-**Note:** If the branch exists in the stack lineage of multiple worktrees and none have it checked out, you'll need to use `erk switch <worktree-name>` to disambiguate first.
+- Navigating between features by branch name
+- Creating worktrees on-demand from remote branches
 
 ### Listing & Viewing
 
@@ -479,52 +482,27 @@ erk status
 # PR: #123 ✅
 ```
 
-### Switching Worktrees
+### Stack Navigation (via Graphite)
 
-#### `erk switch`
+For navigating through stacks of dependent branches, use Graphite's native commands:
 
-Switch to a different worktree by name.
+#### `gt up` / `gt down`
 
-```bash
-# Switch to named worktree
-erk switch my-feature
-
-# Switch to repo root
-erk switch root
-```
-
-**What happens on switch:**
-
-1. Outputs shell commands to change directory
-2. Activates environment (sources `.env` if exists)
-3. Exports `WORKTREE_PATH`, `REPO_ROOT`, `WORKTREE_NAME`
-4. Runs activation script if configured
-
-**Shell integration required**: `erk init --shell` sets up shell function that evaluates output.
-
-#### `erk up`
-
-Move to child branch in Graphite stack.
+Navigate through your stack using Graphite's built-in commands:
 
 ```bash
-# Navigate to child branch's worktree
-erk up
+# Navigate to child branch in stack
+gt up
 
-# With script output for shell integration
-erk up --script
+# Navigate to parent branch in stack
+gt down
 ```
 
-**How it works:**
+**These commands:**
 
-1. Determines the child branch of your current branch in the Graphite stack
-2. Finds the worktree containing that child branch
-3. Switches to that worktree and activates its environment
-
-**Requirements:**
-
-- Graphite must be enabled
-- Current branch must have a child in the stack
-- Child branch must have an existing worktree
+- Use Graphite's native stack traversal
+- Automatically checkout the appropriate branch
+- Work within the current worktree (no worktree switching)
 
 **Example:**
 
@@ -532,46 +510,14 @@ erk up --script
 # Current stack: main -> feature-1 -> feature-2 -> feature-3
 # You are in: feature-2
 
-erk up       # → Switches to feature-3's worktree
+gt up       # → Checks out feature-3
+gt down     # → Checks out feature-2 again
+gt down     # → Checks out feature-1
 ```
 
-**Use case:** Navigate up the dependency chain when working on stacked PRs.
+**Use case:** Moving through dependent features within a single worktree.
 
-#### `erk down`
-
-Move to parent branch in Graphite stack.
-
-```bash
-# Navigate to parent branch's worktree
-erk down
-
-# With script output for shell integration
-erk down --script
-```
-
-**How it works:**
-
-1. Determines the parent branch of your current branch in the Graphite stack
-2. Finds the worktree containing that parent branch
-3. Switches to that worktree and activates its environment
-
-**Requirements:**
-
-- Graphite must be enabled
-- Current branch must have a parent in the stack
-- Parent branch must have an existing worktree (or navigates to root for trunk)
-
-**Example:**
-
-```bash
-# Current stack: main -> feature-1 -> feature-2 -> feature-3
-# You are in: feature-2
-
-erk down     # → Switches to feature-1's worktree
-erk down     # → Switches to root (main)
-```
-
-**Use case:** Navigate down the dependency chain or return to earlier work in a stack.
+For navigating to branches in different worktrees, use `erk checkout <branch>` instead.
 
 ### Managing Worktrees
 
@@ -679,17 +625,17 @@ erk sync --dry-run
 ```bash
 # Create new feature
 erk create user-auth
-erk switch user-auth
+erk checkout user-auth
 
 # Work on feature
 # ... make changes, commit ...
 
-# Switch to another feature without losing context
+# Navigate to another feature without losing context
 erk create bug-fix
-erk switch bug-fix
+erk checkout bug-fix
 
-# Switch back instantly
-erk switch user-auth
+# Navigate back instantly
+erk checkout user-auth
 ```
 
 ### Pattern 2: Plan-Based Development
@@ -698,7 +644,7 @@ erk switch user-auth
 
 ```bash
 # 1. Plan in repo root
-erk switch root
+cd /path/to/repo/root
 # Create plan file: Add_User_Auth.md
 
 # 2. Create worktree from plan
@@ -706,8 +652,8 @@ erk create --plan Add_User_Auth.md
 # Creates worktree "add-user-auth"
 # Creates .plan/ folder with plan.md and progress.md
 
-# 3. Switch and implement
-erk switch add-user-auth
+# 3. Navigate and implement
+erk checkout add-user-auth
 # Your plan is at .plan/plan.md for reference during implementation
 # Progress tracked in .plan/progress.md
 
@@ -741,14 +687,14 @@ erk create my-work --from-branch feature/existing-work
 erk create feature-base
 
 # Create dependent feature
-erk switch feature-base
+erk checkout feature-base
 gt create feature-base-part-2
 erk create feature-base-part-2 --from-current-branch
 
 # Navigate stack
-erk switch feature-base
-erk up                 # Move to feature-base-part-2
-erk down               # Back to feature-base
+erk checkout feature-base
+gt up                  # Move to feature-base-part-2 (within same worktree)
+gt down                # Back to feature-base
 
 # View stack structure
 erk list --stacks
@@ -765,17 +711,17 @@ erk create feature-c
 # List all worktrees
 erk ls
 
-# Switch between them instantly
-erk switch feature-a   # Work on A
-erk switch feature-b   # Switch to B
-erk switch feature-a   # Back to A
+# Navigate between them instantly
+erk checkout feature-a   # Work on A
+erk checkout feature-b   # Navigate to B
+erk checkout feature-a   # Back to A
 ```
 
 ### Pattern 6: Moving Work Between Worktrees
 
 ```bash
 # Started work in wrong worktree
-erk switch wrong-worktree
+erk checkout wrong-branch
 
 # Move current branch to correct worktree
 erk move correct-worktree
@@ -861,15 +807,15 @@ When `use_graphite = true`, erk integrates with Graphite:
 
 ```bash
 # Stack navigation
-erk up                 # Navigate to child branch
-erk down               # Navigate to parent branch
-erk jump <branch>      # Jump to specific branch
+gt up                  # Navigate to child branch (within worktree)
+gt down                # Navigate to parent branch (within worktree)
+erk checkout <branch>  # Navigate to specific branch (across worktrees)
 
 # Stack visualization
 erk list --stacks      # Show stack structure
 
 # Sync and cleanup
-erk sync              # Run gt repo sync + cleanup
+erk sync               # Run gt repo sync + cleanup
 ```
 
 **Graphite commands used:**
@@ -973,25 +919,23 @@ erk sync --dry-run
 
 ### Shell Integration
 
-Shell integration enables directory switching:
+Shell integration enables directory navigation:
 
 ```bash
 # Set up shell integration
 erk init --shell
 
 # Adds function to ~/.zshrc or ~/.bashrc:
-ws() {
-    eval "$(erk switch "$@")"
-}
+# Enables 'erk checkout' to actually change directory
 ```
 
 **What it provides:**
 
-- `ws` command that actually changes directory
-- Environment activation on switch
-- Tab completion for worktree names
+- `erk checkout` command that actually changes directory
+- Environment activation on navigation
+- Tab completion for branch names
 
-**Without shell integration**: `erk switch` only prints commands, doesn't execute them.
+**Without shell integration**: `erk checkout` only prints commands, doesn't execute them.
 
 ---
 
@@ -1004,17 +948,17 @@ ws() {
 erk ls --stacks
 
 # Work on feature A
-ws feature-a
+erk checkout feature-a
 # ... make changes, commit ...
 
-# Switch to urgent bug fix
-ws root
+# Navigate to urgent bug fix
+cd /path/to/repo/root  # Navigate to root
 erk create hotfix-urgent
-ws hotfix-urgent
+erk checkout hotfix-urgent
 # ... fix bug, commit, push ...
 
 # Back to feature A
-ws feature-a
+erk checkout feature-a
 
 # Check status
 erk status
@@ -1024,14 +968,14 @@ erk status
 
 ```bash
 # 1. Plan in root
-ws root
+cd /path/to/repo/root
 # Create plan: Add_Authentication.md
 
 # 2. Create worktree from plan
 erk create --plan Add_Authentication.md
 
 # 3. Implement
-ws add-authentication
+erk checkout add-authentication
 cat .plan/plan.md         # Reference plan
 cat .plan/progress.md     # Check progress
 # ... implement ...
@@ -1050,22 +994,22 @@ erk ls --stacks     # See PR #123 ✅
 ```bash
 # Base feature
 erk create api-v2
-ws api-v2
+erk checkout api-v2
 # ... implement base API ...
 git commit -m "Add API v2 base"
 
 # Dependent feature
 gt create api-v2-auth
 erk create api-v2-auth --from-current-branch
-ws api-v2-auth
+erk checkout api-v2-auth
 # ... implement auth on top of API v2 ...
 git commit -m "Add authentication to API v2"
 
 # Navigate stack
 erk list --stacks
 
-ws api-v2              # Base
-erk up           # → api-v2-auth
+erk checkout api-v2    # Base
+gt up                  # → api-v2-auth (within worktree)
 ```
 
 ### Example 4: Environment Isolation
@@ -1081,12 +1025,12 @@ EOF
 
 # Each worktree gets unique environment
 erk create user-service
-ws user-service
+erk checkout user-service
 echo $DATABASE_URL  # postgresql://localhost/user-service_db
 echo $API_PORT      # 300user-service (would need numeric hashing in real use)
 
 erk create payment-service
-ws payment-service
+erk checkout payment-service
 echo $DATABASE_URL  # postgresql://localhost/payment-service_db
 ```
 
@@ -1114,7 +1058,7 @@ erk sync --force
 
 ```bash
 # Started feature in wrong worktree
-ws old-feature
+erk checkout old-feature
 # ... did work ...
 git status  # Uncommitted changes
 
@@ -1124,7 +1068,7 @@ git commit -m "WIP"
 
 # Move to correct worktree
 erk move correct-feature
-ws correct-feature
+erk checkout correct-feature
 # Branch is now here
 ```
 
@@ -1150,7 +1094,7 @@ EOF
 # New worktrees automatically set up
 erk create new-feature
 # Runs: uv venv && uv pip install -e .[dev] && pre-commit install
-ws new-feature
+erk checkout new-feature
 # Environment already configured
 ```
 

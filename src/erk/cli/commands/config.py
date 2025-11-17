@@ -5,6 +5,8 @@ import click
 
 from erk.cli.config import LoadedConfig
 from erk.cli.core import discover_repo_context
+from erk.cli.json_output import emit_json
+from erk.cli.json_schemas import ConfigListResponse, GlobalConfigInfo, RepositoryConfigInfo
 from erk.cli.output import machine_output, user_output
 from erk.core.context import ErkContext, write_trunk_to_pyproject
 from erk.core.global_config import GlobalConfig
@@ -60,45 +62,75 @@ def config_group() -> None:
 
 
 @config_group.command("list")
+@click.option("--json", "output_json", is_flag=True, help="Output JSON format")
 @click.pass_obj
-def config_list(ctx: ErkContext) -> None:
+def config_list(ctx: ErkContext, output_json: bool) -> None:
     """Print a list of configuration keys and values."""
-    # Display global config
-    user_output(click.style("Global configuration:", bold=True))
-    if ctx.global_config:
-        user_output(f"  erk_root={ctx.global_config.erk_root}")
-        user_output(f"  use_graphite={str(ctx.global_config.use_graphite).lower()}")
-        user_output(f"  show_pr_info={str(ctx.global_config.show_pr_info).lower()}")
-    else:
-        user_output("  (not configured - run 'erk init' to create)")
+    if output_json:
+        # Build JSON response
+        from erk.core.repo_discovery import NoRepoSentinel, RepoContext
 
-    # Display local config
-    user_output(click.style("\nRepository configuration:", bold=True))
-    from erk.core.repo_discovery import NoRepoSentinel
+        global_config_info = None
+        if ctx.global_config:
+            global_config_info = GlobalConfigInfo(
+                erk_root=str(ctx.global_config.erk_root),
+                use_graphite=ctx.global_config.use_graphite,
+                show_pr_info=ctx.global_config.show_pr_info,
+                exists=True,
+            )
 
-    if isinstance(ctx.repo, NoRepoSentinel):
-        user_output("  (not in a git repository)")
-    else:
-        trunk_branch = ctx.trunk_branch
-        cfg = ctx.local_config
-        if trunk_branch:
-            user_output(f"  trunk-branch={trunk_branch}")
-        if cfg.env:
-            for key, value in cfg.env.items():
-                user_output(f"  env.{key}={value}")
-        if cfg.post_create_shell:
-            user_output(f"  post_create.shell={cfg.post_create_shell}")
-        if cfg.post_create_commands:
-            user_output(f"  post_create.commands={cfg.post_create_commands}")
+        repository_config_info = None
+        if isinstance(ctx.repo, RepoContext):
+            cfg = ctx.local_config
+            repository_config_info = RepositoryConfigInfo(
+                trunk_branch=ctx.trunk_branch,
+                env=cfg.env,
+                post_create_shell=cfg.post_create_shell,
+                post_create_commands=cfg.post_create_commands,
+            )
 
-        has_no_config = (
-            not trunk_branch
-            and not cfg.env
-            and not cfg.post_create_shell
-            and not cfg.post_create_commands
+        response = ConfigListResponse(
+            global_config=global_config_info,
+            repository_config=repository_config_info,
         )
-        if has_no_config:
-            user_output("  (no configuration - run 'erk init --repo' to create)")
+        emit_json(response.model_dump(mode="json"))
+    else:
+        # Display global config
+        user_output(click.style("Global configuration:", bold=True))
+        if ctx.global_config:
+            user_output(f"  erk_root={ctx.global_config.erk_root}")
+            user_output(f"  use_graphite={str(ctx.global_config.use_graphite).lower()}")
+            user_output(f"  show_pr_info={str(ctx.global_config.show_pr_info).lower()}")
+        else:
+            user_output("  (not configured - run 'erk init' to create)")
+
+        # Display local config
+        user_output(click.style("\nRepository configuration:", bold=True))
+        from erk.core.repo_discovery import NoRepoSentinel
+
+        if isinstance(ctx.repo, NoRepoSentinel):
+            user_output("  (not in a git repository)")
+        else:
+            trunk_branch = ctx.trunk_branch
+            cfg = ctx.local_config
+            if trunk_branch:
+                user_output(f"  trunk-branch={trunk_branch}")
+            if cfg.env:
+                for key, value in cfg.env.items():
+                    user_output(f"  env.{key}={value}")
+            if cfg.post_create_shell:
+                user_output(f"  post_create.shell={cfg.post_create_shell}")
+            if cfg.post_create_commands:
+                user_output(f"  post_create.commands={cfg.post_create_commands}")
+
+            has_no_config = (
+                not trunk_branch
+                and not cfg.env
+                and not cfg.post_create_shell
+                and not cfg.post_create_commands
+            )
+            if has_no_config:
+                user_output("  (no configuration - run 'erk init --repo' to create)")
 
 
 @config_group.command("get")

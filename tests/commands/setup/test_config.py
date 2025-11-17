@@ -425,3 +425,270 @@ def test_config_key_with_multiple_dots() -> None:
 
         assert result.exit_code == 1
         assert "Invalid key" in result.output
+
+
+def test_config_list_json_with_both_configs() -> None:
+    """Test config list --json with both global and repository config."""
+    import json
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+
+        git_ops = FakeGitOps(
+            git_common_dirs={env.cwd: env.git_dir}, default_branches={env.cwd: "main"}
+        )
+        local_config = LoadedConfig(
+            env={"FOO": "bar"},
+            post_create_commands=["npm install"],
+            post_create_shell="/bin/bash",
+        )
+
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
+        )
+
+        test_ctx = env.build_context(
+            git_ops=git_ops,
+            local_config=local_config,
+            repo=repo,
+            script_writer=env.script_writer,
+            cwd=env.cwd,
+        )
+
+        result = runner.invoke(cli, ["config", "list", "--json"], obj=test_ctx)
+
+        assert result.exit_code == 0, result.output
+        data = json.loads(result.output)
+
+        # Verify global_config structure
+        assert "global_config" in data
+        assert data["global_config"] is not None
+        assert "erk_root" in data["global_config"]
+        assert "use_graphite" in data["global_config"]
+        assert "show_pr_info" in data["global_config"]
+        assert "exists" in data["global_config"]
+        assert data["global_config"]["exists"] is True
+
+        # Verify repository_config structure
+        assert "repository_config" in data
+        assert data["repository_config"] is not None
+        assert data["repository_config"]["trunk_branch"] == "main"
+        assert data["repository_config"]["env"] == {"FOO": "bar"}
+        assert data["repository_config"]["post_create_shell"] == "/bin/bash"
+        assert data["repository_config"]["post_create_commands"] == ["npm install"]
+
+
+def test_config_list_json_global_only() -> None:
+    """Test config list --json with only global config (not in repository)."""
+    import json
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        # No git directory - FakeGitOps with no repos
+        git_ops = FakeGitOps()
+
+        # Build context without repository
+        global_config = GlobalConfig(
+            erk_root=Path("/fake/erks"),
+            use_graphite=False,
+            show_pr_info=True,
+            shell_setup_complete=False,
+        )
+
+        test_ctx = ErkContext.for_test(
+            git_ops=git_ops,
+            graphite_ops=FakeGraphiteOps(),
+            github_ops=FakeGitHubOps(),
+            global_config=global_config,
+            script_writer=env.script_writer,
+            cwd=env.cwd,
+            repo=None,
+        )
+
+        result = runner.invoke(cli, ["config", "list", "--json"], obj=test_ctx)
+
+        assert result.exit_code == 0, result.output
+        data = json.loads(result.output)
+
+        # Verify global_config is present
+        assert "global_config" in data
+        assert data["global_config"] is not None
+        assert data["global_config"]["exists"] is True
+
+        # Verify repository_config is None
+        assert "repository_config" in data
+        assert data["repository_config"] is None
+
+
+def test_config_list_json_with_env_vars() -> None:
+    """Test config list --json with environment variables."""
+    import json
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+
+        git_ops = FakeGitOps(
+            git_common_dirs={env.cwd: env.git_dir}, default_branches={env.cwd: "main"}
+        )
+        local_config = LoadedConfig(
+            env={"FOO": "bar", "BAZ": "qux"},
+            post_create_commands=[],
+            post_create_shell=None,
+        )
+
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
+        )
+
+        test_ctx = env.build_context(
+            git_ops=git_ops,
+            local_config=local_config,
+            repo=repo,
+            script_writer=env.script_writer,
+            cwd=env.cwd,
+        )
+
+        result = runner.invoke(cli, ["config", "list", "--json"], obj=test_ctx)
+
+        assert result.exit_code == 0, result.output
+        data = json.loads(result.output)
+
+        # Verify env dict
+        assert data["repository_config"]["env"] == {"FOO": "bar", "BAZ": "qux"}
+        assert isinstance(data["repository_config"]["env"], dict)
+        # Verify all keys and values are strings
+        for key, value in data["repository_config"]["env"].items():
+            assert isinstance(key, str)
+            assert isinstance(value, str)
+
+
+def test_config_list_json_with_post_create() -> None:
+    """Test config list --json with post-create settings."""
+    import json
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+
+        git_ops = FakeGitOps(
+            git_common_dirs={env.cwd: env.git_dir}, default_branches={env.cwd: "main"}
+        )
+        local_config = LoadedConfig(
+            env={},
+            post_create_commands=["npm install", "npm build"],
+            post_create_shell="bash",
+        )
+
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
+        )
+
+        test_ctx = env.build_context(
+            git_ops=git_ops,
+            local_config=local_config,
+            repo=repo,
+            script_writer=env.script_writer,
+            cwd=env.cwd,
+        )
+
+        result = runner.invoke(cli, ["config", "list", "--json"], obj=test_ctx)
+
+        assert result.exit_code == 0, result.output
+        data = json.loads(result.output)
+
+        # Verify post_create_commands is a list of strings
+        assert data["repository_config"]["post_create_commands"] == [
+            "npm install",
+            "npm build",
+        ]
+        assert isinstance(data["repository_config"]["post_create_commands"], list)
+
+        # Verify post_create_shell
+        assert data["repository_config"]["post_create_shell"] == "bash"
+
+
+def test_config_list_json_validates_schema() -> None:
+    """Test config list --json validates against expected schema."""
+    import json
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+
+        git_ops = FakeGitOps(
+            git_common_dirs={env.cwd: env.git_dir}, default_branches={env.cwd: "main"}
+        )
+        local_config = LoadedConfig(
+            env={"KEY": "value"},
+            post_create_commands=["echo test"],
+            post_create_shell="/bin/zsh",
+        )
+
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
+        )
+
+        test_ctx = env.build_context(
+            use_graphite=True,
+            git_ops=git_ops,
+            local_config=local_config,
+            repo=repo,
+            script_writer=env.script_writer,
+            cwd=env.cwd,
+        )
+
+        result = runner.invoke(cli, ["config", "list", "--json"], obj=test_ctx)
+
+        assert result.exit_code == 0, result.output
+        data = json.loads(result.output)
+
+        # Verify top-level keys
+        assert set(data.keys()) == {"global_config", "repository_config"}
+
+        # Verify global_config keys if not None
+        if data["global_config"] is not None:
+            assert set(data["global_config"].keys()) == {
+                "erk_root",
+                "use_graphite",
+                "show_pr_info",
+                "exists",
+            }
+            assert isinstance(data["global_config"]["erk_root"], str)
+            assert isinstance(data["global_config"]["use_graphite"], bool)
+            assert isinstance(data["global_config"]["show_pr_info"], bool)
+            assert isinstance(data["global_config"]["exists"], bool)
+
+        # Verify repository_config keys if not None
+        if data["repository_config"] is not None:
+            assert set(data["repository_config"].keys()) == {
+                "trunk_branch",
+                "env",
+                "post_create_shell",
+                "post_create_commands",
+            }
+            # trunk_branch can be str or null
+            assert data["repository_config"]["trunk_branch"] is None or isinstance(
+                data["repository_config"]["trunk_branch"], str
+            )
+            # env is always dict
+            assert isinstance(data["repository_config"]["env"], dict)
+            # post_create_shell can be str or null
+            assert data["repository_config"]["post_create_shell"] is None or isinstance(
+                data["repository_config"]["post_create_shell"], str
+            )
+            # post_create_commands is always list
+            assert isinstance(data["repository_config"]["post_create_commands"], list)

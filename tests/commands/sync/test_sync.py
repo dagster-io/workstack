@@ -722,7 +722,7 @@ def test_sync_without_force_runs_single_gt_sync() -> None:
         assert force is False
         assert quiet is True  # Default is quiet mode
         # Verify manual instruction is still shown
-        assert "Next step: Run 'erk sync -f'" in result.output
+        assert "Next step: Run 'gt sync -f'" in result.output
 
 
 def test_sync_force_dry_run_no_sync_calls() -> None:

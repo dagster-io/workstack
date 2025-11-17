@@ -43,14 +43,14 @@ For each branch from bottom to top:
 - Navigate to safe branch (trunk or next unmerged branch)
 - Regenerate context after directory changes
 
-**Note:** Worktree cleanup (`erk sync -f`) is NOT run automatically. After landing, you can manually run `erk sync -f` to remove worktrees for merged branches.
+**Note:** Worktree cleanup (`gt sync -f`) is NOT run automatically. After landing, you can manually run `gt sync -f` to remove worktrees for merged branches.
 
 ### Phase 5: Final State
 
 - Display what was accomplished
 - Show current branch and merged branches
 - Display next steps for manual operations:
-  - Run `erk sync -f` to remove worktrees for merged branches
+  - Run `gt sync -f` to remove worktrees for merged branches
   - Run `gt sync -f` to rebase remaining stack branches (if needed)
 
 ## Phase 2.5: PR Base Verification (Race Condition Prevention)
@@ -88,7 +88,7 @@ For each branch from bottom to top:
 **Restacking:**
 After PRs are merged, remaining upstack branches need to be rebased onto the new trunk state to maintain stack integrity. This is done manually by running `gt sync -f` after landing completes.
 
-**Manual Control:** The land-stack command does NOT automatically run `gt sync -f` or `erk sync -f`. This gives you full control over when restacking and cleanup happen, allowing you to inspect the state between operations.
+**Manual Control:** The land-stack command does NOT automatically run `gt sync -f`. This gives you full control over when restacking and cleanup happen, allowing you to inspect the state between operations.
 
 **Worktree Conflicts:**
 Git prevents checking out a branch in multiple worktrees. Phase 1 validation detects ANY branch in the stack that is checked out in ANY worktree (including the current worktree) and requires `erk consolidate` to fix. This ensures all landing operations happen from a consistent location (the root worktree).

@@ -241,6 +241,21 @@ class GraphiteOps(ABC):
         ...
 
     @abstractmethod
+    def track_branch(self, cwd: Path, branch_name: str, parent_branch: str) -> None:
+        """Track a branch with Graphite.
+
+        Uses `gt track` to register a branch in Graphite's cache. This is needed
+        when branches are created with direct git operations (git branch) instead
+        of gt create.
+
+        Args:
+            cwd: Working directory where gt track should run
+            branch_name: Name of the branch to track
+            parent_branch: Name of the parent branch in the stack
+        """
+        ...
+
+    @abstractmethod
     def submit_branch(self, repo_root: Path, branch_name: str, *, quiet: bool) -> None:
         """Submit (force-push) a branch to GitHub.
 
@@ -464,6 +479,28 @@ class RealGraphiteOps(GraphiteOps):
         # ancestors already contains the current branch
         return ancestors + descendants
 
+    def track_branch(self, cwd: Path, branch_name: str, parent_branch: str) -> None:
+        """Track a branch with Graphite.
+
+        Uses `gt track --branch <branch> --parent <parent>` to register a branch
+        in Graphite's cache. This is needed when branches are created with direct
+        git operations (git branch) instead of gt create.
+
+        Args:
+            cwd: Working directory where gt track should run
+            branch_name: Name of the branch to track
+            parent_branch: Name of the parent branch in the stack
+        """
+        subprocess.run(
+            ["gt", "track", "--branch", branch_name, "--parent", parent_branch],
+            cwd=cwd,
+            check=True,
+            capture_output=True,
+        )
+
+        # Invalidate branches cache - gt track modifies Graphite metadata
+        self._branches_cache = None
+
     def submit_branch(self, repo_root: Path, branch_name: str, *, quiet: bool) -> None:
         """Submit (force-push) a branch to GitHub.
 
@@ -545,6 +582,11 @@ class NoopGraphiteOps(GraphiteOps):
         # Do nothing - prevents actual gt sync execution
         pass
 
+    def track_branch(self, cwd: Path, branch_name: str, parent_branch: str) -> None:
+        """No-op for gt track in dry-run mode."""
+        # Do nothing - prevents actual gt track execution
+        pass
+
     def submit_branch(self, repo_root: Path, branch_name: str, *, quiet: bool) -> None:
         """No-op for gt submit in dry-run mode."""
         # Do nothing - prevents actual gt submit execution
@@ -602,6 +644,13 @@ class PrintingGraphiteOps(PrintingOpsBase, GraphiteOps):
         cmd = "gt sync -f" if force else "gt sync"
         self._emit(self._format_command(cmd))
         self._wrapped.sync(repo_root, force=force, quiet=quiet)
+
+    def track_branch(self, cwd: Path, branch_name: str, parent_branch: str) -> None:
+        """Track branch with printed output."""
+        self._emit(
+            self._format_command(f"gt track --branch {branch_name} --parent {parent_branch}")
+        )
+        self._wrapped.track_branch(cwd, branch_name, parent_branch)
 
     def submit_branch(self, repo_root: Path, branch_name: str, *, quiet: bool) -> None:
         """Submit branch with printed output."""

@@ -787,3 +787,41 @@ def test_consolidate_allows_uncommitted_changes_in_protected_worktrees() -> None
         assert main_worktree not in test_ctx.git_ops.removed_worktrees  # Root
         assert wt3_path not in test_ctx.git_ops.removed_worktrees  # Not consolidated
         assert wt4_path not in test_ctx.git_ops.removed_worktrees  # Current
+
+
+def test_consolidate_with_name_tracks_temp_branch_with_graphite() -> None:
+    """Test that temporary branch created during consolidate --name is tracked by Graphite.
+
+    This is a regression test for the bug where:
+    1. `erk consolidate` creates temp branch but doesn't track it with Graphite
+    2. Second `erk consolidate --name <name>` call fails with "not tracked by Graphite" error
+
+    The fix ensures that after creating the temporary branch, we call
+    ctx.graphite_ops.track_branch() to register it in Graphite's cache.
+    """
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        # Configure graphite with stack (main -> feature-1 -> feature-2)
+        graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
+
+        # Current worktree on feature-2
+        worktrees = {env.cwd: [WorktreeInfo(path=env.cwd, branch="feature-2")]}
+
+        test_ctx = _create_test_context(
+            env, worktrees, "feature-2", graphite_ops, git_dir=env.git_dir
+        )
+
+        # Run consolidate with --name flag to create new worktree
+        result = runner.invoke(cli, ["consolidate", "--name", "my-stack", "-f"], obj=test_ctx)
+
+        assert result.exit_code == 0, result.output
+
+        # Verify that temporary branch was tracked with Graphite
+        # The fix ensures ctx.graphite_ops.track_branch() is called
+        assert len(graphite_ops.track_branch_calls) == 1
+
+        # Verify the track call parameters
+        cwd, temp_branch_name, parent_branch = graphite_ops.track_branch_calls[0]
+        assert cwd == env.cwd  # Tracking happens in current worktree
+        assert temp_branch_name.startswith("temp-consolidate-")  # Temp branch naming pattern
+        assert parent_branch == "feature-2"  # Parent is current branch

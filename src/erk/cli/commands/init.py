@@ -176,6 +176,16 @@ def init_cmd(
 
         setup_complete = perform_shell_setup(ctx.shell_ops)
         if setup_complete:
+            # Show what we're about to write
+            config_path = ctx.global_config_ops.path()
+            user_output("\nTo remember that shell setup is complete, erk needs to update:")
+            user_output(f"  {config_path}")
+
+            if not click.confirm("Proceed with updating global config?", default=True):
+                user_output("\nShell integration instructions were displayed above.")
+                user_output("Run 'erk init --shell' again to save this preference.")
+                return
+
             # Update global config with shell_setup_complete=True
             new_config = GlobalConfig(
                 erk_root=ctx.global_config.erk_root,
@@ -183,7 +193,15 @@ def init_cmd(
                 shell_setup_complete=True,
                 show_pr_info=ctx.global_config.show_pr_info,
             )
-            ctx.global_config_ops.save(new_config)
+            try:
+                ctx.global_config_ops.save(new_config)
+                user_output(click.style("✓", fg="green") + " Global config updated")
+            except PermissionError as e:
+                user_output(click.style("\n❌ Error: ", fg="red") + "Could not save global config")
+                user_output(str(e))
+                user_output("\nShell integration instructions were displayed above.")
+                user_output("You can use them now - erk just couldn't save this preference.")
+                raise SystemExit(1) from e
         return
 
     # Discover available presets on demand
@@ -287,11 +305,29 @@ def init_cmd(
         if not fresh_config.shell_setup_complete:
             setup_complete = perform_shell_setup(ctx.shell_ops)
             if setup_complete:
-                # Update global config with shell_setup_complete=True
-                new_config = GlobalConfig(
-                    erk_root=fresh_config.erk_root,
-                    use_graphite=fresh_config.use_graphite,
-                    shell_setup_complete=True,
-                    show_pr_info=fresh_config.show_pr_info,
-                )
-                ctx.global_config_ops.save(new_config)
+                # Show what we're about to write
+                config_path = ctx.global_config_ops.path()
+                user_output("\nTo remember that shell setup is complete, erk needs to update:")
+                user_output(f"  {config_path}")
+
+                if not click.confirm("Proceed with updating global config?", default=True):
+                    user_output("\nShell integration instructions were displayed above.")
+                    user_output("Run 'erk init --shell' again to save this preference.")
+                else:
+                    # Update global config with shell_setup_complete=True
+                    new_config = GlobalConfig(
+                        erk_root=fresh_config.erk_root,
+                        use_graphite=fresh_config.use_graphite,
+                        shell_setup_complete=True,
+                        show_pr_info=fresh_config.show_pr_info,
+                    )
+                    try:
+                        ctx.global_config_ops.save(new_config)
+                        user_output(click.style("✓", fg="green") + " Global config updated")
+                    except PermissionError as e:
+                        error_msg = "Could not save global config"
+                        user_output(click.style("\n❌ Error: ", fg="red") + error_msg)
+                        user_output(str(e))
+                        user_output("\nShell integration instructions were displayed above.")
+                        msg = "You can use them now - erk just couldn't save this preference."
+                        user_output(msg)

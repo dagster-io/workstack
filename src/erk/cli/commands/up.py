@@ -42,8 +42,15 @@ def up_cmd(ctx: ErkContext, script: bool) -> None:
     # Get all worktrees for checking if target has a worktree
     worktrees = ctx.git_ops.list_worktrees(repo.root)
 
-    # Resolve navigation to get target branch
-    target_name = _resolve_up_navigation(ctx, repo, current_branch, worktrees)
+    # Resolve navigation to get target branch (may auto-create worktree)
+    target_name, was_created = _resolve_up_navigation(ctx, repo, current_branch, worktrees)
+
+    # Show creation message if worktree was just created
+    if was_created and not script:
+        user_output(
+            click.style("✓", fg="green")
+            + f" Created worktree for {click.style(target_name, fg='yellow')} and moved to it"
+        )
 
     # Resolve target branch to actual worktree path
     target_wt_path = ctx.git_ops.find_worktree_for_branch(repo.root, target_name)

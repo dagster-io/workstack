@@ -45,8 +45,17 @@ def down_cmd(ctx: ErkContext, script: bool) -> None:
     # Get all worktrees for checking if target has a worktree
     worktrees = ctx.git_ops.list_worktrees(repo.root)
 
-    # Resolve navigation to get target branch or 'root'
-    target_name = _resolve_down_navigation(ctx, repo, current_branch, worktrees, trunk_branch)
+    # Resolve navigation to get target branch or 'root' (may auto-create worktree)
+    target_name, was_created = _resolve_down_navigation(
+        ctx, repo, current_branch, worktrees, trunk_branch
+    )
+
+    # Show creation message if worktree was just created
+    if was_created and not script:
+        user_output(
+            click.style("✓", fg="green")
+            + f" Created worktree for {click.style(target_name, fg='yellow')} and moved to it"
+        )
 
     # Check if target_name refers to 'root' which means root repo
     if target_name == "root":

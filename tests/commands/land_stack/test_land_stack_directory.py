@@ -15,7 +15,7 @@ from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.test_utils.builders import PullRequestInfoBuilder
-from tests.test_utils.env_helpers import simulated_workstack_env
+from tests.test_utils.env_helpers import erk_isolated_fs_env
 
 
 def test_land_stack_navigates_to_root_worktree() -> None:
@@ -27,7 +27,7 @@ def test_land_stack_navigates_to_root_worktree() -> None:
     - No duplicate checkout messages in output
     """
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Create a root worktree and a feature worktree
         feature_worktree_path = env.erk_root / "worktrees" / "feat-branch"
 
@@ -102,7 +102,7 @@ def test_land_stack_no_duplicate_checkout_message() -> None:
     the redundant checkout.
     """
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Create a root worktree and a feature worktree
         feature_worktree_path = env.erk_root / "worktrees" / "feat-branch"
 

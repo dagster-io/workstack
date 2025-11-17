@@ -4,7 +4,7 @@
 
 **Artifacts**:
 
-- command: commands/fix-merge-conflicts/fix-merge-conflicts.md
+- command: .claude/commands/fix-merge-conflicts/fix-merge-conflicts.md
 
 **Usage**:
 

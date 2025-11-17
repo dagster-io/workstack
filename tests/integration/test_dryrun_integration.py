@@ -41,9 +41,9 @@ def test_dryrun_context_creation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     config_dir = tmp_path / ".erk"
     config_dir.mkdir()
     config_file = config_dir / "config.toml"
-    workstacks_root = tmp_path / "workstacks"
+    erk_root = tmp_path / "workstacks"
     config_file.write_text(
-        f"""workstacks_root = "{workstacks_root}"
+        f"""erk_root = "{erk_root}"
 use_graphite = false
 shell_setup_complete = false
 show_pr_info = true
@@ -64,7 +64,7 @@ show_pr_info = true
     assert ctx.global_config is not None
     assert type(ctx.global_config).__name__ == "GlobalConfig"
     # Config loading resolves paths, so compare resolved paths
-    assert ctx.global_config.workstacks_root == workstacks_root.resolve()
+    assert ctx.global_config.erk_root == erk_root.resolve()
     assert "Noop" in type(ctx.github_ops).__name__
     assert "Noop" in type(ctx.graphite_ops).__name__
 
@@ -84,7 +84,7 @@ def test_dryrun_read_operations_still_work(tmp_path: Path) -> None:
         existing_paths={repo, repo / ".git", tmp_path / "workstacks"},
     )
     global_config_ops = GlobalConfig(
-        workstacks_root=tmp_path / "workstacks",
+        erk_root=tmp_path / "workstacks",
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=False,  # This test is about dry-run operations, not PR info
@@ -246,7 +246,7 @@ def test_dryrun_git_checkout_branch_is_allowed(tmp_path: Path) -> None:
 
 # def test_dryrun_config_read_still_works(tmp_path: Path) -> None:
 #     """Test that dry-run GlobalConfigOps read operations still work."""
-#     # REMOVED: GlobalConfig is now a simple dataclass, no .get_workstacks_root() method
+#     # REMOVED: GlobalConfig is now a simple dataclass, no .get_erk_root() method
 
 
 def test_dryrun_graphite_operations(tmp_path: Path) -> None:

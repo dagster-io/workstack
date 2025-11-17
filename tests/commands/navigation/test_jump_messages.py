@@ -21,7 +21,7 @@ def test_message_case_1_already_on_target_branch_in_current_worktree() -> None:
 
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / env.cwd.name
         feature_wt = work_dir / "feature-1"
 
         git_ops = FakeGitOps(
@@ -70,7 +70,7 @@ def test_message_case_2_jumped_to_existing_worktree_standard_naming() -> None:
 
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / env.cwd.name
         # Standard naming: worktree name matches branch name
         feature_wt = work_dir / "feature-1"
 
@@ -122,7 +122,7 @@ def test_message_case_2_jumped_to_existing_worktree_nonstandard_naming() -> None
 
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / env.cwd.name
         # Non-standard naming: worktree name differs from branch name
         feature_wt = work_dir / "custom-worktree-name"
 
@@ -173,7 +173,7 @@ def test_message_case_3_jumped_and_checked_out_branch() -> None:
 
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / env.cwd.name
         feature_wt = work_dir / "feature-wt"
 
         git_ops = FakeGitOps(
@@ -227,7 +227,7 @@ def test_message_case_4_jumped_to_newly_created_worktree() -> None:
 
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / env.cwd.name
         new_wt = work_dir / "new-feature"
 
         git_ops = FakeGitOps(
@@ -275,7 +275,7 @@ def test_message_colorization_applied() -> None:
 
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / env.cwd.name
         feature_wt = work_dir / "feature-1"
 
         git_ops = FakeGitOps(
@@ -325,7 +325,7 @@ def test_message_non_script_mode_case_1() -> None:
 
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / env.cwd.name
         feature_wt = work_dir / "feature-1"
 
         git_ops = FakeGitOps(
@@ -379,7 +379,7 @@ def test_message_non_script_mode_case_4() -> None:
 
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        work_dir = env.workstacks_root / env.cwd.name
+        work_dir = env.erk_root / env.cwd.name
         new_wt = work_dir / "new-feature"
 
         git_ops = FakeGitOps(

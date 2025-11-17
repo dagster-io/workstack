@@ -29,14 +29,14 @@ from tests.test_utils.env_helpers import pure_workstack_env
 def test_get_worktree_mapping() -> None:
     """Test worktree mapping creation from git worktrees."""
     repo_root = sentinel_path()
-    workstacks_dir = sentinel_path() / "work"
+    repo_dir = sentinel_path() / "work"
 
     git_ops = FakeGitOps(
         worktrees={
             repo_root: [
                 WorktreeInfo(path=repo_root, branch="main"),
-                WorktreeInfo(path=workstacks_dir / "feature-a", branch="feature-a"),
-                WorktreeInfo(path=workstacks_dir / "feature-b", branch="feature-b"),
+                WorktreeInfo(path=repo_dir / "feature-a", branch="feature-a"),
+                WorktreeInfo(path=repo_dir / "feature-b", branch="feature-b"),
             ]
         },
         current_branches={repo_root: "main"},
@@ -190,7 +190,7 @@ def test_tree_command_displays_hierarchy() -> None:
                 repo_root: [
                     WorktreeInfo(path=repo_root, branch="main"),
                     WorktreeInfo(
-                        path=env.workstacks_root / "feature-a",
+                        path=env.erk_root / "feature-a",
                         branch="feature-a",
                     ),
                 ]
@@ -240,7 +240,7 @@ def test_tree_command_filters_branches_without_worktrees() -> None:
                 repo_root: [
                     WorktreeInfo(path=repo_root, branch="main"),
                     WorktreeInfo(
-                        path=env.workstacks_root / "feature-a",
+                        path=env.erk_root / "feature-a",
                         branch="feature-a",
                     ),
                 ]
@@ -311,8 +311,8 @@ def test_tree_command_shows_nested_hierarchy() -> None:
             worktrees={
                 repo_root: [
                     WorktreeInfo(path=repo_root, branch="main"),
-                    WorktreeInfo(path=env.workstacks_root / "parent", branch="parent"),
-                    WorktreeInfo(path=env.workstacks_root / "child", branch="child"),
+                    WorktreeInfo(path=env.erk_root / "parent", branch="parent"),
+                    WorktreeInfo(path=env.erk_root / "child", branch="child"),
                 ]
             },
         )
@@ -366,11 +366,11 @@ def test_tree_command_shows_three_level_hierarchy_with_correct_indentation() -> 
                 repo_root: [
                     WorktreeInfo(path=repo_root, branch="main"),
                     WorktreeInfo(
-                        path=env.workstacks_root / "workstack-dev-cli-implementation",
+                        path=env.erk_root / "workstack-dev-cli-implementation",
                         branch="workstack-dev-cli-implementation",
                     ),
                     WorktreeInfo(
-                        path=env.workstacks_root / "create-agents-symlinks-implementation-plan",
+                        path=env.erk_root / "create-agents-symlinks-implementation-plan",
                         branch="create-agents-symlinks-implementation-plan",
                     ),
                 ]
@@ -449,11 +449,11 @@ def test_tree_root_on_non_trunk_branch() -> None:
                 repo_root: [
                     WorktreeInfo(path=repo_root, branch="cleanup"),
                     WorktreeInfo(
-                        path=env.workstacks_root / "feature-a",
+                        path=env.erk_root / "feature-a",
                         branch="feature-a",
                     ),
                     WorktreeInfo(
-                        path=env.workstacks_root / "feature-b",
+                        path=env.erk_root / "feature-b",
                         branch="feature-b",
                     ),
                 ]

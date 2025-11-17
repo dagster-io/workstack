@@ -25,7 +25,7 @@ def test_graphite_branches_text_format(tmp_path: Path) -> None:
 
     graphite_ops = FakeGraphiteOps(branches=branches)
     global_config_ops = GlobalConfig(
-        workstacks_root=sentinel_path(),
+        erk_root=sentinel_path(),
         use_graphite=True,
         shell_setup_complete=False,
         show_pr_info=True,
@@ -62,7 +62,7 @@ def test_graphite_branches_json_format(tmp_path: Path) -> None:
 
     graphite_ops = FakeGraphiteOps(branches=branches)
     global_config_ops = GlobalConfig(
-        workstacks_root=sentinel_path(),
+        erk_root=sentinel_path(),
         use_graphite=True,
         shell_setup_complete=False,
         show_pr_info=True,
@@ -112,7 +112,7 @@ def test_graphite_branches_empty(tmp_path: Path) -> None:
     # Arrange: Empty branch data
     graphite_ops = FakeGraphiteOps(branches={})
     global_config_ops = GlobalConfig(
-        workstacks_root=sentinel_path(),
+        erk_root=sentinel_path(),
         use_graphite=True,
         shell_setup_complete=False,
         show_pr_info=True,
@@ -143,7 +143,7 @@ def test_graphite_branches_graphite_disabled(tmp_path: Path) -> None:
     # Arrange: Graphite disabled
     graphite_ops = FakeGraphiteOps()
     global_config_ops = GlobalConfig(
-        workstacks_root=sentinel_path(),
+        erk_root=sentinel_path(),
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=True,
@@ -177,7 +177,7 @@ def test_graphite_branches_multiple_children(tmp_path: Path) -> None:
 
     graphite_ops = FakeGraphiteOps(branches=branches)
     global_config_ops = GlobalConfig(
-        workstacks_root=sentinel_path(),
+        erk_root=sentinel_path(),
         use_graphite=True,
         shell_setup_complete=False,
         show_pr_info=True,
@@ -217,7 +217,7 @@ def test_graphite_branches_linear_stack(tmp_path: Path) -> None:
 
     graphite_ops = FakeGraphiteOps(branches=branches)
     global_config_ops = GlobalConfig(
-        workstacks_root=sentinel_path(),
+        erk_root=sentinel_path(),
         use_graphite=True,
         shell_setup_complete=False,
         show_pr_info=True,

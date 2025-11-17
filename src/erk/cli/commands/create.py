@@ -18,7 +18,7 @@ from erk.core.naming_utils import (
     strip_plan_from_filename,
 )
 from erk.core.plan_folder import create_plan_folder, get_plan_path
-from erk.core.repo_discovery import ensure_workstacks_dir
+from erk.core.repo_discovery import ensure_repo_dir
 
 
 def add_worktree(
@@ -74,7 +74,7 @@ def add_worktree(
                     '  • Commit them: git commit -m "message"\n'
                     "  • Unstage them: git reset\n"
                     "  • Stash them: git stash\n"
-                    "  • Disable Graphite: workstack config set use_graphite false",
+                    "  • Disable Graphite: erk config set use_graphite false",
                 )
                 raise SystemExit(1)
             run_with_error_reporting(
@@ -85,7 +85,7 @@ def add_worktree(
                     "Check if branch name is valid",
                     "Ensure Graphite is properly configured (gt repo init)",
                     f"Try creating the branch manually: gt create {branch}",
-                    "Disable Graphite: workstack config set use_graphite false",
+                    "Disable Graphite: erk config set use_graphite false",
                 ],
             )
             ctx.git_ops.checkout_branch(cwd, original_branch)
@@ -343,15 +343,15 @@ def create(
         raise SystemExit(1)
 
     repo = discover_repo_context(ctx, ctx.cwd)
-    workstacks_dir = ensure_workstacks_dir(repo)
+    ensure_repo_dir(repo)
     cfg = ctx.local_config
     trunk_branch = ctx.trunk_branch
 
     # Apply date prefix and uniqueness for plan-derived names
     if is_plan_derived:
-        name = ensure_unique_worktree_name(name, workstacks_dir)
+        name = ensure_unique_worktree_name(name, repo.worktrees_dir)
 
-    wt_path = worktree_path_for(workstacks_dir, name)
+    wt_path = worktree_path_for(repo.worktrees_dir, name)
 
     if ctx.git_ops.path_exists(wt_path):
         if output_json:

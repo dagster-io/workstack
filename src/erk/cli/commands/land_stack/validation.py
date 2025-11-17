@@ -131,9 +131,9 @@ def _validate_landing_preconditions(
             "in another worktree. To land this stack, you need to consolidate all\n"
             "branches into the current worktree first.\n\n"
             "To fix:\n"
-            f"  • Run: workstack consolidate{' --down' if down else ''}\n"
+            f"  • Run: erk consolidate{' --down' if down else ''}\n"
             "  • This will remove other worktrees for branches in this stack\n"
-            f"  • Then retry: workstack land-stack{' --down' if down else ''}",
+            f"  • Then retry: erk land-stack{' --down' if down else ''}",
             script_mode=script_mode,
             error=True,
         )

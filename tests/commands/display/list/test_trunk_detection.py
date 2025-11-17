@@ -27,7 +27,7 @@ def test_list_with_trunk_branch(trunk_branch: str) -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         # Construct sentinel path without filesystem operations
-        feature_dir = env.workstacks_root / env.cwd.name / "feature"
+        feature_dir = env.erk_root / "repos" / env.cwd.name / "worktrees" / "feature"
 
         git_ops = FakeGitOps(
             worktrees={

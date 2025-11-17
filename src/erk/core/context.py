@@ -22,7 +22,7 @@ from erk.core.repo_discovery import (
     NoRepoSentinel,
     RepoContext,
     discover_repo_or_sentinel,
-    ensure_workstacks_dir,
+    ensure_repo_dir,
 )
 from erk.core.script_writer import RealScriptWriterOps, ScriptWriterOps
 from erk.core.shell_ops import RealShellOps, ShellOps
@@ -215,7 +215,7 @@ class ErkContext:
 
         if global_config is None:
             global_config = GlobalConfig(
-                workstacks_root=Path("/test/workstacks"),
+                erk_root=Path("/test/workstacks"),
                 use_graphite=False,
                 shell_setup_complete=False,
                 show_pr_info=True,
@@ -335,7 +335,7 @@ def create_context(*, dry_run: bool) -> ErkContext:
     Example:
         >>> ctx = create_context(dry_run=False)
         >>> worktrees = ctx.git_ops.list_worktrees(Path("/repo"))
-        >>> workstacks_root = ctx.global_config.workstacks_root
+        >>> erk_root = ctx.global_config.erk_root
     """
     # 1. Capture cwd (no deps)
     cwd_result, error_msg = safe_cwd()
@@ -365,17 +365,17 @@ def create_context(*, dry_run: bool) -> ErkContext:
     graphite_ops: GraphiteOps = RealGraphiteOps()
     github_ops: GitHubOps = RealGitHubOps()
 
-    # 5. Discover repo (only needs cwd, workstacks_root, git_ops)
+    # 5. Discover repo (only needs cwd, erk_root, git_ops)
     # If global_config is None, use placeholder path for repo discovery
-    workstacks_root = global_config.workstacks_root if global_config else Path.home() / "worktrees"
-    repo = discover_repo_or_sentinel(cwd, workstacks_root, git_ops)
+    erk_root = global_config.erk_root if global_config else Path.home() / "worktrees"
+    repo = discover_repo_or_sentinel(cwd, erk_root, git_ops)
 
     # 6. Load local config (or defaults if no repo)
     if isinstance(repo, NoRepoSentinel):
         local_config = LoadedConfig(env={}, post_create_commands=[], post_create_shell=None)
     else:
-        workstacks_dir = ensure_workstacks_dir(repo)
-        local_config = load_config(workstacks_dir)
+        repo_dir = ensure_repo_dir(repo)
+        local_config = load_config(repo_dir)
 
     # 7. Apply dry-run wrappers if needed
     if dry_run:

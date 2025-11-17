@@ -30,7 +30,7 @@ def down_cmd(ctx: ErkContext, script: bool) -> None:
 
     This will cd to the parent branch's worktree (or root repo if parent is trunk),
     create/activate .venv, and load .env variables.
-    Requires Graphite to be enabled: 'workstack config set use_graphite true'
+    Requires Graphite to be enabled: 'erk config set use_graphite true'
     """
     _ensure_graphite_enabled(ctx)
     repo = discover_repo_context(ctx, ctx.cwd)

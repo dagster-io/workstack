@@ -18,7 +18,7 @@ class GlobalConfig:
     All fields are read-only after construction.
     """
 
-    workstacks_root: Path
+    erk_root: Path
     use_graphite: bool
     shell_setup_complete: bool
     show_pr_info: bool
@@ -91,12 +91,12 @@ class FilesystemGlobalConfigOps(GlobalConfigOps):
             raise FileNotFoundError(f"Global config not found at {config_path}")
 
         data = tomllib.loads(config_path.read_text(encoding="utf-8"))
-        root = data.get("workstacks_root")
+        root = data.get("erk_root")
         if not root:
-            raise ValueError(f"Missing 'workstacks_root' in {config_path}")
+            raise ValueError(f"Missing 'erk_root' in {config_path}")
 
         return GlobalConfig(
-            workstacks_root=Path(root).expanduser().resolve(),
+            erk_root=Path(root).expanduser().resolve(),
             use_graphite=bool(data.get("use_graphite", False)),
             shell_setup_complete=bool(data.get("shell_setup_complete", False)),
             show_pr_info=bool(data.get("show_pr_info", True)),
@@ -112,7 +112,7 @@ class FilesystemGlobalConfigOps(GlobalConfigOps):
         config_path.parent.mkdir(parents=True, exist_ok=True)
 
         content = f"""# Global erk configuration
-workstacks_root = "{config.workstacks_root}"
+erk_root = "{config.erk_root}"
 use_graphite = {str(config.use_graphite).lower()}
 shell_setup_complete = {str(config.shell_setup_complete).lower()}
 show_pr_info = {str(config.show_pr_info).lower()}

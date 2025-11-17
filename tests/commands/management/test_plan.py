@@ -49,7 +49,7 @@ def test_create_with_plan_file() -> None:
         expected_name = f"add-auth-feature-{date_suffix}"
 
         # Verify worktree was created with sanitized name and date suffix
-        worktree_path = env.workstacks_root / "repo" / expected_name
+        worktree_path = env.erk_root / "repos" / "repo" / "worktrees" / expected_name
         assert worktree_path.exists()
         assert worktree_path.is_dir()
 
@@ -101,7 +101,7 @@ def test_create_with_plan_name_sanitization() -> None:
         expected_name = f"my-cool-file-{date_suffix}"
 
         # Verify worktree name is lowercase with hyphens, "plan" removed, and date suffix added
-        worktree_path = env.workstacks_root / "repo" / expected_name
+        worktree_path = env.erk_root / "repos" / "repo" / "worktrees" / expected_name
         assert worktree_path.exists()
 
         # Verify plan folder was created
@@ -130,9 +130,9 @@ def test_create_with_both_name_and_plan_fails() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        # Create global config with workstacks_root
+        # Create global config with erk_root
         global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -172,9 +172,9 @@ def test_create_rejects_reserved_name_root() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        # Create global config with workstacks_root
+        # Create global config with erk_root
         global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -200,7 +200,7 @@ def test_create_rejects_reserved_name_root() -> None:
         )
 
         # Verify worktree was not created
-        worktree_path = env.workstacks_root / "repo" / "root"
+        worktree_path = env.erk_root / "repos" / "repo" / "worktrees" / "root"
         assert not worktree_path.exists()
 
 
@@ -220,9 +220,9 @@ def test_create_rejects_reserved_name_root_case_insensitive() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        # Create global config with workstacks_root
+        # Create global config with erk_root
         global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -267,9 +267,9 @@ def test_create_rejects_main_as_worktree_name() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        # Create global config with workstacks_root
+        # Create global config with erk_root
         global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -294,7 +294,7 @@ def test_create_rejects_main_as_worktree_name() -> None:
         assert "erk switch root" in result.output
 
         # Verify worktree was not created
-        worktree_path = env.workstacks_root / "repo" / "main"
+        worktree_path = env.erk_root / "repos" / "repo" / "worktrees" / "main"
         assert not worktree_path.exists()
 
 
@@ -314,9 +314,9 @@ def test_create_rejects_master_as_worktree_name() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        # Create global config with workstacks_root
+        # Create global config with erk_root
         global_config = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -341,7 +341,7 @@ def test_create_rejects_master_as_worktree_name() -> None:
         assert "erk switch root" in result.output
 
         # Verify worktree was not created
-        worktree_path = env.workstacks_root / "repo" / "master"
+        worktree_path = env.erk_root / "repos" / "repo" / "worktrees" / "master"
         assert not worktree_path.exists()
 
 
@@ -385,7 +385,7 @@ def test_create_with_script_flag() -> None:
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
         # Verify worktree was created
-        worktree_path = env.workstacks_root / "repo" / "test-worktree"
+        worktree_path = env.erk_root / "repos" / "repo" / "worktrees" / "test-worktree"
         assert worktree_path.exists()
 
         # Output should be a temp file path

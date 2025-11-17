@@ -21,7 +21,7 @@ def test_create_from_current_branch_outputs_script_path_to_stdout() -> None:
     """
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
-        workstacks_dir = env.workstacks_root / env.cwd.name
+        repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Set up git state: in root worktree on feature branch
         git_ops = FakeGitOps(
@@ -64,7 +64,7 @@ def test_create_from_current_branch_outputs_script_path_to_stdout() -> None:
         assert script_content is not None, "Script path should reference a valid script"
 
         # Assert: Script contains cd command to new worktree
-        expected_worktree_path = workstacks_dir / "my-feature"
+        expected_worktree_path = repo_dir / "worktrees" / "my-feature"
         assert str(expected_worktree_path) in script_content, (
             f"Script should cd to {expected_worktree_path}"
         )

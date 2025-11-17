@@ -24,7 +24,7 @@ def test_sync_requires_graphite() -> None:
     """Test that sync command requires Graphite to be enabled."""
     runner = CliRunner()
     cwd = sentinel_path()
-    workstacks_root = cwd / "workstacks"
+    erk_root = cwd / "workstacks"
 
     # Create minimal git repo structure
     repo_root = cwd
@@ -40,7 +40,7 @@ def test_sync_requires_graphite() -> None:
 
     # use_graphite=False: Test that graphite is required
     global_config_ops = GlobalConfig(
-        workstacks_root=workstacks_root,
+        erk_root=erk_root,
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=True,
@@ -215,11 +215,11 @@ def test_sync_identifies_deletable_workstacks() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         repo_name = env.cwd.name
-        workstacks_dir = env.workstacks_root / repo_name
+        repo_dir = env.erk_root / "repos" / repo_name
 
         # Define worktree paths (sentinel paths, no mkdir needed)
-        wt1 = workstacks_dir / "feature-1"
-        wt2 = workstacks_dir / "feature-2"
+        wt1 = repo_dir / "worktrees" / "feature-1"
+        wt2 = repo_dir / "worktrees" / "feature-2"
 
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
@@ -301,10 +301,10 @@ def test_sync_with_confirmation() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         repo_name = env.cwd.name
-        workstacks_dir = env.workstacks_root / repo_name
+        repo_dir = env.erk_root / "repos" / repo_name
 
         # Define worktree path (sentinel path, no mkdir needed)
-        wt1 = workstacks_dir / "feature-1"
+        wt1 = repo_dir / "worktrees" / "feature-1"
 
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
@@ -343,9 +343,9 @@ def test_sync_user_cancels() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         repo_name = env.cwd.name
-        workstacks_dir = env.workstacks_root / repo_name
+        repo_dir = env.erk_root / "repos" / repo_name
 
-        wt1 = workstacks_dir / "feature-1"
+        wt1 = repo_dir / "worktrees" / "feature-1"
 
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
@@ -385,9 +385,9 @@ def test_sync_force_skips_confirmation() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         repo_name = env.cwd.name
-        workstacks_dir = env.workstacks_root / repo_name
+        repo_dir = env.erk_root / "repos" / repo_name
 
-        wt1 = workstacks_dir / "feature-1"
+        wt1 = repo_dir / "worktrees" / "feature-1"
 
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
@@ -426,9 +426,9 @@ def test_sync_dry_run() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         repo_name = env.cwd.name
-        workstacks_dir = env.workstacks_root / repo_name
+        repo_dir = env.erk_root / "repos" / repo_name
 
-        wt1 = workstacks_dir / "feature-1"
+        wt1 = repo_dir / "worktrees" / "feature-1"
 
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
@@ -472,7 +472,7 @@ def test_sync_return_to_original_worktree() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         # Define worktree path
-        wt1 = env.workstacks_root / "feature-1"
+        wt1 = env.erk_root / "feature-1"
 
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
@@ -503,7 +503,7 @@ def test_sync_return_to_original_worktree() -> None:
         assert result.exit_code == 0
 
         # Note: In isolated_filesystem(), we start at cwd which is not
-        # under workstacks_root, so no "Returning to:" message should appear
+        # under erk_root, so no "Returning to:" message should appear
 
 
 def test_sync_original_worktree_deleted() -> None:
@@ -511,10 +511,10 @@ def test_sync_original_worktree_deleted() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         repo_name = env.cwd.name
-        workstacks_dir = env.workstacks_root / repo_name
+        repo_dir = env.erk_root / "repos" / repo_name
 
         # Define worktree path
-        wt1 = workstacks_dir / "feature-1"
+        wt1 = repo_dir / "worktrees" / "feature-1"
 
         git_ops = FakeGitOps(
             git_common_dirs={wt1: env.git_dir},
@@ -573,9 +573,9 @@ def test_sync_script_mode_when_worktree_exists() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         repo_name = env.cwd.name
-        workstacks_dir = env.workstacks_root / repo_name
+        repo_dir = env.erk_root / "repos" / repo_name
 
-        wt1 = workstacks_dir / "feature-1"
+        wt1 = repo_dir / "worktrees" / "feature-1"
 
         git_ops = FakeGitOps(
             git_common_dirs={wt1: env.git_dir},
@@ -631,10 +631,10 @@ def test_sync_force_runs_double_gt_sync() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         repo_name = env.cwd.name
-        workstacks_dir = env.workstacks_root / repo_name
+        repo_dir = env.erk_root / "repos" / repo_name
 
         # Define worktree path
-        wt1 = workstacks_dir / "feature-1"
+        wt1 = repo_dir / "worktrees" / "feature-1"
 
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
@@ -682,10 +682,10 @@ def test_sync_without_force_runs_single_gt_sync() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         repo_name = env.cwd.name
-        workstacks_dir = env.workstacks_root / repo_name
+        repo_dir = env.erk_root / "repos" / repo_name
 
         # Define worktree path
-        wt1 = workstacks_dir / "feature-1"
+        wt1 = repo_dir / "worktrees" / "feature-1"
 
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
@@ -722,7 +722,7 @@ def test_sync_without_force_runs_single_gt_sync() -> None:
         assert force is False
         assert quiet is True  # Default is quiet mode
         # Verify manual instruction is still shown
-        assert "Next step: Run 'workstack sync -f'" in result.output
+        assert "Next step: Run 'erk sync -f'" in result.output
 
 
 def test_sync_force_dry_run_no_sync_calls() -> None:
@@ -730,10 +730,10 @@ def test_sync_force_dry_run_no_sync_calls() -> None:
     runner = CliRunner()
     with pure_workstack_env(runner) as env:
         repo_name = env.cwd.name
-        workstacks_dir = env.workstacks_root / repo_name
+        repo_dir = env.erk_root / "repos" / repo_name
 
         # Define worktree path
-        wt1 = workstacks_dir / "feature-1"
+        wt1 = repo_dir / "worktrees" / "feature-1"
 
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},

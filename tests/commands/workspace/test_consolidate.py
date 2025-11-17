@@ -112,8 +112,8 @@ def test_consolidate_removes_other_stack_worktrees() -> None:
         graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
 
         # Create worktree directories
-        wt1_path = env.workstacks_root / env.root_worktree.name / "wt1"
-        wt2_path = env.workstacks_root / env.root_worktree.name / "wt2"
+        wt1_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "wt1"
+        wt2_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "wt2"
 
         # Current worktree on feature-2, other worktrees on feature-1 and main
         worktrees = {
@@ -144,7 +144,7 @@ def test_consolidate_preserves_current_worktree() -> None:
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create other worktree
-        wt1_path = env.workstacks_root / env.root_worktree.name / "wt1"
+        wt1_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "wt1"
 
         # Both worktrees in same stack, current is on feature-1
         worktrees = {
@@ -173,7 +173,7 @@ def test_consolidate_aborts_on_uncommitted_changes() -> None:
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree with uncommitted changes marker
-        wt1_path = env.workstacks_root / env.root_worktree.name / "wt1"
+        wt1_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "wt1"
 
         worktrees = {
             env.cwd: [
@@ -210,7 +210,7 @@ def test_consolidate_dry_run_shows_preview() -> None:
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree
-        wt1_path = env.workstacks_root / env.root_worktree.name / "wt1"
+        wt1_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "wt1"
 
         worktrees = {
             env.cwd: [
@@ -238,7 +238,7 @@ def test_consolidate_confirmation_prompt() -> None:
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree
-        wt1_path = env.workstacks_root / env.root_worktree.name / "wt1"
+        wt1_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "wt1"
 
         worktrees = {
             env.cwd: [
@@ -317,8 +317,8 @@ def test_consolidate_skips_non_stack_worktrees() -> None:
         graphite_ops = FakeGraphiteOps(stacks={"stack-a": ["main", "stack-a"]})
 
         # Create worktrees
-        wt1_path = env.workstacks_root / env.root_worktree.name / "wt1"
-        wt2_path = env.workstacks_root / env.root_worktree.name / "wt2"
+        wt1_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "wt1"
+        wt2_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "wt2"
 
         # Current on stack-a, wt1 on main (in stack), wt2 on stack-b (NOT in stack)
         worktrees = {
@@ -349,9 +349,9 @@ def test_consolidate_with_uncommitted_changes_in_non_stack_worktree() -> None:
         graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
 
         # Create worktrees
-        wt1_path = env.workstacks_root / env.root_worktree.name / "wt1"
-        wt2_path = env.workstacks_root / env.root_worktree.name / "wt2"
-        wt3_path = env.workstacks_root / env.root_worktree.name / "wt3"
+        wt1_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "wt1"
+        wt2_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "wt2"
+        wt3_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "wt3"
 
         # Current on feature-2, wt1 on feature-1 (in stack), wt2 on main (in stack),
         # wt3 on other-branch (NOT in stack, has uncommitted changes)
@@ -405,9 +405,9 @@ def test_consolidate_preserves_root_worktree_even_when_in_stack() -> None:
         # Root worktree at repo root (on main branch, part of the stack)
         main_worktree = env.cwd / "main-repo"
         # Linked worktree for feature-1
-        wt1_path = env.workstacks_root / env.root_worktree.name / "wt1"
+        wt1_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "wt1"
         # Current linked worktree for feature-2
-        wt2_path = env.workstacks_root / env.root_worktree.name / "wt2"
+        wt2_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "wt2"
 
         # Root worktree is on 'main' branch (which is in the stack)
         # Current worktree is wt2 on feature-2
@@ -466,10 +466,10 @@ def test_consolidate_partial_stack() -> None:
         graphite_ops = FakeGraphiteOps(stacks={"feat-3": ["main", "feat-1", "feat-2", "feat-3"]})
 
         # Create worktree directories
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        wt1_path = workstacks_dir / "wt1"
-        wt2_path = workstacks_dir / "wt2"
-        wt3_path = workstacks_dir / "wt3"
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        wt1_path = repo_dir / "wt1"
+        wt2_path = repo_dir / "wt2"
+        wt3_path = repo_dir / "wt3"
 
         # Three worktrees: wt1 (feat-1), wt2 (feat-2), wt3 (feat-3, current)
         worktrees = {
@@ -530,11 +530,11 @@ def test_consolidate_preserves_upstack_branches() -> None:
         )
 
         # Create worktree directories
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        wt1_path = workstacks_dir / "wt1"
-        wt2_path = workstacks_dir / "wt2"
-        wt3_path = workstacks_dir / "wt3"
-        wt4_path = workstacks_dir / "wt4"
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        wt1_path = repo_dir / "wt1"
+        wt2_path = repo_dir / "wt2"
+        wt3_path = repo_dir / "wt3"
+        wt4_path = repo_dir / "wt4"
 
         # Four worktrees for feat-1, feat-2, feat-3, feat-4
         # Current is wt4 (feat-4)
@@ -578,8 +578,8 @@ def test_consolidate_shows_output_with_script_flag() -> None:
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        wt1_path = workstacks_dir / "wt1"
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        wt1_path = repo_dir / "wt1"
 
         worktrees = {
             env.cwd: [
@@ -608,8 +608,8 @@ def test_consolidate_shows_output_without_script_flag() -> None:
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        wt1_path = workstacks_dir / "wt1"
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        wt1_path = repo_dir / "wt1"
 
         worktrees = {
             env.cwd: [
@@ -642,7 +642,7 @@ def test_consolidate_script_mode_shows_preview_output() -> None:
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree to remove
-        wt1_path = env.workstacks_root / env.root_worktree.name / "wt1"
+        wt1_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "wt1"
 
         worktrees = {
             env.cwd: [
@@ -679,7 +679,7 @@ def test_consolidate_outputs_to_stderr() -> None:
     with pure_workstack_env(runner) as env:
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
-        wt1_path = env.workstacks_root / env.root_worktree.name / "wt1"
+        wt1_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "wt1"
 
         worktrees = {
             env.cwd: [
@@ -723,11 +723,11 @@ def test_consolidate_allows_uncommitted_changes_in_protected_worktrees() -> None
         # Create worktree directories
         # Root worktree is env.cwd (on main branch)
         main_worktree = env.cwd
-        workstacks_dir = env.workstacks_root / env.cwd.name
-        wt1_path = workstacks_dir / "wt1"  # feat-1 (will be consolidated)
-        wt2_path = workstacks_dir / "wt2"  # feat-2 (will be consolidated)
-        wt3_path = workstacks_dir / "wt3"  # feat-3 (will NOT be consolidated, has uncommitted)
-        wt4_path = workstacks_dir / "wt4"  # feat-4 (current, consolidation target)
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        wt1_path = repo_dir / "wt1"  # feat-1 (will be consolidated)
+        wt2_path = repo_dir / "wt2"  # feat-2 (will be consolidated)
+        wt3_path = repo_dir / "wt3"  # feat-3 (will NOT be consolidated, has uncommitted)
+        wt4_path = repo_dir / "wt4"  # feat-4 (current, consolidation target)
 
         # Set up worktrees:
         # - Root worktree on main (protected, has uncommitted changes)

@@ -57,7 +57,7 @@ def test_env_rendering(tmp_path: Path) -> None:
 #     ... (removed - was testing FakeGlobalConfigOps)
 
 
-def test_load_global_config_missing_workstacks_root(
+def test_load_global_config_missing_erk_root(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Test that FilesystemGlobalConfigOps validates required fields
@@ -75,7 +75,7 @@ def test_load_global_config_missing_workstacks_root(
     (erk_dir / "config.toml").write_text("use_graphite = true\n", encoding="utf-8")
 
     ops = FilesystemGlobalConfigOps()
-    with pytest.raises(ValueError, match="Missing 'workstacks_root'"):
+    with pytest.raises(ValueError, match="Missing 'erk_root'"):
         ops.load()
 
 
@@ -112,7 +112,7 @@ def test_create_global_config_creates_parent_directory(tmp_path: Path) -> None:
     # Verify config was saved to in-memory ops
     assert global_config_ops.exists()
     loaded = global_config_ops.load()
-    assert loaded.workstacks_root == Path("/tmp/workstacks")
+    assert loaded.erk_root == Path("/tmp/workstacks")
 
 
 # def test_create_global_config_detects_graphite(tmp_path: Path) -> None:

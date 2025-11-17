@@ -1,7 +1,7 @@
-"""Tree visualization for workstack.
+"""Tree visualization for worktrees.
 
 This module provides the CLI orchestration layer for tree visualization.
-Business logic has been extracted to workstack.core.tree_utils.
+Business logic has been extracted to erk.core.tree_utils.
 """
 
 from pathlib import Path
@@ -18,7 +18,7 @@ from erk.core.tree_utils import (
 )
 
 
-def build_workstack_tree(
+def build_worktree_tree(
     ctx: ErkContext,
     repo_root: Path,
 ) -> list[TreeNode]:

@@ -31,7 +31,7 @@ def test_land_stack_fails_when_first_pr_has_conflict() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -99,7 +99,7 @@ def test_land_stack_fails_when_middle_pr_has_conflict() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -171,7 +171,7 @@ def test_land_stack_fails_when_last_pr_has_conflict() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -238,7 +238,7 @@ def test_land_stack_succeeds_with_unknown_mergeability() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -299,7 +299,7 @@ def test_land_stack_succeeds_when_all_prs_mergeable() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,

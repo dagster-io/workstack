@@ -56,7 +56,7 @@ def test_land_stack_force_pushes_remaining_branches_after_sync() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -141,7 +141,7 @@ def test_land_stack_force_pushes_after_each_pr_landed() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -233,7 +233,7 @@ def test_land_stack_no_submit_when_landing_top_branch() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -325,7 +325,7 @@ def test_land_stack_switches_to_root_when_run_from_linked_worktree() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -391,7 +391,7 @@ def test_land_stack_merge_command_excludes_auto_flag() -> None:
         )
 
         global_config_ops = GlobalConfig(
-            workstacks_root=env.workstacks_root,
+            erk_root=env.erk_root,
             use_graphite=True,
             shell_setup_complete=False,
             show_pr_info=True,

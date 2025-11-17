@@ -256,6 +256,7 @@ def jump_cmd(ctx: ErkContext, branch: str, script: bool) -> None:
             ref=None,
             use_existing_branch=True,
             use_graphite=False,
+            skip_remote_check=True,
         )
 
         user_output(click.style(f"✓ Created worktree: {name}", fg="green"))

@@ -1582,3 +1582,116 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
         assert actual_branch_name.endswith(date_suffix), (
             f"Branch name should end with '{date_suffix}', got: {actual_branch_name}"
         )
+
+
+def test_create_fails_when_branch_exists_on_remote() -> None:
+    """Test that create fails if branch name already exists on origin."""
+    runner = CliRunner()
+    with pure_workstack_env(runner) as env:
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
+
+        config_toml = repo_dir / "config.toml"
+        config_toml.write_text("", encoding="utf-8")
+
+        git_ops = FakeGitOps(
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
+            remote_branches={env.cwd: ["origin/main", "origin/existing-feature"]},
+        )
+
+        test_ctx = env.build_context(git_ops=git_ops)
+
+        result = runner.invoke(cli, ["create", "existing-feature"], obj=test_ctx)
+
+        assert result.exit_code == 1
+        assert "already exists on remote" in result.output
+        assert "origin" in result.output
+
+
+def test_create_succeeds_when_branch_not_on_remote() -> None:
+    """Test that create succeeds if branch name doesn't exist on origin."""
+    runner = CliRunner()
+    with pure_workstack_env(runner) as env:
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
+
+        config_toml = repo_dir / "config.toml"
+        config_toml.write_text("", encoding="utf-8")
+
+        git_ops = FakeGitOps(
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
+            remote_branches={env.cwd: ["origin/main"]},
+        )
+
+        test_ctx = env.build_context(git_ops=git_ops)
+
+        result = runner.invoke(cli, ["create", "new-feature"], obj=test_ctx)
+
+        assert result.exit_code == 0
+        assert "new-feature" in result.output
+
+
+def test_create_with_skip_remote_check_flag() -> None:
+    """Test that --skip-remote-check bypasses remote validation."""
+    runner = CliRunner()
+    with pure_workstack_env(runner) as env:
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
+
+        config_toml = repo_dir / "config.toml"
+        config_toml.write_text("", encoding="utf-8")
+
+        git_ops = FakeGitOps(
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
+            remote_branches={env.cwd: ["origin/main", "origin/existing-feature"]},
+        )
+
+        test_ctx = env.build_context(git_ops=git_ops)
+
+        result = runner.invoke(
+            cli,
+            ["create", "existing-feature", "--skip-remote-check"],
+            obj=test_ctx,
+        )
+
+        assert result.exit_code == 0
+        assert "existing-feature" in result.output
+
+
+def test_create_proceeds_with_warning_when_remote_check_fails() -> None:
+    """Test that create proceeds with warning if remote check fails."""
+    runner = CliRunner()
+    with pure_workstack_env(runner) as env:
+        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir.mkdir(parents=True)
+        (repo_dir / "worktrees").mkdir(parents=True)
+
+        config_toml = repo_dir / "config.toml"
+        config_toml.write_text("", encoding="utf-8")
+
+        # Create FakeGitOps that raises exception on list_remote_branches
+        git_ops = FakeGitOps(
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
+        )
+
+        # Override list_remote_branches to raise exception
+        def failing_list_remote_branches(repo_root):
+            raise Exception("Network error")
+
+        git_ops.list_remote_branches = failing_list_remote_branches
+
+        test_ctx = env.build_context(git_ops=git_ops)
+
+        result = runner.invoke(cli, ["create", "new-feature"], obj=test_ctx)
+
+        assert result.exit_code == 0
+        assert "Warning:" in result.output
+        assert "Could not check remote branches" in result.output
+        assert "new-feature" in result.output

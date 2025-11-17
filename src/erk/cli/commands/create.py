@@ -1,5 +1,6 @@
 import json
 import shlex
+import subprocess
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 
@@ -18,7 +19,117 @@ from erk.core.naming_utils import (
     strip_plan_from_filename,
 )
 from erk.core.plan_folder import create_plan_folder, get_plan_path
-from erk.core.repo_discovery import ensure_repo_dir
+from erk.core.repo_discovery import RepoContext, ensure_repo_dir
+
+
+def ensure_worktree_for_branch(
+    ctx: ErkContext,
+    repo: RepoContext,
+    branch: str,
+) -> tuple[Path, bool]:
+    """Ensure worktree exists for branch, creating if necessary.
+
+    This function checks if a worktree already exists for the given branch.
+    If it does, returns the path and False. If not, creates a new worktree
+    with config-driven post-create commands and .env generation.
+
+    Args:
+        ctx: The Erk context with git operations
+        repo: Repository context with root and worktrees directory
+        branch: The branch name to ensure a worktree for
+
+    Returns:
+        Tuple of (worktree_path, was_created)
+        - worktree_path: Path to the worktree directory
+        - was_created: True if worktree was newly created, False if it already existed
+
+    Raises:
+        SystemExit: If branch doesn't exist or tracking branch creation fails
+    """
+    # Check if worktree already exists for this branch
+    existing_path = ctx.git_ops.is_branch_checked_out(repo.root, branch)
+    if existing_path is not None:
+        return existing_path, False
+
+    # Branch not checked out - need to create worktree
+    # First check if branch exists locally
+    local_branches = ctx.git_ops.list_local_branches(repo.root)
+
+    if branch not in local_branches:
+        # Not a local branch - check if remote branch exists
+        remote_branches = ctx.git_ops.list_remote_branches(repo.root)
+        remote_ref = f"origin/{branch}"
+
+        if remote_ref not in remote_branches:
+            # Branch doesn't exist locally or on origin
+            user_output(
+                f"Error: Branch '{branch}' does not exist.\n"
+                f"To create a new branch and worktree, run:\n"
+                f"  erk create --branch {branch}"
+            )
+            raise SystemExit(1)
+
+        # Remote branch exists - create local tracking branch
+        user_output(f"Branch '{branch}' exists on origin, creating local tracking branch...")
+        try:
+            ctx.git_ops.create_tracking_branch(repo.root, branch, remote_ref)
+        except subprocess.CalledProcessError as e:
+            user_output(
+                f"Error: Failed to create local tracking branch from {remote_ref}\n"
+                f"Details: {e.stderr}\n"
+                f"Suggested action:\n"
+                f"  1. Check git status and resolve any issues\n"
+                f"  2. Manually create branch: git branch --track {branch} {remote_ref}\n"
+                f"  3. Or use: erk create --branch {branch}"
+            )
+            raise SystemExit(1) from e
+
+    # Branch exists but not checked out - auto-create worktree
+    user_output(f"Branch '{branch}' not checked out, creating worktree...")
+
+    # Load local config for .env template and post-create commands
+    config = (
+        ctx.local_config
+        if ctx.local_config is not None
+        else LoadedConfig(env={}, post_create_commands=[], post_create_shell=None)
+    )
+
+    # Generate and ensure unique worktree name
+    name = sanitize_worktree_name(branch)
+    name = ensure_unique_worktree_name(name, repo.worktrees_dir, ctx.git_ops)
+
+    # Calculate worktree path
+    wt_path = worktree_path_for(repo.worktrees_dir, name)
+
+    # Create worktree from existing branch
+    add_worktree(
+        ctx,
+        repo.root,
+        wt_path,
+        branch=branch,
+        ref=None,
+        use_existing_branch=True,
+        use_graphite=False,
+        skip_remote_check=True,
+    )
+
+    user_output(click.style(f"✓ Created worktree: {name}", fg="green"))
+
+    # Write .env file if template exists
+    env_content = make_env_content(config, worktree_path=wt_path, repo_root=repo.root, name=name)
+    if env_content:
+        env_path = wt_path / ".env"
+        env_path.write_text(env_content, encoding="utf-8")
+
+    # Run post-create commands
+    if config.post_create_commands:
+        run_commands_in_worktree(
+            commands=config.post_create_commands,
+            worktree_path=wt_path,
+            shell=config.post_create_shell,
+        )
+
+    return wt_path, True
 
 
 def add_worktree(
@@ -383,7 +494,7 @@ def create(
 
     # Apply date prefix and uniqueness for plan-derived names
     if is_plan_derived:
-        name = ensure_unique_worktree_name(name, repo.worktrees_dir)
+        name = ensure_unique_worktree_name(name, repo.worktrees_dir, ctx.git_ops)
 
     wt_path = worktree_path_for(repo.worktrees_dir, name)
 

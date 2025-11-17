@@ -3,6 +3,7 @@ from pathlib import Path
 import click
 
 from erk.cli.activation import render_activation_script
+from erk.cli.commands.create import ensure_worktree_for_branch
 from erk.cli.core import discover_repo_context
 from erk.cli.debug import debug_log
 from erk.cli.output import machine_output, user_output
@@ -115,7 +116,7 @@ def _activate_worktree(
 
 def _resolve_up_navigation(
     ctx: ErkContext, repo: RepoContext, current_branch: str, worktrees: list[WorktreeInfo]
-) -> str:
+) -> tuple[str, bool]:
     """Resolve --up navigation to determine target branch name.
 
     Args:
@@ -125,10 +126,12 @@ def _resolve_up_navigation(
         worktrees: List of worktrees from git_ops.list_worktrees()
 
     Returns:
-        Target branch name to switch to
+        Tuple of (target_branch, was_created)
+        - target_branch: Target branch name to switch to
+        - was_created: True if worktree was newly created, False if it already existed
 
     Raises:
-        SystemExit: If navigation fails (at top of stack or target has no worktree)
+        SystemExit: If navigation fails (at top of stack)
     """
     # Navigate up to child branch
     children = ctx.graphite_ops.get_child_branches(ctx.git_ops, repo.root, current_branch)
@@ -150,18 +153,14 @@ def _resolve_up_navigation(
     # Use the single child
     target_branch = children[0]
 
-    # Check if target branch has a worktree
+    # Check if target branch has a worktree, create if necessary
     target_wt_path = ctx.git_ops.find_worktree_for_branch(repo.root, target_branch)
     if target_wt_path is None:
-        user_output(
-            f"Branch '{target_branch}' is the next branch up in the stack "
-            f"but has no worktree.\n"
-            f"To create a worktree for it, run:\n"
-            f"  erk create {target_branch}"
-        )
-        raise SystemExit(1)
+        # Auto-create worktree for target branch
+        _worktree_path, was_created = ensure_worktree_for_branch(ctx, repo, target_branch)
+        return target_branch, was_created
 
-    return target_branch
+    return target_branch, False
 
 
 def _resolve_down_navigation(
@@ -170,7 +169,7 @@ def _resolve_down_navigation(
     current_branch: str,
     worktrees: list[WorktreeInfo],
     trunk_branch: str | None,
-) -> str:
+) -> tuple[str, bool]:
     """Resolve --down navigation to determine target branch name.
 
     Args:
@@ -181,10 +180,12 @@ def _resolve_down_navigation(
         trunk_branch: Configured trunk branch name, or None for auto-detection
 
     Returns:
-        Target branch name or 'root' to switch to
+        Tuple of (target_branch, was_created)
+        - target_branch: Target branch name or 'root' to switch to
+        - was_created: True if worktree was newly created, False if it already existed
 
     Raises:
-        SystemExit: If navigation fails (at bottom of stack or target has no worktree)
+        SystemExit: If navigation fails (at bottom of stack)
     """
     # Navigate down to parent branch
     parent_branch = ctx.graphite_ops.get_parent_branch(ctx.git_ops, repo.root, current_branch)
@@ -205,28 +206,22 @@ def _resolve_down_navigation(
         trunk_wt_path = ctx.git_ops.find_worktree_for_branch(repo.root, detected_trunk)
         if trunk_wt_path is not None and trunk_wt_path == repo.root:
             # Trunk is in root repository, not in a dedicated worktree
-            return "root"
+            return "root", False
         else:
             # Trunk has a dedicated worktree
             if trunk_wt_path is None:
-                user_output(
-                    f"Branch '{parent_branch}' is the parent branch but has no worktree.\n"
-                    f"To switch to the root repository, run:\n"
-                    f"  erk checkout root"
-                )
-                raise SystemExit(1)
-            return parent_branch
+                # Auto-create worktree for trunk branch
+                _worktree_path, was_created = ensure_worktree_for_branch(ctx, repo, parent_branch)
+                return parent_branch, was_created
+            return parent_branch, False
     else:
         # Parent is not trunk, check if it has a worktree
         target_wt_path = ctx.git_ops.find_worktree_for_branch(repo.root, parent_branch)
         if target_wt_path is None:
-            user_output(
-                f"Branch '{parent_branch}' is the parent branch but has no worktree.\n"
-                f"To create a worktree for it, run:\n"
-                f"  erk create {parent_branch}"
-            )
-            raise SystemExit(1)
-        return parent_branch
+            # Auto-create worktree for parent branch
+            _worktree_path, was_created = ensure_worktree_for_branch(ctx, repo, parent_branch)
+            return parent_branch, was_created
+        return parent_branch, False
 
 
 def complete_worktree_names(

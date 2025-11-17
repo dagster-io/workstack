@@ -1481,8 +1481,8 @@ def test_create_with_plan_ensures_uniqueness() -> None:
         result2 = runner.invoke(cli, ["create", "--plan", str(plan_file)], obj=test_ctx)
         assert result2.exit_code == 0, result2.output
 
-        # Check that second worktree has -2 before date suffix
-        expected_name2 = f"my-feature-2-{date_suffix}"
+        # Check that second worktree has -2 after date suffix
+        expected_name2 = f"my-feature-{date_suffix}-2"
         wt_path2 = repo_dir / "worktrees" / expected_name2
         assert wt_path2.exists(), f"Expected second worktree at {wt_path2}"
         assert (wt_path2 / ".plan" / "plan.md").exists()

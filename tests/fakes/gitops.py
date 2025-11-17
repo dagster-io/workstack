@@ -82,6 +82,7 @@ class FakeGitOps(GitOps):
         delete_branch_raises: dict[str, Exception] | None = None,
         local_branches: dict[Path, list[str]] | None = None,
         remote_branches: dict[Path, list[str]] | None = None,
+        tracking_branch_failures: dict[str, str] | None = None,
     ) -> None:
         """Create FakeGitOps with pre-configured state.
 
@@ -103,6 +104,8 @@ class FakeGitOps(GitOps):
             local_branches: Mapping of repo_root -> list of local branch names
             remote_branches: Mapping of repo_root -> list of remote branch names
                 (with prefix like 'origin/branch-name')
+            tracking_branch_failures: Mapping of branch name -> error message to raise
+                when create_tracking_branch is called for that branch
         """
         self._worktrees = worktrees or {}
         self._current_branches = current_branches or {}
@@ -120,6 +123,7 @@ class FakeGitOps(GitOps):
         self._delete_branch_raises = delete_branch_raises or {}
         self._local_branches = local_branches or {}
         self._remote_branches = remote_branches or {}
+        self._tracking_branch_failures = tracking_branch_failures or {}
 
         # Mutation tracking
         self._deleted_branches: list[str] = []
@@ -130,6 +134,7 @@ class FakeGitOps(GitOps):
         self._fetched_branches: list[tuple[str, str]] = []
         self._pulled_branches: list[tuple[str, str, bool]] = []
         self._chdir_history: list[Path] = []
+        self._created_tracking_branches: list[tuple[str, str]] = []
 
     def list_worktrees(self, repo_root: Path) -> list[WorktreeInfo]:
         """List all worktrees in the repository."""
@@ -182,6 +187,18 @@ class FakeGitOps(GitOps):
 
     def create_tracking_branch(self, repo_root: Path, branch: str, remote_ref: str) -> None:
         """Create a local tracking branch from a remote branch (fake implementation)."""
+        import subprocess
+
+        # Check if this branch should fail
+        if branch in self._tracking_branch_failures:
+            error_msg = self._tracking_branch_failures[branch]
+            raise subprocess.CalledProcessError(
+                returncode=1, cmd=["git", "branch", "--track", branch, remote_ref], stderr=error_msg
+            )
+
+        # Track this mutation
+        self._created_tracking_branches.append((branch, remote_ref))
+
         # In the fake, we simulate branch creation by adding to local branches
         if repo_root not in self._local_branches:
             self._local_branches[repo_root] = []
@@ -426,6 +443,15 @@ class FakeGitOps(GitOps):
         This property is for test assertions only.
         """
         return self._chdir_history.copy()
+
+    @property
+    def created_tracking_branches(self) -> list[tuple[str, str]]:
+        """Get list of tracking branches created during test.
+
+        Returns list of (branch, remote_ref) tuples.
+        This property is for test assertions only.
+        """
+        return self._created_tracking_branches.copy()
 
     def _is_parent(self, parent: Path, child: Path) -> bool:
         """Check if parent is an ancestor of child."""

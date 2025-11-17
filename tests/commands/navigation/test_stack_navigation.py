@@ -10,7 +10,7 @@ from erk.core.gitops import WorktreeInfo
 from erk.core.repo_discovery import RepoContext
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.test_utils.env_helpers import erk_inmem_env
+from tests.test_utils.env_helpers import erk_inmem_env, erk_isolated_fs_env
 
 
 def test_up_with_existing_worktree() -> None:
@@ -109,12 +109,12 @@ def test_up_at_top_of_stack() -> None:
 
 
 def test_up_child_has_no_worktree() -> None:
-    """Test 'erk up' navigation when child branch exists but has no worktree."""
+    """Test 'erk up' navigation when child has no worktree - should auto-create."""
     runner = CliRunner()
-    with erk_inmem_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
-        # Only feature-1 has a worktree, feature-2 does not
+        # Only feature-1 has a worktree, feature-2 does not (will be auto-created)
         git_ops = FakeGitOps(
             worktrees={
                 env.cwd: [
@@ -124,6 +124,8 @@ def test_up_child_has_no_worktree() -> None:
             },
             current_branches={env.cwd: "feature-1"},  # Simulate being in feature-1 worktree
             git_common_dirs={env.cwd: env.git_dir},
+            # feature-2 exists locally
+            local_branches={env.cwd: ["main", "feature-1", "feature-2"]},
         )
 
         # Set up stack: main -> feature-1 -> feature-2
@@ -137,14 +139,26 @@ def test_up_child_has_no_worktree() -> None:
             }
         )
 
-        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir,
+        )
 
-        result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
+        test_ctx = env.build_context(
+            git_ops=git_ops, graphite_ops=graphite_ops, repo=repo, use_graphite=True
+        )
 
-        assert result.exit_code == 1
-        assert "feature-2" in result.stderr
-        assert "no worktree" in result.stderr
-        assert "erk create feature-2" in result.stderr
+        result = runner.invoke(cli, ["up", "--script"], obj=test_ctx, catch_exceptions=False)
+
+        # Should succeed and create worktree
+        assert result.exit_code == 0
+
+        # Verify worktree was created for feature-2
+        # added_worktrees is a list of (path, branch) tuples
+        assert any(branch == "feature-2" for _path, branch in git_ops.added_worktrees)
 
 
 def test_down_with_existing_worktree() -> None:
@@ -278,12 +292,12 @@ def test_down_at_trunk() -> None:
 
 
 def test_down_parent_has_no_worktree() -> None:
-    """Test 'erk down' navigation when parent branch exists but has no worktree."""
+    """Test 'erk down' navigation when parent has no worktree - should auto-create."""
     runner = CliRunner()
-    with erk_inmem_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
-        # Only feature-2 has a worktree, feature-1 does not
+        # Only feature-2 has a worktree, feature-1 does not (will be auto-created)
         git_ops = FakeGitOps(
             worktrees={
                 env.cwd: [
@@ -294,6 +308,8 @@ def test_down_parent_has_no_worktree() -> None:
             current_branches={env.cwd: "feature-2"},  # Simulate being in feature-2 worktree
             default_branches={env.cwd: "main"},
             git_common_dirs={env.cwd: env.git_dir},
+            # feature-1 exists locally
+            local_branches={env.cwd: ["main", "feature-1", "feature-2"]},
         )
 
         # Set up stack: main -> feature-1 -> feature-2
@@ -307,14 +323,26 @@ def test_down_parent_has_no_worktree() -> None:
             }
         )
 
-        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
+        # Create RepoContext to avoid filesystem checks
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir,
+        )
 
-        result = runner.invoke(cli, ["down"], obj=test_ctx, catch_exceptions=False)
+        test_ctx = env.build_context(
+            git_ops=git_ops, graphite_ops=graphite_ops, repo=repo, use_graphite=True
+        )
 
-        assert result.exit_code == 1
-        assert "feature-1" in result.stderr or "parent branch" in result.stderr
-        assert "no worktree" in result.stderr
-        assert "erk create feature-1" in result.stderr
+        result = runner.invoke(cli, ["down", "--script"], obj=test_ctx, catch_exceptions=False)
+
+        # Should succeed and create worktree
+        assert result.exit_code == 0
+
+        # Verify worktree was created for feature-1
+        # added_worktrees is a list of (path, branch) tuples
+        assert any(branch == "feature-1" for _path, branch in git_ops.added_worktrees)
 
 
 def test_up_down_graphite_not_enabled() -> None:

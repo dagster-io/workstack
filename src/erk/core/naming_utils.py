@@ -224,37 +224,38 @@ def extract_trailing_number(name: str) -> tuple[str, int | None]:
     return (name, None)
 
 
-def ensure_unique_worktree_name(base_name: str, worktrees_dir: Path) -> str:
+def ensure_unique_worktree_name(base_name: str, worktrees_dir: Path, git_ops) -> str:
     """Ensure unique worktree name with date suffix and smart versioning.
 
     Adds date suffix in format -YY-MM-DD to the base name.
-    If a worktree with that name exists, increments numeric suffix starting at 2.
-    Uses LBYL pattern: checks path.exists() before operations.
+    If a worktree with that name exists, increments numeric suffix starting at 2 AFTER the date.
+    Uses LBYL pattern: checks via git_ops.path_exists() before operations.
 
     Args:
         base_name: Sanitized worktree base name (without date suffix)
         worktrees_dir: Directory containing worktrees
+        git_ops: Git operations interface for checking path existence
 
     Returns:
         Guaranteed unique worktree name with date suffix
 
     Examples:
         First time: "my-feature" → "my-feature-25-11-08"
-        Duplicate: "my-feature" → "my-feature-2-25-11-08"
+        Duplicate: "my-feature" → "my-feature-25-11-08-2"
         Next day: "my-feature" → "my-feature-25-11-09"
     """
     date_suffix = datetime.now().strftime("%y-%m-%d")
     candidate_name = f"{base_name}-{date_suffix}"
 
     # Check if the base candidate exists
-    if not (worktrees_dir / candidate_name).exists():
+    if not git_ops.path_exists(worktrees_dir / candidate_name):
         return candidate_name
 
-    # Name exists, find next available number
+    # Name exists, find next available number (append after date)
     counter = 2
     while True:
-        versioned_name = f"{base_name}-{counter}-{date_suffix}"
-        if not (worktrees_dir / versioned_name).exists():
+        versioned_name = f"{base_name}-{date_suffix}-{counter}"
+        if not git_ops.path_exists(worktrees_dir / versioned_name):
             return versioned_name
         counter += 1
 

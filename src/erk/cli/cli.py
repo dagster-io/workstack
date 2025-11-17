@@ -7,7 +7,6 @@ from erk.cli.commands.consolidate import consolidate_cmd
 from erk.cli.commands.create import create
 from erk.cli.commands.current import current_cmd
 from erk.cli.commands.down import down_cmd
-from erk.cli.commands.gt import graphite_group
 from erk.cli.commands.init import init_cmd
 from erk.cli.commands.land_stack import land_stack
 from erk.cli.commands.list import list_cmd, ls_cmd
@@ -56,7 +55,6 @@ cli.add_command(rename_cmd)
 cli.add_command(config_group)
 cli.add_command(split_cmd)
 cli.add_command(sync_cmd)
-cli.add_command(graphite_group)
 cli.add_command(hidden_shell_cmd)
 cli.add_command(prepare_cwd_recovery_cmd)
 

@@ -1181,35 +1181,32 @@ This codebase has successfully migrated from 100+ mock patches to fake-based tes
 from unittest.mock import patch
 from erk.cli.core import RepoContext
 
-def test_graphite_branches_json_format(tmp_path: Path) -> None:
+def test_status_command(tmp_path: Path) -> None:
     git_ops = FakeGitOps(git_common_dirs={tmp_path: tmp_path / ".git"})
-    ctx = create_test_context(git_ops=git_ops, graphite_ops=graphite_ops)
+    ctx = create_test_context(git_ops=git_ops)
     repo = RepoContext(root=tmp_path, repo_name="test-repo", erks_dir=tmp_path / "erks")
 
     runner = CliRunner()
-    with patch("erk.cli.commands.gt.discover_repo_context", return_value=repo):
+    with patch("erk.cli.commands.status.discover_repo_context", return_value=repo):
         with runner.isolated_filesystem(temp_dir=tmp_path):
-            result = runner.invoke(graphite_branches_cmd, ["--format", "json"], obj=ctx)
+            result = runner.invoke(status_cmd, [], obj=ctx)
 ```
 
 **✅ After (using cwd injection):**
 
 ```python
-def test_graphite_branches_json_format(tmp_path: Path) -> None:
+def test_status_command(tmp_path: Path) -> None:
     git_ops = FakeGitOps(git_common_dirs={tmp_path: tmp_path / ".git"})
     ctx = create_test_context(
         git_ops=git_ops,
-        graphite_ops=graphite_ops,
         cwd=tmp_path  # ← Set cwd to match git_common_dirs
     )
 
     runner = CliRunner()
-    result = runner.invoke(graphite_branches_cmd, ["--format", "json"], obj=ctx)
+    result = runner.invoke(status_cmd, [], obj=ctx)
 ```
 
 **Key insight**: `discover_repo_context()` uses `ctx.git_ops.get_git_common_dir(ctx.cwd)`, so configuring FakeGitOps with `git_common_dirs` and setting matching `cwd` allows discovery to work naturally without patching.
-
-**Files refactored**: `tests/commands/graphite/test_gt_branches.py` (4 patches eliminated)
 
 ### Example 2: Path Mocking → Real File I/O with tmp_path
 

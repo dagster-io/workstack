@@ -11,7 +11,7 @@ from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def test_land_stack_skips_base_update_when_already_correct() -> None:
@@ -21,7 +21,7 @@ def test_land_stack_skips_base_update_when_already_correct() -> None:
     make unnecessary API calls to update it.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Build two-PR stack
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
@@ -93,7 +93,7 @@ def test_land_stack_updates_pr_bases_after_force_push() -> None:
     in the correct order in dry-run output.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Build initial Graphite/Git state
         # Running from feat-1, which will land only feat-1
         # After sync, feat-2's parent will be updated to "main"
@@ -180,7 +180,7 @@ def test_land_stack_dry_run_shows_trunk_sync_commands() -> None:
     so users can see what would happen.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Build 2-branch stack
         git_ops, graphite_ops = env.build_ops_from_branches(
             {

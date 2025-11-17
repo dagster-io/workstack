@@ -9,7 +9,7 @@ class WorktreeDisplayInfo:
     """Worktree information for display/presentation purposes.
 
     This represents worktree data for status rendering and display.
-    For infrastructure-layer worktree data, see workstack.core.gitops.WorktreeInfo.
+    For infrastructure-layer worktree data, see erk.core.gitops.WorktreeInfo.
     """
 
     name: str

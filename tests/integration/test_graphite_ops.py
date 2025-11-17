@@ -196,6 +196,6 @@ def test_graphite_ops_get_all_branches_caches_results(tmp_path: Path):
 def test_graphite_url_construction():
     """Test Graphite URL construction."""
     ops = RealGraphiteOps()
-    url = ops.get_graphite_url("dagster-io", "workstack", 42)
+    url = ops.get_graphite_url("dagster-io", "erk", 42)
 
-    assert url == "https://app.graphite.com/github/pr/dagster-io/workstack/42"
+    assert url == "https://app.graphite.com/github/pr/dagster-io/erk/42"

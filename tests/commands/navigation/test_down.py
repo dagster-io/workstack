@@ -1,4 +1,4 @@
-"""Tests for workstack down command."""
+"""Tests for erk down command."""
 
 from pathlib import Path
 
@@ -10,13 +10,13 @@ from erk.core.gitops import WorktreeInfo
 from erk.core.repo_discovery import RepoContext
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def test_down_with_existing_worktree() -> None:
     """Test down command when parent branch has a worktree."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         git_ops = FakeGitOps(
@@ -68,7 +68,7 @@ def test_down_with_existing_worktree() -> None:
 def test_down_to_trunk_root() -> None:
     """Test down command when parent is trunk checked out in root."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Main is checked out in root, feature-1 has its own worktree
@@ -119,7 +119,7 @@ def test_down_to_trunk_root() -> None:
 def test_down_at_trunk() -> None:
     """Test down command when already at trunk."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch="main")]},
             current_branches={env.cwd: "main"},
@@ -146,7 +146,7 @@ def test_down_at_trunk() -> None:
 def test_down_parent_has_no_worktree() -> None:
     """Test down command when parent branch exists but has no worktree."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Only feature-2 has a worktree, feature-1 does not
@@ -186,7 +186,7 @@ def test_down_parent_has_no_worktree() -> None:
 def test_down_graphite_not_enabled() -> None:
     """Test down command requires Graphite to be enabled."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch="main")]},
             current_branches={env.cwd: "main"},
@@ -200,13 +200,13 @@ def test_down_graphite_not_enabled() -> None:
 
         assert result.exit_code == 1
         assert "requires Graphite to be enabled" in result.stderr
-        assert "workstack config set use_graphite true" in result.stderr
+        assert "erk config set use_graphite true" in result.stderr
 
 
 def test_down_detached_head() -> None:
     """Test down command fails gracefully on detached HEAD."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Current branch is None (detached HEAD)
         git_ops = FakeGitOps(
             worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch=None)]},
@@ -226,7 +226,7 @@ def test_down_detached_head() -> None:
 def test_down_script_flag() -> None:
     """Test down command with --script flag generates activation script."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         git_ops = FakeGitOps(
@@ -284,7 +284,7 @@ def test_down_with_mismatched_worktree_name() -> None:
     The fix uses find_worktree_for_branch() to resolve branch -> worktree path.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Worktree directories use different naming than branch names

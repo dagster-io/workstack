@@ -49,7 +49,7 @@ def test_prepare_cwd_recovery_outputs_script(tmp_path: Path) -> None:
     repo.mkdir()
     (repo / ".git").mkdir()
 
-    erk_root = tmp_path / "workstacks"
+    erk_root = tmp_path / "erks"
     erk_root.mkdir()
 
     ctx = build_ctx(repo, erk_root, cwd=repo)
@@ -71,7 +71,7 @@ def test_prepare_cwd_recovery_outputs_script(tmp_path: Path) -> None:
 
 def test_prepare_cwd_recovery_no_repo(tmp_path: Path) -> None:
     """Command should emit nothing outside a repository."""
-    erk_root = tmp_path / "workstacks"
+    erk_root = tmp_path / "erks"
     erk_root.mkdir()
 
     ctx = build_ctx(None, erk_root)

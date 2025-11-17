@@ -41,7 +41,7 @@ def test_dryrun_context_creation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     config_dir = tmp_path / ".erk"
     config_dir.mkdir()
     config_file = config_dir / "config.toml"
-    erk_root = tmp_path / "workstacks"
+    erk_root = tmp_path / "erks"
     config_file.write_text(
         f"""erk_root = "{erk_root}"
 use_graphite = false
@@ -81,10 +81,10 @@ def test_dryrun_read_operations_still_work(tmp_path: Path) -> None:
             repo: [WorktreeInfo(path=repo, branch="main")],
         },
         git_common_dirs={repo: repo / ".git"},
-        existing_paths={repo, repo / ".git", tmp_path / "workstacks"},
+        existing_paths={repo, repo / ".git", tmp_path / "erks"},
     )
     global_config_ops = GlobalConfig(
-        erk_root=tmp_path / "workstacks",
+        erk_root=tmp_path / "erks",
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=False,  # This test is about dry-run operations, not PR info

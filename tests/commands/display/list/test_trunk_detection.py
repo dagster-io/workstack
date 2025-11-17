@@ -17,7 +17,7 @@ from erk.core.gitops import WorktreeInfo
 from erk.core.graphite_ops import BranchMetadata
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 from tests.test_utils.output_helpers import strip_ansi
 
 
@@ -25,7 +25,7 @@ from tests.test_utils.output_helpers import strip_ansi
 def test_list_with_trunk_branch(trunk_branch: str) -> None:
     """List command handles trunk branches correctly (CLI layer)."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Construct sentinel path without filesystem operations
         feature_dir = env.erk_root / "repos" / env.cwd.name / "worktrees" / "feature"
 

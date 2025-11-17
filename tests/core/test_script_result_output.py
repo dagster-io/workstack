@@ -133,7 +133,7 @@ def test_fake_script_writer_integration() -> None:
     # Assert - result should have new methods
     assert hasattr(result, "output_for_shell_integration")
     assert hasattr(result, "output_path_for_user")
-    assert result.path.name.startswith("workstack-test-")
+    assert result.path.name.startswith("erk-test-")
 
 
 def test_str_method_returns_path() -> None:

@@ -6,8 +6,8 @@ from erk.core.github_ops import RealGitHubOps, _parse_github_pr_url
 def test_parse_github_pr_url_valid_urls() -> None:
     """Test parsing of valid GitHub PR URLs."""
     # Standard format
-    result = _parse_github_pr_url("https://github.com/dagster-io/workstack/pull/23")
-    assert result == ("dagster-io", "workstack")
+    result = _parse_github_pr_url("https://github.com/dagster-io/erk/pull/23")
+    assert result == ("dagster-io", "erk")
 
     # Different owner/repo names
     result = _parse_github_pr_url("https://github.com/facebook/react/pull/12345")

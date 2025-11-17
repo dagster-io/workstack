@@ -1,4 +1,4 @@
-"""Tests for workstack split command.
+"""Tests for erk split command.
 
 This file tests the split command which creates individual worktrees for each
 branch in a Graphite stack.
@@ -13,7 +13,7 @@ from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def _create_test_context_for_split(
@@ -27,7 +27,7 @@ def _create_test_context_for_split(
     """Helper to create test context for split command tests.
 
     Args:
-        env: Test environment from pure_workstack_env or simulated_workstack_env
+        env: Test environment from pure_erk_env or simulated_erk_env
         stack_branches: Branches in the stack (trunk to leaf order)
         current_branch: Currently checked out branch
         existing_worktrees: List of existing WorktreeInfo objects
@@ -75,7 +75,7 @@ def _create_test_context_for_split(
 def test_split_full_stack() -> None:
     """Default behavior splits entire stack into individual worktrees."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1", "feat-2", "feat-3"]
         test_ctx = _create_test_context_for_split(env, stack_branches, "feat-2")
 
@@ -93,7 +93,7 @@ def test_split_full_stack() -> None:
 def test_split_excludes_trunk() -> None:
     """Trunk branch stays in root worktree and is not split."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1"]
         test_ctx = _create_test_context_for_split(env, stack_branches, "feat-1")
 
@@ -109,7 +109,7 @@ def test_split_excludes_trunk() -> None:
 def test_split_excludes_current_branch() -> None:
     """Current branch cannot be duplicated in another worktree."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1", "feat-2"]
         test_ctx = _create_test_context_for_split(env, stack_branches, "feat-1")
 
@@ -126,7 +126,7 @@ def test_split_excludes_current_branch() -> None:
 def test_split_preserves_existing_worktrees() -> None:
     """Idempotent operation - existing worktrees are preserved."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1", "feat-2"]
         existing_worktrees = [
             WorktreeInfo(path=env.cwd, branch="main", is_root=True),
@@ -149,7 +149,7 @@ def test_split_preserves_existing_worktrees() -> None:
 def test_split_with_up_flag() -> None:
     """--up flag only splits upstack branches."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1", "feat-2", "feat-3"]
         test_ctx = _create_test_context_for_split(env, stack_branches, "feat-2")
 
@@ -165,7 +165,7 @@ def test_split_with_up_flag() -> None:
 def test_split_with_down_flag() -> None:
     """--down flag only splits downstack branches."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1", "feat-2", "feat-3"]
         test_ctx = _create_test_context_for_split(env, stack_branches, "feat-2")
 
@@ -181,7 +181,7 @@ def test_split_with_down_flag() -> None:
 def test_split_up_and_down_conflict() -> None:
     """Error when both --up and --down flags are used."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1", "feat-2"]
         test_ctx = _create_test_context_for_split(env, stack_branches, "feat-1")
 
@@ -194,7 +194,7 @@ def test_split_up_and_down_conflict() -> None:
 def test_split_with_force_flag() -> None:
     """--force flag skips confirmation prompt."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1"]
         test_ctx = _create_test_context_for_split(env, stack_branches, "main")
 
@@ -208,7 +208,7 @@ def test_split_with_force_flag() -> None:
 def test_split_with_dry_run() -> None:
     """--dry-run shows preview without creating worktrees."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1", "feat-2"]
         test_ctx = _create_test_context_for_split(env, stack_branches, "main")
 
@@ -227,7 +227,7 @@ def test_split_with_dry_run() -> None:
 def test_split_detached_head_state() -> None:
     """Handle detached HEAD state gracefully."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1", "feat-2"]
         test_ctx = _create_test_context_for_split(env, stack_branches, None)  # Detached HEAD
 
@@ -243,7 +243,7 @@ def test_split_detached_head_state() -> None:
 def test_split_untracked_branch() -> None:
     """Error when branch is not tracked by Graphite."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Empty graphite_ops - no tracked branches
         graphite_ops = FakeGraphiteOps(stacks={})
         git_ops = FakeGitOps(
@@ -266,7 +266,7 @@ def test_split_untracked_branch() -> None:
 def test_split_no_graphite_init() -> None:
     """Error when repository doesn't have Graphite initialized."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Graphite returns None for uninitialized repo
         graphite_ops = FakeGraphiteOps(stacks=None)  # Returns None for all branches
         git_ops = FakeGitOps(
@@ -290,7 +290,7 @@ def test_split_no_graphite_init() -> None:
 def test_split_uncommitted_changes() -> None:
     """Safety check prevents split with uncommitted changes."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1"]
         test_ctx = _create_test_context_for_split(env, stack_branches, "main", has_uncommitted=True)
 
@@ -304,7 +304,7 @@ def test_split_uncommitted_changes() -> None:
 def test_split_uncommitted_changes_with_force() -> None:
     """--force flag still allows split with uncommitted changes."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1"]
         test_ctx = _create_test_context_for_split(env, stack_branches, "main", has_uncommitted=True)
 
@@ -318,7 +318,7 @@ def test_split_uncommitted_changes_with_force() -> None:
 def test_split_all_branches_have_worktrees() -> None:
     """Nothing to do when all branches already have worktrees."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1"]
         existing_worktrees = [
             WorktreeInfo(path=env.cwd, branch="main", is_root=True),
@@ -339,7 +339,7 @@ def test_split_all_branches_have_worktrees() -> None:
 def test_split_output_formatting() -> None:
     """Verify correct colors and symbols in output."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1", "feat-2", "feat-3"]
         existing_worktrees = [
             WorktreeInfo(path=env.cwd, branch="feat-2", is_root=False),  # Current is feat-2
@@ -366,7 +366,7 @@ def test_split_output_formatting() -> None:
 def test_split_dry_run_output() -> None:
     """Dry run shows clear preview of what would be created."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1", "feat-2"]
         test_ctx = _create_test_context_for_split(env, stack_branches, "main")
 
@@ -383,7 +383,7 @@ def test_split_dry_run_output() -> None:
 def test_split_success_messages() -> None:
     """Successful split shows completion confirmation."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1", "feat-2"]
         test_ctx = _create_test_context_for_split(env, stack_branches, "main")
 
@@ -398,7 +398,7 @@ def test_split_success_messages() -> None:
 def test_split_with_master_as_trunk() -> None:
     """Handle 'master' as trunk branch instead of 'main'."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         stack_branches = ["master", "feat-1"]
         test_ctx = _create_test_context_for_split(
             env, stack_branches, "feat-1", trunk_branch="master"
@@ -416,7 +416,7 @@ def test_split_with_master_as_trunk() -> None:
 def test_split_empty_stack() -> None:
     """Handle edge case of single-branch stack (just trunk)."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         stack_branches = ["main"]
         test_ctx = _create_test_context_for_split(env, stack_branches, "main")
 

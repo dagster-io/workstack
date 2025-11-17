@@ -54,9 +54,9 @@ def find_worktree_containing_path(worktrees: list[WorktreeInfo], target_path: Pa
 
     Examples:
         >>> worktrees = [WorktreeInfo(Path("/repo"), "main", True),
-        ...              WorktreeInfo(Path("/repo/workstacks/feat"), "feat", False)]
-        >>> find_worktree_containing_path(worktrees, Path("/repo/workstacks/feat/src"))
-        Path("/repo/workstacks/feat")  # Returns deepest match
+        ...              WorktreeInfo(Path("/repo/erks/feat"), "feat", False)]
+        >>> find_worktree_containing_path(worktrees, Path("/repo/erks/feat/src"))
+        Path("/repo/erks/feat")  # Returns deepest match
     """
     best_match: Path | None = None
     best_match_depth = -1
@@ -121,7 +121,7 @@ def is_root_worktree(worktree_path: Path, repo_root: Path) -> bool:
     Examples:
         >>> is_root_worktree(Path("/repo"), Path("/repo"))
         True
-        >>> is_root_worktree(Path("/repo/workstacks/feat"), Path("/repo"))
+        >>> is_root_worktree(Path("/repo/erks/feat"), Path("/repo"))
         False
     """
     return worktree_path.resolve() == repo_root.resolve()
@@ -140,10 +140,10 @@ def get_worktree_branch(worktrees: list[WorktreeInfo], wt_path: Path) -> str | N
         Branch name if found and checked out, None otherwise
 
     Examples:
-        >>> worktrees = [WorktreeInfo(Path("/repo/workstacks/feat"), "feature-x", False)]
-        >>> get_worktree_branch(worktrees, Path("/repo/workstacks/feat"))
+        >>> worktrees = [WorktreeInfo(Path("/repo/erks/feat"), "feature-x", False)]
+        >>> get_worktree_branch(worktrees, Path("/repo/erks/feat"))
         "feature-x"
-        >>> get_worktree_branch(worktrees, Path("/repo/workstacks/other"))
+        >>> get_worktree_branch(worktrees, Path("/repo/erks/other"))
         None
     """
     # Resolve paths for comparison to handle relative vs absolute paths
@@ -167,9 +167,9 @@ def find_worktree_with_branch(worktrees: list[WorktreeInfo], branch: str) -> Pat
         Path to worktree containing the branch, or None if not found
 
     Examples:
-        >>> worktrees = [WorktreeInfo(Path("/repo/workstacks/feat"), "feature-x", False)]
+        >>> worktrees = [WorktreeInfo(Path("/repo/erks/feat"), "feature-x", False)]
         >>> find_worktree_with_branch(worktrees, "feature-x")
-        Path("/repo/workstacks/feat")
+        Path("/repo/erks/feat")
         >>> find_worktree_with_branch(worktrees, "unknown")
         None
     """

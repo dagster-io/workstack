@@ -1,4 +1,4 @@
-"""Tests for workstack consolidate command.
+"""Tests for erk consolidate command.
 
 This file tests the consolidate command which removes worktrees containing
 branches from the current Graphite stack.
@@ -15,7 +15,7 @@ from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def _create_test_context(
@@ -31,7 +31,7 @@ def _create_test_context(
     """Helper to create test context for consolidate command tests.
 
     Args:
-        env: Simulated workstack environment
+        env: Simulated erk environment
         worktrees: Map of repo_root to list of WorktreeInfo objects
         current_branch: Current branch name (or None for detached HEAD)
         graphite_ops: FakeGraphiteOps configured with branch stack data
@@ -68,7 +68,7 @@ def _create_test_context(
 def test_consolidate_no_other_worktrees() -> None:
     """Test consolidate when no other worktrees contain stack branches."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1 -> feature-2)
         graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
 
@@ -87,7 +87,7 @@ def test_consolidate_no_other_worktrees() -> None:
 def test_consolidate_no_other_worktrees_with_script_flag() -> None:
     """Test consolidate shows output with --script flag when no worktrees to remove."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1 -> feature-2)
         graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
 
@@ -107,7 +107,7 @@ def test_consolidate_no_other_worktrees_with_script_flag() -> None:
 def test_consolidate_removes_other_stack_worktrees() -> None:
     """Test consolidate removes worktrees with branches from current stack."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1 -> feature-2)
         graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
 
@@ -139,7 +139,7 @@ def test_consolidate_removes_other_stack_worktrees() -> None:
 def test_consolidate_preserves_current_worktree() -> None:
     """Test consolidate preserves the current worktree even if it's in the stack."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1)
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
@@ -168,7 +168,7 @@ def test_consolidate_preserves_current_worktree() -> None:
 def test_consolidate_aborts_on_uncommitted_changes() -> None:
     """Test consolidate aborts if ANY worktree has uncommitted changes."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1)
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
@@ -205,7 +205,7 @@ def test_consolidate_aborts_on_uncommitted_changes() -> None:
 def test_consolidate_dry_run_shows_preview() -> None:
     """Test --dry-run shows what would be removed without executing."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1)
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
@@ -233,7 +233,7 @@ def test_consolidate_dry_run_shows_preview() -> None:
 def test_consolidate_confirmation_prompt() -> None:
     """Test consolidate prompts for confirmation without --force."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1)
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
@@ -263,7 +263,7 @@ def test_consolidate_confirmation_prompt() -> None:
 def test_consolidate_detached_head_error() -> None:
     """Test consolidate aborts if current worktree is in detached HEAD state."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Current worktree with detached HEAD (None branch)
         worktrees = {env.cwd: [WorktreeInfo(path=env.cwd, branch=None)]}
 
@@ -292,7 +292,7 @@ def test_consolidate_detached_head_error() -> None:
 def test_consolidate_not_tracked_by_graphite() -> None:
     """Test consolidate errors if current branch is not tracked by Graphite."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Configure graphite with only main branch (feature-1 is not tracked)
         graphite_ops = FakeGraphiteOps(stacks={"main": ["main"]})
 
@@ -311,7 +311,7 @@ def test_consolidate_not_tracked_by_graphite() -> None:
 def test_consolidate_skips_non_stack_worktrees() -> None:
     """Test consolidate only removes worktrees with branches in current stack."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Configure graphite with stack-a only (main -> stack-a)
         # stack-b is a separate branch not in this stack
         graphite_ops = FakeGraphiteOps(stacks={"stack-a": ["main", "stack-a"]})
@@ -344,7 +344,7 @@ def test_consolidate_skips_non_stack_worktrees() -> None:
 def test_consolidate_with_uncommitted_changes_in_non_stack_worktree() -> None:
     """Test consolidate succeeds when non-stack worktrees have uncommitted changes."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1 -> feature-2)
         graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
 
@@ -397,7 +397,7 @@ def test_consolidate_preserves_root_worktree_even_when_in_stack() -> None:
     operation with "fatal: '/path' is a main working tree".
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1 -> feature-2)
         graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
 
@@ -461,7 +461,7 @@ def test_consolidate_preserves_root_worktree_even_when_in_stack() -> None:
 def test_consolidate_partial_stack() -> None:
     """Test consolidating only trunk → specified branch."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feat-1 -> feat-2 -> feat-3)
         graphite_ops = FakeGraphiteOps(stacks={"feat-3": ["main", "feat-1", "feat-2", "feat-3"]})
 
@@ -503,7 +503,7 @@ def test_consolidate_partial_stack() -> None:
 def test_consolidate_branch_not_in_stack() -> None:
     """Test error when specified branch is not in current stack."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feat-1 -> feat-2)
         graphite_ops = FakeGraphiteOps(stacks={"feat-2": ["main", "feat-1", "feat-2"]})
 
@@ -523,7 +523,7 @@ def test_consolidate_branch_not_in_stack() -> None:
 def test_consolidate_preserves_upstack_branches() -> None:
     """Test that branches above the specified branch remain in separate worktrees."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feat-1 -> feat-2 -> feat-3 -> feat-4)
         graphite_ops = FakeGraphiteOps(
             stacks={"feat-4": ["main", "feat-1", "feat-2", "feat-3", "feat-4"]}
@@ -573,7 +573,7 @@ def test_consolidate_preserves_upstack_branches() -> None:
 def test_consolidate_shows_output_with_script_flag() -> None:
     """Test consolidate displays removal output even when --script flag is enabled."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1)
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
@@ -603,7 +603,7 @@ def test_consolidate_shows_output_with_script_flag() -> None:
 def test_consolidate_shows_output_without_script_flag() -> None:
     """Test consolidate displays removal output when --script flag is not enabled."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1)
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
@@ -637,7 +637,7 @@ def test_consolidate_script_mode_shows_preview_output() -> None:
     in script mode, causing users to see nothing.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1)
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
@@ -676,7 +676,7 @@ def test_consolidate_outputs_to_stderr() -> None:
     or users won't see it.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
 
         wt1_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "wt1"
@@ -714,7 +714,7 @@ def test_consolidate_allows_uncommitted_changes_in_protected_worktrees() -> None
     incorrectly blocked consolidation from linked worktrees.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feat-1 -> feat-2 -> feat-3 -> feat-4)
         graphite_ops = FakeGraphiteOps(
             stacks={"feat-4": ["main", "feat-1", "feat-2", "feat-3", "feat-4"]}

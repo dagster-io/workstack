@@ -66,7 +66,7 @@ def setup_collector(
     graphite_ops = FakeGraphiteOps(**graphite_ops_kwargs)
 
     global_config = GlobalConfig(
-        erk_root=Path("/fake/workstacks"),
+        erk_root=Path("/fake/erks"),
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=show_pr_info,
@@ -270,7 +270,7 @@ def test_github_pr_collector_is_available(
         worktree_path.mkdir()
 
     global_config = GlobalConfig(
-        erk_root=Path("/fake/workstacks"),
+        erk_root=Path("/fake/erks"),
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=show_pr_info,

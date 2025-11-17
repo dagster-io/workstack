@@ -41,14 +41,14 @@ def identify_deletable_worktrees(
     A worktree is deletable if:
     - It's not the root worktree
     - It's not in detached HEAD state
-    - It's managed by workstack (located in workstacks_dir)
+    - It's managed by erk (located in erks_dir)
     - Its PR is MERGED or CLOSED
 
     Args:
         worktrees: List of all worktrees in the repository
         pr_statuses: Map of branch name to PR status information
         repo_root: Path to the repository root
-        workstacks_dir: Path to the workstacks directory containing managed worktrees
+        erks_dir: Path to the erks directory containing managed worktrees
 
     Returns:
         List of worktrees that can be safely deleted
@@ -56,13 +56,13 @@ def identify_deletable_worktrees(
     Example:
         >>> worktrees = [
         ...     WorktreeInfo(Path("/repo"), "main", is_root=True),
-        ...     WorktreeInfo(Path("/repo/.workstacks/feat-1"), "feat-1"),
+        ...     WorktreeInfo(Path("/repo/.erks/feat-1"), "feat-1"),
         ... ]
         >>> pr_statuses = {
         ...     "feat-1": PRStatus("feat-1", "MERGED", 123, "Add feature")
         ... }
         >>> deletable = identify_deletable_worktrees(
-        ...     worktrees, pr_statuses, Path("/repo"), Path("/repo/.workstacks")
+        ...     worktrees, pr_statuses, Path("/repo"), Path("/repo/.erks")
         ... )
         >>> len(deletable)
         1

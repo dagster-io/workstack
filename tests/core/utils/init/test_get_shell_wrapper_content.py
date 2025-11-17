@@ -13,11 +13,11 @@ def test_loads_fish_wrapper(tmp_path: Path) -> None:
     shell_dir.mkdir()
 
     fish_wrapper = shell_dir / "fish_wrapper.fish"
-    fish_wrapper.write_text("function workstack\n    echo fish\nend", encoding="utf-8")
+    fish_wrapper.write_text("function erk\n    echo fish\nend", encoding="utf-8")
 
     result = get_shell_wrapper_content(shell_dir, "fish")
 
-    assert "function workstack" in result
+    assert "function erk" in result
     assert "echo fish" in result
 
 
@@ -27,11 +27,11 @@ def test_loads_zsh_wrapper(tmp_path: Path) -> None:
     shell_dir.mkdir()
 
     zsh_wrapper = shell_dir / "zsh_wrapper.sh"
-    zsh_wrapper.write_text("workstack() {\n    echo zsh\n}", encoding="utf-8")
+    zsh_wrapper.write_text("erk() {\n    echo zsh\n}", encoding="utf-8")
 
     result = get_shell_wrapper_content(shell_dir, "zsh")
 
-    assert "workstack()" in result
+    assert "erk()" in result
     assert "echo zsh" in result
 
 
@@ -41,11 +41,11 @@ def test_loads_bash_wrapper(tmp_path: Path) -> None:
     shell_dir.mkdir()
 
     bash_wrapper = shell_dir / "bash_wrapper.sh"
-    bash_wrapper.write_text("workstack() {\n    echo bash\n}", encoding="utf-8")
+    bash_wrapper.write_text("erk() {\n    echo bash\n}", encoding="utf-8")
 
     result = get_shell_wrapper_content(shell_dir, "bash")
 
-    assert "workstack()" in result
+    assert "erk()" in result
     assert "echo bash" in result
 
 

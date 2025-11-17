@@ -8,7 +8,7 @@ generation business logic.
 from erk.cli.commands.jump import _perform_jump
 from erk.core.gitops import WorktreeInfo
 from tests.fakes.gitops import FakeGitOps
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def test_message_case_1_already_on_target_branch_in_current_worktree() -> None:
@@ -20,7 +20,7 @@ def test_message_case_1_already_on_target_branch_in_current_worktree() -> None:
     from click.testing import CliRunner
 
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         work_dir = env.erk_root / env.cwd.name
         feature_wt = work_dir / "feature-1"
 
@@ -69,7 +69,7 @@ def test_message_case_2_jumped_to_existing_worktree_standard_naming() -> None:
     from click.testing import CliRunner
 
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         work_dir = env.erk_root / env.cwd.name
         # Standard naming: worktree name matches branch name
         feature_wt = work_dir / "feature-1"
@@ -121,7 +121,7 @@ def test_message_case_2_jumped_to_existing_worktree_nonstandard_naming() -> None
     from click.testing import CliRunner
 
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         work_dir = env.erk_root / env.cwd.name
         # Non-standard naming: worktree name differs from branch name
         feature_wt = work_dir / "custom-worktree-name"
@@ -172,7 +172,7 @@ def test_message_case_3_jumped_and_checked_out_branch() -> None:
     from click.testing import CliRunner
 
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         work_dir = env.erk_root / env.cwd.name
         feature_wt = work_dir / "feature-wt"
 
@@ -226,7 +226,7 @@ def test_message_case_4_jumped_to_newly_created_worktree() -> None:
     from click.testing import CliRunner
 
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         work_dir = env.erk_root / env.cwd.name
         new_wt = work_dir / "new-feature"
 
@@ -274,7 +274,7 @@ def test_message_colorization_applied() -> None:
     from click.testing import CliRunner
 
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         work_dir = env.erk_root / env.cwd.name
         feature_wt = work_dir / "feature-1"
 
@@ -324,7 +324,7 @@ def test_message_non_script_mode_case_1() -> None:
     from click.testing import CliRunner
 
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         work_dir = env.erk_root / env.cwd.name
         feature_wt = work_dir / "feature-1"
 
@@ -378,7 +378,7 @@ def test_message_non_script_mode_case_4() -> None:
     from click.testing import CliRunner
 
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         work_dir = env.erk_root / env.cwd.name
         new_wt = work_dir / "new-feature"
 

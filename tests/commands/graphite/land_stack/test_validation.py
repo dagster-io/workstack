@@ -14,13 +14,13 @@ from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def test_land_stack_requires_graphite() -> None:
     """Test that land-stack command requires Graphite to be enabled."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Build both ops from branch metadata
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
@@ -58,7 +58,7 @@ def test_land_stack_requires_graphite() -> None:
 def test_land_stack_fails_on_detached_head() -> None:
     """Test that land-stack fails when HEAD is detached."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # current_branches={env.cwd: None} indicates detached HEAD
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
@@ -100,7 +100,7 @@ def test_land_stack_fails_on_detached_head() -> None:
 def test_land_stack_fails_with_uncommitted_changes() -> None:
     """Test that land-stack fails when current worktree has uncommitted changes."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
@@ -152,7 +152,7 @@ def test_land_stack_fails_with_uncommitted_changes() -> None:
 def test_land_stack_ignores_root_worktree_changes_on_unrelated_branch() -> None:
     """Test that land-stack doesn't check root worktree when it's on unrelated branch."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Set up two worktrees:
         # - Root worktree: on branch "test-docs" with uncommitted changes
         # - Current worktree: on branch "feat-1" (clean)
@@ -243,7 +243,7 @@ def test_land_stack_ignores_root_worktree_changes_on_unrelated_branch() -> None:
 def test_land_stack_fails_on_trunk_branch() -> None:
     """Test that land-stack fails when current branch is trunk."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
@@ -291,7 +291,7 @@ def test_land_stack_fails_on_trunk_branch() -> None:
 def test_land_stack_fails_when_branch_not_tracked() -> None:
     """Test that land-stack fails when branch is not tracked by Graphite."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
@@ -338,7 +338,7 @@ def test_land_stack_fails_when_branch_not_tracked() -> None:
 def test_land_stack_fails_when_pr_missing() -> None:
     """Test that land-stack fails when a branch has no PR."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
@@ -401,7 +401,7 @@ def test_land_stack_fails_when_pr_missing() -> None:
 def test_land_stack_fails_when_pr_closed() -> None:
     """Test that land-stack fails when a branch's PR is closed."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={

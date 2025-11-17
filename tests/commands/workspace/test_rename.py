@@ -1,4 +1,4 @@
-"""Tests for workstack rename command.
+"""Tests for erk rename command.
 
 This file tests the rename command which renames a worktree workspace.
 """
@@ -12,13 +12,13 @@ from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def test_rename_successful() -> None:
     """Test successful rename of a worktree."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Construct worktree paths
         work_dir = env.erk_root / "repos" / env.cwd.name / "worktrees"
         old_wt = work_dir / "old-name"
@@ -49,7 +49,7 @@ def test_rename_successful() -> None:
 def test_rename_old_worktree_not_found() -> None:
     """Test rename fails when old worktree doesn't exist."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         test_ctx = env.build_context(
             git_ops=git_ops,
@@ -67,7 +67,7 @@ def test_rename_old_worktree_not_found() -> None:
 def test_rename_new_name_already_exists() -> None:
     """Test rename fails when new name already exists."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Construct worktree paths
         work_dir = env.erk_root / "repos" / env.cwd.name / "worktrees"
         old_wt = work_dir / "old-name"
@@ -98,7 +98,7 @@ def test_rename_new_name_already_exists() -> None:
 def test_rename_with_graphite_enabled() -> None:
     """Test rename with Graphite integration enabled."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Construct worktree paths
         work_dir = env.erk_root / "repos" / env.cwd.name / "worktrees"
         old_wt = work_dir / "old-branch"
@@ -131,7 +131,7 @@ def test_rename_with_graphite_enabled() -> None:
 def test_rename_dry_run() -> None:
     """Test rename in dry-run mode doesn't actually rename."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Construct worktree paths
         work_dir = env.erk_root / "repos" / env.cwd.name / "worktrees"
         old_wt = work_dir / "old-name"

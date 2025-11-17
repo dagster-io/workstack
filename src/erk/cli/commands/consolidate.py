@@ -201,7 +201,7 @@ def consolidate_cmd(
             # when the source worktree and new worktree would have the same branch checked out
             temp_branch_name = f"temp-consolidate-{int(time.time())}"
 
-            # Use proper workstacks directory path resolution
+            # Use proper erks directory path resolution
             new_worktree_path = worktree_path_for(repo.worktrees_dir, name)
 
             # Create temporary branch on current commit (doesn't checkout)

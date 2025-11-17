@@ -166,8 +166,8 @@ def _parse_github_pr_url(url: str) -> tuple[str, str] | None:
         Tuple of (owner, repo) or None if URL doesn't match expected pattern
 
     Example:
-        >>> _parse_github_pr_url("https://github.com/dagster-io/workstack/pull/23")
-        ("dagster-io", "workstack")
+        >>> _parse_github_pr_url("https://github.com/dagster-io/erk/pull/23")
+        ("dagster-io", "erk")
     """
     match = re.match(r"https://github\.com/([^/]+)/([^/]+)/pull/\d+", url)
     if match:
@@ -185,7 +185,7 @@ class PullRequestInfo:
     is_draft: bool
     checks_passing: bool | None  # None if no checks, True if all pass, False if any fail
     owner: str  # GitHub repo owner (e.g., "schrockn")
-    repo: str  # GitHub repo name (e.g., "workstack")
+    repo: str  # GitHub repo name (e.g., "erk")
     # True if CONFLICTING, False if MERGEABLE, None if UNKNOWN or not fetched
     has_conflicts: bool | None = None
 

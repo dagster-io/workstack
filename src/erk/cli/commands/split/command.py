@@ -156,25 +156,25 @@ def split_cmd(
     \b
     Examples:
       # Split full stack into individual worktrees (default)
-      $ workstack split
+      $ erk split
 
       # Split only upstack (current to leaf)
-      $ workstack split --up
+      $ erk split --up
 
       # Split only downstack (trunk to current)
-      $ workstack split --down
+      $ erk split --down
 
       # Preview changes without executing
-      $ workstack split --dry-run
+      $ erk split --dry-run
 
       # Skip confirmation prompt
-      $ workstack split --force
+      $ erk split --force
 
     Notes:
     - Trunk branch (main/master) stays in root worktree
     - Current branch cannot get its own worktree (already checked out)
     - Existing worktrees are preserved (idempotent operation)
-    - Creates worktrees in the .workstacks directory
+    - Creates worktrees in the .erks directory
     """
     # 1. Validate input flags
     validate_flags(up, down)

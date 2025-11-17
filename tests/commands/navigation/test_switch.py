@@ -8,7 +8,7 @@ from erk.cli.commands.shell_integration import hidden_shell_cmd
 from erk.core.gitops import WorktreeInfo
 from erk.core.repo_discovery import RepoContext
 from tests.fakes.gitops import FakeGitOps
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def strip_ansi(text: str) -> str:
@@ -19,8 +19,8 @@ def strip_ansi(text: str) -> str:
 def test_switch_command() -> None:
     """Test the switch command outputs activation script."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
-        # Create repo-specific workstacks directory
+    with erk_inmem_env(runner) as env:
+        # Create repo-specific erks directory
         work_dir = env.erk_root / "repos" / env.cwd.name / "worktrees"
         myfeature_path = work_dir / "myfeature"
 
@@ -56,7 +56,7 @@ def test_switch_command() -> None:
 
         # Output should be a script path
         script_path = Path(result.output.strip())
-        assert script_path.name.startswith("workstack-switch-")
+        assert script_path.name.startswith("erk-switch-")
         assert script_path.name.endswith(".sh")
 
         # Verify script content (read from in-memory)
@@ -71,8 +71,8 @@ def test_switch_command() -> None:
 def test_switch_nonexistent_worktree() -> None:
     """Test switch command with non-existent worktree."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
-        # Create repo-specific workstacks directory
+    with erk_inmem_env(runner) as env:
+        # Create repo-specific erks directory
         work_dir = env.erk_root / env.cwd.name
 
         # Configure FakeGitOps with just root worktree
@@ -118,8 +118,8 @@ def test_switch_shell_completion() -> None:
 def test_switch_to_root() -> None:
     """Test switching to root repo using 'root'."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
-        # Create repo-specific workstacks directory
+    with erk_inmem_env(runner) as env:
+        # Create repo-specific erks directory
         work_dir = env.erk_root / env.cwd.name
 
         # Configure FakeGitOps with just the root worktree
@@ -149,7 +149,7 @@ def test_switch_to_root() -> None:
 
         # Output should be a script path
         script_path = Path(result.output.strip())
-        assert script_path.name.startswith("workstack-switch-")
+        assert script_path.name.startswith("erk-switch-")
         assert script_path.name.endswith(".sh")
 
         # Verify script content (read from in-memory)
@@ -166,14 +166,14 @@ def test_hidden_shell_cmd_switch_passthrough_on_help() -> None:
     result = runner.invoke(hidden_shell_cmd, ["switch", "--help"])
 
     assert result.exit_code == 0
-    assert result.output.strip() == "__WORKSTACK_PASSTHROUGH__"
+    assert result.output.strip() == "__ERK_PASSTHROUGH__"
 
 
 def test_list_includes_root() -> None:
     """Test that list command shows root repo with branch name."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
-        # Create repo-specific workstacks directory
+    with erk_inmem_env(runner) as env:
+        # Create repo-specific erks directory
         work_dir = env.erk_root / "repos" / env.cwd.name / "worktrees"
         myfeature_path = work_dir / "myfeature"
 
@@ -231,8 +231,8 @@ def test_complete_worktree_names_without_context() -> None:
     from erk.cli.commands.switch import complete_worktree_names
 
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
-        # Create repo-specific workstacks directory
+    with erk_inmem_env(runner) as env:
+        # Create repo-specific erks directory
         work_dir = env.erk_root / env.cwd.name
         feature_a_path = work_dir / "feature-a"
         feature_b_path = work_dir / "feature-b"
@@ -296,8 +296,8 @@ def test_complete_worktree_names_without_context() -> None:
 def test_switch_rejects_main_as_worktree_name() -> None:
     """Test that 'main' is rejected with helpful error."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
-        # Create repo-specific workstacks directory
+    with erk_inmem_env(runner) as env:
+        # Create repo-specific erks directory
         work_dir = env.erk_root / env.cwd.name
 
         # Configure FakeGitOps with just root worktree
@@ -334,8 +334,8 @@ def test_switch_rejects_main_as_worktree_name() -> None:
 def test_switch_rejects_master_as_worktree_name() -> None:
     """Test that 'master' is rejected with helpful error."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
-        # Create repo-specific workstacks directory
+    with erk_inmem_env(runner) as env:
+        # Create repo-specific erks directory
         work_dir = env.erk_root / env.cwd.name
 
         # Configure FakeGitOps with master as trunk branch

@@ -45,7 +45,7 @@ def discover_repo_or_sentinel(
 
     Args:
         cwd: Current working directory to start search from
-        erk_root: Global workstacks root directory (from config)
+        erk_root: Global erks root directory (from config)
         git_ops: Git operations interface (defaults to RealGitOps)
 
     Returns:

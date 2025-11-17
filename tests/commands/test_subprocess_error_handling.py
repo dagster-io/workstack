@@ -78,7 +78,7 @@ def test_sync_displays_stderr_on_gt_sync_failure(tmp_path: Path) -> None:
     )
 
     global_config = GlobalConfig(
-        erk_root=tmp_path / "workstacks",
+        erk_root=tmp_path / "erks",
         use_graphite=True,
         shell_setup_complete=False,
         show_pr_info=True,
@@ -140,7 +140,7 @@ def test_sync_shows_exit_code_when_stderr_empty(tmp_path: Path) -> None:
     )
 
     global_config = GlobalConfig(
-        erk_root=tmp_path / "workstacks",
+        erk_root=tmp_path / "erks",
         use_graphite=True,
         shell_setup_complete=False,
         show_pr_info=True,
@@ -168,7 +168,7 @@ def test_sync_shows_exit_code_when_stderr_empty(tmp_path: Path) -> None:
 
 # Note: land-stack error handling tests are not included here because they
 # require a complex SimulatedWorkstackEnv setup (see tests/commands/graphite/test_land_stack.py).
-# The land-stack error handling code at src/workstack/cli/commands/land_stack.py:677-683
+# The land-stack error handling code at src/erk/cli/commands/land_stack.py:677-683
 # already correctly displays stderr using the same pattern as sync.py:
 #     error_detail = e.stderr.strip() if e.stderr else str(e)
 
@@ -193,8 +193,8 @@ def test_all_calledprocesserror_handlers_use_stderr() -> None:
 
     # Files that should follow this pattern:
     files_with_error_handlers = [
-        "src/workstack/cli/commands/sync.py",
-        "src/workstack/cli/commands/land_stack.py",
+        "src/erk/cli/commands/sync.py",
+        "src/erk/cli/commands/land_stack.py",
     ]
 
     # This test serves as documentation. Actual enforcement happens in:

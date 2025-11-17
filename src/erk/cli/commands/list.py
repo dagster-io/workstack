@@ -72,7 +72,7 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
         if not prs:
             user_output(click.style("❌ Graphite PR cache not found", fg="red"))
             user_output()
-            user_output("Workstack requires Graphite PR data to list worktrees.")
+            user_output("Erk requires Graphite PR data to list worktrees.")
             user_output()
             user_output(click.style("Run: ", fg="white") + click.style("gt sync", fg="yellow"))
             user_output()

@@ -12,13 +12,13 @@ from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def test_land_stack_fails_when_first_pr_has_conflict() -> None:
     """Test that land-stack fails when first PR has merge conflict."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
@@ -86,7 +86,7 @@ def test_land_stack_fails_when_first_pr_has_conflict() -> None:
 def test_land_stack_fails_when_middle_pr_has_conflict() -> None:
     """Test that land-stack fails when middle PR has merge conflict."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
@@ -158,7 +158,7 @@ def test_land_stack_fails_when_middle_pr_has_conflict() -> None:
 def test_land_stack_fails_when_last_pr_has_conflict() -> None:
     """Test that land-stack fails when last PR has merge conflict."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
@@ -225,7 +225,7 @@ def test_land_stack_fails_when_last_pr_has_conflict() -> None:
 def test_land_stack_succeeds_with_unknown_mergeability() -> None:
     """Test that land-stack proceeds with warning when PR mergeability is UNKNOWN."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
@@ -286,7 +286,7 @@ def test_land_stack_succeeds_with_unknown_mergeability() -> None:
 def test_land_stack_succeeds_when_all_prs_mergeable() -> None:
     """Test that land-stack succeeds when all PRs are MERGEABLE."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={

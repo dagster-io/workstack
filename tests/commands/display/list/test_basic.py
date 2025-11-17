@@ -4,13 +4,13 @@ from erk.cli.cli import cli
 from erk.core.gitops import WorktreeInfo
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 from tests.test_utils.output_helpers import strip_ansi
 
 
 def test_list_outputs_names_not_paths() -> None:
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Create worktrees in the location determined by global config
         repo_name = env.cwd.name
         repo_dir = env.erk_root / repo_name

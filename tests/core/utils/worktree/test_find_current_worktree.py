@@ -10,14 +10,14 @@ def test_finds_current_worktree() -> None:
     """Test finding the WorktreeInfo for current directory."""
     worktrees = [
         WorktreeInfo(Path("/repo"), "main", True),
-        WorktreeInfo(Path("/repo/workstacks/feat"), "feat", False),
+        WorktreeInfo(Path("/repo/erks/feat"), "feat", False),
     ]
-    current_dir = Path("/repo/workstacks/feat/src")
+    current_dir = Path("/repo/erks/feat/src")
 
     result = find_current_worktree(worktrees, current_dir)
 
     assert result is not None
-    assert result.path == Path("/repo/workstacks/feat")
+    assert result.path == Path("/repo/erks/feat")
     assert result.branch == "feat"
     assert result.is_root is False
 
@@ -38,7 +38,7 @@ def test_returns_root_worktree_info() -> None:
     """Test correctly returns root worktree info."""
     worktrees = [
         WorktreeInfo(Path("/repo"), "main", True),
-        WorktreeInfo(Path("/repo/workstacks/feat"), "feat", False),
+        WorktreeInfo(Path("/repo/erks/feat"), "feat", False),
     ]
     current_dir = Path("/repo/src")
 

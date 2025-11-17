@@ -241,7 +241,7 @@ def init_cmd(
         # Repository-level config goes in repo root
         cfg_path = repo_context.root / "config.toml"
     else:
-        # Worktree-level config goes in workstacks_dir
+        # Worktree-level config goes in erks_dir
         repo_dir = ensure_repo_dir(repo_context)
         cfg_path = repo_dir / "config.toml"
 

@@ -1,4 +1,4 @@
-"""Graphite integration for workstack.
+"""Graphite integration for erk.
 
 Graphite (https://graphite.com) is a stacked git workflow tool that allows developers
 to manage dependent branches in linear stacks. This module provides utility functions
@@ -26,7 +26,7 @@ This module uses the GraphiteOps abstraction to read Graphite cache data. Produc
 code should use ctx.graphite_ops methods directly instead of importing functions from
 this module.
 
-See workstack.core.graphite_ops for the abstraction interface.
+See erk.core.graphite_ops for the abstraction interface.
 """
 
 from pathlib import Path

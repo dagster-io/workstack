@@ -8,7 +8,7 @@ from erk.core.global_config import GlobalConfig
 from erk.core.graphite_ops import BranchMetadata
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.shell_ops import FakeShellOps
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def test_land_stack_force_pushes_remaining_branches_after_sync() -> None:
@@ -25,7 +25,7 @@ def test_land_stack_force_pushes_remaining_branches_after_sync() -> None:
     remaining branch after landing a PR.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Build 4-branch stack: main → feat-1 → feat-2 → feat-3
         # Current: feat-2 (will land feat-1, leaving feat-2 and feat-3 remaining)
         git_ops, graphite_ops = env.build_ops_from_branches(
@@ -105,7 +105,7 @@ def test_land_stack_force_pushes_after_each_pr_landed() -> None:
     - Total: 5 submit_branch calls
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Build 5-branch stack: main → feat-1 → feat-2 → feat-3 → feat-4
         # Current: feat-3 (will land feat-1 and feat-2)
         git_ops, graphite_ops = env.build_ops_from_branches(
@@ -201,7 +201,7 @@ def test_land_stack_no_submit_when_landing_top_branch() -> None:
     Phase 5 should detect this and skip submit_branch calls entirely.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Build 3-branch stack: main → feat-1 → feat-2 → feat-3
         # Current: feat-3 (top/leaf branch)
         # Landing all 3 branches, final branch has no remaining upstack
@@ -287,7 +287,7 @@ def test_land_stack_switches_to_root_when_run_from_linked_worktree() -> None:
     Scenario: User is in a linked worktree that will be destroyed during land-stack.
     Without the fix, the user's shell ends up in a destroyed directory.
 
-    Bug: land-stack runs cleanup operations (including workstack sync -f) which
+    Bug: land-stack runs cleanup operations (including erk sync -f) which
     destroys worktrees. If the current directory is one of those worktrees, the
     shell is left in a deleted directory.
 
@@ -298,7 +298,7 @@ def test_land_stack_switches_to_root_when_run_from_linked_worktree() -> None:
     integration tests with real filesystem.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Create linked worktree for feat-1 (chdir is ignored in pure mode)
         linked_wt = env.create_linked_worktree(name="feat-1-work", branch="feat-1", chdir=False)
 
@@ -371,7 +371,7 @@ def test_land_stack_merge_command_excludes_auto_flag() -> None:
     This test ensures the --auto flag remains removed from merge commands.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Build simple stack with one PR
         git_ops, graphite_ops = env.build_ops_from_branches(
             {

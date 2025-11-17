@@ -170,7 +170,7 @@ def test_extract_trailing_number(
 
 def test_ensure_unique_worktree_name_first_time(tmp_path: Path) -> None:
     """Test first-time worktree creation gets only date suffix."""
-    repo_dir = tmp_path / "workstacks"
+    repo_dir = tmp_path / "erks"
     repo_dir.mkdir()
 
     result = ensure_unique_worktree_name("my-feature", repo_dir)
@@ -183,7 +183,7 @@ def test_ensure_unique_worktree_name_first_time(tmp_path: Path) -> None:
 
 def test_ensure_unique_worktree_name_duplicate_same_day(tmp_path: Path) -> None:
     """Test duplicate worktree on same day adds -2 before date suffix."""
-    repo_dir = tmp_path / "workstacks"
+    repo_dir = tmp_path / "erks"
     repo_dir.mkdir()
 
     date_suffix = datetime.now().strftime("%y-%m-%d")
@@ -199,7 +199,7 @@ def test_ensure_unique_worktree_name_duplicate_same_day(tmp_path: Path) -> None:
 
 def test_ensure_unique_worktree_name_multiple_duplicates(tmp_path: Path) -> None:
     """Test multiple duplicates increment correctly."""
-    repo_dir = tmp_path / "workstacks"
+    repo_dir = tmp_path / "erks"
     repo_dir.mkdir()
 
     date_suffix = datetime.now().strftime("%y-%m-%d")
@@ -214,7 +214,7 @@ def test_ensure_unique_worktree_name_multiple_duplicates(tmp_path: Path) -> None
 
 def test_ensure_unique_worktree_name_with_existing_number(tmp_path: Path) -> None:
     """Test name with existing number in base preserves it."""
-    repo_dir = tmp_path / "workstacks"
+    repo_dir = tmp_path / "erks"
     repo_dir.mkdir()
 
     date_suffix = datetime.now().strftime("%y-%m-%d")

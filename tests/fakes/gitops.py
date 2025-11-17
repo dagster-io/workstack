@@ -426,11 +426,11 @@ class FakeGitOps(GitOps):
     def path_exists(self, path: Path) -> bool:
         """Check if path should be treated as existing.
 
-        Used in pure_workstack_env to simulate filesystem checks without
+        Used in pure_erk_env to simulate filesystem checks without
         actual filesystem I/O. Paths in existing_paths are treated as
         existing even though they're sentinel paths.
 
-        For simulated_workstack_env (real directories), falls back to
+        For simulated_erk_env (real directories), falls back to
         checking the real filesystem for paths within known worktrees.
         """
         from tests.test_utils.paths import SentinelPath
@@ -512,7 +512,7 @@ class FakeGitOps(GitOps):
     def read_file(self, path: Path) -> str:
         """Read file content from in-memory store.
 
-        Used in pure_workstack_env for commands that need to read files
+        Used in pure_erk_env for commands that need to read files
         (e.g., plan files, config files) without actual filesystem I/O.
 
         Raises:

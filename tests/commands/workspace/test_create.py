@@ -10,13 +10,13 @@ from erk.core.gitops import WorktreeInfo
 from erk.core.repo_discovery import RepoContext
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.test_utils.env_helpers import pure_workstack_env, simulated_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env, erk_isolated_fs_env
 
 
 def test_create_basic_worktree() -> None:
     """Test creating a basic worktree."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -43,7 +43,7 @@ def test_create_basic_worktree() -> None:
 def test_create_with_custom_branch_name() -> None:
     """Test creating a worktree with a custom branch name."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -69,7 +69,7 @@ def test_create_with_custom_branch_name() -> None:
 def test_create_with_plan_file() -> None:
     """Test creating a worktree with a plan file."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Create plan file
         plan_file = env.cwd / "my-feature-plan.md"
         plan_file.write_text("# My Feature Plan\n", encoding="utf-8")
@@ -118,7 +118,7 @@ def test_create_with_plan_file() -> None:
 def test_create_with_plan_file_removes_plan_word() -> None:
     """Test that --plan flag removes 'plan' from worktree names."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.root_worktree.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -181,7 +181,7 @@ def test_create_with_plan_file_removes_plan_word() -> None:
 def test_create_sanitizes_worktree_name() -> None:
     """Test that worktree names are sanitized."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -207,7 +207,7 @@ def test_create_sanitizes_worktree_name() -> None:
 def test_create_sanitizes_branch_name() -> None:
     """Test that branch names are sanitized."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -231,7 +231,7 @@ def test_create_sanitizes_branch_name() -> None:
 def test_create_detects_default_branch() -> None:
     """Test that create detects the default branch when needed."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -257,7 +257,7 @@ def test_create_detects_default_branch() -> None:
 def test_create_from_current_branch_in_worktree() -> None:
     """Regression: ensure --from-current-branch works when executed from a worktree."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         repo_root = env.root_worktree
         git_dir = env.git_dir
 
@@ -299,7 +299,7 @@ def test_create_from_current_branch_in_worktree() -> None:
 def test_create_fails_if_worktree_exists() -> None:
     """Test that create fails if worktree already exists."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -327,7 +327,7 @@ def test_create_fails_if_worktree_exists() -> None:
 def test_create_runs_post_create_commands() -> None:
     """Test that create runs post-create commands."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.root_worktree.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -362,7 +362,7 @@ def test_create_runs_post_create_commands() -> None:
 def test_create_sets_env_variables() -> None:
     """Test that create sets environment variables in .env file."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -409,7 +409,7 @@ def test_create_uses_graphite_when_enabled() -> None:
     with real gt commands.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -452,7 +452,7 @@ def test_create_uses_graphite_when_enabled() -> None:
 def test_create_blocks_when_staged_changes_present_with_graphite_enabled() -> None:
     """Ensure the command fails fast when staged changes exist and graphite is enabled."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -496,7 +496,7 @@ def test_create_blocks_when_staged_changes_present_with_graphite_enabled() -> No
 def test_create_uses_git_when_graphite_disabled() -> None:
     """Test that create uses git when graphite is disabled."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -519,7 +519,7 @@ def test_create_uses_git_when_graphite_disabled() -> None:
 def test_create_allows_staged_changes_when_graphite_disabled() -> None:
     """Graphite disabled path should ignore staged changes and continue."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -541,7 +541,7 @@ def test_create_allows_staged_changes_when_graphite_disabled() -> None:
 def test_create_invalid_worktree_name() -> None:
     """Test that create rejects invalid worktree names."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
 
         test_ctx = env.build_context(git_ops=git_ops)
@@ -565,7 +565,7 @@ def test_create_invalid_worktree_name() -> None:
 def test_create_plan_file_not_found() -> None:
     """Test that create fails when plan file doesn't exist."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
 
         test_ctx = env.build_context(git_ops=git_ops)
@@ -579,7 +579,7 @@ def test_create_plan_file_not_found() -> None:
 def test_create_no_post_flag_skips_commands() -> None:
     """Test that --no-post flag skips post-create commands."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -607,7 +607,7 @@ def test_create_no_post_flag_skips_commands() -> None:
 def test_create_from_current_branch() -> None:
     """Test creating worktree from current branch."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -631,7 +631,7 @@ def test_create_from_current_branch() -> None:
 def test_create_from_branch() -> None:
     """Test creating worktree from an existing branch."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -656,7 +656,7 @@ def test_create_from_branch() -> None:
 def test_create_requires_name_or_flag() -> None:
     """Test that create requires NAME or a flag."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
 
         test_ctx = env.build_context(git_ops=git_ops)
@@ -670,7 +670,7 @@ def test_create_requires_name_or_flag() -> None:
 def test_create_from_current_branch_on_main_fails() -> None:
     """Test that --from-current-branch fails with helpful message when on main."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -695,7 +695,7 @@ def test_create_from_current_branch_on_main_fails() -> None:
 def test_create_detects_branch_already_checked_out() -> None:
     """Test that create detects when branch is already checked out."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -732,7 +732,7 @@ def test_create_detects_branch_already_checked_out() -> None:
 def test_create_from_current_branch_on_master_fails() -> None:
     """Test that --from-current-branch fails when on master branch too."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -758,7 +758,7 @@ def test_create_from_current_branch_on_master_fails() -> None:
 def test_create_with_keep_plan_flag() -> None:
     """Test that --keep-plan copies instead of moves the plan file."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Create plan file
         plan_file = env.cwd / "my-feature-plan.md"
         plan_file.write_text("# My Feature Plan\n", encoding="utf-8")
@@ -810,7 +810,7 @@ def test_create_with_keep_plan_flag() -> None:
 def test_create_keep_plan_without_plan_fails() -> None:
     """Test that --keep-plan without --plan fails with error message."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
 
         test_ctx = env.build_context(git_ops=git_ops)
@@ -832,7 +832,7 @@ def test_from_current_branch_with_main_in_use_prefers_graphite_parent() -> None:
     Expected: Should checkout feature-1 (the parent), not try to checkout main
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_root = env.cwd
         git_dir = env.git_dir
 
@@ -912,7 +912,7 @@ def test_from_current_branch_with_parent_in_use_falls_back_to_detached_head() ->
     Expected: Should use detached HEAD as fallback since both main and parent are in use
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_root = env.cwd
         git_dir = env.git_dir
 
@@ -982,7 +982,7 @@ def test_from_current_branch_without_graphite_falls_back_to_main() -> None:
     Expected: Should checkout main as fallback
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_root = env.cwd
         git_dir = env.git_dir
 
@@ -1039,7 +1039,7 @@ def test_from_current_branch_no_graphite_main_in_use_uses_detached_head() -> Non
     Expected: Should use detached HEAD since no parent exists and main is in use
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_root = env.cwd
         git_dir = env.git_dir
 
@@ -1091,7 +1091,7 @@ def test_from_current_branch_no_graphite_main_in_use_uses_detached_head() -> Non
 def test_create_with_json_output() -> None:
     """Test creating a worktree with JSON output."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -1125,7 +1125,7 @@ def test_create_with_json_output() -> None:
 def test_create_existing_worktree_with_json() -> None:
     """Test creating a worktree that already exists with JSON output."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -1160,7 +1160,7 @@ def test_create_existing_worktree_with_json() -> None:
 def test_create_json_and_script_mutually_exclusive() -> None:
     """Test that --json and --script flags are mutually exclusive."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -1185,7 +1185,7 @@ def test_create_json_and_script_mutually_exclusive() -> None:
 def test_create_with_json_and_plan_file() -> None:
     """Test creating a worktree with JSON output and plan file."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.root_worktree.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -1246,7 +1246,7 @@ def test_create_with_json_and_plan_file() -> None:
 def test_create_with_json_no_plan() -> None:
     """Test that JSON output has null plan_file when no plan is provided."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -1274,7 +1274,7 @@ def test_create_with_json_no_plan() -> None:
 def test_create_with_stay_prevents_script_generation() -> None:
     """Test that --stay flag prevents script generation."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -1302,7 +1302,7 @@ def test_create_with_stay_prevents_script_generation() -> None:
 def test_create_with_stay_and_json() -> None:
     """Test that --stay works with --json output mode."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -1332,7 +1332,7 @@ def test_create_with_stay_and_json() -> None:
 def test_create_with_stay_and_plan() -> None:
     """Test that --stay works with --plan flag."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Create plan file
         plan_file = env.cwd / "test-feature-plan.md"
         plan_file.write_text("# Test Feature Plan\n", encoding="utf-8")
@@ -1384,7 +1384,7 @@ def test_create_with_stay_and_plan() -> None:
 def test_create_default_behavior_generates_script() -> None:
     """Test that default behavior (without --stay) still generates script."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -1403,7 +1403,7 @@ def test_create_default_behavior_generates_script() -> None:
 
         assert result.exit_code == 0, result.output
         # Should generate script path in output
-        assert "/tmp/" in result.output or "workstack-" in result.output
+        assert "/tmp/" in result.output or "erk-" in result.output
         # Verify worktree was created
         repo_dir / "test-feature"
 
@@ -1411,7 +1411,7 @@ def test_create_default_behavior_generates_script() -> None:
 def test_create_with_long_name_truncation() -> None:
     """Test that worktree base names exceeding 30 characters are truncated before date suffix."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -1442,7 +1442,7 @@ def test_create_with_long_name_truncation() -> None:
 def test_create_with_plan_ensures_uniqueness() -> None:
     """Test that --plan ensures uniqueness with date suffix and versioning."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Create plan file
         plan_file = env.cwd / "my-feature-plan.md"
         plan_file.write_text("# My Feature Plan\n", encoding="utf-8")
@@ -1504,12 +1504,12 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
     - Result: worktree name == branch name (both can be >30 chars)
     """
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Create plan file with very long name that will exceed 30 chars with date suffix
         # The base will be truncated to 30 chars, then date suffix added
         # Example: base "fix-branch-worktree-name-misma" (30 chars) + date "-25-11-08"
         # (9 chars) = 39 chars total
-        long_plan_name = "fix-branch-worktree-name-mismatch-in-workstack-plan-workflow-plan.md"
+        long_plan_name = "fix-branch-worktree-name-mismatch-in-erk-plan-workflow-plan.md"
         plan_file = env.cwd / long_plan_name
         plan_file.write_text("# Fix Branch Worktree Name Mismatch\n", encoding="utf-8")
 
@@ -1587,7 +1587,7 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
 def test_create_fails_when_branch_exists_on_remote() -> None:
     """Test that create fails if branch name already exists on origin."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -1613,7 +1613,7 @@ def test_create_fails_when_branch_exists_on_remote() -> None:
 def test_create_succeeds_when_branch_not_on_remote() -> None:
     """Test that create succeeds if branch name doesn't exist on origin."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -1638,7 +1638,7 @@ def test_create_succeeds_when_branch_not_on_remote() -> None:
 def test_create_with_skip_remote_check_flag() -> None:
     """Test that --skip-remote-check bypasses remote validation."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)
@@ -1667,7 +1667,7 @@ def test_create_with_skip_remote_check_flag() -> None:
 def test_create_proceeds_with_warning_when_remote_check_fails() -> None:
     """Test that create proceeds with warning if remote check fails."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
         (repo_dir / "worktrees").mkdir(parents=True)

@@ -91,7 +91,7 @@ def test_create_global_config_creates_parent_directory(tmp_path: Path) -> None:
     from erk.core.context import ErkContext
     from erk.core.global_config import InMemoryGlobalConfigOps
 
-    config_file = tmp_path / ".workstack" / "config.toml"
+    config_file = tmp_path / ".erk" / "config.toml"
     assert not config_file.parent.exists()
 
     # Create test context with InMemoryGlobalConfigOps
@@ -107,12 +107,12 @@ def test_create_global_config_creates_parent_directory(tmp_path: Path) -> None:
         mock.patch("erk.cli.commands.init.detect_graphite", return_value=False),
         mock.patch("erk.core.global_config.Path.home", return_value=tmp_path),
     ):
-        create_and_save_global_config(ctx, Path("/tmp/workstacks"), shell_setup_complete=False)
+        create_and_save_global_config(ctx, Path("/tmp/erks"), shell_setup_complete=False)
 
     # Verify config was saved to in-memory ops
     assert global_config_ops.exists()
     loaded = global_config_ops.load()
-    assert loaded.erk_root == Path("/tmp/workstacks")
+    assert loaded.erk_root == Path("/tmp/erks")
 
 
 # def test_create_global_config_detects_graphite(tmp_path: Path) -> None:

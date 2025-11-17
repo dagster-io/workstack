@@ -17,7 +17,7 @@ def test_returns_true_for_root_worktree() -> None:
 
 def test_returns_false_for_non_root_worktree() -> None:
     """Test identifies non-root worktree correctly."""
-    worktree_path = Path("/repo/workstacks/feat")
+    worktree_path = Path("/repo/erks/feat")
     repo_root = Path("/repo")
 
     result = is_root_worktree(worktree_path, repo_root)

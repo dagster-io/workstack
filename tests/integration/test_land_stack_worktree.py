@@ -104,7 +104,7 @@ def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> No
     )
 
     # Create linked worktree for feat-1
-    repo_dir = tmp_path / "workstacks" / "repo"
+    repo_dir = tmp_path / "erks" / "repo"
     repo_dir.mkdir(parents=True)
     worktree_path = repo_dir / "feat-1-work"
 
@@ -252,7 +252,7 @@ def test_land_stack_with_trunk_in_worktree(tmp_path: Path) -> None:
     )
 
     # Create linked worktree for main (this is the key setup for the bug)
-    repo_dir = tmp_path / "workstacks" / "repo"
+    repo_dir = tmp_path / "erks" / "repo"
     repo_dir.mkdir(parents=True)
     main_worktree = repo_dir / "main-work"
 

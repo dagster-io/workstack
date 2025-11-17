@@ -83,10 +83,10 @@ class ShellOps(ABC):
         ...
 
     @abstractmethod
-    def run_workstack_sync(self, repo_root: Path, *, force: bool, verbose: bool) -> None:
-        """Run workstack sync command as subprocess.
+    def run_erk_sync(self, repo_root: Path, *, force: bool, verbose: bool) -> None:
+        """Run erk sync command as subprocess.
 
-        This is used by commands that need to invoke workstack sync
+        This is used by commands that need to invoke erk sync
         to clean up worktrees and branches (e.g., land-stack cleanup phase).
 
         Args:
@@ -95,7 +95,7 @@ class ShellOps(ABC):
             verbose: If True, pass --verbose flag for detailed output
 
         Raises:
-            subprocess.CalledProcessError: If workstack sync command fails
+            subprocess.CalledProcessError: If erk sync command fails
         """
         ...
 
@@ -118,10 +118,10 @@ class RealShellOps(ShellOps):
         """Check if tool is in PATH using shutil.which."""
         return shutil.which(tool_name)
 
-    def run_workstack_sync(self, repo_root: Path, *, force: bool, verbose: bool) -> None:
-        """Run workstack sync command as subprocess.
+    def run_erk_sync(self, repo_root: Path, *, force: bool, verbose: bool) -> None:
+        """Run erk sync command as subprocess.
 
-        Executes workstack sync in the specified repository directory.
+        Executes erk sync in the specified repository directory.
         Output is shown in verbose mode, captured otherwise.
         """
         cmd = ["erk", "sync"]

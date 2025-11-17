@@ -8,7 +8,7 @@ from erk.core.global_config import GlobalConfig
 from erk.core.graphite_ops import BranchMetadata
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.shell_ops import FakeShellOps
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def test_land_stack_verbose_flag_shows_detailed_output() -> None:
@@ -22,7 +22,7 @@ def test_land_stack_verbose_flag_shows_detailed_output() -> None:
     --quiet flag based on the quiet parameter).
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Build simple 3-branch stack
         git_ops, graphite_ops = env.build_ops_from_branches(
             {
@@ -86,7 +86,7 @@ def test_land_stack_dry_run_shows_submit_commands() -> None:
     on FakeGraphiteOps.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Build 3-branch stack
         git_ops, graphite_ops = env.build_ops_from_branches(
             {

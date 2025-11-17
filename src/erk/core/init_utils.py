@@ -74,7 +74,7 @@ def discover_presets(presets_dir: Path) -> list[str]:
         Sorted list of preset names (without .toml extension)
 
     Example:
-        >>> presets_dir = Path("/path/to/workstack/presets")
+        >>> presets_dir = Path("/path/to/erk/presets")
         >>> discover_presets(presets_dir)
         ['dagster', 'generic', 'python']
     """
@@ -100,7 +100,7 @@ def render_config_template(presets_dir: Path, preset: str | None) -> str:
         ValueError: If the specified preset file doesn't exist
 
     Example:
-        >>> presets_dir = Path("/path/to/workstack/presets")
+        >>> presets_dir = Path("/path/to/erk/presets")
         >>> content = render_config_template(presets_dir, "dagster")
         >>> "trunk_branch" in content
         True
@@ -128,9 +128,9 @@ def get_shell_wrapper_content(shell_integration_dir: Path, shell: str) -> str:
         ValueError: If the shell wrapper file doesn't exist for the given shell
 
     Example:
-        >>> shell_dir = Path("/path/to/workstack/shell_integration")
+        >>> shell_dir = Path("/path/to/erk/shell_integration")
         >>> content = get_shell_wrapper_content(shell_dir, "zsh")
-        >>> "function workstack" in content
+        >>> "function erk" in content
         True
     """
     if shell == "fish":

@@ -248,7 +248,7 @@ class WorktreeScenario:
     """Complete test scenario with worktrees, git ops, and context.
 
     This builder creates a full test environment including:
-    - Directory structure (repo root, workstacks directory)
+    - Directory structure (repo root, erks directory)
     - Fake operations (git, github, graphite, shell, config)
     - ErkContext ready for CLI testing
 
@@ -283,7 +283,7 @@ class WorktreeScenario:
         """Initialize directory structure and internal state."""
         self.repo_root = self.base_path / self.repo_name
         self.git_dir = self.repo_root / ".git"
-        self.erk_root = self.base_path / "workstacks"
+        self.erk_root = self.base_path / "erks"
         self.repo_dir = self.erk_root / self.repo_name
 
         self._worktrees: dict[Path, list[WorktreeInfo]] = {}

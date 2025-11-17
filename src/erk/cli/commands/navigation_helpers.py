@@ -263,3 +263,57 @@ def complete_worktree_names(
     except Exception:
         # Shell completion error boundary: return empty list for graceful degradation
         return []
+
+
+def complete_branch_names(
+    ctx: click.Context, param: click.Parameter | None, incomplete: str
+) -> list[str]:
+    """Shell completion for branch names. Includes both local and remote branches.
+
+    Remote branch names have their remote prefix stripped
+    (e.g., 'origin/feature' becomes 'feature').
+    Duplicates are removed if a branch exists both locally and remotely.
+
+    This is a shell completion function, which is an acceptable error boundary.
+    Exceptions are caught to provide graceful degradation - if completion fails,
+    we return an empty list rather than breaking the user's shell experience.
+
+    Args:
+        ctx: Click context
+        param: Click parameter (unused, but required by Click's completion protocol)
+        incomplete: Partial input string to complete
+    """
+    try:
+        # During shell completion, ctx.obj may be None if the CLI group callback
+        # hasn't run yet. Create a default context in this case.
+        erk_ctx = ctx.find_root().obj
+        if erk_ctx is None:
+            erk_ctx = create_context(dry_run=False)
+
+        repo = discover_repo_context(erk_ctx, erk_ctx.cwd)
+        ensure_repo_dir(repo)
+
+        # Collect all branch names in a set for deduplication
+        branch_names = set()
+
+        # Add local branches
+        local_branches = erk_ctx.git_ops.list_local_branches(repo.root)
+        branch_names.update(local_branches)
+
+        # Add remote branches with prefix stripped
+        remote_branches = erk_ctx.git_ops.list_remote_branches(repo.root)
+        for remote_branch in remote_branches:
+            # Strip remote prefix (e.g., 'origin/feature' -> 'feature')
+            if "/" in remote_branch:
+                _, branch_name = remote_branch.split("/", 1)
+                branch_names.add(branch_name)
+            else:
+                # Fallback: if no slash, use as-is
+                branch_names.add(remote_branch)
+
+        # Filter by incomplete prefix and return sorted list
+        matching_branches = [name for name in branch_names if name.startswith(incomplete)]
+        return sorted(matching_branches)
+    except Exception:
+        # Shell completion error boundary: return empty list for graceful degradation
+        return []

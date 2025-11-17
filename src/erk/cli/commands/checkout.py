@@ -6,6 +6,7 @@ import click
 
 from erk.cli.activation import render_activation_script
 from erk.cli.commands.create import ensure_worktree_for_branch
+from erk.cli.commands.navigation_helpers import complete_branch_names
 from erk.cli.core import discover_repo_context
 from erk.cli.graphite import find_worktrees_containing_branch
 from erk.cli.output import user_output
@@ -145,7 +146,7 @@ def _perform_checkout(
 
 
 @click.command("checkout")
-@click.argument("branch", metavar="BRANCH")
+@click.argument("branch", metavar="BRANCH", shell_complete=complete_branch_names)
 @click.option(
     "--script", is_flag=True, help="Print only the activation script without usage instructions."
 )

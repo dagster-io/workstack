@@ -1,6 +1,8 @@
 """CLI command entry point for land-stack."""
 
 import dataclasses
+import logging
+import os
 import subprocess
 
 import click
@@ -17,6 +19,13 @@ from erk.cli.commands.land_stack.validation import (
 )
 from erk.cli.core import discover_repo_context
 from erk.core.context import ErkContext
+from erk.core.repo_discovery import NoRepoSentinel
+
+logger = logging.getLogger(__name__)
+
+# Enable debug logging if ERK_DEBUG environment variable is set
+if os.getenv("ERK_DEBUG"):
+    logging.basicConfig(level=logging.DEBUG, format="[DEBUG %(name)s:%(lineno)d] %(message)s")
 
 
 @click.command("land-stack")
@@ -89,8 +98,20 @@ def land_stack(
         Current branch: feat-3 (at the top of the stack)
         Result: Lands feat-1, feat-2, feat-3 (same with or without --down)
     """
+    logger.debug(
+        "Command invoked: land_stack(force=%s, dry_run=%s, down=%s, script=%s, current_dir=%s)",
+        force,
+        dry_run,
+        down,
+        script,
+        ctx.cwd,
+    )
+    repo_root = ctx.repo.root if not isinstance(ctx.repo, NoRepoSentinel) else None
+    logger.debug("Context: repo_root=%s, trunk_branch=%s", repo_root, ctx.trunk_branch)
+
     # Discover repository context
     repo = discover_repo_context(ctx, ctx.cwd)
+    logger.debug("Repository discovered: root=%s", repo.root if repo else None)
 
     # Wrap ops with printing versions (and dry-run if requested)
     from erk.core.github_ops import NoopGitHubOps, PrintingGitHubOps
@@ -119,9 +140,11 @@ def land_stack(
 
     # Get current branch
     current_branch = ctx.git_ops.get_current_branch(ctx.cwd)
+    logger.debug("Current branch detected: %s", current_branch)
 
     # Get branches to land
     branches_to_land = _get_branches_to_land(ctx, repo.root, current_branch or "", down_only=down)
+    logger.debug("Branches to land: count=%d, branches=%s", len(branches_to_land), branches_to_land)
 
     # Validate preconditions
     _validate_landing_preconditions(
@@ -149,6 +172,7 @@ def land_stack(
         raise SystemExit(1)
 
     # Show plan and get confirmation
+    logger.debug("About to show landing plan: branches=%d, force=%s", len(valid_branches), force)
     _show_landing_plan(
         current_branch or "",
         trunk_branch,
@@ -170,6 +194,8 @@ def land_stack(
             script_mode=script,
         )
     except subprocess.CalledProcessError as e:
+        logger.debug("Exception caught: %s: %s", type(e).__name__, str(e))
+        logger.debug("Exception details:", exc_info=True)
         _emit("", script_mode=script)
         # Show full stderr from subprocess for complete error context
         error_detail = e.stderr.strip() if e.stderr else str(e)
@@ -177,6 +203,8 @@ def land_stack(
         _emit(error_msg, script_mode=script, error=True)
         raise SystemExit(1) from None
     except FileNotFoundError as e:
+        logger.debug("Exception caught: %s: %s", type(e).__name__, str(e))
+        logger.debug("Exception details:", exc_info=True)
         _emit("", script_mode=script)
         error_msg = click.style(
             f"❌ Command not found: {e.filename}\n\n"

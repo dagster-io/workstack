@@ -1,5 +1,7 @@
 """Pre-flight validation for land-stack command."""
 
+import logging
+import os
 from pathlib import Path
 
 import click
@@ -7,6 +9,12 @@ import click
 from erk.cli.commands.land_stack.models import BranchPR
 from erk.cli.commands.land_stack.output import _emit
 from erk.core.context import ErkContext
+
+logger = logging.getLogger(__name__)
+
+# Enable debug logging if ERK_DEBUG environment variable is set
+if os.getenv("ERK_DEBUG"):
+    logging.basicConfig(level=logging.DEBUG, format="[DEBUG %(name)s:%(lineno)d] %(message)s")
 
 
 def _validate_landing_preconditions(
@@ -31,8 +39,11 @@ def _validate_landing_preconditions(
     Raises:
         SystemExit: If any precondition fails
     """
+    logger.debug("Validation: Checking landing preconditions")
+
     # Check Graphite enabled
     use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
+    logger.debug("  - Graphite enabled: %s", use_graphite)
     if not use_graphite:
         _emit(
             "Error: 'erk land-stack' requires Graphite.\n\n"
@@ -45,6 +56,7 @@ def _validate_landing_preconditions(
         raise SystemExit(1)
 
     # Check not detached HEAD
+    logger.debug("  - Detached HEAD check: %s", current_branch is not None)
     if current_branch is None:
         _emit(
             "Error: HEAD is detached (not on a branch)\n\n"
@@ -56,7 +68,9 @@ def _validate_landing_preconditions(
         raise SystemExit(1)
 
     # Check no uncommitted changes in current worktree
-    if ctx.git_ops.has_uncommitted_changes(ctx.cwd):
+    has_uncommitted = ctx.git_ops.has_uncommitted_changes(ctx.cwd)
+    logger.debug("  - Uncommitted changes: %s", has_uncommitted)
+    if has_uncommitted:
         _emit(
             f"Error: Current worktree has uncommitted changes\n"
             f"Path: {ctx.cwd}\n"
@@ -73,7 +87,9 @@ def _validate_landing_preconditions(
 
     # Check current branch not trunk
     all_branches = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo_root)
-    if current_branch in all_branches and all_branches[current_branch].is_trunk:
+    is_on_trunk = current_branch in all_branches and all_branches[current_branch].is_trunk
+    logger.debug("  - On trunk branch: %s", not is_on_trunk)
+    if is_on_trunk:
         _emit(
             f"Error: Cannot land trunk branch '{current_branch}'\n"
             "Trunk branches (main/master) cannot be landed.\n\n"
@@ -85,6 +101,7 @@ def _validate_landing_preconditions(
         raise SystemExit(1)
 
     # Validate stack exists
+    logger.debug("  - Stack exists: %s", len(branches_to_land) > 0)
     if not branches_to_land:
         stack = ctx.graphite_ops.get_branch_stack(ctx.git_ops, repo_root, current_branch)
         if stack is None:
@@ -109,11 +126,13 @@ def _validate_landing_preconditions(
     current_worktree = ctx.cwd.resolve()
     worktree_conflicts: list[tuple[str, Path]] = []
 
+    logger.debug("  - Checking worktree conflicts for %d branches", len(branches_to_land))
     for branch in branches_to_land:
         worktree_path = ctx.git_ops.is_branch_checked_out(repo_root, branch)
         if worktree_path and worktree_path.resolve() != current_worktree:
             worktree_conflicts.append((branch, worktree_path))
 
+    logger.debug("  - Worktree conflicts: %s", len(worktree_conflicts) == 0)
     if worktree_conflicts:
         _emit(
             "Error: Cannot land stack - branches are checked out in multiple worktrees\n\n"
@@ -157,11 +176,15 @@ def _validate_branches_have_prs(
     Raises:
         SystemExit: If any branch has invalid PR state
     """
+    logger.debug("Validation: Checking branches have PRs")
     errors: list[str] = []
     valid_branches: list[BranchPR] = []
 
     for branch in branches:
         pr_info = ctx.github_ops.get_pr_status(repo_root, branch, debug=False)
+        logger.debug(
+            "  - Branch %s: pr_number=%s, state=%s", branch, pr_info.pr_number, pr_info.state
+        )
 
         if pr_info.state == "NONE":
             errors.append(f"No PR found for branch '{branch}'")
@@ -197,10 +220,13 @@ def _validate_pr_mergeability(
     script_mode: bool,
 ) -> None:
     """Validate all PRs are mergeable (no conflicts)."""
+    logger.debug("Validation: Checking PR mergeability")
     conflicts: list[tuple[str, int]] = []
 
     for branch_pr in branches:
         mergeability = ctx.github_ops.get_pr_mergeability(repo_root, branch_pr.pr_number)
+        mergeable_status = mergeability.mergeable if mergeability else None
+        logger.debug("  - PR #%s: mergeable=%s", branch_pr.pr_number, mergeable_status)
 
         if mergeability is None:
             # API error - log warning but don't fail

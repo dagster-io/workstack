@@ -359,7 +359,7 @@ class SimulatedWorkstackEnv:
                 # Determine which cwd to use (custom or default)
                 effective_cwd = kwargs.get("cwd", self.cwd)
 
-                # Collect core paths - always include cwd and workstacks_root
+                # Collect core paths - always include cwd and erk_root
                 core_paths = {
                     self.cwd,
                     effective_cwd,
@@ -406,7 +406,7 @@ class SimulatedWorkstackEnv:
         if "script_writer" not in kwargs:
             kwargs["script_writer"] = self.script_writer
 
-        # Filter out workstacks_root - it's already set in global_config above
+        # Filter out erk_root - it's already set in global_config above
         # Tests shouldn't override it via kwargs
         if "erk_root" in kwargs:
             kwargs.pop("erk_root")
@@ -698,7 +698,7 @@ class PureWorkstackEnv:
         if "script_writer" not in kwargs:
             kwargs["script_writer"] = self.script_writer
 
-        # Filter out workstacks_root - it's already set in global_config above
+        # Filter out erk_root - it's already set in global_config above
         # Tests shouldn't override it via kwargs
         if "erk_root" in kwargs:
             kwargs.pop("erk_root")

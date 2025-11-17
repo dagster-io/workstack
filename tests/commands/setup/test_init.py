@@ -62,7 +62,7 @@ def test_init_creates_global_config_first_time() -> None:
         assert loaded.erk_root == erk_root.resolve()
 
 
-def test_init_prompts_for_workstacks_root() -> None:
+def test_init_prompts_for_erk_root() -> None:
     """Test that init prompts for workstacks root when creating config."""
     runner = CliRunner()
     with simulated_workstack_env(runner) as env:
@@ -686,7 +686,7 @@ def test_init_first_time_offers_shell_setup() -> None:
             dry_run=False,
         )
 
-        # Provide input: workstacks_root, decline shell setup
+        # Provide input: erk_root, decline shell setup
         with mock.patch.dict(os.environ, {"HOME": str(env.cwd)}):
             result = runner.invoke(cli, ["init"], obj=test_ctx, input=f"{erk_root}\nn\n")
 

@@ -91,10 +91,9 @@ class FilesystemGlobalConfigOps(GlobalConfigOps):
             raise FileNotFoundError(f"Global config not found at {config_path}")
 
         data = tomllib.loads(config_path.read_text(encoding="utf-8"))
-        # Try new key first, fall back to old key for backwards compatibility
-        root = data.get("erk_root") or data.get("workstacks_root")
+        root = data.get("erk_root")
         if not root:
-            raise ValueError(f"Missing 'erk_root' (or 'workstacks_root') in {config_path}")
+            raise ValueError(f"Missing 'erk_root' in {config_path}")
 
         return GlobalConfig(
             erk_root=Path(root).expanduser().resolve(),

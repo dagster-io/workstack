@@ -57,7 +57,7 @@ def test_env_rendering(tmp_path: Path) -> None:
 #     ... (removed - was testing FakeGlobalConfigOps)
 
 
-def test_load_global_config_missing_workstacks_root(
+def test_load_global_config_missing_erk_root(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Test that FilesystemGlobalConfigOps validates required fields

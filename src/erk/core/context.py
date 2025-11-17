@@ -365,7 +365,7 @@ def create_context(*, dry_run: bool) -> ErkContext:
     graphite_ops: GraphiteOps = RealGraphiteOps()
     github_ops: GitHubOps = RealGitHubOps()
 
-    # 5. Discover repo (only needs cwd, workstacks_root, git_ops)
+    # 5. Discover repo (only needs cwd, erk_root, git_ops)
     # If global_config is None, use placeholder path for repo discovery
     erk_root = global_config.erk_root if global_config else Path.home() / "worktrees"
     repo = discover_repo_or_sentinel(cwd, erk_root, git_ops)

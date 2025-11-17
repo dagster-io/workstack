@@ -130,7 +130,7 @@ def test_create_with_both_name_and_plan_fails() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        # Create global config with workstacks_root
+        # Create global config with erk_root
         global_config = GlobalConfig(
             erk_root=env.erk_root,
             use_graphite=False,
@@ -172,7 +172,7 @@ def test_create_rejects_reserved_name_root() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        # Create global config with workstacks_root
+        # Create global config with erk_root
         global_config = GlobalConfig(
             erk_root=env.erk_root,
             use_graphite=False,
@@ -220,7 +220,7 @@ def test_create_rejects_reserved_name_root_case_insensitive() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        # Create global config with workstacks_root
+        # Create global config with erk_root
         global_config = GlobalConfig(
             erk_root=env.erk_root,
             use_graphite=False,
@@ -267,7 +267,7 @@ def test_create_rejects_main_as_worktree_name() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        # Create global config with workstacks_root
+        # Create global config with erk_root
         global_config = GlobalConfig(
             erk_root=env.erk_root,
             use_graphite=False,
@@ -314,7 +314,7 @@ def test_create_rejects_master_as_worktree_name() -> None:
             default_branches={env.root_worktree: "main"},
         )
 
-        # Create global config with workstacks_root
+        # Create global config with erk_root
         global_config = GlobalConfig(
             erk_root=env.erk_root,
             use_graphite=False,

@@ -140,7 +140,7 @@ def test_config_list_not_in_git_repo() -> None:
         assert "not in a git repository" in result.output
 
 
-def test_config_get_workstacks_root() -> None:
+def test_config_get_erk_root() -> None:
     """Test getting erk_root config value."""
     runner = CliRunner()
     with pure_workstack_env(runner) as env:

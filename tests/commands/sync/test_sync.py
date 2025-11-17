@@ -503,7 +503,7 @@ def test_sync_return_to_original_worktree() -> None:
         assert result.exit_code == 0
 
         # Note: In isolated_filesystem(), we start at cwd which is not
-        # under workstacks_root, so no "Returning to:" message should appear
+        # under erk_root, so no "Returning to:" message should appear
 
 
 def test_sync_original_worktree_deleted() -> None:

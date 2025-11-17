@@ -117,7 +117,7 @@ def cli_test_repo(tmp_path: Path) -> Generator[CLITestRepo]:
     global_config_dir.mkdir()
     erk_root = tmp_path / "workstacks"
     (global_config_dir / "config.toml").write_text(
-        f'workstacks_root = "{erk_root}"\nuse_graphite = false\n',
+        f'erk_root = "{erk_root}"\nuse_graphite = false\n',
         encoding="utf-8",
     )
 

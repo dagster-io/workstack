@@ -852,23 +852,27 @@ def test_consolidate_with_name_changes_directory_before_removal() -> None:
         )
 
         # Run consolidate with --name flag in script mode
-        result = runner.invoke(cli, ["consolidate", "--name", "my-stack", "--script", "-f"], obj=test_ctx)
+        result = runner.invoke(
+            cli, ["consolidate", "--name", "my-stack", "--script", "-f"], obj=test_ctx
+        )
 
         assert result.exit_code == 0, result.output
 
         # Verify directory change happened before removal
         # The FakeGitOps should record a safe_chdir call
         # Expected: New worktree path
-        expected_new_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "my-stack"
+        expected_new_path = (
+            env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "my-stack"
+        )
 
         # Verify that safe_chdir was called with the new worktree path
         assert hasattr(test_ctx.git_ops, "chdir_history"), "FakeGitOps should track chdir calls"
-        assert len(test_ctx.git_ops.chdir_history) > 0, "Should have called safe_chdir at least once"
+        assert len(test_ctx.git_ops.chdir_history) > 0, "Should have called safe_chdir"
 
         # The new worktree path should be in the chdir history
-        assert any(
-            expected_new_path == path for path in test_ctx.git_ops.chdir_history
-        ), f"Should have changed to new worktree {expected_new_path}"
+        assert any(expected_new_path == path for path in test_ctx.git_ops.chdir_history), (
+            f"Should have changed to new worktree {expected_new_path}"
+        )
 
         # Verify the source worktree was removed
         # Note: env.cwd is the source worktree that should be removed
@@ -898,13 +902,15 @@ def test_consolidate_with_name_changes_directory_in_non_script_mode() -> None:
         assert result.exit_code == 0, result.output
 
         # Verify directory change happened
-        expected_new_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "my-stack"
+        expected_new_path = (
+            env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "my-stack"
+        )
 
         # Verify that safe_chdir was called
         assert hasattr(test_ctx.git_ops, "chdir_history"), "FakeGitOps should track chdir calls"
         assert len(test_ctx.git_ops.chdir_history) > 0, "Should have called safe_chdir"
 
         # The new worktree path should be in the chdir history
-        assert any(
-            expected_new_path == path for path in test_ctx.git_ops.chdir_history
-        ), f"Should have changed to new worktree {expected_new_path}"
+        assert any(expected_new_path == path for path in test_ctx.git_ops.chdir_history), (
+            f"Should have changed to new worktree {expected_new_path}"
+        )

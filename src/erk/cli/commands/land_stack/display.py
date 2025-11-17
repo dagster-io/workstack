@@ -1,9 +1,18 @@
 """High-level display functions for land-stack command."""
 
+import logging
+import os
+
 import click
 
 from erk.cli.commands.land_stack.models import BranchPR
 from erk.cli.commands.land_stack.output import _emit
+
+logger = logging.getLogger(__name__)
+
+# Enable debug logging if ERK_DEBUG environment variable is set
+if os.getenv("ERK_DEBUG"):
+    logging.basicConfig(level=logging.DEBUG, format="[DEBUG %(name)s:%(lineno)d] %(message)s")
 
 
 def _show_landing_plan(
@@ -28,6 +37,10 @@ def _show_landing_plan(
     Raises:
         SystemExit: If user declines confirmation
     """
+    logger.debug(
+        "_show_landing_plan() called: branches=%s, force=%s", [b.branch for b in branches], force
+    )
+
     # Display header
     header = "📋 Summary"
     if dry_run:

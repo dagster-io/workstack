@@ -11,7 +11,7 @@ from tests.fakes.gitops import FakeGitOps
 from tests.test_utils.env_helpers import erk_inmem_env, erk_isolated_fs_env
 
 
-def test_jump_to_branch_in_single_worktree() -> None:
+def test_checkout_to_branch_in_single_worktree() -> None:
     """Test jumping to a branch that is checked out in exactly one worktree.
 
     This test uses pure_erk_env() for in-memory testing without filesystem I/O.
@@ -49,7 +49,7 @@ def test_jump_to_branch_in_single_worktree() -> None:
 
         # Jump to feature-2 which is checked out in feature_wt
         result = runner.invoke(
-            cli, ["jump", "feature-2", "--script"], obj=test_ctx, catch_exceptions=False
+            cli, ["checkout", "feature-2", "--script"], obj=test_ctx, catch_exceptions=False
         )
 
         if result.exit_code != 0:
@@ -66,7 +66,7 @@ def test_jump_to_branch_in_single_worktree() -> None:
         assert str(feature_wt) in script_content
 
 
-def test_jump_to_branch_not_found() -> None:
+def test_checkout_to_branch_not_found() -> None:
     """Test jumping to a branch that doesn't exist in git."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -97,7 +97,7 @@ def test_jump_to_branch_not_found() -> None:
 
         # Jump to a branch that doesn't exist
         result = runner.invoke(
-            cli, ["jump", "nonexistent-branch"], obj=test_ctx, catch_exceptions=False
+            cli, ["checkout", "nonexistent-branch"], obj=test_ctx, catch_exceptions=False
         )
 
         assert result.exit_code == 1
@@ -105,7 +105,7 @@ def test_jump_to_branch_not_found() -> None:
         assert "erk create --branch nonexistent-branch" in result.stderr
 
 
-def test_jump_creates_worktree_for_unchecked_branch() -> None:
+def test_checkout_creates_worktree_for_unchecked_branch() -> None:
     """Test that jump auto-creates worktree when branch exists but is not checked out."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -136,7 +136,7 @@ def test_jump_creates_worktree_for_unchecked_branch() -> None:
 
         # Jump to branch that exists but is not checked out
         result = runner.invoke(
-            cli, ["jump", "existing-branch", "--script"], obj=test_ctx, catch_exceptions=False
+            cli, ["checkout", "existing-branch", "--script"], obj=test_ctx, catch_exceptions=False
         )
 
         if result.exit_code != 0:
@@ -164,7 +164,7 @@ def test_jump_creates_worktree_for_unchecked_branch() -> None:
         assert "existing-branch" in script_content
 
 
-def test_jump_to_branch_in_stack_but_not_checked_out() -> None:
+def test_checkout_to_branch_in_stack_but_not_checked_out() -> None:
     """Test that jump auto-creates worktree when branch exists in repo but is not checked out.
 
     With auto-creation behavior, branches that exist in Graphite stacks but are not
@@ -202,7 +202,7 @@ def test_jump_to_branch_in_stack_but_not_checked_out() -> None:
 
         # Jump to feature-base which exists in repo but is not checked out
         result = runner.invoke(
-            cli, ["jump", "feature-base", "--script"], obj=test_ctx, catch_exceptions=False
+            cli, ["checkout", "feature-base", "--script"], obj=test_ctx, catch_exceptions=False
         )
 
         if result.exit_code != 0:
@@ -217,7 +217,7 @@ def test_jump_to_branch_in_stack_but_not_checked_out() -> None:
         assert len(git_ops.added_worktrees) == 1
 
 
-def test_jump_works_without_graphite() -> None:
+def test_checkout_works_without_graphite() -> None:
     """Test that jump works without Graphite enabled."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -247,7 +247,7 @@ def test_jump_works_without_graphite() -> None:
         test_ctx = env.build_context(git_ops=git_ops, repo=repo)
 
         result = runner.invoke(
-            cli, ["jump", "feature-1", "--script"], obj=test_ctx, catch_exceptions=False
+            cli, ["checkout", "feature-1", "--script"], obj=test_ctx, catch_exceptions=False
         )
 
         # Should succeed - jump no longer requires Graphite
@@ -258,7 +258,7 @@ def test_jump_works_without_graphite() -> None:
         assert script_content is not None
 
 
-def test_jump_already_on_target_branch() -> None:
+def test_checkout_already_on_target_branch() -> None:
     """Test jumping when already in the target worktree on the target branch.
 
     This test validates the TRUE 'already there' case where ctx.cwd matches the target worktree.
@@ -294,7 +294,7 @@ def test_jump_already_on_target_branch() -> None:
 
         # Jump to feature-1 while already in feature_wt
         result = runner.invoke(
-            cli, ["jump", "feature-1", "--script"], obj=test_ctx, catch_exceptions=False
+            cli, ["checkout", "feature-1", "--script"], obj=test_ctx, catch_exceptions=False
         )
 
         if result.exit_code != 0:
@@ -320,7 +320,7 @@ def test_jump_already_on_target_branch() -> None:
         assert "Jumped" not in script_content
 
 
-def test_jump_succeeds_when_branch_exactly_checked_out() -> None:
+def test_checkout_succeeds_when_branch_exactly_checked_out() -> None:
     """Test that jump succeeds when branch is exactly checked out in a worktree."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -351,7 +351,7 @@ def test_jump_succeeds_when_branch_exactly_checked_out() -> None:
 
         # Jump to feature-2 which is checked out in feature_wt
         result = runner.invoke(
-            cli, ["jump", "feature-2", "--script"], obj=test_ctx, catch_exceptions=False
+            cli, ["checkout", "feature-2", "--script"], obj=test_ctx, catch_exceptions=False
         )
 
         assert result.exit_code == 0
@@ -363,7 +363,7 @@ def test_jump_succeeds_when_branch_exactly_checked_out() -> None:
         assert script_content is not None
 
 
-def test_jump_with_multiple_worktrees_same_branch() -> None:
+def test_checkout_with_multiple_worktrees_same_branch() -> None:
     """Test error when multiple worktrees have the same branch checked out.
 
     This is an edge case that shouldn't happen in normal use (git prevents it),
@@ -400,7 +400,7 @@ def test_jump_with_multiple_worktrees_same_branch() -> None:
 
         # Jump to feature-2 which is checked out in multiple worktrees
         result = runner.invoke(
-            cli, ["jump", "feature-2", "--script"], obj=test_ctx, catch_exceptions=False
+            cli, ["checkout", "feature-2", "--script"], obj=test_ctx, catch_exceptions=False
         )
 
         # Should show error about multiple worktrees
@@ -408,7 +408,7 @@ def test_jump_with_multiple_worktrees_same_branch() -> None:
         assert "exists in multiple worktrees" in result.stderr
 
 
-def test_jump_creates_worktree_for_remote_only_branch() -> None:
+def test_checkout_creates_worktree_for_remote_only_branch() -> None:
     """Test jump auto-creates worktree when branch exists only on origin."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -440,7 +440,7 @@ def test_jump_creates_worktree_for_remote_only_branch() -> None:
 
         # Jump to remote branch
         result = runner.invoke(
-            cli, ["jump", "feature-remote", "--script"], obj=test_ctx, catch_exceptions=False
+            cli, ["checkout", "feature-remote", "--script"], obj=test_ctx, catch_exceptions=False
         )
 
         if result.exit_code != 0:
@@ -469,7 +469,7 @@ def test_jump_creates_worktree_for_remote_only_branch() -> None:
         assert "feature-remote" in script_content
 
 
-def test_jump_fails_when_branch_not_on_origin() -> None:
+def test_checkout_fails_when_branch_not_on_origin() -> None:
     """Test jump shows error when branch doesn't exist locally or on origin."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -501,7 +501,10 @@ def test_jump_fails_when_branch_not_on_origin() -> None:
 
         # Jump to nonexistent branch
         result = runner.invoke(
-            cli, ["jump", "nonexistent-branch", "--script"], obj=test_ctx, catch_exceptions=False
+            cli,
+            ["checkout", "nonexistent-branch", "--script"],
+            obj=test_ctx,
+            catch_exceptions=False,
         )
 
         # Should fail with error message
@@ -510,7 +513,7 @@ def test_jump_fails_when_branch_not_on_origin() -> None:
         assert "erk create --branch nonexistent-branch" in result.stderr
 
 
-def test_jump_message_when_switching_worktrees() -> None:
+def test_checkout_message_when_switching_worktrees() -> None:
     """Test that jump shows 'Jumped to worktree' when switching from different location.
 
     This validates that message logic checks location change, not whether git checkout is needed.
@@ -549,7 +552,7 @@ def test_jump_message_when_switching_worktrees() -> None:
 
         # Jump to feature-branch from root worktree
         result = runner.invoke(
-            cli, ["jump", "feature-branch", "--script"], obj=test_ctx, catch_exceptions=False
+            cli, ["checkout", "feature-branch", "--script"], obj=test_ctx, catch_exceptions=False
         )
 
         if result.exit_code != 0:

@@ -5,7 +5,7 @@ the full CLI command pipeline. These tests directly verify the message
 generation business logic.
 """
 
-from erk.cli.commands.jump import _perform_jump
+from erk.cli.commands.checkout import _perform_checkout
 from erk.core.gitops import WorktreeInfo
 from tests.fakes.gitops import FakeGitOps
 from tests.test_utils.env_helpers import erk_inmem_env
@@ -39,7 +39,7 @@ def test_message_case_1_already_on_target_branch_in_current_worktree() -> None:
         test_ctx = env.build_context(git_ops=git_ops, cwd=feature_wt)
 
         # Call _perform_jump in script mode
-        _perform_jump(
+        _perform_checkout(
             ctx=test_ctx,
             repo_root=env.cwd,
             target_worktree=WorktreeInfo(path=feature_wt, branch="feature-1"),
@@ -90,7 +90,7 @@ def test_message_case_2_jumped_to_existing_worktree_standard_naming() -> None:
         test_ctx = env.build_context(git_ops=git_ops, cwd=env.cwd)
 
         # Call _perform_jump in script mode
-        _perform_jump(
+        _perform_checkout(
             ctx=test_ctx,
             repo_root=env.cwd,
             target_worktree=WorktreeInfo(path=feature_wt, branch="feature-1"),
@@ -142,7 +142,7 @@ def test_message_case_2_jumped_to_existing_worktree_nonstandard_naming() -> None
         test_ctx = env.build_context(git_ops=git_ops, cwd=env.cwd)
 
         # Call _perform_jump in script mode
-        _perform_jump(
+        _perform_checkout(
             ctx=test_ctx,
             repo_root=env.cwd,
             target_worktree=WorktreeInfo(path=feature_wt, branch="feature-1"),
@@ -193,7 +193,7 @@ def test_message_case_3_jumped_and_checked_out_branch() -> None:
         test_ctx = env.build_context(git_ops=git_ops, cwd=env.cwd)
 
         # Call _perform_jump in script mode - will checkout feature-1
-        _perform_jump(
+        _perform_checkout(
             ctx=test_ctx,
             repo_root=env.cwd,
             target_worktree=WorktreeInfo(path=feature_wt, branch="other-branch"),
@@ -246,7 +246,7 @@ def test_message_case_4_jumped_to_newly_created_worktree() -> None:
         test_ctx = env.build_context(git_ops=git_ops, cwd=env.cwd)
 
         # Call _perform_jump with is_newly_created=True
-        _perform_jump(
+        _perform_checkout(
             ctx=test_ctx,
             repo_root=env.cwd,
             target_worktree=WorktreeInfo(path=new_wt, branch="new-feature"),
@@ -293,7 +293,7 @@ def test_message_colorization_applied() -> None:
         test_ctx = env.build_context(git_ops=git_ops, cwd=env.cwd)
 
         # Call _perform_jump in script mode
-        _perform_jump(
+        _perform_checkout(
             ctx=test_ctx,
             repo_root=env.cwd,
             target_worktree=WorktreeInfo(path=feature_wt, branch="feature-1"),
@@ -348,7 +348,7 @@ def test_message_non_script_mode_case_1() -> None:
 
         try:
             # Call _perform_jump in non-script mode
-            _perform_jump(
+            _perform_checkout(
                 ctx=test_ctx,
                 repo_root=env.cwd,
                 target_worktree=WorktreeInfo(path=feature_wt, branch="feature-1"),
@@ -403,7 +403,7 @@ def test_message_non_script_mode_case_4() -> None:
 
         try:
             # Call _perform_jump in non-script mode with is_newly_created=True
-            _perform_jump(
+            _perform_checkout(
                 ctx=test_ctx,
                 repo_root=env.cwd,
                 target_worktree=WorktreeInfo(path=new_wt, branch="new-feature"),

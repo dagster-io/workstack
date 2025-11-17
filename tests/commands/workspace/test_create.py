@@ -1293,8 +1293,8 @@ def test_create_with_stay_prevents_script_generation() -> None:
 
         assert result.exit_code == 0, result.output
         # When --stay is used, no script path should be output
-        # The output should contain the normal message with "erk switch"
-        assert "erk switch" in result.output
+        # The output should contain the normal message with "erk checkout"
+        assert "erk checkout" in result.output
         # Should still create the worktree
         repo_dir / "test-feature"
 
@@ -1377,8 +1377,8 @@ def test_create_with_stay_and_plan() -> None:
         assert (wt_path / ".plan" / "plan.md").exists()
         assert (wt_path / ".plan" / "progress.md").exists()
         assert not plan_file.exists()
-        # When --stay is used, output should contain "erk switch" message
-        assert "erk switch" in result.output
+        # When --stay is used, output should contain "erk checkout" message
+        assert "erk checkout" in result.output
 
 
 def test_create_default_behavior_generates_script() -> None:

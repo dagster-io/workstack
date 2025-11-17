@@ -112,7 +112,7 @@ def perform_shell_setup(shell_ops: ShellOps) -> bool:
     user_output(f"\nDetected shell: {shell}")
     user_output("Shell integration provides:")
     user_output("  - Tab completion for erk commands")
-    user_output("  - Automatic worktree activation on 'erk switch'")
+    user_output("  - Automatic worktree activation on 'erk checkout'")
 
     if not click.confirm("\nShow shell integration setup instructions?", default=True):
         user_output("Skipping shell integration. You can run 'erk init --shell' later.")

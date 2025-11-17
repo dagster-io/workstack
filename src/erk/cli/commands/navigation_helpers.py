@@ -3,7 +3,7 @@ from pathlib import Path
 import click
 
 from erk.cli.activation import render_activation_script
-from erk.cli.core import discover_repo_context, worktree_path_for
+from erk.cli.core import discover_repo_context
 from erk.cli.debug import debug_log
 from erk.cli.output import machine_output, user_output
 from erk.core.context import ErkContext, create_context
@@ -61,10 +61,7 @@ def _activate_root_repo(
             "\nShell integration not detected. "
             "Run 'erk init --shell' to set up automatic activation."
         )
-        if command_name == "switch":
-            user_output("Or use: source <(erk switch root --script)")
-        else:
-            user_output(f"Or use: source <(erk {command_name} --script)")
+        user_output(f"Or use: source <(erk {command_name} --script)")
     raise SystemExit(0)
 
 
@@ -112,10 +109,7 @@ def _activate_worktree(
         user_output(
             "Shell integration not detected. Run 'erk init --shell' to set up automatic activation."
         )
-        if command_name == "switch":
-            user_output(f"\nOr use: source <(erk switch {worktree_name} --script)")
-        else:
-            user_output(f"\nOr use: source <(erk {command_name} --script)")
+        user_output(f"\nOr use: source <(erk {command_name} --script)")
     raise SystemExit(0)
 
 
@@ -218,7 +212,7 @@ def _resolve_down_navigation(
                 user_output(
                     f"Branch '{parent_branch}' is the parent branch but has no worktree.\n"
                     f"To switch to the root repository, run:\n"
-                    f"  erk switch root"
+                    f"  erk checkout root"
                 )
                 raise SystemExit(1)
             return parent_branch
@@ -274,111 +268,3 @@ def complete_worktree_names(
     except Exception:
         # Shell completion error boundary: return empty list for graceful degradation
         return []
-
-
-@click.command("switch")
-@click.argument("name", metavar="NAME", required=False, shell_complete=complete_worktree_names)
-@click.option(
-    "--script", is_flag=True, help="Print only the activation script without usage instructions."
-)
-@click.option(
-    "--up", is_flag=True, help="Move to child branch in Graphite stack (requires Graphite)."
-)
-@click.option(
-    "--down", is_flag=True, help="Move to parent branch in Graphite stack (requires Graphite)."
-)
-@click.pass_obj
-def switch_cmd(ctx: ErkContext, name: str | None, script: bool, up: bool, down: bool) -> None:
-    """Switch to a worktree and activate its environment.
-
-    With shell integration (recommended):
-      erk switch NAME
-      erk switch --up
-      erk switch --down
-
-    The shell wrapper function automatically activates the worktree.
-    Run 'erk init --shell' to set up shell integration.
-
-    Without shell integration:
-      source <(erk switch NAME --script)
-
-    NAME can be a worktree name, or 'root' to switch to the root repo.
-    Use --up to navigate to the child branch in the Graphite stack.
-    Use --down to navigate to the parent branch in the Graphite stack.
-    This will cd to the worktree, create/activate .venv, and load .env variables.
-    """
-
-    # Validate command arguments
-    if up and down:
-        user_output("Error: Cannot use both --up and --down")
-        raise SystemExit(1)
-
-    if name and (up or down):
-        user_output("Error: Cannot specify NAME with --up or --down")
-        raise SystemExit(1)
-
-    if not name and not up and not down:
-        user_output("Error: Must specify NAME, --up, or --down")
-        raise SystemExit(1)
-
-    # Check Graphite requirement for --up/--down
-    if up or down:
-        _ensure_graphite_enabled(ctx)
-
-    repo = discover_repo_context(ctx, ctx.cwd)
-    ensure_repo_dir(repo)
-    trunk_branch = ctx.trunk_branch
-
-    # Check if user is trying to switch to main/master (should use root instead)
-    if name and name.lower() in ("main", "master"):
-        user_output(
-            f'Error: "{name}" cannot be used as a worktree name.\n'
-            f"To switch to the {name} branch in the root repository, use:\n"
-            f"  erk switch root"
-        )
-        raise SystemExit(1)
-
-    # Determine target name based on command arguments
-    target_name: str
-    if up or down:
-        # Get current branch
-        current_branch = ctx.git_ops.get_current_branch(ctx.cwd)
-        if current_branch is None:
-            user_output(
-                "Error: Not currently on a branch (detached HEAD)",
-            )
-            raise SystemExit(1)
-
-        # Get all worktrees for checking if target has a worktree
-        worktrees = ctx.git_ops.list_worktrees(repo.root)
-
-        if up:
-            target_name = _resolve_up_navigation(ctx, repo, current_branch, worktrees)
-        else:  # down
-            target_name = _resolve_down_navigation(
-                ctx, repo, current_branch, worktrees, trunk_branch
-            )
-
-        # Check if target_name refers to 'root' which means root repo
-        if target_name == "root":
-            _activate_root_repo(ctx, repo, script, "switch")
-
-        # Resolve to actual worktree path
-        target_wt_path = ctx.git_ops.find_worktree_for_branch(repo.root, target_name)
-        if target_wt_path is None:
-            user_output(f"Error: Branch '{target_name}' has no worktree. This should not happen.")
-            raise SystemExit(1)
-
-        _activate_worktree(ctx, repo, target_wt_path, script, "switch")
-    else:
-        # NAME argument was provided (validated earlier)
-        target_name = name if name else ""  # This branch is unreachable due to validation
-
-        # Check if target_name refers to 'root' which means root repo
-        if target_name == "root":
-            _activate_root_repo(ctx, repo, script, "switch")
-
-        # For explicit name, use worktree_path_for since user provided the worktree name
-        wt_path = worktree_path_for(repo.worktrees_dir, target_name)
-
-        _activate_worktree(ctx, repo, wt_path, script, "switch")

@@ -54,7 +54,7 @@ def add_worktree(
                 f"Options:\n"
                 f"  • Use a different branch name\n"
                 f"  • Create a new branch instead: erk create {path.name}\n"
-                f"  • Switch to that worktree: erk switch {path.name}",
+                f"  • Switch to that worktree: erk checkout {branch}",
             )
             raise SystemExit(1)
 
@@ -372,7 +372,7 @@ def create(
         user_output(
             f'Error: "{name}" cannot be used as a worktree name.\n'
             f"To switch to the {name} branch in the root repository, use:\n"
-            f"  erk switch root",
+            f"  erk checkout root",
         )
         raise SystemExit(1)
 
@@ -549,7 +549,7 @@ def create(
         user_output(json_response)
     else:
         user_output(f"Created worktree at {wt_path} checked out at branch '{branch}'")
-        user_output(f"\nerk switch {name}")
+        user_output(f"\nerk checkout {branch}")
 
 
 def run_commands_in_worktree(

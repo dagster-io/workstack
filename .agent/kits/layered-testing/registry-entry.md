@@ -3,7 +3,9 @@
 **Purpose**: Defense-in-depth testing architecture for Python with automatic suggestion hook
 
 **Artifacts**:
+
 - skill: skills/layered-testing/SKILL.md
 
 **Usage**:
+
 - Load `layered-testing` skill

@@ -14,7 +14,7 @@ from erk.core.gitops import WorktreeInfo
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.test_utils.builders import PullRequestInfoBuilder
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 # ===========================
 # Config Handling Tests
@@ -32,7 +32,7 @@ from tests.test_utils.env_helpers import pure_workstack_env
 def test_list_with_stacks_pr_visibility(show_pr_info: bool, expected_visible: bool) -> None:
     """PR info visibility follows the show_pr_info configuration flag."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         branch_name = "feature-branch"
         pr = PullRequestInfo(
             number=42,
@@ -108,7 +108,7 @@ def test_list_pr_emoji_mapping(
     This test covers all emoji rendering logic in a single parametrized test.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         branch_name = "test-branch"
 
         # Use builder pattern for PR creation
@@ -169,7 +169,7 @@ def test_list_with_stacks_uses_graphite_url() -> None:
     for better integration with Graphite workflow.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         branch_name = "feature"
         pr = PullRequestInfo(
             number=100,
@@ -229,7 +229,7 @@ def test_list_with_stacks_uses_graphite_url() -> None:
 def test_list_pr_with_merge_conflicts() -> None:
     """Test that PRs with merge conflicts show the conflict emoji 💥."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         branch_name = "conflict-branch"
 
         # Create PR with conflicts

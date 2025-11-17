@@ -139,8 +139,8 @@ def parse_graphite_cache(
 def _graphite_url_to_github_url(graphite_url: str) -> str:
     """Convert Graphite URL to GitHub URL.
 
-    Input: https://app.graphite.com/github/pr/dagster-io/workstack/42
-    Output: https://github.com/dagster-io/workstack/pull/42
+    Input: https://app.graphite.com/github/pr/dagster-io/erk/42
+    Output: https://github.com/dagster-io/erk/pull/42
     """
     parts = graphite_url.split("/")
     if len(parts) >= 8 and parts[2] == "app.graphite.com":
@@ -163,11 +163,11 @@ class GraphiteOps(ABC):
 
         Args:
             owner: GitHub repository owner (e.g., "dagster-io")
-            repo: GitHub repository name (e.g., "workstack")
+            repo: GitHub repository name (e.g., "erk")
             pr_number: GitHub PR number
 
         Returns:
-            Graphite PR URL (e.g., "https://app.graphite.com/github/pr/dagster-io/workstack/23")
+            Graphite PR URL (e.g., "https://app.graphite.com/github/pr/dagster-io/erk/23")
         """
         ...
 
@@ -316,11 +316,11 @@ class RealGraphiteOps(GraphiteOps):
 
         Args:
             owner: GitHub repository owner (e.g., "dagster-io")
-            repo: GitHub repository name (e.g., "workstack")
+            repo: GitHub repository name (e.g., "erk")
             pr_number: GitHub PR number
 
         Returns:
-            Graphite PR URL (e.g., "https://app.graphite.com/github/pr/dagster-io/workstack/23")
+            Graphite PR URL (e.g., "https://app.graphite.com/github/pr/dagster-io/erk/23")
         """
         return f"https://app.graphite.com/github/pr/{owner}/{repo}/{pr_number}"
 

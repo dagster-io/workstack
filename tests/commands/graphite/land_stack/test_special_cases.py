@@ -13,13 +13,13 @@ from erk.core.graphite_ops import BranchMetadata
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def test_land_stack_ignores_root_worktree_changes_on_unrelated_branch() -> None:
     """Test that land-stack doesn't check root worktree when it's on unrelated branch."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Set up two worktrees:
         # - Root worktree: on branch "test-docs" with uncommitted changes
         # - Current worktree: on branch "feat-1" (clean)
@@ -115,7 +115,7 @@ def test_land_stack_ignores_root_worktree_changes_on_unrelated_branch() -> None:
 def test_land_stack_script_mode_accepts_flag() -> None:
     """Verify land-stack accepts --script flag for shell integration."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Build test environment with a simple stack
         git_ops, graphite_ops = env.build_ops_from_branches(
             {

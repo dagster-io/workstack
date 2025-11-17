@@ -1,4 +1,4 @@
-"""Unit tests for workstack graphite branches command."""
+"""Unit tests for erk graphite branches command."""
 
 import json
 from pathlib import Path

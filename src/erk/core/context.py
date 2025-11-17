@@ -215,7 +215,7 @@ class ErkContext:
 
         if global_config is None:
             global_config = GlobalConfig(
-                erk_root=Path("/test/workstacks"),
+                erk_root=Path("/test/erks"),
                 use_graphite=False,
                 shell_setup_complete=False,
                 show_pr_info=True,
@@ -255,7 +255,7 @@ class ErkContext:
 def write_trunk_to_pyproject(repo_root: Path, trunk: str, git_ops: GitOps | None = None) -> None:
     """Write trunk branch configuration to pyproject.toml.
 
-    Creates or updates the [tool.workstack] section with trunk_branch setting.
+    Creates or updates the [tool.erk] section with trunk_branch setting.
     Preserves existing formatting and comments using tomlkit.
 
     Args:
@@ -282,12 +282,12 @@ def write_trunk_to_pyproject(repo_root: Path, trunk: str, git_ops: GitOps | None
     if "tool" not in doc:
         doc["tool"] = tomlkit.table()  # type: ignore[index]
 
-    # Ensure [tool.workstack] section exists
-    if "workstack" not in doc["tool"]:  # type: ignore[operator]
-        doc["tool"]["workstack"] = tomlkit.table()  # type: ignore[index]
+    # Ensure [tool.erk] section exists
+    if "erk" not in doc["tool"]:  # type: ignore[operator]
+        doc["tool"]["erk"] = tomlkit.table()  # type: ignore[index]
 
     # Set trunk_branch value
-    doc["tool"]["workstack"]["trunk_branch"] = trunk  # type: ignore[index]
+    doc["tool"]["erk"]["trunk_branch"] = trunk  # type: ignore[index]
 
     # Write back to file
     with pyproject_path.open("w", encoding="utf-8") as f:

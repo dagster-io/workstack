@@ -40,8 +40,8 @@ def test_sync_trunk_in_worktree_pulls_at_worktree_location() -> None:
     repo_ctx = RepoContext(
         root=repo_root,
         repo_name="test-repo",
-        repo_dir=SentinelPath("/test/workstacks"),
-        worktrees_dir=SentinelPath("/test/workstacks") / "worktrees",
+        repo_dir=SentinelPath("/test/erks"),
+        worktrees_dir=SentinelPath("/test/erks") / "worktrees",
     )
 
     ctx = ErkContext.for_test(
@@ -104,8 +104,8 @@ def test_sync_trunk_not_checked_out_uses_repo_root() -> None:
     repo_ctx = RepoContext(
         root=repo_root,
         repo_name="test-repo",
-        repo_dir=SentinelPath("/test/workstacks"),
-        worktrees_dir=SentinelPath("/test/workstacks") / "worktrees",
+        repo_dir=SentinelPath("/test/erks"),
+        worktrees_dir=SentinelPath("/test/erks") / "worktrees",
     )
 
     ctx = ErkContext.for_test(
@@ -169,8 +169,8 @@ def test_sync_trunk_in_root_worktree_still_pulls() -> None:
     repo_ctx = RepoContext(
         root=repo_root,
         repo_name="test-repo",
-        repo_dir=SentinelPath("/test/workstacks"),
-        worktrees_dir=SentinelPath("/test/workstacks") / "worktrees",
+        repo_dir=SentinelPath("/test/erks"),
+        worktrees_dir=SentinelPath("/test/erks") / "worktrees",
     )
 
     ctx = ErkContext.for_test(

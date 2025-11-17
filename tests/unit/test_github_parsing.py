@@ -20,11 +20,11 @@ def test_parse_github_pr_list_with_checks():
     feature = result["feature-branch"]
     assert feature.number == 123
     assert feature.state == "OPEN"
-    assert feature.url == "https://github.com/dagster-io/workstack/pull/123"
+    assert feature.url == "https://github.com/dagster-io/erk/pull/123"
     assert feature.is_draft is False
     assert feature.checks_passing is True
     assert feature.owner == "dagster-io"
-    assert feature.repo == "workstack"
+    assert feature.repo == "erk"
 
     # Check bugfix branch with failing checks
     assert "bugfix-branch" in result

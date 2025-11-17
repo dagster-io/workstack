@@ -1,4 +1,4 @@
-"""Tests for workstack jump command."""
+"""Tests for erk jump command."""
 
 from pathlib import Path
 
@@ -8,16 +8,16 @@ from erk.cli.cli import cli
 from erk.core.gitops import WorktreeInfo
 from erk.core.repo_discovery import RepoContext
 from tests.fakes.gitops import FakeGitOps
-from tests.test_utils.env_helpers import pure_workstack_env, simulated_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env, erk_isolated_fs_env
 
 
 def test_jump_to_branch_in_single_worktree() -> None:
     """Test jumping to a branch that is checked out in exactly one worktree.
 
-    This test uses pure_workstack_env() for in-memory testing without filesystem I/O.
+    This test uses pure_erk_env() for in-memory testing without filesystem I/O.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         work_dir = env.erk_root / env.cwd.name
 
         # Use sentinel paths (no mkdir() needed in pure mode)
@@ -69,7 +69,7 @@ def test_jump_to_branch_in_single_worktree() -> None:
 def test_jump_to_branch_not_found() -> None:
     """Test jumping to a branch that doesn't exist in git."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         work_dir = env.erk_root / env.cwd.name
 
         git_ops = FakeGitOps(
@@ -108,7 +108,7 @@ def test_jump_to_branch_not_found() -> None:
 def test_jump_creates_worktree_for_unchecked_branch() -> None:
     """Test that jump auto-creates worktree when branch exists but is not checked out."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         work_dir = env.erk_root / env.cwd.name
 
         # Branch 'existing-branch' exists in git but is not checked out
@@ -171,7 +171,7 @@ def test_jump_to_branch_in_stack_but_not_checked_out() -> None:
     directly checked out will have a worktree created automatically.
     """
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         work_dir = env.erk_root / env.cwd.name
         wt1 = work_dir / "feature-1-wt"
 
@@ -220,7 +220,7 @@ def test_jump_to_branch_in_stack_but_not_checked_out() -> None:
 def test_jump_works_without_graphite() -> None:
     """Test that jump works without Graphite enabled."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         work_dir = env.erk_root / env.cwd.name
         feature_wt = work_dir / "feature-1-wt"
 
@@ -265,7 +265,7 @@ def test_jump_already_on_target_branch() -> None:
     Should show 'Already in worktree' message, NOT 'Jumped to worktree'.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         work_dir = env.erk_root / env.cwd.name
         feature_wt = work_dir / "feature-1-wt"
 
@@ -323,7 +323,7 @@ def test_jump_already_on_target_branch() -> None:
 def test_jump_succeeds_when_branch_exactly_checked_out() -> None:
     """Test that jump succeeds when branch is exactly checked out in a worktree."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         work_dir = env.erk_root / env.cwd.name
         feature_wt = work_dir / "feature-wt"
         other_wt = work_dir / "other-wt"
@@ -370,7 +370,7 @@ def test_jump_with_multiple_worktrees_same_branch() -> None:
     but our code should handle it gracefully.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         work_dir = env.erk_root / env.cwd.name
         wt1 = work_dir / "wt1"
         wt2 = work_dir / "wt2"
@@ -411,7 +411,7 @@ def test_jump_with_multiple_worktrees_same_branch() -> None:
 def test_jump_creates_worktree_for_remote_only_branch() -> None:
     """Test jump auto-creates worktree when branch exists only on origin."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         work_dir = env.erk_root / env.cwd.name
 
         # Branch exists on origin but not locally
@@ -472,7 +472,7 @@ def test_jump_creates_worktree_for_remote_only_branch() -> None:
 def test_jump_fails_when_branch_not_on_origin() -> None:
     """Test jump shows error when branch doesn't exist locally or on origin."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         work_dir = env.erk_root / env.cwd.name
 
         # Branch doesn't exist locally or remotely
@@ -518,7 +518,7 @@ def test_jump_message_when_switching_worktrees() -> None:
     when the branch was already checked out in the target worktree.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         work_dir = env.erk_root / env.cwd.name
         # Set up two worktrees: root on main, secondary on feature-branch
         feature_wt = work_dir / "feature-wt"

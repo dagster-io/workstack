@@ -1,4 +1,4 @@
-"""Display formatting utilities for workstack.
+"""Display formatting utilities for erk.
 
 This module contains pure business logic for formatting and displaying worktree
 information in the CLI. All functions are pure (no I/O) and can be tested without

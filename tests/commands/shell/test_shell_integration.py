@@ -73,7 +73,7 @@ def test_shell_integration_unknown_command() -> None:
 def test_shell_integration_sync_generates_posix_passthrough_script(tmp_path: Path) -> None:
     """When invoked from bash/zsh, __shell should return a passthrough script."""
     runner = CliRunner()
-    result = runner.invoke(cli, ["__shell", "sync"], env={"WORKSTACK_SHELL": "bash"})
+    result = runner.invoke(cli, ["__shell", "sync"], env={"ERK_SHELL": "bash"})
     assert result.exit_code == 0
     script_output = result.output.strip()
     assert script_output
@@ -81,7 +81,7 @@ def test_shell_integration_sync_generates_posix_passthrough_script(tmp_path: Pat
     try:
         content = script_path.read_text(encoding="utf-8")
         assert "command erk sync" in content
-        assert "__workstack_exit=$?" in content
+        assert "__erk_exit=$?" in content
     finally:
         script_path.unlink(missing_ok=True)
 
@@ -89,7 +89,7 @@ def test_shell_integration_sync_generates_posix_passthrough_script(tmp_path: Pat
 def test_shell_integration_sync_generates_fish_passthrough_script(tmp_path: Path) -> None:
     """When invoked from fish, __shell should return a fish-compatible script."""
     runner = CliRunner()
-    result = runner.invoke(cli, ["__shell", "sync"], env={"WORKSTACK_SHELL": "fish"})
+    result = runner.invoke(cli, ["__shell", "sync"], env={"ERK_SHELL": "fish"})
     assert result.exit_code == 0
     script_output = result.output.strip()
     assert script_output
@@ -97,7 +97,7 @@ def test_shell_integration_sync_generates_fish_passthrough_script(tmp_path: Path
     try:
         content = script_path.read_text(encoding="utf-8")
         assert 'command erk "sync"' in content
-        assert "set __workstack_exit $status" in content
+        assert "set __erk_exit $status" in content
     finally:
         script_path.unlink(missing_ok=True)
 
@@ -110,7 +110,7 @@ def test_shell_integration_fish_escapes_special_characters(tmp_path: Path) -> No
     result = runner.invoke(
         cli,
         ["__shell", "sync", special_arg, second_arg],
-        env={"WORKSTACK_SHELL": "fish"},
+        env={"ERK_SHELL": "fish"},
     )
     assert result.exit_code == 0
     script_output = result.output.strip()
@@ -195,10 +195,10 @@ def test_shell_integration_switch_invokes_successfully() -> None:
 
     from erk.core.gitops import WorktreeInfo
     from tests.fakes.gitops import FakeGitOps
-    from tests.test_utils.env_helpers import simulated_workstack_env
+    from tests.test_utils.env_helpers import erk_isolated_fs_env
 
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Set up multiple worktrees
         wt1_path = env.create_linked_worktree("feat-1", "feat-1", chdir=False)
 
@@ -232,7 +232,7 @@ def test_shell_integration_switch_invokes_successfully() -> None:
         if result.exit_code == 0 and result.stdout and result.stdout.strip():
             script_path_str = result.stdout.strip()
             # Verify it's a valid path (no TypeError occurred during invocation)
-            if script_path_str and script_path_str != "__WORKSTACK_PASSTHROUGH__":
+            if script_path_str and script_path_str != "__ERK_PASSTHROUGH__":
                 script_path = Path(script_path_str)
                 assert script_path.exists() or not script_path_str
 
@@ -242,10 +242,10 @@ def test_shell_integration_jump_invokes_successfully() -> None:
 
     from erk.core.gitops import WorktreeInfo
     from tests.fakes.gitops import FakeGitOps
-    from tests.test_utils.env_helpers import simulated_workstack_env
+    from tests.test_utils.env_helpers import erk_isolated_fs_env
 
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Set up worktree with branch
         wt1_path = env.create_linked_worktree("feat-1", "feat-1", chdir=False)
 
@@ -278,10 +278,10 @@ def test_shell_integration_up_invokes_successfully() -> None:
     """Test that __shell up invokes command successfully with Graphite stack."""
 
     from erk.core.graphite_ops import BranchMetadata
-    from tests.test_utils.env_helpers import simulated_workstack_env
+    from tests.test_utils.env_helpers import erk_isolated_fs_env
 
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Set up stack: main → feat-1 → feat-2
         wt1_path = env.create_linked_worktree("feat-1", "feat-1", chdir=True)
         _wt2_path = env.create_linked_worktree("feat-2", "feat-2", chdir=False)
@@ -308,10 +308,10 @@ def test_shell_integration_down_invokes_successfully() -> None:
     """Test that __shell down invokes command successfully with Graphite stack."""
 
     from erk.core.graphite_ops import BranchMetadata
-    from tests.test_utils.env_helpers import simulated_workstack_env
+    from tests.test_utils.env_helpers import erk_isolated_fs_env
 
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Set up stack: main → feat-1 → feat-2
         _wt1_path = env.create_linked_worktree("feat-1", "feat-1", chdir=False)
         wt2_path = env.create_linked_worktree("feat-2", "feat-2", chdir=True)
@@ -339,10 +339,10 @@ def test_shell_integration_create_invokes_successfully() -> None:
 
     from erk.core.gitops import WorktreeInfo
     from tests.fakes.gitops import FakeGitOps
-    from tests.test_utils.env_helpers import simulated_workstack_env
+    from tests.test_utils.env_helpers import erk_isolated_fs_env
 
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             default_branches={env.cwd: "main"},
@@ -365,10 +365,10 @@ def test_shell_integration_consolidate_invokes_successfully() -> None:
     """Test that __shell consolidate invokes command successfully."""
     from erk.core.gitops import WorktreeInfo
     from tests.fakes.gitops import FakeGitOps
-    from tests.test_utils.env_helpers import simulated_workstack_env
+    from tests.test_utils.env_helpers import erk_isolated_fs_env
 
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             default_branches={env.cwd: "main"},
@@ -397,10 +397,10 @@ def test_shell_handler_uses_stdout_not_output() -> None:
 
     from erk.core.gitops import WorktreeInfo
     from tests.fakes.gitops import FakeGitOps
-    from tests.test_utils.env_helpers import simulated_workstack_env
+    from tests.test_utils.env_helpers import erk_isolated_fs_env
 
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Set up worktrees that might produce stderr output
         wt1_path = env.create_linked_worktree("feat-1", "feat-1", chdir=False)
 
@@ -448,10 +448,10 @@ def test_shell_integration_shows_note_for_no_directory_change() -> None:
     """
     from erk.core.gitops import WorktreeInfo
     from tests.fakes.gitops import FakeGitOps
-    from tests.test_utils.env_helpers import pure_workstack_env
+    from tests.test_utils.env_helpers import erk_inmem_env
 
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Set up minimal environment - consolidate with no worktrees to remove
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
@@ -483,14 +483,14 @@ def test_shell_integration_create_from_current_branch_returns_script_path() -> N
     The handler reads result.stdout to get the script path - if stdout is empty,
     the handler displays "no directory change needed" instead of switching directories.
 
-    See: https://github.com/anthropics/workstack/issues/XXX
+    See: https://github.com/anthropics/erk/issues/XXX
     """
     from erk.core.gitops import WorktreeInfo
     from tests.fakes.gitops import FakeGitOps
-    from tests.test_utils.env_helpers import simulated_workstack_env
+    from tests.test_utils.env_helpers import erk_isolated_fs_env
 
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Set up git state: in root worktree on feature branch
         git_ops = FakeGitOps(
             worktrees={
@@ -535,7 +535,7 @@ def test_shell_integration_create_from_current_branch_returns_script_path() -> N
             # Assert: Script path points to a valid activation script
             script_path_str = result.stdout.strip()
             # Verify it's not the passthrough marker
-            assert script_path_str != "__WORKSTACK_PASSTHROUGH__", (
+            assert script_path_str != "__ERK_PASSTHROUGH__", (
                 "Should not passthrough - command should generate script"
             )
             script_path = Path(script_path_str)
@@ -555,10 +555,10 @@ def test_shell_integration_land_stack_invokes_successfully() -> None:
     which enables it to receive the --script flag for directory switching after landing PRs.
     """
     from erk.core.graphite_ops import BranchMetadata
-    from tests.test_utils.env_helpers import simulated_workstack_env
+    from tests.test_utils.env_helpers import erk_isolated_fs_env
 
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Set up stack: main → feat-1 → feat-2
         env.create_linked_worktree("feat-1", "feat-1", chdir=False)
         wt2_path = env.create_linked_worktree("feat-2", "feat-2", chdir=True)

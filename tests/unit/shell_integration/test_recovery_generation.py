@@ -48,7 +48,7 @@ def test_returns_script_path_when_in_repo(tmp_path: Path) -> None:
     repo.mkdir()
     (repo / ".git").mkdir()
 
-    erk_root = tmp_path / "workstacks"
+    erk_root = tmp_path / "erks"
     erk_root.mkdir()
 
     ctx = build_ctx(repo, erk_root, cwd=repo)
@@ -65,7 +65,7 @@ def test_returns_script_path_when_in_repo(tmp_path: Path) -> None:
 
 def test_returns_none_when_not_in_repo(tmp_path: Path) -> None:
     """Function returns None when cwd is not inside a repository."""
-    erk_root = tmp_path / "workstacks"
+    erk_root = tmp_path / "erks"
     erk_root.mkdir()
 
     # No repo_root = not in a git repo
@@ -78,7 +78,7 @@ def test_returns_none_when_not_in_repo(tmp_path: Path) -> None:
 
 def test_returns_none_when_cwd_missing(tmp_path: Path) -> None:
     """Function returns None when cwd doesn't exist."""
-    erk_root = tmp_path / "workstacks"
+    erk_root = tmp_path / "erks"
     erk_root.mkdir()
 
     vanished = tmp_path / "vanished"
@@ -97,7 +97,7 @@ def test_script_contains_cd_command(tmp_path: Path) -> None:
     repo.mkdir()
     (repo / ".git").mkdir()
 
-    erk_root = tmp_path / "workstacks"
+    erk_root = tmp_path / "erks"
     erk_root.mkdir()
 
     ctx = build_ctx(repo, erk_root, cwd=repo)
@@ -120,7 +120,7 @@ def test_script_is_executable(tmp_path: Path) -> None:
     repo.mkdir()
     (repo / ".git").mkdir()
 
-    erk_root = tmp_path / "workstacks"
+    erk_root = tmp_path / "erks"
     erk_root.mkdir()
 
     ctx = build_ctx(repo, erk_root, cwd=repo)
@@ -145,7 +145,7 @@ def test_handles_nested_directory_in_repo(tmp_path: Path) -> None:
     nested = repo / "src" / "subdir"
     nested.mkdir(parents=True)
 
-    erk_root = tmp_path / "workstacks"
+    erk_root = tmp_path / "erks"
     erk_root.mkdir()
 
     # cwd is nested inside repo
@@ -166,7 +166,7 @@ def test_multiple_calls_create_unique_scripts(tmp_path: Path) -> None:
     repo.mkdir()
     (repo / ".git").mkdir()
 
-    erk_root = tmp_path / "workstacks"
+    erk_root = tmp_path / "erks"
     erk_root.mkdir()
 
     ctx = build_ctx(repo, erk_root, cwd=repo)

@@ -16,7 +16,7 @@ from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from tests.test_utils.builders import PullRequestInfoBuilder
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 class TrackableFakeGitHubOps(FakeGitHubOps):
@@ -56,7 +56,7 @@ def test_dry_run_does_not_execute_merge_operations() -> None:
     This test MUST FAIL before the fix is applied.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Set up a simple stack: main -> feat-1 -> feat-2
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
@@ -126,7 +126,7 @@ def test_dry_run_still_performs_read_operations() -> None:
     But NOT execute write operations.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Set up stack with missing PR (will cause validation failure)
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
@@ -185,7 +185,7 @@ def test_dry_run_shows_all_operations() -> None:
     - Submit commands for remaining branches
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Set up stack: main -> feat-1 -> feat-2
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
@@ -253,7 +253,7 @@ def test_dry_run_does_not_delete_branches() -> None:
     deleting branches. Note: Checkouts are allowed for validation purposes.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Set up stack
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
@@ -309,7 +309,7 @@ def test_dry_run_does_not_update_pr_bases() -> None:
     NOT happen in dry-run mode.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Set up 3-branch stack
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},

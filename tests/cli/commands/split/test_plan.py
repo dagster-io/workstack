@@ -24,7 +24,7 @@ def test_identify_splittable_branches_excludes_trunk() -> None:
     current_branch = "feat-2"
     all_worktrees = [
         WorktreeInfo(Path("/repo"), "main", is_root=True),
-        WorktreeInfo(Path("/repo/workstacks/feat-2"), "feat-2", is_root=False),
+        WorktreeInfo(Path("/repo/erks/feat-2"), "feat-2", is_root=False),
     ]
 
     branches_to_split, existing, skipped_current, skipped_trunk = identify_splittable_branches(
@@ -43,7 +43,7 @@ def test_identify_splittable_branches_excludes_current() -> None:
     current_branch = "feat-1"
     all_worktrees = [
         WorktreeInfo(Path("/repo"), "main", is_root=True),
-        WorktreeInfo(Path("/repo/workstacks/feat-1"), "feat-1", is_root=False),
+        WorktreeInfo(Path("/repo/erks/feat-1"), "feat-1", is_root=False),
     ]
 
     branches_to_split, existing, skipped_current, skipped_trunk = identify_splittable_branches(
@@ -62,9 +62,9 @@ def test_identify_splittable_branches_excludes_existing_worktrees() -> None:
     current_branch = "feat-3"
     all_worktrees = [
         WorktreeInfo(Path("/repo"), "main", is_root=True),
-        WorktreeInfo(Path("/repo/workstacks/feat-1"), "feat-1", is_root=False),
-        WorktreeInfo(Path("/repo/workstacks/feat-2"), "feat-2", is_root=False),
-        WorktreeInfo(Path("/repo/workstacks/feat-3"), "feat-3", is_root=False),
+        WorktreeInfo(Path("/repo/erks/feat-1"), "feat-1", is_root=False),
+        WorktreeInfo(Path("/repo/erks/feat-2"), "feat-2", is_root=False),
+        WorktreeInfo(Path("/repo/erks/feat-3"), "feat-3", is_root=False),
     ]
 
     branches_to_split, existing, skipped_current, skipped_trunk = identify_splittable_branches(
@@ -142,7 +142,7 @@ def test_create_split_plan_full_stack() -> None:
     trunk_branch = "main"
     current_branch = "main"
     all_worktrees = [WorktreeInfo(Path("/repo"), "main", is_root=True)]
-    repo_dir = Path("/repo/workstacks")
+    repo_dir = Path("/repo/erks")
 
     def sanitize_name(name: str) -> str:
         return name.lower().replace("/", "-")
@@ -159,8 +159,8 @@ def test_create_split_plan_full_stack() -> None:
     )
 
     assert plan.branches_to_split == ["feat-1", "feat-2"]
-    assert plan.target_paths["feat-1"] == Path("/repo/workstacks/feat-1")
-    assert plan.target_paths["feat-2"] == Path("/repo/workstacks/feat-2")
+    assert plan.target_paths["feat-1"] == Path("/repo/erks/feat-1")
+    assert plan.target_paths["feat-2"] == Path("/repo/erks/feat-2")
     assert plan.skipped_trunk is True
     assert plan.skipped_current is True
 
@@ -172,10 +172,10 @@ def test_create_split_plan_with_exclusions() -> None:
     current_branch = "feat-2"
     all_worktrees = [
         WorktreeInfo(Path("/repo"), "main", is_root=True),
-        WorktreeInfo(Path("/repo/workstacks/feat-1"), "feat-1", is_root=False),
-        WorktreeInfo(Path("/repo/workstacks/feat-2"), "feat-2", is_root=False),
+        WorktreeInfo(Path("/repo/erks/feat-1"), "feat-1", is_root=False),
+        WorktreeInfo(Path("/repo/erks/feat-2"), "feat-2", is_root=False),
     ]
-    repo_dir = Path("/repo/workstacks")
+    repo_dir = Path("/repo/erks")
 
     def sanitize_name(name: str) -> str:
         return name
@@ -187,13 +187,13 @@ def test_create_split_plan_with_exclusions() -> None:
         all_worktrees,
         repo_dir,
         sanitize_name,
-        Path("/repo/workstacks/feat-2"),
+        Path("/repo/erks/feat-2"),
         Path("/repo"),  # repo_root
     )
 
     assert plan.branches_to_split == ["feat-3"]
     assert plan.existing_worktrees == ["feat-1"]
-    assert plan.target_paths["feat-3"] == Path("/repo/workstacks/feat-3")
+    assert plan.target_paths["feat-3"] == Path("/repo/erks/feat-3")
 
 
 def test_create_split_plan_generates_correct_paths() -> None:
@@ -202,7 +202,7 @@ def test_create_split_plan_generates_correct_paths() -> None:
     trunk_branch = "main"
     current_branch = "main"
     all_worktrees = [WorktreeInfo(Path("/repo"), "main", is_root=True)]
-    repo_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.erks")
 
     def sanitize_name(name: str) -> str:
         # Simulate actual sanitization
@@ -219,8 +219,8 @@ def test_create_split_plan_generates_correct_paths() -> None:
         Path("/repo"),  # repo_root
     )
 
-    assert plan.target_paths["feature/test-branch"] == Path("/repo/.workstacks/feature-test-branch")
-    assert plan.target_paths["bugfix/issue-123"] == Path("/repo/.workstacks/bugfix-issue-123")
+    assert plan.target_paths["feature/test-branch"] == Path("/repo/.erks/feature-test-branch")
+    assert plan.target_paths["bugfix/issue-123"] == Path("/repo/.erks/bugfix-issue-123")
 
 
 def test_create_split_plan_empty_branches_to_split() -> None:
@@ -230,9 +230,9 @@ def test_create_split_plan_empty_branches_to_split() -> None:
     current_branch = "feat-1"
     all_worktrees = [
         WorktreeInfo(Path("/repo"), "main", is_root=True),
-        WorktreeInfo(Path("/repo/workstacks/feat-1"), "feat-1", is_root=False),
+        WorktreeInfo(Path("/repo/erks/feat-1"), "feat-1", is_root=False),
     ]
-    repo_dir = Path("/repo/workstacks")
+    repo_dir = Path("/repo/erks")
 
     def sanitize_name(name: str) -> str:
         return name
@@ -244,7 +244,7 @@ def test_create_split_plan_empty_branches_to_split() -> None:
         all_worktrees,
         repo_dir,
         sanitize_name,
-        Path("/repo/workstacks/feat-1"),
+        Path("/repo/erks/feat-1"),
         Path("/repo"),  # repo_root
     )
 
@@ -273,8 +273,8 @@ def test_execute_split_plan_creates_worktrees() -> None:
         branches_to_split=["feat-1", "feat-2"],
         existing_worktrees=[],
         target_paths={
-            "feat-1": Path("/repo/workstacks/feat-1"),
-            "feat-2": Path("/repo/workstacks/feat-2"),
+            "feat-1": Path("/repo/erks/feat-1"),
+            "feat-2": Path("/repo/erks/feat-2"),
         },
         source_worktree_path=Path("/repo"),
         repo_root=Path("/repo"),
@@ -286,12 +286,12 @@ def test_execute_split_plan_creates_worktrees() -> None:
     results = execute_split_plan(plan, git_ops)
 
     assert len(results) == 2
-    assert results[0] == ("feat-1", Path("/repo/workstacks/feat-1"))
-    assert results[1] == ("feat-2", Path("/repo/workstacks/feat-2"))
+    assert results[0] == ("feat-1", Path("/repo/erks/feat-1"))
+    assert results[1] == ("feat-2", Path("/repo/erks/feat-2"))
     assert len(git_ops.created_worktrees) == 2
     # Check parameters: (repo_root, path, branch, ref, create_branch)
     assert git_ops.created_worktrees[0][0] == Path("/repo")  # repo_root
-    assert git_ops.created_worktrees[0][1] == Path("/repo/workstacks/feat-1")  # path
+    assert git_ops.created_worktrees[0][1] == Path("/repo/erks/feat-1")  # path
     assert git_ops.created_worktrees[0][2] == "feat-1"  # branch
     assert git_ops.created_worktrees[0][3] is None  # ref
     assert git_ops.created_worktrees[0][4] is False  # create_branch=False (branch exists)
@@ -314,7 +314,7 @@ def test_execute_split_plan_with_noop_ops() -> None:
         stack_branches=["main", "feat-1"],
         branches_to_split=["feat-1"],
         existing_worktrees=[],
-        target_paths={"feat-1": Path("/repo/workstacks/feat-1")},
+        target_paths={"feat-1": Path("/repo/erks/feat-1")},
         source_worktree_path=Path("/repo"),
         repo_root=Path("/repo"),
         skipped_current=False,
@@ -325,7 +325,7 @@ def test_execute_split_plan_with_noop_ops() -> None:
     results = execute_split_plan(plan, git_ops)
 
     assert len(results) == 1
-    assert results[0] == ("feat-1", Path("/repo/workstacks/feat-1"))
+    assert results[0] == ("feat-1", Path("/repo/erks/feat-1"))
     assert len(git_ops.created_worktrees) == 0  # No actual creation due to NoopGitOps
 
 

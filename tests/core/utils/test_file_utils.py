@@ -95,8 +95,8 @@ More content.
     pytest.param(
         "implementation_plan_prefix_colon",
         "plan.md",
-        "# Implementation Plan: Change Workstack LS to Display PR and Plan Info\n\nContent.",
-        "Change Workstack LS to Display PR and Plan Info",
+        "# Implementation Plan: Change Erk LS to Display PR and Plan Info\n\nContent.",
+        "Change Erk LS to Display PR and Plan Info",
         id="implementation_plan_prefix_colon",
     ),
     pytest.param(

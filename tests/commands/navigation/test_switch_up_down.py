@@ -1,4 +1,4 @@
-"""Tests for workstack switch --up and --down navigation."""
+"""Tests for erk switch --up and --down navigation."""
 
 from pathlib import Path
 
@@ -10,13 +10,13 @@ from erk.core.gitops import WorktreeInfo
 from erk.core.repo_discovery import RepoContext
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def test_switch_up_with_existing_worktree() -> None:
     """Test --up navigation when child branch has a worktree."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         git_ops = FakeGitOps(
@@ -77,7 +77,7 @@ def test_switch_up_with_existing_worktree() -> None:
 def test_switch_up_at_top_of_stack() -> None:
     """Test --up navigation when at the top of stack (no children)."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         git_ops = FakeGitOps(
@@ -113,7 +113,7 @@ def test_switch_up_at_top_of_stack() -> None:
 def test_switch_up_child_has_no_worktree() -> None:
     """Test --up navigation when child branch exists but has no worktree."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Only feature-1 has a worktree, feature-2 does not
@@ -152,7 +152,7 @@ def test_switch_up_child_has_no_worktree() -> None:
 def test_switch_down_with_existing_worktree() -> None:
     """Test --down navigation when parent branch has a worktree."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         git_ops = FakeGitOps(
@@ -206,7 +206,7 @@ def test_switch_down_with_existing_worktree() -> None:
 def test_switch_down_to_trunk_root() -> None:
     """Test --down navigation when parent is trunk checked out in root."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Main is checked out in root, feature-1 has its own worktree
@@ -259,7 +259,7 @@ def test_switch_down_to_trunk_root() -> None:
 def test_switch_down_at_trunk() -> None:
     """Test --down navigation when already at trunk."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch="main")]},
             current_branches={env.cwd: "main"},
@@ -286,7 +286,7 @@ def test_switch_down_at_trunk() -> None:
 def test_switch_down_parent_has_no_worktree() -> None:
     """Test --down navigation when parent branch exists but has no worktree."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Only feature-2 has a worktree, feature-1 does not
@@ -326,7 +326,7 @@ def test_switch_down_parent_has_no_worktree() -> None:
 def test_switch_graphite_not_enabled() -> None:
     """Test --up/--down require Graphite to be enabled."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch="main")]},
             current_branches={env.cwd: "main"},
@@ -343,7 +343,7 @@ def test_switch_graphite_not_enabled() -> None:
 
         assert result.exit_code == 1
         assert "requires Graphite to be enabled" in result.stderr
-        assert "workstack config set use_graphite true" in result.stderr
+        assert "erk config set use_graphite true" in result.stderr
 
         # Try --down
         result = runner.invoke(cli, ["switch", "--down"], obj=test_ctx, catch_exceptions=False)
@@ -355,7 +355,7 @@ def test_switch_graphite_not_enabled() -> None:
 def test_switch_up_and_down_mutually_exclusive() -> None:
     """Test that --up and --down cannot be used together."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch="main")]},
             current_branches={env.cwd: "main"},
@@ -377,7 +377,7 @@ def test_switch_up_and_down_mutually_exclusive() -> None:
 def test_switch_name_with_up_mutually_exclusive() -> None:
     """Test that NAME and --up cannot be used together."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch="main")]},
             current_branches={env.cwd: "main"},
@@ -399,7 +399,7 @@ def test_switch_name_with_up_mutually_exclusive() -> None:
 def test_switch_detached_head() -> None:
     """Test --up/--down fail gracefully on detached HEAD."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Current branch is None (detached HEAD)
         git_ops = FakeGitOps(
             worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch=None)]},
@@ -426,7 +426,7 @@ def test_switch_up_with_mismatched_worktree_name() -> None:
     The fix uses find_worktree_for_branch() to resolve branch -> worktree path.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Worktree directories use different naming than branch names
@@ -500,7 +500,7 @@ def test_switch_down_with_mismatched_worktree_name() -> None:
     The fix uses find_worktree_for_branch() to resolve branch -> worktree path.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Worktree directories use different naming than branch names

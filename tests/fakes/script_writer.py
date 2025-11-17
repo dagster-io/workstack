@@ -42,12 +42,12 @@ class FakeScriptWriterOps(ScriptWriterOps):
         unique_id = uuid.uuid4().hex[:8]
 
         # Use sentinel path instead of real temp file
-        script_path = Path(f"/test/script/workstack-{command_name}-{unique_id}.sh")
+        script_path = Path(f"/test/script/erk-{command_name}-{unique_id}.sh")
 
         # Build header (same structure as real implementation)
         header = [
             "#!/bin/bash",
-            f"# workstack {command_name}",
+            f"# erk {command_name}",
             f"# Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             f"# UUID: {unique_id}",
             f"# User: {os.getenv('USER', 'unknown')}",

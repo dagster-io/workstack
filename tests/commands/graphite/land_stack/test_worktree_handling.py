@@ -11,13 +11,13 @@ from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def test_land_stack_with_down_flag_includes_flag_in_error_suggestions() -> None:
     """Test that land-stack --down includes --down in consolidate and retry suggestions."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Create linked worktrees (automatically tracked) - only for downstack branches
         env.create_linked_worktree(name="feat-1", branch="feat-1", chdir=False)
         env.create_linked_worktree(name="feat-2", branch="feat-2", chdir=False)
@@ -85,7 +85,7 @@ def test_land_stack_with_down_flag_includes_flag_in_error_suggestions() -> None:
 def test_land_stack_fails_when_branches_in_multiple_worktrees() -> None:
     """Test that land-stack fails when stack branches are checked out in multiple worktrees."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Create linked worktrees (automatically tracked)
         env.create_linked_worktree(name="feat-1", branch="feat-1", chdir=False)
         env.create_linked_worktree(name="feat-2", branch="feat-2", chdir=False)
@@ -155,7 +155,7 @@ def test_land_stack_fails_when_branches_in_multiple_worktrees() -> None:
 def test_land_stack_succeeds_when_all_branches_in_current_worktree() -> None:
     """Test that land-stack succeeds when all stack branches are only in current worktree."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Only main branch in repo root, current branch is feat-2
         # feat-1 and feat-2 not checked out in other worktrees
         git_ops = FakeGitOps(
@@ -237,7 +237,7 @@ def test_land_stack_from_linked_worktree_on_branch_being_landed() -> None:
     After fix: Detects current branch and skips unnecessary checkout.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Create linked worktree for feat-1 (chdir is ignored in pure mode)
         linked_wt = env.create_linked_worktree(name="feat-1-work", branch="feat-1", chdir=False)
 

@@ -66,9 +66,9 @@ def create_test_context(
         >>> ctx = create_test_context(git_ops=git_ops)
 
         # With pre-configured global config
-        >>> from workstack.core.global_config import GlobalConfig
+        >>> from erk.core.global_config import GlobalConfig
         >>> config = GlobalConfig(
-        ...     erk_root=Path("/tmp/workstacks"),
+        ...     erk_root=Path("/tmp/erks"),
         ...     use_graphite=False,
         ...     shell_setup_complete=False,
         ...     show_pr_info=True,

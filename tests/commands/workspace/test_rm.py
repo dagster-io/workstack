@@ -1,4 +1,4 @@
-"""Tests for workstack rm command.
+"""Tests for erk rm command.
 
 This file tests the rm command which removes a worktree workspace.
 """
@@ -12,14 +12,14 @@ from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def _create_test_context(env, use_graphite: bool = False, dry_run: bool = False, **kwargs):
     """Helper to create test context for rm command tests.
 
     Args:
-        env: Pure workstack environment
+        env: Pure erk environment
         use_graphite: Whether to enable Graphite integration
         dry_run: Whether to use dry-run mode
         **kwargs: Additional arguments to pass to env.build_context()
@@ -46,7 +46,7 @@ def _create_test_context(env, use_graphite: bool = False, dry_run: bool = False,
 def test_rm_force_removes_directory() -> None:
     """Test that rm with --force flag removes the worktree directory."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_name = env.cwd.name
         wt = env.erk_root / "repos" / repo_name / "worktrees" / "foo"
 
@@ -60,7 +60,7 @@ def test_rm_force_removes_directory() -> None:
 def test_rm_prompts_and_aborts_on_no() -> None:
     """Test that rm prompts for confirmation and aborts when user says no."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_name = env.cwd.name
         wt = env.erk_root / "repos" / repo_name / "worktrees" / "bar"
 
@@ -75,7 +75,7 @@ def test_rm_prompts_and_aborts_on_no() -> None:
 def test_rm_dry_run_does_not_delete() -> None:
     """Test that dry-run mode prints actions but doesn't delete."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_name = env.cwd.name
         wt = env.erk_root / "repos" / repo_name / "worktrees" / "test-stack"
 
@@ -93,7 +93,7 @@ def test_rm_dry_run_does_not_delete() -> None:
 def test_rm_dry_run_with_delete_stack() -> None:
     """Test dry-run with --delete-stack flag prints but doesn't delete branches."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_name = env.cwd.name
         wt = env.erk_root / "repos" / repo_name / "worktrees" / "test-stack"
 
@@ -134,7 +134,7 @@ def test_rm_dry_run_with_delete_stack() -> None:
 def test_rm_rejects_dot_dot() -> None:
     """Test that rm rejects '..' as a worktree name."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         test_ctx = _create_test_context(env)
         result = runner.invoke(cli, ["rm", "..", "-f"], obj=test_ctx)
 
@@ -146,7 +146,7 @@ def test_rm_rejects_dot_dot() -> None:
 def test_rm_rejects_root_slash() -> None:
     """Test that rm rejects '/' as a worktree name."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         test_ctx = _create_test_context(env)
         result = runner.invoke(cli, ["rm", "/", "-f"], obj=test_ctx)
 
@@ -158,7 +158,7 @@ def test_rm_rejects_root_slash() -> None:
 def test_rm_rejects_path_with_slash() -> None:
     """Test that rm rejects worktree names containing path separators."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         test_ctx = _create_test_context(env)
         result = runner.invoke(cli, ["rm", "foo/bar", "-f"], obj=test_ctx)
 
@@ -170,7 +170,7 @@ def test_rm_rejects_path_with_slash() -> None:
 def test_rm_rejects_root_name() -> None:
     """Test that rm rejects 'root' as a worktree name."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         test_ctx = _create_test_context(env)
         result = runner.invoke(cli, ["rm", "root", "-f"], obj=test_ctx)
 
@@ -182,7 +182,7 @@ def test_rm_rejects_root_name() -> None:
 def test_rm_changes_directory_when_in_target_worktree() -> None:
     """Test that rm automatically changes to repo root when user is in target worktree."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_name = env.cwd.name
         wt_path = env.erk_root / "repos" / repo_name / "worktrees" / "feature"
 
@@ -217,7 +217,7 @@ def test_rm_with_delete_stack_handles_user_decline() -> None:
     import subprocess
 
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_name = env.cwd.name
         wt = env.erk_root / "repos" / repo_name / "worktrees" / "test-stack"
 
@@ -261,7 +261,7 @@ def test_rm_with_delete_stack_handles_user_decline() -> None:
 def test_rm_with_delete_stack_handles_gt_not_found() -> None:
     """Test that rm -s shows installation instructions when gt not found."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_name = env.cwd.name
         wt = env.erk_root / "repos" / repo_name / "worktrees" / "test-stack"
 

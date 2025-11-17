@@ -63,8 +63,8 @@ def test_real_shell_ops_get_installed_tool_path_python():
     assert result is not None  # Some form of Python should be found
 
 
-def test_real_shell_ops_run_workstack_sync_calls_subprocess():
-    """Test that run_workstack_sync calls subprocess.run with correct parameters.
+def test_real_shell_ops_run_erk_sync_calls_subprocess():
+    """Test that run_erk_sync calls subprocess.run with correct parameters.
 
     This integration test verifies RealShellOps correctly constructs and
     executes the subprocess command with appropriate parameters.
@@ -72,12 +72,12 @@ def test_real_shell_ops_run_workstack_sync_calls_subprocess():
     ops = RealShellOps()
     repo_root = Path("/test/repo")
 
-    # Mock subprocess.run to verify the call without actually running workstack
+    # Mock subprocess.run to verify the call without actually running erk
     with patch("erk.core.shell_ops.subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(returncode=0)
 
         # Call with force=True, verbose=False
-        ops.run_workstack_sync(repo_root, force=True, verbose=False)
+        ops.run_erk_sync(repo_root, force=True, verbose=False)
 
         # Verify subprocess.run was called once
         assert mock_run.call_count == 1
@@ -95,8 +95,8 @@ def test_real_shell_ops_run_workstack_sync_calls_subprocess():
         assert kwargs["text"] is True
 
 
-def test_real_shell_ops_run_workstack_sync_verbose_mode():
-    """Test that run_workstack_sync handles verbose mode correctly."""
+def test_real_shell_ops_run_erk_sync_verbose_mode():
+    """Test that run_erk_sync handles verbose mode correctly."""
     ops = RealShellOps()
     repo_root = Path("/test/repo")
 
@@ -104,7 +104,7 @@ def test_real_shell_ops_run_workstack_sync_verbose_mode():
         mock_run.return_value = MagicMock(returncode=0)
 
         # Call with force=True, verbose=True
-        ops.run_workstack_sync(repo_root, force=True, verbose=True)
+        ops.run_erk_sync(repo_root, force=True, verbose=True)
 
         # Verify command includes --verbose
         call_args = mock_run.call_args
@@ -116,8 +116,8 @@ def test_real_shell_ops_run_workstack_sync_verbose_mode():
         assert kwargs["capture_output"] is False
 
 
-def test_real_shell_ops_run_workstack_sync_without_force():
-    """Test that run_workstack_sync works without force flag."""
+def test_real_shell_ops_run_erk_sync_without_force():
+    """Test that run_erk_sync works without force flag."""
     ops = RealShellOps()
     repo_root = Path("/test/repo")
 
@@ -125,7 +125,7 @@ def test_real_shell_ops_run_workstack_sync_without_force():
         mock_run.return_value = MagicMock(returncode=0)
 
         # Call with force=False
-        ops.run_workstack_sync(repo_root, force=False, verbose=False)
+        ops.run_erk_sync(repo_root, force=False, verbose=False)
 
         # Verify command does not include -f
         call_args = mock_run.call_args
@@ -134,7 +134,7 @@ def test_real_shell_ops_run_workstack_sync_without_force():
         assert "-f" not in cmd
 
 
-def test_real_shell_ops_run_workstack_sync_propagates_error():
+def test_real_shell_ops_run_erk_sync_propagates_error():
     """Test that CalledProcessError is propagated from subprocess.run."""
     ops = RealShellOps()
     repo_root = Path("/test/repo")
@@ -143,13 +143,13 @@ def test_real_shell_ops_run_workstack_sync_propagates_error():
         # Simulate subprocess failure
         mock_run.side_effect = subprocess.CalledProcessError(
             returncode=1,
-            cmd=["workstack", "sync", "-f"],
+            cmd=["erk", "sync", "-f"],
             stderr="sync failed",
         )
 
         # Verify exception is propagated
         try:
-            ops.run_workstack_sync(repo_root, force=True, verbose=False)
+            ops.run_erk_sync(repo_root, force=True, verbose=False)
             raise AssertionError("Expected CalledProcessError to be raised")
         except subprocess.CalledProcessError as e:
             assert e.returncode == 1

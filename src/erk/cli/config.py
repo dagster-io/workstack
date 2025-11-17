@@ -5,7 +5,7 @@ from pathlib import Path
 
 @dataclass(frozen=True)
 class LoadedConfig:
-    """In-memory representation of `.workstack/config.toml`."""
+    """In-memory representation of `.erk/config.toml`."""
 
     env: dict[str, str]
     post_create_commands: list[str]

@@ -20,11 +20,11 @@ def test_basic_command_no_args_no_recovery() -> None:
     )
 
     assert "command erk sync" in script
-    assert "__workstack_exit=$?" in script
-    assert "__workstack_recovery=''" in script
-    assert 'if [ -n "$__workstack_recovery" ] && [ -f "$__workstack_recovery" ]; then' in script
+    assert "__erk_exit=$?" in script
+    assert "__erk_recovery=''" in script
+    assert 'if [ -n "$__erk_recovery" ] && [ -f "$__erk_recovery" ]; then' in script
     assert '  if [ ! -d "$PWD" ]; then' in script
-    assert "return $__workstack_exit" in script
+    assert "return $__erk_exit" in script
     assert script.endswith("\n")
 
 
@@ -39,10 +39,10 @@ def test_command_with_recovery_path() -> None:
 
     assert "command erk sync" in script
     # shlex.quote may or may not add quotes depending on the path
-    assert "__workstack_recovery=" in script
+    assert "__erk_recovery=" in script
     assert "/tmp/recovery.sh" in script
-    assert '    . "$__workstack_recovery"' in script
-    assert '    rm -f "$__workstack_recovery"' in script
+    assert '    . "$__erk_recovery"' in script
+    assert '    rm -f "$__erk_recovery"' in script
 
 
 def test_command_with_simple_args() -> None:
@@ -81,7 +81,7 @@ def test_recovery_path_with_special_chars() -> None:
     )
 
     # Path should be quoted
-    assert "'$__workstack_recovery'" not in script  # Variable reference not quoted
+    assert "'$__erk_recovery'" not in script  # Variable reference not quoted
     assert "'/tmp/path with spaces/recovery.sh'" in script
 
 
@@ -94,19 +94,19 @@ def test_script_checks_pwd_exists() -> None:
     )
 
     assert '  if [ ! -d "$PWD" ]; then' in script
-    assert '    . "$__workstack_recovery"' in script
+    assert '    . "$__erk_recovery"' in script
 
 
 def test_script_respects_keep_scripts_env() -> None:
-    """Script conditionally removes recovery based on WORKSTACK_KEEP_SCRIPTS."""
+    """Script conditionally removes recovery based on ERK_KEEP_SCRIPTS."""
     script = _render_posix_passthrough(
         command_name="sync",
         args=(),
         recovery_path=Path("/tmp/recovery.sh"),
     )
 
-    assert '  if [ -z "$WORKSTACK_KEEP_SCRIPTS" ]; then' in script
-    assert '    rm -f "$__workstack_recovery"' in script
+    assert '  if [ -z "$ERK_KEEP_SCRIPTS" ]; then' in script
+    assert '    rm -f "$__erk_recovery"' in script
 
 
 # Tests for _quote_fish function
@@ -226,11 +226,11 @@ def test_basic_command_no_args_no_recovery_fish() -> None:
     )
 
     assert 'command erk "sync"' in script
-    assert "set __workstack_exit $status" in script
-    assert 'set __workstack_recovery ""' in script
-    assert 'if test -n "$__workstack_recovery"' in script
+    assert "set __erk_exit $status" in script
+    assert 'set __erk_recovery ""' in script
+    assert 'if test -n "$__erk_recovery"' in script
     assert '        if not test -d "$PWD"' in script
-    assert "return $__workstack_exit" in script
+    assert "return $__erk_exit" in script
     assert script.endswith("\n")
 
 
@@ -244,9 +244,9 @@ def test_command_with_recovery_path_fish() -> None:
     )
 
     assert 'command erk "sync"' in script
-    assert 'set __workstack_recovery "/tmp/recovery.fish"' in script
-    assert '            source "$__workstack_recovery"' in script
-    assert '            rm -f "$__workstack_recovery"' in script
+    assert 'set __erk_recovery "/tmp/recovery.fish"' in script
+    assert '            source "$__erk_recovery"' in script
+    assert '            rm -f "$__erk_recovery"' in script
 
 
 def test_command_with_simple_args_fish() -> None:
@@ -284,7 +284,7 @@ def test_recovery_path_with_special_chars_fish() -> None:
     )
 
     # Path should use fish escaping (no spaces in actual path, but test the mechanism)
-    assert "set __workstack_recovery" in script
+    assert "set __erk_recovery" in script
 
 
 def test_script_checks_pwd_exists_fish() -> None:
@@ -296,19 +296,19 @@ def test_script_checks_pwd_exists_fish() -> None:
     )
 
     assert '        if not test -d "$PWD"' in script
-    assert '            source "$__workstack_recovery"' in script
+    assert '            source "$__erk_recovery"' in script
 
 
 def test_script_respects_keep_scripts_env_fish() -> None:
-    """Fish script conditionally removes recovery based on WORKSTACK_KEEP_SCRIPTS."""
+    """Fish script conditionally removes recovery based on ERK_KEEP_SCRIPTS."""
     script = _render_fish_passthrough(
         command_name="sync",
         args=(),
         recovery_path=Path("/tmp/recovery.fish"),
     )
 
-    assert "        if not set -q WORKSTACK_KEEP_SCRIPTS" in script
-    assert '            rm -f "$__workstack_recovery"' in script
+    assert "        if not set -q ERK_KEEP_SCRIPTS" in script
+    assert '            rm -f "$__erk_recovery"' in script
 
 
 def test_fish_indentation_structure() -> None:

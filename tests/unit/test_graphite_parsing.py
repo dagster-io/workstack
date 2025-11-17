@@ -20,11 +20,11 @@ def test_parse_graphite_pr_info():
     pr1 = result["feature-stack-1"]
     assert pr1.number == 101
     assert pr1.state == "OPEN"
-    assert pr1.url == "https://github.com/dagster-io/workstack/pull/101"
+    assert pr1.url == "https://github.com/dagster-io/erk/pull/101"
     assert pr1.is_draft is False
     assert pr1.checks_passing is None  # CI status not available from Graphite
     assert pr1.owner == "dagster-io"
-    assert pr1.repo == "workstack"
+    assert pr1.repo == "erk"
 
     # Check merged PR
     assert "feature-stack-2" in result
@@ -175,8 +175,8 @@ def test_parse_graphite_cache_invalid_data():
 def test_graphite_url_to_github_url():
     """Test converting Graphite URLs to GitHub URLs."""
     # Standard Graphite URL
-    url = _graphite_url_to_github_url("https://app.graphite.com/github/pr/dagster-io/workstack/42")
-    assert url == "https://github.com/dagster-io/workstack/pull/42"
+    url = _graphite_url_to_github_url("https://app.graphite.com/github/pr/dagster-io/erk/42")
+    assert url == "https://github.com/dagster-io/erk/pull/42"
 
     # Different org/repo
     url = _graphite_url_to_github_url("https://app.graphite.com/github/pr/facebook/react/999")

@@ -11,13 +11,13 @@ from erk.core.context import ErkContext
 from erk.core.gitops import WorktreeInfo
 from erk.core.global_config import GlobalConfig, InMemoryGlobalConfigOps
 from tests.fakes.gitops import FakeGitOps
-from tests.test_utils.env_helpers import simulated_workstack_env
+from tests.test_utils.env_helpers import erk_isolated_fs_env
 
 
 def test_create_with_plan_file() -> None:
     """Test creating a worktree from a plan file."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Create a plan file in root worktree
         plan_file = env.root_worktree / "Add_Auth_Feature.md"
         plan_content = "# Auth Feature Plan\n\n- Add login\n- Add signup\n"
@@ -38,7 +38,7 @@ def test_create_with_plan_file() -> None:
         # Create test context using env.build_context() helper
         test_ctx = env.build_context(git_ops=git_ops)
 
-        # Run workstack create with --plan
+        # Run erk create with --plan
         result = runner.invoke(
             cli, ["create", "--plan", "Add_Auth_Feature.md", "--no-post"], obj=test_ctx
         )
@@ -70,7 +70,7 @@ def test_create_with_plan_file() -> None:
 def test_create_with_plan_name_sanitization() -> None:
     """Test that plan filename gets properly sanitized for worktree name."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Create a plan file with underscores and mixed case
         plan_file = env.root_worktree / "MY_COOL_Plan_File.md"
         plan_file.write_text("# Cool Plan\n", encoding="utf-8")
@@ -90,7 +90,7 @@ def test_create_with_plan_name_sanitization() -> None:
         # Create test context using env.build_context() helper
         test_ctx = env.build_context(git_ops=git_ops)
 
-        # Run workstack create with --plan
+        # Run erk create with --plan
         result = runner.invoke(
             cli, ["create", "--plan", "MY_COOL_Plan_File.md", "--no-post"], obj=test_ctx
         )
@@ -113,7 +113,7 @@ def test_create_with_plan_name_sanitization() -> None:
 def test_create_with_both_name_and_plan_fails() -> None:
     """Test that providing both NAME and --plan is an error."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Create a plan file
         plan_file = env.root_worktree / "plan.md"
         plan_file.write_text("# Plan\n", encoding="utf-8")
@@ -148,7 +148,7 @@ def test_create_with_both_name_and_plan_fails() -> None:
             cwd=env.root_worktree,
         )
 
-        # Run workstack create with both NAME and --plan
+        # Run erk create with both NAME and --plan
         result = runner.invoke(cli, ["create", "myname", "--plan", "plan.md"], obj=test_ctx)
 
         # Should fail
@@ -159,7 +159,7 @@ def test_create_with_both_name_and_plan_fails() -> None:
 def test_create_rejects_reserved_name_root() -> None:
     """Test that 'root' is rejected as a reserved worktree name."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Configure FakeGitOps with root worktree only
         git_ops = FakeGitOps(
             worktrees={
@@ -207,7 +207,7 @@ def test_create_rejects_reserved_name_root() -> None:
 def test_create_rejects_reserved_name_root_case_insensitive() -> None:
     """Test that 'ROOT', 'Root', etc. are also rejected (case-insensitive)."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Configure FakeGitOps with root worktree only
         git_ops = FakeGitOps(
             worktrees={
@@ -254,7 +254,7 @@ def test_create_rejects_reserved_name_root_case_insensitive() -> None:
 def test_create_rejects_main_as_worktree_name() -> None:
     """Test that 'main' is rejected as a worktree name."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Configure FakeGitOps with root worktree only
         git_ops = FakeGitOps(
             worktrees={
@@ -301,7 +301,7 @@ def test_create_rejects_main_as_worktree_name() -> None:
 def test_create_rejects_master_as_worktree_name() -> None:
     """Test that 'master' is rejected as a worktree name."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Configure FakeGitOps with root worktree only
         git_ops = FakeGitOps(
             worktrees={
@@ -347,14 +347,14 @@ def test_create_rejects_master_as_worktree_name() -> None:
 
 def test_render_cd_script() -> None:
     """Test that render_cd_script generates proper shell code."""
-    worktree_path = Path("/example/workstacks/repo/my-worktree")
+    worktree_path = Path("/example/erks/repo/my-worktree")
     script = render_cd_script(
         worktree_path,
-        comment="workstack create - cd to new worktree",
+        comment="erk create - cd to new worktree",
         success_message="✓ Switched to new worktree.",
     )
 
-    assert "# workstack create - cd to new worktree" in script
+    assert "# erk create - cd to new worktree" in script
     assert f"cd '{worktree_path}'" in script
     assert 'echo "✓ Switched to new worktree."' in script
 
@@ -362,7 +362,7 @@ def test_render_cd_script() -> None:
 def test_create_with_script_flag() -> None:
     """Test that --script flag outputs cd script instead of regular messages."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Configure FakeGitOps with root worktree only
         git_ops = FakeGitOps(
             worktrees={
@@ -378,7 +378,7 @@ def test_create_with_script_flag() -> None:
         # Create test context using env.build_context() helper
         test_ctx = env.build_context(git_ops=git_ops)
 
-        # Run workstack create with --script flag
+        # Run erk create with --script flag
         result = runner.invoke(
             cli, ["create", "test-worktree", "--no-post", "--script"], obj=test_ctx
         )
@@ -413,12 +413,12 @@ def test_hidden_shell_cmd_create_passthrough_on_help() -> None:
     result = runner.invoke(hidden_shell_cmd, ["create", "--help"])
 
     assert result.exit_code == 0
-    assert result.output.strip() == "__WORKSTACK_PASSTHROUGH__"
+    assert result.output.strip() == "__ERK_PASSTHROUGH__"
 
 
 def test_hidden_shell_cmd_create_passthrough_on_error(tmp_path: Path) -> None:
     """Shell integration command signals passthrough for errors."""
-    # Set up isolated environment without workstack config
+    # Set up isolated environment without erk config
     # This ensures create_context() won't find a real repo
     env_vars = os.environ.copy()
     env_vars["HOME"] = str(tmp_path)
@@ -432,4 +432,4 @@ def test_hidden_shell_cmd_create_passthrough_on_error(tmp_path: Path) -> None:
 
         # Should passthrough on error
         assert result.exit_code != 0
-        assert result.output.strip() == "__WORKSTACK_PASSTHROUGH__"
+        assert result.output.strip() == "__ERK_PASSTHROUGH__"

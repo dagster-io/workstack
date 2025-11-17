@@ -1,17 +1,17 @@
-"""Centralized test environment helpers for simulating workstack scenarios.
+"""Centralized test environment helpers for simulating erk scenarios.
 
-This module provides helpers for setting up realistic workstack test environments
+This module provides helpers for setting up realistic erk test environments
 with Click's CliRunner. It provides two patterns:
 
-1. simulated_workstack_env(): Filesystem-based (uses isolated_filesystem(),
+1. simulated_erk_env(): Filesystem-based (uses isolated_filesystem(),
    creates real directories)
-2. pure_workstack_env(): In-memory (uses fakes only, no filesystem I/O)
+2. pure_erk_env(): In-memory (uses fakes only, no filesystem I/O)
 
 Key Components:
     - SimulatedWorkstackEnv: Helper class for filesystem-based testing
     - PureWorkstackEnv: Helper class for in-memory testing
-    - simulated_workstack_env(): Context manager for filesystem-based tests
-    - pure_workstack_env(): Context manager for in-memory tests
+    - simulated_erk_env(): Context manager for filesystem-based tests
+    - pure_erk_env(): Context manager for in-memory tests
 
 Usage Pattern:
 
@@ -23,7 +23,7 @@ Usage Pattern:
             cwd = Path.cwd()
             git_dir = cwd / ".git"
             git_dir.mkdir()
-            erk_root = cwd / "workstacks"
+            erk_root = cwd / "erks"
             erk_root.mkdir()
 
             git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
@@ -33,11 +33,11 @@ Usage Pattern:
             result = runner.invoke(cli, ["command"], obj=test_ctx)
     ```
 
-    After (using simulated_workstack_env - ~10 lines per test):
+    After (using simulated_erk_env - ~10 lines per test):
     ```python
     def test_something() -> None:
         runner = CliRunner()
-        with simulated_workstack_env(runner) as env:
+        with simulated_erk_env(runner) as env:
             git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
             global_config_ops = GlobalConfig(...)
             script_writer=env.script_writer,
@@ -50,7 +50,7 @@ Advanced Usage (complex worktree scenarios):
     ```python
     def test_multi_worktree_scenario() -> None:
         runner = CliRunner()
-        with simulated_workstack_env(runner) as env:
+        with simulated_erk_env(runner) as env:
             # Create linked worktrees
             env.create_linked_worktree("feat-1", "feat-1", chdir=False)
             env.create_linked_worktree("feat-2", "feat-2", chdir=True)
@@ -72,7 +72,7 @@ Advanced Usage (complex worktree scenarios):
 Directory Structure Created:
     base/
       ├── repo/         (root worktree with .git/)
-      └── workstacks/   (parallel to repo, initially empty)
+      └── erks/   (parallel to repo, initially empty)
 
 Note: This helper is specifically for CliRunner tests. For pytest's tmp_path fixture,
 use WorktreeScenario from conftest.py instead.
@@ -97,8 +97,8 @@ from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.script_writer import FakeScriptWriterOps
 
 
-class SimulatedWorkstackEnv:
-    """Helper for managing simulated workstack test environment.
+class ErkIsolatedFsEnv:
+    """Helper for managing simulated erk test environment.
 
     This class provides utilities for:
     - Managing root and linked worktrees
@@ -109,7 +109,7 @@ class SimulatedWorkstackEnv:
         cwd: Current working directory (initially root_worktree)
         git_dir: Path to .git directory (root_worktree / ".git")
         root_worktree: Path to root worktree (has .git/ directory)
-        erk_root: Path to workstacks directory (parallel to root)
+        erk_root: Path to erks directory (parallel to root)
         script_writer: RealScriptWriterOps for creating actual temp files
         repo: RepoContext computed from root_worktree and erk_root
     """
@@ -119,7 +119,7 @@ class SimulatedWorkstackEnv:
 
         Args:
             root_worktree: Path to root worktree (has .git/ directory)
-            erk_root: Path to workstacks directory (parallel to root)
+            erk_root: Path to erks directory (parallel to root)
         """
         self.root_worktree = root_worktree
         self.erk_root = erk_root
@@ -148,7 +148,7 @@ class SimulatedWorkstackEnv:
         return self._repo
 
     def create_linked_worktree(self, name: str, branch: str, *, chdir: bool) -> Path:
-        """Create a linked worktree in workstacks directory.
+        """Create a linked worktree in erks directory.
 
         Args:
             name: Name for the worktree directory
@@ -315,7 +315,7 @@ class SimulatedWorkstackEnv:
 
         Example:
             ```python
-            with simulated_workstack_env(runner) as env:
+            with simulated_erk_env(runner) as env:
                 # Simple case - use all defaults
                 ctx = env.build_context()
 
@@ -460,13 +460,13 @@ class SimulatedWorkstackEnv:
 
 
 @contextmanager
-def simulated_workstack_env(runner: CliRunner) -> Generator[SimulatedWorkstackEnv]:
-    """Set up simulated workstack environment with isolated filesystem.
+def erk_isolated_fs_env(runner: CliRunner) -> Generator[ErkIsolatedFsEnv]:
+    """Set up simulated erk environment with isolated filesystem.
 
     Creates realistic directory structure:
         base/
           ├── repo/         (root worktree with .git/)
-          └── workstacks/   (parallel to repo, initially empty)
+          └── erks/   (parallel to repo, initially empty)
 
     Defaults to root worktree. Use env.create_linked_worktree() to create
     and optionally navigate to linked worktrees.
@@ -485,8 +485,8 @@ def simulated_workstack_env(runner: CliRunner) -> Generator[SimulatedWorkstackEn
         ```python
         def test_something() -> None:
             runner = CliRunner()
-            # Note: simulated_workstack_env() handles isolated_filesystem() internally
-            with simulated_workstack_env(runner) as env:
+            # Note: simulated_erk_env() handles isolated_filesystem() internally
+            with simulated_erk_env(runner) as env:
                 # env.cwd is available (root worktree)
                 # env.git_dir is available (.git directory)
                 # env.script_writer is available (RealScriptWriterOps for temp files)
@@ -506,30 +506,30 @@ def simulated_workstack_env(runner: CliRunner) -> Generator[SimulatedWorkstackEn
         root_worktree.mkdir()
         (root_worktree / ".git").mkdir()
 
-        # Create workstacks directory
-        erk_root = base / "workstacks"
+        # Create erks directory
+        erk_root = base / "erks"
         erk_root.mkdir()
 
         # Default to root worktree
         os.chdir(root_worktree)
 
-        yield SimulatedWorkstackEnv(
+        yield ErkIsolatedFsEnv(
             root_worktree=root_worktree,
             erk_root=erk_root,
         )
 
 
-class PureWorkstackEnv:
+class ErkInMemEnv:
     """Helper for pure in-memory testing without filesystem I/O.
 
     Use this for tests that verify command logic without needing
     actual filesystem operations. This is faster and simpler than
-    simulated_workstack_env() for tests that don't need real directories.
+    simulated_erk_env() for tests that don't need real directories.
 
     Attributes:
         cwd: Sentinel path representing current working directory
         git_dir: Sentinel path representing .git directory
-        erk_root: Sentinel path for workstacks directory
+        erk_root: Sentinel path for erks directory
         script_writer: FakeScriptWriterOps for in-memory script verification
         repo: RepoContext computed from cwd and erk_root
     """
@@ -546,7 +546,7 @@ class PureWorkstackEnv:
         Args:
             cwd: Sentinel path for current working directory
             git_dir: Sentinel path for .git directory
-            erk_root: Sentinel path for workstacks directory
+            erk_root: Sentinel path for erks directory
             script_writer: FakeScriptWriterOps instance for script verification
         """
         self.cwd = cwd
@@ -607,7 +607,7 @@ class PureWorkstackEnv:
 
         Example:
             ```python
-            with pure_workstack_env(runner) as env:
+            with pure_erk_env(runner) as env:
                 # Simple case - use all defaults
                 ctx = env.build_context()
 
@@ -616,7 +616,7 @@ class PureWorkstackEnv:
 
                 # With existing paths for pure mode testing
                 ctx = env.build_context(
-                    existing_paths={Path("/test/repo/.workstack")},
+                    existing_paths={Path("/test/repo/.erk")},
                     file_contents={Path("/test/repo/.PLAN.md"): "plan content"},
                 )
             ```
@@ -629,7 +629,7 @@ class PureWorkstackEnv:
         if git_ops is None:
             # Automatically include core sentinel paths in existing_paths
             # so that repo discovery and other path checks work correctly
-            # Include repo.root and repo.workstacks_dir so os.walk() and path checks succeed
+            # Include repo.root and repo.erks_dir so os.walk() and path checks succeed
             core_paths = {
                 self.cwd,
                 self.git_dir,
@@ -837,14 +837,14 @@ class PureWorkstackEnv:
 
 
 @contextmanager
-def pure_workstack_env(
+def erk_inmem_env(
     runner: CliRunner,
     *,
     branches: list[BranchMetadata] | None = None,
-) -> Generator[PureWorkstackEnv]:
+) -> Generator[ErkInMemEnv]:
     """Create pure in-memory test environment without filesystem I/O.
 
-    This context manager provides a faster alternative to simulated_workstack_env()
+    This context manager provides a faster alternative to simulated_erk_env()
     for tests that don't need actual filesystem operations. It uses sentinel paths
     and in-memory fakes exclusively.
 
@@ -857,7 +857,7 @@ def pure_workstack_env(
     - Verifying script content without creating temp files
     - Running tests faster without filesystem overhead
 
-    Use simulated_workstack_env() when:
+    Use simulated_erk_env() when:
     - Testing actual worktree creation/removal
     - Verifying git integration with real directories
     - Testing filesystem-dependent features
@@ -873,7 +873,7 @@ def pure_workstack_env(
         ```python
         def test_jump_pure() -> None:
             runner = CliRunner()
-            with pure_workstack_env(runner) as env:
+            with pure_erk_env(runner) as env:
                 # No filesystem I/O, all operations in-memory
                 git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
                 ctx = ErkContext.for_test(
@@ -894,14 +894,14 @@ def pure_workstack_env(
     # Use sentinel paths that throw on filesystem operations
     cwd = sentinel_path("/test/repo")
     git_dir = sentinel_path("/test/repo/.git")
-    erk_root = sentinel_path("/test/workstacks")
+    erk_root = sentinel_path("/test/erks")
 
     # Create in-memory script writer
     script_writer = FakeScriptWriterOps()
 
     # No isolated_filesystem(), no os.chdir(), no mkdir()
     try:
-        yield PureWorkstackEnv(
+        yield ErkInMemEnv(
             cwd=cwd,
             git_dir=git_dir,
             erk_root=erk_root,

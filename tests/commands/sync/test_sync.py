@@ -17,14 +17,14 @@ from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from tests.test_utils import sentinel_path
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def test_sync_requires_graphite() -> None:
     """Test that sync command requires Graphite to be enabled."""
     runner = CliRunner()
     cwd = sentinel_path()
-    erk_root = cwd / "workstacks"
+    erk_root = cwd / "erks"
 
     # Create minimal git repo structure
     repo_root = cwd
@@ -67,7 +67,7 @@ def test_sync_requires_graphite() -> None:
 def test_sync_runs_gt_sync_from_root() -> None:
     """Test that sync runs gt sync from root worktree."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
@@ -106,7 +106,7 @@ def test_sync_runs_gt_sync_from_root() -> None:
 def test_sync_with_force_flag() -> None:
     """Test that sync passes --force flag to gt sync."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
@@ -144,7 +144,7 @@ def test_sync_with_force_flag() -> None:
 def test_sync_handles_gt_not_installed() -> None:
     """Test that sync handles gt command not found."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
@@ -178,7 +178,7 @@ def test_sync_handles_gt_not_installed() -> None:
 def test_sync_handles_gt_sync_failure() -> None:
     """Test that sync handles gt sync failure."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
@@ -210,10 +210,10 @@ def test_sync_handles_gt_sync_failure() -> None:
         assert "gt sync failed: exit code 128" in result.output
 
 
-def test_sync_identifies_deletable_workstacks() -> None:
-    """Test that sync identifies merged/closed workstacks."""
+def test_sync_identifies_deletable_erks() -> None:
+    """Test that sync identifies merged/closed erks."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_name = env.cwd.name
         repo_dir = env.erk_root / "repos" / repo_name
 
@@ -264,10 +264,10 @@ def test_sync_identifies_deletable_workstacks() -> None:
         assert "feature-2" not in result.output or "merged" not in result.output
 
 
-def test_sync_no_deletable_workstacks() -> None:
-    """Test sync when there are no deletable workstacks."""
+def test_sync_no_deletable_erks() -> None:
+    """Test sync when there are no deletable erks."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
@@ -299,7 +299,7 @@ def test_sync_no_deletable_workstacks() -> None:
 def test_sync_with_confirmation() -> None:
     """Test sync with user confirmation."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_name = env.cwd.name
         repo_dir = env.erk_root / "repos" / repo_name
 
@@ -341,7 +341,7 @@ def test_sync_with_confirmation() -> None:
 def test_sync_user_cancels() -> None:
     """Test sync when user cancels."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_name = env.cwd.name
         repo_dir = env.erk_root / "repos" / repo_name
 
@@ -383,7 +383,7 @@ def test_sync_user_cancels() -> None:
 def test_sync_force_skips_confirmation() -> None:
     """Test sync -f skips confirmation."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_name = env.cwd.name
         repo_dir = env.erk_root / "repos" / repo_name
 
@@ -424,7 +424,7 @@ def test_sync_force_skips_confirmation() -> None:
 def test_sync_dry_run() -> None:
     """Test sync --dry-run shows operations without executing."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_name = env.cwd.name
         repo_dir = env.erk_root / "repos" / repo_name
 
@@ -470,7 +470,7 @@ def test_sync_dry_run() -> None:
 def test_sync_return_to_original_worktree() -> None:
     """Test that sync returns to original worktree after running."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Define worktree path
         wt1 = env.erk_root / "feature-1"
 
@@ -509,7 +509,7 @@ def test_sync_return_to_original_worktree() -> None:
 def test_sync_original_worktree_deleted() -> None:
     """Test sync when original worktree is deleted during cleanup."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_name = env.cwd.name
         repo_dir = env.erk_root / "repos" / repo_name
 
@@ -571,7 +571,7 @@ def test_render_return_to_root_script() -> None:
 def test_sync_script_mode_when_worktree_exists() -> None:
     """--script outputs nothing when worktree still exists."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_name = env.cwd.name
         repo_dir = env.erk_root / "repos" / repo_name
 
@@ -609,7 +609,7 @@ def test_sync_script_mode_when_worktree_exists() -> None:
         assert result.exit_code == 0
         unexpected_script = render_cd_script(
             env.cwd,
-            comment="workstack sync - return to root",
+            comment="erk sync - return to root",
             success_message="✓ Switched to root worktree.",
         ).strip()
         assert unexpected_script not in result.output
@@ -623,13 +623,13 @@ def test_hidden_shell_cmd_sync_passthrough_on_help() -> None:
     result = runner.invoke(hidden_shell_cmd, ["sync", "--help"])
 
     assert result.exit_code == 0
-    assert result.output.strip() == "__WORKSTACK_PASSTHROUGH__"
+    assert result.output.strip() == "__ERK_PASSTHROUGH__"
 
 
 def test_sync_force_runs_double_gt_sync() -> None:
     """Test that sync -f runs gt sync twice: once at start, once after cleanup."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_name = env.cwd.name
         repo_dir = env.erk_root / "repos" / repo_name
 
@@ -680,7 +680,7 @@ def test_sync_force_runs_double_gt_sync() -> None:
 def test_sync_without_force_runs_single_gt_sync() -> None:
     """Test that sync without -f only runs gt sync once and shows manual instruction."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_name = env.cwd.name
         repo_dir = env.erk_root / "repos" / repo_name
 
@@ -728,7 +728,7 @@ def test_sync_without_force_runs_single_gt_sync() -> None:
 def test_sync_force_dry_run_no_sync_calls() -> None:
     """Test that sync -f --dry-run does not call gt sync at all."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_name = env.cwd.name
         repo_dir = env.erk_root / "repos" / repo_name
 
@@ -773,7 +773,7 @@ def test_sync_force_dry_run_no_sync_calls() -> None:
 def test_sync_force_no_deletable_single_sync() -> None:
     """Test that sync -f with no deletable worktrees only runs gt sync once."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
@@ -812,7 +812,7 @@ def test_sync_force_no_deletable_single_sync() -> None:
 def test_sync_verbose_flag() -> None:
     """Test that sync --verbose passes quiet=False to graphite_ops.sync()."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
@@ -850,7 +850,7 @@ def test_sync_verbose_flag() -> None:
 def test_sync_verbose_short_flag() -> None:
     """Test that sync -v (short form) passes quiet=False to graphite_ops.sync()."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
@@ -887,7 +887,7 @@ def test_sync_verbose_short_flag() -> None:
 def test_sync_force_verbose_combination() -> None:
     """Test that sync -f -v combines both flags correctly."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={

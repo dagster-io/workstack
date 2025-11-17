@@ -1,1 +1,1 @@
-"""Tests for workstack."""
+"""Tests for erk."""

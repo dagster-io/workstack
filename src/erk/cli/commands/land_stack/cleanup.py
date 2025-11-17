@@ -49,7 +49,7 @@ def _cleanup_and_navigate(
     final_branch = trunk_branch
 
     # Step 2: Sync worktrees
-    base_cmd = "workstack sync -f"
+    base_cmd = "erk sync -f"
     if verbose:
         base_cmd += " --verbose"
 
@@ -58,7 +58,7 @@ def _cleanup_and_navigate(
     else:
         try:
             # This will remove merged worktrees and delete branches
-            ctx.shell_ops.run_workstack_sync(
+            ctx.shell_ops.run_erk_sync(
                 repo_root,
                 force=True,
                 verbose=verbose,

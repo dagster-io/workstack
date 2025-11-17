@@ -1,4 +1,4 @@
-"""Tests for workstack create command output behavior."""
+"""Tests for erk create command output behavior."""
 
 from pathlib import Path
 
@@ -7,7 +7,7 @@ from click.testing import CliRunner
 from erk.cli.cli import cli
 from erk.core.gitops import WorktreeInfo
 from tests.fakes.gitops import FakeGitOps
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def test_create_from_current_branch_outputs_script_path_to_stdout() -> None:
@@ -17,10 +17,10 @@ def test_create_from_current_branch_outputs_script_path_to_stdout() -> None:
     from stdout. If the script path is written to stderr, the handler will miss it
     and display 'no directory change needed' instead of switching to the new worktree.
 
-    See: https://github.com/anthropics/workstack/issues/XXX
+    See: https://github.com/anthropics/erk/issues/XXX
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Set up git state: in root worktree on feature branch

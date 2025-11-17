@@ -11,13 +11,13 @@ from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def test_land_stack_gets_branches_to_land_correctly() -> None:
     """Test that land-stack lands from bottom of stack to current branch."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
@@ -97,7 +97,7 @@ def test_land_stack_from_top_of_stack_lands_all_branches() -> None:
     Fix: Should return entire stack from bottom to current.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
@@ -188,7 +188,7 @@ def test_land_stack_refreshes_metadata_after_sync() -> None:
     and verifies that subsequent get_all_branches() calls return fresh data.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={

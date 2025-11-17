@@ -23,7 +23,7 @@ def _ensure_graphite_enabled(ctx: ErkContext) -> None:
     if not (ctx.global_config and ctx.global_config.use_graphite):
         user_output(
             "Error: This command requires Graphite to be enabled. "
-            "Run 'workstack config set use_graphite true'"
+            "Run 'erk config set use_graphite true'"
         )
         raise SystemExit(1)
 
@@ -252,17 +252,17 @@ def complete_worktree_names(
     try:
         # During shell completion, ctx.obj may be None if the CLI group callback
         # hasn't run yet. Create a default context in this case.
-        workstack_ctx = ctx.find_root().obj
-        if workstack_ctx is None:
-            workstack_ctx = create_context(dry_run=False)
+        erk_ctx = ctx.find_root().obj
+        if erk_ctx is None:
+            erk_ctx = create_context(dry_run=False)
 
-        repo = discover_repo_context(workstack_ctx, workstack_ctx.cwd)
+        repo = discover_repo_context(erk_ctx, erk_ctx.cwd)
         ensure_repo_dir(repo)
 
         names = ["root"] if "root".startswith(incomplete) else []
 
         # Get worktree names from git_ops instead of filesystem iteration
-        worktrees = workstack_ctx.git_ops.list_worktrees(repo.root)
+        worktrees = erk_ctx.git_ops.list_worktrees(repo.root)
         for wt in worktrees:
             if wt.is_root:
                 continue  # Skip root worktree (already added as "root")

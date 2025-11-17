@@ -24,7 +24,7 @@ from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
 from tests.test_utils.builders import PullRequestInfoBuilder
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 class TrackingFakeGitHubOps(FakeGitHubOps):
@@ -60,7 +60,7 @@ def test_land_stack_detects_and_updates_stale_pr_base() -> None:
     This test MUST FAIL before the fix is applied.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Set up stack: main -> feat-1 -> feat-2
         # Simulate after feat-1 has already been landed:
         # - Local git parent of feat-2 is main (after previous iteration's restack)
@@ -159,7 +159,7 @@ def test_land_stack_skips_update_when_pr_base_already_correct() -> None:
     - Proceed with merge
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Set up stack with correct PR base
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
@@ -234,7 +234,7 @@ def test_land_stack_with_multiple_branches_updates_all_stale_bases() -> None:
     Phase 2.5 should detect and fix each stale base before merging.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Set up 3-branch stack: main -> feat-1 -> feat-2 -> feat-3
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},

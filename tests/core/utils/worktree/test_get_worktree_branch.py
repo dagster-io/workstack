@@ -10,9 +10,9 @@ def test_returns_branch_for_worktree() -> None:
     """Test returns branch name for a given worktree path."""
     worktrees = [
         WorktreeInfo(Path("/repo"), "main", True),
-        WorktreeInfo(Path("/repo/workstacks/feat"), "feature-x", False),
+        WorktreeInfo(Path("/repo/erks/feat"), "feature-x", False),
     ]
-    wt_path = Path("/repo/workstacks/feat")
+    wt_path = Path("/repo/erks/feat")
 
     result = get_worktree_branch(worktrees, wt_path)
 
@@ -24,7 +24,7 @@ def test_returns_none_for_unknown_worktree() -> None:
     worktrees = [
         WorktreeInfo(Path("/repo"), "main", True),
     ]
-    wt_path = Path("/repo/workstacks/unknown")
+    wt_path = Path("/repo/erks/unknown")
 
     result = get_worktree_branch(worktrees, wt_path)
 
@@ -35,9 +35,9 @@ def test_returns_none_for_detached_head() -> None:
     """Test returns None when worktree is in detached HEAD state."""
     worktrees = [
         WorktreeInfo(Path("/repo"), "main", True),
-        WorktreeInfo(Path("/repo/workstacks/detached"), None, False),
+        WorktreeInfo(Path("/repo/erks/detached"), None, False),
     ]
-    wt_path = Path("/repo/workstacks/detached")
+    wt_path = Path("/repo/erks/detached")
 
     result = get_worktree_branch(worktrees, wt_path)
 
@@ -47,9 +47,9 @@ def test_returns_none_for_detached_head() -> None:
 def test_handles_path_normalization() -> None:
     """Test handles different path representations correctly."""
     worktrees = [
-        WorktreeInfo(Path("/repo/workstacks/feat"), "feature-x", False),
+        WorktreeInfo(Path("/repo/erks/feat"), "feature-x", False),
     ]
-    wt_path = Path("/repo/workstacks/feat/.")  # With trailing dot
+    wt_path = Path("/repo/erks/feat/.")  # With trailing dot
 
     result = get_worktree_branch(worktrees, wt_path)
 

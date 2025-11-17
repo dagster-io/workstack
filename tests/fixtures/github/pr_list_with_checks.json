@@ -2,7 +2,7 @@
   {
     "number": 123,
     "headRefName": "feature-branch",
-    "url": "https://github.com/dagster-io/workstack/pull/123",
+    "url": "https://github.com/dagster-io/erk/pull/123",
     "state": "OPEN",
     "isDraft": false,
     "statusCheckRollup": [
@@ -19,7 +19,7 @@
   {
     "number": 124,
     "headRefName": "bugfix-branch",
-    "url": "https://github.com/dagster-io/workstack/pull/124",
+    "url": "https://github.com/dagster-io/erk/pull/124",
     "state": "OPEN",
     "isDraft": false,
     "statusCheckRollup": [
@@ -32,7 +32,7 @@
   {
     "number": 125,
     "headRefName": "pending-branch",
-    "url": "https://github.com/dagster-io/workstack/pull/125",
+    "url": "https://github.com/dagster-io/erk/pull/125",
     "state": "OPEN",
     "isDraft": true,
     "statusCheckRollup": [

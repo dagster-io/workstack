@@ -1,4 +1,4 @@
-"""CLI tests for workstack status command.
+"""CLI tests for erk status command.
 
 This file focuses on CLI-specific concerns for the status command:
 - Command execution and exit codes
@@ -72,7 +72,7 @@ def test_status_cmd_in_subdirectory_of_worktree(tmp_path: Path) -> None:
     git_dir = repo_root / ".git"
     git_dir.mkdir()
 
-    worktree_path = tmp_path / "workstacks" / "repo" / "feature"
+    worktree_path = tmp_path / "erks" / "repo" / "feature"
     worktree_path.mkdir(parents=True)
     subdir = worktree_path / "src" / "nested"
     subdir.mkdir(parents=True)
@@ -91,7 +91,7 @@ def test_status_cmd_in_subdirectory_of_worktree(tmp_path: Path) -> None:
         recent_commits={worktree_path: [], subdir: []},
     )
     global_config = GlobalConfig(
-        erk_root=tmp_path / "workstacks",
+        erk_root=tmp_path / "erks",
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=False,
@@ -178,7 +178,7 @@ def test_status_cmd_not_in_git_repo(tmp_path: Path) -> None:
     )
 
     global_config = GlobalConfig(
-        erk_root=tmp_path / "workstacks",
+        erk_root=tmp_path / "erks",
         use_graphite=False,
         shell_setup_complete=False,
         show_pr_info=True,

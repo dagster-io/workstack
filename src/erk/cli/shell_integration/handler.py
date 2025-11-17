@@ -22,7 +22,7 @@ from erk.cli.shell_utils import (
 )
 from erk.core.context import create_context
 
-PASSTHROUGH_MARKER: Final[str] = "__WORKSTACK_PASSTHROUGH__"
+PASSTHROUGH_MARKER: Final[str] = "__ERK_PASSTHROUGH__"
 PASSTHROUGH_COMMANDS: Final[set[str]] = {"sync"}
 
 
@@ -121,7 +121,7 @@ def handle_shell_request(args: tuple[str, ...]) -> ShellIntegrationResult:
 
 def _build_passthrough_script(command_name: str, args: tuple[str, ...]) -> ShellIntegrationResult:
     """Create a passthrough script tailored for the caller's shell."""
-    shell_name = os.environ.get("WORKSTACK_SHELL", "bash").lower()
+    shell_name = os.environ.get("ERK_SHELL", "bash").lower()
     ctx = create_context(dry_run=False)
     recovery_path = generate_recovery_script(ctx)
 
@@ -155,17 +155,17 @@ def _render_posix_passthrough(
     recovery_literal = shlex.quote(str(recovery_path)) if recovery_path is not None else "''"
     lines = [
         f"command erk {quoted_args}",
-        "__workstack_exit=$?",
-        f"__workstack_recovery={recovery_literal}",
-        'if [ -n "$__workstack_recovery" ] && [ -f "$__workstack_recovery" ]; then',
+        "__erk_exit=$?",
+        f"__erk_recovery={recovery_literal}",
+        'if [ -n "$__erk_recovery" ] && [ -f "$__erk_recovery" ]; then',
         '  if [ ! -d "$PWD" ]; then',
-        '    . "$__workstack_recovery"',
+        '    . "$__erk_recovery"',
         "  fi",
-        '  if [ -z "$WORKSTACK_KEEP_SCRIPTS" ]; then',
-        '    rm -f "$__workstack_recovery"',
+        '  if [ -z "$ERK_KEEP_SCRIPTS" ]; then',
+        '    rm -f "$__erk_recovery"',
         "  fi",
         "fi",
-        "return $__workstack_exit",
+        "return $__erk_exit",
     ]
     return "\n".join(lines) + "\n"
 
@@ -217,18 +217,18 @@ def _render_fish_passthrough(
     recovery_literal = _quote_fish(str(recovery_path)) if recovery_path is not None else '""'
     lines = [
         f"command erk {command_parts}",
-        "set __workstack_exit $status",
-        f"set __workstack_recovery {recovery_literal}",
-        'if test -n "$__workstack_recovery"',
-        '    if test -f "$__workstack_recovery"',
+        "set __erk_exit $status",
+        f"set __erk_recovery {recovery_literal}",
+        'if test -n "$__erk_recovery"',
+        '    if test -f "$__erk_recovery"',
         '        if not test -d "$PWD"',
-        '            source "$__workstack_recovery"',
+        '            source "$__erk_recovery"',
         "        end",
-        "        if not set -q WORKSTACK_KEEP_SCRIPTS",
-        '            rm -f "$__workstack_recovery"',
+        "        if not set -q ERK_KEEP_SCRIPTS",
+        '            rm -f "$__erk_recovery"',
         "        end",
         "    end",
         "end",
-        "return $__workstack_exit",
+        "return $__erk_exit",
     ]
     return "\n".join(lines) + "\n"

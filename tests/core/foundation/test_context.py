@@ -148,8 +148,8 @@ def test_for_test_factory_accepts_trunk_branch() -> None:
         repo=RepoContext(
             root=Path("/repo"),
             repo_name="repo",
-            repo_dir=Path("/repo/.workstacks"),
-            worktrees_dir=Path("/repo/.workstacks") / "worktrees",
+            repo_dir=Path("/repo/.erks"),
+            worktrees_dir=Path("/repo/.erks") / "worktrees",
         ),
     )
 

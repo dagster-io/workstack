@@ -340,7 +340,7 @@ def create(
         plan_stem = plan_file.stem  # filename without extension
         cleaned_stem = strip_plan_from_filename(plan_stem)
         base_name = sanitize_worktree_name(cleaned_stem)
-        # Note: Apply ensure_unique_worktree_name() and truncation after getting workstacks_dir
+        # Note: Apply ensure_unique_worktree_name() and truncation after getting erks_dir
         name = base_name
 
     # Regular create (no special flags)

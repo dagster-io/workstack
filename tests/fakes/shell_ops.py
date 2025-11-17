@@ -68,8 +68,8 @@ class FakeShellOps(ShellOps):
         """Return the tool path if configured, None otherwise."""
         return self._installed_tools.get(tool_name)
 
-    def run_workstack_sync(self, repo_root: Path, *, force: bool, verbose: bool) -> None:
-        """Track call to run_workstack_sync without executing anything.
+    def run_erk_sync(self, repo_root: Path, *, force: bool, verbose: bool) -> None:
+        """Track call to run_erk_sync without executing anything.
 
         This method records the call parameters for test assertions.
         It does not execute any actual subprocess operations.
@@ -78,7 +78,7 @@ class FakeShellOps(ShellOps):
 
     @property
     def sync_calls(self) -> list[tuple[Path, bool, bool]]:
-        """Get the list of run_workstack_sync() calls that were made.
+        """Get the list of run_erk_sync() calls that were made.
 
         Returns list of (repo_root, force, verbose) tuples.
 

@@ -13,13 +13,13 @@ from erk.core.context import ErkContext
 from erk.core.gitops import WorktreeInfo
 from erk.core.global_config import GlobalConfig, InMemoryGlobalConfigOps
 from tests.fakes.gitops import FakeGitOps
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def test_current_returns_worktree_name() -> None:
     """Test that current returns worktree name when in named worktree."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Construct sentinel paths (no filesystem operations needed)
         work_dir = env.erk_root / env.cwd.name
         feature_x_path = work_dir / "feature-x"
@@ -56,7 +56,7 @@ def test_current_returns_worktree_name() -> None:
 def test_current_returns_root_in_root_repository() -> None:
     """Test that current returns 'root' when in root repository."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Configure FakeGitOps with just root worktree
         git_ops = FakeGitOps(
             worktrees={
@@ -82,7 +82,7 @@ def test_current_returns_root_in_root_repository() -> None:
 def test_current_exits_with_error_when_not_in_worktree() -> None:
     """Test that current exits with code 1 when not in any worktree."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Construct sentinel path outside any worktree (no mkdir needed)
         outside_dir = env.cwd.parent / "outside"
 
@@ -111,7 +111,7 @@ def test_current_exits_with_error_when_not_in_worktree() -> None:
 def test_current_works_from_subdirectory() -> None:
     """Test that current returns worktree name from subdirectory within worktree."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Construct sentinel paths (no filesystem operations needed)
         work_dir = env.erk_root / env.cwd.name
         feature_y_path = work_dir / "feature-y"
@@ -151,7 +151,7 @@ def test_current_handles_missing_git_gracefully(tmp_path: Path) -> None:
     """Test that current exits with code 1 when not in a git repository."""
     non_git_dir = tmp_path / "not-git"
     non_git_dir.mkdir()
-    erk_root = tmp_path / "workstacks"
+    erk_root = tmp_path / "erks"
 
     # No git_common_dir configured = not in git repo
     git_ops = FakeGitOps(git_common_dirs={})
@@ -184,7 +184,7 @@ def test_current_handles_nested_worktrees(tmp_path: Path) -> None:
     """Test that current returns deepest worktree for nested structures."""
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
-    erk_root = tmp_path / "workstacks"
+    erk_root = tmp_path / "erks"
     parent_wt = erk_root / "repo" / "parent"
     parent_wt.mkdir(parents=True)
     nested_wt = parent_wt / "nested"

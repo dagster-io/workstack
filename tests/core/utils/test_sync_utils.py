@@ -17,7 +17,7 @@ from erk.core.sync_utils import (
 def test_identifies_merged_pr() -> None:
     """Test identification of worktree with merged PR."""
     repo_root = Path("/repo")
-    repo_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.erks")
 
     worktrees = [
         WorktreeInfo(repo_root, "main", is_root=True),
@@ -41,7 +41,7 @@ def test_identifies_merged_pr() -> None:
 def test_identifies_closed_pr() -> None:
     """Test identification of worktree with closed PR."""
     repo_root = Path("/repo")
-    repo_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.erks")
 
     worktrees = [
         WorktreeInfo(repo_root, "main", is_root=True),
@@ -61,7 +61,7 @@ def test_identifies_closed_pr() -> None:
 def test_skips_root_worktree() -> None:
     """Test that root worktree is never deletable."""
     repo_root = Path("/repo")
-    repo_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.erks")
 
     worktrees = [
         WorktreeInfo(repo_root, "main", is_root=True),
@@ -79,7 +79,7 @@ def test_skips_root_worktree() -> None:
 def test_skips_detached_head() -> None:
     """Test that worktrees in detached HEAD state are not deletable."""
     repo_root = Path("/repo")
-    repo_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.erks")
 
     worktrees = [
         WorktreeInfo(repo_root, "main", is_root=True),
@@ -94,13 +94,13 @@ def test_skips_detached_head() -> None:
 
 
 def test_skips_non_managed_worktrees() -> None:
-    """Test that worktrees outside workstacks_dir are not deletable."""
+    """Test that worktrees outside erks_dir are not deletable."""
     repo_root = Path("/repo")
-    repo_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.erks")
 
     worktrees = [
         WorktreeInfo(repo_root, "main", is_root=True),
-        WorktreeInfo(Path("/other/location/feat-1"), "feat-1"),  # Not in workstacks_dir
+        WorktreeInfo(Path("/other/location/feat-1"), "feat-1"),  # Not in erks_dir
     ]
 
     pr_statuses = {
@@ -115,7 +115,7 @@ def test_skips_non_managed_worktrees() -> None:
 def test_skips_open_prs() -> None:
     """Test that worktrees with open PRs are not deletable."""
     repo_root = Path("/repo")
-    repo_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.erks")
 
     worktrees = [
         WorktreeInfo(repo_root, "main", is_root=True),
@@ -134,7 +134,7 @@ def test_skips_open_prs() -> None:
 def test_skips_branches_without_pr_status() -> None:
     """Test that worktrees without PR status are not deletable."""
     repo_root = Path("/repo")
-    repo_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.erks")
 
     worktrees = [
         WorktreeInfo(repo_root, "main", is_root=True),
@@ -151,7 +151,7 @@ def test_skips_branches_without_pr_status() -> None:
 def test_skips_merged_pr_without_number() -> None:
     """Test that merged PRs without a PR number are not deletable."""
     repo_root = Path("/repo")
-    repo_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.erks")
 
     worktrees = [
         WorktreeInfo(repo_root, "main", is_root=True),
@@ -170,7 +170,7 @@ def test_skips_merged_pr_without_number() -> None:
 def test_identifies_multiple_deletable_worktrees() -> None:
     """Test identification of multiple deletable worktrees."""
     repo_root = Path("/repo")
-    repo_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.erks")
 
     worktrees = [
         WorktreeInfo(repo_root, "main", is_root=True),
@@ -197,7 +197,7 @@ def test_identifies_multiple_deletable_worktrees() -> None:
 def test_mixed_scenarios() -> None:
     """Test complex scenario with multiple conditions."""
     repo_root = Path("/repo")
-    repo_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.erks")
 
     worktrees = [
         WorktreeInfo(repo_root, "main", is_root=True),  # Root - skip
@@ -225,7 +225,7 @@ def test_mixed_scenarios() -> None:
 def test_empty_worktrees_list() -> None:
     """Test with empty worktrees list."""
     repo_root = Path("/repo")
-    repo_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.erks")
 
     deletable = identify_deletable_worktrees([], {}, repo_root, repo_dir)
 
@@ -235,7 +235,7 @@ def test_empty_worktrees_list() -> None:
 def test_empty_pr_statuses() -> None:
     """Test with empty PR statuses dict."""
     repo_root = Path("/repo")
-    repo_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.erks")
 
     worktrees = [
         WorktreeInfo(repo_root, "main", is_root=True),
@@ -250,7 +250,7 @@ def test_empty_pr_statuses() -> None:
 def test_worktree_name_extraction() -> None:
     """Test that worktree name is correctly extracted from path."""
     repo_root = Path("/repo")
-    repo_dir = Path("/repo/.workstacks")
+    repo_dir = Path("/repo/.erks")
 
     worktrees = [
         WorktreeInfo(repo_root, "main", is_root=True),

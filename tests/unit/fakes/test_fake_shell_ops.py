@@ -103,28 +103,28 @@ def test_fake_shell_ops_different_shells() -> None:
     assert ops_fish.detect_shell() == ("fish", Path.home() / ".config/fish/config.fish")
 
 
-def test_fake_shell_ops_run_workstack_sync_tracks_calls() -> None:
-    """Test that run_workstack_sync tracks call parameters."""
+def test_fake_shell_ops_run_erk_sync_tracks_calls() -> None:
+    """Test that run_erk_sync tracks call parameters."""
     ops = FakeShellOps()
     repo_root = Path("/test/repo")
 
     # Perform operation
-    ops.run_workstack_sync(repo_root, force=True, verbose=False)
+    ops.run_erk_sync(repo_root, force=True, verbose=False)
 
     # Verify tracking
     assert len(ops.sync_calls) == 1
     assert ops.sync_calls[0] == (repo_root, True, False)
 
 
-def test_fake_shell_ops_run_workstack_sync_multiple_calls() -> None:
+def test_fake_shell_ops_run_erk_sync_multiple_calls() -> None:
     """Test that multiple sync calls are tracked correctly."""
     ops = FakeShellOps()
     repo1 = Path("/test/repo1")
     repo2 = Path("/test/repo2")
 
     # Perform multiple operations
-    ops.run_workstack_sync(repo1, force=True, verbose=False)
-    ops.run_workstack_sync(repo2, force=False, verbose=True)
+    ops.run_erk_sync(repo1, force=True, verbose=False)
+    ops.run_erk_sync(repo2, force=False, verbose=True)
 
     # Verify all calls tracked
     assert len(ops.sync_calls) == 2
@@ -144,7 +144,7 @@ def test_fake_shell_ops_sync_calls_returns_copy() -> None:
     ops = FakeShellOps()
     repo_root = Path("/test/repo")
 
-    ops.run_workstack_sync(repo_root, force=True, verbose=False)
+    ops.run_erk_sync(repo_root, force=True, verbose=False)
 
     # Get the sync_calls list
     calls = ops.sync_calls

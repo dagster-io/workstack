@@ -238,7 +238,7 @@ def jump_cmd(ctx: ErkContext, branch: str, script: bool) -> None:
             else LoadedConfig(env={}, post_create_commands=[], post_create_shell=None)
         )
 
-        # Ensure workstacks directory exists
+        # Ensure erks directory exists
 
         # Generate and ensure unique worktree name
         name = sanitize_worktree_name(branch)

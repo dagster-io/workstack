@@ -8,7 +8,7 @@ from erk.core.global_config import GlobalConfig
 from erk.core.graphite_ops import BranchMetadata
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.shell_ops import FakeShellOps
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def test_land_stack_cleanup_respects_master_trunk() -> None:
@@ -27,7 +27,7 @@ def test_land_stack_cleanup_respects_master_trunk() -> None:
     4. Asserting command output shows 'git checkout master'
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # Build 2-branch stack: master → feat-1
         # Current: feat-1 (will land feat-1)
         # Note: Using "master" instead of "main" to expose the hardcoded bug

@@ -94,14 +94,14 @@ def sync_cmd(
 ) -> None:
     """Sync with Graphite and clean up merged worktrees.
 
-    This command must be run from a workstack-managed repository.
+    This command must be run from a erk-managed repository.
 
     Steps:
     1. Verify graphite is enabled
     2. Save current worktree location
     3. Switch to root worktree (to avoid git checkout conflicts)
     4. Run `gt sync [-f]` from root
-    5. Identify merged/closed workstacks
+    5. Identify merged/closed erks
     6. With -f: automatically remove worktrees without confirmation
     7. Without -f: show deletable worktrees and prompt for confirmation
     8. Return to original worktree (if it still exists)
@@ -169,7 +169,7 @@ def sync_cmd(
     else:
         _emit(f"[DRY RUN] Would run {' '.join(cmd)}", script_mode=script)
 
-    # Step 5: Identify deletable workstacks
+    # Step 5: Identify deletable erks
     worktrees = ctx.git_ops.list_worktrees(repo.root)
 
     # Fetch PR status for all branches

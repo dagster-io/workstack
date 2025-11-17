@@ -19,7 +19,7 @@ def test_find_worktrees_containing_branch_no_match(tmp_path: Path) -> None:
     repo_root.mkdir()
     git_dir = repo_root / ".git"
     git_dir.mkdir()
-    work_dir = tmp_path / "workstacks" / "repo"
+    work_dir = tmp_path / "erks" / "repo"
     work_dir.mkdir(parents=True)
 
     # Set up stack: main -> feature-1
@@ -49,7 +49,7 @@ def test_find_worktrees_containing_branch_no_match(tmp_path: Path) -> None:
     ctx = ErkContext.for_test(
         git_ops=git_ops,
         global_config=GlobalConfig(
-            erk_root=Path("/fake/workstacks"),
+            erk_root=Path("/fake/erks"),
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -71,7 +71,7 @@ def test_find_worktrees_containing_branch_no_match(tmp_path: Path) -> None:
 
 def test_find_worktree_for_branch_simple_match(tmp_path: Path) -> None:
     """Test finding worktree path for a branch that exists."""
-    work_dir = tmp_path / "workstacks" / "repo"
+    work_dir = tmp_path / "erks" / "repo"
     work_dir.mkdir(parents=True)
 
     feature_path = work_dir / "feature-work"
@@ -88,7 +88,7 @@ def test_find_worktree_for_branch_simple_match(tmp_path: Path) -> None:
 
 def test_find_worktree_for_branch_no_match(tmp_path: Path) -> None:
     """Test finding worktree for a branch that doesn't exist returns None."""
-    work_dir = tmp_path / "workstacks" / "repo"
+    work_dir = tmp_path / "erks" / "repo"
     work_dir.mkdir(parents=True)
 
     worktrees = [
@@ -114,7 +114,7 @@ def test_find_worktree_for_branch_mismatched_names(tmp_path: Path) -> None:
     This is the regression test for the bug - the fix allows branch-to-worktree
     resolution even when directory names don't match branch names.
     """
-    work_dir = tmp_path / "workstacks" / "repo"
+    work_dir = tmp_path / "erks" / "repo"
     work_dir.mkdir(parents=True)
 
     # Branch names have slashes, worktree paths use different names
@@ -134,7 +134,7 @@ def test_find_worktree_for_branch_mismatched_names(tmp_path: Path) -> None:
 
 def test_find_worktree_for_branch_detached_head(tmp_path: Path) -> None:
     """Test that worktrees with detached HEAD (branch=None) are skipped."""
-    work_dir = tmp_path / "workstacks" / "repo"
+    work_dir = tmp_path / "erks" / "repo"
     work_dir.mkdir(parents=True)
 
     worktrees = [

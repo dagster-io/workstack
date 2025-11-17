@@ -10,19 +10,19 @@ def test_finds_worktree_with_branch() -> None:
     """Test finds worktree path for a given branch."""
     worktrees = [
         WorktreeInfo(Path("/repo"), "main", True),
-        WorktreeInfo(Path("/repo/workstacks/feat"), "feature-x", False),
+        WorktreeInfo(Path("/repo/erks/feat"), "feature-x", False),
     ]
 
     result = find_worktree_with_branch(worktrees, "feature-x")
 
-    assert result == Path("/repo/workstacks/feat")
+    assert result == Path("/repo/erks/feat")
 
 
 def test_returns_none_when_branch_not_found() -> None:
     """Test returns None when branch is not in any worktree."""
     worktrees = [
         WorktreeInfo(Path("/repo"), "main", True),
-        WorktreeInfo(Path("/repo/workstacks/feat"), "feature-x", False),
+        WorktreeInfo(Path("/repo/erks/feat"), "feature-x", False),
     ]
 
     result = find_worktree_with_branch(worktrees, "unknown-branch")
@@ -34,7 +34,7 @@ def test_finds_root_worktree_branch() -> None:
     """Test finds root worktree by branch name."""
     worktrees = [
         WorktreeInfo(Path("/repo"), "main", True),
-        WorktreeInfo(Path("/repo/workstacks/feat"), "feature-x", False),
+        WorktreeInfo(Path("/repo/erks/feat"), "feature-x", False),
     ]
 
     result = find_worktree_with_branch(worktrees, "main")

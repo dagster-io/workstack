@@ -6,7 +6,7 @@ This file uses minimal mocking for external boundaries:
 
 1. os.environ HOME patches:
    - LEGITIMATE: Testing path resolution logic that depends on $HOME
-   - The init command uses Path.home() to determine ~/.workstack location
+   - The init command uses Path.home() to determine ~/.erk location
    - Patching HOME redirects to temp directory for test isolation
    - Cannot be replaced with fakes (environment variable is external boundary)
 
@@ -28,14 +28,14 @@ from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.fakes.shell_ops import FakeShellOps
-from tests.test_utils.env_helpers import simulated_workstack_env
+from tests.test_utils.env_helpers import erk_isolated_fs_env
 
 
 def test_init_creates_global_config_first_time() -> None:
     """Test that init creates global config on first run."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        erk_root = env.cwd / "workstacks"
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "erks"
 
         git_ops = FakeGitOps(
             git_common_dirs={env.cwd: env.git_dir},
@@ -63,10 +63,10 @@ def test_init_creates_global_config_first_time() -> None:
 
 
 def test_init_prompts_for_erk_root() -> None:
-    """Test that init prompts for workstacks root when creating config."""
+    """Test that init prompts for erks root when creating config."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        erk_root = env.cwd / "my-workstacks"
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "my-erks"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         # Config doesn't exist yet
@@ -91,8 +91,8 @@ def test_init_prompts_for_erk_root() -> None:
 def test_init_detects_graphite_installed() -> None:
     """Test that init detects when Graphite (gt) is installed."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        erk_root = env.cwd / "workstacks"
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "erks"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         shell_ops = FakeShellOps(installed_tools={"gt": "/usr/local/bin/gt"})
@@ -118,8 +118,8 @@ def test_init_detects_graphite_installed() -> None:
 def test_init_detects_graphite_not_installed() -> None:
     """Test that init detects when Graphite (gt) is NOT installed."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        erk_root = env.cwd / "workstacks"
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "erks"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config_ops = InMemoryGlobalConfigOps(config=None)
@@ -143,8 +143,8 @@ def test_init_detects_graphite_not_installed() -> None:
 def test_init_skips_global_with_repo_flag() -> None:
     """Test that --repo flag skips global config creation."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        erk_root = env.cwd / "workstacks"
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "erks"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config = GlobalConfig(
@@ -172,7 +172,7 @@ def test_init_skips_global_with_repo_flag() -> None:
 def test_init_fails_repo_flag_without_global_config() -> None:
     """Test that --repo flag fails when global config doesn't exist."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         # Config doesn't exist - this is the error case being tested
         global_config_ops = InMemoryGlobalConfigOps(config=None)
@@ -194,12 +194,12 @@ def test_init_fails_repo_flag_without_global_config() -> None:
 def test_init_auto_preset_detects_dagster() -> None:
     """Test that auto preset detects dagster repo and uses dagster preset."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Create pyproject.toml with dagster as the project name
         pyproject = env.cwd / "pyproject.toml"
         pyproject.write_text('[project]\nname = "dagster"\n', encoding="utf-8")
 
-        erk_root = env.cwd / "workstacks"
+        erk_root = env.cwd / "erks"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config = GlobalConfig(
@@ -220,7 +220,7 @@ def test_init_auto_preset_detects_dagster() -> None:
         result = runner.invoke(cli, ["init"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
-        # Config should be created in workstacks_dir
+        # Config should be created in erks_dir
         repo_dir = erk_root / "repos" / env.cwd.name
         config_path = repo_dir / "config.toml"
         assert config_path.exists()
@@ -229,12 +229,12 @@ def test_init_auto_preset_detects_dagster() -> None:
 def test_init_auto_preset_uses_generic_fallback() -> None:
     """Test that auto preset falls back to generic for non-dagster repos."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Create pyproject.toml with different project name
         pyproject = env.cwd / "pyproject.toml"
         pyproject.write_text('[project]\nname = "myproject"\n', encoding="utf-8")
 
-        erk_root = env.cwd / "workstacks"
+        erk_root = env.cwd / "erks"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config = GlobalConfig(
@@ -263,8 +263,8 @@ def test_init_auto_preset_uses_generic_fallback() -> None:
 def test_init_explicit_preset_dagster() -> None:
     """Test that explicit --preset dagster uses dagster preset."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        erk_root = env.cwd / "workstacks"
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "erks"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config = GlobalConfig(
@@ -293,8 +293,8 @@ def test_init_explicit_preset_dagster() -> None:
 def test_init_explicit_preset_generic() -> None:
     """Test that explicit --preset generic uses generic preset."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        erk_root = env.cwd / "workstacks"
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "erks"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config = GlobalConfig(
@@ -323,10 +323,10 @@ def test_init_explicit_preset_generic() -> None:
 def test_init_list_presets_displays_available() -> None:
     """Test that --list-presets displays available presets."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config = GlobalConfig(
-            erk_root=env.cwd / "fake-workstacks",
+            erk_root=env.cwd / "fake-erks",
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -351,8 +351,8 @@ def test_init_list_presets_displays_available() -> None:
 def test_init_invalid_preset_fails() -> None:
     """Test that invalid preset name fails with helpful error."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        erk_root = env.cwd / "workstacks"
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "erks"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config = GlobalConfig(
@@ -376,11 +376,11 @@ def test_init_invalid_preset_fails() -> None:
         assert "Invalid preset 'nonexistent'" in result.output
 
 
-def test_init_creates_config_at_workstacks_dir() -> None:
-    """Test that init creates config.toml in workstacks_dir by default."""
+def test_init_creates_config_at_erks_dir() -> None:
+    """Test that init creates config.toml in erks_dir by default."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        erk_root = env.cwd / "workstacks"
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "erks"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config = GlobalConfig(
@@ -401,7 +401,7 @@ def test_init_creates_config_at_workstacks_dir() -> None:
         result = runner.invoke(cli, ["init"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
-        # Config should be in workstacks_dir, not repo root
+        # Config should be in erks_dir, not repo root
         repo_dir = erk_root / "repos" / env.cwd.name
         config_path = repo_dir / "config.toml"
         assert config_path.exists()
@@ -411,8 +411,8 @@ def test_init_creates_config_at_workstacks_dir() -> None:
 def test_init_repo_flag_creates_config_at_root() -> None:
     """Test that --repo creates config.toml at repo root."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        erk_root = env.cwd / "workstacks"
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "erks"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config = GlobalConfig(
@@ -441,8 +441,8 @@ def test_init_repo_flag_creates_config_at_root() -> None:
 def test_init_force_overwrites_existing_config() -> None:
     """Test that --force overwrites existing config."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        erk_root = env.cwd / "workstacks"
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "erks"
         repo_dir = erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
 
@@ -478,8 +478,8 @@ def test_init_force_overwrites_existing_config() -> None:
 def test_init_fails_without_force_when_exists() -> None:
     """Test that init fails when config exists without --force."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        erk_root = env.cwd / "workstacks"
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "erks"
         repo_dir = erk_root / "repos" / env.cwd.name
         repo_dir.mkdir(parents=True)
 
@@ -513,17 +513,17 @@ def test_init_fails_without_force_when_exists() -> None:
 def test_init_adds_env_to_gitignore() -> None:
     """Test that init offers to add .env to .gitignore.
 
-    NOTE: Uses simulated_workstack_env because this test verifies actual
+    NOTE: Uses simulated_erk_env because this test verifies actual
     .gitignore file content on disk. Cannot migrate to pure mode without
     abstracting file operations in production code.
     """
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Create .gitignore
         gitignore = env.cwd / ".gitignore"
         gitignore.write_text("*.pyc\n", encoding="utf-8")
 
-        erk_root = env.cwd / "workstacks"
+        erk_root = env.cwd / "erks"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config = GlobalConfig(
@@ -552,17 +552,17 @@ def test_init_adds_env_to_gitignore() -> None:
 def test_init_skips_gitignore_entries_if_declined() -> None:
     """Test that init skips .env gitignore entry if user declines.
 
-    NOTE: Uses simulated_workstack_env because this test verifies actual
+    NOTE: Uses simulated_erk_env because this test verifies actual
     .gitignore file content on disk. Cannot migrate to pure mode without
     abstracting file operations in production code.
     """
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Create .gitignore
         gitignore = env.cwd / ".gitignore"
         gitignore.write_text("*.pyc\n", encoding="utf-8")
 
-        erk_root = env.cwd / "workstacks"
+        erk_root = env.cwd / "erks"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config = GlobalConfig(
@@ -590,15 +590,15 @@ def test_init_skips_gitignore_entries_if_declined() -> None:
 def test_init_handles_missing_gitignore() -> None:
     """Test that init handles missing .gitignore gracefully.
 
-    NOTE: Uses simulated_workstack_env because this test verifies behavior
+    NOTE: Uses simulated_erk_env because this test verifies behavior
     when .gitignore file doesn't exist on disk. Cannot migrate to pure mode
     without abstracting file operations in production code.
     """
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # No .gitignore file
 
-        erk_root = env.cwd / "workstacks"
+        erk_root = env.cwd / "erks"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config = GlobalConfig(
@@ -624,18 +624,18 @@ def test_init_handles_missing_gitignore() -> None:
 def test_init_preserves_gitignore_formatting() -> None:
     """Test that init preserves existing gitignore formatting.
 
-    NOTE: Uses simulated_workstack_env because this test verifies actual
+    NOTE: Uses simulated_erk_env because this test verifies actual
     .gitignore file formatting on disk. Cannot migrate to pure mode without
     abstracting file operations in production code.
     """
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Create .gitignore with specific formatting
         gitignore = env.cwd / ".gitignore"
         original_content = "# Python\n*.pyc\n__pycache__/\n"
         gitignore.write_text(original_content, encoding="utf-8")
 
-        erk_root = env.cwd / "workstacks"
+        erk_root = env.cwd / "erks"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         global_config = GlobalConfig(
@@ -668,8 +668,8 @@ def test_init_preserves_gitignore_formatting() -> None:
 def test_init_first_time_offers_shell_setup() -> None:
     """Test that first-time init offers shell integration setup."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        erk_root = env.cwd / "workstacks"
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "erks"
         bashrc = Path.home() / ".bashrc"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
@@ -698,8 +698,8 @@ def test_init_first_time_offers_shell_setup() -> None:
 def test_init_shell_flag_only_setup() -> None:
     """Test that --shell flag only performs shell setup."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        erk_root = env.cwd / "workstacks"
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "erks"
         bashrc = Path.home() / ".bashrc"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
@@ -736,8 +736,8 @@ def test_init_shell_flag_only_setup() -> None:
 def test_init_detects_bash_shell() -> None:
     """Test that init correctly detects bash shell."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        erk_root = env.cwd / "workstacks"
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "erks"
         bashrc = Path.home() / ".bashrc"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
@@ -769,8 +769,8 @@ def test_init_detects_bash_shell() -> None:
 def test_init_detects_zsh_shell() -> None:
     """Test that init correctly detects zsh shell."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        erk_root = env.cwd / "workstacks"
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "erks"
         zshrc = Path.home() / ".zshrc"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
@@ -802,8 +802,8 @@ def test_init_detects_zsh_shell() -> None:
 def test_init_detects_fish_shell() -> None:
     """Test that init correctly detects fish shell."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        erk_root = env.cwd / "workstacks"
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "erks"
         fish_config = Path.home() / ".config" / "fish" / "config.fish"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
@@ -835,8 +835,8 @@ def test_init_detects_fish_shell() -> None:
 def test_init_skips_unknown_shell() -> None:
     """Test that init skips shell setup for unknown shells."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        erk_root = env.cwd / "workstacks"
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "erks"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         # Config doesn't exist yet (first-time init)
@@ -858,8 +858,8 @@ def test_init_skips_unknown_shell() -> None:
 def test_init_prints_completion_instructions() -> None:
     """Test that init prints completion instructions."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        erk_root = env.cwd / "workstacks"
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "erks"
         bashrc = Path.home() / ".bashrc"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
@@ -895,8 +895,8 @@ def test_init_prints_completion_instructions() -> None:
 def test_init_prints_wrapper_instructions() -> None:
     """Test that init prints wrapper function instructions."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        erk_root = env.cwd / "workstacks"
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "erks"
         bashrc = Path.home() / ".bashrc"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
@@ -932,8 +932,8 @@ def test_init_prints_wrapper_instructions() -> None:
 def test_init_skips_shell_if_declined() -> None:
     """Test that init skips shell setup if user declines."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
-        erk_root = env.cwd / "workstacks"
+    with erk_isolated_fs_env(runner) as env:
+        erk_root = env.cwd / "erks"
         bashrc = Path.home() / ".bashrc"
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
@@ -968,7 +968,7 @@ def test_init_skips_shell_if_declined() -> None:
 def test_init_not_in_git_repo_fails() -> None:
     """Test that init fails when not in a git repository."""
     runner = CliRunner()
-    with simulated_workstack_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Remove .git directory to simulate non-git directory
         import shutil
 
@@ -977,7 +977,7 @@ def test_init_not_in_git_repo_fails() -> None:
         # Empty git_ops with cwd existing but no .git (simulating non-git directory)
         git_ops = FakeGitOps(existing_paths={env.cwd})
         global_config = GlobalConfig(
-            erk_root=env.cwd / "fake-workstacks",
+            erk_root=env.cwd / "fake-erks",
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
@@ -991,7 +991,7 @@ def test_init_not_in_git_repo_fails() -> None:
             global_config=global_config,
         )
 
-        result = runner.invoke(cli, ["init"], obj=test_ctx, input=f"{env.cwd}/workstacks\n")
+        result = runner.invoke(cli, ["init"], obj=test_ctx, input=f"{env.cwd}/erks\n")
 
         # The command should fail at repo discovery
         assert result.exit_code != 0

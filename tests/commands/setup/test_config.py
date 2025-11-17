@@ -12,13 +12,13 @@ from erk.core.repo_discovery import RepoContext
 from tests.fakes.github_ops import FakeGitHubOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def test_config_list_displays_global_config() -> None:
     """Test that config list displays global configuration."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo = RepoContext(
@@ -48,7 +48,7 @@ def test_config_list_displays_global_config() -> None:
 def test_config_list_displays_repo_config() -> None:
     """Test that config list displays repository configuration."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
@@ -86,7 +86,7 @@ def test_config_list_displays_repo_config() -> None:
 def test_config_list_handles_missing_repo_config() -> None:
     """Test that config list handles missing repo config gracefully."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo = RepoContext(
@@ -112,13 +112,13 @@ def test_config_list_handles_missing_repo_config() -> None:
 def test_config_list_not_in_git_repo() -> None:
     """Test that config list handles not being in a git repo."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         # No .git directory - empty FakeGitOps means no git repos
         git_ops = FakeGitOps()
 
         # Build context manually without env.build_context() to avoid auto-adding git_common_dirs
         global_config = GlobalConfig(
-            erk_root=Path("/fake/workstacks"),
+            erk_root=Path("/fake/erks"),
             use_graphite=False,
             show_pr_info=True,
             shell_setup_complete=False,
@@ -143,7 +143,7 @@ def test_config_list_not_in_git_repo() -> None:
 def test_config_get_erk_root() -> None:
     """Test getting erk_root config value."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo = RepoContext(
@@ -167,7 +167,7 @@ def test_config_get_erk_root() -> None:
 def test_config_get_use_graphite() -> None:
     """Test getting use_graphite config value."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo = RepoContext(
@@ -194,7 +194,7 @@ def test_config_get_use_graphite() -> None:
 def test_config_get_show_pr_info() -> None:
     """Test getting show_pr_info config value."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         test_ctx = env.build_context(
             git_ops=git_ops,
@@ -209,7 +209,7 @@ def test_config_get_show_pr_info() -> None:
 def test_config_get_env_key() -> None:
     """Test getting env.* config value."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
@@ -244,7 +244,7 @@ def test_config_get_env_key() -> None:
 def test_config_get_post_create_shell() -> None:
     """Test getting post_create.shell config value."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
@@ -279,7 +279,7 @@ def test_config_get_post_create_shell() -> None:
 def test_config_get_post_create_commands() -> None:
     """Test getting post_create.commands config value."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
@@ -315,7 +315,7 @@ def test_config_get_post_create_commands() -> None:
 def test_config_get_env_key_not_found() -> None:
     """Test that getting non-existent env key fails."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
@@ -350,7 +350,7 @@ def test_config_get_env_key_not_found() -> None:
 def test_config_get_invalid_key_format() -> None:
     """Test that invalid key format fails."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
         repo_dir = env.erk_root / "repos" / env.cwd.name
         repo = RepoContext(
@@ -376,7 +376,7 @@ def test_config_get_invalid_key_format() -> None:
 def test_config_get_invalid_key() -> None:
     """Test that getting invalid key fails."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
@@ -403,7 +403,7 @@ def test_config_get_invalid_key() -> None:
 def test_config_key_with_multiple_dots() -> None:
     """Test that keys with multiple dots are handled."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})

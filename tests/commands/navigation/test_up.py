@@ -1,4 +1,4 @@
-"""Tests for workstack up command."""
+"""Tests for erk up command."""
 
 from pathlib import Path
 
@@ -10,13 +10,13 @@ from erk.core.gitops import WorktreeInfo
 from erk.core.repo_discovery import RepoContext
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def test_up_with_existing_worktree() -> None:
     """Test up command when child branch has a worktree."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # The test runs from cwd, so we simulate being in feature-1 by setting
@@ -78,7 +78,7 @@ def test_up_with_existing_worktree() -> None:
 def test_up_at_top_of_stack() -> None:
     """Test up command when at the top of stack (no children)."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         git_ops = FakeGitOps(
@@ -122,7 +122,7 @@ def test_up_at_top_of_stack() -> None:
 def test_up_child_has_no_worktree() -> None:
     """Test up command when child branch exists but has no worktree."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Only feature-1 has a worktree, feature-2 does not
@@ -171,7 +171,7 @@ def test_up_child_has_no_worktree() -> None:
 def test_up_graphite_not_enabled() -> None:
     """Test up command requires Graphite to be enabled."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         git_ops = FakeGitOps(
@@ -195,13 +195,13 @@ def test_up_graphite_not_enabled() -> None:
 
         assert result.exit_code == 1
         assert "requires Graphite to be enabled" in result.stderr
-        assert "workstack config set use_graphite true" in result.stderr
+        assert "erk config set use_graphite true" in result.stderr
 
 
 def test_up_detached_head() -> None:
     """Test up command fails gracefully on detached HEAD."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Current branch is None (detached HEAD)
@@ -231,7 +231,7 @@ def test_up_detached_head() -> None:
 def test_up_script_flag() -> None:
     """Test up command with --script flag generates activation script."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         git_ops = FakeGitOps(
@@ -284,7 +284,7 @@ def test_up_script_flag() -> None:
 def test_up_multiple_children_fails_explicitly() -> None:
     """Test up command fails when branch has multiple children."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Set up stack: main -> feature-1 -> [feature-2a, feature-2b]
@@ -342,7 +342,7 @@ def test_up_with_mismatched_worktree_name() -> None:
     The fix uses find_worktree_for_branch() to resolve branch -> worktree path.
     """
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Worktree directories use different naming than branch names

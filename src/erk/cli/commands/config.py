@@ -56,7 +56,7 @@ def _get_post_create_value(cfg: LoadedConfig, parts: list[str], key: str) -> Non
 
 @click.group("config")
 def config_group() -> None:
-    """Manage workstack configuration."""
+    """Manage erk configuration."""
 
 
 @config_group.command("list")

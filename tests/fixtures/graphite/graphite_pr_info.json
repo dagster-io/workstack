@@ -2,14 +2,14 @@
   "prInfos": [
     {
       "headRefName": "feature-stack-1",
-      "url": "https://app.graphite.com/github/pr/dagster-io/workstack/101",
+      "url": "https://app.graphite.com/github/pr/dagster-io/erk/101",
       "prNumber": 101,
       "state": "OPEN",
       "isDraft": false
     },
     {
       "headRefName": "feature-stack-2",
-      "url": "https://app.graphite.com/github/pr/dagster-io/workstack/102",
+      "url": "https://app.graphite.com/github/pr/dagster-io/erk/102",
       "prNumber": 102,
       "state": "MERGED",
       "isDraft": false

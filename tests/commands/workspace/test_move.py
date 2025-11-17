@@ -1,17 +1,17 @@
-"""Tests for the workstack move command."""
+"""Tests for the erk move command."""
 
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
 from erk.core.gitops import WorktreeInfo
 from tests.fakes.gitops import FakeGitOps
-from tests.test_utils.env_helpers import pure_workstack_env
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def test_move_from_current_to_new_worktree() -> None:
     """Test moving branch from current worktree to a new worktree."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         source_wt = env.cwd
         target_wt = env.erk_root / "repos" / env.cwd.name / "worktrees" / "target-wt"
 
@@ -43,7 +43,7 @@ def test_move_from_current_to_new_worktree() -> None:
 def test_move_with_explicit_current_flag() -> None:
     """Test move with explicit --current flag."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             worktrees={
                 env.cwd: [
@@ -67,7 +67,7 @@ def test_move_with_explicit_current_flag() -> None:
 def test_move_with_branch_flag_auto_detect() -> None:
     """Test move with --branch flag to auto-detect source worktree."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         source_wt = env.erk_root / "repos" / env.cwd.name / "worktrees" / "old-wt"
 
         git_ops = FakeGitOps(
@@ -94,7 +94,7 @@ def test_move_with_branch_flag_auto_detect() -> None:
 def test_move_with_worktree_flag() -> None:
     """Test move with explicit --worktree flag."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         source_wt = env.erk_root / "repos" / env.cwd.name / "worktrees" / "source-wt"
 
         git_ops = FakeGitOps(
@@ -121,7 +121,7 @@ def test_move_with_worktree_flag() -> None:
 def test_move_swap_between_two_worktrees() -> None:
     """Test swapping branches between two existing worktrees."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         source_wt = env.erk_root / "repos" / env.cwd.name / "worktrees" / "wt1"
         target_wt = env.erk_root / "repos" / env.cwd.name / "worktrees" / "wt2"
 
@@ -151,7 +151,7 @@ def test_move_swap_between_two_worktrees() -> None:
 def test_move_swap_requires_confirmation() -> None:
     """Test that swap operation requires confirmation without --force."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         source_wt = env.erk_root / "repos" / env.cwd.name / "worktrees" / "wt1"
         target_wt = env.erk_root / "repos" / env.cwd.name / "worktrees" / "wt2"
 
@@ -181,7 +181,7 @@ def test_move_swap_requires_confirmation() -> None:
 def test_move_with_custom_ref() -> None:
     """Test move with custom --ref fallback branch."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             worktrees={
                 env.cwd: [
@@ -205,7 +205,7 @@ def test_move_with_custom_ref() -> None:
 def test_move_error_multiple_source_flags() -> None:
     """Test error when multiple source flags are specified."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={
                 env.cwd: env.git_dir,
@@ -227,7 +227,7 @@ def test_move_error_multiple_source_flags() -> None:
 def test_move_error_branch_not_found() -> None:
     """Test error when specified branch is not found in any worktree."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             worktrees={
                 env.cwd: [
@@ -254,7 +254,7 @@ def test_move_error_branch_not_found() -> None:
 def test_move_error_worktree_not_found() -> None:
     """Test error when specified worktree does not exist."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             git_common_dirs={
                 env.cwd: env.git_dir,
@@ -277,7 +277,7 @@ def test_move_error_worktree_not_found() -> None:
 def test_move_error_source_and_target_same() -> None:
     """Test error when source and target are the same worktree."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         wt = env.erk_root / "repos" / env.cwd.name / "worktrees" / "same-wt"
 
         git_ops = FakeGitOps(
@@ -307,7 +307,7 @@ def test_move_error_source_and_target_same() -> None:
 def test_move_error_source_in_detached_head() -> None:
     """Test error when source worktree is in detached HEAD state."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             worktrees={
                 env.cwd: [
@@ -331,7 +331,7 @@ def test_move_error_source_in_detached_head() -> None:
 def test_move_to_existing_worktree_in_detached_head() -> None:
     """Test moving to an existing worktree in detached HEAD (should checkout branch there)."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         source_wt = env.erk_root / "repos" / env.cwd.name / "worktrees" / "source"
         target_wt = env.erk_root / "repos" / env.cwd.name / "worktrees" / "target"
 
@@ -361,7 +361,7 @@ def test_move_to_existing_worktree_in_detached_head() -> None:
 def test_move_to_root() -> None:
     """Test moving branch from current worktree to root."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         source_wt = env.erk_root / "repos" / env.cwd.name / "worktrees" / "feature-wt"
 
         git_ops = FakeGitOps(
@@ -393,7 +393,7 @@ def test_move_to_root() -> None:
 def test_move_to_root_with_explicit_current() -> None:
     """Test moving from current worktree to root with --current flag."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         source_wt = env.erk_root / "repos" / env.cwd.name / "worktrees" / "feature-wt"
 
         git_ops = FakeGitOps(
@@ -422,7 +422,7 @@ def test_move_to_root_with_explicit_current() -> None:
 def test_move_to_root_when_root_is_detached_head() -> None:
     """Test moving to root when root is in detached HEAD state (move operation)."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         source_wt = env.erk_root / "repos" / env.cwd.name / "worktrees" / "feature-wt"
 
         git_ops = FakeGitOps(
@@ -452,7 +452,7 @@ def test_move_to_root_when_root_is_detached_head() -> None:
 def test_move_error_source_is_root_target_is_root() -> None:
     """Test error when trying to move root to root."""
     runner = CliRunner()
-    with pure_workstack_env(runner) as env:
+    with erk_inmem_env(runner) as env:
         git_ops = FakeGitOps(
             worktrees={
                 env.cwd: [

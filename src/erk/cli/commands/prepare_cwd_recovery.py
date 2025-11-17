@@ -4,9 +4,9 @@ from pathlib import Path
 
 import click
 
-from erk.cli.activation import render_activation_script
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
+from erk.cli.shell_utils import render_navigation_script
 from erk.core.context import ErkContext
 
 
@@ -29,10 +29,11 @@ def generate_recovery_script(ctx: ErkContext) -> Path | None:
     except (FileNotFoundError, ValueError):
         return None
 
-    script_content = render_activation_script(
-        worktree_path=repo.root,
+    script_content = render_navigation_script(
+        repo.root,
+        repo.root,
         comment="erk passthrough recovery script",
-        final_message="",
+        success_message="",
     )
 
     result = ctx.script_writer.write_activation_script(

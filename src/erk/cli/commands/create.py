@@ -9,7 +9,7 @@ import click
 from erk.cli.config import LoadedConfig
 from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output
-from erk.cli.shell_utils import render_cd_script
+from erk.cli.shell_utils import render_navigation_script
 from erk.cli.subprocess_utils import run_with_error_reporting
 from erk.core.context import ErkContext
 from erk.core.naming_utils import (
@@ -637,8 +637,9 @@ def create(
         )
 
     if script and not stay:
-        script_content = render_cd_script(
+        script_content = render_navigation_script(
             wt_path,
+            repo.root,
             comment="cd to new worktree",
             success_message="✓ Switched to new worktree.",
         )

@@ -21,17 +21,16 @@ from tests.fakes.shell_ops import FakeShellOps
 
 
 def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> None:
-    """Test land-stack when run from linked worktree on branch being landed.
+    """Test land-stack fails when run from linked worktree on branch being landed.
 
-    Bug: When running land-stack from a linked worktree where the current branch
-    is part of the stack being landed, the command tries to checkout the branch
-    in the repo root, which fails because git won't allow checking out a branch
-    that's already checked out in a linked worktree.
+    After validation changes, land-stack requires all branches in the stack to NOT be
+    checked out in worktrees when landing. This test verifies that running land-stack
+    from a worktree where a branch being landed is checked out correctly fails.
 
-    Expected behavior after fix: Should skip checkout when already on the branch.
+    Expected behavior: Command should fail with worktree conflict validation error.
 
     This test uses:
-    - Real git repo and worktrees (to trigger actual git checkout error)
+    - Real git repo and worktrees (to test actual worktree detection)
     - Fake Graphite/GitHub ops (to avoid external dependencies)
     """
     # Create real git repository
@@ -165,12 +164,11 @@ def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> No
         # Use --force to skip confirmation, --dry-run to skip subprocess calls
         result = runner.invoke(cli, ["land-stack", "--force", "--dry-run"], obj=test_ctx)
 
-        # After fix: Command should succeed when run from linked worktree
-        # The fix detects we're already on the branch and skips checkout
-        # (dry-run mode validates flow works without executing real operations)
-        assert result.exit_code == 0
-        assert "Landing 1 PR" in result.output
+        # Should fail with worktree conflict error
+        assert result.exit_code == 1, f"Expected failure but got: {result.output}"
+        assert "Cannot land stack - branches are checked out in multiple worktrees" in result.output
         assert "feat-1" in result.output
+        assert "erk consolidate" in result.output
 
     finally:
         # Restore original directory
@@ -178,16 +176,16 @@ def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> No
 
 
 def test_land_stack_with_trunk_in_worktree(tmp_path: Path) -> None:
-    """Test land-stack trunk sync when trunk is checked out in a worktree.
+    """Test land-stack fails when run from repo root with branch checked out.
 
-    Bug: When trunk is checked out in a worktree, _execute_sync_trunk_phase()
-    pulls at repo_root instead of the worktree location, leaving trunk stale.
-    This causes gt sync -f to fail with "commits are not in main" error.
+    After validation changes, land-stack requires all branches in the stack to NOT be
+    checked out in worktrees when landing. This test verifies that running land-stack
+    from repo root where a feature branch is checked out correctly fails.
 
-    Expected behavior after fix: Should detect trunk is in worktree and pull there.
+    Expected behavior: Command should fail with worktree conflict validation error.
 
     This test uses:
-    - Real git repo and worktrees (to test actual worktree path detection)
+    - Real git repo and worktrees (to test actual worktree detection)
     - Fake Graphite/GitHub ops (to avoid external dependencies)
     """
     # Create real git repository
@@ -310,20 +308,14 @@ def test_land_stack_with_trunk_in_worktree(tmp_path: Path) -> None:
 
         runner = CliRunner()
 
-        # Land feat-1 stack (this will trigger trunk sync phase)
-        # The fix should detect main is in a worktree and pull there
+        # Land feat-1 stack (this will trigger validation)
         result = runner.invoke(cli, ["land-stack", "--force", "--dry-run"], obj=test_ctx)
 
-        # After fix: Command should succeed
-        # The trunk sync phase should detect main is in main_worktree and pull there
-        assert result.exit_code == 0, f"Command failed: {result.output}"
-        assert "Landing 1 PR" in result.output
+        # Should fail with worktree conflict error
+        assert result.exit_code == 1, f"Expected failure but got: {result.output}"
+        assert "Cannot land stack - branches are checked out in multiple worktrees" in result.output
         assert "feat-1" in result.output
-
-        # Verify that main worktree location is detected correctly
-        # (by checking that git operations don't fail with "already checked out" error)
-        assert "already checked out" not in result.output.lower()
-        assert "fatal" not in result.output.lower()
+        assert "erk consolidate" in result.output
 
     finally:
         # Restore original directory

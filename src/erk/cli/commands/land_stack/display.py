@@ -110,5 +110,20 @@ def _show_final_state(
     branches_list = ", ".join(click.style(b, fg="yellow") for b in merged_branches)
     _emit(f"  Merged branches: {branches_list}", script_mode=script_mode)
 
-    # Worktrees status
-    _emit("  Worktrees: cleaned up", script_mode=script_mode)
+    # Next steps
+    _emit("", script_mode=script_mode)
+    _emit(click.style("Next steps:", bold=True), script_mode=script_mode)
+    _emit(
+        "  • Run 'erk sync -f' to remove worktrees for merged branches",
+        script_mode=script_mode,
+    )
+    _emit(
+        "  • Run 'gt sync -f' to rebase remaining stack branches (if needed)",
+        script_mode=script_mode,
+    )
+    _emit("", script_mode=script_mode)
+    note_prefix = click.style("Note:", fg="yellow")
+    _emit(
+        f"{note_prefix} These commands are now manual to give you full control",
+        script_mode=script_mode,
+    )

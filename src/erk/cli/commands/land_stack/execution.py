@@ -179,7 +179,10 @@ def _execute_sync_trunk_phase(
         # Parent is not checked out - safe to checkout in repo_root
         ctx.git_ops.checkout_branch(repo_root, parent)
         ctx.git_ops.pull_branch(repo_root, "origin", parent, ff_only=True)
-        ctx.git_ops.checkout_branch(repo_root, branch)
+        # Only checkout branch if it's not checked out elsewhere
+        branch_worktree = ctx.git_ops.is_branch_checked_out(repo_root, branch)
+        if not branch_worktree:
+            ctx.git_ops.checkout_branch(repo_root, branch)
 
 
 def _execute_restack_phase(
@@ -197,7 +200,9 @@ def _execute_restack_phase(
         verbose: If True, show detailed output
         script_mode: True when running in --script mode (output to stderr)
     """
-    ctx.graphite_ops.sync(repo_root, force=True, quiet=not verbose)
+    # Note: gt sync -f is NOT run automatically to prevent destructive rebasing.
+    # User should run 'gt sync -f' manually after landing if needed.
+    pass
 
 
 def _force_push_upstack_branches(

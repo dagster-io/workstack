@@ -226,15 +226,13 @@ def test_land_stack_succeeds_when_all_branches_in_current_worktree() -> None:
 
 
 def test_land_stack_from_linked_worktree_on_branch_being_landed() -> None:
-    """Test that land-stack works when run from a linked worktree on branch being landed.
+    """Test that land-stack fails when run from a linked worktree on branch being landed.
 
     Scenario: User is in a linked worktree on feat-1 and wants to land that PR.
-    The command should detect we're already on the branch and skip checkout.
+    The validation should detect that feat-1 is checked out in a worktree and fail.
 
-    Before fix: Would try to checkout feat-1 in repo root, failing because it's
-    already checked out in the linked worktree.
-
-    After fix: Detects current branch and skips unnecessary checkout.
+    After fix: Validation correctly flags ANY branch checked out in ANY worktree
+    as a conflict, including the current worktree. User must consolidate first.
     """
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -280,8 +278,25 @@ def test_land_stack_from_linked_worktree_on_branch_being_landed() -> None:
         # Try to land feat-1 from the linked worktree
         result = runner.invoke(cli, ["land-stack", "--dry-run"], obj=test_ctx)
 
-        # Should succeed - command skips checkout when already on the branch
-        # (dry-run mode doesn't execute real checkout logic, but validates flow works)
-        assert result.exit_code == 0
-        assert "Landing 1 PR" in result.output
+        # Should fail with worktree conflict error
+        assert result.exit_code == 1
+
+        # Verify complete error message structure
+        assert "Cannot land stack - branches are checked out in multiple worktrees" in result.output
+        assert "The following branches are checked out in other worktrees:" in result.output
         assert "feat-1" in result.output
+
+        # Verify multi-line explanation
+        assert (
+            "Git does not allow checking out a branch that is already checked out" in result.output
+        )
+        assert (
+            "in another worktree. To land this stack, you need to consolidate all" in result.output
+        )
+        assert "branches into the current worktree first." in result.output
+
+        # Verify fix instructions
+        assert "To fix:" in result.output
+        assert "erk consolidate" in result.output
+        assert "This will remove other worktrees for branches in this stack" in result.output
+        assert "Then retry: erk land-stack" in result.output

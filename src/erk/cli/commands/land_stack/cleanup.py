@@ -1,6 +1,5 @@
 """Cleanup and navigation operations for land-stack command."""
 
-import subprocess
 from pathlib import Path
 
 import click
@@ -140,29 +139,8 @@ def _cleanup_and_navigate(
     final_branch = trunk_branch
     final_path = repo_root
 
-    # Step 2: Sync worktrees
-    base_cmd = "erk sync -f"
-    if verbose:
-        base_cmd += " --verbose"
-
-    if dry_run:
-        _emit(_format_cli_command(base_cmd, check), script_mode=script_mode)
-    else:
-        try:
-            # This will remove merged worktrees and delete branches
-            ctx.shell_ops.run_erk_sync(
-                repo_root,
-                force=True,
-                verbose=verbose,
-            )
-            _emit(_format_cli_command(base_cmd, check), script_mode=script_mode)
-        except subprocess.CalledProcessError as e:
-            error_msg = e.stderr.strip() if e.stderr else str(e)
-            _emit(
-                f"Warning: Cleanup sync failed: {error_msg}",
-                script_mode=script_mode,
-                error=True,
-            )
+    # Step 2: Inform user about manual cleanup
+    _emit("  ℹ️  Run 'erk sync -f' to remove worktrees for merged branches", script_mode=script_mode)
 
     # Step 3: Navigate to next branch or stay on trunk
     # If last merged branch had unmerged children, navigate to one of them

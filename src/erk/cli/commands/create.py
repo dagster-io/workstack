@@ -1,4 +1,3 @@
-import json
 import shlex
 import subprocess
 from collections.abc import Iterable, Mapping
@@ -8,6 +7,7 @@ import click
 
 from erk.cli.config import LoadedConfig
 from erk.cli.core import discover_repo_context, worktree_path_for
+from erk.cli.json_schemas import create_response_from_dict
 from erk.cli.output import user_output
 from erk.cli.shell_utils import render_navigation_script
 from erk.cli.subprocess_utils import run_with_error_reporting
@@ -265,37 +265,6 @@ def quote_env_value(value: str) -> str:
     return f'"{escaped}"'
 
 
-def _create_json_response(
-    *,
-    worktree_name: str,
-    worktree_path: Path,
-    branch_name: str | None,
-    plan_file_path: Path | None,
-    status: str,
-) -> str:
-    """Generate JSON response for create command.
-
-    Args:
-        worktree_name: Name of the worktree
-        worktree_path: Path to the worktree directory
-        branch_name: Git branch name (may be None if not available)
-        plan_file_path: Path to plan file if exists, None otherwise
-        status: Status string ("created" or "exists")
-
-    Returns:
-        JSON string with worktree information
-    """
-    return json.dumps(
-        {
-            "worktree_name": worktree_name,
-            "worktree_path": str(worktree_path),
-            "branch_name": branch_name,
-            "plan_file": str(plan_file_path) if plan_file_path else None,
-            "status": status,
-        }
-    )
-
-
 @click.command("create")
 @click.argument("name", metavar="NAME", required=False)
 @click.option(
@@ -397,6 +366,10 @@ def create(
     By default, the command checks if a branch with the same name already exists on
     the 'origin' remote. If a conflict is detected, the command fails with an error.
     Use --skip-remote-check to bypass this validation for offline workflows.
+
+    \b
+    JSON Output (--json):
+    Output schema is defined by CreateCommandResponse in erk.cli.json_schemas.
     """
 
     # Validate mutually exclusive options
@@ -503,7 +476,7 @@ def create(
             # For JSON output, emit a status: "exists" response with available info
             existing_branch = ctx.git_ops.get_current_branch(wt_path)
             plan_path = get_plan_path(wt_path, git_ops=ctx.git_ops)
-            json_response = _create_json_response(
+            json_response = create_response_from_dict(
                 worktree_name=name,
                 worktree_path=wt_path,
                 branch_name=existing_branch,
@@ -651,7 +624,7 @@ def create(
         result.output_for_shell_integration()
     elif output_json:
         # Output JSON with worktree information
-        json_response = _create_json_response(
+        json_response = create_response_from_dict(
             worktree_name=name,
             worktree_path=wt_path,
             branch_name=branch,

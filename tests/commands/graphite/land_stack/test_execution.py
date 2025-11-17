@@ -422,3 +422,188 @@ def test_land_stack_merge_command_excludes_auto_flag() -> None:
             f"This flag requires branch protection rules and provides no value "
             f"for synchronous sequential landing. Actual output:\n{result.output}"
         )
+
+
+def test_land_stack_does_not_run_gt_sync() -> None:
+    """Test that gt sync -f is NOT run automatically during landing.
+
+    After behavior change (execution.py:203-205), gt sync -f is manual, not automatic.
+    This test verifies that graphite_ops.sync() is never called during the landing sequence.
+
+    Rationale: Automatic gt sync -f was destructive and ran without user control.
+    Now users must run it manually after landing.
+    """
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        # Build simple 2-branch stack: main → feat-1
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
+                "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
+            },
+            current_branch="feat-1",
+        )
+
+        github_ops = FakeGitHubOps(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Feature 1"),
+            },
+            pr_bases={
+                100: "main",
+            },
+        )
+
+        test_ctx = env.build_context(
+            git_ops=git_ops,
+            graphite_ops=graphite_ops,
+            github_ops=github_ops,
+            use_graphite=True,
+            dry_run=True,
+        )
+
+        # Run land-stack
+        result = runner.invoke(cli, ["land-stack", "--force", "--dry-run"], obj=test_ctx)
+
+        # Should succeed
+        assert result.exit_code == 0, f"Command failed: {result.output}"
+
+        # Verify gt sync was NOT called via mutation tracking
+        assert len(graphite_ops.sync_calls) == 0, (
+            f"gt sync should NOT be called automatically. "
+            f"Expected 0 sync calls, got {len(graphite_ops.sync_calls)} calls: {graphite_ops.sync_calls}"
+        )
+
+        # Verify gt sync command doesn't appear in execution phases
+        # Note: It WILL appear in "Next steps" as a manual suggestion, which is correct
+        # We're verifying it's not executed automatically
+        assert "Executing: gt sync" not in result.output, (
+            f"gt sync should NOT be executed automatically.\nActual output:\n{result.output}"
+        )
+        assert "(dry run) gt sync" not in result.output, (
+            f"gt sync should NOT be shown in dry-run execution.\nActual output:\n{result.output}"
+        )
+
+
+def test_land_stack_does_not_run_erk_sync() -> None:
+    """Test that erk sync -f is NOT run automatically after landing.
+
+    After behavior change (cleanup.py:144), erk sync -f is manual, not automatic.
+    This test verifies that shell_ops.run_erk_sync() is never called, and worktrees
+    remain after landing completes.
+
+    Rationale: Automatic erk sync -f removed worktrees without user control.
+    Now users must run it manually after landing.
+    """
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        # Build simple 2-branch stack: main → feat-1
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
+                "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
+            },
+            current_branch="feat-1",
+        )
+
+        github_ops = FakeGitHubOps(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Feature 1"),
+            },
+            pr_bases={
+                100: "main",
+            },
+        )
+
+        shell_ops = FakeShellOps()
+
+        test_ctx = env.build_context(
+            git_ops=git_ops,
+            graphite_ops=graphite_ops,
+            github_ops=github_ops,
+            shell_ops=shell_ops,
+            use_graphite=True,
+            dry_run=True,
+        )
+
+        # Run land-stack
+        result = runner.invoke(cli, ["land-stack", "--force", "--dry-run"], obj=test_ctx)
+
+        # Should succeed
+        assert result.exit_code == 0, f"Command failed: {result.output}"
+
+        # Verify erk sync was NOT called via mutation tracking
+        assert len(shell_ops.sync_calls) == 0, (
+            f"erk sync should NOT be called automatically. "
+            f"Expected 0 sync calls, got {len(shell_ops.sync_calls)} calls: {shell_ops.sync_calls}"
+        )
+
+        # Verify output shows suggestion to run erk sync manually
+        assert "Run 'erk sync -f' to remove worktrees" in result.output, (
+            f"Expected manual erk sync suggestion in output.\nActual output:\n{result.output}"
+        )
+
+
+def test_final_state_shows_next_steps() -> None:
+    """Test that final state display includes Next steps section.
+
+    After landing (display.py:113-129), user should see:
+    - "Next steps:" header
+    - Suggestion to run 'erk sync -f'
+    - Suggestion to run 'gt sync -f'
+    - Note about manual control
+
+    This ensures users are informed about follow-up actions after landing.
+    """
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        # Build simple 2-branch stack: main → feat-1
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
+                "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
+            },
+            current_branch="feat-1",
+        )
+
+        github_ops = FakeGitHubOps(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Feature 1"),
+            },
+            pr_bases={
+                100: "main",
+            },
+        )
+
+        test_ctx = env.build_context(
+            git_ops=git_ops,
+            graphite_ops=graphite_ops,
+            github_ops=github_ops,
+            use_graphite=True,
+            dry_run=True,
+        )
+
+        # Run land-stack
+        result = runner.invoke(cli, ["land-stack", "--force", "--dry-run"], obj=test_ctx)
+
+        # Should succeed
+        assert result.exit_code == 0, f"Command failed: {result.output}"
+
+        # Verify "Next steps" section appears
+        assert "Next steps:" in result.output, (
+            f"Expected 'Next steps:' header in output.\nActual output:\n{result.output}"
+        )
+
+        # Verify erk sync suggestion
+        assert "Run 'erk sync -f' to remove worktrees" in result.output, (
+            f"Expected erk sync suggestion in output.\nActual output:\n{result.output}"
+        )
+
+        # Verify gt sync suggestion
+        assert "Run 'gt sync -f' to rebase remaining stack branches" in result.output, (
+            f"Expected gt sync suggestion in output.\nActual output:\n{result.output}"
+        )
+
+        # Verify note about manual control
+        assert "These commands are now manual to give you full control" in result.output, (
+            f"Expected manual control note in output.\nActual output:\n{result.output}"
+        )

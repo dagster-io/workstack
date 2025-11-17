@@ -280,6 +280,19 @@ def test_land_stack_from_linked_worktree_on_branch_being_landed() -> None:
 
         # Should fail with worktree conflict error
         assert result.exit_code == 1
+
+        # Verify complete error message structure
         assert "Cannot land stack - branches are checked out in multiple worktrees" in result.output
+        assert "The following branches are checked out in other worktrees:" in result.output
         assert "feat-1" in result.output
+
+        # Verify multi-line explanation
+        assert "Git does not allow checking out a branch that is already checked out" in result.output
+        assert "in another worktree. To land this stack, you need to consolidate all" in result.output
+        assert "branches into the current worktree first." in result.output
+
+        # Verify fix instructions
+        assert "To fix:" in result.output
         assert "erk consolidate" in result.output
+        assert "This will remove other worktrees for branches in this stack" in result.output
+        assert "Then retry: erk land-stack" in result.output

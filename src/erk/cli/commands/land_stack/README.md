@@ -150,7 +150,7 @@ git push origin main
 
 ```bash
 # Wait a few seconds and retry the land-stack command
-workstack land-stack
+erk land-stack
 ```
 
 **Check Rate Limits:**

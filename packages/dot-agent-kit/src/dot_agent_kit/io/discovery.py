@@ -103,7 +103,7 @@ def _extract_kit_from_skill_name(skill_name: str, config: ProjectConfig | None) 
                 return prefix
 
     # For skills without matching prefix, treat as standalone "kit"
-    # This handles skills like "gh", "workstack", "skill-creator", etc.
+    # This handles skills like "gh", "erk", "skill-creator", etc.
     return skill_name
 
 

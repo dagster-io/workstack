@@ -118,13 +118,13 @@ def slash_command_command(
 
     Examples:
 
-        workstack-dev slash-command "gt:submit-branch"
+        erk-dev slash-command "gt:submit-branch"
 
-        workstack-dev slash-command "issue" "123"
+        erk-dev slash-command "issue" "123"
 
-        workstack-dev slash-command "review" "src/main.py"
+        erk-dev slash-command "review" "src/main.py"
 
-        workstack-dev slash-command "analyze" "performance issues" --verbose
+        erk-dev slash-command "analyze" "performance issues" --verbose
     """
     # Find the command file
     command_file = find_command_file(command_name)

@@ -80,11 +80,11 @@ def test_list_single_kit() -> None:
         config = ProjectConfig(
             version="1",
             kits={
-                "workstack": InstalledKit(
-                    kit_id="workstack",
+                "example-kit": InstalledKit(
+                    kit_id="example-kit",
                     source_type="package",
                     version="2.0.0",
-                    artifacts=["skills/workstack/SKILL.md", "commands/workstack.md"],
+                    artifacts=["skills/example-kit/SKILL.md", "commands/example-kit.md"],
                 ),
             },
         )
@@ -94,6 +94,6 @@ def test_list_single_kit() -> None:
 
         assert result.exit_code == 0
         assert "Installed Kits (1):" in result.output
-        assert "workstack" in result.output
+        assert "example-kit" in result.output
         assert "2.0.0" in result.output
         assert "package" in result.output

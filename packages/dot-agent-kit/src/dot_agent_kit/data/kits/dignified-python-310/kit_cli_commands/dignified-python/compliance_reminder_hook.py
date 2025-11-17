@@ -25,7 +25,7 @@ def compliance_reminder_hook() -> None:
     click.echo("FORBIDDEN patterns (will be rejected):")
     click.echo("  • try/except for control flow → Use if key in dict, if path.exists(), etc.")
     click.echo("  • List[str], Optional, Union → Use list[str], str|None")
-    click.echo("  • Relative imports (.module) → Use absolute (workstack.module)")
+    click.echo("  • Relative imports (.module) → Use absolute (erk.module)")
     click.echo("  • Silent fallbacks → Let exceptions bubble, fail fast")
     click.echo("  • from __future__ import annotations → Python 3.13+ doesn't need it")
     click.echo("</reminder>")

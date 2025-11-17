@@ -8,7 +8,7 @@ import click
 from erk_dev.cli.output import user_output
 
 CACHE_DIRS = [
-    Path.home() / ".cache" / "workstack",
+    Path.home() / ".cache" / "erk",
     Path(".pytest_cache"),
     Path(".ruff_cache"),
     Path("__pycache__"),

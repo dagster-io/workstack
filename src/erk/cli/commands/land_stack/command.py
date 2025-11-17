@@ -233,12 +233,15 @@ def land_stack(
 
     # Generate activation script for shell integration
     if script:
-        from erk.cli.shell_utils import render_cd_script
+        from erk.cli.shell_utils import render_navigation_script
 
         # After cleanup, we're at final worktree (trunk or child)
-        # Generate activation script to switch shell to final worktree
-        script_content = render_cd_script(
+        # Generate navigation script to switch shell to final worktree
+        # Uses render_navigation_script to automatically choose between cd (root)
+        # or full activation (worktree)
+        script_content = render_navigation_script(
             final_path,
+            repo.root,
             comment=f"land-stack: switch to {final_branch}",
             success_message=f"✓ Switched to {final_branch} at {final_path}",
         )

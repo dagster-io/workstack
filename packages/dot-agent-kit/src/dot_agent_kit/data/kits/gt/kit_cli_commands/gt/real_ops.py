@@ -15,6 +15,7 @@ import json
 import subprocess
 
 from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.ops import (
+    CommandResult,
     GitGtKitOps,
     GitHubGtKitOps,
     GraphiteGtKitOps,
@@ -190,17 +191,19 @@ class RealGraphiteGtKitOps(GraphiteGtKitOps):
         children = [line.strip() for line in result.stdout.strip().split("\n") if line.strip()]
         return children
 
-    def squash_commits(self) -> bool:
+    def squash_commits(self) -> CommandResult:
         """Run gt squash to consolidate commits."""
         result = subprocess.run(
-            ["gt", "squash"],
+            ["gt", "squash", "--no-interactive"],
             capture_output=True,
             text=True,
             check=False,
         )
-        return result.returncode == 0
+        return CommandResult(
+            success=result.returncode == 0, stdout=result.stdout, stderr=result.stderr
+        )
 
-    def submit(self, publish: bool = False, restack: bool = False) -> tuple[bool, str, str]:
+    def submit(self, publish: bool = False, restack: bool = False) -> CommandResult:
         """Run gt submit to create or update PR."""
         args = ["gt", "submit", "--no-interactive"]
 
@@ -217,7 +220,9 @@ class RealGraphiteGtKitOps(GraphiteGtKitOps):
             check=False,
         )
 
-        return (result.returncode == 0, result.stdout, result.stderr)
+        return CommandResult(
+            success=result.returncode == 0, stdout=result.stdout, stderr=result.stderr
+        )
 
     def restack(self) -> bool:
         """Run gt restack in no-interactive mode."""

@@ -160,6 +160,52 @@ class TestPreAnalysisExecution:
         assert result.error_type == "squash_failed"
         assert "Failed to squash commits" in result.message
 
+    def test_pre_analysis_detects_squash_conflict(self) -> None:
+        """Test that squash conflicts are detected and reported correctly."""
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(3)  # Multiple commits to trigger squash
+            .with_squash_failure(
+                stdout="",
+                stderr=(
+                    "error: could not apply abc123... commit message\n"
+                    "CONFLICT (content): Merge conflict in file.txt"
+                ),
+            )
+        )
+
+        result = execute_pre_analysis(ops)
+
+        assert isinstance(result, PreAnalysisError)
+        assert result.success is False
+        assert result.error_type == "squash_conflict"
+        assert "Merge conflicts detected while squashing commits" in result.message
+        stderr = result.details["stderr"]
+        assert isinstance(stderr, str)
+        assert "CONFLICT" in stderr
+
+    def test_pre_analysis_squash_conflict_preserves_output(self) -> None:
+        """Test that conflict errors include stdout/stderr for debugging."""
+        test_stdout = "Some output"
+        test_stderr = "CONFLICT (content): Merge conflict in README.md"
+
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(2)
+            .with_squash_failure(stdout=test_stdout, stderr=test_stderr)
+        )
+
+        result = execute_pre_analysis(ops)
+
+        assert isinstance(result, PreAnalysisError)
+        assert result.error_type == "squash_conflict"
+        assert result.details["stdout"] == test_stdout
+        assert result.details["stderr"] == test_stderr
+        assert result.details["branch_name"] == "feature-branch"
+        assert result.details["commit_count"] == "2"
+
 
 class TestPostAnalysisExecution:
     """Tests for post-analysis phase execution logic."""
@@ -255,6 +301,56 @@ class TestPostAnalysisExecution:
         assert result.success is False
         assert result.error_type == "submit_merged_parent"
         assert "Parent branches have been merged" in result.message
+
+    def test_post_analysis_detects_submit_conflict(self) -> None:
+        """Test that submit conflicts are detected and reported correctly."""
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_submit_failure(
+                stdout="",
+                stderr=(
+                    "error: could not rebase\nCONFLICT (content): Merge conflict in src/main.py"
+                ),
+            )
+        )
+
+        result = execute_post_analysis(
+            commit_message="Add feature\n\nFull description",
+            ops=ops,
+        )
+
+        assert isinstance(result, PostAnalysisError)
+        assert result.success is False
+        assert result.error_type == "submit_conflict"
+        assert "Merge conflicts detected during branch submission" in result.message
+        stderr = result.details["stderr"]
+        assert isinstance(stderr, str)
+        assert "CONFLICT" in stderr
+
+    def test_post_analysis_conflict_check_is_first(self) -> None:
+        """Test that conflict detection happens before other error patterns."""
+        # This tests that even if output contains other error patterns,
+        # conflicts are detected first
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_submit_failure(
+                stdout="Branch updated remotely",  # Would normally trigger submit_diverged
+                stderr="merge conflict in file.txt",  # But conflict should be detected first
+            )
+        )
+
+        result = execute_post_analysis(
+            commit_message="Add feature\n\nFull description",
+            ops=ops,
+        )
+
+        assert isinstance(result, PostAnalysisError)
+        assert result.error_type == "submit_conflict"  # Not submit_diverged
+        assert "Merge conflicts detected" in result.message
 
     def test_post_analysis_submit_fails_diverged(self) -> None:
         """Test error when branch has diverged from remote."""

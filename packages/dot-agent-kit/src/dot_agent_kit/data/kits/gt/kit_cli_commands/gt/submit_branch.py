@@ -72,6 +72,7 @@ PreAnalysisErrorType = Literal[
     "no_parent",
     "no_commits",
     "squash_failed",
+    "squash_conflict",
 ]
 
 PostAnalysisErrorType = Literal[
@@ -79,6 +80,7 @@ PostAnalysisErrorType = Literal[
     "submit_failed",
     "submit_merged_parent",
     "submit_diverged",
+    "submit_conflict",
     "pr_update_failed",
 ]
 
@@ -250,7 +252,24 @@ def execute_pre_analysis(ops: GtKitOps | None = None) -> PreAnalysisResult | Pre
     # Step 4: Run gt squash only if 2+ commits
     squashed = False
     if commit_count >= 2:
-        if not ops.graphite().squash_commits():
+        result = ops.graphite().squash_commits()
+        if not result.success:
+            # Check if failure was due to merge conflict
+            combined_output = result.stdout + result.stderr
+            if "conflict" in combined_output.lower() or "merge conflict" in combined_output.lower():
+                return PreAnalysisError(
+                    success=False,
+                    error_type="squash_conflict",
+                    message="Merge conflicts detected while squashing commits",
+                    details={
+                        "branch_name": branch_name,
+                        "commit_count": str(commit_count),
+                        "stdout": result.stdout,
+                        "stderr": result.stderr,
+                    },
+                )
+
+            # Generic squash failure (not conflict-related)
             return PreAnalysisError(
                 success=False,
                 error_type="squash_failed",
@@ -258,6 +277,8 @@ def execute_pre_analysis(ops: GtKitOps | None = None) -> PreAnalysisResult | Pre
                 details={
                     "branch_name": branch_name,
                     "commit_count": str(commit_count),
+                    "stdout": result.stdout,
+                    "stderr": result.stderr,
                 },
             )
         squashed = True
@@ -313,11 +334,24 @@ def execute_post_analysis(
         )
 
     # Step 3: Submit branch
-    success, stdout, stderr = ops.graphite().submit(publish=True, restack=True)
-    if not success:
+    result = ops.graphite().submit(publish=True, restack=True)
+    if not result.success:
         # Combine stdout and stderr for pattern matching
-        combined_output = stdout + stderr
+        combined_output = result.stdout + result.stderr
         combined_lower = combined_output.lower()
+
+        # Check for merge conflicts during restack (MUST BE FIRST)
+        if "conflict" in combined_lower or "merge conflict" in combined_lower:
+            return PostAnalysisError(
+                success=False,
+                error_type="submit_conflict",
+                message="Merge conflicts detected during branch submission",
+                details={
+                    "branch_name": branch_name,
+                    "stdout": result.stdout,
+                    "stderr": result.stderr,
+                },
+            )
 
         # Check for merged parent branches not in main trunk
         if "merged but the merged commits are not contained" in combined_output:
@@ -327,8 +361,8 @@ def execute_post_analysis(
                 message="Parent branches have been merged but are not in main trunk",
                 details={
                     "branch_name": branch_name,
-                    "stdout": stdout,
-                    "stderr": stderr,
+                    "stdout": result.stdout,
+                    "stderr": result.stderr,
                 },
             )
 
@@ -340,8 +374,8 @@ def execute_post_analysis(
                 message="Branch has diverged from remote - manual sync required",
                 details={
                     "branch_name": branch_name,
-                    "stdout": stdout,
-                    "stderr": stderr,
+                    "stdout": result.stdout,
+                    "stderr": result.stderr,
                 },
             )
 
@@ -352,8 +386,8 @@ def execute_post_analysis(
             message="Failed to submit branch with gt submit",
             details={
                 "branch_name": branch_name,
-                "stdout": stdout,
-                "stderr": stderr,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
             },
         )
 

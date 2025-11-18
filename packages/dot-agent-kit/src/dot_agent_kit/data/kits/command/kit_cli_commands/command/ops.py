@@ -12,6 +12,14 @@ from dot_agent_kit.data.kits.command.kit_cli_commands.command.formatting import 
     format_string_result,
     format_structured_result,
 )
+from dot_agent_kit.data.kits.command.kit_cli_commands.command.message_parsing import (
+    ToolResult,
+    ToolUse,
+    build_result_status_string,
+    extract_text_from_assistant_message,
+    extract_tool_results_from_user_message,
+    extract_tool_uses_from_assistant_message,
+)
 
 
 @dataclass(frozen=True)
@@ -114,29 +122,22 @@ class RealClaudeCliOps(ClaudeCliOps):
 
     def _handle_assistant_message(self, msg: dict) -> None:
         """Handle assistant message with text and tool use."""
-        message = msg.get("message", {})
-        content = message.get("content", [])
+        # Extract and print text items
+        for text in extract_text_from_assistant_message(msg):
+            print(text, end="", flush=True)
 
-        for item in content:
-            item_type = item.get("type")
+        # Extract and display tool uses
+        for tool_use in extract_tool_uses_from_assistant_message(msg):
+            self._display_tool_use_info(tool_use)
 
-            if item_type == "text":
-                text = item.get("text", "")
-                print(text, end="", flush=True)
-            elif item_type == "tool_use":
-                self._display_tool_use(item)
-
-    def _display_tool_use(self, item: dict) -> None:
+    def _display_tool_use_info(self, tool_use: ToolUse) -> None:
         """Display tool invocation with parameters."""
-        tool_name = item.get("name", "unknown")
-        tool_input = item.get("input", {})
+        print(f"\n⚙️  Using {tool_use.name}", flush=True)
 
-        print(f"\n⚙️  Using {tool_name}", flush=True)
-
-        if not tool_input:
+        if not tool_use.input_params:
             return
 
-        for param_name, param_value in tool_input.items():
+        for param_name, param_value in tool_use.input_params.items():
             self._display_parameter(param_name, param_value)
 
     def _display_parameter(self, param_name: str, param_value) -> None:
@@ -161,28 +162,19 @@ class RealClaudeCliOps(ClaudeCliOps):
 
     def _handle_user_message(self, msg: dict) -> None:
         """Handle user message with tool results."""
-        message = msg.get("message", {})
-        content = message.get("content", [])
+        for result in extract_tool_results_from_user_message(msg):
+            self._display_tool_result_data(result)
 
-        for item in content:
-            if item.get("type") == "tool_result":
-                self._display_tool_result(item)
-
-    def _display_tool_result(self, item: dict) -> None:
-        """Display tool result content."""
-        result_content = item.get("content")
-        if not result_content:
-            return
-
+    def _display_tool_result_data(self, result: ToolResult) -> None:
+        """Display tool result data."""
         print("\n📤 Result:", flush=True)
 
-        if isinstance(result_content, str):
-            self._display_string_result(result_content)
-        elif isinstance(result_content, list):
-            self._display_structured_result(result_content)
+        if isinstance(result.content, str):
+            self._display_string_result(result.content)
+        elif isinstance(result.content, list):
+            self._display_structured_result(result.content)
 
-        is_error = item.get("is_error", False)
-        if is_error:
+        if result.is_error:
             print("   [Error result]", flush=True)
 
     def _display_string_result(self, result_content: str) -> None:
@@ -197,15 +189,8 @@ class RealClaudeCliOps(ClaudeCliOps):
 
     def _handle_result_message(self, msg: dict) -> None:
         """Handle completion result message."""
-        is_error = msg.get("is_error", False)
-        status = "❌ Error" if is_error else "✅ Success"
-        cost = msg.get("total_cost_usd")
-        cost_str = f"${cost:.4f}" if cost else "N/A"
-        duration_ms = msg.get("duration_ms", 0)
-        print(
-            f"\n\n{status} - Cost: {cost_str}, Duration: {duration_ms}ms\n",
-            flush=True,
-        )
+        status_string = build_result_status_string(msg)
+        print(status_string, flush=True)
 
 
 class FakeClaudeCliOps(ClaudeCliOps):

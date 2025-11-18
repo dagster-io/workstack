@@ -1,5 +1,10 @@
 """Top-level command for executing Claude Code slash commands."""
 
+# TODO: Future enhancements
+# 1. Shell auto-completion - Add shell completion support for available commands
+# 2. Improved formatting - Enhance output formatting and styling consistency
+# 3. Status bars that are prettier - Add visual progress indicators and status displays
+
 from pathlib import Path
 
 import click

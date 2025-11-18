@@ -2,13 +2,13 @@
 
 import pytest
 from click.testing import CliRunner
+
+from erk.cli.cli import cli
+from erk.core.gitops import WorktreeInfo
 from tests.fakes.forest_ops import FakeForestOps
 from tests.fakes.gitops import FakeGitOps
 from tests.fakes.graphite_ops import FakeGraphiteOps
 from tests.test_utils.env_helpers import erk_inmem_env
-
-from erk.cli.cli import cli
-from erk.core.gitops import WorktreeInfo
 
 # TODO: These tests need to use erk_isolated_fs_env instead of erk_inmem_env
 # because forest commands use find_current_worktree() which requires proper

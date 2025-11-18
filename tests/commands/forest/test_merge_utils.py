@@ -1,8 +1,6 @@
 """Unit tests for forest merge utilities."""
 
 import pytest
-from tests.fakes.gitops import FakeGitOps
-from tests.test_utils import sentinel_path
 
 from erk.cli.commands.forest.merge_utils import (
     check_uncommitted_changes,
@@ -10,6 +8,8 @@ from erk.cli.commands.forest.merge_utils import (
     identify_removable_worktrees,
 )
 from erk.core.forest_types import Forest
+from tests.fakes.gitops import FakeGitOps
+from tests.test_utils import sentinel_path
 
 
 def test_identify_removable_worktrees() -> None:

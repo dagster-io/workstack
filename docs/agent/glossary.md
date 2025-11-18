@@ -38,6 +38,66 @@ A **managed worktree** created and maintained by the erk tool.
 
 **Example**: `erk create my-feature` creates both a git worktree and an erk.
 
+### Forest
+
+A **named collection of worktrees** belonging to the same Graphite stack.
+
+**Purpose**: Enables unified stack management operations like split, merge, and reroot.
+
+**Key characteristics**:
+
+- Forest names are pure labels stored in `forests.toml` metadata
+- Renaming a forest NEVER moves worktrees or changes filesystem paths
+- Worktree paths remain stable: `~/.erk/repos/<repo>/worktrees/<original-name>/`
+- Membership determined automatically by Graphite stack structure
+
+**Lifecycle**:
+
+- Created automatically when `erk create <name>` called from trunk
+- Joined automatically when `erk create -s <name>` called from forest member
+- Deleted automatically during `erk sync` when empty (zero worktrees)
+
+**Example**: A forest named "auth" might contain worktrees `auth-redesign`, `add-oauth`, and `add-2fa`.
+
+### Forest Membership
+
+Automatic assignment of a worktree to a forest based on Graphite parent/child relationships.
+
+**Rules**:
+
+- A worktree can only belong to one forest at a time
+- If branch's parent is trunk → new forest OR join existing if siblings present
+- If branch's parent is in forest → join that forest
+
+**Example**: Creating branch `add-oauth` from `auth-redesign` automatically adds it to the `auth` forest.
+
+### Empty Forest
+
+A forest with zero existing worktrees, automatically deleted during `erk sync`.
+
+**Detection**: Checked by comparing forest metadata against actual worktree directories.
+
+**Cleanup**: Automatic and silent during sync operations.
+
+### Reroot
+
+Conflict-preserving rebase operation for an entire forest.
+
+**Purpose**: Rebase all branches in a stack while preserving conflict states in git history.
+
+**Benefits**:
+
+- Permanent audit trail of conflicts and resolutions
+- Better PR reviewability
+- Easier debugging of complex merges
+
+**Commit format**:
+
+- `[CONFLICT] Rebase conflicts from <parent> (<sha>)`
+- `[RESOLVED] Fix rebase conflicts from <parent> (<sha>)`
+
+**Example**: `erk forest reroot auth` rebases all branches in the auth forest.
+
 ### Repo Root
 
 The main git repository directory containing `.git/` directory.

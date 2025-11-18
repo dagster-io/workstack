@@ -8,7 +8,7 @@ from pathlib import Path
 
 import click
 
-from erk.core.git.abc import Git, WorktreeInfo
+from erk.core.git.abc import Git, RerootResult, WorktreeInfo
 
 
 class FakeGit(Git):
@@ -579,3 +579,31 @@ class FakeGit(Git):
         if path not in self._file_contents:
             raise FileNotFoundError(f"No content for {path}")
         return self._file_contents[path]
+
+    def rebase_branch(self, branch: str, onto: str, worktree_path: Path) -> RerootResult:
+        """Simulate rebase operation (always succeeds unless configured)."""
+        # By default, succeed with no conflicts
+        return RerootResult(success=True, has_conflicts=False, conflicted_files=[])
+
+    def get_conflicted_files(self, worktree_path: Path) -> list[Path]:
+        """Get conflicted files (returns empty by default)."""
+        return []
+
+    def commit_with_message(self, message: str, worktree_path: Path) -> None:
+        """Simulate creating a commit."""
+        # No-op for now - could track commits if needed
+        pass
+
+    def is_rebase_in_progress(self, worktree_path: Path) -> bool:
+        """Check if rebase is in progress (returns False by default)."""
+        return False
+
+    def abort_rebase(self, worktree_path: Path) -> None:
+        """Simulate aborting rebase."""
+        # No-op for now
+        pass
+
+    def get_commit_sha(self, ref: str, cwd: Path) -> str:
+        """Get commit SHA for ref (returns dummy SHA)."""
+        # Return consistent dummy SHA for testing
+        return "abc123def456789012345678901234567890"

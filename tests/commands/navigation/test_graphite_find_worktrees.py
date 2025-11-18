@@ -44,7 +44,7 @@ def test_find_worktrees_containing_branch_no_match(tmp_path: Path) -> None:
         git_common_dirs={repo_root: git_dir},
     )
 
-    graphite_ops = RealGraphite()
+    graphite = RealGraphite()
 
     ctx = ErkContext.for_test(
         git=git_ops,
@@ -55,7 +55,7 @@ def test_find_worktrees_containing_branch_no_match(tmp_path: Path) -> None:
             show_pr_info=True,
         ),
         github=FakeGitHub(),
-        graphite=graphite_ops,
+        graphite=graphite,
         shell=FakeShell(),
         cwd=tmp_path,
         dry_run=False,

@@ -9,7 +9,7 @@ import subprocess
 from pathlib import Path
 
 from erk.cli.output import user_output
-from erk.core.git.abc import Git, WorktreeInfo
+from erk.core.git.abc import Git, RerootResult, WorktreeInfo
 from erk.core.subprocess import run_subprocess_with_context
 
 # ============================================================================
@@ -545,3 +545,82 @@ class RealGit(Git):
             operation_context=f"pull branch '{branch}' from remote '{remote}'",
             cwd=repo_root,
         )
+
+    def rebase_branch(self, branch: str, onto: str, worktree_path: Path) -> "RerootResult":
+        """Rebase a branch onto another branch."""
+        result = subprocess.run(
+            ["git", "rebase", onto, branch],
+            cwd=worktree_path,
+            capture_output=True,
+            text=True,
+        )
+
+        if result.returncode == 0:
+            return RerootResult(success=True, has_conflicts=False, conflicted_files=[])
+
+        # Check if there are conflicts
+        conflicted = self.get_conflicted_files(worktree_path)
+        return RerootResult(
+            success=False, has_conflicts=len(conflicted) > 0, conflicted_files=conflicted
+        )
+
+    def get_conflicted_files(self, worktree_path: Path) -> list[Path]:
+        """Get list of files with unresolved conflicts."""
+        result = subprocess.run(
+            ["git", "diff", "--name-only", "--diff-filter=U"],
+            cwd=worktree_path,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        files = []
+        for line in result.stdout.strip().split("\n"):
+            if line:
+                files.append(worktree_path / line)
+        return files
+
+    def commit_with_message(self, message: str, worktree_path: Path) -> None:
+        """Create a commit with the given message."""
+        subprocess.run(
+            ["git", "commit", "-m", message],
+            cwd=worktree_path,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+    def is_rebase_in_progress(self, worktree_path: Path) -> bool:
+        """Check if a rebase is currently in progress."""
+        git_dir = worktree_path / ".git"
+        if git_dir.is_file():
+            # Worktree - read .git file to find real git dir
+            with git_dir.open("r", encoding="utf-8") as f:
+                content = f.read().strip()
+                if content.startswith("gitdir: "):
+                    git_dir = Path(content[8:])
+
+        rebase_merge = git_dir / "rebase-merge"
+        rebase_apply = git_dir / "rebase-apply"
+        return rebase_merge.exists() or rebase_apply.exists()
+
+    def abort_rebase(self, worktree_path: Path) -> None:
+        """Abort an in-progress rebase."""
+        subprocess.run(
+            ["git", "rebase", "--abort"],
+            cwd=worktree_path,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+    def get_commit_sha(self, ref: str, cwd: Path) -> str:
+        """Get the commit SHA for a given ref."""
+        result = subprocess.run(
+            ["git", "rev-parse", ref],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout.strip()

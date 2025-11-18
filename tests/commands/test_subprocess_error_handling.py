@@ -69,7 +69,7 @@ def test_sync_displays_stderr_on_gt_sync_failure(tmp_path: Path) -> None:
         "fatal: unable to access 'https://github.com/user/repo.git/': "
         "Failed to connect to github.com"
     )
-    graphite_ops = FakeGraphite(
+    graphite = FakeGraphite(
         sync_raises=subprocess.CalledProcessError(
             returncode=128,
             cmd=["gt", "sync"],
@@ -87,7 +87,7 @@ def test_sync_displays_stderr_on_gt_sync_failure(tmp_path: Path) -> None:
     ctx = ErkContext.for_test(
         git=git_ops,
         global_config=global_config,
-        graphite=graphite_ops,
+        graphite=graphite,
         github=github_ops,
         cwd=repo_root,
         dry_run=False,
@@ -131,7 +131,7 @@ def test_sync_shows_exit_code_when_stderr_empty(tmp_path: Path) -> None:
     github_ops = FakeGitHub()
 
     # Create FakeGraphite that raises CalledProcessError WITHOUT stderr
-    graphite_ops = FakeGraphite(
+    graphite = FakeGraphite(
         sync_raises=subprocess.CalledProcessError(
             returncode=1,
             cmd=["gt", "sync"],
@@ -149,7 +149,7 @@ def test_sync_shows_exit_code_when_stderr_empty(tmp_path: Path) -> None:
     ctx = ErkContext.for_test(
         git=git_ops,
         global_config=global_config,
-        graphite=graphite_ops,
+        graphite=graphite,
         github=github_ops,
         cwd=repo_root,
         dry_run=False,

@@ -23,7 +23,7 @@ def test_land_stack_skips_base_update_when_already_correct() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Build two-PR stack
-        git_ops, graphite_ops = env.build_ops_from_branches(
+        git_ops, graphite = env.build_ops_from_branches(
             {
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch(
@@ -56,7 +56,7 @@ def test_land_stack_skips_base_update_when_already_correct() -> None:
         test_ctx = ErkContext.for_test(
             git=git_ops,
             global_config=global_config_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             dry_run=True,
@@ -112,7 +112,7 @@ def test_land_stack_updates_pr_bases_after_force_push() -> None:
         # - feat-2's parent is "main" (what it will be after landing feat-1 and syncing)
         # - feat-1 still has feat-2 as a child (for finding upstack branches)
         # - Stack includes full history for proper navigation
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-2"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch(
@@ -150,7 +150,7 @@ def test_land_stack_updates_pr_bases_after_force_push() -> None:
         test_ctx = ErkContext.for_test(
             git=git_ops,
             global_config=global_config_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             dry_run=True,
@@ -182,7 +182,7 @@ def test_land_stack_dry_run_shows_trunk_sync_commands() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Build 2-branch stack
-        git_ops, graphite_ops = env.build_ops_from_branches(
+        git_ops, graphite = env.build_ops_from_branches(
             {
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch(
@@ -214,7 +214,7 @@ def test_land_stack_dry_run_shows_trunk_sync_commands() -> None:
         test_ctx = ErkContext.for_test(
             git=git_ops,
             global_config=global_config_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             dry_run=True,

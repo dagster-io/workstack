@@ -39,7 +39,7 @@ def test_up_with_existing_worktree() -> None:
         )
 
         # Set up stack: main -> feature-1 -> feature-2
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
                 "feature-1": BranchMetadata.branch(
@@ -57,9 +57,7 @@ def test_up_with_existing_worktree() -> None:
             worktrees_dir=repo_dir / "worktrees",
         )
 
-        test_ctx = env.build_context(
-            git=git_ops, graphite=graphite_ops, repo=repo, use_graphite=True
-        )
+        test_ctx = env.build_context(git=git_ops, graphite=graphite, repo=repo, use_graphite=True)
 
         # Navigate up from feature-1 to feature-2
         result = runner.invoke(cli, ["up", "--script"], obj=test_ctx, catch_exceptions=False)
@@ -140,7 +138,7 @@ def test_up_child_has_no_worktree() -> None:
         )
 
         # Set up stack: main -> feature-1 -> feature-2
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
                 "feature-1": BranchMetadata.branch(
@@ -158,9 +156,7 @@ def test_up_child_has_no_worktree() -> None:
             worktrees_dir=repo_dir,
         )
 
-        test_ctx = env.build_context(
-            git=git_ops, graphite=graphite_ops, repo=repo, use_graphite=True
-        )
+        test_ctx = env.build_context(git=git_ops, graphite=graphite, repo=repo, use_graphite=True)
 
         result = runner.invoke(cli, ["up", "--script"], obj=test_ctx, catch_exceptions=False)
 
@@ -252,7 +248,7 @@ def test_up_script_flag() -> None:
         )
 
         # Set up stack: main -> feature-1 -> feature-2
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
                 "feature-1": BranchMetadata.branch(
@@ -270,9 +266,7 @@ def test_up_script_flag() -> None:
             worktrees_dir=repo_dir / "worktrees",
         )
 
-        test_ctx = env.build_context(
-            git=git_ops, graphite=graphite_ops, repo=repo, use_graphite=True
-        )
+        test_ctx = env.build_context(git=git_ops, graphite=graphite, repo=repo, use_graphite=True)
 
         result = runner.invoke(cli, ["up", "--script"], obj=test_ctx, catch_exceptions=False)
 
@@ -306,7 +300,7 @@ def test_up_multiple_children_fails_explicitly() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
                 "feature-1": BranchMetadata.branch(
@@ -325,9 +319,7 @@ def test_up_multiple_children_fails_explicitly() -> None:
             worktrees_dir=repo_dir / "worktrees",
         )
 
-        test_ctx = env.build_context(
-            git=git_ops, graphite=graphite_ops, repo=repo, use_graphite=True
-        )
+        test_ctx = env.build_context(git=git_ops, graphite=graphite, repo=repo, use_graphite=True)
 
         result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
 
@@ -368,7 +360,7 @@ def test_up_with_mismatched_worktree_name() -> None:
 
         # Set up stack: main -> feature/auth -> feature/auth-tests
         # Branch names contain slashes, but worktree dirs don't
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk(
                     "main", children=["feature/auth"], commit_sha="abc123"
@@ -390,9 +382,7 @@ def test_up_with_mismatched_worktree_name() -> None:
             worktrees_dir=repo_dir / "worktrees",
         )
 
-        test_ctx = env.build_context(
-            git=git_ops, graphite=graphite_ops, repo=repo, use_graphite=True
-        )
+        test_ctx = env.build_context(git=git_ops, graphite=graphite, repo=repo, use_graphite=True)
 
         # Navigate up from feature/auth to feature/auth-tests
         # This would fail before the fix because it would try to find a worktree named

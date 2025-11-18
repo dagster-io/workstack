@@ -20,7 +20,7 @@ def test_get_branches_to_land_full_stack_default() -> None:
     repo_root = Path("/test/repo")
     git_ops = FakeGit(current_branches={repo_root: "feat-2"})
 
-    graphite_ops = FakeGraphite(
+    graphite = FakeGraphite(
         stacks={
             "feat-2": ["main", "feat-1", "feat-2", "feat-3"],
         },
@@ -55,7 +55,7 @@ def test_get_branches_to_land_full_stack_default() -> None:
     ctx = ErkContext.for_test(
         cwd=Path("/test"),
         git=git_ops,
-        graphite=graphite_ops,
+        graphite=graphite,
         global_config=GlobalConfig(
             erk_root=Path("/test/erks"),
             use_graphite=True,
@@ -77,7 +77,7 @@ def test_get_branches_to_land_down_only_true() -> None:
     repo_root = Path("/test/repo")
     git_ops = FakeGit(current_branches={repo_root: "feat-2"})
 
-    graphite_ops = FakeGraphite(
+    graphite = FakeGraphite(
         stacks={
             "feat-2": ["main", "feat-1", "feat-2", "feat-3"],
         },
@@ -112,7 +112,7 @@ def test_get_branches_to_land_down_only_true() -> None:
     ctx = ErkContext.for_test(
         cwd=Path("/test"),
         git=git_ops,
-        graphite=graphite_ops,
+        graphite=graphite,
         global_config=GlobalConfig(
             erk_root=Path("/test/erks"),
             use_graphite=True,
@@ -134,7 +134,7 @@ def test_get_branches_to_land_at_leaf_full_stack() -> None:
     repo_root = Path("/test/repo")
     git_ops = FakeGit(current_branches={repo_root: "feat-3"})
 
-    graphite_ops = FakeGraphite(
+    graphite = FakeGraphite(
         stacks={
             "feat-3": ["main", "feat-1", "feat-2", "feat-3"],
         },
@@ -169,7 +169,7 @@ def test_get_branches_to_land_at_leaf_full_stack() -> None:
     ctx = ErkContext.for_test(
         cwd=Path("/test"),
         git=git_ops,
-        graphite=graphite_ops,
+        graphite=graphite,
         global_config=GlobalConfig(
             erk_root=Path("/test/erks"),
             use_graphite=True,
@@ -191,7 +191,7 @@ def test_get_branches_to_land_at_leaf_down_only() -> None:
     repo_root = Path("/test/repo")
     git_ops = FakeGit(current_branches={repo_root: "feat-3"})
 
-    graphite_ops = FakeGraphite(
+    graphite = FakeGraphite(
         stacks={
             "feat-3": ["main", "feat-1", "feat-2", "feat-3"],
         },
@@ -226,7 +226,7 @@ def test_get_branches_to_land_at_leaf_down_only() -> None:
     ctx = ErkContext.for_test(
         cwd=Path("/test"),
         git=git_ops,
-        graphite=graphite_ops,
+        graphite=graphite,
         global_config=GlobalConfig(
             erk_root=Path("/test/erks"),
             use_graphite=True,
@@ -248,7 +248,7 @@ def test_get_branches_to_land_first_branch_full_stack() -> None:
     repo_root = Path("/test/repo")
     git_ops = FakeGit(current_branches={repo_root: "feat-1"})
 
-    graphite_ops = FakeGraphite(
+    graphite = FakeGraphite(
         stacks={
             "feat-1": ["main", "feat-1", "feat-2", "feat-3"],
         },
@@ -283,7 +283,7 @@ def test_get_branches_to_land_first_branch_full_stack() -> None:
     ctx = ErkContext.for_test(
         cwd=Path("/test"),
         git=git_ops,
-        graphite=graphite_ops,
+        graphite=graphite,
         global_config=GlobalConfig(
             erk_root=Path("/test/erks"),
             use_graphite=True,
@@ -305,7 +305,7 @@ def test_get_branches_to_land_first_branch_down_only() -> None:
     repo_root = Path("/test/repo")
     git_ops = FakeGit(current_branches={repo_root: "feat-1"})
 
-    graphite_ops = FakeGraphite(
+    graphite = FakeGraphite(
         stacks={
             "feat-1": ["main", "feat-1", "feat-2", "feat-3"],
         },
@@ -340,7 +340,7 @@ def test_get_branches_to_land_first_branch_down_only() -> None:
     ctx = ErkContext.for_test(
         cwd=Path("/test"),
         git=git_ops,
-        graphite=graphite_ops,
+        graphite=graphite,
         global_config=GlobalConfig(
             erk_root=Path("/test/erks"),
             use_graphite=True,
@@ -362,7 +362,7 @@ def test_get_branches_to_land_no_stack() -> None:
     repo_root = Path("/test/repo")
     git_ops = FakeGit(current_branches={repo_root: "unknown"})
 
-    graphite_ops = FakeGraphite(
+    graphite = FakeGraphite(
         stacks={},  # No stack for unknown branch
         branches={
             "main": BranchMetadata(
@@ -374,7 +374,7 @@ def test_get_branches_to_land_no_stack() -> None:
     ctx = ErkContext.for_test(
         cwd=Path("/test"),
         git=git_ops,
-        graphite=graphite_ops,
+        graphite=graphite,
         global_config=GlobalConfig(
             erk_root=Path("/test/erks"),
             use_graphite=True,
@@ -396,7 +396,7 @@ def test_get_branches_to_land_excludes_trunk() -> None:
     repo_root = Path("/test/repo")
     git_ops = FakeGit(current_branches={repo_root: "feat-1"})
 
-    graphite_ops = FakeGraphite(
+    graphite = FakeGraphite(
         stacks={
             "feat-1": ["main", "feat-1"],
         },
@@ -417,7 +417,7 @@ def test_get_branches_to_land_excludes_trunk() -> None:
     ctx = ErkContext.for_test(
         cwd=Path("/test"),
         git=git_ops,
-        graphite=graphite_ops,
+        graphite=graphite,
         global_config=GlobalConfig(
             erk_root=Path("/test/erks"),
             use_graphite=True,

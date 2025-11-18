@@ -252,6 +252,33 @@ def sync_cmd(
                 script_mode=script,
             )
 
+    # Step 6.6: Auto-cleanup empty forests
+    if not dry_run:
+        from erk.core.forest_utils import get_empty_forests
+
+        # Load forest metadata
+        forest_metadata = ctx.forest.load_forests()
+
+        # Get current worktree names
+        current_worktrees = ctx.git.list_worktrees(repo.root)
+        current_worktree_names = [wt.path.name for wt in current_worktrees if not wt.is_root]
+
+        # Identify empty forests
+        empty_forests = get_empty_forests(forest_metadata, current_worktree_names)
+
+        if empty_forests:
+            # Remove empty forests from metadata
+            updated_forests = {
+                name: f for name, f in forest_metadata.forests.items() if name not in empty_forests
+            }
+            updated_metadata = forest_metadata.__class__(forests=updated_forests)
+
+            ctx.forest.save_forests(updated_metadata)
+
+            # Display cleanup message
+            forest_list = ", ".join(empty_forests)
+            _emit(f"✓ Cleaned up empty forests: {forest_list}", script_mode=script)
+
     # Step 7: Return to original worktree
     script_result: ScriptResult | None = None
 

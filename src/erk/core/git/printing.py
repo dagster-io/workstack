@@ -6,7 +6,7 @@ before delegating to the wrapped implementation.
 
 from pathlib import Path
 
-from erk.core.git.abc import Git, WorktreeInfo
+from erk.core.git.abc import Git, RerootResult, WorktreeInfo
 from erk.core.printing_base import PrintingBase
 
 # ============================================================================
@@ -184,3 +184,30 @@ class PrintingGit(PrintingBase, Git):
     def get_file_status(self, cwd: Path) -> tuple[list[str], list[str], list[str]]:
         """Get file status (read-only, no printing)."""
         return self._wrapped.get_file_status(cwd)
+
+    def rebase_branch(self, branch: str, onto: str, worktree_path: Path) -> "RerootResult":
+        """Rebase branch with printing."""
+        self._emit(self._format_command(f"git rebase {onto} {branch}"))
+        return self._wrapped.rebase_branch(branch, onto, worktree_path)
+
+    def get_conflicted_files(self, worktree_path: Path) -> list[Path]:
+        """Get conflicted files (read-only, no printing)."""
+        return self._wrapped.get_conflicted_files(worktree_path)
+
+    def commit_with_message(self, message: str, worktree_path: Path) -> None:
+        """Commit with printing."""
+        self._emit(self._format_command(f"git commit -m {message!r}"))
+        self._wrapped.commit_with_message(message, worktree_path)
+
+    def is_rebase_in_progress(self, worktree_path: Path) -> bool:
+        """Check rebase status (read-only, no printing)."""
+        return self._wrapped.is_rebase_in_progress(worktree_path)
+
+    def abort_rebase(self, worktree_path: Path) -> None:
+        """Abort rebase with printing."""
+        self._emit(self._format_command("git rebase --abort"))
+        self._wrapped.abort_rebase(worktree_path)
+
+    def get_commit_sha(self, ref: str, cwd: Path) -> str:
+        """Get commit SHA (read-only, no printing)."""
+        return self._wrapped.get_commit_sha(ref, cwd)

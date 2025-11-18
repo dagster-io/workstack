@@ -30,14 +30,14 @@ def test_get_parent_branch_returns_parent() -> None:
         ),
         "feature-2": BranchMetadata.branch("feature-2", "feature-1", commit_sha="ghi789"),
     }
-    graphite_ops = FakeGraphite(branches=branches)
+    graphite = FakeGraphite(branches=branches)
     git_ops = FakeGit()  # Not actually used by helper methods
     repo_root = sentinel_path()
 
     # Act & Assert: Test parent relationships
-    assert graphite_ops.get_parent_branch(git_ops, repo_root, "feature-2") == "feature-1"
-    assert graphite_ops.get_parent_branch(git_ops, repo_root, "feature-1") == "main"
-    assert graphite_ops.get_parent_branch(git_ops, repo_root, "main") is None
+    assert graphite.get_parent_branch(git_ops, repo_root, "feature-2") == "feature-1"
+    assert graphite.get_parent_branch(git_ops, repo_root, "feature-1") == "main"
+    assert graphite.get_parent_branch(git_ops, repo_root, "main") is None
 
 
 def test_get_parent_branch_returns_none_for_unknown_branch() -> None:
@@ -46,23 +46,23 @@ def test_get_parent_branch_returns_none_for_unknown_branch() -> None:
     branches = {
         "main": BranchMetadata.trunk("main", commit_sha="abc123"),
     }
-    graphite_ops = FakeGraphite(branches=branches)
+    graphite = FakeGraphite(branches=branches)
     git_ops = FakeGit()
     repo_root = sentinel_path()
 
     # Act & Assert
-    assert graphite_ops.get_parent_branch(git_ops, repo_root, "unknown-branch") is None
+    assert graphite.get_parent_branch(git_ops, repo_root, "unknown-branch") is None
 
 
 def test_get_parent_branch_returns_none_when_no_branches() -> None:
     """Test get_parent_branch() returns None when no Graphite data available."""
     # Arrange: No branches configured
-    graphite_ops = FakeGraphite()
+    graphite = FakeGraphite()
     git_ops = FakeGit()
     repo_root = sentinel_path()
 
     # Act & Assert
-    assert graphite_ops.get_parent_branch(git_ops, repo_root, "any-branch") is None
+    assert graphite.get_parent_branch(git_ops, repo_root, "any-branch") is None
 
 
 def test_get_child_branches_returns_children() -> None:
@@ -78,15 +78,15 @@ def test_get_child_branches_returns_children() -> None:
         "feature-2": BranchMetadata.branch("feature-2", "main", commit_sha="ghi789"),
         "feature-1-1": BranchMetadata.branch("feature-1-1", "feature-1", commit_sha="jkl012"),
     }
-    graphite_ops = FakeGraphite(branches=branches)
+    graphite = FakeGraphite(branches=branches)
     git_ops = FakeGit()
     repo_root = sentinel_path()
 
     # Act & Assert: Test child relationships
-    assert graphite_ops.get_child_branches(git_ops, repo_root, "main") == ["feature-1", "feature-2"]
-    assert graphite_ops.get_child_branches(git_ops, repo_root, "feature-1") == ["feature-1-1"]
-    assert graphite_ops.get_child_branches(git_ops, repo_root, "feature-2") == []
-    assert graphite_ops.get_child_branches(git_ops, repo_root, "feature-1-1") == []
+    assert graphite.get_child_branches(git_ops, repo_root, "main") == ["feature-1", "feature-2"]
+    assert graphite.get_child_branches(git_ops, repo_root, "feature-1") == ["feature-1-1"]
+    assert graphite.get_child_branches(git_ops, repo_root, "feature-2") == []
+    assert graphite.get_child_branches(git_ops, repo_root, "feature-1-1") == []
 
 
 def test_get_child_branches_returns_empty_for_unknown_branch() -> None:
@@ -95,23 +95,23 @@ def test_get_child_branches_returns_empty_for_unknown_branch() -> None:
     branches = {
         "main": BranchMetadata.trunk("main", commit_sha="abc123"),
     }
-    graphite_ops = FakeGraphite(branches=branches)
+    graphite = FakeGraphite(branches=branches)
     git_ops = FakeGit()
     repo_root = sentinel_path()
 
     # Act & Assert
-    assert graphite_ops.get_child_branches(git_ops, repo_root, "unknown-branch") == []
+    assert graphite.get_child_branches(git_ops, repo_root, "unknown-branch") == []
 
 
 def test_get_child_branches_returns_empty_when_no_branches() -> None:
     """Test get_child_branches() returns empty list when no Graphite data."""
     # Arrange: No branches configured
-    graphite_ops = FakeGraphite()
+    graphite = FakeGraphite()
     git_ops = FakeGit()
     repo_root = sentinel_path()
 
     # Act & Assert
-    assert graphite_ops.get_child_branches(git_ops, repo_root, "any-branch") == []
+    assert graphite.get_child_branches(git_ops, repo_root, "any-branch") == []
 
 
 def test_helper_methods_work_with_stacks_configuration() -> None:
@@ -121,14 +121,14 @@ def test_helper_methods_work_with_stacks_configuration() -> None:
     that rely on get_all_branches() should return empty/None with stacks-only config.
     """
     # Arrange: Use stacks parameter (simpler configuration)
-    graphite_ops = FakeGraphite(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
+    graphite = FakeGraphite(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
     git_ops = FakeGit()
     repo_root = sentinel_path()
 
     # Act & Assert: stacks doesn't populate get_all_branches(), so helpers return empty
-    assert graphite_ops.get_parent_branch(git_ops, repo_root, "feature-2") is None
-    assert graphite_ops.get_child_branches(git_ops, repo_root, "main") == []
+    assert graphite.get_parent_branch(git_ops, repo_root, "feature-2") is None
+    assert graphite.get_child_branches(git_ops, repo_root, "main") == []
 
     # But get_branch_stack() works with stacks
     expected_stack = ["main", "feature-1", "feature-2"]
-    assert graphite_ops.get_branch_stack(git_ops, repo_root, "feature-1") == expected_stack
+    assert graphite.get_branch_stack(git_ops, repo_root, "feature-1") == expected_stack

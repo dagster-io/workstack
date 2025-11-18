@@ -63,10 +63,10 @@ def setup_collector(
 
     # PRs now come from Graphite, not GitHub
     # If prs are provided but no graphite_kwargs with pr_info, use prs for graphite
-    graphite_ops_kwargs = graphite_kwargs or {}
-    if prs is not None and "pr_info" not in graphite_ops_kwargs:
-        graphite_ops_kwargs["pr_info"] = prs
-    graphite_ops = FakeGraphite(**graphite_ops_kwargs)
+    graphite_config = graphite_kwargs or {}
+    if prs is not None and "pr_info" not in graphite_config:
+        graphite_config["pr_info"] = prs
+    graphite = FakeGraphite(**graphite_config)
 
     global_config = GlobalConfig(
         erk_root=Path("/fake/erks"),
@@ -77,7 +77,7 @@ def setup_collector(
     ctx = create_test_context(
         git=git_ops,
         github=FakeGitHub(),  # No longer provide PRs via GitHub
-        graphite=graphite_ops,
+        graphite=graphite,
         global_config=global_config,
     )
 

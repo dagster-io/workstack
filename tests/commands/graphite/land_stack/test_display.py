@@ -24,7 +24,7 @@ def test_land_stack_verbose_flag_shows_detailed_output() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Build simple 3-branch stack
-        git_ops, graphite_ops = env.build_ops_from_branches(
+        git_ops, graphite = env.build_ops_from_branches(
             {
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch(
@@ -56,7 +56,7 @@ def test_land_stack_verbose_flag_shows_detailed_output() -> None:
         test_ctx = ErkContext.for_test(
             git=git_ops,
             global_config=global_config_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             dry_run=False,
@@ -88,7 +88,7 @@ def test_land_stack_dry_run_shows_submit_commands() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Build 3-branch stack
-        git_ops, graphite_ops = env.build_ops_from_branches(
+        git_ops, graphite = env.build_ops_from_branches(
             {
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch(
@@ -120,7 +120,7 @@ def test_land_stack_dry_run_shows_submit_commands() -> None:
         test_ctx = ErkContext.for_test(
             git=git_ops,
             global_config=global_config_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             dry_run=True,

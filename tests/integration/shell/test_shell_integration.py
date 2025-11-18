@@ -141,25 +141,20 @@ def test_shell_integration_forwards_stderr_on_success() -> None:
 
 
 def test_shell_integration_handles_multiline_output() -> None:
-    """Test that handler doesn't crash on multi-line output from commands.
-
-    This specifically tests the bug fix where consolidate --down would output
-    multi-line success messages that caused Path operations to fail with
-    'File name too long' errors.
-    """
+    """Test that handler doesn't crash on multi-line output from commands."""
     runner = CliRunner()
-    # consolidate --down may output multi-line messages without a script path
-    result = runner.invoke(cli, ["__shell", "consolidate", "--down"])
+    # Commands may output multi-line messages without a script path
+    result = runner.invoke(cli, ["__shell", "status"])
     # Should handle gracefully without crashing
-    assert result.exit_code in (0, 1)  # May fail due to missing worktrees
+    assert result.exit_code in (0, 1)  # May fail due to missing config
     # The critical test is that we don't get an OSError: File name too long
 
 
 def test_shell_integration_handles_empty_stdout() -> None:
     """Test that handler correctly handles commands that produce no stdout.
 
-    Some commands like 'consolidate --down' complete successfully but produce
-    no activation script (stdout is empty). This should be handled gracefully.
+    Commands may complete successfully but produce no activation script
+    (stdout is empty). This should be handled gracefully.
     """
     runner = CliRunner()
     # Commands that might produce empty stdout
@@ -285,7 +280,7 @@ def test_shell_integration_up_invokes_successfully() -> None:
         wt1_path = env.create_linked_worktree("feat-1", "feat-1", chdir=True)
         _wt2_path = env.create_linked_worktree("feat-2", "feat-2", chdir=False)
 
-        git_ops, graphite_ops = env.build_ops_from_branches(
+        git_ops, graphite = env.build_ops_from_branches(
             {
                 "main": BranchMetadata.trunk("main", children=["feat-1"]),
                 "feat-1": BranchMetadata.branch("feat-1", "main", children=["feat-2"]),
@@ -295,7 +290,7 @@ def test_shell_integration_up_invokes_successfully() -> None:
             current_worktree=wt1_path,
         )
 
-        test_ctx = env.build_context(git=git_ops, graphite=graphite_ops, use_graphite=True)
+        test_ctx = env.build_context(git=git_ops, graphite=graphite, use_graphite=True)
 
         result = runner.invoke(cli, ["__shell", "up"], obj=test_ctx)
 
@@ -315,7 +310,7 @@ def test_shell_integration_down_invokes_successfully() -> None:
         _wt1_path = env.create_linked_worktree("feat-1", "feat-1", chdir=False)
         wt2_path = env.create_linked_worktree("feat-2", "feat-2", chdir=True)
 
-        git_ops, graphite_ops = env.build_ops_from_branches(
+        git_ops, graphite = env.build_ops_from_branches(
             {
                 "main": BranchMetadata.trunk("main", children=["feat-1"]),
                 "feat-1": BranchMetadata.branch("feat-1", "main", children=["feat-2"]),
@@ -325,7 +320,7 @@ def test_shell_integration_down_invokes_successfully() -> None:
             current_worktree=wt2_path,
         )
 
-        test_ctx = env.build_context(git=git_ops, graphite=graphite_ops, use_graphite=True)
+        test_ctx = env.build_context(git=git_ops, graphite=graphite, use_graphite=True)
 
         result = runner.invoke(cli, ["__shell", "down"], obj=test_ctx)
 
@@ -356,32 +351,6 @@ def test_shell_integration_create_invokes_successfully() -> None:
         result = runner.invoke(cli, ["__shell", "create", "newfeature"], obj=test_ctx)
 
         # Should succeed without TypeError (may fail for other reasons like missing config)
-        assert result.exit_code in (0, 1), f"Unexpected exit code: {result.exit_code}"
-
-
-def test_shell_integration_consolidate_invokes_successfully() -> None:
-    """Test that __shell consolidate invokes command successfully."""
-    from erk.core.git.abc import WorktreeInfo
-    from tests.fakes.git import FakeGit
-    from tests.test_utils.env_helpers import erk_isolated_fs_env
-
-    runner = CliRunner()
-    with erk_isolated_fs_env(runner) as env:
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
-                ]
-            },
-        )
-
-        test_ctx = env.build_context(git=git_ops)
-
-        result = runner.invoke(cli, ["__shell", "consolidate"], obj=test_ctx)
-
-        # Should succeed without TypeError (may fail for other reasons or have no work to do)
         assert result.exit_code in (0, 1), f"Unexpected exit code: {result.exit_code}"
 
 
@@ -434,42 +403,6 @@ def test_shell_handler_uses_stdout_not_output() -> None:
             # Should be a single line (path or marker), not mixed with stderr
             # This verifies we're using result.stdout, not result.output
             assert "\n\n" not in script_path_str  # No multi-paragraph content mixing
-
-
-def test_shell_integration_shows_note_for_no_directory_change() -> None:
-    """Test that handler shows helpful message when command succeeds but produces no script.
-
-    When a command completes successfully (exit_code=0) but produces no activation
-    script (empty stdout), the handler should display a note explaining that no
-    directory change is needed. This clarifies expected behavior for users.
-    """
-    from erk.core.git.abc import WorktreeInfo
-    from tests.fakes.git import FakeGit
-    from tests.test_utils.env_helpers import erk_inmem_env
-
-    runner = CliRunner()
-    with erk_inmem_env(runner) as env:
-        # Set up minimal environment - consolidate with no worktrees to remove
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
-                ]
-            },
-        )
-
-        test_ctx = env.build_context(git=git_ops)
-
-        # Use consolidate command - when there's nothing to consolidate, it succeeds
-        # but produces no script output (no directory change needed)
-        result = runner.invoke(cli, ["__shell", "consolidate"], obj=test_ctx)
-
-        # Command should succeed with no work to do
-        if result.exit_code == 0:
-            # Verify the helpful note is displayed
-            assert "completed (no directory change needed)" in result.output
 
 
 def test_shell_integration_create_from_current_branch_returns_script_path() -> None:
@@ -560,7 +493,7 @@ def test_shell_integration_land_stack_invokes_successfully() -> None:
         env.create_linked_worktree("feat-1", "feat-1", chdir=False)
         wt2_path = env.create_linked_worktree("feat-2", "feat-2", chdir=True)
 
-        git_ops, graphite_ops = env.build_ops_from_branches(
+        git_ops, graphite = env.build_ops_from_branches(
             {
                 "main": BranchMetadata.trunk("main", children=["feat-1"]),
                 "feat-1": BranchMetadata.branch("feat-1", "main", children=["feat-2"]),
@@ -570,7 +503,7 @@ def test_shell_integration_land_stack_invokes_successfully() -> None:
             current_worktree=wt2_path,
         )
 
-        test_ctx = env.build_context(git=git_ops, graphite=graphite_ops, use_graphite=True)
+        test_ctx = env.build_context(git=git_ops, graphite=graphite, use_graphite=True)
 
         # Act: Invoke land-stack through __shell handler
         result = runner.invoke(cli, ["__shell", "land-stack"], obj=test_ctx)

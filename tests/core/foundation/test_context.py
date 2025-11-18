@@ -18,7 +18,7 @@ def test_context_initialization_and_attributes() -> None:
     """Initialization wires through every dependency and exposes them as attributes."""
     git_ops = FakeGit()
     github_ops = FakeGitHub()
-    graphite_ops = FakeGraphite()
+    graphite = FakeGraphite()
     shell_ops = FakeShell()
     global_config = GlobalConfig(
         erk_root=Path("/tmp"),
@@ -30,7 +30,7 @@ def test_context_initialization_and_attributes() -> None:
     ctx = ErkContext.for_test(
         git=git_ops,
         github=github_ops,
-        graphite=graphite_ops,
+        graphite=graphite,
         shell=shell_ops,
         cwd=sentinel_path(),
         global_config=global_config,
@@ -40,7 +40,7 @@ def test_context_initialization_and_attributes() -> None:
     assert ctx.git is git_ops
     assert ctx.global_config == global_config
     assert ctx.github is github_ops
-    assert ctx.graphite is graphite_ops
+    assert ctx.graphite is graphite
     assert ctx.shell is shell_ops
     assert ctx.dry_run is False
 

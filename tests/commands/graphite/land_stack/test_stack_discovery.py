@@ -39,7 +39,7 @@ def test_land_stack_gets_branches_to_land_correctly() -> None:
         # Stack: main → feat-1 → feat-2 → feat-3
         # Current: feat-2
         # With --down flag: Should land feat-1, feat-2 (bottom to current, not including feat-3)
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch(
@@ -70,7 +70,7 @@ def test_land_stack_gets_branches_to_land_correctly() -> None:
         test_ctx = ErkContext.for_test(
             git=git_ops,
             global_config=global_config_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             script_writer=env.script_writer,
@@ -119,7 +119,7 @@ def test_land_stack_from_top_of_stack_lands_all_branches() -> None:
         # Stack: main → feat-1 → feat-2 → feat-3 → feat-4
         # Current: feat-4 (at TOP/leaf)
         # Should land: feat-1, feat-2, feat-3, feat-4 (ALL 4 branches)
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch(
@@ -157,7 +157,7 @@ def test_land_stack_from_top_of_stack_lands_all_branches() -> None:
         test_ctx = ErkContext.for_test(
             git=git_ops,
             global_config=global_config_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             script_writer=env.script_writer,
@@ -208,7 +208,7 @@ def test_land_stack_refreshes_metadata_after_sync() -> None:
         )
 
         # Stack: main → feat-1 → feat-2
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch(
@@ -235,7 +235,7 @@ def test_land_stack_refreshes_metadata_after_sync() -> None:
         test_ctx = ErkContext.for_test(
             git=git_ops,
             global_config=global_config_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             script_writer=env.script_writer,

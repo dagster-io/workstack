@@ -31,7 +31,7 @@ def test_land_stack_cleanup_respects_master_trunk() -> None:
         # Build 2-branch stack: master → feat-1
         # Current: feat-1 (will land feat-1)
         # Note: Using "master" instead of "main" to expose the hardcoded bug
-        git_ops, graphite_ops = env.build_ops_from_branches(
+        git_ops, graphite = env.build_ops_from_branches(
             {
                 "master": BranchMetadata.trunk("master", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch("feat-1", "master", commit_sha="def456"),
@@ -58,7 +58,7 @@ def test_land_stack_cleanup_respects_master_trunk() -> None:
         test_ctx = ErkContext.for_test(
             git=git_ops,
             global_config=global_config_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             dry_run=True,  # Use dry-run to see commands

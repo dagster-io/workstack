@@ -1,5 +1,7 @@
 """Layer 2 tests: Adapter implementation tests with mocking."""
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -14,140 +16,136 @@ from dot_agent_kit.data.kits.command.kit_cli_commands.command.ops import (
 class TestRealClaudeCliOps:
     """Layer 2: Test real implementation with mocked subprocess."""
 
+    def _create_mock_process(self, stdout_lines: list[str], returncode: int = 0) -> MagicMock:
+        """Create a mock subprocess.Popen process with configured output."""
+        mock_process = MagicMock()
+        mock_process.stdout = iter(stdout_lines)
+        mock_process.wait.return_value = returncode
+        return mock_process
+
+    @contextmanager
+    def _mock_claude_execution(
+        self, stdout_lines: list[str], returncode: int = 0
+    ) -> Iterator[tuple[MagicMock, MagicMock]]:
+        """Context manager that mocks subprocess.Popen and print for testing.
+
+        Yields tuple of (mock_popen, mock_print) for assertions.
+        """
+        mock_process = self._create_mock_process(stdout_lines, returncode)
+
+        with patch("subprocess.Popen", return_value=mock_process) as mock_popen:
+            with patch("builtins.print") as mock_print:
+                yield mock_popen, mock_print
+
     def test_successful_execution_with_subprocess(self) -> None:
         """Test that RealClaudeCliOps correctly invokes subprocess with streaming."""
         ops = RealClaudeCliOps()
 
-        # Mock subprocess.Popen to return success with JSONL output
-        mock_process = MagicMock()
-        mock_process.stdout = iter([])  # Empty output for this test
-        mock_process.wait.return_value = 0
+        with self._mock_claude_execution([]) as (mock_popen, mock_print):
+            result = ops.execute_command(
+                command_name="test",
+                cwd=Path("/fake/path"),
+                json_output=False,
+            )
 
-        with patch("subprocess.Popen", return_value=mock_process) as mock_popen:
-            with patch("builtins.print") as mock_print:
-                result = ops.execute_command(
-                    command_name="test",
-                    cwd=Path("/fake/path"),
-                    json_output=False,
-                )
+            # Verify result
+            assert result.returncode == 0
 
-                # Verify result
-                assert result.returncode == 0
+            # Verify status message was printed
+            mock_print.assert_called_once_with("Executing command: /test...", flush=True)
 
-                # Verify status message was printed
-                mock_print.assert_called_once_with("Executing command: /test...", flush=True)
+            # Verify subprocess.Popen was called correctly
+            mock_popen.assert_called_once()
+            call_args = mock_popen.call_args
 
-                # Verify subprocess.Popen was called correctly
-                mock_popen.assert_called_once()
-                call_args = mock_popen.call_args
+            # Check command arguments include stream-json and verbose
+            cmd = call_args[0][0]
+            assert cmd[0] == "claude"
+            assert "--print" in cmd
+            assert "--verbose" in cmd
+            assert "--permission-mode" in cmd
+            assert "bypassPermissions" in cmd
+            assert "--setting-sources" in cmd
+            assert "project" in cmd
+            assert "--output-format" in cmd
+            assert "stream-json" in cmd
+            assert "/test" in cmd
 
-                # Check command arguments include stream-json and verbose
-                cmd = call_args[0][0]
-                assert cmd[0] == "claude"
-                assert "--print" in cmd
-                assert "--verbose" in cmd
-                assert "--permission-mode" in cmd
-                assert "bypassPermissions" in cmd
-                assert "--setting-sources" in cmd
-                assert "project" in cmd
-                assert "--output-format" in cmd
-                assert "stream-json" in cmd
-                assert "/test" in cmd
-
-                # Check keyword arguments
-                assert call_args[1]["cwd"] == Path("/fake/path")
-                assert call_args[1]["stdout"] is not None
-                assert call_args[1]["stderr"] is not None
-                assert call_args[1]["text"] is True
-                assert call_args[1]["bufsize"] == 1
+            # Check keyword arguments
+            assert call_args[1]["cwd"] == Path("/fake/path")
+            assert call_args[1]["stdout"] is not None
+            assert call_args[1]["stderr"] is not None
+            assert call_args[1]["text"] is True
+            assert call_args[1]["bufsize"] == 1
 
     def test_failed_execution_with_subprocess(self) -> None:
         """Test that RealClaudeCliOps propagates non-zero exit codes."""
         ops = RealClaudeCliOps()
 
-        # Mock subprocess.Popen to return failure
-        mock_process = MagicMock()
-        mock_process.stdout = iter([])  # Empty output
-        mock_process.wait.return_value = 1
+        with self._mock_claude_execution([], returncode=1) as (mock_popen, mock_print):
+            result = ops.execute_command(
+                command_name="test",
+                cwd=Path("/fake/path"),
+                json_output=False,
+            )
 
-        with patch("subprocess.Popen", return_value=mock_process):
-            with patch("builtins.print"):
-                result = ops.execute_command(
-                    command_name="test",
-                    cwd=Path("/fake/path"),
-                    json_output=False,
-                )
-
-                # Verify exit code propagated
-                assert result.returncode == 1
+            # Verify exit code propagated
+            assert result.returncode == 1
 
     def test_always_uses_stream_json_format(self) -> None:
         """Test that stream-json is always used regardless of json_output parameter."""
         ops = RealClaudeCliOps()
 
-        # Mock subprocess.Popen
-        mock_process = MagicMock()
-        mock_process.stdout = iter([])  # Empty output
-        mock_process.wait.return_value = 0
+        with self._mock_claude_execution([]) as (mock_popen, mock_print):
+            # Test with json_output=True
+            ops.execute_command(
+                command_name="test",
+                cwd=Path("/fake/path"),
+                json_output=True,
+            )
 
-        with patch("subprocess.Popen", return_value=mock_process) as mock_popen:
-            with patch("builtins.print"):
-                # Test with json_output=True
-                ops.execute_command(
-                    command_name="test",
-                    cwd=Path("/fake/path"),
-                    json_output=True,
-                )
+            # Verify --output-format stream-json in command
+            call_args = mock_popen.call_args
+            cmd = call_args[0][0]
+            assert "--output-format" in cmd
+            assert "stream-json" in cmd
 
-                # Verify --output-format stream-json in command
-                call_args = mock_popen.call_args
-                cmd = call_args[0][0]
-                assert "--output-format" in cmd
-                assert "stream-json" in cmd
+            # Reset mock
+            mock_popen.reset_mock()
 
-                # Reset mock
-                mock_popen.reset_mock()
+            # Test with json_output=False - should still use stream-json
+            ops.execute_command(
+                command_name="test2",
+                cwd=Path("/fake/path"),
+                json_output=False,
+            )
 
-                # Test with json_output=False - should still use stream-json
-                ops.execute_command(
-                    command_name="test2",
-                    cwd=Path("/fake/path"),
-                    json_output=False,
-                )
-
-                # Verify stream-json still used
-                call_args = mock_popen.call_args
-                cmd = call_args[0][0]
-                assert "--output-format" in cmd
-                assert "stream-json" in cmd
+            # Verify stream-json still used
+            call_args = mock_popen.call_args
+            cmd = call_args[0][0]
+            assert "--output-format" in cmd
+            assert "stream-json" in cmd
 
     def test_namespaced_command_passed_to_subprocess(self) -> None:
         """Test that namespaced commands are passed correctly."""
         ops = RealClaudeCliOps()
 
-        # Mock subprocess.Popen
-        mock_process = MagicMock()
-        mock_process.stdout = iter([])  # Empty output
-        mock_process.wait.return_value = 0
+        with self._mock_claude_execution([]) as (mock_popen, mock_print):
+            ops.execute_command(
+                command_name="gt:submit-branch",
+                cwd=Path("/fake/path"),
+                json_output=False,
+            )
 
-        with patch("subprocess.Popen", return_value=mock_process) as mock_popen:
-            with patch("builtins.print"):
-                ops.execute_command(
-                    command_name="gt:submit-branch",
-                    cwd=Path("/fake/path"),
-                    json_output=False,
-                )
-
-                # Verify namespace in command
-                call_args = mock_popen.call_args
-                cmd = call_args[0][0]
-                assert "/gt:submit-branch" in cmd
+            # Verify namespace in command
+            call_args = mock_popen.call_args
+            cmd = call_args[0][0]
+            assert "/gt:submit-branch" in cmd
 
     def test_file_not_found_error_propagates(self) -> None:
         """Test that FileNotFoundError is propagated when claude binary not found."""
         ops = RealClaudeCliOps()
 
-        # Mock subprocess.Popen to raise FileNotFoundError
         with patch("subprocess.Popen", side_effect=FileNotFoundError):
             with patch("builtins.print"):
                 with pytest.raises(FileNotFoundError):
@@ -185,33 +183,27 @@ class TestRealClaudeCliOps:
             ),
         ]
 
-        # Mock subprocess.Popen
-        mock_process = MagicMock()
-        mock_process.stdout = iter(jsonl_output)
-        mock_process.wait.return_value = 0
+        with self._mock_claude_execution(jsonl_output) as (mock_popen, mock_print):
+            result = ops.execute_command(
+                command_name="test",
+                cwd=Path("/fake/path"),
+                json_output=False,
+            )
 
-        with patch("subprocess.Popen", return_value=mock_process):
-            with patch("builtins.print") as mock_print:
-                result = ops.execute_command(
-                    command_name="test",
-                    cwd=Path("/fake/path"),
-                    json_output=False,
-                )
+            # Verify result
+            assert result.returncode == 0
 
-                # Verify result
-                assert result.returncode == 0
-
-                # Verify print was called for status + text chunks
-                assert mock_print.call_count == 3
-                # First call: status message
-                assert mock_print.call_args_list[0] == (
-                    ("Executing command: /test...",),
-                    {"flush": True},
-                )
-                # Second call: "Hello "
-                assert mock_print.call_args_list[1] == (("Hello ",), {"end": "", "flush": True})
-                # Third call: "World!"
-                assert mock_print.call_args_list[2] == (("World!",), {"end": "", "flush": True})
+            # Verify print was called for status + text chunks
+            assert mock_print.call_count == 3
+            # First call: status message
+            assert mock_print.call_args_list[0] == (
+                ("Executing command: /test...",),
+                {"flush": True},
+            )
+            # Second call: "Hello "
+            assert mock_print.call_args_list[1] == (("Hello ",), {"end": "", "flush": True})
+            # Third call: "World!"
+            assert mock_print.call_args_list[2] == (("World!",), {"end": "", "flush": True})
 
     def test_hides_system_messages_but_shows_tool_results(self) -> None:
         """Test that system messages are hidden but tool results from user messages are shown."""
@@ -239,28 +231,22 @@ class TestRealClaudeCliOps:
             ),
         ]
 
-        # Mock subprocess.Popen
-        mock_process = MagicMock()
-        mock_process.stdout = iter(jsonl_output)
-        mock_process.wait.return_value = 0
+        with self._mock_claude_execution(jsonl_output) as (mock_popen, mock_print):
+            result = ops.execute_command(
+                command_name="test",
+                cwd=Path("/fake/path"),
+                json_output=False,
+            )
 
-        with patch("subprocess.Popen", return_value=mock_process):
-            with patch("builtins.print") as mock_print:
-                result = ops.execute_command(
-                    command_name="test",
-                    cwd=Path("/fake/path"),
-                    json_output=False,
-                )
+            # Verify result
+            assert result.returncode == 0
 
-                # Verify result
-                assert result.returncode == 0
-
-                # System message hidden, but tool result should be displayed
-                all_print_calls = [str(call) for call in mock_print.call_args_list]
-                # Status message + result header + result content
-                assert mock_print.call_count >= 3
-                assert any("Result:" in str(call) for call in all_print_calls)
-                assert any("Test result output" in str(call) for call in all_print_calls)
+            # System message hidden, but tool result should be displayed
+            all_print_calls = [str(call) for call in mock_print.call_args_list]
+            # Status message + result header + result content
+            assert mock_print.call_count >= 3
+            assert any("Result:" in str(call) for call in all_print_calls)
+            assert any("Test result output" in str(call) for call in all_print_calls)
 
     def test_displays_tool_use_from_assistant_messages(self) -> None:
         """Test that tool_use blocks in assistant messages are displayed."""
@@ -288,26 +274,20 @@ class TestRealClaudeCliOps:
             ),
         ]
 
-        # Mock subprocess.Popen
-        mock_process = MagicMock()
-        mock_process.stdout = iter(jsonl_output)
-        mock_process.wait.return_value = 0
+        with self._mock_claude_execution(jsonl_output) as (mock_popen, mock_print):
+            result = ops.execute_command(
+                command_name="test",
+                cwd=Path("/fake/path"),
+                json_output=False,
+            )
 
-        with patch("subprocess.Popen", return_value=mock_process):
-            with patch("builtins.print") as mock_print:
-                result = ops.execute_command(
-                    command_name="test",
-                    cwd=Path("/fake/path"),
-                    json_output=False,
-                )
+            # Verify result
+            assert result.returncode == 0
 
-                # Verify result
-                assert result.returncode == 0
-
-                # Verify tool use was displayed
-                all_print_calls = [str(call) for call in mock_print.call_args_list]
-                assert any("Using Bash" in str(call) for call in all_print_calls)
-                assert any("pytest tests/" in str(call) for call in all_print_calls)
+            # Verify tool use was displayed
+            all_print_calls = [str(call) for call in mock_print.call_args_list]
+            assert any("Using Bash" in str(call) for call in all_print_calls)
+            assert any("pytest tests/" in str(call) for call in all_print_calls)
 
     def test_displays_all_tool_parameters(self) -> None:
         """Test that all parameters for all tools are displayed, not just Bash/Edit."""
@@ -362,33 +342,27 @@ class TestRealClaudeCliOps:
             ),
         ]
 
-        # Mock subprocess.Popen
-        mock_process = MagicMock()
-        mock_process.stdout = iter(jsonl_output)
-        mock_process.wait.return_value = 0
+        with self._mock_claude_execution(jsonl_output) as (mock_popen, mock_print):
+            result = ops.execute_command(
+                command_name="test",
+                cwd=Path("/fake/path"),
+                json_output=False,
+            )
 
-        with patch("subprocess.Popen", return_value=mock_process):
-            with patch("builtins.print") as mock_print:
-                result = ops.execute_command(
-                    command_name="test",
-                    cwd=Path("/fake/path"),
-                    json_output=False,
-                )
+            # Verify result
+            assert result.returncode == 0
 
-                # Verify result
-                assert result.returncode == 0
+            # Verify TodoWrite parameters displayed
+            all_print_calls = [str(call) for call in mock_print.call_args_list]
+            assert any("Using TodoWrite" in str(call) for call in all_print_calls)
+            assert any("todos:" in str(call) for call in all_print_calls)
+            assert any("Task 1" in str(call) for call in all_print_calls)
 
-                # Verify TodoWrite parameters displayed
-                all_print_calls = [str(call) for call in mock_print.call_args_list]
-                assert any("Using TodoWrite" in str(call) for call in all_print_calls)
-                assert any("todos:" in str(call) for call in all_print_calls)
-                assert any("Task 1" in str(call) for call in all_print_calls)
-
-                # Verify Task parameters displayed
-                assert any("Using Task" in str(call) for call in all_print_calls)
-                assert any("subagent_type: devrun" in str(call) for call in all_print_calls)
-                assert any("description: Run tests" in str(call) for call in all_print_calls)
-                assert any("prompt: Run pytest tests/" in str(call) for call in all_print_calls)
+            # Verify Task parameters displayed
+            assert any("Using Task" in str(call) for call in all_print_calls)
+            assert any("subagent_type: devrun" in str(call) for call in all_print_calls)
+            assert any("description: Run tests" in str(call) for call in all_print_calls)
+            assert any("prompt: Run pytest tests/" in str(call) for call in all_print_calls)
 
     def test_displays_tool_result_with_multiline_content(self) -> None:
         """Test that multiline tool results are displayed with proper indentation."""
@@ -415,28 +389,22 @@ class TestRealClaudeCliOps:
             ),
         ]
 
-        # Mock subprocess.Popen
-        mock_process = MagicMock()
-        mock_process.stdout = iter(jsonl_output)
-        mock_process.wait.return_value = 0
+        with self._mock_claude_execution(jsonl_output) as (mock_popen, mock_print):
+            result = ops.execute_command(
+                command_name="test",
+                cwd=Path("/fake/path"),
+                json_output=False,
+            )
 
-        with patch("subprocess.Popen", return_value=mock_process):
-            with patch("builtins.print") as mock_print:
-                result = ops.execute_command(
-                    command_name="test",
-                    cwd=Path("/fake/path"),
-                    json_output=False,
-                )
+            # Verify result
+            assert result.returncode == 0
 
-                # Verify result
-                assert result.returncode == 0
-
-                # Verify all lines displayed
-                all_print_calls = [str(call) for call in mock_print.call_args_list]
-                assert any("Result:" in str(call) for call in all_print_calls)
-                assert any("Line 1" in str(call) for call in all_print_calls)
-                assert any("Line 2" in str(call) for call in all_print_calls)
-                assert any("Line 3" in str(call) for call in all_print_calls)
+            # Verify all lines displayed
+            all_print_calls = [str(call) for call in mock_print.call_args_list]
+            assert any("Result:" in str(call) for call in all_print_calls)
+            assert any("Line 1" in str(call) for call in all_print_calls)
+            assert any("Line 2" in str(call) for call in all_print_calls)
+            assert any("Line 3" in str(call) for call in all_print_calls)
 
     def test_displays_tool_result_with_structured_content(self) -> None:
         """Test that structured list content in tool results is displayed."""
@@ -466,27 +434,21 @@ class TestRealClaudeCliOps:
             ),
         ]
 
-        # Mock subprocess.Popen
-        mock_process = MagicMock()
-        mock_process.stdout = iter(jsonl_output)
-        mock_process.wait.return_value = 0
+        with self._mock_claude_execution(jsonl_output) as (mock_popen, mock_print):
+            result = ops.execute_command(
+                command_name="test",
+                cwd=Path("/fake/path"),
+                json_output=False,
+            )
 
-        with patch("subprocess.Popen", return_value=mock_process):
-            with patch("builtins.print") as mock_print:
-                result = ops.execute_command(
-                    command_name="test",
-                    cwd=Path("/fake/path"),
-                    json_output=False,
-                )
+            # Verify result
+            assert result.returncode == 0
 
-                # Verify result
-                assert result.returncode == 0
-
-                # Verify structured content displayed
-                all_print_calls = [str(call) for call in mock_print.call_args_list]
-                assert any("Result:" in str(call) for call in all_print_calls)
-                assert any("Structured output line 1" in str(call) for call in all_print_calls)
-                assert any("Structured output line 2" in str(call) for call in all_print_calls)
+            # Verify structured content displayed
+            all_print_calls = [str(call) for call in mock_print.call_args_list]
+            assert any("Result:" in str(call) for call in all_print_calls)
+            assert any("Structured output line 1" in str(call) for call in all_print_calls)
+            assert any("Structured output line 2" in str(call) for call in all_print_calls)
 
     def test_displays_tool_result_error_flag(self) -> None:
         """Test that error results are marked with [Error result]."""
@@ -514,26 +476,20 @@ class TestRealClaudeCliOps:
             ),
         ]
 
-        # Mock subprocess.Popen
-        mock_process = MagicMock()
-        mock_process.stdout = iter(jsonl_output)
-        mock_process.wait.return_value = 0
+        with self._mock_claude_execution(jsonl_output) as (mock_popen, mock_print):
+            result = ops.execute_command(
+                command_name="test",
+                cwd=Path("/fake/path"),
+                json_output=False,
+            )
 
-        with patch("subprocess.Popen", return_value=mock_process):
-            with patch("builtins.print") as mock_print:
-                result = ops.execute_command(
-                    command_name="test",
-                    cwd=Path("/fake/path"),
-                    json_output=False,
-                )
+            # Verify result
+            assert result.returncode == 0
 
-                # Verify result
-                assert result.returncode == 0
-
-                # Verify error flag displayed
-                all_print_calls = [str(call) for call in mock_print.call_args_list]
-                assert any("Error result" in str(call) for call in all_print_calls)
-                assert any("Error: Command failed" in str(call) for call in all_print_calls)
+            # Verify error flag displayed
+            all_print_calls = [str(call) for call in mock_print.call_args_list]
+            assert any("Error result" in str(call) for call in all_print_calls)
+            assert any("Error: Command failed" in str(call) for call in all_print_calls)
 
     def test_displays_result_message(self) -> None:
         """Test that result messages display completion summary."""
@@ -554,27 +510,21 @@ class TestRealClaudeCliOps:
             ),
         ]
 
-        # Mock subprocess.Popen
-        mock_process = MagicMock()
-        mock_process.stdout = iter(jsonl_output)
-        mock_process.wait.return_value = 0
+        with self._mock_claude_execution(jsonl_output) as (mock_popen, mock_print):
+            result = ops.execute_command(
+                command_name="test",
+                cwd=Path("/fake/path"),
+                json_output=False,
+            )
 
-        with patch("subprocess.Popen", return_value=mock_process):
-            with patch("builtins.print") as mock_print:
-                result = ops.execute_command(
-                    command_name="test",
-                    cwd=Path("/fake/path"),
-                    json_output=False,
-                )
+            # Verify result
+            assert result.returncode == 0
 
-                # Verify result
-                assert result.returncode == 0
-
-                # Verify completion summary was displayed
-                all_print_calls = [str(call) for call in mock_print.call_args_list]
-                assert any("Success" in str(call) for call in all_print_calls)
-                assert any("$0.0234" in str(call) for call in all_print_calls)
-                assert any("5432ms" in str(call) for call in all_print_calls)
+            # Verify completion summary was displayed
+            all_print_calls = [str(call) for call in mock_print.call_args_list]
+            assert any("Success" in str(call) for call in all_print_calls)
+            assert any("$0.0234" in str(call) for call in all_print_calls)
+            assert any("5432ms" in str(call) for call in all_print_calls)
 
     def test_displays_error_result_message(self) -> None:
         """Test that error result messages display error status."""
@@ -594,25 +544,19 @@ class TestRealClaudeCliOps:
             ),
         ]
 
-        # Mock subprocess.Popen
-        mock_process = MagicMock()
-        mock_process.stdout = iter(jsonl_output)
-        mock_process.wait.return_value = 0
+        with self._mock_claude_execution(jsonl_output) as (mock_popen, mock_print):
+            result = ops.execute_command(
+                command_name="test",
+                cwd=Path("/fake/path"),
+                json_output=False,
+            )
 
-        with patch("subprocess.Popen", return_value=mock_process):
-            with patch("builtins.print") as mock_print:
-                result = ops.execute_command(
-                    command_name="test",
-                    cwd=Path("/fake/path"),
-                    json_output=False,
-                )
+            # Verify result
+            assert result.returncode == 0
 
-                # Verify result
-                assert result.returncode == 0
-
-                # Verify error status was displayed
-                all_print_calls = [str(call) for call in mock_print.call_args_list]
-                assert any("Error" in str(call) for call in all_print_calls)
+            # Verify error status was displayed
+            all_print_calls = [str(call) for call in mock_print.call_args_list]
+            assert any("Error" in str(call) for call in all_print_calls)
 
     def test_handles_malformed_json_gracefully(self) -> None:
         """Test that malformed JSON lines are printed with warning without crashing."""
@@ -624,37 +568,31 @@ class TestRealClaudeCliOps:
             '{"incomplete": ',
         ]
 
-        # Mock subprocess.Popen
-        mock_process = MagicMock()
-        mock_process.stdout = iter(output)
-        mock_process.wait.return_value = 0
+        with self._mock_claude_execution(output) as (mock_popen, mock_print):
+            result = ops.execute_command(
+                command_name="test",
+                cwd=Path("/fake/path"),
+                json_output=False,
+            )
 
-        with patch("subprocess.Popen", return_value=mock_process):
-            with patch("builtins.print") as mock_print:
-                result = ops.execute_command(
-                    command_name="test",
-                    cwd=Path("/fake/path"),
-                    json_output=False,
-                )
+            # Verify result
+            assert result.returncode == 0
 
-                # Verify result
-                assert result.returncode == 0
+            # Verify print was called (status + warning messages)
+            assert mock_print.call_count >= 3
 
-                # Verify print was called (status + warning messages)
-                assert mock_print.call_count >= 3
+            # Verify status message was printed (first call)
+            status_call = mock_print.call_args_list[0]
+            assert status_call == (
+                ("Executing command: /test...",),
+                {"flush": True},
+            )
 
-                # Verify status message was printed (first call)
-                status_call = mock_print.call_args_list[0]
-                assert status_call == (
-                    ("Executing command: /test...",),
-                    {"flush": True},
-                )
-
-                # Verify warning messages for malformed JSON
-                all_print_calls = [str(call) for call in mock_print.call_args_list]
-                assert any("Warning: Invalid JSON" in str(call) for call in all_print_calls)
-                assert any("This is not JSON" in str(call) for call in all_print_calls)
-                assert any("incomplete" in str(call) for call in all_print_calls)
+            # Verify warning messages for malformed JSON
+            all_print_calls = [str(call) for call in mock_print.call_args_list]
+            assert any("Warning: Invalid JSON" in str(call) for call in all_print_calls)
+            assert any("This is not JSON" in str(call) for call in all_print_calls)
+            assert any("incomplete" in str(call) for call in all_print_calls)
 
 
 class TestFakeClaudeCliOps:

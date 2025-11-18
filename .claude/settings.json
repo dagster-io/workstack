@@ -10,16 +10,6 @@
   "hooks": {
     "UserPromptSubmit": [
       {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "DOT_AGENT_KIT_ID=devrun DOT_AGENT_HOOK_ID=devrun-reminder-hook dot-agent run devrun devrun-reminder-hook",
-            "timeout": 30
-          }
-        ]
-      },
-      {
         "matcher": "*.py",
         "hooks": [
           {
@@ -29,7 +19,17 @@
           },
           {
             "type": "command",
-            "command": "DOT_AGENT_KIT_ID=layered-testing DOT_AGENT_HOOK_ID=layered-testing-reminder-hook dot-agent run layered-testing layered-testing-reminder-hook",
+            "command": "DOT_AGENT_KIT_ID=fake-driven-testing DOT_AGENT_HOOK_ID=fake-driven-testing-reminder-hook dot-agent run fake-driven-testing fake-driven-testing-reminder-hook",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "DOT_AGENT_KIT_ID=devrun DOT_AGENT_HOOK_ID=devrun-reminder-hook dot-agent run devrun devrun-reminder-hook",
             "timeout": 30
           }
         ]

@@ -7,7 +7,7 @@ These tests use two different parallel task runner implementations:
 1. **RealParallelTaskRunner**: Used for most tests where we want actual collector
    execution to happen. This validates the real-world behavior of the orchestrator
    with actual collector implementations. The underlying tasks (reading files,
-   checking git status with FakeGitOps) are fast, making this tractable for fast tests.
+   checking git status with FakeGit) are fast, making this tractable for fast tests.
 
 2. **FakeParallelTaskRunner**: Used only for specific scenarios where we need to
    simulate exceptional conditions that are difficult to reproduce with real
@@ -31,7 +31,7 @@ from erk.status.collectors.plan import PlanFileCollector
 from erk.status.models.status_data import GitStatus, PlanStatus
 from erk.status.orchestrator import StatusOrchestrator
 from tests.fakes.context import create_test_context
-from tests.fakes.gitops import FakeGitOps, WorktreeInfo
+from tests.fakes.git import FakeGit, WorktreeInfo
 from tests.fakes.parallel_task_runner import FakeParallelTaskRunner
 
 
@@ -49,14 +49,14 @@ def test_orchestrator_collects_all_data(tmp_path: Path) -> None:
     (plan_folder / "plan.md").write_text("# Test Plan", encoding="utf-8")
     (plan_folder / "progress.md").write_text("# Progress\n\n- [ ] Step 1", encoding="utf-8")
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         current_branches={worktree_path: "test-branch"},
         file_statuses={worktree_path: ([], [], [])},
         ahead_behind={(worktree_path, "test-branch"): (0, 0)},
         recent_commits={worktree_path: []},
     )
 
-    ctx = create_test_context(git_ops=git_ops)
+    ctx = create_test_context(git=git_ops)
 
     collectors = [
         GitStatusCollector(),
@@ -318,14 +318,14 @@ def test_orchestrator_parallel_execution(tmp_path: Path) -> None:
     (plan_folder / "plan.md").write_text("# Plan", encoding="utf-8")
     (plan_folder / "progress.md").write_text("# Progress\n\n- [ ] Step 1", encoding="utf-8")
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         current_branches={worktree_path: "branch"},
         file_statuses={worktree_path: ([], [], [])},
         ahead_behind={(worktree_path, "branch"): (0, 0)},
         recent_commits={worktree_path: []},
     )
 
-    ctx = create_test_context(git_ops=git_ops)
+    ctx = create_test_context(git=git_ops)
 
     # Track execution order
     execution_order = []
@@ -373,7 +373,7 @@ def test_orchestrator_related_worktrees(tmp_path: Path) -> None:
     current = tmp_path / "current"
     current.mkdir()
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         worktrees={
             repo_root: [
                 WorktreeInfo(path=repo_root, branch="main"),
@@ -385,7 +385,7 @@ def test_orchestrator_related_worktrees(tmp_path: Path) -> None:
         current_branches={current: "current-branch"},
     )
 
-    ctx = create_test_context(git_ops=git_ops)
+    ctx = create_test_context(git=git_ops)
     orchestrator = StatusOrchestrator([], runner=RealParallelTaskRunner())
 
     # Act
@@ -410,12 +410,12 @@ def test_orchestrator_worktree_info_root(tmp_path: Path) -> None:
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         worktrees={repo_root: [WorktreeInfo(path=repo_root, branch="main")]},
         current_branches={repo_root: "main"},
     )
 
-    ctx = create_test_context(git_ops=git_ops)
+    ctx = create_test_context(git=git_ops)
     orchestrator = StatusOrchestrator([], runner=RealParallelTaskRunner())
 
     # Act
@@ -435,7 +435,7 @@ def test_orchestrator_worktree_info_not_root(tmp_path: Path) -> None:
     worktree = tmp_path / "feature"
     worktree.mkdir()
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         worktrees={
             repo_root: [
                 WorktreeInfo(path=repo_root, branch="main"),
@@ -445,7 +445,7 @@ def test_orchestrator_worktree_info_not_root(tmp_path: Path) -> None:
         current_branches={worktree: "feature"},
     )
 
-    ctx = create_test_context(git_ops=git_ops)
+    ctx = create_test_context(git=git_ops)
     orchestrator = StatusOrchestrator([], runner=RealParallelTaskRunner())
 
     # Act
@@ -464,7 +464,7 @@ def test_orchestrator_handles_nonexistent_paths(tmp_path: Path) -> None:
     repo_root.mkdir()
     nonexistent = tmp_path / "nonexistent"  # Don't create this
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         worktrees={
             repo_root: [
                 WorktreeInfo(path=repo_root, branch="main"),
@@ -474,7 +474,7 @@ def test_orchestrator_handles_nonexistent_paths(tmp_path: Path) -> None:
         current_branches={repo_root: "main"},
     )
 
-    ctx = create_test_context(git_ops=git_ops)
+    ctx = create_test_context(git=git_ops)
     orchestrator = StatusOrchestrator([], runner=RealParallelTaskRunner())
 
     # Act

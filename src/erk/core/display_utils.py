@@ -9,7 +9,7 @@ import re
 
 import click
 
-from erk.core.github_ops import PullRequestInfo
+from erk.core.github import PullRequestInfo
 
 
 def get_visible_length(text: str) -> int:

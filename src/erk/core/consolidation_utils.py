@@ -8,7 +8,7 @@ single worktree. All functions are pure and testable without filesystem I/O.
 from dataclasses import dataclass
 from pathlib import Path
 
-from erk.core.gitops import WorktreeInfo
+from erk.core.git import WorktreeInfo
 
 
 @dataclass(frozen=True)

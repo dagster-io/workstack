@@ -3,14 +3,14 @@
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
+from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.gitops import WorktreeInfo
-from erk.core.global_config import GlobalConfig
-from erk.core.graphite_ops import BranchMetadata
-from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.gitops import FakeGitOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.fakes.shell_ops import FakeShellOps
+from erk.core.git import WorktreeInfo
+from erk.core.graphite import BranchMetadata
+from tests.fakes.git import FakeGit
+from tests.fakes.github import FakeGitHub
+from tests.fakes.graphite import FakeGraphite
+from tests.fakes.shell import FakeShell
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
@@ -46,7 +46,7 @@ def test_land_stack_with_down_flag_includes_flag_in_error_suggestions() -> None:
             show_pr_info=True,
         )
 
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Feature 1"),
                 "feat-2": ("OPEN", 200, "Feature 2"),
@@ -60,11 +60,11 @@ def test_land_stack_with_down_flag_includes_flag_in_error_suggestions() -> None:
         )
 
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
+            git=git_ops,
             global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
@@ -113,7 +113,7 @@ def test_land_stack_fails_when_branches_in_multiple_worktrees() -> None:
             show_pr_info=True,
         )
 
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Feature 1"),
                 "feat-2": ("OPEN", 200, "Feature 2"),
@@ -127,11 +127,11 @@ def test_land_stack_fails_when_branches_in_multiple_worktrees() -> None:
         )
 
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
+            git=git_ops,
             global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
@@ -158,7 +158,7 @@ def test_land_stack_succeeds_when_all_branches_in_current_worktree() -> None:
     with erk_inmem_env(runner) as env:
         # Only main branch in repo root, current branch is feat-2
         # feat-1 and feat-2 not checked out in other worktrees
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
                 env.cwd: [
@@ -179,7 +179,7 @@ def test_land_stack_succeeds_when_all_branches_in_current_worktree() -> None:
         # Stack: main → feat-1 → feat-2
         # Current: feat-2
         # Should land: feat-1, feat-2
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch(
@@ -192,7 +192,7 @@ def test_land_stack_succeeds_when_all_branches_in_current_worktree() -> None:
             },
         )
 
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Feature 1"),
                 "feat-2": ("OPEN", 200, "Feature 2"),
@@ -204,11 +204,11 @@ def test_land_stack_succeeds_when_all_branches_in_current_worktree() -> None:
         )
 
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
+            git=git_ops,
             global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
@@ -256,7 +256,7 @@ def test_land_stack_from_linked_worktree_on_branch_being_landed() -> None:
             show_pr_info=True,
         )
 
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Add feature 1"),
             },
@@ -266,11 +266,11 @@ def test_land_stack_from_linked_worktree_on_branch_being_landed() -> None:
         )
 
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
+            git=git_ops,
             global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             dry_run=False,
             cwd=linked_wt,
         )

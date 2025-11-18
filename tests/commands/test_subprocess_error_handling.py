@@ -31,12 +31,12 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from erk.cli.commands.sync import sync_cmd
+from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.gitops import WorktreeInfo
-from erk.core.global_config import GlobalConfig
-from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.gitops import FakeGitOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
+from erk.core.git import WorktreeInfo
+from tests.fakes.git import FakeGit
+from tests.fakes.github import FakeGitHub
+from tests.fakes.graphite import FakeGraphite
 
 # Tests for sync command error handling
 
@@ -52,7 +52,7 @@ def test_sync_displays_stderr_on_gt_sync_failure(tmp_path: Path) -> None:
     repo_root.mkdir()
     (repo_root / ".git").mkdir()
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         git_common_dirs={repo_root: repo_root / ".git"},
         worktrees={
             repo_root: [
@@ -62,14 +62,14 @@ def test_sync_displays_stderr_on_gt_sync_failure(tmp_path: Path) -> None:
         current_branches={repo_root: "main"},
     )
 
-    github_ops = FakeGitHubOps()
+    github_ops = FakeGitHub()
 
-    # Create a FakeGraphiteOps that raises CalledProcessError with stderr
+    # Create a FakeGraphite that raises CalledProcessError with stderr
     error_message = (
         "fatal: unable to access 'https://github.com/user/repo.git/': "
         "Failed to connect to github.com"
     )
-    graphite_ops = FakeGraphiteOps(
+    graphite_ops = FakeGraphite(
         sync_raises=subprocess.CalledProcessError(
             returncode=128,
             cmd=["gt", "sync"],
@@ -85,10 +85,10 @@ def test_sync_displays_stderr_on_gt_sync_failure(tmp_path: Path) -> None:
     )
 
     ctx = ErkContext.for_test(
-        git_ops=git_ops,
+        git=git_ops,
         global_config=global_config,
-        graphite_ops=graphite_ops,
-        github_ops=github_ops,
+        graphite=graphite_ops,
+        github=github_ops,
         cwd=repo_root,
         dry_run=False,
     )
@@ -118,7 +118,7 @@ def test_sync_shows_exit_code_when_stderr_empty(tmp_path: Path) -> None:
     repo_root.mkdir()
     (repo_root / ".git").mkdir()
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         git_common_dirs={repo_root: repo_root / ".git"},
         worktrees={
             repo_root: [
@@ -128,10 +128,10 @@ def test_sync_shows_exit_code_when_stderr_empty(tmp_path: Path) -> None:
         current_branches={repo_root: "main"},
     )
 
-    github_ops = FakeGitHubOps()
+    github_ops = FakeGitHub()
 
-    # Create FakeGraphiteOps that raises CalledProcessError WITHOUT stderr
-    graphite_ops = FakeGraphiteOps(
+    # Create FakeGraphite that raises CalledProcessError WITHOUT stderr
+    graphite_ops = FakeGraphite(
         sync_raises=subprocess.CalledProcessError(
             returncode=1,
             cmd=["gt", "sync"],
@@ -147,10 +147,10 @@ def test_sync_shows_exit_code_when_stderr_empty(tmp_path: Path) -> None:
     )
 
     ctx = ErkContext.for_test(
-        git_ops=git_ops,
+        git=git_ops,
         global_config=global_config,
-        graphite_ops=graphite_ops,
-        github_ops=github_ops,
+        graphite=graphite_ops,
+        github=github_ops,
         cwd=repo_root,
         dry_run=False,
     )

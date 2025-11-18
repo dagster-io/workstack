@@ -16,14 +16,14 @@ import subprocess
 
 from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.ops import (
     CommandResult,
-    GitGtKitOps,
-    GitHubGtKitOps,
-    GraphiteGtKitOps,
-    GtKitOps,
+    GitGtKit,
+    GitHubGtKit,
+    GraphiteGtKit,
+    GtKit,
 )
 
 
-class RealGitGtKitOps(GitGtKitOps):
+class RealGitGtKit(GitGtKit):
     """Real git operations using subprocess."""
 
     def get_current_branch(self) -> str | None:
@@ -158,7 +158,7 @@ class RealGitGtKitOps(GitGtKitOps):
         return result.stdout
 
 
-class RealGraphiteGtKitOps(GraphiteGtKitOps):
+class RealGraphiteGtKit(GraphiteGtKit):
     """Real Graphite operations using subprocess."""
 
     def get_parent_branch(self) -> str | None:
@@ -246,7 +246,7 @@ class RealGraphiteGtKitOps(GraphiteGtKitOps):
         return result.returncode == 0
 
 
-class RealGitHubGtKitOps(GitHubGtKitOps):
+class RealGitHubGtKit(GitHubGtKit):
     """Real GitHub operations using subprocess."""
 
     def get_pr_info(self) -> tuple[int, str] | None:
@@ -318,7 +318,7 @@ class RealGitHubGtKitOps(GitHubGtKitOps):
         return f"https://app.graphite.com/github/pr/{owner}/{repo}/{pr_number}"
 
 
-class RealGtKitOps(GtKitOps):
+class RealGtKit(GtKit):
     """Real composite operations implementation.
 
     Combines real git, Graphite, and GitHub operations for production use.
@@ -326,18 +326,18 @@ class RealGtKitOps(GtKitOps):
 
     def __init__(self) -> None:
         """Initialize real operations instances."""
-        self._git = RealGitGtKitOps()
-        self._graphite = RealGraphiteGtKitOps()
-        self._github = RealGitHubGtKitOps()
+        self._git = RealGitGtKit()
+        self._graphite = RealGraphiteGtKit()
+        self._github = RealGitHubGtKit()
 
-    def git(self) -> GitGtKitOps:
+    def git(self) -> GitGtKit:
         """Get the git operations interface."""
         return self._git
 
-    def graphite(self) -> GraphiteGtKitOps:
+    def graphite(self) -> GraphiteGtKit:
         """Get the Graphite operations interface."""
         return self._graphite
 
-    def github(self) -> GitHubGtKitOps:
+    def github(self) -> GitHubGtKit:
         """Get the GitHub operations interface."""
         return self._github

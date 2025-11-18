@@ -667,7 +667,8 @@ Erk bundles several kits that provide Claude Code artifacts:
 - **gt** - Graphite integration (`/gt:submit-branch`, `/gt:update-pr`, `gt-graphite` skill)
 - **devrun** - Development tool execution (pytest, pyright, ruff, prettier, make, gt)
 - **dignified-python-313** - Python 3.13+ coding standards
-- **layered-testing** - Testing architecture patterns
+- **fake-driven-testing** - Testing architecture patterns
+- **fix-merge-conflicts** - Merge conflict resolution
 
 For detailed documentation of all installed kits and their artifacts, see `.claude/docs/kit-registry.md`.
 

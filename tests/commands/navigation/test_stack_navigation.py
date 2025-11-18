@@ -6,10 +6,10 @@ from click.testing import CliRunner
 
 from erk.cli.cli import cli
 from erk.core.branch_metadata import BranchMetadata
-from erk.core.gitops import WorktreeInfo
+from erk.core.git import WorktreeInfo
 from erk.core.repo_discovery import RepoContext
-from tests.fakes.gitops import FakeGitOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
+from tests.fakes.git import FakeGit
+from tests.fakes.graphite import FakeGraphite
 from tests.test_utils.env_helpers import erk_inmem_env, erk_isolated_fs_env
 
 
@@ -19,7 +19,7 @@ def test_up_with_existing_worktree() -> None:
     with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -37,7 +37,7 @@ def test_up_with_existing_worktree() -> None:
         )
 
         # Set up stack: main -> feature-1 -> feature-2
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
                 "feature-1": BranchMetadata.branch(
@@ -56,7 +56,7 @@ def test_up_with_existing_worktree() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=graphite_ops, repo=repo, use_graphite=True
+            git=git_ops, graphite=graphite_ops, repo=repo, use_graphite=True
         )
 
         result = runner.invoke(cli, ["up", "--script"], obj=test_ctx, catch_exceptions=False)
@@ -78,7 +78,7 @@ def test_up_at_top_of_stack() -> None:
     with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -90,7 +90,7 @@ def test_up_at_top_of_stack() -> None:
         )
 
         # Set up stack: main -> feature-1 -> feature-2 (at top)
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
                 "feature-1": BranchMetadata.branch(
@@ -100,7 +100,7 @@ def test_up_at_top_of_stack() -> None:
             }
         )
 
-        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
+        test_ctx = env.build_context(git=git_ops, graphite=graphite_ops, use_graphite=True)
 
         result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
 
@@ -115,7 +115,7 @@ def test_up_child_has_no_worktree() -> None:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Only feature-1 has a worktree, feature-2 does not (will be auto-created)
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -129,7 +129,7 @@ def test_up_child_has_no_worktree() -> None:
         )
 
         # Set up stack: main -> feature-1 -> feature-2
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
                 "feature-1": BranchMetadata.branch(
@@ -148,7 +148,7 @@ def test_up_child_has_no_worktree() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=graphite_ops, repo=repo, use_graphite=True
+            git=git_ops, graphite=graphite_ops, repo=repo, use_graphite=True
         )
 
         result = runner.invoke(cli, ["up", "--script"], obj=test_ctx, catch_exceptions=False)
@@ -167,7 +167,7 @@ def test_down_with_existing_worktree() -> None:
     with erk_inmem_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -181,7 +181,7 @@ def test_down_with_existing_worktree() -> None:
         )
 
         # Set up stack: main -> feature-1 -> feature-2
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
                 "feature-1": BranchMetadata.branch(
@@ -200,7 +200,7 @@ def test_down_with_existing_worktree() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=graphite_ops, repo=repo, use_graphite=True
+            git=git_ops, graphite=graphite_ops, repo=repo, use_graphite=True
         )
 
         result = runner.invoke(cli, ["down", "--script"], obj=test_ctx, catch_exceptions=False)
@@ -220,7 +220,7 @@ def test_down_to_trunk_root() -> None:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Main is checked out in root, feature-1 has its own worktree
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -233,7 +233,7 @@ def test_down_to_trunk_root() -> None:
         )
 
         # Set up stack: main -> feature-1
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
                 "feature-1": BranchMetadata.branch("feature-1", "main", commit_sha="def456"),
@@ -249,7 +249,7 @@ def test_down_to_trunk_root() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=graphite_ops, repo=repo, use_graphite=True
+            git=git_ops, graphite=graphite_ops, repo=repo, use_graphite=True
         )
 
         # Switch down from feature-1 to root (main)
@@ -268,7 +268,7 @@ def test_down_at_trunk() -> None:
     """Test 'erk down' navigation when already at trunk."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch="main")]},
             current_branches={env.cwd: "main"},
             default_branches={env.cwd: "main"},
@@ -276,13 +276,13 @@ def test_down_at_trunk() -> None:
         )
 
         # Set up stack: main (only trunk)
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", commit_sha="abc123"),
             }
         )
 
-        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
+        test_ctx = env.build_context(git=git_ops, graphite=graphite_ops, use_graphite=True)
 
         result = runner.invoke(cli, ["down"], obj=test_ctx, catch_exceptions=False)
 
@@ -298,7 +298,7 @@ def test_down_parent_has_no_worktree() -> None:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Only feature-2 has a worktree, feature-1 does not (will be auto-created)
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -313,7 +313,7 @@ def test_down_parent_has_no_worktree() -> None:
         )
 
         # Set up stack: main -> feature-1 -> feature-2
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
                 "feature-1": BranchMetadata.branch(
@@ -332,7 +332,7 @@ def test_down_parent_has_no_worktree() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=graphite_ops, repo=repo, use_graphite=True
+            git=git_ops, graphite=graphite_ops, repo=repo, use_graphite=True
         )
 
         result = runner.invoke(cli, ["down", "--script"], obj=test_ctx, catch_exceptions=False)
@@ -349,16 +349,16 @@ def test_up_down_graphite_not_enabled() -> None:
     """Test 'erk up' and 'erk down' require Graphite to be enabled."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch="main")]},
             current_branches={env.cwd: "main"},
             git_common_dirs={env.cwd: env.git_dir},
         )
 
         # Graphite is NOT enabled
-        graphite_ops = FakeGraphiteOps()
+        graphite_ops = FakeGraphite()
 
-        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops)
+        test_ctx = env.build_context(git=git_ops, graphite=graphite_ops)
 
         # Try 'erk up'
         result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
@@ -379,15 +379,15 @@ def test_up_detached_head() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Current branch is None (detached HEAD)
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch=None)]},
             current_branches={env.cwd: None},
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        graphite_ops = FakeGraphiteOps()
+        graphite_ops = FakeGraphite()
 
-        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
+        test_ctx = env.build_context(git=git_ops, graphite=graphite_ops, use_graphite=True)
 
         result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
 
@@ -410,7 +410,7 @@ def test_up_with_mismatched_worktree_name() -> None:
         # Worktree directories use different naming than branch names
         # Branch: feature/db -> Worktree: db-refactor
         # Branch: feature/db-tests -> Worktree: db-tests-implementation
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -427,7 +427,7 @@ def test_up_with_mismatched_worktree_name() -> None:
         )
 
         # Set up stack: main -> feature/db -> feature/db-tests
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feature/db"], commit_sha="abc123"),
                 "feature/db": BranchMetadata.branch(
@@ -448,7 +448,7 @@ def test_up_with_mismatched_worktree_name() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=graphite_ops, repo=repo, use_graphite=True
+            git=git_ops, graphite=graphite_ops, repo=repo, use_graphite=True
         )
 
         # Navigate up from feature/db to feature/db-tests using 'erk up'
@@ -482,7 +482,7 @@ def test_down_with_mismatched_worktree_name() -> None:
         # Worktree directories use different naming than branch names
         # Branch: feature/api -> Worktree: api-work
         # Branch: feature/api-v2 -> Worktree: api-v2-work
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -497,7 +497,7 @@ def test_down_with_mismatched_worktree_name() -> None:
         )
 
         # Set up stack: main -> feature/api -> feature/api-v2
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feature/api"], commit_sha="abc123"),
                 "feature/api": BranchMetadata.branch(
@@ -518,7 +518,7 @@ def test_down_with_mismatched_worktree_name() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops, graphite_ops=graphite_ops, repo=repo, use_graphite=True
+            git=git_ops, graphite=graphite_ops, repo=repo, use_graphite=True
         )
 
         # Navigate down from feature/api-v2 to feature/api using 'erk down'

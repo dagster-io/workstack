@@ -26,7 +26,7 @@ Usage Pattern:
             erk_root = cwd / "erks"
             erk_root.mkdir()
 
-            git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+            git = FakeGit(git_common_dirs={cwd: git_dir})
             global_config_ops = GlobalConfig(...)
             test_ctx = ErkContext.for_test(cwd=cwd, ...)
 
@@ -38,7 +38,7 @@ Usage Pattern:
     def test_something() -> None:
         runner = CliRunner()
         with simulated_erk_env(runner) as env:
-            git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
+            git = FakeGit(git_common_dirs={env.cwd: env.git_dir})
             global_config_ops = GlobalConfig(...)
             script_writer=env.script_writer,
             test_ctx = ErkContext.for_test(cwd=env.cwd, ...)
@@ -56,7 +56,7 @@ Advanced Usage (complex worktree scenarios):
             env.create_linked_worktree("feat-2", "feat-2", chdir=True)
 
             # Build ops from branch metadata
-            git_ops, graphite_ops = env.build_ops_from_branches(
+            git, graphite = env.build_ops_from_branches(
                 {
                     "main": BranchMetadata.trunk("main", children=["feat-1"]),
                     "feat-1": BranchMetadata.branch("feat-1", "main", children=["feat-2"]),
@@ -66,7 +66,7 @@ Advanced Usage (complex worktree scenarios):
             )
 
             script_writer=env.script_writer,
-            test_ctx = ErkContext.for_test(cwd=env.cwd, git_ops=git_ops, ...)
+            test_ctx = ErkContext.for_test(cwd=env.cwd, git=git, ...)
     ```
 
 Directory Structure Created:
@@ -85,16 +85,16 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
+from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.gitops import WorktreeInfo
-from erk.core.global_config import GlobalConfig
-from erk.core.graphite_ops import BranchMetadata
+from erk.core.git import WorktreeInfo
+from erk.core.graphite import BranchMetadata
 from erk.core.repo_discovery import RepoContext
-from erk.core.script_writer import RealScriptWriterOps
-from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.gitops import FakeGitOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.fakes.script_writer import FakeScriptWriterOps
+from erk.core.script_writer import RealScriptWriter
+from tests.fakes.git import FakeGit
+from tests.fakes.github import FakeGitHub
+from tests.fakes.graphite import FakeGraphite
+from tests.fakes.script_writer import FakeScriptWriter
 
 
 class ErkIsolatedFsEnv:
@@ -102,7 +102,7 @@ class ErkIsolatedFsEnv:
 
     This class provides utilities for:
     - Managing root and linked worktrees
-    - Building FakeGitOps and FakeGraphiteOps from branch metadata
+    - Building FakeGit and FakeGraphite from branch metadata
     - Creating realistic git directory structures
 
     Attributes:
@@ -110,7 +110,7 @@ class ErkIsolatedFsEnv:
         git_dir: Path to .git directory (root_worktree / ".git")
         root_worktree: Path to root worktree (has .git/ directory)
         erk_root: Path to erks directory (parallel to root)
-        script_writer: RealScriptWriterOps for creating actual temp files
+        script_writer: RealScriptWriter for creating actual temp files
         repo: RepoContext computed from root_worktree and erk_root
     """
 
@@ -123,7 +123,7 @@ class ErkIsolatedFsEnv:
         """
         self.root_worktree = root_worktree
         self.erk_root = erk_root
-        self.script_writer = RealScriptWriterOps()
+        self.script_writer = RealScriptWriter()
         self._linked_worktrees: dict[str, Path] = {}  # Track branch -> worktree path
         self._repo = RepoContext(
             root=root_worktree,
@@ -198,8 +198,8 @@ class ErkIsolatedFsEnv:
         *,
         current_branch: str | None = None,
         current_worktree: Path | None = None,
-    ) -> tuple[FakeGitOps, FakeGraphiteOps]:
-        """Build both FakeGitOps and FakeGraphiteOps from branch metadata.
+    ) -> tuple[FakeGit, FakeGraphite]:
+        """Build both FakeGit and FakeGraphite from branch metadata.
 
         Automatically:
         - Maps branches to worktrees (root + any created linked worktrees)
@@ -213,14 +213,14 @@ class ErkIsolatedFsEnv:
             current_worktree: Where current_branch is (defaults to root_worktree)
 
         Returns:
-            Tuple of (FakeGitOps, FakeGraphiteOps) configured for testing
+            Tuple of (FakeGit, FakeGraphite) configured for testing
 
         Example:
             ```python
             env.create_linked_worktree("feat-1", "feat-1", chdir=False)
             env.create_linked_worktree("feat-2", "feat-2", chdir=True)
 
-            git_ops, graphite_ops = env.build_ops_from_branches(
+            git, graphite = env.build_ops_from_branches(
                 {
                     "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                     "feat-1": BranchMetadata.branch(
@@ -230,7 +230,7 @@ class ErkIsolatedFsEnv:
                 },
                 current_branch="feat-2",
             )
-            # Now git_ops and graphite_ops are configured with full stack relationships
+            # Now git and graphite are configured with full stack relationships
             ```
         """
         current_worktree = current_worktree or self.root_worktree
@@ -271,27 +271,27 @@ class ErkIsolatedFsEnv:
             if not branches[branch_name].is_trunk:
                 stacks[branch_name] = self._build_stack_path(branches, branch_name)
 
-        git_ops = FakeGitOps(
+        git = FakeGit(
             worktrees={self.root_worktree: worktrees_list},
             current_branches=current_branches_map,
             git_common_dirs=git_common_dirs_map,
         )
 
-        graphite_ops = FakeGraphiteOps(
+        graphite = FakeGraphite(
             branches=branches,
             stacks=stacks,
         )
 
-        return git_ops, graphite_ops
+        return git, graphite
 
     def build_context(
         self,
         *,
         use_graphite: bool = False,
         show_pr_info: bool = True,
-        git_ops: FakeGitOps | None = None,
-        graphite_ops: FakeGraphiteOps | None = None,
-        github_ops: FakeGitHubOps | None = None,
+        git: FakeGit | None = None,
+        graphite: FakeGraphite | None = None,
+        github: FakeGitHub | None = None,
         repo: RepoContext | None = None,
         **kwargs,
     ) -> ErkContext:
@@ -304,9 +304,9 @@ class ErkIsolatedFsEnv:
         Args:
             use_graphite: Enable Graphite integration (default: False)
             show_pr_info: Show PR information (default: True)
-            git_ops: Custom FakeGitOps (default: minimal git_common_dirs setup)
-            graphite_ops: Custom FakeGraphiteOps (default: empty)
-            github_ops: Custom FakeGitHubOps (default: empty)
+            git: Custom FakeGit (default: minimal git_common_dirs setup)
+            graphite: Custom FakeGraphite (default: empty)
+            github: Custom FakeGitHub (default: empty)
             repo: Custom RepoContext (default: None)
             **kwargs: Additional ErkContext.for_test() parameters
 
@@ -320,8 +320,8 @@ class ErkIsolatedFsEnv:
                 ctx = env.build_context()
 
                 # Custom git ops with branches
-                git_ops, graphite_ops = env.build_ops_from_branches(...)
-                ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops)
+                git, graphite = env.build_ops_from_branches(...)
+                ctx = env.build_context(git=git, graphite=graphite)
 
                 # Enable Graphite with custom config
                 ctx = env.build_context(use_graphite=True)
@@ -332,8 +332,8 @@ class ErkIsolatedFsEnv:
             repo = self._repo
 
         # Create default ops if not provided, or ensure existing paths are set
-        if git_ops is None:
-            git_ops = FakeGitOps(
+        if git is None:
+            git = FakeGit(
                 git_common_dirs={self.cwd: self.git_dir},
                 existing_paths={
                     self.cwd,
@@ -344,11 +344,11 @@ class ErkIsolatedFsEnv:
                 },
             )
         else:
-            # git_ops was provided - ensure it has necessary existing paths
+            # git was provided - ensure it has necessary existing paths
             # for discover_repo_context to work correctly
-            from erk.core.gitops import NoopGitOps
+            from erk.core.git import NoopGit
 
-            unwrapped_ops = git_ops._wrapped if isinstance(git_ops, NoopGitOps) else git_ops
+            unwrapped_ops = git._wrapped if isinstance(git, NoopGit) else git
 
             # Add core paths to existing_paths if they're actually git repos
             # Only add paths that are in git_common_dirs (actual repos)
@@ -372,7 +372,7 @@ class ErkIsolatedFsEnv:
                 if unwrapped_ops._git_common_dirs:
                     core_paths.update({self.git_dir, repo.root})
 
-                # Also add all worktree paths from git_ops
+                # Also add all worktree paths from git
                 if has_worktrees:
                     for worktree_list in unwrapped_ops._worktrees.values():
                         for wt_info in worktree_list:
@@ -380,11 +380,11 @@ class ErkIsolatedFsEnv:
 
                 unwrapped_ops._existing_paths.update(core_paths)
 
-        if graphite_ops is None:
-            graphite_ops = FakeGraphiteOps()
+        if graphite is None:
+            graphite = FakeGraphite()
 
-        if github_ops is None:
-            github_ops = FakeGitHubOps()
+        if github is None:
+            github = FakeGitHub()
 
         # Create global config if not provided in kwargs
         if "global_config" in kwargs:
@@ -411,14 +411,14 @@ class ErkIsolatedFsEnv:
         if "erk_root" in kwargs:
             kwargs.pop("erk_root")
 
-        # Filter out trunk_branch - it's now a computed property based on git_ops
+        # Filter out trunk_branch - it's now a computed property based on git
         if "trunk_branch" in kwargs:
             kwargs.pop("trunk_branch")
 
         return ErkContext.for_test(
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
+            git=git,
+            graphite=graphite,
+            github=github,
             global_config=global_config,
             repo=repo,
             **kwargs,
@@ -489,8 +489,8 @@ def erk_isolated_fs_env(runner: CliRunner) -> Generator[ErkIsolatedFsEnv]:
             with simulated_erk_env(runner) as env:
                 # env.cwd is available (root worktree)
                 # env.git_dir is available (.git directory)
-                # env.script_writer is available (RealScriptWriterOps for temp files)
-                git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
+                # env.script_writer is available (RealScriptWriter for temp files)
+                git = FakeGit(git_common_dirs={env.cwd: env.git_dir})
                 test_ctx = ErkContext.for_test(
                     cwd=env.cwd,
                     script_writer=env.script_writer,
@@ -530,7 +530,7 @@ class ErkInMemEnv:
         cwd: Sentinel path representing current working directory
         git_dir: Sentinel path representing .git directory
         erk_root: Sentinel path for erks directory
-        script_writer: FakeScriptWriterOps for in-memory script verification
+        script_writer: FakeScriptWriter for in-memory script verification
         repo: RepoContext computed from cwd and erk_root
     """
 
@@ -539,7 +539,7 @@ class ErkInMemEnv:
         cwd: Path,
         git_dir: Path,
         erk_root: Path,
-        script_writer: FakeScriptWriterOps,
+        script_writer: FakeScriptWriter,
     ) -> None:
         """Initialize pure test environment.
 
@@ -547,7 +547,7 @@ class ErkInMemEnv:
             cwd: Sentinel path for current working directory
             git_dir: Sentinel path for .git directory
             erk_root: Sentinel path for erks directory
-            script_writer: FakeScriptWriterOps instance for script verification
+            script_writer: FakeScriptWriter instance for script verification
         """
         self.cwd = cwd
         self.git_dir = git_dir
@@ -577,9 +577,9 @@ class ErkInMemEnv:
         *,
         use_graphite: bool = False,
         show_pr_info: bool = True,
-        git_ops: FakeGitOps | None = None,
-        graphite_ops: FakeGraphiteOps | None = None,
-        github_ops: FakeGitHubOps | None = None,
+        git: FakeGit | None = None,
+        graphite: FakeGraphite | None = None,
+        github: FakeGitHub | None = None,
         repo: RepoContext | None = None,
         existing_paths: set[Path] | None = None,
         file_contents: dict[Path, str] | None = None,
@@ -594,9 +594,9 @@ class ErkInMemEnv:
         Args:
             use_graphite: Enable Graphite integration (default: False)
             show_pr_info: Show PR information (default: True)
-            git_ops: Custom FakeGitOps (default: minimal git_common_dirs setup)
-            graphite_ops: Custom FakeGraphiteOps (default: empty)
-            github_ops: Custom FakeGitHubOps (default: empty)
+            git: Custom FakeGit (default: minimal git_common_dirs setup)
+            graphite: Custom FakeGraphite (default: empty)
+            github: Custom FakeGitHub (default: empty)
             repo: Custom RepoContext (default: None)
             existing_paths: Set of sentinel paths to treat as existing (pure mode only)
             file_contents: Mapping of sentinel paths to file content (pure mode only)
@@ -626,7 +626,7 @@ class ErkInMemEnv:
             repo = self._repo
 
         # Create default ops if not provided
-        if git_ops is None:
+        if git is None:
             # Automatically include core sentinel paths in existing_paths
             # so that repo discovery and other path checks work correctly
             # Include repo.root and repo.erks_dir so os.walk() and path checks succeed
@@ -639,17 +639,17 @@ class ErkInMemEnv:
             }
             all_existing = core_paths | (existing_paths or set())
 
-            git_ops = FakeGitOps(
+            git = FakeGit(
                 git_common_dirs={self.cwd: self.git_dir},
                 existing_paths=all_existing,
                 file_contents=file_contents or {},
             )
         else:
-            # git_ops was provided - extract worktree paths and merge with existing_paths
-            # Unwrap NoopGitOps if needed to access underlying FakeGitOps
-            from erk.core.gitops import NoopGitOps
+            # git was provided - extract worktree paths and merge with existing_paths
+            # Unwrap NoopGit if needed to access underlying FakeGit
+            from erk.core.git import NoopGit
 
-            unwrapped_ops = git_ops._wrapped if isinstance(git_ops, NoopGitOps) else git_ops
+            unwrapped_ops = git._wrapped if isinstance(git, NoopGit) else git
             worktree_paths = {
                 wt.path for worktrees in unwrapped_ops._worktrees.values() for wt in worktrees
             }
@@ -672,11 +672,11 @@ class ErkInMemEnv:
             if file_contents:
                 unwrapped_ops._file_contents.update(file_contents)
 
-        if graphite_ops is None:
-            graphite_ops = FakeGraphiteOps()
+        if graphite is None:
+            graphite = FakeGraphite()
 
-        if github_ops is None:
-            github_ops = FakeGitHubOps()
+        if github is None:
+            github = FakeGitHub()
 
         # Create global config if not provided in kwargs
         if "global_config" in kwargs:
@@ -703,14 +703,14 @@ class ErkInMemEnv:
         if "erk_root" in kwargs:
             kwargs.pop("erk_root")
 
-        # Filter out trunk_branch - it's now a computed property based on git_ops
+        # Filter out trunk_branch - it's now a computed property based on git
         if "trunk_branch" in kwargs:
             kwargs.pop("trunk_branch")
 
         return ErkContext.for_test(
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
+            git=git,
+            graphite=graphite,
+            github=github,
             global_config=global_config,
             repo=repo,
             **kwargs,
@@ -739,8 +739,8 @@ class ErkInMemEnv:
         *,
         current_branch: str | None = None,
         current_worktree: Path | None = None,
-    ) -> tuple[FakeGitOps, FakeGraphiteOps]:
-        """Build both FakeGitOps and FakeGraphiteOps from branch metadata.
+    ) -> tuple[FakeGit, FakeGraphite]:
+        """Build both FakeGit and FakeGraphite from branch metadata.
 
         Automatically:
         - Maps branches to worktrees (root + any created linked worktrees)
@@ -754,7 +754,7 @@ class ErkInMemEnv:
             current_worktree: Where current_branch is (defaults to root_worktree)
 
         Returns:
-            Tuple of (FakeGitOps, FakeGraphiteOps) configured for testing
+            Tuple of (FakeGit, FakeGraphite) configured for testing
         """
         current_worktree = current_worktree or self.root_worktree
 
@@ -797,19 +797,19 @@ class ErkInMemEnv:
         # Collect all worktree paths as existing
         existing_paths = {wt.path for wt in worktrees_list} | {self.cwd, self.git_dir}
 
-        git_ops = FakeGitOps(
+        git = FakeGit(
             worktrees={self.root_worktree: worktrees_list},
             current_branches=current_branches_map,
             git_common_dirs=git_common_dirs_map,
             existing_paths=existing_paths,
         )
 
-        graphite_ops = FakeGraphiteOps(
+        graphite = FakeGraphite(
             branches=branches,
             stacks=stacks,
         )
 
-        return git_ops, graphite_ops
+        return git, graphite
 
     def _build_stack_path(
         self,
@@ -875,10 +875,10 @@ def erk_inmem_env(
             runner = CliRunner()
             with pure_erk_env(runner) as env:
                 # No filesystem I/O, all operations in-memory
-                git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
+                git = FakeGit(git_common_dirs={env.cwd: env.git_dir})
                 ctx = ErkContext.for_test(
                     cwd=env.cwd,
-                    git_ops=git_ops,
+                    git=git,
                     script_writer=env.script_writer,
                 )
                 result = runner.invoke(cli, ["jump", "feature", "--script"], obj=ctx)
@@ -897,7 +897,7 @@ def erk_inmem_env(
     erk_root = sentinel_path("/test/erks")
 
     # Create in-memory script writer
-    script_writer = FakeScriptWriterOps()
+    script_writer = FakeScriptWriter()
 
     # No isolated_filesystem(), no os.chdir(), no mkdir()
     try:

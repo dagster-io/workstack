@@ -5,13 +5,13 @@ from typing import Any
 
 import pytest
 
-from erk.core.github_ops import PullRequestInfo
-from erk.core.global_config import GlobalConfig
+from erk.core.config_store import GlobalConfig
+from erk.core.github import PullRequestInfo
 from erk.status.collectors.github import GitHubPRCollector
 from tests.fakes.context import create_test_context
-from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.gitops import FakeGitOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
+from tests.fakes.git import FakeGit
+from tests.fakes.github import FakeGitHub
+from tests.fakes.graphite import FakeGraphite
 
 
 def make_pr(
@@ -53,7 +53,7 @@ def setup_collector(
     repo_root.mkdir()
 
     git_ops_kwargs = git_kwargs or {}
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         current_branches={worktree_path: branch},
         **git_ops_kwargs,
     )
@@ -63,7 +63,7 @@ def setup_collector(
     graphite_ops_kwargs = graphite_kwargs or {}
     if prs is not None and "pr_info" not in graphite_ops_kwargs:
         graphite_ops_kwargs["pr_info"] = prs
-    graphite_ops = FakeGraphiteOps(**graphite_ops_kwargs)
+    graphite_ops = FakeGraphite(**graphite_ops_kwargs)
 
     global_config = GlobalConfig(
         erk_root=Path("/fake/erks"),
@@ -72,9 +72,9 @@ def setup_collector(
         show_pr_info=show_pr_info,
     )
     ctx = create_test_context(
-        git_ops=git_ops,
-        github_ops=FakeGitHubOps(),  # No longer provide PRs via GitHub
-        graphite_ops=graphite_ops,
+        git=git_ops,
+        github=FakeGitHub(),  # No longer provide PRs via GitHub
+        graphite=graphite_ops,
         global_config=global_config,
     )
 

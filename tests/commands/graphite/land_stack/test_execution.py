@@ -3,11 +3,11 @@
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
+from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.global_config import GlobalConfig
-from erk.core.graphite_ops import BranchMetadata
-from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.shell_ops import FakeShellOps
+from erk.core.graphite import BranchMetadata
+from tests.fakes.github import FakeGitHub
+from tests.fakes.shell import FakeShell
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
@@ -42,7 +42,7 @@ def test_land_stack_force_pushes_remaining_branches_after_sync() -> None:
             current_branch="feat-2",
         )
 
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Feature 1"),
                 "feat-2": ("OPEN", 200, "Feature 2"),
@@ -63,11 +63,11 @@ def test_land_stack_force_pushes_remaining_branches_after_sync() -> None:
         )
 
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
+            git=git_ops,
             global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             dry_run=False,
             script_writer=env.script_writer,
             cwd=env.cwd,
@@ -125,7 +125,7 @@ def test_land_stack_force_pushes_after_each_pr_landed() -> None:
             current_branch="feat-3",
         )
 
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Feature 1"),
                 "feat-2": ("OPEN", 200, "Feature 2"),
@@ -148,11 +148,11 @@ def test_land_stack_force_pushes_after_each_pr_landed() -> None:
         )
 
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
+            git=git_ops,
             global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             dry_run=False,
             script_writer=env.script_writer,
             cwd=env.cwd,
@@ -219,7 +219,7 @@ def test_land_stack_no_submit_when_landing_top_branch() -> None:
             current_branch="feat-3",
         )
 
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Feature 1"),
                 "feat-2": ("OPEN", 200, "Feature 2"),
@@ -240,11 +240,11 @@ def test_land_stack_no_submit_when_landing_top_branch() -> None:
         )
 
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
+            git=git_ops,
             global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             dry_run=False,
             script_writer=env.script_writer,
             cwd=env.cwd,
@@ -328,7 +328,7 @@ def test_land_stack_switches_to_root_when_run_from_linked_worktree() -> None:
             show_pr_info=True,
         )
 
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Add feature 1"),
             },
@@ -338,11 +338,11 @@ def test_land_stack_switches_to_root_when_run_from_linked_worktree() -> None:
         )
 
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
+            git=git_ops,
             global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             dry_run=False,
             cwd=linked_wt,
         )
@@ -379,7 +379,7 @@ def test_land_stack_merge_command_excludes_auto_flag() -> None:
             current_branch="feat-1",
         )
 
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Feature 1"),
             },
@@ -396,11 +396,11 @@ def test_land_stack_merge_command_excludes_auto_flag() -> None:
         )
 
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
+            git=git_ops,
             global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             dry_run=True,
             script_writer=env.script_writer,
             cwd=env.cwd,
@@ -444,7 +444,7 @@ def test_land_stack_does_not_run_gt_sync() -> None:
             current_branch="feat-1",
         )
 
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Feature 1"),
             },
@@ -454,9 +454,9 @@ def test_land_stack_does_not_run_gt_sync() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
             use_graphite=True,
             dry_run=True,
         )
@@ -506,7 +506,7 @@ def test_land_stack_does_not_run_erk_sync() -> None:
             current_branch="feat-1",
         )
 
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Feature 1"),
             },
@@ -515,13 +515,13 @@ def test_land_stack_does_not_run_erk_sync() -> None:
             },
         )
 
-        shell_ops = FakeShellOps()
+        shell_ops = FakeShell()
 
         test_ctx = env.build_context(
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=shell_ops,
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=shell_ops,
             use_graphite=True,
             dry_run=True,
         )
@@ -566,7 +566,7 @@ def test_final_state_shows_next_steps() -> None:
             current_branch="feat-1",
         )
 
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Feature 1"),
             },
@@ -576,9 +576,9 @@ def test_final_state_shows_next_steps() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
             use_graphite=True,
             dry_run=True,
         )

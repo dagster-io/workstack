@@ -114,32 +114,32 @@ def land_stack(
     logger.debug("Repository discovered: root=%s", repo.root if repo else None)
 
     # Wrap ops with printing versions (and dry-run if requested)
-    from erk.core.github_ops import NoopGitHubOps, PrintingGitHubOps
-    from erk.core.gitops import NoopGitOps, PrintingGitOps
-    from erk.core.graphite_ops import NoopGraphiteOps, PrintingGraphiteOps
+    from erk.core.git import NoopGit, PrintingGit
+    from erk.core.github import NoopGitHub, PrintingGitHub
+    from erk.core.graphite import NoopGraphite, PrintingGraphite
 
     # First: Choose inner implementation based on dry-run mode
     if dry_run:
         # Wrap with Noop (makes operations no-op)
-        inner_git_ops = NoopGitOps(ctx.git_ops)
-        inner_github_ops = NoopGitHubOps(ctx.github_ops)
-        inner_graphite_ops = NoopGraphiteOps(ctx.graphite_ops)
+        inner_git_ops = NoopGit(ctx.git)
+        inner_github_ops = NoopGitHub(ctx.github)
+        inner_graphite_ops = NoopGraphite(ctx.graphite)
     else:
         # Use real implementations
-        inner_git_ops = ctx.git_ops
-        inner_github_ops = ctx.github_ops
-        inner_graphite_ops = ctx.graphite_ops
+        inner_git_ops = ctx.git
+        inner_github_ops = ctx.github
+        inner_graphite_ops = ctx.graphite
 
     # Then: Always wrap with Printing layer (adds output for all operations)
     ctx = dataclasses.replace(
         ctx,
-        git_ops=PrintingGitOps(inner_git_ops, script_mode=script, dry_run=dry_run),
-        github_ops=PrintingGitHubOps(inner_github_ops, script_mode=script, dry_run=dry_run),
-        graphite_ops=PrintingGraphiteOps(inner_graphite_ops, script_mode=script, dry_run=dry_run),
+        git=PrintingGit(inner_git_ops, script_mode=script, dry_run=dry_run),
+        github=PrintingGitHub(inner_github_ops, script_mode=script, dry_run=dry_run),
+        graphite=PrintingGraphite(inner_graphite_ops, script_mode=script, dry_run=dry_run),
     )
 
     # Get current branch
-    current_branch = ctx.git_ops.get_current_branch(ctx.cwd)
+    current_branch = ctx.git.get_current_branch(ctx.cwd)
     logger.debug("Current branch detected: %s", current_branch)
 
     # Get branches to land
@@ -165,7 +165,7 @@ def land_stack(
         raise SystemExit(1)
 
     first_branch = valid_branches[0][0]  # First tuple is (branch, pr_number, title)
-    trunk_branch = ctx.graphite_ops.get_parent_branch(ctx.git_ops, repo.root, first_branch)
+    trunk_branch = ctx.graphite.get_parent_branch(ctx.git, repo.root, first_branch)
     if trunk_branch is None:
         error_msg = f"Error: Could not determine trunk branch for {first_branch}"
         _emit(error_msg, script_mode=script, error=True)

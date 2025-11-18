@@ -215,7 +215,7 @@ class ScriptResult:
         return str(self.path)
 
 
-class ScriptWriterOps(ABC):
+class ScriptWriter(ABC):
     """Operations for writing shell activation scripts.
 
     This abstraction allows tests to verify script content without
@@ -242,7 +242,7 @@ class ScriptWriterOps(ABC):
         """
 
 
-class RealScriptWriterOps(ScriptWriterOps):
+class RealScriptWriter(ScriptWriter):
     """Production implementation that writes real temp files."""
 
     def write_activation_script(

@@ -7,7 +7,7 @@ from erk.cli.commands.create import make_env_content
 from erk.cli.commands.init import create_and_save_global_config
 from erk.cli.config import load_config
 from erk.core.init_utils import discover_presets
-from tests.fakes.shell_ops import FakeShellOps
+from tests.fakes.shell import FakeShell
 
 
 def test_load_config_defaults(tmp_path: Path) -> None:
@@ -45,23 +45,23 @@ def test_env_rendering(tmp_path: Path) -> None:
     assert 'WORKTREE_NAME="foo"' in content
 
 
-# NOTE: Tests removed during FakeGlobalConfigOps deprecation (Phase 3a)
-# These tests were testing the FakeGlobalConfigOps interface which has been
+# NOTE: Tests removed during FakeConfigStore deprecation (Phase 3a)
+# These tests were testing the FakeConfigStore interface which has been
 # removed. If these behaviors need coverage, they should be tested via
-# RealGlobalConfigOps or GlobalConfig directly.
+# RealConfigStore or GlobalConfig directly.
 
 # def test_load_global_config_valid(tmp_path: Path) -> None:
-#     ... (removed - was testing FakeGlobalConfigOps)
+#     ... (removed - was testing FakeConfigStore)
 
 # def test_load_global_config_missing_file(tmp_path: Path) -> None:
-#     ... (removed - was testing FakeGlobalConfigOps)
+#     ... (removed - was testing FakeConfigStore)
 
 
 def test_load_global_config_missing_erk_root(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # Test that FilesystemGlobalConfigOps validates required fields
-    from erk.core.global_config import FilesystemGlobalConfigOps
+    # Test that RealConfigStore validates required fields
+    from erk.core.config_store import RealConfigStore
 
     config_file = tmp_path / "config.toml"
     config_file.write_text("use_graphite = true\n", encoding="utf-8")
@@ -74,38 +74,38 @@ def test_load_global_config_missing_erk_root(
     erk_dir.mkdir()
     (erk_dir / "config.toml").write_text("use_graphite = true\n", encoding="utf-8")
 
-    ops = FilesystemGlobalConfigOps()
+    ops = RealConfigStore()
     with pytest.raises(ValueError, match="Missing 'erk_root'"):
         ops.load()
 
 
 # def test_load_global_config_use_graphite_defaults_false(tmp_path: Path) -> None:
-#     ... (removed - was testing FakeGlobalConfigOps)
+#     ... (removed - was testing FakeConfigStore)
 
 # def test_create_global_config_creates_file(tmp_path: Path) -> None:
-#     ... (removed - was testing FakeGlobalConfigOps)
+#     ... (removed - was testing FakeConfigStore)
 
 
 def test_create_global_config_creates_parent_directory(tmp_path: Path) -> None:
     # Test that create_and_save_global_config creates parent directory
+    from erk.core.config_store import FakeConfigStore
     from erk.core.context import ErkContext
-    from erk.core.global_config import InMemoryGlobalConfigOps
 
     config_file = tmp_path / ".erk" / "config.toml"
     assert not config_file.parent.exists()
 
-    # Create test context with InMemoryGlobalConfigOps
-    global_config_ops = InMemoryGlobalConfigOps(config=None)
+    # Create test context with FakeConfigStore
+    global_config_ops = FakeConfigStore(config=None)
     ctx = ErkContext.for_test(
-        shell_ops=FakeShellOps(),
-        global_config_ops=global_config_ops,
+        shell=FakeShell(),
+        config_store=global_config_ops,
         global_config=None,
         cwd=tmp_path,
     )
 
     with (
         mock.patch("erk.cli.commands.init.detect_graphite", return_value=False),
-        mock.patch("erk.core.global_config.Path.home", return_value=tmp_path),
+        mock.patch("erk.core.config_store.Path.home", return_value=tmp_path),
     ):
         create_and_save_global_config(ctx, Path("/tmp/erks"), shell_setup_complete=False)
 
@@ -116,7 +116,7 @@ def test_create_global_config_creates_parent_directory(tmp_path: Path) -> None:
 
 
 # def test_create_global_config_detects_graphite(tmp_path: Path) -> None:
-#     ... (removed - was testing FakeGlobalConfigOps)
+#     ... (removed - was testing FakeConfigStore)
 
 
 def test_discover_presets(tmp_path: Path) -> None:

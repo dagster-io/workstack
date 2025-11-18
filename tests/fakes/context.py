@@ -3,24 +3,24 @@
 from pathlib import Path
 
 from erk.cli.config import LoadedConfig
+from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.global_config import GlobalConfig
 from erk.core.repo_discovery import NoRepoSentinel, RepoContext
-from erk.core.script_writer import ScriptWriterOps
-from tests.fakes.completion_ops import FakeCompletionOps
-from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.gitops import FakeGitOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.fakes.shell_ops import FakeShellOps
+from erk.core.script_writer import ScriptWriter
+from tests.fakes.completion import FakeCompletion
+from tests.fakes.git import FakeGit
+from tests.fakes.github import FakeGitHub
+from tests.fakes.graphite import FakeGraphite
+from tests.fakes.shell import FakeShell
 
 
 def create_test_context(
-    git_ops: FakeGitOps | None = None,
-    github_ops: FakeGitHubOps | None = None,
-    graphite_ops: FakeGraphiteOps | None = None,
-    shell_ops: FakeShellOps | None = None,
-    completion_ops: FakeCompletionOps | None = None,
-    script_writer: ScriptWriterOps | None = None,
+    git: FakeGit | None = None,
+    github: FakeGitHub | None = None,
+    graphite: FakeGraphite | None = None,
+    shell: FakeShell | None = None,
+    completion: FakeCompletion | None = None,
+    script_writer: ScriptWriter | None = None,
     cwd: Path | None = None,
     global_config: GlobalConfig | None = None,
     local_config: LoadedConfig | None = None,
@@ -33,19 +33,19 @@ def create_test_context(
     compatibility. New code should use ErkContext.for_test() directly.
 
     Args:
-        git_ops: Optional FakeGitOps with test configuration.
-                If None, creates empty FakeGitOps.
-        github_ops: Optional FakeGitHubOps with test configuration.
-                   If None, creates empty FakeGitHubOps.
-        graphite_ops: Optional FakeGraphiteOps with test configuration.
-                     If None, creates empty FakeGraphiteOps.
-        shell_ops: Optional FakeShellOps with test configuration.
-                  If None, creates empty FakeShellOps (no shell detected).
-        completion_ops: Optional FakeCompletionOps with test configuration.
-                       If None, creates empty FakeCompletionOps.
-        script_writer: Optional ScriptWriterOps (Real or Fake) for test context.
-                      If None, defaults to FakeScriptWriterOps in ErkContext.for_test.
-                      Pass RealScriptWriterOps() for integration tests that need real scripts.
+        git: Optional FakeGit with test configuration.
+                If None, creates empty FakeGit.
+        github: Optional FakeGitHub with test configuration.
+                   If None, creates empty FakeGitHub.
+        graphite: Optional FakeGraphite with test configuration.
+                     If None, creates empty FakeGraphite.
+        shell: Optional FakeShell with test configuration.
+                  If None, creates empty FakeShell (no shell detected).
+        completion: Optional FakeCompletion with test configuration.
+                       If None, creates empty FakeCompletion.
+        script_writer: Optional ScriptWriter (Real or Fake) for test context.
+                      If None, defaults to FakeScriptWriter in ErkContext.for_test.
+                      Pass RealScriptWriter() for integration tests that need real scripts.
         cwd: Optional current working directory path for test context.
             If None, defaults to Path("/test/default/cwd") to prevent accidental use
             of real Path.cwd() in tests.
@@ -62,11 +62,11 @@ def create_test_context(
 
     Example:
         # With pre-configured git ops
-        >>> git_ops = FakeGitOps(default_branches={Path("/repo"): "main"})
-        >>> ctx = create_test_context(git_ops=git_ops)
+        >>> git = FakeGit(default_branches={Path("/repo"): "main"})
+        >>> ctx = create_test_context(git=git)
 
         # With pre-configured global config
-        >>> from erk.core.global_config import GlobalConfig
+        >>> from erk.core.config_store import GlobalConfig
         >>> config = GlobalConfig(
         ...     erk_root=Path("/tmp/erks"),
         ...     use_graphite=False,
@@ -79,11 +79,11 @@ def create_test_context(
         >>> ctx = create_test_context()
     """
     return ErkContext.for_test(
-        git_ops=git_ops,
-        github_ops=github_ops,
-        graphite_ops=graphite_ops,
-        shell_ops=shell_ops,
-        completion_ops=completion_ops,
+        git=git,
+        github=github,
+        graphite=graphite,
+        shell=shell,
+        completion=completion,
         script_writer=script_writer,
         cwd=cwd,
         global_config=global_config,

@@ -9,7 +9,7 @@ from erk.cli.commands.land_stack.models import BranchPR
 from erk.cli.commands.land_stack.output import _emit, _format_description
 from erk.cli.commands.land_stack.retry import retry_with_backoff
 from erk.core.context import ErkContext
-from erk.core.gitops import find_worktree_for_branch
+from erk.core.git import find_worktree_for_branch
 
 
 def _execute_checkout_phase(
@@ -29,19 +29,19 @@ def _execute_checkout_phase(
     """
     # Check if we're already on the target branch (LBYL)
     # This handles the case where we're in a linked worktree on the branch being landed
-    current_branch = ctx.git_ops.get_current_branch(ctx.cwd)
+    current_branch = ctx.git.get_current_branch(ctx.cwd)
 
     if current_branch != branch:
         # Check if branch is already checked out in any worktree
         # If so, we can't checkout in repo root (git will fail with "already checked out" error)
-        checked_out_path = ctx.git_ops.is_branch_checked_out(repo_root, branch)
+        checked_out_path = ctx.git.is_branch_checked_out(repo_root, branch)
         if checked_out_path:
             # Branch is checked out elsewhere - skip checkout
             # This is fine because we'll work with it in its current worktree
             pass
         else:
             # Only checkout if we're not already on the branch and it's not checked out elsewhere
-            ctx.git_ops.checkout_branch(repo_root, branch)
+            ctx.git.checkout_branch(repo_root, branch)
     else:
         # Already on branch, display as already done
         check = click.style("✓", fg="green")
@@ -91,7 +91,7 @@ def _verify_and_update_pr_base(
     # Get current PR base from GitHub (with retry for transient failures)
     @retry_with_backoff(max_attempts=3, base_delay=1.0)
     def get_pr_base_with_retry() -> str | None:
-        return ctx.github_ops.get_pr_base_branch(repo_root, pr_number)
+        return ctx.github.get_pr_base_branch(repo_root, pr_number)
 
     current_base = get_pr_base_with_retry()
 
@@ -110,7 +110,7 @@ def _verify_and_update_pr_base(
         # Update PR base (with retry for transient failures)
         @retry_with_backoff(max_attempts=3, base_delay=1.0)
         def update_pr_base_with_retry() -> None:
-            ctx.github_ops.update_pr_base_branch(repo_root, pr_number, expected_parent)
+            ctx.github.update_pr_base_branch(repo_root, pr_number, expected_parent)
 
         update_pr_base_with_retry()
 
@@ -145,7 +145,7 @@ def _execute_merge_phase(
         verbose: If True, show detailed output
         script_mode: True when running in --script mode (output to stderr)
     """
-    ctx.github_ops.merge_pr(repo_root, pr_number, squash=True, verbose=verbose)
+    ctx.github.merge_pr(repo_root, pr_number, squash=True, verbose=verbose)
 
 
 def _execute_sync_trunk_phase(
@@ -169,21 +169,21 @@ def _execute_sync_trunk_phase(
     # Pull in the correct worktree location if branch is checked out elsewhere
 
     # Fetch parent branch
-    ctx.git_ops.fetch_branch(repo_root, "origin", parent)
+    ctx.git.fetch_branch(repo_root, "origin", parent)
 
     # Check if parent is checked out in a worktree
-    parent_worktree = ctx.git_ops.find_worktree_for_branch(repo_root, parent)
+    parent_worktree = ctx.git.find_worktree_for_branch(repo_root, parent)
     if parent_worktree is not None:
         # Parent is in a worktree - pull there
-        ctx.git_ops.pull_branch(parent_worktree, "origin", parent, ff_only=True)
+        ctx.git.pull_branch(parent_worktree, "origin", parent, ff_only=True)
     else:
         # Parent is not checked out - safe to checkout in repo_root
-        ctx.git_ops.checkout_branch(repo_root, parent)
-        ctx.git_ops.pull_branch(repo_root, "origin", parent, ff_only=True)
+        ctx.git.checkout_branch(repo_root, parent)
+        ctx.git.pull_branch(repo_root, "origin", parent, ff_only=True)
         # Only checkout branch if it's not checked out elsewhere
-        branch_worktree = ctx.git_ops.is_branch_checked_out(repo_root, branch)
+        branch_worktree = ctx.git.is_branch_checked_out(repo_root, branch)
         if not branch_worktree:
-            ctx.git_ops.checkout_branch(repo_root, branch)
+            ctx.git.checkout_branch(repo_root, branch)
 
 
 def _execute_restack_phase(
@@ -235,7 +235,7 @@ def _force_push_upstack_branches(
     upstack_branches = _get_all_children(branch, all_branches_metadata)
 
     # Get list of worktrees to check branch locations (LBYL)
-    worktrees = ctx.git_ops.list_worktrees(repo_root)
+    worktrees = ctx.git.list_worktrees(repo_root)
 
     for upstack_branch in upstack_branches:
         # Check if branch is checked out in a worktree
@@ -243,9 +243,9 @@ def _force_push_upstack_branches(
 
         # If branch is in a worktree, run from there; otherwise use repo_root
         if worktree_path is not None:
-            ctx.graphite_ops.submit_branch(worktree_path, upstack_branch, quiet=not verbose)
+            ctx.graphite.submit_branch(worktree_path, upstack_branch, quiet=not verbose)
         else:
-            ctx.graphite_ops.submit_branch(repo_root, upstack_branch, quiet=not verbose)
+            ctx.graphite.submit_branch(repo_root, upstack_branch, quiet=not verbose)
 
     return upstack_branches
 
@@ -291,7 +291,7 @@ def _update_upstack_pr_bases(
             continue
 
         # Get PR status to check if PR exists and is open
-        pr_info = ctx.github_ops.get_pr_status(repo_root, upstack_branch, debug=False)
+        pr_info = ctx.github.get_pr_status(repo_root, upstack_branch, debug=False)
         if pr_info.state != "OPEN":
             continue
 
@@ -301,7 +301,7 @@ def _update_upstack_pr_bases(
         pr_number = pr_info.pr_number
 
         # Check current base on GitHub
-        current_base = ctx.github_ops.get_pr_base_branch(repo_root, pr_number)
+        current_base = ctx.github.get_pr_base_branch(repo_root, pr_number)
         if current_base is None:
             continue
 
@@ -311,7 +311,7 @@ def _update_upstack_pr_bases(
                 msg = f"  Updating PR #{pr_number} base: {current_base} → {expected_parent}"
                 _emit(msg, script_mode=script_mode)
 
-            ctx.github_ops.update_pr_base_branch(repo_root, pr_number, expected_parent)
+            ctx.github.update_pr_base_branch(repo_root, pr_number, expected_parent)
         elif verbose:
             _emit(
                 f"  PR #{pr_number} base already correct: {current_base}",
@@ -355,7 +355,7 @@ def land_branch_sequence(
         pr_number = branch_pr.pr_number
 
         # Get parent for display and validation
-        parent = ctx.graphite_ops.get_parent_branch(ctx.git_ops, repo_root, branch)
+        parent = ctx.graphite.get_parent_branch(ctx.git, repo_root, branch)
         parent_display = parent if parent else "trunk"
 
         # Print section header
@@ -370,7 +370,7 @@ def land_branch_sequence(
         _execute_checkout_phase(ctx, repo_root, branch, script_mode=script_mode)
 
         # Phase 2: Verify stack integrity
-        all_branches = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo_root)
+        all_branches = ctx.graphite.get_all_branches(ctx.git, repo_root)
 
         # Parent should be trunk after previous restacks
         if parent is None or parent not in all_branches or not all_branches[parent].is_trunk:
@@ -423,7 +423,7 @@ def land_branch_sequence(
             # the branches in our landing list. After landing feat-1 in a stack
             # like main → feat-1 → feat-2 → feat-3, we need to force-push BOTH
             # feat-2 and feat-3, even if we're only landing up to feat-2.
-            all_branches_metadata = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo_root)
+            all_branches_metadata = ctx.graphite.get_all_branches(ctx.git, repo_root)
             if all_branches_metadata:
                 upstack_branches = _force_push_upstack_branches(
                     ctx,

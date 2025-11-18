@@ -23,13 +23,13 @@ def _resolve_current_worktree(ctx: ErkContext, repo_root: Path) -> Path:
 
     Raises SystemExit if not in a git repository or not in any worktree.
     """
-    git_common_dir = ctx.git_ops.get_git_common_dir(ctx.cwd)
+    git_common_dir = ctx.git.get_git_common_dir(ctx.cwd)
     if git_common_dir is None:
         user_output("Error: Not in a git repository")
         raise SystemExit(1)
 
     cwd = ctx.cwd.resolve()
-    worktrees = ctx.git_ops.list_worktrees(repo_root)
+    worktrees = ctx.git.list_worktrees(repo_root)
     wt_path = find_worktree_containing_path(worktrees, cwd)
     if wt_path is None:
         user_output(
@@ -68,7 +68,7 @@ def resolve_source_worktree(
 
     if branch:
         # Find worktree containing this branch
-        worktrees = ctx.git_ops.list_worktrees(repo_root)
+        worktrees = ctx.git.list_worktrees(repo_root)
         wt = find_worktree_with_branch(worktrees, branch)
         if wt is None:
             user_output(f"Error: Branch '{branch}' not found in any worktree")
@@ -79,7 +79,7 @@ def resolve_source_worktree(
         # Resolve worktree name to path
         wt_path = worktree_path_for(worktrees_dir, worktree)
         # Validate that the worktree exists
-        if not ctx.git_ops.path_exists(wt_path):
+        if not ctx.git.path_exists(wt_path):
             user_output(f"Error: Worktree '{worktree}' does not exist")
             raise SystemExit(1)
         return wt_path
@@ -95,7 +95,7 @@ def detect_operation_type(
 
     Returns MoveOperationType enum value.
     """
-    worktrees = ctx.git_ops.list_worktrees(repo_root)
+    worktrees = ctx.git.list_worktrees(repo_root)
     operation = determine_move_operation(worktrees, source_wt, target_wt)
     return operation.operation_type
 
@@ -114,21 +114,21 @@ def execute_move(
     Moves the branch from source to target, then switches source to fallback_ref.
     """
     # Validate source has a branch
-    worktrees = ctx.git_ops.list_worktrees(repo_root)
+    worktrees = ctx.git.list_worktrees(repo_root)
     source_branch = get_worktree_branch(worktrees, source_wt)
     if source_branch is None:
         user_output("Error: Source worktree is in detached HEAD state")
         raise SystemExit(1)
 
     # Check for uncommitted changes in source
-    if ctx.git_ops.has_uncommitted_changes(source_wt) and not force:
+    if ctx.git.has_uncommitted_changes(source_wt) and not force:
         user_output(
             f"Error: Uncommitted changes in source worktree '{source_wt.name}'.\n"
             f"Commit, stash, or use --force to override."
         )
         raise SystemExit(1)
 
-    target_exists = ctx.git_ops.path_exists(target_wt)
+    target_exists = ctx.git.path_exists(target_wt)
 
     # To move branch from source to target, we need to avoid having the same branch
     # checked out in two places simultaneously. Strategy:
@@ -136,11 +136,11 @@ def execute_move(
     # 2. Create/checkout source_branch in target worktree
     # 3. Checkout fallback_ref in source worktree
     user_output(f"Moving '{source_branch}' from '{source_wt.name}' to '{target_wt.name}'")
-    ctx.git_ops.checkout_detached(source_wt, source_branch)
+    ctx.git.checkout_detached(source_wt, source_branch)
 
     if target_exists:
         # Target exists - check for uncommitted changes
-        if ctx.git_ops.has_uncommitted_changes(target_wt) and not force:
+        if ctx.git.has_uncommitted_changes(target_wt) and not force:
             user_output(
                 f"Error: Uncommitted changes in target worktree '{target_wt.name}'.\n"
                 f"Commit, stash, or use --force to override."
@@ -148,21 +148,21 @@ def execute_move(
             raise SystemExit(1)
 
         # Checkout branch in existing target
-        ctx.git_ops.checkout_branch(target_wt, source_branch)
+        ctx.git.checkout_branch(target_wt, source_branch)
     else:
         # Create new worktree with branch
-        ctx.git_ops.add_worktree(
+        ctx.git.add_worktree(
             repo_root, target_wt, branch=source_branch, ref=None, create_branch=False
         )
 
     # Check if fallback_ref is already checked out elsewhere, and detach it if needed
-    fallback_wt = ctx.git_ops.is_branch_checked_out(repo_root, fallback_ref)
+    fallback_wt = ctx.git.is_branch_checked_out(repo_root, fallback_ref)
     if fallback_wt is not None and fallback_wt.resolve() != source_wt.resolve():
         # Fallback branch is checked out in another worktree, detach it first
-        ctx.git_ops.checkout_detached(fallback_wt, fallback_ref)
+        ctx.git.checkout_detached(fallback_wt, fallback_ref)
 
     # Switch source to fallback branch
-    ctx.git_ops.checkout_branch(source_wt, fallback_ref)
+    ctx.git.checkout_branch(source_wt, fallback_ref)
 
     user_output(f"✓ Moved '{source_branch}' from '{source_wt.name}' to '{target_wt.name}'")
 
@@ -179,7 +179,7 @@ def execute_swap(
 
     Swaps the branches between source and target worktrees.
     """
-    worktrees = ctx.git_ops.list_worktrees(repo_root)
+    worktrees = ctx.git.list_worktrees(repo_root)
     source_branch = get_worktree_branch(worktrees, source_wt)
     target_branch = get_worktree_branch(worktrees, target_wt)
 
@@ -188,9 +188,7 @@ def execute_swap(
         raise SystemExit(1)
 
     # Check for uncommitted changes
-    if ctx.git_ops.has_uncommitted_changes(source_wt) or ctx.git_ops.has_uncommitted_changes(
-        target_wt
-    ):
+    if ctx.git.has_uncommitted_changes(source_wt) or ctx.git.has_uncommitted_changes(target_wt):
         if not force:
             user_output(
                 "Error: Uncommitted changes detected in one or more worktrees.\n"
@@ -214,9 +212,9 @@ def execute_swap(
     # 1. Detach HEAD in source worktree (frees up source_branch)
     # 2. Checkout source_branch in target worktree
     # 3. Checkout target_branch in source worktree
-    ctx.git_ops.checkout_detached(source_wt, source_branch)
-    ctx.git_ops.checkout_branch(target_wt, source_branch)
-    ctx.git_ops.checkout_branch(source_wt, target_branch)
+    ctx.git.checkout_detached(source_wt, source_branch)
+    ctx.git.checkout_branch(target_wt, source_branch)
+    ctx.git.checkout_branch(source_wt, target_branch)
 
     user_output(f"✓ Swapped '{source_branch}' ↔ '{target_branch}'")
 
@@ -310,7 +308,7 @@ def move_cmd(
     else:
         # Auto-detect default branch if using 'main' default and it doesn't exist
         if ref == "main":
-            detected_default = ctx.git_ops.detect_default_branch(repo.root, trunk_branch)
+            detected_default = ctx.git.detect_default_branch(repo.root, trunk_branch)
             ref = detected_default
 
         execute_move(ctx, repo.root, source_wt, target_wt, ref, force=force)

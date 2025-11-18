@@ -7,7 +7,7 @@ import click
 from erk.cli.commands.land_stack.output import _emit, _format_cli_command
 from erk.core.branch_metadata import BranchMetadata
 from erk.core.context import ErkContext, regenerate_context
-from erk.core.gitops import WorktreeInfo
+from erk.core.git import WorktreeInfo
 
 
 def _find_next_unmerged_child(
@@ -81,7 +81,7 @@ def _navigate_to_child_worktree(
             return None
 
         # Change process directory to child's worktree
-        if not ctx.git_ops.safe_chdir(child_worktree.path):
+        if not ctx.git.safe_chdir(child_worktree.path):
             return None
 
         ctx = regenerate_context(ctx)
@@ -128,11 +128,11 @@ def _cleanup_and_navigate(
 
     # Step 1: Navigate to trunk worktree (repo root)
     # Only checkout if not already on trunk (avoids duplicate checkout message)
-    current_branch = ctx.git_ops.get_current_branch(repo_root)
+    current_branch = ctx.git.get_current_branch(repo_root)
     if current_branch != trunk_branch:
         if not dry_run and not script_mode:
             # In normal mode, change process directory to repo root
-            if ctx.git_ops.safe_chdir(repo_root):
+            if ctx.git.safe_chdir(repo_root):
                 ctx = regenerate_context(ctx)
         # In script mode, don't change directory - shell integration handles it
         _emit(_format_cli_command(f"git checkout {trunk_branch}", check), script_mode=script_mode)
@@ -147,13 +147,13 @@ def _cleanup_and_navigate(
     if not last_merged:
         return (final_branch, final_path)
 
-    all_branches = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo_root)
+    all_branches = ctx.graphite.get_all_branches(ctx.git, repo_root)
     child_branch = _find_next_unmerged_child(last_merged, all_branches)
 
     if not child_branch:
         return (final_branch, final_path)
 
-    worktrees = ctx.git_ops.list_worktrees(repo_root)
+    worktrees = ctx.git.list_worktrees(repo_root)
     child_worktree = _find_worktree_for_branch(child_branch, worktrees)
 
     if not child_worktree:

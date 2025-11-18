@@ -6,12 +6,12 @@ This file tests the delete command which removes a worktree workspace.
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.gitops import NoopGitOps, WorktreeInfo
-from erk.core.graphite_ops import BranchMetadata
-from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.gitops import FakeGitOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.fakes.shell_ops import FakeShellOps
+from erk.core.git import NoopGit, WorktreeInfo
+from erk.core.graphite import BranchMetadata
+from tests.fakes.git import FakeGit
+from tests.fakes.github import FakeGitHub
+from tests.fakes.graphite import FakeGraphite
+from tests.fakes.shell import FakeShell
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
@@ -27,17 +27,17 @@ def _create_test_context(env, use_graphite: bool = False, dry_run: bool = False,
     Returns:
         ErkContext configured for testing
     """
-    git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
+    git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
 
     if dry_run:
-        git_ops = NoopGitOps(git_ops)
+        git_ops = NoopGit(git_ops)
 
     return env.build_context(
         use_graphite=use_graphite,
-        git_ops=git_ops,
-        github_ops=FakeGitHubOps(),
-        graphite_ops=FakeGraphiteOps(),
-        shell_ops=FakeShellOps(),
+        git=git_ops,
+        github=FakeGitHub(),
+        graphite=FakeGraphite(),
+        shell=FakeShell(),
         dry_run=dry_run,
         **kwargs,
     )
@@ -69,7 +69,7 @@ def test_delete_prompts_and_aborts_on_no() -> None:
 
         assert result.exit_code == 0, result.output
         # User aborted, so worktree should still exist (check via git_ops state)
-        assert test_ctx.git_ops.path_exists(wt)
+        assert test_ctx.git.path_exists(wt)
 
 
 def test_delete_dry_run_does_not_delete() -> None:
@@ -87,7 +87,7 @@ def test_delete_dry_run_does_not_delete() -> None:
         assert "Would run: git worktree remove" in result.output
         assert "Would delete directory" in result.output
         # Directory should still exist (check via git_ops state)
-        assert test_ctx.git_ops.path_exists(wt)
+        assert test_ctx.git.path_exists(wt)
 
 
 def test_delete_dry_run_with_delete_stack() -> None:
@@ -98,11 +98,11 @@ def test_delete_dry_run_with_delete_stack() -> None:
         wt = env.erk_root / "repos" / repo_name / "worktrees" / "test-stack"
 
         # Build fake git ops with worktree info
-        fake_git_ops = FakeGitOps(
+        fake_git_ops = FakeGit(
             worktrees={env.cwd: [WorktreeInfo(path=wt, branch="feature-2")]},
             git_common_dirs={env.cwd: env.git_dir},
         )
-        git_ops = NoopGitOps(fake_git_ops)
+        git_ops = NoopGit(fake_git_ops)
 
         # Build graphite ops with branch metadata
         branches = {
@@ -113,10 +113,10 @@ def test_delete_dry_run_with_delete_stack() -> None:
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(branches=branches),
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            github=FakeGitHub(),
+            graphite=FakeGraphite(branches=branches),
+            shell=FakeShell(),
             dry_run=True,
             existing_paths={wt},
         )
@@ -128,7 +128,7 @@ def test_delete_dry_run_with_delete_stack() -> None:
         assert "Would run: gt delete" in result.output
         assert len(fake_git_ops.deleted_branches) == 0  # No actual deletion
         # Directory should still exist (check via git_ops state)
-        assert test_ctx.git_ops.path_exists(wt)
+        assert test_ctx.git.path_exists(wt)
 
 
 def test_delete_rejects_dot_dot() -> None:
@@ -187,7 +187,7 @@ def test_delete_changes_directory_when_in_target_worktree() -> None:
         wt_path = env.erk_root / "repos" / repo_name / "worktrees" / "feature"
 
         # Set up worktree paths
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main", is_root=True),
@@ -199,7 +199,7 @@ def test_delete_changes_directory_when_in_target_worktree() -> None:
         )
 
         # Build context with cwd set to the worktree being deleted
-        test_ctx = env.build_context(git_ops=git_ops, cwd=wt_path, existing_paths={wt_path})
+        test_ctx = env.build_context(git=git_ops, cwd=wt_path, existing_paths={wt_path})
 
         # Execute delete command with --force to skip confirmation
         result = runner.invoke(cli, ["delete", "feature", "-f"], obj=test_ctx)
@@ -222,7 +222,7 @@ def test_delete_with_delete_stack_handles_user_decline() -> None:
         wt = env.erk_root / "repos" / repo_name / "worktrees" / "test-stack"
 
         # Build fake git ops with worktree info and configured exception
-        fake_git_ops = FakeGitOps(
+        fake_git_ops = FakeGit(
             worktrees={env.cwd: [WorktreeInfo(path=wt, branch="feature-2")]},
             git_common_dirs={env.cwd: env.git_dir},
             delete_branch_raises={
@@ -243,10 +243,10 @@ def test_delete_with_delete_stack_handles_user_decline() -> None:
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=fake_git_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(branches=branches),
-            shell_ops=FakeShellOps(),
+            git=fake_git_ops,
+            github=FakeGitHub(),
+            graphite=FakeGraphite(branches=branches),
+            shell=FakeShell(),
             existing_paths={wt},
         )
 
@@ -265,7 +265,7 @@ def test_delete_with_delete_stack_handles_gt_not_found() -> None:
         repo_name = env.cwd.name
         wt = env.erk_root / "repos" / repo_name / "worktrees" / "test-stack"
 
-        fake_git_ops = FakeGitOps(
+        fake_git_ops = FakeGit(
             worktrees={env.cwd: [WorktreeInfo(path=wt, branch="feature-1")]},
             git_common_dirs={env.cwd: env.git_dir},
             delete_branch_raises={
@@ -280,10 +280,10 @@ def test_delete_with_delete_stack_handles_gt_not_found() -> None:
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=fake_git_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(branches=branches),
-            shell_ops=FakeShellOps(),
+            git=fake_git_ops,
+            github=FakeGitHub(),
+            graphite=FakeGraphite(branches=branches),
+            shell=FakeShell(),
             existing_paths={wt},
         )
 

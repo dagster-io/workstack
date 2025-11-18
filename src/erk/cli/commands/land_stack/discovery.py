@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from erk.core.context import ErkContext
-from erk.core.graphite_ops import BranchMetadata
+from erk.core.graphite import BranchMetadata
 
 
 def _get_branches_to_land(
@@ -29,12 +29,12 @@ def _get_branches_to_land(
         Empty list if branch not in stack
     """
     # Get full stack (trunk to leaves)
-    stack = ctx.graphite_ops.get_branch_stack(ctx.git_ops, repo_root, current_branch)
+    stack = ctx.graphite.get_branch_stack(ctx.git, repo_root, current_branch)
     if stack is None:
         return []
 
     # Get all branch metadata to filter out trunk branches
-    all_branches = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo_root)
+    all_branches = ctx.graphite.get_all_branches(ctx.git, repo_root)
     if not all_branches:
         return []
 

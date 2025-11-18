@@ -53,7 +53,7 @@ def get_plan_path(worktree_path: Path, git_ops=None) -> Path | None:
 
     Args:
         worktree_path: Path to the worktree directory
-        git_ops: Optional GitOps interface for path checking (uses .exists() if None)
+        git_ops: Optional Git interface for path checking (uses .exists() if None)
 
     Returns:
         Path to plan.md if exists, None otherwise

@@ -6,12 +6,12 @@ This file tests the rename command which renames a worktree workspace.
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.gitops import NoopGitOps
+from erk.core.git import NoopGit
 from erk.core.repo_discovery import RepoContext
-from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.gitops import FakeGitOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.fakes.shell_ops import FakeShellOps
+from tests.fakes.git import FakeGit
+from tests.fakes.github import FakeGitHub
+from tests.fakes.graphite import FakeGraphite
+from tests.fakes.shell import FakeShell
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
@@ -24,7 +24,7 @@ def test_rename_successful() -> None:
         old_wt = work_dir / "old-name"
         work_dir / "new-name"
 
-        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
+        git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
@@ -32,10 +32,10 @@ def test_rename_successful() -> None:
             worktrees_dir=work_dir / "worktrees",
         )
         test_ctx = env.build_context(
-            git_ops=git_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            github=FakeGitHub(),
+            graphite=FakeGraphite(),
+            shell=FakeShell(),
             repo=repo,
             dry_run=False,
             existing_paths={old_wt},
@@ -50,12 +50,12 @@ def test_rename_old_worktree_not_found() -> None:
     """Test rename fails when old worktree doesn't exist."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
+        git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
         test_ctx = env.build_context(
-            git_ops=git_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            github=FakeGitHub(),
+            graphite=FakeGraphite(),
+            shell=FakeShell(),
             dry_run=False,
         )
         result = runner.invoke(cli, ["rename", "nonexistent", "new-name"], obj=test_ctx)
@@ -73,7 +73,7 @@ def test_rename_new_name_already_exists() -> None:
         old_wt = work_dir / "old-name"
         existing_wt = work_dir / "existing"
 
-        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
+        git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
@@ -81,10 +81,10 @@ def test_rename_new_name_already_exists() -> None:
             worktrees_dir=work_dir / "worktrees",
         )
         test_ctx = env.build_context(
-            git_ops=git_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            github=FakeGitHub(),
+            graphite=FakeGraphite(),
+            shell=FakeShell(),
             repo=repo,
             dry_run=False,
             existing_paths={old_wt, existing_wt},
@@ -104,7 +104,7 @@ def test_rename_with_graphite_enabled() -> None:
         old_wt = work_dir / "old-branch"
 
         # Enable Graphite
-        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
+        git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
@@ -113,10 +113,10 @@ def test_rename_with_graphite_enabled() -> None:
         )
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            github=FakeGitHub(),
+            graphite=FakeGraphite(),
+            shell=FakeShell(),
             repo=repo,
             dry_run=False,
             existing_paths={old_wt},
@@ -136,8 +136,8 @@ def test_rename_dry_run() -> None:
         work_dir = env.erk_root / "repos" / env.cwd.name / "worktrees"
         old_wt = work_dir / "old-name"
 
-        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-        git_ops = NoopGitOps(git_ops)
+        git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
+        git_ops = NoopGit(git_ops)
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
@@ -145,10 +145,10 @@ def test_rename_dry_run() -> None:
             worktrees_dir=work_dir / "worktrees",
         )
         test_ctx = env.build_context(
-            git_ops=git_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            github=FakeGitHub(),
+            graphite=FakeGraphite(),
+            shell=FakeShell(),
             repo=repo,
             dry_run=True,
             existing_paths={old_wt},

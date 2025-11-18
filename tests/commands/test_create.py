@@ -5,8 +5,8 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.gitops import WorktreeInfo
-from tests.fakes.gitops import FakeGitOps
+from erk.core.git import WorktreeInfo
+from tests.fakes.git import FakeGit
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
@@ -24,7 +24,7 @@ def test_create_from_current_branch_outputs_script_path_to_stdout() -> None:
         repo_dir = env.erk_root / "repos" / env.cwd.name
 
         # Set up git state: in root worktree on feature branch
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -35,7 +35,7 @@ def test_create_from_current_branch_outputs_script_path_to_stdout() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        test_ctx = env.build_context(git_ops=git_ops)
+        test_ctx = env.build_context(git=git_ops)
 
         # Act: Create worktree from current branch with --script flag
         result = runner.invoke(

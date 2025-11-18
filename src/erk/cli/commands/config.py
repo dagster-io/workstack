@@ -6,8 +6,8 @@ import click
 from erk.cli.config import LoadedConfig
 from erk.cli.core import discover_repo_context
 from erk.cli.output import machine_output, user_output
+from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext, write_trunk_to_pyproject
-from erk.core.global_config import GlobalConfig
 
 
 def _get_env_value(cfg: LoadedConfig, parts: list[str], key: str) -> None:
@@ -111,7 +111,7 @@ def config_get(ctx: ErkContext, key: str) -> None:
     # Handle global config keys
     if parts[0] in ("erk_root", "use_graphite", "show_pr_info"):
         if ctx.global_config is None:
-            config_path = ctx.global_config_ops.path()
+            config_path = ctx.config_store.path()
             user_output(f"Global config not found at {config_path}")
             raise SystemExit(1)
 
@@ -164,7 +164,7 @@ def config_set(ctx: ErkContext, key: str, value: str) -> None:
     # Handle global config keys
     if parts[0] in ("erk_root", "use_graphite", "show_pr_info"):
         if ctx.global_config is None:
-            config_path = ctx.global_config_ops.path()
+            config_path = ctx.config_store.path()
             user_output(f"Global config not found at {config_path}")
             user_output("Run 'erk init' to create it.")
             raise SystemExit(1)
@@ -201,7 +201,7 @@ def config_set(ctx: ErkContext, key: str, value: str) -> None:
             user_output(f"Invalid key: {key}")
             raise SystemExit(1)
 
-        ctx.global_config_ops.save(new_config)
+        ctx.config_store.save(new_config)
         user_output(f"Set {key}={value}")
         return
 

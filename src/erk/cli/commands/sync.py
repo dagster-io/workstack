@@ -48,7 +48,7 @@ def _return_to_original_worktree(
         return
 
     wt_path = worktree_path_for(worktrees_dir, current_worktree_name)
-    if not ctx.git_ops.path_exists(wt_path):
+    if not ctx.git.path_exists(wt_path):
         return
 
     _emit(f"✓ Returning to: {current_worktree_name}", script_mode=script_mode)
@@ -129,7 +129,7 @@ def sync_cmd(
 
     # Step 3: Switch to root (only if not already at root)
     if ctx.cwd.resolve() != repo.root:
-        if ctx.git_ops.safe_chdir(repo.root):
+        if ctx.git.safe_chdir(repo.root):
             ctx = regenerate_context(ctx)
 
     # Step 4: Run `gt sync`
@@ -142,7 +142,7 @@ def sync_cmd(
         if verbose:
             _emit(f"Running: {' '.join(cmd)}", script_mode=script)
         try:
-            ctx.graphite_ops.sync(repo.root, force=force, quiet=not verbose)
+            ctx.graphite.sync(repo.root, force=force, quiet=not verbose)
         except subprocess.CalledProcessError as e:
             error_detail = e.stderr.strip() if e.stderr else f"exit code {e.returncode}"
             _emit(
@@ -163,15 +163,13 @@ def sync_cmd(
         _emit(f"[DRY RUN] Would run {' '.join(cmd)}", script_mode=script)
 
     # Step 5: Identify deletable erks
-    worktrees = ctx.git_ops.list_worktrees(repo.root)
+    worktrees = ctx.git.list_worktrees(repo.root)
 
     # Fetch PR status for all branches
     pr_statuses: dict[str, PRStatus] = {}
     for wt in worktrees:
         if wt.branch is not None:
-            state, pr_number, title = ctx.github_ops.get_pr_status(
-                repo.root, wt.branch, debug=False
-            )
+            state, pr_number, title = ctx.github.get_pr_status(repo.root, wt.branch, debug=False)
             pr_statuses[wt.branch] = PRStatus(
                 branch=wt.branch, state=state, pr_number=pr_number, title=title
             )
@@ -228,7 +226,7 @@ def sync_cmd(
         # Step 6.5: Automatically run second gt sync -f to delete branches (when force=True)
         # For external commands like gt sync, check dry_run to avoid subprocess execution
         if force and not dry_run and deletable:
-            ctx.graphite_ops.sync(repo.root, force=True, quiet=not verbose)
+            ctx.graphite.sync(repo.root, force=True, quiet=not verbose)
             _emit("✓ Deleted merged branches", script_mode=script)
 
         # Only show manual instruction if force was not used
@@ -245,7 +243,7 @@ def sync_cmd(
         wt_path = worktree_path_for(repo.worktrees_dir, current_worktree_name)
 
         # Determine return target (worktree if exists, otherwise root)
-        if ctx.git_ops.path_exists(wt_path):
+        if ctx.git.path_exists(wt_path):
             return_path = wt_path
             return_location = current_worktree_name
             _emit(f"✓ Returning to: {current_worktree_name}", script_mode=script)
@@ -256,7 +254,7 @@ def sync_cmd(
 
         # Navigate to return path
         if not script:
-            if ctx.git_ops.safe_chdir(return_path):
+            if ctx.git.safe_chdir(return_path):
                 ctx = regenerate_context(ctx)
         else:
             # Generate navigation script for shell wrapper

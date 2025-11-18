@@ -55,8 +55,8 @@ from typing import Literal, NamedTuple
 
 import click
 
-from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.ops import GtKitOps
-from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops import RealGtKitOps
+from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.ops import GtKit
+from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops import RealGtKit
 
 
 class SubmitResult(NamedTuple):
@@ -151,7 +151,7 @@ class DiffContextResult:
         }
 
 
-def get_diff_context(ops: GtKitOps | None = None) -> DiffContextResult:
+def get_diff_context(ops: GtKit | None = None) -> DiffContextResult:
     """Get all context needed for AI diff analysis.
 
     Args:
@@ -165,7 +165,7 @@ def get_diff_context(ops: GtKitOps | None = None) -> DiffContextResult:
         subprocess.CalledProcessError: If git operations fail
     """
     if ops is None:
-        ops = RealGtKitOps()
+        ops = RealGtKit()
 
     # Get repository root
     repo_root = ops.git().get_repository_root()
@@ -192,10 +192,10 @@ def get_diff_context(ops: GtKitOps | None = None) -> DiffContextResult:
     )
 
 
-def execute_pre_analysis(ops: GtKitOps | None = None) -> PreAnalysisResult | PreAnalysisError:
+def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAnalysisError:
     """Execute the pre-analysis phase. Returns success or error result."""
     if ops is None:
-        ops = RealGtKitOps()
+        ops = RealGtKit()
 
     # Step 0: Check for and commit uncommitted changes
     uncommitted_changes_committed = False
@@ -308,11 +308,11 @@ def execute_pre_analysis(ops: GtKitOps | None = None) -> PreAnalysisResult | Pre
 
 
 def execute_post_analysis(
-    commit_message: str, ops: GtKitOps | None = None
+    commit_message: str, ops: GtKit | None = None
 ) -> PostAnalysisResult | PostAnalysisError:
     """Execute the post-analysis phase. Returns success or error result."""
     if ops is None:
-        ops = RealGtKitOps()
+        ops = RealGtKit()
 
     # Split commit message into PR title and body
     lines = commit_message.split("\n", 1)

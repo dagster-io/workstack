@@ -105,7 +105,7 @@ def consolidate_cmd(
 
     # Get current worktree and branch
     current_worktree = ctx.cwd
-    current_branch = ctx.git_ops.get_current_branch(current_worktree)
+    current_branch = ctx.git.get_current_branch(current_worktree)
 
     if current_branch is None:
         user_output("Error: Current worktree is in detached HEAD state")
@@ -117,7 +117,7 @@ def consolidate_cmd(
     ensure_repo_dir(repo)
 
     # Get current branch's stack
-    stack_branches = ctx.graphite_ops.get_branch_stack(ctx.git_ops, repo.root, current_branch)
+    stack_branches = ctx.graphite.get_branch_stack(ctx.git, repo.root, current_branch)
     if stack_branches is None:
         user_output(f"Error: Branch '{current_branch}' is not tracked by Graphite")
         user_output(
@@ -141,7 +141,7 @@ def consolidate_cmd(
     # This will be used in create_consolidation_plan() below
 
     # Get all worktrees
-    all_worktrees = ctx.git_ops.list_worktrees(repo.root)
+    all_worktrees = ctx.git.list_worktrees(repo.root)
 
     # Validate --name argument if provided
     if name is not None:
@@ -173,7 +173,7 @@ def consolidate_cmd(
         # Skip current worktree (consolidation target, never removed)
         if wt.path.resolve() == current_worktree.resolve():
             continue
-        if ctx.git_ops.path_exists(wt.path) and ctx.git_ops.has_uncommitted_changes(wt.path):
+        if ctx.git.path_exists(wt.path) and ctx.git.has_uncommitted_changes(wt.path):
             worktrees_with_changes.append(wt.path)
 
     if worktrees_with_changes:
@@ -205,18 +205,18 @@ def consolidate_cmd(
             new_worktree_path = worktree_path_for(repo.worktrees_dir, name)
 
             # Create temporary branch on current commit (doesn't checkout)
-            # GitOps operations use check=True, so failures raise CalledProcessError
-            ctx.git_ops.create_branch(current_worktree, temp_branch_name, current_branch)
+            # Git operations use check=True, so failures raise CalledProcessError
+            ctx.git.create_branch(current_worktree, temp_branch_name, current_branch)
 
             # Checkout temporary branch in source worktree to free up the original branch
-            ctx.git_ops.checkout_branch(current_worktree, temp_branch_name)
+            ctx.git.checkout_branch(current_worktree, temp_branch_name)
 
             # Track temporary branch with Graphite
-            ctx.graphite_ops.track_branch(current_worktree, temp_branch_name, current_branch)
+            ctx.graphite.track_branch(current_worktree, temp_branch_name, current_branch)
 
             # Create new worktree with original branch
             # (now available since source is on temp branch)
-            ctx.git_ops.add_worktree(
+            ctx.git.add_worktree(
                 repo.root,
                 new_worktree_path,
                 branch=current_branch,
@@ -230,7 +230,7 @@ def consolidate_cmd(
             # This prevents the shell from being in a deleted directory
             # Always change directory regardless of script mode to ensure we're not in
             # the source worktree when it gets deleted
-            if ctx.git_ops.safe_chdir(new_worktree_path):
+            if ctx.git.safe_chdir(new_worktree_path):
                 # Regenerate context with new cwd (context is immutable)
                 ctx = create_context(dry_run=ctx.dry_run)
                 user_output(click.style("✅ Changed directory to new worktree", fg="green"))
@@ -327,20 +327,20 @@ def consolidate_cmd(
     # Remove worktrees
     user_output()
     for wt in worktrees_to_remove:
-        ctx.git_ops.remove_worktree(repo.root, wt.path, force=True)
+        ctx.git.remove_worktree(repo.root, wt.path, force=True)
         path_text = click.style(str(wt.path), fg="green")
         user_output(f"✅ Removed: {path_text}")
 
     # Remove source worktree if a new worktree was created
     if name is not None:
-        ctx.git_ops.remove_worktree(repo.root, current_worktree.resolve(), force=True)
+        ctx.git.remove_worktree(repo.root, current_worktree.resolve(), force=True)
         path_text = click.style(str(current_worktree), fg="green")
         user_output(f"✅ Removed source worktree: {path_text}")
 
         # Delete temporary branch after source worktree is removed
         # (can't delete while it's checked out in the source worktree)
         if temp_branch_name is not None:
-            ctx.git_ops.delete_branch(repo.root, temp_branch_name, force=True)
+            ctx.git.delete_branch(repo.root, temp_branch_name, force=True)
 
     user_output(f"\n{click.style('✅ Consolidation complete', fg='green', bold=True)}")
 

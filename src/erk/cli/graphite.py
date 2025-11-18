@@ -20,9 +20,9 @@ on top of each other. For example:
 Each branch in the stack depends on its parent, making it easy to work on multiple
 related changes while keeping them in separate PRs.
 
-## GraphiteOps Abstraction
+## Graphite Abstraction
 
-This module uses the GraphiteOps abstraction to read Graphite cache data. Production
+This module uses the Graphite abstraction to read Graphite cache data. Production
 code should use ctx.graphite_ops methods directly instead of importing functions from
 this module.
 
@@ -32,7 +32,7 @@ See erk.core.graphite_ops for the abstraction interface.
 from pathlib import Path
 
 from erk.core.context import ErkContext
-from erk.core.gitops import WorktreeInfo
+from erk.core.git import WorktreeInfo
 
 
 def find_worktrees_containing_branch(

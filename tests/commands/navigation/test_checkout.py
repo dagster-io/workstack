@@ -5,9 +5,9 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.gitops import WorktreeInfo
+from erk.core.git import WorktreeInfo
 from erk.core.repo_discovery import RepoContext
-from tests.fakes.gitops import FakeGitOps
+from tests.fakes.git import FakeGit
 from tests.test_utils.env_helpers import erk_inmem_env, erk_isolated_fs_env
 
 
@@ -24,7 +24,7 @@ def test_checkout_to_branch_in_single_worktree() -> None:
         feature_wt = work_dir / "feature-wt"
         other_wt = work_dir / "other-wt"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=other_wt, branch="other-feature"),
@@ -45,7 +45,7 @@ def test_checkout_to_branch_in_single_worktree() -> None:
             worktrees_dir=env.erk_root / "repo" / "worktrees",
         )
 
-        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
+        test_ctx = env.build_context(git=git_ops, repo=repo)
 
         # Jump to feature-2 which is checked out in feature_wt
         result = runner.invoke(
@@ -72,7 +72,7 @@ def test_checkout_to_branch_not_found() -> None:
     with erk_inmem_env(runner) as env:
         work_dir = env.erk_root / env.cwd.name
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -93,7 +93,7 @@ def test_checkout_to_branch_not_found() -> None:
             worktrees_dir=work_dir / "worktrees",
         )
 
-        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
+        test_ctx = env.build_context(git=git_ops, repo=repo)
 
         # Jump to a branch that doesn't exist
         result = runner.invoke(
@@ -112,7 +112,7 @@ def test_checkout_creates_worktree_for_unchecked_branch() -> None:
         work_dir = env.erk_root / env.cwd.name
 
         # Branch 'existing-branch' exists in git but is not checked out
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -132,7 +132,7 @@ def test_checkout_creates_worktree_for_unchecked_branch() -> None:
             worktrees_dir=work_dir / "worktrees",
         )
 
-        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
+        test_ctx = env.build_context(git=git_ops, repo=repo)
 
         # Jump to branch that exists but is not checked out
         result = runner.invoke(
@@ -177,7 +177,7 @@ def test_checkout_to_branch_in_stack_but_not_checked_out() -> None:
 
         # feature-1 is checked out, but feature-base is not
         # (even though it exists in git)
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -198,7 +198,7 @@ def test_checkout_to_branch_in_stack_but_not_checked_out() -> None:
             worktrees_dir=work_dir / "worktrees",
         )
 
-        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
+        test_ctx = env.build_context(git=git_ops, repo=repo)
 
         # Jump to feature-base which exists in repo but is not checked out
         result = runner.invoke(
@@ -224,7 +224,7 @@ def test_checkout_works_without_graphite() -> None:
         work_dir = env.erk_root / env.cwd.name
         feature_wt = work_dir / "feature-1-wt"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -244,7 +244,7 @@ def test_checkout_works_without_graphite() -> None:
         )
 
         # Graphite is NOT enabled - jump should still work
-        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
+        test_ctx = env.build_context(git=git_ops, repo=repo)
 
         result = runner.invoke(
             cli, ["checkout", "feature-1", "--script"], obj=test_ctx, catch_exceptions=False
@@ -269,7 +269,7 @@ def test_checkout_already_on_target_branch() -> None:
         work_dir = env.erk_root / env.cwd.name
         feature_wt = work_dir / "feature-1-wt"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -290,7 +290,7 @@ def test_checkout_already_on_target_branch() -> None:
         )
 
         # CRITICAL: Set cwd to feature_wt to simulate already being in target location
-        test_ctx = env.build_context(git_ops=git_ops, repo=repo, cwd=feature_wt)
+        test_ctx = env.build_context(git=git_ops, repo=repo, cwd=feature_wt)
 
         # Jump to feature-1 while already in feature_wt
         result = runner.invoke(
@@ -328,7 +328,7 @@ def test_checkout_succeeds_when_branch_exactly_checked_out() -> None:
         feature_wt = work_dir / "feature-wt"
         other_wt = work_dir / "other-wt"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=other_wt, branch="other-feature"),
@@ -347,7 +347,7 @@ def test_checkout_succeeds_when_branch_exactly_checked_out() -> None:
             worktrees_dir=work_dir / "worktrees",
         )
 
-        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
+        test_ctx = env.build_context(git=git_ops, repo=repo)
 
         # Jump to feature-2 which is checked out in feature_wt
         result = runner.invoke(
@@ -377,7 +377,7 @@ def test_checkout_with_multiple_worktrees_same_branch() -> None:
 
         # Edge case: same branch checked out in multiple worktrees
         # (shouldn't happen in real git, but test our handling)
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=wt1, branch="feature-2"),
@@ -396,7 +396,7 @@ def test_checkout_with_multiple_worktrees_same_branch() -> None:
             worktrees_dir=work_dir / "worktrees",
         )
 
-        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
+        test_ctx = env.build_context(git=git_ops, repo=repo)
 
         # Jump to feature-2 which is checked out in multiple worktrees
         result = runner.invoke(
@@ -415,7 +415,7 @@ def test_checkout_creates_worktree_for_remote_only_branch() -> None:
         work_dir = env.erk_root / env.cwd.name
 
         # Branch exists on origin but not locally
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -436,7 +436,7 @@ def test_checkout_creates_worktree_for_remote_only_branch() -> None:
             worktrees_dir=work_dir / "worktrees",
         )
 
-        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
+        test_ctx = env.build_context(git=git_ops, repo=repo)
 
         # Jump to remote branch
         result = runner.invoke(
@@ -476,7 +476,7 @@ def test_checkout_fails_when_branch_not_on_origin() -> None:
         work_dir = env.erk_root / env.cwd.name
 
         # Branch doesn't exist locally or remotely
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -497,7 +497,7 @@ def test_checkout_fails_when_branch_not_on_origin() -> None:
             worktrees_dir=work_dir / "worktrees",
         )
 
-        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
+        test_ctx = env.build_context(git=git_ops, repo=repo)
 
         # Jump to nonexistent branch
         result = runner.invoke(
@@ -526,7 +526,7 @@ def test_checkout_message_when_switching_worktrees() -> None:
         # Set up two worktrees: root on main, secondary on feature-branch
         feature_wt = work_dir / "feature-wt"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -548,7 +548,7 @@ def test_checkout_message_when_switching_worktrees() -> None:
         )
 
         # Build context with cwd=env.cwd (root worktree)
-        test_ctx = env.build_context(git_ops=git_ops, repo=repo)
+        test_ctx = env.build_context(git=git_ops, repo=repo)
 
         # Jump to feature-branch from root worktree
         result = runner.invoke(

@@ -3,11 +3,11 @@
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
+from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.global_config import GlobalConfig
-from erk.core.graphite_ops import BranchMetadata
-from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.shell_ops import FakeShellOps
+from erk.core.graphite import BranchMetadata
+from tests.fakes.github import FakeGitHub
+from tests.fakes.shell import FakeShell
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
@@ -18,7 +18,7 @@ def test_land_stack_verbose_flag_shows_detailed_output() -> None:
     the Phase 5 submit_branch calls. In non-verbose mode, operations are quieter.
 
     Note: This test verifies --verbose doesn't break Phase 5, not the exact output
-    format, since the verbose behavior is implemented in RealGraphiteOps (which uses
+    format, since the verbose behavior is implemented in RealGraphite (which uses
     --quiet flag based on the quiet parameter).
     """
     runner = CliRunner()
@@ -35,7 +35,7 @@ def test_land_stack_verbose_flag_shows_detailed_output() -> None:
             current_branch="feat-2",
         )
 
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Feature 1"),
                 "feat-2": ("OPEN", 200, "Feature 2"),
@@ -54,11 +54,11 @@ def test_land_stack_verbose_flag_shows_detailed_output() -> None:
         )
 
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
+            git=git_ops,
             global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             dry_run=False,
             script_writer=env.script_writer,
             cwd=env.cwd,
@@ -83,7 +83,7 @@ def test_land_stack_dry_run_shows_submit_commands() -> None:
 
     In dry-run mode, the command should display the gt submit commands that would
     be executed for each remaining branch, but should NOT actually call submit_branch
-    on FakeGraphiteOps.
+    on FakeGraphite.
     """
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -99,7 +99,7 @@ def test_land_stack_dry_run_shows_submit_commands() -> None:
             current_branch="feat-2",
         )
 
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Feature 1"),
                 "feat-2": ("OPEN", 200, "Feature 2"),
@@ -118,11 +118,11 @@ def test_land_stack_dry_run_shows_submit_commands() -> None:
         )
 
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
+            git=git_ops,
             global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             dry_run=True,
             script_writer=env.script_writer,
             cwd=env.cwd,
@@ -140,11 +140,11 @@ def test_land_stack_dry_run_shows_submit_commands() -> None:
             f"Actual output:\n{result.output}"
         )
 
-        # Assert: DRY RUN mode means submit_branch should NOT be called on FakeGraphiteOps
-        # (In dry-run, NoopGraphiteOps.submit_branch shows the command but doesn't mutate)
-        # The test_ctx uses dry_run=True, so FakeGraphiteOps.submit_branch is NOT invoked
-        # Instead, NoopGraphiteOps wrapper shows the command
+        # Assert: DRY RUN mode means submit_branch should NOT be called on FakeGraphite
+        # (In dry-run, NoopGraphite.submit_branch shows the command but doesn't mutate)
+        # The test_ctx uses dry_run=True, so FakeGraphite.submit_branch is NOT invoked
+        # Instead, NoopGraphite wrapper shows the command
         #
         # Note: We can't assert len(graphite_ops.submit_branch_calls) == 0 here because
-        # the NoopGraphiteOps wrapper still calls the underlying fake for tracking.
+        # the NoopGraphite wrapper still calls the underlying fake for tracking.
         # The key is that dry-run mode shows the command in output without real execution.

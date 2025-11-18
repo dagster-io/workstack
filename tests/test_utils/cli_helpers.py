@@ -4,7 +4,7 @@ This module provides utilities for setting up isolated test environments
 for CLI command tests that require REAL git operations (not fakes).
 
 IMPORTANT: For 95% of CLI tests, use `simulated_erk_env()` from
-`tests.test_utils.env_helpers` instead. That helper uses FakeGitOps and
+`tests.test_utils.env_helpers` instead. That helper uses FakeGit and
 is faster, better isolated, and easier to use.
 
 Only use `cli_test_repo()` when you specifically need:
@@ -63,7 +63,7 @@ def cli_test_repo(tmp_path: Path) -> Generator[CLITestRepo]:
 
     When NOT to use this helper:
     - Regular CLI command tests → Use simulated_erk_env() instead
-    - Unit tests of core logic → Use FakeGitOps directly
+    - Unit tests of core logic → Use FakeGit directly
     - Tests that can use fakes → Use simulated_erk_env() instead
 
     Args:
@@ -104,8 +104,8 @@ def cli_test_repo(tmp_path: Path) -> Generator[CLITestRepo]:
             runner = CliRunner()
             with simulated_erk_env(runner) as env:
                 # Much simpler! No HOME setup, no os.chdir, uses fakes
-                git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-                test_ctx = ErkContext.for_test(git_ops=git_ops, cwd=env.cwd)
+                git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
+                test_ctx = ErkContext.for_test(git=git_ops, cwd=env.cwd)
                 result = runner.invoke(cli, ["create", "feature"], obj=test_ctx)
         ```
 

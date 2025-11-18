@@ -6,11 +6,11 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from erk.cli.commands.prepare_cwd_recovery import prepare_cwd_recovery_cmd
+from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.global_config import GlobalConfig
 from tests.fakes.context import create_test_context
-from tests.fakes.gitops import FakeGitOps
-from tests.fakes.script_writer import FakeScriptWriterOps
+from tests.fakes.git import FakeGit
+from tests.fakes.script_writer import FakeScriptWriter
 
 
 def build_ctx(repo_root: Path | None, erk_root: Path, cwd: Path | None = None) -> ErkContext:
@@ -26,8 +26,8 @@ def build_ctx(repo_root: Path | None, erk_root: Path, cwd: Path | None = None) -
     if cwd is not None and cwd != repo_root:
         existing_paths.add(cwd)
 
-    git_ops = FakeGitOps(git_common_dirs=git_common_dirs, existing_paths=existing_paths)
-    script_writer = FakeScriptWriterOps()
+    git_ops = FakeGit(git_common_dirs=git_common_dirs, existing_paths=existing_paths)
+    script_writer = FakeScriptWriter()
     global_config_ops = GlobalConfig(
         erk_root=erk_root,
         use_graphite=False,
@@ -35,7 +35,7 @@ def build_ctx(repo_root: Path | None, erk_root: Path, cwd: Path | None = None) -
         show_pr_info=True,
     )
     return create_test_context(
-        git_ops=git_ops,
+        git=git_ops,
         script_writer=script_writer,
         global_config=global_config_ops,
         cwd=cwd or repo_root or erk_root,

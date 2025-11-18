@@ -39,17 +39,17 @@ def rename_cmd(ctx: ErkContext, old_name: str, new_name: str, dry_run: bool) -> 
     new_path = worktree_path_for(repo.worktrees_dir, sanitized_new_name)
 
     # Validate old worktree exists
-    if not ctx.git_ops.path_exists(old_path):
+    if not ctx.git.path_exists(old_path):
         user_output(f"Worktree not found: {old_path}")
         raise SystemExit(1)
 
     # Validate new path doesn't already exist
-    if ctx.git_ops.path_exists(new_path):
+    if ctx.git.path_exists(new_path):
         user_output(f"Destination already exists: {new_path}")
         raise SystemExit(1)
 
     # Move via git worktree move
-    ctx.git_ops.move_worktree(repo.root, old_path, new_path)
+    ctx.git.move_worktree(repo.root, old_path, new_path)
 
     # Regenerate .env file with updated paths and name
     cfg = ctx.local_config

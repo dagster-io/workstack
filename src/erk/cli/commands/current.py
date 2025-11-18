@@ -22,7 +22,7 @@ def current_cmd(ctx: ErkContext) -> None:
         repo = discover_repo_context(ctx, ctx.cwd)
 
     current_dir = ctx.cwd
-    worktrees = ctx.git_ops.list_worktrees(repo.root)
+    worktrees = ctx.git.list_worktrees(repo.root)
     wt_info = find_current_worktree(worktrees, current_dir)
 
     if wt_info is None:

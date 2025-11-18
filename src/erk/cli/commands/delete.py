@@ -12,7 +12,7 @@ from erk.cli.core import (
 )
 from erk.cli.output import user_output
 from erk.core.context import ErkContext, create_context, regenerate_context
-from erk.core.gitops import GitOps
+from erk.core.git import Git
 from erk.core.repo_discovery import ensure_repo_dir
 from erk.core.worktree_utils import (
     filter_non_trunk_branches,
@@ -21,7 +21,7 @@ from erk.core.worktree_utils import (
 )
 
 
-def _try_git_worktree_delete(git_ops: GitOps, repo_root: Path, wt_path: Path) -> bool:
+def _try_git_worktree_delete(git_ops: Git, repo_root: Path, wt_path: Path) -> bool:
     """Attempt git worktree remove, returning success status.
 
     This function violates LBYL norms because there's no reliable way to
@@ -44,7 +44,7 @@ def _try_git_worktree_delete(git_ops: GitOps, repo_root: Path, wt_path: Path) ->
         return False
 
 
-def _prune_worktrees_safe(git_ops: GitOps, repo_root: Path) -> None:
+def _prune_worktrees_safe(git_ops: Git, repo_root: Path) -> None:
     """Prune worktree metadata, ignoring errors if nothing to prune.
 
     This function violates LBYL norms because git worktree prune can fail
@@ -98,16 +98,16 @@ def _delete_worktree(
     wt_path = worktree_path_for(repo.worktrees_dir, name)
 
     # Check if worktree exists using git operations (works with both real and sentinel paths)
-    if not ctx.git_ops.path_exists(wt_path):
+    if not ctx.git.path_exists(wt_path):
         user_output(f"Worktree not found: {wt_path}")
         raise SystemExit(1)
 
     # LBYL: Check if user is currently in the worktree being deleted
     # If so, change to repository root before deletion to prevent
     # shell from being in deleted directory
-    if ctx.git_ops.path_exists(ctx.cwd):
+    if ctx.git.path_exists(ctx.cwd):
         current_dir = ctx.cwd.resolve()
-        worktrees = ctx.git_ops.list_worktrees(repo.root)
+        worktrees = ctx.git.list_worktrees(repo.root)
         current_worktree_path = find_worktree_containing_path(worktrees, current_dir)
 
         if (
@@ -122,7 +122,7 @@ def _delete_worktree(
             )
 
             # Change directory using safe_chdir which handles both real and sentinel paths
-            if not dry_run and ctx.git_ops.safe_chdir(safe_dir):
+            if not dry_run and ctx.git.safe_chdir(safe_dir):
                 # Regenerate context with new cwd (context is immutable)
                 ctx = regenerate_context(ctx)
 
@@ -138,7 +138,7 @@ def _delete_worktree(
             raise SystemExit(1)
 
         # Get the branches in the stack before deleting the worktree
-        worktrees = ctx.git_ops.list_worktrees(repo.root)
+        worktrees = ctx.git.list_worktrees(repo.root)
         worktree_branch = get_worktree_branch(worktrees, wt_path)
 
         if worktree_branch is None:
@@ -147,7 +147,7 @@ def _delete_worktree(
                 "Cannot delete stack without a branch.",
             )
         else:
-            stack = ctx.graphite_ops.get_branch_stack(ctx.git_ops, repo.root, worktree_branch)
+            stack = ctx.graphite.get_branch_stack(ctx.git, repo.root, worktree_branch)
             if stack is None:
                 user_output(
                     f"Warning: Branch {worktree_branch} is not tracked by Graphite. "
@@ -155,7 +155,7 @@ def _delete_worktree(
                 )
             else:
                 # Get all branches and filter to non-trunk branches
-                all_branches = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo.root)
+                all_branches = ctx.graphite.get_all_branches(ctx.git, repo.root)
                 if not all_branches:
                     raise ValueError("Graphite cache not available")
                 branches_to_delete = filter_non_trunk_branches(all_branches, stack)
@@ -186,12 +186,12 @@ def _delete_worktree(
 
     # 4a. Try to delete via git first
     # This updates git's metadata when possible
-    _try_git_worktree_delete(ctx.git_ops, repo.root, wt_path)
+    _try_git_worktree_delete(ctx.git, repo.root, wt_path)
 
     # 4b. Always manually delete directory if it still exists
     # (git worktree remove may have succeeded or failed, but directory might still be there)
     # Use git_ops.path_exists() instead of .exists() to work with both real and sentinel paths
-    if ctx.git_ops.path_exists(wt_path):
+    if ctx.git.path_exists(wt_path):
         if ctx.dry_run:
             user_output(f"[DRY RUN] Would delete directory: {wt_path}")
         else:
@@ -205,8 +205,8 @@ def _delete_worktree(
 
     # 4c. Prune worktree metadata to clean up any stale references
     # This is important if git worktree remove failed or if we manually deleted
-    # Trust NoopGitOps wrapper to handle dry-run behavior
-    _prune_worktrees_safe(ctx.git_ops, repo.root)
+    # Trust NoopGit wrapper to handle dry-run behavior
+    _prune_worktrees_safe(ctx.git, repo.root)
 
     # 4c. Delete stack branches (now that worktree is removed)
     # Exception handling here is acceptable because:
@@ -216,7 +216,7 @@ def _delete_worktree(
     if branches_to_delete:
         for branch in branches_to_delete:
             try:
-                ctx.git_ops.delete_branch_with_graphite(repo.root, branch, force=force)
+                ctx.git.delete_branch_with_graphite(repo.root, branch, force=force)
                 if not dry_run:
                     branch_text = click.style(branch, fg="green")
                     user_output(f"✅ Deleted branch: {branch_text}")

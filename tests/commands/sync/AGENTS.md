@@ -18,9 +18,9 @@ The sync command:
 
 ```python
 from click.testing import CliRunner
-from tests.fakes.gitops import FakeGitOps
-from tests.fakes.global_config_ops import FakeGlobalConfigOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
+from tests.fakes.fake_git import FakeGit
+from tests.fakes.fake_config_store import FakeConfigStore
+from tests.fakes.fake_graphite import FakeGraphite
 from erk.cli.cli import cli
 from erk.core.context import ErkContext
 
@@ -29,13 +29,13 @@ def test_sync_command() -> None:
     with runner.isolated_filesystem():
         # Setup
         cwd = Path.cwd()
-        git_ops = FakeGitOps(git_common_dirs={cwd: cwd / ".git"})
-        config_ops = FakeGlobalConfigOps(use_graphite=True, ...)
+        git = FakeGit(git_common_dirs={cwd: cwd / ".git"})
+        config_store = FakeConfigStore(use_graphite=True, ...)
 
         ctx = ErkContext(
-            git_ops=git_ops,
-            global_config_ops=config_ops,
-            graphite_ops=FakeGraphiteOps(),
+            git=git,
+            config_store=config_store,
+            graphite=FakeGraphite(),
             # ...
         )
 

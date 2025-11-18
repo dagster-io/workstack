@@ -193,8 +193,8 @@ def test_shell_integration_switch_invokes_successfully() -> None:
     """
     from pathlib import Path
 
-    from erk.core.gitops import WorktreeInfo
-    from tests.fakes.gitops import FakeGitOps
+    from erk.core.git import WorktreeInfo
+    from tests.fakes.git import FakeGit
     from tests.test_utils.env_helpers import erk_isolated_fs_env
 
     runner = CliRunner()
@@ -202,7 +202,7 @@ def test_shell_integration_switch_invokes_successfully() -> None:
         # Set up multiple worktrees
         wt1_path = env.create_linked_worktree("feat-1", "feat-1", chdir=False)
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={
                 env.cwd: env.git_dir,
                 wt1_path: env.git_dir,
@@ -219,7 +219,7 @@ def test_shell_integration_switch_invokes_successfully() -> None:
             },
         )
 
-        test_ctx = env.build_context(git_ops=git_ops)
+        test_ctx = env.build_context(git=git_ops)
 
         # Invoke switch command through __shell handler
         result = runner.invoke(cli, ["__shell", "switch", "feat-1"], obj=test_ctx)
@@ -240,8 +240,8 @@ def test_shell_integration_switch_invokes_successfully() -> None:
 def test_shell_integration_jump_invokes_successfully() -> None:
     """Test that __shell jump invokes command successfully."""
 
-    from erk.core.gitops import WorktreeInfo
-    from tests.fakes.gitops import FakeGitOps
+    from erk.core.git import WorktreeInfo
+    from tests.fakes.git import FakeGit
     from tests.test_utils.env_helpers import erk_isolated_fs_env
 
     runner = CliRunner()
@@ -249,7 +249,7 @@ def test_shell_integration_jump_invokes_successfully() -> None:
         # Set up worktree with branch
         wt1_path = env.create_linked_worktree("feat-1", "feat-1", chdir=False)
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={
                 env.cwd: env.git_dir,
                 wt1_path: env.git_dir,
@@ -266,7 +266,7 @@ def test_shell_integration_jump_invokes_successfully() -> None:
             },
         )
 
-        test_ctx = env.build_context(git_ops=git_ops)
+        test_ctx = env.build_context(git=git_ops)
 
         result = runner.invoke(cli, ["__shell", "jump", "feat-1"], obj=test_ctx)
 
@@ -277,7 +277,7 @@ def test_shell_integration_jump_invokes_successfully() -> None:
 def test_shell_integration_up_invokes_successfully() -> None:
     """Test that __shell up invokes command successfully with Graphite stack."""
 
-    from erk.core.graphite_ops import BranchMetadata
+    from erk.core.graphite import BranchMetadata
     from tests.test_utils.env_helpers import erk_isolated_fs_env
 
     runner = CliRunner()
@@ -296,7 +296,7 @@ def test_shell_integration_up_invokes_successfully() -> None:
             current_worktree=wt1_path,
         )
 
-        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
+        test_ctx = env.build_context(git=git_ops, graphite=graphite_ops, use_graphite=True)
 
         result = runner.invoke(cli, ["__shell", "up"], obj=test_ctx)
 
@@ -307,7 +307,7 @@ def test_shell_integration_up_invokes_successfully() -> None:
 def test_shell_integration_down_invokes_successfully() -> None:
     """Test that __shell down invokes command successfully with Graphite stack."""
 
-    from erk.core.graphite_ops import BranchMetadata
+    from erk.core.graphite import BranchMetadata
     from tests.test_utils.env_helpers import erk_isolated_fs_env
 
     runner = CliRunner()
@@ -326,7 +326,7 @@ def test_shell_integration_down_invokes_successfully() -> None:
             current_worktree=wt2_path,
         )
 
-        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
+        test_ctx = env.build_context(git=git_ops, graphite=graphite_ops, use_graphite=True)
 
         result = runner.invoke(cli, ["__shell", "down"], obj=test_ctx)
 
@@ -337,13 +337,13 @@ def test_shell_integration_down_invokes_successfully() -> None:
 def test_shell_integration_create_invokes_successfully() -> None:
     """Test that __shell create invokes command successfully."""
 
-    from erk.core.gitops import WorktreeInfo
-    from tests.fakes.gitops import FakeGitOps
+    from erk.core.git import WorktreeInfo
+    from tests.fakes.git import FakeGit
     from tests.test_utils.env_helpers import erk_isolated_fs_env
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             default_branches={env.cwd: "main"},
             worktrees={
@@ -353,7 +353,7 @@ def test_shell_integration_create_invokes_successfully() -> None:
             },
         )
 
-        test_ctx = env.build_context(git_ops=git_ops)
+        test_ctx = env.build_context(git=git_ops)
 
         result = runner.invoke(cli, ["__shell", "create", "newfeature"], obj=test_ctx)
 
@@ -363,13 +363,13 @@ def test_shell_integration_create_invokes_successfully() -> None:
 
 def test_shell_integration_consolidate_invokes_successfully() -> None:
     """Test that __shell consolidate invokes command successfully."""
-    from erk.core.gitops import WorktreeInfo
-    from tests.fakes.gitops import FakeGitOps
+    from erk.core.git import WorktreeInfo
+    from tests.fakes.git import FakeGit
     from tests.test_utils.env_helpers import erk_isolated_fs_env
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             default_branches={env.cwd: "main"},
             worktrees={
@@ -379,7 +379,7 @@ def test_shell_integration_consolidate_invokes_successfully() -> None:
             },
         )
 
-        test_ctx = env.build_context(git_ops=git_ops)
+        test_ctx = env.build_context(git=git_ops)
 
         result = runner.invoke(cli, ["__shell", "consolidate"], obj=test_ctx)
 
@@ -395,8 +395,8 @@ def test_shell_handler_uses_stdout_not_output() -> None:
     to avoid mixing stderr messages with the script path.
     """
 
-    from erk.core.gitops import WorktreeInfo
-    from tests.fakes.gitops import FakeGitOps
+    from erk.core.git import WorktreeInfo
+    from tests.fakes.git import FakeGit
     from tests.test_utils.env_helpers import erk_isolated_fs_env
 
     runner = CliRunner()
@@ -404,7 +404,7 @@ def test_shell_handler_uses_stdout_not_output() -> None:
         # Set up worktrees that might produce stderr output
         wt1_path = env.create_linked_worktree("feat-1", "feat-1", chdir=False)
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={
                 env.cwd: env.git_dir,
                 wt1_path: env.git_dir,
@@ -421,7 +421,7 @@ def test_shell_handler_uses_stdout_not_output() -> None:
             },
         )
 
-        test_ctx = env.build_context(git_ops=git_ops)
+        test_ctx = env.build_context(git=git_ops)
 
         result = runner.invoke(cli, ["__shell", "switch", "feat-1"], obj=test_ctx)
 
@@ -446,14 +446,14 @@ def test_shell_integration_shows_note_for_no_directory_change() -> None:
     script (empty stdout), the handler should display a note explaining that no
     directory change is needed. This clarifies expected behavior for users.
     """
-    from erk.core.gitops import WorktreeInfo
-    from tests.fakes.gitops import FakeGitOps
+    from erk.core.git import WorktreeInfo
+    from tests.fakes.git import FakeGit
     from tests.test_utils.env_helpers import erk_inmem_env
 
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Set up minimal environment - consolidate with no worktrees to remove
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             default_branches={env.cwd: "main"},
             worktrees={
@@ -463,7 +463,7 @@ def test_shell_integration_shows_note_for_no_directory_change() -> None:
             },
         )
 
-        test_ctx = env.build_context(git_ops=git_ops)
+        test_ctx = env.build_context(git=git_ops)
 
         # Use consolidate command - when there's nothing to consolidate, it succeeds
         # but produces no script output (no directory change needed)
@@ -485,14 +485,14 @@ def test_shell_integration_create_from_current_branch_returns_script_path() -> N
 
     See: https://github.com/anthropics/erk/issues/XXX
     """
-    from erk.core.gitops import WorktreeInfo
-    from tests.fakes.gitops import FakeGitOps
+    from erk.core.git import WorktreeInfo
+    from tests.fakes.git import FakeGit
     from tests.test_utils.env_helpers import erk_isolated_fs_env
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
         # Set up git state: in root worktree on feature branch
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main", is_root=True),
@@ -503,7 +503,7 @@ def test_shell_integration_create_from_current_branch_returns_script_path() -> N
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        test_ctx = env.build_context(git_ops=git_ops)
+        test_ctx = env.build_context(git=git_ops)
 
         # Act: Create worktree from current branch through __shell handler
         result = runner.invoke(
@@ -554,7 +554,7 @@ def test_shell_integration_land_stack_invokes_successfully() -> None:
     Verifies that land-stack is registered in the shell integration handler's command_map,
     which enables it to receive the --script flag for directory switching after landing PRs.
     """
-    from erk.core.graphite_ops import BranchMetadata
+    from erk.core.graphite import BranchMetadata
     from tests.test_utils.env_helpers import erk_isolated_fs_env
 
     runner = CliRunner()
@@ -573,7 +573,7 @@ def test_shell_integration_land_stack_invokes_successfully() -> None:
             current_worktree=wt2_path,
         )
 
-        test_ctx = env.build_context(git_ops=git_ops, graphite_ops=graphite_ops, use_graphite=True)
+        test_ctx = env.build_context(git=git_ops, graphite=graphite_ops, use_graphite=True)
 
         # Act: Invoke land-stack through __shell handler
         result = runner.invoke(cli, ["__shell", "land-stack"], obj=test_ctx)

@@ -98,7 +98,7 @@ git rebase --continue
 
 ```python
 test_ctx = ErkContext(
-    git_ops=git_ops,
+    git=git,
     global_config_ops=global_config_ops,  # ❌ Wrong parameter name
     cwd=Path("/test/default/cwd"),        # ❌ Hardcoded path
 )
@@ -108,7 +108,7 @@ test_ctx = ErkContext(
 
 ```python
 test_ctx = ErkContext.for_test(  # ✅ Factory method
-    git_ops=git_ops,
+    git=git,
     global_config=global_config,        # ✅ Renamed parameter
     cwd=env.cwd,                        # ✅ Actual environment path
 )
@@ -133,11 +133,11 @@ def test_something() -> None:
     with simulated_erk_env(runner) as env:
         # env provides: cwd, git_dir, root_worktree, erks_root
 
-        git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
+        git = FakeGit(git_common_dirs={env.cwd: env.git_dir})
         global_config = GlobalConfig(erks_root=env.erks_root, ...)
 
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
+            git=git,
             global_config=global_config,
             cwd=env.cwd,  # ✅ Use env.cwd
         )
@@ -155,11 +155,11 @@ def test_something() -> None:
         git_dir = cwd / ".git"
         git_dir.mkdir()
 
-        git_ops = FakeGitOps(git_common_dirs={cwd: git_dir})
+        git = FakeGit(git_common_dirs={cwd: git_dir})
         global_config = GlobalConfig(erks_root=cwd / "erks", ...)
 
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
+            git=git,
             global_config=global_config,
             cwd=cwd,  # ✅ Use local cwd variable
         )
@@ -204,7 +204,7 @@ class SimulatedErkEnv:
 ### BranchMetadata API
 
 ```python
-from erk.core.graphite_ops import BranchMetadata
+from erk.core.graphite import BranchMetadata
 
 # ✅ Trunk branch
 metadata = BranchMetadata.trunk(
@@ -472,7 +472,7 @@ fix_test_file(Path('tests/commands/graphite/test_land_stack.py'))
 
 ### Configuration Classes
 
-- **`GlobalConfig`** - Global configuration (not `GlobalConfigOps`)
+- **`GlobalConfig`** - Global configuration (not `ConfigStore`)
 - **`LoadedConfig`** - Repository-specific configuration
 - **`RepoContext`** - Repository context (root, name, erks_dir)
 

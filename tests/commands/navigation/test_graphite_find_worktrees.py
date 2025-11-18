@@ -3,13 +3,13 @@
 from pathlib import Path
 
 from erk.cli.graphite import find_worktrees_containing_branch
+from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.gitops import WorktreeInfo, find_worktree_for_branch
-from erk.core.global_config import GlobalConfig
-from erk.core.graphite_ops import RealGraphiteOps
-from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.gitops import FakeGitOps
-from tests.fakes.shell_ops import FakeShellOps
+from erk.core.git import WorktreeInfo, find_worktree_for_branch
+from erk.core.graphite import RealGraphite
+from tests.fakes.git import FakeGit
+from tests.fakes.github import FakeGitHub
+from tests.fakes.shell import FakeShell
 from tests.test_utils.graphite_helpers import setup_graphite_stack
 
 
@@ -38,25 +38,25 @@ def test_find_worktrees_containing_branch_no_match(tmp_path: Path) -> None:
         WorktreeInfo(path=wt1_path, branch="feature-1"),
     ]
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         worktrees={repo_root: worktrees},
         current_branches={repo_root: "main"},
         git_common_dirs={repo_root: git_dir},
     )
 
-    graphite_ops = RealGraphiteOps()
+    graphite_ops = RealGraphite()
 
     ctx = ErkContext.for_test(
-        git_ops=git_ops,
+        git=git_ops,
         global_config=GlobalConfig(
             erk_root=Path("/fake/erks"),
             use_graphite=False,
             shell_setup_complete=False,
             show_pr_info=True,
         ),
-        github_ops=FakeGitHubOps(),
-        graphite_ops=graphite_ops,
-        shell_ops=FakeShellOps(),
+        github=FakeGitHub(),
+        graphite=graphite_ops,
+        shell=FakeShell(),
         cwd=tmp_path,
         dry_run=False,
     )

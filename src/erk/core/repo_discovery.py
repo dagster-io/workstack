@@ -7,7 +7,7 @@ full ErkContext (enables config loading before context creation).
 from dataclasses import dataclass
 from pathlib import Path
 
-from erk.core.gitops import GitOps, RealGitOps
+from erk.core.git import Git, RealGit
 
 
 @dataclass(frozen=True)
@@ -33,7 +33,7 @@ class NoRepoSentinel:
 
 
 def discover_repo_or_sentinel(
-    cwd: Path, erk_root: Path, git_ops: GitOps | None = None
+    cwd: Path, erk_root: Path, git_ops: Git | None = None
 ) -> RepoContext | NoRepoSentinel:
     """Walk up from `cwd` to find a directory containing `.git`.
 
@@ -46,12 +46,12 @@ def discover_repo_or_sentinel(
     Args:
         cwd: Current working directory to start search from
         erk_root: Global erks root directory (from config)
-        git_ops: Git operations interface (defaults to RealGitOps)
+        git_ops: Git operations interface (defaults to RealGit)
 
     Returns:
         RepoContext if inside a git repository, NoRepoSentinel otherwise
     """
-    ops = git_ops if git_ops is not None else RealGitOps()
+    ops = git_ops if git_ops is not None else RealGit()
 
     if not ops.path_exists(cwd):
         return NoRepoSentinel(message=f"Start path '{cwd}' does not exist")

@@ -13,10 +13,10 @@ import pytest
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.gitops import WorktreeInfo
-from erk.core.graphite_ops import BranchMetadata
-from tests.fakes.gitops import FakeGitOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
+from erk.core.git import WorktreeInfo
+from erk.core.graphite import BranchMetadata
+from tests.fakes.git import FakeGit
+from tests.fakes.graphite import FakeGraphite
 from tests.test_utils.env_helpers import erk_inmem_env
 from tests.test_utils.output_helpers import strip_ansi
 
@@ -29,7 +29,7 @@ def test_list_with_trunk_branch(trunk_branch: str) -> None:
         # Construct sentinel path without filesystem operations
         feature_dir = env.erk_root / "repos" / env.cwd.name / "worktrees" / "feature"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch=trunk_branch),
@@ -40,8 +40,8 @@ def test_list_with_trunk_branch(trunk_branch: str) -> None:
             current_branches={env.cwd: trunk_branch, feature_dir: "feature"},
         )
 
-        # Configure FakeGraphiteOps with branch metadata instead of writing cache file
-        graphite_ops = FakeGraphiteOps(
+        # Configure FakeGraphite with branch metadata instead of writing cache file
+        graphite_ops = FakeGraphite(
             branches={
                 trunk_branch: BranchMetadata.trunk(trunk_branch, children=["feature"]),
                 "feature": BranchMetadata.branch("feature", trunk_branch, children=[]),
@@ -50,8 +50,8 @@ def test_list_with_trunk_branch(trunk_branch: str) -> None:
         )
 
         ctx = env.build_context(
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
+            git=git_ops,
+            graphite=graphite_ops,
             repo=env.repo,
             use_graphite=True,
             show_pr_info=False,

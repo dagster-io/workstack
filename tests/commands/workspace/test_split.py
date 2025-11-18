@@ -8,11 +8,11 @@ from click.testing import CliRunner
 
 from erk.cli.cli import cli
 from erk.core.context import ErkContext
-from erk.core.gitops import WorktreeInfo
-from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.gitops import FakeGitOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.fakes.shell_ops import FakeShellOps
+from erk.core.git import WorktreeInfo
+from tests.fakes.git import FakeGit
+from tests.fakes.github import FakeGitHub
+from tests.fakes.graphite import FakeGraphite
+from tests.fakes.shell import FakeShell
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
@@ -36,10 +36,10 @@ def _create_test_context_for_split(
     """
     # Configure graphite with stack
     if current_branch and current_branch in stack_branches:
-        graphite_ops = FakeGraphiteOps(stacks={current_branch: stack_branches})
+        graphite_ops = FakeGraphite(stacks={current_branch: stack_branches})
     else:
         # For detached HEAD or untracked branches, use trunk as key
-        graphite_ops = FakeGraphiteOps(stacks={trunk_branch: stack_branches})
+        graphite_ops = FakeGraphite(stacks={trunk_branch: stack_branches})
 
     # Default worktrees if not provided
     if existing_worktrees is None:
@@ -53,7 +53,7 @@ def _create_test_context_for_split(
         # Simulate uncommitted changes with modified files
         file_statuses = {env.cwd: ([], ["modified_file.py"], [])}  # (staged, modified, untracked)
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         worktrees={env.cwd: existing_worktrees},
         current_branches={env.cwd: current_branch},
         file_statuses=file_statuses,
@@ -61,10 +61,10 @@ def _create_test_context_for_split(
     )
 
     return env.build_context(
-        git_ops=git_ops,
-        graphite_ops=graphite_ops,
-        github_ops=FakeGitHubOps(),
-        shell_ops=FakeShellOps(),
+        git=git_ops,
+        graphite=graphite_ops,
+        github=FakeGitHub(),
+        shell=FakeShell(),
         use_graphite=True,
     )
 
@@ -87,7 +87,7 @@ def test_split_full_stack() -> None:
         assert "feat-1" in result.output
         assert "feat-3" in result.output
         # Check that worktrees were created via git_ops
-        assert len(test_ctx.git_ops.added_worktrees) == 2
+        assert len(test_ctx.git.added_worktrees) == 2
 
 
 def test_split_excludes_trunk() -> None:
@@ -103,7 +103,7 @@ def test_split_excludes_trunk() -> None:
         # Main should be marked as staying in root
         assert "trunk (stays in root)" in result.output
         # Main should not be in the "will create" list
-        assert len(test_ctx.git_ops.added_worktrees) == 0  # Only feat-1, which is current
+        assert len(test_ctx.git.added_worktrees) == 0  # Only feat-1, which is current
 
 
 def test_split_excludes_current_branch() -> None:
@@ -120,7 +120,7 @@ def test_split_excludes_current_branch() -> None:
         assert "current (already checked out)" in result.output
         # Only feat-2 should be created
         assert "feat-2" in result.output
-        assert len(test_ctx.git_ops.added_worktrees) == 1
+        assert len(test_ctx.git.added_worktrees) == 1
 
 
 def test_split_preserves_existing_worktrees() -> None:
@@ -140,7 +140,7 @@ def test_split_preserves_existing_worktrees() -> None:
         # feat-1 should be marked as already having a worktree
         assert "already has worktree" in result.output
         # Only feat-2 should be created
-        assert len(test_ctx.git_ops.added_worktrees) == 1
+        assert len(test_ctx.git.added_worktrees) == 1
 
 
 # Flag combination tests
@@ -159,7 +159,7 @@ def test_split_with_up_flag() -> None:
         # Only feat-3 should be created (upstack from feat-2)
         assert "feat-3" in result.output
         assert "feat-1" not in result.output  # Downstack, not included
-        assert len(test_ctx.git_ops.added_worktrees) == 1
+        assert len(test_ctx.git.added_worktrees) == 1
 
 
 def test_split_with_down_flag() -> None:
@@ -175,7 +175,7 @@ def test_split_with_down_flag() -> None:
         # Only feat-1 should be created (downstack from feat-2, main excluded)
         assert "feat-1" in result.output
         assert "feat-3" not in result.output  # Upstack, not included
-        assert len(test_ctx.git_ops.added_worktrees) == 1
+        assert len(test_ctx.git.added_worktrees) == 1
 
 
 def test_split_up_and_down_conflict() -> None:
@@ -218,7 +218,7 @@ def test_split_with_dry_run() -> None:
         assert "[DRY RUN] Would create:" in result.output
         assert "[DRY RUN] No changes made" in result.output
         # No actual worktrees created
-        assert len(test_ctx.git_ops.added_worktrees) == 0
+        assert len(test_ctx.git.added_worktrees) == 0
 
 
 # Edge case tests
@@ -237,7 +237,7 @@ def test_split_detached_head_state() -> None:
         # Should split feat-1 and feat-2 (main excluded as trunk)
         assert "feat-1" in result.output
         assert "feat-2" in result.output
-        assert len(test_ctx.git_ops.added_worktrees) == 2
+        assert len(test_ctx.git.added_worktrees) == 2
 
 
 def test_split_untracked_branch() -> None:
@@ -245,15 +245,15 @@ def test_split_untracked_branch() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Empty graphite_ops - no tracked branches
-        graphite_ops = FakeGraphiteOps(stacks={})
-        git_ops = FakeGitOps(
+        graphite_ops = FakeGraphite(stacks={})
+        git_ops = FakeGit(
             worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch="untracked")]},
             current_branches={env.cwd: "untracked"},
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
+            git=git_ops,
+            graphite=graphite_ops,
             use_graphite=True,
         )
 
@@ -268,15 +268,15 @@ def test_split_no_graphite_init() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Graphite returns None for uninitialized repo
-        graphite_ops = FakeGraphiteOps(stacks=None)  # Returns None for all branches
-        git_ops = FakeGitOps(
+        graphite_ops = FakeGraphite(stacks=None)  # Returns None for all branches
+        git_ops = FakeGit(
             worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch="main")]},
             current_branches={env.cwd: "main"},
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
+            git=git_ops,
+            graphite=graphite_ops,
             use_graphite=True,
         )
 
@@ -330,7 +330,7 @@ def test_split_all_branches_have_worktrees() -> None:
 
         assert result.exit_code == 0, result.output
         assert "All branches already have worktrees" in result.output
-        assert len(test_ctx.git_ops.added_worktrees) == 0
+        assert len(test_ctx.git.added_worktrees) == 0
 
 
 # Output verification tests
@@ -410,7 +410,7 @@ def test_split_with_master_as_trunk() -> None:
         # Master should be marked as trunk
         assert "trunk (stays in root)" in result.output
         # feat-1 is current, so nothing to create
-        assert len(test_ctx.git_ops.added_worktrees) == 0
+        assert len(test_ctx.git.added_worktrees) == 0
 
 
 def test_split_empty_stack() -> None:
@@ -424,4 +424,4 @@ def test_split_empty_stack() -> None:
 
         assert result.exit_code == 0, result.output
         assert "All branches already have worktrees or are excluded" in result.output
-        assert len(test_ctx.git_ops.added_worktrees) == 0
+        assert len(test_ctx.git.added_worktrees) == 0

@@ -68,7 +68,7 @@ class PlanFileCollector(StatusCollector):
         Returns:
             True if .plan/plan.md exists
         """
-        plan_path = get_plan_path(worktree_path, git_ops=ctx.git_ops)
+        plan_path = get_plan_path(worktree_path, git_ops=ctx.git)
         return plan_path is not None
 
     def collect(self, ctx: ErkContext, worktree_path: Path, repo_root: Path) -> PlanStatus | None:
@@ -82,7 +82,7 @@ class PlanFileCollector(StatusCollector):
         Returns:
             PlanStatus with folder information or None if collection fails
         """
-        plan_path = get_plan_path(worktree_path, git_ops=ctx.git_ops)
+        plan_path = get_plan_path(worktree_path, git_ops=ctx.git)
 
         # Detect enriched plan at repo root
         enriched_plan_path, enriched_plan_filename = detect_enriched_plan(repo_root)

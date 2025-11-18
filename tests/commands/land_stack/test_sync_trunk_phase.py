@@ -6,9 +6,9 @@ This is a regression test for the bug where trunk was not updated after landing 
 
 from erk.cli.commands.land_stack.execution import _execute_sync_trunk_phase
 from erk.core.context import ErkContext
-from erk.core.gitops import WorktreeInfo
+from erk.core.git import WorktreeInfo
 from erk.core.repo_discovery import RepoContext
-from tests.fakes.gitops import FakeGitOps
+from tests.fakes.git import FakeGit
 from tests.test_utils.paths import SentinelPath
 
 
@@ -23,7 +23,7 @@ def test_sync_trunk_in_worktree_pulls_at_worktree_location() -> None:
     trunk_worktree = SentinelPath("/test/worktrees/main")
     feature_branch = "feat-1"
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         worktrees={
             repo_root: [
                 WorktreeInfo(path=repo_root, branch=feature_branch, is_root=True),
@@ -45,7 +45,7 @@ def test_sync_trunk_in_worktree_pulls_at_worktree_location() -> None:
     )
 
     ctx = ErkContext.for_test(
-        git_ops=git_ops,
+        git=git_ops,
         cwd=repo_root,
         repo=repo_ctx,
     )
@@ -72,7 +72,7 @@ def test_sync_trunk_in_worktree_pulls_at_worktree_location() -> None:
     assert ff_only is True
 
     # The key assertion: pull should NOT have happened at repo_root
-    # (we can't directly verify the path with current FakeGitOps, but we can
+    # (we can't directly verify the path with current FakeGit, but we can
     # verify that checkout was NOT called, which would indicate the old buggy behavior)
     assert len(git_ops.checked_out_branches) == 0, (
         "Should not checkout branches when trunk is already in a worktree"
@@ -88,7 +88,7 @@ def test_sync_trunk_not_checked_out_uses_repo_root() -> None:
     repo_root = SentinelPath("/test/repo")
     feature_branch = "feat-1"
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         worktrees={
             repo_root: [
                 WorktreeInfo(path=repo_root, branch=feature_branch, is_root=True),
@@ -109,7 +109,7 @@ def test_sync_trunk_not_checked_out_uses_repo_root() -> None:
     )
 
     ctx = ErkContext.for_test(
-        git_ops=git_ops,
+        git=git_ops,
         cwd=repo_root,
         repo=repo_ctx,
     )
@@ -153,7 +153,7 @@ def test_sync_trunk_in_root_worktree_still_pulls() -> None:
     # Arrange: Set up trunk checked out in root worktree
     repo_root = SentinelPath("/test/repo")
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         worktrees={
             repo_root: [
                 WorktreeInfo(path=repo_root, branch="main", is_root=True),
@@ -174,7 +174,7 @@ def test_sync_trunk_in_root_worktree_still_pulls() -> None:
     )
 
     ctx = ErkContext.for_test(
-        git_ops=git_ops,
+        git=git_ops,
         cwd=repo_root,
         repo=repo_ctx,
     )

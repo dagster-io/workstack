@@ -12,7 +12,7 @@ from erk.core.display_utils import (
     get_visible_length,
 )
 from erk.core.file_utils import extract_plan_title
-from erk.core.github_ops import PullRequestInfo
+from erk.core.github import PullRequestInfo
 from erk.core.plan_folder import get_plan_path
 from erk.core.repo_discovery import RepoContext
 from erk.core.worktree_utils import find_current_worktree
@@ -29,11 +29,11 @@ def _format_plan_summary(worktree_path: Path, ctx: ErkContext) -> str | None:
         Plan title string, or None if no plan file
     """
     # Check for new .plan/ folder format only
-    plan_path = get_plan_path(worktree_path, git_ops=ctx.git_ops)
+    plan_path = get_plan_path(worktree_path, git_ops=ctx.git)
     if plan_path is None:
         return None
 
-    return extract_plan_title(plan_path, git_ops=ctx.git_ops)
+    return extract_plan_title(plan_path, git_ops=ctx.git)
 
 
 def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
@@ -55,7 +55,7 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
     current_dir = ctx.cwd
 
     # Get branch info for all worktrees
-    worktrees = ctx.git_ops.list_worktrees(repo.root)
+    worktrees = ctx.git.list_worktrees(repo.root)
     branches = {wt.path: wt.branch for wt in worktrees}
 
     # Determine which worktree the user is currently in
@@ -66,7 +66,7 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
     prs: dict[str, PullRequestInfo] | None = None
     if ctx.global_config and ctx.global_config.show_pr_info:
         # Always try Graphite first (fast, no pagination issues)
-        prs = ctx.graphite_ops.get_prs_from_graphite(ctx.git_ops, repo.root)
+        prs = ctx.graphite.get_prs_from_graphite(ctx.git, repo.root)
 
         # Fail fast if Graphite cache unavailable
         if not prs:
@@ -84,13 +84,13 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
 
         # If --ci flag set, enrich with CI status and mergeability using batched GraphQL query
         if ci:
-            prs = ctx.github_ops.enrich_prs_with_ci_status_batch(prs, repo.root)
+            prs = ctx.github.enrich_prs_with_ci_status_batch(prs, repo.root)
 
     # Identify branches without worktrees
     branches_with_worktrees = {wt.branch for wt in worktrees if wt.branch is not None}
 
     # Get Graphite-tracked branches without worktrees
-    all_graphite_branches = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo.root)
+    all_graphite_branches = ctx.graphite.get_all_branches(ctx.git, repo.root)
     graphite_without_worktrees = [
         branch
         for branch in all_graphite_branches.keys()
@@ -98,7 +98,7 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
     ]
 
     # Get all local branches without worktrees (excluding Graphite-tracked ones)
-    all_local_branches = ctx.git_ops.list_local_branches(repo.root)
+    all_local_branches = ctx.git.list_local_branches(repo.root)
     local_without_worktrees = [
         branch
         for branch in all_local_branches
@@ -121,7 +121,7 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
         if prs:
             pr = prs.get(root_branch)
             if pr:
-                graphite_url = ctx.graphite_ops.get_graphite_url(pr.owner, pr.repo, pr.number)
+                graphite_url = ctx.graphite.get_graphite_url(pr.owner, pr.repo, pr.number)
                 root_pr_info = format_pr_info(pr, graphite_url)
                 all_pr_info.append(root_pr_info if root_pr_info else "[no PR]")
             else:
@@ -146,7 +146,7 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
             if prs:
                 pr = prs.get(branch_name)
                 if pr:
-                    graphite_url = ctx.graphite_ops.get_graphite_url(pr.owner, pr.repo, pr.number)
+                    graphite_url = ctx.graphite.get_graphite_url(pr.owner, pr.repo, pr.number)
                     wt_pr_info = format_pr_info(pr, graphite_url)
                     all_pr_info.append(wt_pr_info if wt_pr_info else "[no PR]")
                 else:
@@ -175,7 +175,7 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
     if prs and root_branch:
         pr = prs.get(root_branch)
         if pr:
-            graphite_url = ctx.graphite_ops.get_graphite_url(pr.owner, pr.repo, pr.number)
+            graphite_url = ctx.graphite.get_graphite_url(pr.owner, pr.repo, pr.number)
             root_pr_info = format_pr_info(pr, graphite_url)
     root_plan_summary = _format_plan_summary(repo.root, ctx)
 
@@ -206,7 +206,7 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
         if prs and wt_branch:
             pr = prs.get(wt_branch)
             if pr:
-                graphite_url = ctx.graphite_ops.get_graphite_url(pr.owner, pr.repo, pr.number)
+                graphite_url = ctx.graphite.get_graphite_url(pr.owner, pr.repo, pr.number)
                 wt_pr_info = format_pr_info(pr, graphite_url)
         wt_plan_summary = _format_plan_summary(wt_path, ctx)
 
@@ -238,7 +238,7 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
             if prs:
                 pr = prs.get(branch)
                 if pr:
-                    graphite_url = ctx.graphite_ops.get_graphite_url(pr.owner, pr.repo, pr.number)
+                    graphite_url = ctx.graphite.get_graphite_url(pr.owner, pr.repo, pr.number)
                     branch_pr_info = format_pr_info(pr, graphite_url)
 
             if branch_pr_info:

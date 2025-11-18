@@ -7,13 +7,13 @@ Integration tests verify that abstraction layers correctly wrap external tools
 
 ## What Goes Here
 
-- `test_real_gitops.py` - Tests RealGitOps with actual `git` subprocess calls
-- `test_real_global_config.py` - Tests RealGlobalConfigOps with real filesystem I/O
+- `test_real_git.py` - Tests RealGit with actual `git` subprocess calls
+- `test_real_config_store.py` - Tests RealConfigStore with real filesystem I/O
 - `test_dryrun_integration.py` - Tests dry-run wrappers intercept operations
 
 ## What DOESN'T Go Here
 
-❌ Tests using fakes (FakeGitOps, etc.)
+❌ Tests using fakes (FakeGit, etc.)
 → Go in `tests/commands/` or `tests/core/`
 
 ❌ Tests OF fakes themselves
@@ -33,8 +33,8 @@ import subprocess
 from pathlib import Path
 import pytest
 
-def test_real_gitops_with_actual_git(tmp_path: Path) -> None:
-    """Test that RealGitOps correctly calls actual git command."""
+def test_real_git_with_actual_git(tmp_path: Path) -> None:
+    """Test that RealGit correctly calls actual git command."""
     # Arrange: Set up real directory
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -47,10 +47,10 @@ def test_real_gitops_with_actual_git(tmp_path: Path) -> None:
         capture_output=True
     )
 
-    git_ops = RealGitOps()
+    git = RealGit()
 
     # Act: Call git operation
-    result = git_ops.list_branches(repo)
+    result = git.list_branches(repo)
 
     # Assert: Verify real git behavior
     assert len(result) >= 1  # At least main/master branch exists
@@ -67,14 +67,14 @@ Use the `tmp_path` pytest fixture for:
 
 ```python
 def test_real_filesystem_io(tmp_path: Path) -> None:
-    config_ops = RealGlobalConfigOps()
+    config_store = RealConfigStore()
 
     # Write real config file
     config_file = tmp_path / "config.toml"
     config_file.write_text("[erk]\nroot = /tmp/ws\n")
 
     # Load and verify
-    config = config_ops.load_from_path(config_file)
+    config = config_store.load_from_path(config_file)
     assert config.root == Path("/tmp/ws")
 ```
 

@@ -29,7 +29,7 @@ class CommandResult(NamedTuple):
     stderr: str
 
 
-class GitGtKitOps(ABC):
+class GitGtKit(ABC):
     """Git operations interface for GT kit commands."""
 
     @abstractmethod
@@ -126,7 +126,7 @@ class GitGtKitOps(ABC):
         """
 
 
-class GraphiteGtKitOps(ABC):
+class GraphiteGtKit(ABC):
     """Graphite (gt) operations interface for GT kit commands."""
 
     @abstractmethod
@@ -182,7 +182,7 @@ class GraphiteGtKitOps(ABC):
         """
 
 
-class GitHubGtKitOps(ABC):
+class GitHubGtKit(ABC):
     """GitHub (gh) operations interface for GT kit commands."""
 
     @abstractmethod
@@ -233,7 +233,7 @@ class GitHubGtKitOps(ABC):
         """
 
 
-class GtKitOps(ABC):
+class GtKit(ABC):
     """Composite interface combining all GT kit operations.
 
     This interface provides a single injection point for all git, Graphite,
@@ -241,7 +241,7 @@ class GtKitOps(ABC):
     """
 
     @abstractmethod
-    def git(self) -> GitGtKitOps:
+    def git(self) -> GitGtKit:
         """Get the git operations interface.
 
         Returns:
@@ -249,7 +249,7 @@ class GtKitOps(ABC):
         """
 
     @abstractmethod
-    def graphite(self) -> GraphiteGtKitOps:
+    def graphite(self) -> GraphiteGtKit:
         """Get the Graphite operations interface.
 
         Returns:
@@ -257,7 +257,7 @@ class GtKitOps(ABC):
         """
 
     @abstractmethod
-    def github(self) -> GitHubGtKitOps:
+    def github(self) -> GitHubGtKit:
         """Get the GitHub operations interface.
 
         Returns:

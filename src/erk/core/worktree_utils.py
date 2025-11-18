@@ -10,7 +10,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from erk.core.gitops import WorktreeInfo
+from erk.core.git import WorktreeInfo
 
 
 class MoveOperationType(Enum):

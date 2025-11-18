@@ -21,17 +21,17 @@ All CLI command tests use dependency injection via ErkContext with fake implemen
 from click.testing import CliRunner
 from erk.commands.create import create
 from erk.context import ErkContext
-from tests.fakes.fake_gitops import FakeGitOps
+from tests.fakes.fake_git import FakeGit
 
 def test_command_behavior() -> None:
     # Arrange: Set up fakes with desired state
-    git_ops = FakeGitOps(
+    git = FakeGit(
         current_branch="main",
         all_branches=["main", "feature"]
     )
 
     ctx = ErkContext(
-        git_ops=git_ops,
+        git=git,
         # ... other dependencies
     )
 
@@ -47,7 +47,7 @@ def test_command_behavior() -> None:
     # Assert: Verify behavior
     assert result.exit_code == 0
     assert "Created workspace" in result.output
-    assert "new-branch" in git_ops.created_branches
+    assert "new-branch" in git.created_branches
 ```
 
 ## Context Construction
@@ -60,10 +60,10 @@ The `simulated_erk_env()` context manager provides an `env.build_context()` help
 
 ```python
 # ❌ WRONG - Manual GlobalConfig construction with 5+ parameters
-from erk.core.global_config import GlobalConfig
+from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
 
-git_ops = FakeGitOps(
+git = FakeGit(
     git_common_dirs={env.cwd: env.git_dir},
     default_branches={env.cwd: "main"},
 )
@@ -77,7 +77,7 @@ global_config = GlobalConfig(
 )
 
 test_ctx = ErkContext.for_test(
-    git_ops=git_ops,
+    git=git,
     global_config=global_config,
     script_writer=env.script_writer,
     cwd=env.cwd,
@@ -88,12 +88,12 @@ test_ctx = ErkContext.for_test(
 
 ```python
 # ✅ CORRECT - Use env.build_context() helper
-git_ops = FakeGitOps(
+git = FakeGit(
     git_common_dirs={env.cwd: env.git_dir},
     default_branches={env.cwd: "main"},
 )
 
-test_ctx = env.build_context(git_ops=git_ops)
+test_ctx = env.build_context(git=git)
 ```
 
 ### When to Override Defaults
@@ -101,11 +101,11 @@ test_ctx = env.build_context(git_ops=git_ops)
 The `env.build_context()` method accepts optional parameters to customize the context:
 
 ```python
-# Override specific ops implementations
+# Override specific integration implementations
 test_ctx = env.build_context(
-    git_ops=custom_git_ops,
-    graphite_ops=custom_graphite_ops,
-    github_ops=FakeGitHubOps(),
+    git=custom_git,
+    graphite=custom_graphite,
+    github=FakeGitHub(),
 )
 
 # Enable Graphite integration
@@ -114,10 +114,10 @@ test_ctx = env.build_context(
     show_pr_checks=True,
 )
 
-# Combine custom ops with config flags
+# Combine custom integrations with config flags
 test_ctx = env.build_context(
-    git_ops=git_ops,
-    graphite_ops=graphite_ops,
+    git=git,
+    graphite=graphite,
     use_graphite=True,
     dry_run=False,
 )
@@ -125,10 +125,10 @@ test_ctx = env.build_context(
 
 ### Available Parameters
 
-- `git_ops`: Custom GitOps implementation (defaults to FakeGitOps)
-- `graphite_ops`: Custom GraphiteOps implementation (defaults to FakeGraphiteOps)
-- `github_ops`: Custom GitHubOps implementation (defaults to FakeGitHubOps)
-- `shell_ops`: Custom ShellOps implementation
+- `git`: Custom Git implementation (defaults to FakeGit)
+- `graphite`: Custom Graphite implementation (defaults to FakeGraphite)
+- `github`: Custom GitHub implementation (defaults to FakeGitHub)
+- `shell`: Custom Shell implementation
 - `script_writer`: Custom ScriptWriter implementation
 - `use_graphite`: Enable Graphite integration (default: False)
 - `show_pr_info`: Show PR information (default: True)
@@ -176,9 +176,9 @@ assert "Error: Expected error" in result.output
 
 ```python
 # Verify mutations via fake's read-only properties
-assert "branch-name" in git_ops.created_branches
-assert "old-name" in git_ops.deleted_branches
-assert git_ops.rename_history == [("old", "new")]
+assert "branch-name" in git.created_branches
+assert "old-name" in git.deleted_branches
+assert git.rename_history == [("old", "new")]
 ```
 
 ## Testing CLI Options
@@ -206,12 +206,12 @@ result = runner.invoke(command, ["arg1", "arg2"])
 ```python
 def test_command_with_invalid_input() -> None:
     # Arrange: Set up state that will cause validation error
-    git_ops = FakeGitOps(
+    git = FakeGit(
         current_branch="main",
         all_branches=["main", "existing-branch"]
     )
 
-    ctx = ErkContext(git_ops=git_ops)
+    ctx = ErkContext(git=git)
     runner = CliRunner()
 
     # Act: Try to create duplicate branch
@@ -224,19 +224,19 @@ def test_command_with_invalid_input() -> None:
 
 ## Subprocess Interaction
 
-Commands that use `subprocess.run` should inject `FakeShellOps`:
+Commands that use `subprocess.run` should inject `FakeShell`:
 
 ```python
-from tests.fakes.fake_shell_ops import FakeShellOps
+from tests.fakes.fake_shell import FakeShell
 
-shell_ops = FakeShellOps()
-shell_ops.add_command_result(
+shell = FakeShell()
+shell.add_command_result(
     "git status",
     returncode=0,
     stdout="clean working tree"
 )
 
-ctx = ErkContext(shell_ops=shell_ops)
+ctx = ErkContext(shell=shell)
 ```
 
 ## Test File Organization

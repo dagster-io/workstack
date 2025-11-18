@@ -19,22 +19,22 @@ All workspace manipulation tests follow this pattern:
 from click.testing import CliRunner
 from erk.commands.create import create
 from erk.context import ErkContext
-from tests.fakes.fake_gitops import FakeGitOps
-from tests.fakes.fake_graphite_ops import FakeGraphiteOps
+from tests.fakes.fake_git import FakeGit
+from tests.fakes.fake_graphite import FakeGraphite
 
 def test_workspace_operation() -> None:
     # Arrange: Set up git state
-    git_ops = FakeGitOps(
+    git = FakeGit(
         current_branch="main",
         all_branches=["main", "existing-branch"],
         remote_tracking={"main": "origin/main"}
     )
 
-    graphite_ops = FakeGraphiteOps()
+    graphite = FakeGraphite()
 
     ctx = ErkContext(
-        git_ops=git_ops,
-        graphite_ops=graphite_ops,
+        git=git,
+        graphite=graphite,
         cwd="/fake/workspace"
     )
 
@@ -62,7 +62,7 @@ assert result.exit_code == 0
 
 ```python
 # Commands that change directories should be verified via shell wrappers
-assert "cd /path/to/workspace" in shell_ops.executed_commands
+assert "cd /path/to/workspace" in shell.executed_commands
 ```
 
 ## Git State Verification
@@ -72,7 +72,7 @@ assert "cd /path/to/workspace" in shell_ops.executed_commands
 ```python
 result = runner.invoke(create, ["new-branch"], obj=ctx)
 assert result.exit_code == 0
-assert "new-branch" in git_ops.created_branches
+assert "new-branch" in git.created_branches
 ```
 
 ### Branch Deletion
@@ -80,7 +80,7 @@ assert "new-branch" in git_ops.created_branches
 ```python
 result = runner.invoke(delete, ["old-branch"], obj=ctx)
 assert result.exit_code == 0
-assert "old-branch" in git_ops.deleted_branches
+assert "old-branch" in git.deleted_branches
 ```
 
 ### Branch Renaming
@@ -88,14 +88,14 @@ assert "old-branch" in git_ops.deleted_branches
 ```python
 result = runner.invoke(rename, ["old-name", "new-name"], obj=ctx)
 assert result.exit_code == 0
-assert git_ops.rename_history == [("old-name", "new-name")]
+assert git.rename_history == [("old-name", "new-name")]
 ```
 
 ### Branch Existence Checks
 
 ```python
 # Test trying to create duplicate branch
-git_ops = FakeGitOps(
+git = FakeGit(
     current_branch="main",
     all_branches=["main", "existing"]
 )
@@ -121,7 +121,7 @@ assert result.exit_code == 0
 # Test --dry-run doesn't actually mutate
 result = runner.invoke(delete, ["--dry-run", "branch"], obj=ctx)
 assert result.exit_code == 0
-assert "branch" not in git_ops.deleted_branches
+assert "branch" not in git.deleted_branches
 assert "Would delete" in result.output
 ```
 
@@ -130,18 +130,18 @@ assert "Would delete" in result.output
 Commands may need to interact with Graphite stacks:
 
 ```python
-graphite_ops = FakeGraphiteOps()
-graphite_ops.add_stack("feature/parent", ["feature/child1", "feature/child2"])
+graphite = FakeGraphite()
+graphite.add_stack("feature/parent", ["feature/child1", "feature/child2"])
 
 ctx = ErkContext(
-    git_ops=git_ops,
-    graphite_ops=graphite_ops
+    git=git,
+    graphite=graphite
 )
 
 # Test command that affects stacks
 result = runner.invoke(rename, ["feature/parent", "feature/new-parent"], obj=ctx)
 assert result.exit_code == 0
-assert graphite_ops.renamed_stacks == [("feature/parent", "feature/new-parent")]
+assert graphite.renamed_stacks == [("feature/parent", "feature/new-parent")]
 ```
 
 ## Error Scenarios to Test
@@ -163,10 +163,10 @@ result = runner.invoke(move, ["branch-name", "/new/location"], obj=ctx)
 assert result.exit_code == 0
 
 # Verify git operations
-assert "branch-name" in git_ops.checked_out_branches
+assert "branch-name" in git.checked_out_branches
 
 # Verify filesystem operations
-assert shell_ops.executed_commands[-1].startswith("cd /new/location")
+assert shell.executed_commands[-1].startswith("cd /new/location")
 ```
 
 ### Testing Output Messages
@@ -183,4 +183,4 @@ assert "Successfully" in result.output or "✓" in result.output
 
 - [../CLAUDE.md](../CLAUDE.md) - General CLI command patterns
 - [../../docs/TESTING.md](../../../docs/TESTING.md) - Complete testing guide
-- [../../fakes/fake_gitops.py](../../fakes/fake_gitops.py) - FakeGitOps implementation
+- [../../fakes/git.py](../../fakes/git.py) - FakeGit implementation

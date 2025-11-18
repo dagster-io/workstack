@@ -50,20 +50,20 @@ invocation = "dot-agent run dignified-python-313 dignified-python-reminder-hook"
 description = "Output dignified-python compliance reminder when Python files are in context"
 timeout = 30
 
-[kits.layered-testing]
-kit_id = "layered-testing"
+[kits.fake-driven-testing]
+kit_id = "fake-driven-testing"
 source_type = "bundled"
 version = "0.1.0"
 artifacts = [
-    ".claude/skills/layered-testing/SKILL.md",
+    ".claude/skills/fake-driven-testing/SKILL.md",
 ]
 
-[[kits.layered-testing.hooks]]
-id = "layered-testing-reminder-hook"
+[[kits.fake-driven-testing.hooks]]
+id = "fake-driven-testing-reminder-hook"
 lifecycle = "UserPromptSubmit"
 matcher = "*.py"
-invocation = "dot-agent run layered-testing layered-testing-reminder-hook"
-description = "Output layered-testing reminder when Python files are in context"
+invocation = "dot-agent run fake-driven-testing fake-driven-testing-reminder-hook"
+description = "Output fake-driven-testing reminder when Python files are in context"
 timeout = 30
 
 [kits.erk]

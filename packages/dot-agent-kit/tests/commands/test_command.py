@@ -1,8 +1,12 @@
 """Tests for command discovery and name conversion."""
 
 from pathlib import Path
+from unittest.mock import MagicMock
 
-from dot_agent_kit.commands.command import discover_commands
+import click
+import pytest
+
+from dot_agent_kit.commands.command import complete_command_name, discover_commands
 
 
 def test_discover_commands_empty_directory(tmp_project: Path) -> None:
@@ -188,3 +192,122 @@ def test_discover_commands_deeply_nested_with_multiple_separators(
     result = discover_commands(tmp_project)
 
     assert result == ["level1:level2:level3:command"]
+
+
+# Tests for shell completion function
+
+
+def test_complete_command_name_returns_all_commands_when_empty_prefix(
+    tmp_project: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test complete_command_name returns all commands when prefix is empty."""
+    # Mock Path.cwd() to return our test project
+    monkeypatch.setattr(Path, "cwd", lambda: tmp_project)
+
+    # Create test commands
+    commands_dir = tmp_project / ".claude" / "commands"
+    commands_dir.mkdir(parents=True)
+    (commands_dir / "alpha.md").write_text("# Alpha", encoding="utf-8")
+    (commands_dir / "beta.md").write_text("# Beta", encoding="utf-8")
+    (commands_dir / "gamma.md").write_text("# Gamma", encoding="utf-8")
+
+    # Create mock context and parameter (unused but required by Click API)
+    ctx = MagicMock(spec=click.Context)
+    param = MagicMock(spec=click.Parameter)
+
+    # Test with empty incomplete text
+    result = complete_command_name(ctx, param, "")
+
+    assert result == ["alpha", "beta", "gamma"]
+
+
+def test_complete_command_name_filters_by_prefix(
+    tmp_project: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test complete_command_name filters commands by incomplete text."""
+    # Mock Path.cwd() to return our test project
+    monkeypatch.setattr(Path, "cwd", lambda: tmp_project)
+
+    # Create test commands
+    commands_dir = tmp_project / ".claude" / "commands"
+    commands_dir.mkdir(parents=True)
+    (commands_dir / "ensure-ci.md").write_text("# Ensure CI", encoding="utf-8")
+    (commands_dir / "ensure-tests.md").write_text("# Ensure Tests", encoding="utf-8")
+    (commands_dir / "build-docs.md").write_text("# Build Docs", encoding="utf-8")
+
+    # Create namespaced commands
+    erk_dir = commands_dir / "erk"
+    erk_dir.mkdir()
+    (erk_dir / "persist-plan.md").write_text("# Persist Plan", encoding="utf-8")
+    (erk_dir / "create-wt.md").write_text("# Create WT", encoding="utf-8")
+
+    # Create mock context and parameter
+    ctx = MagicMock(spec=click.Context)
+    param = MagicMock(spec=click.Parameter)
+
+    # Test filtering with "ens" prefix
+    result = complete_command_name(ctx, param, "ens")
+    assert result == ["ensure-ci", "ensure-tests"]
+
+    # Test filtering with "er" prefix (matches namespaced commands)
+    result = complete_command_name(ctx, param, "er")
+    assert result == ["erk:create-wt", "erk:persist-plan"]
+
+    # Test filtering with "build" prefix
+    result = complete_command_name(ctx, param, "build")
+    assert result == ["build-docs"]
+
+    # Test filtering with non-matching prefix
+    result = complete_command_name(ctx, param, "xyz")
+    assert result == []
+
+
+def test_complete_command_name_empty_when_no_commands_dir(
+    tmp_project: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test complete_command_name returns empty list when .claude/commands/ doesn't exist."""
+    # Mock Path.cwd() to return our test project
+    monkeypatch.setattr(Path, "cwd", lambda: tmp_project)
+
+    # Don't create .claude/commands/ directory
+
+    # Create mock context and parameter
+    ctx = MagicMock(spec=click.Context)
+    param = MagicMock(spec=click.Parameter)
+
+    # Test completion with missing directory
+    result = complete_command_name(ctx, param, "")
+
+    assert result == []
+
+
+def test_complete_command_name_handles_namespaced_commands(
+    tmp_project: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test complete_command_name correctly handles namespaced commands."""
+    # Mock Path.cwd() to return our test project
+    monkeypatch.setattr(Path, "cwd", lambda: tmp_project)
+
+    # Create namespaced commands
+    gt_dir = tmp_project / ".claude" / "commands" / "gt"
+    gt_dir.mkdir(parents=True)
+    (gt_dir / "submit-branch.md").write_text("# Submit", encoding="utf-8")
+    (gt_dir / "update-pr.md").write_text("# Update", encoding="utf-8")
+
+    # Create mock context and parameter
+    ctx = MagicMock(spec=click.Context)
+    param = MagicMock(spec=click.Parameter)
+
+    # Test completion with "gt:" prefix
+    result = complete_command_name(ctx, param, "gt:")
+
+    assert result == ["gt:submit-branch", "gt:update-pr"]
+
+    # Test completion with "gt:s" prefix
+    result = complete_command_name(ctx, param, "gt:s")
+
+    assert result == ["gt:submit-branch"]

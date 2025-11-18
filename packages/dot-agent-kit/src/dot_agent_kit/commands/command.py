@@ -1,9 +1,8 @@
 """Top-level command for executing Claude Code slash commands."""
 
 # TODO: Future enhancements
-# 1. Shell auto-completion - Add shell completion support for available commands
-# 2. Improved formatting - Enhance output formatting and styling consistency
-# 3. Status bars that are prettier - Add visual progress indicators and status displays
+# 1. Improved formatting - Enhance output formatting and styling consistency
+# 2. Status bars that are prettier - Add visual progress indicators and status displays
 
 from pathlib import Path
 
@@ -19,6 +18,31 @@ from dot_agent_kit.data.kits.command.kit_cli_commands.command.ops import (
 from dot_agent_kit.data.kits.command.kit_cli_commands.command.resolution import (
     resolve_command_file,
 )
+
+
+def complete_command_name(ctx: click.Context, param: click.Parameter, incomplete: str) -> list[str]:
+    """Provide shell completion for command names.
+
+    Args:
+        ctx: Click context (unused but required by Click API)
+        param: Click parameter (unused but required by Click API)
+        incomplete: Partial command name typed by user
+
+    Returns:
+        List of command names that start with incomplete text
+    """
+    # Get available commands from current directory
+    project_dir = Path.cwd()
+
+    # Check if .claude/commands/ exists (LBYL)
+    if not (project_dir / ".claude" / "commands").exists():
+        return []
+
+    # Get all available commands
+    all_commands = discover_commands(project_dir)
+
+    # Filter commands that start with the incomplete text
+    return [cmd for cmd in all_commands if cmd.startswith(incomplete)]
 
 
 def discover_commands(project_dir: Path) -> list[str]:
@@ -92,7 +116,7 @@ def format_help_text(ctx: click.Context, project_dir: Path) -> str:
 
 
 @click.command()
-@click.argument("command_name", required=False)
+@click.argument("command_name", required=False, shell_complete=complete_command_name)
 @click.option("--json", is_flag=True, help="Output JSON for scripting")
 @click.pass_context
 def command(ctx: click.Context, command_name: str | None, json: bool) -> None:
@@ -108,6 +132,21 @@ def command(ctx: click.Context, command_name: str | None, json: bool) -> None:
         dot-agent command gt:submit-branch
 
         dot-agent command --json ensure-ci
+
+    Shell Completion:
+
+        Enable tab completion for command names:
+
+        For Bash:
+            eval "$(_DOT_AGENT_COMPLETE=bash_source dot-agent)"
+
+        For Zsh:
+            eval "$(_DOT_AGENT_COMPLETE=zsh_source dot-agent)"
+
+        For Fish:
+            _DOT_AGENT_COMPLETE=fish_source dot-agent | source
+
+        Add to your shell's rc file (.bashrc, .zshrc, etc.) for persistent completion.
     """
     project_dir = Path.cwd()
 

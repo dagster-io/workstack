@@ -1,1 +1,0 @@
-../../../packages/dot-agent-kit/src/dot_agent_kit/data/kits/fix-merge-conflicts/commands/fix-merge-conflicts/fix-merge-conflicts.md

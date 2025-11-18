@@ -35,7 +35,14 @@ class TestRealClaudeCliOps:
 
         with patch("subprocess.Popen", return_value=mock_process) as mock_popen:
             with patch("builtins.print") as mock_print:
-                yield mock_popen, mock_print
+                # Mock the command_status context manager to avoid Rich Console interactions
+                with patch(
+                    "dot_agent_kit.data.kits.command.kit_cli_commands.command.ops.command_status"
+                ) as mock_status:
+                    # Make the context manager return a mock Status object
+                    mock_status.return_value.__enter__ = MagicMock()
+                    mock_status.return_value.__exit__ = MagicMock()
+                    yield mock_popen, mock_print
 
     def test_successful_execution_with_subprocess(self) -> None:
         """Test that RealClaudeCliOps correctly invokes subprocess with streaming."""
@@ -51,8 +58,9 @@ class TestRealClaudeCliOps:
             # Verify result
             assert result.returncode == 0
 
-            # Verify status message was printed
-            mock_print.assert_called_once_with("Executing command: /test...", flush=True)
+            # Status message is now handled by command_status context manager (Rich)
+            # No direct print calls expected when there's no output
+            assert mock_print.call_count == 0
 
             # Verify subprocess.Popen was called correctly
             mock_popen.assert_called_once()
@@ -193,17 +201,12 @@ class TestRealClaudeCliOps:
             # Verify result
             assert result.returncode == 0
 
-            # Verify print was called for status + text chunks
-            assert mock_print.call_count == 3
-            # First call: status message
-            assert mock_print.call_args_list[0] == (
-                ("Executing command: /test...",),
-                {"flush": True},
-            )
-            # Second call: "Hello "
-            assert mock_print.call_args_list[1] == (("Hello ",), {"end": "", "flush": True})
-            # Third call: "World!"
-            assert mock_print.call_args_list[2] == (("World!",), {"end": "", "flush": True})
+            # Verify print was called for text chunks (status handled by command_status)
+            assert mock_print.call_count == 2
+            # First call: "Hello "
+            assert mock_print.call_args_list[0] == (("Hello ",), {"end": "", "flush": True})
+            # Second call: "World!"
+            assert mock_print.call_args_list[1] == (("World!",), {"end": "", "flush": True})
 
     def test_hides_system_messages_but_shows_tool_results(self) -> None:
         """Test that system messages are hidden but tool results from user messages are shown."""
@@ -242,9 +245,9 @@ class TestRealClaudeCliOps:
             assert result.returncode == 0
 
             # System message hidden, but tool result should be displayed
+            # Status handled by command_status, so only result header + content expected
             all_print_calls = [str(call) for call in mock_print.call_args_list]
-            # Status message + result header + result content
-            assert mock_print.call_count >= 3
+            assert mock_print.call_count >= 2
             assert any("Result:" in str(call) for call in all_print_calls)
             assert any("Test result output" in str(call) for call in all_print_calls)
 
@@ -578,15 +581,8 @@ class TestRealClaudeCliOps:
             # Verify result
             assert result.returncode == 0
 
-            # Verify print was called (status + warning messages)
-            assert mock_print.call_count >= 3
-
-            # Verify status message was printed (first call)
-            status_call = mock_print.call_args_list[0]
-            assert status_call == (
-                ("Executing command: /test...",),
-                {"flush": True},
-            )
+            # Verify print was called for warning messages (status handled by command_status)
+            assert mock_print.call_count >= 2
 
             # Verify warning messages for malformed JSON
             all_print_calls = [str(call) for call in mock_print.call_args_list]

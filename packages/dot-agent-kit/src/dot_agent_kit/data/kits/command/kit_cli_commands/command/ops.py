@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 
+from dot_agent_kit.cli.progress import command_status
 from dot_agent_kit.data.kits.command.kit_cli_commands.command.formatting import (
     format_complex_parameter,
     format_string_parameter,
@@ -65,9 +66,6 @@ class RealClaudeCliOps(ClaudeCliOps):
         json_output: bool,
     ) -> CommandExecutionResult:
         """Execute Claude CLI via subprocess with streaming output."""
-        # Print status message before launching
-        print(f"Executing command: /{command_name}...", flush=True)
-
         # Build claude CLI command - always use stream-json for real-time output
         cmd = [
             "claude",
@@ -82,22 +80,24 @@ class RealClaudeCliOps(ClaudeCliOps):
             f"/{command_name}",
         ]
 
-        # Execute Claude Code CLI with streaming output
-        process = subprocess.Popen(
-            cmd,
-            cwd=cwd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,  # Merge stderr into stdout
-            text=True,
-            bufsize=1,  # Line buffered
-        )
+        # Execute with animated status spinner
+        with command_status(command_name):
+            # Execute Claude Code CLI with streaming output
+            process = subprocess.Popen(
+                cmd,
+                cwd=cwd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,  # Merge stderr into stdout
+                text=True,
+                bufsize=1,  # Line buffered
+            )
 
-        # Stream output line by line, parsing JSONL format
-        if process.stdout is not None:
-            self._stream_jsonl_output(process.stdout)
+            # Stream output line by line, parsing JSONL format
+            if process.stdout is not None:
+                self._stream_jsonl_output(process.stdout)
 
-        # Wait for process to complete
-        returncode = process.wait()
+            # Wait for process to complete
+            returncode = process.wait()
 
         return CommandExecutionResult(returncode=returncode)
 

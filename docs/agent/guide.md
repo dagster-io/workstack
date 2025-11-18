@@ -11,9 +11,14 @@ The documentation is organized by audience and purpose:
 - Load the `dignified-python` skill for all Python coding standards
 - Covers: exception handling, type annotations, imports, ABC patterns, file operations, CLI development
 
+**Universal Patterns:**
+
+- [testing-architecture.md](testing-architecture.md) - Operations layer and fakes (universal)
+
 **Erk-Specific Documentation:**
 
-- [glossary.md](glossary.md) - Project terminology and definitions
+- [erk/cli-commands.md](erk/cli-commands.md) - Adding CLI commands with JSON output
+- [erk/glossary.md](erk/glossary.md) - Project terminology and definitions
 - [testing.md](testing.md) - Testing architecture with fakes and ops patterns
 
 ### For Humans
@@ -39,9 +44,12 @@ The documentation is organized by audience and purpose:
 ```
 docs/
 ├── agent/                      # Agent-focused reference
-│   ├── glossary.md            # Erk terminology
+│   ├── testing-architecture.md # Universal ops/fakes patterns
 │   ├── guide.md               # This file
-│   └── testing.md             # Testing patterns
+│   ├── testing.md             # Testing patterns
+│   └── erk/                   # Erk-specific docs
+│       ├── cli-commands.md    # CLI commands with JSON
+│       └── glossary.md        # Erk terminology
 └── writing/                   # Human-readable guides
     ├── agentic-programming/
     └── schrockn-style/
@@ -51,7 +59,8 @@ docs/
 
 | Your Task                         | Start Here                                                                                                     |
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Understanding erk terminology     | [glossary.md](glossary.md)                                                                                     |
-| Writing tests with fakes/ops      | [testing.md](testing.md)                                                                                       |
+| Adding CLI commands with JSON     | [erk/cli-commands.md](erk/cli-commands.md)                                                                     |
+| Understanding erk terminology     | [erk/glossary.md](erk/glossary.md)                                                                             |
+| Writing tests with fakes/ops      | [testing.md](testing.md) and [testing-architecture.md](testing-architecture.md)                                |
 | Python coding standards           | Load `dignified-python` skill                                                                                  |
 | Understanding agentic programming | [../writing/agentic-programming/agentic-programming.md](../writing/agentic-programming/agentic-programming.md) |

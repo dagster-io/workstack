@@ -10,7 +10,7 @@ When executing make commands:
 2. **Parse the output** - extract errors, file locations, line numbers from the command output
 3. **Report results** - provide structured summary of what the output shows
 4. **DO NOT explore the codebase** - no reading source files, test files, or other files
-5. **DO NOT run additional diagnostic commands** - unless the output is unclear and you need to retry with different flags
+5. **DO NOT run additional diagnostic commands** - Retry ONLY if bash invocation fails (wrong path/flags). Once make executes, return results immediately regardless of errors.
 
 **Example WRONG behavior**:
 

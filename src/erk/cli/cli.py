@@ -3,11 +3,11 @@ import click
 from erk.cli.commands.checkout import checkout_cmd
 from erk.cli.commands.completion import completion_group
 from erk.cli.commands.config import config_group
-from erk.cli.commands.consolidate import consolidate_cmd
 from erk.cli.commands.create import create
 from erk.cli.commands.current import current_cmd
 from erk.cli.commands.delete import del_cmd, delete_cmd
 from erk.cli.commands.down import down_cmd
+from erk.cli.commands.forest import forest_group
 from erk.cli.commands.goto import goto_cmd
 from erk.cli.commands.init import init_cmd
 from erk.cli.commands.land_stack import land_stack
@@ -16,10 +16,10 @@ from erk.cli.commands.move import move_cmd
 from erk.cli.commands.prepare_cwd_recovery import prepare_cwd_recovery_cmd
 from erk.cli.commands.rename import rename_cmd
 from erk.cli.commands.shell_integration import hidden_shell_cmd
-from erk.cli.commands.split import split_cmd
 from erk.cli.commands.status import status_cmd
 from erk.cli.commands.sync import sync_cmd
 from erk.cli.commands.up import up_cmd
+from erk.cli.output import user_output
 from erk.core.context import create_context
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])  # terse help flags
@@ -35,14 +35,45 @@ def cli(ctx: click.Context) -> None:
         ctx.obj = create_context(dry_run=False)
 
 
+# Migration error commands for deprecated functionality
+@click.command("split")
+def split_deprecated() -> None:
+    """Deprecated: Use 'erk forest split' instead."""
+    user_output(
+        click.style("Error: ", fg="red")
+        + "'split' command has been replaced\n\n"
+        + "Use: "
+        + click.style("erk forest split", fg="cyan")
+        + " instead\n\n"
+        + "Run 'erk forest split --help' for details"
+    )
+    raise SystemExit(1)
+
+
+@click.command("consolidate")
+def consolidate_deprecated() -> None:
+    """Deprecated: Use 'erk forest merge' instead."""
+    user_output(
+        click.style("Error: ", fg="red")
+        + "'consolidate' command has been replaced\n\n"
+        + "Use: "
+        + click.style("erk forest merge", fg="cyan")
+        + " instead\n\n"
+        + "Run 'erk forest merge --help' for details\n\n"
+        + "Note: The --name flag is no longer needed. "
+        + "Forest names are managed automatically."
+    )
+    raise SystemExit(1)
+
+
 # Register all commands
 cli.add_command(completion_group)
-cli.add_command(consolidate_cmd)
 cli.add_command(create)
 cli.add_command(current_cmd)
 cli.add_command(down_cmd)
 cli.add_command(checkout_cmd)
 cli.add_command(checkout_cmd, name="co")  # Alias
+cli.add_command(forest_group)
 cli.add_command(goto_cmd)
 cli.add_command(land_stack)
 cli.add_command(up_cmd)
@@ -55,10 +86,13 @@ cli.add_command(delete_cmd)
 cli.add_command(del_cmd)
 cli.add_command(rename_cmd)
 cli.add_command(config_group)
-cli.add_command(split_cmd)
 cli.add_command(sync_cmd)
 cli.add_command(hidden_shell_cmd)
 cli.add_command(prepare_cwd_recovery_cmd)
+
+# Migration error commands (deprecated)
+cli.add_command(split_deprecated, name="split")
+cli.add_command(consolidate_deprecated, name="consolidate")
 
 
 def main() -> None:

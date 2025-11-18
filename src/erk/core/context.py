@@ -9,6 +9,7 @@ import tomlkit
 from erk.cli.config import LoadedConfig, load_config
 from erk.cli.output import user_output
 from erk.core.completion_ops import CompletionOps, RealCompletionOps
+from erk.core.forest_ops import FakeForestOps, ForestOps, RealForestOps
 from erk.core.github_ops import GitHubOps, NoopGitHubOps, RealGitHubOps
 from erk.core.gitops import GitOps, NoopGitOps, RealGitOps
 from erk.core.global_config import (
@@ -46,6 +47,7 @@ class ErkContext:
     completion_ops: CompletionOps
     global_config_ops: GlobalConfigOps
     script_writer: ScriptWriterOps
+    forest_ops: ForestOps
     cwd: Path  # Current working directory at CLI invocation
     global_config: GlobalConfig | None
     local_config: LoadedConfig
@@ -119,6 +121,7 @@ class ErkContext:
             completion_ops=FakeCompletionOps(),
             global_config_ops=InMemoryGlobalConfigOps(config=None),
             script_writer=FakeScriptWriterOps(),
+            forest_ops=FakeForestOps(),
             cwd=cwd,
             global_config=None,
             local_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
@@ -135,6 +138,7 @@ class ErkContext:
         completion_ops: CompletionOps | None = None,
         global_config_ops: GlobalConfigOps | None = None,
         script_writer: ScriptWriterOps | None = None,
+        forest_ops: ForestOps | None = None,
         cwd: Path | None = None,
         global_config: GlobalConfig | None = None,
         local_config: LoadedConfig | None = None,
@@ -213,6 +217,9 @@ class ErkContext:
         if script_writer is None:
             script_writer = FakeScriptWriterOps()
 
+        if forest_ops is None:
+            forest_ops = FakeForestOps()
+
         if global_config is None:
             global_config = GlobalConfig(
                 erk_root=Path("/test/erks"),
@@ -244,6 +251,7 @@ class ErkContext:
             completion_ops=completion_ops,
             global_config_ops=global_config_ops,
             script_writer=script_writer,
+            forest_ops=forest_ops,
             cwd=cwd or sentinel_path(),
             global_config=global_config,
             local_config=local_config,
@@ -373,9 +381,11 @@ def create_context(*, dry_run: bool) -> ErkContext:
     # 6. Load local config (or defaults if no repo)
     if isinstance(repo, NoRepoSentinel):
         local_config = LoadedConfig(env={}, post_create_commands=[], post_create_shell=None)
+        forest_ops: ForestOps = FakeForestOps()  # No repo, no forest ops
     else:
         repo_dir = ensure_repo_dir(repo)
         local_config = load_config(repo_dir)
+        forest_ops = RealForestOps(repo_dir)
 
     # 7. Apply dry-run wrappers if needed
     if dry_run:
@@ -392,6 +402,7 @@ def create_context(*, dry_run: bool) -> ErkContext:
         completion_ops=RealCompletionOps(),
         global_config_ops=FilesystemGlobalConfigOps(),
         script_writer=RealScriptWriterOps(),
+        forest_ops=forest_ops,
         cwd=cwd,
         global_config=global_config,
         local_config=local_config,

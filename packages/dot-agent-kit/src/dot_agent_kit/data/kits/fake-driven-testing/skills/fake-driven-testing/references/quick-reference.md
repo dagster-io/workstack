@@ -7,9 +7,13 @@
 ```
 ┌─ I need to test...
 │
-├─ A NEW FEATURE or BUG FIX
-│  └─> tests/unit/ or tests/services/ (over fakes) ← START HERE
+├─ A NEW FEATURE or BUG FIX WITH EXTERNAL DEPENDENCIES
+│  └─> tests/unit/ or tests/services/ (over fakes) ← START HERE FOR BUSINESS LOGIC
 │     Example: tests/services/test_user_service.py
+│
+├─ A PURE UTILITY/HELPER WITH NO DEPENDENCIES
+│  └─> tests/unit/ (pure unit tests, no fakes/mocks)
+│     Example: tests/unit/test_string_utils.py
 │
 ├─ A FAKE IMPLEMENTATION (test infrastructure)
 │  └─> tests/unit/fakes/test_fake_*.py
@@ -20,11 +24,13 @@
 │     Example: tests/integration/test_real_database.py
 │
 └─ CRITICAL USER WORKFLOW (smoke test)
-   └─> tests/e2e/ (end-to-end, sparingly)
+   └─> tests/e2e/ (integration tests, sparingly)
       Example: tests/e2e/test_user_journey.py
 ```
 
-**Default**: When in doubt, write tests over fakes (Layer 3).
+**Default**:
+- For business logic with dependencies → Layer 4 (tests over fakes)
+- For pure utilities with no dependencies → Layer 3 (pure unit tests)
 
 ## File Location Map
 
@@ -69,18 +75,20 @@ tests/
 │   │   ├── test_fake_database.py
 │   │   ├── test_fake_api_client.py
 │   │   └── test_fake_filesystem.py
-│   ├── services/              ← Business logic tests (Layer 3)
+│   ├── test_string_utils.py   ← Pure unit tests (Layer 3)
+│   ├── test_parsers.py        ← Pure unit tests (Layer 3)
+│   ├── services/              ← Business logic tests (Layer 4)
 │   │   ├── test_user_service.py
 │   │   ├── test_order_service.py
 │   │   └── test_payment_service.py
 │   └── models/                ← Model tests
 │       ├── test_user.py
 │       └── test_order.py
-├── integration/               ← Tests WITH real integration classes (Layer 2)
+├── integration/               ← Integration sanity tests (Layer 2)
 │   ├── test_real_database.py ← Layer 2: mocked connections
 │   ├── test_real_api_client.py
 │   └── test_api_endpoints.py ← API integration tests
-├── e2e/                       ← End-to-end tests (Layer 4)
+├── e2e/                       ← Business logic integration tests (Layer 5)
 │   ├── test_user_journey.py
 │   └── test_order_flow.py
 └── helpers/                   ← Test utilities
@@ -121,7 +129,27 @@ tests/
 
 ## Common Test Patterns
 
-### Basic Unit Test Over Fakes
+### Pure Unit Test (Layer 3)
+
+```python
+def test_sanitize_branch_name() -> None:
+    """Test pure utility function with no dependencies."""
+    # No setup needed - pure function
+    assert sanitize_branch_name("feat/FOO-123") == "feat-foo-123"
+    assert sanitize_branch_name("feature__test") == "feature-test"
+    assert sanitize_branch_name("UPPER") == "upper"
+
+
+def test_parse_git_status() -> None:
+    """Test parser with no external dependencies."""
+    output = "## main...origin/main"
+    result = parse_git_status(output)
+
+    assert result["branch"] == "main"
+    assert result["remote"] == "origin/main"
+```
+
+### Business Logic Test Over Fakes (Layer 4)
 
 ```python
 import pytest
@@ -227,7 +255,7 @@ def test_real_database_with_mocking(monkeypatch) -> None:
 
 ## Example Tests to Reference
 
-### Layer 1: Fake Infrastructure Tests
+### Layer 1: Fake Infrastructure Tests (5%)
 
 **Purpose**: Verify fakes work correctly
 
@@ -237,16 +265,27 @@ def test_real_database_with_mocking(monkeypatch) -> None:
 | `tests/unit/fakes/test_fake_api_client.py` | FakeApiClient returns configured responses |
 | `tests/unit/fakes/test_fake_filesystem.py` | FakeFileSystem simulates file operations   |
 
-### Layer 2: Real Integration classes with Mocking
+### Layer 2: Integration Sanity Tests (10%)
 
-**Purpose**: Get code coverage of real implementations
+**Purpose**: Quick validation of real implementations
 
 | File                                        | What It Tests                          |
 | ------------------------------------------- | -------------------------------------- |
 | `tests/integration/test_real_database.py`   | RealDatabase executes correct SQL      |
 | `tests/integration/test_real_api_client.py` | RealApiClient makes correct HTTP calls |
 
-### Layer 3: Business Logic Over Fakes (MAJORITY)
+### Layer 3: Pure Unit Tests (10%)
+
+**Purpose**: Test utilities and helpers with no dependencies
+
+| File                               | What It Tests                        |
+| ---------------------------------- | ------------------------------------ |
+| `tests/unit/test_string_utils.py`  | String sanitization, formatting      |
+| `tests/unit/test_parsers.py`       | CLI output parsing, config parsing   |
+| `tests/unit/test_validators.py`    | Input validation logic               |
+| `tests/unit/test_calculations.py`  | Mathematical and business algorithms |
+
+### Layer 4: Business Logic Over Fakes (70% - MAJORITY)
 
 **Purpose**: Test features and bug fixes
 
@@ -256,7 +295,7 @@ def test_real_database_with_mocking(monkeypatch) -> None:
 | `tests/unit/services/test_order_service.py`   | Order processing logic            |
 | `tests/unit/services/test_payment_service.py` | Payment validation and processing |
 
-### Layer 4: End-to-End Integration
+### Layer 5: Business Logic Integration Tests (5%)
 
 **Purpose**: Smoke tests over real system
 
@@ -342,14 +381,15 @@ pytest -n auto
 
 For a typical feature (e.g., "add user authentication"):
 
-| Layer                    | Count       | Example                                                   |
-| ------------------------ | ----------- | --------------------------------------------------------- |
-| Layer 1: Fake tests      | 1-2 tests   | Verify `FakeAuthService.authenticate()` tracks correctly  |
-| Layer 2: Real with mocks | 1-2 tests   | Verify `RealAuthService.authenticate()` calls correct API |
-| Layer 3: Business logic  | 10-15 tests | Test auth flow over fakes (success, failures, edge cases) |
-| Layer 4: E2E             | 1 test      | Smoke test complete login flow                            |
+| Layer                       | Count       | Example                                                   |
+| --------------------------- | ----------- | --------------------------------------------------------- |
+| Layer 1: Fake tests         | 1-2 tests   | Verify `FakeAuthService.authenticate()` tracks correctly  |
+| Layer 2: Sanity tests       | 1-2 tests   | Verify `RealAuthService.authenticate()` calls correct API |
+| Layer 3: Pure unit tests    | 2-3 tests   | Test password hashing, token generation logic             |
+| Layer 4: Business logic     | 12-14 tests | Test auth flow over fakes (success, failures, edge cases) |
+| Layer 5: Integration tests  | 1 test      | Smoke test complete login flow                            |
 
-**Total**: ~20 tests, with 80% over fakes.
+**Total**: ~20 tests, with 70% over fakes (Layer 4), 10% pure unit (Layer 3), 10% sanity (Layer 2), 5% integration (Layer 5), 5% fake tests (Layer 1).
 
 ## Quick Checklist: Adding a New Integration class Method
 

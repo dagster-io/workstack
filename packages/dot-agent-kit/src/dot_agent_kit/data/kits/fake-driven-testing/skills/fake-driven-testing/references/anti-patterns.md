@@ -182,7 +182,7 @@ class DryRunDatabaseAdapter(DatabaseAdapter):
 - **Inconsistent behavior**: Different implementations have different behavior
 - **Broken tests**: Tests expect old signature
 
-**Rule**: When changing interface, update ALL four layers + tests.
+**Rule**: When changing interface, update ALL implementation layers (ABC, Real, Fake, DryRun) + tests.
 
 ---
 
@@ -258,7 +258,7 @@ def test_fastapi_endpoint(client):
 - subprocess: Shell interpretation issues, PATH dependencies
 - Test clients: Direct Python invocation, no shell quirks
 
-**Rule**: Always use appropriate test clients. Only use subprocess for true end-to-end integration tests (Layer 4).
+**Rule**: Always use appropriate test clients. Only use subprocess for true end-to-end integration tests (Layer 5).
 
 ---
 

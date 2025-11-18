@@ -1,4 +1,4 @@
-"""Pure utility functions for consolidate command planning."""
+"""Utility functions for worktree consolidation planning."""
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -8,26 +8,24 @@ from erk.core.gitops import WorktreeInfo
 
 @dataclass(frozen=True)
 class ConsolidationPlan:
-    """Plan for consolidating stack branches into target worktree."""
+    """Plan for consolidating worktrees containing stack branches."""
 
     stack_to_consolidate: list[str]
     worktrees_to_remove: list[WorktreeInfo]
-    target_worktree_path: Path
-    source_worktree_path: Path | None
 
 
 def calculate_stack_range(
     stack_branches: list[str],
     end_branch: str | None,
 ) -> list[str]:
-    """Calculate which branches in the stack should be consolidated.
+    """Calculate the range of branches to consolidate.
 
     Args:
-        stack_branches: Full list of branches in stack (trunk to leaf)
-        end_branch: Branch to consolidate up to (inclusive), or None for full stack
+        stack_branches: Full stack from trunk to leaf (ordered)
+        end_branch: Optional branch to end consolidation at (None = full stack)
 
     Returns:
-        List of branch names to consolidate
+        List of branches to consolidate (trunk to end_branch, or full stack if None)
     """
     if end_branch is None:
         return stack_branches
@@ -47,38 +45,36 @@ def create_consolidation_plan(
     target_worktree_path: Path,
     source_worktree_path: Path | None,
 ) -> ConsolidationPlan:
-    """Create a plan for consolidating stack branches.
+    """Create a consolidation plan identifying worktrees to remove.
 
     Args:
         all_worktrees: All worktrees in the repository
-        stack_branches: Full list of branches in stack (trunk to leaf)
-        end_branch: Branch to consolidate up to (inclusive), or None for full stack
-        target_worktree_path: Path to worktree that will contain consolidated branches
-        source_worktree_path: Original worktree path (if creating new target), or None
+        stack_branches: Full stack branches (trunk to leaf)
+        end_branch: Optional branch to end consolidation at (None = full stack)
+        target_worktree_path: Path of the target worktree (where branches will be consolidated)
+        source_worktree_path: Path of source worktree if creating new target (to be removed)
 
     Returns:
-        ConsolidationPlan with branches and worktrees to remove
+        ConsolidationPlan with stack range and worktrees to remove
     """
-    # Calculate which branches should be consolidated
     stack_to_consolidate = calculate_stack_range(stack_branches, end_branch)
 
-    # Find worktrees to remove:
-    # - Worktrees containing branches in stack_to_consolidate
-    # - Skip root worktree (never removed)
-    # - Skip target worktree (consolidation destination)
     worktrees_to_remove: list[WorktreeInfo] = []
-
     for wt in all_worktrees:
-        # Skip if branch not in consolidation range
+        # Skip worktrees not in consolidation range
         if wt.branch not in stack_to_consolidate:
             continue
 
-        # Skip root worktree
+        # Skip root worktree (never remove)
         if wt.is_root:
             continue
 
-        # Skip target worktree
+        # Skip target worktree (consolidation destination)
         if wt.path.resolve() == target_worktree_path.resolve():
+            continue
+
+        # Skip source worktree if creating new target (handled separately)
+        if source_worktree_path is not None and wt.path.resolve() == source_worktree_path.resolve():
             continue
 
         worktrees_to_remove.append(wt)
@@ -86,6 +82,4 @@ def create_consolidation_plan(
     return ConsolidationPlan(
         stack_to_consolidate=stack_to_consolidate,
         worktrees_to_remove=worktrees_to_remove,
-        target_worktree_path=target_worktree_path,
-        source_worktree_path=source_worktree_path,
     )

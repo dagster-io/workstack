@@ -80,40 +80,85 @@ class SimpleRenderer:
 
         user_output()
 
+    def _truncate_plan_filename(self, filename: str) -> str:
+        """Truncate enriched plan filename to max 22 characters, stripping suffixes.
+
+        Args:
+            filename: Full filename (e.g., "very-long-plan-name-plan.md")
+
+        Returns:
+            Base name truncated to 22 chars, with "-plan.md" suffix removed
+            Format: "first-14-chars...last-5-chars" (exactly 22 chars when truncated)
+        """
+        max_length = 22
+
+        # Strip "-plan.md" suffix if present (9 chars)
+        suffix = "-plan.md"
+        if filename.endswith(suffix):
+            base_name = filename[: -len(suffix)]
+        else:
+            base_name = filename
+
+        # If short enough, return as-is
+        if len(base_name) <= max_length:
+            return base_name
+
+        # Truncate with ellipsis: first 14 chars + "..." + last 5 chars = 22 chars
+        return f"{base_name[:14]}...{base_name[-5:]}"
+
     def _render_plan(self, status: StatusData) -> None:
         """Render plan folder section if available.
 
         Args:
             status: Status data
         """
-        if status.plan is None or not status.plan.exists:
+        if status.plan is None:
             return
 
-        # Plan title with emoji progress indicator if front matter exists
+        # Check if we have either .plan/ folder or enriched plan
+        has_plan_folder = status.plan.exists
+        has_enriched_plan = status.plan.enriched_plan_filename is not None
+
+        if not has_plan_folder and not has_enriched_plan:
+            return
+
+        # Build plan header with both indicators
         plan_header = "Plan:"
 
-        if status.plan.completion_percentage is not None:
+        # Add .plan/ folder progress indicator if exists
+        if has_plan_folder and status.plan.completion_percentage is not None:
             # New format with emoji: "Plan: 🟡 7/10"
             emoji = self._get_progress_emoji(status.plan.completion_percentage)
             # Extract fraction from progress_summary (e.g., "3/10" from "3/10 steps completed")
             if status.plan.progress_summary:
                 fraction = status.plan.progress_summary.split(" ")[0]  # Get "3/10" part
                 plan_header += f" {emoji} {fraction}"
-        # No progress display for files without front matter (backward compatibility)
+
+        # Add enriched plan indicator if exists
+        if has_enriched_plan and status.plan.enriched_plan_filename is not None:
+            # Add spacing if .plan/ folder exists
+            if has_plan_folder and status.plan.completion_percentage is not None:
+                plan_header += "  "
+            # Strip suffixes and truncate to max 22 chars for display
+            display_filename = self._truncate_plan_filename(status.plan.enriched_plan_filename)
+            plan_header += f"🆕 {display_filename}"
 
         user_output(click.style(plan_header, fg="bright_magenta", bold=True))
 
-        if status.plan.first_lines:
-            for line in status.plan.first_lines:
-                user_output(f"  {line}")
+        # Only show plan content details if .plan/ folder exists
+        if has_plan_folder:
+            if status.plan.first_lines:
+                for line in status.plan.first_lines:
+                    user_output(f"  {line}")
 
-        user_output(
-            click.style(
-                f"  ({status.plan.line_count} lines in plan.md)",
-                fg="white",
-                dim=True,
+            user_output(
+                click.style(
+                    f"  ({status.plan.line_count} lines in plan.md)",
+                    fg="white",
+                    dim=True,
+                )
             )
-        )
+
         user_output()
 
     def _render_stack(self, status: StatusData) -> None:

@@ -291,7 +291,7 @@ class DependencyStatus:
 
 @dataclass(frozen=True)
 class PlanStatus:
-    """Status of .plan/ folder."""
+    """Status of .plan/ folder and enriched plans."""
 
     exists: bool
     path: Path | None
@@ -301,6 +301,8 @@ class PlanStatus:
     progress_summary: str | None  # e.g., "3/10 steps completed"
     format: str  # "folder" or "none"
     completion_percentage: int | None = None  # None if no front matter present
+    enriched_plan_path: Path | None = None  # Path to enriched plan file
+    enriched_plan_filename: str | None = None  # Filename of enriched plan
 
 
 @dataclass(frozen=True)

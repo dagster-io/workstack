@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import frontmatter
+
 from erk.core.context import ErkContext
 from erk.core.plan_folder import (
     get_plan_path,
@@ -11,6 +13,41 @@ from erk.core.plan_folder import (
 )
 from erk.status.collectors.base import StatusCollector
 from erk.status.models.status_data import PlanStatus
+
+
+def detect_enriched_plan(repo_root: Path) -> tuple[Path | None, str | None]:
+    """Detect enriched plan file at repository root.
+
+    Scans for *-plan.md files and checks for enriched_by_persist_plan marker.
+
+    Args:
+        repo_root: Repository root path
+
+    Returns:
+        Tuple of (path, filename) or (None, None) if not found
+    """
+    if not repo_root.exists():
+        return None, None
+
+    # Find all *-plan.md files
+    plan_files = list(repo_root.glob("*-plan.md"))
+
+    if not plan_files:
+        return None, None
+
+    # Sort by modification time (most recent first)
+    plan_files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+
+    # Check each file for enrichment marker
+    for plan_file in plan_files:
+        # Use frontmatter library to parse YAML frontmatter
+        post = frontmatter.load(str(plan_file))
+
+        # Check for enrichment marker (handles missing frontmatter gracefully)
+        if post.get("enriched_by_persist_plan") is True:
+            return plan_file, plan_file.name
+
+    return None, None
 
 
 class PlanFileCollector(StatusCollector):
@@ -47,6 +84,9 @@ class PlanFileCollector(StatusCollector):
         """
         plan_path = get_plan_path(worktree_path, git_ops=ctx.git_ops)
 
+        # Detect enriched plan at repo root
+        enriched_plan_path, enriched_plan_filename = detect_enriched_plan(repo_root)
+
         if plan_path is None:
             return PlanStatus(
                 exists=False,
@@ -56,6 +96,8 @@ class PlanFileCollector(StatusCollector):
                 first_lines=[],
                 progress_summary=None,
                 format="none",
+                enriched_plan_path=enriched_plan_path,
+                enriched_plan_filename=enriched_plan_filename,
             )
 
         # Read plan.md
@@ -96,6 +138,8 @@ class PlanFileCollector(StatusCollector):
             progress_summary=progress_summary,
             format="folder",
             completion_percentage=completion_percentage,
+            enriched_plan_path=enriched_plan_path,
+            enriched_plan_filename=enriched_plan_filename,
         )
 
     def _calculate_progress(self, worktree_path: Path) -> tuple[str | None, int | None]:

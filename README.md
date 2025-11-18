@@ -1,19 +1,43 @@
 # `erk`
 
-**Effortless `git` worktree management for parallel development.**
+**Git worktree manager designed for parallelized, plan-oriented, agentic engineering workflows.**
 
-Create, switch, and manage multiple worktrees from a centralized location with automatic environment setup.
+`erk` enables true parallel development by giving each branch its own isolated workspace with preserved state. Built specifically for modern engineering workflows where AI agents and developers collaborate on multiple workstreams simultaneously, each following structured implementation plans.
 
-## Philosophy
+## Core Design Principles
 
-erk makes git worktrees lightweight and disposable:
+- **Parallel execution**: Multiple agents or developers can work on separate features simultaneously without environment conflicts or context pollution
+- **State isolation**: Each worktree maintains complete environment independence - dependencies, build artifacts, env vars, and file system state
+- **Context preservation**: Implementation context, API constraints, and design decisions persist in plan artifacts, enabling AI agents to maintain full context across sessions
+- **Plan-first development**: Each worktree can be created from a structured plan (`.plan/`) that travels with the workspace, providing persistent context for both human and AI implementers
+- **Agentic optimization**: Seamless integration with Claude Code for AI-driven implementation (`/erk:persist-plan`, `/erk:implement-plan`, `/erk:create-planned-wt`)
 
-- **One branch per worktree** - No more `git checkout` conflicts. Each feature gets its own working directory.
-- **Lightweight and ephemeral** - Create and destroy worktrees freely. Branches persist, worktrees don't.
-- **Automatic environment setup** - Each worktree gets .env files, virtual environments, and activation scripts.
-- **Organized in ~/.erk/repos/<repo>/worktrees/** - All worktrees for a repository in one predictable location.
+## Why Parallel Worktrees Matter for AI-Native Engineering
 
-Think of worktrees as "working directories for branches" rather than "branches you switch between."
+Traditional git workflows assume serial development - one working directory, one active context. This breaks down when working with AI agents that can pursue multiple implementation paths simultaneously or when plans need to be executed in isolation to prevent cross-contamination of dependencies and state.
+
+`erk` inverts the traditional model: branches contain valuable work product, while worktrees are disposable execution contexts that can be created and destroyed as needed. This enables workflows like:
+
+```bash
+# Create multiple planned implementations in parallel
+erk create feat-1 # Create a branch feat-1 on worktree feat-1
+
+erk checkout master # navigates back to root worktree, where master is checked out
+
+erk delete feat-1 # Deletes feat-1 *worktree*. Branch remains untouched.
+
+erk checkout feat-1 # Recreates feat-1 *worktree* checked out to feat-1 *branch*.
+```
+
+Notice that `cd` was never used while navigating between worktrees, nor was `uv sync` or `source .venv/bin/activate`. `erk` handles all of that bookkeeping.
+
+This architecture ensures that whether you're working with AI agents, managing multiple contractors, or simply juggling several features yourself, each workstream maintains perfect isolation and context.
+
+Note: `erk` was designed to work with `gt` (graphite) for managing stacks of branches (it uses `gt create` instead of `git co -b` when `gt` is available) and `uv` for ultrafast Python environment management. It could be generalized to other languages and tools fairly easily.
+
+## Plan Orientation
+
+`erk` has first-class support for planning workflows. You can create plan documents and then use the `--plan` flag on `create` to create new worktrees that contain planning documents in `.plan`, which by default is in `.gitignore`. There are also bundled claude code commands (installable via `dot-agent`) that facilitate the creation, enrichement, and implementation of these plans.
 
 ## Installation
 
@@ -32,14 +56,6 @@ uv tool install git+https://github.com/dagster-io/erk.git
 cd /path/to/your/repo
 erk init
 source ~/.zshrc  # or ~/.bashrc
-
-# Create and switch to a worktree
-erk create user-auth
-erk switch user-auth
-
-# Switch back and clean up
-erk checkout root
-erk delete user-auth
 ```
 
 ## Overview
@@ -83,7 +99,7 @@ erk up                     # Navigate to child branch in Graphite stack
 erk down                   # Navigate to parent branch in Graphite stack
 erk status                 # Show status of current worktree
 erk list                   # List all worktrees (alias: ls)
-erk list --stacks          # List with graphite stacks and PR status
+erk list --ci              # Fetch CI check status from GitHub (slower)
 erk rename OLD NEW         # Rename a worktree
 erk delete NAME            # Delete worktree
 erk sync                   # Sync with Graphite, show cleanup candidates
@@ -101,14 +117,14 @@ erk down              # Move to parent branch in stack
 erk checkout BRANCH   # Checkout any branch in a stack (finds worktree automatically)
 ```
 
-#### Jump to Branch
+#### Checkout Branch
 
 Find and switch to a worktree by branch name:
 
 ```bash
-erk jump feature/user-auth    # Finds worktree containing this branch
-erk jump hotfix/critical-bug  # Works with any branch in your stacks
-erk jump origin-branch        # Auto-creates from remote if not local
+erk checkout feature/user-auth    # Finds worktree containing this branch
+erk checkout hotfix/critical-bug  # Works with any branch in your stacks
+erk checkout origin-branch        # Auto-creates from remote if not local
 ```
 
 **How it works:**
@@ -127,7 +143,7 @@ erk jump origin-branch        # Auto-creates from remote if not local
 **Behavior:**
 
 - **Branch checked out in one worktree**: Switches to that worktree and checks out the branch
-- **Branch checked out in multiple worktrees**: Shows all worktrees (choose manually with `erk switch`)
+- **Branch checked out in multiple worktrees**: Shows all worktrees (choose manually with `erk checkout`)
 - **Branch exists locally but not checked out**: Auto-creates worktree for the branch
 - **Branch exists on origin but not locally**: Auto-creates tracking branch and worktree
 - **Branch doesn't exist anywhere**: Shows error with suggestion to create new branch
@@ -139,29 +155,28 @@ Example workflow:
 # - worktree "feature-work": main -> feature-1 -> feature-2 -> feature-3
 # - worktree "bugfix-work": main -> bugfix-1 -> bugfix-2
 
-# Jump to existing branch in worktree
-erk jump feature-2    # → Switches to "feature-work" and checks out feature-2
-erk jump bugfix-1     # → Switches to "bugfix-work" and checks out bugfix-1
+# Checkout existing branch in worktree
+erk checkout feature-2    # → Switches to "feature-work" and checks out feature-2
+erk checkout bugfix-1     # → Switches to "bugfix-work" and checks out bugfix-1
 
-# Jump to unchecked local branch
-erk jump feature-4    # → Auto-creates worktree for feature-4
+# Checkout unchecked local branch
+erk checkout feature-4    # → Auto-creates worktree for feature-4
 
-# Jump to remote-only branch (like git checkout origin/branch)
-erk jump hotfix-123   # → Creates tracking branch + worktree from origin/hotfix-123
+# Checkout remote-only branch (like git checkout origin/branch)
+erk checkout hotfix-123   # → Creates tracking branch + worktree from origin/hotfix-123
 ```
 
-#### Stack Navigation with Switch
+#### Stack Navigation Commands
 
-Example workflow:
+Navigate up and down your Graphite stack with dedicated commands:
 
 ```bash
 # Current stack: main -> feature-1 -> feature-2 -> feature-3
 # You are in: feature-2
 
-erk switch --up       # → feature-3
-erk switch --down     # → feature-2
-erk switch --down     # → feature-1
-erk switch --down     # → root (main)
+erk up       # → feature-3
+erk down     # → feature-1
+erk down     # → root (main)
 ```
 
 **Requirements:**
@@ -172,10 +187,96 @@ erk switch --down     # → root (main)
 
 **Behavior:**
 
-- `--up`: Navigates to child branch (up the stack)
-- `--down`: Navigates to parent branch (down toward trunk)
+- `erk up`: Navigates to child branch (up the stack toward leaves)
+- `erk down`: Navigates to parent branch (down toward trunk)
 - At stack boundaries, shows clear error messages
-- Cannot be combined with NAME argument
+
+### Consolidating Stacks
+
+Consolidate stack branches into a single worktree by removing other worktrees containing branches from the current stack:
+
+```bash
+erk consolidate                        # Consolidate full stack (trunk to leaf)
+erk consolidate --down                 # Consolidate only downstack (trunk to current)
+erk consolidate feat-2                 # Consolidate trunk → feat-2 only
+erk consolidate --name my-stack        # Create new worktree and consolidate into it
+erk consolidate --dry-run              # Preview what would be removed
+```
+
+**How it works:**
+
+- Removes other worktrees that contain branches from your stack
+- Ensures each branch exists in only one worktree
+- Useful before stack-wide operations like `gt restack`
+- By default, consolidates entire stack (trunk to leaf)
+
+**Options:**
+
+- `BRANCH` - Optional branch name for partial consolidation (trunk → BRANCH)
+- `--name NAME` - Create and consolidate into new worktree with this name
+- `-f, --force` - Skip confirmation prompt
+- `--dry-run` - Show what would be removed without executing
+- `--down` - Only consolidate downstack (trunk to current). Cannot combine with BRANCH.
+- `--script` - Output shell script for directory change
+
+**Example workflow:**
+
+```bash
+# Current state: branches spread across multiple worktrees
+# - worktree "feat-1-wt": main -> feat-1
+# - worktree "feat-2-wt": main -> feat-1 -> feat-2
+# - worktree "feat-3-wt": main -> feat-1 -> feat-2 -> feat-3
+
+# Consolidate all stack branches into current worktree
+erk consolidate
+# Result: Only feat-3-wt remains with full stack: main -> feat-1 -> feat-2 -> feat-3
+```
+
+**Requirements:**
+
+- Graphite must be enabled (`erk config set use_graphite true`)
+
+### Splitting Stacks
+
+Split a consolidated stack into individual worktrees per branch (inverse of consolidate):
+
+```bash
+erk split                              # Split entire stack
+erk split --up                         # Split only upstack branches
+erk split --down                       # Split only downstack branches
+erk split --dry-run                    # Preview what would be created
+```
+
+**How it works:**
+
+- Creates individual worktrees for each branch in the stack
+- Inverse operation of `consolidate`
+- Useful when you want to work on stack branches in parallel
+
+**Options:**
+
+- `-f, --force` - Skip confirmation prompts
+- `--dry-run` - Show what would be created without executing
+- `--up` - Only split upstack branches
+- `--down` - Only split downstack branches
+
+**Example workflow:**
+
+```bash
+# Current state: all branches in one worktree
+# - worktree "feat-wt": main -> feat-1 -> feat-2 -> feat-3
+
+# Split into individual worktrees
+erk split
+# Result: Three worktrees created:
+# - worktree "feat-1": main -> feat-1
+# - worktree "feat-2": main -> feat-1 -> feat-2
+# - worktree "feat-3": main -> feat-1 -> feat-2 -> feat-3
+```
+
+**Requirements:**
+
+- Graphite must be enabled (`erk config set use_graphite true`)
 
 ### Moving Branches
 
@@ -196,7 +297,7 @@ root [master]
 feature-a [feature-a]
 feature-b [work/feature-b]
 
-$ erk list --stacks
+$ erk list
 root [master]
   ◉  master
 
@@ -218,7 +319,7 @@ feature-b [work/feature-b]
 - ⭕ Closed
 - ◯ Open (no checks)
 
-Note: The repository root is displayed as `root` and can be accessed with `erk switch root`.
+Note: The repository root is displayed as `root` and can be accessed with `erk checkout root`.
 
 ### Configuration
 
@@ -264,14 +365,14 @@ commands = [
 
 ```bash
 erk create feature-a
-erk switch feature-a
+erk checkout feature-a
 # ... work on feature A ...
 
 erk create feature-b
-erk switch feature-b
+erk checkout feature-b
 # ... work on feature B ...
 
-erk switch feature-a  # Instantly back to feature A
+erk checkout feature-a  # Instantly back to feature A
 ```
 
 ### Plan-Based Development
@@ -288,7 +389,7 @@ erk switch feature-a  # Instantly back to feature A
 
 ```bash
 # 1. Stay in root repo for planning
-erk switch root
+erk checkout root
 
 # 2. Create your plan and save it to disk (e.g. Add_User_Auth.md)
 
@@ -300,7 +401,7 @@ erk create --plan Add_User_Auth.md
 #   - .plan/ is already in .gitignore (added by erk init)
 
 # 4. Switch and execute
-erk switch add-user-auth
+erk checkout add-user-auth
 # Your plan is now at .plan/plan.md for reference during implementation
 # Progress tracking in .plan/progress.md shows step completion
 ```
@@ -314,6 +415,220 @@ erk switch add-user-auth
 - Workflow guides user to start implementation with clean context and progress visibility
 
 This workflow emerged from experience - checking in planning documents created noise in reviews and maintenance overhead without clear benefits.
+
+**AI-Augmented Planning:**
+
+The manual workflow above can be fully automated using kit-installed Claude Code commands. See [Claude Code Integration](#claude-code-integration) for `/erk:persist-plan`, `/erk:create-planned-wt`, and `/erk:implement-plan` commands that automate plan extraction, enhancement, worktree creation, and implementation execution.
+
+## Claude Code Integration
+
+Erk includes bundled kits that provide Claude Code artifacts for AI-assisted development workflows.
+
+### What Are Kits?
+
+Kits are collections of Claude Code artifacts (slash commands, agents, skills) that augment erk's core functionality. The erk and gt kits are bundled with the tool and provide automation for planning and Graphite workflows.
+
+### AI-Augmented Planning Workflow
+
+The traditional erk planning workflow can be fully automated with kit-installed commands:
+
+**Traditional Approach (Manual):**
+
+1. Discuss and plan with Claude in conversation
+2. Manually copy/save plan to a markdown file
+3. Run `erk create --plan <file>.md`
+4. Manually track implementation progress
+
+**AI-Augmented Approach (With Kits):**
+
+1. Discuss and plan with Claude in conversation
+2. `/erk:persist-plan` - Automatically extracts, enhances, and saves plan
+3. `/erk:create-planned-wt` - Creates worktree from saved plan
+4. `/erk:implement-plan` - Executes plan with automated progress tracking
+
+### Planning Workflow Commands
+
+#### `/erk:persist-plan` - Save Enhanced Plan
+
+Extracts the implementation plan from your conversation with Claude, interactively enhances it, and saves to disk.
+
+**What it does:**
+
+- Extracts plan from conversation context
+- Preserves semantic understanding (API quirks, architectural insights, known pitfalls)
+- Asks clarifying questions to resolve ambiguities
+- Suggests phase decomposition for complex plans
+- Saves to `<repo-root>/<kebab-case-title>-plan.md`
+
+**Usage:**
+
+```bash
+# In conversation with Claude after planning
+/erk:persist-plan
+
+# With optional guidance corrections
+/erk:persist-plan "Focus on security validation in authentication phase"
+```
+
+**Why context preservation matters:**
+
+Plans include expensive discoveries made during planning so implementing agents don't have to re-learn them. For example:
+
+- **API quirks**: "Stripe webhooks often arrive BEFORE API response returns to client"
+- **Known pitfalls**: "DO NOT use payment_intent.succeeded event alone - fires even for zero-amount test payments"
+
+This prevents bugs and speeds up implementation. See [Context Preservation Examples](.claude/docs/erk/EXAMPLES.md) for comprehensive details.
+
+#### `/erk:create-planned-wt` - Create Worktree from Plan
+
+Creates a new erk worktree from a saved plan file.
+
+**What it does:**
+
+- Auto-detects most recent `*-plan.md` at repo root
+- Runs `erk create --plan <file>`
+- Moves plan to `.plan/plan.md` in new worktree
+- Creates `.plan/progress.md` for tracking step completion
+- Displays plan content and next steps
+
+**Usage:**
+
+```bash
+# After running /erk:persist-plan
+/erk:create-planned-wt
+```
+
+#### `/erk:implement-plan` - Execute Implementation Plan
+
+Executes the implementation plan in the current worktree with automated progress tracking.
+
+**What it does:**
+
+- Reads `.plan/plan.md` in current directory
+- Creates TodoWrite entries for progress tracking
+- Executes each phase sequentially following coding standards
+- Updates `.plan/progress.md` with step completions
+- Updates YAML front matter for `erk status` progress indicators
+- Reports progress after each phase
+- Runs final verification (CI checks if documented)
+
+**Usage:**
+
+```bash
+# After switching to planned worktree
+erk checkout <branch>
+claude --permission-mode acceptEdits "/erk:implement-plan"
+```
+
+### Complete Workflow Example
+
+```bash
+# 1. Plan in conversation (in root repo)
+erk checkout root
+# ... discuss with Claude, create implementation plan ...
+
+# 2. Save enhanced plan to disk
+/erk:persist-plan
+# Output: Saved plan to: Add_User_Auth-plan.md
+
+# 3. Create worktree from plan
+/erk:create-planned-wt
+# Output: Created worktree 'add-user-auth' from plan
+
+# 4. Switch to worktree
+erk checkout add-user-auth
+
+# 5. Execute implementation
+claude --permission-mode acceptEdits "/erk:implement-plan"
+# Claude implements the plan, updates progress.md, runs CI
+
+# 6. Submit PR (optional)
+/gt:submit-branch
+```
+
+### Graphite Workflow Commands
+
+The gt kit provides commands for streamlined Graphite integration:
+
+#### `/gt:submit-branch` - Create Commit and Submit PR
+
+Automatically creates a git commit with AI-generated message and submits the current branch as a pull request.
+
+**What it does:**
+
+- Checks for uncommitted changes and commits them
+- Analyzes all changes in the branch
+- Generates detailed commit message
+- Submits branch to Graphite and creates PR
+- Updates PR metadata with structured documentation
+
+**Usage:**
+
+```bash
+/gt:submit-branch
+# Or with description hint
+/gt:submit-branch "Add user authentication feature"
+```
+
+#### `/gt:update-pr` - Update Existing PR
+
+Updates an existing PR by staging changes, committing, restacking, and submitting.
+
+**What it does:**
+
+- Stages all changes
+- Creates commit with AI-generated message
+- Runs `gt stack submit`
+- Returns to original worktree
+
+**Usage:**
+
+```bash
+/gt:update-pr
+```
+
+### Progress Tracking System
+
+The `.plan/` folder structure enables automated progress tracking:
+
+```
+.plan/
+├── plan.md       # Immutable reference (never edited during implementation)
+└── progress.md   # Mutable tracking (checkboxes + YAML front matter)
+```
+
+Progress files include YAML front matter for `erk status` indicators:
+
+```yaml
+---
+completed_steps: 3
+total_steps: 10
+---
+# Progress Tracking
+- [x] 1. First step
+- [x] 2. Second step
+- [x] 3. Third step
+- [ ] 4. Fourth step
+```
+
+The `erk status` command shows:
+
+- ⚪ Not started (0%)
+- 🟡 In progress (1-99%)
+- 🟢 Complete (100%)
+
+### Available Kits
+
+Erk bundles several kits that provide Claude Code artifacts:
+
+- **erk** - Planning workflow commands (`/erk:persist-plan`, `/erk:implement-plan`, `/erk:create-planned-wt`)
+- **gt** - Graphite integration (`/gt:submit-branch`, `/gt:update-pr`, `gt-graphite` skill)
+- **devrun** - Development tool execution (pytest, pyright, ruff, prettier, make, gt)
+- **dignified-python-313** - Python 3.13+ coding standards
+- **layered-testing** - Testing architecture patterns
+- **fix-merge-conflicts** - Merge conflict resolution
+
+For detailed documentation of all installed kits and their artifacts, see `.claude/docs/kit-registry.md`.
 
 ### Moving Current Work
 
@@ -350,6 +665,62 @@ erk sync --dry-run         # Preview without executing
 
 Requires Graphite CLI (`gt`) and GitHub CLI (`gh`) installed.
 
+### Landing Stacks
+
+Land all PRs in a Graphite stack in the correct order:
+
+```bash
+erk land-stack                         # Land full stack (trunk to leaf)
+erk land-stack --down                  # Land only downstack PRs (trunk to current)
+erk land-stack --dry-run               # Preview landing plan
+erk land-stack -f                      # Skip confirmation prompts
+erk land-stack --verbose               # Show detailed output
+```
+
+**How it works:**
+
+- Merges all PRs sequentially from bottom of stack (first branch above trunk) upward
+- After each merge, runs `gt sync -f` to rebase upstack branches onto updated trunk
+- PRs are landed bottom-up because each PR depends on the ones below it
+- With `--down`, lands only downstack PRs and skips rebase of upstack branches
+
+**Options:**
+
+- `-f, --force` - Skip confirmation prompt and proceed immediately
+- `--verbose` - Show detailed output for merge and sync operations
+- `--dry-run` - Show what would be done without executing merge operations
+- `--down` - Only land downstack PRs (trunk to current). Skips upstack rebase.
+- `--script` - Output shell script for directory change
+
+**Use --down when:**
+
+- You have uncommitted changes in upstack branches
+- Work-in-progress in upstack branches you don't want to rebase yet
+
+**Example workflow:**
+
+```bash
+# Stack: main -> feat-1 -> feat-2 -> feat-3 (all have open PRs)
+# You are in: feat-3
+
+# Land all PRs in order
+erk land-stack
+# Merges: feat-1 PR → feat-2 PR → feat-3 PR
+# Each merge triggers gt sync to rebase remaining upstack branches
+
+# Or land only downstack PRs
+erk land-stack --down
+# Merges: feat-1 PR → feat-2 PR
+# Skips rebase of feat-3 (your current branch with WIP)
+```
+
+**Requirements:**
+
+- Graphite must be enabled (`erk config set use_graphite true`)
+- GitHub CLI (`gh`) must be installed and authenticated
+- All PRs must be in mergeable state
+- No uncommitted changes (unless using `--down`)
+
 ## Command Reference
 
 ### `create` Options
@@ -365,10 +736,9 @@ Requires Graphite CLI (`gt`) and GitHub CLI (`gh`) installed.
 
 ### `list` / `ls` Options
 
-| Option         | Description                                     |
-| -------------- | ----------------------------------------------- |
-| `-s, --stacks` | Show graphite stacks and PR status              |
-| `-c, --checks` | Show CI check status (requires GitHub API call) |
+| Option | Description                                |
+| ------ | ------------------------------------------ |
+| `--ci` | Fetch CI check status from GitHub (slower) |
 
 ### `move` Options
 
@@ -400,6 +770,36 @@ Requires Graphite CLI (`gt`) and GitHub CLI (`gh`) installed.
 | ------------- | ---------------------------------------------- |
 | `-f, --force` | Force gt sync and auto-remove merged worktrees |
 | `--dry-run`   | Show what would be done without executing      |
+
+### `consolidate` Options
+
+| Option        | Description                                                               |
+| ------------- | ------------------------------------------------------------------------- |
+| `BRANCH`      | Optional branch for partial consolidation (trunk → BRANCH)                |
+| `--name NAME` | Create and consolidate into new worktree with this name                   |
+| `-f, --force` | Skip confirmation prompt                                                  |
+| `--dry-run`   | Show what would be removed without executing                              |
+| `--down`      | Only consolidate downstack (trunk to current). Cannot combine with BRANCH |
+| `--script`    | Output shell script for directory change                                  |
+
+### `split` Options
+
+| Option        | Description                                  |
+| ------------- | -------------------------------------------- |
+| `-f, --force` | Skip confirmation prompts                    |
+| `--dry-run`   | Show what would be created without executing |
+| `--up`        | Only split upstack branches                  |
+| `--down`      | Only split downstack branches                |
+
+### `land-stack` Options
+
+| Option          | Description                                                      |
+| --------------- | ---------------------------------------------------------------- |
+| `-f, --force`   | Skip confirmation prompt and proceed immediately                 |
+| `-v, --verbose` | Show detailed output for merge and sync operations               |
+| `--dry-run`     | Show what would be done without executing merge operations       |
+| `--down`        | Only land downstack PRs (trunk to current). Skips upstack rebase |
+| `--script`      | Output shell script for directory change                         |
 
 ### `init` Options
 
@@ -538,6 +938,14 @@ Comprehensive, agent-optimized documentation is available in the `.agent/` direc
 - **[erk-dev CLI](docs/ERK_DEV.md)** - Development CLI architecture and design
 
 See [`.agent/README.md`](.agent/README.md) for more details.
+
+**Kit-Installed Artifacts:**
+
+Erk includes bundled kits that provide slash commands, agents, and skills for AI-assisted workflows. For comprehensive documentation of all installed kits and their artifacts, see:
+
+- **[Kit Registry](.claude/docs/kit-registry.md)** - Complete catalog of installed kits, commands, agents, and skills
+- **[Planning Workflow Commands](#claude-code-integration)** - `/erk:persist-plan`, `/erk:implement-plan`, `/erk:create-planned-wt`
+- **[Graphite Workflow Commands](#claude-code-integration)** - `/gt:submit-branch`, `/gt:update-pr`
 
 ## Links
 

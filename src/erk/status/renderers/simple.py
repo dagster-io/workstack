@@ -80,6 +80,32 @@ class SimpleRenderer:
 
         user_output()
 
+    def _truncate_plan_filename(self, filename: str) -> str:
+        """Truncate enriched plan filename to max 22 characters, stripping suffixes.
+
+        Args:
+            filename: Full filename (e.g., "very-long-plan-name-plan.md")
+
+        Returns:
+            Base name truncated to 22 chars, with "-plan.md" suffix removed
+            Format: "first-14-chars...last-5-chars" (exactly 22 chars when truncated)
+        """
+        max_length = 22
+
+        # Strip "-plan.md" suffix if present (9 chars)
+        suffix = "-plan.md"
+        if filename.endswith(suffix):
+            base_name = filename[: -len(suffix)]
+        else:
+            base_name = filename
+
+        # If short enough, return as-is
+        if len(base_name) <= max_length:
+            return base_name
+
+        # Truncate with ellipsis: first 14 chars + "..." + last 5 chars = 22 chars
+        return f"{base_name[:14]}...{base_name[-5:]}"
+
     def _render_plan(self, status: StatusData) -> None:
         """Render plan folder section if available.
 
@@ -109,11 +135,13 @@ class SimpleRenderer:
                 plan_header += f" {emoji} {fraction}"
 
         # Add enriched plan indicator if exists
-        if has_enriched_plan:
+        if has_enriched_plan and status.plan.enriched_plan_filename is not None:
             # Add spacing if .plan/ folder exists
             if has_plan_folder and status.plan.completion_percentage is not None:
                 plan_header += "  "
-            plan_header += f"🆕 {status.plan.enriched_plan_filename}"
+            # Strip suffixes and truncate to max 22 chars for display
+            display_filename = self._truncate_plan_filename(status.plan.enriched_plan_filename)
+            plan_header += f"🆕 {display_filename}"
 
         user_output(click.style(plan_header, fg="bright_magenta", bold=True))
 

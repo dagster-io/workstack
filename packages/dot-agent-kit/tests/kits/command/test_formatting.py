@@ -199,17 +199,17 @@ class TestFormatStructuredResult:
 
     def test_single_text_item(self) -> None:
         """Test formatting result with single text item."""
-        result = format_structured_result([
-            {"type": "text", "text": "Output line"}
-        ])
+        result = format_structured_result([{"type": "text", "text": "Output line"}])
         assert result == ["   Output line"]
 
     def test_multiple_text_items(self) -> None:
         """Test formatting result with multiple text items."""
-        result = format_structured_result([
-            {"type": "text", "text": "Line 1"},
-            {"type": "text", "text": "Line 2"},
-        ])
+        result = format_structured_result(
+            [
+                {"type": "text", "text": "Line 1"},
+                {"type": "text", "text": "Line 2"},
+            ]
+        )
         assert result == [
             "   Line 1",
             "   Line 2",
@@ -217,10 +217,12 @@ class TestFormatStructuredResult:
 
     def test_multiline_text_items(self) -> None:
         """Test formatting result with multiline text items."""
-        result = format_structured_result([
-            {"type": "text", "text": "Line 1\nLine 2"},
-            {"type": "text", "text": "Line 3\nLine 4"},
-        ])
+        result = format_structured_result(
+            [
+                {"type": "text", "text": "Line 1\nLine 2"},
+                {"type": "text", "text": "Line 3\nLine 4"},
+            ]
+        )
         assert result == [
             "   Line 1",
             "   Line 2",
@@ -235,13 +237,15 @@ class TestFormatStructuredResult:
 
     def test_ignores_non_dict_items(self) -> None:
         """Test that non-dict items in list are ignored."""
-        result = format_structured_result([
-            {"type": "text", "text": "Valid"},
-            "invalid string",
-            42,
-            None,
-            {"type": "text", "text": "Also valid"},
-        ])
+        result = format_structured_result(
+            [
+                {"type": "text", "text": "Valid"},
+                "invalid string",
+                42,
+                None,
+                {"type": "text", "text": "Also valid"},
+            ]
+        )
         assert result == [
             "   Valid",
             "   Also valid",
@@ -249,19 +253,23 @@ class TestFormatStructuredResult:
 
     def test_ignores_non_text_type(self) -> None:
         """Test that non-text type items are ignored."""
-        result = format_structured_result([
-            {"type": "image", "url": "http://example.com/image.png"},
-            {"type": "text", "text": "Text item"},
-            {"type": "other", "data": "something"},
-        ])
+        result = format_structured_result(
+            [
+                {"type": "image", "url": "http://example.com/image.png"},
+                {"type": "text", "text": "Text item"},
+                {"type": "other", "data": "something"},
+            ]
+        )
         assert result == ["   Text item"]
 
     def test_handles_missing_text_field(self) -> None:
         """Test handling of text type item with missing text field."""
-        result = format_structured_result([
-            {"type": "text"},  # Missing "text" field
-            {"type": "text", "text": "Valid"},
-        ])
+        result = format_structured_result(
+            [
+                {"type": "text"},  # Missing "text" field
+                {"type": "text", "text": "Valid"},
+            ]
+        )
         # Should use empty string as default
         assert result == [
             "   ",
@@ -270,10 +278,12 @@ class TestFormatStructuredResult:
 
     def test_handles_empty_text_field(self) -> None:
         """Test handling of text type item with empty text field."""
-        result = format_structured_result([
-            {"type": "text", "text": ""},
-            {"type": "text", "text": "Non-empty"},
-        ])
+        result = format_structured_result(
+            [
+                {"type": "text", "text": ""},
+                {"type": "text", "text": "Non-empty"},
+            ]
+        )
         assert result == [
             "   ",
             "   Non-empty",
@@ -281,14 +291,16 @@ class TestFormatStructuredResult:
 
     def test_mixed_valid_and_invalid_items(self) -> None:
         """Test formatting with mix of valid and invalid items."""
-        result = format_structured_result([
-            {"type": "text", "text": "First"},
-            "string item",  # Not a dict, ignored
-            {"type": "other"},  # Wrong type, ignored
-            {"type": "text", "text": "Second"},
-            {"no_type": "present"},  # No type field, ignored
-            {"type": "text", "text": "Third"},
-        ])
+        result = format_structured_result(
+            [
+                {"type": "text", "text": "First"},
+                "string item",  # Not a dict, ignored
+                {"type": "other"},  # Wrong type, ignored
+                {"type": "text", "text": "Second"},
+                {"no_type": "present"},  # No type field, ignored
+                {"type": "text", "text": "Third"},
+            ]
+        )
         assert result == [
             "   First",
             "   Second",

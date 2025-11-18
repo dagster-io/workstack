@@ -28,6 +28,15 @@ class WorktreeInfo:
     is_root: bool = False
 
 
+@dataclass(frozen=True)
+class RerootResult:
+    """Result of a rebase operation."""
+
+    success: bool
+    has_conflicts: bool
+    conflicted_files: list[Path]
+
+
 def find_worktree_for_branch(worktrees: list[WorktreeInfo], branch: str) -> Path | None:
     """Find the path of the worktree that has the given branch checked out.
 
@@ -404,6 +413,76 @@ class GitOps(ABC):
             remote: Remote name (e.g., "origin")
             branch: Branch name to pull
             ff_only: If True, use --ff-only to prevent merge commits
+        """
+        ...
+
+    @abstractmethod
+    def rebase_branch(self, branch: str, onto: str, worktree_path: Path) -> RerootResult:
+        """Rebase branch onto another branch.
+
+        Args:
+            branch: Branch to rebase
+            onto: Branch to rebase onto
+            worktree_path: Path to worktree
+
+        Returns:
+            RerootResult with success status and conflict information
+        """
+        ...
+
+    @abstractmethod
+    def get_conflicted_files(self, worktree_path: Path) -> list[Path]:
+        """Return list of files with conflict markers.
+
+        Args:
+            worktree_path: Path to worktree
+
+        Returns:
+            List of paths with unresolved conflicts
+        """
+        ...
+
+    @abstractmethod
+    def commit_with_message(self, message: str, worktree_path: Path) -> None:
+        """Create commit with given message.
+
+        Args:
+            message: Commit message
+            worktree_path: Path to worktree
+        """
+        ...
+
+    @abstractmethod
+    def is_rebase_in_progress(self, worktree_path: Path) -> bool:
+        """Check if rebase operation is active.
+
+        Args:
+            worktree_path: Path to worktree
+
+        Returns:
+            True if rebase is in progress
+        """
+        ...
+
+    @abstractmethod
+    def abort_rebase(self, worktree_path: Path) -> None:
+        """Abort rebase operation.
+
+        Args:
+            worktree_path: Path to worktree
+        """
+        ...
+
+    @abstractmethod
+    def get_commit_sha(self, ref: str, cwd: Path) -> str:
+        """Get commit SHA for a ref.
+
+        Args:
+            ref: Git ref (branch, tag, etc.)
+            cwd: Working directory
+
+        Returns:
+            Commit SHA
         """
         ...
 
@@ -917,6 +996,87 @@ class RealGitOps(GitOps):
             text=True,
         )
 
+    def rebase_branch(self, branch: str, onto: str, worktree_path: Path) -> RerootResult:
+        """Rebase branch onto another branch."""
+        result = subprocess.run(
+            ["git", "rebase", onto, branch],
+            cwd=worktree_path,
+            capture_output=True,
+            text=True,
+        )
+
+        if result.returncode == 0:
+            return RerootResult(success=True, has_conflicts=False, conflicted_files=[])
+
+        # Check for conflicts
+        conflicted = self.get_conflicted_files(worktree_path)
+
+        return RerootResult(
+            success=False, has_conflicts=len(conflicted) > 0, conflicted_files=conflicted
+        )
+
+    def get_conflicted_files(self, worktree_path: Path) -> list[Path]:
+        """Return list of files with conflict markers."""
+        result = subprocess.run(
+            ["git", "diff", "--name-only", "--diff-filter=U"],
+            cwd=worktree_path,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        if result.returncode != 0:
+            return []
+
+        files = result.stdout.strip().split("\n")
+        return [Path(f) for f in files if f]
+
+    def commit_with_message(self, message: str, worktree_path: Path) -> None:
+        """Create commit with given message."""
+        # Stage all changes
+        subprocess.run(
+            ["git", "add", "."],
+            cwd=worktree_path,
+            check=True,
+        )
+
+        # Commit
+        subprocess.run(
+            ["git", "commit", "-m", message],
+            cwd=worktree_path,
+            check=True,
+        )
+
+    def is_rebase_in_progress(self, worktree_path: Path) -> bool:
+        """Check if rebase operation is active."""
+        git_dir = worktree_path / ".git"
+
+        # Check for rebase-merge or rebase-apply directories
+        rebase_merge = git_dir / "rebase-merge"
+        rebase_apply = git_dir / "rebase-apply"
+
+        return rebase_merge.exists() or rebase_apply.exists()
+
+    def abort_rebase(self, worktree_path: Path) -> None:
+        """Abort rebase operation."""
+        subprocess.run(
+            ["git", "rebase", "--abort"],
+            cwd=worktree_path,
+            check=True,
+        )
+
+    def get_commit_sha(self, ref: str, cwd: Path) -> str:
+        """Get commit SHA for a ref."""
+        result = subprocess.run(
+            ["git", "rev-parse", ref],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        return result.stdout.strip()
+
 
 # ============================================================================
 # No-op Wrapper
@@ -1097,6 +1257,31 @@ class NoopGitOps(GitOps):
         # Do nothing - prevents actual pull execution
         pass
 
+    def rebase_branch(self, branch: str, onto: str, worktree_path: Path) -> RerootResult:
+        """Print dry-run message instead of rebasing."""
+        user_output(f"[DRY RUN] Would run: git rebase {onto} {branch}")
+        return RerootResult(success=True, has_conflicts=False, conflicted_files=[])
+
+    def get_conflicted_files(self, worktree_path: Path) -> list[Path]:
+        """Get conflicted files (read-only, delegates to wrapped)."""
+        return self._wrapped.get_conflicted_files(worktree_path)
+
+    def commit_with_message(self, message: str, worktree_path: Path) -> None:
+        """Print dry-run message instead of committing."""
+        user_output(f"[DRY RUN] Would run: git commit -m '{message}'")
+
+    def is_rebase_in_progress(self, worktree_path: Path) -> bool:
+        """Check rebase status (read-only, delegates to wrapped)."""
+        return self._wrapped.is_rebase_in_progress(worktree_path)
+
+    def abort_rebase(self, worktree_path: Path) -> None:
+        """Print dry-run message instead of aborting rebase."""
+        user_output("[DRY RUN] Would run: git rebase --abort")
+
+    def get_commit_sha(self, ref: str, cwd: Path) -> str:
+        """Get commit SHA (read-only, delegates to wrapped)."""
+        return self._wrapped.get_commit_sha(ref, cwd)
+
 
 # ============================================================================
 # Printing Wrapper Implementation
@@ -1269,3 +1454,27 @@ class PrintingGitOps(PrintingOpsBase, GitOps):
     def get_file_status(self, cwd: Path) -> tuple[list[str], list[str], list[str]]:
         """Get file status (read-only, no printing)."""
         return self._wrapped.get_file_status(cwd)
+
+    def rebase_branch(self, branch: str, onto: str, worktree_path: Path) -> RerootResult:
+        """Rebase branch (delegates to wrapped)."""
+        return self._wrapped.rebase_branch(branch, onto, worktree_path)
+
+    def get_conflicted_files(self, worktree_path: Path) -> list[Path]:
+        """Get conflicted files (read-only, no printing)."""
+        return self._wrapped.get_conflicted_files(worktree_path)
+
+    def commit_with_message(self, message: str, worktree_path: Path) -> None:
+        """Commit with message (delegates to wrapped)."""
+        self._wrapped.commit_with_message(message, worktree_path)
+
+    def is_rebase_in_progress(self, worktree_path: Path) -> bool:
+        """Check rebase status (read-only, no printing)."""
+        return self._wrapped.is_rebase_in_progress(worktree_path)
+
+    def abort_rebase(self, worktree_path: Path) -> None:
+        """Abort rebase (delegates to wrapped)."""
+        self._wrapped.abort_rebase(worktree_path)
+
+    def get_commit_sha(self, ref: str, cwd: Path) -> str:
+        """Get commit SHA (read-only, no printing)."""
+        return self._wrapped.get_commit_sha(ref, cwd)

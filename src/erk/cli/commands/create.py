@@ -603,6 +603,72 @@ def create(
             skip_remote_check=skip_remote_check,
         )
 
+    # Auto-create or join forest (silent operation)
+    # Check graphite setting (defined in else block above, but also check global config)
+    use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
+    if use_graphite and branch:
+        from erk.core.forest_utils import (
+            add_worktree_to_forest,
+            create_forest,
+            find_forest_by_worktree,
+        )
+
+        # Get parent branch
+        parent = ctx.graphite_ops.get_parent_branch(ctx.git_ops, repo.root, branch)
+
+        if parent:
+            # Load forest metadata
+            forest_metadata = ctx.forest_ops.load_forests()
+
+            # Get trunk branch
+            trunk_branch = ctx.trunk_branch
+
+            if trunk_branch is None:
+                # Cannot determine trunk, skip forest logic
+                return
+
+            if parent == trunk_branch:
+                # Parent is trunk - check if siblings have forest
+                sibling_forest = None
+                all_branches = ctx.graphite_ops.get_all_branches(ctx.git_ops, repo.root)
+
+                # Find siblings (branches with same parent)
+                for branch_name, metadata_obj in all_branches.items():
+                    if branch_name != branch and metadata_obj.parent == parent:
+                        sibling_forest = find_forest_by_worktree(forest_metadata, branch_name)
+                        if sibling_forest:
+                            break
+
+                if sibling_forest:
+                    # Join existing forest
+                    updated_forest = add_worktree_to_forest(sibling_forest, name)
+                    updated_forests = forest_metadata.forests.copy()
+                    updated_forests[sibling_forest.name] = updated_forest
+                    updated_metadata = forest_metadata.__class__(forests=updated_forests)
+                else:
+                    # Create new forest with branch name
+                    new_forest = create_forest(
+                        name=branch, worktrees=[name], root_branch=trunk_branch
+                    )
+                    updated_forests = forest_metadata.forests.copy()
+                    updated_forests[branch] = new_forest
+                    updated_metadata = forest_metadata.__class__(forests=updated_forests)
+
+                ctx.forest_ops.save_forests(updated_metadata)
+
+            else:
+                # Parent is not trunk - check if parent in forest
+                parent_forest = find_forest_by_worktree(forest_metadata, parent)
+
+                if parent_forest:
+                    # Join parent's forest
+                    updated_forest = add_worktree_to_forest(parent_forest, name)
+                    updated_forests = forest_metadata.forests.copy()
+                    updated_forests[parent_forest.name] = updated_forest
+                    updated_metadata = forest_metadata.__class__(forests=updated_forests)
+
+                    ctx.forest_ops.save_forests(updated_metadata)
+
     # Write .env based on config
     env_content = make_env_content(cfg, worktree_path=wt_path, repo_root=repo.root, name=name)
     (wt_path / ".env").write_text(env_content, encoding="utf-8")

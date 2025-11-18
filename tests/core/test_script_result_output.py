@@ -117,11 +117,11 @@ def test_path_access_still_works() -> None:
 
 
 def test_fake_script_writer_integration() -> None:
-    """Test that ScriptResult works with FakeScriptWriterOps."""
-    from tests.fakes.script_writer import FakeScriptWriterOps
+    """Test that ScriptResult works with FakeScriptWriter."""
+    from tests.fakes.script_writer import FakeScriptWriter
 
     # Arrange
-    fake_ops = FakeScriptWriterOps()
+    fake_ops = FakeScriptWriter()
 
     # Act
     result = fake_ops.write_activation_script(

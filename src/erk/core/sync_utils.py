@@ -7,7 +7,7 @@ based on their PR state, without I/O dependencies.
 from dataclasses import dataclass
 from pathlib import Path
 
-from erk.core.gitops import WorktreeInfo
+from erk.core.git import WorktreeInfo
 
 
 @dataclass(frozen=True)

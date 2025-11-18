@@ -3,11 +3,11 @@
 from pathlib import Path
 
 from erk.cli.commands.prepare_cwd_recovery import generate_recovery_script
+from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.global_config import GlobalConfig
-from erk.core.script_writer import RealScriptWriterOps
+from erk.core.script_writer import RealScriptWriter
 from tests.fakes.context import create_test_context
-from tests.fakes.gitops import FakeGitOps
+from tests.fakes.git import FakeGit
 
 
 def build_ctx(repo_root: Path | None, erk_root: Path, cwd: Path | None = None) -> ErkContext:
@@ -23,7 +23,7 @@ def build_ctx(repo_root: Path | None, erk_root: Path, cwd: Path | None = None) -
     if cwd is not None and cwd != repo_root:
         existing_paths.add(cwd)
 
-    git_ops = FakeGitOps(git_common_dirs=git_common_dirs, existing_paths=existing_paths)
+    git_ops = FakeGit(git_common_dirs=git_common_dirs, existing_paths=existing_paths)
     global_config_ops = GlobalConfig(
         erk_root=erk_root,
         use_graphite=False,
@@ -31,9 +31,9 @@ def build_ctx(repo_root: Path | None, erk_root: Path, cwd: Path | None = None) -
         show_pr_info=True,
     )
     return create_test_context(
-        git_ops=git_ops,
+        git=git_ops,
         global_config=global_config_ops,
-        script_writer=RealScriptWriterOps(),  # Use real script writer for integration tests
+        script_writer=RealScriptWriter(),  # Use real script writer for integration tests
         cwd=cwd or repo_root or erk_root,
         dry_run=False,
     )

@@ -30,7 +30,7 @@ make test-all
 **Characteristics:**
 
 - ⚡ Very fast (in-memory, uses fakes)
-- Uses `FakeGitOps`, `FakeGraphiteOps`, `FakeGitHubOps`, `FakeShellOps`
+- Uses `FakeGit`, `FakeGraphite`, `FakeGitHub`, `FakeShell`
 - Uses `CliRunner` for CLI tests (NOT subprocess)
 - Uses `pure_erk_env()` (sentinel paths) or `simulated_erk_env()` (isolated filesystem)
 - No external system calls
@@ -48,7 +48,7 @@ make test-all
 **Characteristics:**
 
 - 🐌 Slower (real filesystem I/O, subprocess calls)
-- Uses `RealGitOps`, `RealGraphiteOps`, etc.
+- Uses `RealGit`, `RealGraphite`, etc.
 - Uses `tmp_path` pytest fixture for real directories
 - Calls actual git commands via `subprocess.run()`
 - Tests that abstraction layers correctly wrap external tools
@@ -121,13 +121,13 @@ ctx = _create_test_context(env, ...)  # env.cwd used internally
 
 ## Quick Reference
 
-| Testing Scenario              | Use This                                             |
-| ----------------------------- | ---------------------------------------------------- |
-| Unit test CLI command         | FakeGitOps + FakeGlobalConfigOps + context injection |
-| Integration test git behavior | RealGitOps + tmp_path fixture                        |
-| Test dry-run behavior         | create_context(dry_run=True) + assertions on output  |
-| Test shell detection          | FakeShellOps with detected_shell parameter           |
-| Test tool availability        | FakeShellOps with installed_tools parameter          |
+| Testing Scenario              | Use This                                            |
+| ----------------------------- | --------------------------------------------------- |
+| Unit test CLI command         | FakeGit + FakeConfigStore + context injection       |
+| Integration test git behavior | RealGit + tmp_path fixture                          |
+| Test dry-run behavior         | create_context(dry_run=True) + assertions on output |
+| Test shell detection          | FakeShell with detected_shell parameter             |
+| Test tool availability        | FakeShell with installed_tools parameter            |
 
 ## Test Organization Principles
 
@@ -221,12 +221,12 @@ tests/core/utils/worktree/
 
 **Every code change falls into one of these categories, each requiring tests:**
 
-| Change Type               | Test Requirement         | Test Layer          | Example                                                         |
-| ------------------------- | ------------------------ | ------------------- | --------------------------------------------------------------- |
-| **New Feature**           | MUST have tests          | Fake layer          | Adding `erk merge` command → Test with FakeGitOps               |
-| **Bug Fix**               | MUST reproduce then fix  | Fake layer          | Fixing branch detection → Test that reproduces bug, then passes |
-| **Business Logic Change** | MUST have tests          | Fake layer          | Changing worktree naming logic → Test new behavior with fakes   |
-| **New Ops Method**        | MUST test implementation | Mock stateful calls | Adding `GitOps.cherry_pick()` → Mock git subprocess, test paths |
+| Change Type                          | Test Requirement         | Test Layer          | Example                                                         |
+| ------------------------------------ | ------------------------ | ------------------- | --------------------------------------------------------------- |
+| **New Feature**                      | MUST have tests          | Fake layer          | Adding `erk merge` command → Test with FakeGit                  |
+| **Bug Fix**                          | MUST reproduce then fix  | Fake layer          | Fixing branch detection → Test that reproduces bug, then passes |
+| **Business Logic Change**            | MUST have tests          | Fake layer          | Changing worktree naming logic → Test new behavior with fakes   |
+| **New Integration Interface Method** | MUST test implementation | Mock stateful calls | Adding `Git.cherry_pick()` → Mock git subprocess, test paths    |
 
 ### Default Testing Strategy: Fake Layer
 
@@ -254,26 +254,26 @@ tests/core/utils/worktree/
 - Type definitions
 - Documentation
 
-### Testing Ops Implementations
+### Testing Integration Class Implementations
 
-**When adding new methods to ops interfaces, you MUST provide test coverage for the real implementation.**
+**When adding new methods to integration interfaces, you MUST provide test coverage for the real implementation.**
 
-**Pattern for testing ops implementations:**
+**Pattern for testing integration implementations:**
 
 1. **Test the interface contract with fakes** (for consumers)
 2. **Test the real implementation with mocked stateful interactions** (for coverage)
 
-**Example: Adding a new GitOps method**
+**Example: Adding a new Git method**
 
 ```python
-# In src/erk/core/git_ops.py
-class GitOps(ABC):
+# In src/erk/core/git.py
+class Git(ABC):
     @abstractmethod
     def stash_changes(self, repo_path: Path, message: str) -> None:
         """Stash uncommitted changes."""
         ...
 
-class RealGitOps(GitOps):
+class RealGit(Git):
     def stash_changes(self, repo_path: Path, message: str) -> None:
         result = subprocess.run(
             ["git", "stash", "push", "-m", message],
@@ -289,7 +289,7 @@ class RealGitOps(GitOps):
 
 ```python
 # In tests/fakes/gitops.py
-class FakeGitOps(GitOps):
+class FakeGit(Git):
     def __init__(self):
         self.stashed_changes: list[tuple[Path, str]] = []
 
@@ -298,24 +298,24 @@ class FakeGitOps(GitOps):
 
 # In tests/commands/test_stash.py
 def test_stash_command():
-    git_ops = FakeGitOps()
-    ctx = create_test_context(git_ops=git_ops)
+    git = FakeGit()
+    ctx = create_test_context(git=git)
 
     result = runner.invoke(cli, ["stash", "WIP"], obj=ctx)
 
     assert result.exit_code == 0
-    assert (".", "WIP") in git_ops.stashed_changes
+    assert (".", "WIP") in git.stashed_changes
 ```
 
 **Test 2: Real implementation with mocked subprocess**
 
 ```python
-# In tests/integration/test_git_ops.py
+# In tests/integration/test_git.py
 from unittest.mock import patch, MagicMock
 
-def test_real_git_ops_stash_success():
-    """Test RealGitOps.stash_changes with successful git stash."""
-    ops = RealGitOps()
+def test_real_git_stash_success():
+    """Test RealGit.stash_changes with successful git stash."""
+    ops = RealGit()
 
     with patch("subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(returncode=0, stderr="")
@@ -329,9 +329,9 @@ def test_real_git_ops_stash_success():
             text=True,
         )
 
-def test_real_git_ops_stash_failure():
-    """Test RealGitOps.stash_changes handles git errors."""
-    ops = RealGitOps()
+def test_real_git_stash_failure():
+    """Test RealGit.stash_changes handles git errors."""
+    ops = RealGit()
 
     with patch("subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(
@@ -343,7 +343,7 @@ def test_real_git_ops_stash_failure():
             ops.stash_changes(Path("/repo"), "WIP")
 ```
 
-**Key points for ops implementation testing:**
+**Key points for integration implementation testing:**
 
 - Mock at the boundary (subprocess, file I/O, network)
 - Test both success and error paths
@@ -364,7 +364,7 @@ What are you changing?
 ├─ Changing business logic?
 │  └─ Write tests using fake layer
 │
-├─ Adding new ops interface method?
+├─ Adding new integration interface method?
 │  ├─ Write fake implementation with mutation tracking
 │  ├─ Write tests for consumers using fake
 │  └─ Write tests for real implementation with mocks
@@ -380,18 +380,18 @@ What are you changing?
 ```python
 def test_new_merge_command():
     """Test new merge command merges worktree branch."""
-    git_ops = FakeGitOps(
+    git = FakeGit(
         worktrees={repo: [
             WorktreeInfo(path=repo, branch="main"),
             WorktreeInfo(path=wt, branch="feature"),
         ]}
     )
-    ctx = create_test_context(git_ops=git_ops)
+    ctx = create_test_context(git=git)
 
     result = runner.invoke(cli, ["merge", "feature"], obj=ctx)
 
     assert result.exit_code == 0
-    assert "feature" in git_ops.merged_branches  # Mutation tracking
+    assert "feature" in git.merged_branches  # Mutation tracking
 ```
 
 **Bug Fix Pattern:**
@@ -400,10 +400,10 @@ def test_new_merge_command():
 def test_branch_detection_with_detached_head():
     """Regression test for bug #123: crash on detached HEAD."""
     # Setup state that reproduces the bug
-    git_ops = FakeGitOps(
+    git = FakeGit(
         current_branches={repo: None}  # Detached HEAD
     )
-    ctx = create_test_context(git_ops=git_ops)
+    ctx = create_test_context(git=git)
 
     # This used to crash, now should handle gracefully
     result = runner.invoke(cli, ["current"], obj=ctx)
@@ -417,8 +417,8 @@ def test_branch_detection_with_detached_head():
 ```python
 def test_new_worktree_naming_convention():
     """Test updated worktree naming includes timestamp."""
-    git_ops = FakeGitOps()
-    ctx = create_test_context(git_ops=git_ops)
+    git = FakeGit()
+    ctx = create_test_context(git=git)
 
     with patch("time.time", return_value=1234567890):
         result = runner.invoke(
@@ -428,21 +428,21 @@ def test_new_worktree_naming_convention():
     assert result.exit_code == 0
     # New naming convention includes timestamp
     assert any("feature-1234567890" in str(wt)
-              for wt, _ in git_ops.added_worktrees)
+              for wt, _ in git.added_worktrees)
 ```
 
 ## Dependency Categories
 
-### 1. GitOps - Version Control Operations
+### 1. Git - Version Control Operations
 
-**Real Implementation**: `RealGitOps()`
-**Dry-Run Wrapper**: `DryRunGitOps(wrapped)`
-**Fake Implementation**: `FakeGitOps(...)`
+**Real Implementation**: `RealGit()`
+**Dry-Run Wrapper**: `DryRunGit(wrapped)`
+**Fake Implementation**: `FakeGit(...)`
 
 **Constructor Parameters**:
 
 ```python
-FakeGitOps(
+FakeGit(
     worktrees: dict[Path, list[WorktreeInfo]] = {},
     current_branches: dict[Path, str] = {},
     default_branches: dict[Path, str] = {},
@@ -452,19 +452,19 @@ FakeGitOps(
 
 **Mutation Tracking** (read-only properties):
 
-- `git_ops.deleted_branches: list[str]`
-- `git_ops.added_worktrees: list[tuple[Path, str | None]]`
-- `git_ops.removed_worktrees: list[Path]`
-- `git_ops.checked_out_branches: list[tuple[Path, str]]`
+- `git.deleted_branches: list[str]`
+- `git.added_worktrees: list[tuple[Path, str | None]]`
+- `git.removed_worktrees: list[Path]`
+- `git.checked_out_branches: list[tuple[Path, str]]`
 
 **Common Patterns**:
 
 ```python
 # Pattern 1: Empty git state
-git_ops = FakeGitOps(git_common_dirs={cwd: cwd / ".git"})
+git = FakeGit(git_common_dirs={cwd: cwd / ".git"})
 
 # Pattern 2: Pre-configured worktrees
-git_ops = FakeGitOps(
+git = FakeGit(
     worktrees={
         repo: [
             WorktreeInfo(path=repo, branch="main"),
@@ -475,21 +475,21 @@ git_ops = FakeGitOps(
 )
 
 # Pattern 3: Track mutations
-git_ops = FakeGitOps(...)
+git = FakeGit(...)
 # ... run command ...
-assert "feature" in git_ops.deleted_branches
+assert "feature" in git.deleted_branches
 ```
 
-### 2. GlobalConfigOps - Configuration Management
+### 2. ConfigStore - Configuration Management
 
-**Real Implementation**: `RealGlobalConfigOps()`
-**Dry-Run Wrapper**: `DryRunGlobalConfigOps(wrapped)`
-**Fake Implementation**: `FakeGlobalConfigOps(...)`
+**Real Implementation**: `RealConfigStore()`
+**Dry-Run Wrapper**: `DryRunConfigStore(wrapped)`
+**Fake Implementation**: `FakeConfigStore(...)`
 
 **Constructor Parameters**:
 
 ```python
-FakeGlobalConfigOps(
+FakeConfigStore(
     exists: bool = True,
     erks_root: Path | None = None,
     use_graphite: bool = False,
@@ -503,31 +503,31 @@ FakeGlobalConfigOps(
 
 ```python
 # Pattern 1: Config exists with values
-config_ops = FakeGlobalConfigOps(
+config_store = FakeConfigStore(
     exists=True,
     erks_root=Path("/tmp/erks"),
     use_graphite=True,
 )
 
 # Pattern 2: Config doesn't exist (first-time init)
-config_ops = FakeGlobalConfigOps(exists=False)
+config_store = FakeConfigStore(exists=False)
 
 # Pattern 3: Test config mutations
-config_ops = FakeGlobalConfigOps(exists=False)
-config_ops.set(erks_root=Path("/tmp/ws"), use_graphite=True)
-assert config_ops.get_erks_root() == Path("/tmp/ws")
+config_store = FakeConfigStore(exists=False)
+config_store.set(erks_root=Path("/tmp/ws"), use_graphite=True)
+assert config_store.get_erks_root() == Path("/tmp/ws")
 ```
 
-### 3. GitHubOps - GitHub API Interactions
+### 3. GitHub - GitHub API Interactions
 
-**Real Implementation**: `RealGitHubOps()`
-**Dry-Run Wrapper**: `DryRunGitHubOps(wrapped)`
-**Fake Implementation**: `FakeGitHubOps(...)`
+**Real Implementation**: `RealGitHub()`
+**Dry-Run Wrapper**: `DryRunGitHub(wrapped)`
+**Fake Implementation**: `FakeGitHub(...)`
 
 **Constructor Parameters**:
 
 ```python
-FakeGitHubOps(
+FakeGitHub(
     prs: dict[str, PullRequestInfo] = {},
 )
 ```
@@ -536,12 +536,12 @@ FakeGitHubOps(
 
 ```python
 # Pattern 1: No PRs
-github_ops = FakeGitHubOps()
+github = FakeGitHub()
 
 # Pattern 2: Pre-configured PRs
-from erk.core.github_ops import PullRequestInfo
+from erk.core.github import PullRequestInfo
 
-github_ops = FakeGitHubOps(
+github = FakeGitHub(
     prs={
         "feature-branch": PullRequestInfo(
             number=123,
@@ -556,16 +556,16 @@ github_ops = FakeGitHubOps(
 )
 ```
 
-### 4. GraphiteOps - Graphite Tool Operations
+### 4. Graphite - Graphite Tool Operations
 
-**Real Implementation**: `RealGraphiteOps()`
-**Dry-Run Wrapper**: `DryRunGraphiteOps(wrapped)`
-**Fake Implementation**: `FakeGraphiteOps(...)`
+**Real Implementation**: `RealGraphite()`
+**Dry-Run Wrapper**: `DryRunGraphite(wrapped)`
+**Fake Implementation**: `FakeGraphite(...)`
 
 **Constructor Parameters**:
 
 ```python
-FakeGraphiteOps(
+FakeGraphite(
     stacks: dict[Path, list[str]] = {},
     current_branch_in_stack: dict[Path, bool] = {},
 )
@@ -575,25 +575,25 @@ FakeGraphiteOps(
 
 ```python
 # Pattern 1: No Graphite stacks
-graphite_ops = FakeGraphiteOps()
+graphite = FakeGraphite()
 
 # Pattern 2: Pre-configured stacks
-graphite_ops = FakeGraphiteOps(
+graphite = FakeGraphite(
     stacks={repo: ["main", "feature-1", "feature-2"]},
     current_branch_in_stack={repo: True},
 )
 ```
 
-### 5. ShellOps - Shell Detection and Tool Availability
+### 5. Shell - Shell Detection and Tool Availability
 
-**Real Implementation**: `RealShellOps()`
+**Real Implementation**: `RealShell()`
 **No Dry-Run Wrapper** (read-only operations)
-**Fake Implementation**: `FakeShellOps(...)`
+**Fake Implementation**: `FakeShell(...)`
 
 **Constructor Parameters**:
 
 ```python
-FakeShellOps(
+FakeShell(
     detected_shell: tuple[str, Path] | None = None,
     installed_tools: dict[str, str] = {},
 )
@@ -603,20 +603,20 @@ FakeShellOps(
 
 ```python
 # Pattern 1: No shell detected
-shell_ops = FakeShellOps()
+shell = FakeShell()
 
 # Pattern 2: Bash shell detected
-shell_ops = FakeShellOps(
+shell = FakeShell(
     detected_shell=("bash", Path.home() / ".bashrc")
 )
 
 # Pattern 3: Tool installed
-shell_ops = FakeShellOps(
+shell = FakeShell(
     installed_tools={"gt": "/usr/local/bin/gt"}
 )
 
 # Pattern 4: Multiple tools
-shell_ops = FakeShellOps(
+shell = FakeShell(
     detected_shell=("zsh", Path.home() / ".zshrc"),
     installed_tools={
         "gt": "/usr/local/bin/gt",
@@ -637,19 +637,19 @@ def test_command_behavior() -> None:
         cwd = Path.cwd()
 
         # Configure fakes with initial state
-        git_ops = FakeGitOps(git_common_dirs={cwd: cwd / ".git"})
-        config_ops = FakeGlobalConfigOps(
+        git = FakeGit(git_common_dirs={cwd: cwd / ".git"})
+        config_store = FakeConfigStore(
             erks_root=cwd / "erks",
             use_graphite=False,
         )
 
         # Create context with all dependencies
         test_ctx = ErkContext(
-            git_ops=git_ops,
-            global_config_ops=config_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            git=git,
+            config_store=config_store,
+            github=FakeGitHub(),
+            graphite=FakeGraphite(),
+            shell=FakeShell(),
             dry_run=False,
         )
 
@@ -661,7 +661,7 @@ def test_command_behavior() -> None:
         assert "expected output" in result.output
 
         # Assert on mutations (if tracking enabled)
-        assert len(git_ops.deleted_branches) == 1
+        assert len(git.deleted_branches) == 1
 ```
 
 ### Integration Test Pattern
@@ -680,9 +680,9 @@ def test_real_git_behavior(tmp_path: Path) -> None:
         check=True,
     )
 
-    # Use real GitOps
-    git_ops = RealGitOps()
-    worktrees = git_ops.list_worktrees(repo)
+    # Use real Git
+    git = RealGit()
+    worktrees = git.list_worktrees(repo)
 
     assert len(worktrees) == 2
     assert any(wt.branch == "feature" for wt in worktrees)
@@ -752,15 +752,15 @@ def test_dryrun_prevents_mutations() -> None:
 from click.testing import CliRunner
 from erk.cli.cli import cli
 from tests.test_utils.env_helpers import simulated_erk_env
-from tests.fakes.gitops import FakeGitOps
+from tests.fakes.gitops import FakeGit
 from erk.core.context import ErkContext
-from erk.core.global_config import GlobalConfig
+from erk.core.config_store import GlobalConfig
 
 def test_create_command() -> None:
     runner = CliRunner()
     with simulated_erk_env(runner) as env:
         # Set up configuration and test context
-        git_ops = FakeGitOps(
+        git = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             default_branches={env.cwd: "main"},
         )
@@ -770,7 +770,7 @@ def test_create_command() -> None:
         )
 
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
+            git=git,
             global_config=global_config,
             cwd=env.cwd,
         )
@@ -793,7 +793,7 @@ def test_create_command() -> None:
 **Why use `simulated_erk_env()`:**
 
 - Complete isolation via `runner.isolated_filesystem()`
-- Works with FakeGitOps (faster than real git)
+- Works with FakeGit (faster than real git)
 - No HOME environment manipulation needed
 - No manual directory changes or try/finally blocks
 - Provides helpers for complex worktree scenarios
@@ -900,7 +900,7 @@ def test_create_command(tmp_path: Path) -> None:
 - `runner.invoke(cli, ["command"], obj=test_ctx)`: Pass context explicitly via `obj=`
 - `result.exit_code`: Command exit code (0 = success)
 - `result.output`: Combined stdout/stderr output
-- Works with FakeGitOps for fast, isolated tests
+- Works with FakeGit for fast, isolated tests
 
 **For `cli_test_repo()` pattern (real git only):**
 
@@ -981,8 +981,8 @@ runner = CliRunner()
 runner = CliRunner()
 with simulated_erk_env(runner) as env:
     # Ready to test immediately
-    git_ops = FakeGitOps(git_common_dirs={env.cwd: env.git_dir})
-    test_ctx = ErkContext.for_test(git_ops=git_ops, cwd=env.cwd)
+    git = FakeGit(git_common_dirs={env.cwd: env.git_dir})
+    test_ctx = ErkContext.for_test(git=git, cwd=env.cwd)
 ```
 
 ### Migration Checklist
@@ -996,7 +996,7 @@ When converting tests from subprocess to CliRunner:
 - [ ] Import `cli` from `erk.cli.cli`
 - [ ] Set up `runner = CliRunner()`
 - [ ] Use `with simulated_erk_env(runner) as env:` context manager
-- [ ] Create `FakeGitOps` with `git_common_dirs={env.cwd: env.git_dir}`
+- [ ] Create `FakeGit` with `git_common_dirs={env.cwd: env.git_dir}`
 - [ ] Create `ErkContext.for_test()` with fakes and `cwd=env.cwd`
 - [ ] Replace `subprocess.run([...])` with `runner.invoke(cli, [...], obj=test_ctx)`
 - [ ] Replace `result.returncode` with `result.exit_code`
@@ -1033,8 +1033,8 @@ def test_bad(monkeypatch):
 ```python
 # DO THIS
 def test_good():
-    fake_ops = FakeShellOps(installed_tools={"tool": "/path"})
-    ctx = ErkContext(..., shell_ops=fake_ops, ...)
+    fake_ops = FakeShell(installed_tools={"tool": "/path"})
+    ctx = ErkContext(..., shell=fake_ops, ...)
     result = function_under_test(ctx)
 ```
 
@@ -1043,7 +1043,7 @@ def test_good():
 ```python
 # DON'T DO THIS
 def test_bad():
-    ops = RealGlobalConfigOps()
+    ops = RealConfigStore()
     ops._path = test_path  # Violates encapsulation
 ```
 
@@ -1052,7 +1052,7 @@ def test_bad():
 ```python
 # DO THIS
 def test_good():
-    ops = FakeGlobalConfigOps(...)  # Constructor injection
+    ops = FakeConfigStore(...)  # Constructor injection
 ```
 
 ### ❌ Anti-Pattern 3: Not Using Context Injection
@@ -1100,17 +1100,17 @@ Fakes simulate entire subsystems in-memory and are the preferred testing approac
 ```python
 def test_with_fake():
     # Clear test setup: configure fake state via constructor
-    completion_ops = FakeCompletionOps(
+    completion = FakeCompletion(
         bash_script="# bash completion code",
         erk_path="/usr/local/bin/erk"
     )
-    ctx = create_test_context(completion_ops=completion_ops)
+    ctx = create_test_context(completion=completion)
 
     # Run command
     result = runner.invoke(completion_bash, obj=ctx)
 
     # Assert behavior via mutation tracking
-    assert "bash" in completion_ops.generation_calls
+    assert "bash" in completion.generation_calls
     assert "# bash completion code" in result.output
 ```
 
@@ -1151,7 +1151,7 @@ def test_subprocess_timeout(mock_run):
 ```
 Can you create a fake for this dependency?
 ├─ YES → Create/use a fake (preferred)
-│  └─ Examples: GitOps, CompletionOps, ShellOps
+│  └─ Examples: Git, Completion, Shell
 │
 ├─ NO → Consider if mocking is necessary
    ├─ Testing error edge cases? → Mock acceptable
@@ -1164,12 +1164,12 @@ Can you create a fake for this dependency?
 
 If you encounter existing tests using mocks:
 
-1. **Evaluate**: Does an ops abstraction exist? (GitOps, ShellOps, etc.)
+1. **Evaluate**: Does an integration abstraction exist? (Git, Shell, etc.)
 2. **If yes**: Refactor to use the fake implementation
-3. **If no**: Consider creating an ops abstraction + fake if the mock is complex
+3. **If no**: Consider creating an integration abstraction + fake if the mock is complex
 4. **Keep mock only if**: It falls into acceptable use cases above
 
-This codebase has successfully migrated from 100+ mock patches to fake-based testing. The completion tests (17 tests using `@patch`) were refactored to FakeCompletionOps, demonstrating this pattern.
+This codebase has successfully migrated from 100+ mock patches to fake-based testing. The completion tests (17 tests using `@patch`) were refactored to FakeCompletion, demonstrating this pattern.
 
 ## Real-World Refactoring Examples
 
@@ -1182,8 +1182,8 @@ from unittest.mock import patch
 from erk.cli.core import RepoContext
 
 def test_status_command(tmp_path: Path) -> None:
-    git_ops = FakeGitOps(git_common_dirs={tmp_path: tmp_path / ".git"})
-    ctx = create_test_context(git_ops=git_ops)
+    git = FakeGit(git_common_dirs={tmp_path: tmp_path / ".git"})
+    ctx = create_test_context(git=git)
     repo = RepoContext(root=tmp_path, repo_name="test-repo", erks_dir=tmp_path / "erks")
 
     runner = CliRunner()
@@ -1196,9 +1196,9 @@ def test_status_command(tmp_path: Path) -> None:
 
 ```python
 def test_status_command(tmp_path: Path) -> None:
-    git_ops = FakeGitOps(git_common_dirs={tmp_path: tmp_path / ".git"})
+    git = FakeGit(git_common_dirs={tmp_path: tmp_path / ".git"})
     ctx = create_test_context(
-        git_ops=git_ops,
+        git=git,
         cwd=tmp_path  # ← Set cwd to match git_common_dirs
     )
 
@@ -1206,7 +1206,7 @@ def test_status_command(tmp_path: Path) -> None:
     result = runner.invoke(status_cmd, [], obj=ctx)
 ```
 
-**Key insight**: `discover_repo_context()` uses `ctx.git_ops.get_git_common_dir(ctx.cwd)`, so configuring FakeGitOps with `git_common_dirs` and setting matching `cwd` allows discovery to work naturally without patching.
+**Key insight**: `discover_repo_context()` uses `ctx.git.get_git_common_dir(ctx.cwd)`, so configuring FakeGit with `git_common_dirs` and setting matching `cwd` allows discovery to work naturally without patching.
 
 ### Example 2: Path Mocking → Real File I/O with tmp_path
 
@@ -1216,34 +1216,34 @@ def test_status_command(tmp_path: Path) -> None:
 from unittest.mock import patch
 from pathlib import Path
 
-def test_graphite_ops_get_prs():
+def test_graphite_get_prs():
     fixture_data = '{"branches": [...]}'
 
     with patch.object(Path, "exists", return_value=True), \
          patch.object(Path, "read_text", return_value=fixture_data):
-        git_ops = MagicMock()
-        ops = RealGraphiteOps()
-        result = ops.get_prs_from_graphite(git_ops, Path("/fake/repo"))
+        git = MagicMock()
+        ops = RealGraphite()
+        result = ops.get_prs_from_graphite(git, Path("/fake/repo"))
 ```
 
 **✅ After (using tmp_path fixture):**
 
 ```python
-def test_graphite_ops_get_prs(tmp_path: Path):
+def test_graphite_get_prs(tmp_path: Path):
     # Create real files in temp directory
     git_dir = tmp_path / ".git"
     git_dir.mkdir()
     pr_info_file = git_dir / ".graphite_pr_info"
     pr_info_file.write_text('{"branches": [...]}', encoding="utf-8")
 
-    git_ops = FakeGitOps(git_common_dirs={tmp_path: git_dir})
-    ops = RealGraphiteOps()
-    result = ops.get_prs_from_graphite(git_ops, tmp_path)
+    git = FakeGit(git_common_dirs={tmp_path: git_dir})
+    ops = RealGraphite()
+    result = ops.get_prs_from_graphite(git, tmp_path)
 ```
 
 **Key insight**: Integration tests should use real file I/O with `tmp_path`, not Path mocking. This tests actual file reading behavior and ensures encoding is handled correctly.
 
-**Files refactored**: `tests/integration/test_graphite_ops.py` (20 patches/mocks eliminated)
+**Files refactored**: `tests/integration/test_graphite.py` (20 patches/mocks eliminated)
 
 ### Example 3: Subprocess Mocks → Fake Abstractions
 
@@ -1259,25 +1259,25 @@ def test_create_uses_graphite():
         assert any("gt" in str(call) for call in mock_run.call_args_list)
 ```
 
-**✅ After (using FakeGraphiteOps):**
+**✅ After (using FakeGraphite):**
 
 ```python
 def test_create_without_graphite():
-    # Test the non-graphite path (uses FakeGitOps successfully)
-    graphite_ops = FakeGraphiteOps()
-    ctx = create_test_context(git_ops=git_ops, graphite_ops=graphite_ops, graphite=False)
+    # Test the non-graphite path (uses FakeGit successfully)
+    graphite = FakeGraphite()
+    ctx = create_test_context(git=git, graphite=graphite, graphite=False)
 
     result = runner.invoke(cli, ["create", "test-feature"], obj=ctx)
     # Clear assertion on actual behavior
     assert result.exit_code == 0
-    assert "test-feature" in git_ops.added_worktrees
+    assert "test-feature" in git.added_worktrees
 ```
 
 **Key insight**: If command calls subprocess directly without abstraction, refactor tests to focus on paths that DO use abstractions, or test error handling before subprocess is reached.
 
 **Files refactored**: `tests/commands/workspace/test_create.py` (2 patches eliminated)
 
-### Example 4: Environment Variable Mocks → FakeShellOps
+### Example 4: Environment Variable Mocks → FakeShell
 
 **❌ Before (using patch.dict):**
 
@@ -1287,25 +1287,25 @@ import os
 
 def test_shell_detection_zsh():
     with patch.dict(os.environ, {"SHELL": "/bin/zsh"}):
-        ops = RealShellOps()
+        ops = RealShell()
         result = ops.detect_shell()
         assert result == ("zsh", Path.home() / ".zshrc")
 ```
 
-**✅ After (using FakeShellOps):**
+**✅ After (using FakeShell):**
 
 ```python
 def test_shell_detection_zsh():
-    shell_ops = FakeShellOps(detected_shell=("zsh", Path.home() / ".zshrc"))
-    ctx = create_test_context(shell_ops=shell_ops)
+    shell = FakeShell(detected_shell=("zsh", Path.home() / ".zshrc"))
+    ctx = create_test_context(shell=shell)
 
     result = runner.invoke(init_cmd, obj=ctx)
     assert "zsh" in result.output
 ```
 
-**Key insight**: Use FakeShellOps for shell detection logic in unit tests. Keep integration tests with real environment for actual shell detection.
+**Key insight**: Use FakeShell for shell detection logic in unit tests. Keep integration tests with real environment for actual shell detection.
 
-**Files refactored**: `tests/integration/test_shell_ops.py` (5 patches eliminated)
+**Files refactored**: `tests/integration/test_shell.py` (5 patches eliminated)
 
 ### Example 5: When Mocks ARE Legitimate
 
@@ -1342,7 +1342,7 @@ def test_init_creates_global_config_first_time() -> None:
 
 When refactoring tests from mocks to fakes:
 
-- [ ] Check if ops abstraction exists (GitOps, ShellOps, GraphiteOps, etc.)
+- [ ] Check if integration abstraction exists (Git, Shell, Graphite, etc.)
 - [ ] Replace mock setup with fake constructor injection
 - [ ] Replace mock assertions with mutation tracking properties
 - [ ] Set `cwd` in context to match fake configuration
@@ -1371,20 +1371,20 @@ Some operations require mutating state to simulate external systems:
 ```python
 def test_branch_deletion():
     # Initial state via constructor
-    git_ops = FakeGitOps(
+    git = FakeGit(
         worktrees={repo: [WorktreeInfo(path=wt, branch="feature")]},
         git_common_dirs={repo: repo / ".git"},
     )
 
     # Verify initial state
-    assert len(git_ops.list_worktrees(repo)) == 1
+    assert len(git.list_worktrees(repo)) == 1
 
     # Perform mutation
-    git_ops.delete_branch_with_graphite(repo, "feature", force=True)
+    git.delete_branch_with_graphite(repo, "feature", force=True)
 
     # Verify mutation via tracking property
-    assert "feature" in git_ops.deleted_branches
-    assert len(git_ops.deleted_branches) == 1
+    assert "feature" in git.deleted_branches
+    assert len(git.deleted_branches) == 1
 ```
 
 ## Decision Tree
@@ -1416,14 +1416,14 @@ from tests.fakes.context import create_test_context
 # Minimal context (all fakes with defaults)
 ctx = create_test_context()
 
-# Custom git_ops
+# Custom git
 ctx = create_test_context(
-    git_ops=FakeGitOps(worktrees={...})
+    git=FakeGit(worktrees={...})
 )
 
-# Custom config_ops
+# Custom config_store
 ctx = create_test_context(
-    global_config_ops=FakeGlobalConfigOps(
+    config_store=FakeConfigStore(
         erks_root=Path("/tmp/ws")
     )
 )

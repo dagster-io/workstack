@@ -8,7 +8,7 @@ from erk.cli.core import discover_repo_context
 from erk.cli.debug import debug_log
 from erk.cli.output import machine_output, user_output
 from erk.core.context import ErkContext, create_context
-from erk.core.gitops import WorktreeInfo
+from erk.core.git import WorktreeInfo
 from erk.core.repo_discovery import RepoContext, ensure_repo_dir
 
 
@@ -87,7 +87,7 @@ def _activate_worktree(
     """
     wt_path = target_path
 
-    if not ctx.git_ops.path_exists(wt_path):
+    if not ctx.git.path_exists(wt_path):
         user_output(f"Worktree not found: {wt_path}")
         raise SystemExit(1)
 
@@ -134,7 +134,7 @@ def _resolve_up_navigation(
         SystemExit: If navigation fails (at top of stack)
     """
     # Navigate up to child branch
-    children = ctx.graphite_ops.get_child_branches(ctx.git_ops, repo.root, current_branch)
+    children = ctx.graphite.get_child_branches(ctx.git, repo.root, current_branch)
     if not children:
         user_output(
             "Already at the top of the stack (no child branches)",
@@ -154,7 +154,7 @@ def _resolve_up_navigation(
     target_branch = children[0]
 
     # Check if target branch has a worktree, create if necessary
-    target_wt_path = ctx.git_ops.find_worktree_for_branch(repo.root, target_branch)
+    target_wt_path = ctx.git.find_worktree_for_branch(repo.root, target_branch)
     if target_wt_path is None:
         # Auto-create worktree for target branch
         _worktree_path, was_created = ensure_worktree_for_branch(ctx, repo, target_branch)
@@ -188,10 +188,10 @@ def _resolve_down_navigation(
         SystemExit: If navigation fails (at bottom of stack)
     """
     # Navigate down to parent branch
-    parent_branch = ctx.graphite_ops.get_parent_branch(ctx.git_ops, repo.root, current_branch)
+    parent_branch = ctx.graphite.get_parent_branch(ctx.git, repo.root, current_branch)
     if parent_branch is None:
         # Check if we're already on trunk
-        detected_trunk = ctx.git_ops.detect_default_branch(repo.root, trunk_branch)
+        detected_trunk = ctx.git.detect_default_branch(repo.root, trunk_branch)
         if current_branch == detected_trunk:
             user_output(f"Already at the bottom of the stack (on trunk branch '{detected_trunk}')")
             raise SystemExit(1)
@@ -200,10 +200,10 @@ def _resolve_down_navigation(
             raise SystemExit(1)
 
     # Check if parent is the trunk - if so, switch to root
-    detected_trunk = ctx.git_ops.detect_default_branch(repo.root, trunk_branch)
+    detected_trunk = ctx.git.detect_default_branch(repo.root, trunk_branch)
     if parent_branch == detected_trunk:
         # Check if trunk is checked out in root (repo.root path)
-        trunk_wt_path = ctx.git_ops.find_worktree_for_branch(repo.root, detected_trunk)
+        trunk_wt_path = ctx.git.find_worktree_for_branch(repo.root, detected_trunk)
         if trunk_wt_path is not None and trunk_wt_path == repo.root:
             # Trunk is in root repository, not in a dedicated worktree
             return "root", False
@@ -216,7 +216,7 @@ def _resolve_down_navigation(
             return parent_branch, False
     else:
         # Parent is not trunk, check if it has a worktree
-        target_wt_path = ctx.git_ops.find_worktree_for_branch(repo.root, parent_branch)
+        target_wt_path = ctx.git.find_worktree_for_branch(repo.root, parent_branch)
         if target_wt_path is None:
             # Auto-create worktree for parent branch
             _worktree_path, was_created = ensure_worktree_for_branch(ctx, repo, parent_branch)
@@ -251,7 +251,7 @@ def complete_worktree_names(
         names = ["root"] if "root".startswith(incomplete) else []
 
         # Get worktree names from git_ops instead of filesystem iteration
-        worktrees = erk_ctx.git_ops.list_worktrees(repo.root)
+        worktrees = erk_ctx.git.list_worktrees(repo.root)
         for wt in worktrees:
             if wt.is_root:
                 continue  # Skip root worktree (already added as "root")
@@ -297,11 +297,11 @@ def complete_branch_names(
         branch_names = set()
 
         # Add local branches
-        local_branches = erk_ctx.git_ops.list_local_branches(repo.root)
+        local_branches = erk_ctx.git.list_local_branches(repo.root)
         branch_names.update(local_branches)
 
         # Add remote branches with prefix stripped
-        remote_branches = erk_ctx.git_ops.list_remote_branches(repo.root)
+        remote_branches = erk_ctx.git.list_remote_branches(repo.root)
         for remote_branch in remote_branches:
             # Strip remote prefix (e.g., 'origin/feature' -> 'feature')
             if "/" in remote_branch:

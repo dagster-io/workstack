@@ -5,8 +5,8 @@ import click
 
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
+from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.global_config import GlobalConfig
 from erk.core.init_utils import (
     add_gitignore_entry,
     discover_presets,
@@ -15,10 +15,10 @@ from erk.core.init_utils import (
     render_config_template,
 )
 from erk.core.repo_discovery import ensure_repo_dir
-from erk.core.shell_ops import ShellOps
+from erk.core.shell import Shell
 
 
-def detect_graphite(shell_ops: ShellOps) -> bool:
+def detect_graphite(shell_ops: Shell) -> bool:
     """Detect if Graphite (gt) is installed and available in PATH."""
     return shell_ops.get_installed_tool_path("gt") is not None
 
@@ -29,14 +29,14 @@ def create_and_save_global_config(
     shell_setup_complete: bool,
 ) -> GlobalConfig:
     """Create and save global config, returning the created config."""
-    use_graphite = detect_graphite(ctx.shell_ops)
+    use_graphite = detect_graphite(ctx.shell)
     config = GlobalConfig(
         erk_root=erk_root,
         use_graphite=use_graphite,
         shell_setup_complete=shell_setup_complete,
         show_pr_info=True,
     )
-    ctx.global_config_ops.save(config)
+    ctx.config_store.save(config)
     return config
 
 
@@ -93,7 +93,7 @@ def print_shell_setup_instructions(
     user_output("━" * 60)
 
 
-def perform_shell_setup(shell_ops: ShellOps) -> bool:
+def perform_shell_setup(shell_ops: Shell) -> bool:
     """Print shell integration setup instructions for manual installation.
 
     Returns True if instructions were printed, False if setup was skipped.
@@ -169,15 +169,15 @@ def init_cmd(
     # Handle --shell flag: only do shell setup
     if shell:
         if ctx.global_config is None:
-            config_path = ctx.global_config_ops.path()
+            config_path = ctx.config_store.path()
             user_output(f"Global config not found at {config_path}")
             user_output("Run 'erk init' without --shell to create global config first.")
             raise SystemExit(1)
 
-        setup_complete = perform_shell_setup(ctx.shell_ops)
+        setup_complete = perform_shell_setup(ctx.shell)
         if setup_complete:
             # Show what we're about to write
-            config_path = ctx.global_config_ops.path()
+            config_path = ctx.config_store.path()
             user_output("\nTo remember that shell setup is complete, erk needs to update:")
             user_output(f"  {config_path}")
 
@@ -194,7 +194,7 @@ def init_cmd(
                 show_pr_info=ctx.global_config.show_pr_info,
             )
             try:
-                ctx.global_config_ops.save(new_config)
+                ctx.config_store.save(new_config)
                 user_output(click.style("✓", fg="green") + " Global config updated")
             except PermissionError as e:
                 user_output(click.style("\n❌ Error: ", fg="red") + "Could not save global config")
@@ -225,9 +225,9 @@ def init_cmd(
     first_time_init = False
 
     # Check for global config first (unless --repo flag is set)
-    if not repo and not ctx.global_config_ops.exists():
+    if not repo and not ctx.config_store.exists():
         first_time_init = True
-        config_path = ctx.global_config_ops.path()
+        config_path = ctx.config_store.path()
         user_output(f"Global config not found at {config_path}")
         user_output("Please provide the path where you want to store all worktrees.")
         user_output("(This directory will contain subdirectories for each repository)")
@@ -238,15 +238,15 @@ def init_cmd(
         ctx = dataclasses.replace(ctx, global_config=config)
         user_output(f"Created global config at {config_path}")
         # Show graphite status on first init
-        has_graphite = detect_graphite(ctx.shell_ops)
+        has_graphite = detect_graphite(ctx.shell)
         if has_graphite:
             user_output("Graphite (gt) detected - will use 'gt create' for new branches")
         else:
             user_output("Graphite (gt) not detected - will use 'git' for branch creation")
 
     # When --repo is set, verify that global config exists
-    if repo and not ctx.global_config_ops.exists():
-        config_path = ctx.global_config_ops.path()
+    if repo and not ctx.config_store.exists():
+        config_path = ctx.config_store.path()
         user_output(f"Global config not found at {config_path}")
         user_output("Run 'erk init' without --repo to create global config first.")
         raise SystemExit(1)
@@ -301,12 +301,12 @@ def init_cmd(
     # On first-time init, offer shell setup if not already completed
     if first_time_init:
         # Reload global config after creating it
-        fresh_config = ctx.global_config_ops.load()
+        fresh_config = ctx.config_store.load()
         if not fresh_config.shell_setup_complete:
-            setup_complete = perform_shell_setup(ctx.shell_ops)
+            setup_complete = perform_shell_setup(ctx.shell)
             if setup_complete:
                 # Show what we're about to write
-                config_path = ctx.global_config_ops.path()
+                config_path = ctx.config_store.path()
                 user_output("\nTo remember that shell setup is complete, erk needs to update:")
                 user_output(f"  {config_path}")
 
@@ -322,7 +322,7 @@ def init_cmd(
                         show_pr_info=fresh_config.show_pr_info,
                     )
                     try:
-                        ctx.global_config_ops.save(new_config)
+                        ctx.config_store.save(new_config)
                         user_output(click.style("✓", fg="green") + " Global config updated")
                     except PermissionError as e:
                         error_msg = "Could not save global config"

@@ -10,11 +10,11 @@ from click.testing import CliRunner
 
 from erk.cli.cli import cli
 from erk.core.context import ErkContext
-from erk.core.gitops import WorktreeInfo
-from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.gitops import FakeGitOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.fakes.shell_ops import FakeShellOps
+from erk.core.git import WorktreeInfo
+from tests.fakes.git import FakeGit
+from tests.fakes.github import FakeGitHub
+from tests.fakes.graphite import FakeGraphite
+from tests.fakes.shell import FakeShell
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
@@ -22,7 +22,7 @@ def _create_test_context(
     env,
     worktrees: dict[Path, list[WorktreeInfo]],
     current_branch: str | None,
-    graphite_ops: FakeGraphiteOps,
+    graphite_ops: FakeGraphite,
     *,
     cwd: Path | None = None,
     git_dir: Path | None = None,
@@ -34,7 +34,7 @@ def _create_test_context(
         env: Simulated erk environment
         worktrees: Map of repo_root to list of WorktreeInfo objects
         current_branch: Current branch name (or None for detached HEAD)
-        graphite_ops: FakeGraphiteOps configured with branch stack data
+        graphite_ops: FakeGraphite configured with branch stack data
         cwd: Optional current working directory path (defaults to env.cwd)
         git_dir: Optional git directory path (defaults to env.git_dir)
         file_statuses: Optional mapping of worktree paths to (staged, modified, untracked) files
@@ -47,7 +47,7 @@ def _create_test_context(
     if git_dir is None:
         git_dir = env.git_dir
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         worktrees=worktrees,
         git_common_dirs={cwd: git_dir},
         current_branches={cwd: current_branch},
@@ -56,10 +56,10 @@ def _create_test_context(
 
     return env.build_context(
         use_graphite=True,
-        git_ops=git_ops,
-        github_ops=FakeGitHubOps(),
-        graphite_ops=graphite_ops,
-        shell_ops=FakeShellOps(),
+        git=git_ops,
+        github=FakeGitHub(),
+        graphite=graphite_ops,
+        shell=FakeShell(),
         cwd=cwd,
         dry_run=False,
     )
@@ -70,7 +70,7 @@ def test_consolidate_no_other_worktrees() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1 -> feature-2)
-        graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
+        graphite_ops = FakeGraphite(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
 
         # Current worktree only (on feature-2)
         worktrees = {env.cwd: [WorktreeInfo(path=env.cwd, branch="feature-2")]}
@@ -89,7 +89,7 @@ def test_consolidate_no_other_worktrees_with_script_flag() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1 -> feature-2)
-        graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
+        graphite_ops = FakeGraphite(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
 
         # Current worktree only (on feature-2)
         worktrees = {env.cwd: [WorktreeInfo(path=env.cwd, branch="feature-2")]}
@@ -109,7 +109,7 @@ def test_consolidate_removes_other_stack_worktrees() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1 -> feature-2)
-        graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
+        graphite_ops = FakeGraphite(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
 
         # Create worktree directories
         wt1_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "wt1"
@@ -133,7 +133,7 @@ def test_consolidate_removes_other_stack_worktrees() -> None:
         assert "Removed:" in result.output
         assert str(wt1_path) in result.output
         assert str(wt2_path) in result.output
-        assert len(test_ctx.git_ops.removed_worktrees) == 2
+        assert len(test_ctx.git.removed_worktrees) == 2
 
 
 def test_consolidate_preserves_current_worktree() -> None:
@@ -141,7 +141,7 @@ def test_consolidate_preserves_current_worktree() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1)
-        graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
+        graphite_ops = FakeGraphite(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create other worktree
         wt1_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "wt1"
@@ -161,8 +161,8 @@ def test_consolidate_preserves_current_worktree() -> None:
 
         assert result.exit_code == 0, result.output
         # Only wt1 should be removed, not cwd
-        assert len(test_ctx.git_ops.removed_worktrees) == 1
-        assert wt1_path in test_ctx.git_ops.removed_worktrees
+        assert len(test_ctx.git.removed_worktrees) == 1
+        assert wt1_path in test_ctx.git.removed_worktrees
 
 
 def test_consolidate_aborts_on_uncommitted_changes() -> None:
@@ -170,7 +170,7 @@ def test_consolidate_aborts_on_uncommitted_changes() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1)
-        graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
+        graphite_ops = FakeGraphite(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree with uncommitted changes marker
         wt1_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "wt1"
@@ -199,7 +199,7 @@ def test_consolidate_aborts_on_uncommitted_changes() -> None:
 
         assert result.exit_code == 1
         assert "Uncommitted changes detected" in result.output
-        assert len(test_ctx.git_ops.removed_worktrees) == 0
+        assert len(test_ctx.git.removed_worktrees) == 0
 
 
 def test_consolidate_dry_run_shows_preview() -> None:
@@ -207,7 +207,7 @@ def test_consolidate_dry_run_shows_preview() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1)
-        graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
+        graphite_ops = FakeGraphite(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree
         wt1_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "wt1"
@@ -227,7 +227,7 @@ def test_consolidate_dry_run_shows_preview() -> None:
         assert result.exit_code == 0, result.output
         assert "[DRY RUN]" in result.output
         assert str(wt1_path) in result.output
-        assert len(test_ctx.git_ops.removed_worktrees) == 0
+        assert len(test_ctx.git.removed_worktrees) == 0
 
 
 def test_consolidate_confirmation_prompt() -> None:
@@ -235,7 +235,7 @@ def test_consolidate_confirmation_prompt() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1)
-        graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
+        graphite_ops = FakeGraphite(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree
         wt1_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "wt1"
@@ -257,7 +257,7 @@ def test_consolidate_confirmation_prompt() -> None:
         assert result.exit_code == 0, result.output
         assert "Proceed with removal?" in result.output
         assert "Aborted" in result.output
-        assert len(test_ctx.git_ops.removed_worktrees) == 0
+        assert len(test_ctx.git.removed_worktrees) == 0
 
 
 def test_consolidate_detached_head_error() -> None:
@@ -268,7 +268,7 @@ def test_consolidate_detached_head_error() -> None:
         worktrees = {env.cwd: [WorktreeInfo(path=env.cwd, branch=None)]}
 
         # Create context with no current branch
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees=worktrees,
             git_common_dirs={env.cwd: env.git_dir},
             current_branches={env.cwd: None},
@@ -276,10 +276,10 @@ def test_consolidate_detached_head_error() -> None:
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            github=FakeGitHub(),
+            graphite=FakeGraphite(),
+            shell=FakeShell(),
             dry_run=False,
         )
 
@@ -294,7 +294,7 @@ def test_consolidate_not_tracked_by_graphite() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Configure graphite with only main branch (feature-1 is not tracked)
-        graphite_ops = FakeGraphiteOps(stacks={"main": ["main"]})
+        graphite_ops = FakeGraphite(stacks={"main": ["main"]})
 
         # Current branch is "feature-1" but not in Graphite
         worktrees = {env.cwd: [WorktreeInfo(path=env.cwd, branch="feature-1")]}
@@ -314,7 +314,7 @@ def test_consolidate_skips_non_stack_worktrees() -> None:
     with erk_inmem_env(runner) as env:
         # Configure graphite with stack-a only (main -> stack-a)
         # stack-b is a separate branch not in this stack
-        graphite_ops = FakeGraphiteOps(stacks={"stack-a": ["main", "stack-a"]})
+        graphite_ops = FakeGraphite(stacks={"stack-a": ["main", "stack-a"]})
 
         # Create worktrees
         wt1_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "wt1"
@@ -336,9 +336,9 @@ def test_consolidate_skips_non_stack_worktrees() -> None:
 
         assert result.exit_code == 0, result.output
         # Only wt1 (main) should be removed, wt2 (stack-b) should remain
-        assert len(test_ctx.git_ops.removed_worktrees) == 1
-        assert wt1_path in test_ctx.git_ops.removed_worktrees
-        assert wt2_path not in test_ctx.git_ops.removed_worktrees
+        assert len(test_ctx.git.removed_worktrees) == 1
+        assert wt1_path in test_ctx.git.removed_worktrees
+        assert wt2_path not in test_ctx.git.removed_worktrees
 
 
 def test_consolidate_with_uncommitted_changes_in_non_stack_worktree() -> None:
@@ -346,7 +346,7 @@ def test_consolidate_with_uncommitted_changes_in_non_stack_worktree() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1 -> feature-2)
-        graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
+        graphite_ops = FakeGraphite(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
 
         # Create worktrees
         wt1_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "wt1"
@@ -382,11 +382,11 @@ def test_consolidate_with_uncommitted_changes_in_non_stack_worktree() -> None:
         # Command should succeed despite uncommitted changes in non-stack worktree
         assert result.exit_code == 0, result.output
         # Only feature-1 and main worktrees should be removed
-        assert len(test_ctx.git_ops.removed_worktrees) == 2
-        assert wt1_path in test_ctx.git_ops.removed_worktrees
-        assert wt2_path in test_ctx.git_ops.removed_worktrees
+        assert len(test_ctx.git.removed_worktrees) == 2
+        assert wt1_path in test_ctx.git.removed_worktrees
+        assert wt2_path in test_ctx.git.removed_worktrees
         # other-branch worktree should remain untouched
-        assert wt3_path not in test_ctx.git_ops.removed_worktrees
+        assert wt3_path not in test_ctx.git.removed_worktrees
 
 
 def test_consolidate_preserves_root_worktree_even_when_in_stack() -> None:
@@ -399,7 +399,7 @@ def test_consolidate_preserves_root_worktree_even_when_in_stack() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1 -> feature-2)
-        graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
+        graphite_ops = FakeGraphite(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
 
         # Create worktree directories
         # Root worktree at repo root (on main branch, part of the stack)
@@ -421,7 +421,7 @@ def test_consolidate_preserves_root_worktree_even_when_in_stack() -> None:
         }
 
         # Create custom context with wt2_path as cwd
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees=worktrees,
             git_common_dirs={wt2_path: main_worktree / ".git"},
             current_branches={wt2_path: "feature-2"},
@@ -433,10 +433,10 @@ def test_consolidate_preserves_root_worktree_even_when_in_stack() -> None:
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=graphite_ops,
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            github=FakeGitHub(),
+            graphite=graphite_ops,
+            shell=FakeShell(),
             cwd=wt2_path,
             dry_run=False,
         )
@@ -448,14 +448,14 @@ def test_consolidate_preserves_root_worktree_even_when_in_stack() -> None:
         assert result.exit_code == 0, result.output
 
         # Root worktree should NEVER be removed, even though 'main' is in the stack
-        assert main_worktree not in test_ctx.git_ops.removed_worktrees
+        assert main_worktree not in test_ctx.git.removed_worktrees
 
         # Only feature-1 worktree should be removed (feature-2 is current, root is root)
-        assert len(test_ctx.git_ops.removed_worktrees) == 1
-        assert wt1_path in test_ctx.git_ops.removed_worktrees
+        assert len(test_ctx.git.removed_worktrees) == 1
+        assert wt1_path in test_ctx.git.removed_worktrees
 
         # Current worktree (feature-2) should also not be removed
-        assert wt2_path not in test_ctx.git_ops.removed_worktrees
+        assert wt2_path not in test_ctx.git.removed_worktrees
 
 
 def test_consolidate_partial_stack() -> None:
@@ -463,7 +463,7 @@ def test_consolidate_partial_stack() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feat-1 -> feat-2 -> feat-3)
-        graphite_ops = FakeGraphiteOps(stacks={"feat-3": ["main", "feat-1", "feat-2", "feat-3"]})
+        graphite_ops = FakeGraphite(stacks={"feat-3": ["main", "feat-1", "feat-2", "feat-3"]})
 
         # Create worktree directories
         repo_dir = env.erk_root / "repos" / env.cwd.name
@@ -484,9 +484,9 @@ def test_consolidate_partial_stack() -> None:
             env, worktrees, "feat-3", graphite_ops, cwd=wt3_path, git_dir=env.git_dir
         )
         # Override git_common_dirs
-        test_ctx.git_ops._git_common_dirs[wt1_path] = env.git_dir
-        test_ctx.git_ops._git_common_dirs[wt2_path] = env.git_dir
-        test_ctx.git_ops._git_common_dirs[wt3_path] = env.git_dir
+        test_ctx.git._git_common_dirs[wt1_path] = env.git_dir
+        test_ctx.git._git_common_dirs[wt2_path] = env.git_dir
+        test_ctx.git._git_common_dirs[wt3_path] = env.git_dir
 
         # Run consolidate with branch argument: consolidate feat-2
         # Should consolidate main → feat-2 only, keeping feat-3 separate
@@ -494,10 +494,10 @@ def test_consolidate_partial_stack() -> None:
 
         assert result.exit_code == 0, result.output
         # Should remove wt1 (feat-1) and wt2 (feat-2), but NOT wt3 (feat-3, current)
-        assert len(test_ctx.git_ops.removed_worktrees) == 2
-        assert wt1_path in test_ctx.git_ops.removed_worktrees
-        assert wt2_path in test_ctx.git_ops.removed_worktrees
-        assert wt3_path not in test_ctx.git_ops.removed_worktrees
+        assert len(test_ctx.git.removed_worktrees) == 2
+        assert wt1_path in test_ctx.git.removed_worktrees
+        assert wt2_path in test_ctx.git.removed_worktrees
+        assert wt3_path not in test_ctx.git.removed_worktrees
 
 
 def test_consolidate_branch_not_in_stack() -> None:
@@ -505,7 +505,7 @@ def test_consolidate_branch_not_in_stack() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feat-1 -> feat-2)
-        graphite_ops = FakeGraphiteOps(stacks={"feat-2": ["main", "feat-1", "feat-2"]})
+        graphite_ops = FakeGraphite(stacks={"feat-2": ["main", "feat-1", "feat-2"]})
 
         # Current worktree on feat-2
         worktrees = {env.cwd: [WorktreeInfo(path=env.cwd, branch="feat-2")]}
@@ -525,7 +525,7 @@ def test_consolidate_preserves_upstack_branches() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feat-1 -> feat-2 -> feat-3 -> feat-4)
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             stacks={"feat-4": ["main", "feat-1", "feat-2", "feat-3", "feat-4"]}
         )
 
@@ -551,10 +551,10 @@ def test_consolidate_preserves_upstack_branches() -> None:
             env, worktrees, "feat-4", graphite_ops, cwd=wt4_path, git_dir=env.git_dir
         )
         # Override git_common_dirs
-        test_ctx.git_ops._git_common_dirs[wt1_path] = env.git_dir
-        test_ctx.git_ops._git_common_dirs[wt2_path] = env.git_dir
-        test_ctx.git_ops._git_common_dirs[wt3_path] = env.git_dir
-        test_ctx.git_ops._git_common_dirs[wt4_path] = env.git_dir
+        test_ctx.git._git_common_dirs[wt1_path] = env.git_dir
+        test_ctx.git._git_common_dirs[wt2_path] = env.git_dir
+        test_ctx.git._git_common_dirs[wt3_path] = env.git_dir
+        test_ctx.git._git_common_dirs[wt4_path] = env.git_dir
 
         # Consolidate feat-2 (from current=feat-4)
         # Should remove feat-1 and feat-2, but keep feat-3 and feat-4
@@ -562,12 +562,12 @@ def test_consolidate_preserves_upstack_branches() -> None:
 
         assert result.exit_code == 0, result.output
         # Should remove wt1 (feat-1) and wt2 (feat-2)
-        assert len(test_ctx.git_ops.removed_worktrees) == 2
-        assert wt1_path in test_ctx.git_ops.removed_worktrees
-        assert wt2_path in test_ctx.git_ops.removed_worktrees
+        assert len(test_ctx.git.removed_worktrees) == 2
+        assert wt1_path in test_ctx.git.removed_worktrees
+        assert wt2_path in test_ctx.git.removed_worktrees
         # Should NOT remove wt3 (feat-3) and wt4 (feat-4, current)
-        assert wt3_path not in test_ctx.git_ops.removed_worktrees
-        assert wt4_path not in test_ctx.git_ops.removed_worktrees
+        assert wt3_path not in test_ctx.git.removed_worktrees
+        assert wt4_path not in test_ctx.git.removed_worktrees
 
 
 def test_consolidate_shows_output_with_script_flag() -> None:
@@ -575,7 +575,7 @@ def test_consolidate_shows_output_with_script_flag() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1)
-        graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
+        graphite_ops = FakeGraphite(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree
         repo_dir = env.erk_root / "repos" / env.cwd.name
@@ -605,7 +605,7 @@ def test_consolidate_shows_output_without_script_flag() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1)
-        graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
+        graphite_ops = FakeGraphite(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree
         repo_dir = env.erk_root / "repos" / env.cwd.name
@@ -639,7 +639,7 @@ def test_consolidate_script_mode_shows_preview_output() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1)
-        graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
+        graphite_ops = FakeGraphite(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree to remove
         wt1_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "wt1"
@@ -677,7 +677,7 @@ def test_consolidate_outputs_to_stderr() -> None:
     """
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        graphite_ops = FakeGraphiteOps(stacks={"feature-1": ["main", "feature-1"]})
+        graphite_ops = FakeGraphite(stacks={"feature-1": ["main", "feature-1"]})
 
         wt1_path = env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "wt1"
 
@@ -716,7 +716,7 @@ def test_consolidate_allows_uncommitted_changes_in_protected_worktrees() -> None
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feat-1 -> feat-2 -> feat-3 -> feat-4)
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             stacks={"feat-4": ["main", "feat-1", "feat-2", "feat-3", "feat-4"]}
         )
 
@@ -765,10 +765,10 @@ def test_consolidate_allows_uncommitted_changes_in_protected_worktrees() -> None
         )
 
         # Override git_common_dirs for all worktrees
-        test_ctx.git_ops._git_common_dirs[wt1_path] = env.git_dir
-        test_ctx.git_ops._git_common_dirs[wt2_path] = env.git_dir
-        test_ctx.git_ops._git_common_dirs[wt3_path] = env.git_dir
-        test_ctx.git_ops._git_common_dirs[wt4_path] = env.git_dir
+        test_ctx.git._git_common_dirs[wt1_path] = env.git_dir
+        test_ctx.git._git_common_dirs[wt2_path] = env.git_dir
+        test_ctx.git._git_common_dirs[wt3_path] = env.git_dir
+        test_ctx.git._git_common_dirs[wt4_path] = env.git_dir
 
         # Consolidate feat-2 (from current=feat-4)
         # This consolidates main → feat-1 → feat-2, but NOT feat-3 or feat-4
@@ -779,14 +779,14 @@ def test_consolidate_allows_uncommitted_changes_in_protected_worktrees() -> None
         assert result.exit_code == 0, result.output
 
         # feat-1 and feat-2 worktrees should be removed
-        assert len(test_ctx.git_ops.removed_worktrees) == 2
-        assert wt1_path in test_ctx.git_ops.removed_worktrees
-        assert wt2_path in test_ctx.git_ops.removed_worktrees
+        assert len(test_ctx.git.removed_worktrees) == 2
+        assert wt1_path in test_ctx.git.removed_worktrees
+        assert wt2_path in test_ctx.git.removed_worktrees
 
         # Protected worktrees should NOT be removed
-        assert main_worktree not in test_ctx.git_ops.removed_worktrees  # Root
-        assert wt3_path not in test_ctx.git_ops.removed_worktrees  # Not consolidated
-        assert wt4_path not in test_ctx.git_ops.removed_worktrees  # Current
+        assert main_worktree not in test_ctx.git.removed_worktrees  # Root
+        assert wt3_path not in test_ctx.git.removed_worktrees  # Not consolidated
+        assert wt4_path not in test_ctx.git.removed_worktrees  # Current
 
 
 def test_consolidate_with_name_tracks_temp_branch_with_graphite() -> None:
@@ -802,7 +802,7 @@ def test_consolidate_with_name_tracks_temp_branch_with_graphite() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1 -> feature-2)
-        graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
+        graphite_ops = FakeGraphite(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
 
         # Current worktree on feature-2
         worktrees = {env.cwd: [WorktreeInfo(path=env.cwd, branch="feature-2")]}
@@ -842,7 +842,7 @@ def test_consolidate_with_name_changes_directory_before_removal() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1 -> feature-2)
-        graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
+        graphite_ops = FakeGraphite(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
 
         # Current worktree on feature-2
         worktrees = {env.cwd: [WorktreeInfo(path=env.cwd, branch="feature-2")]}
@@ -859,24 +859,24 @@ def test_consolidate_with_name_changes_directory_before_removal() -> None:
         assert result.exit_code == 0, result.output
 
         # Verify directory change happened before removal
-        # The FakeGitOps should record a safe_chdir call
+        # The FakeGit should record a safe_chdir call
         # Expected: New worktree path
         expected_new_path = (
             env.erk_root / "repos" / env.root_worktree.name / "worktrees" / "my-stack"
         )
 
         # Verify that safe_chdir was called with the new worktree path
-        assert hasattr(test_ctx.git_ops, "chdir_history"), "FakeGitOps should track chdir calls"
-        assert len(test_ctx.git_ops.chdir_history) > 0, "Should have called safe_chdir"
+        assert hasattr(test_ctx.git, "chdir_history"), "FakeGit should track chdir calls"
+        assert len(test_ctx.git.chdir_history) > 0, "Should have called safe_chdir"
 
         # The new worktree path should be in the chdir history
-        assert any(expected_new_path == path for path in test_ctx.git_ops.chdir_history), (
+        assert any(expected_new_path == path for path in test_ctx.git.chdir_history), (
             f"Should have changed to new worktree {expected_new_path}"
         )
 
         # Verify the source worktree was removed
         # Note: env.cwd is the source worktree that should be removed
-        assert len(test_ctx.git_ops.removed_worktrees) == 1, "Should have removed source worktree"
+        assert len(test_ctx.git.removed_worktrees) == 1, "Should have removed source worktree"
 
 
 def test_consolidate_with_name_changes_directory_in_non_script_mode() -> None:
@@ -887,7 +887,7 @@ def test_consolidate_with_name_changes_directory_in_non_script_mode() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Configure graphite with stack (main -> feature-1 -> feature-2)
-        graphite_ops = FakeGraphiteOps(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
+        graphite_ops = FakeGraphite(stacks={"feature-2": ["main", "feature-1", "feature-2"]})
 
         # Current worktree on feature-2
         worktrees = {env.cwd: [WorktreeInfo(path=env.cwd, branch="feature-2")]}
@@ -907,10 +907,10 @@ def test_consolidate_with_name_changes_directory_in_non_script_mode() -> None:
         )
 
         # Verify that safe_chdir was called
-        assert hasattr(test_ctx.git_ops, "chdir_history"), "FakeGitOps should track chdir calls"
-        assert len(test_ctx.git_ops.chdir_history) > 0, "Should have called safe_chdir"
+        assert hasattr(test_ctx.git, "chdir_history"), "FakeGit should track chdir calls"
+        assert len(test_ctx.git.chdir_history) > 0, "Should have called safe_chdir"
 
         # The new worktree path should be in the chdir history
-        assert any(expected_new_path == path for path in test_ctx.git_ops.chdir_history), (
+        assert any(expected_new_path == path for path in test_ctx.git.chdir_history), (
             f"Should have changed to new worktree {expected_new_path}"
         )

@@ -3,11 +3,11 @@
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
+from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.global_config import GlobalConfig
-from erk.core.graphite_ops import BranchMetadata
-from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.shell_ops import FakeShellOps
+from erk.core.graphite import BranchMetadata
+from tests.fakes.github import FakeGitHub
+from tests.fakes.shell import FakeShell
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
@@ -39,7 +39,7 @@ def test_land_stack_cleanup_respects_master_trunk() -> None:
             current_branch="feat-1",
         )
 
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Feature 1"),
             },
@@ -56,11 +56,11 @@ def test_land_stack_cleanup_respects_master_trunk() -> None:
         )
 
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
+            git=git_ops,
             global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             dry_run=True,  # Use dry-run to see commands
             script_writer=env.script_writer,
             cwd=env.cwd,

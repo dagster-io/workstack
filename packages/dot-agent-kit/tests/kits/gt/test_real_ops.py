@@ -19,10 +19,10 @@ from unittest.mock import Mock, patch
 
 from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.ops import CommandResult
 from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops import (
-    RealGitGtKitOps,
-    RealGitHubGtKitOps,
-    RealGraphiteGtKitOps,
-    RealGtKitOps,
+    RealGitGtKit,
+    RealGitHubGtKit,
+    RealGraphiteGtKit,
+    RealGtKit,
 )
 
 
@@ -66,7 +66,7 @@ class TestRealGitGtKitOpsSmoke:
             original_cwd = os.getcwd()
             try:
                 os.chdir(repo_path)
-                ops = RealGitGtKitOps()
+                ops = RealGitGtKit()
                 branch_name = ops.get_current_branch()
 
                 assert branch_name is not None
@@ -112,7 +112,7 @@ class TestRealGitGtKitOpsSmoke:
             original_cwd = os.getcwd()
             try:
                 os.chdir(repo_path)
-                ops = RealGitGtKitOps()
+                ops = RealGitGtKit()
 
                 # Should be clean after commit
                 assert ops.has_uncommitted_changes() is False
@@ -155,7 +155,7 @@ class TestRealGitGtKitOpsSmoke:
             original_cwd = os.getcwd()
             try:
                 os.chdir(repo_path)
-                ops = RealGitGtKitOps()
+                ops = RealGitGtKit()
 
                 # Add all files
                 result = ops.add_all()
@@ -194,7 +194,7 @@ class TestRealGitGtKitOpsSmoke:
             original_cwd = os.getcwd()
             try:
                 os.chdir(repo_path)
-                ops = RealGitGtKitOps()
+                ops = RealGitGtKit()
 
                 # Create commit
                 result = ops.commit("Test commit")
@@ -243,7 +243,7 @@ class TestRealGitGtKitOpsSmoke:
             original_cwd = os.getcwd()
             try:
                 os.chdir(repo_path)
-                ops = RealGitGtKitOps()
+                ops = RealGitGtKit()
 
                 # Amend commit
                 result = ops.amend_commit("Amended commit")
@@ -314,7 +314,7 @@ class TestRealGitGtKitOpsSmoke:
             original_cwd = os.getcwd()
             try:
                 os.chdir(repo_path)
-                ops = RealGitGtKitOps()
+                ops = RealGitGtKit()
 
                 # Count commits since main
                 count = ops.count_commits_in_branch("main")
@@ -334,7 +334,7 @@ class TestRealGraphiteGtKitOpsSmoke:
 
     def test_get_parent_branch(self) -> None:
         """Test get_parent_branch returns str or None."""
-        ops = RealGraphiteGtKitOps()
+        ops = RealGraphiteGtKit()
 
         # Call the method - may return None if not in gt repo or gt not installed
         result = ops.get_parent_branch()
@@ -344,7 +344,7 @@ class TestRealGraphiteGtKitOpsSmoke:
 
     def test_get_children_branches(self) -> None:
         """Test get_children_branches returns list."""
-        ops = RealGraphiteGtKitOps()
+        ops = RealGraphiteGtKit()
 
         # Call the method - may return empty list if not in gt repo or gt not installed
         result = ops.get_children_branches()
@@ -364,7 +364,7 @@ class TestRealGraphiteGtKitOpsSmoke:
             "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
             return_value=mock_result,
         ) as mock_run:
-            ops = RealGraphiteGtKitOps()
+            ops = RealGraphiteGtKit()
             result = ops.squash_commits()
 
             # Verify correct command was called
@@ -385,7 +385,7 @@ class TestRealGraphiteGtKitOpsSmoke:
             "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
             return_value=mock_result,
         ):
-            ops = RealGraphiteGtKitOps()
+            ops = RealGraphiteGtKit()
             result = ops.squash_commits()
             assert isinstance(result, CommandResult)
             assert result.success is False
@@ -401,7 +401,7 @@ class TestRealGraphiteGtKitOpsSmoke:
             "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
             return_value=mock_result,
         ) as mock_run:
-            ops = RealGraphiteGtKitOps()
+            ops = RealGraphiteGtKit()
             result = ops.submit(publish=False, restack=False)
 
             # Verify correct command was called
@@ -426,7 +426,7 @@ class TestRealGraphiteGtKitOpsSmoke:
             "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
             return_value=mock_result,
         ) as mock_run:
-            ops = RealGraphiteGtKitOps()
+            ops = RealGraphiteGtKit()
             result = ops.submit(publish=True, restack=True)
 
             # Verify flags are added
@@ -446,7 +446,7 @@ class TestRealGraphiteGtKitOpsSmoke:
             "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
             return_value=mock_result,
         ) as mock_run:
-            ops = RealGraphiteGtKitOps()
+            ops = RealGraphiteGtKit()
             result = ops.restack()
 
             # Verify correct command was called
@@ -467,7 +467,7 @@ class TestRealGraphiteGtKitOpsSmoke:
             "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
             return_value=mock_result,
         ):
-            ops = RealGraphiteGtKitOps()
+            ops = RealGraphiteGtKit()
             result = ops.restack()
             assert result is False
 
@@ -480,7 +480,7 @@ class TestRealGraphiteGtKitOpsSmoke:
             "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
             return_value=mock_result,
         ) as mock_run:
-            ops = RealGraphiteGtKitOps()
+            ops = RealGraphiteGtKit()
             result = ops.navigate_to_child()
 
             # Verify correct command was called
@@ -498,7 +498,7 @@ class TestRealGraphiteGtKitOpsSmoke:
             "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
             return_value=mock_result,
         ):
-            ops = RealGraphiteGtKitOps()
+            ops = RealGraphiteGtKit()
             result = ops.navigate_to_child()
             assert result is False
 
@@ -524,7 +524,7 @@ class TestRealGitHubGtKitOpsSmoke:
             "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
             return_value=mock_result,
         ) as mock_run:
-            ops = RealGitHubGtKitOps()
+            ops = RealGitHubGtKit()
             result = ops.get_pr_info()
 
             # Verify correct command was called
@@ -551,7 +551,7 @@ class TestRealGitHubGtKitOpsSmoke:
             "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
             return_value=mock_result,
         ):
-            ops = RealGitHubGtKitOps()
+            ops = RealGitHubGtKit()
             result = ops.get_pr_info()
             assert result is None
 
@@ -567,7 +567,7 @@ class TestRealGitHubGtKitOpsSmoke:
             "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
             return_value=mock_result,
         ) as mock_run:
-            ops = RealGitHubGtKitOps()
+            ops = RealGitHubGtKit()
             result = ops.get_pr_state()
 
             # Verify correct command was called
@@ -594,7 +594,7 @@ class TestRealGitHubGtKitOpsSmoke:
             "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
             return_value=mock_result,
         ):
-            ops = RealGitHubGtKitOps()
+            ops = RealGitHubGtKit()
             result = ops.get_pr_state()
             assert result is None
 
@@ -607,7 +607,7 @@ class TestRealGitHubGtKitOpsSmoke:
             "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
             return_value=mock_result,
         ) as mock_run:
-            ops = RealGitHubGtKitOps()
+            ops = RealGitHubGtKit()
             result = ops.update_pr_metadata("Test Title", "Test Body")
 
             # Verify correct command was called
@@ -628,7 +628,7 @@ class TestRealGitHubGtKitOpsSmoke:
             "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
             return_value=mock_result,
         ):
-            ops = RealGitHubGtKitOps()
+            ops = RealGitHubGtKit()
             result = ops.update_pr_metadata("Title", "Body")
             assert result is False
 
@@ -641,7 +641,7 @@ class TestRealGitHubGtKitOpsSmoke:
             "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
             return_value=mock_result,
         ) as mock_run:
-            ops = RealGitHubGtKitOps()
+            ops = RealGitHubGtKit()
             result = ops.merge_pr()
 
             # Verify correct command was called (squash merge)
@@ -659,7 +659,7 @@ class TestRealGitHubGtKitOpsSmoke:
             "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
             return_value=mock_result,
         ):
-            ops = RealGitHubGtKitOps()
+            ops = RealGitHubGtKit()
             result = ops.merge_pr()
             assert result is False
 
@@ -669,30 +669,30 @@ class TestRealGtKitOpsSmoke:
 
     def test_git(self) -> None:
         """Test git() returns RealGitGtKitOps instance."""
-        ops = RealGtKitOps()
+        ops = RealGtKit()
 
         # Get git operations interface
         git_ops = ops.git()
 
         # Verify return type matches interface contract
-        assert isinstance(git_ops, RealGitGtKitOps)
+        assert isinstance(git_ops, RealGitGtKit)
 
     def test_graphite(self) -> None:
         """Test graphite() returns RealGraphiteGtKitOps instance."""
-        ops = RealGtKitOps()
+        ops = RealGtKit()
 
         # Get graphite operations interface
         graphite_ops = ops.graphite()
 
         # Verify return type matches interface contract
-        assert isinstance(graphite_ops, RealGraphiteGtKitOps)
+        assert isinstance(graphite_ops, RealGraphiteGtKit)
 
     def test_github(self) -> None:
         """Test github() returns RealGitHubGtKitOps instance."""
-        ops = RealGtKitOps()
+        ops = RealGtKit()
 
         # Get github operations interface
         github_ops = ops.github()
 
         # Verify return type matches interface contract
-        assert isinstance(github_ops, RealGitHubGtKitOps)
+        assert isinstance(github_ops, RealGitHubGtKit)

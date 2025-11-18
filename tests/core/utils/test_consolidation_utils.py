@@ -13,7 +13,7 @@ from erk.core.consolidation_utils import (
     create_consolidation_plan,
     identify_removable_worktrees,
 )
-from erk.core.gitops import WorktreeInfo
+from erk.core.git import WorktreeInfo
 
 # Tests for calculate_stack_range function
 

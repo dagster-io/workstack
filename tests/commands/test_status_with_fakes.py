@@ -22,10 +22,10 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from erk.cli.commands.status import status_cmd
+from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.global_config import GlobalConfig
 from tests.fakes.context import create_test_context
-from tests.fakes.gitops import FakeGitOps, WorktreeInfo
+from tests.fakes.git import FakeGit, WorktreeInfo
 from tests.test_utils.builders import WorktreeScenario
 
 
@@ -77,7 +77,7 @@ def test_status_cmd_in_subdirectory_of_worktree(tmp_path: Path) -> None:
     subdir = worktree_path / "src" / "nested"
     subdir.mkdir(parents=True)
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         worktrees={
             repo_root: [
                 WorktreeInfo(path=repo_root, branch="main"),
@@ -96,7 +96,7 @@ def test_status_cmd_in_subdirectory_of_worktree(tmp_path: Path) -> None:
         shell_setup_complete=False,
         show_pr_info=False,
     )
-    ctx = create_test_context(git_ops=git_ops, global_config=global_config, cwd=subdir)
+    ctx = create_test_context(git=git_ops, global_config=global_config, cwd=subdir)
 
     runner = CliRunner()
     original_dir = os.getcwd()
@@ -140,11 +140,11 @@ def test_status_cmd_displays_all_collector_sections(tmp_path: Path) -> None:
     # Update context with correct cwd for feature worktree
     feature_dir = scenario.repo_dir / "feature"
     ctx = ErkContext.for_test(
-        git_ops=scenario.ctx.git_ops,
+        git=scenario.ctx.git,
         global_config=scenario.ctx.global_config,
-        github_ops=scenario.ctx.github_ops,
-        graphite_ops=scenario.ctx.graphite_ops,
-        shell_ops=scenario.ctx.shell_ops,
+        github=scenario.ctx.github,
+        graphite=scenario.ctx.graphite,
+        shell=scenario.ctx.shell,
         cwd=feature_dir,
         dry_run=scenario.ctx.dry_run,
     )
@@ -172,7 +172,7 @@ def test_status_cmd_not_in_git_repo(tmp_path: Path) -> None:
     non_git_dir = tmp_path / "not-a-repo"
     non_git_dir.mkdir()
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         git_common_dirs={},  # No git directories
         worktrees={},
     )
@@ -184,7 +184,7 @@ def test_status_cmd_not_in_git_repo(tmp_path: Path) -> None:
         show_pr_info=True,
     )
 
-    ctx = create_test_context(git_ops=git_ops, global_config=global_config)
+    ctx = create_test_context(git=git_ops, global_config=global_config)
 
     runner = CliRunner()
     original_dir = os.getcwd()

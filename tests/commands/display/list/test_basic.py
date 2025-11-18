@@ -1,9 +1,9 @@
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.gitops import WorktreeInfo
-from tests.fakes.gitops import FakeGitOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
+from erk.core.git import WorktreeInfo
+from tests.fakes.git import FakeGit
+from tests.fakes.graphite import FakeGraphite
 from tests.test_utils.env_helpers import erk_inmem_env
 from tests.test_utils.output_helpers import strip_ansi
 
@@ -16,7 +16,7 @@ def test_list_outputs_names_not_paths() -> None:
         repo_dir = env.erk_root / repo_name
 
         # Build fake git ops with worktree info
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -28,8 +28,8 @@ def test_list_outputs_names_not_paths() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops,
-            graphite_ops=FakeGraphiteOps(pr_info={}),
+            git=git_ops,
+            graphite=FakeGraphite(pr_info={}),
             show_pr_info=False,  # Don't require PR info for this test
         )
 

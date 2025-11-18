@@ -11,7 +11,7 @@ from erk.cli.core import discover_repo_context
 from erk.cli.graphite import find_worktrees_containing_branch
 from erk.cli.output import user_output
 from erk.core.context import ErkContext
-from erk.core.gitops import WorktreeInfo
+from erk.core.git import WorktreeInfo
 from erk.core.repo_discovery import RepoContext, ensure_repo_dir
 
 
@@ -62,11 +62,11 @@ def _perform_checkout(
     # If we need to checkout, do it before generating the activation script
     if need_checkout:
         # Checkout the branch in the target worktree
-        ctx.git_ops.checkout_branch(target_path, branch)
+        ctx.git.checkout_branch(target_path, branch)
 
         # Show stack context
         if not script:
-            stack = ctx.graphite_ops.get_branch_stack(ctx.git_ops, repo_root, branch)
+            stack = ctx.graphite.get_branch_stack(ctx.git, repo_root, branch)
             if stack:
                 user_output(f"Stack: {' -> '.join(stack)}")
             user_output(f"Checked out '{branch}' in worktree")
@@ -177,7 +177,7 @@ def checkout_cmd(ctx: ErkContext, branch: str, script: bool) -> None:
     ensure_repo_dir(repo)
 
     # Get all worktrees
-    worktrees = ctx.git_ops.list_worktrees(repo.root)
+    worktrees = ctx.git.list_worktrees(repo.root)
 
     # Find worktrees containing the target branch
     matching_worktrees = find_worktrees_containing_branch(ctx, repo.root, worktrees, branch)
@@ -191,7 +191,7 @@ def checkout_cmd(ctx: ErkContext, branch: str, script: bool) -> None:
         _worktree_path, is_newly_created = ensure_worktree_for_branch(ctx, repo, branch)
 
         # Refresh worktree list to include the newly created worktree
-        worktrees = ctx.git_ops.list_worktrees(repo.root)
+        worktrees = ctx.git.list_worktrees(repo.root)
         matching_worktrees = find_worktrees_containing_branch(ctx, repo.root, worktrees, branch)
 
         # Fall through to jump to the newly created worktree

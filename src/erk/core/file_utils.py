@@ -4,10 +4,10 @@ from pathlib import Path
 
 import frontmatter
 
-from erk.core.gitops import GitOps
+from erk.core.git import Git
 
 
-def extract_plan_title(plan_path: Path, git_ops: GitOps | None = None) -> str | None:
+def extract_plan_title(plan_path: Path, git_ops: Git | None = None) -> str | None:
     """Extract the first heading from a markdown plan file.
 
     Uses python-frontmatter library to properly parse YAML frontmatter,
@@ -16,7 +16,7 @@ def extract_plan_title(plan_path: Path, git_ops: GitOps | None = None) -> str | 
 
     Args:
         plan_path: Path to the plan markdown file (e.g., .plan/plan.md)
-        git_ops: Optional GitOps interface for path checking (uses .exists() if None)
+        git_ops: Optional Git interface for path checking (uses .exists() if None)
 
     Returns:
         The heading text (without the # prefix and common prefixes), or None if
@@ -56,12 +56,12 @@ def extract_plan_title(plan_path: Path, git_ops: GitOps | None = None) -> str | 
     return None
 
 
-def extract_plan_title_from_folder(folder_path: Path, git_ops: GitOps | None = None) -> str | None:
+def extract_plan_title_from_folder(folder_path: Path, git_ops: Git | None = None) -> str | None:
     """Extract the first heading from plan.md within a .plan/ folder.
 
     Args:
         folder_path: Path to the .plan/ directory
-        git_ops: Optional GitOps interface for path checking (uses .exists() if None)
+        git_ops: Optional Git interface for path checking (uses .exists() if None)
 
     Returns:
         The heading text (without the # prefix and common prefixes), or None if

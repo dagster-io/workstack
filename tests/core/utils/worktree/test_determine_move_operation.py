@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from erk.core.gitops import WorktreeInfo
+from erk.core.git import WorktreeInfo
 from erk.core.worktree_utils import MoveOperationType, determine_move_operation
 
 

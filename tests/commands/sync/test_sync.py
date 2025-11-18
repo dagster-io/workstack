@@ -9,13 +9,13 @@ from erk.cli.cli import cli
 from erk.cli.commands.shell_integration import hidden_shell_cmd
 from erk.cli.commands.sync import sync_cmd
 from erk.cli.shell_utils import render_cd_script
+from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.gitops import WorktreeInfo
-from erk.core.global_config import GlobalConfig
-from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.gitops import FakeGitOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.fakes.shell_ops import FakeShellOps
+from erk.core.git import WorktreeInfo
+from tests.fakes.git import FakeGit
+from tests.fakes.github import FakeGitHub
+from tests.fakes.graphite import FakeGraphite
+from tests.fakes.shell import FakeShell
 from tests.test_utils import sentinel_path
 from tests.test_utils.env_helpers import erk_inmem_env
 
@@ -29,7 +29,7 @@ def test_sync_requires_graphite() -> None:
     # Create minimal git repo structure
     repo_root = cwd
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         git_common_dirs={cwd: cwd / ".git"},
         worktrees={
             repo_root: [
@@ -46,14 +46,14 @@ def test_sync_requires_graphite() -> None:
         show_pr_info=True,
     )
 
-    graphite_ops = FakeGraphiteOps()
+    graphite_ops = FakeGraphite()
 
     test_ctx = ErkContext.for_test(
-        git_ops=git_ops,
+        git=git_ops,
         global_config=global_config_ops,
-        graphite_ops=graphite_ops,
-        github_ops=FakeGitHubOps(),
-        shell_ops=FakeShellOps(),
+        graphite=graphite_ops,
+        github=FakeGitHub(),
+        shell=FakeShell(),
         cwd=cwd,
         dry_run=False,
     )
@@ -68,7 +68,7 @@ def test_sync_runs_gt_sync_from_root() -> None:
     """Test that sync runs gt sync from root worktree."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
                 env.cwd: [
@@ -77,14 +77,14 @@ def test_sync_runs_gt_sync_from_root() -> None:
             },
         )
 
-        graphite_ops = FakeGraphiteOps()
+        graphite_ops = FakeGraphite()
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=FakeGitHubOps(),
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=FakeGitHub(),
+            shell=FakeShell(),
             script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
@@ -107,7 +107,7 @@ def test_sync_with_force_flag() -> None:
     """Test that sync passes --force flag to gt sync."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
                 env.cwd: [
@@ -116,14 +116,14 @@ def test_sync_with_force_flag() -> None:
             },
         )
 
-        graphite_ops = FakeGraphiteOps()
+        graphite_ops = FakeGraphite()
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=FakeGitHubOps(),
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=FakeGitHub(),
+            shell=FakeShell(),
             script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
@@ -145,7 +145,7 @@ def test_sync_handles_gt_not_installed() -> None:
     """Test that sync handles gt command not found."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
                 env.cwd: [
@@ -155,14 +155,14 @@ def test_sync_handles_gt_not_installed() -> None:
         )
 
         # Configure graphite_ops to raise FileNotFoundError
-        graphite_ops = FakeGraphiteOps(sync_raises=FileNotFoundError())
+        graphite_ops = FakeGraphite(sync_raises=FileNotFoundError())
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=FakeGitHubOps(),
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=FakeGitHub(),
+            shell=FakeShell(),
             script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
@@ -179,7 +179,7 @@ def test_sync_handles_gt_sync_failure() -> None:
     """Test that sync handles gt sync failure."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
                 env.cwd: [
@@ -189,16 +189,14 @@ def test_sync_handles_gt_sync_failure() -> None:
         )
 
         # Configure graphite_ops to raise CalledProcessError
-        graphite_ops = FakeGraphiteOps(
-            sync_raises=subprocess.CalledProcessError(128, ["gt", "sync"])
-        )
+        graphite_ops = FakeGraphite(sync_raises=subprocess.CalledProcessError(128, ["gt", "sync"]))
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=FakeGitHubOps(),
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=FakeGitHub(),
+            shell=FakeShell(),
             script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
@@ -221,7 +219,7 @@ def test_sync_identifies_deletable_erks() -> None:
         wt1 = repo_dir / "worktrees" / "feature-1"
         wt2 = repo_dir / "worktrees" / "feature-2"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
                 env.cwd: [
@@ -232,10 +230,10 @@ def test_sync_identifies_deletable_erks() -> None:
             },
         )
 
-        graphite_ops = FakeGraphiteOps()
+        graphite_ops = FakeGraphite()
 
         # feature-1 is merged, feature-2 is open
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             pr_statuses={
                 "feature-1": ("MERGED", 123, "Feature 1"),
                 "feature-2": ("OPEN", 124, "Feature 2"),
@@ -244,10 +242,10 @@ def test_sync_identifies_deletable_erks() -> None:
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
@@ -268,7 +266,7 @@ def test_sync_no_deletable_erks() -> None:
     """Test sync when there are no deletable erks."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
                 env.cwd: [
@@ -277,14 +275,14 @@ def test_sync_no_deletable_erks() -> None:
             },
         )
 
-        graphite_ops = FakeGraphiteOps()
+        graphite_ops = FakeGraphite()
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=FakeGitHubOps(),
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=FakeGitHub(),
+            shell=FakeShell(),
             script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
@@ -306,7 +304,7 @@ def test_sync_with_confirmation() -> None:
         # Define worktree path (sentinel path, no mkdir needed)
         wt1 = repo_dir / "worktrees" / "feature-1"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
                 env.cwd: [
@@ -316,15 +314,15 @@ def test_sync_with_confirmation() -> None:
             },
         )
 
-        graphite_ops = FakeGraphiteOps()
-        github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
+        graphite_ops = FakeGraphite()
+        github_ops = FakeGitHub(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
@@ -347,7 +345,7 @@ def test_sync_user_cancels() -> None:
 
         wt1 = repo_dir / "worktrees" / "feature-1"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
                 env.cwd: [
@@ -357,15 +355,15 @@ def test_sync_user_cancels() -> None:
             },
         )
 
-        graphite_ops = FakeGraphiteOps()
-        github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
+        graphite_ops = FakeGraphite()
+        github_ops = FakeGitHub(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
@@ -389,7 +387,7 @@ def test_sync_force_skips_confirmation() -> None:
 
         wt1 = repo_dir / "worktrees" / "feature-1"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
                 env.cwd: [
@@ -399,15 +397,15 @@ def test_sync_force_skips_confirmation() -> None:
             },
         )
 
-        graphite_ops = FakeGraphiteOps()
-        github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
+        graphite_ops = FakeGraphite()
+        github_ops = FakeGitHub(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
@@ -430,7 +428,7 @@ def test_sync_dry_run() -> None:
 
         wt1 = repo_dir / "worktrees" / "feature-1"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
                 env.cwd: [
@@ -440,15 +438,15 @@ def test_sync_dry_run() -> None:
             },
         )
 
-        graphite_ops = FakeGraphiteOps()
-        github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
+        graphite_ops = FakeGraphite()
+        github_ops = FakeGitHub(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
@@ -474,7 +472,7 @@ def test_sync_return_to_original_worktree() -> None:
         # Define worktree path
         wt1 = env.erk_root / "feature-1"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
                 env.cwd: [
@@ -484,15 +482,15 @@ def test_sync_return_to_original_worktree() -> None:
             },
         )
 
-        graphite_ops = FakeGraphiteOps()
-        github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("OPEN", 123, "Feature 1")})
+        graphite_ops = FakeGraphite()
+        github_ops = FakeGitHub(pr_statuses={"feature-1": ("OPEN", 123, "Feature 1")})
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
@@ -516,7 +514,7 @@ def test_sync_original_worktree_deleted() -> None:
         # Define worktree path
         wt1 = repo_dir / "worktrees" / "feature-1"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={wt1: env.git_dir},
             worktrees={
                 env.cwd: [
@@ -526,15 +524,15 @@ def test_sync_original_worktree_deleted() -> None:
             },
         )
 
-        graphite_ops = FakeGraphiteOps()
-        github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
+        graphite_ops = FakeGraphite()
+        github_ops = FakeGitHub(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             script_writer=env.script_writer,
             cwd=wt1,  # Test from the worktree that will be deleted
             dry_run=False,
@@ -577,7 +575,7 @@ def test_sync_script_mode_when_worktree_exists() -> None:
 
         wt1 = repo_dir / "worktrees" / "feature-1"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={wt1: env.git_dir},
             worktrees={
                 env.cwd: [
@@ -587,15 +585,15 @@ def test_sync_script_mode_when_worktree_exists() -> None:
             },
         )
 
-        graphite_ops = FakeGraphiteOps()
-        github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("OPEN", 123, "Feature 1")})
+        graphite_ops = FakeGraphite()
+        github_ops = FakeGitHub(pr_statuses={"feature-1": ("OPEN", 123, "Feature 1")})
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             cwd=wt1,  # Start from the worktree
             dry_run=False,
         )
@@ -636,7 +634,7 @@ def test_sync_force_runs_double_gt_sync() -> None:
         # Define worktree path
         wt1 = repo_dir / "worktrees" / "feature-1"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
                 env.cwd: [
@@ -646,16 +644,16 @@ def test_sync_force_runs_double_gt_sync() -> None:
             },
         )
 
-        graphite_ops = FakeGraphiteOps()
+        graphite_ops = FakeGraphite()
         # feature-1 is merged
-        github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
+        github_ops = FakeGitHub(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
@@ -687,7 +685,7 @@ def test_sync_without_force_runs_single_gt_sync() -> None:
         # Define worktree path
         wt1 = repo_dir / "worktrees" / "feature-1"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
                 env.cwd: [
@@ -697,16 +695,16 @@ def test_sync_without_force_runs_single_gt_sync() -> None:
             },
         )
 
-        graphite_ops = FakeGraphiteOps()
+        graphite_ops = FakeGraphite()
         # feature-1 is merged
-        github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
+        github_ops = FakeGitHub(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
@@ -735,7 +733,7 @@ def test_sync_force_dry_run_no_sync_calls() -> None:
         # Define worktree path
         wt1 = repo_dir / "worktrees" / "feature-1"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
                 env.cwd: [
@@ -745,16 +743,16 @@ def test_sync_force_dry_run_no_sync_calls() -> None:
             },
         )
 
-        graphite_ops = FakeGraphiteOps()
+        graphite_ops = FakeGraphite()
         # feature-1 is merged
-        github_ops = FakeGitHubOps(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
+        github_ops = FakeGitHub(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
@@ -774,7 +772,7 @@ def test_sync_force_no_deletable_single_sync() -> None:
     """Test that sync -f with no deletable worktrees only runs gt sync once."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
                 env.cwd: [
@@ -783,14 +781,14 @@ def test_sync_force_no_deletable_single_sync() -> None:
             },
         )
 
-        graphite_ops = FakeGraphiteOps()
+        graphite_ops = FakeGraphite()
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=FakeGitHubOps(),
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=FakeGitHub(),
+            shell=FakeShell(),
             script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
@@ -813,7 +811,7 @@ def test_sync_verbose_flag() -> None:
     """Test that sync --verbose passes quiet=False to graphite_ops.sync()."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
                 env.cwd: [
@@ -822,14 +820,14 @@ def test_sync_verbose_flag() -> None:
             },
         )
 
-        graphite_ops = FakeGraphiteOps()
+        graphite_ops = FakeGraphite()
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=FakeGitHubOps(),
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=FakeGitHub(),
+            shell=FakeShell(),
             script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
@@ -851,7 +849,7 @@ def test_sync_verbose_short_flag() -> None:
     """Test that sync -v (short form) passes quiet=False to graphite_ops.sync()."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
                 env.cwd: [
@@ -860,14 +858,14 @@ def test_sync_verbose_short_flag() -> None:
             },
         )
 
-        graphite_ops = FakeGraphiteOps()
+        graphite_ops = FakeGraphite()
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=FakeGitHubOps(),
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=FakeGitHub(),
+            shell=FakeShell(),
             script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
@@ -888,7 +886,7 @@ def test_sync_force_verbose_combination() -> None:
     """Test that sync -f -v combines both flags correctly."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
                 env.cwd: [
@@ -897,14 +895,14 @@ def test_sync_force_verbose_combination() -> None:
             },
         )
 
-        graphite_ops = FakeGraphiteOps()
+        graphite_ops = FakeGraphite()
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=FakeGitHubOps(),
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=FakeGitHub(),
+            shell=FakeShell(),
             script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,

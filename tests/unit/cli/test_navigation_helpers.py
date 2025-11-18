@@ -4,11 +4,11 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import click
-from tests.fakes.gitops import FakeGitOps
+from tests.fakes.git import FakeGit
 
 from erk.cli.commands.navigation_helpers import complete_branch_names
+from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.global_config import GlobalConfig
 
 
 def test_complete_branch_names_local_branches(tmp_path: Path) -> None:
@@ -21,7 +21,7 @@ def test_complete_branch_names_local_branches(tmp_path: Path) -> None:
     erk_root = tmp_path / "erks"
     erk_root.mkdir()
 
-    git_ops = FakeGitOps(
+    git = FakeGit(
         local_branches={repo_root: ["main", "feature-a", "feature-b"]},
         remote_branches={repo_root: []},
         git_common_dirs={repo_root: git_dir},
@@ -31,7 +31,7 @@ def test_complete_branch_names_local_branches(tmp_path: Path) -> None:
         erk_root=erk_root, use_graphite=False, shell_setup_complete=False, show_pr_info=False
     )
 
-    ctx_obj = ErkContext.for_test(git_ops=git_ops, cwd=repo_root, global_config=global_config)
+    ctx_obj = ErkContext.for_test(git=git, cwd=repo_root, global_config=global_config)
 
     # Create mock Click context
     mock_ctx = Mock(spec=click.Context)
@@ -56,7 +56,7 @@ def test_complete_branch_names_remote_branches_strip_prefix(tmp_path: Path) -> N
     erk_root = tmp_path / "erks"
     erk_root.mkdir()
 
-    git_ops = FakeGitOps(
+    git = FakeGit(
         local_branches={repo_root: ["main"]},
         remote_branches={repo_root: ["origin/feature-c", "upstream/feature-d"]},
         git_common_dirs={repo_root: git_dir},
@@ -66,7 +66,7 @@ def test_complete_branch_names_remote_branches_strip_prefix(tmp_path: Path) -> N
         erk_root=erk_root, use_graphite=False, shell_setup_complete=False, show_pr_info=False
     )
 
-    ctx_obj = ErkContext.for_test(git_ops=git_ops, cwd=repo_root, global_config=global_config)
+    ctx_obj = ErkContext.for_test(git=git, cwd=repo_root, global_config=global_config)
 
     # Create mock Click context
     mock_ctx = Mock(spec=click.Context)
@@ -91,7 +91,7 @@ def test_complete_branch_names_deduplication(tmp_path: Path) -> None:
     erk_root = tmp_path / "erks"
     erk_root.mkdir()
 
-    git_ops = FakeGitOps(
+    git = FakeGit(
         local_branches={repo_root: ["main", "feature-a"]},
         remote_branches={repo_root: ["origin/main", "origin/feature-a", "origin/feature-b"]},
         git_common_dirs={repo_root: git_dir},
@@ -101,7 +101,7 @@ def test_complete_branch_names_deduplication(tmp_path: Path) -> None:
         erk_root=erk_root, use_graphite=False, shell_setup_complete=False, show_pr_info=False
     )
 
-    ctx_obj = ErkContext.for_test(git_ops=git_ops, cwd=repo_root, global_config=global_config)
+    ctx_obj = ErkContext.for_test(git=git, cwd=repo_root, global_config=global_config)
 
     # Create mock Click context
     mock_ctx = Mock(spec=click.Context)
@@ -127,7 +127,7 @@ def test_complete_branch_names_filters_by_prefix(tmp_path: Path) -> None:
     erk_root = tmp_path / "erks"
     erk_root.mkdir()
 
-    git_ops = FakeGitOps(
+    git = FakeGit(
         local_branches={repo_root: ["main", "feature-a", "feature-b", "bugfix-1"]},
         remote_branches={repo_root: []},
         git_common_dirs={repo_root: git_dir},
@@ -137,7 +137,7 @@ def test_complete_branch_names_filters_by_prefix(tmp_path: Path) -> None:
         erk_root=erk_root, use_graphite=False, shell_setup_complete=False, show_pr_info=False
     )
 
-    ctx_obj = ErkContext.for_test(git_ops=git_ops, cwd=repo_root, global_config=global_config)
+    ctx_obj = ErkContext.for_test(git=git, cwd=repo_root, global_config=global_config)
 
     # Create mock Click context
     mock_ctx = Mock(spec=click.Context)

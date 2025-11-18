@@ -50,8 +50,8 @@ from typing import Literal
 
 import click
 
-from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.ops import GtKitOps
-from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops import RealGtKitOps
+from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.ops import GtKit
+from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops import RealGtKit
 
 ErrorType = Literal[
     "parent_not_trunk",
@@ -82,10 +82,10 @@ class LandBranchError:
     details: dict[str, str | int | list[str]]
 
 
-def execute_land_branch(ops: GtKitOps | None = None) -> LandBranchSuccess | LandBranchError:
+def execute_land_branch(ops: GtKit | None = None) -> LandBranchSuccess | LandBranchError:
     """Execute the land-branch workflow. Returns success or error result."""
     if ops is None:
-        ops = RealGtKitOps()
+        ops = RealGtKit()
 
     # Step 1: Get current branch
     branch_name = ops.git().get_current_branch()

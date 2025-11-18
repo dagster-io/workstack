@@ -33,22 +33,22 @@ This directory contains unit tests for core erk components - the business logic 
 ## Standard Core Test Pattern
 
 ```python
-from erk.core.operations.gitops import GitOps
-from tests.fakes.fake_gitops import FakeGitOps
+from erk.core.integration.git import Git
+from tests.fakes.fake_git import FakeGit
 
 def test_core_logic() -> None:
     # Arrange: Set up fakes
-    git_ops = FakeGitOps(
+    git = FakeGit(
         current_branch="main",
         all_branches=["main", "feature"]
     )
 
     # Act: Call core function directly
-    result = some_core_function(git_ops)
+    result = some_core_function(git)
 
     # Assert: Verify behavior
     assert result == expected_value
-    assert "feature" in git_ops.created_branches
+    assert "feature" in git.created_branches
 ```
 
 ## Dependency Injection at Core Layer
@@ -57,22 +57,22 @@ Core components use constructor injection:
 
 ```python
 from dataclasses import dataclass
-from erk.core.operations.gitops_abc import GitOpsABC
+from erk.core.integration.git import Git
 
 @dataclass(frozen=True)
 class WorkspaceManager:
-    git_ops: GitOpsABC
+    git: Git
 
     def create_workspace(self, name: str) -> None:
-        self.git_ops.create_branch(name)
+        self.git.create_branch(name)
 
 def test_workspace_manager() -> None:
-    git_ops = FakeGitOps(current_branch="main")
-    manager = WorkspaceManager(git_ops=git_ops)
+    git = FakeGit(current_branch="main")
+    manager = WorkspaceManager(git=git)
 
     manager.create_workspace("new-branch")
 
-    assert "new-branch" in git_ops.created_branches
+    assert "new-branch" in git.created_branches
 ```
 
 ## Testing Without CLI
@@ -111,16 +111,16 @@ def test_pure_function() -> None:
 ```python
 def test_stateful_class() -> None:
     # Use fakes for dependencies
-    git_ops = FakeGitOps(current_branch="main")
+    git = FakeGit(current_branch="main")
 
     # Construct with dependencies
-    instance = MyClass(git_ops=git_ops)
+    instance = MyClass(git=git)
 
     # Exercise behavior
     instance.do_something()
 
     # Assert via fake's read-only properties
-    assert len(git_ops.created_branches) == 1
+    assert len(git.created_branches) == 1
 ```
 
 ### Algorithm Testing
@@ -167,14 +167,14 @@ Core code follows LBYL (Look Before You Leap):
 
 ```python
 def test_lbyl_pattern() -> None:
-    git_ops = FakeGitOps(
+    git = FakeGit(
         current_branch="main",
         all_branches=["main"]
     )
 
     # Function checks existence before acting
-    if "feature" in git_ops.all_branches:
-        result = switch_to_branch(git_ops, "feature")
+    if "feature" in git.all_branches:
+        result = switch_to_branch(git, "feature")
     else:
         result = None
 
@@ -187,13 +187,13 @@ Never use mocks - track mutations via read-only properties:
 
 ```python
 def test_mutation_tracking() -> None:
-    git_ops = FakeGitOps(current_branch="main")
+    git = FakeGit(current_branch="main")
 
-    create_branch(git_ops, "new-branch")
+    create_branch(git, "new-branch")
 
     # ❌ DON'T: mock.assert_called_with(...)
     # ✅ DO: Check read-only property
-    assert "new-branch" in git_ops.created_branches
+    assert "new-branch" in git.created_branches
 ```
 
 ## Test File Organization

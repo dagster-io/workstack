@@ -20,13 +20,13 @@ The `erk list` command is the most complex display command, supporting multiple 
 from erk.commands.list import list as list_cmd
 
 def test_list_default() -> None:
-    git_ops = FakeGitOps(
+    git = FakeGit(
         current_branch="main",
         all_branches=["main", "feature/a", "feature/b"]
     )
 
     runner = CliRunner()
-    result = runner.invoke(list_cmd, [], obj=ErkContext(git_ops=git_ops))
+    result = runner.invoke(list_cmd, [], obj=ErkContext(git=git))
 
     assert result.exit_code == 0
     assert "feature/a" in result.output
@@ -37,15 +37,15 @@ def test_list_default() -> None:
 
 ```python
 def test_list_stacks() -> None:
-    git_ops = FakeGitOps(
+    git = FakeGit(
         current_branch="main",
         all_branches=["main", "parent", "parent/child"]
     )
 
-    graphite_ops = FakeGraphiteOps()
-    graphite_ops.add_stack("parent", ["parent/child"])
+    graphite = FakeGraphite()
+    graphite.add_stack("parent", ["parent/child"])
 
-    ctx = ErkContext(git_ops=git_ops, graphite_ops=graphite_ops)
+    ctx = ErkContext(git=git, graphite=graphite)
     runner = CliRunner()
 
     result = runner.invoke(list_cmd, ["--stacks"], obj=ctx)
@@ -60,7 +60,7 @@ def test_list_stacks() -> None:
 
 ```python
 def test_list_verbose() -> None:
-    git_ops = FakeGitOps(
+    git = FakeGit(
         current_branch="main",
         all_branches=["main", "feature/test"]
     )
@@ -79,20 +79,20 @@ The list command integrates with GitHub to show PR status:
 
 ```python
 def test_list_with_pr_info() -> None:
-    git_ops = FakeGitOps(
+    git = FakeGit(
         current_branch="main",
         all_branches=["main", "feature/test"]
     )
 
-    github_ops = FakeGitHubOps()
-    github_ops.add_pr(
+    github = FakeGitHub()
+    github.add_pr(
         "feature/test",
         number=123,
         state="open",
         title="Add new feature"
     )
 
-    ctx = ErkContext(git_ops=git_ops, github_ops=github_ops)
+    ctx = ErkContext(git=git, github=github)
     runner = CliRunner()
 
     result = runner.invoke(list_cmd, [], obj=ctx)
@@ -108,7 +108,7 @@ The list command can filter branches to show only root-level branches:
 
 ```python
 def test_list_root_filtering() -> None:
-    git_ops = FakeGitOps(
+    git = FakeGit(
         current_branch="main",
         all_branches=[
             "main",
@@ -134,16 +134,16 @@ Testing hierarchical stack display:
 
 ```python
 def test_list_stack_hierarchy() -> None:
-    git_ops = FakeGitOps(
+    git = FakeGit(
         current_branch="main",
         all_branches=["main", "level1", "level1/level2", "level1/level2/level3"]
     )
 
-    graphite_ops = FakeGraphiteOps()
-    graphite_ops.add_stack("level1", ["level1/level2"])
-    graphite_ops.add_stack("level1/level2", ["level1/level2/level3"])
+    graphite = FakeGraphite()
+    graphite.add_stack("level1", ["level1/level2"])
+    graphite.add_stack("level1/level2", ["level1/level2/level3"])
 
-    ctx = ErkContext(git_ops=git_ops, graphite_ops=graphite_ops)
+    ctx = ErkContext(git=git, graphite=graphite)
     runner = CliRunner()
 
     result = runner.invoke(list_cmd, ["--stacks"], obj=ctx)
@@ -163,7 +163,7 @@ The list command detects and handles trunk branches (main, master, etc.):
 
 ```python
 def test_list_trunk_detection() -> None:
-    git_ops = FakeGitOps(
+    git = FakeGit(
         current_branch="main",
         all_branches=["main", "develop", "feature/test"]
     )
@@ -183,7 +183,7 @@ def test_list_trunk_detection() -> None:
 
 ```python
 def test_list_no_branches() -> None:
-    git_ops = FakeGitOps(
+    git = FakeGit(
         current_branch="main",
         all_branches=["main"]  # Only trunk
     )
@@ -199,15 +199,15 @@ def test_list_no_branches() -> None:
 
 ```python
 def test_list_github_api_failure() -> None:
-    git_ops = FakeGitOps(
+    git = FakeGit(
         current_branch="main",
         all_branches=["main", "feature/test"]
     )
 
-    github_ops = FakeGitHubOps()
-    github_ops.set_error("API rate limit exceeded")
+    github = FakeGitHub()
+    github.set_error("API rate limit exceeded")
 
-    ctx = ErkContext(git_ops=git_ops, github_ops=github_ops)
+    ctx = ErkContext(git=git, github=github)
     runner = CliRunner()
 
     result = runner.invoke(list_cmd, [], obj=ctx)
@@ -238,9 +238,9 @@ def test_list_table_format() -> None:
 def test_list_color_coding() -> None:
     from click import unstyle
 
-    github_ops = FakeGitHubOps()
-    github_ops.add_pr("feature/open", number=1, state="open")
-    github_ops.add_pr("feature/merged", number=2, state="merged")
+    github = FakeGitHub()
+    github.add_pr("feature/open", number=1, state="open")
+    github.add_pr("feature/merged", number=2, state="merged")
 
     result = runner.invoke(list_cmd, [], obj=ctx)
 

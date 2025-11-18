@@ -6,8 +6,8 @@ generation business logic.
 """
 
 from erk.cli.commands.checkout import _perform_checkout
-from erk.core.gitops import WorktreeInfo
-from tests.fakes.gitops import FakeGitOps
+from erk.core.git import WorktreeInfo
+from tests.fakes.git import FakeGit
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
@@ -24,7 +24,7 @@ def test_message_case_1_already_on_target_branch_in_current_worktree() -> None:
         work_dir = env.erk_root / env.cwd.name
         feature_wt = work_dir / "feature-1"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=feature_wt, branch="feature-1"),
@@ -36,7 +36,7 @@ def test_message_case_1_already_on_target_branch_in_current_worktree() -> None:
         )
 
         # Build context with cwd=feature_wt (already in target location)
-        test_ctx = env.build_context(git_ops=git_ops, cwd=feature_wt)
+        test_ctx = env.build_context(git=git_ops, cwd=feature_wt)
 
         # Call _perform_jump in script mode
         _perform_checkout(
@@ -74,7 +74,7 @@ def test_message_case_2_jumped_to_existing_worktree_standard_naming() -> None:
         # Standard naming: worktree name matches branch name
         feature_wt = work_dir / "feature-1"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -87,7 +87,7 @@ def test_message_case_2_jumped_to_existing_worktree_standard_naming() -> None:
         )
 
         # Build context with cwd=env.cwd (root worktree, different from target)
-        test_ctx = env.build_context(git_ops=git_ops, cwd=env.cwd)
+        test_ctx = env.build_context(git=git_ops, cwd=env.cwd)
 
         # Call _perform_jump in script mode
         _perform_checkout(
@@ -126,7 +126,7 @@ def test_message_case_2_jumped_to_existing_worktree_nonstandard_naming() -> None
         # Non-standard naming: worktree name differs from branch name
         feature_wt = work_dir / "custom-worktree-name"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -139,7 +139,7 @@ def test_message_case_2_jumped_to_existing_worktree_nonstandard_naming() -> None
         )
 
         # Build context with cwd=env.cwd (root worktree, different from target)
-        test_ctx = env.build_context(git_ops=git_ops, cwd=env.cwd)
+        test_ctx = env.build_context(git=git_ops, cwd=env.cwd)
 
         # Call _perform_jump in script mode
         _perform_checkout(
@@ -176,7 +176,7 @@ def test_message_case_3_jumped_and_checked_out_branch() -> None:
         work_dir = env.erk_root / env.cwd.name
         feature_wt = work_dir / "feature-wt"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -190,7 +190,7 @@ def test_message_case_3_jumped_and_checked_out_branch() -> None:
         )
 
         # Build context with cwd=env.cwd (root worktree)
-        test_ctx = env.build_context(git_ops=git_ops, cwd=env.cwd)
+        test_ctx = env.build_context(git=git_ops, cwd=env.cwd)
 
         # Call _perform_jump in script mode - will checkout feature-1
         _perform_checkout(
@@ -230,7 +230,7 @@ def test_message_case_4_jumped_to_newly_created_worktree() -> None:
         work_dir = env.erk_root / env.cwd.name
         new_wt = work_dir / "new-feature"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -243,7 +243,7 @@ def test_message_case_4_jumped_to_newly_created_worktree() -> None:
         )
 
         # Build context with cwd=env.cwd (root worktree)
-        test_ctx = env.build_context(git_ops=git_ops, cwd=env.cwd)
+        test_ctx = env.build_context(git=git_ops, cwd=env.cwd)
 
         # Call _perform_jump with is_newly_created=True
         _perform_checkout(
@@ -278,7 +278,7 @@ def test_message_colorization_applied() -> None:
         work_dir = env.erk_root / env.cwd.name
         feature_wt = work_dir / "feature-1"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -290,7 +290,7 @@ def test_message_colorization_applied() -> None:
             default_branches={env.cwd: "main"},
         )
 
-        test_ctx = env.build_context(git_ops=git_ops, cwd=env.cwd)
+        test_ctx = env.build_context(git=git_ops, cwd=env.cwd)
 
         # Call _perform_jump in script mode
         _perform_checkout(
@@ -328,7 +328,7 @@ def test_message_non_script_mode_case_1() -> None:
         work_dir = env.erk_root / env.cwd.name
         feature_wt = work_dir / "feature-1"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=feature_wt, branch="feature-1"),
@@ -339,7 +339,7 @@ def test_message_non_script_mode_case_1() -> None:
             default_branches={env.cwd: "main"},
         )
 
-        test_ctx = env.build_context(git_ops=git_ops, cwd=feature_wt)
+        test_ctx = env.build_context(git=git_ops, cwd=feature_wt)
 
         # Capture stderr (where user_output writes)
         captured_stderr = StringIO()
@@ -382,7 +382,7 @@ def test_message_non_script_mode_case_4() -> None:
         work_dir = env.erk_root / env.cwd.name
         new_wt = work_dir / "new-feature"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -394,7 +394,7 @@ def test_message_non_script_mode_case_4() -> None:
             default_branches={env.cwd: "main"},
         )
 
-        test_ctx = env.build_context(git_ops=git_ops, cwd=env.cwd)
+        test_ctx = env.build_context(git=git_ops, cwd=env.cwd)
 
         # Capture stderr (where user_output writes)
         captured_stderr = StringIO()

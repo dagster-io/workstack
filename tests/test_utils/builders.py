@@ -31,13 +31,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.github_ops import PullRequestInfo
-from erk.core.global_config import GlobalConfig
-from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.gitops import FakeGitOps, WorktreeInfo
-from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.fakes.shell_ops import FakeShellOps
+from erk.core.github import PullRequestInfo
+from tests.fakes.git import FakeGit, WorktreeInfo
+from tests.fakes.github import FakeGitHub
+from tests.fakes.graphite import FakeGraphite
+from tests.fakes.shell import FakeShell
 
 
 class GraphiteCacheBuilder:
@@ -382,16 +382,16 @@ class WorktreeScenario:
         Returns:
             Self with ctx attribute populated
         """
-        self.git_ops = FakeGitOps(
+        self.git = FakeGit(
             worktrees=self._worktrees,
             git_common_dirs=self._git_common_dirs,
             current_branches=self._current_branches,
         )
 
-        self.github_ops = FakeGitHubOps(prs=self._prs)
+        self.github = FakeGitHub(prs=self._prs)
 
         # PRs now come from Graphite, not GitHub
-        self.graphite_ops = FakeGraphiteOps(stacks=self._graphite_stacks, pr_info=self._prs)
+        self.graphite = FakeGraphite(stacks=self._graphite_stacks, pr_info=self._prs)
 
         global_config = GlobalConfig(
             erk_root=self.erk_root,
@@ -400,14 +400,14 @@ class WorktreeScenario:
             show_pr_info=self._show_pr_info,
         )
 
-        self.shell_ops = FakeShellOps()
+        self.shell = FakeShell()
 
         self.ctx = ErkContext.for_test(
-            git_ops=self.git_ops,
+            git=self.git,
             global_config=global_config,
-            github_ops=self.github_ops,
-            graphite_ops=self.graphite_ops,
-            shell_ops=self.shell_ops,
+            github=self.github,
+            graphite=self.graphite,
+            shell=self.shell,
             cwd=self.repo_root,
             dry_run=False,
         )

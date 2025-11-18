@@ -1,6 +1,6 @@
 """Tests for the current command using fakes (fast integration tests).
 
-These tests use FakeGitOps with pre-configured WorktreeInfo data instead of
+These tests use FakeGit with pre-configured WorktreeInfo data instead of
 real git operations, providing 5-10x speedup while maintaining full CLI coverage.
 """
 
@@ -9,10 +9,10 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
+from erk.core.config_store import FakeConfigStore, GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.gitops import WorktreeInfo
-from erk.core.global_config import GlobalConfig, InMemoryGlobalConfigOps
-from tests.fakes.gitops import FakeGitOps
+from erk.core.git import WorktreeInfo
+from tests.fakes.git import FakeGit
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
@@ -24,8 +24,8 @@ def test_current_returns_worktree_name() -> None:
         work_dir = env.erk_root / env.cwd.name
         feature_x_path = work_dir / "feature-x"
 
-        # Configure FakeGitOps with worktrees - feature-x is current
-        git_ops = FakeGitOps(
+        # Configure FakeGit with worktrees - feature-x is current
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main", is_root=True),
@@ -44,7 +44,7 @@ def test_current_returns_worktree_name() -> None:
         )
 
         # Use env.build_context() helper to eliminate boilerplate
-        test_ctx = env.build_context(git_ops=git_ops, cwd=feature_x_path, repo=env.repo)
+        test_ctx = env.build_context(git=git_ops, cwd=feature_x_path, repo=env.repo)
 
         # Run current command
         result = runner.invoke(cli, ["current"], obj=test_ctx)
@@ -57,8 +57,8 @@ def test_current_returns_root_in_root_repository() -> None:
     """Test that current returns 'root' when in root repository."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        # Configure FakeGitOps with just root worktree
-        git_ops = FakeGitOps(
+        # Configure FakeGit with just root worktree
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main", is_root=True),
@@ -70,7 +70,7 @@ def test_current_returns_root_in_root_repository() -> None:
         )
 
         # Use env.build_context() helper to eliminate boilerplate
-        test_ctx = env.build_context(git_ops=git_ops, cwd=env.cwd, repo=env.repo)
+        test_ctx = env.build_context(git=git_ops, cwd=env.cwd, repo=env.repo)
 
         # Run current command
         result = runner.invoke(cli, ["current"], obj=test_ctx)
@@ -86,8 +86,8 @@ def test_current_exits_with_error_when_not_in_worktree() -> None:
         # Construct sentinel path outside any worktree (no mkdir needed)
         outside_dir = env.cwd.parent / "outside"
 
-        # Configure FakeGitOps with worktrees, but we'll run from outside
-        git_ops = FakeGitOps(
+        # Configure FakeGit with worktrees, but we'll run from outside
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main", is_root=True),
@@ -99,7 +99,7 @@ def test_current_exits_with_error_when_not_in_worktree() -> None:
         )
 
         # Use env.build_context() helper to eliminate boilerplate
-        test_ctx = env.build_context(git_ops=git_ops, cwd=outside_dir, repo=None)
+        test_ctx = env.build_context(git=git_ops, cwd=outside_dir, repo=None)
 
         # Run current command from outside directory (no os.chdir needed)
         result = runner.invoke(cli, ["current"], obj=test_ctx)
@@ -117,8 +117,8 @@ def test_current_works_from_subdirectory() -> None:
         feature_y_path = work_dir / "feature-y"
         subdir = feature_y_path / "src" / "nested"
 
-        # Configure FakeGitOps with worktrees
-        git_ops = FakeGitOps(
+        # Configure FakeGit with worktrees
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main", is_root=True),
@@ -138,7 +138,7 @@ def test_current_works_from_subdirectory() -> None:
         )
 
         # Use env.build_context() helper to eliminate boilerplate
-        test_ctx = env.build_context(git_ops=git_ops, cwd=subdir, repo=env.repo)
+        test_ctx = env.build_context(git=git_ops, cwd=subdir, repo=env.repo)
 
         # Run current command from subdirectory (no os.chdir needed)
         result = runner.invoke(cli, ["current"], obj=test_ctx)
@@ -154,7 +154,7 @@ def test_current_handles_missing_git_gracefully(tmp_path: Path) -> None:
     erk_root = tmp_path / "erks"
 
     # No git_common_dir configured = not in git repo
-    git_ops = FakeGitOps(git_common_dirs={})
+    git_ops = FakeGit(git_common_dirs={})
 
     # Create global config
     global_config = GlobalConfig(
@@ -163,12 +163,12 @@ def test_current_handles_missing_git_gracefully(tmp_path: Path) -> None:
         shell_setup_complete=False,
         show_pr_info=True,
     )
-    global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+    global_config_ops = FakeConfigStore(config=global_config)
 
     ctx = ErkContext.for_test(
         cwd=non_git_dir,
-        git_ops=git_ops,
-        global_config_ops=global_config_ops,
+        git=git_ops,
+        config_store=global_config_ops,
         global_config=global_config,
         repo=None,
     )
@@ -193,7 +193,7 @@ def test_current_handles_nested_worktrees(tmp_path: Path) -> None:
     target_dir.mkdir()
 
     # Set up nested worktrees: root contains parent, parent contains nested
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         worktrees={
             repo_root: [
                 WorktreeInfo(path=repo_root, branch="main", is_root=True),
@@ -215,12 +215,12 @@ def test_current_handles_nested_worktrees(tmp_path: Path) -> None:
         shell_setup_complete=False,
         show_pr_info=True,
     )
-    global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+    global_config_ops = FakeConfigStore(config=global_config)
 
     ctx = ErkContext.for_test(
         cwd=target_dir,
-        git_ops=git_ops,
-        global_config_ops=global_config_ops,
+        git=git_ops,
+        config_store=global_config_ops,
         global_config=global_config,
     )
 

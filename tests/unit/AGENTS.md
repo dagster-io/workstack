@@ -10,7 +10,7 @@ Tests in this layer verify that fakes are correct and reliable test doubles. If 
 
 **Important:** The `tests/unit/` directory itself must have `__init__.py` to ensure Python recognizes it as a regular package, not a namespace package.
 
-Without `__init__.py`, Python 3.3+ treats this as a namespace package, which breaks absolute imports like `from tests.fakes.gitops import FakeGitOps`.
+Without `__init__.py`, Python 3.3+ treats this as a namespace package, which breaks absolute imports like `from tests.fakes.git import FakeGit`.
 
 ## Subdirectories
 
@@ -18,11 +18,11 @@ Without `__init__.py`, Python 3.3+ treats this as a namespace package, which bre
 
 Tests that verify fake implementations work correctly:
 
-- `test_fake_gitops.py` - Verifies FakeGitOps mutation tracking and state management
-- `test_fake_global_config_ops.py` - Verifies FakeGlobalConfigOps config storage
-- `test_fake_graphite_ops.py` - Verifies FakeGraphiteOps stack tracking (if exists)
-- `test_fake_github_ops.py` - Verifies FakeGitHubOps PR simulation (if exists)
-- `test_fake_shell_ops.py` - Verifies FakeShellOps command tracking (if exists)
+- `test_fake_git.py` - Verifies FakeGit mutation tracking and state management
+- `test_fake_config_store.py` - Verifies FakeConfigStore config storage
+- `test_fake_graphite.py` - Verifies FakeGraphite stack tracking (if exists)
+- `test_fake_github.py` - Verifies FakeGitHub PR simulation (if exists)
+- `test_fake_shell.py` - Verifies FakeShell command tracking (if exists)
 
 **See:** [fakes/CLAUDE.md](fakes/CLAUDE.md) for testing patterns.
 
@@ -44,24 +44,24 @@ Tests that verify fake implementations work correctly:
 
 ```python
 from pathlib import Path
-from tests.fakes.gitops import FakeGitOps
-from erk.core.gitops import WorktreeInfo
+from tests.fakes.fake_git import FakeGit
+from erk.core.integration import WorktreeInfo
 
-def test_fake_gitops_tracks_mutations() -> None:
-    """Test that FakeGitOps correctly tracks state changes."""
+def test_fake_git_tracks_mutations() -> None:
+    """Test that FakeGit correctly tracks state changes."""
     # Arrange: Create a fake
-    git_ops = FakeGitOps(
+    git = FakeGit(
         current_branch="main",
         all_branches=["main", "feature"]
     )
 
     # Act: Perform operations on the fake
-    git_ops.create_branch("new-branch")
-    git_ops.checkout("new-branch")
+    git.create_branch("new-branch")
+    git.checkout("new-branch")
 
     # Assert: Verify the fake tracked mutations correctly
-    assert "new-branch" in git_ops.created_branches
-    assert git_ops.current_branch == "new-branch"
+    assert "new-branch" in git.created_branches
+    assert git.current_branch == "new-branch"
 ```
 
 ## Key Principle: Reliability of Test Doubles
@@ -69,7 +69,7 @@ def test_fake_gitops_tracks_mutations() -> None:
 These tests ensure fakes are **reliable test doubles** for all higher-layer tests:
 
 ```
-If FakeGitOps is broken
+If FakeGit is broken
   → All tests in tests/commands/ that use it are unreliable
   → All tests in tests/core/ that use it are unreliable
 ```
@@ -80,8 +80,8 @@ Therefore, tests/unit/ serves as the foundation:
 tests/unit/fakes/
   ↑
   └─── ensures fakes are correct
-        ├─→ tests/commands/ can trust FakeGitOps
-        ├─→ tests/core/ can trust FakeGitOps
+        ├─→ tests/commands/ can trust FakeGit
+        ├─→ tests/core/ can trust FakeGit
         └─→ All higher-layer tests are reliable
 ```
 
@@ -106,12 +106,12 @@ tests/unit/fakes/
 
 ```python
 # ✅ CORRECT: Plain functions testing fake implementations
-def test_fake_gitops_tracks_branch_creation() -> None: ...
-def test_fake_gitops_tracks_branch_deletion() -> None: ...
-def test_fake_gitops_handles_checkout() -> None: ...
+def test_fake_git_tracks_branch_creation() -> None: ...
+def test_fake_git_tracks_branch_deletion() -> None: ...
+def test_fake_git_handles_checkout() -> None: ...
 
 # ❌ WRONG: Test classes for grouping
-class TestFakeGitOps:
+class TestFakeGit:
     def test_tracks_branch_creation(self) -> None: ...
 ```
 

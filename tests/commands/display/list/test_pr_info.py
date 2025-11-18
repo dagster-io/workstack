@@ -9,10 +9,10 @@ from click.testing import CliRunner
 
 from erk.cli.cli import cli
 from erk.core.branch_metadata import BranchMetadata
-from erk.core.github_ops import PullRequestInfo
-from erk.core.gitops import WorktreeInfo
-from tests.fakes.gitops import FakeGitOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
+from erk.core.git import WorktreeInfo
+from erk.core.github import PullRequestInfo
+from tests.fakes.git import FakeGit
+from tests.fakes.graphite import FakeGraphite
 from tests.test_utils.builders import PullRequestInfoBuilder
 from tests.test_utils.env_helpers import erk_inmem_env
 
@@ -56,7 +56,7 @@ def test_list_with_stacks_pr_visibility(show_pr_info: bool, expected_visible: bo
         feature_worktree = repo_dir / branch_name
 
         # Build fake git ops with worktree for branch
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -69,8 +69,8 @@ def test_list_with_stacks_pr_visibility(show_pr_info: bool, expected_visible: bo
 
         # PR data now comes from Graphite, not GitHub
         test_ctx = env.build_context(
-            git_ops=git_ops,
-            graphite_ops=FakeGraphiteOps(branches=branches, pr_info={branch_name: pr}),
+            git=git_ops,
+            graphite=FakeGraphite(branches=branches, pr_info={branch_name: pr}),
             use_graphite=True,
             show_pr_info=show_pr_info,
         )
@@ -130,7 +130,7 @@ def test_list_pr_emoji_mapping(
         feature_worktree = repo_dir / branch_name
 
         # Build fake git ops with worktree for branch
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -143,8 +143,8 @@ def test_list_pr_emoji_mapping(
 
         # PR data now comes from Graphite, not GitHub
         test_ctx = env.build_context(
-            git_ops=git_ops,
-            graphite_ops=FakeGraphiteOps(branches=branches, pr_info={branch_name: pr}),
+            git=git_ops,
+            graphite=FakeGraphite(branches=branches, pr_info={branch_name: pr}),
             use_graphite=True,
         )
 
@@ -193,7 +193,7 @@ def test_list_with_stacks_uses_graphite_url() -> None:
         feature_worktree = repo_dir / branch_name
 
         # Build fake git ops with worktree for branch
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -206,8 +206,8 @@ def test_list_with_stacks_uses_graphite_url() -> None:
 
         # PR data now comes from Graphite, not GitHub
         test_ctx = env.build_context(
-            git_ops=git_ops,
-            graphite_ops=FakeGraphiteOps(branches=branches, pr_info={branch_name: pr}),
+            git=git_ops,
+            graphite=FakeGraphite(branches=branches, pr_info={branch_name: pr}),
             use_graphite=True,
         )
 
@@ -256,7 +256,7 @@ def test_list_pr_with_merge_conflicts() -> None:
         feature_worktree = repo_dir / branch_name
 
         # Build fake git ops
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main"),
@@ -268,8 +268,8 @@ def test_list_pr_with_merge_conflicts() -> None:
         )
 
         test_ctx = env.build_context(
-            git_ops=git_ops,
-            graphite_ops=FakeGraphiteOps(branches=branches, pr_info={branch_name: pr}),
+            git=git_ops,
+            graphite=FakeGraphite(branches=branches, pr_info={branch_name: pr}),
             use_graphite=True,
         )
 

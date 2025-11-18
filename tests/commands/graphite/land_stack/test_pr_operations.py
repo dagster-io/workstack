@@ -3,14 +3,14 @@
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
+from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.gitops import WorktreeInfo
-from erk.core.global_config import GlobalConfig
-from erk.core.graphite_ops import BranchMetadata
-from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.gitops import FakeGitOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.fakes.shell_ops import FakeShellOps
+from erk.core.git import WorktreeInfo
+from erk.core.graphite import BranchMetadata
+from tests.fakes.git import FakeGit
+from tests.fakes.github import FakeGitHub
+from tests.fakes.graphite import FakeGraphite
+from tests.fakes.shell import FakeShell
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
@@ -34,8 +34,8 @@ def test_land_stack_skips_base_update_when_already_correct() -> None:
             current_branch="feat-2",
         )
 
-        # Configure FakeGitHubOps with correct bases (matching Graphite parents)
-        github_ops = FakeGitHubOps(
+        # Configure FakeGitHub with correct bases (matching Graphite parents)
+        github_ops = FakeGitHub(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Feature 1"),
                 "feat-2": ("OPEN", 200, "Feature 2"),
@@ -54,11 +54,11 @@ def test_land_stack_skips_base_update_when_already_correct() -> None:
         )
 
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
+            git=git_ops,
             global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             dry_run=True,
             script_writer=env.script_writer,
             cwd=env.cwd,
@@ -97,7 +97,7 @@ def test_land_stack_updates_pr_bases_after_force_push() -> None:
         # Build initial Graphite/Git state
         # Running from feat-1, which will land only feat-1
         # After sync, feat-2's parent will be updated to "main"
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
                 env.cwd: [
@@ -112,7 +112,7 @@ def test_land_stack_updates_pr_bases_after_force_push() -> None:
         # - feat-2's parent is "main" (what it will be after landing feat-1 and syncing)
         # - feat-1 still has feat-2 as a child (for finding upstack branches)
         # - Stack includes full history for proper navigation
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-2"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch(
@@ -129,7 +129,7 @@ def test_land_stack_updates_pr_bases_after_force_push() -> None:
         # Configure GitHub with stale base for PR #200
         # After landing feat-1, Graphite updates feat-2's parent to "main"
         # but GitHub still shows base as "feat-1" (this is the bug)
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Feature 1"),
                 "feat-2": ("OPEN", 200, "Feature 2"),
@@ -148,11 +148,11 @@ def test_land_stack_updates_pr_bases_after_force_push() -> None:
         )
 
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
+            git=git_ops,
             global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             dry_run=True,
             script_writer=env.script_writer,
             cwd=env.cwd,
@@ -193,7 +193,7 @@ def test_land_stack_dry_run_shows_trunk_sync_commands() -> None:
             current_branch="feat-2",
         )
 
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Feature 1"),
                 "feat-2": ("OPEN", 200, "Feature 2"),
@@ -212,11 +212,11 @@ def test_land_stack_dry_run_shows_trunk_sync_commands() -> None:
         )
 
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
+            git=git_ops,
             global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             dry_run=True,
             script_writer=env.script_writer,
             cwd=env.cwd,

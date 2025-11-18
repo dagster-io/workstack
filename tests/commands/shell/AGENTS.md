@@ -27,9 +27,9 @@ Shell wrappers allow erk commands to affect the parent shell:
 from erk.commands.shell import prepare_shell_integration
 
 def test_shell_wrapper_generation() -> None:
-    shell_ops = FakeShellOps()
+    shell = FakeShell()
 
-    ctx = ErkContext(shell_ops=shell_ops)
+    ctx = ErkContext(shell=shell)
     runner = CliRunner()
 
     result = runner.invoke(prepare_shell_integration, ["bash"], obj=ctx)
@@ -73,12 +73,12 @@ def test_cwd_recovery() -> None:
     initial_cwd = "/initial/path"
     target_cwd = "/target/path"
 
-    shell_ops = FakeShellOps()
-    git_ops = FakeGitOps(current_branch="main")
+    shell = FakeShell()
+    git = FakeGit(current_branch="main")
 
     ctx = ErkContext(
-        shell_ops=shell_ops,
-        git_ops=git_ops,
+        shell=shell,
+        git=git,
         cwd=initial_cwd
     )
 
@@ -87,33 +87,33 @@ def test_cwd_recovery() -> None:
 
     assert result.exit_code == 0
     # Verify CWD recovery commands were generated
-    assert f"cd {target_cwd}" in shell_ops.generated_output
+    assert f"cd {target_cwd}" in shell.generated_output
 ```
 
-## FakeShellOps Usage Patterns
+## FakeShell Usage Patterns
 
-The `FakeShellOps` fake tracks shell operations:
+The `FakeShell` fake tracks shell operations:
 
 ```python
-from tests.fakes.fake_shell_ops import FakeShellOps
+from tests.fakes.fake_shell import FakeShell
 
 def test_shell_command_execution() -> None:
-    shell_ops = FakeShellOps()
+    shell = FakeShell()
 
     # Pre-configure command results
-    shell_ops.add_command_result(
+    shell.add_command_result(
         "git status",
         returncode=0,
         stdout="On branch main\nnothing to commit"
     )
 
-    ctx = ErkContext(shell_ops=shell_ops)
+    ctx = ErkContext(shell=shell)
 
     # Execute command that runs subprocess
     result = runner.invoke(status, [], obj=ctx)
 
     # Verify subprocess was called
-    assert "git status" in shell_ops.executed_commands
+    assert "git status" in shell.executed_commands
 ```
 
 ## Testing Subprocess Interaction
@@ -122,23 +122,23 @@ Commands may execute git or other subprocess commands:
 
 ```python
 def test_subprocess_calls() -> None:
-    shell_ops = FakeShellOps()
+    shell = FakeShell()
 
     # Configure expected subprocess result
-    shell_ops.add_command_result(
+    shell.add_command_result(
         "git branch --show-current",
         returncode=0,
         stdout="main\n"
     )
 
-    ctx = ErkContext(shell_ops=shell_ops)
+    ctx = ErkContext(shell=shell)
     runner = CliRunner()
 
     result = runner.invoke(status, [], obj=ctx)
 
     assert result.exit_code == 0
     # Verify command was executed
-    assert any("git branch" in cmd for cmd in shell_ops.executed_commands)
+    assert any("git branch" in cmd for cmd in shell.executed_commands)
 ```
 
 ## Shell Output Capture
@@ -147,16 +147,16 @@ Testing commands that capture and process shell output:
 
 ```python
 def test_shell_output_processing() -> None:
-    shell_ops = FakeShellOps()
+    shell = FakeShell()
 
     # Multi-line output
-    shell_ops.add_command_result(
+    shell.add_command_result(
         "git branch -a",
         returncode=0,
         stdout="  main\n* feature/test\n  feature/other\n"
     )
 
-    ctx = ErkContext(shell_ops=shell_ops)
+    ctx = ErkContext(shell=shell)
 
     # Command processes branch list
     result = runner.invoke(list_cmd, [], obj=ctx)
@@ -171,16 +171,16 @@ Testing shell command failures:
 
 ```python
 def test_shell_command_failure() -> None:
-    shell_ops = FakeShellOps()
+    shell = FakeShell()
 
     # Simulate git command failure
-    shell_ops.add_command_result(
+    shell.add_command_result(
         "git status",
         returncode=128,
         stderr="fatal: not a git repository"
     )
 
-    ctx = ErkContext(shell_ops=shell_ops)
+    ctx = ErkContext(shell=shell)
     runner = CliRunner()
 
     result = runner.invoke(status, [], obj=ctx)
@@ -196,10 +196,10 @@ def test_shell_command_failure() -> None:
 
 ```python
 def test_shell_environment() -> None:
-    shell_ops = FakeShellOps()
-    shell_ops.set_env("WORKSTACK_HOME", "/custom/path")
+    shell = FakeShell()
+    shell.set_env("WORKSTACK_HOME", "/custom/path")
 
-    ctx = ErkContext(shell_ops=shell_ops)
+    ctx = ErkContext(shell=shell)
 
     # Command should respect environment
     result = runner.invoke(init, [], obj=ctx)
@@ -227,15 +227,15 @@ Shell operations often accompany other operations:
 
 ```python
 def test_command_with_shell_wrapper() -> None:
-    git_ops = FakeGitOps(
+    git = FakeGit(
         current_branch="main",
         all_branches=["main", "feature"]
     )
-    shell_ops = FakeShellOps()
+    shell = FakeShell()
 
     ctx = ErkContext(
-        git_ops=git_ops,
-        shell_ops=shell_ops,
+        git=git,
+        shell=shell,
         cwd="/workspace"
     )
 
@@ -244,12 +244,12 @@ def test_command_with_shell_wrapper() -> None:
 
     assert result.exit_code == 0
     # Verify both git and shell operations
-    assert "feature" in git_ops.checked_out_branches
-    assert any("cd" in cmd for cmd in shell_ops.generated_output)
+    assert "feature" in git.checked_out_branches
+    assert any("cd" in cmd for cmd in shell.generated_output)
 ```
 
 ## See Also
 
 - [../CLAUDE.md](../CLAUDE.md) - General CLI command patterns
-- [../../fakes/fake_shell_ops.py](../../fakes/fake_shell_ops.py) - FakeShellOps implementation
+- [../../fakes/shell.py](../../fakes/shell.py) - FakeShell implementation
 - [../../docs/TESTING.md](../../../docs/TESTING.md) - Complete testing guide

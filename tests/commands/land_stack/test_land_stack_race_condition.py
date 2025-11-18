@@ -18,17 +18,17 @@ from click.testing import CliRunner
 
 from erk.cli.cli import cli
 from erk.core.branch_metadata import BranchMetadata
-from erk.core.gitops import WorktreeInfo
-from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.gitops import FakeGitOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.fakes.shell_ops import FakeShellOps
+from erk.core.git import WorktreeInfo
+from tests.fakes.git import FakeGit
+from tests.fakes.github import FakeGitHub
+from tests.fakes.graphite import FakeGraphite
+from tests.fakes.shell import FakeShell
 from tests.test_utils.builders import PullRequestInfoBuilder
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
-class TrackingFakeGitHubOps(FakeGitHubOps):
-    """FakeGitHubOps that tracks get_pr_base_branch calls.
+class TrackingFakeGitHub(FakeGitHub):
+    """FakeGitHub that tracks get_pr_base_branch calls.
 
     Used to verify that PR base verification happens before merge.
     """
@@ -65,7 +65,7 @@ def test_land_stack_detects_and_updates_stale_pr_base() -> None:
         # Simulate after feat-1 has already been landed:
         # - Local git parent of feat-2 is main (after previous iteration's restack)
         # - But GitHub PR #102 base is still "feat-1" (stale)
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             default_branches={env.cwd: "main"},
             current_branches={env.cwd: "feat-2"},
@@ -78,7 +78,7 @@ def test_land_stack_detects_and_updates_stale_pr_base() -> None:
 
         # Configure Graphite metadata
         # After landing feat-1, the stack should look like: main -> feat-2
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-2"]),
                 "feat-2": BranchMetadata.branch("feat-2", parent="main"),
@@ -90,7 +90,7 @@ def test_land_stack_detects_and_updates_stale_pr_base() -> None:
 
         # Configure GitHub ops with STALE PR base
         # PR #102 (feat-2) base is "feat-1" but should be "main"
-        github_ops = TrackingFakeGitHubOps(
+        github_ops = TrackingFakeGitHub(
             prs={
                 "feat-2": PullRequestInfoBuilder(102, "feat-2").with_passing_checks().build(),
             },
@@ -101,10 +101,10 @@ def test_land_stack_detects_and_updates_stale_pr_base() -> None:
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             dry_run=False,
         )
 
@@ -161,7 +161,7 @@ def test_land_stack_skips_update_when_pr_base_already_correct() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Set up stack with correct PR base
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             default_branches={env.cwd: "main"},
             current_branches={env.cwd: "feat-1"},
@@ -172,7 +172,7 @@ def test_land_stack_skips_update_when_pr_base_already_correct() -> None:
             },
         )
 
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"]),
                 "feat-1": BranchMetadata.branch("feat-1", parent="main"),
@@ -183,7 +183,7 @@ def test_land_stack_skips_update_when_pr_base_already_correct() -> None:
         )
 
         # PR base is CORRECT - already points to main
-        github_ops = TrackingFakeGitHubOps(
+        github_ops = TrackingFakeGitHub(
             prs={
                 "feat-1": PullRequestInfoBuilder(101, "feat-1").with_passing_checks().build(),
             },
@@ -194,10 +194,10 @@ def test_land_stack_skips_update_when_pr_base_already_correct() -> None:
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             dry_run=False,
         )
 
@@ -236,7 +236,7 @@ def test_land_stack_with_multiple_branches_updates_all_stale_bases() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Set up 3-branch stack: main -> feat-1 -> feat-2 -> feat-3
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             default_branches={env.cwd: "main"},
             current_branches={env.cwd: "feat-3"},
@@ -249,7 +249,7 @@ def test_land_stack_with_multiple_branches_updates_all_stale_bases() -> None:
 
         # Configure Graphite metadata
         # Simulate after feat-1 and feat-2 have landed: main -> feat-3
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"]),
                 "feat-1": BranchMetadata.branch("feat-1", parent="main", children=["feat-2"]),
@@ -264,7 +264,7 @@ def test_land_stack_with_multiple_branches_updates_all_stale_bases() -> None:
         # Configure GitHub ops with PRs
         # All PR bases start correct, but we'll simulate them becoming stale
         # as each parent branch lands and is deleted
-        github_ops = TrackingFakeGitHubOps(
+        github_ops = TrackingFakeGitHub(
             prs={
                 "feat-1": PullRequestInfoBuilder(101, "feat-1").with_passing_checks().build(),
                 "feat-2": PullRequestInfoBuilder(102, "feat-2").with_passing_checks().build(),
@@ -279,10 +279,10 @@ def test_land_stack_with_multiple_branches_updates_all_stale_bases() -> None:
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             dry_run=False,
         )
 

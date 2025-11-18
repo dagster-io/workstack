@@ -61,7 +61,7 @@ def check_uncommitted_changes(
         SystemExit: If uncommitted changes detected
     """
     if not force and not dry_run:
-        if ctx.git_ops.has_uncommitted_changes(current_worktree):
+        if ctx.git.has_uncommitted_changes(current_worktree):
             user_output(click.style("❌ Error: Uncommitted changes detected", fg="red", bold=True))
             user_output("\nCommit or stash changes before running split")
             raise SystemExit(1)
@@ -181,7 +181,7 @@ def split_cmd(
 
     # 2. Gather repository context
     current_worktree = ctx.cwd
-    current_branch = ctx.git_ops.get_current_branch(current_worktree)
+    current_branch = ctx.git.get_current_branch(current_worktree)
     repo = discover_repo_context(ctx, current_worktree)
     trunk_branch = ctx.trunk_branch
     validate_trunk_branch(trunk_branch)
@@ -198,7 +198,7 @@ def split_cmd(
     check_uncommitted_changes(ctx, current_worktree, force, dry_run)
 
     # 6. Create split plan
-    all_worktrees = ctx.git_ops.list_worktrees(repo.root)
+    all_worktrees = ctx.git.list_worktrees(repo.root)
     plan = create_split_plan(
         stack_branches=stack_to_split,
         trunk_branch=trunk_branch,
@@ -226,7 +226,7 @@ def split_cmd(
     if dry_run:
         results = [(branch, plan.target_paths[branch]) for branch in plan.branches_to_split]
     else:
-        results = execute_split_plan(plan, ctx.git_ops)
+        results = execute_split_plan(plan, ctx.git)
 
     # 10. Display results
     display_results(results, dry_run)

@@ -37,13 +37,13 @@ def down_cmd(ctx: ErkContext, script: bool) -> None:
     trunk_branch = ctx.trunk_branch
 
     # Get current branch
-    current_branch = ctx.git_ops.get_current_branch(ctx.cwd)
+    current_branch = ctx.git.get_current_branch(ctx.cwd)
     if current_branch is None:
         user_output("Error: Not currently on a branch (detached HEAD)")
         raise SystemExit(1)
 
     # Get all worktrees for checking if target has a worktree
-    worktrees = ctx.git_ops.list_worktrees(repo.root)
+    worktrees = ctx.git.list_worktrees(repo.root)
 
     # Resolve navigation to get target branch or 'root' (may auto-create worktree)
     target_name, was_created = _resolve_down_navigation(
@@ -62,7 +62,7 @@ def down_cmd(ctx: ErkContext, script: bool) -> None:
         _activate_root_repo(ctx, repo, script, "down")
 
     # Resolve target branch to actual worktree path
-    target_wt_path = ctx.git_ops.find_worktree_for_branch(repo.root, target_name)
+    target_wt_path = ctx.git.find_worktree_for_branch(repo.root, target_name)
     if target_wt_path is None:
         # This should not happen because _resolve_down_navigation already checks
         # But include defensive error handling

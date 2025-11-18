@@ -3,14 +3,14 @@
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
+from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.gitops import WorktreeInfo
-from erk.core.global_config import GlobalConfig
-from erk.core.graphite_ops import BranchMetadata
-from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.gitops import FakeGitOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.fakes.shell_ops import FakeShellOps
+from erk.core.git import WorktreeInfo
+from erk.core.graphite import BranchMetadata
+from tests.fakes.git import FakeGit
+from tests.fakes.github import FakeGitHub
+from tests.fakes.graphite import FakeGraphite
+from tests.fakes.shell import FakeShell
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
@@ -18,7 +18,7 @@ def test_land_stack_gets_branches_to_land_correctly() -> None:
     """Test that land-stack lands from bottom of stack to current branch."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
                 env.cwd: [
@@ -39,7 +39,7 @@ def test_land_stack_gets_branches_to_land_correctly() -> None:
         # Stack: main → feat-1 → feat-2 → feat-3
         # Current: feat-2
         # With --down flag: Should land feat-1, feat-2 (bottom to current, not including feat-3)
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch(
@@ -56,7 +56,7 @@ def test_land_stack_gets_branches_to_land_correctly() -> None:
         )
 
         # feat-1 and feat-2 have open PRs (feat-3 not needed)
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Feature 1"),
                 "feat-2": ("OPEN", 200, "Feature 2"),
@@ -68,11 +68,11 @@ def test_land_stack_gets_branches_to_land_correctly() -> None:
         )
 
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
+            git=git_ops,
             global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
@@ -98,7 +98,7 @@ def test_land_stack_from_top_of_stack_lands_all_branches() -> None:
     """
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
                 env.cwd: [
@@ -119,7 +119,7 @@ def test_land_stack_from_top_of_stack_lands_all_branches() -> None:
         # Stack: main → feat-1 → feat-2 → feat-3 → feat-4
         # Current: feat-4 (at TOP/leaf)
         # Should land: feat-1, feat-2, feat-3, feat-4 (ALL 4 branches)
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch(
@@ -139,7 +139,7 @@ def test_land_stack_from_top_of_stack_lands_all_branches() -> None:
         )
 
         # All branches have open PRs
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Feature 1"),
                 "feat-2": ("OPEN", 200, "Feature 2"),
@@ -155,11 +155,11 @@ def test_land_stack_from_top_of_stack_lands_all_branches() -> None:
         )
 
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
+            git=git_ops,
             global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,
@@ -177,10 +177,10 @@ def test_land_stack_from_top_of_stack_lands_all_branches() -> None:
 
 
 def test_land_stack_refreshes_metadata_after_sync() -> None:
-    """Test that RealGraphiteOps invalidates cache after gt sync.
+    """Test that RealGraphite invalidates cache after gt sync.
 
     This test verifies the fix for the cache invalidation bug:
-    - Bug: RealGraphiteOps.sync() didn't invalidate _branches_cache
+    - Bug: RealGraphite.sync() didn't invalidate _branches_cache
     - Result: After gt sync updated metadata, stale cached data was returned
     - Fix: Added `self._branches_cache = None` at end of sync()
 
@@ -189,7 +189,7 @@ def test_land_stack_refreshes_metadata_after_sync() -> None:
     """
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             worktrees={
                 env.cwd: [
@@ -208,7 +208,7 @@ def test_land_stack_refreshes_metadata_after_sync() -> None:
         )
 
         # Stack: main → feat-1 → feat-2
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch(
@@ -221,7 +221,7 @@ def test_land_stack_refreshes_metadata_after_sync() -> None:
             },
         )
 
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Feature 1"),
                 "feat-2": ("OPEN", 200, "Feature 2"),
@@ -233,11 +233,11 @@ def test_land_stack_refreshes_metadata_after_sync() -> None:
         )
 
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
+            git=git_ops,
             global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             script_writer=env.script_writer,
             cwd=env.cwd,
             dry_run=False,

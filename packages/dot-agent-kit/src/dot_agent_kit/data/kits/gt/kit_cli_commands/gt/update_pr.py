@@ -35,8 +35,8 @@ from typing import Literal
 
 import click
 
-from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.ops import GtKitOps
-from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops import RealGtKitOps
+from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.ops import GtKit
+from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops import RealGtKit
 
 ErrorType = Literal[
     "no_pr",
@@ -68,10 +68,10 @@ class UpdatePRError:
     details: dict[str, str]
 
 
-def execute_update_pr(ops: GtKitOps | None = None) -> UpdatePRResult | UpdatePRError:
+def execute_update_pr(ops: GtKit | None = None) -> UpdatePRResult | UpdatePRError:
     """Execute the update-pr workflow. Returns success or error result."""
     if ops is None:
-        ops = RealGtKitOps()
+        ops = RealGtKit()
 
     # Step 1: Get current branch for context
     branch_name = ops.git().get_current_branch()

@@ -11,5 +11,5 @@ used across land-stack test modules.
 # Common patterns across tests:
 # - pure_erk_env(runner) for test environment setup
 # - env.build_ops_from_branches() for Graphite/Git state construction
-# - FakeGitHubOps with pr_statuses and pr_mergeability configuration
+# - FakeGitHub with pr_statuses and pr_mergeability configuration
 # - GlobalConfig with use_graphite=True for all land-stack tests

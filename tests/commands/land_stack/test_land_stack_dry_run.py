@@ -10,19 +10,19 @@ from click.testing import CliRunner
 
 from erk.cli.cli import cli
 from erk.core.branch_metadata import BranchMetadata
-from erk.core.gitops import WorktreeInfo
-from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.gitops import FakeGitOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.fakes.shell_ops import FakeShellOps
+from erk.core.git import WorktreeInfo
+from tests.fakes.git import FakeGit
+from tests.fakes.github import FakeGitHub
+from tests.fakes.graphite import FakeGraphite
+from tests.fakes.shell import FakeShell
 from tests.test_utils.builders import PullRequestInfoBuilder
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
-class TrackableFakeGitHubOps(FakeGitHubOps):
-    """FakeGitHubOps with call tracking for dry-run tests.
+class TrackableFakeGitHub(FakeGitHub):
+    """FakeGitHub with call tracking for dry-run tests.
 
-    Extends FakeGitHubOps to track all write operation calls (merge_pr,
+    Extends FakeGitHub to track all write operation calls (merge_pr,
     update_pr_base_branch) to verify they are NOT called in dry-run mode.
     """
 
@@ -58,7 +58,7 @@ def test_dry_run_does_not_execute_merge_operations() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Set up a simple stack: main -> feat-1 -> feat-2
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             default_branches={env.cwd: "main"},
             current_branches={env.cwd: "feat-2"},
@@ -70,7 +70,7 @@ def test_dry_run_does_not_execute_merge_operations() -> None:
         )
 
         # Configure Graphite metadata for stack
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"]),
                 "feat-1": BranchMetadata.branch("feat-1", parent="main", children=["feat-2"]),
@@ -82,7 +82,7 @@ def test_dry_run_does_not_execute_merge_operations() -> None:
         )
 
         # Configure trackable GitHub ops with PRs
-        github_ops = TrackableFakeGitHubOps(
+        github_ops = TrackableFakeGitHub(
             prs={
                 "feat-1": PullRequestInfoBuilder(101, "feat-1").with_passing_checks().build(),
                 "feat-2": PullRequestInfoBuilder(102, "feat-2").with_passing_checks().build(),
@@ -95,10 +95,10 @@ def test_dry_run_does_not_execute_merge_operations() -> None:
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             dry_run=False,
         )
 
@@ -128,7 +128,7 @@ def test_dry_run_still_performs_read_operations() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Set up stack with missing PR (will cause validation failure)
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             default_branches={env.cwd: "main"},
             current_branches={env.cwd: "feat-2"},
@@ -139,7 +139,7 @@ def test_dry_run_still_performs_read_operations() -> None:
             },
         )
 
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"]),
                 "feat-1": BranchMetadata.branch("feat-1", parent="main", children=["feat-2"]),
@@ -151,7 +151,7 @@ def test_dry_run_still_performs_read_operations() -> None:
         )
 
         # Only feat-1 has a PR, feat-2 does not
-        github_ops = TrackableFakeGitHubOps(
+        github_ops = TrackableFakeGitHub(
             prs={
                 "feat-1": PullRequestInfoBuilder(101, "feat-1").with_passing_checks().build(),
             },
@@ -160,10 +160,10 @@ def test_dry_run_still_performs_read_operations() -> None:
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             dry_run=False,
         )
 
@@ -187,7 +187,7 @@ def test_dry_run_shows_all_operations() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Set up stack: main -> feat-1 -> feat-2
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             default_branches={env.cwd: "main"},
             current_branches={env.cwd: "feat-2"},
@@ -198,7 +198,7 @@ def test_dry_run_shows_all_operations() -> None:
             },
         )
 
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"]),
                 "feat-1": BranchMetadata.branch("feat-1", parent="main", children=["feat-2"]),
@@ -209,7 +209,7 @@ def test_dry_run_shows_all_operations() -> None:
             },
         )
 
-        github_ops = TrackableFakeGitHubOps(
+        github_ops = TrackableFakeGitHub(
             prs={
                 "feat-1": PullRequestInfoBuilder(101, "feat-1").with_passing_checks().build(),
                 "feat-2": PullRequestInfoBuilder(102, "feat-2").with_passing_checks().build(),
@@ -222,10 +222,10 @@ def test_dry_run_shows_all_operations() -> None:
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             dry_run=False,
         )
 
@@ -255,7 +255,7 @@ def test_dry_run_does_not_delete_branches() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Set up stack
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             default_branches={env.cwd: "main"},
             current_branches={env.cwd: "feat-1"},
@@ -266,7 +266,7 @@ def test_dry_run_does_not_delete_branches() -> None:
             },
         )
 
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"]),
                 "feat-1": BranchMetadata.branch("feat-1", parent="main"),
@@ -276,7 +276,7 @@ def test_dry_run_does_not_delete_branches() -> None:
             },
         )
 
-        github_ops = TrackableFakeGitHubOps(
+        github_ops = TrackableFakeGitHub(
             prs={
                 "feat-1": PullRequestInfoBuilder(101, "feat-1").with_passing_checks().build(),
             },
@@ -285,10 +285,10 @@ def test_dry_run_does_not_delete_branches() -> None:
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             dry_run=False,
         )
 
@@ -298,7 +298,7 @@ def test_dry_run_does_not_delete_branches() -> None:
         # Assert: Command succeeded
         assert result.exit_code == 0
 
-        # Assert: No branches were deleted (NoopGitOps prevents this)
+        # Assert: No branches were deleted (NoopGit prevents this)
         assert len(git_ops.deleted_branches) == 0, "No branches should be deleted in dry-run mode"
 
 
@@ -311,7 +311,7 @@ def test_dry_run_does_not_update_pr_bases() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Set up 3-branch stack
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             default_branches={env.cwd: "main"},
             current_branches={env.cwd: "feat-2"},
@@ -322,7 +322,7 @@ def test_dry_run_does_not_update_pr_bases() -> None:
             },
         )
 
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"]),
                 "feat-1": BranchMetadata.branch("feat-1", parent="main", children=["feat-2"]),
@@ -333,7 +333,7 @@ def test_dry_run_does_not_update_pr_bases() -> None:
             },
         )
 
-        github_ops = TrackableFakeGitHubOps(
+        github_ops = TrackableFakeGitHub(
             prs={
                 "feat-1": PullRequestInfoBuilder(101, "feat-1").with_passing_checks().build(),
                 "feat-2": PullRequestInfoBuilder(102, "feat-2").with_passing_checks().build(),
@@ -346,10 +346,10 @@ def test_dry_run_does_not_update_pr_bases() -> None:
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             dry_run=False,
         )
 

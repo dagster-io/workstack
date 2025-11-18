@@ -147,7 +147,7 @@ show_pr_info = true
 shell_setup_complete = true
 ```
 
-**Access**: Via `GlobalConfigOps` interface.
+**Access**: Via `ConfigStore` interface.
 
 ### Repo Config
 
@@ -202,10 +202,13 @@ A frozen dataclass containing all injected dependencies.
 ```python
 @dataclass(frozen=True)
 class ErkContext:
-    git_ops: GitOps
-    global_config_ops: GlobalConfigOps
-    github_ops: GitHubOps
-    graphite_ops: GraphiteOps
+    git: Git
+    config_store: ConfigStore
+    github: GitHub
+    graphite: Graphite
+    shell: Shell
+    completion: Completion
+    script_writer: ScriptWriter
     dry_run: bool
 ```
 
@@ -219,16 +222,16 @@ class ErkContext:
 
 ---
 
-## Operations Layer Terms
+## Integration Layer Terms
 
-### Ops Interface
+### Integration Class
 
-An ABC (Abstract Base Class) defining operations for external integrations.
+An ABC (Abstract Base Class) defining integration classes for external systems.
 
 **Pattern**:
 
 ```python
-class GitOps(ABC):
+class Git(ABC):
     @abstractmethod
     def list_worktrees(self, repo_root: Path) -> list[WorktreeInfo]:
         ...
@@ -236,23 +239,26 @@ class GitOps(ABC):
 
 **Examples**:
 
-- `GitOps` - Git operations
-- `GitHubOps` - GitHub API operations
-- `GraphiteOps` - Graphite CLI operations
-- `GlobalConfigOps` - Configuration operations
+- `Git` - Git operations
+- `GitHub` - GitHub API operations
+- `Graphite` - Graphite CLI operations
+- `ConfigStore` - Configuration operations
+- `Shell` - Shell detection and tool availability
+- `Completion` - Shell completion generation
+- `ScriptWriter` - Activation script generation
 
 **Purpose**: Abstraction enabling testing with fakes.
 
 ### Real Implementation
 
-Production implementation of an ops interface that executes actual commands.
+Production implementation of an integration interface that executes actual commands.
 
-**Naming**: `Real<Interface>` (e.g., `RealGitOps`)
+**Naming**: `Real<Interface>` (e.g., `RealGit`)
 
 **Pattern**:
 
 ```python
-class RealGitOps(GitOps):
+class RealGit(Git):
     def list_worktrees(self, repo_root: Path) -> list[WorktreeInfo]:
         result = subprocess.run(["git", "worktree", "list", ...])
         return parse_worktrees(result.stdout)
@@ -262,16 +268,16 @@ class RealGitOps(GitOps):
 
 ### Fake Implementation
 
-In-memory implementation of an ops interface for testing.
+In-memory implementation of an integration interface for testing.
 
-**Naming**: `Fake<Interface>` (e.g., `FakeGitOps`)
+**Naming**: `Fake<Interface>` (e.g., `FakeGit`)
 
 **Location**: `tests/fakes/<interface>.py`
 
 **Pattern**:
 
 ```python
-class FakeGitOps(GitOps):
+class FakeGit(Git):
     def __init__(self, *, worktrees: list[WorktreeInfo] | None = None):
         self._worktrees = worktrees or []
 
@@ -287,13 +293,13 @@ class FakeGitOps(GitOps):
 
 A wrapper around a real implementation that prints messages instead of executing destructive operations.
 
-**Naming**: `DryRun<Interface>` (e.g., `DryRunGitOps`)
+**Naming**: `DryRun<Interface>` (e.g., `DryRunGit`)
 
 **Pattern**:
 
 ```python
-class DryRunGitOps(GitOps):
-    def __init__(self, wrapped: GitOps) -> None:
+class DryRunGit(Git):
+    def __init__(self, wrapped: Git) -> None:
         self._wrapped = wrapped
 
     def remove_worktree(self, repo_root: Path, path: Path, force: bool) -> None:
@@ -389,11 +395,11 @@ Test that uses real implementations and filesystem operations.
 
 **Characteristics**:
 
-- Uses `RealGitOps`, actual git commands
+- Uses `RealGit`, actual git commands
 - Slower than unit tests
 - Tests real integration with external tools
 
-**Example**: `tests/integration/test_gitops_integration.py`
+**Example**: `tests/integration/test_git_integration.py`
 
 ### Unit Test
 
@@ -403,7 +409,7 @@ Test that uses fake implementations and isolated filesystem.
 
 **Characteristics**:
 
-- Uses `FakeGitOps`, `FakeGitHubOps`, etc.
+- Uses `FakeGit`, `FakeGitHub`, etc.
 - Fast (no subprocess calls)
 - Majority of test suite
 

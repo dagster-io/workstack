@@ -6,11 +6,11 @@ from typing import Any
 import pytest
 
 from erk.core.branch_metadata import BranchMetadata
-from erk.core.global_config import GlobalConfig
+from erk.core.config_store import GlobalConfig
 from erk.status.collectors.graphite import GraphiteStackCollector
 from tests.fakes.context import create_test_context
-from tests.fakes.gitops import FakeGitOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
+from tests.fakes.git import FakeGit
+from tests.fakes.graphite import FakeGraphite
 
 
 def setup_stack_collector(
@@ -27,11 +27,11 @@ def setup_stack_collector(
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         current_branches={worktree_path: branch},
         **(git_kwargs or {}),
     )
-    graphite_ops = FakeGraphiteOps(**(graphite_kwargs or {}))
+    graphite_ops = FakeGraphite(**(graphite_kwargs or {}))
     global_config = GlobalConfig(
         erk_root=Path("/fake/erks"),
         use_graphite=use_graphite,
@@ -39,8 +39,8 @@ def setup_stack_collector(
         show_pr_info=True,
     )
     ctx = create_test_context(
-        git_ops=git_ops,
-        graphite_ops=graphite_ops,
+        git=git_ops,
+        graphite=graphite_ops,
         global_config=global_config,
     )
 

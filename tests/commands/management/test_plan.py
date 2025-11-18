@@ -7,10 +7,10 @@ from click.testing import CliRunner
 from erk.cli.cli import cli
 from erk.cli.commands.shell_integration import hidden_shell_cmd
 from erk.cli.shell_utils import render_cd_script
+from erk.core.config_store import FakeConfigStore, GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.gitops import WorktreeInfo
-from erk.core.global_config import GlobalConfig, InMemoryGlobalConfigOps
-from tests.fakes.gitops import FakeGitOps
+from erk.core.git import WorktreeInfo
+from tests.fakes.git import FakeGit
 from tests.test_utils.env_helpers import erk_isolated_fs_env
 
 
@@ -23,8 +23,8 @@ def test_create_with_plan_file() -> None:
         plan_content = "# Auth Feature Plan\n\n- Add login\n- Add signup\n"
         plan_file.write_text(plan_content, encoding="utf-8")
 
-        # Configure FakeGitOps with root worktree only
-        git_ops = FakeGitOps(
+        # Configure FakeGit with root worktree only
+        git_ops = FakeGit(
             worktrees={
                 env.root_worktree: [
                     WorktreeInfo(path=env.root_worktree, branch="main", is_root=True),
@@ -36,7 +36,7 @@ def test_create_with_plan_file() -> None:
         )
 
         # Create test context using env.build_context() helper
-        test_ctx = env.build_context(git_ops=git_ops)
+        test_ctx = env.build_context(git=git_ops)
 
         # Run erk create with --plan
         result = runner.invoke(
@@ -75,8 +75,8 @@ def test_create_with_plan_name_sanitization() -> None:
         plan_file = env.root_worktree / "MY_COOL_Plan_File.md"
         plan_file.write_text("# Cool Plan\n", encoding="utf-8")
 
-        # Configure FakeGitOps with root worktree only
-        git_ops = FakeGitOps(
+        # Configure FakeGit with root worktree only
+        git_ops = FakeGit(
             worktrees={
                 env.root_worktree: [
                     WorktreeInfo(path=env.root_worktree, branch="main", is_root=True),
@@ -88,7 +88,7 @@ def test_create_with_plan_name_sanitization() -> None:
         )
 
         # Create test context using env.build_context() helper
-        test_ctx = env.build_context(git_ops=git_ops)
+        test_ctx = env.build_context(git=git_ops)
 
         # Run erk create with --plan
         result = runner.invoke(
@@ -118,8 +118,8 @@ def test_create_with_both_name_and_plan_fails() -> None:
         plan_file = env.root_worktree / "plan.md"
         plan_file.write_text("# Plan\n", encoding="utf-8")
 
-        # Configure FakeGitOps with root worktree only
-        git_ops = FakeGitOps(
+        # Configure FakeGit with root worktree only
+        git_ops = FakeGit(
             worktrees={
                 env.root_worktree: [
                     WorktreeInfo(path=env.root_worktree, branch="main", is_root=True),
@@ -137,12 +137,12 @@ def test_create_with_both_name_and_plan_fails() -> None:
             shell_setup_complete=False,
             show_pr_info=True,
         )
-        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+        global_config_ops = FakeConfigStore(config=global_config)
 
         # Create test context
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            git=git_ops,
+            config_store=global_config_ops,
             global_config=global_config,
             script_writer=env.script_writer,
             cwd=env.root_worktree,
@@ -160,8 +160,8 @@ def test_create_rejects_reserved_name_root() -> None:
     """Test that 'root' is rejected as a reserved worktree name."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
-        # Configure FakeGitOps with root worktree only
-        git_ops = FakeGitOps(
+        # Configure FakeGit with root worktree only
+        git_ops = FakeGit(
             worktrees={
                 env.root_worktree: [
                     WorktreeInfo(path=env.root_worktree, branch="main", is_root=True),
@@ -179,12 +179,12 @@ def test_create_rejects_reserved_name_root() -> None:
             shell_setup_complete=False,
             show_pr_info=True,
         )
-        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+        global_config_ops = FakeConfigStore(config=global_config)
 
         # Create test context
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            git=git_ops,
+            config_store=global_config_ops,
             global_config=global_config,
             script_writer=env.script_writer,
             cwd=env.root_worktree,
@@ -208,8 +208,8 @@ def test_create_rejects_reserved_name_root_case_insensitive() -> None:
     """Test that 'ROOT', 'Root', etc. are also rejected (case-insensitive)."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
-        # Configure FakeGitOps with root worktree only
-        git_ops = FakeGitOps(
+        # Configure FakeGit with root worktree only
+        git_ops = FakeGit(
             worktrees={
                 env.root_worktree: [
                     WorktreeInfo(path=env.root_worktree, branch="main", is_root=True),
@@ -227,12 +227,12 @@ def test_create_rejects_reserved_name_root_case_insensitive() -> None:
             shell_setup_complete=False,
             show_pr_info=True,
         )
-        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+        global_config_ops = FakeConfigStore(config=global_config)
 
         # Create test context
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            git=git_ops,
+            config_store=global_config_ops,
             global_config=global_config,
             script_writer=env.script_writer,
             cwd=env.root_worktree,
@@ -255,8 +255,8 @@ def test_create_rejects_main_as_worktree_name() -> None:
     """Test that 'main' is rejected as a worktree name."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
-        # Configure FakeGitOps with root worktree only
-        git_ops = FakeGitOps(
+        # Configure FakeGit with root worktree only
+        git_ops = FakeGit(
             worktrees={
                 env.root_worktree: [
                     WorktreeInfo(path=env.root_worktree, branch="main", is_root=True),
@@ -274,12 +274,12 @@ def test_create_rejects_main_as_worktree_name() -> None:
             shell_setup_complete=False,
             show_pr_info=True,
         )
-        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+        global_config_ops = FakeConfigStore(config=global_config)
 
         # Create test context
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            git=git_ops,
+            config_store=global_config_ops,
             global_config=global_config,
             script_writer=env.script_writer,
             cwd=env.root_worktree,
@@ -302,8 +302,8 @@ def test_create_rejects_master_as_worktree_name() -> None:
     """Test that 'master' is rejected as a worktree name."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
-        # Configure FakeGitOps with root worktree only
-        git_ops = FakeGitOps(
+        # Configure FakeGit with root worktree only
+        git_ops = FakeGit(
             worktrees={
                 env.root_worktree: [
                     WorktreeInfo(path=env.root_worktree, branch="main", is_root=True),
@@ -321,12 +321,12 @@ def test_create_rejects_master_as_worktree_name() -> None:
             shell_setup_complete=False,
             show_pr_info=True,
         )
-        global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+        global_config_ops = FakeConfigStore(config=global_config)
 
         # Create test context
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
-            global_config_ops=global_config_ops,
+            git=git_ops,
+            config_store=global_config_ops,
             global_config=global_config,
             script_writer=env.script_writer,
             cwd=env.root_worktree,
@@ -363,8 +363,8 @@ def test_create_with_script_flag() -> None:
     """Test that --script flag outputs cd script instead of regular messages."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
-        # Configure FakeGitOps with root worktree only
-        git_ops = FakeGitOps(
+        # Configure FakeGit with root worktree only
+        git_ops = FakeGit(
             worktrees={
                 env.root_worktree: [
                     WorktreeInfo(path=env.root_worktree, branch="main", is_root=True),
@@ -376,7 +376,7 @@ def test_create_with_script_flag() -> None:
         )
 
         # Create test context using env.build_context() helper
-        test_ctx = env.build_context(git_ops=git_ops)
+        test_ctx = env.build_context(git=git_ops)
 
         # Run erk create with --script flag
         result = runner.invoke(

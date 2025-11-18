@@ -5,14 +5,14 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
+from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.github_ops import PullRequestInfo
-from erk.core.gitops import WorktreeInfo
-from erk.core.global_config import GlobalConfig
-from erk.core.graphite_ops import BranchMetadata
-from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.fakes.shell_ops import FakeShellOps
+from erk.core.git import WorktreeInfo
+from erk.core.github import PullRequestInfo
+from erk.core.graphite import BranchMetadata
+from tests.fakes.github import FakeGitHub
+from tests.fakes.graphite import FakeGraphite
+from tests.fakes.shell import FakeShell
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
@@ -26,9 +26,9 @@ def test_land_stack_ignores_root_worktree_changes_on_unrelated_branch() -> None:
         root_path = Path("/root")
         current_path = env.cwd
 
-        from tests.fakes.gitops import FakeGitOps
+        from tests.fakes.git import FakeGit
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={
                 root_path: env.git_dir,
                 current_path: env.git_dir,
@@ -60,7 +60,7 @@ def test_land_stack_ignores_root_worktree_changes_on_unrelated_branch() -> None:
             show_pr_info=True,
         )
 
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
@@ -85,10 +85,10 @@ def test_land_stack_ignores_root_worktree_changes_on_unrelated_branch() -> None:
         )
 
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
+            git=git_ops,
             global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            github_ops=FakeGitHubOps(
+            graphite=graphite_ops,
+            github=FakeGitHub(
                 pr_statuses={
                     "feat-1": ("OPEN", 123, "Add feature 1"),
                 },
@@ -96,7 +96,7 @@ def test_land_stack_ignores_root_worktree_changes_on_unrelated_branch() -> None:
                     123: "main",
                 },
             ),
-            shell_ops=FakeShellOps(),
+            shell=FakeShell(),
             cwd=current_path,  # Current worktree is clean
             dry_run=True,  # Use dry-run to avoid actual GitHub operations
         )
@@ -126,7 +126,7 @@ def test_land_stack_script_mode_accepts_flag() -> None:
         )
 
         # Setup GitHub ops with an open PR
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             pr_statuses={"feature-1": ("OPEN", 123, "Feature 1")},
             pr_bases={
                 123: "main",
@@ -141,11 +141,11 @@ def test_land_stack_script_mode_accepts_flag() -> None:
         )
 
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
+            git=git_ops,
             global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             dry_run=False,
             script_writer=env.script_writer,
             cwd=env.cwd,

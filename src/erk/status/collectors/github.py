@@ -46,12 +46,12 @@ class GitHubPRCollector(StatusCollector):
         Returns:
             PullRequestStatus with PR information or None if collection fails
         """
-        branch = ctx.git_ops.get_current_branch(worktree_path)
+        branch = ctx.git.get_current_branch(worktree_path)
         if branch is None:
             return None
 
         # Always use Graphite (fast, no pagination issues)
-        prs = ctx.graphite_ops.get_prs_from_graphite(ctx.git_ops, repo_root)
+        prs = ctx.graphite.get_prs_from_graphite(ctx.git, repo_root)
 
         # Fail fast if Graphite cache unavailable - no fallback to GitHub
         if not prs:

@@ -1,14 +1,14 @@
-"""Fake implementation of ScriptWriterOps for testing."""
+"""Fake implementation of ScriptWriter for testing."""
 
 import os
 import uuid
 from datetime import datetime
 from pathlib import Path
 
-from erk.core.script_writer import ScriptResult, ScriptWriterOps
+from erk.core.script_writer import ScriptResult, ScriptWriter
 
 
-class FakeScriptWriterOps(ScriptWriterOps):
+class FakeScriptWriter(ScriptWriter):
     """In-memory fake for script writing operations.
 
     Stores scripts in memory using sentinel paths instead of creating

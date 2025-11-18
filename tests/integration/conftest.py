@@ -10,59 +10,59 @@ from typing import NamedTuple
 
 import pytest
 
-from erk.core.gitops import GitOps, RealGitOps
+from erk.core.git import Git, RealGit
 
 
-class GitOpsSetup(NamedTuple):
+class GitSetup(NamedTuple):
     """Result of git operations setup fixture for integration testing.
 
     Attributes:
-        git_ops: RealGitOps instance for integration testing
+        git: RealGit instance for integration testing
         repo: Path to the real repository root
     """
 
-    git_ops: GitOps
+    git: Git
     repo: Path
 
 
-class GitOpsWithWorktrees(NamedTuple):
+class GitWithWorktrees(NamedTuple):
     """Result of git operations setup with multiple worktrees for integration testing.
 
     Attributes:
-        git_ops: RealGitOps instance for integration testing
+        git: RealGit instance for integration testing
         repo: Path to the real repository root
         worktrees: List of real worktree paths (wt1, wt2, etc.)
     """
 
-    git_ops: GitOps
+    git: Git
     repo: Path
     worktrees: list[Path]
 
 
-class GitOpsWithDetached(NamedTuple):
+class GitWithDetached(NamedTuple):
     """Result of git operations setup with detached HEAD worktree for integration testing.
 
     Attributes:
-        git_ops: RealGitOps instance for integration testing
+        git: RealGit instance for integration testing
         repo: Path to the real repository root
         detached_wt: Path to the real detached HEAD worktree
     """
 
-    git_ops: GitOps
+    git: Git
     repo: Path
     detached_wt: Path
 
 
-class GitOpsWithExistingBranch(NamedTuple):
+class GitWithExistingBranch(NamedTuple):
     """Result of git operations setup with existing branch for integration testing.
 
     Attributes:
-        git_ops: RealGitOps instance for integration testing
+        git: RealGit instance for integration testing
         repo: Path to the real repository root
         wt_path: Path to a worktree location (not yet created, for testing add_worktree)
     """
 
-    git_ops: GitOps
+    git: Git
     repo: Path
     wt_path: Path
 
@@ -83,10 +83,10 @@ def init_git_repo(repo_path: Path, default_branch: str = "main") -> None:
 @pytest.fixture
 def git_ops(
     tmp_path: Path,
-) -> Iterator[GitOpsSetup]:
-    """Provide RealGitOps with setup repo for integration testing.
+) -> Iterator[GitSetup]:
+    """Provide RealGit with setup repo for integration testing.
 
-    Returns a GitOpsSetup namedtuple with (git_ops, repo) where repo is the path
+    Returns a GitSetup namedtuple with (git_ops, repo) where repo is the path
     to a real git repository that can be used for testing.
 
     Uses actual git subprocess calls on tmp_path repo for integration testing.
@@ -95,16 +95,16 @@ def git_ops(
     repo.mkdir()
     init_git_repo(repo, "main")
 
-    yield GitOpsSetup(git_ops=RealGitOps(), repo=repo)
+    yield GitSetup(git=RealGit(), repo=repo)
 
 
 @pytest.fixture
 def git_ops_with_worktrees(
     tmp_path: Path,
-) -> Iterator[GitOpsWithWorktrees]:
-    """Provide RealGitOps with multiple pre-configured worktrees for integration testing.
+) -> Iterator[GitWithWorktrees]:
+    """Provide RealGit with multiple pre-configured worktrees for integration testing.
 
-    Returns a GitOpsWithWorktrees namedtuple with (git_ops, repo, worktrees)
+    Returns a GitWithWorktrees namedtuple with (git_ops, repo, worktrees)
     where worktrees is a list of worktree paths created via 'git worktree add'.
 
     Creates actual worktrees via git for integration testing.
@@ -127,16 +127,16 @@ def git_ops_with_worktrees(
         cwd=repo,
         check=True,
     )
-    yield GitOpsWithWorktrees(git_ops=RealGitOps(), repo=repo, worktrees=[wt1, wt2])
+    yield GitWithWorktrees(git=RealGit(), repo=repo, worktrees=[wt1, wt2])
 
 
 @pytest.fixture
 def git_ops_with_detached(
     tmp_path: Path,
-) -> Iterator[GitOpsWithDetached]:
-    """Provide RealGitOps with a detached HEAD worktree for integration testing.
+) -> Iterator[GitWithDetached]:
+    """Provide RealGit with a detached HEAD worktree for integration testing.
 
-    Returns a GitOpsWithDetached namedtuple with (git_ops, repo, detached_wt).
+    Returns a GitWithDetached namedtuple with (git_ops, repo, detached_wt).
 
     Creates actual detached HEAD worktree via git for integration testing.
     """
@@ -151,16 +151,16 @@ def git_ops_with_detached(
         cwd=repo,
         check=True,
     )
-    yield GitOpsWithDetached(git_ops=RealGitOps(), repo=repo, detached_wt=wt_detached)
+    yield GitWithDetached(git=RealGit(), repo=repo, detached_wt=wt_detached)
 
 
 @pytest.fixture
 def git_ops_with_existing_branch(
     tmp_path: Path,
-) -> Iterator[GitOpsWithExistingBranch]:
-    """Provide RealGitOps with existing branch and worktree path for integration testing.
+) -> Iterator[GitWithExistingBranch]:
+    """Provide RealGit with existing branch and worktree path for integration testing.
 
-    Returns a GitOpsWithExistingBranch namedtuple with (git_ops, repo, wt_path).
+    Returns a GitWithExistingBranch namedtuple with (git_ops, repo, wt_path).
 
     Creates real git repository for integration testing.
     """
@@ -170,4 +170,4 @@ def git_ops_with_existing_branch(
 
     wt = tmp_path / "wt"
 
-    yield GitOpsWithExistingBranch(git_ops=RealGitOps(), repo=repo, wt_path=wt)
+    yield GitWithExistingBranch(git=RealGit(), repo=repo, wt_path=wt)

@@ -8,24 +8,23 @@ import tomlkit
 
 from erk.cli.config import LoadedConfig, load_config
 from erk.cli.output import user_output
-from erk.core.completion_ops import CompletionOps, RealCompletionOps
-from erk.core.github_ops import GitHubOps, NoopGitHubOps, RealGitHubOps
-from erk.core.gitops import GitOps, NoopGitOps, RealGitOps
-from erk.core.global_config import (
-    FilesystemGlobalConfigOps,
+from erk.core.completion import Completion, RealCompletion
+from erk.core.config_store import (
+    ConfigStore,
     GlobalConfig,
-    GlobalConfigOps,
-    InMemoryGlobalConfigOps,
+    RealConfigStore,
 )
-from erk.core.graphite_ops import GraphiteOps, NoopGraphiteOps, RealGraphiteOps
+from erk.core.git import Git, NoopGit, RealGit
+from erk.core.github import GitHub, NoopGitHub, RealGitHub
+from erk.core.graphite import Graphite, NoopGraphite, RealGraphite
 from erk.core.repo_discovery import (
     NoRepoSentinel,
     RepoContext,
     discover_repo_or_sentinel,
     ensure_repo_dir,
 )
-from erk.core.script_writer import RealScriptWriterOps, ScriptWriterOps
-from erk.core.shell_ops import RealShellOps, ShellOps
+from erk.core.script_writer import RealScriptWriter, ScriptWriter
+from erk.core.shell import RealShell, Shell
 
 
 @dataclass(frozen=True)
@@ -39,13 +38,13 @@ class ErkContext:
     All other commands should have a valid GlobalConfig.
     """
 
-    git_ops: GitOps
-    github_ops: GitHubOps
-    graphite_ops: GraphiteOps
-    shell_ops: ShellOps
-    completion_ops: CompletionOps
-    global_config_ops: GlobalConfigOps
-    script_writer: ScriptWriterOps
+    git: Git
+    github: GitHub
+    graphite: Graphite
+    shell: Shell
+    completion: Completion
+    config_store: ConfigStore
+    script_writer: ScriptWriter
     cwd: Path  # Current working directory at CLI invocation
     global_config: GlobalConfig | None
     local_config: LoadedConfig
@@ -56,38 +55,38 @@ class ErkContext:
     def trunk_branch(self) -> str | None:
         """Get the trunk branch name from git detection.
 
-        Returns None if not in a repository, otherwise uses git_ops to detect trunk.
+        Returns None if not in a repository, otherwise uses git to detect trunk.
         """
         if isinstance(self.repo, NoRepoSentinel):
             return None
-        return self.git_ops.get_trunk_branch(self.repo.root)
+        return self.git.get_trunk_branch(self.repo.root)
 
     @staticmethod
-    def minimal(git_ops: GitOps, cwd: Path, dry_run: bool = False) -> "ErkContext":
-        """Create minimal context with only git_ops configured, rest are test defaults.
+    def minimal(git: Git, cwd: Path, dry_run: bool = False) -> "ErkContext":
+        """Create minimal context with only git configured, rest are test defaults.
 
-        Useful for simple tests that only need git operations. Other ops
-        are initialized with their standard test defaults (fake implementations).
+        Useful for simple tests that only need git operations. Other integration
+        classes are initialized with their standard test defaults (fake implementations).
 
         Args:
-            git_ops: The GitOps implementation (usually FakeGitOps with test configuration)
+            git: The Git implementation (usually FakeGit with test configuration)
             cwd: Current working directory path for the context
             dry_run: Whether to enable dry-run mode (default False)
 
         Returns:
-            ErkContext with git_ops configured and other dependencies using test defaults
+            ErkContext with git configured and other dependencies using test defaults
 
         Example:
             Before (7 lines):
-            >>> from tests.fakes.gitops import FakeGitOps
-            >>> from tests.fakes.github_ops import FakeGitHubOps
-            >>> from tests.fakes.graphite_ops import FakeGraphiteOps
-            >>> from tests.fakes.shell_ops import FakeShellOps
+            >>> from tests.fakes.git import FakeGit
+            >>> from tests.fakes.github import FakeGitHub
+            >>> from tests.fakes.graphite import FakeGraphite
+            >>> from tests.fakes.shell import FakeShell
             >>> ctx = ErkContext(
-            ...     git_ops=git_ops,
-            ...     github_ops=FakeGitHubOps(),
-            ...     graphite_ops=FakeGraphiteOps(),
-            ...     shell_ops=FakeShellOps(),
+            ...     git=git,
+            ...     github=FakeGitHub(),
+            ...     graphite=FakeGraphite(),
+            ...     shell=FakeShell(),
             ...     cwd=cwd,
             ...     global_config=None,
             ...     local_config=LoadedConfig(
@@ -99,26 +98,28 @@ class ErkContext:
             ... )
 
             After (1 line):
-            >>> ctx = ErkContext.minimal(git_ops, cwd)
+            >>> ctx = ErkContext.minimal(git, cwd)
 
         Note:
-            For more complex test setup with custom configs or multiple ops,
+            For more complex test setup with custom configs or multiple integration classes,
             use ErkContext.for_test() instead.
         """
-        from tests.fakes.completion_ops import FakeCompletionOps
-        from tests.fakes.github_ops import FakeGitHubOps
-        from tests.fakes.graphite_ops import FakeGraphiteOps
-        from tests.fakes.script_writer import FakeScriptWriterOps
-        from tests.fakes.shell_ops import FakeShellOps
+        from tests.fakes.completion import FakeCompletion
+        from tests.fakes.github import FakeGitHub
+        from tests.fakes.graphite import FakeGraphite
+        from tests.fakes.script_writer import FakeScriptWriter
+        from tests.fakes.shell import FakeShell
+
+        from erk.core.config_store import FakeConfigStore
 
         return ErkContext(
-            git_ops=git_ops,
-            github_ops=FakeGitHubOps(),
-            graphite_ops=FakeGraphiteOps(),
-            shell_ops=FakeShellOps(),
-            completion_ops=FakeCompletionOps(),
-            global_config_ops=InMemoryGlobalConfigOps(config=None),
-            script_writer=FakeScriptWriterOps(),
+            git=git,
+            github=FakeGitHub(),
+            graphite=FakeGraphite(),
+            shell=FakeShell(),
+            completion=FakeCompletion(),
+            config_store=FakeConfigStore(config=None),
+            script_writer=FakeScriptWriter(),
             cwd=cwd,
             global_config=None,
             local_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
@@ -128,37 +129,37 @@ class ErkContext:
 
     @staticmethod
     def for_test(
-        git_ops: GitOps | None = None,
-        github_ops: GitHubOps | None = None,
-        graphite_ops: GraphiteOps | None = None,
-        shell_ops: ShellOps | None = None,
-        completion_ops: CompletionOps | None = None,
-        global_config_ops: GlobalConfigOps | None = None,
-        script_writer: ScriptWriterOps | None = None,
+        git: Git | None = None,
+        github: GitHub | None = None,
+        graphite: Graphite | None = None,
+        shell: Shell | None = None,
+        completion: Completion | None = None,
+        config_store: ConfigStore | None = None,
+        script_writer: ScriptWriter | None = None,
         cwd: Path | None = None,
         global_config: GlobalConfig | None = None,
         local_config: LoadedConfig | None = None,
         repo: RepoContext | NoRepoSentinel | None = None,
         dry_run: bool = False,
     ) -> "ErkContext":
-        """Create test context with optional pre-configured ops.
+        """Create test context with optional pre-configured integration classes.
 
         Provides full control over all context parameters with sensible test defaults
         for any unspecified values. Use this for complex test scenarios that need
-        specific configurations for multiple operations.
+        specific configurations for multiple integration classes.
 
         Args:
-            git_ops: Optional GitOps implementation. If None, creates empty FakeGitOps.
-            github_ops: Optional GitHubOps implementation. If None, creates empty FakeGitHubOps.
-            graphite_ops: Optional GraphiteOps implementation.
-                         If None, creates empty FakeGraphiteOps.
-            shell_ops: Optional ShellOps implementation. If None, creates empty FakeShellOps.
-            completion_ops: Optional CompletionOps implementation.
-                           If None, creates empty FakeCompletionOps.
-            global_config_ops: Optional GlobalConfigOps implementation.
-                              If None, creates InMemoryGlobalConfigOps with test config.
-            script_writer: Optional ScriptWriterOps implementation.
-                          If None, creates empty FakeScriptWriterOps.
+            git: Optional Git implementation. If None, creates empty FakeGit.
+            github: Optional GitHub implementation. If None, creates empty FakeGitHub.
+            graphite: Optional Graphite implementation.
+                         If None, creates empty FakeGraphite.
+            shell: Optional Shell implementation. If None, creates empty FakeShell.
+            completion: Optional Completion implementation.
+                           If None, creates empty FakeCompletion.
+            config_store: Optional ConfigStore implementation.
+                              If None, creates FakeConfigStore with test config.
+            script_writer: Optional ScriptWriter implementation.
+                          If None, creates empty FakeScriptWriter.
             cwd: Optional current working directory. If None, uses Path("/test/default/cwd").
             global_config: Optional GlobalConfig. If None, uses test defaults.
             local_config: Optional LoadedConfig. If None, uses empty defaults.
@@ -170,48 +171,50 @@ class ErkContext:
 
         Example:
             Simple case (use .minimal() instead):
-            >>> git_ops = FakeGitOps(default_branches={Path("/repo"): "main"})
-            >>> ctx = ErkContext.for_test(git_ops=git_ops)
+            >>> git = FakeGit(default_branches={Path("/repo"): "main"})
+            >>> ctx = ErkContext.for_test(git=git)
 
-            Complex case with multiple ops:
-            >>> git_ops = FakeGitOps(default_branches={Path("/repo"): "main"})
-            >>> github_ops = FakeGitHubOps(prs={123: PR(...)})
-            >>> graphite_ops = FakeGraphiteOps(stack_info={"feature": StackInfo(...)})
+            Complex case with multiple integration classes:
+            >>> git = FakeGit(default_branches={Path("/repo"): "main"})
+            >>> github = FakeGitHub(prs={123: PR(...)})
+            >>> graphite = FakeGraphite(stack_info={"feature": StackInfo(...)})
             >>> ctx = ErkContext.for_test(
-            ...     git_ops=git_ops,
-            ...     github_ops=github_ops,
-            ...     graphite_ops=graphite_ops,
+            ...     git=git,
+            ...     github=github,
+            ...     graphite=graphite,
             ... )
 
         Note:
-            For simple cases that only need git_ops, use ErkContext.minimal()
+            For simple cases that only need git, use ErkContext.minimal()
             which is more concise.
         """
-        from tests.fakes.completion_ops import FakeCompletionOps
-        from tests.fakes.github_ops import FakeGitHubOps
-        from tests.fakes.gitops import FakeGitOps
-        from tests.fakes.graphite_ops import FakeGraphiteOps
-        from tests.fakes.script_writer import FakeScriptWriterOps
-        from tests.fakes.shell_ops import FakeShellOps
+        from tests.fakes.completion import FakeCompletion
+        from tests.fakes.git import FakeGit
+        from tests.fakes.github import FakeGitHub
+        from tests.fakes.graphite import FakeGraphite
+        from tests.fakes.script_writer import FakeScriptWriter
+        from tests.fakes.shell import FakeShell
         from tests.test_utils import sentinel_path
 
-        if git_ops is None:
-            git_ops = FakeGitOps()
+        from erk.core.config_store import FakeConfigStore
 
-        if github_ops is None:
-            github_ops = FakeGitHubOps()
+        if git is None:
+            git = FakeGit()
 
-        if graphite_ops is None:
-            graphite_ops = FakeGraphiteOps()
+        if github is None:
+            github = FakeGitHub()
 
-        if shell_ops is None:
-            shell_ops = FakeShellOps()
+        if graphite is None:
+            graphite = FakeGraphite()
 
-        if completion_ops is None:
-            completion_ops = FakeCompletionOps()
+        if shell is None:
+            shell = FakeShell()
+
+        if completion is None:
+            completion = FakeCompletion()
 
         if script_writer is None:
-            script_writer = FakeScriptWriterOps()
+            script_writer = FakeScriptWriter()
 
         if global_config is None:
             global_config = GlobalConfig(
@@ -221,8 +224,8 @@ class ErkContext:
                 show_pr_info=True,
             )
 
-        if global_config_ops is None:
-            global_config_ops = InMemoryGlobalConfigOps(config=global_config)
+        if config_store is None:
+            config_store = FakeConfigStore(config=global_config)
 
         if local_config is None:
             local_config = LoadedConfig(env={}, post_create_commands=[], post_create_shell=None)
@@ -232,17 +235,17 @@ class ErkContext:
 
         # Apply dry-run wrappers if needed (matching production behavior)
         if dry_run:
-            git_ops = NoopGitOps(git_ops)
-            graphite_ops = NoopGraphiteOps(graphite_ops)
-            github_ops = NoopGitHubOps(github_ops)
+            git = NoopGit(git)
+            graphite = NoopGraphite(graphite)
+            github = NoopGitHub(github)
 
         return ErkContext(
-            git_ops=git_ops,
-            github_ops=github_ops,
-            graphite_ops=graphite_ops,
-            shell_ops=shell_ops,
-            completion_ops=completion_ops,
-            global_config_ops=global_config_ops,
+            git=git,
+            github=github,
+            graphite=graphite,
+            shell=shell,
+            completion=completion,
+            config_store=config_store,
             script_writer=script_writer,
             cwd=cwd or sentinel_path(),
             global_config=global_config,
@@ -252,7 +255,7 @@ class ErkContext:
         )
 
 
-def write_trunk_to_pyproject(repo_root: Path, trunk: str, git_ops: GitOps | None = None) -> None:
+def write_trunk_to_pyproject(repo_root: Path, trunk: str, git: Git | None = None) -> None:
     """Write trunk branch configuration to pyproject.toml.
 
     Creates or updates the [tool.erk] section with trunk_branch setting.
@@ -261,13 +264,13 @@ def write_trunk_to_pyproject(repo_root: Path, trunk: str, git_ops: GitOps | None
     Args:
         repo_root: Path to the repository root directory
         trunk: Trunk branch name to configure
-        git_ops: Optional GitOps interface for path checking (uses .exists() if None)
+        git: Optional Git interface for path checking (uses .exists() if None)
     """
     pyproject_path = repo_root / "pyproject.toml"
 
-    # Check existence using git_ops if available (for test compatibility)
-    if git_ops is not None:
-        path_exists = git_ops.path_exists(pyproject_path)
+    # Check existence using git if available (for test compatibility)
+    if git is not None:
+        path_exists = git.path_exists(pyproject_path)
     else:
         path_exists = pyproject_path.exists()
 
@@ -334,7 +337,7 @@ def create_context(*, dry_run: bool) -> ErkContext:
 
     Example:
         >>> ctx = create_context(dry_run=False)
-        >>> worktrees = ctx.git_ops.list_worktrees(Path("/repo"))
+        >>> worktrees = ctx.git.list_worktrees(Path("/repo"))
         >>> erk_root = ctx.global_config.erk_root
     """
     # 1. Capture cwd (no deps)
@@ -349,26 +352,26 @@ def create_context(*, dry_run: bool) -> ErkContext:
 
     cwd = cwd_result
 
-    # 2. Create global config ops
-    global_config_ops = FilesystemGlobalConfigOps()
+    # 2. Create global config store
+    config_store = RealConfigStore()
 
     # 3. Load global config (no deps) - None if not exists (for init command)
     global_config: GlobalConfig | None
-    if global_config_ops.exists():
-        global_config = global_config_ops.load()
+    if config_store.exists():
+        global_config = config_store.load()
     else:
         # For init command only: config doesn't exist yet
         global_config = None
 
-    # 4. Create ops (need git_ops for repo discovery)
-    git_ops: GitOps = RealGitOps()
-    graphite_ops: GraphiteOps = RealGraphiteOps()
-    github_ops: GitHubOps = RealGitHubOps()
+    # 4. Create integration classes (need git for repo discovery)
+    git: Git = RealGit()
+    graphite: Graphite = RealGraphite()
+    github: GitHub = RealGitHub()
 
-    # 5. Discover repo (only needs cwd, erk_root, git_ops)
+    # 5. Discover repo (only needs cwd, erk_root, git)
     # If global_config is None, use placeholder path for repo discovery
     erk_root = global_config.erk_root if global_config else Path.home() / "worktrees"
-    repo = discover_repo_or_sentinel(cwd, erk_root, git_ops)
+    repo = discover_repo_or_sentinel(cwd, erk_root, git)
 
     # 6. Load local config (or defaults if no repo)
     if isinstance(repo, NoRepoSentinel):
@@ -379,19 +382,19 @@ def create_context(*, dry_run: bool) -> ErkContext:
 
     # 7. Apply dry-run wrappers if needed
     if dry_run:
-        git_ops = NoopGitOps(git_ops)
-        graphite_ops = NoopGraphiteOps(graphite_ops)
-        github_ops = NoopGitHubOps(github_ops)
+        git = NoopGit(git)
+        graphite = NoopGraphite(graphite)
+        github = NoopGitHub(github)
 
     # 8. Create context with all values
     return ErkContext(
-        git_ops=git_ops,
-        github_ops=github_ops,
-        graphite_ops=graphite_ops,
-        shell_ops=RealShellOps(),
-        completion_ops=RealCompletionOps(),
-        global_config_ops=FilesystemGlobalConfigOps(),
-        script_writer=RealScriptWriterOps(),
+        git=git,
+        github=github,
+        graphite=graphite,
+        shell=RealShell(),
+        completion=RealCompletion(),
+        config_store=RealConfigStore(),
+        script_writer=RealScriptWriter(),
         cwd=cwd,
         global_config=global_config,
         local_config=local_config,

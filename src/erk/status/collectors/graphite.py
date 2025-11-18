@@ -46,12 +46,12 @@ class GraphiteStackCollector(StatusCollector):
         Returns:
             StackPosition with stack information or None if collection fails
         """
-        branch = ctx.git_ops.get_current_branch(worktree_path)
+        branch = ctx.git.get_current_branch(worktree_path)
         if branch is None:
             return None
 
         # Get the stack for current branch
-        stack = ctx.graphite_ops.get_branch_stack(ctx.git_ops, repo_root, branch)
+        stack = ctx.graphite.get_branch_stack(ctx.git, repo_root, branch)
         if stack is None:
             return None
 

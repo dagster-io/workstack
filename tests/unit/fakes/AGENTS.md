@@ -9,7 +9,7 @@ When adding new test directories under `tests/`, always ensure:
 1. The parent directory has `__init__.py` (e.g., `tests/unit/__init__.py`)
 2. The new directory itself has `__init__.py` (e.g., `tests/unit/fakes/__init__.py`)
 
-This ensures `from tests.fakes.gitops import FakeGitOps` works correctly from any test file.
+This ensures `from tests.fakes.git import FakeGit` works correctly from any test file.
 
 ## Purpose
 
@@ -20,11 +20,11 @@ This directory tests the **test infrastructure itself**, not production code.
 
 Tests OF the fakes themselves:
 
-- `test_fake_gitops.py` - Verifies FakeGitOps mutation tracking, state management
-- `test_fake_global_config_ops.py` - Verifies FakeGlobalConfigOps config storage
-- `test_fake_graphite_ops.py` - Verifies FakeGraphiteOps stack tracking
-- `test_fake_github_ops.py` - Verifies FakeGitHubOps PR simulation
-- `test_fake_shell_ops.py` - Verifies FakeShellOps command tracking
+- `test_fake_git.py` - Verifies FakeGit mutation tracking, state management
+- `test_fake_config_store.py` - Verifies FakeConfigStore config storage
+- `test_fake_graphite.py` - Verifies FakeGraphite stack tracking
+- `test_fake_github.py` - Verifies FakeGitHub PR simulation
+- `test_fake_shell.py` - Verifies FakeShell command tracking
 
 ## What DOESN'T Go Here
 
@@ -38,15 +38,15 @@ Tests OF the fakes themselves:
 
 ```python
 def test_fake_tracks_mutation() -> None:
-    """Test that FakeGitOps tracks worktree additions."""
-    git_ops = FakeGitOps()
+    """Test that FakeGit tracks worktree additions."""
+    git = FakeGit()
 
     # Perform operation on fake
-    git_ops.add_worktree(Path("/repo"), Path("/worktree"), branch="feature")
+    git.add_worktree(Path("/repo"), Path("/worktree"), branch="feature")
 
     # Verify fake tracked the mutation
-    assert (Path("/worktree"), "feature") in git_ops.added_worktrees
-    assert len(git_ops.list_worktrees(Path("/repo"))) == 1
+    assert (Path("/worktree"), "feature") in git.added_worktrees
+    assert len(git.list_worktrees(Path("/repo"))) == 1
 ```
 
 ## Key Principle

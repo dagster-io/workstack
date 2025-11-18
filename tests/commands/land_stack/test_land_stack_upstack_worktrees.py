@@ -12,10 +12,10 @@ from click.testing import CliRunner
 
 from erk.cli.cli import cli
 from erk.core.branch_metadata import BranchMetadata
-from erk.core.gitops import WorktreeInfo
-from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.gitops import FakeGitOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
+from erk.core.git import WorktreeInfo
+from tests.fakes.git import FakeGit
+from tests.fakes.github import FakeGitHub
+from tests.fakes.graphite import FakeGraphite
 from tests.test_utils.builders import PullRequestInfoBuilder
 from tests.test_utils.env_helpers import erk_inmem_env
 
@@ -50,7 +50,7 @@ def test_land_stack_force_pushes_upstack_branches_from_correct_worktree() -> Non
         # Root worktree has feat-2 checked out (being landed)
         # feat-3 is in a linked worktree
         # feat-4 is not checked out anywhere
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             default_branches={env.cwd: "main"},
             current_branches={env.cwd: "feat-2"},  # Current branch being landed
@@ -63,7 +63,7 @@ def test_land_stack_force_pushes_upstack_branches_from_correct_worktree() -> Non
         )
 
         # Configure Graphite metadata for stack
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk(
                     "main",
@@ -100,7 +100,7 @@ def test_land_stack_force_pushes_upstack_branches_from_correct_worktree() -> Non
         )
 
         # Configure GitHub ops with PRs (only for branches being landed)
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             prs={
                 "feat-1": PullRequestInfoBuilder(101, "feat-1").with_passing_checks().build(),
                 "feat-2": PullRequestInfoBuilder(102, "feat-2").with_passing_checks().build(),
@@ -113,9 +113,9 @@ def test_land_stack_force_pushes_upstack_branches_from_correct_worktree() -> Non
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
         )
 
         # Execute land-stack with --down flag (land only feat-1 and feat-2)
@@ -167,7 +167,7 @@ def test_land_stack_force_pushes_branch_not_in_worktree_from_repo_root() -> None
         repo_root = env.cwd
 
         # Configure git ops with only one worktree (current branch)
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             default_branches={env.cwd: "main"},
             current_branches={env.cwd: "feat-1"},
@@ -179,7 +179,7 @@ def test_land_stack_force_pushes_branch_not_in_worktree_from_repo_root() -> None
         )
 
         # Configure Graphite metadata for stack (feat-2 not in worktree)
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk(
                     "main",
@@ -204,7 +204,7 @@ def test_land_stack_force_pushes_branch_not_in_worktree_from_repo_root() -> None
         )
 
         # Configure GitHub ops with PRs
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             prs={
                 "feat-1": PullRequestInfoBuilder(101, "feat-1").with_passing_checks().build(),
                 "feat-2": PullRequestInfoBuilder(102, "feat-2").with_passing_checks().build(),
@@ -217,9 +217,9 @@ def test_land_stack_force_pushes_branch_not_in_worktree_from_repo_root() -> None
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
         )
 
         # Execute land-stack (dry-run to skip actual PR operations)

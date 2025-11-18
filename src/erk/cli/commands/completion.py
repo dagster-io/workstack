@@ -33,7 +33,7 @@ def completion_bash(ctx: ErkContext) -> None:
     \b
     You will need to start a new shell for this setup to take effect.
     """
-    script = ctx.completion_ops.generate_bash()
+    script = ctx.completion.generate_bash()
     machine_output(script, nl=False)
 
 
@@ -60,7 +60,7 @@ def completion_zsh(ctx: ErkContext) -> None:
     \b
     You will need to start a new shell for this setup to take effect.
     """
-    script = ctx.completion_ops.generate_zsh()
+    script = ctx.completion.generate_zsh()
     machine_output(script, nl=False)
 
 
@@ -85,5 +85,5 @@ def completion_fish(ctx: ErkContext) -> None:
     \b
     You will need to start a new shell for this setup to take effect.
     """
-    script = ctx.completion_ops.generate_fish()
+    script = ctx.completion.generate_fish()
     machine_output(script, nl=False)

@@ -11,15 +11,15 @@ import pytest
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
+from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext, create_context
-from erk.core.github_ops import NoopGitHubOps
-from erk.core.gitops import NoopGitOps, WorktreeInfo
-from erk.core.global_config import GlobalConfig
-from erk.core.graphite_ops import NoopGraphiteOps
-from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.gitops import FakeGitOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.fakes.shell_ops import FakeShellOps
+from erk.core.git import NoopGit, WorktreeInfo
+from erk.core.github import NoopGitHub
+from erk.core.graphite import NoopGraphite
+from tests.fakes.git import FakeGit
+from tests.fakes.github import FakeGitHub
+from tests.fakes.graphite import FakeGraphite
+from tests.fakes.shell import FakeShell
 
 
 def init_git_repo(repo_path: Path, default_branch: str = "main") -> None:
@@ -59,14 +59,14 @@ show_pr_info = true
     assert ctx.dry_run is True
     # The context should have Noop-wrapped implementations
     # We verify this by checking the class names
-    assert "Noop" in type(ctx.git_ops).__name__
+    assert "Noop" in type(ctx.git).__name__
     # global_config should now be loaded from our test config
     assert ctx.global_config is not None
     assert type(ctx.global_config).__name__ == "GlobalConfig"
     # Config loading resolves paths, so compare resolved paths
     assert ctx.global_config.erk_root == erk_root.resolve()
-    assert "Noop" in type(ctx.github_ops).__name__
-    assert "Noop" in type(ctx.graphite_ops).__name__
+    assert "Noop" in type(ctx.github).__name__
+    assert "Noop" in type(ctx.graphite).__name__
 
 
 def test_dryrun_read_operations_still_work(tmp_path: Path) -> None:
@@ -76,7 +76,7 @@ def test_dryrun_read_operations_still_work(tmp_path: Path) -> None:
     init_git_repo(repo, "main")
 
     # Set up fakes to avoid needing real config file
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         worktrees={
             repo: [WorktreeInfo(path=repo, branch="main")],
         },
@@ -92,11 +92,11 @@ def test_dryrun_read_operations_still_work(tmp_path: Path) -> None:
 
     # Wrap fakes in dry-run wrappers
     ctx = ErkContext.for_test(
-        git_ops=NoopGitOps(git_ops),
+        git=NoopGit(git_ops),
         global_config=global_config_ops,
-        github_ops=NoopGitHubOps(FakeGitHubOps()),
-        graphite_ops=NoopGraphiteOps(FakeGraphiteOps()),
-        shell_ops=FakeShellOps(),
+        github=NoopGitHub(FakeGitHub()),
+        graphite=NoopGraphite(FakeGraphite()),
+        shell=FakeShell(),
         cwd=repo,
         dry_run=True,
     )
@@ -111,7 +111,7 @@ def test_dryrun_read_operations_still_work(tmp_path: Path) -> None:
 
 
 def test_dryrun_git_delete_branch_prints_message(tmp_path: Path) -> None:
-    """Test that dry-run GitOps delete operations print messages without executing."""
+    """Test that dry-run Git delete operations print messages without executing."""
     repo = tmp_path / "repo"
     repo.mkdir()
     init_git_repo(repo, "main")
@@ -137,12 +137,12 @@ def test_dryrun_git_delete_branch_prints_message(tmp_path: Path) -> None:
     assert "feature-branch" in result.stdout
 
     # Try to delete via dry-run context
-    from erk.core.gitops import RealGitOps
+    from erk.core.git import RealGit
 
-    real_ops = RealGitOps()
+    real_ops = RealGit()
     git_dir = real_ops.get_git_common_dir(repo)
     if git_dir is not None:
-        ctx.git_ops.delete_branch_with_graphite(git_dir.parent, "feature-branch", force=True)
+        ctx.git.delete_branch_with_graphite(git_dir.parent, "feature-branch", force=True)
 
     # Verify the branch still exists (dry-run didn't actually delete)
     result = subprocess.run(
@@ -156,7 +156,7 @@ def test_dryrun_git_delete_branch_prints_message(tmp_path: Path) -> None:
 
 
 def test_dryrun_git_add_worktree_prints_message(tmp_path: Path) -> None:
-    """Test that dry-run GitOps add_worktree prints message without creating."""
+    """Test that dry-run Git add_worktree prints message without creating."""
     repo = tmp_path / "repo"
     repo.mkdir()
     init_git_repo(repo, "main")
@@ -165,22 +165,22 @@ def test_dryrun_git_add_worktree_prints_message(tmp_path: Path) -> None:
 
     new_wt = tmp_path / "new-worktree"
     # This should print a dry-run message but not create the worktree
-    ctx.git_ops.add_worktree(repo, new_wt, branch="new-feature", ref=None, create_branch=True)
+    ctx.git.add_worktree(repo, new_wt, branch="new-feature", ref=None, create_branch=True)
 
     # Verify the worktree wasn't actually created
     assert not new_wt.exists()
 
     # Verify git doesn't know about the worktree
-    from erk.core.gitops import RealGitOps
+    from erk.core.git import RealGit
 
-    real_ops = RealGitOps()
+    real_ops = RealGit()
     worktrees = real_ops.list_worktrees(repo)
     assert len(worktrees) == 1  # Only main repo
     assert not any(wt.path == new_wt for wt in worktrees)
 
 
 def test_dryrun_git_remove_worktree_prints_message(tmp_path: Path) -> None:
-    """Test that dry-run GitOps remove_worktree prints message without removing."""
+    """Test that dry-run Git remove_worktree prints message without removing."""
     repo = tmp_path / "repo"
     repo.mkdir()
     init_git_repo(repo, "main")
@@ -196,22 +196,22 @@ def test_dryrun_git_remove_worktree_prints_message(tmp_path: Path) -> None:
     ctx = create_context(dry_run=True)
 
     # Try to remove via dry-run
-    ctx.git_ops.remove_worktree(repo, wt, force=False)
+    ctx.git.remove_worktree(repo, wt, force=False)
 
     # Verify the worktree still exists
     assert wt.exists()
 
     # Verify git still knows about it
-    from erk.core.gitops import RealGitOps
+    from erk.core.git import RealGit
 
-    real_ops = RealGitOps()
+    real_ops = RealGit()
     worktrees = real_ops.list_worktrees(repo)
     assert len(worktrees) == 2
     assert any(wt_info.path == wt for wt_info in worktrees)
 
 
 def test_dryrun_git_checkout_branch_is_allowed(tmp_path: Path) -> None:
-    """Test that dry-run GitOps allows checkout_branch (it's non-destructive)."""
+    """Test that dry-run Git allows checkout_branch (it's non-destructive)."""
     repo = tmp_path / "repo"
     repo.mkdir()
     init_git_repo(repo, "main")
@@ -220,37 +220,37 @@ def test_dryrun_git_checkout_branch_is_allowed(tmp_path: Path) -> None:
     subprocess.run(["git", "branch", "feature"], cwd=repo, check=True)
 
     # Verify we're on main
-    from erk.core.gitops import RealGitOps
+    from erk.core.git import RealGit
 
-    real_ops = RealGitOps()
+    real_ops = RealGit()
     assert real_ops.get_current_branch(repo) == "main"
 
     ctx = create_context(dry_run=True)
 
     # Checkout is allowed in dry-run mode (it's non-destructive)
-    ctx.git_ops.checkout_branch(repo, "feature")
+    ctx.git.checkout_branch(repo, "feature")
 
     # Verify we actually checked out (checkout is allowed in dry-run)
     assert real_ops.get_current_branch(repo) == "feature"
 
 
 # NOTE: Tests removed during global_config_ops migration
-# The GlobalConfigOps abstraction has been removed in favor of simple
+# The ConfigStore abstraction has been removed in favor of simple
 # GlobalConfig dataclass. Config is now loaded once at entry point.
 # Dry-run behavior for config mutations no longer applies since config
 # is immutable after loading.
 
 # def test_dryrun_config_set_prints_message(tmp_path: Path) -> None:
-#     """Test that dry-run GlobalConfigOps.set prints message without writing."""
+#     """Test that dry-run ConfigStore.set prints message without writing."""
 #     # REMOVED: GlobalConfig is now immutable, no .set() method
 
 # def test_dryrun_config_read_still_works(tmp_path: Path) -> None:
-#     """Test that dry-run GlobalConfigOps read operations still work."""
+#     """Test that dry-run ConfigStore read operations still work."""
 #     # REMOVED: GlobalConfig is now a simple dataclass, no .get_erk_root() method
 
 
 def test_dryrun_graphite_operations(tmp_path: Path) -> None:
-    """Test that dry-run GraphiteOps operations work correctly."""
+    """Test that dry-run Graphite operations work correctly."""
     repo = tmp_path / "repo"
     repo.mkdir()
     init_git_repo(repo, "main")
@@ -258,19 +258,19 @@ def test_dryrun_graphite_operations(tmp_path: Path) -> None:
     ctx = create_context(dry_run=True)
 
     # Test read operations work (they delegate to wrapped implementation)
-    url = ctx.graphite_ops.get_graphite_url("owner", "repo", 123)
+    url = ctx.graphite.get_graphite_url("owner", "repo", 123)
     assert isinstance(url, str)
     assert "graphite.com" in url
 
     # Test get_prs_from_graphite (read operation)
-    from erk.core.gitops import RealGitOps
+    from erk.core.git import RealGit
 
-    git_ops = RealGitOps()
-    prs = ctx.graphite_ops.get_prs_from_graphite(git_ops, repo)
+    git_ops = RealGit()
+    prs = ctx.graphite.get_prs_from_graphite(git_ops, repo)
     assert isinstance(prs, dict)
 
     # Test sync prints dry-run message without executing
     # Note: sync is a write operation, so it should be blocked in dry-run mode
-    ctx.graphite_ops.sync(repo, force=False, quiet=False)
+    ctx.graphite.sync(repo, force=False, quiet=False)
     # If sync was actually executed, it would require gt CLI to be installed
     # In dry-run mode, it just prints a message

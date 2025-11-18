@@ -4,7 +4,7 @@ from pathlib import Path
 
 from erk.status.collectors.git import GitStatusCollector
 from tests.fakes.context import create_test_context
-from tests.fakes.gitops import FakeGitOps
+from tests.fakes.git import FakeGit
 
 
 def test_git_status_collector_clean_working_directory(tmp_path: Path) -> None:
@@ -14,7 +14,7 @@ def test_git_status_collector_clean_working_directory(tmp_path: Path) -> None:
     worktree_path.mkdir()
     repo_root = tmp_path / "repo"
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         current_branches={worktree_path: "feature-branch"},
         file_statuses={worktree_path: ([], [], [])},  # No files
         ahead_behind={(worktree_path, "feature-branch"): (0, 0)},
@@ -30,7 +30,7 @@ def test_git_status_collector_clean_working_directory(tmp_path: Path) -> None:
         },
     )
 
-    ctx = create_test_context(git_ops=git_ops)
+    ctx = create_test_context(git=git_ops)
     collector = GitStatusCollector()
 
     # Act
@@ -56,7 +56,7 @@ def test_git_status_collector_with_modified_files(tmp_path: Path) -> None:
     worktree_path.mkdir()
     repo_root = tmp_path / "repo"
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         current_branches={worktree_path: "feature-branch"},
         file_statuses={worktree_path: ([], ["src/main.py", "README.md"], [])},
         ahead_behind={(worktree_path, "feature-branch"): (2, 0)},
@@ -78,7 +78,7 @@ def test_git_status_collector_with_modified_files(tmp_path: Path) -> None:
         },
     )
 
-    ctx = create_test_context(git_ops=git_ops)
+    ctx = create_test_context(git=git_ops)
     collector = GitStatusCollector()
 
     # Act
@@ -104,7 +104,7 @@ def test_git_status_collector_with_added_files(tmp_path: Path) -> None:
     worktree_path.mkdir()
     repo_root = tmp_path / "repo"
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         current_branches={worktree_path: "new-feature"},
         file_statuses={worktree_path: (["new_file.py", "config.json"], [], [])},
         ahead_behind={(worktree_path, "new-feature"): (1, 0)},
@@ -120,7 +120,7 @@ def test_git_status_collector_with_added_files(tmp_path: Path) -> None:
         },
     )
 
-    ctx = create_test_context(git_ops=git_ops)
+    ctx = create_test_context(git=git_ops)
     collector = GitStatusCollector()
 
     # Act
@@ -147,7 +147,7 @@ def test_git_status_collector_with_deleted_files(tmp_path: Path) -> None:
     repo_root = tmp_path / "repo"
 
     # Deleted files show up as staged changes
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         current_branches={worktree_path: "cleanup-branch"},
         file_statuses={worktree_path: (["old_file.py", "deprecated.txt"], [], [])},
         ahead_behind={(worktree_path, "cleanup-branch"): (1, 0)},
@@ -163,7 +163,7 @@ def test_git_status_collector_with_deleted_files(tmp_path: Path) -> None:
         },
     )
 
-    ctx = create_test_context(git_ops=git_ops)
+    ctx = create_test_context(git=git_ops)
     collector = GitStatusCollector()
 
     # Act
@@ -185,7 +185,7 @@ def test_git_status_collector_with_untracked_files(tmp_path: Path) -> None:
     worktree_path.mkdir()
     repo_root = tmp_path / "repo"
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         current_branches={worktree_path: "experimental"},
         file_statuses={worktree_path: ([], [], ["temp.txt", ".env", "notes.md"])},
         ahead_behind={(worktree_path, "experimental"): (0, 0)},
@@ -201,7 +201,7 @@ def test_git_status_collector_with_untracked_files(tmp_path: Path) -> None:
         },
     )
 
-    ctx = create_test_context(git_ops=git_ops)
+    ctx = create_test_context(git=git_ops)
     collector = GitStatusCollector()
 
     # Act
@@ -226,7 +226,7 @@ def test_git_status_collector_ahead_behind_tracking(tmp_path: Path) -> None:
     worktree_path.mkdir()
     repo_root = tmp_path / "repo"
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         current_branches={worktree_path: "feature-diverged"},
         file_statuses={worktree_path: ([], [], [])},
         ahead_behind={(worktree_path, "feature-diverged"): (3, 5)},
@@ -254,7 +254,7 @@ def test_git_status_collector_ahead_behind_tracking(tmp_path: Path) -> None:
         },
     )
 
-    ctx = create_test_context(git_ops=git_ops)
+    ctx = create_test_context(git=git_ops)
     collector = GitStatusCollector()
 
     # Act
@@ -275,7 +275,7 @@ def test_git_status_collector_no_upstream_branch(tmp_path: Path) -> None:
     worktree_path.mkdir()
     repo_root = tmp_path / "repo"
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         current_branches={worktree_path: "new-branch"},
         file_statuses={worktree_path: ([], [], [])},
         # No ahead/behind info means no upstream
@@ -283,7 +283,7 @@ def test_git_status_collector_no_upstream_branch(tmp_path: Path) -> None:
         recent_commits={worktree_path: []},
     )
 
-    ctx = create_test_context(git_ops=git_ops)
+    ctx = create_test_context(git=git_ops)
     collector = GitStatusCollector()
 
     # Act
@@ -304,7 +304,7 @@ def test_git_status_collector_with_stashes(tmp_path: Path) -> None:
     repo_root = tmp_path / "repo"
 
     # Note: Stash count is not currently tracked by GitStatus model
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         current_branches={worktree_path: "work-branch"},
         file_statuses={worktree_path: (["changes.py"], [], [])},
         ahead_behind={(worktree_path, "work-branch"): (1, 0)},
@@ -320,7 +320,7 @@ def test_git_status_collector_with_stashes(tmp_path: Path) -> None:
         },
     )
 
-    ctx = create_test_context(git_ops=git_ops)
+    ctx = create_test_context(git=git_ops)
     collector = GitStatusCollector()
 
     # Act
@@ -347,14 +347,14 @@ def test_git_status_collector_recent_commits(tmp_path: Path) -> None:
         {"sha": "mno7890", "message": "Initial setup", "author": "Eve", "date": "1 day ago"},
     ]
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         current_branches={worktree_path: "active-development"},
         file_statuses={worktree_path: ([], [], [])},
         ahead_behind={(worktree_path, "active-development"): (5, 0)},
         recent_commits={worktree_path: commits},
     )
 
-    ctx = create_test_context(git_ops=git_ops)
+    ctx = create_test_context(git=git_ops)
     collector = GitStatusCollector()
 
     # Act
@@ -378,11 +378,11 @@ def test_git_status_collector_in_detached_head(tmp_path: Path) -> None:
     repo_root = tmp_path / "repo"
 
     # Detached HEAD means no current branch
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         current_branches={worktree_path: None},  # Detached HEAD
     )
 
-    ctx = create_test_context(git_ops=git_ops)
+    ctx = create_test_context(git=git_ops)
     collector = GitStatusCollector()
 
     # Act
@@ -400,14 +400,14 @@ def test_git_status_collector_handles_subprocess_errors(tmp_path: Path) -> None:
     repo_root = tmp_path / "repo"
 
     # Simulate error conditions by providing partial data
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         current_branches={worktree_path: "error-branch"},
         # No file_statuses entry means get_file_status returns ([], [], [])
         # No ahead_behind entry means get_ahead_behind returns (0, 0)
         # No recent_commits entry means get_recent_commits returns []
     )
 
-    ctx = create_test_context(git_ops=git_ops)
+    ctx = create_test_context(git=git_ops)
     collector = GitStatusCollector()
 
     # Act
@@ -432,8 +432,8 @@ def test_git_status_collector_is_available(tmp_path: Path) -> None:
     existing_path.mkdir()
     nonexistent_path = tmp_path / "does_not_exist"
 
-    git_ops = FakeGitOps()
-    ctx = create_test_context(git_ops=git_ops)
+    git_ops = FakeGit()
+    ctx = create_test_context(git=git_ops)
     collector = GitStatusCollector()
 
     # Act & Assert
@@ -448,7 +448,7 @@ def test_git_status_collector_mixed_file_states(tmp_path: Path) -> None:
     worktree_path.mkdir()
     repo_root = tmp_path / "repo"
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         current_branches={worktree_path: "complex-changes"},
         file_statuses={
             worktree_path: (
@@ -476,7 +476,7 @@ def test_git_status_collector_mixed_file_states(tmp_path: Path) -> None:
         },
     )
 
-    ctx = create_test_context(git_ops=git_ops)
+    ctx = create_test_context(git=git_ops)
     collector = GitStatusCollector()
 
     # Act
@@ -509,14 +509,14 @@ def test_git_status_collector_limit_recent_commits(tmp_path: Path) -> None:
         for i in range(10)
     ]
 
-    git_ops = FakeGitOps(
+    git_ops = FakeGit(
         current_branches={worktree_path: "many-commits"},
         file_statuses={worktree_path: ([], [], [])},
         ahead_behind={(worktree_path, "many-commits"): (10, 0)},
         recent_commits={worktree_path: commits},
     )
 
-    ctx = create_test_context(git_ops=git_ops)
+    ctx = create_test_context(git=git_ops)
     collector = GitStatusCollector()
 
     # Act

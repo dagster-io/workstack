@@ -1,7 +1,7 @@
 """Test shell completion generation commands.
 
 This module tests the CLI commands that generate shell completion scripts
-for bash, zsh, and fish shells using FakeCompletionOps for dependency injection.
+for bash, zsh, and fish shells using FakeCompletion for dependency injection.
 
 For E2E tests that validate subprocess behavior with special environment variables,
 see tests/integration/test_completion_e2e.py.
@@ -10,10 +10,10 @@ see tests/integration/test_completion_e2e.py.
 from click.testing import CliRunner
 
 from erk.cli.commands.completion import completion_bash, completion_fish, completion_zsh
-from tests.fakes.completion_ops import FakeCompletionOps
+from tests.fakes.completion import FakeCompletion
 from tests.fakes.context import create_test_context
 
-# Unit tests using FakeCompletionOps
+# Unit tests using FakeCompletion
 
 
 def test_bash_cmd_generation() -> None:
@@ -26,9 +26,9 @@ def test_bash_cmd_generation() -> None:
         "    complete -F _erk_completion erk\n"
         "}"
     )
-    completion_ops = FakeCompletionOps(bash_script=bash_script, erk_path="/usr/local/bin/erk")
+    completion_ops = FakeCompletion(bash_script=bash_script, erk_path="/usr/local/bin/erk")
 
-    ctx = create_test_context(completion_ops=completion_ops)
+    ctx = create_test_context(completion=completion_ops)
     runner = CliRunner()
     result = runner.invoke(completion_bash, obj=ctx)
 
@@ -57,8 +57,8 @@ _erk_completion() {
 
 complete -F _erk_completion erk
 """
-    completion_ops = FakeCompletionOps(bash_script=completion_script)
-    ctx = create_test_context(completion_ops=completion_ops)
+    completion_ops = FakeCompletion(bash_script=completion_script)
+    ctx = create_test_context(completion=completion_ops)
 
     runner = CliRunner()
     result = runner.invoke(completion_bash, obj=ctx)
@@ -82,8 +82,8 @@ _erk_completion() {
 }
 complete -F _erk_completion erk
 """
-    completion_ops = FakeCompletionOps(bash_script=completion_script)
-    ctx = create_test_context(completion_ops=completion_ops)
+    completion_ops = FakeCompletion(bash_script=completion_script)
+    ctx = create_test_context(completion=completion_ops)
 
     runner = CliRunner()
     result = runner.invoke(completion_bash, obj=ctx)
@@ -107,8 +107,8 @@ _erk() {
 }
 compdef _erk erk
 """
-    completion_ops = FakeCompletionOps(zsh_script=zsh_completion)
-    ctx = create_test_context(completion_ops=completion_ops)
+    completion_ops = FakeCompletion(zsh_script=zsh_completion)
+    ctx = create_test_context(completion=completion_ops)
 
     runner = CliRunner()
     result = runner.invoke(completion_zsh, obj=ctx)
@@ -136,8 +136,8 @@ _erk() {
     _describe 'command' commands
 }
 """
-    completion_ops = FakeCompletionOps(zsh_script=zsh_completion)
-    ctx = create_test_context(completion_ops=completion_ops)
+    completion_ops = FakeCompletion(zsh_script=zsh_completion)
+    ctx = create_test_context(completion=completion_ops)
 
     runner = CliRunner()
     result = runner.invoke(completion_zsh, obj=ctx)
@@ -167,8 +167,8 @@ _erk() {
     esac
 }
 """
-    completion_ops = FakeCompletionOps(zsh_script=zsh_completion)
-    ctx = create_test_context(completion_ops=completion_ops)
+    completion_ops = FakeCompletion(zsh_script=zsh_completion)
+    ctx = create_test_context(completion=completion_ops)
 
     runner = CliRunner()
     result = runner.invoke(completion_zsh, obj=ctx)
@@ -186,8 +186,8 @@ complete -c erk -n "__fish_use_subcommand" -a list -d "List all workspaces"
 complete -c erk -n "__fish_use_subcommand" -a status -d "Show workspace status"
 complete -c erk -l help -d "Show help message"
 """
-    completion_ops = FakeCompletionOps(fish_script=fish_completion)
-    ctx = create_test_context(completion_ops=completion_ops)
+    completion_ops = FakeCompletion(fish_script=fish_completion)
+    ctx = create_test_context(completion=completion_ops)
 
     runner = CliRunner()
     result = runner.invoke(completion_fish, obj=ctx)
@@ -211,8 +211,8 @@ complete -c erk -n "__fish_use_subcommand" -a switch -d "Switch to a workspace"
 complete -c erk -n "__fish_seen_subcommand_from create" -s f -l force -d "Force creation"
 complete -c erk -n "__fish_seen_subcommand_from create" -s b -l branch -d "Specify branch"
 """
-    completion_ops = FakeCompletionOps(fish_script=fish_completion)
-    ctx = create_test_context(completion_ops=completion_ops)
+    completion_ops = FakeCompletion(fish_script=fish_completion)
+    ctx = create_test_context(completion=completion_ops)
 
     runner = CliRunner()
     result = runner.invoke(completion_fish, obj=ctx)
@@ -225,8 +225,8 @@ complete -c erk -n "__fish_seen_subcommand_from create" -s b -l branch -d "Speci
 def test_completion_with_invalid_shell() -> None:
     """Test completion with empty script (simulates error condition)."""
     # Configure fake with empty script to simulate error condition
-    completion_ops = FakeCompletionOps(bash_script="")
-    ctx = create_test_context(completion_ops=completion_ops)
+    completion_ops = FakeCompletion(bash_script="")
+    ctx = create_test_context(completion=completion_ops)
 
     runner = CliRunner()
     result = runner.invoke(completion_bash, obj=ctx)
@@ -238,11 +238,11 @@ def test_completion_with_invalid_shell() -> None:
 
 def test_completion_subprocess_error_handling() -> None:
     """Test completion handles subprocess errors gracefully (integration test context)."""
-    # This test verifies error behavior when RealCompletionOps subprocess fails.
+    # This test verifies error behavior when RealCompletion subprocess fails.
     # Since we now use fakes in unit tests, subprocess errors are tested at integration level.
     # For unit test of error paths, we test with fake returning error-like output.
-    completion_ops = FakeCompletionOps(bash_script="")
-    ctx = create_test_context(completion_ops=completion_ops)
+    completion_ops = FakeCompletion(bash_script="")
+    ctx = create_test_context(completion=completion_ops)
 
     runner = CliRunner()
     result = runner.invoke(completion_bash, obj=ctx)
@@ -253,8 +253,8 @@ def test_completion_subprocess_error_handling() -> None:
 
 def test_bash_cmd_with_custom_path() -> None:
     """Test bash completion with custom erk path."""
-    completion_ops = FakeCompletionOps(bash_script="completion script", erk_path="/custom/path/erk")
-    ctx = create_test_context(completion_ops=completion_ops)
+    completion_ops = FakeCompletion(bash_script="completion script", erk_path="/custom/path/erk")
+    ctx = create_test_context(completion=completion_ops)
 
     runner = CliRunner()
     result = runner.invoke(completion_bash, obj=ctx)
@@ -266,8 +266,8 @@ def test_bash_cmd_with_custom_path() -> None:
 
 def test_zsh_cmd_with_custom_path() -> None:
     """Test zsh completion with custom erk path."""
-    completion_ops = FakeCompletionOps(zsh_script="#compdef erk", erk_path="/usr/bin/erk")
-    ctx = create_test_context(completion_ops=completion_ops)
+    completion_ops = FakeCompletion(zsh_script="#compdef erk", erk_path="/usr/bin/erk")
+    ctx = create_test_context(completion=completion_ops)
 
     runner = CliRunner()
     result = runner.invoke(completion_zsh, obj=ctx)
@@ -278,8 +278,8 @@ def test_zsh_cmd_with_custom_path() -> None:
 
 def test_fish_cmd_with_custom_path() -> None:
     """Test fish completion with custom erk path."""
-    completion_ops = FakeCompletionOps(fish_script="complete -c erk", erk_path="./erk")
-    ctx = create_test_context(completion_ops=completion_ops)
+    completion_ops = FakeCompletion(fish_script="complete -c erk", erk_path="./erk")
+    ctx = create_test_context(completion=completion_ops)
 
     runner = CliRunner()
     result = runner.invoke(completion_fish, obj=ctx)

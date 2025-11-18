@@ -15,10 +15,10 @@ from dataclasses import dataclass, field, replace
 
 from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.ops import (
     CommandResult,
-    GitGtKitOps,
-    GitHubGtKitOps,
-    GraphiteGtKitOps,
-    GtKitOps,
+    GitGtKit,
+    GitHubGtKit,
+    GraphiteGtKit,
+    GtKit,
 )
 
 
@@ -63,7 +63,7 @@ class GitHubState:
     pr_delay_attempts_until_visible: int = 0
 
 
-class FakeGitGtKitOps(GitGtKitOps):
+class FakeGitGtKit(GitGtKit):
     """Fake git operations with in-memory state."""
 
     def __init__(self, state: GitState | None = None) -> None:
@@ -133,7 +133,7 @@ class FakeGitGtKitOps(GitGtKitOps):
         )
 
 
-class FakeGraphiteGtKitOps(GraphiteGtKitOps):
+class FakeGraphiteGtKit(GraphiteGtKit):
     """Fake Graphite operations with in-memory state."""
 
     def __init__(self, state: GraphiteState | None = None) -> None:
@@ -190,7 +190,7 @@ class FakeGraphiteGtKitOps(GraphiteGtKitOps):
         return False
 
 
-class FakeGitHubGtKitOps(GitHubGtKitOps):
+class FakeGitHubGtKit(GitHubGtKit):
     """Fake GitHub operations with in-memory state."""
 
     def __init__(self, state: GitHubState | None = None) -> None:
@@ -260,7 +260,7 @@ class FakeGitHubGtKitOps(GitHubGtKitOps):
         return f"https://app.graphite.com/github/pr/test-owner/test-repo/{pr_number}"
 
 
-class FakeGtKitOps(GtKitOps):
+class FakeGtKit(GtKit):
     """Fake composite operations for testing.
 
     Provides declarative setup methods for common test scenarios.
@@ -273,25 +273,25 @@ class FakeGtKitOps(GtKitOps):
         github_state: GitHubState | None = None,
     ) -> None:
         """Initialize with optional initial states."""
-        self._git = FakeGitGtKitOps(git_state)
-        self._graphite = FakeGraphiteGtKitOps(graphite_state)
-        self._github = FakeGitHubGtKitOps(github_state)
+        self._git = FakeGitGtKit(git_state)
+        self._graphite = FakeGraphiteGtKit(graphite_state)
+        self._github = FakeGitHubGtKit(github_state)
 
-    def git(self) -> FakeGitGtKitOps:
+    def git(self) -> FakeGitGtKit:
         """Get the git operations interface."""
         return self._git
 
-    def graphite(self) -> FakeGraphiteGtKitOps:
+    def graphite(self) -> FakeGraphiteGtKit:
         """Get the Graphite operations interface."""
         return self._graphite
 
-    def github(self) -> FakeGitHubGtKitOps:
+    def github(self) -> FakeGitHubGtKit:
         """Get the GitHub operations interface."""
         return self._github
 
     # Declarative setup methods
 
-    def with_branch(self, branch: str, parent: str = "main") -> "FakeGtKitOps":
+    def with_branch(self, branch: str, parent: str = "main") -> "FakeGtKit":
         """Set current branch and its parent.
 
         Args:
@@ -316,7 +316,7 @@ class FakeGtKitOps(GtKitOps):
 
         return self
 
-    def with_uncommitted_files(self, files: list[str]) -> "FakeGtKitOps":
+    def with_uncommitted_files(self, files: list[str]) -> "FakeGtKit":
         """Set uncommitted files.
 
         Args:
@@ -329,7 +329,7 @@ class FakeGtKitOps(GtKitOps):
         self._git._state = replace(git_state, uncommitted_files=files)
         return self
 
-    def with_commits(self, count: int) -> "FakeGtKitOps":
+    def with_commits(self, count: int) -> "FakeGtKit":
         """Add a number of commits.
 
         Args:
@@ -343,7 +343,7 @@ class FakeGtKitOps(GtKitOps):
         self._git._state = replace(git_state, commits=commits)
         return self
 
-    def with_pr(self, number: int, url: str | None = None, state: str = "OPEN") -> "FakeGtKitOps":
+    def with_pr(self, number: int, url: str | None = None, state: str = "OPEN") -> "FakeGtKit":
         """Set PR for current branch.
 
         Args:
@@ -372,7 +372,7 @@ class FakeGtKitOps(GtKitOps):
         )
         return self
 
-    def with_children(self, children: list[str]) -> "FakeGtKitOps":
+    def with_children(self, children: list[str]) -> "FakeGtKit":
         """Set child branches for current branch.
 
         Args:
@@ -388,7 +388,7 @@ class FakeGtKitOps(GtKitOps):
         self._graphite._state = replace(gt_state, branch_children=new_children)
         return self
 
-    def with_submit_failure(self, stdout: str = "", stderr: str = "") -> "FakeGtKitOps":
+    def with_submit_failure(self, stdout: str = "", stderr: str = "") -> "FakeGtKit":
         """Configure submit to fail.
 
         Args:
@@ -404,7 +404,7 @@ class FakeGtKitOps(GtKitOps):
         )
         return self
 
-    def with_restack_failure(self) -> "FakeGtKitOps":
+    def with_restack_failure(self) -> "FakeGtKit":
         """Configure restack to fail.
 
         Returns:
@@ -414,7 +414,7 @@ class FakeGtKitOps(GtKitOps):
         self._graphite._state = replace(gt_state, restack_success=False)
         return self
 
-    def with_merge_failure(self) -> "FakeGtKitOps":
+    def with_merge_failure(self) -> "FakeGtKit":
         """Configure PR merge to fail.
 
         Returns:
@@ -424,7 +424,7 @@ class FakeGtKitOps(GtKitOps):
         self._github._state = replace(gh_state, merge_success=False)
         return self
 
-    def with_squash_failure(self, stdout: str = "", stderr: str = "") -> "FakeGtKitOps":
+    def with_squash_failure(self, stdout: str = "", stderr: str = "") -> "FakeGtKit":
         """Configure squash to fail.
 
         Args:
@@ -440,7 +440,7 @@ class FakeGtKitOps(GtKitOps):
         )
         return self
 
-    def with_add_failure(self) -> "FakeGtKitOps":
+    def with_add_failure(self) -> "FakeGtKit":
         """Configure git add to fail.
 
         Returns:
@@ -450,7 +450,7 @@ class FakeGtKitOps(GtKitOps):
         self._git._state = replace(git_state, add_success=False)
         return self
 
-    def with_pr_update_failure(self) -> "FakeGtKitOps":
+    def with_pr_update_failure(self) -> "FakeGtKit":
         """Configure PR metadata update to fail.
 
         Returns:
@@ -460,7 +460,7 @@ class FakeGtKitOps(GtKitOps):
         self._github._state = replace(gh_state, pr_update_success=False)
         return self
 
-    def with_pr_delay(self, attempts_until_visible: int) -> "FakeGtKitOps":
+    def with_pr_delay(self, attempts_until_visible: int) -> "FakeGtKit":
         """Configure PR to appear only after N get_pr_info() attempts.
 
         Simulates GitHub API delay where PR is not immediately visible after creation.

@@ -17,22 +17,22 @@ Display commands typically read state but don't modify it:
 from click.testing import CliRunner
 from erk.commands.status import status
 from erk.context import ErkContext
-from tests.fakes.fake_gitops import FakeGitOps
-from tests.fakes.fake_github_ops import FakeGitHubOps
+from tests.fakes.fake_git import FakeGit
+from tests.fakes.fake_github import FakeGitHub
 
 def test_display_command() -> None:
     # Arrange: Set up state to display
-    git_ops = FakeGitOps(
+    git = FakeGit(
         current_branch="feature/test",
         all_branches=["main", "feature/test", "feature/other"]
     )
 
-    github_ops = FakeGitHubOps()
-    github_ops.add_pr("feature/test", number=123, state="open")
+    github = FakeGitHub()
+    github.add_pr("feature/test", number=123, state="open")
 
     ctx = ErkContext(
-        git_ops=git_ops,
-        github_ops=github_ops
+        git=git,
+        github=github
     )
 
     runner = CliRunner()
@@ -94,10 +94,10 @@ assert "Open" in clean_output  # Status without color codes
 Many display commands show PR information:
 
 ```python
-github_ops = FakeGitHubOps()
+github = FakeGitHub()
 
 # Add PR data
-github_ops.add_pr(
+github.add_pr(
     "feature/branch",
     number=456,
     state="open",
@@ -106,8 +106,8 @@ github_ops.add_pr(
 )
 
 ctx = ErkContext(
-    git_ops=git_ops,
-    github_ops=github_ops
+    git=git,
+    github=github
 )
 
 result = runner.invoke(status, [], obj=ctx)
@@ -139,7 +139,7 @@ assert result.exit_code == 0
 
 ```python
 # Test display when no data available
-git_ops = FakeGitOps(
+git = FakeGit(
     current_branch="main",
     all_branches=["main"]  # Only main branch
 )
@@ -153,8 +153,8 @@ assert "No workspaces" in result.output or "None found" in result.output
 
 ```python
 # Test error message formatting
-github_ops = FakeGitHubOps()
-github_ops.set_error("API rate limit exceeded")
+github = FakeGitHub()
+github.set_error("API rate limit exceeded")
 
 result = runner.invoke(status, [], obj=ctx)
 # Command should handle gracefully
@@ -186,16 +186,16 @@ Display commands should be fast and not modify state:
 
 ```python
 def test_display_no_side_effects() -> None:
-    git_ops = FakeGitOps(current_branch="main", all_branches=["main"])
+    git = FakeGit(current_branch="main", all_branches=["main"])
 
-    ctx = ErkContext(git_ops=git_ops)
+    ctx = ErkContext(git=git)
     runner = CliRunner()
 
     result = runner.invoke(status, [], obj=ctx)
 
     # Verify no mutations occurred
-    assert len(git_ops.created_branches) == 0
-    assert len(git_ops.deleted_branches) == 0
+    assert len(git.created_branches) == 0
+    assert len(git.deleted_branches) == 0
 ```
 
 ## Testing Output Consistency

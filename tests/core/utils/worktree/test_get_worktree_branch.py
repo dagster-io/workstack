@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from erk.core.gitops import WorktreeInfo
+from erk.core.git import WorktreeInfo
 from erk.core.worktree_utils import get_worktree_branch
 
 

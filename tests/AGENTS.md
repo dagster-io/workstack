@@ -13,7 +13,7 @@ Run with coverage: `uv run pytest --cov=erk`
 
 **Every new subdirectory under `tests/` must include `__init__.py`** to ensure Python recognizes it as a regular package (not a namespace package).
 
-Without `__init__.py`, pytest's import system breaks because Python 3.3+ treats directories without `__init__.py` as namespace packages, which disrupts absolute imports like `from tests.fakes.gitops import FakeGitOps`.
+Without `__init__.py`, pytest's import system breaks because Python 3.3+ treats directories without `__init__.py` as namespace packages, which disrupts absolute imports like `from tests.fakes.git import FakeGit`.
 
 **When adding a new test directory:**
 
@@ -68,9 +68,9 @@ Tests that verify fake implementations work correctly. These test the **test inf
 
 **Contains:**
 
-- `test_fake_gitops.py` - Tests FakeGitOps mutation tracking
-- `test_fake_global_config_ops.py` - Tests FakeGlobalConfigOps state management
-- Tests OF other fakes (GraphiteOps, GitHubOps, ShellOps)
+- `test_fake_git.py` - Tests FakeGit mutation tracking
+- `test_fake_config_store.py` - Tests FakeConfigStore state management
+- Tests OF other fakes (Graphite, GitHub, Shell)
 
 **When to add tests here:** When modifying fake implementations or adding new fakes.
 
@@ -82,8 +82,8 @@ Tests with REAL implementations (actual git, filesystem, subprocess calls).
 
 **Contains:**
 
-- `test_real_gitops.py` - Tests RealGitOps with actual git commands
-- `test_real_global_config.py` - Tests RealGlobalConfigOps with real filesystem
+- `test_real_git.py` - Tests RealGit with actual git commands
+- `test_real_config_store.py` - Tests RealConfigStore with real filesystem
 - `test_dryrun_integration.py` - Tests dry-run wrappers
 
 **When to add tests here:** When testing that abstraction layers correctly wrap external tools.
@@ -199,7 +199,7 @@ Each subdirectory has targeted CLAUDE.md files with domain-specific patterns:
 ## Testing Principles
 
 1. **Use dependency injection** - All tests inject fakes via ErkContext
-2. **No mock.patch** - Use FakeShellOps, FakeGitOps, etc. instead
+2. **No mock.patch** - Use FakeShell, FakeGit, etc. instead
 3. **Constructor injection** - All fake state configured at construction
 4. **Mutation tracking** - Use read-only properties for assertions (e.g., `git_ops.deleted_branches`)
 5. **Three implementations** - Real (production), Dry-Run (safety), Fake (testing)

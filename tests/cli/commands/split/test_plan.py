@@ -12,7 +12,7 @@ from erk.cli.commands.split.plan import (
     execute_split_plan,
     identify_splittable_branches,
 )
-from erk.core.gitops import WorktreeInfo
+from erk.core.git import WorktreeInfo
 
 # Tests for identify_splittable_branches function
 
@@ -261,7 +261,7 @@ def test_execute_split_plan_creates_worktrees() -> None:
     """Normal execution creates worktrees."""
 
     # Create fake git ops
-    class FakeGitOps:
+    class FakeGit:
         def __init__(self):
             self.created_worktrees = []
 
@@ -282,7 +282,7 @@ def test_execute_split_plan_creates_worktrees() -> None:
         skipped_trunk=True,
     )
 
-    git_ops = FakeGitOps()
+    git_ops = FakeGit()
     results = execute_split_plan(plan, git_ops)
 
     assert len(results) == 2
@@ -298,16 +298,16 @@ def test_execute_split_plan_creates_worktrees() -> None:
 
 
 def test_execute_split_plan_with_noop_ops() -> None:
-    """NoopGitOps doesn't create actual worktrees."""
+    """NoopGit doesn't create actual worktrees."""
 
-    class NoopGitOps:
-        """Simulates NoopGitOps behavior for testing."""
+    class NoopGit:
+        """Simulates NoopGit behavior for testing."""
 
         def __init__(self):
             self.created_worktrees = []
 
         def add_worktree(self, repo_root, path, *, branch=None, ref=None, create_branch=True):
-            # NoopGitOps would do nothing here
+            # NoopGit would do nothing here
             pass
 
     plan = SplitPlan(
@@ -321,18 +321,18 @@ def test_execute_split_plan_with_noop_ops() -> None:
         skipped_trunk=True,
     )
 
-    git_ops = NoopGitOps()
+    git_ops = NoopGit()
     results = execute_split_plan(plan, git_ops)
 
     assert len(results) == 1
     assert results[0] == ("feat-1", Path("/repo/erks/feat-1"))
-    assert len(git_ops.created_worktrees) == 0  # No actual creation due to NoopGitOps
+    assert len(git_ops.created_worktrees) == 0  # No actual creation due to NoopGit
 
 
 def test_execute_split_plan_empty_plan() -> None:
     """Handle empty plan with no branches to split."""
 
-    class FakeGitOps:
+    class FakeGit:
         def __init__(self):
             self.created_worktrees = []
 
@@ -350,7 +350,7 @@ def test_execute_split_plan_empty_plan() -> None:
         skipped_trunk=True,
     )
 
-    git_ops = FakeGitOps()
+    git_ops = FakeGit()
     results = execute_split_plan(plan, git_ops)
 
     assert len(results) == 0

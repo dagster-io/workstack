@@ -10,10 +10,10 @@ from click.testing import CliRunner
 
 from erk.cli.cli import cli
 from erk.core.branch_metadata import BranchMetadata
-from erk.core.gitops import WorktreeInfo
-from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.gitops import FakeGitOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
+from erk.core.git import WorktreeInfo
+from tests.fakes.git import FakeGit
+from tests.fakes.github import FakeGitHub
+from tests.fakes.graphite import FakeGraphite
 from tests.test_utils.builders import PullRequestInfoBuilder
 from tests.test_utils.env_helpers import erk_isolated_fs_env
 
@@ -32,7 +32,7 @@ def test_land_stack_navigates_to_root_worktree() -> None:
         # Create a root worktree and a feature worktree
         feature_worktree_path = env.erk_root / "worktrees" / "feat-branch"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir, feature_worktree_path: env.git_dir},
             default_branches={env.cwd: "main", feature_worktree_path: "main"},
             current_branches={env.cwd: "main", feature_worktree_path: "feat-branch"},
@@ -45,7 +45,7 @@ def test_land_stack_navigates_to_root_worktree() -> None:
         )
 
         # Configure Graphite metadata for simple stack
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-branch"]),
                 "feat-branch": BranchMetadata.branch("feat-branch", parent="main"),
@@ -56,7 +56,7 @@ def test_land_stack_navigates_to_root_worktree() -> None:
         )
 
         # Configure GitHub ops with passing PR
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             prs={
                 "feat-branch": (
                     PullRequestInfoBuilder(101, "feat-branch").with_passing_checks().build()
@@ -69,9 +69,9 @@ def test_land_stack_navigates_to_root_worktree() -> None:
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
         )
 
         # Execute land-stack from feature worktree directory
@@ -107,7 +107,7 @@ def test_land_stack_no_duplicate_checkout_message() -> None:
         feature_worktree_path = env.erk_root / "worktrees" / "feat-branch"
 
         # Start from feature branch (land-stack must be run from feature branch)
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir, feature_worktree_path: env.git_dir},
             default_branches={env.cwd: "main", feature_worktree_path: "main"},
             current_branches={env.cwd: "main", feature_worktree_path: "feat-branch"},
@@ -120,7 +120,7 @@ def test_land_stack_no_duplicate_checkout_message() -> None:
         )
 
         # Configure Graphite metadata for simple stack
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-branch"]),
                 "feat-branch": BranchMetadata.branch("feat-branch", parent="main"),
@@ -131,7 +131,7 @@ def test_land_stack_no_duplicate_checkout_message() -> None:
         )
 
         # Configure GitHub ops with passing PR
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             prs={
                 "feat-branch": (
                     PullRequestInfoBuilder(101, "feat-branch").with_passing_checks().build()
@@ -144,9 +144,9 @@ def test_land_stack_no_duplicate_checkout_message() -> None:
 
         test_ctx = env.build_context(
             use_graphite=True,
-            git_ops=git_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
         )
 
         # Execute from feature worktree

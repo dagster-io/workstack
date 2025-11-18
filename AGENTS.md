@@ -39,6 +39,7 @@
 | Tests for speculative features                                   | → **FORBIDDEN** - Only test actively implemented code (TDD is fine)                                  |
 | Creating `.claude/` artifacts                                    | → Use `kebab-case` (hyphens) NOT `snake_case` (underscores)                                          |
 | `Path("/test/...")` or hardcoded paths                           | → **CATASTROPHIC** - Use `pure_erk_env` fixture - [Test Isolation](#6-test-isolation--must)          |
+| Writing or modifying tests                                       | → **🔴 LOAD fake-driven-testing skill FIRST** - Test patterns, architecture, anti-patterns           |
 | ⚠️ Python patterns above                                         | → These are EXCERPTS ONLY - Load dignified-python skill for complete guidance                        |
 
 ## 📚 Quick Reference
@@ -139,7 +140,7 @@ if path.exists():
 ```python
 from abc import ABC, abstractmethod
 
-class MyOps(ABC):  # ✅ Not Protocol
+class MyIntegration(ABC):  # ✅ Not Protocol
     @abstractmethod
     def operation(self) -> None: ...
 ```
@@ -377,7 +378,7 @@ Given stack: `main → feat-1 → feat-2 → feat-3`
 
 **This codebase uses dependency injection for dry-run mode, NOT boolean flags.**
 
-🔴 **MUST**: Use NoopGitOps wrapper for dry-run mode
+🔴 **MUST**: Use Noop wrappers for dry-run mode
 🔴 **MUST NOT**: Pass dry_run flags through business logic functions
 🟡 **SHOULD**: Keep dry-run UI logic at the CLI layer only
 
@@ -385,24 +386,24 @@ Given stack: `main → feat-1 → feat-2 → feat-3`
 
 ```python
 # ❌ WRONG: Passing dry_run flag through business logic
-def execute_plan(plan, git_ops, dry_run=False):
+def execute_plan(plan, git, dry_run=False):
     if not dry_run:
-        git_ops.add_worktree(...)
+        git.add_worktree(...)
 ```
 
 **Correct Pattern:**
 
 ```python
-# ✅ CORRECT: Rely on injected ops implementation
-def execute_plan(plan, git_ops):
-    # Always execute - behavior depends on git_ops implementation
-    git_ops.add_worktree(...)  # NoopGitOps does nothing, RealGitOps executes
+# ✅ CORRECT: Rely on injected integration implementation
+def execute_plan(plan, git):
+    # Always execute - behavior depends on git implementation
+    git.add_worktree(...)  # NoopGit does nothing, RealGit executes
 
 # At the context creation level:
 if dry_run:
-    git_ops = NoopGitOps(real_ops)  # or PrintingGitOps(NoopGitOps(...))
+    git = NoopGit(real_git)  # or PrintingGit(NoopGit(...))
 else:
-    git_ops = real_ops  # or PrintingGitOps(real_ops)
+    git = real_git  # or PrintingGit(real_git)
 ```
 
 **Rationale:**
@@ -556,10 +557,10 @@ machine_output(str(activation_path))
 
 **Default testing position:** Any change to business logic, features, or bug fixes MUST include tests written over the fake layer.
 
-🔴 **MUST add coverage for ops implementations:**
+🔴 **MUST add coverage for integration class implementations:**
 
-- **New ops interface method** → Test the real implementation with mocked stateful interactions
-- **Example:** Adding `GitOps.new_method()` → Mock subprocess calls, test error paths
+- **New integration interface method** → Test the real implementation with mocked stateful interactions
+- **Example:** Adding `Git.new_method()` → Mock subprocess calls, test error paths
 - **Goal:** Ensure code coverage even when underlying systems (git, filesystem, network) are mocked
 
 **TDD is explicitly allowed and encouraged:**

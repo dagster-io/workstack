@@ -6,7 +6,7 @@ from pathlib import Path
 
 from erk.cli.output import user_output
 from erk.core.context import ErkContext
-from erk.core.gitops import WorktreeInfo
+from erk.core.git import WorktreeInfo
 
 
 @dataclass(frozen=True)
@@ -52,13 +52,13 @@ def get_stack_branches(
     """
     if current_branch is None:
         # In detached HEAD state, get the full stack from trunk
-        stack_branches = ctx.graphite_ops.get_branch_stack(ctx.git_ops, repo_root, trunk_branch)
+        stack_branches = ctx.graphite.get_branch_stack(ctx.git, repo_root, trunk_branch)
         if stack_branches is None:
             user_output(f"Error: Trunk branch '{trunk_branch}' is not tracked by Graphite")
             raise SystemExit(1)
     else:
         # Get current branch's stack
-        stack_branches = ctx.graphite_ops.get_branch_stack(ctx.git_ops, repo_root, current_branch)
+        stack_branches = ctx.graphite.get_branch_stack(ctx.git, repo_root, current_branch)
         if stack_branches is None:
             user_output(f"Error: Branch '{current_branch}' is not tracked by Graphite")
             user_output(
@@ -183,14 +183,14 @@ def execute_split_plan(
 ) -> list[tuple[str, Path]]:
     """Execute a split plan by creating worktrees.
 
-    The actual execution depends on the GitOps implementation passed in:
-    - RealGitOps: Actually creates the worktrees
-    - NoopGitOps: No-op execution for dry-run mode
-    - PrintingGitOps: Prints operations (wraps either Real or Noop)
+    The actual execution depends on the Git implementation passed in:
+    - RealGit: Actually creates the worktrees
+    - NoopGit: No-op execution for dry-run mode
+    - PrintingGit: Prints operations (wraps either Real or Noop)
 
     Args:
         plan: The split plan to execute
-        git_ops: GitOps instance for performing git operations
+        git_ops: Git instance for performing git operations
 
     Returns:
         List of (branch, worktree_path) tuples indicating what was processed
@@ -202,7 +202,7 @@ def execute_split_plan(
 
         # Create worktree for existing branch
         # Using create_branch=False since branch already exists
-        # The actual behavior depends on the injected GitOps implementation
+        # The actual behavior depends on the injected Git implementation
         git_ops.add_worktree(
             plan.repo_root,
             target_path,

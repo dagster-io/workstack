@@ -12,12 +12,12 @@ from click.testing import CliRunner
 
 from erk.cli.cli import cli
 from erk.core.branch_metadata import BranchMetadata
+from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.gitops import RealGitOps
-from erk.core.global_config import GlobalConfig
-from tests.fakes.github_ops import FakeGitHubOps
-from tests.fakes.graphite_ops import FakeGraphiteOps
-from tests.fakes.shell_ops import FakeShellOps
+from erk.core.git import RealGit
+from tests.fakes.github import FakeGitHub
+from tests.fakes.graphite import FakeGraphite
+from tests.fakes.shell import FakeShell
 
 
 def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> None:
@@ -119,9 +119,9 @@ def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> No
 
     try:
         # Set up test context with real git ops + fake others
-        git_ops = RealGitOps()
+        git_ops = RealGit()
 
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
@@ -131,7 +131,7 @@ def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> No
             },
         )
 
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Add feature 1"),
             },
@@ -148,11 +148,11 @@ def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> No
         )
 
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
+            git=git_ops,
             global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             cwd=worktree_path,
             dry_run=True,  # Match --dry-run flag on line 164
         )
@@ -267,9 +267,9 @@ def test_land_stack_with_trunk_in_worktree(tmp_path: Path) -> None:
 
     try:
         # Set up test context with real git ops + fake others
-        git_ops = RealGitOps()
+        git_ops = RealGit()
 
-        graphite_ops = FakeGraphiteOps(
+        graphite_ops = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
@@ -279,7 +279,7 @@ def test_land_stack_with_trunk_in_worktree(tmp_path: Path) -> None:
             },
         )
 
-        github_ops = FakeGitHubOps(
+        github_ops = FakeGitHub(
             pr_statuses={
                 "feat-1": ("OPEN", 100, "Add feature 1"),
             },
@@ -296,11 +296,11 @@ def test_land_stack_with_trunk_in_worktree(tmp_path: Path) -> None:
         )
 
         test_ctx = ErkContext.for_test(
-            git_ops=git_ops,
+            git=git_ops,
             global_config=global_config_ops,
-            graphite_ops=graphite_ops,
-            github_ops=github_ops,
-            shell_ops=FakeShellOps(),
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
             cwd=repo,
             dry_run=True,  # Use dry-run to skip actual PR merge
         )

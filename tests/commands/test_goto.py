@@ -5,8 +5,8 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.gitops import WorktreeInfo
-from tests.fakes.gitops import FakeGitOps
+from erk.core.git import WorktreeInfo
+from tests.fakes.git import FakeGit
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
@@ -17,7 +17,7 @@ def test_goto_named_worktree() -> None:
         # Set up worktrees: root on main, feature-work on feature-1
         worktree_path = env.repo.worktrees_dir / "feature-work"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main", is_root=True),
@@ -29,7 +29,7 @@ def test_goto_named_worktree() -> None:
             git_common_dirs={env.cwd: env.git_dir, worktree_path: env.git_dir},
         )
 
-        test_ctx = env.build_context(git_ops=git_ops)
+        test_ctx = env.build_context(git=git_ops)
 
         # Act: Navigate to feature-work worktree
         result = runner.invoke(
@@ -58,7 +58,7 @@ def test_goto_root() -> None:
         # Set up worktrees: root on main, feature-work on feature-1
         worktree_path = env.repo.worktrees_dir / "feature-work"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main", is_root=True),
@@ -70,7 +70,7 @@ def test_goto_root() -> None:
             git_common_dirs={env.cwd: env.git_dir, worktree_path: env.git_dir},
         )
 
-        test_ctx = env.build_context(git_ops=git_ops)
+        test_ctx = env.build_context(git=git_ops)
 
         # Act: Navigate to root using special keyword
         result = runner.invoke(
@@ -97,7 +97,7 @@ def test_goto_nonexistent_worktree() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Set up worktrees: only root exists
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main", is_root=True),
@@ -108,7 +108,7 @@ def test_goto_nonexistent_worktree() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        test_ctx = env.build_context(git_ops=git_ops)
+        test_ctx = env.build_context(git=git_ops)
 
         # Act: Try to navigate to non-existent worktree
         result = runner.invoke(
@@ -135,7 +135,7 @@ def test_goto_shows_branch_info() -> None:
         # Set up worktrees: root on main, feature-work on feature-1
         worktree_path = env.repo.worktrees_dir / "feature-work"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main", is_root=True),
@@ -147,7 +147,7 @@ def test_goto_shows_branch_info() -> None:
             git_common_dirs={env.cwd: env.git_dir, worktree_path: env.git_dir},
         )
 
-        test_ctx = env.build_context(git_ops=git_ops)
+        test_ctx = env.build_context(git=git_ops)
 
         # Act: Navigate to feature-work worktree WITHOUT --script flag
         # (but shell integration not detected, so will show manual instructions)
@@ -173,7 +173,7 @@ def test_goto_script_mode() -> None:
         # Set up worktrees
         worktree_path = env.repo.worktrees_dir / "my-feature"
 
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main", is_root=True),
@@ -185,7 +185,7 @@ def test_goto_script_mode() -> None:
             git_common_dirs={env.cwd: env.git_dir, worktree_path: env.git_dir},
         )
 
-        test_ctx = env.build_context(git_ops=git_ops)
+        test_ctx = env.build_context(git=git_ops)
 
         # Act: Navigate with --script flag
         result = runner.invoke(
@@ -214,7 +214,7 @@ def test_goto_branch_name_hint() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Set up worktrees: only root exists
-        git_ops = FakeGitOps(
+        git_ops = FakeGit(
             worktrees={
                 env.cwd: [
                     WorktreeInfo(path=env.cwd, branch="main", is_root=True),
@@ -225,7 +225,7 @@ def test_goto_branch_name_hint() -> None:
             git_common_dirs={env.cwd: env.git_dir},
         )
 
-        test_ctx = env.build_context(git_ops=git_ops)
+        test_ctx = env.build_context(git=git_ops)
 
         # Act: Try to navigate using a branch-like name (contains '/')
         result = runner.invoke(

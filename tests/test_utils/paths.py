@@ -11,7 +11,7 @@ class SentinelPath(type(Path())):
     """Path subclass that throws on filesystem operations.
 
     This enforces that all filesystem checks go through fake operations
-    (like FakeGitOps.path_exists()) rather than direct Path methods.
+    (like FakeGit.path_exists()) rather than direct Path methods.
     This ensures high fidelity between test and production environments.
 
     File I/O operations (write_text/read_text) are tracked in memory,
@@ -36,7 +36,7 @@ class SentinelPath(type(Path())):
     def exists(self) -> bool:
         """Throw error instead of checking filesystem.
 
-        Production code should use FakeGitOps.path_exists() instead of
+        Production code should use FakeGit.path_exists() instead of
         directly calling Path.exists() in pure test mode.
         """
         raise RuntimeError(
@@ -158,7 +158,7 @@ def sentinel_path(path: str = "/test/sentinel") -> Path:
     Note:
         - ErkContext.for_test() accepts any Path without validating existence
         - CliRunner.invoke() doesn't validate ctx.cwd exists
-        - FakeGitOps should provide path_exists() for path checks
+        - FakeGit should provide path_exists() for path checks
         - All tests share the same sentinel path - tests are isolated via separate
           ErkContext instances, not different paths
     """

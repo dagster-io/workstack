@@ -18,7 +18,7 @@ def discover_repo_context(ctx: ErkContext, start: Path) -> RepoContext:
     if ctx.global_config is None:
         raise FileNotFoundError("Global config not found. Run 'erk init' to create it.")
 
-    result = discover_repo_or_sentinel(start, ctx.global_config.erk_root, ctx.git_ops)
+    result = discover_repo_or_sentinel(start, ctx.global_config.erk_root, ctx.git)
     if isinstance(result, RepoContext):
         return result
     raise FileNotFoundError(result.message)

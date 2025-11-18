@@ -47,17 +47,17 @@ def ensure_worktree_for_branch(
         SystemExit: If branch doesn't exist or tracking branch creation fails
     """
     # Check if worktree already exists for this branch
-    existing_path = ctx.git_ops.is_branch_checked_out(repo.root, branch)
+    existing_path = ctx.git.is_branch_checked_out(repo.root, branch)
     if existing_path is not None:
         return existing_path, False
 
     # Branch not checked out - need to create worktree
     # First check if branch exists locally
-    local_branches = ctx.git_ops.list_local_branches(repo.root)
+    local_branches = ctx.git.list_local_branches(repo.root)
 
     if branch not in local_branches:
         # Not a local branch - check if remote branch exists
-        remote_branches = ctx.git_ops.list_remote_branches(repo.root)
+        remote_branches = ctx.git.list_remote_branches(repo.root)
         remote_ref = f"origin/{branch}"
 
         if remote_ref not in remote_branches:
@@ -72,7 +72,7 @@ def ensure_worktree_for_branch(
         # Remote branch exists - create local tracking branch
         user_output(f"Branch '{branch}' exists on origin, creating local tracking branch...")
         try:
-            ctx.git_ops.create_tracking_branch(repo.root, branch, remote_ref)
+            ctx.git.create_tracking_branch(repo.root, branch, remote_ref)
         except subprocess.CalledProcessError as e:
             user_output(
                 f"Error: Failed to create local tracking branch from {remote_ref}\n"
@@ -96,7 +96,7 @@ def ensure_worktree_for_branch(
 
     # Generate and ensure unique worktree name
     name = sanitize_worktree_name(branch)
-    name = ensure_unique_worktree_name(name, repo.worktrees_dir, ctx.git_ops)
+    name = ensure_unique_worktree_name(name, repo.worktrees_dir, ctx.git)
 
     # Calculate worktree path
     wt_path = worktree_path_for(repo.worktrees_dir, name)
@@ -157,7 +157,7 @@ def add_worktree(
 
     if branch and use_existing_branch:
         # Validate branch is not already checked out
-        existing_path = ctx.git_ops.is_branch_checked_out(repo_root, branch)
+        existing_path = ctx.git.is_branch_checked_out(repo_root, branch)
         if existing_path:
             user_output(
                 f"Error: Branch '{branch}' is already checked out at {existing_path}\n"
@@ -169,12 +169,12 @@ def add_worktree(
             )
             raise SystemExit(1)
 
-        ctx.git_ops.add_worktree(repo_root, path, branch=branch, ref=None, create_branch=False)
+        ctx.git.add_worktree(repo_root, path, branch=branch, ref=None, create_branch=False)
     elif branch:
         # Check if branch name exists on remote origin (only when creating new branches)
         if not skip_remote_check:
             try:
-                remote_branches = ctx.git_ops.list_remote_branches(repo_root)
+                remote_branches = ctx.git.list_remote_branches(repo_root)
                 remote_ref = f"origin/{branch}"
 
                 if remote_ref in remote_branches:
@@ -195,10 +195,10 @@ def add_worktree(
 
         if use_graphite:
             cwd = ctx.cwd
-            original_branch = ctx.git_ops.get_current_branch(cwd)
+            original_branch = ctx.git.get_current_branch(cwd)
             if original_branch is None:
                 raise ValueError("Cannot create graphite branch from detached HEAD")
-            if ctx.git_ops.has_staged_changes(repo_root):
+            if ctx.git.has_staged_changes(repo_root):
                 user_output(
                     "Error: Staged changes detected. "
                     "Graphite cannot create a branch while staged changes are present.\n"
@@ -222,12 +222,12 @@ def add_worktree(
                     "Disable Graphite: erk config set use_graphite false",
                 ],
             )
-            ctx.git_ops.checkout_branch(cwd, original_branch)
-            ctx.git_ops.add_worktree(repo_root, path, branch=branch, ref=None, create_branch=False)
+            ctx.git.checkout_branch(cwd, original_branch)
+            ctx.git.add_worktree(repo_root, path, branch=branch, ref=None, create_branch=False)
         else:
-            ctx.git_ops.add_worktree(repo_root, path, branch=branch, ref=ref, create_branch=True)
+            ctx.git.add_worktree(repo_root, path, branch=branch, ref=ref, create_branch=True)
     else:
-        ctx.git_ops.add_worktree(repo_root, path, branch=None, ref=ref, create_branch=False)
+        ctx.git.add_worktree(repo_root, path, branch=None, ref=ref, create_branch=False)
 
 
 def make_env_content(cfg: LoadedConfig, *, worktree_path: Path, repo_root: Path, name: str) -> str:
@@ -418,7 +418,7 @@ def create(
     # Handle --from-current-branch flag
     if from_current_branch:
         # Get the current branch
-        current_branch = ctx.git_ops.get_current_branch(ctx.cwd)
+        current_branch = ctx.git.get_current_branch(ctx.cwd)
         if current_branch is None:
             user_output("Error: HEAD is detached (not on a branch)")
             raise SystemExit(1)
@@ -494,15 +494,15 @@ def create(
 
     # Apply date prefix and uniqueness for plan-derived names
     if is_plan_derived:
-        name = ensure_unique_worktree_name(name, repo.worktrees_dir, ctx.git_ops)
+        name = ensure_unique_worktree_name(name, repo.worktrees_dir, ctx.git)
 
     wt_path = worktree_path_for(repo.worktrees_dir, name)
 
-    if ctx.git_ops.path_exists(wt_path):
+    if ctx.git.path_exists(wt_path):
         if output_json:
             # For JSON output, emit a status: "exists" response with available info
-            existing_branch = ctx.git_ops.get_current_branch(wt_path)
-            plan_path = get_plan_path(wt_path, git_ops=ctx.git_ops)
+            existing_branch = ctx.git.get_current_branch(wt_path)
+            plan_path = get_plan_path(wt_path, git_ops=ctx.git)
             json_response = _create_json_response(
                 worktree_name=name,
                 worktree_path=wt_path,
@@ -519,14 +519,14 @@ def create(
     # Handle from-current-branch logic: switch current worktree first
     to_branch = None
     if from_current_branch:
-        current_branch = ctx.git_ops.get_current_branch(ctx.cwd)
+        current_branch = ctx.git.get_current_branch(ctx.cwd)
         if current_branch is None:
             user_output("Error: Unable to determine current branch")
             raise SystemExit(1)
 
         # Determine preferred branch to checkout (prioritize Graphite parent)
         parent_branch = (
-            ctx.graphite_ops.get_parent_branch(ctx.git_ops, repo.root, current_branch)
+            ctx.graphite.get_parent_branch(ctx.git, repo.root, current_branch)
             if current_branch
             else None
         )
@@ -539,7 +539,7 @@ def create(
             to_branch = ref
         else:
             # Fall back to default branch (main/master)
-            to_branch = ctx.git_ops.detect_default_branch(repo.root, trunk_branch)
+            to_branch = ctx.git.detect_default_branch(repo.root, trunk_branch)
 
         # Check for edge case: can't move main to worktree then switch to main
         if current_branch == to_branch:
@@ -554,13 +554,13 @@ def create(
             raise SystemExit(1)
 
         # Check if target branch is available (not checked out in another worktree)
-        checkout_path = ctx.git_ops.is_branch_checked_out(repo.root, to_branch)
+        checkout_path = ctx.git.is_branch_checked_out(repo.root, to_branch)
         if checkout_path is not None:
             # Target branch is in use, fall back to detached HEAD
-            ctx.git_ops.checkout_detached(ctx.cwd, current_branch)
+            ctx.git.checkout_detached(ctx.cwd, current_branch)
         else:
             # Target branch is available, checkout normally
-            ctx.git_ops.checkout_branch(ctx.cwd, to_branch)
+            ctx.git.checkout_branch(ctx.cwd, to_branch)
 
         # Create worktree with existing branch
         add_worktree(

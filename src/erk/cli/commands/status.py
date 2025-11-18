@@ -3,7 +3,9 @@
 import click
 
 from erk.cli.core import discover_repo_context
+from erk.cli.json_output import json_error_boundary
 from erk.cli.output import user_output
+from erk.cli.rendering import get_renderer
 from erk.core.context import ErkContext
 from erk.core.parallel_task_runner import RealParallelTaskRunner
 from erk.status.collectors.git import GitStatusCollector
@@ -11,13 +13,26 @@ from erk.status.collectors.github import GitHubPRCollector
 from erk.status.collectors.graphite import GraphiteStackCollector
 from erk.status.collectors.plan import PlanFileCollector
 from erk.status.orchestrator import StatusOrchestrator
-from erk.status.renderers.simple import SimpleRenderer
 
 
 @click.command("status")
+@click.option(
+    "--format",
+    type=click.Choice(["text", "json"]),
+    default="text",
+    help="Output format (text or json)",
+)
+@json_error_boundary
 @click.pass_obj
-def status_cmd(ctx: ErkContext) -> None:
-    """Show comprehensive status of current worktree."""
+def status_cmd(ctx: ErkContext, format: str) -> None:
+    """Show comprehensive status of current worktree.
+
+    \b
+    JSON Output (--format json):
+    Output schema is defined and validated by StatusCommandResponse
+    in erk.cli.json_schemas. The Pydantic model ensures type safety
+    and runtime validation of the JSON structure.
+    """
     # Discover repository context
     repo = discover_repo_context(ctx, ctx.cwd)
     current_dir = ctx.cwd.resolve()
@@ -53,6 +68,6 @@ def status_cmd(ctx: ErkContext) -> None:
     # Collect status
     status = orchestrator.collect_status(ctx, current_worktree_path, repo.root)
 
-    # Render status
-    renderer = SimpleRenderer()
-    renderer.render(status)
+    # Render status with appropriate renderer
+    renderer = get_renderer(format)
+    renderer.render_status(status)

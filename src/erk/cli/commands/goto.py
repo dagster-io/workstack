@@ -43,6 +43,7 @@ def goto_cmd(ctx: ErkContext, worktree_name: str, script: bool) -> None:
     # Special case: "root" jumps to root repository
     if worktree_name == "root":
         _activate_root_repo(ctx, repo, script, "goto")
+        return  # _activate_root_repo raises SystemExit, but explicit return for clarity
 
     # Validate worktree exists
     worktree_path = repo.worktrees_dir / worktree_name

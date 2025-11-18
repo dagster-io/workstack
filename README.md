@@ -1,19 +1,43 @@
 # `erk`
 
-**Effortless `git` worktree management for parallel development.**
+**Git worktree manager designed for parallelized, plan-oriented, agentic engineering workflows.**
 
-Create, switch, and manage multiple worktrees from a centralized location with automatic environment setup.
+`erk` enables true parallel development by giving each branch its own isolated workspace with preserved state. Built specifically for modern engineering workflows where AI agents and developers collaborate on multiple workstreams simultaneously, each following structured implementation plans.
 
-## Philosophy
+## Core Design Principles
 
-erk makes git worktrees lightweight and disposable:
+- **Parallel execution**: Multiple agents or developers can work on separate features simultaneously without environment conflicts or context pollution
+- **State isolation**: Each worktree maintains complete environment independence - dependencies, build artifacts, env vars, and file system state
+- **Context preservation**: Implementation context, API constraints, and design decisions persist in plan artifacts, enabling AI agents to maintain full context across sessions
+- **Plan-first development**: Each worktree can be created from a structured plan (`.plan/`) that travels with the workspace, providing persistent context for both human and AI implementers
+- **Agentic optimization**: Seamless integration with Claude Code for AI-driven implementation (`/erk:persist-plan`, `/erk:implement-plan`, `/erk:create-planned-wt`)
 
-- **One branch per worktree** - No more `git checkout` conflicts. Each feature gets its own working directory.
-- **Lightweight and ephemeral** - Create and destroy worktrees freely. Branches persist, worktrees don't.
-- **Automatic environment setup** - Each worktree gets .env files, virtual environments, and activation scripts.
-- **Organized in ~/.erk/repos/<repo>/worktrees/** - All worktrees for a repository in one predictable location.
+## Why Parallel Worktrees Matter for AI-Native Engineering
 
-Think of worktrees as "working directories for branches" rather than "branches you switch between."
+Traditional git workflows assume serial development - one working directory, one active context. This breaks down when working with AI agents that can pursue multiple implementation paths simultaneously or when plans need to be executed in isolation to prevent cross-contamination of dependencies and state.
+
+`erk` inverts the traditional model: branches contain valuable work product, while worktrees are disposable execution contexts that can be created and destroyed as needed. This enables workflows like:
+
+```bash
+# Create multiple planned implementations in parallel
+erk create feat-1 # Create a branch feat-1 on worktree feat-1
+
+erk checkout master # navigates back to root worktree, where master is checked out
+
+erk delete feat-1 # Deletes feat-1 *worktree*. Branch remains untouched.
+
+erk checkout feat-1 # Recreates feat-1 *worktree* checked out to feat-1 *branch*.
+```
+
+Notice that `cd` was never used while navigating between worktrees, nor was `uv sync` or `source .venv/bin/activate`. `erk` handles all of that bookkeeping.
+
+This architecture ensures that whether you're working with AI agents, managing multiple contractors, or simply juggling several features yourself, each workstream maintains perfect isolation and context.
+
+Note: `erk` was designed to work with `gt` (graphite) for managing stacks of branches (it uses `gt create` instead of `git co -b` when `gt` is available) and `uv` for ultrafast Python environment management. It could be generalized to other languages and tools fairly easily.
+
+## Plan Orientation
+
+`erk` has first-class support for planning workflows. You can create plan documents and then use the `--plan` flag on `create` to create new worktrees that contain planning documents in `.plan`, which by default is in `.gitignore`. There are also bundled claude code commands (installable via `dot-agent`) that facilitate the creation, enrichement, and implementation of these plans.
 
 ## Installation
 
@@ -32,14 +56,6 @@ uv tool install git+https://github.com/dagster-io/erk.git
 cd /path/to/your/repo
 erk init
 source ~/.zshrc  # or ~/.bashrc
-
-# Create and switch to a worktree
-erk create user-auth
-erk checkout user-auth
-
-# Switch back and clean up
-erk checkout root
-erk delete user-auth
 ```
 
 ## Overview

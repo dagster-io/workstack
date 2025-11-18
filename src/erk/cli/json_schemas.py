@@ -34,6 +34,22 @@ class CreateCommandResponse(BaseModel):
     status: str = Field(..., pattern="^(created|exists)$")
 
 
+class CurrentCommandResponse(BaseModel):
+    """JSON response schema for the `erk current` command.
+
+    Attributes:
+        name: Name of the worktree (or "root" if in root worktree)
+        path: Absolute path to the worktree directory
+        is_root: Whether this is the root worktree
+    """
+
+    model_config = ConfigDict(strict=True)
+
+    name: str
+    path: str
+    is_root: bool
+
+
 class StatusWorktreeInfo(BaseModel):
     """Worktree information in status command output.
 

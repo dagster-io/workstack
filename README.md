@@ -95,6 +95,7 @@ erk create --plan Add_Auth.md                # Creates worktree with .plan/ fold
 ```bash
 erk checkout BRANCH        # Checkout branch (finds worktree automatically)
 erk co BRANCH              # Alias for checkout
+erk goto WORKTREE          # Jump directly to worktree by name
 erk up                     # Navigate to child branch in Graphite stack
 erk down                   # Navigate to parent branch in Graphite stack
 erk status                 # Show status of current worktree
@@ -112,6 +113,7 @@ erk sync -f                # Sync and auto-remove merged worktrees
 With Graphite enabled, navigate your stacks directly:
 
 ```bash
+erk goto WORKTREE     # Jump directly to worktree by name
 erk up                # Move to child branch in stack
 erk down              # Move to parent branch in stack
 erk checkout BRANCH   # Checkout any branch in a stack (finds worktree automatically)
@@ -190,6 +192,46 @@ erk down     # → root (main)
 - `erk up`: Navigates to child branch (up the stack toward leaves)
 - `erk down`: Navigates to parent branch (down toward trunk)
 - At stack boundaries, shows clear error messages
+
+#### Direct Worktree Navigation
+
+Jump directly to a worktree by name without needing to know which branch is checked out:
+
+```bash
+erk goto feature-work    # Jump to worktree named "feature-work"
+erk goto root            # Jump to root repository
+```
+
+**How it works:**
+
+- Switches directly to the specified worktree by name
+- Works with or without Graphite enabled
+- Useful when you know the worktree name but not the current branch
+
+**Requirements:**
+
+- Worktree must already exist (use `erk list` to see all worktrees)
+
+**Behavior:**
+
+- Activates the worktree and loads its environment (.env, venv)
+- Shows current branch in the worktree
+- Shows error with available worktree names if not found
+- If you provide a branch name by mistake, suggests using `erk checkout`
+
+**Example workflow:**
+
+```bash
+# See available worktrees
+erk list
+# root [master]
+# feature-work [feature-1]
+# bugfix-stack [bugfix-2]
+
+# Jump directly by name
+erk goto feature-work    # → Switches to feature-work worktree [feature-1]
+erk goto root            # → Switches back to root [master]
+```
 
 ### Consolidating Stacks
 

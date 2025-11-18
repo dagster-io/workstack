@@ -47,33 +47,60 @@ class RealClaudeCliOps(ClaudeCliOps):
         cwd: Path,
         json_output: bool,
     ) -> CommandExecutionResult:
-        """Execute Claude CLI via subprocess."""
+        """Execute Claude CLI via subprocess with streaming output."""
+        import json
         import subprocess
 
-        # Build claude CLI command
+        # Print status message before launching
+        print(f"Executing command: /{command_name}...", flush=True)
+
+        # Build claude CLI command - always use stream-json for real-time output
         cmd = [
             "claude",
             "--print",
+            "--verbose",  # Required for stream-json with --print
             "--permission-mode",
             "bypassPermissions",
             "--setting-sources",
             "project",
+            "--output-format",
+            "stream-json",  # Always use streaming JSON for real-time output
         ]
-
-        if json_output:
-            cmd.extend(["--output-format", "json"])
 
         # Invoke slash command
         cmd.append(f"/{command_name}")
 
-        # Execute Claude Code CLI (stream output directly)
-        result = subprocess.run(
+        # Execute Claude Code CLI with streaming output
+        process = subprocess.Popen(
             cmd,
             cwd=cwd,
-            check=False,  # Don't raise on non-zero exit
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,  # Merge stderr into stdout
+            text=True,
+            bufsize=1,  # Line buffered
         )
 
-        return CommandExecutionResult(returncode=result.returncode)
+        # Stream output line by line, parsing JSONL format
+        if process.stdout is not None:
+            for line in process.stdout:
+                # Parse JSONL and extract text content from assistant messages
+                try:
+                    msg = json.loads(line)
+                    # Extract text from assistant messages
+                    if msg.get("role") == "assistant":
+                        content = msg.get("content", [])
+                        for item in content:
+                            if item.get("type") == "text":
+                                text = item.get("text", "")
+                                print(text, end="", flush=True)
+                except json.JSONDecodeError:
+                    # If JSON parsing fails, print raw line
+                    print(line, end="", flush=True)
+
+        # Wait for process to complete
+        returncode = process.wait()
+
+        return CommandExecutionResult(returncode=returncode)
 
 
 class FakeClaudeCliOps(ClaudeCliOps):

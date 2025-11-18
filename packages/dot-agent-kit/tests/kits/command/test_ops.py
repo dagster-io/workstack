@@ -163,10 +163,26 @@ class TestRealClaudeCliOps:
 
         ops = RealClaudeCliOps()
 
-        # Create JSONL output with assistant messages
+        # Create JSONL output with assistant messages (stream-json format)
         jsonl_output = [
-            json.dumps({"role": "assistant", "content": [{"type": "text", "text": "Hello "}]}),
-            json.dumps({"role": "assistant", "content": [{"type": "text", "text": "World!"}]}),
+            json.dumps(
+                {
+                    "type": "assistant",
+                    "message": {
+                        "role": "assistant",
+                        "content": [{"type": "text", "text": "Hello "}],
+                    },
+                }
+            ),
+            json.dumps(
+                {
+                    "type": "assistant",
+                    "message": {
+                        "role": "assistant",
+                        "content": [{"type": "text", "text": "World!"}],
+                    },
+                }
+            ),
         ]
 
         # Mock subprocess.Popen
@@ -185,7 +201,7 @@ class TestRealClaudeCliOps:
                 # Verify result
                 assert result.returncode == 0
 
-                # Verify print was called for status + each text chunk
+                # Verify print was called for status + text chunks
                 assert mock_print.call_count == 3
                 # First call: status message
                 assert mock_print.call_args_list[0] == (
@@ -197,8 +213,409 @@ class TestRealClaudeCliOps:
                 # Third call: "World!"
                 assert mock_print.call_args_list[2] == (("World!",), {"end": "", "flush": True})
 
+    def test_hides_system_messages_but_shows_tool_results(self) -> None:
+        """Test that system messages are hidden but tool results from user messages are shown."""
+        import json
+
+        ops = RealClaudeCliOps()
+
+        # Create JSONL output with system and user messages
+        jsonl_output = [
+            json.dumps({"type": "system", "subtype": "init", "data": "metadata"}),
+            json.dumps(
+                {
+                    "type": "user",
+                    "message": {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": "toolu_123",
+                                "content": "Test result output",
+                            }
+                        ],
+                    },
+                }
+            ),
+        ]
+
+        # Mock subprocess.Popen
+        mock_process = MagicMock()
+        mock_process.stdout = iter(jsonl_output)
+        mock_process.wait.return_value = 0
+
+        with patch("subprocess.Popen", return_value=mock_process):
+            with patch("builtins.print") as mock_print:
+                result = ops.execute_command(
+                    command_name="test",
+                    cwd=Path("/fake/path"),
+                    json_output=False,
+                )
+
+                # Verify result
+                assert result.returncode == 0
+
+                # System message hidden, but tool result should be displayed
+                all_print_calls = [str(call) for call in mock_print.call_args_list]
+                # Status message + result header + result content
+                assert mock_print.call_count >= 3
+                assert any("Result:" in str(call) for call in all_print_calls)
+                assert any("Test result output" in str(call) for call in all_print_calls)
+
+    def test_displays_tool_use_from_assistant_messages(self) -> None:
+        """Test that tool_use blocks in assistant messages are displayed."""
+        import json
+
+        ops = RealClaudeCliOps()
+
+        # Create JSONL output with assistant message containing tool use
+        jsonl_output = [
+            json.dumps(
+                {
+                    "type": "assistant",
+                    "message": {
+                        "role": "assistant",
+                        "content": [
+                            {
+                                "type": "tool_use",
+                                "id": "toolu_123",
+                                "name": "Bash",
+                                "input": {"command": "pytest tests/"},
+                            }
+                        ],
+                    },
+                }
+            ),
+        ]
+
+        # Mock subprocess.Popen
+        mock_process = MagicMock()
+        mock_process.stdout = iter(jsonl_output)
+        mock_process.wait.return_value = 0
+
+        with patch("subprocess.Popen", return_value=mock_process):
+            with patch("builtins.print") as mock_print:
+                result = ops.execute_command(
+                    command_name="test",
+                    cwd=Path("/fake/path"),
+                    json_output=False,
+                )
+
+                # Verify result
+                assert result.returncode == 0
+
+                # Verify tool use was displayed
+                all_print_calls = [str(call) for call in mock_print.call_args_list]
+                assert any("Using Bash" in str(call) for call in all_print_calls)
+                assert any("pytest tests/" in str(call) for call in all_print_calls)
+
+    def test_displays_all_tool_parameters(self) -> None:
+        """Test that all parameters for all tools are displayed, not just Bash/Edit."""
+        import json
+
+        ops = RealClaudeCliOps()
+
+        # Create JSONL output with various tool invocations
+        jsonl_output = [
+            # TodoWrite with complex parameters
+            json.dumps(
+                {
+                    "type": "assistant",
+                    "message": {
+                        "role": "assistant",
+                        "content": [
+                            {
+                                "type": "tool_use",
+                                "id": "toolu_1",
+                                "name": "TodoWrite",
+                                "input": {
+                                    "todos": [
+                                        {"content": "Task 1", "status": "pending"},
+                                        {"content": "Task 2", "status": "completed"},
+                                    ]
+                                },
+                            }
+                        ],
+                    },
+                }
+            ),
+            # Task with string parameters
+            json.dumps(
+                {
+                    "type": "assistant",
+                    "message": {
+                        "role": "assistant",
+                        "content": [
+                            {
+                                "type": "tool_use",
+                                "id": "toolu_2",
+                                "name": "Task",
+                                "input": {
+                                    "subagent_type": "devrun",
+                                    "description": "Run tests",
+                                    "prompt": "Run pytest tests/",
+                                },
+                            }
+                        ],
+                    },
+                }
+            ),
+        ]
+
+        # Mock subprocess.Popen
+        mock_process = MagicMock()
+        mock_process.stdout = iter(jsonl_output)
+        mock_process.wait.return_value = 0
+
+        with patch("subprocess.Popen", return_value=mock_process):
+            with patch("builtins.print") as mock_print:
+                result = ops.execute_command(
+                    command_name="test",
+                    cwd=Path("/fake/path"),
+                    json_output=False,
+                )
+
+                # Verify result
+                assert result.returncode == 0
+
+                # Verify TodoWrite parameters displayed
+                all_print_calls = [str(call) for call in mock_print.call_args_list]
+                assert any("Using TodoWrite" in str(call) for call in all_print_calls)
+                assert any("todos:" in str(call) for call in all_print_calls)
+                assert any("Task 1" in str(call) for call in all_print_calls)
+
+                # Verify Task parameters displayed
+                assert any("Using Task" in str(call) for call in all_print_calls)
+                assert any("subagent_type: devrun" in str(call) for call in all_print_calls)
+                assert any("description: Run tests" in str(call) for call in all_print_calls)
+                assert any("prompt: Run pytest tests/" in str(call) for call in all_print_calls)
+
+    def test_displays_tool_result_with_multiline_content(self) -> None:
+        """Test that multiline tool results are displayed with proper indentation."""
+        import json
+
+        ops = RealClaudeCliOps()
+
+        # Create JSONL output with multiline tool result
+        jsonl_output = [
+            json.dumps(
+                {
+                    "type": "user",
+                    "message": {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": "toolu_123",
+                                "content": "Line 1\nLine 2\nLine 3",
+                            }
+                        ],
+                    },
+                }
+            ),
+        ]
+
+        # Mock subprocess.Popen
+        mock_process = MagicMock()
+        mock_process.stdout = iter(jsonl_output)
+        mock_process.wait.return_value = 0
+
+        with patch("subprocess.Popen", return_value=mock_process):
+            with patch("builtins.print") as mock_print:
+                result = ops.execute_command(
+                    command_name="test",
+                    cwd=Path("/fake/path"),
+                    json_output=False,
+                )
+
+                # Verify result
+                assert result.returncode == 0
+
+                # Verify all lines displayed
+                all_print_calls = [str(call) for call in mock_print.call_args_list]
+                assert any("Result:" in str(call) for call in all_print_calls)
+                assert any("Line 1" in str(call) for call in all_print_calls)
+                assert any("Line 2" in str(call) for call in all_print_calls)
+                assert any("Line 3" in str(call) for call in all_print_calls)
+
+    def test_displays_tool_result_with_structured_content(self) -> None:
+        """Test that structured list content in tool results is displayed."""
+        import json
+
+        ops = RealClaudeCliOps()
+
+        # Create JSONL output with structured tool result
+        jsonl_output = [
+            json.dumps(
+                {
+                    "type": "user",
+                    "message": {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": "toolu_123",
+                                "content": [
+                                    {"type": "text", "text": "Structured output line 1"},
+                                    {"type": "text", "text": "Structured output line 2"},
+                                ],
+                            }
+                        ],
+                    },
+                }
+            ),
+        ]
+
+        # Mock subprocess.Popen
+        mock_process = MagicMock()
+        mock_process.stdout = iter(jsonl_output)
+        mock_process.wait.return_value = 0
+
+        with patch("subprocess.Popen", return_value=mock_process):
+            with patch("builtins.print") as mock_print:
+                result = ops.execute_command(
+                    command_name="test",
+                    cwd=Path("/fake/path"),
+                    json_output=False,
+                )
+
+                # Verify result
+                assert result.returncode == 0
+
+                # Verify structured content displayed
+                all_print_calls = [str(call) for call in mock_print.call_args_list]
+                assert any("Result:" in str(call) for call in all_print_calls)
+                assert any("Structured output line 1" in str(call) for call in all_print_calls)
+                assert any("Structured output line 2" in str(call) for call in all_print_calls)
+
+    def test_displays_tool_result_error_flag(self) -> None:
+        """Test that error results are marked with [Error result]."""
+        import json
+
+        ops = RealClaudeCliOps()
+
+        # Create JSONL output with error tool result
+        jsonl_output = [
+            json.dumps(
+                {
+                    "type": "user",
+                    "message": {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": "toolu_123",
+                                "content": "Error: Command failed",
+                                "is_error": True,
+                            }
+                        ],
+                    },
+                }
+            ),
+        ]
+
+        # Mock subprocess.Popen
+        mock_process = MagicMock()
+        mock_process.stdout = iter(jsonl_output)
+        mock_process.wait.return_value = 0
+
+        with patch("subprocess.Popen", return_value=mock_process):
+            with patch("builtins.print") as mock_print:
+                result = ops.execute_command(
+                    command_name="test",
+                    cwd=Path("/fake/path"),
+                    json_output=False,
+                )
+
+                # Verify result
+                assert result.returncode == 0
+
+                # Verify error flag displayed
+                all_print_calls = [str(call) for call in mock_print.call_args_list]
+                assert any("Error result" in str(call) for call in all_print_calls)
+                assert any("Error: Command failed" in str(call) for call in all_print_calls)
+
+    def test_displays_result_message(self) -> None:
+        """Test that result messages display completion summary."""
+        import json
+
+        ops = RealClaudeCliOps()
+
+        # Create JSONL output with result message
+        jsonl_output = [
+            json.dumps(
+                {
+                    "type": "result",
+                    "is_error": False,
+                    "total_cost_usd": 0.0234,
+                    "duration_ms": 5432,
+                    "num_turns": 3,
+                }
+            ),
+        ]
+
+        # Mock subprocess.Popen
+        mock_process = MagicMock()
+        mock_process.stdout = iter(jsonl_output)
+        mock_process.wait.return_value = 0
+
+        with patch("subprocess.Popen", return_value=mock_process):
+            with patch("builtins.print") as mock_print:
+                result = ops.execute_command(
+                    command_name="test",
+                    cwd=Path("/fake/path"),
+                    json_output=False,
+                )
+
+                # Verify result
+                assert result.returncode == 0
+
+                # Verify completion summary was displayed
+                all_print_calls = [str(call) for call in mock_print.call_args_list]
+                assert any("Success" in str(call) for call in all_print_calls)
+                assert any("$0.0234" in str(call) for call in all_print_calls)
+                assert any("5432ms" in str(call) for call in all_print_calls)
+
+    def test_displays_error_result_message(self) -> None:
+        """Test that error result messages display error status."""
+        import json
+
+        ops = RealClaudeCliOps()
+
+        # Create JSONL output with error result
+        jsonl_output = [
+            json.dumps(
+                {
+                    "type": "result",
+                    "is_error": True,
+                    "total_cost_usd": 0.0123,
+                    "duration_ms": 2000,
+                }
+            ),
+        ]
+
+        # Mock subprocess.Popen
+        mock_process = MagicMock()
+        mock_process.stdout = iter(jsonl_output)
+        mock_process.wait.return_value = 0
+
+        with patch("subprocess.Popen", return_value=mock_process):
+            with patch("builtins.print") as mock_print:
+                result = ops.execute_command(
+                    command_name="test",
+                    cwd=Path("/fake/path"),
+                    json_output=False,
+                )
+
+                # Verify result
+                assert result.returncode == 0
+
+                # Verify error status was displayed
+                all_print_calls = [str(call) for call in mock_print.call_args_list]
+                assert any("Error" in str(call) for call in all_print_calls)
+
     def test_handles_malformed_json_gracefully(self) -> None:
-        """Test that malformed JSON lines are printed as-is without crashing."""
+        """Test that malformed JSON lines are printed with warning without crashing."""
         ops = RealClaudeCliOps()
 
         # Create output with malformed JSON
@@ -223,22 +640,21 @@ class TestRealClaudeCliOps:
                 # Verify result
                 assert result.returncode == 0
 
-                # Verify print was called for status + malformed lines
-                assert mock_print.call_count == 3
-                # First call: status message
-                assert mock_print.call_args_list[0] == (
+                # Verify print was called (status + warning messages)
+                assert mock_print.call_count >= 3
+
+                # Verify status message was printed (first call)
+                status_call = mock_print.call_args_list[0]
+                assert status_call == (
                     ("Executing command: /test...",),
                     {"flush": True},
                 )
-                # Malformed lines printed as-is
-                assert mock_print.call_args_list[1] == (
-                    ("This is not JSON\n",),
-                    {"end": "", "flush": True},
-                )
-                assert mock_print.call_args_list[2] == (
-                    ('{"incomplete": ',),
-                    {"end": "", "flush": True},
-                )
+
+                # Verify warning messages for malformed JSON
+                all_print_calls = [str(call) for call in mock_print.call_args_list]
+                assert any("Warning: Invalid JSON" in str(call) for call in all_print_calls)
+                assert any("This is not JSON" in str(call) for call in all_print_calls)
+                assert any("incomplete" in str(call) for call in all_print_calls)
 
 
 class TestFakeClaudeCliOps:

@@ -54,6 +54,13 @@ class RealClaudeCliOps(ClaudeCliOps):
         # Print status message before launching
         print(f"Executing command: /{command_name}...", flush=True)
 
+        # Separator for visual clarity between message blocks
+        separator = "─" * 60
+
+        def print_separator() -> None:
+            """Print visual separator line."""
+            print(f"\n{separator}\n", flush=True)
+
         # Build claude CLI command - always use stream-json for real-time output
         cmd = [
             "claude",
@@ -83,19 +90,95 @@ class RealClaudeCliOps(ClaudeCliOps):
         # Stream output line by line, parsing JSONL format
         if process.stdout is not None:
             for line in process.stdout:
-                # Parse JSONL and extract text content from assistant messages
+                # Parse JSONL stream-json format
+                # Message types: assistant, user, system, result
                 try:
                     msg = json.loads(line)
-                    # Extract text from assistant messages
-                    if msg.get("role") == "assistant":
-                        content = msg.get("content", [])
+                    msg_type = msg.get("type")
+
+                    if msg_type == "assistant":
+                        # Show text and tool use from assistant messages
+                        message = msg.get("message", {})
+                        content = message.get("content", [])
                         for item in content:
                             if item.get("type") == "text":
                                 text = item.get("text", "")
                                 print(text, end="", flush=True)
+                            elif item.get("type") == "tool_use":
+                                tool_name = item.get("name", "unknown")
+                                tool_input = item.get("input", {})
+                                # Show tool invocations
+                                print(f"\n⚙️  Using {tool_name}", flush=True)
+                                # Show all parameters for all tools
+                                if tool_input:
+                                    for param_name, param_value in tool_input.items():
+                                        # Format parameter display
+                                        if isinstance(param_value, str):
+                                            # For string values, show inline or
+                                            # indented for multiline
+                                            if "\n" in param_value:
+                                                print(f"   {param_name}:", flush=True)
+                                                for line in param_value.split("\n"):
+                                                    print(f"      {line}", flush=True)
+                                            else:
+                                                print(f"   {param_name}: {param_value}", flush=True)
+                                        elif isinstance(param_value, (list, dict)):
+                                            # For complex types, use JSON formatting
+                                            json_str = json.dumps(
+                                                param_value, indent=2, ensure_ascii=False
+                                            )
+                                            print(f"   {param_name}:", flush=True)
+                                            for line in json_str.split("\n"):
+                                                print(f"      {line}", flush=True)
+                                        else:
+                                            # For other types (int, bool, etc), show inline
+                                            print(f"   {param_name}: {param_value}", flush=True)
+
+                    elif msg_type == "system":
+                        # Hide system messages (internal metadata)
+                        pass
+
+                    elif msg_type == "user":
+                        # Display tool results from user messages
+                        message = msg.get("message", {})
+                        content = message.get("content", [])
+                        for item in content:
+                            if item.get("type") == "tool_result":
+                                # Display result content
+                                result_content = item.get("content")
+                                if result_content:
+                                    print("\n📤 Result:", flush=True)
+                                    if isinstance(result_content, str):
+                                        # Indent multiline results
+                                        for line in result_content.split("\n"):
+                                            print(f"   {line}", flush=True)
+                                    elif isinstance(result_content, list):
+                                        # Handle structured content
+                                        for result_item in result_content:
+                                            if isinstance(result_item, dict):
+                                                if result_item.get("type") == "text":
+                                                    text = result_item.get("text", "")
+                                                    for line in text.split("\n"):
+                                                        print(f"   {line}", flush=True)
+                                is_error = item.get("is_error", False)
+                                if is_error:
+                                    print("   [Error result]", flush=True)
+
+                    elif msg_type == "result":
+                        # Show completion summary
+                        is_error = msg.get("is_error", False)
+                        status = "❌ Error" if is_error else "✅ Success"
+                        cost = msg.get("total_cost_usd")
+                        cost_str = f"${cost:.4f}" if cost else "N/A"
+                        duration_ms = msg.get("duration_ms", 0)
+                        print(
+                            f"\n\n{status} - Cost: {cost_str}, Duration: {duration_ms}ms\n",
+                            flush=True,
+                        )
+
                 except json.JSONDecodeError:
                     # If JSON parsing fails, print raw line
-                    print(line, end="", flush=True)
+                    print(f"\n[Warning: Invalid JSON]: {line}", end="", flush=True)
 
         # Wait for process to complete
         returncode = process.wait()

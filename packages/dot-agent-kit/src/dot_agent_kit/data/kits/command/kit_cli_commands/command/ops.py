@@ -6,6 +6,13 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 
+from dot_agent_kit.data.kits.command.kit_cli_commands.command.formatting import (
+    format_complex_parameter,
+    format_string_parameter,
+    format_string_result,
+    format_structured_result,
+)
+
 
 @dataclass(frozen=True)
 class CommandExecutionResult:
@@ -144,19 +151,13 @@ class RealClaudeCliOps(ClaudeCliOps):
 
     def _display_string_parameter(self, param_name: str, param_value: str) -> None:
         """Display string parameter (inline or multiline)."""
-        if "\n" in param_value:
-            print(f"   {param_name}:", flush=True)
-            for line in param_value.split("\n"):
-                print(f"      {line}", flush=True)
-        else:
-            print(f"   {param_name}: {param_value}", flush=True)
+        for line in format_string_parameter(param_name, param_value):
+            print(line, flush=True)
 
     def _display_complex_parameter(self, param_name: str, param_value) -> None:
         """Display complex parameter (list/dict) as formatted JSON."""
-        json_str = json.dumps(param_value, indent=2, ensure_ascii=False)
-        print(f"   {param_name}:", flush=True)
-        for line in json_str.split("\n"):
-            print(f"      {line}", flush=True)
+        for line in format_complex_parameter(param_name, param_value):
+            print(line, flush=True)
 
     def _handle_user_message(self, msg: dict) -> None:
         """Handle user message with tool results."""
@@ -186,19 +187,13 @@ class RealClaudeCliOps(ClaudeCliOps):
 
     def _display_string_result(self, result_content: str) -> None:
         """Display string result with indentation."""
-        for line in result_content.split("\n"):
-            print(f"   {line}", flush=True)
+        for line in format_string_result(result_content):
+            print(line, flush=True)
 
     def _display_structured_result(self, result_content: list) -> None:
         """Display structured result content."""
-        for result_item in result_content:
-            if not isinstance(result_item, dict):
-                continue
-
-            if result_item.get("type") == "text":
-                text = result_item.get("text", "")
-                for line in text.split("\n"):
-                    print(f"   {line}", flush=True)
+        for line in format_structured_result(result_content):
+            print(line, flush=True)
 
     def _handle_result_message(self, msg: dict) -> None:
         """Handle completion result message."""

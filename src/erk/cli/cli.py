@@ -8,6 +8,7 @@ from erk.cli.commands.create import create
 from erk.cli.commands.current import current_cmd
 from erk.cli.commands.delete import del_cmd, delete_cmd
 from erk.cli.commands.down import down_cmd
+from erk.cli.commands.forest import forest_group
 from erk.cli.commands.goto import goto_cmd
 from erk.cli.commands.init import init_cmd
 from erk.cli.commands.land_stack import land_stack
@@ -43,11 +44,13 @@ cli.add_command(current_cmd)
 cli.add_command(down_cmd)
 cli.add_command(checkout_cmd)
 cli.add_command(checkout_cmd, name="co")  # Alias
+cli.add_command(forest_group)
 cli.add_command(goto_cmd)
 cli.add_command(land_stack)
 cli.add_command(up_cmd)
 cli.add_command(list_cmd)
 cli.add_command(ls_cmd)
+cli.add_command(split_cmd)
 cli.add_command(status_cmd)
 cli.add_command(init_cmd)
 cli.add_command(move_cmd)
@@ -55,7 +58,6 @@ cli.add_command(delete_cmd)
 cli.add_command(del_cmd)
 cli.add_command(rename_cmd)
 cli.add_command(config_group)
-cli.add_command(split_cmd)
 cli.add_command(sync_cmd)
 cli.add_command(hidden_shell_cmd)
 cli.add_command(prepare_cwd_recovery_cmd)

@@ -35,7 +35,7 @@ source ~/.zshrc  # or ~/.bashrc
 
 # Create and switch to a worktree
 erk create user-auth
-erk switch user-auth
+erk checkout user-auth
 
 # Switch back and clean up
 erk checkout root
@@ -83,7 +83,7 @@ erk up                     # Navigate to child branch in Graphite stack
 erk down                   # Navigate to parent branch in Graphite stack
 erk status                 # Show status of current worktree
 erk list                   # List all worktrees (alias: ls)
-erk list --stacks          # List with graphite stacks and PR status
+erk list --ci              # Fetch CI check status from GitHub (slower)
 erk rename OLD NEW         # Rename a worktree
 erk delete NAME            # Delete worktree
 erk sync                   # Sync with Graphite, show cleanup candidates
@@ -101,14 +101,14 @@ erk down              # Move to parent branch in stack
 erk checkout BRANCH   # Checkout any branch in a stack (finds worktree automatically)
 ```
 
-#### Jump to Branch
+#### Checkout Branch
 
 Find and switch to a worktree by branch name:
 
 ```bash
-erk jump feature/user-auth    # Finds worktree containing this branch
-erk jump hotfix/critical-bug  # Works with any branch in your stacks
-erk jump origin-branch        # Auto-creates from remote if not local
+erk checkout feature/user-auth    # Finds worktree containing this branch
+erk checkout hotfix/critical-bug  # Works with any branch in your stacks
+erk checkout origin-branch        # Auto-creates from remote if not local
 ```
 
 **How it works:**
@@ -127,7 +127,7 @@ erk jump origin-branch        # Auto-creates from remote if not local
 **Behavior:**
 
 - **Branch checked out in one worktree**: Switches to that worktree and checks out the branch
-- **Branch checked out in multiple worktrees**: Shows all worktrees (choose manually with `erk switch`)
+- **Branch checked out in multiple worktrees**: Shows all worktrees (choose manually with `erk checkout`)
 - **Branch exists locally but not checked out**: Auto-creates worktree for the branch
 - **Branch exists on origin but not locally**: Auto-creates tracking branch and worktree
 - **Branch doesn't exist anywhere**: Shows error with suggestion to create new branch
@@ -139,29 +139,28 @@ Example workflow:
 # - worktree "feature-work": main -> feature-1 -> feature-2 -> feature-3
 # - worktree "bugfix-work": main -> bugfix-1 -> bugfix-2
 
-# Jump to existing branch in worktree
-erk jump feature-2    # → Switches to "feature-work" and checks out feature-2
-erk jump bugfix-1     # → Switches to "bugfix-work" and checks out bugfix-1
+# Checkout existing branch in worktree
+erk checkout feature-2    # → Switches to "feature-work" and checks out feature-2
+erk checkout bugfix-1     # → Switches to "bugfix-work" and checks out bugfix-1
 
-# Jump to unchecked local branch
-erk jump feature-4    # → Auto-creates worktree for feature-4
+# Checkout unchecked local branch
+erk checkout feature-4    # → Auto-creates worktree for feature-4
 
-# Jump to remote-only branch (like git checkout origin/branch)
-erk jump hotfix-123   # → Creates tracking branch + worktree from origin/hotfix-123
+# Checkout remote-only branch (like git checkout origin/branch)
+erk checkout hotfix-123   # → Creates tracking branch + worktree from origin/hotfix-123
 ```
 
-#### Stack Navigation with Switch
+#### Stack Navigation Commands
 
-Example workflow:
+Navigate up and down your Graphite stack with dedicated commands:
 
 ```bash
 # Current stack: main -> feature-1 -> feature-2 -> feature-3
 # You are in: feature-2
 
-erk switch --up       # → feature-3
-erk switch --down     # → feature-2
-erk switch --down     # → feature-1
-erk switch --down     # → root (main)
+erk up       # → feature-3
+erk down     # → feature-1
+erk down     # → root (main)
 ```
 
 **Requirements:**
@@ -172,10 +171,96 @@ erk switch --down     # → root (main)
 
 **Behavior:**
 
-- `--up`: Navigates to child branch (up the stack)
-- `--down`: Navigates to parent branch (down toward trunk)
+- `erk up`: Navigates to child branch (up the stack toward leaves)
+- `erk down`: Navigates to parent branch (down toward trunk)
 - At stack boundaries, shows clear error messages
-- Cannot be combined with NAME argument
+
+### Consolidating Stacks
+
+Consolidate stack branches into a single worktree by removing other worktrees containing branches from the current stack:
+
+```bash
+erk consolidate                        # Consolidate full stack (trunk to leaf)
+erk consolidate --down                 # Consolidate only downstack (trunk to current)
+erk consolidate feat-2                 # Consolidate trunk → feat-2 only
+erk consolidate --name my-stack        # Create new worktree and consolidate into it
+erk consolidate --dry-run              # Preview what would be removed
+```
+
+**How it works:**
+
+- Removes other worktrees that contain branches from your stack
+- Ensures each branch exists in only one worktree
+- Useful before stack-wide operations like `gt restack`
+- By default, consolidates entire stack (trunk to leaf)
+
+**Options:**
+
+- `BRANCH` - Optional branch name for partial consolidation (trunk → BRANCH)
+- `--name NAME` - Create and consolidate into new worktree with this name
+- `-f, --force` - Skip confirmation prompt
+- `--dry-run` - Show what would be removed without executing
+- `--down` - Only consolidate downstack (trunk to current). Cannot combine with BRANCH.
+- `--script` - Output shell script for directory change
+
+**Example workflow:**
+
+```bash
+# Current state: branches spread across multiple worktrees
+# - worktree "feat-1-wt": main -> feat-1
+# - worktree "feat-2-wt": main -> feat-1 -> feat-2
+# - worktree "feat-3-wt": main -> feat-1 -> feat-2 -> feat-3
+
+# Consolidate all stack branches into current worktree
+erk consolidate
+# Result: Only feat-3-wt remains with full stack: main -> feat-1 -> feat-2 -> feat-3
+```
+
+**Requirements:**
+
+- Graphite must be enabled (`erk config set use_graphite true`)
+
+### Splitting Stacks
+
+Split a consolidated stack into individual worktrees per branch (inverse of consolidate):
+
+```bash
+erk split                              # Split entire stack
+erk split --up                         # Split only upstack branches
+erk split --down                       # Split only downstack branches
+erk split --dry-run                    # Preview what would be created
+```
+
+**How it works:**
+
+- Creates individual worktrees for each branch in the stack
+- Inverse operation of `consolidate`
+- Useful when you want to work on stack branches in parallel
+
+**Options:**
+
+- `-f, --force` - Skip confirmation prompts
+- `--dry-run` - Show what would be created without executing
+- `--up` - Only split upstack branches
+- `--down` - Only split downstack branches
+
+**Example workflow:**
+
+```bash
+# Current state: all branches in one worktree
+# - worktree "feat-wt": main -> feat-1 -> feat-2 -> feat-3
+
+# Split into individual worktrees
+erk split
+# Result: Three worktrees created:
+# - worktree "feat-1": main -> feat-1
+# - worktree "feat-2": main -> feat-1 -> feat-2
+# - worktree "feat-3": main -> feat-1 -> feat-2 -> feat-3
+```
+
+**Requirements:**
+
+- Graphite must be enabled (`erk config set use_graphite true`)
 
 ### Moving Branches
 
@@ -196,7 +281,7 @@ root [master]
 feature-a [feature-a]
 feature-b [work/feature-b]
 
-$ erk list --stacks
+$ erk list
 root [master]
   ◉  master
 
@@ -218,7 +303,7 @@ feature-b [work/feature-b]
 - ⭕ Closed
 - ◯ Open (no checks)
 
-Note: The repository root is displayed as `root` and can be accessed with `erk switch root`.
+Note: The repository root is displayed as `root` and can be accessed with `erk checkout root`.
 
 ### Configuration
 
@@ -264,14 +349,14 @@ commands = [
 
 ```bash
 erk create feature-a
-erk switch feature-a
+erk checkout feature-a
 # ... work on feature A ...
 
 erk create feature-b
-erk switch feature-b
+erk checkout feature-b
 # ... work on feature B ...
 
-erk switch feature-a  # Instantly back to feature A
+erk checkout feature-a  # Instantly back to feature A
 ```
 
 ### Plan-Based Development
@@ -288,7 +373,7 @@ erk switch feature-a  # Instantly back to feature A
 
 ```bash
 # 1. Stay in root repo for planning
-erk switch root
+erk checkout root
 
 # 2. Create your plan and save it to disk (e.g. Add_User_Auth.md)
 
@@ -300,7 +385,7 @@ erk create --plan Add_User_Auth.md
 #   - .plan/ is already in .gitignore (added by erk init)
 
 # 4. Switch and execute
-erk switch add-user-auth
+erk checkout add-user-auth
 # Your plan is now at .plan/plan.md for reference during implementation
 # Progress tracking in .plan/progress.md shows step completion
 ```
@@ -350,6 +435,62 @@ erk sync --dry-run         # Preview without executing
 
 Requires Graphite CLI (`gt`) and GitHub CLI (`gh`) installed.
 
+### Landing Stacks
+
+Land all PRs in a Graphite stack in the correct order:
+
+```bash
+erk land-stack                         # Land full stack (trunk to leaf)
+erk land-stack --down                  # Land only downstack PRs (trunk to current)
+erk land-stack --dry-run               # Preview landing plan
+erk land-stack -f                      # Skip confirmation prompts
+erk land-stack --verbose               # Show detailed output
+```
+
+**How it works:**
+
+- Merges all PRs sequentially from bottom of stack (first branch above trunk) upward
+- After each merge, runs `gt sync -f` to rebase upstack branches onto updated trunk
+- PRs are landed bottom-up because each PR depends on the ones below it
+- With `--down`, lands only downstack PRs and skips rebase of upstack branches
+
+**Options:**
+
+- `-f, --force` - Skip confirmation prompt and proceed immediately
+- `--verbose` - Show detailed output for merge and sync operations
+- `--dry-run` - Show what would be done without executing merge operations
+- `--down` - Only land downstack PRs (trunk to current). Skips upstack rebase.
+- `--script` - Output shell script for directory change
+
+**Use --down when:**
+
+- You have uncommitted changes in upstack branches
+- Work-in-progress in upstack branches you don't want to rebase yet
+
+**Example workflow:**
+
+```bash
+# Stack: main -> feat-1 -> feat-2 -> feat-3 (all have open PRs)
+# You are in: feat-3
+
+# Land all PRs in order
+erk land-stack
+# Merges: feat-1 PR → feat-2 PR → feat-3 PR
+# Each merge triggers gt sync to rebase remaining upstack branches
+
+# Or land only downstack PRs
+erk land-stack --down
+# Merges: feat-1 PR → feat-2 PR
+# Skips rebase of feat-3 (your current branch with WIP)
+```
+
+**Requirements:**
+
+- Graphite must be enabled (`erk config set use_graphite true`)
+- GitHub CLI (`gh`) must be installed and authenticated
+- All PRs must be in mergeable state
+- No uncommitted changes (unless using `--down`)
+
 ## Command Reference
 
 ### `create` Options
@@ -365,10 +506,9 @@ Requires Graphite CLI (`gt`) and GitHub CLI (`gh`) installed.
 
 ### `list` / `ls` Options
 
-| Option         | Description                                     |
-| -------------- | ----------------------------------------------- |
-| `-s, --stacks` | Show graphite stacks and PR status              |
-| `-c, --checks` | Show CI check status (requires GitHub API call) |
+| Option | Description                                |
+| ------ | ------------------------------------------ |
+| `--ci` | Fetch CI check status from GitHub (slower) |
 
 ### `move` Options
 
@@ -400,6 +540,36 @@ Requires Graphite CLI (`gt`) and GitHub CLI (`gh`) installed.
 | ------------- | ---------------------------------------------- |
 | `-f, --force` | Force gt sync and auto-remove merged worktrees |
 | `--dry-run`   | Show what would be done without executing      |
+
+### `consolidate` Options
+
+| Option        | Description                                                               |
+| ------------- | ------------------------------------------------------------------------- |
+| `BRANCH`      | Optional branch for partial consolidation (trunk → BRANCH)                |
+| `--name NAME` | Create and consolidate into new worktree with this name                   |
+| `-f, --force` | Skip confirmation prompt                                                  |
+| `--dry-run`   | Show what would be removed without executing                              |
+| `--down`      | Only consolidate downstack (trunk to current). Cannot combine with BRANCH |
+| `--script`    | Output shell script for directory change                                  |
+
+### `split` Options
+
+| Option        | Description                                  |
+| ------------- | -------------------------------------------- |
+| `-f, --force` | Skip confirmation prompts                    |
+| `--dry-run`   | Show what would be created without executing |
+| `--up`        | Only split upstack branches                  |
+| `--down`      | Only split downstack branches                |
+
+### `land-stack` Options
+
+| Option          | Description                                                      |
+| --------------- | ---------------------------------------------------------------- |
+| `-f, --force`   | Skip confirmation prompt and proceed immediately                 |
+| `-v, --verbose` | Show detailed output for merge and sync operations               |
+| `--dry-run`     | Show what would be done without executing merge operations       |
+| `--down`        | Only land downstack PRs (trunk to current). Skips upstack rebase |
+| `--script`      | Output shell script for directory change                         |
 
 ### `init` Options
 

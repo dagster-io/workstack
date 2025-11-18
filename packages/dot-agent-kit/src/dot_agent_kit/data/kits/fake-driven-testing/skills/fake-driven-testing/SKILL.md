@@ -309,7 +309,7 @@ This skill provides a **defense-in-depth testing strategy** with five layers for
   - Testing workflows: `submit_pr(fake_gh, fake_git, ...)`
   - Testing business logic that coordinates multiple integrations
 
-**If your test imports a Fake*, it belongs in Layer 4, not Layer 3.**
+**If your test imports a Fake\*, it belongs in Layer 4, not Layer 3.**
 
 ## Default Testing Strategy
 

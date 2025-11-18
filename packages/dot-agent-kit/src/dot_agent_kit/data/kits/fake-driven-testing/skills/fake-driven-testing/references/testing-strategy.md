@@ -167,7 +167,7 @@ def test_calculate_percentage() -> None:
 
 ### Key Characteristics
 
-- **Zero imports of Fake* classes** - if you import a fake, this is Layer 4, not Layer 3
+- **Zero imports of Fake\* classes** - if you import a fake, this is Layer 4, not Layer 3
 - **No mocking** - no `mock.patch`, no `monkeypatch`
 - **No external state** - no filesystem, database, network, subprocess
 - **Pure logic only** - string manipulation, parsing, calculations, data structure operations
@@ -353,6 +353,7 @@ Use integration tests as **final validation**, not primary testing strategy.
 ```
 
 **Default**:
+
 - For business logic with dependencies → Layer 4 (tests over fakes)
 - For pure utilities with no dependencies → Layer 3 (pure unit tests)
 
@@ -403,7 +404,7 @@ Does the test use ANY external dependencies? (files, git, network, etc.)
 
 **Ask these questions in order:**
 
-1. **Does the test import any Fake* classes?**
+1. **Does the test import any Fake\* classes?**
    - YES → Layer 4 (Business Logic Test)
    - NO → Continue to question 2
 
@@ -422,6 +423,7 @@ Does the test use ANY external dependencies? (files, git, network, etc.)
 ### Common Patterns and Their Layer Assignments
 
 **Layer 1 patterns:**
+
 ```python
 def test_fake_git_tracks_branches():
     fake = FakeGit()  # Testing the fake itself
@@ -430,6 +432,7 @@ def test_fake_git_tracks_branches():
 ```
 
 **Layer 2 patterns:**
+
 ```python
 def test_real_git_create_branch(monkeypatch):
     mock_run = Mock()
@@ -443,6 +446,7 @@ def test_real_git_create_branch(monkeypatch):
 ```
 
 **Layer 3 patterns:**
+
 ```python
 def test_sanitize_branch_name():
     # No imports, no dependencies
@@ -451,6 +455,7 @@ def test_sanitize_branch_name():
 ```
 
 **Layer 4 patterns:**
+
 ```python
 def test_create_worktree_command():
     fake_git = FakeGit()  # Using fake
@@ -460,6 +465,7 @@ def test_create_worktree_command():
 ```
 
 **Layer 5 patterns:**
+
 ```python
 def test_complete_pr_workflow(tmp_path):
     # Real git operations, real filesystem
@@ -471,18 +477,22 @@ def test_complete_pr_workflow(tmp_path):
 ### What to Do If a Test Doesn't Fit Cleanly
 
 **Scenario 1: Test uses both fakes and real I/O**
+
 - **Classification**: Layer 4 (Business Logic Test)
 - **Recommendation**: Consider refactoring to isolate the I/O behind an integration interface
 
 **Scenario 2: Test has minimal logic, mostly setup**
+
 - **Classification**: Probably not worth testing separately
 - **Recommendation**: Consider if this test adds value or is just testing framework behavior
 
 **Scenario 3: Test mocks at multiple levels**
+
 - **Classification**: Layer 2 (Integration Sanity Test) if mocking real implementation
 - **Recommendation**: Simplify mocking strategy if possible
 
 **Scenario 4: Test is very slow but uses fakes**
+
 - **Classification**: Still Layer 4, but investigate performance issue
 - **Recommendation**: Profile the test to find the bottleneck
 
@@ -495,6 +505,7 @@ def test_complete_pr_workflow(tmp_path):
 3. **Identifying gaps in testing strategy**
 
 **Only refactor tests if:**
+
 - Test is in wrong location AND causing confusion
 - Test is slow because it's using wrong layer
 - Test is brittle because it's over-mocking or over-integrating

@@ -29,6 +29,7 @@
 ```
 
 **Default**:
+
 - For business logic with dependencies → Layer 4 (tests over fakes)
 - For pure utilities with no dependencies → Layer 3 (pure unit tests)
 
@@ -278,12 +279,12 @@ def test_real_database_with_mocking(monkeypatch) -> None:
 
 **Purpose**: Test utilities and helpers with no dependencies
 
-| File                               | What It Tests                        |
-| ---------------------------------- | ------------------------------------ |
-| `tests/unit/test_string_utils.py`  | String sanitization, formatting      |
-| `tests/unit/test_parsers.py`       | CLI output parsing, config parsing   |
-| `tests/unit/test_validators.py`    | Input validation logic               |
-| `tests/unit/test_calculations.py`  | Mathematical and business algorithms |
+| File                              | What It Tests                        |
+| --------------------------------- | ------------------------------------ |
+| `tests/unit/test_string_utils.py` | String sanitization, formatting      |
+| `tests/unit/test_parsers.py`      | CLI output parsing, config parsing   |
+| `tests/unit/test_validators.py`   | Input validation logic               |
+| `tests/unit/test_calculations.py` | Mathematical and business algorithms |
 
 ### Layer 4: Business Logic Over Fakes (70% - MAJORITY)
 
@@ -381,13 +382,13 @@ pytest -n auto
 
 For a typical feature (e.g., "add user authentication"):
 
-| Layer                       | Count       | Example                                                   |
-| --------------------------- | ----------- | --------------------------------------------------------- |
-| Layer 1: Fake tests         | 1-2 tests   | Verify `FakeAuthService.authenticate()` tracks correctly  |
-| Layer 2: Sanity tests       | 1-2 tests   | Verify `RealAuthService.authenticate()` calls correct API |
-| Layer 3: Pure unit tests    | 2-3 tests   | Test password hashing, token generation logic             |
-| Layer 4: Business logic     | 12-14 tests | Test auth flow over fakes (success, failures, edge cases) |
-| Layer 5: Integration tests  | 1 test      | Smoke test complete login flow                            |
+| Layer                      | Count       | Example                                                   |
+| -------------------------- | ----------- | --------------------------------------------------------- |
+| Layer 1: Fake tests        | 1-2 tests   | Verify `FakeAuthService.authenticate()` tracks correctly  |
+| Layer 2: Sanity tests      | 1-2 tests   | Verify `RealAuthService.authenticate()` calls correct API |
+| Layer 3: Pure unit tests   | 2-3 tests   | Test password hashing, token generation logic             |
+| Layer 4: Business logic    | 12-14 tests | Test auth flow over fakes (success, failures, edge cases) |
+| Layer 5: Integration tests | 1 test      | Smoke test complete login flow                            |
 
 **Total**: ~20 tests, with 70% over fakes (Layer 4), 10% pure unit (Layer 3), 10% sanity (Layer 2), 5% integration (Layer 5), 5% fake tests (Layer 1).
 

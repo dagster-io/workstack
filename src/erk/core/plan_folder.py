@@ -9,6 +9,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+import frontmatter
 import yaml
 
 
@@ -142,30 +143,18 @@ def parse_progress_frontmatter(content: str) -> dict[str, Any] | None:
     Returns:
         Dictionary with 'completed_steps' and 'total_steps', or None if missing/invalid
     """
-    # Try to extract front matter (between --- delimiters)
-    front_matter_pattern = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
-    match = front_matter_pattern.match(content)
-
-    if not match:
-        return None
-
-    yaml_content = match.group(1)
-
-    # Parse YAML with error handling (never throw exceptions)
-    if not yaml_content:
-        return None
-
     # Gracefully handle YAML parsing errors (third-party API exception handling)
     try:
-        parsed = yaml.safe_load(yaml_content)
+        post = frontmatter.loads(content)
     except yaml.YAMLError:
         return None
 
-    if not isinstance(parsed, dict):
+    # Check for required fields
+    metadata = post.metadata
+    if "completed_steps" not in metadata or "total_steps" not in metadata:
         return None
-    if "completed_steps" not in parsed or "total_steps" not in parsed:
-        return None
-    return parsed
+
+    return metadata
 
 
 def update_progress_frontmatter(worktree_path: Path, completed: int, total: int) -> None:

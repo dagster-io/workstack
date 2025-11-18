@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-import yaml
+import frontmatter
 
 from erk.core.context import ErkContext
 from erk.core.plan_folder import (
@@ -40,26 +40,11 @@ def detect_enriched_plan(repo_root: Path) -> tuple[Path | None, str | None]:
 
     # Check each file for enrichment marker
     for plan_file in plan_files:
-        content = plan_file.read_text(encoding="utf-8")
+        # Use frontmatter library to parse YAML frontmatter
+        post = frontmatter.load(str(plan_file))
 
-        # Check for YAML front matter
-        if not content.startswith("---"):
-            continue
-
-        # Extract front matter
-        parts = content.split("---", 2)
-        if len(parts) < 3:
-            continue
-
-        front_matter_text = parts[1]
-
-        # Parse YAML
-        front_matter = yaml.safe_load(front_matter_text)
-        if front_matter is None:
-            continue
-
-        # Check for enrichment marker
-        if front_matter.get("enriched_by_persist_plan") is True:
+        # Check for enrichment marker (handles missing frontmatter gracefully)
+        if post.get("enriched_by_persist_plan") is True:
             return plan_file, plan_file.name
 
     return None, None

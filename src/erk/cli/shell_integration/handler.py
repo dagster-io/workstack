@@ -10,6 +10,7 @@ from erk.cli.commands.checkout import checkout_cmd
 from erk.cli.commands.consolidate import consolidate_cmd
 from erk.cli.commands.create import create
 from erk.cli.commands.down import down_cmd
+from erk.cli.commands.goto import goto_cmd
 from erk.cli.commands.land_stack import land_stack
 from erk.cli.commands.prepare_cwd_recovery import generate_recovery_script
 from erk.cli.commands.up import up_cmd
@@ -52,6 +53,7 @@ def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellInt
         "create": create,
         "up": up_cmd,
         "down": down_cmd,
+        "goto": goto_cmd,
         "consolidate": consolidate_cmd,
         "land-stack": land_stack,
     }

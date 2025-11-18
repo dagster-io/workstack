@@ -10,7 +10,7 @@ def fake_driven_testing_reminder_hook() -> None:
     click.echo(
         "🔴 CRITICAL: LOAD fake-driven-testing skill NOW before editing Python\n"
         "\n"
-        "WHY: 4-layer defense-in-depth strategy (fakes → mocked real → business logic → e2e)\n"
+        "WHY: 5-layer defense-in-depth strategy (see skill for architecture)\n"
         "NOTE: Guides test placement, fake usage, integration class architecture patterns"
     )
 

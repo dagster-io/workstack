@@ -4,7 +4,7 @@
 
 **Artifacts**:
 
-- command: commands/erk/persist-plan.md, commands/erk/create-planned-wt.md, commands/erk/implement-plan.md
+- command: commands/erk/persist-plan.md, commands/erk/create-planned-wt.md, commands/erk/implement-plan.md, commands/erk/fix-merge-conflicts.md
 - doc: docs/erk/EXAMPLES.md
 
 **Usage**:

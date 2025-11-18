@@ -1,7 +1,0 @@
-name: fix-merge-conflicts
-version: 0.1.0
-description: Fix merge conflicts during git rebase with intelligent conflict analysis
-license: MIT
-artifacts:
-  command:
-    - commands/fix-merge-conflicts/fix-merge-conflicts.md

@@ -4,13 +4,17 @@ from dataclasses import replace
 
 import pytest
 from click.testing import CliRunner
+from tests.kits.gt.fake_ops import FakeGtKit
 
 from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.land_branch import (
     LandBranchError,
     LandBranchSuccess,
     execute_land_branch,
 )
+<<<<<<<< 88d25308bf4f8e963754dbaf39a63d9239b9119c:packages/dot-agent-kit/tests/unit/kits/gt/test_land_branch.py
 from tests.unit.kits.gt.fake_ops import FakeGtKitOps
+========
+>>>>>>>> 7ea7fa23d6a40698c99b219ea05bae79dafb3b54:packages/dot-agent-kit/tests/kits/gt/test_land_branch.py
 
 
 @pytest.fixture

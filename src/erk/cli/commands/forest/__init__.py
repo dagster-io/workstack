@@ -3,6 +3,7 @@
 import click
 
 from erk.cli.commands.forest.list import list_forests
+from erk.cli.commands.forest.merge import merge_forest
 from erk.cli.commands.forest.rename import rename_forest
 from erk.cli.commands.forest.show import show_forest
 from erk.cli.commands.forest.split import split_forest
@@ -27,6 +28,7 @@ def forest_group(ctx: click.Context) -> None:
 
 # Register subcommands
 forest_group.add_command(list_forests)
+forest_group.add_command(merge_forest)
 forest_group.add_command(show_forest)
 forest_group.add_command(rename_forest)
 forest_group.add_command(split_forest)

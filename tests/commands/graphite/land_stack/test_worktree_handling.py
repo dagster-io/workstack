@@ -15,7 +15,7 @@ from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def test_land_stack_with_down_flag_includes_flag_in_error_suggestions() -> None:
-    """Test that land-stack --down includes --down in consolidate and retry suggestions."""
+    """Test that land-stack --down includes --down in retry suggestion."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Create linked worktrees (automatically tracked) - only for downstack branches
@@ -77,8 +77,8 @@ def test_land_stack_with_down_flag_includes_flag_in_error_suggestions() -> None:
         assert "Cannot land stack - branches are checked out in multiple worktrees" in result.output
         assert "feat-1" in result.output
         assert "feat-2" in result.output
-        # Key assertion: both suggestions should include --down
-        assert "erk consolidate --down" in result.output
+        # Key assertion: forest merge suggestion (no --down flag) and retry with --down
+        assert "erk forest merge" in result.output
         assert "erk land-stack --down" in result.output
 
 
@@ -144,11 +144,10 @@ def test_land_stack_fails_when_branches_in_multiple_worktrees() -> None:
         assert "Cannot land stack - branches are checked out in multiple worktrees" in result.output
         assert "feat-1" in result.output
         assert "feat-2" in result.output
-        # Key assertion: suggestions should NOT include --down when flag wasn't used
-        assert "erk consolidate" in result.output
+        # Key assertion: forest merge suggestion and retry without --down
+        assert "erk forest merge" in result.output
         assert "erk land-stack" in result.output
-        # Verify --down is NOT included
-        assert "erk consolidate --down" not in result.output
+        # Verify --down is NOT included in retry suggestion
         assert "erk land-stack --down" not in result.output
 
 

@@ -3,7 +3,6 @@ import click
 from erk.cli.commands.checkout import checkout_cmd
 from erk.cli.commands.completion import completion_group
 from erk.cli.commands.config import config_group
-from erk.cli.commands.consolidate import consolidate_cmd
 from erk.cli.commands.create import create
 from erk.cli.commands.current import current_cmd
 from erk.cli.commands.delete import del_cmd, delete_cmd
@@ -37,7 +36,6 @@ def cli(ctx: click.Context) -> None:
 
 # Register all commands
 cli.add_command(completion_group)
-cli.add_command(consolidate_cmd)
 cli.add_command(create)
 cli.add_command(current_cmd)
 cli.add_command(down_cmd)

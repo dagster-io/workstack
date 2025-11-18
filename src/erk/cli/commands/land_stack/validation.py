@@ -154,11 +154,11 @@ def _validate_landing_preconditions(
 
         _emit(
             "\nGit does not allow checking out a branch that is already checked out\n"
-            "in another worktree. To land this stack, you need to consolidate all\n"
-            "branches into the current worktree first.\n\n"
+            "in another worktree. To land this stack, you need to merge the forest\n"
+            "into the current worktree first.\n\n"
             "To fix:\n"
-            f"  • Run: erk consolidate{' --down' if down else ''}\n"
-            "  • This will remove other worktrees for branches in this stack\n"
+            "  • Run: erk forest merge\n"
+            "  • This will remove other worktrees for branches in this forest\n"
             f"  • Then retry: erk land-stack{' --down' if down else ''}",
             script_mode=script_mode,
             error=True,

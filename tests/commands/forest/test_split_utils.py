@@ -1,5 +1,7 @@
 """Unit tests for forest split utilities."""
 
+from tests.test_utils import sentinel_path
+
 from erk.cli.commands.forest.split_utils import (
     create_forest_split_plan,
     detect_or_create_forest_name,
@@ -7,7 +9,6 @@ from erk.cli.commands.forest.split_utils import (
 )
 from erk.core.forest_types import Forest, ForestMetadata
 from erk.core.gitops import WorktreeInfo
-from tests.test_utils import sentinel_path
 
 
 def test_identify_splittable_branches_all() -> None:

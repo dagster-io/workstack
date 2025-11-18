@@ -17,7 +17,6 @@ from erk.cli.commands.move import move_cmd
 from erk.cli.commands.prepare_cwd_recovery import prepare_cwd_recovery_cmd
 from erk.cli.commands.rename import rename_cmd
 from erk.cli.commands.shell_integration import hidden_shell_cmd
-from erk.cli.commands.split import split_cmd
 from erk.cli.commands.status import status_cmd
 from erk.cli.commands.sync import sync_cmd
 from erk.cli.commands.up import up_cmd
@@ -57,7 +56,6 @@ cli.add_command(delete_cmd)
 cli.add_command(del_cmd)
 cli.add_command(rename_cmd)
 cli.add_command(config_group)
-cli.add_command(split_cmd)
 cli.add_command(sync_cmd)
 cli.add_command(hidden_shell_cmd)
 cli.add_command(prepare_cwd_recovery_cmd)

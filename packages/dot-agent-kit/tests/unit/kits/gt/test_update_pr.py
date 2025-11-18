@@ -4,7 +4,6 @@ import json
 
 import pytest
 from click.testing import CliRunner
-from tests.kits.gt.fake_ops import FakeGtKit
 
 from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.update_pr import (
     UpdatePRError,
@@ -12,6 +11,7 @@ from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.update_pr import (
     execute_update_pr,
     update_pr,
 )
+from tests.unit.kits.gt.fake_ops import FakeGtKitOps
 
 
 @pytest.fixture
@@ -27,7 +27,7 @@ class TestUpdatePRWorkflow:
         """Test successfully updating PR with uncommitted changes."""
         # Setup: branch with PR and uncommitted files
         ops = (
-            FakeGtKit()
+            FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_pr(123, url="https://github.com/repo/pull/123")
             .with_uncommitted_files(["file1.py", "file2.py"])
@@ -47,7 +47,7 @@ class TestUpdatePRWorkflow:
         """Test successfully updating PR without uncommitted changes."""
         # Setup: branch with PR but no uncommitted files
         ops = (
-            FakeGtKit()
+            FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_pr(123, url="https://github.com/repo/pull/123")
         )
@@ -64,7 +64,7 @@ class TestUpdatePRWorkflow:
     def test_error_no_pr(self) -> None:
         """Test error when no PR exists for branch."""
         # Setup: branch without PR
-        ops = FakeGtKit().with_branch("feature-branch", parent="main")
+        ops = FakeGtKitOps().with_branch("feature-branch", parent="main")
         # Don't call with_pr(), so no PR exists
 
         result = execute_update_pr(ops)
@@ -79,7 +79,7 @@ class TestUpdatePRWorkflow:
         """Test error when git add fails during commit."""
         # Setup: branch with PR, uncommitted files, and add configured to fail
         ops = (
-            FakeGtKit()
+            FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_pr(123)
             .with_uncommitted_files(["file.py"])
@@ -97,7 +97,7 @@ class TestUpdatePRWorkflow:
         """Test error when restack encounters conflicts."""
         # Setup: branch with PR, restack configured to fail
         ops = (
-            FakeGtKit()
+            FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_pr(123)
             .with_restack_failure()
@@ -114,7 +114,7 @@ class TestUpdatePRWorkflow:
         """Test error when submit fails."""
         # Setup: branch with PR, submit configured to fail
         ops = (
-            FakeGtKit()
+            FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_pr(123)
             .with_submit_failure()
@@ -135,7 +135,7 @@ class TestUpdatePRCLI:
         """Test CLI command with successful update."""
         # Setup: create ops and inject into execute function via monkey patch
         ops = (
-            FakeGtKit()
+            FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_pr(123, url="https://github.com/repo/pull/123")
         )
@@ -165,7 +165,7 @@ class TestUpdatePRCLI:
     def test_command_error(self, runner: CliRunner) -> None:
         """Test CLI command error output format."""
         # Setup: ops with no PR to trigger error
-        ops = FakeGtKit().with_branch("feature-branch", parent="main")
+        ops = FakeGtKitOps().with_branch("feature-branch", parent="main")
 
         # Monkey patch execute_update_pr to use our fake ops
         import dot_agent_kit.data.kits.gt.kit_cli_commands.gt.update_pr as update_pr_module

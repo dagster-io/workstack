@@ -14,7 +14,7 @@ import pytest
 def build_wheel(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """Build the wheel once per test session and return wheel path."""
     # Get the package directory (dot-agent-kit)
-    package_dir = Path(__file__).parent.parent.parent
+    package_dir = Path(__file__).parent.parent.parent.parent
     tmp_path = tmp_path_factory.mktemp("wheel_build")
     dist_dir = tmp_path / "dist"
     dist_dir.mkdir()

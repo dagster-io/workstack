@@ -190,24 +190,3 @@ def test_claude_cli_not_found_error_propagates(
             execute_command_impl("test", False, fake_cli_ops)
     finally:
         os.chdir(original_cwd)
-
-
-def test_cli_integration_with_file_not_found(
-    runner: CliRunner,
-) -> None:
-    """Test CLI error handling for FileNotFoundError (integration test)."""
-    with runner.isolated_filesystem():
-        # Setup: Create valid command file
-        commands_dir = Path(".claude/commands")
-        commands_dir.mkdir(parents=True)
-        (commands_dir / "test.md").write_text("# Test")
-
-        # Note: This will actually try to run 'claude' binary
-        # In a real environment without claude installed, it will fail
-        # For this test, we just verify the CLI structure works
-        result = runner.invoke(execute, ["test"])
-
-        # Either succeeds (if claude is installed) or shows error message
-        if result.exit_code != 0:
-            # If failed, should be a helpful error message
-            assert "Error:" in result.output or "claude" in result.output.lower()

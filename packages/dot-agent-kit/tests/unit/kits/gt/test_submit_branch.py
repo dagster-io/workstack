@@ -1,14 +1,10 @@
 """Tests for submit_branch kit CLI command using fake ops."""
 
 import json
-import subprocess
-import tempfile
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
 from click.testing import CliRunner
-from tests.kits.gt.fake_ops import FakeGtKit
 
 from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch import (
     PostAnalysisError,
@@ -19,6 +15,7 @@ from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch import (
     execute_pre_analysis,
     submit_branch,
 )
+from tests.unit.kits.gt.fake_ops import FakeGtKitOps
 
 
 @pytest.fixture
@@ -33,7 +30,7 @@ class TestPreAnalysisExecution:
     def test_pre_analysis_with_uncommitted_changes(self) -> None:
         """Test pre-analysis when uncommitted changes exist (should commit them)."""
         ops = (
-            FakeGtKit()
+            FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_uncommitted_files(["file.txt"])
             .with_commits(0)  # Start with no commits
@@ -52,7 +49,7 @@ class TestPreAnalysisExecution:
     def test_pre_analysis_without_uncommitted_changes(self) -> None:
         """Test pre-analysis when no uncommitted changes exist."""
         ops = (
-            FakeGtKit()
+            FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_commits(1)  # Single commit, no uncommitted files
         )
@@ -69,7 +66,7 @@ class TestPreAnalysisExecution:
     def test_pre_analysis_with_multiple_commits(self) -> None:
         """Test pre-analysis with 2+ commits (should squash)."""
         ops = (
-            FakeGtKit()
+            FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_commits(3)  # Multiple commits
         )
@@ -85,7 +82,7 @@ class TestPreAnalysisExecution:
     def test_pre_analysis_single_commit(self) -> None:
         """Test pre-analysis with single commit (no squash needed)."""
         ops = (
-            FakeGtKit()
+            FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_commits(1)  # Single commit
         )
@@ -100,7 +97,7 @@ class TestPreAnalysisExecution:
 
     def test_pre_analysis_no_branch(self) -> None:
         """Test error when current branch cannot be determined."""
-        ops = FakeGtKit()
+        ops = FakeGtKitOps()
         # Set current_branch to None to simulate failure
         from dataclasses import replace
 
@@ -115,7 +112,7 @@ class TestPreAnalysisExecution:
 
     def test_pre_analysis_no_parent(self) -> None:
         """Test error when parent branch cannot be determined."""
-        ops = FakeGtKit().with_branch("orphan-branch", parent="main")
+        ops = FakeGtKitOps().with_branch("orphan-branch", parent="main")
         # Remove parent relationship to simulate gt parent failure
         from dataclasses import replace
 
@@ -132,7 +129,9 @@ class TestPreAnalysisExecution:
     def test_pre_analysis_no_commits(self) -> None:
         """Test error when branch has no commits."""
         ops = (
-            FakeGtKit().with_branch("feature-branch", parent="main").with_commits(0)  # No commits
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(0)  # No commits
         )
 
         result = execute_pre_analysis(ops)
@@ -145,7 +144,7 @@ class TestPreAnalysisExecution:
     def test_pre_analysis_squash_fails(self) -> None:
         """Test error when gt squash fails."""
         ops = (
-            FakeGtKit()
+            FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_commits(3)  # Multiple commits to trigger squash
             .with_squash_failure()  # Configure squash to fail
@@ -161,7 +160,7 @@ class TestPreAnalysisExecution:
     def test_pre_analysis_detects_squash_conflict(self) -> None:
         """Test that squash conflicts are detected and reported correctly."""
         ops = (
-            FakeGtKit()
+            FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_commits(3)  # Multiple commits to trigger squash
             .with_squash_failure(
@@ -189,7 +188,7 @@ class TestPreAnalysisExecution:
         test_stderr = "CONFLICT (content): Merge conflict in README.md"
 
         ops = (
-            FakeGtKit()
+            FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_commits(2)
             .with_squash_failure(stdout=test_stdout, stderr=test_stderr)
@@ -210,7 +209,7 @@ class TestPostAnalysisExecution:
 
     def test_post_analysis_creates_pr(self) -> None:
         """Test successfully creating new PR."""
-        ops = FakeGtKit().with_branch("feature-branch", parent="main").with_commits(1)
+        ops = FakeGtKitOps().with_branch("feature-branch", parent="main").with_commits(1)
         # No PR initially (will be created)
 
         result = execute_post_analysis(
@@ -227,7 +226,7 @@ class TestPostAnalysisExecution:
     def test_post_analysis_updates_existing_pr(self) -> None:
         """Test successfully updating existing PR metadata."""
         ops = (
-            FakeGtKit()
+            FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_commits(1)
             .with_pr(123, url="https://github.com/repo/pull/123")
@@ -246,7 +245,7 @@ class TestPostAnalysisExecution:
 
     def test_post_analysis_amend_fails(self) -> None:
         """Test error when git commit --amend fails."""
-        ops = FakeGtKit().with_branch("feature-branch", parent="main")
+        ops = FakeGtKitOps().with_branch("feature-branch", parent="main")
         # No commits, so amend will fail
 
         result = execute_post_analysis(
@@ -262,7 +261,7 @@ class TestPostAnalysisExecution:
     def test_post_analysis_submit_fails_generic(self) -> None:
         """Test error on generic submit failure."""
         ops = (
-            FakeGtKit()
+            FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_commits(1)
             .with_submit_failure(stdout="", stderr="generic error")
@@ -281,7 +280,7 @@ class TestPostAnalysisExecution:
     def test_post_analysis_submit_fails_merged_parent(self) -> None:
         """Test error when parent branches merged but not in main trunk."""
         ops = (
-            FakeGtKit()
+            FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_commits(1)
             .with_submit_failure(
@@ -303,7 +302,7 @@ class TestPostAnalysisExecution:
     def test_post_analysis_detects_submit_conflict(self) -> None:
         """Test that submit conflicts are detected and reported correctly."""
         ops = (
-            FakeGtKit()
+            FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_commits(1)
             .with_submit_failure(
@@ -332,7 +331,7 @@ class TestPostAnalysisExecution:
         # This tests that even if output contains other error patterns,
         # conflicts are detected first
         ops = (
-            FakeGtKit()
+            FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_commits(1)
             .with_submit_failure(
@@ -353,7 +352,7 @@ class TestPostAnalysisExecution:
     def test_post_analysis_submit_fails_diverged(self) -> None:
         """Test error when branch has diverged from remote."""
         ops = (
-            FakeGtKit()
+            FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_commits(1)
             .with_submit_failure(
@@ -376,7 +375,7 @@ class TestPostAnalysisExecution:
         """Test error when gh pr edit fails."""
         # Setup: branch with PR and PR update configured to fail
         ops = (
-            FakeGtKit()
+            FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_commits(1)
             .with_pr(123)
@@ -397,7 +396,7 @@ class TestPostAnalysisExecution:
     def test_post_analysis_pr_info_delayed(self, mock_sleep: Mock) -> None:
         """Test that PR metadata update succeeds even when PR info is delayed."""
         ops = (
-            FakeGtKit()
+            FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_commits(1)
             .with_pr(123)
@@ -424,7 +423,7 @@ class TestSubmitBranchCLI:
 
     def test_pre_analysis_command_success(self, runner: CliRunner) -> None:
         """Test pre-analysis CLI command with successful execution."""
-        ops = FakeGtKit().with_branch("feature-branch", parent="main").with_commits(1)
+        ops = FakeGtKitOps().with_branch("feature-branch", parent="main").with_commits(1)
 
         # Monkey patch execute_pre_analysis to use our fake ops
         import dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch as submit_module
@@ -450,7 +449,7 @@ class TestSubmitBranchCLI:
     def test_post_analysis_command_success(self, runner: CliRunner) -> None:
         """Test post-analysis CLI command with successful execution."""
         ops = (
-            FakeGtKit()
+            FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
             .with_commits(1)
             .with_pr(123, url="https://github.com/repo/pull/123")
@@ -482,72 +481,3 @@ class TestSubmitBranchCLI:
             assert output["pr_number"] == 123
         finally:
             submit_module.execute_post_analysis = original_execute
-
-
-class TestSubmitBranchIntegration:
-    """Integration tests using real git repos for edge cases."""
-
-    def test_amend_commit_with_backticks_direct(self) -> None:
-        """Test commit message with backticks using real git repo.
-
-        This test uses a real git repository because it tests edge case
-        behavior around shell quoting that is difficult to fake accurately.
-        """
-        with tempfile.TemporaryDirectory() as tmpdir:
-            repo_path = Path(tmpdir)
-
-            # Initialize git repo
-            subprocess.run(
-                ["git", "init"],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-            )
-            subprocess.run(
-                ["git", "config", "user.name", "Test User"],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-            )
-            subprocess.run(
-                ["git", "config", "user.email", "test@example.com"],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-            )
-
-            # Create initial commit
-            test_file = repo_path / "test.txt"
-            test_file.write_text("initial content", encoding="utf-8")
-            subprocess.run(
-                ["git", "add", "test.txt"],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-            )
-            subprocess.run(
-                ["git", "commit", "-m", "initial commit"],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-            )
-
-            # Test amend with backticks in message
-            message_with_backticks = "feat: add `some_function()` implementation"
-            subprocess.run(
-                ["git", "commit", "--amend", "-m", message_with_backticks],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-            )
-
-            # Verify the message was set correctly
-            result = subprocess.run(
-                ["git", "log", "-1", "--format=%B"],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-
-            assert message_with_backticks in result.stdout

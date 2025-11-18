@@ -28,7 +28,7 @@ def show() -> None:
     all installed kit documentation entries.
     """
     project_dir = Path.cwd()
-    registry_path = project_dir / ".claude" / "docs" / "kit-registry.md"
+    registry_path = project_dir / ".agent" / "kits" / "kit-registry.md"
 
     if not registry_path.exists():
         user_output("No registry found")
@@ -50,11 +50,11 @@ def validate() -> None:
     """
     project_dir = Path.cwd()
     config = require_project_config(project_dir)
-    registry_path = project_dir / ".claude" / "docs" / "kit-registry.md"
+    registry_path = project_dir / ".agent" / "kits" / "kit-registry.md"
 
     # Check registry file exists
     if not registry_path.exists():
-        user_output("❌ Registry file not found: .claude/docs/kit-registry.md")
+        user_output("❌ Registry file not found: .agent/kits/kit-registry.md")
         user_output("Run 'dot-agent kit sync' to create it")
         raise SystemExit(1)
 

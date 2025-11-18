@@ -662,7 +662,8 @@ The kit documentation registry contains the complete index of ALL installed kit 
 
 **MUST LOAD:** Before answering questions about available kits, agents, commands, or skills, ALWAYS reference:
 
-@.claude/docs/kit-registry.md
+@.agent/kits/README.md
+@.agent/kits/kit-registry.md
 
 This registry is automatically maintained and updated when kits are installed, updated, or removed. It is the single source of truth for what kit functionality is available in this project.
 

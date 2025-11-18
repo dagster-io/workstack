@@ -254,7 +254,7 @@ def add_kit_to_registry(kit_id: str, project_dir: Path, version: str, source_typ
     """
     from dot_agent_kit.io import load_project_config
 
-    registry_path = project_dir / ".claude" / "docs" / "kit-registry.md"
+    registry_path = project_dir / ".agent" / "kits" / "kit-registry.md"
 
     # Create registry file if it doesn't exist
     if not registry_path.exists():
@@ -314,7 +314,7 @@ def remove_kit_from_registry(kit_id: str, project_dir: Path) -> None:
         kit_id: Kit identifier
         project_dir: Project root directory
     """
-    registry_path = project_dir / ".claude" / "docs" / "kit-registry.md"
+    registry_path = project_dir / ".agent" / "kits" / "kit-registry.md"
 
     # Remove entry from registry if it exists
     if registry_path.exists():
@@ -364,7 +364,7 @@ def rebuild_registry(project_dir: Path, config: ProjectConfig) -> None:
     from dot_agent_kit.io.manifest import load_kit_manifest
     from dot_agent_kit.sources import BundledKitSource, KitResolver, StandalonePackageSource
 
-    registry_path = project_dir / ".claude" / "docs" / "kit-registry.md"
+    registry_path = project_dir / ".agent" / "kits" / "kit-registry.md"
 
     failures = []
     entries = []

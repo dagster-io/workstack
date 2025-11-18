@@ -90,7 +90,7 @@ def test_add_kit_to_registry_new_file(tmp_path: Path) -> None:
     """Test adding kit to new registry with structured format."""
     add_kit_to_registry("test-kit", tmp_path, "1.0.0", "bundled")
 
-    registry_path = tmp_path / ".claude" / "docs" / "kit-registry.md"
+    registry_path = tmp_path / ".agent" / "kits" / "kit-registry.md"
 
     # Verify registry created
     assert registry_path.exists()
@@ -116,7 +116,7 @@ def test_add_kit_to_registry_existing_file(tmp_path: Path) -> None:
     # Add new kit to existing registry
     add_kit_to_registry("new-kit", tmp_path, "2.0.0", "bundled")
 
-    registry_path = tmp_path / ".claude" / "docs" / "kit-registry.md"
+    registry_path = tmp_path / ".agent" / "kits" / "kit-registry.md"
     content = registry_path.read_text(encoding="utf-8")
 
     # Verify structured format
@@ -135,7 +135,7 @@ def test_add_kit_to_registry_duplicate(tmp_path: Path) -> None:
     # Add kit once
     add_kit_to_registry("test-kit", tmp_path, "1.0.0", "bundled")
 
-    registry_path = tmp_path / ".claude" / "docs" / "kit-registry.md"
+    registry_path = tmp_path / ".agent" / "kits" / "kit-registry.md"
     content_after_first = registry_path.read_text(encoding="utf-8")
 
     # Add same kit again
@@ -153,7 +153,7 @@ def test_add_kit_to_registry_duplicate(tmp_path: Path) -> None:
 def test_remove_kit_from_registry(tmp_path: Path) -> None:
     """Test removing kit from registry."""
     # Create registry with kit
-    registry_path = tmp_path / ".claude" / "docs" / "kit-registry.md"
+    registry_path = tmp_path / ".agent" / "kits" / "kit-registry.md"
     registry_path.parent.mkdir(parents=True, exist_ok=True)
     registry_path.write_text(
         "# Kit Documentation Registry\n\n"
@@ -187,7 +187,7 @@ def test_remove_kit_from_registry(tmp_path: Path) -> None:
 def test_remove_kit_from_registry_nonexistent(tmp_path: Path) -> None:
     """Test removing nonexistent kit (should not error)."""
     # Create empty registry
-    registry_path = tmp_path / ".claude" / "docs" / "kit-registry.md"
+    registry_path = tmp_path / ".agent" / "kits" / "kit-registry.md"
     registry_path.parent.mkdir(parents=True, exist_ok=True)
     registry_path.write_text("# Kit Documentation Registry\n\n", encoding="utf-8")
 
@@ -204,7 +204,7 @@ def test_rebuild_registry(tmp_path: Path) -> None:
 
     rebuild_registry(tmp_path, config)
 
-    registry_path = tmp_path / ".claude" / "docs" / "kit-registry.md"
+    registry_path = tmp_path / ".agent" / "kits" / "kit-registry.md"
 
     # Verify registry created
     assert registry_path.exists()
@@ -323,7 +323,7 @@ def test_old_format_migration() -> None:
 
     try:
         # Create old format registry
-        registry_path = tmp_path / ".claude" / "docs" / "kit-registry.md"
+        registry_path = tmp_path / ".agent" / "kits" / "kit-registry.md"
         registry_path.parent.mkdir(parents=True, exist_ok=True)
         registry_path.write_text(
             "# Kit Documentation Registry\n\n@.agent/kits/old-kit/registry-entry.md\n",

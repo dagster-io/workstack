@@ -50,6 +50,65 @@ class CurrentCommandResponse(BaseModel):
     is_root: bool
 
 
+class GlobalConfigInfo(BaseModel):
+    """Global configuration information for `erk config list --json`.
+
+    This represents the global configuration from ~/.erk/config.toml.
+    Note: The `shell_setup_complete` field is intentionally excluded as it
+    is internal state not shown to users.
+
+    Attributes:
+        erk_root: Path to the erk root directory
+        use_graphite: Whether Graphite integration is enabled
+        show_pr_info: Whether to show PR information in status output
+        exists: Whether the global config file exists
+    """
+
+    model_config = ConfigDict(strict=True)
+
+    erk_root: str
+    use_graphite: bool
+    show_pr_info: bool
+    exists: bool
+
+
+class RepositoryConfigInfo(BaseModel):
+    """Repository configuration information for `erk config list --json`.
+
+    This represents the repository-level configuration merged from
+    pyproject.toml and .erk/config.toml.
+
+    Attributes:
+        trunk_branch: Trunk branch name (main/master) or None if not configured
+        env: Environment variables dict (may be empty)
+        post_create_shell: Shell to use for post-create commands or None
+        post_create_commands: List of commands to run after worktree creation (may be empty)
+    """
+
+    model_config = ConfigDict(strict=True)
+
+    trunk_branch: str | None
+    env: dict[str, str]
+    post_create_shell: str | None
+    post_create_commands: list[str]
+
+
+class ConfigListResponse(BaseModel):
+    """JSON response schema for the `erk config list --json` command.
+
+    This is the top-level container for configuration information.
+
+    Attributes:
+        global_config: Global configuration (None if ~/.erk/config.toml doesn't exist)
+        repository_config: Repository configuration (None if not in a repository)
+    """
+
+    model_config = ConfigDict(strict=True)
+
+    global_config: GlobalConfigInfo | None
+    repository_config: RepositoryConfigInfo | None
+
+
 class StatusWorktreeInfo(BaseModel):
     """Worktree information in status command output.
 

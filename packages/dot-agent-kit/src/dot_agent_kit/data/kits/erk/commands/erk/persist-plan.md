@@ -1137,6 +1137,22 @@ Suggested action:
    - MUST be ≤ 30 characters
    - If > 30 characters, this is an implementation bug - the filename generation in Step 5 failed
 
+**Add enrichment marker:**
+
+Before saving the plan content, prepend YAML front matter to mark it as enriched:
+
+```markdown
+---
+enriched_by_persist_plan: true
+---
+
+[plan content here]
+```
+
+This marker enables detection of enriched plans for status display in both `erk status` and Claude Code status line.
+
+**If filename base validation fails:**
+
 ```
 ❌ Error: Internal error - filename base exceeds 30 characters
 
@@ -1150,7 +1166,7 @@ Suggested action:
   2. Manually truncate the plan title and rerun the command
 ```
 
-2. **Check if file already exists** at `<repo-root>/<derived-filename>`:
+**If file already exists:**
 
 ```
 ❌ Error: Plan file already exists

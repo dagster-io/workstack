@@ -86,34 +86,51 @@ class SimpleRenderer:
         Args:
             status: Status data
         """
-        if status.plan is None or not status.plan.exists:
+        if status.plan is None:
             return
 
-        # Plan title with emoji progress indicator if front matter exists
+        # Check if we have either .plan/ folder or enriched plan
+        has_plan_folder = status.plan.exists
+        has_enriched_plan = status.plan.enriched_plan_filename is not None
+
+        if not has_plan_folder and not has_enriched_plan:
+            return
+
+        # Build plan header with both indicators
         plan_header = "Plan:"
 
-        if status.plan.completion_percentage is not None:
+        # Add .plan/ folder progress indicator if exists
+        if has_plan_folder and status.plan.completion_percentage is not None:
             # New format with emoji: "Plan: 🟡 7/10"
             emoji = self._get_progress_emoji(status.plan.completion_percentage)
             # Extract fraction from progress_summary (e.g., "3/10" from "3/10 steps completed")
             if status.plan.progress_summary:
                 fraction = status.plan.progress_summary.split(" ")[0]  # Get "3/10" part
                 plan_header += f" {emoji} {fraction}"
-        # No progress display for files without front matter (backward compatibility)
+
+        # Add enriched plan indicator if exists
+        if has_enriched_plan:
+            # Add spacing if .plan/ folder exists
+            if has_plan_folder and status.plan.completion_percentage is not None:
+                plan_header += "  "
+            plan_header += f"🆕 {status.plan.enriched_plan_filename}"
 
         user_output(click.style(plan_header, fg="bright_magenta", bold=True))
 
-        if status.plan.first_lines:
-            for line in status.plan.first_lines:
-                user_output(f"  {line}")
+        # Only show plan content details if .plan/ folder exists
+        if has_plan_folder:
+            if status.plan.first_lines:
+                for line in status.plan.first_lines:
+                    user_output(f"  {line}")
 
-        user_output(
-            click.style(
-                f"  ({status.plan.line_count} lines in plan.md)",
-                fg="white",
-                dim=True,
+            user_output(
+                click.style(
+                    f"  ({status.plan.line_count} lines in plan.md)",
+                    fg="white",
+                    dim=True,
+                )
             )
-        )
+
         user_output()
 
     def _render_stack(self, status: StatusData) -> None:

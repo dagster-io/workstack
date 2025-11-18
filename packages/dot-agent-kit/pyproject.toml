@@ -10,6 +10,7 @@ dependencies = [
     "pydantic>=2.0",
     "pyyaml>=6.0",
     "python-frontmatter>=1.0.0",
+    "rich>=13.0",
     "tomli>=2.0",
     "tomli-w>=1.0",
 ]

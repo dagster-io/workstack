@@ -400,6 +400,220 @@ erk checkout add-user-auth
 
 This workflow emerged from experience - checking in planning documents created noise in reviews and maintenance overhead without clear benefits.
 
+**AI-Augmented Planning:**
+
+The manual workflow above can be fully automated using kit-installed Claude Code commands. See [Claude Code Integration](#claude-code-integration) for `/erk:persist-plan`, `/erk:create-planned-wt`, and `/erk:implement-plan` commands that automate plan extraction, enhancement, worktree creation, and implementation execution.
+
+## Claude Code Integration
+
+Erk includes bundled kits that provide Claude Code artifacts for AI-assisted development workflows.
+
+### What Are Kits?
+
+Kits are collections of Claude Code artifacts (slash commands, agents, skills) that augment erk's core functionality. The erk and gt kits are bundled with the tool and provide automation for planning and Graphite workflows.
+
+### AI-Augmented Planning Workflow
+
+The traditional erk planning workflow can be fully automated with kit-installed commands:
+
+**Traditional Approach (Manual):**
+
+1. Discuss and plan with Claude in conversation
+2. Manually copy/save plan to a markdown file
+3. Run `erk create --plan <file>.md`
+4. Manually track implementation progress
+
+**AI-Augmented Approach (With Kits):**
+
+1. Discuss and plan with Claude in conversation
+2. `/erk:persist-plan` - Automatically extracts, enhances, and saves plan
+3. `/erk:create-planned-wt` - Creates worktree from saved plan
+4. `/erk:implement-plan` - Executes plan with automated progress tracking
+
+### Planning Workflow Commands
+
+#### `/erk:persist-plan` - Save Enhanced Plan
+
+Extracts the implementation plan from your conversation with Claude, interactively enhances it, and saves to disk.
+
+**What it does:**
+
+- Extracts plan from conversation context
+- Preserves semantic understanding (API quirks, architectural insights, known pitfalls)
+- Asks clarifying questions to resolve ambiguities
+- Suggests phase decomposition for complex plans
+- Saves to `<repo-root>/<kebab-case-title>-plan.md`
+
+**Usage:**
+
+```bash
+# In conversation with Claude after planning
+/erk:persist-plan
+
+# With optional guidance corrections
+/erk:persist-plan "Focus on security validation in authentication phase"
+```
+
+**Why context preservation matters:**
+
+Plans include expensive discoveries made during planning so implementing agents don't have to re-learn them. For example:
+
+- **API quirks**: "Stripe webhooks often arrive BEFORE API response returns to client"
+- **Known pitfalls**: "DO NOT use payment_intent.succeeded event alone - fires even for zero-amount test payments"
+
+This prevents bugs and speeds up implementation. See [Context Preservation Examples](.claude/docs/erk/EXAMPLES.md) for comprehensive details.
+
+#### `/erk:create-planned-wt` - Create Worktree from Plan
+
+Creates a new erk worktree from a saved plan file.
+
+**What it does:**
+
+- Auto-detects most recent `*-plan.md` at repo root
+- Runs `erk create --plan <file>`
+- Moves plan to `.plan/plan.md` in new worktree
+- Creates `.plan/progress.md` for tracking step completion
+- Displays plan content and next steps
+
+**Usage:**
+
+```bash
+# After running /erk:persist-plan
+/erk:create-planned-wt
+```
+
+#### `/erk:implement-plan` - Execute Implementation Plan
+
+Executes the implementation plan in the current worktree with automated progress tracking.
+
+**What it does:**
+
+- Reads `.plan/plan.md` in current directory
+- Creates TodoWrite entries for progress tracking
+- Executes each phase sequentially following coding standards
+- Updates `.plan/progress.md` with step completions
+- Updates YAML front matter for `erk status` progress indicators
+- Reports progress after each phase
+- Runs final verification (CI checks if documented)
+
+**Usage:**
+
+```bash
+# After switching to planned worktree
+erk checkout <branch>
+claude --permission-mode acceptEdits "/erk:implement-plan"
+```
+
+### Complete Workflow Example
+
+```bash
+# 1. Plan in conversation (in root repo)
+erk checkout root
+# ... discuss with Claude, create implementation plan ...
+
+# 2. Save enhanced plan to disk
+/erk:persist-plan
+# Output: Saved plan to: Add_User_Auth-plan.md
+
+# 3. Create worktree from plan
+/erk:create-planned-wt
+# Output: Created worktree 'add-user-auth' from plan
+
+# 4. Switch to worktree
+erk checkout add-user-auth
+
+# 5. Execute implementation
+claude --permission-mode acceptEdits "/erk:implement-plan"
+# Claude implements the plan, updates progress.md, runs CI
+
+# 6. Submit PR (optional)
+/gt:submit-branch
+```
+
+### Graphite Workflow Commands
+
+The gt kit provides commands for streamlined Graphite integration:
+
+#### `/gt:submit-branch` - Create Commit and Submit PR
+
+Automatically creates a git commit with AI-generated message and submits the current branch as a pull request.
+
+**What it does:**
+
+- Checks for uncommitted changes and commits them
+- Analyzes all changes in the branch
+- Generates detailed commit message
+- Submits branch to Graphite and creates PR
+- Updates PR metadata with structured documentation
+
+**Usage:**
+
+```bash
+/gt:submit-branch
+# Or with description hint
+/gt:submit-branch "Add user authentication feature"
+```
+
+#### `/gt:update-pr` - Update Existing PR
+
+Updates an existing PR by staging changes, committing, restacking, and submitting.
+
+**What it does:**
+
+- Stages all changes
+- Creates commit with AI-generated message
+- Runs `gt stack submit`
+- Returns to original worktree
+
+**Usage:**
+
+```bash
+/gt:update-pr
+```
+
+### Progress Tracking System
+
+The `.plan/` folder structure enables automated progress tracking:
+
+```
+.plan/
+├── plan.md       # Immutable reference (never edited during implementation)
+└── progress.md   # Mutable tracking (checkboxes + YAML front matter)
+```
+
+Progress files include YAML front matter for `erk status` indicators:
+
+```yaml
+---
+completed_steps: 3
+total_steps: 10
+---
+# Progress Tracking
+- [x] 1. First step
+- [x] 2. Second step
+- [x] 3. Third step
+- [ ] 4. Fourth step
+```
+
+The `erk status` command shows:
+
+- ⚪ Not started (0%)
+- 🟡 In progress (1-99%)
+- 🟢 Complete (100%)
+
+### Available Kits
+
+Erk bundles several kits that provide Claude Code artifacts:
+
+- **erk** - Planning workflow commands (`/erk:persist-plan`, `/erk:implement-plan`, `/erk:create-planned-wt`)
+- **gt** - Graphite integration (`/gt:submit-branch`, `/gt:update-pr`, `gt-graphite` skill)
+- **devrun** - Development tool execution (pytest, pyright, ruff, prettier, make, gt)
+- **dignified-python-313** - Python 3.13+ coding standards
+- **layered-testing** - Testing architecture patterns
+- **fix-merge-conflicts** - Merge conflict resolution
+
+For detailed documentation of all installed kits and their artifacts, see `.claude/docs/kit-registry.md`.
+
 ### Moving Current Work
 
 ```bash
@@ -708,6 +922,14 @@ Comprehensive, agent-optimized documentation is available in the `.agent/` direc
 - **[erk-dev CLI](docs/ERK_DEV.md)** - Development CLI architecture and design
 
 See [`.agent/README.md`](.agent/README.md) for more details.
+
+**Kit-Installed Artifacts:**
+
+Erk includes bundled kits that provide slash commands, agents, and skills for AI-assisted workflows. For comprehensive documentation of all installed kits and their artifacts, see:
+
+- **[Kit Registry](.claude/docs/kit-registry.md)** - Complete catalog of installed kits, commands, agents, and skills
+- **[Planning Workflow Commands](#claude-code-integration)** - `/erk:persist-plan`, `/erk:implement-plan`, `/erk:create-planned-wt`
+- **[Graphite Workflow Commands](#claude-code-integration)** - `/gt:submit-branch`, `/gt:update-pr`
 
 ## Links
 

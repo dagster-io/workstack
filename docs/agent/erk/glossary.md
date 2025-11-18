@@ -219,88 +219,7 @@ class ErkContext:
 
 ---
 
-## Operations Layer Terms
-
-### Ops Interface
-
-An ABC (Abstract Base Class) defining operations for external integrations.
-
-**Pattern**:
-
-```python
-class GitOps(ABC):
-    @abstractmethod
-    def list_worktrees(self, repo_root: Path) -> list[WorktreeInfo]:
-        ...
-```
-
-**Examples**:
-
-- `GitOps` - Git operations
-- `GitHubOps` - GitHub API operations
-- `GraphiteOps` - Graphite CLI operations
-- `GlobalConfigOps` - Configuration operations
-
-**Purpose**: Abstraction enabling testing with fakes.
-
-### Real Implementation
-
-Production implementation of an ops interface that executes actual commands.
-
-**Naming**: `Real<Interface>` (e.g., `RealGitOps`)
-
-**Pattern**:
-
-```python
-class RealGitOps(GitOps):
-    def list_worktrees(self, repo_root: Path) -> list[WorktreeInfo]:
-        result = subprocess.run(["git", "worktree", "list", ...])
-        return parse_worktrees(result.stdout)
-```
-
-**Usage**: Instantiated in `create_context()` for production.
-
-### Fake Implementation
-
-In-memory implementation of an ops interface for testing.
-
-**Naming**: `Fake<Interface>` (e.g., `FakeGitOps`)
-
-**Location**: `tests/fakes/<interface>.py`
-
-**Pattern**:
-
-```python
-class FakeGitOps(GitOps):
-    def __init__(self, *, worktrees: list[WorktreeInfo] | None = None):
-        self._worktrees = worktrees or []
-
-    def list_worktrees(self, repo_root: Path) -> list[WorktreeInfo]:
-        return self._worktrees
-```
-
-**Key Rule**: All state via constructor, NO public setup methods.
-
-**Purpose**: Fast, deterministic tests without filesystem I/O.
-
-### Dry Run Wrapper
-
-A wrapper around a real implementation that prints messages instead of executing destructive operations.
-
-**Naming**: `DryRun<Interface>` (e.g., `DryRunGitOps`)
-
-**Pattern**:
-
-```python
-class DryRunGitOps(GitOps):
-    def __init__(self, wrapped: GitOps) -> None:
-        self._wrapped = wrapped
-
-    def remove_worktree(self, repo_root: Path, path: Path, force: bool) -> None:
-        click.echo(f"[DRY RUN] Would remove worktree: {path}")
-```
-
-**Usage**: Wrapped around real implementations when `--dry-run` flag is used.
+**Note:** For universal operations layer and testing patterns (ops interfaces, fakes, dry run wrappers), see [../testing-architecture.md](../testing-architecture.md).
 
 ---
 
@@ -364,53 +283,6 @@ erk delete my-feature --dry-run
 
 ---
 
-## Testing Terms
-
-### Isolated Filesystem
-
-A temporary directory created by Click's test runner for unit tests.
-
-**Usage**:
-
-```python
-runner = CliRunner()
-with runner.isolated_filesystem():
-    # Operations here happen in temporary directory
-    # Automatically cleaned up after test
-```
-
-**Purpose**: Prevent tests from affecting actual filesystem.
-
-### Integration Test
-
-Test that uses real implementations and filesystem operations.
-
-**Location**: `tests/integration/`
-
-**Characteristics**:
-
-- Uses `RealGitOps`, actual git commands
-- Slower than unit tests
-- Tests real integration with external tools
-
-**Example**: `tests/integration/test_gitops_integration.py`
-
-### Unit Test
-
-Test that uses fake implementations and isolated filesystem.
-
-**Location**: `tests/commands/`, `tests/core/`
-
-**Characteristics**:
-
-- Uses `FakeGitOps`, `FakeGitHubOps`, etc.
-- Fast (no subprocess calls)
-- Majority of test suite
-
-**Example**: `tests/commands/test_rm.py`
-
----
-
 ## Abbreviations
 
 - **ABC**: Abstract Base Class (Python's `abc` module)
@@ -425,4 +297,5 @@ Test that uses fake implementations and isolated filesystem.
 
 ## Related Documentation
 
-- [AGENTS.md](../../AGENTS.md) - Coding standards
+- [AGENTS.md](../../../AGENTS.md) - Coding standards
+- [../testing-architecture.md](../testing-architecture.md) - Universal operations layer and testing patterns

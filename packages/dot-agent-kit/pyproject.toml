@@ -12,6 +12,8 @@ dependencies = [
     "python-frontmatter>=1.0.0",
     "tomli>=2.0",
     "tomli-w>=1.0",
+    "claude-agent-sdk>=0.1.6",
+    "anyio>=4.0.0",
 ]
 
 [project.scripts]

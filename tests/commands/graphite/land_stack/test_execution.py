@@ -538,9 +538,9 @@ def test_land_stack_does_not_run_erk_sync() -> None:
             f"Expected 0 sync calls, got {len(shell_ops.sync_calls)} calls: {shell_ops.sync_calls}"
         )
 
-        # Verify output shows suggestion to run gt sync manually
-        assert "Run 'gt sync -f' to remove worktrees" in result.output, (
-            f"Expected manual gt sync suggestion in output.\nActual output:\n{result.output}"
+        # Verify output shows suggestion to run erk sync manually
+        assert "Run 'erk sync -f' to remove worktrees" in result.output, (
+            f"Expected manual erk sync suggestion in output.\nActual output:\n{result.output}"
         )
 
 
@@ -549,8 +549,8 @@ def test_final_state_shows_next_steps() -> None:
 
     After landing (display.py:113-129), user should see:
     - "Next steps:" header
-    - Suggestion to run 'gt sync -f' to remove worktrees
-    - Suggestion to run 'gt sync -f' to rebase remaining branches
+    - Suggestion to run 'erk sync -f' to remove worktrees
+    - Suggestion to run 'gt sync -f' to remove branches with closed PRs
     - Note about manual control
 
     This ensures users are informed about follow-up actions after landing.
@@ -594,13 +594,13 @@ def test_final_state_shows_next_steps() -> None:
             f"Expected 'Next steps:' header in output.\nActual output:\n{result.output}"
         )
 
-        # Verify gt sync suggestion for removing worktrees
-        assert "Run 'gt sync -f' to remove worktrees" in result.output, (
-            f"Expected gt sync suggestion in output.\nActual output:\n{result.output}"
+        # Verify erk sync suggestion for removing worktrees
+        assert "Run 'erk sync -f' to remove worktrees" in result.output, (
+            f"Expected erk sync suggestion in output.\nActual output:\n{result.output}"
         )
 
-        # Verify gt sync suggestion
-        assert "Run 'gt sync -f' to rebase remaining stack branches" in result.output, (
+        # Verify gt sync suggestion for removing branches with closed PRs
+        assert "Run 'gt sync -f' to remove branches with closed PRs" in result.output, (
             f"Expected gt sync suggestion in output.\nActual output:\n{result.output}"
         )
 

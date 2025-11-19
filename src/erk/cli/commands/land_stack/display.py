@@ -114,11 +114,11 @@ def _show_final_state(
     _emit("", script_mode=script_mode)
     _emit(click.style("Next steps:", bold=True), script_mode=script_mode)
     _emit(
-        "  • Run 'gt sync -f' to remove worktrees for merged branches",
+        "  • Run 'erk sync -f' to remove worktrees for merged branches",
         script_mode=script_mode,
     )
     _emit(
-        "  • Run 'gt sync -f' to rebase remaining stack branches (if needed)",
+        "  • Run 'gt sync -f' to remove branches with closed PRs",
         script_mode=script_mode,
     )
     _emit("", script_mode=script_mode)

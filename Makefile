@@ -29,8 +29,16 @@ upgrade-pyright:
 test-erk-dev:
 	cd packages/erk-dev && uv run pytest -n auto
 
-test-dot-agent-kit:
-	cd packages/dot-agent-kit && uv run pytest -n auto
+# Unit tests: Fast, in-memory tests using fakes
+test-unit-dot-agent-kit:
+	cd packages/dot-agent-kit && uv run pytest tests/unit/ -n auto
+
+# Integration tests: Slower tests with real I/O and subprocess calls
+test-integration-dot-agent-kit:
+	cd packages/dot-agent-kit && uv run pytest tests/integration/ -n auto
+
+# Backward compatibility: test-dot-agent-kit now runs unit tests only
+test-dot-agent-kit: test-unit-dot-agent-kit
 
 # === Erk test targets ===
 
@@ -57,10 +65,10 @@ test-erk: test-unit-erk
 test: test-unit-erk test-erk-dev test-dot-agent-kit
 
 # Integration tests: Run only integration tests across all packages
-test-integration: test-integration-erk
+test-integration: test-integration-erk test-integration-dot-agent-kit
 
 # All tests: Run both unit and integration tests (comprehensive validation)
-test-all: test-all-erk test-erk-dev test-dot-agent-kit
+test-all: test-all-erk test-erk-dev test-unit-dot-agent-kit test-integration-dot-agent-kit
 
 check:
 	uv run dot-agent check

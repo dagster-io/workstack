@@ -5,7 +5,8 @@ import pytest
 
 def test_universal_standards_are_synchronized():
     """Ensure all Dignified Python kits have identical universal standards."""
-    kits_dir = Path(__file__).parent.parent.parent / "src" / "dot_agent_kit" / "data" / "kits"
+    package_root = Path(__file__).parent.parent.parent.parent
+    kits_dir = package_root / "src" / "dot_agent_kit" / "data" / "kits"
 
     source = kits_dir / "dignified-python-shared" / "universal-python-standards.md"
     py310_copy = kits_dir / "dignified-python-310" / "skills" / "dignified-python" / "UNIVERSAL.md"

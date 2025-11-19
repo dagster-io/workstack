@@ -73,6 +73,10 @@ class PrintingGit(PrintingBase, Git):
         """Check for uncommitted changes (read-only, no printing)."""
         return self._wrapped.has_uncommitted_changes(cwd)
 
+    def is_worktree_clean(self, worktree_path: Path) -> bool:
+        """Check if worktree is clean (read-only, no printing)."""
+        return self._wrapped.is_worktree_clean(worktree_path)
+
     def is_branch_checked_out(self, repo_root: Path, branch: str) -> Path | None:
         """Check if branch is checked out (read-only, no printing)."""
         return self._wrapped.is_branch_checked_out(repo_root, branch)

@@ -239,6 +239,39 @@ class RealGit(Git):
             return False
         return bool(result.stdout.strip())
 
+    def is_worktree_clean(self, worktree_path: Path) -> bool:
+        """Check if worktree has no uncommitted changes, staged changes, or untracked files."""
+        # LBYL: Check path exists before attempting git operations
+        if not worktree_path.exists():
+            return False
+
+        # Check for uncommitted changes using diff-index (respects git config)
+        result = subprocess.run(
+            ["git", "-C", str(worktree_path), "diff-index", "--quiet", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        # Exit code 0 means no changes, 1 means changes exist
+        if result.returncode not in (0, 1):
+            return False
+        if result.returncode == 1:
+            return False
+
+        # Check for untracked files
+        result = subprocess.run(
+            ["git", "-C", str(worktree_path), "ls-files", "--others", "--exclude-standard"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            return False
+        if result.stdout.strip():
+            return False
+
+        return True
+
     def add_worktree(
         self,
         repo_root: Path,

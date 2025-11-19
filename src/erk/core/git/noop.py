@@ -98,6 +98,10 @@ class NoopGit(Git):
         """Check for uncommitted changes (read-only, delegates to wrapped)."""
         return self._wrapped.has_uncommitted_changes(cwd)
 
+    def is_worktree_clean(self, worktree_path: Path) -> bool:
+        """Check if worktree is clean (read-only, delegates to wrapped)."""
+        return self._wrapped.is_worktree_clean(worktree_path)
+
     def add_worktree(
         self,
         repo_root: Path,

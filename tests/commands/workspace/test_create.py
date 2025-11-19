@@ -551,15 +551,13 @@ def test_create_invalid_worktree_name() -> None:
         assert result.exit_code == 1
         assert "reserved" in result.output.lower()
 
-        # Test reserved name "main"
+        # Test trunk branch rejection (default is "main")
         result = runner.invoke(cli, ["create", "main"], obj=test_ctx)
         assert result.exit_code == 1
         assert "cannot be used" in result.output.lower()
 
-        # Test reserved name "master"
-        result = runner.invoke(cli, ["create", "master"], obj=test_ctx)
-        assert result.exit_code == 1
-        assert "cannot be used" in result.output.lower()
+        # Note: "master" is not rejected unless it's the configured trunk branch
+        # If repo uses master as trunk, it would be rejected; otherwise it's allowed
 
 
 def test_create_plan_file_not_found() -> None:

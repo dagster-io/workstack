@@ -14,7 +14,9 @@ from erk.cli.subprocess_utils import run_with_error_reporting
 from erk.core.context import ErkContext
 from erk.core.naming_utils import (
     default_branch_for_worktree,
+    ensure_simple_worktree_name,
     ensure_unique_worktree_name,
+    ensure_unique_worktree_name_with_date,
     sanitize_worktree_name,
     strip_plan_from_filename,
 )
@@ -26,17 +28,21 @@ def ensure_worktree_for_branch(
     ctx: ErkContext,
     repo: RepoContext,
     branch: str,
+    *,
+    is_plan_derived: bool = False,
 ) -> tuple[Path, bool]:
     """Ensure worktree exists for branch, creating if necessary.
 
     This function checks if a worktree already exists for the given branch.
-    If it does, returns the path and False. If not, creates a new worktree
+    If it does, validates branch match and returns path. If not, creates a new worktree
     with config-driven post-create commands and .env generation.
 
     Args:
         ctx: The Erk context with git operations
         repo: Repository context with root and worktrees directory
         branch: The branch name to ensure a worktree for
+        is_plan_derived: If True, use dated worktree names (for plan workflows).
+                        If False, use simple names (for manual checkout).
 
     Returns:
         Tuple of (worktree_path, was_created)
@@ -44,7 +50,8 @@ def ensure_worktree_for_branch(
         - was_created: True if worktree was newly created, False if it already existed
 
     Raises:
-        SystemExit: If branch doesn't exist or tracking branch creation fails
+        SystemExit: If branch doesn't exist, tracking branch creation fails,
+                   or worktree name collision with different branch
     """
     # Check if worktree already exists for this branch
     existing_path = ctx.git.is_branch_checked_out(repo.root, branch)
@@ -96,10 +103,42 @@ def ensure_worktree_for_branch(
 
     # Generate and ensure unique worktree name
     name = sanitize_worktree_name(branch)
-    name = ensure_unique_worktree_name(name, repo.worktrees_dir, ctx.git)
+
+    # Use appropriate naming strategy based on whether worktree is plan-derived
+    if is_plan_derived:
+        # Plan workflows need date suffixes to create multiple worktrees from same plan
+        name = ensure_unique_worktree_name_with_date(name, repo.worktrees_dir, ctx.git)
+    else:
+        # Manual checkouts use simple names for predictability
+        name = ensure_simple_worktree_name(name, repo.worktrees_dir, ctx.git)
 
     # Calculate worktree path
     wt_path = worktree_path_for(repo.worktrees_dir, name)
+
+    # Check for name collision with different branch (for non-plan checkouts)
+    if not is_plan_derived and ctx.git.path_exists(wt_path):
+        # Worktree exists - check what branch it has
+        worktrees = ctx.git.list_worktrees(repo.root)
+        for wt in worktrees:
+            if wt.path == wt_path:
+                if wt.branch != branch:
+                    user_output(
+                        f"Error: Worktree '{name}' already exists "
+                        f"with different branch '{wt.branch}'.\n"
+                        f"Cannot create worktree for branch '{branch}' with same name.\n"
+                        f"Options:\n"
+                        f"  1. Switch to existing worktree: erk jump {name}\n"
+                        f"  2. Use a different branch name"
+                    )
+                    raise SystemExit(1)
+                # Same branch - return existing path
+                return wt_path, False
+        # Path exists but not in worktree list (shouldn't happen, but handle gracefully)
+        user_output(
+            f"Error: Directory '{wt_path}' exists but is not a git worktree.\n"
+            f"Please remove or rename the directory and try again."
+        )
+        raise SystemExit(1)
 
     # Create worktree from existing branch
     add_worktree(
@@ -478,19 +517,19 @@ def create(
         user_output('Error: "root" is a reserved name and cannot be used for a worktree.')
         raise SystemExit(1)
 
-    # Validate that name is not main or master (common branch names that should use root)
-    if name.lower() in ("main", "master"):
+    repo = discover_repo_context(ctx, ctx.cwd)
+    ensure_repo_dir(repo)
+    cfg = ctx.local_config
+    trunk_branch = ctx.git.get_trunk_branch(repo.root)
+
+    # Validate that name is not trunk branch (should use root worktree)
+    if name == trunk_branch:
         user_output(
             f'Error: "{name}" cannot be used as a worktree name.\n'
             f"To switch to the {name} branch in the root repository, use:\n"
             f"  erk checkout root",
         )
         raise SystemExit(1)
-
-    repo = discover_repo_context(ctx, ctx.cwd)
-    ensure_repo_dir(repo)
-    cfg = ctx.local_config
-    trunk_branch = ctx.trunk_branch
 
     # Apply date prefix and uniqueness for plan-derived names
     if is_plan_derived:

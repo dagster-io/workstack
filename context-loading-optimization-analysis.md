@@ -9,6 +9,7 @@ The erk project's Claude Code integration currently loads 40,000-50,000 tokens a
 ### Token Consumption Breakdown
 
 #### At Conversation Start (Fixed Overhead)
+
 ```
 Component                     Size        Tokens      % of Total
 ─────────────────────────────────────────────────────────────────
@@ -20,6 +21,7 @@ TOTAL FIXED                   60 KB       15,264      100%
 ```
 
 #### Per User Message (Variable Overhead)
+
 ```
 Hook                          Trigger     Tokens      Impact
 ─────────────────────────────────────────────────────────────────
@@ -46,12 +48,13 @@ fake-driven-testing-hook      test*.py    1,875       Test files only
 {
   "name": "devrun-reminder-hook",
   "type": "user_prompt_submit",
-  "matcher": "*",  // ← PROBLEM: Matches everything
+  "matcher": "*", // ← PROBLEM: Matches everything
   "command": "python .claude/hooks/devrun-reminder-hook.py"
 }
 ```
 
 **Impact**:
+
 - Adds 2,000 tokens to every non-development conversation
 - Outputs reminders for pytest, pyright, ruff, prettier, make, gt on unrelated queries
 - 100% of messages pay this penalty when <5% need it
@@ -69,12 +72,14 @@ fake-driven-testing-hook      test*.py    1,875       Test files only
 ```
 
 **Chain Reaction**:
+
 1. CLAUDE.md loads (1 KB)
 2. References @AGENTS.md (28 KB)
 3. AGENTS.md references kit registry (4 KB)
 4. Kit registry auto-expands 6 kit entries (24 KB total)
 
 **Impact**:
+
 - 6,144 tokens loaded even when kits aren't relevant
 - No lazy loading mechanism
 - Registry loaded for "Hello" or "What time is it?"
@@ -96,6 +101,7 @@ Lines 645-673:  Kit documentation (reference)
 ```
 
 **Impact**:
+
 - Loads 7,168 tokens when only ~2,000 are critical
 - No separation between "must know" and "reference when needed"
 - CLI styling guide (1,000 tokens) loads for non-CLI work
@@ -104,13 +110,13 @@ Lines 645-673:  Kit documentation (reference)
 
 ### Priority Matrix
 
-| Priority | Optimization | Tokens Saved | Effort | ROI |
-|----------|-------------|--------------|--------|-----|
-| CRITICAL | Fix devrun hook matcher | 2,000/msg | 5 min | Very High |
-| HIGH | Remove kit registry @-refs | 6,144 | 10 min | Very High |
-| HIGH | Split AGENTS.md | 3,000-5,000 | 30 min | High |
-| MEDIUM | Conditional hook flags | Variable | 20 min | Medium |
-| LOW | Lazy skill loading | Variable | 2 hours | Low |
+| Priority | Optimization               | Tokens Saved | Effort  | ROI       |
+| -------- | -------------------------- | ------------ | ------- | --------- |
+| CRITICAL | Fix devrun hook matcher    | 2,000/msg    | 5 min   | Very High |
+| HIGH     | Remove kit registry @-refs | 6,144        | 10 min  | Very High |
+| HIGH     | Split AGENTS.md            | 3,000-5,000  | 30 min  | High      |
+| MEDIUM   | Conditional hook flags     | Variable     | 20 min  | Medium    |
+| LOW      | Lazy skill loading         | Variable     | 2 hours | Low       |
 
 ## Recommended Implementation Plan
 
@@ -119,16 +125,19 @@ Lines 645-673:  Kit documentation (reference)
 #### 1.1 Fix Devrun Hook Matcher
 
 **Current**:
+
 ```json
 "matcher": "*"
 ```
 
 **Optimized**:
+
 ```json
 "matcher": "(?i)(pytest|pyright|ruff|prettier|make|gt|test|lint|format|ci|devrun)"
 ```
 
 **Alternative (file-based)**:
+
 ```json
 "matcher": "\\.(py|js|ts|tsx|jsx|yml|yaml|json|md)$"
 ```
@@ -138,14 +147,17 @@ Lines 645-673:  Kit documentation (reference)
 #### 1.2 Remove Kit Registry Auto-Loading
 
 **Current AGENTS.md:665-666**:
+
 ```markdown
 @.agent/kits/README.md
 @.agent/kits/kit-registry.md
 ```
 
 **Optimized**:
+
 ```markdown
 **Kit Registry**: To see available kits, agents, and commands:
+
 - Load when needed: `@.agent/kits/kit-registry.md`
 - Or ask: "What kits are available?"
 ```
@@ -164,14 +176,17 @@ Extract only essential rules that prevent common mistakes:
 ## TOP 3 MUST-KNOW RULES
 
 ### 1. Exception Handling
+
 - NEVER use try/except for control flow
 - Check conditions with if statements
 
 ### 2. Test Isolation
+
 - NEVER use Path("/test/...") in tests
 - ALWAYS use fixtures: pure_erk_env or tmp_path
 
 ### 3. Load Skills Before Coding
+
 - Python: Load dignified-python skill
 - Tests: Load fake-driven-testing skill
 
@@ -181,11 +196,13 @@ For complete standards, see: @AGENTS.md
 #### 2.2 Update CLAUDE.md
 
 **Current**:
+
 ```markdown
 @AGENTS.md
 ```
 
 **Optimized**:
+
 ```markdown
 @AGENTS-CRITICAL.md
 
@@ -199,9 +216,10 @@ For complete standards when needed: @AGENTS.md
 #### 3.1 Context-Aware Loading
 
 Add to settings.json:
+
 ```json
 {
-  "context_mode": "minimal",  // Options: minimal, standard, full
+  "context_mode": "minimal", // Options: minimal, standard, full
   "lazy_load_skills": true,
   "verbose_reminders": false
 }
@@ -210,6 +228,7 @@ Add to settings.json:
 #### 3.2 Progressive Skill Loading
 
 Detect intent and load only relevant skills:
+
 - Python work detected → Load dignified-python
 - Test work detected → Load fake-driven-testing
 - General query → Load nothing
@@ -217,6 +236,7 @@ Detect intent and load only relevant skills:
 ## Expected Results
 
 ### Before Optimization
+
 ```
 Fixed overhead:      15,264 tokens
 Per message:         +2,000 tokens (unnecessary)
@@ -224,6 +244,7 @@ Total for "Hello":   17,264 tokens
 ```
 
 ### After Phase 1 (10 minutes of work)
+
 ```
 Fixed overhead:       7,120 tokens (-53%)
 Per message:             +0 tokens (for non-dev)
@@ -231,6 +252,7 @@ Total for "Hello":    7,120 tokens (-59% reduction)
 ```
 
 ### After Phase 2 (40 minutes total)
+
 ```
 Fixed overhead:       2,120 tokens (-86%)
 Per message:             +0 tokens (for non-dev)
@@ -266,14 +288,17 @@ Track these metrics before and after optimization:
 ## Risk Assessment
 
 ### Low Risk Changes
+
 - Fixing hook matcher: Only affects when reminders show
 - Removing @-references: Makes kit loading explicit
 
 ### Medium Risk Changes
+
 - Splitting AGENTS.md: May require updating documentation references
 - Could miss critical rules if split incorrectly
 
 ### Mitigation
+
 - Keep full AGENTS.md available via explicit reference
 - Test with common workflows before committing
 - Can revert by restoring @-references

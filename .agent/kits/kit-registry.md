@@ -4,7 +4,7 @@
 <!-- DO NOT EDIT: Changes will be overwritten. Use 'dot-agent kit sync' -->
 
 <!-- REGISTRY_VERSION: 1 -->
-<!-- GENERATED_AT: 2025-11-18T09:09:08 -->
+<!-- GENERATED_AT: 2025-11-19T10:42:36 -->
 
 <!-- BEGIN_ENTRIES -->
 
@@ -29,12 +29,6 @@
 <!-- ENTRY_START kit_id="fake-driven-testing" version="0.1.0" source="bundled" -->
 
 @.agent/kits/fake-driven-testing/registry-entry.md
-
-<!-- ENTRY_END -->
-
-<!-- ENTRY_START kit_id="fix-merge-conflicts" version="0.1.0" source="bundled" -->
-
-@.agent/kits/fix-merge-conflicts/registry-entry.md
 
 <!-- ENTRY_END -->
 

@@ -448,3 +448,35 @@ def test_fake_gitops_delete_branch_with_graphite_raises() -> None:
     # Other branches should not raise
     git_ops.delete_branch_with_graphite(repo_root, "other-branch", force=False)
     assert "other-branch" in git_ops.deleted_branches
+
+
+def test_fake_git_is_worktree_clean_with_clean_worktree() -> None:
+    """Test that is_worktree_clean returns True for clean worktree."""
+    worktree_path = Path("/repo/worktree")
+    git_ops = FakeGit(
+        existing_paths={worktree_path},
+    )
+
+    result = git_ops.is_worktree_clean(worktree_path)
+    assert result is True
+
+
+def test_fake_git_is_worktree_clean_with_uncommitted_changes() -> None:
+    """Test that is_worktree_clean returns False for dirty worktree."""
+    worktree_path = Path("/repo/worktree")
+    git_ops = FakeGit(
+        existing_paths={worktree_path},
+        dirty_worktrees={worktree_path},
+    )
+
+    result = git_ops.is_worktree_clean(worktree_path)
+    assert result is False
+
+
+def test_fake_git_is_worktree_clean_with_nonexistent_path() -> None:
+    """Test that is_worktree_clean returns False for nonexistent path."""
+    worktree_path = Path("/repo/nonexistent")
+    git_ops = FakeGit()
+
+    result = git_ops.is_worktree_clean(worktree_path)
+    assert result is False

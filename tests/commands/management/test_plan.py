@@ -265,6 +265,7 @@ def test_create_rejects_main_as_worktree_name() -> None:
             current_branches={env.root_worktree: "main"},
             git_common_dirs={env.root_worktree: env.git_dir},
             default_branches={env.root_worktree: "main"},
+            trunk_branches={env.root_worktree: "main"},
         )
 
         # Create global config with erk_root
@@ -303,15 +304,17 @@ def test_create_rejects_master_as_worktree_name() -> None:
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
         # Configure FakeGit with root worktree only
+        # Set trunk_branches to "master" so it gets rejected
         git_ops = FakeGit(
             worktrees={
                 env.root_worktree: [
-                    WorktreeInfo(path=env.root_worktree, branch="main", is_root=True),
+                    WorktreeInfo(path=env.root_worktree, branch="master", is_root=True),
                 ]
             },
-            current_branches={env.root_worktree: "main"},
+            current_branches={env.root_worktree: "master"},
             git_common_dirs={env.root_worktree: env.git_dir},
-            default_branches={env.root_worktree: "main"},
+            default_branches={env.root_worktree: "master"},
+            trunk_branches={env.root_worktree: "master"},
         )
 
         # Create global config with erk_root

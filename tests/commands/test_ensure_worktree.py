@@ -433,7 +433,7 @@ def test_ensure_worktree_works_without_local_config() -> None:
 
 
 def test_ensure_worktree_generates_unique_name_on_collision() -> None:
-    """Test that ensure_worktree_for_branch generates unique name when collision occurs."""
+    """Test that ensure_worktree_for_branch errors on name collision with different branch."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
         repo_dir = env.erk_root / "repos" / env.cwd.name
@@ -451,6 +451,7 @@ def test_ensure_worktree_generates_unique_name_on_collision() -> None:
             },
             local_branches={env.cwd: ["main", "feature-name", "other-branch"]},
             git_common_dirs={env.cwd: env.git_dir},
+            existing_paths={env.cwd, existing_path},
         )
 
         repo = RepoContext(
@@ -463,14 +464,14 @@ def test_ensure_worktree_generates_unique_name_on_collision() -> None:
         ctx = env.build_context(git=git_ops, repo=repo)
 
         # Call ensure_worktree_for_branch for branch that would collide
-        path, was_created = ensure_worktree_for_branch(ctx, repo, "feature-name")
+        # Should error because name exists with different branch
+        import pytest
 
-        # Should create worktree with unique name
-        assert was_created is True
-        # Name should be different from existing "feature-name"
-        # ensure_unique_worktree_name adds version suffix (-2, -3, etc)
-        assert path.name != "feature-name"
-        assert "feature-name" in path.name  # Should contain the base name
+        with pytest.raises(SystemExit) as exc_info:
+            ensure_worktree_for_branch(ctx, repo, "feature-name", is_plan_derived=False)
+
+        # Should exit with error code
+        assert exc_info.value.code == 1
 
 
 def test_ensure_worktree_returns_was_created_flag() -> None:

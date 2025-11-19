@@ -83,6 +83,7 @@ class FakeGit(Git):
         local_branches: dict[Path, list[str]] | None = None,
         remote_branches: dict[Path, list[str]] | None = None,
         tracking_branch_failures: dict[str, str] | None = None,
+        dirty_worktrees: set[Path] | None = None,
     ) -> None:
         """Create FakeGit with pre-configured state.
 
@@ -106,6 +107,7 @@ class FakeGit(Git):
                 (with prefix like 'origin/branch-name')
             tracking_branch_failures: Mapping of branch name -> error message to raise
                 when create_tracking_branch is called for that branch
+            dirty_worktrees: Set of worktree paths that have uncommitted/staged/untracked changes
         """
         self._worktrees = worktrees or {}
         self._current_branches = current_branches or {}
@@ -124,6 +126,7 @@ class FakeGit(Git):
         self._local_branches = local_branches or {}
         self._remote_branches = remote_branches or {}
         self._tracking_branch_failures = tracking_branch_failures or {}
+        self._dirty_worktrees = dirty_worktrees or set()
 
         # Mutation tracking
         self._deleted_branches: list[str] = []
@@ -217,6 +220,18 @@ class FakeGit(Git):
         """Check if a worktree has uncommitted changes."""
         staged, modified, untracked = self._file_statuses.get(cwd, ([], [], []))
         return bool(staged or modified or untracked)
+
+    def is_worktree_clean(self, worktree_path: Path) -> bool:
+        """Check if worktree has no uncommitted changes, staged changes, or untracked files."""
+        # Check if path exists (LBYL pattern)
+        if worktree_path not in self._existing_paths:
+            return False
+
+        # Check if worktree is marked as dirty
+        if worktree_path in self._dirty_worktrees:
+            return False
+
+        return True
 
     def add_worktree(
         self,

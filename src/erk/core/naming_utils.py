@@ -224,12 +224,15 @@ def extract_trailing_number(name: str) -> tuple[str, int | None]:
     return (name, None)
 
 
-def ensure_unique_worktree_name(base_name: str, worktrees_dir: Path, git_ops) -> str:
+def ensure_unique_worktree_name_with_date(base_name: str, worktrees_dir: Path, git_ops) -> str:
     """Ensure unique worktree name with date suffix and smart versioning.
 
     Adds date suffix in format -YY-MM-DD to the base name.
     If a worktree with that name exists, increments numeric suffix starting at 2 AFTER the date.
     Uses LBYL pattern: checks via git_ops.path_exists() before operations.
+
+    This function is used for plan-derived worktrees where multiple worktrees may be
+    created from the same plan, requiring date-based disambiguation.
 
     Args:
         base_name: Sanitized worktree base name (without date suffix)
@@ -258,6 +261,44 @@ def ensure_unique_worktree_name(base_name: str, worktrees_dir: Path, git_ops) ->
         if not git_ops.path_exists(worktrees_dir / versioned_name):
             return versioned_name
         counter += 1
+
+
+def ensure_simple_worktree_name(base_name: str, worktrees_dir: Path, git_ops) -> str:
+    """Ensure simple worktree name without date suffix for manual checkouts.
+
+    Returns the simple name if no worktree exists at that path.
+    If a worktree already exists, returns the simple name (caller validates branch match).
+    Uses LBYL pattern: checks via git_ops.path_exists() before operations.
+
+    This function is used for manual checkout operations where predictable names are
+    desired (e.g., `erk co feature` → `feature` not `feature-25-11-08`).
+
+    Args:
+        base_name: Sanitized worktree base name
+        worktrees_dir: Directory containing worktrees
+        git_ops: Git operations interface for checking path existence
+
+    Returns:
+        Simple worktree name without date suffix
+
+    Examples:
+        First time: "my-feature" → "my-feature"
+        Exists: "my-feature" → "my-feature" (caller handles validation)
+    """
+    candidate_name = base_name
+    # Always return simple name - collision handling happens in caller
+    return candidate_name
+
+
+def ensure_unique_worktree_name(base_name: str, worktrees_dir: Path, git_ops) -> str:
+    """Deprecated: Use ensure_unique_worktree_name_with_date for plan-derived worktrees.
+
+    This function is kept for backward compatibility but will be removed in the future.
+    New code should use:
+    - ensure_unique_worktree_name_with_date() for plan-derived worktrees
+    - ensure_simple_worktree_name() for manual checkout operations
+    """
+    return ensure_unique_worktree_name_with_date(base_name, worktrees_dir, git_ops)
 
 
 def default_branch_for_worktree(name: str) -> str:

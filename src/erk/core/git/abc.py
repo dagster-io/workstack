@@ -160,6 +160,18 @@ class Git(ABC):
         ...
 
     @abstractmethod
+    def is_worktree_clean(self, worktree_path: Path) -> bool:
+        """Check if worktree has no uncommitted changes, staged changes, or untracked files.
+
+        Args:
+            worktree_path: Path to the worktree to check
+
+        Returns:
+            True if worktree is clean (no uncommitted, staged, or untracked files)
+        """
+        ...
+
+    @abstractmethod
     def add_worktree(
         self,
         repo_root: Path,

@@ -15,6 +15,45 @@ from erk.core.git.abc import WorktreeInfo
 from erk.core.repo_discovery import RepoContext, ensure_repo_dir
 
 
+def try_switch_root_worktree(ctx: ErkContext, repo: RepoContext, branch: str) -> Path | None:
+    """Try to switch root worktree to branch if it's trunk and root is clean.
+
+    This implements the "takeover" behavior where checking out trunk in a clean root
+    worktree switches the root to trunk instead of creating a new dated worktree.
+
+    Args:
+        ctx: Erk context with git operations
+        repo: Repository context
+        branch: Branch name to check
+
+    Returns:
+        Root worktree path if successful, None otherwise
+    """
+    # Check if branch is trunk
+    if branch != ctx.trunk_branch:
+        return None
+
+    # Find root worktree
+    worktrees = ctx.git.list_worktrees(repo.root)
+    root_worktree = None
+    for wt in worktrees:
+        if wt.is_root:
+            root_worktree = wt
+            break
+
+    if root_worktree is None:
+        return None
+
+    # Check if root is clean
+    if not ctx.git.is_worktree_clean(root_worktree.path):
+        return None
+
+    # Switch root to trunk branch
+    ctx.git.checkout_branch(root_worktree.path, branch)
+
+    return root_worktree.path
+
+
 def _format_worktree_info(wt: WorktreeInfo, repo_root: Path) -> str:
     """Format worktree information for display.
 
@@ -187,14 +226,24 @@ def checkout_cmd(ctx: ErkContext, branch: str, script: bool) -> None:
 
     # Handle three cases: no match, one match, multiple matches
     if len(matching_worktrees) == 0:
-        # No worktrees have this branch checked out - auto-create worktree
-        _worktree_path, is_newly_created = ensure_worktree_for_branch(ctx, repo, branch)
+        # No worktrees have this branch checked out
+        # First, try switching clean root worktree if checking out trunk
+        root_path = try_switch_root_worktree(ctx, repo, branch)
+        if root_path is not None:
+            # Successfully switched root to trunk - refresh and jump to it
+            worktrees = ctx.git.list_worktrees(repo.root)
+            matching_worktrees = find_worktrees_containing_branch(ctx, repo.root, worktrees, branch)
+        else:
+            # Root not available or not trunk - auto-create worktree
+            _worktree_path, is_newly_created = ensure_worktree_for_branch(
+                ctx, repo, branch, is_plan_derived=False
+            )
 
-        # Refresh worktree list to include the newly created worktree
-        worktrees = ctx.git.list_worktrees(repo.root)
-        matching_worktrees = find_worktrees_containing_branch(ctx, repo.root, worktrees, branch)
+            # Refresh worktree list to include the newly created worktree
+            worktrees = ctx.git.list_worktrees(repo.root)
+            matching_worktrees = find_worktrees_containing_branch(ctx, repo.root, worktrees, branch)
 
-        # Fall through to jump to the newly created worktree
+        # Fall through to jump to the worktree
 
     if len(matching_worktrees) == 1:
         # Exactly one worktree contains this branch

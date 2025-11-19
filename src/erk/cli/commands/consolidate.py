@@ -342,6 +342,10 @@ def consolidate_cmd(
         if temp_branch_name is not None:
             ctx.git.delete_branch(repo.root, temp_branch_name, force=True)
 
+    # Prune stale worktree metadata after all removals
+    # (explicit call now that remove_worktree no longer auto-prunes)
+    ctx.git.prune_worktrees(repo.root)
+
     user_output(f"\n{click.style('✅ Consolidation complete', fg='green', bold=True)}")
 
     # Early return when no worktree switch (consolidating into current worktree)

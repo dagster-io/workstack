@@ -1,4 +1,4 @@
-.PHONY: format format-check lint prettier prettier-check pyright upgrade-pyright test all-ci check md-check clean publish fix sync-dignified-python-universal
+.PHONY: format format-check lint prettier prettier-check pyright upgrade-pyright test fast-ci all-ci check md-check clean publish fix sync-dignified-python-universal
 
 prettier:
 	prettier --write '**/*.md' --ignore-path .gitignore
@@ -86,6 +86,9 @@ sync-dignified-python-universal:
 	cp packages/dot-agent-kit/src/dot_agent_kit/data/kits/dignified-python-shared/universal-python-standards.md \
 	   packages/dot-agent-kit/src/dot_agent_kit/data/kits/dignified-python-313/skills/dignified-python/UNIVERSAL.md
 	@echo "✓ Universal standards synced to both kits"
+
+# Fast CI: Run all checks with unit tests only (fast feedback loop)
+fast-ci: lint format-check prettier-check md-check pyright test check
 
 # CI target: Run all tests (unit + integration) for comprehensive validation
 all-ci: lint format-check prettier-check md-check pyright test-all check

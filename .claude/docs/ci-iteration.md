@@ -1,38 +1,24 @@
----
-description: Run make all-ci and iteratively fix issues until all checks pass
----
+# CI Iteration Process
 
-You are an implementation finalizer. Your task is to run `make all-ci` and iteratively fix any issues until all CI checks pass successfully.
+This document describes the standard process for iteratively running CI checks and fixing issues until all checks pass.
 
-## Your Mission
+## Overview
 
-Run the full CI pipeline (`make all-ci`) from the repository root and automatically fix any failures. Keep iterating until all checks pass or you get stuck on an issue that requires human intervention.
+Run the specified CI target and automatically fix any failures. Keep iterating until all checks pass or you get stuck on an issue that requires human intervention.
 
 **IMPORTANT**: All `make` commands must be run from the repository root directory. The Makefile is located at the root of the repository, not in subdirectories.
-
-## CI Pipeline (make all-ci)
-
-The `make all-ci` target runs these checks in order:
-
-1. **lint** - Ruff linting checks
-2. **format** - Ruff code formatting checks
-3. **prettier-check** - Markdown formatting checks
-4. **md-check** - AGENTS.md standard compliance validation
-5. **pyright** - Type checking
-6. **test** - Pytest test suite
-7. **sync-kit** - Kit synchronization validation
 
 ## Iteration Process
 
 ### 1. Initial Run
 
-Start by using the devrun agent to run `make all-ci` from the repository root and see the current state. Use the Task tool to invoke the devrun agent:
+Start by using the devrun agent to run the specified make target from the repository root and see the current state. Use the Task tool to invoke the devrun agent:
 
 ```
 Task tool with:
 - subagent_type: devrun
-- description: "Run make all-ci from repo root"
-- prompt: "Change to repository root and execute: make all-ci"
+- description: "Run [make target] from repo root"
+- prompt: "Change to repository root and execute: [make target]"
 ```
 
 The devrun agent will automatically handle running the command from the correct directory.
@@ -117,13 +103,13 @@ AGENTS.md standard violations occur when CLAUDE.md files don't properly referenc
 
 ### 4. Verify Fix
 
-After applying fixes, use the devrun agent to run `make all-ci` again to verify:
+After applying fixes, use the devrun agent to run the make target again to verify:
 
 ```
 Task tool with:
 - subagent_type: devrun
-- description: "Run make all-ci from repo root"
-- prompt: "Change to repository root and execute: make all-ci"
+- description: "Run [make target] from repo root"
+- prompt: "Change to repository root and execute: [make target]"
 ```
 
 ### 5. Repeat Until Success
@@ -153,7 +139,7 @@ Update the status as you work through each iteration.
 
 ## When to Stop
 
-**SUCCESS**: Stop when `make all-ci` exits with code 0 (all checks passed)
+**SUCCESS**: Stop when the make target exits with code 0 (all checks passed)
 
 **STUCK**: Stop and report to user if:
 
@@ -218,7 +204,7 @@ The code is ready for commit/PR.
 ## Important Guidelines
 
 1. **Be systematic**: Fix one type of error at a time
-2. **Run full CI**: Always run full `make all-ci`, not individual checks
+2. **Run full CI**: Always run the full make target, not individual checks
 3. **Use devrun agent**: Always use the Task tool with devrun agent for ALL make commands
 4. **Run from repo root**: Always ensure make commands execute from repository root
 5. **Track progress**: Use TodoWrite for every iteration
@@ -231,19 +217,19 @@ The code is ready for commit/PR.
 
 ```
 Iteration 1:
-- Use Task tool with devrun agent to run make all-ci from repo root
+- Use Task tool with devrun agent to run make target from repo root
 - Found: 5 lint errors, 2 files need formatting
 - Fix: Use Task tool with devrun agent to run make fix, then make format from repo root
 - Result: 3 lint errors remain
 
 Iteration 2:
-- Use Task tool with devrun agent to run make all-ci from repo root
+- Use Task tool with devrun agent to run make target from repo root
 - Found: 3 lint errors (imports)
 - Fix: Edit files to fix import issues
 - Result: All lint/format pass, 2 type errors
 
 Iteration 3:
-- Use Task tool with devrun agent to run make all-ci from repo root
+- Use Task tool with devrun agent to run make target from repo root
 - Found: 2 pyright errors in switch.py:45 and switch.py:67
 - Fix: Add type annotations
 - Result: All checks pass
@@ -251,11 +237,7 @@ Iteration 3:
 SUCCESS
 ```
 
-## Begin Now
-
-Start by using the Task tool with the devrun agent to run `make all-ci` from the repository root and begin the iterative fix process. Track your progress with TodoWrite and report your final status clearly.
-
-**Remember**:
+## Important Reminders
 
 - NEVER run pytest/pyright/ruff/prettier/make/gt directly via Bash
 - Always use the Task tool with subagent_type: devrun

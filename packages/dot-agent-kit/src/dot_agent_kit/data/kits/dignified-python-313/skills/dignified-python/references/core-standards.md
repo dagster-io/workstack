@@ -329,7 +329,9 @@ class FakeStore(DataStore):
 
 ### Module-Level Imports
 
-**ALWAYS place imports at module level, NEVER inline**
+**Default: ALWAYS place imports at module level**
+
+Inline imports (imports inside functions or methods) should only be used in specific exceptional cases (see "Legitimate Inline Import Patterns" below for when exceptions apply).
 
 ```python
 # ✅ CORRECT: Module-level imports
@@ -350,27 +352,259 @@ def my_function() -> None:
     data = json.loads(content)
 ```
 
-### Acceptable Inline Import Exceptions
+### Legitimate Inline Import Patterns
 
-#### 1. Circular Dependency Resolution
+While imports should generally be at module level, inline imports ARE acceptable in these specific cases:
+
+#### 1. Circular Import Prevention
+
+When module A imports module B and module B imports module A, inline imports break the cycle.
+
+**Pattern:**
 
 ```python
-# ✅ ACCEPTABLE: Breaking circular import
-def process_user(user_id: int) -> None:
-    # Circular import: user.py imports processor.py
-    from .user import User
-    user = User.get(user_id)
+# commands/sync.py
+def register_commands(cli_group):
+    """Register commands with CLI group (avoids circular import with main CLI entry)."""
+    from myapp.cli import sync_command
+    cli_group.add_command(sync_command)
 ```
 
-#### 2. Performance Optimization
+**When to use:**
+
+- CLI command registration to avoid circular dependencies
+- Plugin systems with bidirectional dependencies
+- Lazy loading of modules that would create import cycles
+
+**Documentation guideline:** SHOULD include comment explaining the circular dependency
+
+#### 2. Conditional Feature Imports
+
+When code is only needed for specific runtime conditions (flags, modes, features).
+
+**Pattern:**
 
 ```python
-# ✅ ACCEPTABLE: Expensive import deferred
+def process_data(data: dict, dry_run: bool = False) -> None:
+    if dry_run:
+        # Inline import: Only needed for dry-run mode, avoids loading in normal mode
+        from myapp.dry_run import NoopProcessor
+        processor = NoopProcessor()
+    else:
+        processor = RealProcessor()
+    processor.execute(data)
+```
+
+**When to use:**
+
+- Debug/verbose mode utilities
+- Dry-run mode wrappers
+- Optional feature modules
+- Platform-specific implementations
+
+**Documentation guideline:** SHOULD include comment explaining when import is needed
+
+#### 3. TYPE_CHECKING Imports
+
+For forward references and type annotations that would create circular imports.
+
+**Pattern:**
+
+```python
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from myapp.models import User
+
+def process_user(user: "User") -> None:
+    ...
+```
+
+**When to use:**
+
+- Type annotations that would create circular imports
+- Expensive modules only needed for type checking
+- Forward references to not-yet-defined types
+
+**Documentation guideline:** No comment needed (standard Python pattern)
+
+#### 4. Performance Optimization (Use Sparingly)
+
+For truly expensive imports that would slow down application startup.
+
+**Pattern:**
+
+```python
 def analyze_data(data: dict) -> Report:
-    """Analyze data using heavy ML library."""
-    import tensorflow as tf  # 30+ second import time
+    # Inline import: tensorflow takes 30+ seconds to load, only used for ML analysis
+    import tensorflow as tf
     model = tf.load_model("model.h5")
     return model.predict(data)
+```
+
+**When to use:**
+
+- ML libraries with 10+ second import times
+- Large data processing modules
+- Module initialization triggers expensive operations
+
+**Documentation guideline:** MUST include comment with measured import time
+
+#### 5. Test-Only Utilities
+
+Test-specific imports inside test functions.
+
+**Pattern:**
+
+```python
+def test_api_endpoint():
+    # Test infrastructure import
+    from myapp.testing import create_mock_client
+    client = create_mock_client()
+    assert client.get("/health") == 200
+```
+
+**When to use:**
+
+- Test fixtures and helpers
+- Mocking utilities
+- Test data generators
+
+**Documentation guideline:** Optional (common test pattern)
+
+### Documentation Guideline for Inline Imports
+
+**Recommendation (SHOULD):** Add explanatory comment for inline imports
+
+While not strictly required, comments help maintain code clarity and prevent confusion about whether an inline import is intentional or poor organization.
+
+**Comment format:**
+
+```python
+if feature_enabled:
+    # Inline import: Only needed for optional feature, avoids loading in normal mode
+    from myapp.features import advanced_processor
+```
+
+**What to include:**
+
+1. **WHY** the import is inline (circular dependency? performance? conditional?)
+2. **WHEN** the code path is executed (what triggers this import?)
+
+**Examples:**
+
+✅ **Good documentation:**
+
+```python
+def analyze_data(data: dict) -> Report:
+    # Inline import: tensorflow takes 30+ seconds to load, only used for ML analysis
+    import tensorflow as tf
+    return tf.process(data)
+```
+
+❌ **Poor documentation:**
+
+```python
+def analyze_data(data: dict) -> Report:
+    import tensorflow  # ML stuff
+    return tensorflow.process(data)
+```
+
+⚠️ **No documentation (acceptable for obvious cases):**
+
+```python
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from myapp.models import User  # Standard pattern, self-explanatory
+```
+
+### Decision Tree: Should This Be an Inline Import?
+
+Use this quick flowchart to determine if inline import is justified:
+
+```
+Is the import...
+
+1. Using TYPE_CHECKING for type annotations?
+   YES → ✅ Inline OK (standard Python pattern)
+   NO → Continue to question 2
+
+2. Causing a circular import if moved to module level?
+   YES → ✅ Inline OK (document why)
+   NO → Continue to question 3
+
+3. Only needed when specific flag/condition is true?
+   YES → ✅ Inline OK (document when used)
+   NO → Continue to question 4
+
+4. Expensive (>5 seconds) and rarely used?
+   YES → ✅ Inline OK (document measured time)
+   NO → Continue to question 5
+
+5. Inside a test function?
+   YES → ✅ Inline OK (test infrastructure)
+   NO → ❌ Move to module level
+```
+
+**Default stance:** If none of the above apply, the import should be at module level.
+
+### Anti-Patterns: When Inline Imports Are Wrong
+
+#### 1. Hiding Import Costs Without Benefit
+
+❌ **WRONG - Inline import of fast-loading standard library:**
+
+```python
+def format_date(dt):
+    import datetime  # Why? datetime loads in milliseconds
+    return datetime.strftime(dt, "%Y-%m-%d")
+```
+
+✅ **CORRECT - Module-level import:**
+
+```python
+import datetime
+
+def format_date(dt):
+    return datetime.strftime(dt, "%Y-%m-%d")
+```
+
+#### 2. Patching Poor Module Organization
+
+❌ **WRONG - Using inline import to avoid refactoring circular dependency:**
+
+```python
+# models.py imports utils.py imports models.py
+def helper_function():
+    from .models import User  # Band-aid for circular import
+    return User.query.all()
+```
+
+✅ **CORRECT - Refactor to break circular dependency:**
+
+```python
+# Extract shared code to separate module
+# Or use dependency injection
+# Or restructure module boundaries
+```
+
+#### 3. Conditional Import Without Clear Condition
+
+❌ **WRONG - Inline import without runtime condition:**
+
+```python
+def process_data(data):
+    from myapp.processor import DataProcessor  # Why inline?
+    return DataProcessor().process(data)
+```
+
+✅ **CORRECT - Module-level import when always needed:**
+
+```python
+from myapp.processor import DataProcessor
+
+def process_data(data):
+    return DataProcessor().process(data)
 ```
 
 ### Absolute vs Relative Imports

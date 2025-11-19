@@ -361,6 +361,7 @@ While imports should generally be at module level, inline imports ARE acceptable
 When module A imports module B and module B imports module A, inline imports break the cycle.
 
 **Pattern:**
+
 ```python
 # commands/sync.py
 def register_commands(cli_group):
@@ -370,6 +371,7 @@ def register_commands(cli_group):
 ```
 
 **When to use:**
+
 - CLI command registration to avoid circular dependencies
 - Plugin systems with bidirectional dependencies
 - Lazy loading of modules that would create import cycles
@@ -381,6 +383,7 @@ def register_commands(cli_group):
 When code is only needed for specific runtime conditions (flags, modes, features).
 
 **Pattern:**
+
 ```python
 def process_data(data: dict, dry_run: bool = False) -> None:
     if dry_run:
@@ -393,6 +396,7 @@ def process_data(data: dict, dry_run: bool = False) -> None:
 ```
 
 **When to use:**
+
 - Debug/verbose mode utilities
 - Dry-run mode wrappers
 - Optional feature modules
@@ -405,6 +409,7 @@ def process_data(data: dict, dry_run: bool = False) -> None:
 For forward references and type annotations that would create circular imports.
 
 **Pattern:**
+
 ```python
 from typing import TYPE_CHECKING
 
@@ -416,6 +421,7 @@ def process_user(user: "User") -> None:
 ```
 
 **When to use:**
+
 - Type annotations that would create circular imports
 - Expensive modules only needed for type checking
 - Forward references to not-yet-defined types
@@ -427,6 +433,7 @@ def process_user(user: "User") -> None:
 For truly expensive imports that would slow down application startup.
 
 **Pattern:**
+
 ```python
 def analyze_data(data: dict) -> Report:
     # Inline import: tensorflow takes 30+ seconds to load, only used for ML analysis
@@ -436,6 +443,7 @@ def analyze_data(data: dict) -> Report:
 ```
 
 **When to use:**
+
 - ML libraries with 10+ second import times
 - Large data processing modules
 - Module initialization triggers expensive operations
@@ -447,6 +455,7 @@ def analyze_data(data: dict) -> Report:
 Test-specific imports inside test functions.
 
 **Pattern:**
+
 ```python
 def test_api_endpoint():
     # Test infrastructure import
@@ -456,6 +465,7 @@ def test_api_endpoint():
 ```
 
 **When to use:**
+
 - Test fixtures and helpers
 - Mocking utilities
 - Test data generators
@@ -469,6 +479,7 @@ def test_api_endpoint():
 While not strictly required, comments help maintain code clarity and prevent confusion about whether an inline import is intentional or poor organization.
 
 **Comment format:**
+
 ```python
 if feature_enabled:
     # Inline import: Only needed for optional feature, avoids loading in normal mode
@@ -476,12 +487,14 @@ if feature_enabled:
 ```
 
 **What to include:**
+
 1. **WHY** the import is inline (circular dependency? performance? conditional?)
 2. **WHEN** the code path is executed (what triggers this import?)
 
 **Examples:**
 
 ✅ **Good documentation:**
+
 ```python
 def analyze_data(data: dict) -> Report:
     # Inline import: tensorflow takes 30+ seconds to load, only used for ML analysis
@@ -490,6 +503,7 @@ def analyze_data(data: dict) -> Report:
 ```
 
 ❌ **Poor documentation:**
+
 ```python
 def analyze_data(data: dict) -> Report:
     import tensorflow  # ML stuff
@@ -497,6 +511,7 @@ def analyze_data(data: dict) -> Report:
 ```
 
 ⚠️ **No documentation (acceptable for obvious cases):**
+
 ```python
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -538,6 +553,7 @@ Is the import...
 #### 1. Hiding Import Costs Without Benefit
 
 ❌ **WRONG - Inline import of fast-loading standard library:**
+
 ```python
 def format_date(dt):
     import datetime  # Why? datetime loads in milliseconds
@@ -545,6 +561,7 @@ def format_date(dt):
 ```
 
 ✅ **CORRECT - Module-level import:**
+
 ```python
 import datetime
 
@@ -555,6 +572,7 @@ def format_date(dt):
 #### 2. Patching Poor Module Organization
 
 ❌ **WRONG - Using inline import to avoid refactoring circular dependency:**
+
 ```python
 # models.py imports utils.py imports models.py
 def helper_function():
@@ -563,6 +581,7 @@ def helper_function():
 ```
 
 ✅ **CORRECT - Refactor to break circular dependency:**
+
 ```python
 # Extract shared code to separate module
 # Or use dependency injection
@@ -572,6 +591,7 @@ def helper_function():
 #### 3. Conditional Import Without Clear Condition
 
 ❌ **WRONG - Inline import without runtime condition:**
+
 ```python
 def process_data(data):
     from myapp.processor import DataProcessor  # Why inline?
@@ -579,6 +599,7 @@ def process_data(data):
 ```
 
 ✅ **CORRECT - Module-level import when always needed:**
+
 ```python
 from myapp.processor import DataProcessor
 

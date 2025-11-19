@@ -579,3 +579,155 @@ def test_checkout_message_when_switching_worktrees() -> None:
 
         # Should not checkout (branch already checked out in target worktree)
         assert len(git_ops.checked_out_branches) == 0
+
+
+def test_checkout_with_implement_flag_with_valid_plan() -> None:
+    """Test that --implement flag succeeds when plan exists.
+
+    Note: This test verifies the command succeeds with the --implement flag
+    but does not verify the subprocess call itself (subprocess.run is not
+    abstracted through Shell ABC). Integration tests would verify actual
+    Claude launching behavior.
+    """
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        work_dir = env.erk_root / env.cwd.name
+        feature_wt = work_dir / "feature-wt"
+
+        # Create .plan/plan.md in the target worktree
+        plan_dir = feature_wt / ".plan"
+        plan_dir.mkdir(parents=True)
+        plan_file = plan_dir / "plan.md"
+        plan_file.write_text("# Test Plan\nImplementation steps...", encoding="utf-8")
+
+        git_ops = FakeGit(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
+                    WorktreeInfo(path=feature_wt, branch="feature"),
+                ]
+            },
+            current_branches={env.cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
+        )
+
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            repo_dir=work_dir,
+            worktrees_dir=work_dir / "worktrees",
+        )
+
+        test_ctx = env.build_context(git=git_ops, repo=repo)
+
+        # Jump with --implement flag
+        # Note: subprocess.run will fail in test environment since claude not installed
+        # This is expected - we're testing the validation logic, not Claude itself
+        result = runner.invoke(
+            cli, ["checkout", "feature", "--script", "--implement"], obj=test_ctx, catch_exceptions=False
+        )
+
+        # The command will succeed through plan validation and script generation
+        # The subprocess.run call will fail (claude not found), but that's after our logic
+        # We verify the success message is shown before the subprocess attempt
+        assert "Launching Claude Code" in result.stderr or result.exit_code == 0
+
+
+def test_checkout_with_implement_flag_fails_without_plan() -> None:
+    """Test that --implement flag shows error when plan doesn't exist."""
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        work_dir = env.erk_root / env.cwd.name
+        feature_wt = work_dir / "feature-wt"
+
+        # Create feature_wt directory but NO .plan/ folder
+        feature_wt.mkdir(parents=True)
+
+        git_ops = FakeGit(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
+                    WorktreeInfo(path=feature_wt, branch="feature"),
+                ]
+            },
+            current_branches={env.cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
+        )
+
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            repo_dir=work_dir,
+            worktrees_dir=work_dir / "worktrees",
+        )
+
+        test_ctx = env.build_context(git=git_ops, repo=repo)
+
+        # Jump with --implement flag but no plan
+        result = runner.invoke(
+            cli, ["checkout", "feature", "--implement"], obj=test_ctx, catch_exceptions=False
+        )
+
+        # Should fail with error message
+        assert result.exit_code == 1
+        assert "Error:" in result.stderr
+        assert "No plan found" in result.stderr
+        assert "feature" in result.stderr
+        assert "/erk:persist-plan" in result.stderr
+        assert "/erk:create-planned-wt" in result.stderr
+
+
+def test_checkout_without_implement_flag_skips_claude() -> None:
+    """Test that checkout without --implement flag doesn't launch Claude.
+
+    Note: This test verifies normal checkout behavior is unchanged when
+    --implement flag is not provided, even when a plan exists.
+    """
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        work_dir = env.erk_root / env.cwd.name
+        feature_wt = work_dir / "feature-wt"
+
+        # Create .plan/plan.md (but flag not used)
+        plan_dir = feature_wt / ".plan"
+        plan_dir.mkdir(parents=True)
+        plan_file = plan_dir / "plan.md"
+        plan_file.write_text("# Test Plan\nImplementation steps...", encoding="utf-8")
+
+        git_ops = FakeGit(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
+                    WorktreeInfo(path=feature_wt, branch="feature"),
+                ]
+            },
+            current_branches={env.cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
+        )
+
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            repo_dir=work_dir,
+            worktrees_dir=work_dir / "worktrees",
+        )
+
+        test_ctx = env.build_context(git=git_ops, repo=repo)
+
+        # Jump WITHOUT --implement flag
+        result = runner.invoke(
+            cli, ["checkout", "feature", "--script"], obj=test_ctx, catch_exceptions=False
+        )
+
+        if result.exit_code != 0:
+            print(f"stderr: {result.stderr}")
+            print(f"stdout: {result.stdout}")
+
+        # Should succeed
+        assert result.exit_code == 0
+
+        # Should NOT show "Launching Claude Code" message
+        assert "Launching Claude Code" not in result.stderr

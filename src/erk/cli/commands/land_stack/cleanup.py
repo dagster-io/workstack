@@ -140,7 +140,7 @@ def _cleanup_and_navigate(
     final_path = repo_root
 
     # Step 2: Inform user about manual cleanup
-    _emit("  ℹ️  Run 'gt sync -f' to remove worktrees for merged branches", script_mode=script_mode)
+    _emit("  ℹ️  Run 'erk sync -f' to remove worktrees for merged branches", script_mode=script_mode)
 
     # Step 3: Navigate to next branch or stay on trunk
     # If last merged branch had unmerged children, navigate to one of them

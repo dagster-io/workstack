@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv run python:*)",
+      "Bash(python:*)"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "*.py",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "DOT_AGENT_KIT_ID=dignified-python-313 DOT_AGENT_HOOK_ID=dignified-python-reminder-hook dot-agent run dignified-python-313 dignified-python-reminder-hook",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "DOT_AGENT_KIT_ID=fake-driven-testing DOT_AGENT_HOOK_ID=fake-driven-testing-reminder-hook dot-agent run fake-driven-testing fake-driven-testing-reminder-hook",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "*(pytest|pyright|ruff|prettier|make|gt|uv|npm|docker|yarn|pip|fast-ci|all-ci|test|lint|format)*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "DOT_AGENT_KIT_ID=devrun DOT_AGENT_HOOK_ID=devrun-reminder-hook dot-agent run devrun devrun-reminder-hook",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -306,6 +306,76 @@ When renaming a hook (e.g., `compliance-reminder-hook` → `dignified-python-rem
 - File: `my_reminder_hook.py`
 - Function: `def my_reminder_hook()`
 
+### ⚠️ CRITICAL: Editing Hook Matchers
+
+**WARNING**: DO NOT edit `.claude/settings.json` directly to change hook matchers! These changes will be lost when `dot-agent kit sync` is run.
+
+#### The Problem
+
+When you edit `.claude/settings.json` directly:
+
+1. Your changes appear to work temporarily
+2. Running `uv run dot-agent kit sync` overwrites your changes
+3. The matcher reverts to the original pattern from the kit source
+
+#### The Correct Way to Edit Hook Matchers
+
+To permanently change a hook matcher pattern, you MUST edit the kit source:
+
+1. **Locate the kit source file**:
+
+   ```
+   packages/dot-agent-kit/src/dot_agent_kit/data/kits/{kit-name}/kit.yaml
+   ```
+
+2. **Edit the matcher in the hooks section**:
+
+   ```yaml
+   hooks:
+     - id: { hook-name }
+       lifecycle: UserPromptSubmit
+       matcher: "your-new-pattern" # ← Edit this line
+       invocation: dot-agent run {kit-name} {hook-name}
+       description: Hook description
+       timeout: 30
+   ```
+
+3. **Apply the changes**:
+
+   ```bash
+   # Sync kits to apply the new configuration
+   uv run dot-agent kit sync --force
+
+   # Verify the change in settings.json
+   jq '.hooks.UserPromptSubmit[].matcher' .claude/settings.json
+   ```
+
+#### Example: Optimizing Token Usage
+
+A real-world example of why this matters:
+
+**Problem**: The devrun hook with `matcher: "*"` fired on every message, consuming ~10,000 extra tokens per conversation.
+
+**Solution**: Changed the matcher to only fire when dev tools are mentioned:
+
+```yaml
+# In packages/dot-agent-kit/src/dot_agent_kit/data/kits/devrun/kit.yaml
+hooks:
+  - id: devrun-reminder-hook
+    lifecycle: UserPromptSubmit
+    matcher: "*(pytest|pyright|ruff|prettier|make|gt)*" # Only fires for dev tools
+    # Previously: matcher: "*"  # Fired on EVERY message
+```
+
+**Result**: 60% reduction in token usage (17,000 → 7,000 tokens per conversation start).
+
+#### Key Points
+
+- **`.claude/settings.json` is generated**, not a source file
+- **`kit.yaml` is the source of truth** for hook configuration
+- **Always edit the kit source** for permanent changes
+- **Run `kit sync`** to apply changes from source to settings
+
 ## Hook Configuration
 
 ### Lifecycle Events
@@ -413,6 +483,14 @@ Hooks from different kits can work together:
 2. `.claude/settings.json` contains hook configuration
 3. Matcher pattern matches current context
 4. No syntax errors in hook script
+
+### Hook Changes Lost After Kit Sync
+
+**Problem**: You edited `.claude/settings.json` to change a hook matcher, but the changes were lost after running `dot-agent kit sync`.
+
+**Cause**: `.claude/settings.json` is generated from kit source files, not meant to be edited directly.
+
+**Solution**: Edit the kit source at `packages/dot-agent-kit/src/dot_agent_kit/data/kits/{kit-name}/kit.yaml` instead. See [CRITICAL: Editing Hook Matchers](#-critical-editing-hook-matchers) section above.
 
 ### Installation Issues
 

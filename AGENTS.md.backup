@@ -15,32 +15,11 @@
 
 **NOTE: `.plan/` folders are NOT tracked in git and should never be committed**
 
-**NOTE: `.submission/` folders ARE tracked in git as signals for remote AI implementation**
-
-## .submission/ Folder Protocol
-
-**Purpose:** Signal for remote AI implementation via GitHub Actions
-
-**Workflow:**
-
-1. Create worktree with `/erk:create-planned-wt` (creates .plan/)
-2. Run `erk submit` to copy .plan/ to .submission/
-3. GitHub Actions detects .submission/ and runs implementation
-4. .submission/ is auto-deleted after completion
-
-**Key differences from .plan/:**
-
-- `.plan/` = Local implementation tracking (NOT git-tracked)
-- `.submission/` = Remote submission signal (git-tracked, ephemeral)
-
-**Important:** `.submission/` folders should NOT be added to .gitignore. They are meant to be committed as a signal to GitHub Actions.
-
----
-
 | If you're about to write...                                      | STOP! Check this instead                                                                             |
 | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | Writing or editing Python code                                   | → **🔴 LOAD dignified-python skill FIRST** - Complete LBYL philosophy (checklist rules are excerpts) |
 | `try:` or `except:`                                              | → [Exception Handling](#exception-handling) - Default: let exceptions bubble                         |
+| `from __future__ import annotations`                             | → **FORBIDDEN** - Python 3.13+ doesn't need it                                                       |
 | `List[...]`, `Dict[...]`, `Union[...]`                           | → Use `list[...]`, `dict[...]`, `X \| Y`                                                             |
 | `typing.Protocol`                                                | → Use `abc.ABC` instead                                                                              |
 | `dict[key]` without checking                                     | → Use `if key in dict:` or `.get()`                                                                  |
@@ -48,8 +27,8 @@
 | Function with default argument                                   | → Make explicit at call sites                                                                        |
 | `from .module import`                                            | → Use absolute imports only                                                                          |
 | `print(...)` in CLI code                                         | → Use `click.echo()`                                                                                 |
-| `subprocess.run(..., check=True)`                                | → Use `run_subprocess_with_context()` from erk.core.subprocess for rich errors                       |
-| Creating or executing implementation plans                       | → Use /erk:persist-plan, /erk:create-planned-wt, /erk:implement-plan, erk submit                     |
+| `subprocess.run(...)`                                            | → Add `check=True`                                                                                   |
+| Creating or executing implementation plans                       | → Use /erk:persist-plan, /erk:create-planned-wt, /erk:implement-plan                                 |
 | Submitting a branch with Graphite                                | → Use /gt:submit-branch command (delegates to gt-branch-submitter agent)                             |
 | Updating an existing PR                                          | → Use /gt:update-pr command                                                                          |
 | Systematic Python changes (migrate calls, rename, batch updates) | → Use libcst-refactor agent (Task tool); for multi-file transformations                              |
@@ -61,23 +40,16 @@
 | Creating `.claude/` artifacts                                    | → Use `kebab-case` (hyphens) NOT `snake_case` (underscores)                                          |
 | `Path("/test/...")` or hardcoded paths                           | → **CATASTROPHIC** - Use `pure_erk_env` fixture - [Test Isolation](#6-test-isolation--must)          |
 | Writing or modifying tests                                       | → **🔴 LOAD fake-driven-testing skill FIRST** - Test patterns, architecture, anti-patterns           |
-| Test that invokes subprocess or uses `time.sleep()`              | → **MUST** be integration test - [Test Categorization](#test-categorization-rules)                   |
-| Creating or modifying hooks                                      | → [Hook Guide](docs/agent/hooks.md)                                                                  |
-| Kit CLI commands that call Claude (preprocessing, discovery)     | → [Kit CLI Standards](docs/agent/kit-cli-commands.md) - Python reduces tokens, LLM does inference    |
-| Creating command that orchestrates workflow                      | → [Command-Agent Delegation](docs/agent/command-agent-delegation.md) - When/how to delegate          |
 | ⚠️ Python patterns above                                         | → These are EXCERPTS ONLY - Load dignified-python skill for complete guidance                        |
 
 ## 📚 Quick Reference
 
-| Need help with...            | See documentation                                                                |
-| ---------------------------- | -------------------------------------------------------------------------------- |
-| **Python standards**         | **🔴 LOAD dignified-python skill FIRST** - Checklist rules are excerpts only     |
-| **Project terms**            | [docs/agent/glossary.md](docs/agent/glossary.md)                                 |
-| **Documentation nav**        | [docs/agent/guide.md](docs/agent/guide.md)                                       |
-| **Testing patterns**         | [docs/agent/testing.md](docs/agent/testing.md)                                   |
-| **Hooks**                    | [docs/agent/hooks.md](docs/agent/hooks.md)                                       |
-| **Kit CLI commands**         | [docs/agent/kit-cli-commands.md](docs/agent/kit-cli-commands.md)                 |
-| **Command-agent delegation** | [docs/agent/command-agent-delegation.md](docs/agent/command-agent-delegation.md) |
+| Need help with...     | See documentation                                                            |
+| --------------------- | ---------------------------------------------------------------------------- |
+| **Python standards**  | **🔴 LOAD dignified-python skill FIRST** - Checklist rules are excerpts only |
+| **Project terms**     | [docs/agent/glossary.md](docs/agent/glossary.md)                             |
+| **Documentation nav** | [docs/agent/guide.md](docs/agent/guide.md)                                   |
+| **Testing patterns**  | [docs/agent/testing.md](docs/agent/testing.md)                               |
 
 ## Documentation Structure
 
@@ -144,14 +116,12 @@ else:
 
 ### 2. Type Annotations 🔴 MUST
 
-**Use modern Python type syntax (available in Python 3.10+)**
+**Use Python 3.13+ syntax. NO `from __future__ import annotations`**
 
 ```python
 # ✅ CORRECT: list[str], dict[str, Any], str | None
 # ❌ WRONG: List[str], Dict[str, Any], Optional[str]
 ```
-
-**Note:** `from __future__ import annotations` usage is version-specific. Consult the dignified-python skill for your Python version.
 
 ### 3. Path Operations 🔴 MUST
 
@@ -241,22 +211,15 @@ The checklist above contains quick-reference excerpts of Python rules. **This is
 - Anti-patterns and code smells from production systems (Dagster Labs)
 - Progressive disclosure with detailed references
 - Unified philosophy connecting all the rules
-- Version-appropriate type annotation guidance
-
-**Selecting the right skill version:**
-
-The dignified-python skill is available for Python 3.10, 3.11, 3.12, and 3.13. Each version provides guidance specific to that Python version:
-
-- **Python 3.10**: Modern type syntax with `from __future__ import annotations` when needed
-- **Python 3.11**: Adds `Self` type for method chaining
-- **Python 3.12**: Adds PEP 695 type parameter syntax (`def func[T](x: T) -> T`)
-- **Python 3.13**: All modern syntax without `from __future__ import`
-
-To load the skill:
 
 ```python
+# ❌ WRONG: Following checklist rules without loading skill
+# You implement code based only on checklist excerpts
+# Missing: WHY behind rules, anti-patterns, unified philosophy
+
+# ✅ CORRECT: Load skill first
 # Use Skill tool with command: "dignified-python"
-# The skill will match the installed kit version for this project
+# Then implement code with complete understanding
 ```
 
 **WHY this matters:**
@@ -265,7 +228,6 @@ To load the skill:
 - The checklist shows WHAT to do, the skill explains WHY
 - Anti-patterns and code smells prevent specific production bugs
 - Progressive disclosure provides references when you need deeper guidance
-- Version-specific guidance ensures you use appropriate syntax
 
 **Note**: The rules in this document are NOT sufficient on their own. Always load the skill.
 
@@ -307,56 +269,6 @@ Task(
 - ANY time you need to run one of these tools
 - With or without `uv run` prefix
 - For single commands or CI workflows (like `/ensure-ci`)
-
-### 9. Subprocess Execution 🔴 MUST
-
-**NEVER use bare `subprocess.run(..., check=True)`. ALWAYS use wrapper functions.**
-
-**For integration layer (raises exceptions):**
-
-```python
-from erk.core.subprocess import run_subprocess_with_context
-
-# ✅ CORRECT: Rich error context with stderr
-result = run_subprocess_with_context(
-    ["git", "worktree", "add", str(path), branch],
-    operation_context=f"add worktree for branch '{branch}' at {path}",
-    cwd=repo_root,
-)
-```
-
-**For CLI layer (user-friendly output):**
-
-```python
-from erk.cli.subprocess_utils import run_with_error_reporting
-
-# ✅ CORRECT: User-friendly error messages + SystemExit
-run_with_error_reporting(
-    ["gh", "pr", "view", str(pr_number)],
-    operation_context="view pull request",
-    cwd=repo_root,
-)
-```
-
-**WHY this matters:**
-
-- **Rich error messages**: Includes operation context, command, exit code, stderr
-- **Exception chaining**: Preserves original CalledProcessError for debugging
-- **Consistent patterns**: Two-layer design (integration vs CLI boundaries)
-
-**Two-layer pattern:**
-
-- `run_subprocess_with_context()` - Integration layer (raises RuntimeError)
-- `run_with_error_reporting()` - CLI layer (prints message, raises SystemExit)
-
-**DO NOT migrate check=False LBYL patterns:**
-
-```python
-# ✅ CORRECT: Intentional LBYL pattern (keep as-is)
-result = subprocess.run(cmd, check=False, capture_output=True, text=True)
-if result.returncode != 0:
-    return None  # Graceful degradation
-```
 
 ---
 
@@ -413,7 +325,7 @@ Given stack: `main → feat-1 → feat-2 → feat-3`
 
 ### Python Requirements
 
-- **Version**: Python 3.10 or higher
+- **Version**: Python 3.13+ only
 - **Type checking**: `uv run pyright` (must pass)
 - **Formatting**: `uv run ruff format` (100 char lines)
 
@@ -686,67 +598,6 @@ def test_new_feature_im_building_today():
 - Use Click's `CliRunner` for command tests (NOT subprocess)
 - Only use subprocess for true end-to-end tests
 - See [docs/agent/testing.md#cli-testing-patterns](docs/agent/testing.md#cli-testing-patterns) for detailed patterns and performance comparison
-
-#### Test Categorization Rules
-
-🔴 **CRITICAL: A test MUST be categorized as an integration test if:**
-
-1. **It invokes a subprocess** - Any test that calls `subprocess.run()`, `subprocess.Popen()`, or similar
-2. **It uses `time.sleep()`** - Tests that rely on actual timing delays (must use mocking or DI instead)
-3. **It performs extensive real filesystem I/O** - Tests that interact with external filesystem locations, create many files, or depend on actual filesystem behavior (limited file I/O with `isolated_filesystem()` or `tmp_path` in unit tests is acceptable)
-4. **It tests subprocess boundaries** - Tests validating that abstraction layers correctly wrap external tools
-
-**Location rules:**
-
-- **Unit tests** → `tests/unit/`, `tests/commands/`, `tests/core/`
-  - Use fakes (FakeGit, FakeShell, etc.)
-  - Use `CliRunner` (NOT subprocess)
-  - No `time.sleep()` calls
-  - Fast, in-memory execution
-
-- **Integration tests** → `tests/integration/`
-  - Use real implementations (RealGit, etc.)
-  - May invoke subprocess calls
-  - May use `tmp_path` fixture for real directories
-  - Slower, tests external tool integration
-
-**Examples:**
-
-```python
-# ❌ WRONG - Unit test location with subprocess call
-# Located in tests/commands/test_sync.py
-def test_sync_calls_git() -> None:
-    result = subprocess.run(["git", "fetch"], capture_output=True)
-    # This MUST be moved to tests/integration/
-
-# ❌ WRONG - Unit test with time.sleep()
-# Located in tests/unit/test_retry.py
-def test_retry_with_backoff() -> None:
-    time.sleep(0.5)  # Actual delay
-    # This MUST be moved to tests/integration/ OR use mocking
-
-# ✅ CORRECT - Integration test with subprocess
-# Located in tests/integration/test_real_git.py
-def test_real_git_fetch(tmp_path: Path) -> None:
-    result = subprocess.run(["git", "fetch"], cwd=tmp_path, capture_output=True)
-    assert result.returncode == 0
-
-# ✅ CORRECT - Unit test with mocked sleep
-# Located in tests/unit/test_retry.py
-def test_retry_with_backoff(monkeypatch) -> None:
-    mock_sleep = Mock()
-    monkeypatch.setattr("time.sleep", mock_sleep)
-    # Test logic without actual delay
-```
-
-**Why this matters:**
-
-- **CI performance**: Unit tests must remain fast (<2s total) for quick feedback
-- **Test reliability**: Subprocess calls can fail due to environment differences
-- **Parallel execution**: Tests with subprocesses may have race conditions
-- **Resource usage**: Subprocess tests consume more system resources
-
-**If you're unsure:** Default to integration test. It's safer to categorize a test as integration than to slow down the unit test suite.
 
 **See**: [docs/agent/testing.md](docs/agent/testing.md) for comprehensive testing guidance.
 

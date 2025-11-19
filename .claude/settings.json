@@ -25,7 +25,7 @@
         ]
       },
       {
-        "matcher": "*",
+        "matcher": "*(pytest|pyright|ruff|prettier|make|gt|uv|npm|docker|yarn|pip|fast-ci|all-ci|test|tests|lint|format|execute|run|build|check|ci|CI)*",
         "hooks": [
           {
             "type": "command",

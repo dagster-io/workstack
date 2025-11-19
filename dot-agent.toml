@@ -29,7 +29,7 @@ artifacts = [
 [[kits.devrun.hooks]]
 id = "devrun-reminder-hook"
 lifecycle = "UserPromptSubmit"
-matcher = "*"
+matcher = "*(pytest|pyright|ruff|prettier|make|gt|uv|npm|docker|yarn|pip|fast-ci|all-ci|test|tests|lint|format|execute|run|build|check|ci|CI)*"
 invocation = "dot-agent run devrun devrun-reminder-hook"
 description = "Output devrun agent reminder on every prompt"
 timeout = 30

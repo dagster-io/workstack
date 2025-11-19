@@ -1,20 +1,17 @@
-"""Smoke tests for real_ops.py subprocess integration.
+"""Unit tests for real_ops.py subprocess integration with mocked subprocess.
 
-These tests verify that real subprocess-based implementations can be called
-without crashing and handle basic success/failure scenarios. Git and Graphite
-tests use actual git/gt commands. GitHub tests mock subprocess.run to avoid
-network API calls while still testing JSON parsing and error handling.
+These tests verify that real subprocess-based implementations construct commands
+correctly and parse outputs properly. All subprocess calls are mocked to ensure
+fast execution. For integration tests with real subprocess calls, see
+tests/integration/kits/gt/test_real_git_ops.py.
 
 Test organization:
-- TestRealGitGtKitOpsSmoke: Git operations (6 methods, uses actual git commands)
-- TestRealGraphiteGtKitOpsSmoke: Graphite operations (6 methods, uses actual gt commands)
-- TestRealGitHubGtKitOpsSmoke: GitHub operations (4 methods, mocks subprocess.run)
-- TestRealGtKitOpsSmoke: Composite operations (3 accessor methods)
+- TestRealGitGtKitOps: Git operations (6 methods, mocked subprocess)
+- TestRealGraphiteGtKitOps: Graphite operations (6 methods, mocked subprocess)
+- TestRealGitHubGtKitOps: GitHub operations (4 methods, mocked subprocess)
+- TestRealGtKitOps: Composite operations (3 accessor methods)
 """
 
-import subprocess
-import tempfile
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.ops import CommandResult
@@ -26,339 +23,182 @@ from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops import (
 )
 
 
-class TestRealGitGtKitOpsSmoke:
-    """Smoke tests for RealGitGtKitOps subprocess integration."""
+class TestRealGitGtKitOps:
+    """Unit tests for RealGitGtKit with mocked subprocess calls."""
 
-    def test_get_current_branch(self) -> None:
-        """Test get_current_branch returns branch name or None."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            repo_path = Path(tmpdir)
-
-            # Initialize git repo
-            subprocess.run(["git", "init"], cwd=repo_path, check=True, capture_output=True)
-            subprocess.run(
-                ["git", "config", "user.name", "Test User"],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-            )
-            subprocess.run(
-                ["git", "config", "user.email", "test@example.com"],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-            )
-
-            # Create initial commit
-            test_file = repo_path / "test.txt"
-            test_file.write_text("test", encoding="utf-8")
-            subprocess.run(["git", "add", "."], cwd=repo_path, check=True, capture_output=True)
-            subprocess.run(
-                ["git", "commit", "-m", "Initial commit"],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-            )
-
-            # Test from repo directory
-            import os
-
-            original_cwd = os.getcwd()
-            try:
-                os.chdir(repo_path)
-                ops = RealGitGtKit()
-                branch_name = ops.get_current_branch()
-
-                assert branch_name is not None
-                assert isinstance(branch_name, str)
-                # Default branch is typically "main" or "master"
-                assert branch_name in ("main", "master")
-            finally:
-                os.chdir(original_cwd)
-
-    def test_has_uncommitted_changes(self) -> None:
-        """Test has_uncommitted_changes returns bool correctly."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            repo_path = Path(tmpdir)
-
-            # Initialize git repo
-            subprocess.run(["git", "init"], cwd=repo_path, check=True, capture_output=True)
-            subprocess.run(
-                ["git", "config", "user.name", "Test User"],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-            )
-            subprocess.run(
-                ["git", "config", "user.email", "test@example.com"],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-            )
-
-            # Create initial commit
-            test_file = repo_path / "test.txt"
-            test_file.write_text("test", encoding="utf-8")
-            subprocess.run(["git", "add", "."], cwd=repo_path, check=True, capture_output=True)
-            subprocess.run(
-                ["git", "commit", "-m", "Initial commit"],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-            )
-
-            import os
-
-            original_cwd = os.getcwd()
-            try:
-                os.chdir(repo_path)
-                ops = RealGitGtKit()
-
-                # Should be clean after commit
-                assert ops.has_uncommitted_changes() is False
-
-                # Create new file
-                new_file = repo_path / "new.txt"
-                new_file.write_text("new content", encoding="utf-8")
-
-                # Should detect uncommitted changes
-                assert ops.has_uncommitted_changes() is True
-            finally:
-                os.chdir(original_cwd)
-
-    def test_add_all(self) -> None:
-        """Test add_all returns True on success."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            repo_path = Path(tmpdir)
-
-            # Initialize git repo
-            subprocess.run(["git", "init"], cwd=repo_path, check=True, capture_output=True)
-            subprocess.run(
-                ["git", "config", "user.name", "Test User"],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-            )
-            subprocess.run(
-                ["git", "config", "user.email", "test@example.com"],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-            )
-
-            # Create file
-            test_file = repo_path / "test.txt"
-            test_file.write_text("test", encoding="utf-8")
-
-            import os
-
-            original_cwd = os.getcwd()
-            try:
-                os.chdir(repo_path)
-                ops = RealGitGtKit()
-
-                # Add all files
-                result = ops.add_all()
-
-                assert result is True
-            finally:
-                os.chdir(original_cwd)
-
-    def test_commit(self) -> None:
-        """Test commit returns True on success."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            repo_path = Path(tmpdir)
-
-            # Initialize git repo
-            subprocess.run(["git", "init"], cwd=repo_path, check=True, capture_output=True)
-            subprocess.run(
-                ["git", "config", "user.name", "Test User"],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-            )
-            subprocess.run(
-                ["git", "config", "user.email", "test@example.com"],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-            )
-
-            # Create and stage file
-            test_file = repo_path / "test.txt"
-            test_file.write_text("test", encoding="utf-8")
-            subprocess.run(["git", "add", "."], cwd=repo_path, check=True, capture_output=True)
-
-            import os
-
-            original_cwd = os.getcwd()
-            try:
-                os.chdir(repo_path)
-                ops = RealGitGtKit()
-
-                # Create commit
-                result = ops.commit("Test commit")
-
-                assert result is True
-            finally:
-                os.chdir(original_cwd)
-
-    def test_amend_commit(self) -> None:
-        """Test amend_commit returns True on success."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            repo_path = Path(tmpdir)
-
-            # Initialize git repo
-            subprocess.run(["git", "init"], cwd=repo_path, check=True, capture_output=True)
-            subprocess.run(
-                ["git", "config", "user.name", "Test User"],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-            )
-            subprocess.run(
-                ["git", "config", "user.email", "test@example.com"],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-            )
-
-            # Create initial commit
-            test_file = repo_path / "test.txt"
-            test_file.write_text("test", encoding="utf-8")
-            subprocess.run(["git", "add", "."], cwd=repo_path, check=True, capture_output=True)
-            subprocess.run(
-                ["git", "commit", "-m", "Initial commit"],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-            )
-
-            # Modify file and stage
-            test_file.write_text("modified", encoding="utf-8")
-            subprocess.run(["git", "add", "."], cwd=repo_path, check=True, capture_output=True)
-
-            import os
-
-            original_cwd = os.getcwd()
-            try:
-                os.chdir(repo_path)
-                ops = RealGitGtKit()
-
-                # Amend commit
-                result = ops.amend_commit("Amended commit")
-
-                assert result is True
-            finally:
-                os.chdir(original_cwd)
-
-    def test_count_commits_in_branch(self) -> None:
-        """Test count_commits_in_branch returns int count."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            repo_path = Path(tmpdir)
-
-            # Initialize git repo
-            subprocess.run(["git", "init"], cwd=repo_path, check=True, capture_output=True)
-            subprocess.run(
-                ["git", "config", "user.name", "Test User"],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-            )
-            subprocess.run(
-                ["git", "config", "user.email", "test@example.com"],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-            )
-
-            # Create initial commit on main
-            test_file = repo_path / "test.txt"
-            test_file.write_text("test", encoding="utf-8")
-            subprocess.run(["git", "add", "."], cwd=repo_path, check=True, capture_output=True)
-            subprocess.run(
-                ["git", "commit", "-m", "Initial commit"],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-            )
-
-            # Rename default branch to main (git init may create master or other name)
-            subprocess.run(
-                ["git", "branch", "-M", "main"],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-            )
-
-            # Create branch and add commits
-            subprocess.run(
-                ["git", "checkout", "-b", "feature"],
-                cwd=repo_path,
-                check=True,
-                capture_output=True,
-            )
-            for i in range(3):
-                new_file = repo_path / f"file{i}.txt"
-                new_file.write_text(f"content{i}", encoding="utf-8")
-                subprocess.run(["git", "add", "."], cwd=repo_path, check=True, capture_output=True)
-                subprocess.run(
-                    ["git", "commit", "-m", f"Commit {i}"],
-                    cwd=repo_path,
-                    check=True,
-                    capture_output=True,
-                )
-
-            import os
-
-            original_cwd = os.getcwd()
-            try:
-                os.chdir(repo_path)
-                ops = RealGitGtKit()
-
-                # Count commits since main
-                count = ops.count_commits_in_branch("main")
-
-                assert isinstance(count, int)
-                assert count == 3
-            finally:
-                os.chdir(original_cwd)
-
-
-class TestRealGraphiteGtKitOpsSmoke:
-    """Smoke tests for RealGraphiteGtKitOps subprocess integration.
-
-    These tests call real gt commands and verify they don't crash.
-    Tests may fail if gt is not installed, which is expected.
-    """
-
-    def test_get_parent_branch(self) -> None:
-        """Test get_parent_branch returns str or None."""
-        ops = RealGraphiteGtKit()
-
-        # Call the method - may return None if not in gt repo or gt not installed
-        result = ops.get_parent_branch()
-
-        # Verify return type matches interface contract
-        assert result is None or isinstance(result, str)
-
-    def test_get_children_branches(self) -> None:
-        """Test get_children_branches returns list."""
-        ops = RealGraphiteGtKit()
-
-        # Call the method - may return empty list if not in gt repo or gt not installed
-        result = ops.get_children_branches()
-
-        # Verify return type matches interface contract
-        assert isinstance(result, list)
-        # All elements should be strings if present
-        if result:
-            assert all(isinstance(branch, str) for branch in result)
-
-    def test_squash_commits(self) -> None:
-        """Test squash_commits returns bool and calls correct command."""
+    @patch("dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run")
+    def test_get_current_branch(self, mock_run: Mock) -> None:
+        """Test get_current_branch constructs command and parses output correctly."""
         mock_result = Mock()
         mock_result.returncode = 0
+        mock_result.stdout = "main\n"
+        mock_run.return_value = mock_result
+
+        ops = RealGitGtKit()
+        branch_name = ops.get_current_branch()
+
+        # Verify correct command was called
+        mock_run.assert_called_once()
+        args = mock_run.call_args[0][0]
+        assert args == ["git", "branch", "--show-current"]
+
+        # Verify output parsing
+        assert branch_name == "main"
+
+    @patch("dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run")
+    def test_has_uncommitted_changes_clean(self, mock_run: Mock) -> None:
+        """Test has_uncommitted_changes returns False when repo is clean."""
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = ""  # Empty output = clean repo
+        mock_run.return_value = mock_result
+
+        ops = RealGitGtKit()
+        result = ops.has_uncommitted_changes()
+
+        # Verify correct command was called
+        mock_run.assert_called_once()
+        args = mock_run.call_args[0][0]
+        assert args == ["git", "status", "--porcelain"]
+
+        # Verify return value
+        assert result is False
+
+    @patch("dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run")
+    def test_has_uncommitted_changes_dirty(self, mock_run: Mock) -> None:
+        """Test has_uncommitted_changes returns True when repo has changes."""
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = " M file.txt\n"  # Modified file
+        mock_run.return_value = mock_result
+
+        ops = RealGitGtKit()
+        result = ops.has_uncommitted_changes()
+
+        # Verify return value
+        assert result is True
+
+    @patch("dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run")
+    def test_add_all(self, mock_run: Mock) -> None:
+        """Test add_all constructs command correctly."""
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_run.return_value = mock_result
+
+        ops = RealGitGtKit()
+        result = ops.add_all()
+
+        # Verify correct command was called
+        mock_run.assert_called_once()
+        args = mock_run.call_args[0][0]
+        assert args == ["git", "add", "."]
+
+        # Verify return value
+        assert result is True
+
+    @patch("dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run")
+    def test_commit(self, mock_run: Mock) -> None:
+        """Test commit constructs command with message correctly."""
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_run.return_value = mock_result
+
+        ops = RealGitGtKit()
+        result = ops.commit("Test commit message")
+
+        # Verify correct command was called
+        mock_run.assert_called_once()
+        args = mock_run.call_args[0][0]
+        assert args == ["git", "commit", "-m", "Test commit message"]
+
+        # Verify return value
+        assert result is True
+
+    @patch("dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run")
+    def test_amend_commit(self, mock_run: Mock) -> None:
+        """Test amend_commit constructs command with message correctly."""
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_run.return_value = mock_result
+
+        ops = RealGitGtKit()
+        result = ops.amend_commit("Amended message")
+
+        # Verify correct command was called
+        mock_run.assert_called_once()
+        args = mock_run.call_args[0][0]
+        assert args == ["git", "commit", "--amend", "-m", "Amended message"]
+
+        # Verify return value
+        assert result is True
+
+    @patch("dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run")
+    def test_count_commits_in_branch(self, mock_run: Mock) -> None:
+        """Test count_commits_in_branch constructs command and parses count."""
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = "3\n"
+        mock_run.return_value = mock_result
+
+        ops = RealGitGtKit()
+        count = ops.count_commits_in_branch("main")
+
+        # Verify correct command was called
+        mock_run.assert_called_once()
+        args = mock_run.call_args[0][0]
+        assert args == ["git", "rev-list", "--count", "main..HEAD"]
+
+        # Verify output parsing
+        assert count == 3
+
+
+class TestRealGraphiteGtKitOps:
+    """Unit tests for RealGraphiteGtKit with mocked subprocess calls."""
+
+    @patch("dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run")
+    def test_get_parent_branch(self, mock_run: Mock) -> None:
+        """Test get_parent_branch constructs command and parses output."""
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = "main\n"
+        mock_run.return_value = mock_result
+
+        ops = RealGraphiteGtKit()
+        result = ops.get_parent_branch()
+
+        # Verify correct command was called
+        mock_run.assert_called_once()
+        args = mock_run.call_args[0][0]
+        assert args == ["gt", "parent"]
+
+        # Verify output parsing
+        assert result == "main"
+
+    @patch("dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run")
+    def test_get_children_branches(self, mock_run: Mock) -> None:
+        """Test get_children_branches constructs command and parses output."""
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = "feature-1\nfeature-2\n"
+        mock_run.return_value = mock_result
+
+        ops = RealGraphiteGtKit()
+        result = ops.get_children_branches()
+
+        # Verify correct command was called
+        mock_run.assert_called_once()
+        args = mock_run.call_args[0][0]
+        assert args == ["gt", "children"]
+
+        # Verify output parsing
+        assert result == ["feature-1", "feature-2"]
+
+    def test_squash_commits(self) -> None:
+        """Test squash_commits returns CommandResult and calls correct command."""
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = ""
+        mock_result.stderr = ""
 
         with patch(
             "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops.subprocess.run",
@@ -391,7 +231,7 @@ class TestRealGraphiteGtKitOpsSmoke:
             assert result.success is False
 
     def test_submit(self) -> None:
-        """Test submit returns tuple with 3 elements and calls correct command."""
+        """Test submit returns CommandResult and calls correct command."""
         mock_result = Mock()
         mock_result.returncode = 0
         mock_result.stdout = "PR created successfully"
@@ -503,12 +343,8 @@ class TestRealGraphiteGtKitOpsSmoke:
             assert result is False
 
 
-class TestRealGitHubGtKitOpsSmoke:
-    """Smoke tests for RealGitHubGtKitOps subprocess integration.
-
-    These tests call real gh commands and verify they don't crash.
-    Tests may fail if gh is not installed or not in a repo with a PR, which is expected.
-    """
+class TestRealGitHubGtKitOps:
+    """Unit tests for RealGitHubGtKit with mocked subprocess calls."""
 
     def test_get_pr_info(self) -> None:
         """Test get_pr_info returns tuple or None."""
@@ -664,11 +500,11 @@ class TestRealGitHubGtKitOpsSmoke:
             assert result is False
 
 
-class TestRealGtKitOpsSmoke:
-    """Smoke tests for RealGtKitOps composite operations."""
+class TestRealGtKitOps:
+    """Unit tests for RealGtKit composite operations."""
 
     def test_git(self) -> None:
-        """Test git() returns RealGitGtKitOps instance."""
+        """Test git() returns RealGitGtKit instance."""
         ops = RealGtKit()
 
         # Get git operations interface
@@ -678,7 +514,7 @@ class TestRealGtKitOpsSmoke:
         assert isinstance(git_ops, RealGitGtKit)
 
     def test_graphite(self) -> None:
-        """Test graphite() returns RealGraphiteGtKitOps instance."""
+        """Test graphite() returns RealGraphiteGtKit instance."""
         ops = RealGtKit()
 
         # Get graphite operations interface
@@ -688,7 +524,7 @@ class TestRealGtKitOpsSmoke:
         assert isinstance(graphite_ops, RealGraphiteGtKit)
 
     def test_github(self) -> None:
-        """Test github() returns RealGitHubGtKitOps instance."""
+        """Test github() returns RealGitHubGtKit instance."""
         ops = RealGtKit()
 
         # Get github operations interface

@@ -207,7 +207,8 @@ class TestPreAnalysisExecution:
 class TestPostAnalysisExecution:
     """Tests for post-analysis phase execution logic."""
 
-    def test_post_analysis_creates_pr(self) -> None:
+    @patch("dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch.time.sleep")
+    def test_post_analysis_creates_pr(self, mock_sleep: Mock) -> None:
         """Test successfully creating new PR."""
         ops = FakeGtKitOps().with_branch("feature-branch", parent="main").with_commits(1)
         # No PR initially (will be created)
@@ -222,6 +223,8 @@ class TestPostAnalysisExecution:
         assert result.branch_name == "feature-branch"
         # PR created but number not retrieved in this flow
         assert "PR created (number pending)" in result.message
+        # Verify sleep was called 4 times (5 attempts, no sleep after last)
+        assert mock_sleep.call_count == 4
 
     def test_post_analysis_updates_existing_pr(self) -> None:
         """Test successfully updating existing PR metadata."""

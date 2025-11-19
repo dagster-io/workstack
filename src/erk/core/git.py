@@ -663,21 +663,16 @@ class RealGit(Git):
         subprocess.run(cmd, cwd=repo_root, check=True)
 
     def remove_worktree(self, repo_root: Path, path: Path, *, force: bool) -> None:
-        """Remove a worktree."""
+        """Remove a worktree.
+
+        Note: This does NOT automatically prune worktree metadata. Call prune_worktrees()
+        explicitly if needed to clean up stale metadata.
+        """
         cmd = ["git", "worktree", "remove"]
         if force:
             cmd.append("--force")
         cmd.append(str(path))
         subprocess.run(cmd, cwd=repo_root, check=True)
-
-        # Clean up git worktree metadata to prevent permission issues during test cleanup
-        # This prunes stale administrative files left behind after worktree removal
-        subprocess.run(
-            ["git", "worktree", "prune"],
-            cwd=repo_root,
-            check=True,
-            capture_output=True,
-        )
 
     def checkout_branch(self, cwd: Path, branch: str) -> None:
         """Checkout a branch in the given directory."""
@@ -1031,7 +1026,10 @@ class NoopGit(Git):
         user_output(f"[DRY RUN] Would run: git worktree move {old_path} {new_path}")
 
     def remove_worktree(self, repo_root: Path, path: Path, *, force: bool) -> None:
-        """Print dry-run message instead of removing worktree."""
+        """Print dry-run message instead of removing worktree.
+
+        Note: Like RealGit, this does NOT automatically prune worktree metadata.
+        """
         force_flag = "--force " if force else ""
         user_output(f"[DRY RUN] Would run: git worktree remove {force_flag}{path}")
 
@@ -1217,7 +1215,11 @@ class PrintingGit(PrintingBase, Git):
         self._wrapped.move_worktree(repo_root, old_path, new_path)
 
     def remove_worktree(self, repo_root: Path, path: Path, *, force: bool) -> None:
-        """Remove worktree (delegates without printing for now)."""
+        """Remove worktree (delegates without printing for now).
+
+        Note: Delegates to wrapped implementation. Neither this nor the wrapped
+        implementation automatically prunes worktree metadata.
+        """
         # Not used in land-stack
         self._wrapped.remove_worktree(repo_root, path, force=force)
 

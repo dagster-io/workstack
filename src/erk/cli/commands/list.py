@@ -12,7 +12,7 @@ from erk.core.display_utils import (
     get_visible_length,
 )
 from erk.core.file_utils import extract_plan_title
-from erk.core.github import PullRequestInfo
+from erk.core.github.types import PullRequestInfo
 from erk.core.plan_folder import get_plan_path
 from erk.core.repo_discovery import RepoContext
 from erk.core.worktree_utils import find_current_worktree

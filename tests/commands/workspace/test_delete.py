@@ -6,8 +6,9 @@ This file tests the delete command which removes a worktree workspace.
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.git import NoopGit, WorktreeInfo
-from erk.core.graphite import BranchMetadata
+from erk.core.branch_metadata import BranchMetadata
+from erk.core.git.abc import WorktreeInfo
+from erk.core.git.noop import NoopGit
 from tests.fakes.git import FakeGit
 from tests.fakes.github import FakeGitHub
 from tests.fakes.graphite import FakeGraphite

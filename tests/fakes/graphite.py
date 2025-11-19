@@ -7,9 +7,9 @@ in its constructor. Construct instances directly with keyword arguments.
 from pathlib import Path
 
 from erk.core.branch_metadata import BranchMetadata
-from erk.core.git import Git
-from erk.core.github import PullRequestInfo
-from erk.core.graphite import Graphite
+from erk.core.git.abc import Git
+from erk.core.github.types import PullRequestInfo
+from erk.core.graphite.abc import Graphite
 
 
 class FakeGraphite(Graphite):

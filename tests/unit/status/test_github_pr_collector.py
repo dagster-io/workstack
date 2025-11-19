@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 
 from erk.core.config_store import GlobalConfig
-from erk.core.github import PullRequestInfo
+from erk.core.github.types import PullRequestInfo
 from erk.status.collectors.github import GitHubPRCollector
 from tests.fakes.context import create_test_context
 from tests.fakes.git import FakeGit

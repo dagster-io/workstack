@@ -204,7 +204,7 @@ class SimulatedErkEnv:
 ### BranchMetadata API
 
 ```python
-from erk.core.graphite import BranchMetadata
+from erk.core.branch_metadata import BranchMetadata
 
 # ✅ Trunk branch
 metadata = BranchMetadata.trunk(

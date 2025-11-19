@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from erk.core.github import PRInfo, PullRequestInfo
+from erk.core.github.types import PRInfo, PullRequestInfo
 from tests.fakes.github import FakeGitHub
 from tests.test_utils import sentinel_path
 

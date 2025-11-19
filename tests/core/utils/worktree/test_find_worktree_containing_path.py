@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from erk.core.git import WorktreeInfo
+from erk.core.git.abc import WorktreeInfo
 from erk.core.worktree_utils import find_worktree_containing_path
 
 

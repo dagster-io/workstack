@@ -1,6 +1,6 @@
 """Unit tests for GitHub parsing functions with JSON fixtures."""
 
-from erk.core.github import (
+from erk.core.github.parsing import (
     _determine_checks_status,
     parse_github_pr_list,
     parse_github_pr_status,

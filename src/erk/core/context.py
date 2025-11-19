@@ -14,9 +14,15 @@ from erk.core.config_store import (
     GlobalConfig,
     RealConfigStore,
 )
-from erk.core.git import Git, NoopGit, RealGit
-from erk.core.github import GitHub, NoopGitHub, RealGitHub
-from erk.core.graphite import Graphite, NoopGraphite, RealGraphite
+from erk.core.git.abc import Git
+from erk.core.git.noop import NoopGit
+from erk.core.git.real import RealGit
+from erk.core.github.abc import GitHub
+from erk.core.github.noop import NoopGitHub
+from erk.core.github.real import RealGitHub
+from erk.core.graphite.abc import Graphite
+from erk.core.graphite.noop import NoopGraphite
+from erk.core.graphite.real import RealGraphite
 from erk.core.repo_discovery import (
     NoRepoSentinel,
     RepoContext,

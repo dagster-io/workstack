@@ -7,7 +7,7 @@ for external tools (gt) without actually executing them.
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from erk.core.graphite import RealGraphite
+from erk.core.graphite.real import RealGraphite
 
 
 def test_real_graphite_ops_sync() -> None:

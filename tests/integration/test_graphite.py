@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from erk.core.graphite import RealGraphite
+from erk.core.graphite.real import RealGraphite
 from tests.conftest import load_fixture
 from tests.fakes.git import FakeGit
 

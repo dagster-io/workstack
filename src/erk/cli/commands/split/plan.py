@@ -6,7 +6,7 @@ from pathlib import Path
 
 from erk.cli.output import user_output
 from erk.core.context import ErkContext
-from erk.core.git import WorktreeInfo
+from erk.core.git.abc import WorktreeInfo
 
 
 @dataclass(frozen=True)

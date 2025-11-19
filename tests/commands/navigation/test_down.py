@@ -6,7 +6,7 @@ from click.testing import CliRunner
 
 from erk.cli.cli import cli
 from erk.core.branch_metadata import BranchMetadata
-from erk.core.git import WorktreeInfo
+from erk.core.git.abc import WorktreeInfo
 from erk.core.repo_discovery import RepoContext
 from tests.fakes.git import FakeGit
 from tests.fakes.graphite import FakeGraphite

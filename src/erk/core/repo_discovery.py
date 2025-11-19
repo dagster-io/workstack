@@ -7,7 +7,8 @@ full ErkContext (enables config loading before context creation).
 from dataclasses import dataclass
 from pathlib import Path
 
-from erk.core.git import Git, RealGit
+from erk.core.git.abc import Git
+from erk.core.git.real import RealGit
 
 
 @dataclass(frozen=True)

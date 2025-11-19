@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from erk.core.branch_metadata import BranchMetadata
-from erk.core.github import PullRequestInfo
+from erk.core.github.types import PullRequestInfo
 from tests.fakes.git import FakeGit
 from tests.fakes.graphite import FakeGraphite
 

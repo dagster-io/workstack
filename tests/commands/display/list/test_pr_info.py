@@ -9,8 +9,8 @@ from click.testing import CliRunner
 
 from erk.cli.cli import cli
 from erk.core.branch_metadata import BranchMetadata
-from erk.core.git import WorktreeInfo
-from erk.core.github import PullRequestInfo
+from erk.core.git.abc import WorktreeInfo
+from erk.core.github.types import PullRequestInfo
 from tests.fakes.git import FakeGit
 from tests.fakes.graphite import FakeGraphite
 from tests.test_utils.builders import PullRequestInfoBuilder

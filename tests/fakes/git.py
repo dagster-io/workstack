@@ -8,7 +8,7 @@ from pathlib import Path
 
 import click
 
-from erk.core.git import Git, WorktreeInfo
+from erk.core.git.abc import Git, WorktreeInfo
 
 
 class FakeGit(Git):

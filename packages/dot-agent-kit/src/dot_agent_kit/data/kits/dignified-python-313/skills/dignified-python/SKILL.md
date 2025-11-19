@@ -20,6 +20,7 @@ Write explicit, predictable code that fails fast at proper boundaries.
 | `path.resolve()` or `path.is_relative_to()`   | → Check `path.exists()` first                                                                            |
 | `typing.Protocol`                             | → Use `abc.ABC` instead                                                                                  |
 | `from .module import`                         | → Use absolute imports only                                                                              |
+| Inline import (inside function)               | → See references/core-standards.md#legitimate-inline-import-patterns                                     |
 | `__all__ = ["..."]` in `__init__.py`          | → See references/core-standards.md#code-in-**init**py-and-**all**-exports                                |
 | `print(...)` in CLI code                      | → Use `click.echo()`                                                                                     |
 | `subprocess.run(...)`                         | → Add `check=True`                                                                                       |
@@ -104,7 +105,7 @@ from typing import Protocol
 
 ### 5. Imports - Module-Level and Absolute 🔴
 
-**ALL imports must be at module level unless preventing circular imports**
+**ALL imports must be at module level unless one of the documented exceptions applies**
 
 ```python
 # ✅ CORRECT: Module-level, absolute imports
@@ -112,16 +113,16 @@ from erk.config import load_config
 from pathlib import Path
 import click
 
-# ❌ WRONG: Inline imports (unless for circular import prevention)
+# ❌ WRONG: Inline imports (unless documented exception applies)
 def my_function():
-    from erk.config import load_config  # WRONG unless circular import
+    from erk.config import load_config  # WRONG unless exception applies
     return load_config()
 
 # ❌ WRONG: Relative imports
 from .config import load_config
 ```
 
-**Exception**: Inline imports are ONLY acceptable when preventing circular imports. Always document why:
+**Exceptions**: Inline imports are acceptable for specific cases (circular imports, TYPE_CHECKING, conditional features, performance optimization, test utilities). See detailed guidance below.
 
 ```python
 def create_context():
@@ -130,7 +131,7 @@ def create_context():
     return FakeGitOps()
 ```
 
-**Details**: See `references/core-standards.md#imports`
+**Details**: See `references/core-standards.md#legitimate-inline-import-patterns`
 
 ### 6. No Silent Fallback Behavior 🔴
 

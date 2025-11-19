@@ -11,7 +11,7 @@ from erk.cli.core import discover_repo_context
 from erk.cli.graphite import find_worktrees_containing_branch
 from erk.cli.output import user_output
 from erk.core.context import ErkContext
-from erk.core.git import WorktreeInfo
+from erk.core.git.abc import WorktreeInfo
 from erk.core.repo_discovery import RepoContext, ensure_repo_dir
 
 

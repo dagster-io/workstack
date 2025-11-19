@@ -1,6 +1,7 @@
 """Tests for GitHub operations."""
 
-from erk.core.github import RealGitHub, _parse_github_pr_url
+from erk.core.github.parsing import _parse_github_pr_url
+from erk.core.github.real import RealGitHub
 
 
 def test_parse_github_pr_url_valid_urls() -> None:

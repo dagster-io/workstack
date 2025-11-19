@@ -107,7 +107,7 @@ def test_detect_default_branch_master(
     tmp_path: Path,
 ) -> None:
     """Test detecting default branch when it's master using real git."""
-    from erk.core.git import RealGit
+    from erk.core.git.real import RealGit
     from tests.integration.conftest import init_git_repo
 
     repo = tmp_path / "repo"
@@ -126,7 +126,7 @@ def test_detect_default_branch_with_remote_head(
     tmp_path: Path,
 ) -> None:
     """Test detecting default branch using remote HEAD with real git."""
-    from erk.core.git import RealGit
+    from erk.core.git.real import RealGit
     from tests.integration.conftest import init_git_repo
 
     repo = tmp_path / "repo"
@@ -152,7 +152,7 @@ def test_detect_default_branch_neither_exists(
     tmp_path: Path,
 ) -> None:
     """Test default branch detection when neither main nor master exist using real git."""
-    from erk.core.git import RealGit
+    from erk.core.git.real import RealGit
     from tests.integration.conftest import init_git_repo
 
     repo = tmp_path / "repo"
@@ -172,7 +172,7 @@ def test_detect_default_branch_neither_exists(
 
 def test_get_trunk_branch_with_symbolic_ref_main(tmp_path: Path) -> None:
     """Test get_trunk_branch detects main via symbolic-ref."""
-    from erk.core.git import RealGit
+    from erk.core.git.real import RealGit
     from tests.integration.conftest import init_git_repo
 
     repo = tmp_path / "repo"
@@ -194,7 +194,7 @@ def test_get_trunk_branch_with_symbolic_ref_main(tmp_path: Path) -> None:
 
 def test_get_trunk_branch_with_symbolic_ref_master(tmp_path: Path) -> None:
     """Test get_trunk_branch detects master via symbolic-ref."""
-    from erk.core.git import RealGit
+    from erk.core.git.real import RealGit
     from tests.integration.conftest import init_git_repo
 
     repo = tmp_path / "repo"
@@ -216,7 +216,7 @@ def test_get_trunk_branch_with_symbolic_ref_master(tmp_path: Path) -> None:
 
 def test_get_trunk_branch_with_symbolic_ref_custom(tmp_path: Path) -> None:
     """Test get_trunk_branch detects custom trunk name via symbolic-ref."""
-    from erk.core.git import RealGit
+    from erk.core.git.real import RealGit
     from tests.integration.conftest import init_git_repo
 
     repo = tmp_path / "repo"
@@ -238,7 +238,7 @@ def test_get_trunk_branch_with_symbolic_ref_custom(tmp_path: Path) -> None:
 
 def test_get_trunk_branch_fallback_to_main(tmp_path: Path) -> None:
     """Test get_trunk_branch falls back to main when symbolic-ref fails."""
-    from erk.core.git import RealGit
+    from erk.core.git.real import RealGit
     from tests.integration.conftest import init_git_repo
 
     repo = tmp_path / "repo"
@@ -254,7 +254,7 @@ def test_get_trunk_branch_fallback_to_main(tmp_path: Path) -> None:
 
 def test_get_trunk_branch_fallback_to_master(tmp_path: Path) -> None:
     """Test get_trunk_branch falls back to master when main doesn't exist."""
-    from erk.core.git import RealGit
+    from erk.core.git.real import RealGit
     from tests.integration.conftest import init_git_repo
 
     repo = tmp_path / "repo"
@@ -272,7 +272,7 @@ def test_get_trunk_branch_fallback_to_master(tmp_path: Path) -> None:
 
 def test_get_trunk_branch_both_branches_prefers_main(tmp_path: Path) -> None:
     """Test get_trunk_branch prefers main when both main and master exist."""
-    from erk.core.git import RealGit
+    from erk.core.git.real import RealGit
     from tests.integration.conftest import init_git_repo
 
     repo = tmp_path / "repo"
@@ -291,7 +291,7 @@ def test_get_trunk_branch_both_branches_prefers_main(tmp_path: Path) -> None:
 
 def test_get_trunk_branch_final_fallback(tmp_path: Path) -> None:
     """Test get_trunk_branch returns 'main' when neither main nor master exist."""
-    from erk.core.git import RealGit
+    from erk.core.git.real import RealGit
     from tests.integration.conftest import init_git_repo
 
     repo = tmp_path / "repo"
@@ -392,7 +392,7 @@ def test_add_worktree_from_specific_ref(
     tmp_path: Path,
 ) -> None:
     """Test adding worktree from specific ref using real git."""
-    from erk.core.git import RealGit
+    from erk.core.git.real import RealGit
     from tests.integration.conftest import init_git_repo
 
     repo = tmp_path / "repo"
@@ -494,7 +494,7 @@ def test_checkout_branch(
     tmp_path: Path,
 ) -> None:
     """Test checking out a branch using real git."""
-    from erk.core.git import RealGit
+    from erk.core.git.real import RealGit
     from tests.integration.conftest import init_git_repo
 
     repo = tmp_path / "repo"
@@ -519,7 +519,7 @@ def test_checkout_branch_in_worktree(
     tmp_path: Path,
 ) -> None:
     """Test checking out a branch within a worktree using real git."""
-    from erk.core.git import RealGit
+    from erk.core.git.real import RealGit
     from tests.integration.conftest import init_git_repo
 
     repo = tmp_path / "repo"

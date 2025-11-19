@@ -12,7 +12,7 @@ from erk.cli.core import (
 )
 from erk.cli.output import user_output
 from erk.core.context import ErkContext, create_context, regenerate_context
-from erk.core.git import Git
+from erk.core.git.abc import Git
 from erk.core.repo_discovery import ensure_repo_dir
 from erk.core.worktree_utils import (
     filter_non_trunk_branches,

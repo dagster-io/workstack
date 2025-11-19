@@ -8,7 +8,7 @@ from erk.cli.core import discover_repo_context
 from erk.cli.debug import debug_log
 from erk.cli.output import machine_output, user_output
 from erk.core.context import ErkContext, create_context
-from erk.core.git import WorktreeInfo
+from erk.core.git.abc import WorktreeInfo
 from erk.core.repo_discovery import RepoContext, ensure_repo_dir
 
 

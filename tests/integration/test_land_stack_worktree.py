@@ -14,7 +14,7 @@ from erk.cli.cli import cli
 from erk.core.branch_metadata import BranchMetadata
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.git import RealGit
+from erk.core.git.real import RealGit
 from tests.fakes.github import FakeGitHub
 from tests.fakes.graphite import FakeGraphite
 from tests.fakes.shell import FakeShell

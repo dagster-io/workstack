@@ -7,7 +7,8 @@ in its constructor. Construct instances directly with keyword arguments.
 from pathlib import Path
 from typing import cast
 
-from erk.core.github import GitHub, PRInfo, PRMergeability, PRState, PullRequestInfo
+from erk.core.github.abc import GitHub
+from erk.core.github.types import PRInfo, PRMergeability, PRState, PullRequestInfo
 
 
 class FakeGitHub(GitHub):

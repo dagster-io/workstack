@@ -112,11 +112,12 @@ def land_stack(
     # Discover repository context
     repo = discover_repo_context(ctx, ctx.cwd)
     logger.debug("Repository discovered: root=%s", repo.root if repo else None)
-
-    # Wrap ops with printing versions (and dry-run if requested)
-    from erk.core.git import NoopGit, PrintingGit
-    from erk.core.github import NoopGitHub, PrintingGitHub
-    from erk.core.graphite import NoopGraphite, PrintingGraphite
+    from erk.core.git.noop import NoopGit
+    from erk.core.git.printing import PrintingGit
+    from erk.core.github.noop import NoopGitHub
+    from erk.core.github.printing import PrintingGitHub
+    from erk.core.graphite.noop import NoopGraphite
+    from erk.core.graphite.printing import PrintingGraphite
 
     # First: Choose inner implementation based on dry-run mode
     if dry_run:

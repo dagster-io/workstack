@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from erk.core.github import RealGitHub
+from erk.core.github.real import RealGitHub
 from tests.conftest import load_fixture
 
 # ============================================================================

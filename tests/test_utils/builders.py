@@ -33,7 +33,7 @@ from typing import Any
 
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.github import PullRequestInfo
+from erk.core.github.types import PullRequestInfo
 from tests.fakes.git import FakeGit, WorktreeInfo
 from tests.fakes.github import FakeGitHub
 from tests.fakes.graphite import FakeGraphite

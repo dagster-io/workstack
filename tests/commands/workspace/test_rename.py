@@ -6,7 +6,7 @@ This file tests the rename command which renames a worktree workspace.
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.git import NoopGit
+from erk.core.git.noop import NoopGit
 from erk.core.repo_discovery import RepoContext
 from tests.fakes.git import FakeGit
 from tests.fakes.github import FakeGitHub

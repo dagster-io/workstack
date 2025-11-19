@@ -85,10 +85,10 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
+from erk.core.branch_metadata import BranchMetadata
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.git import WorktreeInfo
-from erk.core.graphite import BranchMetadata
+from erk.core.git.abc import WorktreeInfo
 from erk.core.repo_discovery import RepoContext
 from erk.core.script_writer import RealScriptWriter
 from tests.fakes.git import FakeGit
@@ -344,9 +344,7 @@ class ErkIsolatedFsEnv:
                 },
             )
         else:
-            # git was provided - ensure it has necessary existing paths
-            # for discover_repo_context to work correctly
-            from erk.core.git import NoopGit
+            from erk.core.git.noop import NoopGit
 
             unwrapped_ops = git._wrapped if isinstance(git, NoopGit) else git
 
@@ -645,9 +643,7 @@ class ErkInMemEnv:
                 file_contents=file_contents or {},
             )
         else:
-            # git was provided - extract worktree paths and merge with existing_paths
-            # Unwrap NoopGit if needed to access underlying FakeGit
-            from erk.core.git import NoopGit
+            from erk.core.git.noop import NoopGit
 
             unwrapped_ops = git._wrapped if isinstance(git, NoopGit) else git
             worktree_paths = {

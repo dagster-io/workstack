@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
+from erk.core.branch_metadata import BranchMetadata
 from erk.core.context import ErkContext
-from erk.core.graphite import BranchMetadata
 
 
 def _get_branches_to_land(

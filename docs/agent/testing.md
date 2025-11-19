@@ -34,6 +34,7 @@ make test-all
 - Uses `CliRunner` for CLI tests (NOT subprocess)
 - Uses `pure_erk_env()` (sentinel paths) or `simulated_erk_env()` (isolated filesystem)
 - No external system calls
+- No `time.sleep()` calls (use mocking or dependency injection)
 
 **Locations:**
 
@@ -52,10 +53,56 @@ make test-all
 - Uses `tmp_path` pytest fixture for real directories
 - Calls actual git commands via `subprocess.run()`
 - Tests that abstraction layers correctly wrap external tools
+- Tests that invoke subprocess calls to external tools
 
 **Location:** `tests/integration/`
 
 **Run with:** `make test-integration`
+
+### 🔴 Test Categorization Rules (CRITICAL)
+
+**A test MUST be categorized as an integration test if:**
+
+1. **It invokes a subprocess** - Any test that calls `subprocess.run()`, `subprocess.Popen()`, or similar
+2. **It uses `time.sleep()`** - Tests that rely on actual timing delays (unless testing time-critical behavior)
+3. **It performs extensive real filesystem I/O** - Tests that interact with external filesystem locations, create many files, or depend on actual filesystem behavior (limited file I/O with `isolated_filesystem()` or `tmp_path` in unit tests is acceptable)
+4. **It tests subprocess boundaries** - Tests validating that abstraction layers correctly wrap external tools
+
+**Examples:**
+
+```python
+# ❌ WRONG - Unit test with subprocess call
+def test_git_status() -> None:
+    result = subprocess.run(["git", "status"], capture_output=True)
+    # This MUST go in tests/integration/
+
+# ❌ WRONG - Unit test with time.sleep()
+def test_retry_with_backoff() -> None:
+    time.sleep(0.5)  # Actual delay
+    # This MUST go in tests/integration/ OR use mocking/DI
+
+# ✅ CORRECT - Integration test with subprocess
+def test_real_git_status(tmp_path: Path) -> None:
+    # Located in tests/integration/
+    result = subprocess.run(["git", "status"], cwd=tmp_path, capture_output=True)
+    assert result.returncode == 0
+
+# ✅ CORRECT - Unit test with mocked sleep
+def test_retry_with_backoff(monkeypatch) -> None:
+    # Located in tests/unit/ or tests/commands/
+    mock_sleep = Mock()
+    monkeypatch.setattr("time.sleep", mock_sleep)
+    # Test logic without actual delay
+```
+
+**Why this matters:**
+
+- **CI performance**: Unit tests must remain fast for quick feedback
+- **Test reliability**: Subprocess calls can fail due to environment differences
+- **Parallel execution**: Tests with subprocesses may have race conditions
+- **Resource usage**: Subprocess tests consume more system resources
+
+**If you're unsure:** Default to integration test. It's safer to categorize a test as integration than to slow down the unit test suite.
 
 ### CI Configuration
 

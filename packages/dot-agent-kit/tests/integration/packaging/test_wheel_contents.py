@@ -1,6 +1,13 @@
-"""Tests for wheel packaging integrity.
+"""Integration tests for wheel packaging integrity.
 
-Verifies that all data files are included in the built wheel package.
+These tests build an actual wheel package using `uv build` and verify that all
+required data files are included. The wheel is built once per test session and
+shared across all tests via a session-scoped fixture.
+
+This is an integration test (Layer 5) because it:
+- Executes real build system (uv build)
+- Creates real filesystem artifacts
+- Tests the complete packaging pipeline
 """
 
 import subprocess

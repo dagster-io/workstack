@@ -40,6 +40,7 @@
 | Creating `.claude/` artifacts                                    | → Use `kebab-case` (hyphens) NOT `snake_case` (underscores)                                          |
 | `Path("/test/...")` or hardcoded paths                           | → **CATASTROPHIC** - Use `pure_erk_env` fixture - [Test Isolation](#6-test-isolation--must)          |
 | Writing or modifying tests                                       | → **🔴 LOAD fake-driven-testing skill FIRST** - Test patterns, architecture, anti-patterns           |
+| Test that invokes subprocess or uses `time.sleep()`              | → **MUST** be integration test - [Test Categorization](#test-categorization-rules)                   |
 | ⚠️ Python patterns above                                         | → These are EXCERPTS ONLY - Load dignified-python skill for complete guidance                        |
 
 ## 📚 Quick Reference
@@ -598,6 +599,67 @@ def test_new_feature_im_building_today():
 - Use Click's `CliRunner` for command tests (NOT subprocess)
 - Only use subprocess for true end-to-end tests
 - See [docs/agent/testing.md#cli-testing-patterns](docs/agent/testing.md#cli-testing-patterns) for detailed patterns and performance comparison
+
+#### Test Categorization Rules
+
+🔴 **CRITICAL: A test MUST be categorized as an integration test if:**
+
+1. **It invokes a subprocess** - Any test that calls `subprocess.run()`, `subprocess.Popen()`, or similar
+2. **It uses `time.sleep()`** - Tests that rely on actual timing delays (must use mocking or DI instead)
+3. **It performs extensive real filesystem I/O** - Tests that interact with external filesystem locations, create many files, or depend on actual filesystem behavior (limited file I/O with `isolated_filesystem()` or `tmp_path` in unit tests is acceptable)
+4. **It tests subprocess boundaries** - Tests validating that abstraction layers correctly wrap external tools
+
+**Location rules:**
+
+- **Unit tests** → `tests/unit/`, `tests/commands/`, `tests/core/`
+  - Use fakes (FakeGit, FakeShell, etc.)
+  - Use `CliRunner` (NOT subprocess)
+  - No `time.sleep()` calls
+  - Fast, in-memory execution
+
+- **Integration tests** → `tests/integration/`
+  - Use real implementations (RealGit, etc.)
+  - May invoke subprocess calls
+  - May use `tmp_path` fixture for real directories
+  - Slower, tests external tool integration
+
+**Examples:**
+
+```python
+# ❌ WRONG - Unit test location with subprocess call
+# Located in tests/commands/test_sync.py
+def test_sync_calls_git() -> None:
+    result = subprocess.run(["git", "fetch"], capture_output=True)
+    # This MUST be moved to tests/integration/
+
+# ❌ WRONG - Unit test with time.sleep()
+# Located in tests/unit/test_retry.py
+def test_retry_with_backoff() -> None:
+    time.sleep(0.5)  # Actual delay
+    # This MUST be moved to tests/integration/ OR use mocking
+
+# ✅ CORRECT - Integration test with subprocess
+# Located in tests/integration/test_real_git.py
+def test_real_git_fetch(tmp_path: Path) -> None:
+    result = subprocess.run(["git", "fetch"], cwd=tmp_path, capture_output=True)
+    assert result.returncode == 0
+
+# ✅ CORRECT - Unit test with mocked sleep
+# Located in tests/unit/test_retry.py
+def test_retry_with_backoff(monkeypatch) -> None:
+    mock_sleep = Mock()
+    monkeypatch.setattr("time.sleep", mock_sleep)
+    # Test logic without actual delay
+```
+
+**Why this matters:**
+
+- **CI performance**: Unit tests must remain fast (<2s total) for quick feedback
+- **Test reliability**: Subprocess calls can fail due to environment differences
+- **Parallel execution**: Tests with subprocesses may have race conditions
+- **Resource usage**: Subprocess tests consume more system resources
+
+**If you're unsure:** Default to integration test. It's safer to categorize a test as integration than to slow down the unit test suite.
 
 **See**: [docs/agent/testing.md](docs/agent/testing.md) for comprehensive testing guidance.
 

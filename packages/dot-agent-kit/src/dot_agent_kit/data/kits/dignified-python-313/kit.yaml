@@ -1,10 +1,20 @@
 name: dignified-python-313
-version: 0.1.0
+version: 0.1.1
 description: Workstack Python 3.13+ coding standards with automatic suggestion hook
 license: MIT
 artifacts:
   skill:
     - skills/dignified-python/SKILL.md
+    - skills/dignified-python/references/cli-patterns.md
+    - skills/dignified-python/references/code-smells-dagster.md
+    - skills/dignified-python/references/core-standards.md
+    - skills/dignified-python/references/dependency-injection.md
+    - skills/dignified-python/references/exception-handling.md
+    - skills/dignified-python/references/imports.md
+    - skills/dignified-python/references/path-operations.md
+    - skills/dignified-python/references/patterns-reference.md
+    - skills/dignified-python/references/subprocess.md
+    - skills/dignified-python/references/type-annotations.md
 kit_cli_commands:
   - name: dignified-python-reminder-hook
     path: kit_cli_commands/dignified-python/dignified_python_reminder_hook.py

@@ -4,7 +4,7 @@
 <!-- DO NOT EDIT: Changes will be overwritten. Use 'dot-agent kit sync' -->
 
 <!-- REGISTRY_VERSION: 1 -->
-<!-- GENERATED_AT: 2025-11-20T08:11:50 -->
+<!-- GENERATED_AT: 2025-11-20T14:42:30 -->
 
 <!-- BEGIN_ENTRIES -->
 
@@ -14,19 +14,19 @@
 
 <!-- ENTRY_END -->
 
-<!-- ENTRY_START kit_id="dignified-python-313" version="0.1.0" source="bundled" -->
+<!-- ENTRY_START kit_id="dignified-python-313" version="0.1.1" source="bundled" -->
 
 @.agent/kits/dignified-python-313/registry-entry.md
 
 <!-- ENTRY_END -->
 
-<!-- ENTRY_START kit_id="erk" version="0.2.1" source="bundled" -->
+<!-- ENTRY_START kit_id="erk" version="0.2.2" source="bundled" -->
 
 @.agent/kits/erk/registry-entry.md
 
 <!-- ENTRY_END -->
 
-<!-- ENTRY_START kit_id="fake-driven-testing" version="0.1.0" source="bundled" -->
+<!-- ENTRY_START kit_id="fake-driven-testing" version="0.1.1" source="bundled" -->
 
 @.agent/kits/fake-driven-testing/registry-entry.md
 

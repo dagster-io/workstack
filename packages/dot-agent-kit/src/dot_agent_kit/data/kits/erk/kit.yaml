@@ -1,5 +1,5 @@
 name: erk
-version: 0.2.1
+version: 0.2.2
 description: Erk implementation workflow commands for creating worktrees from plans (.PLAN.md) and executing implementation. Includes commands for plan creation, execution, and quick access.
 license: MIT
 artifacts:
@@ -8,6 +8,7 @@ artifacts:
     - commands/erk/create-enhanced-plan.md
     - commands/erk/create-planned-wt.md
     - commands/erk/implement-plan.md
+    - commands/erk/implement-submission.md
     - commands/erk/fix-merge-conflicts.md
   doc:
     - docs/erk/EXAMPLES.md

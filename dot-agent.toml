@@ -37,9 +37,19 @@ timeout = 30
 [kits.dignified-python-313]
 kit_id = "dignified-python-313"
 source_type = "bundled"
-version = "0.1.0"
+version = "0.1.1"
 artifacts = [
     ".claude/skills/dignified-python/SKILL.md",
+    ".claude/skills/dignified-python/references/cli-patterns.md",
+    ".claude/skills/dignified-python/references/code-smells-dagster.md",
+    ".claude/skills/dignified-python/references/core-standards.md",
+    ".claude/skills/dignified-python/references/dependency-injection.md",
+    ".claude/skills/dignified-python/references/exception-handling.md",
+    ".claude/skills/dignified-python/references/imports.md",
+    ".claude/skills/dignified-python/references/path-operations.md",
+    ".claude/skills/dignified-python/references/patterns-reference.md",
+    ".claude/skills/dignified-python/references/subprocess.md",
+    ".claude/skills/dignified-python/references/type-annotations.md",
 ]
 
 [[kits.dignified-python-313.hooks]]
@@ -50,31 +60,16 @@ invocation = "dot-agent run dignified-python-313 dignified-python-reminder-hook"
 description = "Output dignified-python compliance reminder when Python files are in context"
 timeout = 30
 
-[kits.fake-driven-testing]
-kit_id = "fake-driven-testing"
-source_type = "bundled"
-version = "0.1.0"
-artifacts = [
-    ".claude/skills/fake-driven-testing/SKILL.md",
-]
-
-[[kits.fake-driven-testing.hooks]]
-id = "fake-driven-testing-reminder-hook"
-lifecycle = "UserPromptSubmit"
-matcher = "*.py"
-invocation = "dot-agent run fake-driven-testing fake-driven-testing-reminder-hook"
-description = "Output fake-driven-testing reminder when Python files are in context"
-timeout = 30
-
 [kits.erk]
 kit_id = "erk"
 source_type = "bundled"
-version = "0.2.1"
+version = "0.2.2"
 artifacts = [
     ".claude/commands/erk/persist-plan.md",
     ".claude/commands/erk/create-enhanced-plan.md",
     ".claude/commands/erk/create-planned-wt.md",
     ".claude/commands/erk/implement-plan.md",
+    ".claude/commands/erk/implement-submission.md",
     ".claude/commands/erk/fix-merge-conflicts.md",
     ".claude/docs/erk/EXAMPLES.md",
 ]
@@ -85,4 +80,27 @@ lifecycle = "UserPromptSubmit"
 matcher = "*"
 invocation = "dot-agent run erk session-id-injector-hook"
 description = "Injects session ID into context when /erk:create-enhanced-plan is invoked"
+timeout = 30
+
+[kits.fake-driven-testing]
+kit_id = "fake-driven-testing"
+source_type = "bundled"
+version = "0.1.2"
+artifacts = [
+    ".claude/skills/fake-driven-testing/SKILL.md",
+    ".claude/skills/fake-driven-testing/references/anti-patterns.md",
+    ".claude/skills/fake-driven-testing/references/integration-architecture.md",
+    ".claude/skills/fake-driven-testing/references/patterns.md",
+    ".claude/skills/fake-driven-testing/references/python-specific.md",
+    ".claude/skills/fake-driven-testing/references/quick-reference.md",
+    ".claude/skills/fake-driven-testing/references/testing-strategy.md",
+    ".claude/skills/fake-driven-testing/references/workflows.md",
+]
+
+[[kits.fake-driven-testing.hooks]]
+id = "fake-driven-testing-reminder-hook"
+lifecycle = "UserPromptSubmit"
+matcher = "*.py"
+invocation = "dot-agent run fake-driven-testing fake-driven-testing-reminder-hook"
+description = "Output fake-driven-testing reminder when Python files are in context"
 timeout = 30

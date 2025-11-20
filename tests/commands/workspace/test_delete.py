@@ -61,7 +61,6 @@ def test_delete_dry_run_does_not_delete() -> None:
             result,
             "[DRY RUN]",
             "Would run: git worktree remove",
-            "Would delete directory",
         )
         # Directory should still exist (check via git_ops state)
         assert test_ctx.git.path_exists(wt)

@@ -95,6 +95,7 @@ from tests.fakes.git import FakeGit
 from tests.fakes.github import FakeGitHub
 from tests.fakes.graphite import FakeGraphite
 from tests.fakes.script_writer import FakeScriptWriter
+from tests.fakes.shell import FakeShell
 
 
 class ErkIsolatedFsEnv:
@@ -319,27 +320,35 @@ class ErkIsolatedFsEnv:
     def build_context(
         self,
         *,
+        current_branch: str | None = None,
+        trunk_branch: str = "main",
         use_graphite: bool = False,
         show_pr_info: bool = True,
         git: FakeGit | None = None,
         graphite: FakeGraphite | None = None,
         github: FakeGitHub | None = None,
+        shell: FakeShell | None = None,
         repo: RepoContext | None = None,
+        dry_run: bool = False,
         **kwargs,
     ) -> ErkContext:
-        """Build ErkContext with sensible defaults for testing.
+        """Build ErkContext with smart defaults for test scenarios.
 
         This helper eliminates boilerplate by providing default ops and config
         for tests that don't need custom setup. Custom values can be provided
         via keyword arguments.
 
         Args:
+            current_branch: If provided, auto-configures FakeGit.current_branches
+            trunk_branch: Default branch name (default: "main")
             use_graphite: Enable Graphite integration (default: False)
             show_pr_info: Show PR information (default: True)
-            git: Custom FakeGit (default: minimal git_common_dirs setup)
-            graphite: Custom FakeGraphite (default: empty)
-            github: Custom FakeGitHub (default: empty)
+            git: Custom FakeGit instance (overrides smart defaults)
+            graphite: Custom FakeGraphite instance
+            github: Custom FakeGitHub instance
+            shell: Custom FakeShell instance
             repo: Custom RepoContext (default: None)
+            dry_run: Whether to wrap with NoopGit
             **kwargs: Additional ErkContext.for_test() parameters
 
         Returns:
@@ -350,6 +359,17 @@ class ErkIsolatedFsEnv:
             with simulated_erk_env(runner) as env:
                 # Simple case - use all defaults
                 ctx = env.build_context()
+
+                # Before (5 lines):
+                git_ops = FakeGit(
+                    git_common_dirs={env.cwd: env.git_dir},
+                    default_branches={env.cwd: "main"},
+                    current_branches={env.cwd: "feature-1"},
+                )
+                ctx = ErkContext.for_test(..., git=git_ops, ...)
+
+                # After (1 line):
+                ctx = env.build_context(current_branch="feature-1")
 
                 # Custom git ops with branches
                 git, graphite = env.build_ops_from_branches(...)
@@ -363,10 +383,12 @@ class ErkIsolatedFsEnv:
         if repo is None:
             repo = self._repo
 
-        # Create default ops if not provided, or ensure existing paths are set
+        # Smart FakeGit configuration
         if git is None:
             git = FakeGit(
                 git_common_dirs={self.cwd: self.git_dir},
+                default_branches={self.cwd: trunk_branch},
+                current_branches={self.cwd: current_branch} if current_branch else {},
                 existing_paths={
                     self.cwd,
                     self.git_dir,
@@ -410,11 +432,22 @@ class ErkIsolatedFsEnv:
 
                 unwrapped_ops._existing_paths.update(core_paths)
 
+        # Wrap with NoopGit for dry-run mode (only if not already wrapped)
+        if dry_run:
+            from erk.core.git.noop import NoopGit
+
+            if not isinstance(git, NoopGit):
+                git = NoopGit(git)
+
+        # Smart integration defaults
         if graphite is None:
             graphite = FakeGraphite()
 
         if github is None:
             github = FakeGitHub()
+
+        if shell is None:
+            shell = FakeShell()
 
         # Create global config if not provided in kwargs
         if "global_config" in kwargs:
@@ -449,6 +482,7 @@ class ErkIsolatedFsEnv:
             git=git,
             graphite=graphite,
             github=github,
+            shell=shell,
             global_config=global_config,
             repo=repo,
             **kwargs,
@@ -644,31 +678,39 @@ class ErkInMemEnv:
     def build_context(
         self,
         *,
+        current_branch: str | None = None,
+        trunk_branch: str = "main",
         use_graphite: bool = False,
         show_pr_info: bool = True,
         git: FakeGit | None = None,
         graphite: FakeGraphite | None = None,
         github: FakeGitHub | None = None,
+        shell: FakeShell | None = None,
         repo: RepoContext | None = None,
         existing_paths: set[Path] | None = None,
         file_contents: dict[Path, str] | None = None,
+        dry_run: bool = False,
         **kwargs,
     ) -> ErkContext:
-        """Build ErkContext with sensible defaults for testing.
+        """Build ErkContext with smart defaults for test scenarios.
 
         This helper eliminates boilerplate by providing default ops and config
         for tests that don't need custom setup. Custom values can be provided
         via keyword arguments.
 
         Args:
+            current_branch: If provided, auto-configures FakeGit.current_branches
+            trunk_branch: Default branch name (default: "main")
             use_graphite: Enable Graphite integration (default: False)
             show_pr_info: Show PR information (default: True)
-            git: Custom FakeGit (default: minimal git_common_dirs setup)
-            graphite: Custom FakeGraphite (default: empty)
-            github: Custom FakeGitHub (default: empty)
+            git: Custom FakeGit instance (overrides smart defaults)
+            graphite: Custom FakeGraphite instance
+            github: Custom FakeGitHub instance
+            shell: Custom FakeShell instance
             repo: Custom RepoContext (default: None)
             existing_paths: Set of sentinel paths to treat as existing (pure mode only)
             file_contents: Mapping of sentinel paths to file content (pure mode only)
+            dry_run: Whether to wrap with NoopGit
             **kwargs: Additional ErkContext.for_test() parameters
 
         Returns:
@@ -679,6 +721,17 @@ class ErkInMemEnv:
             with pure_erk_env(runner) as env:
                 # Simple case - use all defaults
                 ctx = env.build_context()
+
+                # Before (5 lines):
+                git_ops = FakeGit(
+                    git_common_dirs={env.cwd: env.git_dir},
+                    default_branches={env.cwd: "main"},
+                    current_branches={env.cwd: "feature-1"},
+                )
+                ctx = ErkContext.for_test(..., git=git_ops, ...)
+
+                # After (1 line):
+                ctx = env.build_context(current_branch="feature-1")
 
                 # Enable Graphite with custom config
                 ctx = env.build_context(use_graphite=True)
@@ -694,7 +747,7 @@ class ErkInMemEnv:
         if repo is None:
             repo = self._repo
 
-        # Create default ops if not provided
+        # Smart FakeGit configuration
         if git is None:
             # Automatically include core sentinel paths in existing_paths
             # so that repo discovery and other path checks work correctly
@@ -710,6 +763,8 @@ class ErkInMemEnv:
 
             git = FakeGit(
                 git_common_dirs={self.cwd: self.git_dir},
+                default_branches={self.cwd: trunk_branch},
+                current_branches={self.cwd: current_branch} if current_branch else {},
                 existing_paths=all_existing,
                 file_contents=file_contents or {},
             )
@@ -739,11 +794,22 @@ class ErkInMemEnv:
             if file_contents:
                 unwrapped_ops._file_contents.update(file_contents)
 
+        # Wrap with NoopGit for dry-run mode (only if not already wrapped)
+        if dry_run:
+            from erk.core.git.noop import NoopGit
+
+            if not isinstance(git, NoopGit):
+                git = NoopGit(git)
+
+        # Smart integration defaults
         if graphite is None:
             graphite = FakeGraphite()
 
         if github is None:
             github = FakeGitHub()
+
+        if shell is None:
+            shell = FakeShell()
 
         # Create global config if not provided in kwargs
         if "global_config" in kwargs:
@@ -778,6 +844,7 @@ class ErkInMemEnv:
             git=git,
             graphite=graphite,
             github=github,
+            shell=shell,
             global_config=global_config,
             repo=repo,
             **kwargs,

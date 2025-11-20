@@ -78,18 +78,31 @@ def submit_cmd(ctx: ErkContext, dry_run: bool) -> None:
         capture_output=True,
     )
 
-    subprocess.run(
-        [
-            "git",
-            "commit",
-            "-m",
-            "Submit plan for AI implementation\n\n"
-            "This commit signals GitHub Actions to begin implementation.",
-        ],
+    # Check if there are changes to commit
+    status_result = subprocess.run(
+        ["git", "diff", "--cached", "--quiet"],
         cwd=ctx.cwd,
-        check=True,
         capture_output=True,
     )
+
+    if status_result.returncode == 0:
+        user_output(
+            click.style("ℹ️  ", fg="cyan")
+            + "No changes to commit - .submission/ folder is already up to date"
+        )
+    else:
+        subprocess.run(
+            [
+                "git",
+                "commit",
+                "-m",
+                "Submit plan for AI implementation\n\n"
+                "This commit signals GitHub Actions to begin implementation.",
+            ],
+            cwd=ctx.cwd,
+            check=True,
+            capture_output=True,
+        )
 
     # Submit branch via Graphite
     user_output("Submitting branch via Graphite...")

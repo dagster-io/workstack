@@ -75,7 +75,14 @@ def run_subprocess_with_context(
         - For CLI commands that need user-friendly output, use run_with_error_reporting() instead
         - Uses LBYL philosophy: caller should validate inputs before calling
         - Exception chaining preserves original CalledProcessError for debugging
+        - If explicit stdout/stderr kwargs are provided, capture_output is disabled to avoid ValueError
     """
+    # Check if explicit stdout or stderr kwargs are provided
+    # If so, disable capture_output to avoid ValueError from subprocess.run
+    has_explicit_output = "stdout" in kwargs or "stderr" in kwargs
+    if has_explicit_output:
+        capture_output = False
+
     try:
         return subprocess.run(
             cmd,

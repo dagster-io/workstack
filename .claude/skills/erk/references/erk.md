@@ -138,7 +138,7 @@ erk status    # Shows: "feature-a [feature-a]"
 | Term              | Definition                                            | Example                                                |
 | ----------------- | ----------------------------------------------------- | ------------------------------------------------------ |
 | **Worktree**      | Git's native feature for multiple working directories | Created by `git worktree add`                          |
-| **Erk**           | A configured worktree with environment setup          | Created by `erk add`                                |
+| **Erk**           | A configured worktree with environment setup          | Created by `erk add`                                   |
 | **Repo Root**     | Original git repository directory containing `.git/`  | `/Users/you/projects/erk`                              |
 | **Work Dir**      | Directory containing all erks for a specific repo     | `~/erks/erk/`                                          |
 | **Erks Root**     | Top-level directory for all configured repos          | `~/erks/`                                              |

@@ -151,17 +151,22 @@ def _execute_merge_phase(
 def _execute_sync_trunk_phase(
     ctx: ErkContext,
     repo_root: Path,
-    branch: str,
     parent: str,
     *,
     script_mode: bool,
 ) -> None:
     """Execute trunk sync phase after PR merge.
 
+    Syncs trunk branch with remote after a PR merge. If trunk is checked
+    out in a worktree, pulls there. Otherwise, checks out and pulls at
+    repo_root, leaving repo_root on trunk.
+
+    The repo_root worktree will remain on trunk (parent) after this operation.
+    Feature branches are never checked out by this function.
+
     Args:
         ctx: ErkContext with access to operations
         repo_root: Repository root directory
-        branch: Current branch name
         parent: Parent branch name (should be trunk)
         script_mode: True when running in --script mode (output to stderr)
     """
@@ -180,10 +185,6 @@ def _execute_sync_trunk_phase(
         # Parent is not checked out - safe to checkout in repo_root
         ctx.git.checkout_branch(repo_root, parent)
         ctx.git.pull_branch(repo_root, "origin", parent, ff_only=True)
-        # Only checkout branch if it's not checked out elsewhere
-        branch_worktree = ctx.git.is_branch_checked_out(repo_root, branch)
-        if not branch_worktree:
-            ctx.git.checkout_branch(repo_root, branch)
 
 
 def _execute_restack_phase(
@@ -412,7 +413,7 @@ def land_branch_sequence(
         if parent is None:
             raise RuntimeError(f"Cannot sync trunk: {branch} has no parent branch")
 
-        _execute_sync_trunk_phase(ctx, repo_root, branch, parent, script_mode=script_mode)
+        _execute_sync_trunk_phase(ctx, repo_root, parent, script_mode=script_mode)
 
         # Phase 4: Restack (skip if down_only)
         if not down_only:

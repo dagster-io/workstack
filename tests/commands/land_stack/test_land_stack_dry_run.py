@@ -5,6 +5,7 @@ but still performs read operations for validation.
 """
 
 from pathlib import Path
+from unittest.mock import Mock
 
 from click.testing import CliRunner
 
@@ -112,6 +113,85 @@ def test_dry_run_does_not_execute_merge_operations() -> None:
         assert len(github_ops.merge_pr_calls) == 0, (
             f"merge_pr was called {len(github_ops.merge_pr_calls)} times in dry-run mode! "
             f"Calls: {github_ops.merge_pr_calls}"
+        )
+
+
+def test_dry_run_does_not_execute_checkout_operations() -> None:
+    """Test that --dry-run flag prevents git checkout operations from executing.
+
+    This test verifies the fix for the critical bug where NoopGit.checkout_branch()
+    was incorrectly delegating to the wrapped implementation instead of being a no-op.
+    This test MUST FAIL before the fix is applied and PASS after.
+    """
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        # Set up a simple stack: main -> feat-1 -> feat-2
+        git_ops = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
+            current_branches={env.cwd: "feat-2"},
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
+                ],
+            },
+        )
+
+        # Track checkout_branch calls on the real git implementation
+        checkout_spy = Mock()
+        original_checkout = git_ops.checkout_branch
+
+        def tracked_checkout(cwd: Path, branch: str) -> None:
+            checkout_spy(branch)
+            return original_checkout(cwd, branch)
+
+        git_ops.checkout_branch = tracked_checkout
+
+        # Configure Graphite metadata for stack
+        graphite_ops = FakeGraphite(
+            branches={
+                "main": BranchMetadata.trunk("main", children=["feat-1"]),
+                "feat-1": BranchMetadata.branch("feat-1", parent="main", children=["feat-2"]),
+                "feat-2": BranchMetadata.branch("feat-2", parent="feat-1"),
+            },
+            stacks={
+                "feat-2": ["main", "feat-1", "feat-2"],
+            },
+        )
+
+        # Configure GitHub ops with PRs
+        github_ops = TrackableFakeGitHub(
+            prs={
+                "feat-1": PullRequestInfoBuilder(101, "feat-1").with_passing_checks().build(),
+                "feat-2": PullRequestInfoBuilder(102, "feat-2").with_passing_checks().build(),
+            },
+            pr_bases={
+                101: "main",
+                102: "feat-1",
+            },
+        )
+
+        test_ctx = env.build_context(
+            use_graphite=True,
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
+            dry_run=False,
+        )
+
+        # Act: Run land-stack with --dry-run flag and --force to skip confirmation
+        result = runner.invoke(cli, ["land-stack", "--dry-run", "--force"], obj=test_ctx)
+
+        # Assert: Command should succeed
+        assert result.exit_code == 0, f"Command failed: {result.output}"
+
+        # Assert: checkout_branch should NOT have been called
+        # Note: In dry-run mode, NoopGit wrapper prevents the call from reaching
+        # the underlying FakeGit
+        assert checkout_spy.call_count == 0, (
+            f"checkout_branch was called {checkout_spy.call_count} times in dry-run mode! "
+            f"Calls: {checkout_spy.call_args_list}"
         )
 
 

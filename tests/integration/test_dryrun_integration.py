@@ -205,8 +205,8 @@ def test_dryrun_git_remove_worktree_prints_message(tmp_path: Path) -> None:
     assert any(wt_info.path == wt for wt_info in worktrees)
 
 
-def test_dryrun_git_checkout_branch_is_allowed(tmp_path: Path) -> None:
-    """Test that dry-run Git allows checkout_branch (it's non-destructive)."""
+def test_dryrun_git_checkout_branch_is_blocked(tmp_path: Path) -> None:
+    """Test that dry-run Git blocks checkout_branch (it mutates working directory)."""
     repo = tmp_path / "repo"
     repo.mkdir()
     init_git_repo(repo, "main")
@@ -220,11 +220,11 @@ def test_dryrun_git_checkout_branch_is_allowed(tmp_path: Path) -> None:
 
     ctx = create_context(dry_run=True)
 
-    # Checkout is allowed in dry-run mode (it's non-destructive)
+    # Checkout is blocked in dry-run mode (it's a write operation that mutates state)
     ctx.git.checkout_branch(repo, "feature")
 
-    # Verify we actually checked out (checkout is allowed in dry-run)
-    assert real_ops.get_current_branch(repo) == "feature"
+    # Verify we did NOT check out (checkout is blocked in dry-run)
+    assert real_ops.get_current_branch(repo) == "main"
 
 
 # NOTE: Tests removed during global_config_ops migration

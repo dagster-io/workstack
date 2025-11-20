@@ -147,6 +147,38 @@ class ErkIsolatedFsEnv:
         """RepoContext constructed from root worktree paths."""
         return self._repo
 
+    def setup_repo_structure(self, create_config: bool = True) -> Path:
+        """Create standard erk repo directory structure with worktrees folder.
+
+        Creates:
+            {erk_root}/repos/{cwd.name}/
+            {erk_root}/repos/{cwd.name}/worktrees/
+            {erk_root}/repos/{cwd.name}/config.toml (if create_config=True)
+
+        Args:
+            create_config: Whether to create empty config.toml file
+
+        Returns:
+            Path to repo directory ({erk_root}/repos/{cwd.name})
+
+        Example:
+            >>> with erk_isolated_fs_env(runner) as env:
+            ...     repo_dir = env.setup_repo_structure()
+            ...     # repo_dir = env.erk_root / "repos" / env.cwd.name
+            ...     # Already has worktrees/ subdirectory created
+        """
+        repo_dir = self.erk_root / "repos" / self.cwd.name
+        repo_dir.mkdir(parents=True, exist_ok=True)
+
+        worktrees_dir = repo_dir / "worktrees"
+        worktrees_dir.mkdir(parents=True, exist_ok=True)
+
+        if create_config:
+            config_toml = repo_dir / "config.toml"
+            config_toml.write_text("", encoding="utf-8")
+
+        return repo_dir
+
     def create_linked_worktree(self, name: str, branch: str, *, chdir: bool) -> Path:
         """Create a linked worktree in erks directory.
 
@@ -569,6 +601,45 @@ class ErkInMemEnv:
     def root_worktree(self) -> Path:
         """Alias for cwd for compatibility with SimulatedWorkstackEnv."""
         return self.cwd
+
+    def setup_repo_structure(self, create_config: bool = True) -> Path:
+        """Create standard erk repo directory structure (in-memory sentinel paths).
+
+        Creates sentinel paths for:
+            {erk_root}/repos/{cwd.name}/
+            {erk_root}/repos/{cwd.name}/worktrees/
+            {erk_root}/repos/{cwd.name}/config.toml (if create_config=True)
+
+        Note: In pure mode, this only creates sentinel paths. No actual directories
+        are created on the filesystem. Paths returned are just Path objects that
+        will be validated through FakeGit's existing_paths mechanism.
+
+        Args:
+            create_config: Whether to create config.toml file content in memory
+
+        Returns:
+            Path to repo directory ({erk_root}/repos/{cwd.name})
+
+        Example:
+            >>> with erk_inmem_env(runner) as env:
+            ...     repo_dir = env.setup_repo_structure()
+            ...     # repo_dir = env.erk_root / "repos" / env.cwd.name
+            ...     # Returns sentinel path (no filesystem I/O)
+        """
+        repo_dir = self.erk_root / "repos" / self.cwd.name
+
+        # In pure mode, just create the paths - no mkdir() or special tracking needed
+        # FakeGit's existing_paths will handle path validation
+        # SentinelPath.mkdir() is a no-op anyway
+        # Note: worktrees_dir path (repo_dir / "worktrees") is implicitly available
+        # but doesn't need to be created or tracked in pure mode
+
+        if create_config:
+            config_toml = repo_dir / "config.toml"
+            # Store empty config content in memory
+            config_toml.write_text("", encoding="utf-8")
+
+        return repo_dir
 
     def build_context(
         self,

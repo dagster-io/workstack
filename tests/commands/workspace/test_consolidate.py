@@ -489,7 +489,7 @@ def test_consolidate_partial_stack() -> None:
         graphite_ops = FakeGraphite(stacks={"feat-3": ["main", "feat-1", "feat-2", "feat-3"]})
 
         # Create worktree directories
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
         wt1_path = repo_dir / "wt1"
         wt2_path = repo_dir / "wt2"
         wt3_path = repo_dir / "wt3"
@@ -573,7 +573,7 @@ def test_consolidate_preserves_upstack_branches() -> None:
         )
 
         # Create worktree directories
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
         wt1_path = repo_dir / "wt1"
         wt2_path = repo_dir / "wt2"
         wt3_path = repo_dir / "wt3"
@@ -631,7 +631,7 @@ def test_consolidate_shows_output_with_script_flag() -> None:
         graphite_ops = FakeGraphite(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
         wt1_path = repo_dir / "wt1"
 
         worktrees = {
@@ -670,7 +670,7 @@ def test_consolidate_shows_output_without_script_flag() -> None:
         graphite_ops = FakeGraphite(stacks={"feature-1": ["main", "feature-1"]})
 
         # Create worktree
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
         wt1_path = repo_dir / "wt1"
 
         worktrees = {
@@ -810,7 +810,7 @@ def test_consolidate_allows_uncommitted_changes_in_protected_worktrees() -> None
         # Create worktree directories
         # Root worktree is env.cwd (on main branch)
         main_worktree = env.cwd
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
         wt1_path = repo_dir / "wt1"  # feat-1 (will be consolidated)
         wt2_path = repo_dir / "wt2"  # feat-2 (will be consolidated)
         wt3_path = repo_dir / "wt3"  # feat-3 (will NOT be consolidated, has uncommitted)

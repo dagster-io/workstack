@@ -17,9 +17,7 @@ def test_create_basic_worktree() -> None:
     """Test creating a basic worktree."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         # Create minimal config
         config_toml = repo_dir / "config.toml"
@@ -44,9 +42,7 @@ def test_create_with_custom_branch_name() -> None:
     """Test creating a worktree with a custom branch name."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -74,9 +70,7 @@ def test_create_with_plan_file() -> None:
         plan_file = env.cwd / "my-feature-plan.md"
         plan_file.write_text("# My Feature Plan\n", encoding="utf-8")
 
-        repo_dir = env.erk_root / "repos" / env.root_worktree.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         # Pass local config directly
         local_config = LoadedConfig(
@@ -119,9 +113,7 @@ def test_create_with_plan_file_removes_plan_word() -> None:
     """Test that --plan flag removes 'plan' from worktree names."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.root_worktree.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         # Pass local config directly
         local_config = LoadedConfig(
@@ -182,9 +174,7 @@ def test_create_sanitizes_worktree_name() -> None:
     """Test that worktree names are sanitized."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -208,9 +198,7 @@ def test_create_sanitizes_branch_name() -> None:
     """Test that branch names are sanitized."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -232,9 +220,7 @@ def test_create_detects_default_branch() -> None:
     """Test that create detects the default branch when needed."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -264,8 +250,7 @@ def test_create_from_current_branch_in_worktree() -> None:
         current_worktree = env.root_worktree.parent / "wt-current"
         current_worktree.mkdir()
 
-        repo_dir = env.erk_root / "repos" / repo_root.name
-        repo_dir.mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -300,9 +285,7 @@ def test_create_fails_if_worktree_exists() -> None:
     """Test that create fails if worktree already exists."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -328,9 +311,7 @@ def test_create_runs_post_create_commands() -> None:
     """Test that create runs post-create commands."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.root_worktree.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         # Pass local config directly with post_create commands
         local_config = LoadedConfig(
@@ -363,9 +344,7 @@ def test_create_sets_env_variables() -> None:
     """Test that create sets environment variables in .env file."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         # Pass local config directly with env vars
         local_config = LoadedConfig(
@@ -410,9 +389,7 @@ def test_create_uses_graphite_when_enabled() -> None:
     """
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         # Pass local config directly
         local_config = LoadedConfig(
@@ -453,9 +430,7 @@ def test_create_blocks_when_staged_changes_present_with_graphite_enabled() -> No
     """Ensure the command fails fast when staged changes exist and graphite is enabled."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         # Pass local config directly
         local_config = LoadedConfig(
@@ -497,9 +472,7 @@ def test_create_uses_git_when_graphite_disabled() -> None:
     """Test that create uses git when graphite is disabled."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -520,9 +493,7 @@ def test_create_allows_staged_changes_when_graphite_disabled() -> None:
     """Graphite disabled path should ignore staged changes and continue."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
         (repo_dir / "config.toml").write_text("", encoding="utf-8")
 
         git_ops = FakeGit(
@@ -578,9 +549,7 @@ def test_create_no_post_flag_skips_commands() -> None:
     """Test that --no-post flag skips post-create commands."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         # Create config with post_create commands
         config_toml = repo_dir / "config.toml"
@@ -606,9 +575,7 @@ def test_create_from_current_branch() -> None:
     """Test creating worktree from current branch."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -630,9 +597,7 @@ def test_create_from_branch() -> None:
     """Test creating worktree from an existing branch."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -669,9 +634,7 @@ def test_create_from_current_branch_on_main_fails() -> None:
     """Test that --from-current-branch fails with helpful message when on main."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -694,9 +657,7 @@ def test_create_detects_branch_already_checked_out() -> None:
     """Test that create detects when branch is already checked out."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -731,9 +692,7 @@ def test_create_from_current_branch_on_master_fails() -> None:
     """Test that --from-current-branch fails when on master branch too."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -761,9 +720,7 @@ def test_create_with_keep_plan_flag() -> None:
         plan_file = env.cwd / "my-feature-plan.md"
         plan_file.write_text("# My Feature Plan\n", encoding="utf-8")
 
-        repo_dir = env.erk_root / "repos" / env.root_worktree.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         # Pass local config directly
         local_config = LoadedConfig(
@@ -837,8 +794,7 @@ def test_from_current_branch_with_main_in_use_prefers_graphite_parent() -> None:
         current_worktree = env.cwd.parent / "wt-current"
         current_worktree.mkdir()
 
-        repo_dir = env.erk_root / "repos" / repo_root.name
-        repo_dir.mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         # Pass local config directly
         local_config = LoadedConfig(
@@ -920,8 +876,7 @@ def test_from_current_branch_with_parent_in_use_falls_back_to_detached_head() ->
         other_worktree = env.cwd.parent / "wt-other"
         other_worktree.mkdir()
 
-        repo_dir = env.erk_root / "repos" / repo_root.name
-        repo_dir.mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -987,8 +942,7 @@ def test_from_current_branch_without_graphite_falls_back_to_main() -> None:
         current_worktree = env.cwd.parent / "wt-current"
         current_worktree.mkdir()
 
-        repo_dir = env.erk_root / "repos" / repo_root.name
-        repo_dir.mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -1044,8 +998,7 @@ def test_from_current_branch_no_graphite_main_in_use_uses_detached_head() -> Non
         current_worktree = env.cwd.parent / "wt-current"
         current_worktree.mkdir()
 
-        repo_dir = env.erk_root / "repos" / repo_root.name
-        repo_dir.mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -1090,9 +1043,7 @@ def test_create_with_json_output() -> None:
     """Test creating a worktree with JSON output."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -1124,9 +1075,7 @@ def test_create_existing_worktree_with_json() -> None:
     """Test creating a worktree that already exists with JSON output."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -1159,9 +1108,7 @@ def test_create_json_and_script_mutually_exclusive() -> None:
     """Test that --json and --script flags are mutually exclusive."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -1184,9 +1131,7 @@ def test_create_with_json_and_plan_file() -> None:
     """Test creating a worktree with JSON output and plan file."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.root_worktree.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         # Pass local config directly
         local_config = LoadedConfig(
@@ -1245,9 +1190,7 @@ def test_create_with_json_no_plan() -> None:
     """Test that JSON output has null plan_file when no plan is provided."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -1273,9 +1216,7 @@ def test_create_with_stay_prevents_script_generation() -> None:
     """Test that --stay flag prevents script generation."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -1301,9 +1242,7 @@ def test_create_with_stay_and_json() -> None:
     """Test that --stay works with --json output mode."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -1335,9 +1274,7 @@ def test_create_with_stay_and_plan() -> None:
         plan_file = env.cwd / "test-feature-plan.md"
         plan_file.write_text("# Test Feature Plan\n", encoding="utf-8")
 
-        repo_dir = env.erk_root / "repos" / env.root_worktree.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         # Pass local config directly
         local_config = LoadedConfig(
@@ -1383,9 +1320,7 @@ def test_create_default_behavior_generates_script() -> None:
     """Test that default behavior (without --stay) still generates script."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -1410,9 +1345,7 @@ def test_create_with_long_name_truncation() -> None:
     """Test that worktree base names exceeding 30 characters are truncated before date suffix."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -1445,9 +1378,7 @@ def test_create_with_plan_ensures_uniqueness() -> None:
         plan_file = env.cwd / "my-feature-plan.md"
         plan_file.write_text("# My Feature Plan\n", encoding="utf-8")
 
-        repo_dir = env.erk_root / "repos" / env.root_worktree.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -1511,9 +1442,7 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
         plan_file = env.cwd / long_plan_name
         plan_file.write_text("# Fix Branch Worktree Name Mismatch\n", encoding="utf-8")
 
-        repo_dir = env.erk_root / "repos" / env.root_worktree.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         # Pass local config directly
         local_config = LoadedConfig(
@@ -1586,9 +1515,7 @@ def test_create_fails_when_branch_exists_on_remote() -> None:
     """Test that create fails if branch name already exists on origin."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -1612,9 +1539,7 @@ def test_create_succeeds_when_branch_not_on_remote() -> None:
     """Test that create succeeds if branch name doesn't exist on origin."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -1637,9 +1562,7 @@ def test_create_with_skip_remote_check_flag() -> None:
     """Test that --skip-remote-check bypasses remote validation."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
@@ -1666,9 +1589,7 @@ def test_create_proceeds_with_warning_when_remote_check_fails() -> None:
     """Test that create proceeds with warning if remote check fails."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
-        repo_dir.mkdir(parents=True)
-        (repo_dir / "worktrees").mkdir(parents=True)
+        repo_dir = env.setup_repo_structure()
 
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")

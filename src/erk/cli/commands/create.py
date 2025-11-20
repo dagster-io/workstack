@@ -372,6 +372,16 @@ def _create_json_response(
     help="Copy the plan file instead of moving it (requires --plan).",
 )
 @click.option(
+    "--copy-plan",
+    is_flag=True,
+    default=False,
+    help=(
+        "Copy .plan directory from current worktree to new worktree. "
+        "Useful for multi-phase workflows where each phase builds on the previous plan. "
+        "Mutually exclusive with --plan."
+    ),
+)
+@click.option(
     "--from-current-branch",
     is_flag=True,
     help=(
@@ -418,6 +428,7 @@ def create(
     no_post: bool,
     plan_file: Path | None,
     keep_plan: bool,
+    copy_plan: bool,
     from_current_branch: bool,
     from_branch: str | None,
     script: bool,
@@ -453,6 +464,33 @@ def create(
     if keep_plan and not plan_file:
         user_output("Error: --keep-plan requires --plan")
         raise SystemExit(1)
+
+    # Validate --copy-plan and --plan are mutually exclusive
+    if copy_plan and plan_file is not None:
+        user_output(
+            click.style("Error: ", fg="red")
+            + "--copy-plan and --plan are mutually exclusive. "
+            + "Use --copy-plan to copy from current worktree OR --plan <file> to use a plan file."
+        )
+        raise SystemExit(1)
+
+    # Validate .plan directory exists if --copy-plan is used
+    if copy_plan:
+        plan_source = ctx.cwd / ".plan"
+        if not plan_source.exists():
+            user_output(
+                click.style("Error: ", fg="red")
+                + f"No .plan directory found in current worktree ({ctx.cwd}). "
+                + "Use 'erk create --plan <file>' to create a worktree with a plan from a file."
+            )
+            raise SystemExit(1)
+
+        if not plan_source.is_dir():
+            user_output(
+                click.style("Error: ", fg="red")
+                + f".plan exists but is not a directory ({plan_source})"
+            )
+            raise SystemExit(1)
 
     # Handle --from-current-branch flag
     if from_current_branch:
@@ -664,6 +702,23 @@ def create(
             plan_file.unlink()  # Remove source file
             if not script and not output_json:
                 user_output(f"Moved plan to {plan_folder_destination}")
+
+    # Copy .plan directory if --copy-plan flag is set
+    if copy_plan:
+        import shutil
+
+        plan_source = ctx.cwd / ".plan"
+        plan_dest = wt_path / ".plan"
+
+        # Copy entire directory
+        shutil.copytree(plan_source, plan_dest)
+
+        if not script and not output_json:
+            user_output(
+                "  "
+                + click.style("✓", fg="green")
+                + f" Copied .plan from {click.style(str(ctx.cwd), fg='yellow')}"
+            )
 
     # Post-create commands (suppress output if JSON mode)
     if not no_post and cfg.post_create_commands:

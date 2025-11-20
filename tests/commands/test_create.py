@@ -7,7 +7,7 @@ from click.testing import CliRunner
 from erk.cli.cli import cli
 from erk.core.git.abc import WorktreeInfo
 from tests.fakes.git import FakeGit
-from tests.test_utils.env_helpers import erk_inmem_env
+from tests.test_utils.env_helpers import erk_inmem_env, erk_isolated_fs_env
 
 
 def test_create_from_current_branch_outputs_script_path_to_stdout() -> None:

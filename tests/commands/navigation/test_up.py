@@ -338,7 +338,7 @@ def test_up_multiple_children_fails_explicitly() -> None:
             "Error: Branch 'feature-1' has multiple children",
             "'feature-2a'",
             "'feature-2b'",
-            "erk add",
+            "erk create",
         )
 
 

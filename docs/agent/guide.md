@@ -53,5 +53,6 @@ docs/
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | Understanding erk terminology     | [glossary.md](glossary.md)                                                                                     |
 | Writing tests with fakes/ops      | [testing.md](testing.md)                                                                                       |
+| Understanding or modifying hooks  | [hooks-erk.md](hooks-erk.md) → General: [hooks.md](hooks.md)                                                   |
 | Python coding standards           | Load `dignified-python` skill                                                                                  |
 | Understanding agentic programming | [../writing/agentic-programming/agentic-programming.md](../writing/agentic-programming/agentic-programming.md) |

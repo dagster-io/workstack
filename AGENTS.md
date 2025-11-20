@@ -41,6 +41,7 @@
 | `Path("/test/...")` or hardcoded paths                           | → **CATASTROPHIC** - Use `pure_erk_env` fixture - [Test Isolation](#6-test-isolation--must)          |
 | Writing or modifying tests                                       | → **🔴 LOAD fake-driven-testing skill FIRST** - Test patterns, architecture, anti-patterns           |
 | Test that invokes subprocess or uses `time.sleep()`              | → **MUST** be integration test - [Test Categorization](#test-categorization-rules)                   |
+| Creating or modifying hooks                                      | → [Hook Guide](docs/agent/hooks.md)                                                                  |
 | ⚠️ Python patterns above                                         | → These are EXCERPTS ONLY - Load dignified-python skill for complete guidance                        |
 
 ## 📚 Quick Reference
@@ -51,6 +52,7 @@
 | **Project terms**     | [docs/agent/glossary.md](docs/agent/glossary.md)                             |
 | **Documentation nav** | [docs/agent/guide.md](docs/agent/guide.md)                                   |
 | **Testing patterns**  | [docs/agent/testing.md](docs/agent/testing.md)                               |
+| **Hooks**             | [docs/agent/hooks.md](docs/agent/hooks.md)                                   |
 
 ## Documentation Structure
 

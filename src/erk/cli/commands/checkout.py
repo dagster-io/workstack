@@ -292,7 +292,9 @@ def checkout_cmd(ctx: ErkContext, branch: str, script: bool, implement: bool) ->
     if len(matching_worktrees) == 1:
         # Exactly one worktree contains this branch
         target_worktree = matching_worktrees[0]
-        _perform_checkout(ctx, repo.root, target_worktree, branch, script, implement, is_newly_created)
+        _perform_checkout(
+            ctx, repo.root, target_worktree, branch, script, implement, is_newly_created
+        )
 
     else:
         # Multiple worktrees contain this branch
@@ -302,7 +304,9 @@ def checkout_cmd(ctx: ErkContext, branch: str, script: bool, implement: bool) ->
         if len(directly_checked_out) == 1:
             # Exactly one worktree has the branch directly checked out - jump to it
             target_worktree = directly_checked_out[0]
-            _perform_checkout(ctx, repo.root, target_worktree, branch, script, implement, is_newly_created)
+            _perform_checkout(
+                ctx, repo.root, target_worktree, branch, script, implement, is_newly_created
+            )
         else:
             # Zero or multiple worktrees have it directly checked out
             # Show error message listing all options

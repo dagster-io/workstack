@@ -625,7 +625,10 @@ def test_checkout_with_implement_flag_with_valid_plan() -> None:
         # Note: subprocess.run will fail in test environment since claude not installed
         # This is expected - we're testing the validation logic, not Claude itself
         result = runner.invoke(
-            cli, ["checkout", "feature", "--script", "--implement"], obj=test_ctx, catch_exceptions=False
+            cli,
+            ["checkout", "feature", "--script", "--implement"],
+            obj=test_ctx,
+            catch_exceptions=False,
         )
 
         # The command will succeed through plan validation and script generation

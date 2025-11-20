@@ -255,6 +255,4 @@ custom_field: some_value
 
         assert "completed_steps: 5" in copied_progress, "completed_steps preserved"
         assert "total_steps: 10" in copied_progress, "total_steps preserved"
-        assert (
-            "custom_field: some_value" in copied_progress
-        ), "Custom YAML fields preserved"
+        assert "custom_field: some_value" in copied_progress, "Custom YAML fields preserved"

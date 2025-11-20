@@ -40,7 +40,7 @@ def test_create_with_plan_file() -> None:
 
         # Run erk create with --plan
         result = runner.invoke(
-            cli, ["create", "--plan", "Add_Auth_Feature.md", "--no-post"], obj=test_ctx
+            cli, ["add", "--plan", "Add_Auth_Feature.md", "--no-post"], obj=test_ctx
         )
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
@@ -92,7 +92,7 @@ def test_create_with_plan_name_sanitization() -> None:
 
         # Run erk create with --plan
         result = runner.invoke(
-            cli, ["create", "--plan", "MY_COOL_Plan_File.md", "--no-post"], obj=test_ctx
+            cli, ["add", "--plan", "MY_COOL_Plan_File.md", "--no-post"], obj=test_ctx
         )
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
@@ -149,7 +149,7 @@ def test_create_with_both_name_and_plan_fails() -> None:
         )
 
         # Run erk create with both NAME and --plan
-        result = runner.invoke(cli, ["create", "myname", "--plan", "plan.md"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "myname", "--plan", "plan.md"], obj=test_ctx)
 
         # Should fail
         assert result.exit_code != 0
@@ -191,7 +191,7 @@ def test_create_rejects_reserved_name_root() -> None:
         )
 
         # Try to create a worktree named "root"
-        result = runner.invoke(cli, ["create", "root", "--no-post"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "root", "--no-post"], obj=test_ctx)
 
         # Should fail with reserved name error
         assert result.exit_code != 0
@@ -240,7 +240,7 @@ def test_create_rejects_reserved_name_root_case_insensitive() -> None:
 
         # Test various cases of "root"
         for name_variant in ["ROOT", "Root", "RoOt"]:
-            result = runner.invoke(cli, ["create", name_variant, "--no-post"], obj=test_ctx)
+            result = runner.invoke(cli, ["add", name_variant, "--no-post"], obj=test_ctx)
 
             # Should fail with reserved name error
             assert result.exit_code != 0, f"Expected failure for name '{name_variant}'"
@@ -287,7 +287,7 @@ def test_create_rejects_main_as_worktree_name() -> None:
         )
 
         # Try to create a worktree named "main"
-        result = runner.invoke(cli, ["create", "main", "--no-post"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "main", "--no-post"], obj=test_ctx)
 
         # Should fail with error suggesting to use root
         assert result.exit_code != 0
@@ -336,7 +336,7 @@ def test_create_rejects_master_as_worktree_name() -> None:
         )
 
         # Try to create a worktree named "master"
-        result = runner.invoke(cli, ["create", "master", "--no-post"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "master", "--no-post"], obj=test_ctx)
 
         # Should fail with error suggesting to use root
         assert result.exit_code != 0
@@ -353,11 +353,11 @@ def test_render_cd_script() -> None:
     worktree_path = Path("/example/erks/repo/my-worktree")
     script = render_cd_script(
         worktree_path,
-        comment="erk create - cd to new worktree",
+        comment="erk add - cd to new worktree",
         success_message="✓ Switched to new worktree.",
     )
 
-    assert "# erk create - cd to new worktree" in script
+    assert "# erk add - cd to new worktree" in script
     assert f"cd '{worktree_path}'" in script
     assert 'echo "✓ Switched to new worktree."' in script
 
@@ -383,7 +383,7 @@ def test_create_with_script_flag() -> None:
 
         # Run erk create with --script flag
         result = runner.invoke(
-            cli, ["create", "test-worktree", "--no-post", "--script"], obj=test_ctx
+            cli, ["add", "test-worktree", "--no-post", "--script"], obj=test_ctx
         )
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
@@ -394,7 +394,7 @@ def test_create_with_script_flag() -> None:
         # Output should be a temp file path
         script_path = Path(result.output.strip())
         assert script_path.exists()
-        assert script_path.name.startswith("erk-create-")
+        assert script_path.name.startswith("erk-add-")
         assert script_path.name.endswith(".sh")
 
         # Verify script content contains activation keywords (not simple cd)
@@ -412,7 +412,7 @@ def test_create_with_script_flag() -> None:
 def test_hidden_shell_cmd_create_passthrough_on_help() -> None:
     """Shell integration command signals passthrough for help."""
     runner = CliRunner()
-    result = runner.invoke(hidden_shell_cmd, ["create", "--help"])
+    result = runner.invoke(hidden_shell_cmd, ["add", "--help"])
 
     assert result.exit_code == 0
     assert result.output.strip() == "__ERK_PASSTHROUGH__"
@@ -430,7 +430,7 @@ def test_hidden_shell_cmd_create_passthrough_on_error(tmp_path: Path) -> None:
     # Create isolated filesystem without git repo or config
     with runner.isolated_filesystem(temp_dir=tmp_path):
         # Try to create without any setup - should error
-        result = runner.invoke(hidden_shell_cmd, ["create", "test-worktree"])
+        result = runner.invoke(hidden_shell_cmd, ["add", "test-worktree"])
 
         # Should passthrough on error
         assert result.exit_code != 0

@@ -5,7 +5,7 @@ from pathlib import Path
 import click
 
 from dot_agent_kit.cli.progress import command_status
-from erk.cli.commands.delete import _delete_worktree
+from erk.cli.commands.remove import _delete_worktree
 from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output
 from erk.cli.shell_utils import render_navigation_script

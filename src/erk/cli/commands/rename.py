@@ -1,6 +1,6 @@
 import click
 
-from erk.cli.commands.create import make_env_content, sanitize_worktree_name
+from erk.cli.commands.add import make_env_content, sanitize_worktree_name
 from erk.cli.commands.navigation_helpers import complete_worktree_names
 from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output

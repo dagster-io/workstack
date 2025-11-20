@@ -72,7 +72,7 @@ def ensure_worktree_for_branch(
             user_output(
                 f"Error: Branch '{branch}' does not exist.\n"
                 f"To create a new branch and worktree, run:\n"
-                f"  erk create --branch {branch}"
+                f"  erk add --branch {branch}"
             )
             raise SystemExit(1)
 
@@ -87,7 +87,7 @@ def ensure_worktree_for_branch(
                 f"Suggested action:\n"
                 f"  1. Check git status and resolve any issues\n"
                 f"  2. Manually create branch: git branch --track {branch} {remote_ref}\n"
-                f"  3. Or use: erk create --branch {branch}"
+                f"  3. Or use: erk add --branch {branch}"
             )
             raise SystemExit(1) from e
 
@@ -203,7 +203,7 @@ def add_worktree(
                 f"Git doesn't allow the same branch to be checked out in multiple worktrees.\n\n"
                 f"Options:\n"
                 f"  • Use a different branch name\n"
-                f"  • Create a new branch instead: erk create {path.name}\n"
+                f"  • Create a new branch instead: erk add {path.name}\n"
                 f"  • Switch to that worktree: erk checkout {branch}",
             )
             raise SystemExit(1)
@@ -243,7 +243,7 @@ def add_worktree(
                     "Graphite cannot create a branch while staged changes are present.\n"
                     "`gt create --no-interactive` attempts to commit staged files but fails when "
                     "no commit message is provided.\n\n"
-                    "Resolve the staged changes before running `erk create`:\n"
+                    "Resolve the staged changes before running `erk add`:\n"
                     '  • Commit them: git commit -m "message"\n'
                     "  • Unstage them: git reset\n"
                     "  • Stash them: git stash\n"
@@ -335,7 +335,7 @@ def _create_json_response(
     )
 
 
-@click.command("create")
+@click.command("add")
 @click.argument("name", metavar="NAME", required=False)
 @click.option(
     "--branch",
@@ -420,7 +420,7 @@ def _create_json_response(
     help="Skip checking if branch exists on remote (for offline work)",
 )
 @click.pass_obj
-def create(
+def add(
     ctx: ErkContext,
     name: str | None,
     branch: str | None,
@@ -436,7 +436,7 @@ def create(
     stay: bool,
     skip_remote_check: bool,
 ) -> None:
-    """Create a worktree and write a .env file.
+    """Add a worktree and write a .env file.
 
     Reads config.toml for env templates and post-create commands (if present).
     If --plan is provided, derives name from the plan filename and creates
@@ -624,7 +624,7 @@ def create(
                 f"Error: Cannot use --from-current-branch when on '{current_branch}'.\n"
                 f"The current branch cannot be moved to a worktree and then checked out again.\n\n"
                 f"Alternatives:\n"
-                f"  • Create a new branch: erk create {name}\n"
+                f"  • Create a new branch: erk add {name}\n"
                 f"  • Switch to a feature branch first, then use --from-current-branch\n"
                 f"  • Use --from-branch to create from a different existing branch",
             )
@@ -739,7 +739,7 @@ def create(
         )
         result = ctx.script_writer.write_activation_script(
             script_content,
-            command_name="create",
+            command_name="add",
             comment=f"cd to {name}",
         )
         result.output_for_shell_integration()

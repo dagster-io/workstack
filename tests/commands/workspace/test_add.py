@@ -13,7 +13,7 @@ from tests.fakes.graphite import FakeGraphite
 from tests.test_utils.env_helpers import erk_inmem_env, erk_isolated_fs_env
 
 
-def test_create_basic_worktree() -> None:
+def test_add_basic_worktree() -> None:
     """Test creating a basic worktree."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -32,7 +32,7 @@ def test_create_basic_worktree() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "test-feature"], obj=test_ctx)
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
         # Verify worktree creation from output
@@ -40,7 +40,7 @@ def test_create_basic_worktree() -> None:
         assert "test-feature" in result.output
 
 
-def test_create_with_custom_branch_name() -> None:
+def test_add_with_custom_branch_name() -> None:
     """Test creating a worktree with a custom branch name."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -59,14 +59,14 @@ def test_create_with_custom_branch_name() -> None:
         test_ctx = env.build_context(git=git_ops)
 
         result = runner.invoke(
-            cli, ["create", "feature", "--branch", "my-custom-branch"], obj=test_ctx
+            cli, ["add", "feature", "--branch", "my-custom-branch"], obj=test_ctx
         )
 
         assert result.exit_code == 0, result.output
         assert "my-custom-branch" in result.output
 
 
-def test_create_with_plan_file() -> None:
+def test_add_with_plan_file() -> None:
     """Test creating a worktree with a plan file."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -99,7 +99,7 @@ def test_create_with_plan_file() -> None:
 
         test_ctx = env.build_context(git=git_ops, local_config=local_config, repo=repo)
 
-        result = runner.invoke(cli, ["create", "--plan", str(plan_file)], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "--plan", str(plan_file)], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Should create worktree with "plan" stripped from filename and date suffix added
@@ -115,7 +115,7 @@ def test_create_with_plan_file() -> None:
         assert not plan_file.exists()
 
 
-def test_create_with_plan_file_removes_plan_word() -> None:
+def test_add_with_plan_file_removes_plan_word() -> None:
     """Test that --plan flag removes 'plan' from worktree names."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -161,7 +161,7 @@ def test_create_with_plan_file_removes_plan_word() -> None:
             plan_file = env.cwd / plan_filename
             plan_file.write_text(f"# {plan_filename}\n", encoding="utf-8")
 
-            result = runner.invoke(cli, ["create", "--plan", str(plan_file)], obj=test_ctx)
+            result = runner.invoke(cli, ["add", "--plan", str(plan_file)], obj=test_ctx)
 
             assert result.exit_code == 0, f"Failed for {plan_filename}: {result.output}"
             # Worktree name includes date suffix
@@ -178,7 +178,7 @@ def test_create_with_plan_file_removes_plan_word() -> None:
             shutil.rmtree(wt_path)
 
 
-def test_create_sanitizes_worktree_name() -> None:
+def test_add_sanitizes_worktree_name() -> None:
     """Test that worktree names are sanitized."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -196,7 +196,7 @@ def test_create_sanitizes_worktree_name() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "Test_Feature!!"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "Test_Feature!!"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # The actual sanitization is tested in test_naming.py
@@ -204,7 +204,7 @@ def test_create_sanitizes_worktree_name() -> None:
         assert "Created worktree" in result.output
 
 
-def test_create_sanitizes_branch_name() -> None:
+def test_add_sanitizes_branch_name() -> None:
     """Test that branch names are sanitized."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -223,12 +223,12 @@ def test_create_sanitizes_branch_name() -> None:
         test_ctx = env.build_context(git=git_ops)
 
         # Branch name should be sanitized differently than worktree name
-        result = runner.invoke(cli, ["create", "Test_Feature!!"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "Test_Feature!!"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
 
 
-def test_create_detects_default_branch() -> None:
+def test_add_detects_default_branch() -> None:
     """Test that create detects the default branch when needed."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -248,13 +248,13 @@ def test_create_detects_default_branch() -> None:
         test_ctx = env.build_context(git=git_ops)
 
         result = runner.invoke(
-            cli, ["create", "new-feature", "--from-current-branch"], obj=test_ctx
+            cli, ["add", "new-feature", "--from-current-branch"], obj=test_ctx
         )
 
         assert result.exit_code == 0, result.output
 
 
-def test_create_from_current_branch_in_worktree() -> None:
+def test_add_from_current_branch_in_worktree() -> None:
     """Regression: ensure --from-current-branch works when executed from a worktree."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -286,7 +286,7 @@ def test_create_from_current_branch_in_worktree() -> None:
 
         test_ctx = env.build_context(git=git_ops, cwd=current_worktree)
 
-        result = runner.invoke(cli, ["create", "--from-current-branch"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "--from-current-branch"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
 
@@ -296,7 +296,7 @@ def test_create_from_current_branch_in_worktree() -> None:
         assert (expected_worktree, "feature") in git_ops.added_worktrees
 
 
-def test_create_fails_if_worktree_exists() -> None:
+def test_add_fails_if_worktree_exists() -> None:
     """Test that create fails if worktree already exists."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -318,13 +318,13 @@ def test_create_fails_if_worktree_exists() -> None:
         # Tell context that wt_path exists
         test_ctx = env.build_context(git=git_ops, existing_paths={wt_path})
 
-        result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "test-feature"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "already exists" in result.output
 
 
-def test_create_runs_post_create_commands() -> None:
+def test_add_runs_post_create_commands() -> None:
     """Test that create runs post-create commands."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -353,13 +353,13 @@ def test_create_runs_post_create_commands() -> None:
 
         test_ctx = env.build_context(git=git_ops, local_config=local_config, repo=repo)
 
-        result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "test-feature"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         assert "Running post-create commands" in result.output
 
 
-def test_create_sets_env_variables() -> None:
+def test_add_sets_env_variables() -> None:
     """Test that create sets environment variables in .env file."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -388,7 +388,7 @@ def test_create_sets_env_variables() -> None:
 
         test_ctx = env.build_context(git=git_ops, local_config=local_config, repo=repo)
 
-        result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "test-feature"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         wt_path = repo_dir / "worktrees" / "test-feature"
@@ -399,7 +399,7 @@ def test_create_sets_env_variables() -> None:
         assert "REPO_ROOT" in env_content
 
 
-def test_create_uses_graphite_when_enabled() -> None:
+def test_add_uses_graphite_when_enabled() -> None:
     """Test that create works with graphite disabled (testing without gt subprocess).
 
     Note: The original test mocked subprocess.run to test graphite integration.
@@ -442,14 +442,14 @@ def test_create_uses_graphite_when_enabled() -> None:
             repo=repo,
         )
 
-        result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "test-feature"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Verify worktree was created successfully
         repo_dir / "test-feature"
 
 
-def test_create_blocks_when_staged_changes_present_with_graphite_enabled() -> None:
+def test_add_blocks_when_staged_changes_present_with_graphite_enabled() -> None:
     """Ensure the command fails fast when staged changes exist and graphite is enabled."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -485,7 +485,7 @@ def test_create_blocks_when_staged_changes_present_with_graphite_enabled() -> No
             repo=repo,
         )
 
-        result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "test-feature"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "Staged changes detected." in result.output
@@ -493,7 +493,7 @@ def test_create_blocks_when_staged_changes_present_with_graphite_enabled() -> No
         # No need to verify subprocess wasn't called - the error happens before subprocess
 
 
-def test_create_uses_git_when_graphite_disabled() -> None:
+def test_add_uses_git_when_graphite_disabled() -> None:
     """Test that create uses git when graphite is disabled."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -511,12 +511,12 @@ def test_create_uses_git_when_graphite_disabled() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "test-feature"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
 
 
-def test_create_allows_staged_changes_when_graphite_disabled() -> None:
+def test_add_allows_staged_changes_when_graphite_disabled() -> None:
     """Graphite disabled path should ignore staged changes and continue."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -533,12 +533,12 @@ def test_create_allows_staged_changes_when_graphite_disabled() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "test-feature"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
 
 
-def test_create_invalid_worktree_name() -> None:
+def test_add_invalid_worktree_name() -> None:
     """Test that create rejects invalid worktree names."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -547,12 +547,12 @@ def test_create_invalid_worktree_name() -> None:
         test_ctx = env.build_context(git=git_ops)
 
         # Test reserved name "root"
-        result = runner.invoke(cli, ["create", "root"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "root"], obj=test_ctx)
         assert result.exit_code == 1
         assert "reserved" in result.output.lower()
 
         # Test trunk branch rejection (default is "main")
-        result = runner.invoke(cli, ["create", "main"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "main"], obj=test_ctx)
         assert result.exit_code == 1
         assert "cannot be used" in result.output.lower()
 
@@ -560,7 +560,7 @@ def test_create_invalid_worktree_name() -> None:
         # If repo uses master as trunk, it would be rejected; otherwise it's allowed
 
 
-def test_create_plan_file_not_found() -> None:
+def test_add_plan_file_not_found() -> None:
     """Test that create fails when plan file doesn't exist."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -568,13 +568,13 @@ def test_create_plan_file_not_found() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "--plan", "nonexistent.md"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "--plan", "nonexistent.md"], obj=test_ctx)
 
         # Click should fail validation before reaching our code
         assert result.exit_code != 0
 
 
-def test_create_no_post_flag_skips_commands() -> None:
+def test_add_no_post_flag_skips_commands() -> None:
     """Test that --no-post flag skips post-create commands."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -596,13 +596,13 @@ def test_create_no_post_flag_skips_commands() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "test-feature", "--no-post"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "test-feature", "--no-post"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         assert "Running post-create commands" not in result.output
 
 
-def test_create_from_current_branch() -> None:
+def test_add_from_current_branch() -> None:
     """Test creating worktree from current branch."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -621,12 +621,12 @@ def test_create_from_current_branch() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "feature", "--from-current-branch"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "feature", "--from-current-branch"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
 
 
-def test_create_from_branch() -> None:
+def test_add_from_branch() -> None:
     """Test creating worktree from an existing branch."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -645,13 +645,13 @@ def test_create_from_branch() -> None:
         test_ctx = env.build_context(git=git_ops)
 
         result = runner.invoke(
-            cli, ["create", "feature", "--from-branch", "existing-branch"], obj=test_ctx
+            cli, ["add", "feature", "--from-branch", "existing-branch"], obj=test_ctx
         )
 
         assert result.exit_code == 0, result.output
 
 
-def test_create_requires_name_or_flag() -> None:
+def test_add_requires_name_or_flag() -> None:
     """Test that create requires NAME or a flag."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -659,13 +659,13 @@ def test_create_requires_name_or_flag() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create"], obj=test_ctx)
+        result = runner.invoke(cli, ["add"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "Must provide NAME" in result.output
 
 
-def test_create_from_current_branch_on_main_fails() -> None:
+def test_add_from_current_branch_on_main_fails() -> None:
     """Test that --from-current-branch fails with helpful message when on main."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -683,14 +683,14 @@ def test_create_from_current_branch_on_main_fails() -> None:
         )
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "feature", "--from-current-branch"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "feature", "--from-current-branch"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "Cannot use --from-current-branch when on 'main'" in result.output
         assert "Alternatives:" in result.output
 
 
-def test_create_detects_branch_already_checked_out() -> None:
+def test_add_detects_branch_already_checked_out() -> None:
     """Test that create detects when branch is already checked out."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -719,7 +719,7 @@ def test_create_detects_branch_already_checked_out() -> None:
         test_ctx = env.build_context(git=git_ops)
 
         result = runner.invoke(
-            cli, ["create", "new-feature", "--from-branch", "feature-branch"], obj=test_ctx
+            cli, ["add", "new-feature", "--from-branch", "feature-branch"], obj=test_ctx
         )
 
         assert result.exit_code == 1
@@ -727,7 +727,7 @@ def test_create_detects_branch_already_checked_out() -> None:
         assert "feature-branch" in result.output
 
 
-def test_create_from_current_branch_on_master_fails() -> None:
+def test_add_from_current_branch_on_master_fails() -> None:
     """Test that --from-current-branch fails when on master branch too."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -747,13 +747,13 @@ def test_create_from_current_branch_on_master_fails() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "feature", "--from-current-branch"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "feature", "--from-current-branch"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "Cannot use --from-current-branch when on 'master'" in result.output
 
 
-def test_create_with_keep_plan_flag() -> None:
+def test_add_with_keep_plan_flag() -> None:
     """Test that --keep-plan copies instead of moves the plan file."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -787,7 +787,7 @@ def test_create_with_keep_plan_flag() -> None:
         test_ctx = env.build_context(git=git_ops, local_config=local_config, repo=repo)
 
         result = runner.invoke(
-            cli, ["create", "--plan", str(plan_file), "--keep-plan"], obj=test_ctx
+            cli, ["add", "--plan", str(plan_file), "--keep-plan"], obj=test_ctx
         )
 
         assert result.exit_code == 0, result.output
@@ -805,7 +805,7 @@ def test_create_with_keep_plan_flag() -> None:
         assert "Copied plan to" in result.output
 
 
-def test_create_keep_plan_without_plan_fails() -> None:
+def test_add_keep_plan_without_plan_fails() -> None:
     """Test that --keep-plan without --plan fails with error message."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -813,7 +813,7 @@ def test_create_keep_plan_without_plan_fails() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "test-feature", "--keep-plan"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "test-feature", "--keep-plan"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "--keep-plan requires --plan" in result.output
@@ -892,7 +892,7 @@ def test_from_current_branch_with_main_in_use_prefers_graphite_parent() -> None:
             cwd=current_worktree,
         )
 
-        result = runner.invoke(cli, ["create", "--from-current-branch"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "--from-current-branch"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Should checkout feature-1 (the Graphite parent), not main
@@ -960,7 +960,7 @@ def test_from_current_branch_with_parent_in_use_falls_back_to_detached_head() ->
 
         test_ctx = env.build_context(git=git_ops, cwd=current_worktree)
 
-        result = runner.invoke(cli, ["create", "--from-current-branch"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "--from-current-branch"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Should use detached HEAD since both main and feature-1 are in use
@@ -1020,7 +1020,7 @@ def test_from_current_branch_without_graphite_falls_back_to_main() -> None:
 
         test_ctx = env.build_context(git=git_ops, cwd=current_worktree)
 
-        result = runner.invoke(cli, ["create", "--from-current-branch"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "--from-current-branch"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Should checkout main since no Graphite parent exists
@@ -1077,7 +1077,7 @@ def test_from_current_branch_no_graphite_main_in_use_uses_detached_head() -> Non
 
         test_ctx = env.build_context(git=git_ops, cwd=current_worktree)
 
-        result = runner.invoke(cli, ["create", "--from-current-branch"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "--from-current-branch"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Should use detached HEAD since no parent and main is in use
@@ -1086,7 +1086,7 @@ def test_from_current_branch_no_graphite_main_in_use_uses_detached_head() -> Non
         assert git_ops.detached_checkouts[0][1] == "standalone-feature"
 
 
-def test_create_with_json_output() -> None:
+def test_add_with_json_output() -> None:
     """Test creating a worktree with JSON output."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -1104,7 +1104,7 @@ def test_create_with_json_output() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "test-feature", "--json"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "test-feature", "--json"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
 
@@ -1120,7 +1120,7 @@ def test_create_with_json_output() -> None:
         repo_dir / "test-feature"
 
 
-def test_create_existing_worktree_with_json() -> None:
+def test_add_existing_worktree_with_json() -> None:
     """Test creating a worktree that already exists with JSON output."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -1143,7 +1143,7 @@ def test_create_existing_worktree_with_json() -> None:
         # Tell context that existing_wt exists
         test_ctx = env.build_context(git=git_ops, existing_paths={existing_wt})
 
-        result = runner.invoke(cli, ["create", "existing-feature", "--json"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "existing-feature", "--json"], obj=test_ctx)
 
         assert result.exit_code == 1, result.output
 
@@ -1155,7 +1155,7 @@ def test_create_existing_worktree_with_json() -> None:
         assert output_data["status"] == "exists"
 
 
-def test_create_json_and_script_mutually_exclusive() -> None:
+def test_add_json_and_script_mutually_exclusive() -> None:
     """Test that --json and --script flags are mutually exclusive."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -1173,14 +1173,14 @@ def test_create_json_and_script_mutually_exclusive() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "test-feature", "--json", "--script"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "test-feature", "--json", "--script"], obj=test_ctx)
 
         # Should fail with validation error
         assert result.exit_code == 1
         assert "Cannot use both --json and --script" in result.output
 
 
-def test_create_with_json_and_plan_file() -> None:
+def test_add_with_json_and_plan_file() -> None:
     """Test creating a worktree with JSON output and plan file."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -1216,7 +1216,7 @@ def test_create_with_json_and_plan_file() -> None:
         # Don't provide NAME - it's derived from plan filename
         result = runner.invoke(
             cli,
-            ["create", "--json", "--plan", str(plan_file)],
+            ["add", "--json", "--plan", str(plan_file)],
             obj=test_ctx,
         )
 
@@ -1241,7 +1241,7 @@ def test_create_with_json_and_plan_file() -> None:
         assert not plan_file.exists()  # Original should be moved, not copied
 
 
-def test_create_with_json_no_plan() -> None:
+def test_add_with_json_no_plan() -> None:
     """Test that JSON output has null plan_file when no plan is provided."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -1259,7 +1259,7 @@ def test_create_with_json_no_plan() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "test-feature", "--json"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "test-feature", "--json"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
 
@@ -1269,7 +1269,7 @@ def test_create_with_json_no_plan() -> None:
         assert output_data["status"] == "created"
 
 
-def test_create_with_stay_prevents_script_generation() -> None:
+def test_add_with_stay_prevents_script_generation() -> None:
     """Test that --stay flag prevents script generation."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -1287,7 +1287,7 @@ def test_create_with_stay_prevents_script_generation() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "test-feature", "--script", "--stay"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "test-feature", "--script", "--stay"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # When --stay is used, no script path should be output
@@ -1297,7 +1297,7 @@ def test_create_with_stay_prevents_script_generation() -> None:
         repo_dir / "test-feature"
 
 
-def test_create_with_stay_and_json() -> None:
+def test_add_with_stay_and_json() -> None:
     """Test that --stay works with --json output mode."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -1315,7 +1315,7 @@ def test_create_with_stay_and_json() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "test-feature", "--json", "--stay"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "test-feature", "--json", "--stay"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
 
@@ -1327,7 +1327,7 @@ def test_create_with_stay_and_json() -> None:
         repo_dir / "test-feature"
 
 
-def test_create_with_stay_and_plan() -> None:
+def test_add_with_stay_and_plan() -> None:
     """Test that --stay works with --plan flag."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -1361,7 +1361,7 @@ def test_create_with_stay_and_plan() -> None:
         test_ctx = env.build_context(git=git_ops, local_config=local_config, repo=repo)
 
         result = runner.invoke(
-            cli, ["create", "--plan", str(plan_file), "--script", "--stay"], obj=test_ctx
+            cli, ["add", "--plan", str(plan_file), "--script", "--stay"], obj=test_ctx
         )
 
         assert result.exit_code == 0, result.output
@@ -1379,7 +1379,7 @@ def test_create_with_stay_and_plan() -> None:
         assert "erk checkout" in result.output
 
 
-def test_create_default_behavior_generates_script() -> None:
+def test_add_default_behavior_generates_script() -> None:
     """Test that default behavior (without --stay) still generates script."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -1397,7 +1397,7 @@ def test_create_default_behavior_generates_script() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "test-feature", "--script"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "test-feature", "--script"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Should generate script path in output
@@ -1406,7 +1406,7 @@ def test_create_default_behavior_generates_script() -> None:
         repo_dir / "test-feature"
 
 
-def test_create_with_long_name_truncation() -> None:
+def test_add_with_long_name_truncation() -> None:
     """Test that worktree base names exceeding 30 characters are truncated before date suffix."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -1426,7 +1426,7 @@ def test_create_with_long_name_truncation() -> None:
 
         # Create with name that exceeds 30 characters
         long_name = "this-is-a-very-long-worktree-name-that-exceeds-thirty-characters"
-        result = runner.invoke(cli, ["create", long_name], obj=test_ctx)
+        result = runner.invoke(cli, ["add", long_name], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Worktree base name should be truncated to 30 chars
@@ -1437,7 +1437,7 @@ def test_create_with_long_name_truncation() -> None:
         assert len(expected_truncated) == 30, "Truncated base name should be exactly 30 chars"
 
 
-def test_create_with_plan_ensures_uniqueness() -> None:
+def test_add_with_plan_ensures_uniqueness() -> None:
     """Test that --plan ensures uniqueness with date suffix and versioning."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -1460,7 +1460,7 @@ def test_create_with_plan_ensures_uniqueness() -> None:
         test_ctx = env.build_context(git=git_ops)
 
         # Create first worktree from plan
-        result1 = runner.invoke(cli, ["create", "--plan", str(plan_file)], obj=test_ctx)
+        result1 = runner.invoke(cli, ["add", "--plan", str(plan_file)], obj=test_ctx)
         assert result1.exit_code == 0, result1.output
 
         # Check that first worktree has date suffix
@@ -1476,7 +1476,7 @@ def test_create_with_plan_ensures_uniqueness() -> None:
         plan_file.write_text("# My Feature Plan - Round 2\n", encoding="utf-8")
 
         # Create second worktree from same plan (same day)
-        result2 = runner.invoke(cli, ["create", "--plan", str(plan_file)], obj=test_ctx)
+        result2 = runner.invoke(cli, ["add", "--plan", str(plan_file)], obj=test_ctx)
         assert result2.exit_code == 0, result2.output
 
         # Check that second worktree has -2 after date suffix
@@ -1490,7 +1490,7 @@ def test_create_with_plan_ensures_uniqueness() -> None:
         assert wt_path2.exists()
 
 
-def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
+def test_add_with_long_plan_name_matches_branch_and_worktree() -> None:
     """Test that long plan names produce matching branch/worktree names.
 
     Without post-date truncation.
@@ -1537,7 +1537,7 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
         test_ctx = env.build_context(git=git_ops, local_config=local_config, repo=repo)
 
         # Create worktree from long plan filename
-        result = runner.invoke(cli, ["create", "--plan", str(plan_file)], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "--plan", str(plan_file)], obj=test_ctx)
         assert result.exit_code == 0, result.output
 
         # Get the created worktree (should be only directory in worktrees_dir)
@@ -1582,7 +1582,7 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
         )
 
 
-def test_create_fails_when_branch_exists_on_remote() -> None:
+def test_add_fails_when_branch_exists_on_remote() -> None:
     """Test that create fails if branch name already exists on origin."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -1601,14 +1601,14 @@ def test_create_fails_when_branch_exists_on_remote() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "existing-feature"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "existing-feature"], obj=test_ctx)
 
         assert result.exit_code == 1
         assert "already exists on remote" in result.output
         assert "origin" in result.output
 
 
-def test_create_succeeds_when_branch_not_on_remote() -> None:
+def test_add_succeeds_when_branch_not_on_remote() -> None:
     """Test that create succeeds if branch name doesn't exist on origin."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -1627,13 +1627,13 @@ def test_create_succeeds_when_branch_not_on_remote() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "new-feature"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "new-feature"], obj=test_ctx)
 
         assert result.exit_code == 0
         assert "new-feature" in result.output
 
 
-def test_create_with_skip_remote_check_flag() -> None:
+def test_add_with_skip_remote_check_flag() -> None:
     """Test that --skip-remote-check bypasses remote validation."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -1654,7 +1654,7 @@ def test_create_with_skip_remote_check_flag() -> None:
 
         result = runner.invoke(
             cli,
-            ["create", "existing-feature", "--skip-remote-check"],
+            ["add", "existing-feature", "--skip-remote-check"],
             obj=test_ctx,
         )
 
@@ -1662,7 +1662,7 @@ def test_create_with_skip_remote_check_flag() -> None:
         assert "existing-feature" in result.output
 
 
-def test_create_proceeds_with_warning_when_remote_check_fails() -> None:
+def test_add_proceeds_with_warning_when_remote_check_fails() -> None:
     """Test that create proceeds with warning if remote check fails."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -1687,7 +1687,7 @@ def test_create_proceeds_with_warning_when_remote_check_fails() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["create", "new-feature"], obj=test_ctx)
+        result = runner.invoke(cli, ["add", "new-feature"], obj=test_ctx)
 
         assert result.exit_code == 0
         assert "Warning:" in result.output

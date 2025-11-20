@@ -3,7 +3,7 @@ from pathlib import Path
 import click
 
 from erk.cli.activation import render_activation_script
-from erk.cli.commands.create import ensure_worktree_for_branch
+from erk.cli.commands.add import ensure_worktree_for_branch
 from erk.cli.core import discover_repo_context
 from erk.cli.debug import debug_log
 from erk.cli.output import machine_output, user_output
@@ -146,7 +146,7 @@ def _resolve_up_navigation(
         children_list = ", ".join(f"'{child}'" for child in children)
         user_output(
             f"Error: Branch '{current_branch}' has multiple children: {children_list}.\n"
-            f"Please create worktree for specific child: erk create <branch-name>"
+            f"Please create worktree for specific child: erk add <branch-name>"
         )
         raise SystemExit(1)
 

@@ -1,5 +1,5 @@
 name: erk
-version: 0.1.0
+version: 0.2.1
 description: Erk implementation workflow commands for creating worktrees from plans (.PLAN.md) and executing implementation. Includes commands for plan creation, execution, and quick access.
 license: MIT
 artifacts:
@@ -15,6 +15,9 @@ kit_cli_commands:
   - name: session-id-injector-hook
     path: kit_cli_commands/erk/session_id_injector_hook.py
     description: Inject session ID into conversation context for plan creation
+  - name: preprocess-session
+    path: kit_cli_commands/erk/preprocess_session.py
+    description: Compress JSONL session logs to XML format, auto-discovering agent logs for comprehensive preprocessing
 hooks:
   - id: session-id-injector-hook
     lifecycle: UserPromptSubmit

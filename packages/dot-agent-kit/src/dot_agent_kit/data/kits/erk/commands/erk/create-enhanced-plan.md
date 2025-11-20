@@ -139,9 +139,58 @@ Please create a plan first:
 4. Then run /erk:create-enhanced-plan
 ```
 
-### Step 3: Mine Session Logs for Discoveries
+### Step 3: Preprocess and Mine Session Logs
 
-Parse each log file line by line (JSONL format). Each line is a separate JSON object.
+**Step 3a: Preprocess JSONL logs to XML**
+
+Use the preprocessing CLI command to compress logs before mining:
+
+```bash
+# Preprocess main session log (replace with actual paths from Step 1b)
+dot-agent run erk preprocess-session ~/.claude/projects/<project-hash>/<session-id>.jsonl
+```
+
+This outputs a temp file path like: `/tmp/session-<session-id>-compressed.xml`
+
+**Benefits:**
+
+- 70-80% token reduction (drops metadata, deduplicates, filters noise)
+- Tool results preserved with full formatting inside `<tool_result>` tags
+- Coarse-grained XML structure easy to parse
+
+**Step 3b: Mine discoveries from compressed XML**
+
+Read the compressed XML file. The format uses coarse-grained tags:
+
+```xml
+<session>
+  <meta branch="..." />
+  <user>User message text</user>
+  <assistant>Assistant reasoning</assistant>
+  <tool_use name="ToolName" id="toolu_123">
+    <param name="param1">value</param>
+  </tool_use>
+  <tool_result tool="toolu_123">
+    Full tool result content preserved verbatim...
+  </tool_result>
+</session>
+```
+
+Extract discoveries using simple regex patterns:
+
+```python
+# Extract tool uses
+tool_uses = re.findall(r'<tool_use name="([^"]+)" id="([^"]+)">(.*?)</tool_use>', xml, re.DOTALL)
+
+# Extract tool results (preserve full verbosity)
+tool_results = re.findall(r'<tool_result tool="([^"]+)">(.*?)</tool_result>', xml, re.DOTALL)
+
+# Extract user messages
+user_messages = re.findall(r'<user>(.*?)</user>', xml, re.DOTALL)
+
+# Extract assistant reasoning
+assistant_text = re.findall(r'<assistant>(.*?)</assistant>', xml, re.DOTALL)
+```
 
 #### What to Extract
 

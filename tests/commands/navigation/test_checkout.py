@@ -581,7 +581,7 @@ def test_checkout_message_when_switching_worktrees() -> None:
         assert len(git_ops.checked_out_branches) == 0
 
 
-def test_checkout_with_implement_flag_with_valid_plan() -> None:
+def test_checkout_with_implement_flag_with_valid_plan(monkeypatch) -> None:
     """Test that --implement flag succeeds when plan exists.
 
     Note: This test verifies the command succeeds with the --implement flag
@@ -589,6 +589,13 @@ def test_checkout_with_implement_flag_with_valid_plan() -> None:
     abstracted through Shell ABC). Integration tests would verify actual
     Claude launching behavior.
     """
+    import subprocess
+    from unittest.mock import Mock
+
+    # Mock subprocess.run to avoid trying to execute claude in test environment
+    mock_run = Mock(return_value=Mock(returncode=0))
+    monkeypatch.setattr(subprocess, "run", mock_run)
+
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
         work_dir = env.erk_root / env.cwd.name
@@ -622,8 +629,7 @@ def test_checkout_with_implement_flag_with_valid_plan() -> None:
         test_ctx = env.build_context(git=git_ops, repo=repo)
 
         # Jump with --implement flag
-        # Note: subprocess.run will fail in test environment since claude not installed
-        # This is expected - we're testing the validation logic, not Claude itself
+        # subprocess.run is mocked to avoid executing claude in test environment
         result = runner.invoke(
             cli,
             ["checkout", "feature", "--script", "--implement"],
@@ -631,10 +637,22 @@ def test_checkout_with_implement_flag_with_valid_plan() -> None:
             catch_exceptions=False,
         )
 
-        # The command will succeed through plan validation and script generation
-        # The subprocess.run call will fail (claude not found), but that's after our logic
-        # We verify the success message is shown before the subprocess attempt
-        assert "Launching Claude Code" in result.stderr or result.exit_code == 0
+        # Verify command succeeded
+        assert result.exit_code == 0
+
+        # Verify success message was shown
+        assert "Launching Claude Code" in result.stderr
+
+        # Verify subprocess.run was called with correct arguments
+        mock_run.assert_called_once()
+        call_args = mock_run.call_args
+        expected_command = [
+            "claude",
+            "--permission-mode",
+            "acceptEdits",
+            "/erk:implement-plan",
+        ]
+        assert call_args[0][0] == expected_command
 
 
 def test_checkout_with_implement_flag_fails_without_plan() -> None:

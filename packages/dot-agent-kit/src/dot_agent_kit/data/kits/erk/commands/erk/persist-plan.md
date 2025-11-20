@@ -164,7 +164,25 @@ This command succeeds when ALL of the following are true:
 
 You are executing the `/persist-plan` command. Follow these steps carefully:
 
+---
+
+🔴 **CRITICAL: YOU ARE ONLY WRITING MARKDOWN - DO NOT IMPLEMENT**
+
+- DO NOT use Edit or Write tools except for the final plan file
+- DO NOT implement any code from the plan
+- DO NOT modify any files in the codebase
+- ONLY save ONE markdown file at `<repo-root>/<name>-plan.md`
+
+---
+
 ### Step 0: Verify Scope and Constraints
+
+🔴 **REMINDER: YOU ARE ONLY WRITING MARKDOWN**
+
+- DO NOT use Edit or Write tools except for the final plan file
+- DO NOT implement any code from the plan
+- DO NOT modify any files in the codebase
+- ONLY save ONE markdown file at `<repo-root>/<name>-plan.md`
 
 **Error Handling Template:**
 All errors must follow this format:
@@ -194,9 +212,26 @@ Suggested action: [1-3 concrete steps to resolve]
 - Running ANY commands except `git rev-parse`
 - Implementing ANY part of the plan
 
+**ALLOWED TOOLS ONLY:**
+
+- ✅ Read (to examine conversation context)
+- ✅ AskUserQuestion (for clarification)
+- ✅ Bash (ONLY `git rev-parse --show-toplevel`)
+- ✅ Write (ONLY for final plan file at `<repo-root>/*-plan.md`)
+
+**IF YOU USE:** Edit, Write (to codebase files), Bash (other commands), Task, NotebookEdit, SlashCommand, etc.
+→ 🔴 **YOU ARE IMPLEMENTING, NOT PLANNING. STOP IMMEDIATELY.**
+
 This command only saves the plan. Worktree creation happens via `/erk:create-planned-wt`.
 
 ### Step 1: Detect Implementation Plan in Context
+
+🔴 **REMINDER: YOU ARE ONLY WRITING MARKDOWN**
+
+- DO NOT use Edit or Write tools except for the final plan file
+- DO NOT implement any code from the plan
+- DO NOT modify any files in the codebase
+- ONLY save ONE markdown file at `<repo-root>/<name>-plan.md`
 
 Search conversation history for an implementation plan:
 
@@ -249,6 +284,13 @@ Suggested action:
 ```
 
 ### Step 2: Apply Optional Guidance to Plan
+
+🔴 **REMINDER: YOU ARE ONLY WRITING MARKDOWN**
+
+- DO NOT use Edit or Write tools except for the final plan file
+- DO NOT implement any code from the plan
+- DO NOT modify any files in the codebase
+- ONLY save ONE markdown file at `<repo-root>/<name>-plan.md`
 
 **Check for guidance argument:**
 
@@ -306,6 +348,13 @@ If no guidance provided: use the original plan as-is
 **Output:** Final plan content (original or modified) ready for Step 3 processing
 
 ### Step 3: Extract and Preserve Semantic Understanding
+
+🔴 **REMINDER: YOU ARE ONLY WRITING MARKDOWN**
+
+- DO NOT use Edit or Write tools except for the final plan file
+- DO NOT implement any code from the plan
+- DO NOT modify any files in the codebase
+- ONLY save ONE markdown file at `<repo-root>/<name>-plan.md`
 
 Analyze the planning discussion to extract valuable context that implementing agents would find expensive to rediscover. Use the structured template sections to organize discoveries.
 
@@ -522,6 +571,13 @@ Document any worries, uncertainties, or potential issues identified during plann
 **Output:** Enhanced plan with populated Context & Understanding sections, ready for Step 4 interactive enhancement
 
 ### Step 4: Interactive Plan Enhancement
+
+🔴 **REMINDER: YOU ARE ONLY WRITING MARKDOWN**
+
+- DO NOT use Edit or Write tools except for the final plan file
+- DO NOT implement any code from the plan
+- DO NOT modify any files in the codebase
+- ONLY save ONE markdown file at `<repo-root>/<name>-plan.md`
 
 Analyze the plan for common ambiguities and ask clarifying questions when helpful. Focus on practical improvements that make implementation clearer.
 
@@ -1045,6 +1101,13 @@ Suggested fix: Include rollback procedure or backup strategy
 
 ### Step 5: Generate Filename from Plan
 
+🔴 **REMINDER: YOU ARE ONLY WRITING MARKDOWN**
+
+- DO NOT use Edit or Write tools except for the final plan file
+- DO NOT implement any code from the plan
+- DO NOT modify any files in the codebase
+- ONLY save ONE markdown file at `<repo-root>/<name>-plan.md`
+
 **Filename Extraction Algorithm:**
 
 1. **Try H1 header** - Look for `# Title` at start of document
@@ -1111,6 +1174,13 @@ Use AskUserQuestion tool to get the plan name from the user if extraction fails.
 
 ### Step 6: Detect Repository Root
 
+🔴 **REMINDER: YOU ARE ONLY WRITING MARKDOWN**
+
+- DO NOT use Edit or Write tools except for the final plan file
+- DO NOT implement any code from the plan
+- DO NOT modify any files in the codebase
+- ONLY save ONE markdown file at `<repo-root>/<name>-plan.md`
+
 Execute: `git rev-parse --show-toplevel`
 
 This returns the absolute path to the root of the current repository. Store this as `<repo-root>` for use in subsequent steps.
@@ -1128,7 +1198,47 @@ Suggested action:
   3. Check if .git directory exists
 ```
 
+### Step 6.5: Verify You Did Not Implement
+
+🔴 **CRITICAL: VERIFY YOU ONLY GATHERED INFORMATION**
+
+Before saving the plan, confirm you ONLY gathered information and did NOT implement anything.
+
+**Check your tool usage in this session:**
+
+- ✅ Did you use Read to examine conversation? → CORRECT
+- ✅ Did you use AskUserQuestion for clarifications? → CORRECT
+- ✅ Did you use Bash(git rev-parse) to find repo root? → CORRECT
+- ❌ Did you use Edit on ANY file? → **VIOLATION - STOP**
+- ❌ Did you use Write on ANY codebase file (not plan)? → **VIOLATION - STOP**
+- ❌ Did you use Task, SlashCommand, or other tools? → **VIOLATION - STOP**
+- ❌ Did you run ANY bash commands besides git rev-parse? → **VIOLATION - STOP**
+
+**If you violated restrictions:**
+
+```
+❌ Error: Implementation attempted during plan persistence
+
+Details: You used [tool name] which is forbidden in /persist-plan
+
+This command ONLY writes markdown. Implementation happens in /erk:implement-plan.
+
+Suggested action:
+  1. Stop immediately - do NOT save the plan
+  2. Report what tools you used incorrectly
+  3. User should restart the command without implementing
+```
+
+**If all checks passed:** Proceed to Step 7 to save the plan.
+
 ### Step 7: Save Plan to Disk
+
+🔴 **REMINDER: YOU ARE ONLY WRITING MARKDOWN**
+
+- DO NOT use Edit or Write tools except for the final plan file
+- DO NOT implement any code from the plan
+- DO NOT modify any files in the codebase
+- ONLY save ONE markdown file at `<repo-root>/<name>-plan.md`
 
 **Pre-save validation:**
 

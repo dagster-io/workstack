@@ -10,13 +10,12 @@ from unittest.mock import Mock
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.branch_metadata import BranchMetadata
 from erk.core.git.abc import WorktreeInfo
 from tests.fakes.git import FakeGit
 from tests.fakes.github import FakeGitHub
 from tests.fakes.graphite import FakeGraphite
 from tests.fakes.shell import FakeShell
-from tests.test_utils.builders import PullRequestInfoBuilder
+from tests.test_utils.builders import BranchStackBuilder, PullRequestInfoBuilder
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
@@ -72,11 +71,7 @@ def test_dry_run_does_not_execute_merge_operations() -> None:
 
         # Configure Graphite metadata for stack
         graphite_ops = FakeGraphite(
-            branches={
-                "main": BranchMetadata.trunk("main", children=["feat-1"]),
-                "feat-1": BranchMetadata.branch("feat-1", parent="main", children=["feat-2"]),
-                "feat-2": BranchMetadata.branch("feat-2", parent="feat-1"),
-            },
+            branches=BranchStackBuilder().add_linear_stack("feat-1", "feat-2").build(),
             stacks={
                 "feat-2": ["main", "feat-1", "feat-2"],
             },
@@ -149,11 +144,7 @@ def test_dry_run_does_not_execute_checkout_operations() -> None:
 
         # Configure Graphite metadata for stack
         graphite_ops = FakeGraphite(
-            branches={
-                "main": BranchMetadata.trunk("main", children=["feat-1"]),
-                "feat-1": BranchMetadata.branch("feat-1", parent="main", children=["feat-2"]),
-                "feat-2": BranchMetadata.branch("feat-2", parent="feat-1"),
-            },
+            branches=BranchStackBuilder().add_linear_stack("feat-1", "feat-2").build(),
             stacks={
                 "feat-2": ["main", "feat-1", "feat-2"],
             },
@@ -220,11 +211,7 @@ def test_dry_run_still_performs_read_operations() -> None:
         )
 
         graphite_ops = FakeGraphite(
-            branches={
-                "main": BranchMetadata.trunk("main", children=["feat-1"]),
-                "feat-1": BranchMetadata.branch("feat-1", parent="main", children=["feat-2"]),
-                "feat-2": BranchMetadata.branch("feat-2", parent="feat-1"),
-            },
+            branches=BranchStackBuilder().add_linear_stack("feat-1", "feat-2").build(),
             stacks={
                 "feat-2": ["main", "feat-1", "feat-2"],
             },
@@ -279,11 +266,7 @@ def test_dry_run_shows_all_operations() -> None:
         )
 
         graphite_ops = FakeGraphite(
-            branches={
-                "main": BranchMetadata.trunk("main", children=["feat-1"]),
-                "feat-1": BranchMetadata.branch("feat-1", parent="main", children=["feat-2"]),
-                "feat-2": BranchMetadata.branch("feat-2", parent="feat-1"),
-            },
+            branches=BranchStackBuilder().add_linear_stack("feat-1", "feat-2").build(),
             stacks={
                 "feat-2": ["main", "feat-1", "feat-2"],
             },
@@ -347,10 +330,7 @@ def test_dry_run_does_not_delete_branches() -> None:
         )
 
         graphite_ops = FakeGraphite(
-            branches={
-                "main": BranchMetadata.trunk("main", children=["feat-1"]),
-                "feat-1": BranchMetadata.branch("feat-1", parent="main"),
-            },
+            branches=BranchStackBuilder().add_linear_stack("feat-1").build(),
             stacks={
                 "feat-1": ["main", "feat-1"],
             },
@@ -403,11 +383,7 @@ def test_dry_run_does_not_update_pr_bases() -> None:
         )
 
         graphite_ops = FakeGraphite(
-            branches={
-                "main": BranchMetadata.trunk("main", children=["feat-1"]),
-                "feat-1": BranchMetadata.branch("feat-1", parent="main", children=["feat-2"]),
-                "feat-2": BranchMetadata.branch("feat-2", parent="feat-1"),
-            },
+            branches=BranchStackBuilder().add_linear_stack("feat-1", "feat-2").build(),
             stacks={
                 "feat-2": ["main", "feat-1", "feat-2"],
             },

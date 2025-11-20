@@ -66,6 +66,7 @@ class FakeGitHub(GitHub):
         self._merged_prs: list[int] = []
         self._get_prs_for_repo_calls: list[tuple[Path, bool]] = []
         self._get_pr_status_calls: list[tuple[Path, str]] = []
+        self._triggered_workflows: list[tuple[str, dict[str, str]]] = []
 
     @property
     def merged_prs(self) -> list[int]:
@@ -165,7 +166,21 @@ class FakeGitHub(GitHub):
         """Record PR merge in mutation tracking list."""
         self._merged_prs.append(pr_number)
 
+    def trigger_workflow(
+        self,
+        repo_root: Path,
+        workflow: str,
+        inputs: dict[str, str],
+    ) -> None:
+        """Record workflow trigger in mutation tracking list."""
+        self._triggered_workflows.append((workflow, inputs))
+
     @property
     def updated_pr_bases(self) -> list[tuple[int, str]]:
         """Read-only access to tracked PR base updates for test assertions."""
         return self._updated_pr_bases
+
+    @property
+    def triggered_workflows(self) -> list[tuple[str, dict[str, str]]]:
+        """Read-only access to tracked workflow triggers for test assertions."""
+        return self._triggered_workflows

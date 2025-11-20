@@ -15,6 +15,26 @@
 
 **NOTE: `.plan/` folders are NOT tracked in git and should never be committed**
 
+**NOTE: `.submission/` folders ARE tracked in git as signals for remote AI implementation**
+
+## .submission/ Folder Protocol
+
+**Purpose:** Signal for remote AI implementation via GitHub Actions
+
+**Workflow:**
+1. Create worktree with `/erk:create-planned-wt` (creates .plan/)
+2. Run `erk submit` to copy .plan/ to .submission/
+3. GitHub Actions detects .submission/ and runs implementation
+4. .submission/ is auto-deleted after completion
+
+**Key differences from .plan/:**
+- `.plan/` = Local implementation tracking (NOT git-tracked)
+- `.submission/` = Remote submission signal (git-tracked, ephemeral)
+
+**Important:** `.submission/` folders should NOT be added to .gitignore. They are meant to be committed as a signal to GitHub Actions.
+
+---
+
 | If you're about to write...                                      | STOP! Check this instead                                                                             |
 | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | Writing or editing Python code                                   | → **🔴 LOAD dignified-python skill FIRST** - Complete LBYL philosophy (checklist rules are excerpts) |
@@ -28,7 +48,7 @@
 | `from .module import`                                            | → Use absolute imports only                                                                          |
 | `print(...)` in CLI code                                         | → Use `click.echo()`                                                                                 |
 | `subprocess.run(..., check=True)`                                | → Use `run_subprocess_with_context()` from erk.core.subprocess for rich errors                       |
-| Creating or executing implementation plans                       | → Use /erk:persist-plan, /erk:create-planned-wt, /erk:implement-plan                                 |
+| Creating or executing implementation plans                       | → Use /erk:persist-plan, /erk:create-planned-wt, /erk:implement-plan, erk submit                     |
 | Submitting a branch with Graphite                                | → Use /gt:submit-branch command (delegates to gt-branch-submitter agent)                             |
 | Updating an existing PR                                          | → Use /gt:update-pr command                                                                          |
 | Systematic Python changes (migrate calls, rename, batch updates) | → Use libcst-refactor agent (Task tool); for multi-file transformations                              |

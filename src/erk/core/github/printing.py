@@ -69,3 +69,14 @@ class PrintingGitHub(PrintingBase, GitHub):
         merge_type = "--squash" if squash else "--merge"
         self._emit(self._format_command(f"gh pr merge {pr_number} {merge_type}"))
         self._wrapped.merge_pr(repo_root, pr_number, squash=squash, verbose=verbose)
+
+    def trigger_workflow(
+        self,
+        repo_root: Path,
+        workflow: str,
+        inputs: dict[str, str],
+    ) -> None:
+        """Trigger workflow with printed output."""
+        input_args = " ".join(f"-f {key}={value}" for key, value in inputs.items())
+        self._emit(self._format_command(f"gh workflow run {workflow} {input_args}"))
+        self._wrapped.trigger_workflow(repo_root, workflow, inputs)

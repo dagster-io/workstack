@@ -64,20 +64,23 @@ class NoopGit(Git):
         return self._wrapped.list_remote_branches(repo_root)
 
     def create_tracking_branch(self, repo_root: Path, branch: str, remote_ref: str) -> None:
-        """Create tracking branch (delegates to wrapped - considered read-only for dry-run)."""
-        return self._wrapped.create_tracking_branch(repo_root, branch, remote_ref)
+        """No-op for creating tracking branch in dry-run mode."""
+        # Do nothing - prevents actual tracking branch creation
+        pass
 
     def get_git_common_dir(self, cwd: Path) -> Path | None:
         """Get git common directory (read-only, delegates to wrapped)."""
         return self._wrapped.get_git_common_dir(cwd)
 
     def checkout_branch(self, cwd: Path, branch: str) -> None:
-        """Checkout branch (delegates to wrapped - considered read-only for dry-run)."""
-        return self._wrapped.checkout_branch(cwd, branch)
+        """No-op for checkout in dry-run mode."""
+        # Do nothing - prevents actual checkout execution
+        pass
 
     def checkout_detached(self, cwd: Path, ref: str) -> None:
-        """Checkout detached HEAD (delegates to wrapped - considered read-only for dry-run)."""
-        return self._wrapped.checkout_detached(cwd, ref)
+        """No-op for detached checkout in dry-run mode."""
+        # Do nothing - prevents actual detached HEAD checkout execution
+        pass
 
     def create_branch(self, cwd: Path, branch_name: str, start_point: str) -> None:
         """Print dry-run message instead of creating branch."""

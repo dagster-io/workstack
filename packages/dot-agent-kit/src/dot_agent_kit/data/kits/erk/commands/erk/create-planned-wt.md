@@ -16,7 +16,7 @@ This command detects plan files at the repository root, selects the most recent 
 
 - ✅ Auto-detect most recent `*-plan.md` file at repo root
 - ✅ Create worktree with `erk create --plan`
-- ✅ Display plan content from disk (including any manual edits)
+- ✅ Display plan location and next steps
 
 **What happens AFTER (in separate command):**
 
@@ -28,9 +28,8 @@ When you run this command, these steps occur:
 
 1. **Verify Scope** - Confirm we're in a git repository with erk available
 2. **Detect Plan File** - Find and select most recent `*-plan.md` at repo root
-3. **Read Plan Content** - Read plan file before it gets moved by erk
-4. **Create Worktree** - Run `erk create --plan` command
-5. **Display Next Steps** - Show plan content and implementation command
+3. **Create Worktree** - Run `erk create --plan` command
+4. **Display Next Steps** - Show plan location and implementation command
 
 ## Usage
 
@@ -60,7 +59,7 @@ This command succeeds when ALL of the following are true:
 ✅ Worktree listed in `erk list`
 
 **Next Steps:**
-✅ Plan content displayed (including user edits)
+✅ Plan location displayed (`.plan/plan.md`)
 ✅ Next command displayed: `erk checkout <branch> && claude --permission-mode acceptEdits "/erk:implement-plan"`
 
 ## Troubleshooting
@@ -123,9 +122,8 @@ Suggested action: [1-3 concrete steps to resolve]
 
 1. Detect plan file at repository root
 2. Validate plan file (exists, readable, not empty)
-3. Read plan content from disk (BEFORE it gets moved)
-4. Run `erk create --plan <file>`
-5. Display plan content and next steps
+3. Run `erk create --plan <file>`
+4. Display plan location and next steps
 
 **FORBIDDEN ACTIONS:**
 
@@ -201,15 +199,7 @@ Suggested action:
   3. Check if .git directory exists
 ```
 
-### Step 2: Read Plan Content (Before It Gets Moved)
-
-**IMPORTANT:** Read the plan content NOW, before running `erk create`, because erk will move the file from the repository root to the new worktree.
-
-Read the plan file: `plan_content = Path(plan_file_path).read_text(encoding="utf-8")`
-
-Store this content for display in Step 4.
-
-### Step 3: Create Worktree with Plan
+### Step 2: Create Worktree with Plan
 
 Execute: `erk create --plan <plan-file-path> --json --stay`
 
@@ -302,7 +292,7 @@ Suggested action:
 
 **Use the JSON output directly** for all worktree information.
 
-### Step 4: Display Next Steps
+### Step 3: Display Next Steps
 
 After successful worktree creation, **you MUST output the following formatted display**:
 
@@ -311,36 +301,35 @@ After successful worktree creation, **you MUST output the following formatted di
 ```markdown
 ✅ Worktree created: **<worktree-name>**
 
-Plan:
-
-<full-plan-content-from-disk>
-
 Branch: `<branch-name>`
 Location: `<worktree-path>`
+Plan: `.plan/plan.md`
 
 **Next step:**
 
 `erk checkout <branch-name> && claude --permission-mode acceptEdits "/erk:implement-plan"`
 ```
 
-**CRITICAL:** You MUST output this complete formatted message. Do not skip the plan content or the command.
+**CRITICAL:** You MUST output this complete formatted message. Do not skip any fields or the command.
 
-**Template Variable Clarification:**
+**Template Variables:**
 
-- `<full-plan-content-from-disk>` refers to the plan markdown read from disk in Step 2
-- Output the complete plan text verbatim (all headers, sections, steps)
-- This is the file content that was read BEFORE being moved by erk
-- Preserve all markdown formatting (headers, lists, code blocks)
-- Do not truncate or summarize the plan
+- `<worktree-name>` - From JSON output `worktree_name` field
+- `<branch-name>` - From JSON output `branch_name` field
+- `<worktree-path>` - From JSON output `worktree_path` field
 
-**Note:** The final output the user sees should be the single copy-pasteable command above. No additional text after that command.
+**Note:**
+
+- The plan file is now located at `<worktree-path>/.plan/plan.md`
+- User can read it there after switching to the worktree
+- The final output should end with the single copy-pasteable command above
 
 ## Important Notes
 
 - 🔴 **This command does NOT write code** - only creates workspace with plan
 - 🔴 **This command does NOT enhance plans** - expects plan already enhanced via `/persist-plan`
 - Auto-detects most recent `*-plan.md` file at repository root
-- Reads plan content from disk to show any manual edits
+- Shows plan location in new worktree (.plan/plan.md)
 - All errors follow consistent template with details and suggested actions
 - This command does NOT switch directories or execute the plan
 - User must manually run `erk checkout` and `/erk:implement-plan` to begin implementation

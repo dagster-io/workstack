@@ -22,12 +22,14 @@
 **Purpose:** Signal for remote AI implementation via GitHub Actions
 
 **Workflow:**
+
 1. Create worktree with `/erk:create-planned-wt` (creates .plan/)
 2. Run `erk submit` to copy .plan/ to .submission/
 3. GitHub Actions detects .submission/ and runs implementation
 4. .submission/ is auto-deleted after completion
 
 **Key differences from .plan/:**
+
 - `.plan/` = Local implementation tracking (NOT git-tracked)
 - `.submission/` = Remote submission signal (git-tracked, ephemeral)
 

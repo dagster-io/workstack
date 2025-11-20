@@ -1,8 +1,10 @@
-  # Test Feature Plan
+# Test Feature Plan
 
-  ## Objective
-  Add a simple test function
+## Objective
 
-  ## Implementation Steps
-  - Create test file
-  - Add function
+Add a simple test function
+
+## Implementation Steps
+
+- Create test file
+- Add function

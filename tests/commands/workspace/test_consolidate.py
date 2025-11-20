@@ -4,65 +4,16 @@ This file tests the consolidate command which removes worktrees containing
 branches from the current Graphite stack.
 """
 
-from pathlib import Path
-
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.context import ErkContext
 from erk.core.git.abc import WorktreeInfo
 from tests.fakes.git import FakeGit
 from tests.fakes.github import FakeGitHub
 from tests.fakes.graphite import FakeGraphite
 from tests.fakes.shell import FakeShell
+from tests.test_utils.context_builders import build_workspace_test_context
 from tests.test_utils.env_helpers import erk_inmem_env
-
-
-def _create_test_context(
-    env,
-    worktrees: dict[Path, list[WorktreeInfo]],
-    current_branch: str | None,
-    graphite_ops: FakeGraphite,
-    *,
-    cwd: Path | None = None,
-    git_dir: Path | None = None,
-    file_statuses: dict[Path, tuple[list[str], list[str], list[str]]] | None = None,
-) -> ErkContext:
-    """Helper to create test context for consolidate command tests.
-
-    Args:
-        env: Simulated erk environment
-        worktrees: Map of repo_root to list of WorktreeInfo objects
-        current_branch: Current branch name (or None for detached HEAD)
-        graphite_ops: FakeGraphite configured with branch stack data
-        cwd: Optional current working directory path (defaults to env.cwd)
-        git_dir: Optional git directory path (defaults to env.git_dir)
-        file_statuses: Optional mapping of worktree paths to (staged, modified, untracked) files
-
-    Returns:
-        ErkContext configured for testing
-    """
-    if cwd is None:
-        cwd = env.cwd
-    if git_dir is None:
-        git_dir = env.git_dir
-
-    git_ops = FakeGit(
-        worktrees=worktrees,
-        git_common_dirs={cwd: git_dir},
-        current_branches={cwd: current_branch},
-        file_statuses=file_statuses,
-    )
-
-    return env.build_context(
-        use_graphite=True,
-        git=git_ops,
-        github=FakeGitHub(),
-        graphite=graphite_ops,
-        shell=FakeShell(),
-        cwd=cwd,
-        dry_run=False,
-    )
 
 
 def test_consolidate_no_other_worktrees() -> None:
@@ -75,8 +26,16 @@ def test_consolidate_no_other_worktrees() -> None:
         # Current worktree only (on feature-2)
         worktrees = {env.cwd: [WorktreeInfo(path=env.cwd, branch="feature-2")]}
 
-        test_ctx = _create_test_context(
-            env, worktrees, "feature-2", graphite_ops, git_dir=env.git_dir
+        git_ops = FakeGit(
+            worktrees=worktrees,
+            git_common_dirs={env.cwd: env.git_dir},
+            current_branches={env.cwd: "feature-2"},
+        )
+        test_ctx = build_workspace_test_context(
+            env,
+            use_graphite=True,
+            git=git_ops,
+            graphite=graphite_ops,
         )
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
@@ -94,8 +53,16 @@ def test_consolidate_no_other_worktrees_with_script_flag() -> None:
         # Current worktree only (on feature-2)
         worktrees = {env.cwd: [WorktreeInfo(path=env.cwd, branch="feature-2")]}
 
-        test_ctx = _create_test_context(
-            env, worktrees, "feature-2", graphite_ops, git_dir=env.git_dir
+        git_ops = FakeGit(
+            worktrees=worktrees,
+            git_common_dirs={env.cwd: env.git_dir},
+            current_branches={env.cwd: "feature-2"},
+        )
+        test_ctx = build_workspace_test_context(
+            env,
+            use_graphite=True,
+            git=git_ops,
+            graphite=graphite_ops,
         )
         result = runner.invoke(cli, ["consolidate", "--script", "-f"], obj=test_ctx)
 
@@ -124,8 +91,16 @@ def test_consolidate_removes_other_stack_worktrees() -> None:
             ]
         }
 
-        test_ctx = _create_test_context(
-            env, worktrees, "feature-2", graphite_ops, git_dir=env.git_dir
+        git_ops = FakeGit(
+            worktrees=worktrees,
+            git_common_dirs={env.cwd: env.git_dir},
+            current_branches={env.cwd: "feature-2"},
+        )
+        test_ctx = build_workspace_test_context(
+            env,
+            use_graphite=True,
+            git=git_ops,
+            graphite=graphite_ops,
         )
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
@@ -154,8 +129,16 @@ def test_consolidate_preserves_current_worktree() -> None:
             ]
         }
 
-        test_ctx = _create_test_context(
-            env, worktrees, "feature-1", graphite_ops, git_dir=env.git_dir
+        git_ops = FakeGit(
+            worktrees=worktrees,
+            git_common_dirs={env.cwd: env.git_dir},
+            current_branches={env.cwd: "feature-1"},
+        )
+        test_ctx = build_workspace_test_context(
+            env,
+            use_graphite=True,
+            git=git_ops,
+            graphite=graphite_ops,
         )
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
@@ -187,13 +170,17 @@ def test_consolidate_aborts_on_uncommitted_changes() -> None:
             wt1_path: ([], [], ["uncommitted.txt"]),  # Untracked file
         }
 
-        test_ctx = _create_test_context(
-            env,
-            worktrees,
-            "feature-1",
-            graphite_ops,
-            git_dir=env.git_dir,
+        git_ops = FakeGit(
+            worktrees=worktrees,
+            git_common_dirs={env.cwd: env.git_dir},
+            current_branches={env.cwd: "feature-1"},
             file_statuses=file_statuses,
+        )
+        test_ctx = build_workspace_test_context(
+            env,
+            use_graphite=True,
+            git=git_ops,
+            graphite=graphite_ops,
         )
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
@@ -219,8 +206,16 @@ def test_consolidate_dry_run_shows_preview() -> None:
             ]
         }
 
-        test_ctx = _create_test_context(
-            env, worktrees, "feature-1", graphite_ops, git_dir=env.git_dir
+        git_ops = FakeGit(
+            worktrees=worktrees,
+            git_common_dirs={env.cwd: env.git_dir},
+            current_branches={env.cwd: "feature-1"},
+        )
+        test_ctx = build_workspace_test_context(
+            env,
+            use_graphite=True,
+            git=git_ops,
+            graphite=graphite_ops,
         )
         result = runner.invoke(cli, ["consolidate", "--dry-run"], obj=test_ctx)
 
@@ -247,8 +242,16 @@ def test_consolidate_confirmation_prompt() -> None:
             ]
         }
 
-        test_ctx = _create_test_context(
-            env, worktrees, "feature-1", graphite_ops, git_dir=env.git_dir
+        git_ops = FakeGit(
+            worktrees=worktrees,
+            git_common_dirs={env.cwd: env.git_dir},
+            current_branches={env.cwd: "feature-1"},
+        )
+        test_ctx = build_workspace_test_context(
+            env,
+            use_graphite=True,
+            git=git_ops,
+            graphite=graphite_ops,
         )
 
         # Test saying "no" to prompt
@@ -299,8 +302,16 @@ def test_consolidate_not_tracked_by_graphite() -> None:
         # Current branch is "feature-1" but not in Graphite
         worktrees = {env.cwd: [WorktreeInfo(path=env.cwd, branch="feature-1")]}
 
-        test_ctx = _create_test_context(
-            env, worktrees, "feature-1", graphite_ops, git_dir=env.git_dir
+        git_ops = FakeGit(
+            worktrees=worktrees,
+            git_common_dirs={env.cwd: env.git_dir},
+            current_branches={env.cwd: "feature-1"},
+        )
+        test_ctx = build_workspace_test_context(
+            env,
+            use_graphite=True,
+            git=git_ops,
+            graphite=graphite_ops,
         )
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
@@ -329,8 +340,16 @@ def test_consolidate_skips_non_stack_worktrees() -> None:
             ]
         }
 
-        test_ctx = _create_test_context(
-            env, worktrees, "stack-a", graphite_ops, git_dir=env.git_dir
+        git_ops = FakeGit(
+            worktrees=worktrees,
+            git_common_dirs={env.cwd: env.git_dir},
+            current_branches={env.cwd: "stack-a"},
+        )
+        test_ctx = build_workspace_test_context(
+            env,
+            use_graphite=True,
+            git=git_ops,
+            graphite=graphite_ops,
         )
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
@@ -369,13 +388,17 @@ def test_consolidate_with_uncommitted_changes_in_non_stack_worktree() -> None:
             wt3_path: ([], [], ["uncommitted.txt"]),  # Untracked file in non-stack worktree
         }
 
-        test_ctx = _create_test_context(
-            env,
-            worktrees,
-            "feature-2",
-            graphite_ops,
-            git_dir=env.git_dir,
+        git_ops = FakeGit(
+            worktrees=worktrees,
+            git_common_dirs={env.cwd: env.git_dir},
+            current_branches={env.cwd: "feature-2"},
             file_statuses=file_statuses,
+        )
+        test_ctx = build_workspace_test_context(
+            env,
+            use_graphite=True,
+            git=git_ops,
+            graphite=graphite_ops,
         )
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
@@ -480,13 +503,23 @@ def test_consolidate_partial_stack() -> None:
             ]
         }
 
-        test_ctx = _create_test_context(
-            env, worktrees, "feat-3", graphite_ops, cwd=wt3_path, git_dir=env.git_dir
+        git_ops = FakeGit(
+            worktrees=worktrees,
+            git_common_dirs={wt3_path: env.git_dir},
+            current_branches={wt3_path: "feat-3"},
         )
         # Override git_common_dirs
-        test_ctx.git._git_common_dirs[wt1_path] = env.git_dir
-        test_ctx.git._git_common_dirs[wt2_path] = env.git_dir
-        test_ctx.git._git_common_dirs[wt3_path] = env.git_dir
+        git_ops._git_common_dirs[wt1_path] = env.git_dir
+        git_ops._git_common_dirs[wt2_path] = env.git_dir
+        git_ops._git_common_dirs[wt3_path] = env.git_dir
+
+        test_ctx = build_workspace_test_context(
+            env,
+            use_graphite=True,
+            git=git_ops,
+            graphite=graphite_ops,
+            cwd=wt3_path,
+        )
 
         # Run consolidate with branch argument: consolidate feat-2
         # Should consolidate main → feat-2 only, keeping feat-3 separate
@@ -510,7 +543,17 @@ def test_consolidate_branch_not_in_stack() -> None:
         # Current worktree on feat-2
         worktrees = {env.cwd: [WorktreeInfo(path=env.cwd, branch="feat-2")]}
 
-        test_ctx = _create_test_context(env, worktrees, "feat-2", graphite_ops, git_dir=env.git_dir)
+        git_ops = FakeGit(
+            worktrees=worktrees,
+            git_common_dirs={env.cwd: env.git_dir},
+            current_branches={env.cwd: "feat-2"},
+        )
+        test_ctx = build_workspace_test_context(
+            env,
+            use_graphite=True,
+            git=git_ops,
+            graphite=graphite_ops,
+        )
 
         # Try to consolidate to a branch not in the stack
         result = runner.invoke(cli, ["consolidate", "feat-99", "-f"], obj=test_ctx)
@@ -547,14 +590,24 @@ def test_consolidate_preserves_upstack_branches() -> None:
             ]
         }
 
-        test_ctx = _create_test_context(
-            env, worktrees, "feat-4", graphite_ops, cwd=wt4_path, git_dir=env.git_dir
+        git_ops = FakeGit(
+            worktrees=worktrees,
+            git_common_dirs={wt4_path: env.git_dir},
+            current_branches={wt4_path: "feat-4"},
         )
         # Override git_common_dirs
-        test_ctx.git._git_common_dirs[wt1_path] = env.git_dir
-        test_ctx.git._git_common_dirs[wt2_path] = env.git_dir
-        test_ctx.git._git_common_dirs[wt3_path] = env.git_dir
-        test_ctx.git._git_common_dirs[wt4_path] = env.git_dir
+        git_ops._git_common_dirs[wt1_path] = env.git_dir
+        git_ops._git_common_dirs[wt2_path] = env.git_dir
+        git_ops._git_common_dirs[wt3_path] = env.git_dir
+        git_ops._git_common_dirs[wt4_path] = env.git_dir
+
+        test_ctx = build_workspace_test_context(
+            env,
+            use_graphite=True,
+            git=git_ops,
+            graphite=graphite_ops,
+            cwd=wt4_path,
+        )
 
         # Consolidate feat-2 (from current=feat-4)
         # Should remove feat-1 and feat-2, but keep feat-3 and feat-4
@@ -588,8 +641,16 @@ def test_consolidate_shows_output_with_script_flag() -> None:
             ]
         }
 
-        test_ctx = _create_test_context(
-            env, worktrees, "feature-1", graphite_ops, git_dir=env.git_dir
+        git_ops = FakeGit(
+            worktrees=worktrees,
+            git_common_dirs={env.cwd: env.git_dir},
+            current_branches={env.cwd: "feature-1"},
+        )
+        test_ctx = build_workspace_test_context(
+            env,
+            use_graphite=True,
+            git=git_ops,
+            graphite=graphite_ops,
         )
         result = runner.invoke(cli, ["consolidate", "--script", "-f"], obj=test_ctx)
 
@@ -619,8 +680,16 @@ def test_consolidate_shows_output_without_script_flag() -> None:
             ]
         }
 
-        test_ctx = _create_test_context(
-            env, worktrees, "feature-1", graphite_ops, git_dir=env.git_dir
+        git_ops = FakeGit(
+            worktrees=worktrees,
+            git_common_dirs={env.cwd: env.git_dir},
+            current_branches={env.cwd: "feature-1"},
+        )
+        test_ctx = build_workspace_test_context(
+            env,
+            use_graphite=True,
+            git=git_ops,
+            graphite=graphite_ops,
         )
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
@@ -653,8 +722,16 @@ def test_consolidate_script_mode_shows_preview_output() -> None:
             ]
         }
 
-        test_ctx = _create_test_context(
-            env, worktrees, "feature-1", graphite_ops, git_dir=env.git_dir
+        git_ops = FakeGit(
+            worktrees=worktrees,
+            git_common_dirs={env.cwd: env.git_dir},
+            current_branches={env.cwd: "feature-1"},
+        )
+        test_ctx = build_workspace_test_context(
+            env,
+            use_graphite=True,
+            git=git_ops,
+            graphite=graphite_ops,
         )
         result = runner.invoke(cli, ["consolidate", "--script", "-f"], obj=test_ctx)
 
@@ -690,8 +767,16 @@ def test_consolidate_outputs_to_stderr() -> None:
             ]
         }
 
-        test_ctx = _create_test_context(
-            env, worktrees, "feature-1", graphite_ops, git_dir=env.git_dir
+        git_ops = FakeGit(
+            worktrees=worktrees,
+            git_common_dirs={env.cwd: env.git_dir},
+            current_branches={env.cwd: "feature-1"},
+        )
+        test_ctx = build_workspace_test_context(
+            env,
+            use_graphite=True,
+            git=git_ops,
+            graphite=graphite_ops,
         )
         result = runner.invoke(
             cli, ["consolidate", "--script", "-f"], obj=test_ctx, catch_exceptions=False
@@ -756,21 +841,26 @@ def test_consolidate_allows_uncommitted_changes_in_protected_worktrees() -> None
             # wt4_path is current (can have changes)
         }
 
-        test_ctx = _create_test_context(
-            env,
-            worktrees,
-            "feat-4",
-            graphite_ops,
-            cwd=wt4_path,
-            git_dir=env.git_dir,
+        git_ops = FakeGit(
+            worktrees=worktrees,
+            git_common_dirs={wt4_path: env.git_dir},
+            current_branches={wt4_path: "feat-4"},
             file_statuses=file_statuses,
         )
 
         # Override git_common_dirs for all worktrees
-        test_ctx.git._git_common_dirs[wt1_path] = env.git_dir
-        test_ctx.git._git_common_dirs[wt2_path] = env.git_dir
-        test_ctx.git._git_common_dirs[wt3_path] = env.git_dir
-        test_ctx.git._git_common_dirs[wt4_path] = env.git_dir
+        git_ops._git_common_dirs[wt1_path] = env.git_dir
+        git_ops._git_common_dirs[wt2_path] = env.git_dir
+        git_ops._git_common_dirs[wt3_path] = env.git_dir
+        git_ops._git_common_dirs[wt4_path] = env.git_dir
+
+        test_ctx = build_workspace_test_context(
+            env,
+            use_graphite=True,
+            git=git_ops,
+            graphite=graphite_ops,
+            cwd=wt4_path,
+        )
 
         # Consolidate feat-2 (from current=feat-4)
         # This consolidates main → feat-1 → feat-2, but NOT feat-3 or feat-4
@@ -809,8 +899,16 @@ def test_consolidate_with_name_tracks_temp_branch_with_graphite() -> None:
         # Current worktree on feature-2
         worktrees = {env.cwd: [WorktreeInfo(path=env.cwd, branch="feature-2")]}
 
-        test_ctx = _create_test_context(
-            env, worktrees, "feature-2", graphite_ops, git_dir=env.git_dir
+        git_ops = FakeGit(
+            worktrees=worktrees,
+            git_common_dirs={env.cwd: env.git_dir},
+            current_branches={env.cwd: "feature-2"},
+        )
+        test_ctx = build_workspace_test_context(
+            env,
+            use_graphite=True,
+            git=git_ops,
+            graphite=graphite_ops,
         )
 
         # Run consolidate with --name flag to create new worktree
@@ -849,8 +947,16 @@ def test_consolidate_with_name_changes_directory_before_removal() -> None:
         # Current worktree on feature-2
         worktrees = {env.cwd: [WorktreeInfo(path=env.cwd, branch="feature-2")]}
 
-        test_ctx = _create_test_context(
-            env, worktrees, "feature-2", graphite_ops, git_dir=env.git_dir
+        git_ops = FakeGit(
+            worktrees=worktrees,
+            git_common_dirs={env.cwd: env.git_dir},
+            current_branches={env.cwd: "feature-2"},
+        )
+        test_ctx = build_workspace_test_context(
+            env,
+            use_graphite=True,
+            git=git_ops,
+            graphite=graphite_ops,
         )
 
         # Run consolidate with --name flag in script mode
@@ -894,8 +1000,16 @@ def test_consolidate_with_name_changes_directory_in_non_script_mode() -> None:
         # Current worktree on feature-2
         worktrees = {env.cwd: [WorktreeInfo(path=env.cwd, branch="feature-2")]}
 
-        test_ctx = _create_test_context(
-            env, worktrees, "feature-2", graphite_ops, git_dir=env.git_dir
+        git_ops = FakeGit(
+            worktrees=worktrees,
+            git_common_dirs={env.cwd: env.git_dir},
+            current_branches={env.cwd: "feature-2"},
+        )
+        test_ctx = build_workspace_test_context(
+            env,
+            use_graphite=True,
+            git=git_ops,
+            graphite=graphite_ops,
         )
 
         # Run consolidate with --name flag WITHOUT script mode

@@ -13,35 +13,8 @@ from tests.fakes.git import FakeGit
 from tests.fakes.github import FakeGitHub
 from tests.fakes.graphite import FakeGraphite
 from tests.fakes.shell import FakeShell
+from tests.test_utils.context_builders import build_workspace_test_context
 from tests.test_utils.env_helpers import erk_inmem_env
-
-
-def _create_test_context(env, use_graphite: bool = False, dry_run: bool = False, **kwargs):
-    """Helper to create test context for delete command tests.
-
-    Args:
-        env: Pure erk environment
-        use_graphite: Whether to enable Graphite integration
-        dry_run: Whether to use dry-run mode
-        **kwargs: Additional arguments to pass to env.build_context()
-
-    Returns:
-        ErkContext configured for testing
-    """
-    git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
-
-    if dry_run:
-        git_ops = NoopGit(git_ops)
-
-    return env.build_context(
-        use_graphite=use_graphite,
-        git=git_ops,
-        github=FakeGitHub(),
-        graphite=FakeGraphite(),
-        shell=FakeShell(),
-        dry_run=dry_run,
-        **kwargs,
-    )
 
 
 def test_delete_force_removes_directory() -> None:
@@ -51,7 +24,7 @@ def test_delete_force_removes_directory() -> None:
         repo_name = env.cwd.name
         wt = env.erk_root / "repos" / repo_name / "worktrees" / "foo"
 
-        test_ctx = _create_test_context(env, existing_paths={wt})
+        test_ctx = build_workspace_test_context(env, existing_paths={wt})
         result = runner.invoke(cli, ["delete", "foo", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
@@ -65,7 +38,7 @@ def test_delete_prompts_and_aborts_on_no() -> None:
         repo_name = env.cwd.name
         wt = env.erk_root / "repos" / repo_name / "worktrees" / "bar"
 
-        test_ctx = _create_test_context(env, existing_paths={wt})
+        test_ctx = build_workspace_test_context(env, existing_paths={wt})
         result = runner.invoke(cli, ["delete", "bar"], input="n\n", obj=test_ctx)
 
         assert result.exit_code == 0, result.output
@@ -80,7 +53,7 @@ def test_delete_dry_run_does_not_delete() -> None:
         repo_name = env.cwd.name
         wt = env.erk_root / "repos" / repo_name / "worktrees" / "test-stack"
 
-        test_ctx = _create_test_context(env, dry_run=True, existing_paths={wt})
+        test_ctx = build_workspace_test_context(env, dry_run=True, existing_paths={wt})
         result = runner.invoke(cli, ["delete", "test-stack", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
@@ -136,7 +109,7 @@ def test_delete_rejects_dot_dot() -> None:
     """Test that delete rejects '..' as a worktree name."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        test_ctx = _create_test_context(env)
+        test_ctx = build_workspace_test_context(env)
         result = runner.invoke(cli, ["delete", "..", "-f"], obj=test_ctx)
 
         assert result.exit_code == 1
@@ -148,7 +121,7 @@ def test_delete_rejects_root_slash() -> None:
     """Test that delete rejects '/' as a worktree name."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        test_ctx = _create_test_context(env)
+        test_ctx = build_workspace_test_context(env)
         result = runner.invoke(cli, ["delete", "/", "-f"], obj=test_ctx)
 
         assert result.exit_code == 1
@@ -160,7 +133,7 @@ def test_delete_rejects_path_with_slash() -> None:
     """Test that delete rejects worktree names containing path separators."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        test_ctx = _create_test_context(env)
+        test_ctx = build_workspace_test_context(env)
         result = runner.invoke(cli, ["delete", "foo/bar", "-f"], obj=test_ctx)
 
         assert result.exit_code == 1
@@ -172,7 +145,7 @@ def test_delete_rejects_root_name() -> None:
     """Test that delete rejects 'root' as a worktree name."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        test_ctx = _create_test_context(env)
+        test_ctx = build_workspace_test_context(env)
         result = runner.invoke(cli, ["delete", "root", "-f"], obj=test_ctx)
 
         assert result.exit_code == 1

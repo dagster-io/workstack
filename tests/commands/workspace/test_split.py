@@ -7,67 +7,10 @@ branch in a Graphite stack.
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.context import ErkContext
 from erk.core.git.abc import WorktreeInfo
 from tests.fakes.git import FakeGit
-from tests.fakes.github import FakeGitHub
 from tests.fakes.graphite import FakeGraphite
-from tests.fakes.shell import FakeShell
 from tests.test_utils.env_helpers import erk_inmem_env
-
-
-def _create_test_context_for_split(
-    env,
-    stack_branches: list[str],
-    current_branch: str | None,
-    existing_worktrees: list[WorktreeInfo] | None = None,
-    trunk_branch: str = "main",
-    has_uncommitted: bool = False,
-) -> ErkContext:
-    """Helper to create test context for split command tests.
-
-    Args:
-        env: Test environment from pure_erk_env or simulated_erk_env
-        stack_branches: Branches in the stack (trunk to leaf order)
-        current_branch: Currently checked out branch
-        existing_worktrees: List of existing WorktreeInfo objects
-        trunk_branch: Name of trunk branch (main or master)
-        has_uncommitted: Whether to simulate uncommitted changes
-    """
-    # Configure graphite with stack
-    if current_branch and current_branch in stack_branches:
-        graphite_ops = FakeGraphite(stacks={current_branch: stack_branches})
-    else:
-        # For detached HEAD or untracked branches, use trunk as key
-        graphite_ops = FakeGraphite(stacks={trunk_branch: stack_branches})
-
-    # Default worktrees if not provided
-    if existing_worktrees is None:
-        existing_worktrees = [
-            WorktreeInfo(path=env.cwd, branch=current_branch, is_root=True),
-        ]
-
-    # Configure git ops
-    file_statuses = None
-    if has_uncommitted:
-        # Simulate uncommitted changes with modified files
-        file_statuses = {env.cwd: ([], ["modified_file.py"], [])}  # (staged, modified, untracked)
-
-    git_ops = FakeGit(
-        worktrees={env.cwd: existing_worktrees},
-        current_branches={env.cwd: current_branch},
-        file_statuses=file_statuses,
-        trunk_branches={env.cwd: trunk_branch},  # Configure trunk branch properly
-    )
-
-    return env.build_context(
-        git=git_ops,
-        graphite=graphite_ops,
-        github=FakeGitHub(),
-        shell=FakeShell(),
-        use_graphite=True,
-    )
-
 
 # Basic functionality tests
 
@@ -77,7 +20,19 @@ def test_split_full_stack() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1", "feat-2", "feat-3"]
-        test_ctx = _create_test_context_for_split(env, stack_branches, "feat-2")
+        current_branch = "feat-2"
+
+        # Configure graphite with stack
+        graphite_ops = FakeGraphite(stacks={current_branch: stack_branches})
+
+        # Configure git ops with worktrees
+        git_ops = FakeGit(
+            worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch=current_branch, is_root=True)]},
+            current_branches={env.cwd: current_branch},
+            trunk_branches={env.cwd: "main"},
+        )
+
+        test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
         result = runner.invoke(cli, ["split", "-f"], obj=test_ctx)
 
@@ -95,7 +50,15 @@ def test_split_excludes_trunk() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1"]
-        test_ctx = _create_test_context_for_split(env, stack_branches, "feat-1")
+        current_branch = "feat-1"
+
+        graphite_ops = FakeGraphite(stacks={current_branch: stack_branches})
+        git_ops = FakeGit(
+            worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch=current_branch, is_root=True)]},
+            current_branches={env.cwd: current_branch},
+            trunk_branches={env.cwd: "main"},
+        )
+        test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
         result = runner.invoke(cli, ["split", "-f"], obj=test_ctx)
 
@@ -111,7 +74,15 @@ def test_split_excludes_current_branch() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1", "feat-2"]
-        test_ctx = _create_test_context_for_split(env, stack_branches, "feat-1")
+        current_branch = "feat-1"
+
+        graphite_ops = FakeGraphite(stacks={current_branch: stack_branches})
+        git_ops = FakeGit(
+            worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch=current_branch, is_root=True)]},
+            current_branches={env.cwd: current_branch},
+            trunk_branches={env.cwd: "main"},
+        )
+        test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
         result = runner.invoke(cli, ["split", "-f"], obj=test_ctx)
 
@@ -128,11 +99,19 @@ def test_split_preserves_existing_worktrees() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1", "feat-2"]
+        current_branch = "main"
         existing_worktrees = [
             WorktreeInfo(path=env.cwd, branch="main", is_root=True),
             WorktreeInfo(path=env.erk_root / "feat-1", branch="feat-1", is_root=False),
         ]
-        test_ctx = _create_test_context_for_split(env, stack_branches, "main", existing_worktrees)
+
+        graphite_ops = FakeGraphite(stacks={current_branch: stack_branches})
+        git_ops = FakeGit(
+            worktrees={env.cwd: existing_worktrees},
+            current_branches={env.cwd: current_branch},
+            trunk_branches={env.cwd: "main"},
+        )
+        test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
         result = runner.invoke(cli, ["split", "-f"], obj=test_ctx)
 
@@ -151,7 +130,15 @@ def test_split_with_up_flag() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1", "feat-2", "feat-3"]
-        test_ctx = _create_test_context_for_split(env, stack_branches, "feat-2")
+        current_branch = "feat-2"
+
+        graphite_ops = FakeGraphite(stacks={current_branch: stack_branches})
+        git_ops = FakeGit(
+            worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch=current_branch, is_root=True)]},
+            current_branches={env.cwd: current_branch},
+            trunk_branches={env.cwd: "main"},
+        )
+        test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
         result = runner.invoke(cli, ["split", "--up", "-f"], obj=test_ctx)
 
@@ -167,7 +154,15 @@ def test_split_with_down_flag() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1", "feat-2", "feat-3"]
-        test_ctx = _create_test_context_for_split(env, stack_branches, "feat-2")
+        current_branch = "feat-2"
+
+        graphite_ops = FakeGraphite(stacks={current_branch: stack_branches})
+        git_ops = FakeGit(
+            worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch=current_branch, is_root=True)]},
+            current_branches={env.cwd: current_branch},
+            trunk_branches={env.cwd: "main"},
+        )
+        test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
         result = runner.invoke(cli, ["split", "--down", "-f"], obj=test_ctx)
 
@@ -183,7 +178,15 @@ def test_split_up_and_down_conflict() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1", "feat-2"]
-        test_ctx = _create_test_context_for_split(env, stack_branches, "feat-1")
+        current_branch = "feat-1"
+
+        graphite_ops = FakeGraphite(stacks={current_branch: stack_branches})
+        git_ops = FakeGit(
+            worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch=current_branch, is_root=True)]},
+            current_branches={env.cwd: current_branch},
+            trunk_branches={env.cwd: "main"},
+        )
+        test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
         result = runner.invoke(cli, ["split", "--up", "--down"], obj=test_ctx)
 
@@ -196,7 +199,15 @@ def test_split_with_force_flag() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1"]
-        test_ctx = _create_test_context_for_split(env, stack_branches, "main")
+        current_branch = "main"
+
+        graphite_ops = FakeGraphite(stacks={current_branch: stack_branches})
+        git_ops = FakeGit(
+            worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch=current_branch, is_root=True)]},
+            current_branches={env.cwd: current_branch},
+            trunk_branches={env.cwd: "main"},
+        )
+        test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
         # Without -f, would need interactive confirmation
         result = runner.invoke(cli, ["split", "-f"], obj=test_ctx)
@@ -210,7 +221,15 @@ def test_split_with_dry_run() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1", "feat-2"]
-        test_ctx = _create_test_context_for_split(env, stack_branches, "main")
+        current_branch = "main"
+
+        graphite_ops = FakeGraphite(stacks={current_branch: stack_branches})
+        git_ops = FakeGit(
+            worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch=current_branch, is_root=True)]},
+            current_branches={env.cwd: current_branch},
+            trunk_branches={env.cwd: "main"},
+        )
+        test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
         result = runner.invoke(cli, ["split", "--dry-run"], obj=test_ctx)
 
@@ -229,7 +248,16 @@ def test_split_detached_head_state() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1", "feat-2"]
-        test_ctx = _create_test_context_for_split(env, stack_branches, None)  # Detached HEAD
+        current_branch = None  # Detached HEAD
+
+        # For detached HEAD, use "main" as key for graphite stacks
+        graphite_ops = FakeGraphite(stacks={"main": stack_branches})
+        git_ops = FakeGit(
+            worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch=current_branch, is_root=True)]},
+            current_branches={env.cwd: current_branch},
+            trunk_branches={env.cwd: "main"},
+        )
+        test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
         result = runner.invoke(cli, ["split", "-f"], obj=test_ctx)
 
@@ -292,7 +320,16 @@ def test_split_uncommitted_changes() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1"]
-        test_ctx = _create_test_context_for_split(env, stack_branches, "main", has_uncommitted=True)
+        current_branch = "main"
+
+        graphite_ops = FakeGraphite(stacks={current_branch: stack_branches})
+        git_ops = FakeGit(
+            worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch=current_branch, is_root=True)]},
+            current_branches={env.cwd: current_branch},
+            trunk_branches={env.cwd: "main"},
+            file_statuses={env.cwd: ([], ["modified_file.py"], [])},  # has_uncommitted=True
+        )
+        test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
         result = runner.invoke(cli, ["split"], obj=test_ctx)
 
@@ -306,7 +343,16 @@ def test_split_uncommitted_changes_with_force() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1"]
-        test_ctx = _create_test_context_for_split(env, stack_branches, "main", has_uncommitted=True)
+        current_branch = "main"
+
+        graphite_ops = FakeGraphite(stacks={current_branch: stack_branches})
+        git_ops = FakeGit(
+            worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch=current_branch, is_root=True)]},
+            current_branches={env.cwd: current_branch},
+            trunk_branches={env.cwd: "main"},
+            file_statuses={env.cwd: ([], ["modified_file.py"], [])},  # has_uncommitted=True
+        )
+        test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
         result = runner.invoke(cli, ["split", "-f"], obj=test_ctx)
 
@@ -320,11 +366,19 @@ def test_split_all_branches_have_worktrees() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1"]
+        current_branch = "main"
         existing_worktrees = [
             WorktreeInfo(path=env.cwd, branch="main", is_root=True),
             WorktreeInfo(path=env.erk_root / "feat-1", branch="feat-1", is_root=False),
         ]
-        test_ctx = _create_test_context_for_split(env, stack_branches, "main", existing_worktrees)
+
+        graphite_ops = FakeGraphite(stacks={current_branch: stack_branches})
+        git_ops = FakeGit(
+            worktrees={env.cwd: existing_worktrees},
+            current_branches={env.cwd: current_branch},
+            trunk_branches={env.cwd: "main"},
+        )
+        test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
         result = runner.invoke(cli, ["split", "-f"], obj=test_ctx)
 
@@ -341,17 +395,20 @@ def test_split_output_formatting() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1", "feat-2", "feat-3"]
+        current_branch = "feat-2"  # Current is feat-2, not main
         existing_worktrees = [
-            WorktreeInfo(path=env.cwd, branch="feat-2", is_root=False),  # Current is feat-2
+            WorktreeInfo(path=env.cwd, branch="feat-2", is_root=False),
             WorktreeInfo(path=env.erk_root / "main", branch="main", is_root=True),
             WorktreeInfo(path=env.erk_root / "feat-1", branch="feat-1", is_root=False),
         ]
-        test_ctx = _create_test_context_for_split(
-            env,
-            stack_branches,
-            "feat-2",
-            existing_worktrees,  # Current is feat-2, not main
+
+        graphite_ops = FakeGraphite(stacks={current_branch: stack_branches})
+        git_ops = FakeGit(
+            worktrees={env.cwd: existing_worktrees},
+            current_branches={env.cwd: current_branch},
+            trunk_branches={env.cwd: "main"},
         )
+        test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
         result = runner.invoke(cli, ["split", "-f"], obj=test_ctx)
 
@@ -368,7 +425,15 @@ def test_split_dry_run_output() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1", "feat-2"]
-        test_ctx = _create_test_context_for_split(env, stack_branches, "main")
+        current_branch = "main"
+
+        graphite_ops = FakeGraphite(stacks={current_branch: stack_branches})
+        git_ops = FakeGit(
+            worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch=current_branch, is_root=True)]},
+            current_branches={env.cwd: current_branch},
+            trunk_branches={env.cwd: "main"},
+        )
+        test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
         result = runner.invoke(cli, ["split", "--dry-run"], obj=test_ctx)
 
@@ -385,7 +450,15 @@ def test_split_success_messages() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         stack_branches = ["main", "feat-1", "feat-2"]
-        test_ctx = _create_test_context_for_split(env, stack_branches, "main")
+        current_branch = "main"
+
+        graphite_ops = FakeGraphite(stacks={current_branch: stack_branches})
+        git_ops = FakeGit(
+            worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch=current_branch, is_root=True)]},
+            current_branches={env.cwd: current_branch},
+            trunk_branches={env.cwd: "main"},
+        )
+        test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
         result = runner.invoke(cli, ["split", "-f"], obj=test_ctx)
 
@@ -400,9 +473,15 @@ def test_split_with_master_as_trunk() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         stack_branches = ["master", "feat-1"]
-        test_ctx = _create_test_context_for_split(
-            env, stack_branches, "feat-1", trunk_branch="master"
+        current_branch = "feat-1"
+
+        graphite_ops = FakeGraphite(stacks={current_branch: stack_branches})
+        git_ops = FakeGit(
+            worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch=current_branch, is_root=True)]},
+            current_branches={env.cwd: current_branch},
+            trunk_branches={env.cwd: "master"},  # trunk_branch="master"
         )
+        test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
         result = runner.invoke(cli, ["split", "-f"], obj=test_ctx)
 
@@ -418,7 +497,15 @@ def test_split_empty_stack() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         stack_branches = ["main"]
-        test_ctx = _create_test_context_for_split(env, stack_branches, "main")
+        current_branch = "main"
+
+        graphite_ops = FakeGraphite(stacks={current_branch: stack_branches})
+        git_ops = FakeGit(
+            worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch=current_branch, is_root=True)]},
+            current_branches={env.cwd: current_branch},
+            trunk_branches={env.cwd: "main"},
+        )
+        test_ctx = env.build_context(use_graphite=True, git=git_ops, graphite=graphite_ops)
 
         result = runner.invoke(cli, ["split", "-f"], obj=test_ctx)
 

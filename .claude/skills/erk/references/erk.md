@@ -103,7 +103,7 @@ Repository Root
 
 ```bash
 # Create worktree named "auth" with branch "feature/user-auth"
-erk create auth --branch feature/user-auth
+erk add auth --branch feature/user-auth
 
 # Navigate to the branch
 erk checkout feature/user-auth
@@ -138,7 +138,7 @@ erk status    # Shows: "feature-a [feature-a]"
 | Term              | Definition                                            | Example                                                |
 | ----------------- | ----------------------------------------------------- | ------------------------------------------------------ |
 | **Worktree**      | Git's native feature for multiple working directories | Created by `git worktree add`                          |
-| **Erk**           | A configured worktree with environment setup          | Created by `erk create`                                |
+| **Erk**           | A configured worktree with environment setup          | Created by `erk add`                                   |
 | **Repo Root**     | Original git repository directory containing `.git/`  | `/Users/you/projects/erk`                              |
 | **Work Dir**      | Directory containing all erks for a specific repo     | `~/erks/erk/`                                          |
 | **Erks Root**     | Top-level directory for all configured repos          | `~/erks/`                                              |
@@ -154,11 +154,11 @@ Worktrees are identified by **name** (not branch):
 
 ```bash
 # Create worktree with custom name and branch
-erk create auth --branch feature/user-authentication
+erk add auth --branch feature/user-authentication
 
 # Operations use branch or worktree names
 erk checkout feature/user-authentication
-erk delete auth
+erk remove auth
 erk rename auth user-auth
 ```
 
@@ -166,10 +166,10 @@ erk rename auth user-auth
 
 ```bash
 # Worktree name = branch name by default
-erk create my-feature           # Creates worktree "my-feature" with branch "my-feature"
+erk add my-feature           # Creates worktree "my-feature" with branch "my-feature"
 
 # Explicit branch name
-erk create feat --branch my-feature  # Worktree "feat", branch "my-feature"
+erk add feat --branch my-feature  # Worktree "feat", branch "my-feature"
 ```
 
 ### Configuration Hierarchy
@@ -337,33 +337,33 @@ erk completion fish > ~/.config/fish/completions/erk.fish
 
 ### Creating Worktrees
 
-#### `erk create`
+#### `erk add`
 
 Create a new worktree.
 
 ```bash
 # Basic creation (name = branch)
-erk create my-feature
+erk add my-feature
 
 # Custom branch name
-erk create feat --branch feature/my-feature
+erk add feat --branch feature/my-feature
 
 # From existing branch
-erk create --from-branch existing-feature
-erk create my-work --from-branch feature/existing
+erk add --from-branch existing-feature
+erk add my-work --from-branch feature/existing
 
 # Move current branch to new worktree
-erk create --from-current-branch
+erk add --from-current-branch
 
 # Create from plan file
-erk create --plan implementation-plan.md
-erk create auth --plan add-auth.md
+erk add --plan implementation-plan.md
+erk add auth --plan add-auth.md
 
 # Skip post-create commands
-erk create my-feature --no-post
+erk add my-feature --no-post
 
 # Custom base ref
-erk create my-feature --ref develop
+erk add my-feature --ref develop
 ```
 
 **Branch creation logic:**
@@ -376,7 +376,7 @@ erk create my-feature --ref develop
 **Plan folder behavior:**
 
 ```bash
-erk create --plan plan.md my-feature
+erk add --plan plan.md my-feature
 # 1. Creates worktree ~/erks/repo/my-feature/
 # 2. Creates .plan/ folder with:
 #    - plan.md (immutable - original plan content)
@@ -562,22 +562,22 @@ erk rename old-name new-name --dry-run
 
 **Note**: Renames the worktree directory, not the branch.
 
-#### `erk delete` / `erk del`
+#### `erk remove` / `erk rm`
 
 Delete a worktree.
 
 ```bash
 # Delete single worktree
-erk delete my-feature
+erk remove my-feature
 
 # Force deletion (skip confirmation)
-erk delete my-feature --force
+erk remove my-feature --force
 
 # Delete worktree and entire Graphite stack
-erk delete my-feature --delete-stack
+erk remove my-feature --delete-stack
 
 # Dry run
-erk delete my-feature --dry-run
+erk remove my-feature --dry-run
 ```
 
 **Safety checks:**
@@ -624,14 +624,14 @@ erk sync --dry-run
 
 ```bash
 # Create new feature
-erk create user-auth
+erk add user-auth
 erk checkout user-auth
 
 # Work on feature
 # ... make changes, commit ...
 
 # Navigate to another feature without losing context
-erk create bug-fix
+erk add bug-fix
 erk checkout bug-fix
 
 # Navigate back instantly
@@ -648,7 +648,7 @@ cd /path/to/repo/root
 # Create plan file: Add_User_Auth.md
 
 # 2. Create worktree from plan
-erk create --plan Add_User_Auth.md
+erk add --plan Add_User_Auth.md
 # Creates worktree "add-user-auth"
 # Creates .plan/ folder with plan.md and progress.md
 
@@ -674,22 +674,22 @@ git commit -m "Implement user authentication"
 
 ```bash
 # Create worktree from existing branch
-erk create --from-branch feature/existing-work
+erk add --from-branch feature/existing-work
 
 # Or with custom name
-erk create my-work --from-branch feature/existing-work
+erk add my-work --from-branch feature/existing-work
 ```
 
 ### Pattern 4: Stacked Development with Graphite
 
 ```bash
 # Create base feature
-erk create feature-base
+erk add feature-base
 
 # Create dependent feature
 erk checkout feature-base
 gt create feature-base-part-2
-erk create feature-base-part-2 --from-current-branch
+erk add feature-base-part-2 --from-current-branch
 
 # Navigate stack
 erk checkout feature-base
@@ -704,9 +704,9 @@ erk list --stacks
 
 ```bash
 # Start multiple features
-erk create feature-a
-erk create feature-b
-erk create feature-c
+erk add feature-a
+erk add feature-b
+erk add feature-c
 
 # List all worktrees
 erk ls
@@ -727,7 +727,7 @@ erk checkout wrong-branch
 erk move correct-worktree
 
 # Or create new worktree from current branch
-erk create --from-current-branch
+erk add --from-current-branch
 ```
 
 ### Pattern 7: Cleanup After Merging
@@ -740,7 +740,7 @@ erk sync --dry-run
 erk sync --force
 
 # Manual deletion
-erk delete merged-feature
+erk remove merged-feature
 ```
 
 ### Pattern 8: Environment-Specific Worktrees
@@ -755,8 +755,8 @@ LOG_LEVEL = "debug"
 EOF
 
 # Each worktree gets unique environment
-erk create feature-a   # DATABASE_URL=postgresql://localhost/feature-a_db
-erk create feature-b   # DATABASE_URL=postgresql://localhost/feature-b_db
+erk add feature-a   # DATABASE_URL=postgresql://localhost/feature-a_db
+erk add feature-b   # DATABASE_URL=postgresql://localhost/feature-b_db
 ```
 
 ### Pattern 9: Custom Post-Create Setup
@@ -772,7 +772,7 @@ command = ["npm", "run", "db:migrate"]
 EOF
 
 # Commands run automatically on worktree creation
-erk create my-feature
+erk add my-feature
 # Automatically runs: npm install && npm run db:migrate
 ```
 
@@ -786,8 +786,8 @@ Erk uses git's native worktree feature:
 
 ```bash
 # Erk commands map to git commands:
-erk create feature     # → git worktree add -b feature path
-erk delete feature     # → git worktree remove path
+erk add feature     # → git worktree add -b feature path
+erk remove feature     # → git worktree remove path
 ```
 
 **Git operations erk uses:**
@@ -886,7 +886,7 @@ erk checkout feature-a
 
 # Navigate to urgent bug fix
 cd /path/to/repo/root  # Navigate to root
-erk create hotfix-urgent
+erk add hotfix-urgent
 erk checkout hotfix-urgent
 # ... fix bug, commit, push ...
 
@@ -905,7 +905,7 @@ cd /path/to/repo/root
 # Create plan: Add_Authentication.md
 
 # 2. Create worktree from plan
-erk create --plan Add_Authentication.md
+erk add --plan Add_Authentication.md
 
 # 3. Implement
 erk checkout add-authentication
@@ -926,14 +926,14 @@ erk ls --stacks     # See PR #123 ✅
 
 ```bash
 # Base feature
-erk create api-v2
+erk add api-v2
 erk checkout api-v2
 # ... implement base API ...
 git commit -m "Add API v2 base"
 
 # Dependent feature
 gt create api-v2-auth
-erk create api-v2-auth --from-current-branch
+erk add api-v2-auth --from-current-branch
 erk checkout api-v2-auth
 # ... implement auth on top of API v2 ...
 git commit -m "Add authentication to API v2"
@@ -957,12 +957,12 @@ API_PORT = "300{name}"
 EOF
 
 # Each worktree gets unique environment
-erk create user-service
+erk add user-service
 erk checkout user-service
 echo $DATABASE_URL  # postgresql://localhost/user-service_db
 echo $API_PORT      # 300user-service (would need numeric hashing in real use)
 
-erk create payment-service
+erk add payment-service
 erk checkout payment-service
 echo $DATABASE_URL  # postgresql://localhost/payment-service_db
 ```
@@ -979,8 +979,8 @@ erk sync --dry-run
 # feature-b [feature-b] - merged (PR #124)
 
 # Manual cleanup
-erk delete feature-a
-erk delete feature-b
+erk remove feature-a
+erk remove feature-b
 
 # Or automatic cleanup
 erk sync --force
@@ -1025,7 +1025,7 @@ ENV = "dev"
 EOF
 
 # New worktrees automatically set up
-erk create new-feature
+erk add new-feature
 # Runs: uv venv && uv pip install -e .[dev] && pre-commit install
 erk checkout new-feature
 # Environment already configured

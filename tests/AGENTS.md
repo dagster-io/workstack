@@ -6,7 +6,7 @@ For comprehensive testing patterns and architecture, see:
 ## Quick Commands
 
 Run all tests: `uv run pytest`
-Run specific test: `uv run pytest tests/commands/workspace/test_delete.py::test_delete_force_removes_directory`
+Run specific test: `uv run pytest tests/commands/workspace/test_remove.py::test_delete_force_removes_directory`
 Run with coverage: `uv run pytest --cov=erk`
 
 ## Important: Directory Structure Requirements
@@ -193,7 +193,7 @@ class TestWorktreeUtils:
 Each subdirectory has targeted CLAUDE.md files with domain-specific patterns:
 
 - Load only the CLAUDE.md relevant to your current work
-- Example: working on `test_create.py` → load `commands/workspace/CLAUDE.md`
+- Example: working on `test_add.py` → load `commands/workspace/CLAUDE.md`
 - This reduces context noise by 50-70% compared to flat structure
 
 ## Testing Principles

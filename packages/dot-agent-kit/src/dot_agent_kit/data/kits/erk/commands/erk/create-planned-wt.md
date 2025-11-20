@@ -15,7 +15,7 @@ This command detects plan files at the repository root, selects the most recent 
 **What this command does:**
 
 - ✅ Auto-detect most recent `*-plan.md` file at repo root
-- ✅ Create worktree with `erk create --plan`
+- ✅ Create worktree with `erk add --plan`
 - ✅ Display plan content from disk (including any manual edits)
 
 **What happens AFTER (in separate command):**
@@ -29,7 +29,7 @@ When you run this command, these steps occur:
 1. **Verify Scope** - Confirm we're in a git repository with erk available
 2. **Detect Plan File** - Find and select most recent `*-plan.md` at repo root
 3. **Read Plan Content** - Read plan file before it gets moved by erk
-4. **Create Worktree** - Run `erk create --plan` command
+4. **Create Worktree** - Run `erk add --plan` command
 5. **Display Next Steps** - Show plan content and implementation command
 
 ## Usage
@@ -55,7 +55,7 @@ This command succeeds when ALL of the following are true:
 ✅ Most recent plan file selected (if multiple exist)
 
 **Worktree Creation:**
-✅ Worktree created with `erk create --plan`
+✅ Worktree created with `erk add --plan`
 ✅ Worktree contains `.plan/` folder with `plan.md` and `progress.md`
 ✅ Worktree listed in `erk list`
 
@@ -89,7 +89,7 @@ This command succeeds when ALL of the following are true:
 **Solution:**
 
 - List worktrees: `erk list`
-- Delete existing: `erk delete <name>`
+- Delete existing: `erk remove <name>`
 - Or navigate to existing: `erk checkout <branch>`
 
 ### "Failed to parse erk output"
@@ -124,14 +124,14 @@ Suggested action: [1-3 concrete steps to resolve]
 1. Detect plan file at repository root
 2. Validate plan file (exists, readable, not empty)
 3. Read plan content from disk (BEFORE it gets moved)
-4. Run `erk create --plan <file>`
+4. Run `erk add --plan <file>`
 5. Display plan content and next steps
 
 **FORBIDDEN ACTIONS:**
 
 - Writing ANY code files (.py, .ts, .js, etc.)
 - Making ANY edits to existing codebase
-- Running ANY commands except `git rev-parse` and `erk create`
+- Running ANY commands except `git rev-parse` and `erk add`
 - Implementing ANY part of the plan
 - Modifying the plan file
 
@@ -203,7 +203,7 @@ Suggested action:
 
 ### Step 2: Read Plan Content (Before It Gets Moved)
 
-**IMPORTANT:** Read the plan content NOW, before running `erk create`, because erk will move the file from the repository root to the new worktree.
+**IMPORTANT:** Read the plan content NOW, before running `erk add`, because erk will move the file from the repository root to the new worktree.
 
 Read the plan file: `plan_content = Path(plan_file_path).read_text(encoding="utf-8")`
 
@@ -211,7 +211,7 @@ Store this content for display in Step 4.
 
 ### Step 3: Create Worktree with Plan
 
-Execute: `erk create --plan <plan-file-path> --json --stay`
+Execute: `erk add --plan <plan-file-path> --json --stay`
 
 **Parse JSON output:**
 
@@ -253,14 +253,14 @@ Suggested action:
 **JSON parsing fails:**
 
 ```
-❌ Error: Failed to parse erk create output
+❌ Error: Failed to parse erk add output
 
 Details: [parse error message]
 
 Suggested action:
   1. Check erk version: erk --version
   2. Ensure --json flag is supported (v0.2.0+)
-  3. Try running manually: erk create --plan <file> --json
+  3. Try running manually: erk add --plan <file> --json
 ```
 
 **Worktree already exists (status = "exists"):**
@@ -273,7 +273,7 @@ Details: A worktree with this name already exists from a previous plan
 Suggested action:
   1. View existing: erk status <worktree_name>
   2. Navigate to it: erk checkout <branch>
-  3. Or delete it: erk delete <worktree_name>
+  3. Or delete it: erk remove <worktree_name>
   4. Or modify plan title to generate different name
 ```
 
@@ -292,7 +292,7 @@ Suggested action:
 
 **CRITICAL: Claude Code Directory Behavior**
 
-🔴 **Claude Code CANNOT switch directories.** After `erk create` runs, you will remain in your original directory. This is **NORMAL and EXPECTED**. The JSON output gives you all the information you need about the new worktree.
+🔴 **Claude Code CANNOT switch directories.** After `erk add` runs, you will remain in your original directory. This is **NORMAL and EXPECTED**. The JSON output gives you all the information you need about the new worktree.
 
 **Do NOT:**
 

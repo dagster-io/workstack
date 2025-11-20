@@ -5,7 +5,7 @@ from pathlib import Path
 import click
 
 from erk.cli.activation import render_activation_script
-from erk.cli.commands.create import ensure_worktree_for_branch
+from erk.cli.commands.add import ensure_worktree_for_branch
 from erk.cli.commands.navigation_helpers import complete_branch_names
 from erk.cli.core import discover_repo_context
 from erk.cli.graphite import find_worktrees_containing_branch

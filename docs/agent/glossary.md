@@ -36,7 +36,7 @@ A **managed worktree** created and maintained by the erk tool.
 - Post-creation hook execution
 - Integration with graphite/GitHub
 
-**Example**: `erk create my-feature` creates both a git worktree and an erk.
+**Example**: `erk add my-feature` creates both a git worktree and an erk.
 
 ### Repo Root
 
@@ -316,7 +316,7 @@ class DryRunGit(Git):
 
 A `.plan/` folder containing implementation plans and progress tracking for a feature.
 
-**Usage**: `erk create --plan my-plan.md my-feature`
+**Usage**: `erk add --plan my-plan.md my-feature`
 
 **Behavior**:
 
@@ -340,7 +340,7 @@ A `.plan/` folder containing implementation plans and progress tracking for a fe
 echo "## Implementation Plan\n1. Step 1\n2. Step 2" > plan.md
 
 # Create worktree from plan
-erk create --plan plan.md my-feature
+erk add --plan plan.md my-feature
 
 # Plan structure created:
 # ~/erks/erk/my-feature/.plan/
@@ -364,7 +364,7 @@ Mode where commands print what they would do without executing destructive opera
 **Example**:
 
 ```bash
-erk delete my-feature --dry-run
+erk remove my-feature --dry-run
 # Output: [DRY RUN] Would delete worktree: /Users/you/worktrees/erk/my-feature
 ```
 

@@ -247,9 +247,7 @@ def test_add_detects_default_branch() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(
-            cli, ["add", "new-feature", "--from-current-branch"], obj=test_ctx
-        )
+        result = runner.invoke(cli, ["add", "new-feature", "--from-current-branch"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
 
@@ -786,9 +784,7 @@ def test_add_with_keep_plan_flag() -> None:
 
         test_ctx = env.build_context(git=git_ops, local_config=local_config, repo=repo)
 
-        result = runner.invoke(
-            cli, ["add", "--plan", str(plan_file), "--keep-plan"], obj=test_ctx
-        )
+        result = runner.invoke(cli, ["add", "--plan", str(plan_file), "--keep-plan"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
         # Should create worktree with "plan" stripped from filename and date suffix added

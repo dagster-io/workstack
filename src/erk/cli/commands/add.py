@@ -481,7 +481,7 @@ def add(
             user_output(
                 click.style("Error: ", fg="red")
                 + f"No .plan directory found in current worktree ({ctx.cwd}). "
-                + "Use 'erk create --plan <file>' to create a worktree with a plan from a file."
+                + "Use 'erk add --plan <file>' to create a worktree with a plan from a file."
             )
             raise SystemExit(1)
 

@@ -562,7 +562,7 @@ erk rename old-name new-name --dry-run
 
 **Note**: Renames the worktree directory, not the branch.
 
-#### `erk remove` / `erk remove`
+#### `erk remove` / `erk rm`
 
 Delete a worktree.
 

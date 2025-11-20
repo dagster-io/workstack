@@ -1,4 +1,4 @@
-"""Tests for erk create --copy-plan flag."""
+"""Tests for erk add --copy-plan flag."""
 
 from click.testing import CliRunner
 

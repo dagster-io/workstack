@@ -38,7 +38,7 @@ def test_create_with_plan_file() -> None:
         # Create test context using env.build_context() helper
         test_ctx = env.build_context(git=git_ops)
 
-        # Run erk create with --plan
+        # Run erk add with --plan
         result = runner.invoke(
             cli, ["add", "--plan", "Add_Auth_Feature.md", "--no-post"], obj=test_ctx
         )
@@ -90,7 +90,7 @@ def test_create_with_plan_name_sanitization() -> None:
         # Create test context using env.build_context() helper
         test_ctx = env.build_context(git=git_ops)
 
-        # Run erk create with --plan
+        # Run erk add with --plan
         result = runner.invoke(
             cli, ["add", "--plan", "MY_COOL_Plan_File.md", "--no-post"], obj=test_ctx
         )
@@ -148,7 +148,7 @@ def test_create_with_both_name_and_plan_fails() -> None:
             cwd=env.root_worktree,
         )
 
-        # Run erk create with both NAME and --plan
+        # Run erk add with both NAME and --plan
         result = runner.invoke(cli, ["add", "myname", "--plan", "plan.md"], obj=test_ctx)
 
         # Should fail
@@ -381,10 +381,8 @@ def test_create_with_script_flag() -> None:
         # Create test context using env.build_context() helper
         test_ctx = env.build_context(git=git_ops)
 
-        # Run erk create with --script flag
-        result = runner.invoke(
-            cli, ["add", "test-worktree", "--no-post", "--script"], obj=test_ctx
-        )
+        # Run erk add with --script flag
+        result = runner.invoke(cli, ["add", "test-worktree", "--no-post", "--script"], obj=test_ctx)
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
         # Verify worktree was created

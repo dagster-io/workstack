@@ -1,6 +1,6 @@
-"""Tests for erk delete command.
+"""Tests for erk remove command.
 
-This file tests the delete command which removes a worktree workspace.
+This file tests the remove command which removes a worktree workspace.
 """
 
 from click.testing import CliRunner

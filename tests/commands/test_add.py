@@ -1,4 +1,4 @@
-"""Tests for erk create command output behavior."""
+"""Tests for erk add command output behavior."""
 
 from pathlib import Path
 

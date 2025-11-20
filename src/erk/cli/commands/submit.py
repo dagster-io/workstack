@@ -1,7 +1,6 @@
 """Submit plan for remote AI implementation via GitHub Actions."""
 
 import subprocess
-from pathlib import Path
 
 import click
 
@@ -81,8 +80,13 @@ def submit_cmd(ctx: ErkContext, dry_run: bool) -> None:
     )
 
     subprocess.run(
-        ["git", "commit", "-m", "Submit plan for AI implementation\n\n"
-         "This commit signals GitHub Actions to begin implementation."],
+        [
+            "git",
+            "commit",
+            "-m",
+            "Submit plan for AI implementation\n\n"
+            "This commit signals GitHub Actions to begin implementation.",
+        ],
         cwd=ctx.cwd,
         check=True,
         capture_output=True,

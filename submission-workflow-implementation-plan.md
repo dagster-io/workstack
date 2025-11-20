@@ -72,9 +72,11 @@ def remove_submission_folder(worktree_path: Path) -> None:
 ```
 
 **Files affected:**
+
 - `src/erk/core/plan_folder.py` (+40 lines)
 
 **Tests needed:**
+
 - `test_copy_plan_to_submission()` - Copies correctly
 - `test_copy_plan_to_submission_no_plan()` - Error when no .plan/
 - `test_copy_plan_to_submission_already_exists()` - Error when .submission/ exists
@@ -207,6 +209,7 @@ def submit_cmd(ctx: ErkContext, dry_run: bool) -> None:
 ```
 
 **Key features:**
+
 - Checks for .plan/ folder existence
 - Checks for existing .submission/ (error if present)
 - Copies .plan/ to .submission/
@@ -216,6 +219,7 @@ def submit_cmd(ctx: ErkContext, dry_run: bool) -> None:
 - Clear user feedback
 
 **Files affected:**
+
 - `src/erk/cli/commands/submit.py` (complete rewrite, ~110 lines)
 
 ---
@@ -228,18 +232,20 @@ def submit_cmd(ctx: ErkContext, dry_run: bool) -> None:
 
 Add new section after implementation completes:
 
-```markdown
+````markdown
 ## Step 6: Run CI and Fix Issues Iteratively (if .submission/ present)
 
 **CRITICAL: Only run this step if working in a .submission/ folder (not .plan/)**
 
 Check if current directory contains `.submission/` folder:
+
 - If yes: This is a remote submission, run iterative CI
 - If no: This is local implementation, skip CI loop
 
 **Iterative CI Process (max 5 attempts):**
 
 For each attempt:
+
 1. Run the fast CI checks: `/fast-ci` (unit tests + pyright)
 2. If all checks pass: Break out of loop, proceed to cleanup
 3. If checks fail: Read the error output carefully
@@ -250,12 +256,14 @@ For each attempt:
 **After CI passes (or if .plan/ folder):**
 
 If in .submission/ folder:
+
 1. Delete .submission/ folder: `rm -rf .submission/`
 2. Stage deletion: `git add .submission/`
 3. Commit: `git commit -m "Clean up submission artifacts after implementation"`
 4. Push: `git push`
 
 If in .plan/ folder:
+
 1. DO NOT delete .plan/
 2. DO NOT auto-commit
 3. Leave changes for user review
@@ -265,10 +273,13 @@ If in .plan/ folder:
 **Only if .submission/ was present:**
 
 Use gh CLI to create or update PR:
+
 ```bash
 gh pr create --fill --label "ai-generated" || gh pr edit --add-label "ai-generated"
 ```
-```
+````
+
+````
 
 **Key additions:**
 - Detect .submission/ vs .plan/ folder
@@ -408,9 +419,10 @@ def test_submit_errors_on_detached_head(tmp_path: Path) -> None:
 
     assert result.exit_code == 1
     assert "Not on a branch" in result.output
-```
+````
 
 **Files affected:**
+
 - `tests/commands/test_submit.py` (rewrite, ~140 lines)
 - `tests/core/test_plan_folder.py` (add submission tests, +50 lines)
 
@@ -429,13 +441,13 @@ on:
   workflow_dispatch:
     inputs:
       branch-name:
-        description: 'Branch name to implement'
+        description: "Branch name to implement"
         required: true
   push:
     branches:
-      - '**'
+      - "**"
     paths:
-      - '.submission/**'
+      - ".submission/**"
 
 jobs:
   implement:
@@ -489,6 +501,7 @@ jobs:
 ```
 
 **Key simplifications:**
+
 - No manual CI loop in workflow
 - Just run `/erk:implement-plan` with skip permissions
 - The command handles everything:
@@ -499,6 +512,7 @@ jobs:
 - Git is pre-configured for the bot to commit
 
 **Files affected:**
+
 - `.github/workflows/implement-plan.yml` (simplify, ~80 lines total)
 
 ---
@@ -517,12 +531,14 @@ Add section explaining the .submission/ protocol:
 **Purpose:** Signal for remote AI implementation via GitHub Actions
 
 **Workflow:**
+
 1. Create worktree with `/erk:create-planned-wt` (creates .plan/)
 2. Run `erk submit` to copy .plan/ to .submission/
 3. GitHub Actions detects .submission/ and runs implementation
 4. .submission/ is auto-deleted after completion
 
 **Key differences from .plan/:**
+
 - `.plan/` = Local implementation tracking (NOT git-tracked)
 - `.submission/` = Remote submission signal (git-tracked, ephemeral)
 
@@ -530,6 +546,7 @@ Add section explaining the .submission/ protocol:
 ```
 
 **Files affected:**
+
 - `AGENTS.md` (add ~30 lines)
 - `.agent/kits/erk/registry-entry.md` (update command list)
 
@@ -540,22 +557,26 @@ Add section explaining the .submission/ protocol:
 **After implementation, the full workflow is:**
 
 ### 1. Create Plan
+
 ```bash
 /erk:persist-plan  # Save plan to repo root as <name>-plan.md
 ```
 
 ### 2. Create Worktree
+
 ```bash
 /erk:create-planned-wt  # Creates worktree with .plan/ folder
 ```
 
 ### 3. Submit for Remote Implementation
+
 ```bash
 erk checkout <branch-name>
 erk submit  # Copies .plan/ to .submission/, commits, pushes, triggers
 ```
 
 ### 4. GitHub Actions Automatically
+
 - Detects .submission/ folder in push
 - Runs `/erk:implement-plan` with `--dangerously-skip-permissions`
 - Command detects .submission/ and runs CI loop internally:
@@ -568,6 +589,7 @@ erk submit  # Copies .plan/ to .submission/, commits, pushes, triggers
   - Create/update PR with `ai-generated` label
 
 ### 5. Result
+
 - ✅ Clean PR with implemented code
 - ✅ No .submission/ artifacts
 - ✅ Original .plan/ unchanged in worktree
@@ -592,15 +614,15 @@ erk submit  # Copies .plan/ to .submission/, commits, pushes, triggers
 
 ### Modified Files
 
-| File | Change Type | Lines |
-|------|-------------|-------|
-| `src/erk/core/plan_folder.py` | Add functions | +40 |
-| `src/erk/cli/commands/submit.py` | Complete rewrite | ~110 |
-| `packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/commands/erk/implement-plan.md` | Add CI loop section | +60 |
-| `tests/commands/test_submit.py` | Complete rewrite | ~140 |
-| `tests/core/test_plan_folder.py` | Add submission tests | +50 |
-| `.github/workflows/implement-plan.yml` | Simplify | ~80 total |
-| `AGENTS.md` | Add documentation | +30 |
+| File                                                                                    | Change Type          | Lines     |
+| --------------------------------------------------------------------------------------- | -------------------- | --------- |
+| `src/erk/core/plan_folder.py`                                                           | Add functions        | +40       |
+| `src/erk/cli/commands/submit.py`                                                        | Complete rewrite     | ~110      |
+| `packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/commands/erk/implement-plan.md` | Add CI loop section  | +60       |
+| `tests/commands/test_submit.py`                                                         | Complete rewrite     | ~140      |
+| `tests/core/test_plan_folder.py`                                                        | Add submission tests | +50       |
+| `.github/workflows/implement-plan.yml`                                                  | Simplify             | ~80 total |
+| `AGENTS.md`                                                                             | Add documentation    | +30       |
 
 **Total:** ~510 lines of code
 **Tests:** 9 new test cases
@@ -640,26 +662,31 @@ erk submit  # Copies .plan/ to .submission/, commits, pushes, triggers
 ## Risk Mitigation
 
 ### Risk 1: .submission/ conflicts with existing work
+
 - **Impact:** User unable to submit
 - **Mitigation:** Error if .submission/ already exists
 - **Recovery:** Manual cleanup with `rm -rf .submission/`
 
 ### Risk 2: CI loop never terminates
+
 - **Impact:** Wastes API calls, delays PR creation
 - **Mitigation:** Max 5 attempts, then fail
 - **Recovery:** Manual fixes, then re-submit
 
 ### Risk 3: Incomplete cleanup after failure
+
 - **Impact:** .submission/ folder left in repository
 - **Mitigation:** Make deletion step idempotent
 - **Recovery:** User can manually delete or re-run
 
 ### Risk 4: GitHub Actions not triggering on push
+
 - **Impact:** No automatic implementation
 - **Mitigation:** Test with real push before rollout
 - **Recovery:** Manual workflow_dispatch trigger
 
 ### Risk 5: Breaking existing .plan/ workflow
+
 - **Impact:** Users unable to do local implementation
 - **Mitigation:** Touch nothing in existing commands
 - **Recovery:** Parallel workflows, no breaking changes
@@ -669,6 +696,7 @@ erk submit  # Copies .plan/ to .submission/, commits, pushes, triggers
 ## Testing Strategy
 
 ### Unit Tests (tests/core/test_plan_folder.py)
+
 - `test_copy_plan_to_submission()` - Happy path
 - `test_copy_plan_to_submission_no_plan()` - Missing .plan/ error
 - `test_copy_plan_to_submission_already_exists()` - Existing .submission/ error
@@ -676,12 +704,14 @@ erk submit  # Copies .plan/ to .submission/, commits, pushes, triggers
 - `test_remove_submission_folder()` - Cleanup works
 
 ### Command Tests (tests/commands/test_submit.py)
+
 - `test_submit_errors_without_plan_folder()` - Error when no .plan/
 - `test_submit_dry_run_shows_operations()` - Dry run output
 - `test_submit_errors_with_existing_submission()` - Error on conflict
 - `test_submit_errors_on_detached_head()` - Error on detached HEAD
 
 ### Integration Tests (Manual)
+
 1. Create worktree with `/erk:create-planned-wt`
 2. Run `erk submit --dry-run` (verify output)
 3. Run `erk submit` (verify .submission/ created)
@@ -695,22 +725,27 @@ erk submit  # Copies .plan/ to .submission/, commits, pushes, triggers
 ## Open Questions
 
 ### Question 1: Should .submission/ be tracked in git?
+
 **Decision:** Yes, required for GitHub Actions to detect it
 **Rationale:** Push trigger requires file to be in commit
 
 ### Question 2: Should we support manual cleanup command?
+
 **Suggestion:** Add `erk clean-submission` command for manual cleanup
 **Rationale:** Useful when GitHub Actions fails
 
 ### Question 3: Should submission worktrees have special naming?
+
 **Suggestion:** Add `-submission` suffix to worktree names
 **Rationale:** Makes it clear this is for remote work
 
 ### Question 4: What if /fast-ci doesn't exist?
+
 **Decision:** Document that /fast-ci must be available
 **Rationale:** Required for CI loop to work
 
 ### Question 5: Should we log CI attempts?
+
 **Suggestion:** Log each CI attempt to a file in .submission/
 **Rationale:** Helps debug if max attempts reached
 
@@ -719,15 +754,19 @@ erk submit  # Copies .plan/ to .submission/, commits, pushes, triggers
 ## Future Enhancements
 
 ### Enhancement 1: Submission Status Command
+
 ```bash
 erk submission status  # Show current submission state
 ```
+
 - Check if .submission/ exists
 - Show GitHub Actions run status
 - Show PR status if created
 
 ### Enhancement 2: Submission History
+
 Track all submissions in `.erk/submissions.json`:
+
 - Timestamp
 - Branch name
 - Plan file used
@@ -735,12 +774,15 @@ Track all submissions in `.erk/submissions.json`:
 - PR URL
 
 ### Enhancement 3: Multi-Plan Support
+
 Allow submitting specific plans:
+
 ```bash
 erk submit --plan other-feature-plan.md
 ```
 
 ### Enhancement 4: Submission Rollback
+
 ```bash
 erk submission rollback  # Delete .submission/, reset branch
 ```

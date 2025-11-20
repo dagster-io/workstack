@@ -45,7 +45,6 @@ def test_message_case_1_already_on_target_branch_in_current_worktree() -> None:
             target_worktree=WorktreeInfo(path=feature_wt, branch="feature-1"),
             branch="feature-1",
             script=True,
-            implement=False,
             is_newly_created=False,
         )
 
@@ -97,7 +96,6 @@ def test_message_case_2_jumped_to_existing_worktree_standard_naming() -> None:
             target_worktree=WorktreeInfo(path=feature_wt, branch="feature-1"),
             branch="feature-1",
             script=True,
-            implement=False,
             is_newly_created=False,
         )
 
@@ -150,7 +148,6 @@ def test_message_case_2_jumped_to_existing_worktree_nonstandard_naming() -> None
             target_worktree=WorktreeInfo(path=feature_wt, branch="feature-1"),
             branch="feature-1",
             script=True,
-            implement=False,
             is_newly_created=False,
         )
 
@@ -202,7 +199,6 @@ def test_message_case_3_jumped_and_checked_out_branch() -> None:
             target_worktree=WorktreeInfo(path=feature_wt, branch="other-branch"),
             branch="feature-1",
             script=True,
-            implement=False,
             is_newly_created=False,
         )
 
@@ -256,7 +252,6 @@ def test_message_case_4_jumped_to_newly_created_worktree() -> None:
             target_worktree=WorktreeInfo(path=new_wt, branch="new-feature"),
             branch="new-feature",
             script=True,
-            implement=False,
             is_newly_created=True,
         )
 
@@ -304,7 +299,6 @@ def test_message_colorization_applied() -> None:
             target_worktree=WorktreeInfo(path=feature_wt, branch="feature-1"),
             branch="feature-1",
             script=True,
-            implement=False,
             is_newly_created=False,
         )
 
@@ -360,7 +354,6 @@ def test_message_non_script_mode_case_1() -> None:
                 target_worktree=WorktreeInfo(path=feature_wt, branch="feature-1"),
                 branch="feature-1",
                 script=False,
-                implement=False,
                 is_newly_created=False,
             )
         finally:
@@ -416,7 +409,6 @@ def test_message_non_script_mode_case_4() -> None:
                 target_worktree=WorktreeInfo(path=new_wt, branch="new-feature"),
                 branch="new-feature",
                 script=False,
-                implement=False,
                 is_newly_created=True,
             )
         finally:

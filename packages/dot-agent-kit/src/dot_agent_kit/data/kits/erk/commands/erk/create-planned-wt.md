@@ -20,7 +20,7 @@ This command detects plan files at the repository root, selects the most recent 
 
 **What happens AFTER (in separate command):**
 
-- ⏭️ Navigate and implement: `erk checkout <branch> --implement`
+- ⏭️ Navigate and implement: `erk checkout <branch> && claude --permission-mode acceptEdits "/erk:implement-plan"`
 
 ## What Happens
 
@@ -61,7 +61,7 @@ This command succeeds when ALL of the following are true:
 
 **Next Steps:**
 ✅ Plan content displayed (including user edits)
-✅ Next command displayed: `erk checkout <branch> --implement`
+✅ Next command displayed: `erk checkout <branch> && claude --permission-mode acceptEdits "/erk:implement-plan"`
 
 ## Troubleshooting
 
@@ -320,7 +320,7 @@ Location: `<worktree-path>`
 
 **Next step:**
 
-`erk checkout <branch-name> --implement`
+`erk checkout <branch-name> && claude --permission-mode acceptEdits "/erk:implement-plan"`
 ```
 
 **CRITICAL:** You MUST output this complete formatted message. Do not skip the plan content or the command.
@@ -343,6 +343,6 @@ Location: `<worktree-path>`
 - Reads plan content from disk to show any manual edits
 - All errors follow consistent template with details and suggested actions
 - This command does NOT switch directories or execute the plan
-- User must manually run `erk checkout <branch> --implement` to begin implementation
-- The `--implement` flag combines navigation and Claude Code launch into a single command
+- User must manually run `erk checkout` and `/erk:implement-plan` to begin implementation
+- The `--permission-mode acceptEdits` flag is included to automatically accept edits during implementation
 - Always provide clear feedback at each step

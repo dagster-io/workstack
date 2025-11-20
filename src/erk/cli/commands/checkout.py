@@ -1,6 +1,5 @@
 """Checkout command - find and switch to a worktree by branch name."""
 
-import subprocess
 from pathlib import Path
 
 import click
@@ -55,40 +54,6 @@ def try_switch_root_worktree(ctx: ErkContext, repo: RepoContext, branch: str) ->
     return root_worktree.path
 
 
-def _handle_implement_flag(worktree_path: Path, branch: str) -> None:
-    """Handle the --implement flag by launching Claude Code if plan exists.
-
-    Args:
-        worktree_path: Path to the target worktree
-        branch: Branch name for error messages
-    """
-    plan_file = worktree_path / ".plan" / "plan.md"
-
-    if not plan_file.exists():
-        # Display error and exit
-        error_message = click.style("Error: ", fg="red")
-        branch_styled = click.style(branch, fg="yellow")
-        user_output(f"\n{error_message}No plan found for branch {branch_styled}")
-        user_output("\nThis worktree does not have a .plan/ folder with plan.md.")
-        user_output("The --implement flag only works after creating a planned worktree.")
-        user_output("\nTo create a planned worktree:")
-        user_output("  1. Run: /erk:persist-plan")
-        user_output("  2. Run: /erk:create-planned-wt")
-        user_output("  3. Then use: erk checkout <branch> --implement")
-        raise SystemExit(1)
-
-    # Plan exists - launch Claude Code
-    success_message = click.style("✓", fg="green")
-    user_output(f"\n{success_message} Launching Claude Code for plan implementation")
-
-    # Launch Claude in foreground (blocking)
-    # Note: Not using check=True because Claude may exit with non-zero codes during normal operation
-    subprocess.run(
-        ["claude", "--permission-mode", "acceptEdits", "/erk:implement-plan"],
-        cwd=worktree_path,
-    )
-
-
 def _format_worktree_info(wt: WorktreeInfo, repo_root: Path) -> str:
     """Format worktree information for display.
 
@@ -114,7 +79,6 @@ def _perform_checkout(
     target_worktree: WorktreeInfo,
     branch: str,
     script: bool,
-    implement: bool,
     is_newly_created: bool = False,
 ) -> None:
     """Perform the actual jump to a worktree.
@@ -125,7 +89,6 @@ def _perform_checkout(
         target_worktree: The worktree to jump to
         branch: Target branch name
         script: Whether to output only the activation script
-        implement: Whether to launch Claude Code for plan implementation
         is_newly_created: Whether the worktree was just created (default False)
     """
     target_path = target_worktree.path
@@ -220,21 +183,14 @@ def _perform_checkout(
         user_output("\nShell integration not detected. Run 'erk init --shell' to set up.")
         user_output(f"Or use: source <(erk checkout {branch} --script)")
 
-    # Handle --implement flag (both script and non-script mode)
-    if implement:
-        _handle_implement_flag(target_path, branch)
-
 
 @click.command("checkout")
 @click.argument("branch", metavar="BRANCH", shell_complete=complete_branch_names)
 @click.option(
     "--script", is_flag=True, help="Print only the activation script without usage instructions."
 )
-@click.option(
-    "--implement", is_flag=True, help="Launch Claude Code to implement plan after checkout"
-)
 @click.pass_obj
-def checkout_cmd(ctx: ErkContext, branch: str, script: bool, implement: bool) -> None:
+def checkout_cmd(ctx: ErkContext, branch: str, script: bool) -> None:
     """Checkout BRANCH by finding and switching to its worktree.
 
     This command finds which worktree has the specified branch checked out
@@ -292,9 +248,7 @@ def checkout_cmd(ctx: ErkContext, branch: str, script: bool, implement: bool) ->
     if len(matching_worktrees) == 1:
         # Exactly one worktree contains this branch
         target_worktree = matching_worktrees[0]
-        _perform_checkout(
-            ctx, repo.root, target_worktree, branch, script, implement, is_newly_created
-        )
+        _perform_checkout(ctx, repo.root, target_worktree, branch, script, is_newly_created)
 
     else:
         # Multiple worktrees contain this branch
@@ -304,9 +258,7 @@ def checkout_cmd(ctx: ErkContext, branch: str, script: bool, implement: bool) ->
         if len(directly_checked_out) == 1:
             # Exactly one worktree has the branch directly checked out - jump to it
             target_worktree = directly_checked_out[0]
-            _perform_checkout(
-                ctx, repo.root, target_worktree, branch, script, implement, is_newly_created
-            )
+            _perform_checkout(ctx, repo.root, target_worktree, branch, script, is_newly_created)
         else:
             # Zero or multiple worktrees have it directly checked out
             # Show error message listing all options

@@ -1,72 +1,75 @@
 ---
-description: Execute the implementation plan from .plan/ folder in current directory (local implementation)
+description: Execute the implementation plan from .submission/ folder (remote AI implementation via GitHub Actions)
 ---
 
-# /erk:implement-plan
+# /erk:implement-submission
 
-This command reads and executes the `.plan/plan.md` file from the current directory. It is designed to be run after switching to a worktree created by `/erk:persist-plan` and `/erk:create-planned-wt`.
+This command reads and executes the `.submission/plan.md` file from the current directory. It is designed to run in GitHub Actions CI environment after `erk submit` has copied `.plan/` to `.submission/`.
 
 ## Usage
 
 ```bash
-/erk:implement-plan
+/erk:implement-submission
 ```
 
 ## Prerequisites
 
-- Must be in a worktree directory that contains `.plan/` folder
-- Typically run after `erk checkout <branch>`
-- `.plan/plan.md` should contain a valid implementation plan
-- This command is for local development. For remote implementation via GitHub Actions, use `/erk:implement-submission`
+- Must be in a worktree directory that contains `.submission/` folder
+- Typically runs in GitHub Actions CI environment
+- `.submission/plan.md` should contain a valid implementation plan
+- **DO NOT run this locally** - use `/erk:implement-plan` for local implementation
 
 ## What Happens
 
 When you run this command:
 
-1. Verifies `.plan/plan.md` exists in the current directory
+1. Verifies `.submission/plan.md` exists in the current directory
 2. Reads and parses the implementation plan
 3. Creates todo list for tracking progress
 4. Executes each phase of the plan sequentially
-5. Updates `.plan/progress.md` with step completions
-6. Provides progress updates and summary
+5. Updates `.submission/progress.md` with step completions
+6. Runs iterative CI validation (max 5 attempts)
+7. Cleans up `.submission/` folder after success
+8. Creates or updates pull request with results
 
 ## Expected Outcome
 
 - Implementation plan executed according to specifications
 - Code changes follow project coding standards (if defined)
-- Clear progress tracking and completion summary
+- All CI checks pass after iterative fixes
+- Pull request created or updated with "ai-generated" label
+- `.submission/` folder removed after completion
 
 ---
 
 ## Agent Instructions
 
-You are executing the `/erk:implement-plan` command. Follow these steps carefully:
+You are executing the `/erk:implement-submission` command. Follow these steps carefully:
 
-### Step 1: Verify .plan/plan.md Exists
+### Step 1: Verify .submission/plan.md Exists
 
-Check that `.plan/plan.md` exists in the current directory.
+Check that `.submission/plan.md` exists in the current directory.
 
 If not found:
 
 ```
-❌ Error: No plan folder found in current directory
+❌ Error: No submission folder found in current directory
 
-This command must be run from a worktree directory that contains a .plan/ folder with plan.md.
+This command must be run from a worktree directory that contains a .submission/ folder with plan.md.
 
-To create a worktree with a plan:
-1. Run /erk:persist-plan to save your enhanced plan to disk
-2. Run /erk:create-planned-wt to create a worktree from the plan
-3. Run: erk checkout <branch>
-4. Then run: /erk:implement-plan
+This typically means:
+1. This command is being run in the wrong environment (should be GitHub Actions)
+2. The .submission/ folder was already cleaned up from a previous run
+3. `erk submit` was not run before this command
 
-For remote implementation via GitHub Actions:
-- Use /erk:implement-submission command instead
-- This applies to .submission/ folders created by `erk submit`
+For local implementation:
+1. Use `/erk:implement-plan` command instead
+2. This command is only for remote implementation via GitHub Actions
 ```
 
 ### Step 2: Read the Plan File
 
-Read `.plan/plan.md` from the current directory to get the full implementation plan.
+Read `.submission/plan.md` from the current directory to get the full implementation plan.
 
 Parse the plan to understand:
 
@@ -102,7 +105,7 @@ Pay special attention to:
 
 ### Step 2.5: Understanding Progress.md Structure
 
-The `.plan/progress.md` file tracks implementation progress using checkboxes AND YAML front matter (for files created after 2025-01-17).
+The `.submission/progress.md` file tracks implementation progress using checkboxes AND YAML front matter (for files created after 2025-01-17).
 
 **Front Matter Format:**
 
@@ -186,7 +189,7 @@ For each phase in the plan:
    - If plan mentions tests, follow patterns in project test documentation (if available)
 5. **Verify implementation** against standards
 6. **Mark phase as completed** when done:
-   - Edit `.plan/progress.md` to change checkbox from `- [ ]` to `- [x]`
+   - Edit `.submission/progress.md` to change checkbox from `- [ ]` to `- [x]`
    - If front matter exists (file starts with `---`):
      - Count total checked boxes in the entire file
      - Edit the `completed_steps:` line in front matter with new count
@@ -197,15 +200,15 @@ For each phase in the plan:
 
 **IMPORTANT - Progress Tracking:**
 
-The new `.plan/` folder structure separates concerns:
+The new `.submission/` folder structure for remote execution:
 
-1. **`.plan/plan.md` (immutable reference)**: Contains Objective, Context & Understanding, Implementation Steps/Phases, Testing. This file should NEVER be edited during implementation.
+1. **`.submission/plan.md` (immutable reference)**: Contains Objective, Context & Understanding, Implementation Steps/Phases, Testing. This file should NEVER be edited during implementation.
 
-2. **`.plan/progress.md` (mutable tracking)**: Contains checkboxes for all steps extracted from plan.md. This is the ONLY file that should be updated during implementation.
+2. **`.submission/progress.md` (mutable tracking)**: Contains checkboxes for all steps extracted from plan.md. This is the ONLY file that should be updated during implementation.
 
 When updating progress:
 
-- Only edit `.plan/progress.md` - never touch `.plan/plan.md`
+- Only edit `.submission/progress.md` - never touch `.submission/plan.md`
 - Mark checkboxes as completed: `- [x]` instead of `- [ ]`
 - Simple find-replace operation: no risk of corrupting the plan
 - Progress format example:
@@ -312,20 +315,60 @@ After completing all implementation steps:
 
 4. **Address any failures** by returning to relevant implementation steps
 
-**After verification:**
+### Step 9: Run CI and Fix Issues Iteratively (SUBMISSION WORKFLOW)
 
-- DO NOT delete `.plan/` folder - user needs it for reference and potential re-runs
-- DO NOT auto-commit changes - user controls git history and commits
-- Leave changes for user review and staging
+**CRITICAL: This step is ONLY for .submission/ folders (remote implementation)**
 
-### Step 9: Output Format
+Check if current directory contains `.submission/` folder - you should already have verified this in Step 1.
+
+**Iterative CI Process (max 5 attempts):**
+
+For each attempt (numbered 1-5):
+
+1. Run the fast CI checks: `/fast-ci` (unit tests + pyright)
+2. If all checks pass: Break out of loop, proceed to Step 10
+3. If checks fail: Read the error output carefully
+4. Analyze the failures and fix them
+5. Increment attempt counter
+6. If max attempts reached (attempt 5 failed): Exit with error message, DO NOT proceed to cleanup
+
+**Maximum Attempts Protection:**
+
+- This prevents infinite loops in automated CI
+- If you reach attempt 5 and tests still fail, stop and report the error
+- Document which attempt failed and what the error was
+
+### Step 10: Clean Up and Create/Update PR (SUBMISSION WORKFLOW)
+
+**CRITICAL: Only run this step if CI passed in Step 9**
+
+After CI passes:
+
+1. **Delete .submission/ folder**: `rm -rf .submission/`
+2. **Stage deletion**: `git add .submission/`
+3. **Commit cleanup**: `git commit -m "Clean up submission artifacts after implementation"`
+4. **Push changes**: `git push`
+5. **Create or update PR** using gh CLI:
+
+   ```bash
+   gh pr create --fill --label "ai-generated" || gh pr edit --add-label "ai-generated"
+   ```
+
+**Success indicators:**
+
+- `.submission/` folder no longer exists
+- Changes committed and pushed
+- PR created or updated with "ai-generated" label
+
+### Step 11: Output Format
 
 Structure your output clearly:
 
-- **Start**: "Executing implementation plan from .plan/plan.md (local implementation)"
+- **Start**: "Executing implementation plan from .submission/plan.md (remote submission workflow)"
 - **Each phase**: "Phase X: [brief description]" with code changes
+- **CI section**: "Running iterative CI validation (attempt N of 5)"
 - **Progress updates**: Regular status reports
-- **End**: "Plan execution complete. [Summary of what was implemented]"
+- **End**: "Plan execution complete. Submission workflow finished. [Summary of what was implemented and PR details]"
 
 ## Requesting Clarification
 
@@ -343,3 +386,4 @@ If clarification is needed during execution:
 - **Sequential execution**: Complete phases in order unless plan specifies otherwise
 - **Progress tracking**: Keep todo list updated throughout
 - **User communication**: Provide clear, concise progress updates
+- **Remote-specific**: This command is optimized for GitHub Actions CI - do not run locally

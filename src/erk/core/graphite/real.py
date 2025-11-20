@@ -16,6 +16,7 @@ from erk.core.graphite.parsing import (
     parse_graphite_pr_info,
     read_graphite_json_file,
 )
+from erk.core.subprocess import run_subprocess_with_context
 
 
 class RealGraphite(Graphite):
@@ -47,7 +48,7 @@ class RealGraphite(Graphite):
     def sync(self, repo_root: Path, *, force: bool, quiet: bool) -> None:
         """Run gt sync to synchronize with remote.
 
-        Error output (stderr) is always captured to ensure CalledProcessError
+        Error output (stderr) is always captured to ensure RuntimeError
         includes complete error messages for debugging. In verbose mode (!quiet),
         stderr is displayed to the user after successful execution.
 
@@ -65,13 +66,12 @@ class RealGraphite(Graphite):
         if quiet:
             cmd.append("--quiet")
 
-        result = subprocess.run(
+        result = run_subprocess_with_context(
             cmd,
+            operation_context="sync with Graphite (gt sync)",
             cwd=repo_root,
-            check=True,
             stdout=DEVNULL if quiet else sys.stdout,
             stderr=subprocess.PIPE,
-            text=True,
         )
 
         # Display stderr in verbose mode after successful execution
@@ -196,11 +196,10 @@ class RealGraphite(Graphite):
             branch_name: Name of the branch to track
             parent_branch: Name of the parent branch in the stack
         """
-        subprocess.run(
+        run_subprocess_with_context(
             ["gt", "track", "--branch", branch_name, "--parent", parent_branch],
+            operation_context=f"track branch '{branch_name}' with Graphite",
             cwd=cwd,
-            check=True,
-            capture_output=True,
         )
 
         # Invalidate branches cache - gt track modifies Graphite metadata
@@ -213,7 +212,7 @@ class RealGraphite(Graphite):
         rebased by `gt sync -f`. This ensures GitHub PRs show the rebased commits
         rather than stale versions with duplicate commits.
 
-        Error output (stderr) is always captured to ensure CalledProcessError
+        Error output (stderr) is always captured to ensure RuntimeError
         includes complete error messages for debugging. In verbose mode (!quiet),
         stderr is displayed to the user after successful execution.
 
@@ -226,13 +225,12 @@ class RealGraphite(Graphite):
         if quiet:
             cmd.append("--quiet")
 
-        result = subprocess.run(
+        result = run_subprocess_with_context(
             cmd,
+            operation_context=f"submit branch '{branch_name}' with Graphite",
             cwd=repo_root,
-            check=True,
             stdout=DEVNULL if quiet else sys.stdout,
             stderr=subprocess.PIPE,
-            text=True,
         )
 
         # Display stderr in verbose mode after successful execution

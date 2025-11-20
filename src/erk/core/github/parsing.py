@@ -2,10 +2,10 @@
 
 import json
 import re
-import subprocess
 from pathlib import Path
 
 from erk.core.github.types import PRInfo, PullRequestInfo
+from erk.core.subprocess import run_subprocess_with_context
 
 
 def execute_gh_command(cmd: list[str], cwd: Path) -> str:
@@ -19,21 +19,18 @@ def execute_gh_command(cmd: list[str], cwd: Path) -> str:
         stdout from the command
 
     Raises:
-        subprocess.CalledProcessError: If command fails
+        RuntimeError: If command fails with enriched error context
         FileNotFoundError: If gh is not installed
     """
-    # Acceptable exception use: Third-party subprocess API forces exception handling
-    # We catch to add context and re-raise with GitHub error details
-    result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=False)
+    # Build operation context from command
+    cmd_str = " ".join(cmd)
+    operation_context = f"execute gh command '{cmd_str}'"
 
-    if result.returncode != 0:
-        # Extract error details from stderr for better diagnostics
-        error_msg = f"GitHub CLI command failed with exit code {result.returncode}"
-        if result.stderr:
-            error_msg += f"\nError output: {result.stderr.strip()}"
-        raise subprocess.CalledProcessError(
-            result.returncode, cmd, output=result.stdout, stderr=result.stderr
-        )
+    result = run_subprocess_with_context(
+        cmd,
+        operation_context=operation_context,
+        cwd=cwd,
+    )
 
     return result.stdout
 

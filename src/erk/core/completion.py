@@ -7,9 +7,10 @@ without mock.patch.
 
 import os
 import shutil
-import subprocess
 import sys
 from abc import ABC, abstractmethod
+
+from erk.core.subprocess import run_subprocess_with_context
 
 
 class Completion(ABC):
@@ -89,7 +90,11 @@ class RealCompletion(Completion):
         erk_exe = self.get_erk_path()
         env = os.environ.copy()
         env["_ERK_COMPLETE"] = "bash_source"
-        result = subprocess.run([erk_exe], env=env, capture_output=True, text=True, check=True)
+        result = run_subprocess_with_context(
+            [erk_exe],
+            operation_context="generate bash completion script",
+            env=env,
+        )
         return result.stdout
 
     def generate_zsh(self) -> str:
@@ -102,7 +107,11 @@ class RealCompletion(Completion):
         erk_exe = self.get_erk_path()
         env = os.environ.copy()
         env["_ERK_COMPLETE"] = "zsh_source"
-        result = subprocess.run([erk_exe], env=env, capture_output=True, text=True, check=True)
+        result = run_subprocess_with_context(
+            [erk_exe],
+            operation_context="generate zsh completion script",
+            env=env,
+        )
         return result.stdout
 
     def generate_fish(self) -> str:
@@ -115,7 +124,11 @@ class RealCompletion(Completion):
         erk_exe = self.get_erk_path()
         env = os.environ.copy()
         env["_ERK_COMPLETE"] = "fish_source"
-        result = subprocess.run([erk_exe], env=env, capture_output=True, text=True, check=True)
+        result = run_subprocess_with_context(
+            [erk_exe],
+            operation_context="generate fish completion script",
+            env=env,
+        )
         return result.stdout
 
     def get_erk_path(self) -> str:

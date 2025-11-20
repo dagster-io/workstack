@@ -1,7 +1,6 @@
 """Production implementation of GitHub operations."""
 
 import json
-import subprocess
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -15,6 +14,7 @@ from erk.core.github.parsing import (
     parse_github_pr_status,
 )
 from erk.core.github.types import PRInfo, PRMergeability, PullRequestInfo
+from erk.core.subprocess import run_subprocess_with_context
 
 
 class RealGitHub(GitHub):
@@ -59,7 +59,7 @@ class RealGitHub(GitHub):
             stdout = self._execute(cmd, repo_root)
             return parse_github_pr_list(stdout, include_checks)
 
-        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError):
+        except (RuntimeError, FileNotFoundError, json.JSONDecodeError):
             # gh not installed, not authenticated, or JSON parsing failed
             return {}
 
@@ -92,7 +92,7 @@ class RealGitHub(GitHub):
             stdout = self._execute(cmd, repo_root)
             return parse_github_pr_status(stdout)
 
-        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError):
+        except (RuntimeError, FileNotFoundError, json.JSONDecodeError):
             # gh not installed, not authenticated, or JSON parsing failed
             return PRInfo("NONE", None, None)
 
@@ -117,7 +117,7 @@ class RealGitHub(GitHub):
             stdout = self._execute(cmd, repo_root)
             return stdout.strip()
 
-        except (subprocess.CalledProcessError, FileNotFoundError):
+        except (RuntimeError, FileNotFoundError):
             # gh not installed, not authenticated, or command failed
             return None
 
@@ -135,7 +135,7 @@ class RealGitHub(GitHub):
         try:
             cmd = ["gh", "pr", "edit", str(pr_number), "--base", new_base]
             self._execute(cmd, repo_root)
-        except (subprocess.CalledProcessError, FileNotFoundError):
+        except (RuntimeError, FileNotFoundError):
             # gh not installed, not authenticated, or command failed
             # Graceful degradation - operation skipped
             # Caller is responsible for precondition validation
@@ -149,13 +149,10 @@ class RealGitHub(GitHub):
         and authentication status a priori without duplicating gh's logic.
         """
         try:
-            result = subprocess.run(
+            result = run_subprocess_with_context(
                 ["gh", "pr", "view", str(pr_number), "--json", "mergeable,mergeStateStatus"],
+                operation_context=f"check PR mergeability for PR #{pr_number}",
                 cwd=repo_root,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                check=True,
             )
             data = json.loads(result.stdout)
             return PRMergeability(
@@ -163,7 +160,7 @@ class RealGitHub(GitHub):
                 merge_state_status=data["mergeStateStatus"],
             )
         except (
-            subprocess.CalledProcessError,
+            RuntimeError,
             json.JSONDecodeError,
             KeyError,
             FileNotFoundError,
@@ -371,12 +368,10 @@ query {{
         if squash:
             cmd.append("--squash")
 
-        result = subprocess.run(
+        result = run_subprocess_with_context(
             cmd,
+            operation_context=f"merge PR #{pr_number}",
             cwd=repo_root,
-            capture_output=True,
-            text=True,
-            check=True,
         )
 
         # Show output in verbose mode

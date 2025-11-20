@@ -27,7 +27,7 @@
 | Function with default argument                                   | → Make explicit at call sites                                                                        |
 | `from .module import`                                            | → Use absolute imports only                                                                          |
 | `print(...)` in CLI code                                         | → Use `click.echo()`                                                                                 |
-| `subprocess.run(...)`                                            | → Add `check=True`                                                                                   |
+| `subprocess.run(..., check=True)`                                | → Use `run_subprocess_with_context()` from erk.core.subprocess for rich errors                       |
 | Creating or executing implementation plans                       | → Use /erk:persist-plan, /erk:create-planned-wt, /erk:implement-plan                                 |
 | Submitting a branch with Graphite                                | → Use /gt:submit-branch command (delegates to gt-branch-submitter agent)                             |
 | Updating an existing PR                                          | → Use /gt:update-pr command                                                                          |
@@ -270,6 +270,56 @@ Task(
 - ANY time you need to run one of these tools
 - With or without `uv run` prefix
 - For single commands or CI workflows (like `/ensure-ci`)
+
+### 9. Subprocess Execution 🔴 MUST
+
+**NEVER use bare `subprocess.run(..., check=True)`. ALWAYS use wrapper functions.**
+
+**For integration layer (raises exceptions):**
+
+```python
+from erk.core.subprocess import run_subprocess_with_context
+
+# ✅ CORRECT: Rich error context with stderr
+result = run_subprocess_with_context(
+    ["git", "worktree", "add", str(path), branch],
+    operation_context=f"add worktree for branch '{branch}' at {path}",
+    cwd=repo_root,
+)
+```
+
+**For CLI layer (user-friendly output):**
+
+```python
+from erk.cli.subprocess_utils import run_with_error_reporting
+
+# ✅ CORRECT: User-friendly error messages + SystemExit
+run_with_error_reporting(
+    ["gh", "pr", "view", str(pr_number)],
+    operation_context="view pull request",
+    cwd=repo_root,
+)
+```
+
+**WHY this matters:**
+
+- **Rich error messages**: Includes operation context, command, exit code, stderr
+- **Exception chaining**: Preserves original CalledProcessError for debugging
+- **Consistent patterns**: Two-layer design (integration vs CLI boundaries)
+
+**Two-layer pattern:**
+
+- `run_subprocess_with_context()` - Integration layer (raises RuntimeError)
+- `run_with_error_reporting()` - CLI layer (prints message, raises SystemExit)
+
+**DO NOT migrate check=False LBYL patterns:**
+
+```python
+# ✅ CORRECT: Intentional LBYL pattern (keep as-is)
+result = subprocess.run(cmd, check=False, capture_output=True, text=True)
+if result.returncode != 0:
+    return None  # Graceful degradation
+```
 
 ---
 

@@ -10,6 +10,7 @@ from pathlib import Path
 
 from erk.cli.output import user_output
 from erk.core.git.abc import Git, WorktreeInfo
+from erk.core.subprocess import run_subprocess_with_context
 
 # ============================================================================
 # Production Implementation
@@ -24,12 +25,10 @@ class RealGit(Git):
 
     def list_worktrees(self, repo_root: Path) -> list[WorktreeInfo]:
         """List all worktrees in the repository."""
-        result = subprocess.run(
+        result = run_subprocess_with_context(
             ["git", "worktree", "list", "--porcelain"],
+            operation_context="list worktrees",
             cwd=repo_root,
-            capture_output=True,
-            text=True,
-            check=True,
         )
 
         worktrees: list[WorktreeInfo] = []
@@ -163,35 +162,29 @@ class RealGit(Git):
 
     def list_local_branches(self, repo_root: Path) -> list[str]:
         """List all local branch names in the repository."""
-        result = subprocess.run(
+        result = run_subprocess_with_context(
             ["git", "branch", "--format=%(refname:short)"],
+            operation_context="list local branches",
             cwd=repo_root,
-            capture_output=True,
-            text=True,
-            check=True,
         )
         branches = [line.strip() for line in result.stdout.strip().split("\n") if line.strip()]
         return branches
 
     def list_remote_branches(self, repo_root: Path) -> list[str]:
         """List all remote branch names in the repository."""
-        result = subprocess.run(
+        result = run_subprocess_with_context(
             ["git", "branch", "-r", "--format=%(refname:short)"],
+            operation_context="list remote branches",
             cwd=repo_root,
-            capture_output=True,
-            text=True,
-            check=True,
         )
         return [line.strip() for line in result.stdout.strip().split("\n") if line.strip()]
 
     def create_tracking_branch(self, repo_root: Path, branch: str, remote_ref: str) -> None:
         """Create a local tracking branch from a remote branch."""
-        subprocess.run(
+        run_subprocess_with_context(
             ["git", "branch", "--track", branch, remote_ref],
+            operation_context=f"create tracking branch '{branch}' from '{remote_ref}'",
             cwd=repo_root,
-            capture_output=True,
-            text=True,
-            check=True,
         )
 
     def get_git_common_dir(self, cwd: Path) -> Path | None:
@@ -284,19 +277,26 @@ class RealGit(Git):
         """Add a new git worktree."""
         if branch and not create_branch:
             cmd = ["git", "worktree", "add", str(path), branch]
+            context = f"add worktree for branch '{branch}' at {path}"
         elif branch and create_branch:
             base_ref = ref or "HEAD"
             cmd = ["git", "worktree", "add", "-b", branch, str(path), base_ref]
+            context = f"add worktree with new branch '{branch}' at {path}"
         else:
             base_ref = ref or "HEAD"
             cmd = ["git", "worktree", "add", str(path), base_ref]
+            context = f"add worktree at {path}"
 
-        subprocess.run(cmd, cwd=repo_root, check=True, capture_output=True, text=True)
+        run_subprocess_with_context(cmd, operation_context=context, cwd=repo_root)
 
     def move_worktree(self, repo_root: Path, old_path: Path, new_path: Path) -> None:
         """Move a worktree to a new location."""
         cmd = ["git", "worktree", "move", str(old_path), str(new_path)]
-        subprocess.run(cmd, cwd=repo_root, check=True)
+        run_subprocess_with_context(
+            cmd,
+            operation_context=f"move worktree from {old_path} to {new_path}",
+            cwd=repo_root,
+        )
 
     def remove_worktree(self, repo_root: Path, path: Path, *, force: bool) -> None:
         """Remove a worktree."""
@@ -304,56 +304,51 @@ class RealGit(Git):
         if force:
             cmd.append("--force")
         cmd.append(str(path))
-        subprocess.run(cmd, cwd=repo_root, check=True)
+        run_subprocess_with_context(
+            cmd,
+            operation_context=f"remove worktree at {path}",
+            cwd=repo_root,
+        )
 
         # Clean up git worktree metadata to prevent permission issues during test cleanup
         # This prunes stale administrative files left behind after worktree removal
-        subprocess.run(
+        run_subprocess_with_context(
             ["git", "worktree", "prune"],
+            operation_context="prune worktree metadata",
             cwd=repo_root,
-            check=True,
-            capture_output=True,
         )
 
     def checkout_branch(self, cwd: Path, branch: str) -> None:
         """Checkout a branch in the given directory."""
-        subprocess.run(
+        run_subprocess_with_context(
             ["git", "checkout", branch],
+            operation_context=f"checkout branch '{branch}'",
             cwd=cwd,
-            check=True,
-            capture_output=True,
-            text=True,
         )
 
     def checkout_detached(self, cwd: Path, ref: str) -> None:
         """Checkout a detached HEAD at the given ref."""
-        subprocess.run(
+        run_subprocess_with_context(
             ["git", "checkout", "--detach", ref],
+            operation_context=f"checkout detached HEAD at '{ref}'",
             cwd=cwd,
-            check=True,
-            capture_output=True,
-            text=True,
         )
 
     def create_branch(self, cwd: Path, branch_name: str, start_point: str) -> None:
         """Create a new branch without checking it out."""
-        subprocess.run(
+        run_subprocess_with_context(
             ["git", "branch", branch_name, start_point],
+            operation_context=f"create branch '{branch_name}' from '{start_point}'",
             cwd=cwd,
-            check=True,
-            capture_output=True,
-            text=True,
         )
 
     def delete_branch(self, cwd: Path, branch_name: str, *, force: bool) -> None:
         """Delete a local branch."""
         flag = "-D" if force else "-d"
-        subprocess.run(
+        run_subprocess_with_context(
             ["git", "branch", flag, branch_name],
+            operation_context=f"delete branch '{branch_name}'",
             cwd=cwd,
-            check=True,
-            capture_output=True,
-            text=True,
         )
 
     def delete_branch_with_graphite(self, repo_root: Path, branch: str, *, force: bool) -> None:
@@ -361,11 +356,19 @@ class RealGit(Git):
         cmd = ["gt", "delete", branch]
         if force:
             cmd.insert(2, "-f")
-        subprocess.run(cmd, cwd=repo_root, check=True)
+        run_subprocess_with_context(
+            cmd,
+            operation_context=f"delete branch '{branch}' with Graphite",
+            cwd=repo_root,
+        )
 
     def prune_worktrees(self, repo_root: Path) -> None:
         """Prune stale worktree metadata."""
-        subprocess.run(["git", "worktree", "prune"], cwd=repo_root, check=True)
+        run_subprocess_with_context(
+            ["git", "worktree", "prune"],
+            operation_context="prune worktree metadata",
+            cwd=repo_root,
+        )
 
     def path_exists(self, path: Path) -> bool:
         """Check if a path exists on the filesystem."""
@@ -428,12 +431,10 @@ class RealGit(Git):
 
     def get_file_status(self, cwd: Path) -> tuple[list[str], list[str], list[str]]:
         """Get lists of staged, modified, and untracked files."""
-        result = subprocess.run(
+        result = run_subprocess_with_context(
             ["git", "status", "--porcelain"],
+            operation_context="get file status",
             cwd=cwd,
-            capture_output=True,
-            text=True,
-            check=True,
         )
 
         staged = []
@@ -479,12 +480,10 @@ class RealGit(Git):
         upstream = result.stdout.strip()
 
         # Get ahead/behind counts
-        result = subprocess.run(
+        result = run_subprocess_with_context(
             ["git", "rev-list", "--left-right", "--count", f"{upstream}...HEAD"],
+            operation_context=f"get ahead/behind counts for branch '{branch}'",
             cwd=cwd,
-            capture_output=True,
-            text=True,
-            check=True,
         )
 
         parts = result.stdout.strip().split()
@@ -497,17 +496,15 @@ class RealGit(Git):
 
     def get_recent_commits(self, cwd: Path, *, limit: int = 5) -> list[dict[str, str]]:
         """Get recent commit information."""
-        result = subprocess.run(
+        result = run_subprocess_with_context(
             [
                 "git",
                 "log",
                 f"-{limit}",
                 "--format=%H%x00%s%x00%an%x00%ar",
             ],
+            operation_context=f"get recent {limit} commits",
             cwd=cwd,
-            capture_output=True,
-            text=True,
-            check=True,
         )
 
         commits = []
@@ -530,12 +527,10 @@ class RealGit(Git):
 
     def fetch_branch(self, repo_root: Path, remote: str, branch: str) -> None:
         """Fetch a specific branch from a remote."""
-        subprocess.run(
+        run_subprocess_with_context(
             ["git", "fetch", remote, branch],
+            operation_context=f"fetch branch '{branch}' from remote '{remote}'",
             cwd=repo_root,
-            check=True,
-            capture_output=True,
-            text=True,
         )
 
     def pull_branch(self, repo_root: Path, remote: str, branch: str, *, ff_only: bool) -> None:
@@ -545,10 +540,8 @@ class RealGit(Git):
             cmd.append("--ff-only")
         cmd.extend([remote, branch])
 
-        subprocess.run(
+        run_subprocess_with_context(
             cmd,
+            operation_context=f"pull branch '{branch}' from remote '{remote}'",
             cwd=repo_root,
-            check=True,
-            capture_output=True,
-            text=True,
         )

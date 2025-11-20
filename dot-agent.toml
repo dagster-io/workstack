@@ -69,7 +69,7 @@ timeout = 30
 [kits.erk]
 kit_id = "erk"
 source_type = "bundled"
-version = "0.1.0"
+version = "0.2.1"
 artifacts = [
     ".claude/commands/erk/persist-plan.md",
     ".claude/commands/erk/create-enhanced-plan.md",

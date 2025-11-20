@@ -64,11 +64,29 @@ class FakeGitHub(GitHub):
         self._pr_mergeability = pr_mergeability or {}
         self._updated_pr_bases: list[tuple[int, str]] = []
         self._merged_prs: list[int] = []
+        self._get_prs_for_repo_calls: list[tuple[Path, bool]] = []
+        self._get_pr_status_calls: list[tuple[Path, str]] = []
 
     @property
     def merged_prs(self) -> list[int]:
         """List of PR numbers that were merged."""
         return self._merged_prs
+
+    @property
+    def get_prs_for_repo_calls(self) -> list[tuple[Path, bool]]:
+        """Read-only access to tracked get_prs_for_repo() calls for test assertions.
+
+        Returns list of (repo_root, include_checks) tuples.
+        """
+        return self._get_prs_for_repo_calls
+
+    @property
+    def get_pr_status_calls(self) -> list[tuple[Path, str]]:
+        """Read-only access to tracked get_pr_status() calls for test assertions.
+
+        Returns list of (repo_root, branch) tuples.
+        """
+        return self._get_pr_status_calls
 
     def get_prs_for_repo(
         self, repo_root: Path, *, include_checks: bool
@@ -78,6 +96,7 @@ class FakeGitHub(GitHub):
         The include_checks parameter is accepted but ignored - fake returns the
         same pre-configured data regardless of this parameter.
         """
+        self._get_prs_for_repo_calls.append((repo_root, include_checks))
         return self._prs
 
     def get_pr_status(self, repo_root: Path, branch: str, *, debug: bool) -> PRInfo:

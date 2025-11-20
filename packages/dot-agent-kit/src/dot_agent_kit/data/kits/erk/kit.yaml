@@ -11,3 +11,14 @@ artifacts:
     - commands/erk/fix-merge-conflicts.md
   doc:
     - docs/erk/EXAMPLES.md
+kit_cli_commands:
+  - name: session-id-injector-hook
+    path: kit_cli_commands/erk/session_id_injector_hook.py
+    description: Inject session ID into conversation context for plan creation
+hooks:
+  - id: session-id-injector-hook
+    lifecycle: UserPromptSubmit
+    matcher: "*"
+    invocation: dot-agent run erk session-id-injector-hook
+    description: Injects session ID into context when /erk:create-enhanced-plan is invoked
+    timeout: 30

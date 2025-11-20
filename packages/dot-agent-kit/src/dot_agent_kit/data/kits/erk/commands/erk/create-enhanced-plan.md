@@ -55,26 +55,53 @@ You are executing the `/erk:create-enhanced-plan` command. Follow these steps ca
 
 **CRITICAL:** If you use any forbidden tool, STOP immediately.
 
-### Step 1: Locate Session Logs
+### Step 1: Extract Session ID and Locate Session Logs
 
-Find the Claude Code session logs for this project:
+**Step 1a: Extract Session ID from Context**
+
+Search the conversation for the session ID injected by the session-id-injector-hook:
+
+1. Look for system-reminder or reminder messages containing "SESSION_CONTEXT:"
+2. Extract the session ID from format: `SESSION_CONTEXT: session_id={uuid}`
+3. Store the session ID for use in locating log files
+
+Example pattern to match:
+
+```
+SESSION_CONTEXT: session_id=abc-123-def-456
+```
+
+If session ID not found in context:
+
+```
+⚠️ Warning: Session ID not found in conversation context
+
+The session-id-injector-hook may not be installed or running.
+Falling back to manual log discovery (less reliable).
+```
+
+**Step 1b: Locate Session Logs**
+
+Using the extracted session ID, find the Claude Code session logs:
 
 ```bash
 # Get current directory to determine project
 pwd
 
-# List available projects
+# List available projects to find project hash
 ls ~/.claude/projects/
 
-# Find the current project's logs
-# Project hash is typically derived from workspace path
-ls ~/.claude/projects/<project-hash>/*.jsonl
+# Match current working directory against project directories
+# to identify the correct project hash
+
+# Once project hash identified, locate session log using session ID
+# Log file format: ~/.claude/projects/<project-hash>/<session-id>.jsonl
 ```
 
 Look for:
 
-- Main session log (file NOT starting with "agent-")
-- Agent logs (files starting with "agent-")
+- Main session log: `~/.claude/projects/<project-hash>/<session-id>.jsonl`
+- Agent logs: `~/.claude/projects/<project-hash>/agent-*.jsonl` (from same session)
 
 If logs not found or inaccessible:
 
@@ -196,7 +223,7 @@ Build the enhanced plan with this structure:
 ```markdown
 ---
 enriched_by_create_enhanced_plan: true
-session_id: <from-logs>
+session_id: <session-id-from-step-1a>
 discovery_count: <number>
 timestamp: <ISO-8601>
 ---

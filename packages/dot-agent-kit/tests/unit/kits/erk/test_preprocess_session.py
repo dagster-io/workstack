@@ -201,7 +201,7 @@ def test_process_log_file_filters_file_history_snapshot(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    entries = process_log_file(log_file)
+    entries, _total, _skipped = process_log_file(log_file)
     assert len(entries) == 1  # Only user message, snapshot filtered
     assert entries[0]["type"] == "user"
 
@@ -212,7 +212,7 @@ def test_process_log_file_strips_metadata(tmp_path: Path) -> None:
     user_json = json.dumps(json.loads(fixtures.JSONL_USER_MESSAGE_STRING))
     log_file.write_text(user_json, encoding="utf-8")
 
-    entries = process_log_file(log_file)
+    entries, _total, _skipped = process_log_file(log_file)
     # Should NOT have metadata fields
     assert "parentUuid" not in entries[0]
     assert "sessionId" not in entries[0]
@@ -227,7 +227,7 @@ def test_process_log_file_removes_usage_field(tmp_path: Path) -> None:
     log_file = tmp_path / "test.jsonl"
     log_file.write_text(json.dumps(json.loads(fixtures.JSONL_ASSISTANT_TEXT)), encoding="utf-8")
 
-    entries = process_log_file(log_file)
+    entries, _total, _skipped = process_log_file(log_file)
     assert "usage" not in entries[0]["message"]
 
 
@@ -237,7 +237,7 @@ def test_process_log_file_preserves_git_branch(tmp_path: Path) -> None:
     user_json = json.dumps(json.loads(fixtures.JSONL_USER_MESSAGE_STRING))
     log_file.write_text(user_json, encoding="utf-8")
 
-    entries = process_log_file(log_file)
+    entries, _total, _skipped = process_log_file(log_file)
     assert entries[0]["gitBranch"] == "test-branch"
 
 
@@ -246,7 +246,7 @@ def test_process_log_file_handles_empty_file(tmp_path: Path) -> None:
     log_file = tmp_path / "empty.jsonl"
     log_file.write_text("", encoding="utf-8")
 
-    entries = process_log_file(log_file)
+    entries, _total, _skipped = process_log_file(log_file)
     assert entries == []
 
 

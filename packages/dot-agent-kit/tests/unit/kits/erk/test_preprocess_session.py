@@ -396,7 +396,9 @@ def test_preprocess_session_no_include_agents_flag(tmp_path: Path) -> None:
         agent_file = Path("agent-abc.jsonl")
         agent_file.write_text(user_json, encoding="utf-8")
 
-        result = runner.invoke(preprocess_session, [str(log_file), "--no-include-agents", "--no-filtering"])
+        result = runner.invoke(
+            preprocess_session, [str(log_file), "--no-include-agents", "--no-filtering"]
+        )
         assert result.exit_code == 0
 
         # Check temp file contains only main session
@@ -570,11 +572,7 @@ def test_is_log_discovery_operation_detects_pwd() -> None:
     """Test that pwd commands are detected as log discovery."""
     entry = {
         "type": "assistant",
-        "message": {
-            "content": [
-                {"type": "tool_use", "name": "Bash", "input": {"command": "pwd"}}
-            ]
-        },
+        "message": {"content": [{"type": "tool_use", "name": "Bash", "input": {"command": "pwd"}}]},
     }
     assert is_log_discovery_operation(entry) is True
 
@@ -597,9 +595,7 @@ def test_is_log_discovery_operation_ignores_normal_commands() -> None:
     entry = {
         "type": "assistant",
         "message": {
-            "content": [
-                {"type": "tool_use", "name": "Bash", "input": {"command": "git status"}}
-            ]
+            "content": [{"type": "tool_use", "name": "Bash", "input": {"command": "git status"}}]
         },
     }
     assert is_log_discovery_operation(entry) is False

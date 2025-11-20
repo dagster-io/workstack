@@ -130,15 +130,18 @@ def deduplicate_documentation_blocks(entries: list[dict]) -> list[dict]:
             content_str = str(content)
 
             # Detect command documentation by markers
-            is_doc = any(marker in content_str for marker in [
-                "/erk:create-enhanced-plan",
-                "/erk:persist-plan",
-                "/erk:implement-plan",
-                "/gt:submit-branch",
-                "/gt:update-pr",
-                "command-message>",
-                "command-name>",
-            ])
+            is_doc = any(
+                marker in content_str
+                for marker in [
+                    "/erk:create-enhanced-plan",
+                    "/erk:persist-plan",
+                    "/erk:implement-plan",
+                    "/gt:submit-branch",
+                    "/gt:update-pr",
+                    "command-message>",
+                    "command-name>",
+                ]
+            )
 
             if is_doc and len(content_str) > 500:
                 # Hash the content
@@ -156,7 +159,10 @@ def deduplicate_documentation_blocks(entries: list[dict]) -> list[dict]:
 
                     # Create marker entry
                     marker_entry = entry.copy()
-                    marker_content = f"[Duplicate command documentation block omitted - hash {content_hash}, occurrence #{occurrence_num}]"
+                    marker_content = (
+                        f"[Duplicate command documentation block omitted - "
+                        f"hash {content_hash}, occurrence #{occurrence_num}]"
+                    )
 
                     # Preserve structure
                     if isinstance(entry.get("message", {}).get("content"), list):
@@ -192,7 +198,7 @@ def truncate_parameter_value(value: str, max_length: int = 200) -> str:
 
     # Detect file paths - check for path separators and no spaces
     has_slash = "/" in value
-    has_no_spaces_early = " " not in value[:min(100, len(value))]
+    has_no_spaces_early = " " not in value[: min(100, len(value))]
 
     if has_slash and has_no_spaces_early:
         # Likely a file path - preserve start and end structure
@@ -205,7 +211,8 @@ def truncate_parameter_value(value: str, max_length: int = 200) -> str:
 
     # General text - keep beginning and end with marker
     keep_chars = (max_length - 20) // 2
-    return f"{value[:keep_chars]}...[truncated {len(value) - max_length} chars]...{value[-keep_chars:]}"
+    truncated_count = len(value) - max_length
+    return f"{value[:keep_chars]}...[truncated {truncated_count} chars]...{value[-keep_chars:]}"
 
 
 def truncate_tool_parameters(entries: list[dict]) -> list[dict]:
@@ -581,9 +588,6 @@ def preprocess_session(
     entries, total_entries, skipped_entries = process_log_file(
         log_path, session_id=session_id, enable_filtering=enable_filtering
     )
-
-    # Track original size before filtering
-    original_entry_count = len(entries)
 
     # Apply filtering operations if enabled
     if enable_filtering:

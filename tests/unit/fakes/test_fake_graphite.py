@@ -184,6 +184,7 @@ def test_fake_graphite_ops_get_prs_from_graphite() -> None:
             state="OPEN",
             url="https://github.com/owner/repo/pull/123",
             is_draft=False,
+            title=None,
             checks_passing=True,
             owner="owner",
             repo="repo",

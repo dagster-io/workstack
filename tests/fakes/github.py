@@ -42,6 +42,19 @@ class FakeGitHub(GitHub):
         if pr_statuses is not None:
             # Convert legacy pr_statuses format to PullRequestInfo
             self._prs = {}
+            for branch, (state, pr_number, title) in pr_statuses.items():
+                if pr_number is not None:
+                    self._prs[branch] = PullRequestInfo(
+                        number=pr_number,
+                        state=state if state != "NONE" else "OPEN",
+                        url=f"https://github.com/owner/repo/pull/{pr_number}",
+                        is_draft=False,
+                        title=title,
+                        checks_passing=None,
+                        owner="owner",
+                        repo="repo",
+                        has_conflicts=None,
+                    )
             self._pr_statuses = pr_statuses
         else:
             self._prs = prs or {}
@@ -51,11 +64,29 @@ class FakeGitHub(GitHub):
         self._pr_mergeability = pr_mergeability or {}
         self._updated_pr_bases: list[tuple[int, str]] = []
         self._merged_prs: list[int] = []
+        self._get_prs_for_repo_calls: list[tuple[Path, bool]] = []
+        self._get_pr_status_calls: list[tuple[Path, str]] = []
 
     @property
     def merged_prs(self) -> list[int]:
         """List of PR numbers that were merged."""
         return self._merged_prs
+
+    @property
+    def get_prs_for_repo_calls(self) -> list[tuple[Path, bool]]:
+        """Read-only access to tracked get_prs_for_repo() calls for test assertions.
+
+        Returns list of (repo_root, include_checks) tuples.
+        """
+        return self._get_prs_for_repo_calls
+
+    @property
+    def get_pr_status_calls(self) -> list[tuple[Path, str]]:
+        """Read-only access to tracked get_pr_status() calls for test assertions.
+
+        Returns list of (repo_root, branch) tuples.
+        """
+        return self._get_pr_status_calls
 
     def get_prs_for_repo(
         self, repo_root: Path, *, include_checks: bool
@@ -65,13 +96,13 @@ class FakeGitHub(GitHub):
         The include_checks parameter is accepted but ignored - fake returns the
         same pre-configured data regardless of this parameter.
         """
+        self._get_prs_for_repo_calls.append((repo_root, include_checks))
         return self._prs
 
     def get_pr_status(self, repo_root: Path, branch: str, *, debug: bool) -> PRInfo:
         """Get PR status from configured PRs.
 
         Returns PRInfo("NONE", None, None) if branch not found.
-        Note: Returns URL in place of title since PullRequestInfo has no title field.
         """
         # Support legacy pr_statuses format
         if self._pr_statuses is not None:
@@ -87,10 +118,9 @@ class FakeGitHub(GitHub):
         pr = self._prs.get(branch)
         if pr is None:
             return PRInfo("NONE", None, None)
-        # PullRequestInfo has: number, state, url, is_draft, checks_passing
-        # But get_pr_status expects: state, number, title
-        # Using url as title since PullRequestInfo doesn't have a title field
-        return PRInfo(cast(PRState, pr.state), pr.number, pr.url)
+        # PullRequestInfo has: number, state, url, is_draft, title, checks_passing
+        # Return state, number, and title as expected by PRInfo
+        return PRInfo(cast(PRState, pr.state), pr.number, pr.title)
 
     def get_pr_base_branch(self, repo_root: Path, pr_number: int) -> str | None:
         """Get current base branch of a PR from configured state.

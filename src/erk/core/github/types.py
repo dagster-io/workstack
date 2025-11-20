@@ -22,6 +22,7 @@ class PullRequestInfo:
     state: str  # "OPEN", "MERGED", "CLOSED"
     url: str
     is_draft: bool
+    title: str | None
     checks_passing: bool | None  # None if no checks, True if all pass, False if any fail
     owner: str  # GitHub repo owner (e.g., "schrockn")
     repo: str  # GitHub repo name (e.g., "erk")

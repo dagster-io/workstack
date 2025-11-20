@@ -807,6 +807,77 @@ def test_sync_force_no_deletable_single_sync() -> None:
         assert "✓ No worktrees to clean up" in result.output
 
 
+def test_sync_uses_batch_pr_fetch() -> None:
+    """Test that sync uses batched PR fetch instead of serial calls.
+
+    This test verifies the performance optimization where sync fetches all PR
+    information in a single batched call to get_prs_for_repo() instead of making
+    N serial calls to get_pr_status() for each worktree.
+    """
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        repo_name = env.cwd.name
+        repo_dir = env.erk_root / "repos" / repo_name
+
+        # Define multiple worktrees to test batching behavior
+        wt1 = repo_dir / "worktrees" / "feature-1"
+        wt2 = repo_dir / "worktrees" / "feature-2"
+        wt3 = repo_dir / "worktrees" / "feature-3"
+
+        git_ops = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
+                    WorktreeInfo(path=wt1, branch="feature-1"),
+                    WorktreeInfo(path=wt2, branch="feature-2"),
+                    WorktreeInfo(path=wt3, branch="feature-3"),
+                ],
+            },
+        )
+
+        graphite_ops = FakeGraphite()
+
+        # Configure PR data: feature-1 merged (deletable), others open
+        github_ops = FakeGitHub(
+            pr_statuses={
+                "feature-1": ("MERGED", 123, "Feature 1"),
+                "feature-2": ("OPEN", 124, "Feature 2"),
+                "feature-3": ("OPEN", 125, "Feature 3"),
+            }
+        )
+
+        test_ctx = env.build_context(
+            use_graphite=True,
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
+            script_writer=env.script_writer,
+            cwd=env.cwd,
+            dry_run=False,
+        )
+
+        # Run sync (cancel deletion to just verify PR fetching)
+        result = runner.invoke(cli, ["sync"], obj=test_ctx, input="n\n")
+
+        assert result.exit_code == 0
+
+        # BATCHING VERIFICATION: Verify single batch call was made
+        assert len(github_ops.get_prs_for_repo_calls) == 1
+        repo_root_arg, include_checks_arg = github_ops.get_prs_for_repo_calls[0]
+        assert repo_root_arg == env.cwd
+        assert include_checks_arg is False  # Sync doesn't need CI checks
+
+        # BATCHING VERIFICATION: Verify no serial calls were made
+        assert len(github_ops.get_pr_status_calls) == 0
+
+        # RESULT VERIFICATION: Verify sync correctly identified deletable worktree
+        assert "feature-1" in result.output
+        assert "merged" in result.output.lower()
+        assert "PR #123" in result.output
+
+
 def test_sync_verbose_flag() -> None:
     """Test that sync --verbose passes quiet=False to graphite_ops.sync()."""
     runner = CliRunner()

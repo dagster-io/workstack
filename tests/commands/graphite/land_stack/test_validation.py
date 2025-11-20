@@ -208,6 +208,7 @@ def test_land_stack_ignores_root_worktree_changes_on_unrelated_branch() -> None:
                     state="OPEN",
                     url="https://github.com/owner/repo/pull/123",
                     is_draft=False,
+                    title=None,
                     checks_passing=True,
                     owner="owner",
                     repo="repo",

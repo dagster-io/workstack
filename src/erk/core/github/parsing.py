@@ -69,6 +69,7 @@ def parse_github_pr_list(json_str: str, include_checks: bool) -> dict[str, PullR
             state=pr["state"],
             url=url,
             is_draft=pr["isDraft"],
+            title=pr.get("title"),
             checks_passing=checks_passing,
             owner=owner,
             repo=repo,

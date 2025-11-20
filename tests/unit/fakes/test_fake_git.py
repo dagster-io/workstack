@@ -428,7 +428,7 @@ def test_fake_gitops_delete_branch_with_graphite_raises() -> None:
 
     error = subprocess.CalledProcessError(
         returncode=1,
-        cmd=["gt", "remove", "test-branch"],
+        cmd=["gt", "delete", "test-branch"],
         stderr=None,
     )
 

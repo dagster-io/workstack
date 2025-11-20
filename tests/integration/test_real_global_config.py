@@ -3,7 +3,7 @@ from unittest import mock
 
 import pytest
 
-from erk.cli.commands.add import make_env_content
+from erk.cli.commands.create import make_env_content
 from erk.cli.commands.init import create_and_save_global_config
 from erk.cli.config import load_config
 from erk.core.init_utils import discover_presets

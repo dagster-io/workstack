@@ -51,7 +51,7 @@ _erk_completion() {
 
     response=$(env COMP_WORDS="${COMP_WORDS[*]}" _ERK_COMPLETE=bash_complete erk)
 
-    local commands="add list status switch up down rm rename move gc"
+    local commands="create list status switch up down rm rename move gc"
     COMPREPLY=($(compgen -W "$commands" -- "${COMP_WORDS[COMP_CWORD]}"))
 }
 
@@ -65,7 +65,7 @@ complete -F _erk_completion erk
 
     assert result.exit_code == 0
     # Check for common commands in the output
-    assert "add" in result.output
+    assert "create" in result.output
     assert "switch" in result.output
     assert "complete -F _erk_completion erk" in result.output
 

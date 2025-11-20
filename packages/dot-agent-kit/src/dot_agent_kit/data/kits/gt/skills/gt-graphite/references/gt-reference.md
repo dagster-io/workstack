@@ -1287,7 +1287,7 @@ gt create auth-service
 
 # Want to work on unrelated feature in parallel
 # Create new worktree
-erk add billing-stack
+erk create billing-stack
 
 # Navigate to new worktree
 erk checkout billing-stack

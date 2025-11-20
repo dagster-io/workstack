@@ -68,7 +68,7 @@ This reference contains:
 - Always load `references/erk.md` when user asks erk-related questions
 - The reference is comprehensive (~1200 lines) but optimized for progressive reading
 - Use grep patterns to find specific sections when needed:
-  - `erk add` - Creating worktrees
+  - `erk create` - Creating worktrees
   - `erk checkout` - Navigating to branches
   - `erk list` - Listing worktrees
   - `Pattern [0-9]:` - Workflow patterns
@@ -88,7 +88,7 @@ When users ask for help with erk, guide them using these patterns:
 
 ### Creating Worktrees
 
-Load `references/erk.md` and search for "erk add" section to provide:
+Load `references/erk.md` and search for "erk create" section to provide:
 
 - Syntax options (basic, custom branch, from existing branch, with plan file)
 - Environment setup details
@@ -117,7 +117,7 @@ Load `references/erk.md` and search for "erk sync" section to provide:
 
 - Finding merged worktrees: `erk sync --dry-run`
 - Syncing and cleaning with Graphite: `erk sync -f`
-- Manual deletion: `erk remove <name>`
+- Manual deletion: `erk delete <name>`
 
 ## Workflow Guidance
 

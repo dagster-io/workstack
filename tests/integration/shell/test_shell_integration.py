@@ -353,7 +353,7 @@ def test_shell_integration_create_invokes_successfully() -> None:
 
         test_ctx = env.build_context(git=git_ops)
 
-        result = runner.invoke(cli, ["__shell", "add", "newfeature"], obj=test_ctx)
+        result = runner.invoke(cli, ["__shell", "create", "newfeature"], obj=test_ctx)
 
         # Should succeed without TypeError (may fail for other reasons like missing config)
         assert result.exit_code in (0, 1), f"Unexpected exit code: {result.exit_code}"
@@ -505,7 +505,7 @@ def test_shell_integration_create_from_current_branch_returns_script_path() -> N
         # Act: Create worktree from current branch through __shell handler
         result = runner.invoke(
             cli,
-            ["__shell", "add", "--from-current-branch"],
+            ["__shell", "create", "--from-current-branch"],
             obj=test_ctx,
             catch_exceptions=False,
         )

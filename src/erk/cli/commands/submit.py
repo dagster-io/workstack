@@ -50,7 +50,7 @@ def submit_cmd(ctx: ErkContext, dry_run: bool) -> None:
         raise SystemExit(1)
 
     # Get current branch
-    current_branch = ctx.git.get_current_branch(repo.root)
+    current_branch = ctx.git.get_current_branch(ctx.cwd)
     if current_branch is None:
         user_output(click.style("Error: ", fg="red") + "Not on a branch (detached HEAD)")
         raise SystemExit(1)
@@ -92,14 +92,9 @@ def submit_cmd(ctx: ErkContext, dry_run: bool) -> None:
         capture_output=True,
     )
 
-    # Push branch
-    user_output("Pushing branch...")
-    subprocess.run(
-        ["git", "push", "-u", "origin", current_branch],
-        cwd=ctx.cwd,
-        check=True,
-        capture_output=True,
-    )
+    # Submit branch via Graphite
+    user_output("Submitting branch via Graphite...")
+    ctx.graphite.submit_branch(repo.root, current_branch, quiet=False)
 
     # Trigger workflow
     workflow = "implement-plan.yml"

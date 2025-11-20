@@ -13,6 +13,61 @@ from erk.core.context import ErkContext, create_context
 from erk.core.repo_discovery import ensure_repo_dir
 
 
+def _format_section_header(text: str, separator_length: int = 59) -> str:
+    """Format a section header with styled text and separator line."""
+    header = click.style(text, bold=True)
+    separator = "─" * separator_length
+    return f"{header}\n{separator}"
+
+
+def _format_consolidation_plan(
+    stack_branches: list[str],
+    current_branch: str,
+    consolidated_branches: list[str],
+    target_name: str,
+    worktrees_to_remove: list[tuple[str, Path]],
+) -> str:
+    """Format the consolidation plan section with visual hierarchy."""
+    lines: list[str] = []
+
+    # Section header
+    lines.append(_format_section_header("📋 Consolidation Plan"))
+    lines.append("")
+
+    # Branches consolidating to current worktree
+    lines.append("Branches consolidating to current worktree:")
+    for branch in consolidated_branches:
+        if branch == current_branch:
+            branch_display = click.style(branch, fg="bright_green", bold=True)
+            lines.append(f"  • {branch_display} ← (keeping this worktree)")
+        else:
+            lines.append(f"  • {branch}")
+
+    lines.append("")
+
+    # Worktrees to remove
+    lines.append("Worktrees to remove:")
+    for branch, path in worktrees_to_remove:
+        lines.append(f"  • {branch}")
+        lines.append(f"    {click.style(str(path), fg='white', dim=True)}")
+
+    lines.append("")
+    lines.append("─" * 59)
+
+    return "\n".join(lines)
+
+
+def _format_removal_progress(removed_paths: list[Path]) -> str:
+    """Format the removal execution output with grouped checkmarks."""
+    lines: list[str] = []
+
+    lines.append(_format_section_header("🗑️  Removing worktrees..."))
+    for path in removed_paths:
+        lines.append(f"  ✓ {click.style(str(path), fg='green')}")
+
+    return "\n".join(lines)
+
+
 @click.command("consolidate")
 @click.argument("branch", required=False, default=None)
 @click.option(
@@ -268,46 +323,25 @@ def consolidate_cmd(
             return
         # Continue to source worktree removal when using --name
 
-    # Display current stack (or partial stack) with visual indicators
-    user_output("\n" + click.style("Current stack:", bold=True))
-    for b in stack_branches:  # Show FULL stack for context
-        if b == current_branch:
-            marker = f" {click.style('←', fg='bright_green')} current"
-            branch_display = click.style(b, fg="bright_green", bold=True)
-        elif b in stack_to_consolidate:
-            marker = f" {click.style('→', fg='yellow')} consolidating"
-            branch_display = click.style(b, fg="yellow")
-        else:
-            marker = " (keeping separate)"
-            branch_display = click.style(b, fg="white", dim=True)
+    # Collect data for formatted output
+    worktrees_to_remove_list: list[tuple[str, Path]] = [
+        (wt.branch or "detached", wt.path) for wt in worktrees_to_remove
+    ]
 
-        user_output(f"  {branch_display}{marker}")
-
-    # Display target worktree info
+    # Add source worktree to removal list if creating new worktree
     if name is not None:
-        target_display = click.style(name, fg="cyan", bold=True)
-        user_output(f"\n{click.style('Target worktree:', bold=True)} {target_display} (new)")
-    else:
-        target_display = click.style(str(current_worktree), fg="cyan")
-        user_output(f"\n{click.style('Target worktree:', bold=True)} {target_display} (current)")
+        worktrees_to_remove_list.append((current_branch, current_worktree))
 
-    user_output(f"\n{click.style('🗑️  Safe to remove (no uncommitted changes):', bold=True)}")
-    for wt in worktrees_to_remove:
-        branch_text = click.style(wt.branch or "detached", fg="yellow")
-        path_text = click.style(str(wt.path), fg="cyan")
-        user_output(f"  - {branch_text} at {path_text}")
-
-    # Show source worktree removal if creating new worktree
-    if name is not None:
-        path_text = click.style(str(current_worktree), fg="cyan")
-        user_output(f"  - source worktree at {path_text}")
-
-    # Inform user about stack restackability
+    # Display consolidation plan
     user_output()
-    user_output(
-        f"ℹ️  Note: Use 'gt restack' on {target_worktree_path} to restack. "
-        "All branches are preserved."
+    plan_output = _format_consolidation_plan(
+        stack_branches=stack_branches,
+        current_branch=current_branch,
+        consolidated_branches=stack_to_consolidate,
+        target_name=name if name is not None else str(current_worktree.name),
+        worktrees_to_remove=worktrees_to_remove_list,
     )
+    user_output(plan_output)
 
     # Exit if dry-run
     if dry_run:
@@ -324,29 +358,35 @@ def consolidate_cmd(
             user_output(click.style("⭕ Aborted", fg="red", bold=True))
             return
 
-    # Remove worktrees
-    user_output()
+    # Remove worktrees and collect paths for progress output
+    removed_paths: list[Path] = []
+
     for wt in worktrees_to_remove:
         ctx.git.remove_worktree(repo.root, wt.path, force=True)
-        path_text = click.style(str(wt.path), fg="green")
-        user_output(f"✅ Removed: {path_text}")
+        removed_paths.append(wt.path)
 
     # Remove source worktree if a new worktree was created
     if name is not None:
         ctx.git.remove_worktree(repo.root, current_worktree.resolve(), force=True)
-        path_text = click.style(str(current_worktree), fg="green")
-        user_output(f"✅ Removed source worktree: {path_text}")
+        removed_paths.append(current_worktree)
 
         # Delete temporary branch after source worktree is removed
         # (can't delete while it's checked out in the source worktree)
         if temp_branch_name is not None:
             ctx.git.delete_branch(repo.root, temp_branch_name, force=True)
 
+    # Display grouped removal progress
+    user_output()
+    user_output(_format_removal_progress(removed_paths))
+
     # Prune stale worktree metadata after all removals
     # (explicit call now that remove_worktree no longer auto-prunes)
     ctx.git.prune_worktrees(repo.root)
 
     user_output(f"\n{click.style('✅ Consolidation complete', fg='green', bold=True)}")
+    user_output()
+    user_output("Next step:")
+    user_output("  Run 'gt restack' to update branch relationships")
 
     # Early return when no worktree switch (consolidating into current worktree)
     # Makes it explicit that no script is needed in this case

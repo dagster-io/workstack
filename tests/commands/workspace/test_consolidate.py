@@ -130,7 +130,7 @@ def test_consolidate_removes_other_stack_worktrees() -> None:
         result = runner.invoke(cli, ["consolidate", "-f"], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
-        assert "Removed:" in result.output
+        assert "🗑️  Removing worktrees..." in result.output
         assert str(wt1_path) in result.output
         assert str(wt2_path) in result.output
         assert len(test_ctx.git.removed_worktrees) == 2
@@ -595,9 +595,10 @@ def test_consolidate_shows_output_with_script_flag() -> None:
 
         assert result.exit_code == 0, result.output
         # Verify output is shown even with --script flag
-        assert "✅ Removed:" in result.output
+        assert "🗑️  Removing worktrees..." in result.output
         assert str(wt1_path) in result.output
         assert "Consolidation complete" in result.output
+        assert "Next step:" in result.output
 
 
 def test_consolidate_shows_output_without_script_flag() -> None:
@@ -625,9 +626,10 @@ def test_consolidate_shows_output_without_script_flag() -> None:
 
         assert result.exit_code == 0, result.output
         # Verify output is shown
-        assert "✅ Removed:" in result.output
+        assert "🗑️  Removing worktrees..." in result.output
         assert str(wt1_path) in result.output
         assert "Consolidation complete" in result.output
+        assert "Next step:" in result.output
 
 
 def test_consolidate_script_mode_shows_preview_output() -> None:
@@ -658,15 +660,15 @@ def test_consolidate_script_mode_shows_preview_output() -> None:
 
         assert result.exit_code == 0, result.output
 
-        # Verify preview sections appear (were suppressed by line 277 guard)
-        assert "Current stack:" in result.output
-        assert "Target worktree:" in result.output
-        assert "Safe to remove" in result.output
-        assert "Note: Use 'gt restack'" in result.output
+        # Verify preview sections appear with new format
+        assert "📋 Consolidation Plan" in result.output
+        assert "Branches consolidating to current worktree:" in result.output
+        assert "Worktrees to remove:" in result.output
+        assert "─" in result.output  # Separator line
+        assert "Next step:" in result.output
 
         # Verify visual markers appear
         assert "←" in result.output or "current" in result.output
-        assert "→" in result.output or "consolidating" in result.output
 
 
 def test_consolidate_outputs_to_stderr() -> None:

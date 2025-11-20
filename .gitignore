@@ -13,7 +13,10 @@ wheels/
 # Virtual environments
 .venv
 activate.sh
-.erk
+
+# Erk configuration (keep sandboxes tracked, ignore everything else)
+.erk/*
+!.erk/sandboxes/
 
 # Local planning and configuration (not tracked in git)
 .plan/

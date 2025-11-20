@@ -84,6 +84,27 @@ class Shell(ABC):
         ...
 
     @abstractmethod
+    def run_command(self, command: list[str], cwd: Path | None = None) -> int:
+        """Run arbitrary command as subprocess and return exit code.
+
+        This is used for running external commands that need their exit
+        codes checked (e.g., claude CLI, git operations).
+
+        Args:
+            command: Command and arguments to execute (e.g., ["claude", "--help"])
+            cwd: Working directory to run command in (None = current directory)
+
+        Returns:
+            Exit code from the command
+
+        Example:
+            >>> shell_ops = RealShell()
+            >>> exit_code = shell_ops.run_command(["echo", "hello"], cwd=Path("/tmp"))
+            >>> assert exit_code == 0
+        """
+        ...
+
+    @abstractmethod
     def run_erk_sync(self, repo_root: Path, *, force: bool, verbose: bool) -> None:
         """Run erk sync command as subprocess.
 
@@ -118,6 +139,15 @@ class RealShell(Shell):
     def get_installed_tool_path(self, tool_name: str) -> str | None:
         """Check if tool is in PATH using shutil.which."""
         return shutil.which(tool_name)
+
+    def run_command(self, command: list[str], cwd: Path | None = None) -> int:
+        """Run arbitrary command and return exit code.
+
+        Executes command using subprocess.run() without check=True
+        so that we can return the actual exit code.
+        """
+        result = subprocess.run(command, cwd=cwd, check=False)
+        return result.returncode
 
     def run_erk_sync(self, repo_root: Path, *, force: bool, verbose: bool) -> None:
         """Run erk sync command as subprocess.

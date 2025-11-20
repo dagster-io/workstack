@@ -366,22 +366,35 @@ query {{
         squash: bool = True,
         verbose: bool = False,
     ) -> None:
-        """Merge a pull request on GitHub via gh CLI."""
+        """Merge a pull request on GitHub via gh CLI.
+
+        Note: Uses try/except as an acceptable error boundary for handling gh CLI
+        failures. Re-raises with stderr context to help diagnose issues.
+        """
         cmd = ["gh", "pr", "merge", str(pr_number)]
         if squash:
             cmd.append("--squash")
 
-        result = subprocess.run(
-            cmd,
-            cwd=repo_root,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
+        try:
+            result = subprocess.run(
+                cmd,
+                cwd=repo_root,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                check=True,
+            )
 
-        # Show output in verbose mode
-        if verbose and result.stdout:
-            user_output(result.stdout)
+            # Show output in verbose mode
+            if verbose and result.stdout:
+                user_output(result.stdout)
+
+        except subprocess.CalledProcessError as e:
+            # Re-raise with stderr context for better error messages
+            error_msg = f"Failed to merge PR #{pr_number}"
+            if e.stderr and e.stderr.strip():
+                error_msg += f"\ngh CLI error: {e.stderr.strip()}"
+            raise RuntimeError(error_msg) from e
 
     def trigger_workflow(
         self,
@@ -389,15 +402,27 @@ query {{
         workflow: str,
         inputs: dict[str, str],
     ) -> None:
-        """Trigger GitHub Actions workflow via gh CLI."""
+        """Trigger GitHub Actions workflow via gh CLI.
+
+        Note: Uses try/except as an acceptable error boundary for handling gh CLI
+        failures. Re-raises with stderr context to help diagnose issues.
+        """
         cmd = ["gh", "workflow", "run", workflow]
         for key, value in inputs.items():
             cmd.extend(["-f", f"{key}={value}"])
 
-        subprocess.run(
-            cmd,
-            cwd=repo_root,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
+        try:
+            subprocess.run(
+                cmd,
+                cwd=repo_root,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                check=True,
+            )
+        except subprocess.CalledProcessError as e:
+            # Re-raise with stderr context for better error messages
+            error_msg = f"Failed to trigger workflow '{workflow}'"
+            if e.stderr and e.stderr.strip():
+                error_msg += f"\ngh CLI error: {e.stderr.strip()}"
+            raise RuntimeError(error_msg) from e

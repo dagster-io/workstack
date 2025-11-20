@@ -1,11 +1,12 @@
 import click
 
-from erk.cli.commands.add import add
 from erk.cli.commands.checkout import checkout_cmd
 from erk.cli.commands.completion import completion_group
 from erk.cli.commands.config import config_group
 from erk.cli.commands.consolidate import consolidate_cmd
+from erk.cli.commands.create import create
 from erk.cli.commands.current import current_cmd
+from erk.cli.commands.delete import del_cmd, delete_cmd
 from erk.cli.commands.down import down_cmd
 from erk.cli.commands.goto import goto_cmd
 from erk.cli.commands.init import init_cmd
@@ -13,7 +14,6 @@ from erk.cli.commands.land_stack import land_stack
 from erk.cli.commands.list import list_cmd, ls_cmd
 from erk.cli.commands.move import move_cmd
 from erk.cli.commands.prepare_cwd_recovery import prepare_cwd_recovery_cmd
-from erk.cli.commands.remove import remove_cmd
 from erk.cli.commands.rename import rename_cmd
 from erk.cli.commands.shell_integration import hidden_shell_cmd
 from erk.cli.commands.split import split_cmd
@@ -37,9 +37,9 @@ def cli(ctx: click.Context) -> None:
 
 
 # Register all commands
-cli.add_command(add)
 cli.add_command(completion_group)
 cli.add_command(consolidate_cmd)
+cli.add_command(create)
 cli.add_command(current_cmd)
 cli.add_command(down_cmd)
 cli.add_command(checkout_cmd)
@@ -52,7 +52,8 @@ cli.add_command(ls_cmd)
 cli.add_command(status_cmd)
 cli.add_command(init_cmd)
 cli.add_command(move_cmd)
-cli.add_command(remove_cmd)
+cli.add_command(delete_cmd)
+cli.add_command(del_cmd)
 cli.add_command(rename_cmd)
 cli.add_command(config_group)
 cli.add_command(split_cmd)

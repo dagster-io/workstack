@@ -89,7 +89,7 @@ def cli_test_repo(tmp_path: Path) -> Generator[CLITestRepo]:
                 original_cwd = os.getcwd()
                 try:
                     os.chdir(test_env.repo)
-                    result = runner.invoke(cli, ["add", "feature"])
+                    result = runner.invoke(cli, ["create", "feature"])
                     assert result.exit_code == 0
                 finally:
                     os.chdir(original_cwd)
@@ -100,13 +100,13 @@ def cli_test_repo(tmp_path: Path) -> Generator[CLITestRepo]:
         from click.testing import CliRunner
         from tests.test_utils.env_helpers import simulated_erk_env
 
-        def test_add_command() -> None:
+        def test_create_command() -> None:
             runner = CliRunner()
             with simulated_erk_env(runner) as env:
                 # Much simpler! No HOME setup, no os.chdir, uses fakes
                 git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
                 test_ctx = ErkContext.for_test(git=git_ops, cwd=env.cwd)
-                result = runner.invoke(cli, ["add", "feature"], obj=test_ctx)
+                result = runner.invoke(cli, ["create", "feature"], obj=test_ctx)
         ```
 
     See Also:

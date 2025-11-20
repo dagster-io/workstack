@@ -1322,7 +1322,7 @@ def test_create_without_graphite():
 
 **Key insight**: If command calls subprocess directly without abstraction, refactor tests to focus on paths that DO use abstractions, or test error handling before subprocess is reached.
 
-**Files refactored**: `tests/commands/workspace/test_add.py` (2 patches eliminated)
+**Files refactored**: `tests/commands/workspace/test_create.py` (2 patches eliminated)
 
 ### Example 4: Environment Variable Mocks → FakeShell
 

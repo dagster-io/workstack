@@ -335,7 +335,7 @@ def test_up_multiple_children_fails_explicitly() -> None:
         assert "Error: Branch 'feature-1' has multiple children" in result.stderr
         assert "'feature-2a'" in result.stderr
         assert "'feature-2b'" in result.stderr
-        assert "erk add" in result.stderr
+        assert "erk create" in result.stderr
 
 
 def test_up_with_mismatched_worktree_name() -> None:

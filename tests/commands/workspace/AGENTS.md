@@ -6,9 +6,9 @@ This directory contains tests for commands that create, rename, remove, and move
 
 ## Commands in This Directory
 
-- `test_add.py` - Tests for `erk add` command
+- `test_create.py` - Tests for `erk create` command
 - `test_rename.py` - Tests for `erk rename` command
-- `test_remove.py` - Tests for `erk remove` command
+- `test_delete.py` - Tests for `erk delete` command
 - `test_move.py` - Tests for `erk move` command
 
 ## Common Test Setup

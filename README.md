@@ -20,11 +20,11 @@ Traditional git workflows assume serial development - one working directory, one
 
 ```bash
 # Create multiple planned implementations in parallel
-erk add feat-1 # Create a branch feat-1 on worktree feat-1
+erk create feat-1 # Create a branch feat-1 on worktree feat-1
 
 erk checkout master # navigates back to root worktree, where master is checked out
 
-erk remove feat-1 # Deletes feat-1 *worktree*. Branch remains untouched.
+erk delete feat-1 # Deletes feat-1 *worktree*. Branch remains untouched.
 
 erk checkout feat-1 # Recreates feat-1 *worktree* checked out to feat-1 *branch*.
 ```
@@ -37,7 +37,7 @@ Note: `erk` was designed to work with `gt` (graphite) for managing stacks of bra
 
 ## Plan Orientation
 
-`erk` has first-class support for planning workflows. You can create plan documents and then use the `--plan` flag on `add` to add new worktrees that contain planning documents in `.plan`, which by default is in `.gitignore`. There are also bundled claude code commands (installable via `dot-agent`) that facilitate the creation, enrichement, and implementation of these plans.
+`erk` has first-class support for planning workflows. You can create plan documents and then use the `--plan` flag on `create` to create new worktrees that contain planning documents in `.plan`, which by default is in `.gitignore`. There are also bundled claude code commands (installable via `dot-agent`) that facilitate the creation, enrichement, and implementation of these plans.
 
 ## Installation
 
@@ -66,7 +66,7 @@ source ~/.zshrc  # or ~/.bashrc
 
 - Centralized worktrees in `~/.erk/repos/<repo>/worktrees/<feature>/`
 - Automatic environment setup (`.env`, virtual environments, activation scripts)
-- Simple CLI: `add`, `checkout`, `remove`, `ls`
+- Simple CLI: `create`, `checkout`, `delete`, `ls`
 - Plan-based development workflow
 - Optional Graphite integration for stacked diffs
 
@@ -76,18 +76,18 @@ source ~/.zshrc  # or ~/.bashrc
 
 ```bash
 # New feature branch
-erk add feature-x                          # Creates worktree 'feature-x' with branch 'feature-x'
-erk add fix --branch hotfix/bug           # Creates worktree 'fix' with branch 'hotfix/bug'
+erk create feature-x                          # Creates worktree 'feature-x' with branch 'feature-x'
+erk create fix --branch hotfix/bug           # Creates worktree 'fix' with branch 'hotfix/bug'
 
 # From existing branch
-erk add --from-branch feature/login       # Creates worktree from existing branch 'feature/login'
-erk add login --from-branch feature/login # Creates worktree 'login' from branch 'feature/login'
+erk create --from-branch feature/login       # Creates worktree from existing branch 'feature/login'
+erk create login --from-branch feature/login # Creates worktree 'login' from branch 'feature/login'
 
 # Move current work
-erk add --from-current-branch             # Move current branch to new worktree
+erk create --from-current-branch             # Move current branch to new worktree
 
 # From a plan file
-erk add --plan Add_Auth.md                # Creates worktree with .plan/ folder
+erk create --plan Add_Auth.md                # Creates worktree with .plan/ folder
 ```
 
 ### Managing Worktrees
@@ -102,7 +102,7 @@ erk status                 # Show status of current worktree
 erk list                   # List all worktrees (alias: ls)
 erk list --ci              # Fetch CI check status from GitHub (slower)
 erk rename OLD NEW         # Rename a worktree
-erk remove NAME            # Delete worktree
+erk delete NAME            # Delete worktree
 erk sync                   # Sync with Graphite, show cleanup candidates
 erk sync --dry-run         # Show safe-to-delete worktrees (merged PRs)
 erk sync -f                # Sync and auto-remove merged worktrees
@@ -185,7 +185,7 @@ erk down     # → root (main)
 
 - Graphite must be enabled (`erk config set use_graphite true`)
 - Target branch must have an existing worktree
-- If no worktree exists, shows helpful message: `erk add <branch>`
+- If no worktree exists, shows helpful message: `erk create <branch>`
 
 **Behavior:**
 
@@ -406,11 +406,11 @@ commands = [
 ### Parallel Feature Development
 
 ```bash
-erk add feature-a
+erk create feature-a
 erk checkout feature-a
 # ... work on feature A ...
 
-erk add feature-b
+erk create feature-b
 erk checkout feature-b
 # ... work on feature B ...
 
@@ -436,7 +436,7 @@ erk checkout root
 # 2. Create your plan and save it to disk (e.g. Add_User_Auth.md)
 
 # 3. Create worktree from plan
-erk add --plan Add_User_Auth.md
+erk create --plan Add_User_Auth.md
 # This automatically:
 #   - Creates worktree named 'add-user-auth'
 #   - Creates .plan/ folder with plan.md (immutable) and progress.md (mutable)
@@ -478,7 +478,7 @@ The traditional erk planning workflow can be fully automated with kit-installed 
 
 1. Discuss and plan with Claude in conversation
 2. Manually copy/save plan to a markdown file
-3. Run `erk add --plan <file>.md`
+3. Run `erk create --plan <file>.md`
 4. Manually track implementation progress
 
 **AI-Augmented Approach (With Kits):**
@@ -528,7 +528,7 @@ Creates a new erk worktree from a saved plan file.
 **What it does:**
 
 - Auto-detects most recent `*-plan.md` at repo root
-- Runs `erk add --plan <file>`
+- Runs `erk create --plan <file>`
 - Moves plan to `.plan/plan.md` in new worktree
 - Creates `.plan/progress.md` for tracking step completion
 - Displays plan content and next steps
@@ -676,7 +676,7 @@ For detailed documentation of all installed kits and their artifacts, see `.clau
 
 ```bash
 # Started work on main by accident?
-erk add --from-current-branch
+erk create --from-current-branch
 # Creates worktree with current branch, switches you back to root
 ```
 
@@ -765,7 +765,7 @@ erk land-stack --down
 
 ## Command Reference
 
-### `add` Options
+### `create` Options
 
 | Option                  | Description                         |
 | ----------------------- | ----------------------------------- |
@@ -792,7 +792,7 @@ erk land-stack --down
 | `--ref REF`       | Fallback branch for source (default: main)  |
 | `-f, --force`     | Skip confirmation prompts                   |
 
-### `remove` Options
+### `delete` / `del` Options
 
 | Option               | Description                               |
 | -------------------- | ----------------------------------------- |

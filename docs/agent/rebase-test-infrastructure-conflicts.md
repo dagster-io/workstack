@@ -44,8 +44,8 @@ For test infrastructure conflicts, accept the incoming version (newer pattern):
 ```bash
 # Accept incoming version of conflicted files
 git show <incoming_commit>:tests/commands/setup/test_init.py > tests/commands/setup/test_init.py
-git show <incoming_commit>:tests/commands/workspace/test_add.py > tests/commands/workspace/test_add.py
-git add tests/commands/setup/test_init.py tests/commands/workspace/test_add.py
+git show <incoming_commit>:tests/commands/workspace/test_create.py > tests/commands/workspace/test_create.py
+git add tests/commands/setup/test_init.py tests/commands/workspace/test_create.py
 ```
 
 ### Step 3: Fix Parameter Names

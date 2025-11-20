@@ -43,7 +43,7 @@ the code under test performs actual filesystem I/O that cannot be faked.
 
 from click.testing import CliRunner
 
-from erk.cli.commands.add import ensure_worktree_for_branch
+from erk.cli.commands.create import ensure_worktree_for_branch
 from erk.cli.config import LoadedConfig
 from erk.core.git.abc import WorktreeInfo
 from erk.core.repo_discovery import RepoContext

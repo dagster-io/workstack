@@ -1,4 +1,4 @@
-"""Tests for erk add command output behavior."""
+"""Tests for erk create command output behavior."""
 
 from pathlib import Path
 
@@ -10,7 +10,7 @@ from tests.fakes.git import FakeGit
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
-def test_add_from_current_branch_outputs_script_path_to_stdout() -> None:
+def test_create_from_current_branch_outputs_script_path_to_stdout() -> None:
     """Test that create --from-current-branch outputs script path to stdout, not stderr.
 
     This test verifies that the shell integration handler can read the script path
@@ -40,7 +40,7 @@ def test_add_from_current_branch_outputs_script_path_to_stdout() -> None:
         # Act: Create worktree from current branch with --script flag
         result = runner.invoke(
             cli,
-            ["add", "--from-current-branch", "--script"],
+            ["create", "--from-current-branch", "--script"],
             obj=test_ctx,
             catch_exceptions=False,
         )

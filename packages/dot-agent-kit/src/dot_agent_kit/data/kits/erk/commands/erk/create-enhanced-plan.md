@@ -28,7 +28,7 @@ This command solves the critical problem where planning sessions lose valuable d
 2. **Mines discoveries** from tool invocations and assistant reasoning
 3. **Extracts the plan** from the conversation
 4. **Enhances the plan** with mined context
-5. **Saves enhanced plan** to `.plan/` folder
+5. **Saves enhanced plan** to repository root
 
 ---
 
@@ -41,7 +41,7 @@ You are executing the `/erk:create-enhanced-plan` command. Follow these steps ca
 **ALLOWED TOOLS:**
 
 - `Read` - For reading session logs and files
-- `Write` - ONLY for writing to `.plan/` folder
+- `Write` - ONLY for writing to repository root
 - `Bash` - ONLY for log operations in `~/.claude/projects/`
 - `AskUserQuestion` - For clarifications
 
@@ -360,7 +360,7 @@ Link discoveries to implementation steps:
 
 ### Step 6: Save Enhanced Plan
 
-Generate filename and save:
+Generate filename and save to repository root:
 
 ```python
 # Determine repo root
@@ -375,11 +375,8 @@ repo_root = subprocess.run(
 # Example: "session-log-mining-enhanced-plan.md"
 filename = f"{descriptive_name}-enhanced-plan.md"
 
-# Save to .plan/ folder
-plan_path = Path(repo_root) / ".plan" / filename
-
-# Create .plan/ if needed
-plan_path.parent.mkdir(exist_ok=True)
+# Save directly to repo root (NOT to .plan/ folder)
+plan_path = Path(repo_root) / filename
 
 # Write enhanced plan
 plan_path.write_text(enhanced_plan_content, encoding="utf-8")
@@ -388,7 +385,7 @@ plan_path.write_text(enhanced_plan_content, encoding="utf-8")
 Output:
 
 ```
-✅ Enhanced plan saved to: .plan/[filename]
+✅ Enhanced plan saved to: [filename]
 
 Summary:
 - Discoveries mined: [count]
@@ -396,9 +393,9 @@ Summary:
 - Context links added: [count]
 
 Next steps:
-1. Run: /erk:create-planned-wt
-2. Switch to new worktree
-3. Run: /erk:implement-plan
+1. Review the enhanced plan
+2. Create worktree: /erk:create-planned-wt [plan-file]
+3. Switch to worktree and implement
 ```
 
 ### Step 7: Handle Errors
@@ -421,7 +418,7 @@ Next steps:
 **File already exists:**
 
 ```
-File .plan/[name] already exists.
+File [name] already exists in repository root.
 
 Options:
 1. Use different name

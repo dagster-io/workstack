@@ -13,6 +13,7 @@ from tests.fakes.git import FakeGit
 from tests.fakes.github import FakeGitHub
 from tests.fakes.graphite import FakeGraphite
 from tests.fakes.shell import FakeShell
+from tests.test_utils.cli_helpers import assert_cli_error, assert_cli_success
 from tests.test_utils.context_builders import build_workspace_test_context
 from tests.test_utils.env_helpers import erk_inmem_env
 
@@ -41,7 +42,7 @@ def test_delete_prompts_and_aborts_on_no() -> None:
         test_ctx = build_workspace_test_context(env, existing_paths={wt})
         result = runner.invoke(cli, ["delete", "bar"], input="n\n", obj=test_ctx)
 
-        assert result.exit_code == 0, result.output
+        assert_cli_success(result)
         # User aborted, so worktree should still exist (check via git_ops state)
         assert test_ctx.git.path_exists(wt)
 
@@ -56,10 +57,12 @@ def test_delete_dry_run_does_not_delete() -> None:
         test_ctx = build_workspace_test_context(env, dry_run=True, existing_paths={wt})
         result = runner.invoke(cli, ["delete", "test-stack", "-f"], obj=test_ctx)
 
-        assert result.exit_code == 0, result.output
-        assert "[DRY RUN]" in result.output
-        assert "Would run: git worktree remove" in result.output
-        assert "Would delete directory" in result.output
+        assert_cli_success(
+            result,
+            "[DRY RUN]",
+            "Would run: git worktree remove",
+            "Would delete directory",
+        )
         # Directory should still exist (check via git_ops state)
         assert test_ctx.git.path_exists(wt)
 
@@ -97,9 +100,7 @@ def test_delete_dry_run_with_delete_stack() -> None:
 
         result = runner.invoke(cli, ["delete", "test-stack", "-f", "-s"], obj=test_ctx)
 
-        assert result.exit_code == 0, result.output
-        assert "[DRY RUN]" in result.output
-        assert "Would run: gt delete" in result.output
+        assert_cli_success(result, "[DRY RUN]", "Would run: gt delete")
         assert len(fake_git_ops.deleted_branches) == 0  # No actual deletion
         # Directory should still exist (check via git_ops state)
         assert test_ctx.git.path_exists(wt)
@@ -112,9 +113,7 @@ def test_delete_rejects_dot_dot() -> None:
         test_ctx = build_workspace_test_context(env)
         result = runner.invoke(cli, ["delete", "..", "-f"], obj=test_ctx)
 
-        assert result.exit_code == 1
-        assert "Error: Cannot delete '..'" in result.output
-        assert "directory references not allowed" in result.output
+        assert_cli_error(result, 1, "Error: Cannot delete '..'", "directory references not allowed")
 
 
 def test_delete_rejects_root_slash() -> None:
@@ -124,9 +123,7 @@ def test_delete_rejects_root_slash() -> None:
         test_ctx = build_workspace_test_context(env)
         result = runner.invoke(cli, ["delete", "/", "-f"], obj=test_ctx)
 
-        assert result.exit_code == 1
-        assert "Error: Cannot delete '/'" in result.output
-        assert "absolute paths not allowed" in result.output
+        assert_cli_error(result, 1, "Error: Cannot delete '/'", "absolute paths not allowed")
 
 
 def test_delete_rejects_path_with_slash() -> None:
@@ -136,9 +133,7 @@ def test_delete_rejects_path_with_slash() -> None:
         test_ctx = build_workspace_test_context(env)
         result = runner.invoke(cli, ["delete", "foo/bar", "-f"], obj=test_ctx)
 
-        assert result.exit_code == 1
-        assert "Error: Cannot delete 'foo/bar'" in result.output
-        assert "path separators not allowed" in result.output
+        assert_cli_error(result, 1, "Error: Cannot delete 'foo/bar'", "path separators not allowed")
 
 
 def test_delete_rejects_root_name() -> None:
@@ -148,9 +143,7 @@ def test_delete_rejects_root_name() -> None:
         test_ctx = build_workspace_test_context(env)
         result = runner.invoke(cli, ["delete", "root", "-f"], obj=test_ctx)
 
-        assert result.exit_code == 1
-        assert "Error: Cannot delete 'root'" in result.output
-        assert "root worktree name not allowed" in result.output
+        assert_cli_error(result, 1, "Error: Cannot delete 'root'", "root worktree name not allowed")
 
 
 def test_delete_changes_directory_when_in_target_worktree() -> None:
@@ -178,12 +171,8 @@ def test_delete_changes_directory_when_in_target_worktree() -> None:
         # Execute delete command with --force to skip confirmation
         result = runner.invoke(cli, ["delete", "feature", "-f"], obj=test_ctx)
 
-        # Should succeed
-        assert result.exit_code == 0, result.output
-
-        # Should show directory change message
-        assert "Changing directory to repository root" in result.output
-        assert str(env.cwd) in result.output
+        # Should succeed and show directory change message
+        assert_cli_success(result, "Changing directory to repository root", str(env.cwd))
 
 
 def test_delete_with_delete_stack_handles_user_decline() -> None:
@@ -263,6 +252,8 @@ def test_delete_with_delete_stack_handles_gt_not_found() -> None:
 
         result = runner.invoke(cli, ["delete", "test-stack", "-f", "-s"], obj=test_ctx)
 
-        assert result.exit_code == 1, result.output
-        assert "gt" in result.output.lower()
-        assert "install" in result.output.lower() or "brew" in result.output.lower()
+        # For case-insensitive checks, verify we can find the patterns
+        output_lower = result.output.lower()
+        assert_cli_error(result, 1)
+        assert "gt" in output_lower
+        assert "install" in output_lower or "brew" in output_lower

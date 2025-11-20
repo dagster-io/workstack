@@ -1,7 +1,8 @@
-"""Helpers for CLI testing with REAL git operations.
+"""Helpers for CLI testing with REAL git operations and CLI assertions.
 
 This module provides utilities for setting up isolated test environments
-for CLI command tests that require REAL git operations (not fakes).
+for CLI command tests that require REAL git operations (not fakes), plus
+reusable assertion helpers to reduce CLI test boilerplate.
 
 IMPORTANT: For 95% of CLI tests, use `simulated_erk_env()` from
 `tests.test_utils.env_helpers` instead. That helper uses FakeGit and
@@ -21,6 +22,8 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+
+from click.testing import Result
 
 
 @dataclass
@@ -134,3 +137,125 @@ def cli_test_repo(tmp_path: Path) -> Generator[CLITestRepo]:
     subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=repo, check=True)
 
     yield CLITestRepo(repo=repo, erk_root=erk_root, tmp_path=tmp_path)
+
+
+def assert_cli_success(result: Result, *expected_messages: str) -> None:
+    """Assert CLI command succeeded and output contains expected messages.
+
+    Reduces boilerplate in CLI tests by combining exit code check with message
+    verification in a single assertion that provides clear error messages.
+
+    Args:
+        result: Click CliRunner test result
+        *expected_messages: Messages that should appear in command output
+
+    Raises:
+        AssertionError: If command failed or expected messages not found
+
+    Example:
+        ```python
+        from click.testing import CliRunner
+        from tests.test_utils.cli_helpers import assert_cli_success
+
+        def test_create_command() -> None:
+            runner = CliRunner()
+            result = runner.invoke(cli, ["create", "feature"])
+
+            # Before (3 lines with generic error messages):
+            assert result.exit_code == 0
+            assert "Created" in result.output
+            assert "feature" in result.output
+
+            # After (1 line with clear error message):
+            assert_cli_success(result, "Created", "feature")
+        ```
+    """
+    if result.exit_code != 0:
+        msg = f"Command failed with exit code {result.exit_code}\nOutput:\n{result.output}"
+        raise AssertionError(msg)
+
+    for message in expected_messages:
+        if message not in result.output:
+            msg = f"Expected message '{message}' not found in output\nOutput:\n{result.output}"
+            raise AssertionError(msg)
+
+
+def assert_cli_error(
+    result: Result,
+    exit_code: int = 1,
+    *expected_messages: str,
+) -> None:
+    """Assert CLI command failed with specific error.
+
+    Reduces boilerplate in CLI error handling tests by combining exit code
+    check with error message verification.
+
+    Args:
+        result: Click CliRunner test result
+        exit_code: Expected non-zero exit code (default: 1)
+        *expected_messages: Error messages that should appear in output
+
+    Raises:
+        AssertionError: If exit code is wrong or messages not found
+
+    Example:
+        ```python
+        from click.testing import CliRunner
+        from tests.test_utils.cli_helpers import assert_cli_error
+
+        def test_create_invalid_branch() -> None:
+            runner = CliRunner()
+            result = runner.invoke(cli, ["create", "invalid@name"])
+
+            # Before (3 lines):
+            assert result.exit_code == 1
+            assert "invalid" in result.output
+            assert "branch" in result.output
+
+            # After (1 line):
+            assert_cli_error(result, 1, "invalid", "branch")
+        ```
+    """
+    if result.exit_code != exit_code:
+        msg = f"Expected exit code {exit_code}, got {result.exit_code}\nOutput:\n{result.output}"
+        raise AssertionError(msg)
+
+    for message in expected_messages:
+        if message not in result.output:
+            msg = (
+                f"Expected error message '{message}' not found in output\nOutput:\n{result.output}"
+            )
+            raise AssertionError(msg)
+
+
+def assert_cli_output_contains(result: Result, *patterns: str) -> None:
+    """Assert output contains patterns (doesn't check exit code).
+
+    Useful for checking intermediate output regardless of success/failure.
+    When you care about what's in the output but not whether the command
+    succeeded or failed.
+
+    Args:
+        result: Click CliRunner test result
+        *patterns: Patterns that should appear in output
+
+    Raises:
+        AssertionError: If any pattern not found
+
+    Example:
+        ```python
+        from click.testing import CliRunner
+        from tests.test_utils.cli_helpers import assert_cli_output_contains
+
+        def test_status_displays_worktree_name() -> None:
+            runner = CliRunner()
+            result = runner.invoke(cli, ["status"])
+
+            # Verify output contains key info, regardless of exit code
+            assert_cli_output_contains(result, "feature-1", "main")
+        ```
+    """
+    for pattern in patterns:
+        if pattern not in result.output:
+            msg = f"Expected pattern '{pattern}' not found in output\nOutput:\n{result.output}"
+            raise AssertionError(msg)

@@ -3,9 +3,14 @@
 This module handles the .plan/ folder structure:
 - plan.md: Immutable implementation plan
 - progress.md: Mutable progress tracking with step checkboxes
+
+And the .submission/ folder structure:
+- Ephemeral copy of .plan/ for remote AI implementation
+- Git-tracked, auto-deleted after implementation
 """
 
 import re
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -190,6 +195,58 @@ def update_progress_frontmatter(worktree_path: Path, completed: int, total: int)
         updated_content = new_front_matter + content
 
     progress_file.write_text(updated_content, encoding="utf-8")
+
+
+def copy_plan_to_submission(worktree_path: Path) -> Path:
+    """Copy .plan/ folder to .submission/ folder.
+
+    Args:
+        worktree_path: Path to worktree directory
+
+    Returns:
+        Path to created .submission/ directory
+
+    Raises:
+        FileNotFoundError: If .plan/ folder doesn't exist
+        FileExistsError: If .submission/ folder already exists
+    """
+    plan_folder = worktree_path / ".plan"
+    submission_folder = worktree_path / ".submission"
+
+    if not plan_folder.exists():
+        raise FileNotFoundError(f"No .plan/ folder found at {worktree_path}")
+
+    if submission_folder.exists():
+        raise FileExistsError(f".submission/ folder already exists at {worktree_path}")
+
+    shutil.copytree(plan_folder, submission_folder)
+    return submission_folder
+
+
+def get_submission_path(worktree_path: Path) -> Path | None:
+    """Get path to .submission/ folder if it exists.
+
+    Args:
+        worktree_path: Path to worktree directory
+
+    Returns:
+        Path to .submission/ folder if exists, None otherwise
+    """
+    submission_folder = worktree_path / ".submission"
+    if submission_folder.exists() and submission_folder.is_dir():
+        return submission_folder
+    return None
+
+
+def remove_submission_folder(worktree_path: Path) -> None:
+    """Remove .submission/ folder if it exists.
+
+    Args:
+        worktree_path: Path to worktree directory
+    """
+    submission_folder = worktree_path / ".submission"
+    if submission_folder.exists():
+        shutil.rmtree(submission_folder)
 
 
 def _generate_progress_content(steps: list[str]) -> str:

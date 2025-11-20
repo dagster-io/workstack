@@ -1,6 +1,7 @@
 """Production implementation of GitHub operations."""
 
 import json
+import subprocess
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -377,3 +378,22 @@ query {{
         # Show output in verbose mode
         if verbose and result.stdout:
             user_output(result.stdout)
+
+    def trigger_workflow(
+        self,
+        repo_root: Path,
+        workflow: str,
+        inputs: dict[str, str],
+    ) -> None:
+        """Trigger GitHub Actions workflow via gh CLI."""
+        cmd = ["gh", "workflow", "run", workflow]
+        for key, value in inputs.items():
+            cmd.extend(["-f", f"{key}={value}"])
+
+        subprocess.run(
+            cmd,
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=True,
+        )

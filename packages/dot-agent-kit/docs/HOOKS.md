@@ -9,6 +9,9 @@ Hooks are automated triggers that run commands at specific lifecycle events in C
 ## Table of Contents
 
 - [Hook Architecture](#hook-architecture)
+- [Official Claude Code Hooks Capabilities](#official-claude-code-hooks-capabilities)
+- [Capabilities Not Yet Implemented](#capabilities-not-yet-implemented)
+- [dot-agent-kit vs Native Claude Code Hooks](#dot-agent-kit-vs-native-claude-code-hooks)
 - [Creating a New Hook](#creating-a-new-hook)
 - [Modifying Existing Hooks](#modifying-existing-hooks)
 - [Hook Configuration](#hook-configuration)
@@ -45,6 +48,119 @@ kit.yaml                    Installation                Runtime
 └──────────────┘           └─────────────┘           └──────────────┘
 ```
 
+## Official Claude Code Hooks Capabilities
+
+**Official Documentation**: [Claude Code Hooks Reference](https://code.claude.com/docs/en/hooks)
+
+Claude Code provides comprehensive hook capabilities beyond what dot-agent-kit currently implements:
+
+- **10 lifecycle events**: UserPromptSubmit, PreToolUse, PermissionRequest, PostToolUse, Notification, Stop, SubagentStop, PreCompact, SessionStart, SessionEnd
+- **Two hook types**: Command-based (shell commands) and prompt-based (LLM evaluation)
+- **Tool-specific matchers**: Target specific tools like Bash, Task, Grep, Read, Edit, Write, WebFetch, WebSearch, MCP tools
+- **Decision control via JSON**: Hooks can programmatically allow/deny/block operations and modify tool parameters via structured JSON responses
+- **Plugin hook system**: Advanced integration capabilities for complex workflows
+
+**Current dot-agent-kit implementation**:
+
+This package currently implements **command-based hooks only**, primarily using the `UserPromptSubmit` lifecycle event with file glob matchers (e.g., `*.py`, `*`). This covers the most common use case: providing contextual reminders and guidance when agents interact with specific file types.
+
+**For full capabilities**, see the official documentation. The architecture described in this guide is compatible with all Claude Code hook features, but dot-agent-kit's kit.yaml schema currently supports command-based hooks only.
+
+## Capabilities Not Yet Implemented
+
+The following Claude Code hook capabilities are **not yet supported** by dot-agent-kit:
+
+### Prompt-Based Hooks
+
+**What they are**: Hooks that use Claude Haiku to evaluate a prompt and return structured JSON decisions.
+
+**Example use case**: "Evaluate if this bash command is safe to run" - LLM analyzes command and returns allow/deny decision.
+
+**Why not yet implemented**: Requires additional kit.yaml schema fields for prompt configuration and response handling.
+
+### Tool-Specific Matchers
+
+**What they are**: Matchers that target specific tool executions (e.g., `Bash`, `Task`, `Grep`).
+
+**Example use case**: Hook that fires only before `Bash` tool use to validate shell commands.
+
+**Current workaround**: Use file glob matchers (`*`, `*.py`) which match based on context files, not tool execution.
+
+### Decision Control JSON
+
+**What it is**: Structured JSON responses from hooks that programmatically control tool execution:
+
+- `allow` - Permit operation with message
+- `deny` - Refuse operation silently
+- `block` - Refuse operation with error message
+- `updatedInput` - Modify tool parameters before execution
+
+**Example use case**: Hook that adds safety flags to dangerous commands or blocks operations on production files.
+
+**Current workaround**: Command-based hooks can only show reminders (exit 0) or blocking errors (exit 2), not modify parameters.
+
+### Additional Lifecycle Events
+
+**Currently supported**: `UserPromptSubmit` only
+
+**Not yet supported**:
+
+- `PreToolUse` - Before any tool execution (useful for validation)
+- `PermissionRequest` - Before permission dialogs (useful for auto-approval)
+- `PostToolUse` - After tool execution (useful for side effects)
+- `SessionStart` - At session initialization (useful for environment setup)
+- `SessionEnd` - At session termination (useful for cleanup)
+- `Stop`, `SubagentStop`, `PreCompact`, `Notification`
+
+**Why not yet implemented**: Kit.yaml schema currently only defines `lifecycle` field with `UserPromptSubmit` validation. Adding support requires schema expansion and testing for each lifecycle event's unique behavior.
+
+### Plugin Hook System
+
+**What it is**: Advanced hook integration capabilities for complex workflows and third-party tools.
+
+**Why not yet implemented**: Requires additional infrastructure beyond kit-based hook management.
+
+## dot-agent-kit vs Native Claude Code Hooks
+
+### Comparison Table
+
+| Feature               | dot-agent-kit                                                | Native Claude Code                                         |
+| --------------------- | ------------------------------------------------------------ | ---------------------------------------------------------- |
+| **Organization**      | Kit-based: hooks bundled with related skills/commands/agents | Manual: edit `.claude/settings.json` directly              |
+| **Installation**      | Atomic: `dot-agent kit install {kit}` installs all artifacts | Manual: copy/paste hook configuration                      |
+| **Removal**           | Atomic: `dot-agent kit remove {kit}` removes all artifacts   | Manual: delete hook entries from settings.json             |
+| **Metadata Tracking** | Tracked in `dot-agent.toml` with source information          | No metadata tracking                                       |
+| **Version Control**   | Hooks are code artifacts in repository                       | Configuration-only (settings.json)                         |
+| **Portability**       | Project-portable: kits work across projects                  | Must manually replicate per project                        |
+| **Hook Types**        | Command-based only (currently)                               | Command-based AND prompt-based                             |
+| **Lifecycle Events**  | UserPromptSubmit only (currently)                            | All 10 lifecycle events                                    |
+| **Matchers**          | File globs only (`*.py`, `*`)                                | File globs AND tool matchers (Bash, Task, etc.)            |
+| **Decision Control**  | Exit codes only (0 = show, 2 = block)                        | Full JSON decision control (allow/deny/block/updatedInput) |
+| **Use Cases**         | Kit-bundled hooks, project-shared patterns                   | Full control, all features, one-off hooks                  |
+
+### When to Use dot-agent-kit
+
+✅ **Use dot-agent-kit hooks when**:
+
+- Hooks are part of a reusable kit with related skills/commands
+- You want atomic installation/removal across projects
+- You need version control and metadata tracking
+- Standard command-based reminders are sufficient
+- Team collaboration: hooks should be shared via repository
+
+### When to Use Native Claude Code Hooks
+
+✅ **Use native hooks (manual settings.json) when**:
+
+- You need prompt-based hooks (LLM evaluation)
+- You need tool-specific matchers (Bash, Task, etc.)
+- You need decision control JSON (allow/deny/block/updatedInput)
+- You need lifecycle events beyond UserPromptSubmit
+- One-off hooks specific to your workflow
+- Maximum flexibility and control
+
+**Both approaches are compatible**: You can use dot-agent-kit hooks alongside manually-configured hooks. They all live in `.claude/settings.json` and work together.
+
 ## Creating a New Hook
 
 ### Step 1: Create Directory Structure
@@ -80,9 +196,9 @@ import click
 @click.command()
 def {function_name}() -> None:
     """Output {kit-name} reminder for UserPromptSubmit hook."""
-    click.echo("<reminder>")
-    click.echo("Your reminder text here")
-    click.echo("</reminder>")
+    click.echo("🔴 CRITICAL: Your reminder text here")
+    click.echo("")
+    click.echo("WHY: Brief explanation")
 
 
 if __name__ == "__main__":
@@ -92,9 +208,9 @@ if __name__ == "__main__":
 **Critical Requirements**:
 
 - Function name MUST match file name (snake_case)
-- MUST output `<reminder>` tags for Claude to display properly
 - Use `click.echo()` not `print()`
 - Keep logic simple - hooks run on every matching event
+- Output plain text (no special tags required)
 
 ### Step 3: Configure kit.yaml
 
@@ -221,10 +337,10 @@ Currently supported:
 # Test hook execution directly
 uv run dot-agent run {kit-name} {hook-name}
 
-# Should output:
-# <reminder>
-# Your reminder text
-# </reminder>
+# Should output plain text reminder:
+# 🔴 CRITICAL: Your reminder text here
+#
+# WHY: Brief explanation
 ```
 
 ### Verification Checklist
@@ -232,7 +348,7 @@ uv run dot-agent run {kit-name} {hook-name}
 - [ ] Hook appears in `dot-agent kit show {kit-name}`
 - [ ] Hook ID in `dot-agent.toml` matches kit.yaml
 - [ ] Hook configuration in `.claude/settings.json`
-- [ ] Direct execution produces `<reminder>` output
+- [ ] Direct execution produces expected output
 - [ ] Function name matches file name
 
 ### Testing in Claude Code
@@ -252,9 +368,14 @@ Most common pattern - provides contextual reminders:
 @click.command()
 def devrun_reminder_hook() -> None:
     """Output devrun agent reminder for UserPromptSubmit hook."""
-    click.echo("<reminder>")
-    click.echo("🛠️ Use devrun agent for pytest, pyright, ruff, prettier, make, gt commands")
-    click.echo("</reminder>")
+    click.echo(
+        "🔴 CRITICAL: For pytest/pyright/ruff/prettier/make/gt → MUST use devrun agent "
+        '(Task tool with subagent_type="devrun"), NOT direct Bash\n'
+        "\n"
+        "This includes uv run variants: uv run pytest, uv run pyright, uv run ruff, etc.\n"
+        "\n"
+        "WHY: Specialized parsing & cost efficiency"
+    )
 ```
 
 ### Conditional Output
@@ -266,14 +387,12 @@ For more complex scenarios:
 @click.option('--verbose', is_flag=True, help='Show detailed reminder')
 def conditional_hook(verbose: bool) -> None:
     """Output conditional reminder based on context."""
-    click.echo("<reminder>")
     if verbose:
-        click.echo("Detailed reminder with multiple lines")
+        click.echo("🔴 CRITICAL: Detailed reminder with multiple lines")
         click.echo("• Point 1")
         click.echo("• Point 2")
     else:
-        click.echo("Brief reminder")
-    click.echo("</reminder>")
+        click.echo("🔴 CRITICAL: Brief reminder")
 ```
 
 ### Multi-Kit Coordination
@@ -315,7 +434,7 @@ uv run dot-agent kit install {kit-name}
 | `No such command '{hook-name}'` | Function name mismatch  | Ensure function matches file name |
 | `Missing artifact`              | kit.yaml path incorrect | Verify path in kit_cli_commands   |
 | `Hook not in settings.json`     | Installation failed     | Remove and reinstall kit          |
-| `No <reminder> output`          | Missing tags in output  | Add `<reminder>` tags             |
+| `No output shown`               | Script error or timeout | Test hook script independently    |
 
 ## Best Practices
 
@@ -333,7 +452,6 @@ uv run dot-agent kit install {kit-name}
 - ❌ Forget either kit_cli_commands or hooks section
 - ❌ Include complex logic in hooks
 - ❌ Make network calls or slow operations
-- ❌ Output without `<reminder>` tags
 
 ## Related Documentation
 

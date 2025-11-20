@@ -461,9 +461,12 @@ Summary:
 - Context links added: [count]
 
 Next steps:
-1. Review the enhanced plan
-2. Create worktree: /erk:create-planned-wt [plan-file]
-3. Switch to worktree and implement
+1. Create worktree: /erk:create-planned-wt [plan-file]
+2. Start implementation with streamlined workflow:
+   - `erk checkout <branch> --implement` - Combines navigation and Claude Code launch (recommended)
+3. Or review the plan first:
+   - Review the enhanced plan
+   - Then manually run: `erk checkout <branch> && claude --permission-mode acceptEdits "/erk:implement-plan"`
 ```
 
 ### Step 7: Handle Errors

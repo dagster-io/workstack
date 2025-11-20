@@ -24,7 +24,8 @@ This command extracts a plan from conversation context, optionally applies guida
 **What happens AFTER (in separate commands):**
 
 - ⏭️ Create worktree: `/erk:create-planned-wt`
-- ⏭️ Navigate and implement: `erk checkout <branch> && claude --permission-mode acceptEdits "/erk:implement-plan"`
+- ⏭️ Navigate and implement: `erk checkout <branch> --implement` (streamlined, recommended)
+  - Or manually: `erk checkout <branch> && claude --permission-mode acceptEdits "/erk:implement-plan"` (if reviewing plan first)
 
 ## What Happens
 
@@ -1317,8 +1318,12 @@ Suggested action:
 
 You can now:
 
-1. Review and edit the plan file if needed
-2. Create the worktree: /erk:create-planned-wt
+1. **Create the worktree**: /erk:create-planned-wt
+2. **Start implementation** with streamlined workflow:
+   - `erk checkout <branch> --implement` - Combines navigation and Claude Code launch
+3. Or review the plan first:
+   - Edit the plan file if needed
+   - Then manually run: `erk checkout <branch> && claude --permission-mode acceptEdits "/erk:implement-plan"`
 
 ---
 

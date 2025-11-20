@@ -18,6 +18,328 @@ def escape_xml(text: str) -> str:
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
+def is_empty_session(entries: list[dict]) -> bool:
+    """Check if session contains only metadata with no meaningful content.
+
+    Empty sessions are characterized by:
+    - Fewer than 3 entries (too small to be meaningful)
+    - Only metadata/system entries without substantive interaction
+
+    Args:
+        entries: List of session entries to check
+
+    Returns:
+        True if session is empty/meaningless, False otherwise
+    """
+    if len(entries) < 3:
+        return True
+
+    # Check if there's any meaningful content
+    has_user_message = False
+    has_assistant_response = False
+
+    for entry in entries:
+        entry_type = entry.get("type")
+        if entry_type == "user":
+            content = entry.get("message", {}).get("content", "")
+            if isinstance(content, list):
+                text_parts = []
+                for block in content:
+                    if isinstance(block, dict) and block.get("type") == "text":
+                        text_parts.append(block.get("text", ""))
+                content = " ".join(text_parts)
+            if content and len(str(content).strip()) > 0:
+                has_user_message = True
+
+        elif entry_type == "assistant":
+            content_blocks = entry.get("message", {}).get("content", [])
+            for block in content_blocks:
+                if block.get("type") == "text" and block.get("text", "").strip():
+                    has_assistant_response = True
+                    break
+
+    # Session is empty if it lacks meaningful interaction
+    return not (has_user_message and has_assistant_response)
+
+
+def is_warmup_session(entries: list[dict]) -> bool:
+    """Check if session is a warmup containing only boilerplate acknowledgment.
+
+    Warmup sessions contain predictable patterns like:
+    - "I've reviewed"
+    - "I'm ready"
+    - "loaded the instructions"
+
+    Args:
+        entries: List of session entries to check
+
+    Returns:
+        True if session is a warmup, False otherwise
+    """
+    if not entries:
+        return False
+
+    # Look for warmup keyword in first user message
+    for entry in entries:
+        if entry.get("type") == "user":
+            content = entry.get("message", {}).get("content", "")
+            if isinstance(content, list):
+                text_parts = []
+                for block in content:
+                    if isinstance(block, dict) and block.get("type") == "text":
+                        text_parts.append(block.get("text", ""))
+                content = " ".join(text_parts)
+
+            content_lower = str(content).lower()
+            if "warmup" in content_lower:
+                return True
+            break
+
+    return False
+
+
+def deduplicate_documentation_blocks(entries: list[dict]) -> list[dict]:
+    """Replace duplicate command documentation blocks with marker text.
+
+    Command documentation can appear verbatim multiple times, consuming
+    significant tokens. This function detects duplicate blocks by content hash
+    and replaces them with a reference marker.
+
+    Args:
+        entries: List of session entries
+
+    Returns:
+        Modified entries with duplicate documentation replaced by markers
+    """
+    import hashlib
+
+    seen_docs: dict[str, int] = {}  # hash -> first occurrence count
+    occurrence_counter: dict[str, int] = {}  # hash -> current occurrence
+    deduplicated = []
+
+    for entry in entries:
+        if entry.get("type") == "user":
+            content = entry.get("message", {}).get("content", "")
+            if isinstance(content, list):
+                text_parts = []
+                for block in content:
+                    if isinstance(block, dict) and block.get("type") == "text":
+                        text_parts.append(block.get("text", ""))
+                content = " ".join(text_parts)
+
+            content_str = str(content)
+
+            # Detect command documentation by markers
+            is_doc = any(marker in content_str for marker in [
+                "/erk:create-enhanced-plan",
+                "/erk:persist-plan",
+                "/erk:implement-plan",
+                "/gt:submit-branch",
+                "/gt:update-pr",
+                "command-message>",
+                "command-name>",
+            ])
+
+            if is_doc and len(content_str) > 500:
+                # Hash the content
+                content_hash = hashlib.sha256(content_str.encode()).hexdigest()[:16]
+
+                if content_hash not in seen_docs:
+                    # First occurrence - keep it
+                    seen_docs[content_hash] = 1
+                    occurrence_counter[content_hash] = 1
+                    deduplicated.append(entry)
+                else:
+                    # Duplicate - replace with marker
+                    occurrence_counter[content_hash] += 1
+                    occurrence_num = occurrence_counter[content_hash]
+
+                    # Create marker entry
+                    marker_entry = entry.copy()
+                    marker_content = f"[Duplicate command documentation block omitted - hash {content_hash}, occurrence #{occurrence_num}]"
+
+                    # Preserve structure
+                    if isinstance(entry.get("message", {}).get("content"), list):
+                        marker_entry["message"] = {
+                            "content": [{"type": "text", "text": marker_content}]
+                        }
+                    else:
+                        marker_entry["message"] = {"content": marker_content}
+
+                    deduplicated.append(marker_entry)
+            else:
+                deduplicated.append(entry)
+        else:
+            deduplicated.append(entry)
+
+    return deduplicated
+
+
+def truncate_parameter_value(value: str, max_length: int = 200) -> str:
+    """Truncate long parameter values while preserving identifiability.
+
+    Special handling for file paths to preserve structure.
+
+    Args:
+        value: Parameter value to truncate
+        max_length: Maximum length (default 200)
+
+    Returns:
+        Truncated value with context markers
+    """
+    if len(value) <= max_length:
+        return value
+
+    # Detect file paths - check for path separators and no spaces
+    has_slash = "/" in value
+    has_no_spaces_early = " " not in value[:min(100, len(value))]
+
+    if has_slash and has_no_spaces_early:
+        # Likely a file path - preserve start and end structure
+        parts = value.split("/")
+        if len(parts) > 3:
+            # Build path keeping first 2 parts and last 2 parts
+            first_parts = "/".join(parts[:2])
+            last_parts = "/".join(parts[-2:])
+            return f"{first_parts}/.../{last_parts}"
+
+    # General text - keep beginning and end with marker
+    keep_chars = (max_length - 20) // 2
+    return f"{value[:keep_chars]}...[truncated {len(value) - max_length} chars]...{value[-keep_chars:]}"
+
+
+def truncate_tool_parameters(entries: list[dict]) -> list[dict]:
+    """Truncate verbose tool parameters to reduce token usage.
+
+    Tool parameters can be extremely long (20+ lines), especially prompts.
+    This function truncates them while preserving identifiability.
+
+    Args:
+        entries: List of session entries
+
+    Returns:
+        Modified entries with truncated parameters
+    """
+    truncated = []
+
+    for entry in entries:
+        if entry.get("type") == "assistant":
+            message = entry.get("message", {})
+            content_blocks = message.get("content", [])
+
+            modified_blocks = []
+            for block in content_blocks:
+                if block.get("type") == "tool_use":
+                    # Truncate input parameters
+                    input_params = block.get("input", {})
+                    truncated_params = {}
+                    for key, value in input_params.items():
+                        value_str = str(value)
+                        if len(value_str) > 200:
+                            truncated_params[key] = truncate_parameter_value(value_str)
+                        else:
+                            truncated_params[key] = value
+
+                    # Create modified block
+                    modified_block = block.copy()
+                    modified_block["input"] = truncated_params
+                    modified_blocks.append(modified_block)
+                else:
+                    modified_blocks.append(block)
+
+            # Update entry
+            modified_entry = entry.copy()
+            modified_entry["message"] = message.copy()
+            modified_entry["message"]["content"] = modified_blocks
+            truncated.append(modified_entry)
+        else:
+            truncated.append(entry)
+
+    return truncated
+
+
+def prune_tool_result_content(result_text: str) -> str:
+    """Prune verbose tool results to first 30 lines, preserving errors.
+
+    Tool results can be extremely long. This function keeps the first 30 lines
+    (which usually contain the most relevant context) and preserves any lines
+    containing error keywords.
+
+    Args:
+        result_text: Tool result text to prune
+
+    Returns:
+        Pruned result text with error preservation
+    """
+    lines = result_text.split("\n")
+
+    if len(lines) <= 30:
+        return result_text
+
+    # Keep first 30 lines
+    kept_lines = lines[:30]
+
+    # Scan remaining lines for errors
+    error_keywords = ["error", "exception", "failed", "failure", "fatal", "warning"]
+    error_lines = []
+
+    for line in lines[30:]:
+        line_lower = line.lower()
+        if any(keyword in line_lower for keyword in error_keywords):
+            error_lines.append(line)
+
+    # Combine
+    if error_lines:
+        result_lines = kept_lines + [f"\n... [{len(lines) - 30} lines omitted] ...\n"] + error_lines
+    else:
+        result_lines = kept_lines + [f"\n... [{len(lines) - 30} lines omitted] ..."]
+
+    return "\n".join(result_lines)
+
+
+def is_log_discovery_operation(entry: dict) -> bool:
+    """Check if entry is a log discovery bash command (pwd, ls, etc.).
+
+    These are implementation mechanics that don't provide semantic value
+    for plan enhancement.
+
+    Args:
+        entry: Session entry to check
+
+    Returns:
+        True if entry is a log discovery operation, False otherwise
+    """
+    if entry.get("type") != "assistant":
+        return False
+
+    content_blocks = entry.get("message", {}).get("content", [])
+
+    for block in content_blocks:
+        if block.get("type") == "tool_use":
+            tool_name = block.get("name", "")
+            if tool_name != "Bash":
+                continue
+
+            # Check command parameter
+            input_params = block.get("input", {})
+            command = input_params.get("command", "")
+
+            # Log discovery patterns
+            log_discovery_patterns = [
+                "pwd",
+                "ls ~/.claude/projects/",
+                "ls ~/.claude",
+                "find ~/.claude",
+                "echo $SESSION_ID",
+            ]
+
+            for pattern in log_discovery_patterns:
+                if pattern in command:
+                    return True
+
+    return False
+
+
 def deduplicate_assistant_messages(entries: list[dict]) -> list[dict]:
     """Remove duplicate assistant text when tool_use present."""
     deduplicated = []
@@ -45,8 +367,19 @@ def deduplicate_assistant_messages(entries: list[dict]) -> list[dict]:
     return deduplicated
 
 
-def generate_compressed_xml(entries: list[dict], source_label: str | None = None) -> str:
-    """Generate coarse-grained XML from filtered entries."""
+def generate_compressed_xml(
+    entries: list[dict], source_label: str | None = None, enable_pruning: bool = True
+) -> str:
+    """Generate coarse-grained XML from filtered entries.
+
+    Args:
+        entries: List of session entries to convert to XML
+        source_label: Optional label for agent logs
+        enable_pruning: Whether to prune tool results (default: True)
+
+    Returns:
+        XML string representation of the session
+    """
     xml_lines = ["<session>"]
 
     # Add source label if provided (for agent logs)
@@ -101,7 +434,7 @@ def generate_compressed_xml(entries: list[dict], source_label: str | None = None
                     xml_lines.append("  </tool_use>")
 
         elif entry_type == "tool_result":
-            # Handle tool results - preserve verbosity
+            # Handle tool results - apply pruning if enabled
             content_blocks = message.get("content", [])
             tool_use_id = message.get("tool_use_id", "")
 
@@ -117,6 +450,11 @@ def generate_compressed_xml(entries: list[dict], source_label: str | None = None
                     result_parts.append(block)
 
             result_text = "\n".join(result_parts)
+
+            # Apply pruning if enabled
+            if enable_pruning:
+                result_text = prune_tool_result_content(result_text)
+
             xml_lines.append(f'  <tool_result tool="{escape_xml(tool_use_id)}">')
             xml_lines.append(escape_xml(result_text))
             xml_lines.append("  </tool_result>")
@@ -126,7 +464,10 @@ def generate_compressed_xml(entries: list[dict], source_label: str | None = None
 
 
 def process_log_file(
-    log_path: Path, session_id: str | None = None, source_label: str | None = None
+    log_path: Path,
+    session_id: str | None = None,
+    source_label: str | None = None,
+    enable_filtering: bool = True,
 ) -> tuple[list[dict], int, int]:
     """Process a single JSONL log file and return filtered entries.
 
@@ -134,6 +475,7 @@ def process_log_file(
         log_path: Path to the JSONL log file
         session_id: Optional session ID to filter entries by
         source_label: Optional label for agent logs
+        enable_filtering: Whether to apply optimization filters (default: True)
 
     Returns:
         Tuple of (filtered entries, total entries count, skipped entries count)
@@ -159,6 +501,10 @@ def process_log_file(
 
         # Filter out noise entries
         if entry.get("type") == "file-history-snapshot":
+            continue
+
+        # Filter log discovery operations if filtering enabled
+        if enable_filtering and is_log_discovery_operation(entry):
             continue
 
         # Keep minimal fields but preserve gitBranch for metadata extraction
@@ -200,19 +546,63 @@ def discover_agent_logs(session_log_path: Path) -> list[Path]:
     default=True,
     help="Include agent logs from same directory (default: True)",
 )
-def preprocess_session(log_path: Path, session_id: str | None, include_agents: bool) -> None:
+@click.option(
+    "--no-filtering",
+    is_flag=True,
+    help="Disable all filtering optimizations (raw output)",
+)
+def preprocess_session(
+    log_path: Path, session_id: str | None, include_agents: bool, no_filtering: bool
+) -> None:
     """Preprocess session log JSONL to compressed XML format.
 
     By default, automatically discovers and includes agent logs (agent-*.jsonl)
     from the same directory as the main session log.
 
+    All optimization filters are enabled by default for maximum token reduction:
+    - Empty session filtering
+    - Warmup session filtering
+    - Documentation deduplication
+    - Parameter truncation
+    - Tool result pruning
+    - Log discovery operation filtering
+
+    Use --no-filtering to disable all optimizations and get raw output.
+
     Args:
         log_path: Path to the main session JSONL file
         session_id: Optional session ID to filter entries by
         include_agents: Whether to include agent logs
+        no_filtering: Disable all filtering optimizations
     """
+    enable_filtering = not no_filtering
+
     # Process main session log
-    entries, total_entries, skipped_entries = process_log_file(log_path, session_id=session_id)
+    entries, total_entries, skipped_entries = process_log_file(
+        log_path, session_id=session_id, enable_filtering=enable_filtering
+    )
+
+    # Track original size before filtering
+    original_entry_count = len(entries)
+
+    # Apply filtering operations if enabled
+    if enable_filtering:
+        # Check for empty/warmup sessions
+        if is_empty_session(entries):
+            click.echo("⚠️  Empty session detected - skipping output", err=True)
+            return
+
+        if is_warmup_session(entries):
+            click.echo("⚠️  Warmup session detected - skipping output", err=True)
+            return
+
+        # Apply documentation deduplication
+        entries = deduplicate_documentation_blocks(entries)
+
+        # Apply parameter truncation
+        entries = truncate_tool_parameters(entries)
+
+    # Apply standard deduplication (always enabled)
     entries = deduplicate_assistant_messages(entries)
 
     # Show diagnostic output if filtering by session ID
@@ -225,24 +615,48 @@ def preprocess_session(log_path: Path, session_id: str | None, include_agents: b
         )
 
     # Generate main session XML
-    xml_sections = [generate_compressed_xml(entries)]
+    xml_sections = [generate_compressed_xml(entries, enable_pruning=enable_filtering)]
 
     # Discover and process agent logs if requested
     if include_agents:
         agent_logs = discover_agent_logs(log_path)
         for agent_log in agent_logs:
             agent_entries, agent_total, agent_skipped = process_log_file(
-                agent_log, session_id=session_id
+                agent_log, session_id=session_id, enable_filtering=enable_filtering
             )
+
+            # Apply filtering for agent logs
+            if enable_filtering:
+                if is_empty_session(agent_entries):
+                    continue
+                if is_warmup_session(agent_entries):
+                    continue
+                agent_entries = deduplicate_documentation_blocks(agent_entries)
+                agent_entries = truncate_tool_parameters(agent_entries)
+
             agent_entries = deduplicate_assistant_messages(agent_entries)
 
             # Generate XML with source label
             source_label = f"agent-{agent_log.stem.replace('agent-', '')}"
-            agent_xml = generate_compressed_xml(agent_entries, source_label=source_label)
+            agent_xml = generate_compressed_xml(
+                agent_entries, source_label=source_label, enable_pruning=enable_filtering
+            )
             xml_sections.append(agent_xml)
 
     # Combine all XML sections
     xml_content = "\n\n".join(xml_sections)
+
+    # Calculate compression metrics (only when filtering is enabled)
+    if enable_filtering:
+        original_size = sum(len(log_path.read_text(encoding="utf-8")) for _ in [log_path])
+        compressed_size = len(xml_content)
+        if original_size > 0:
+            reduction_pct = ((original_size - compressed_size) / original_size) * 100
+            click.echo(
+                f"📉 Token reduction: {reduction_pct:.1f}% "
+                f"({original_size:,} → {compressed_size:,} chars)",
+                err=True,
+            )
 
     # Write to temp file and print path
     # Use NamedTemporaryFile to avoid conflicts when multiple tests use same filename

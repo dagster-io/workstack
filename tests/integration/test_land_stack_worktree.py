@@ -11,13 +11,13 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.branch_metadata import BranchMetadata
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
 from erk.core.git.real import RealGit
 from tests.fakes.github import FakeGitHub
 from tests.fakes.graphite import FakeGraphite
 from tests.fakes.shell import FakeShell
+from tests.test_utils.builders import BranchStackBuilder
 
 
 def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> None:
@@ -122,10 +122,7 @@ def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> No
         git_ops = RealGit()
 
         graphite_ops = FakeGraphite(
-            branches={
-                "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
-                "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
-            },
+            branches=BranchStackBuilder().add_linear_stack("feat-1").build(),
             stacks={
                 "feat-1": ["main", "feat-1"],
             },
@@ -270,10 +267,7 @@ def test_land_stack_with_trunk_in_worktree(tmp_path: Path) -> None:
         git_ops = RealGit()
 
         graphite_ops = FakeGraphite(
-            branches={
-                "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
-                "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
-            },
+            branches=BranchStackBuilder().add_linear_stack("feat-1").build(),
             stacks={
                 "feat-1": ["main", "feat-1"],
             },
@@ -431,10 +425,7 @@ def test_land_stack_leaves_root_on_trunk(tmp_path: Path) -> None:
         git_ops = RealGit()
 
         graphite_ops = FakeGraphite(
-            branches={
-                "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
-                "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
-            },
+            branches=BranchStackBuilder().add_linear_stack("feat-1").build(),
             stacks={
                 "feat-1": ["main", "feat-1"],
             },

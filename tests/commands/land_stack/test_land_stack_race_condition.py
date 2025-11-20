@@ -23,7 +23,7 @@ from tests.fakes.git import FakeGit
 from tests.fakes.github import FakeGitHub
 from tests.fakes.graphite import FakeGraphite
 from tests.fakes.shell import FakeShell
-from tests.test_utils.builders import PullRequestInfoBuilder
+from tests.test_utils.builders import BranchStackBuilder, PullRequestInfoBuilder
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
@@ -79,10 +79,7 @@ def test_land_stack_detects_and_updates_stale_pr_base() -> None:
         # Configure Graphite metadata
         # After landing feat-1, the stack should look like: main -> feat-2
         graphite_ops = FakeGraphite(
-            branches={
-                "main": BranchMetadata.trunk("main", children=["feat-2"]),
-                "feat-2": BranchMetadata.branch("feat-2", parent="main"),
-            },
+            branches=BranchStackBuilder().add_linear_stack("feat-2").build(),
             stacks={
                 "feat-2": ["main", "feat-2"],
             },
@@ -173,10 +170,7 @@ def test_land_stack_skips_update_when_pr_base_already_correct() -> None:
         )
 
         graphite_ops = FakeGraphite(
-            branches={
-                "main": BranchMetadata.trunk("main", children=["feat-1"]),
-                "feat-1": BranchMetadata.branch("feat-1", parent="main"),
-            },
+            branches=BranchStackBuilder().add_linear_stack("feat-1").build(),
             stacks={
                 "feat-1": ["main", "feat-1"],
             },

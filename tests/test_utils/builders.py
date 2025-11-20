@@ -236,6 +236,7 @@ class PullRequestInfoBuilder:
             state=self.state,
             url=f"https://github.com/{self.owner}/{self.repo}/pull/{self.number}",
             is_draft=self.is_draft,
+            title=f"PR #{self.number}: {self.branch}",
             checks_passing=self.checks_passing,
             owner=self.owner,
             repo=self.repo,

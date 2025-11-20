@@ -42,6 +42,19 @@ class FakeGitHub(GitHub):
         if pr_statuses is not None:
             # Convert legacy pr_statuses format to PullRequestInfo
             self._prs = {}
+            for branch, (state, pr_number, title) in pr_statuses.items():
+                if pr_number is not None:
+                    self._prs[branch] = PullRequestInfo(
+                        number=pr_number,
+                        state=state if state != "NONE" else "OPEN",
+                        url=f"https://github.com/owner/repo/pull/{pr_number}",
+                        is_draft=False,
+                        title=title,
+                        checks_passing=None,
+                        owner="owner",
+                        repo="repo",
+                        has_conflicts=None,
+                    )
             self._pr_statuses = pr_statuses
         else:
             self._prs = prs or {}
@@ -71,7 +84,6 @@ class FakeGitHub(GitHub):
         """Get PR status from configured PRs.
 
         Returns PRInfo("NONE", None, None) if branch not found.
-        Note: Returns URL in place of title since PullRequestInfo has no title field.
         """
         # Support legacy pr_statuses format
         if self._pr_statuses is not None:
@@ -87,10 +99,9 @@ class FakeGitHub(GitHub):
         pr = self._prs.get(branch)
         if pr is None:
             return PRInfo("NONE", None, None)
-        # PullRequestInfo has: number, state, url, is_draft, checks_passing
-        # But get_pr_status expects: state, number, title
-        # Using url as title since PullRequestInfo doesn't have a title field
-        return PRInfo(cast(PRState, pr.state), pr.number, pr.url)
+        # PullRequestInfo has: number, state, url, is_draft, title, checks_passing
+        # Return state, number, and title as expected by PRInfo
+        return PRInfo(cast(PRState, pr.state), pr.number, pr.title)
 
     def get_pr_base_branch(self, repo_root: Path, pr_number: int) -> str | None:
         """Get current base branch of a PR from configured state.

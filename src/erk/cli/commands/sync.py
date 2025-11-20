@@ -4,6 +4,7 @@ from pathlib import Path
 
 import click
 
+from dot_agent_kit.cli.progress import command_status
 from erk.cli.commands.delete import _delete_worktree
 from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output
@@ -165,14 +166,29 @@ def sync_cmd(
     # Step 5: Identify deletable erks
     worktrees = ctx.git.list_worktrees(repo.root)
 
-    # Fetch PR status for all branches
+    # Fetch PR status for all branches in one batch call
+    with command_status("Checking PR status"):
+        all_prs = ctx.github.get_prs_for_repo(repo.root, include_checks=False)
+
     pr_statuses: dict[str, PRStatus] = {}
     for wt in worktrees:
         if wt.branch is not None:
-            state, pr_number, title = ctx.github.get_pr_status(repo.root, wt.branch, debug=False)
-            pr_statuses[wt.branch] = PRStatus(
-                branch=wt.branch, state=state, pr_number=pr_number, title=title
-            )
+            if wt.branch in all_prs:
+                pr = all_prs[wt.branch]
+                pr_statuses[wt.branch] = PRStatus(
+                    branch=wt.branch,
+                    state=pr.state,
+                    pr_number=pr.number,
+                    title=pr.title,
+                )
+            else:
+                # No PR found for this branch
+                pr_statuses[wt.branch] = PRStatus(
+                    branch=wt.branch,
+                    state="NONE",
+                    pr_number=None,
+                    title=None,
+                )
 
     # Identify deletable worktrees using pure business logic
     deletable = identify_deletable_worktrees(worktrees, pr_statuses, repo.root, repo.worktrees_dir)

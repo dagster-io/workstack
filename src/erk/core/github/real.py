@@ -43,7 +43,7 @@ class RealGitHub(GitHub):
         """
         try:
             # Build JSON fields list - conditionally include statusCheckRollup for performance
-            json_fields = "number,headRefName,url,state,isDraft"
+            json_fields = "number,headRefName,url,state,isDraft,title"
             if include_checks:
                 json_fields += ",statusCheckRollup"
 

@@ -68,6 +68,7 @@ def parse_graphite_pr_info(json_str: str) -> dict[str, PullRequestInfo]:
             state=pr["state"],
             url=github_url,
             is_draft=pr["isDraft"],
+            title=pr.get("title"),  # Title not available from Graphite cache
             checks_passing=None,  # CI status not available from Graphite cache
             owner=owner,
             repo=repo,

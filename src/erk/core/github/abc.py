@@ -114,3 +114,19 @@ class GitHub(ABC):
             verbose: If True, show detailed output
         """
         ...
+
+    @abstractmethod
+    def trigger_workflow(
+        self,
+        repo_root: Path,
+        workflow: str,
+        inputs: dict[str, str],
+    ) -> None:
+        """Trigger a GitHub Actions workflow via gh CLI.
+
+        Args:
+            repo_root: Repository root directory
+            workflow: Workflow filename (e.g., "implement-plan.yml")
+            inputs: Workflow inputs as key-value pairs
+        """
+        ...

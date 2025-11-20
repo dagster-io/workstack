@@ -307,7 +307,52 @@ After completing all implementation steps:
 
 4. **Address any failures** by returning to relevant implementation steps
 
-### Step 9: Output Format
+### Step 9: Run CI and Fix Issues Iteratively (if .submission/ present)
+
+**CRITICAL: Only run this step if working in a .submission/ folder (not .plan/)**
+
+Check if current directory contains `.submission/` folder:
+
+- If yes: This is a remote submission, run iterative CI
+- If no: This is local implementation, skip to Step 11
+
+**Iterative CI Process (max 5 attempts):**
+
+For each attempt:
+
+1. Run the fast CI checks: `/fast-ci` (unit tests + pyright)
+2. If all checks pass: Break out of loop, proceed to cleanup
+3. If checks fail: Read the error output carefully
+4. Analyze the failures and fix them
+5. Increment attempt counter
+6. If max attempts reached: Exit with error, DO NOT proceed
+
+**After CI passes (or if .plan/ folder):**
+
+If in .submission/ folder:
+
+1. Delete .submission/ folder: `rm -rf .submission/`
+2. Stage deletion: `git add .submission/`
+3. Commit: `git commit -m "Clean up submission artifacts after implementation"`
+4. Push: `git push`
+
+If in .plan/ folder:
+
+1. DO NOT delete .plan/
+2. DO NOT auto-commit
+3. Leave changes for user review
+
+### Step 10: Create/Update PR (if .submission/ present)
+
+**Only if .submission/ was present:**
+
+Use gh CLI to create or update PR:
+
+```bash
+gh pr create --fill --label "ai-generated" || gh pr edit --add-label "ai-generated"
+```
+
+### Step 11: Output Format
 
 Structure your output clearly:
 

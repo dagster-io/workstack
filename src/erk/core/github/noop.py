@@ -64,3 +64,13 @@ class NoopGitHub(GitHub):
         """No-op for merging PR in dry-run mode."""
         # Do nothing - prevents actual PR merge
         pass
+
+    def trigger_workflow(
+        self,
+        repo_root: Path,
+        workflow: str,
+        inputs: dict[str, str],
+    ) -> None:
+        """No-op for triggering workflow in dry-run mode."""
+        # Do nothing - prevents actual workflow trigger
+        pass

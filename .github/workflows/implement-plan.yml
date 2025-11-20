@@ -1,0 +1,63 @@
+name: Implement Plan
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch-name:
+        description: 'Branch name to implement'
+        required: true
+  push:
+    branches:
+      - '**'
+    paths:
+      - '.submission/**'
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch-name || github.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for submission
+        id: check_submission
+        run: |
+          if [ -d ".submission" ]; then
+            echo "has_submission=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_submission=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup environment
+        if: steps.check_submission.outputs.has_submission == 'true'
+        run: |
+          # Install uv
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          source $HOME/.cargo/env
+
+          # Install erk
+          cd $GITHUB_WORKSPACE
+          uv tool install --from . erk
+
+          # Install Claude Code
+          npm install -g @anthropic-ai/claude-code
+
+          # Install erk kit for Claude Code
+          dot-agent kit install erk
+
+      - name: Configure git
+        if: steps.check_submission.outputs.has_submission == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Run implementation with CI loop
+        if: steps.check_submission.outputs.has_submission == 'true'
+        run: |
+          dot-agent command "/erk:implement-plan" \
+            --permission-mode dangerouslySkipPermissions
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

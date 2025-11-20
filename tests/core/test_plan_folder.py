@@ -5,11 +5,14 @@ from pathlib import Path
 import pytest
 
 from erk.core.plan_folder import (
+    copy_plan_to_submission,
     create_plan_folder,
     extract_steps_from_plan,
     get_plan_path,
     get_progress_path,
+    get_submission_path,
     parse_progress_frontmatter,
+    remove_submission_folder,
     update_progress,
     update_progress_frontmatter,
 )
@@ -424,3 +427,103 @@ def test_update_progress_frontmatter_no_file(tmp_path: Path) -> None:
     """Test updating front matter when file doesn't exist does nothing."""
     # Should not raise error
     update_progress_frontmatter(tmp_path, 1, 2)
+
+
+def test_copy_plan_to_submission_success(tmp_path: Path) -> None:
+    """Test copying .plan/ folder to .submission/ folder."""
+    # Create .plan/ folder with content
+    plan_content = "# Test Plan\n\n1. Step one\n2. Step two"
+    plan_folder = create_plan_folder(tmp_path, plan_content)
+
+    # Verify .plan/ exists
+    assert plan_folder.exists()
+    assert (plan_folder / "plan.md").exists()
+    assert (plan_folder / "progress.md").exists()
+
+    # Copy to .submission/
+    submission_folder = copy_plan_to_submission(tmp_path)
+
+    # Verify .submission/ exists and has same content
+    assert submission_folder.exists()
+    assert submission_folder == tmp_path / ".submission"
+    assert (submission_folder / "plan.md").exists()
+    assert (submission_folder / "progress.md").exists()
+
+    # Verify content matches
+    assert (submission_folder / "plan.md").read_text(encoding="utf-8") == plan_content
+    assert (submission_folder / "progress.md").exists()
+
+
+def test_copy_plan_to_submission_no_plan(tmp_path: Path) -> None:
+    """Test copy_plan_to_submission raises error when no .plan/ folder exists."""
+    # No .plan/ folder created
+    with pytest.raises(FileNotFoundError, match="No .plan/ folder found"):
+        copy_plan_to_submission(tmp_path)
+
+
+def test_copy_plan_to_submission_already_exists(tmp_path: Path) -> None:
+    """Test copy_plan_to_submission raises error when .submission/ already exists."""
+    # Create .plan/ folder
+    plan_content = "# Test Plan\n\n1. Step"
+    create_plan_folder(tmp_path, plan_content)
+
+    # Create .submission/ folder manually
+    submission_folder = tmp_path / ".submission"
+    submission_folder.mkdir()
+
+    # Try to copy - should raise error
+    with pytest.raises(FileExistsError, match=".submission/ folder already exists"):
+        copy_plan_to_submission(tmp_path)
+
+
+def test_get_submission_path_exists(tmp_path: Path) -> None:
+    """Test get_submission_path returns path when .submission/ exists."""
+    # Create .plan/ and copy to .submission/
+    plan_content = "# Test Plan\n\n1. Step"
+    create_plan_folder(tmp_path, plan_content)
+    copy_plan_to_submission(tmp_path)
+
+    # Get submission path
+    submission_path = get_submission_path(tmp_path)
+
+    assert submission_path is not None
+    assert submission_path == tmp_path / ".submission"
+    assert submission_path.exists()
+
+
+def test_get_submission_path_not_exists(tmp_path: Path) -> None:
+    """Test get_submission_path returns None when .submission/ doesn't exist."""
+    submission_path = get_submission_path(tmp_path)
+    assert submission_path is None
+
+
+def test_remove_submission_folder_exists(tmp_path: Path) -> None:
+    """Test remove_submission_folder removes .submission/ folder."""
+    # Create .plan/ and copy to .submission/
+    plan_content = "# Test Plan\n\n1. Step"
+    create_plan_folder(tmp_path, plan_content)
+    copy_plan_to_submission(tmp_path)
+
+    # Verify .submission/ exists
+    submission_folder = tmp_path / ".submission"
+    assert submission_folder.exists()
+
+    # Remove .submission/
+    remove_submission_folder(tmp_path)
+
+    # Verify .submission/ is gone
+    assert not submission_folder.exists()
+
+    # Verify .plan/ still exists
+    plan_folder = tmp_path / ".plan"
+    assert plan_folder.exists()
+
+
+def test_remove_submission_folder_not_exists(tmp_path: Path) -> None:
+    """Test remove_submission_folder does nothing when .submission/ doesn't exist."""
+    # Should not raise error
+    remove_submission_folder(tmp_path)
+
+    # Verify still doesn't exist
+    submission_folder = tmp_path / ".submission"
+    assert not submission_folder.exists()

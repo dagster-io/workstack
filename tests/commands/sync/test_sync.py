@@ -70,11 +70,7 @@ def test_sync_runs_gt_sync_from_root() -> None:
     with erk_inmem_env(runner) as env:
         git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                ],
-            },
+            worktrees=env.build_worktrees("main"),
         )
 
         graphite_ops = FakeGraphite()
@@ -109,11 +105,7 @@ def test_sync_with_force_flag() -> None:
     with erk_inmem_env(runner) as env:
         git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                ],
-            },
+            worktrees=env.build_worktrees("main"),
         )
 
         graphite_ops = FakeGraphite()
@@ -147,11 +139,7 @@ def test_sync_handles_gt_not_installed() -> None:
     with erk_inmem_env(runner) as env:
         git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                ],
-            },
+            worktrees=env.build_worktrees("main"),
         )
 
         # Configure graphite_ops to raise FileNotFoundError
@@ -181,11 +169,7 @@ def test_sync_handles_gt_sync_failure() -> None:
     with erk_inmem_env(runner) as env:
         git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                ],
-            },
+            worktrees=env.build_worktrees("main"),
         )
 
         # Configure graphite_ops to raise CalledProcessError
@@ -212,22 +196,9 @@ def test_sync_identifies_deletable_erks() -> None:
     """Test that sync identifies merged/closed erks."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_name = env.cwd.name
-        repo_dir = env.erk_root / "repos" / repo_name
-
-        # Define worktree paths (sentinel paths, no mkdir needed)
-        wt1 = repo_dir / "worktrees" / "feature-1"
-        wt2 = repo_dir / "worktrees" / "feature-2"
-
         git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=wt1, branch="feature-1"),
-                    WorktreeInfo(path=wt2, branch="feature-2"),
-                ],
-            },
+            worktrees=env.build_worktrees("main", ["feature-1", "feature-2"]),
         )
 
         graphite_ops = FakeGraphite()
@@ -268,11 +239,7 @@ def test_sync_no_deletable_erks() -> None:
     with erk_inmem_env(runner) as env:
         git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                ],
-            },
+            worktrees=env.build_worktrees("main"),
         )
 
         graphite_ops = FakeGraphite()
@@ -298,20 +265,9 @@ def test_sync_with_confirmation() -> None:
     """Test sync with user confirmation."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_name = env.cwd.name
-        repo_dir = env.erk_root / "repos" / repo_name
-
-        # Define worktree path (sentinel path, no mkdir needed)
-        wt1 = repo_dir / "worktrees" / "feature-1"
-
         git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=wt1, branch="feature-1"),
-                ],
-            },
+            worktrees=env.build_worktrees("main", ["feature-1"]),
         )
 
         graphite_ops = FakeGraphite()
@@ -340,19 +296,9 @@ def test_sync_user_cancels() -> None:
     """Test sync when user cancels."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_name = env.cwd.name
-        repo_dir = env.erk_root / "repos" / repo_name
-
-        wt1 = repo_dir / "worktrees" / "feature-1"
-
         git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=wt1, branch="feature-1"),
-                ],
-            },
+            worktrees=env.build_worktrees("main", ["feature-1"]),
         )
 
         graphite_ops = FakeGraphite()
@@ -382,19 +328,9 @@ def test_sync_force_skips_confirmation() -> None:
     """Test sync -f skips confirmation."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_name = env.cwd.name
-        repo_dir = env.erk_root / "repos" / repo_name
-
-        wt1 = repo_dir / "worktrees" / "feature-1"
-
         git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=wt1, branch="feature-1"),
-                ],
-            },
+            worktrees=env.build_worktrees("main", ["feature-1"]),
         )
 
         graphite_ops = FakeGraphite()
@@ -423,19 +359,9 @@ def test_sync_dry_run() -> None:
     """Test sync --dry-run shows operations without executing."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_name = env.cwd.name
-        repo_dir = env.erk_root / "repos" / repo_name
-
-        wt1 = repo_dir / "worktrees" / "feature-1"
-
         git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=wt1, branch="feature-1"),
-                ],
-            },
+            worktrees=env.build_worktrees("main", ["feature-1"]),
         )
 
         graphite_ops = FakeGraphite()
@@ -774,11 +700,7 @@ def test_sync_force_no_deletable_single_sync() -> None:
     with erk_inmem_env(runner) as env:
         git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                ],
-            },
+            worktrees=env.build_worktrees("main"),
         )
 
         graphite_ops = FakeGraphite()
@@ -816,24 +738,9 @@ def test_sync_uses_batch_pr_fetch() -> None:
     """
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_name = env.cwd.name
-        repo_dir = env.erk_root / "repos" / repo_name
-
-        # Define multiple worktrees to test batching behavior
-        wt1 = repo_dir / "worktrees" / "feature-1"
-        wt2 = repo_dir / "worktrees" / "feature-2"
-        wt3 = repo_dir / "worktrees" / "feature-3"
-
         git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=wt1, branch="feature-1"),
-                    WorktreeInfo(path=wt2, branch="feature-2"),
-                    WorktreeInfo(path=wt3, branch="feature-3"),
-                ],
-            },
+            worktrees=env.build_worktrees("main", ["feature-1", "feature-2", "feature-3"]),
         )
 
         graphite_ops = FakeGraphite()
@@ -884,11 +791,7 @@ def test_sync_verbose_flag() -> None:
     with erk_inmem_env(runner) as env:
         git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                ],
-            },
+            worktrees=env.build_worktrees("main"),
         )
 
         graphite_ops = FakeGraphite()
@@ -922,11 +825,7 @@ def test_sync_verbose_short_flag() -> None:
     with erk_inmem_env(runner) as env:
         git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                ],
-            },
+            worktrees=env.build_worktrees("main"),
         )
 
         graphite_ops = FakeGraphite()
@@ -959,11 +858,7 @@ def test_sync_force_verbose_combination() -> None:
     with erk_inmem_env(runner) as env:
         git_ops = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                ],
-            },
+            worktrees=env.build_worktrees("main"),
         )
 
         graphite_ops = FakeGraphite()

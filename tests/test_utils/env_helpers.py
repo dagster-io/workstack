@@ -180,6 +180,59 @@ class ErkIsolatedFsEnv:
 
         return repo_dir
 
+    def build_worktrees(
+        self,
+        root_branch: str = "main",
+        linked_branches: list[str] | None = None,
+        *,
+        repo_dir: Path | None = None,
+    ) -> dict[Path, list[WorktreeInfo]]:
+        """Build standard worktree configuration for test scenarios.
+
+        Creates a worktree list with:
+        - Root worktree at self.cwd with specified branch
+        - Linked worktrees in repo_dir/{branch} for each linked branch
+
+        Args:
+            root_branch: Branch name for root worktree (default: "main")
+            linked_branches: List of linked worktree branches (default: [])
+            repo_dir: Base directory for linked worktrees (default: auto-calculated)
+
+        Returns:
+            Dict mapping repo root to list of WorktreeInfo instances
+
+        Example:
+            >>> # Before (10-15 lines):
+            >>> worktrees = {
+            ...     env.cwd: [
+            ...         WorktreeInfo(path=env.cwd, branch="main", is_root=True),
+            ...         WorktreeInfo(
+            ...             path=repo_dir / "worktrees" / "feat-1", branch="feat-1", is_root=False
+            ...         ),
+            ...         WorktreeInfo(
+            ...             path=repo_dir / "worktrees" / "feat-2", branch="feat-2", is_root=False
+            ...         ),
+            ...     ]
+            ... }
+            >>> # After (1 line):
+            >>> worktrees = env.build_worktrees("main", ["feat-1", "feat-2"])
+        """
+        if repo_dir is None:
+            repo_dir = self.erk_root / "repos" / self.cwd.name
+
+        worktrees = [WorktreeInfo(path=self.cwd, branch=root_branch, is_root=True)]
+
+        for branch in linked_branches or []:
+            worktrees.append(
+                WorktreeInfo(
+                    path=repo_dir / "worktrees" / branch,
+                    branch=branch,
+                    is_root=False,
+                )
+            )
+
+        return {self.cwd: worktrees}
+
     def create_linked_worktree(self, name: str, branch: str, *, chdir: bool) -> Path:
         """Create a linked worktree in erks directory.
 
@@ -674,6 +727,59 @@ class ErkInMemEnv:
             config_toml.write_text("", encoding="utf-8")
 
         return repo_dir
+
+    def build_worktrees(
+        self,
+        root_branch: str = "main",
+        linked_branches: list[str] | None = None,
+        *,
+        repo_dir: Path | None = None,
+    ) -> dict[Path, list[WorktreeInfo]]:
+        """Build standard worktree configuration for test scenarios.
+
+        Creates a worktree list with:
+        - Root worktree at self.cwd with specified branch
+        - Linked worktrees in repo_dir/{branch} for each linked branch
+
+        Args:
+            root_branch: Branch name for root worktree (default: "main")
+            linked_branches: List of linked worktree branches (default: [])
+            repo_dir: Base directory for linked worktrees (default: auto-calculated)
+
+        Returns:
+            Dict mapping repo root to list of WorktreeInfo instances
+
+        Example:
+            >>> # Before (10-15 lines):
+            >>> worktrees = {
+            ...     env.cwd: [
+            ...         WorktreeInfo(path=env.cwd, branch="main", is_root=True),
+            ...         WorktreeInfo(
+            ...             path=repo_dir / "worktrees" / "feat-1", branch="feat-1", is_root=False
+            ...         ),
+            ...         WorktreeInfo(
+            ...             path=repo_dir / "worktrees" / "feat-2", branch="feat-2", is_root=False
+            ...         ),
+            ...     ]
+            ... }
+            >>> # After (1 line):
+            >>> worktrees = env.build_worktrees("main", ["feat-1", "feat-2"])
+        """
+        if repo_dir is None:
+            repo_dir = self.erk_root / "repos" / self.cwd.name
+
+        worktrees = [WorktreeInfo(path=self.cwd, branch=root_branch, is_root=True)]
+
+        for branch in linked_branches or []:
+            worktrees.append(
+                WorktreeInfo(
+                    path=repo_dir / "worktrees" / branch,
+                    branch=branch,
+                    is_root=False,
+                )
+            )
+
+        return {self.cwd: worktrees}
 
     def build_context(
         self,

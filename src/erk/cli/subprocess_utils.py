@@ -1,4 +1,13 @@
-"""Utilities for running subprocesses with better error reporting."""
+"""Utilities for running subprocesses with better error reporting.
+
+This module provides CLI-layer subprocess execution with user-friendly error output.
+
+For integration layer subprocess calls (raises RuntimeError), use:
+    from erk.core.subprocess import run_subprocess_with_context
+
+For CLI-layer subprocess calls (prints message, raises SystemExit), use:
+    from erk.cli.subprocess_utils import run_with_error_reporting (this module)
+"""
 
 import subprocess
 from collections.abc import Sequence
@@ -14,7 +23,11 @@ def run_with_error_reporting(
     error_prefix: str = "Command failed",
     troubleshooting: list[str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    """Run a subprocess command with improved error reporting.
+    """Run subprocess command with user-friendly error reporting for CLI layer.
+
+    This function is designed for CLI commands that need to display error messages
+    directly to users and exit the program. For integration layer code that needs
+    to raise exceptions with context, use run_subprocess_with_context() instead.
 
     Args:
         cmd: Command to run as a list of strings
@@ -27,6 +40,20 @@ def run_with_error_reporting(
 
     Raises:
         SystemExit: If command fails (after displaying user-friendly error)
+
+    Example:
+        >>> run_with_error_reporting(
+        ...     ["gh", "pr", "view", "123"],
+        ...     cwd=repo_root,
+        ...     error_prefix="Failed to view PR",
+        ...     troubleshooting=["Ensure gh is installed", "Run 'gh auth login'"]
+        ... )
+
+    Notes:
+        - This is for CLI-layer code (commands that interact with users)
+        - For integration layer code, use run_subprocess_with_context() instead
+        - Uses check=False and manually handles errors for user-friendly output
+        - Displays stderr/stdout to user before raising SystemExit
     """
     result = subprocess.run(cmd, cwd=cwd, check=False, capture_output=True, text=True)
 

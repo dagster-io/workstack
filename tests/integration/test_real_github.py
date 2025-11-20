@@ -56,7 +56,7 @@ def test_get_prs_for_repo_command_failure() -> None:
     """Test that get_prs_for_repo gracefully handles command failures."""
 
     def mock_execute_failure(cmd: list[str], cwd: Path) -> str:
-        raise subprocess.CalledProcessError(1, cmd)
+        raise RuntimeError("Failed to execute gh command")
 
     ops = RealGitHub(execute_fn=mock_execute_failure)
     result = ops.get_prs_for_repo(Path("/repo"), include_checks=False)
@@ -117,7 +117,7 @@ def test_get_pr_status_command_failure() -> None:
     """Test that get_pr_status gracefully handles command failures."""
 
     def mock_execute_failure(cmd: list[str], cwd: Path) -> str:
-        raise subprocess.CalledProcessError(1, cmd)
+        raise RuntimeError("Failed to execute gh command")
 
     ops = RealGitHub(execute_fn=mock_execute_failure)
     state, number, title = ops.get_pr_status(Path("/repo"), "branch", debug=False)
@@ -178,7 +178,7 @@ def test_get_pr_base_branch_command_failure() -> None:
     """Test that get_pr_base_branch returns None on command failure."""
 
     def mock_execute_failure(cmd: list[str], cwd: Path) -> str:
-        raise subprocess.CalledProcessError(1, cmd)
+        raise RuntimeError("Failed to execute gh command")
 
     ops = RealGitHub(execute_fn=mock_execute_failure)
     result = ops.get_pr_base_branch(Path("/repo"), 123)
@@ -223,7 +223,7 @@ def test_update_pr_base_branch_command_failure() -> None:
     """Test that update_pr_base_branch gracefully handles command failures."""
 
     def mock_execute_failure(cmd: list[str], cwd: Path) -> str:
-        raise subprocess.CalledProcessError(1, cmd)
+        raise RuntimeError("Failed to execute gh command")
 
     ops = RealGitHub(execute_fn=mock_execute_failure)
 
@@ -345,6 +345,8 @@ def test_get_pr_mergeability_command_failure() -> None:
     repo_root = Path("/repo")
 
     def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        # Raise CalledProcessError which will be caught by run_subprocess_with_context
+        # and converted to RuntimeError
         raise subprocess.CalledProcessError(1, cmd, stderr="PR not found")
 
     original_run = subprocess.run
@@ -488,7 +490,7 @@ def test_merge_pr_without_squash() -> None:
 
 
 def test_merge_pr_raises_on_failure() -> None:
-    """Test merge_pr raises CalledProcessError when gh pr merge fails."""
+    """Test merge_pr raises RuntimeError when gh pr merge fails."""
     repo_root = Path("/repo")
     pr_number = 789
 
@@ -501,8 +503,8 @@ def test_merge_pr_raises_on_failure() -> None:
 
         ops = RealGitHub()
 
-        # Should raise CalledProcessError
-        with pytest.raises(subprocess.CalledProcessError):
+        # Should raise RuntimeError (from run_subprocess_with_context wrapper)
+        with pytest.raises(RuntimeError):
             ops.merge_pr(repo_root, pr_number, squash=True, verbose=False)
     finally:
         subprocess.run = original_run

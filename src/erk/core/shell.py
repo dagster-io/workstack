@@ -7,9 +7,10 @@ enables dependency injection for testing without mock.patch.
 
 import os
 import shutil
-import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
+
+from erk.core.subprocess import run_subprocess_with_context
 
 
 def detect_shell_from_env(shell_env: str) -> tuple[str, Path] | None:
@@ -95,7 +96,7 @@ class Shell(ABC):
             verbose: If True, pass --verbose flag for detailed output
 
         Raises:
-            subprocess.CalledProcessError: If erk sync command fails
+            RuntimeError: If erk sync command fails (with enriched error context)
         """
         ...
 
@@ -130,10 +131,9 @@ class RealShell(Shell):
         if verbose:
             cmd.append("--verbose")
 
-        subprocess.run(
+        run_subprocess_with_context(
             cmd,
+            operation_context="execute erk sync subprocess",
             cwd=repo_root,
-            check=True,
             capture_output=not verbose,
-            text=True,
         )

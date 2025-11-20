@@ -8,7 +8,6 @@ via the detect_shell_from_env() function.
 """
 
 import os
-import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -64,7 +63,7 @@ def test_real_shell_ops_get_installed_tool_path_python():
 
 
 def test_real_shell_ops_run_erk_sync_calls_subprocess():
-    """Test that run_erk_sync calls subprocess.run with correct parameters.
+    """Test that run_erk_sync calls run_subprocess_with_context with correct parameters.
 
     This integration test verifies RealShell correctly constructs and
     executes the subprocess command with appropriate parameters.
@@ -72,17 +71,17 @@ def test_real_shell_ops_run_erk_sync_calls_subprocess():
     ops = RealShell()
     repo_root = Path("/test/repo")
 
-    # Mock subprocess.run to verify the call without actually running erk
-    with patch("erk.core.shell.subprocess.run") as mock_run:
+    # Mock run_subprocess_with_context to verify the call without actually running erk
+    with patch("erk.core.shell.run_subprocess_with_context") as mock_run:
         mock_run.return_value = MagicMock(returncode=0)
 
         # Call with force=True, verbose=False
         ops.run_erk_sync(repo_root, force=True, verbose=False)
 
-        # Verify subprocess.run was called once
+        # Verify run_subprocess_with_context was called once
         assert mock_run.call_count == 1
 
-        # Verify command structure
+        # Verify command structure and parameters
         call_args = mock_run.call_args
         cmd = call_args[0][0]
         assert cmd == ["erk", "sync", "-f"]
@@ -90,9 +89,8 @@ def test_real_shell_ops_run_erk_sync_calls_subprocess():
         # Verify kwargs
         kwargs = call_args[1]
         assert kwargs["cwd"] == repo_root
-        assert kwargs["check"] is True
+        assert kwargs["operation_context"] == "execute erk sync subprocess"
         assert kwargs["capture_output"] is True
-        assert kwargs["text"] is True
 
 
 def test_real_shell_ops_run_erk_sync_verbose_mode():
@@ -100,7 +98,7 @@ def test_real_shell_ops_run_erk_sync_verbose_mode():
     ops = RealShell()
     repo_root = Path("/test/repo")
 
-    with patch("erk.core.shell.subprocess.run") as mock_run:
+    with patch("erk.core.shell.run_subprocess_with_context") as mock_run:
         mock_run.return_value = MagicMock(returncode=0)
 
         # Call with force=True, verbose=True
@@ -121,7 +119,7 @@ def test_real_shell_ops_run_erk_sync_without_force():
     ops = RealShell()
     repo_root = Path("/test/repo")
 
-    with patch("erk.core.shell.subprocess.run") as mock_run:
+    with patch("erk.core.shell.run_subprocess_with_context") as mock_run:
         mock_run.return_value = MagicMock(returncode=0)
 
         # Call with force=False
@@ -135,22 +133,23 @@ def test_real_shell_ops_run_erk_sync_without_force():
 
 
 def test_real_shell_ops_run_erk_sync_propagates_error():
-    """Test that CalledProcessError is propagated from subprocess.run."""
+    """Test that RuntimeError is propagated from run_subprocess_with_context."""
     ops = RealShell()
     repo_root = Path("/test/repo")
 
-    with patch("erk.core.shell.subprocess.run") as mock_run:
-        # Simulate subprocess failure
-        mock_run.side_effect = subprocess.CalledProcessError(
-            returncode=1,
-            cmd=["erk", "sync", "-f"],
-            stderr="sync failed",
+    with patch("erk.core.shell.run_subprocess_with_context") as mock_run:
+        # Simulate subprocess failure (run_subprocess_with_context raises RuntimeError)
+        mock_run.side_effect = RuntimeError(
+            "Failed to execute erk sync subprocess\n"
+            "Command: erk sync -f\n"
+            "Exit code: 1\n"
+            "stderr: sync failed"
         )
 
-        # Verify exception is propagated
+        # Verify RuntimeError is propagated
         try:
             ops.run_erk_sync(repo_root, force=True, verbose=False)
-            raise AssertionError("Expected CalledProcessError to be raised")
-        except subprocess.CalledProcessError as e:
-            assert e.returncode == 1
-            assert e.stderr == "sync failed"
+            raise AssertionError("Expected RuntimeError to be raised")
+        except RuntimeError as e:
+            assert "Failed to execute erk sync subprocess" in str(e)
+            assert "sync failed" in str(e)

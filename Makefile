@@ -1,4 +1,4 @@
-.PHONY: format format-check lint prettier prettier-check pyright upgrade-pyright test fast-ci all-ci check md-check clean publish fix sync-dignified-python-universal
+.PHONY: format format-check lint prettier prettier-check pyright upgrade-pyright test fast-ci all-ci check md-check clean publish fix
 
 prettier:
 	prettier --write '**/*.md' --ignore-path .gitignore
@@ -77,15 +77,7 @@ md-check:
 	uv run dot-agent md check
 
 # Removed: land-branch command has been deprecated
-
-# Sync universal Python standards to all Dignified Python kits
-sync-dignified-python-universal:
-	@echo "Syncing universal Python standards..."
-	cp packages/dot-agent-kit/src/dot_agent_kit/data/kits/dignified-python-shared/universal-python-standards.md \
-	   packages/dot-agent-kit/src/dot_agent_kit/data/kits/dignified-python-310/skills/dignified-python/UNIVERSAL.md
-	cp packages/dot-agent-kit/src/dot_agent_kit/data/kits/dignified-python-shared/universal-python-standards.md \
-	   packages/dot-agent-kit/src/dot_agent_kit/data/kits/dignified-python-313/skills/dignified-python/UNIVERSAL.md
-	@echo "✓ Universal standards synced to both kits"
+# Removed: sync-dignified-python-universal (obsolete - shared content now referenced directly)
 
 # Fast CI: Run all checks with unit tests only (fast feedback loop)
 fast-ci: lint format-check prettier-check md-check pyright test check

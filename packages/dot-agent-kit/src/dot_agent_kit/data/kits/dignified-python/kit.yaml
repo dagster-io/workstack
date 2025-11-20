@@ -1,0 +1,21 @@
+name: dignified-python
+version: 0.2.0
+description: Version-aware Python coding standards with automatic version detection
+license: MIT
+artifacts:
+  skill:
+    - skills/dignified-python-310/SKILL.md
+    - skills/dignified-python-311/SKILL.md
+    - skills/dignified-python-312/SKILL.md
+    - skills/dignified-python-313/SKILL.md
+kit_cli_commands:
+  - name: version-aware-reminder-hook
+    path: kit_cli_commands/dignified-python/version_aware_reminder_hook.py
+    description: Output dignified-python compliance reminder with runtime version detection
+hooks:
+  - id: version-aware-reminder-hook
+    lifecycle: UserPromptSubmit
+    matcher: "*.py"
+    invocation: dot-agent run dignified-python version-aware-reminder-hook
+    description: Output dignified-python compliance reminder when Python files are in context
+    timeout: 30

@@ -34,22 +34,6 @@ invocation = "dot-agent run devrun devrun-reminder-hook"
 description = "Output devrun agent reminder on every prompt"
 timeout = 30
 
-[kits.dignified-python-313]
-kit_id = "dignified-python-313"
-source_type = "bundled"
-version = "0.1.0"
-artifacts = [
-    ".claude/skills/dignified-python/SKILL.md",
-]
-
-[[kits.dignified-python-313.hooks]]
-id = "dignified-python-reminder-hook"
-lifecycle = "UserPromptSubmit"
-matcher = "*.py"
-invocation = "dot-agent run dignified-python-313 dignified-python-reminder-hook"
-description = "Output dignified-python compliance reminder when Python files are in context"
-timeout = 30
-
 [kits.fake-driven-testing]
 kit_id = "fake-driven-testing"
 source_type = "bundled"
@@ -85,4 +69,23 @@ lifecycle = "UserPromptSubmit"
 matcher = "*"
 invocation = "dot-agent run erk session-id-injector-hook"
 description = "Injects session ID into context when /erk:create-enhanced-plan is invoked"
+timeout = 30
+
+[kits.dignified-python]
+kit_id = "dignified-python"
+source_type = "bundled"
+version = "0.2.0"
+artifacts = [
+    ".claude/skills/dignified-python-310/SKILL.md",
+    ".claude/skills/dignified-python-311/SKILL.md",
+    ".claude/skills/dignified-python-312/SKILL.md",
+    ".claude/skills/dignified-python-313/SKILL.md",
+]
+
+[[kits.dignified-python.hooks]]
+id = "version-aware-reminder-hook"
+lifecycle = "UserPromptSubmit"
+matcher = "*.py"
+invocation = "dot-agent run dignified-python version-aware-reminder-hook"
+description = "Output dignified-python compliance reminder when Python files are in context"
 timeout = 30

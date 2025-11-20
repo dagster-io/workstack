@@ -10,6 +10,7 @@ from erk.core.git.abc import WorktreeInfo
 from erk.core.repo_discovery import RepoContext
 from tests.fakes.git import FakeGit
 from tests.fakes.graphite import FakeGraphite
+from tests.test_utils.cli_helpers import assert_cli_error
 from tests.test_utils.env_helpers import erk_inmem_env, erk_isolated_fs_env
 
 
@@ -138,9 +139,7 @@ def test_down_at_trunk() -> None:
 
         result = runner.invoke(cli, ["down"], obj=test_ctx, catch_exceptions=False)
 
-        assert result.exit_code == 1
-        assert "Already at the bottom of the stack" in result.stderr
-        assert "trunk branch 'main'" in result.stderr
+        assert_cli_error(result, 1, "Already at the bottom of the stack", "trunk branch 'main'")
 
 
 def test_down_parent_has_no_worktree() -> None:
@@ -212,9 +211,12 @@ def test_down_graphite_not_enabled() -> None:
 
         result = runner.invoke(cli, ["down"], obj=test_ctx, catch_exceptions=False)
 
-        assert result.exit_code == 1
-        assert "requires Graphite to be enabled" in result.stderr
-        assert "erk config set use_graphite true" in result.stderr
+        assert_cli_error(
+            result,
+            1,
+            "requires Graphite to be enabled",
+            "erk config set use_graphite true",
+        )
 
 
 def test_down_detached_head() -> None:
@@ -232,9 +234,7 @@ def test_down_detached_head() -> None:
 
         result = runner.invoke(cli, ["down"], obj=test_ctx, catch_exceptions=False)
 
-        assert result.exit_code == 1
-        assert "Not currently on a branch" in result.stderr
-        assert "detached HEAD" in result.stderr
+        assert_cli_error(result, 1, "Not currently on a branch", "detached HEAD")
 
 
 def test_down_script_flag() -> None:

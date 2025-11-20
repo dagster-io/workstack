@@ -10,6 +10,7 @@ from erk.core.git.abc import WorktreeInfo
 from erk.core.repo_discovery import RepoContext
 from tests.fakes.git import FakeGit
 from tests.fakes.graphite import FakeGraphite
+from tests.test_utils.cli_helpers import assert_cli_error
 from tests.test_utils.env_helpers import erk_inmem_env, erk_isolated_fs_env
 
 
@@ -115,8 +116,7 @@ def test_up_at_top_of_stack() -> None:
 
         result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
 
-        assert result.exit_code == 1
-        assert "Already at the top of the stack" in result.stderr
+        assert_cli_error(result, 1, "Already at the top of the stack")
 
 
 def test_up_child_has_no_worktree() -> None:
@@ -197,9 +197,12 @@ def test_up_graphite_not_enabled() -> None:
 
         result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
 
-        assert result.exit_code == 1
-        assert "requires Graphite to be enabled" in result.stderr
-        assert "erk config set use_graphite true" in result.stderr
+        assert_cli_error(
+            result,
+            1,
+            "requires Graphite to be enabled",
+            "erk config set use_graphite true",
+        )
 
 
 def test_up_detached_head() -> None:
@@ -227,9 +230,7 @@ def test_up_detached_head() -> None:
 
         result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
 
-        assert result.exit_code == 1
-        assert "Not currently on a branch" in result.stderr
-        assert "detached HEAD" in result.stderr
+        assert_cli_error(result, 1, "Not currently on a branch", "detached HEAD")
 
 
 def test_up_script_flag() -> None:
@@ -331,11 +332,14 @@ def test_up_multiple_children_fails_explicitly() -> None:
 
         result = runner.invoke(cli, ["up"], obj=test_ctx, catch_exceptions=False)
 
-        assert result.exit_code == 1
-        assert "Error: Branch 'feature-1' has multiple children" in result.stderr
-        assert "'feature-2a'" in result.stderr
-        assert "'feature-2b'" in result.stderr
-        assert "erk create" in result.stderr
+        assert_cli_error(
+            result,
+            1,
+            "Error: Branch 'feature-1' has multiple children",
+            "'feature-2a'",
+            "'feature-2b'",
+            "erk create",
+        )
 
 
 def test_up_with_mismatched_worktree_name() -> None:

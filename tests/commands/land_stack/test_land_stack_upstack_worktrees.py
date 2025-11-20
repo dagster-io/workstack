@@ -63,7 +63,7 @@ def test_land_stack_force_pushes_upstack_branches_from_correct_worktree() -> Non
         )
 
         # Configure Graphite metadata for stack
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk(
                     "main",
@@ -114,7 +114,7 @@ def test_land_stack_force_pushes_upstack_branches_from_correct_worktree() -> Non
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
         )
 
@@ -126,7 +126,7 @@ def test_land_stack_force_pushes_upstack_branches_from_correct_worktree() -> Non
         assert result.exit_code == 0, f"Command failed with: {result.output}"
 
         # Verify submit_branch was called for upstack branches
-        submit_calls = graphite_ops.submit_branch_calls
+        submit_calls = graphite.submit_branch_calls
         submit_calls_by_branch = {call[1]: call for call in submit_calls}
 
         # feat-3 should be submitted from its worktree (not repo_root)
@@ -179,7 +179,7 @@ def test_land_stack_force_pushes_branch_not_in_worktree_from_repo_root() -> None
         )
 
         # Configure Graphite metadata for stack (feat-2 not in worktree)
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk(
                     "main",
@@ -218,7 +218,7 @@ def test_land_stack_force_pushes_branch_not_in_worktree_from_repo_root() -> None
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
         )
 
@@ -229,7 +229,7 @@ def test_land_stack_force_pushes_branch_not_in_worktree_from_repo_root() -> None
         assert result.exit_code == 0, f"Command failed with: {result.output}"
 
         # Verify submit_branch was called for upstack branch
-        submit_calls = graphite_ops.submit_branch_calls
+        submit_calls = graphite.submit_branch_calls
         submit_calls_by_branch = {call[1]: call for call in submit_calls}
 
         # feat-2 should be submitted from repo_root (not in any worktree)

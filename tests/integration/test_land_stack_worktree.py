@@ -121,7 +121,7 @@ def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> No
         # Set up test context with real git ops + fake others
         git_ops = RealGit()
 
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
@@ -150,7 +150,7 @@ def test_land_stack_from_linked_worktree_on_current_branch(tmp_path: Path) -> No
         test_ctx = ErkContext.for_test(
             git=git_ops,
             global_config=global_config_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             cwd=worktree_path,
@@ -269,7 +269,7 @@ def test_land_stack_with_trunk_in_worktree(tmp_path: Path) -> None:
         # Set up test context with real git ops + fake others
         git_ops = RealGit()
 
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
@@ -298,7 +298,7 @@ def test_land_stack_with_trunk_in_worktree(tmp_path: Path) -> None:
         test_ctx = ErkContext.for_test(
             git=git_ops,
             global_config=global_config_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             cwd=repo,

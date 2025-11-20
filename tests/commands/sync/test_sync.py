@@ -46,12 +46,12 @@ def test_sync_requires_graphite() -> None:
         show_pr_info=True,
     )
 
-    graphite_ops = FakeGraphite()
+    graphite = FakeGraphite()
 
     test_ctx = ErkContext.for_test(
         git=git_ops,
         global_config=global_config_ops,
-        graphite=graphite_ops,
+        graphite=graphite,
         github=FakeGitHub(),
         shell=FakeShell(),
         cwd=cwd,
@@ -77,12 +77,12 @@ def test_sync_runs_gt_sync_from_root() -> None:
             },
         )
 
-        graphite_ops = FakeGraphite()
+        graphite = FakeGraphite()
 
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=FakeGitHub(),
             shell=FakeShell(),
             script_writer=env.script_writer,
@@ -96,8 +96,8 @@ def test_sync_runs_gt_sync_from_root() -> None:
         # Note: "Running: gt sync" message only appears with --verbose flag
 
         # Verify sync was called with correct arguments
-        assert len(graphite_ops.sync_calls) == 1
-        cwd_arg, force_arg, quiet_arg = graphite_ops.sync_calls[0]
+        assert len(graphite.sync_calls) == 1
+        cwd_arg, force_arg, quiet_arg = graphite.sync_calls[0]
         assert cwd_arg == env.cwd
         assert force_arg is False
         assert quiet_arg is True  # Default is quiet mode
@@ -116,12 +116,12 @@ def test_sync_with_force_flag() -> None:
             },
         )
 
-        graphite_ops = FakeGraphite()
+        graphite = FakeGraphite()
 
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=FakeGitHub(),
             shell=FakeShell(),
             script_writer=env.script_writer,
@@ -135,8 +135,8 @@ def test_sync_with_force_flag() -> None:
         # Note: "Running: gt sync -f" message only appears with --verbose flag
 
         # Verify -f was passed
-        assert len(graphite_ops.sync_calls) == 1
-        _cwd_arg, force_arg, quiet_arg = graphite_ops.sync_calls[0]
+        assert len(graphite.sync_calls) == 1
+        _cwd_arg, force_arg, quiet_arg = graphite.sync_calls[0]
         assert force_arg is True
         assert quiet_arg is True  # Default is quiet mode
 
@@ -155,12 +155,12 @@ def test_sync_handles_gt_not_installed() -> None:
         )
 
         # Configure graphite_ops to raise FileNotFoundError
-        graphite_ops = FakeGraphite(sync_raises=FileNotFoundError())
+        graphite = FakeGraphite(sync_raises=FileNotFoundError())
 
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=FakeGitHub(),
             shell=FakeShell(),
             script_writer=env.script_writer,
@@ -189,12 +189,12 @@ def test_sync_handles_gt_sync_failure() -> None:
         )
 
         # Configure graphite_ops to raise CalledProcessError
-        graphite_ops = FakeGraphite(sync_raises=subprocess.CalledProcessError(128, ["gt", "sync"]))
+        graphite = FakeGraphite(sync_raises=subprocess.CalledProcessError(128, ["gt", "sync"]))
 
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=FakeGitHub(),
             shell=FakeShell(),
             script_writer=env.script_writer,
@@ -230,7 +230,7 @@ def test_sync_identifies_deletable_erks() -> None:
             },
         )
 
-        graphite_ops = FakeGraphite()
+        graphite = FakeGraphite()
 
         # feature-1 is merged, feature-2 is open
         github_ops = FakeGitHub(
@@ -243,7 +243,7 @@ def test_sync_identifies_deletable_erks() -> None:
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             script_writer=env.script_writer,
@@ -275,12 +275,12 @@ def test_sync_no_deletable_erks() -> None:
             },
         )
 
-        graphite_ops = FakeGraphite()
+        graphite = FakeGraphite()
 
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=FakeGitHub(),
             shell=FakeShell(),
             script_writer=env.script_writer,
@@ -314,13 +314,13 @@ def test_sync_with_confirmation() -> None:
             },
         )
 
-        graphite_ops = FakeGraphite()
+        graphite = FakeGraphite()
         github_ops = FakeGitHub(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             script_writer=env.script_writer,
@@ -355,13 +355,13 @@ def test_sync_user_cancels() -> None:
             },
         )
 
-        graphite_ops = FakeGraphite()
+        graphite = FakeGraphite()
         github_ops = FakeGitHub(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             script_writer=env.script_writer,
@@ -397,13 +397,13 @@ def test_sync_force_skips_confirmation() -> None:
             },
         )
 
-        graphite_ops = FakeGraphite()
+        graphite = FakeGraphite()
         github_ops = FakeGitHub(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             script_writer=env.script_writer,
@@ -438,13 +438,13 @@ def test_sync_dry_run() -> None:
             },
         )
 
-        graphite_ops = FakeGraphite()
+        graphite = FakeGraphite()
         github_ops = FakeGitHub(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             script_writer=env.script_writer,
@@ -459,7 +459,7 @@ def test_sync_dry_run() -> None:
         assert "[DRY RUN] Would remove worktree: feature-1" in result.output
 
         # Verify sync was not called
-        assert len(graphite_ops.sync_calls) == 0
+        assert len(graphite.sync_calls) == 0
 
         # Verify worktree was not removed (check git_ops state)
         assert len(git_ops.removed_worktrees) == 0
@@ -482,13 +482,13 @@ def test_sync_return_to_original_worktree() -> None:
             },
         )
 
-        graphite_ops = FakeGraphite()
+        graphite = FakeGraphite()
         github_ops = FakeGitHub(pr_statuses={"feature-1": ("OPEN", 123, "Feature 1")})
 
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             script_writer=env.script_writer,
@@ -524,13 +524,13 @@ def test_sync_original_worktree_deleted() -> None:
             },
         )
 
-        graphite_ops = FakeGraphite()
+        graphite = FakeGraphite()
         github_ops = FakeGitHub(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             script_writer=env.script_writer,
@@ -585,13 +585,13 @@ def test_sync_script_mode_when_worktree_exists() -> None:
             },
         )
 
-        graphite_ops = FakeGraphite()
+        graphite = FakeGraphite()
         github_ops = FakeGitHub(pr_statuses={"feature-1": ("OPEN", 123, "Feature 1")})
 
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             cwd=wt1,  # Start from the worktree
@@ -644,14 +644,14 @@ def test_sync_force_runs_double_gt_sync() -> None:
             },
         )
 
-        graphite_ops = FakeGraphite()
+        graphite = FakeGraphite()
         # feature-1 is merged
         github_ops = FakeGitHub(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             script_writer=env.script_writer,
@@ -663,10 +663,10 @@ def test_sync_force_runs_double_gt_sync() -> None:
 
         assert result.exit_code == 0
         # Verify sync was called twice
-        assert len(graphite_ops.sync_calls) == 2
+        assert len(graphite.sync_calls) == 2
         # Both calls should have force=True and quiet=True
-        _cwd1, force1, quiet1 = graphite_ops.sync_calls[0]
-        _cwd2, force2, quiet2 = graphite_ops.sync_calls[1]
+        _cwd1, force1, quiet1 = graphite.sync_calls[0]
+        _cwd2, force2, quiet2 = graphite.sync_calls[1]
         assert force1 is True
         assert quiet1 is True
         assert force2 is True
@@ -695,14 +695,14 @@ def test_sync_without_force_runs_single_gt_sync() -> None:
             },
         )
 
-        graphite_ops = FakeGraphite()
+        graphite = FakeGraphite()
         # feature-1 is merged
         github_ops = FakeGitHub(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             script_writer=env.script_writer,
@@ -715,8 +715,8 @@ def test_sync_without_force_runs_single_gt_sync() -> None:
 
         assert result.exit_code == 0
         # Verify sync was called only once
-        assert len(graphite_ops.sync_calls) == 1
-        _cwd, force, quiet = graphite_ops.sync_calls[0]
+        assert len(graphite.sync_calls) == 1
+        _cwd, force, quiet = graphite.sync_calls[0]
         assert force is False
         assert quiet is True  # Default is quiet mode
         # Verify manual instruction is still shown
@@ -743,14 +743,14 @@ def test_sync_force_dry_run_no_sync_calls() -> None:
             },
         )
 
-        graphite_ops = FakeGraphite()
+        graphite = FakeGraphite()
         # feature-1 is merged
         github_ops = FakeGitHub(pr_statuses={"feature-1": ("MERGED", 123, "Feature 1")})
 
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             script_writer=env.script_writer,
@@ -762,7 +762,7 @@ def test_sync_force_dry_run_no_sync_calls() -> None:
 
         assert result.exit_code == 0
         # Verify sync was not called at all
-        assert len(graphite_ops.sync_calls) == 0
+        assert len(graphite.sync_calls) == 0
         # Should show dry-run messages
         assert "[DRY RUN] Would run gt sync -f" in result.output
         assert "[DRY RUN] Would remove worktree: feature-1" in result.output
@@ -781,12 +781,12 @@ def test_sync_force_no_deletable_single_sync() -> None:
             },
         )
 
-        graphite_ops = FakeGraphite()
+        graphite = FakeGraphite()
 
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=FakeGitHub(),
             shell=FakeShell(),
             script_writer=env.script_writer,
@@ -798,8 +798,8 @@ def test_sync_force_no_deletable_single_sync() -> None:
 
         assert result.exit_code == 0
         # Verify sync was called only once (initial sync, no cleanup needed)
-        assert len(graphite_ops.sync_calls) == 1
-        _cwd, force, quiet = graphite_ops.sync_calls[0]
+        assert len(graphite.sync_calls) == 1
+        _cwd, force, quiet = graphite.sync_calls[0]
         assert force is True
         assert quiet is True  # Default is quiet mode
         # No cleanup message
@@ -891,12 +891,12 @@ def test_sync_verbose_flag() -> None:
             },
         )
 
-        graphite_ops = FakeGraphite()
+        graphite = FakeGraphite()
 
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=FakeGitHub(),
             shell=FakeShell(),
             script_writer=env.script_writer,
@@ -910,8 +910,8 @@ def test_sync_verbose_flag() -> None:
         assert "Running: gt sync" in result.output
 
         # Verify quiet=False was passed
-        assert len(graphite_ops.sync_calls) == 1
-        _cwd_arg, force_arg, quiet_arg = graphite_ops.sync_calls[0]
+        assert len(graphite.sync_calls) == 1
+        _cwd_arg, force_arg, quiet_arg = graphite.sync_calls[0]
         assert force_arg is False
         assert quiet_arg is False  # Verbose mode = not quiet
 
@@ -929,12 +929,12 @@ def test_sync_verbose_short_flag() -> None:
             },
         )
 
-        graphite_ops = FakeGraphite()
+        graphite = FakeGraphite()
 
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=FakeGitHub(),
             shell=FakeShell(),
             script_writer=env.script_writer,
@@ -947,8 +947,8 @@ def test_sync_verbose_short_flag() -> None:
         assert result.exit_code == 0
 
         # Verify quiet=False was passed
-        assert len(graphite_ops.sync_calls) == 1
-        _cwd_arg, force_arg, quiet_arg = graphite_ops.sync_calls[0]
+        assert len(graphite.sync_calls) == 1
+        _cwd_arg, force_arg, quiet_arg = graphite.sync_calls[0]
         assert force_arg is False
         assert quiet_arg is False  # Verbose mode = not quiet
 
@@ -966,12 +966,12 @@ def test_sync_force_verbose_combination() -> None:
             },
         )
 
-        graphite_ops = FakeGraphite()
+        graphite = FakeGraphite()
 
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=FakeGitHub(),
             shell=FakeShell(),
             script_writer=env.script_writer,
@@ -984,7 +984,7 @@ def test_sync_force_verbose_combination() -> None:
         assert result.exit_code == 0
 
         # Verify both flags were passed correctly
-        assert len(graphite_ops.sync_calls) == 1
-        _cwd_arg, force_arg, quiet_arg = graphite_ops.sync_calls[0]
+        assert len(graphite.sync_calls) == 1
+        _cwd_arg, force_arg, quiet_arg = graphite.sync_calls[0]
         assert force_arg is True
         assert quiet_arg is False  # Verbose mode = not quiet

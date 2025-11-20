@@ -23,7 +23,7 @@ related changes while keeping them in separate PRs.
 ## Graphite Abstraction
 
 This module uses the Graphite abstraction to read Graphite cache data. Production
-code should use ctx.graphite_ops methods directly instead of importing functions from
+code should use ctx.graphite methods directly instead of importing functions from
 this module.
 
 See erk.core.graphite_ops for the abstraction interface.
@@ -62,7 +62,7 @@ def find_worktrees_containing_branch(
         2. Return all matching worktrees
 
     Example:
-        >>> worktrees = ctx.git_ops.list_worktrees(repo.root)
+        >>> worktrees = ctx.git.list_worktrees(repo.root)
         >>> matching = find_worktrees_containing_branch(ctx, repo.root, worktrees, "feature-2")
         >>> print([wt.path for wt in matching])
         [Path("/path/to/work/feature-work")]

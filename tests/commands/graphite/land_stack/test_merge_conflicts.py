@@ -38,7 +38,7 @@ def test_land_stack_fails_when_first_pr_has_conflict() -> None:
         )
 
         # Stack: main → feat-1 → feat-2
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch(
@@ -66,7 +66,7 @@ def test_land_stack_fails_when_first_pr_has_conflict() -> None:
         test_ctx = ErkContext.for_test(
             git=git_ops,
             global_config=global_config_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             script_writer=env.script_writer,
@@ -106,7 +106,7 @@ def test_land_stack_fails_when_middle_pr_has_conflict() -> None:
         )
 
         # Stack: main → feat-1 → feat-2 → feat-3
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch(
@@ -139,7 +139,7 @@ def test_land_stack_fails_when_middle_pr_has_conflict() -> None:
         test_ctx = ErkContext.for_test(
             git=git_ops,
             global_config=global_config_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             script_writer=env.script_writer,
@@ -178,7 +178,7 @@ def test_land_stack_fails_when_last_pr_has_conflict() -> None:
         )
 
         # Stack: main → feat-1 → feat-2
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch(
@@ -206,7 +206,7 @@ def test_land_stack_fails_when_last_pr_has_conflict() -> None:
         test_ctx = ErkContext.for_test(
             git=git_ops,
             global_config=global_config_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             script_writer=env.script_writer,
@@ -245,7 +245,7 @@ def test_land_stack_succeeds_with_unknown_mergeability() -> None:
         )
 
         # Simple stack: main → feat-1
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
@@ -268,7 +268,7 @@ def test_land_stack_succeeds_with_unknown_mergeability() -> None:
         test_ctx = ErkContext.for_test(
             git=git_ops,
             global_config=global_config_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             script_writer=env.script_writer,
@@ -306,7 +306,7 @@ def test_land_stack_succeeds_when_all_prs_mergeable() -> None:
         )
 
         # Stack: main → feat-1 → feat-2
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch(
@@ -334,7 +334,7 @@ def test_land_stack_succeeds_when_all_prs_mergeable() -> None:
         test_ctx = ErkContext.for_test(
             git=git_ops,
             global_config=global_config_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             script_writer=env.script_writer,

@@ -14,6 +14,7 @@ from erk.core.config_store import (
     GlobalConfig,
     RealConfigStore,
 )
+from erk.core.forest_ops import FakeForest, Forest, RealForest
 from erk.core.git.abc import Git
 from erk.core.git.noop import NoopGit
 from erk.core.git.real import RealGit
@@ -51,6 +52,7 @@ class ErkContext:
     completion: Completion
     config_store: ConfigStore
     script_writer: ScriptWriter
+    forest: Forest
     cwd: Path  # Current working directory at CLI invocation
     global_config: GlobalConfig | None
     local_config: LoadedConfig
@@ -126,6 +128,7 @@ class ErkContext:
             completion=FakeCompletion(),
             config_store=FakeConfigStore(config=None),
             script_writer=FakeScriptWriter(),
+            forest=FakeForest(),
             cwd=cwd,
             global_config=None,
             local_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
@@ -142,6 +145,7 @@ class ErkContext:
         completion: Completion | None = None,
         config_store: ConfigStore | None = None,
         script_writer: ScriptWriter | None = None,
+        forest: Forest | None = None,
         cwd: Path | None = None,
         global_config: GlobalConfig | None = None,
         local_config: LoadedConfig | None = None,
@@ -222,6 +226,9 @@ class ErkContext:
         if script_writer is None:
             script_writer = FakeScriptWriter()
 
+        if forest is None:
+            forest = FakeForest()
+
         if global_config is None:
             global_config = GlobalConfig(
                 erk_root=Path("/test/erks"),
@@ -253,6 +260,7 @@ class ErkContext:
             completion=completion,
             config_store=config_store,
             script_writer=script_writer,
+            forest=forest,
             cwd=cwd or sentinel_path(),
             global_config=global_config,
             local_config=local_config,
@@ -382,9 +390,11 @@ def create_context(*, dry_run: bool) -> ErkContext:
     # 6. Load local config (or defaults if no repo)
     if isinstance(repo, NoRepoSentinel):
         local_config = LoadedConfig(env={}, post_create_commands=[], post_create_shell=None)
+        forest: Forest = FakeForest()  # No repo, no forest ops
     else:
         repo_dir = ensure_repo_dir(repo)
         local_config = load_config(repo_dir)
+        forest = RealForest(repo_dir)
 
     # 7. Apply dry-run wrappers if needed
     if dry_run:
@@ -401,6 +411,7 @@ def create_context(*, dry_run: bool) -> ErkContext:
         completion=RealCompletion(),
         config_store=RealConfigStore(),
         script_writer=RealScriptWriter(),
+        forest=forest,
         cwd=cwd,
         global_config=global_config,
         local_config=local_config,

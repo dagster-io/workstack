@@ -41,7 +41,7 @@ def test_list_with_trunk_branch(trunk_branch: str) -> None:
         )
 
         # Configure FakeGraphite with branch metadata instead of writing cache file
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 trunk_branch: BranchMetadata.trunk(trunk_branch, children=["feature"]),
                 "feature": BranchMetadata.branch("feature", trunk_branch, children=[]),
@@ -51,7 +51,7 @@ def test_list_with_trunk_branch(trunk_branch: str) -> None:
 
         ctx = env.build_context(
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             repo=env.repo,
             use_graphite=True,
             show_pr_info=False,

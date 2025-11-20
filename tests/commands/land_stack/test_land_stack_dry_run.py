@@ -70,7 +70,7 @@ def test_dry_run_does_not_execute_merge_operations() -> None:
         )
 
         # Configure Graphite metadata for stack
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"]),
                 "feat-1": BranchMetadata.branch("feat-1", parent="main", children=["feat-2"]),
@@ -96,7 +96,7 @@ def test_dry_run_does_not_execute_merge_operations() -> None:
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             dry_run=False,
@@ -139,7 +139,7 @@ def test_dry_run_still_performs_read_operations() -> None:
             },
         )
 
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"]),
                 "feat-1": BranchMetadata.branch("feat-1", parent="main", children=["feat-2"]),
@@ -161,7 +161,7 @@ def test_dry_run_still_performs_read_operations() -> None:
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             dry_run=False,
@@ -198,7 +198,7 @@ def test_dry_run_shows_all_operations() -> None:
             },
         )
 
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"]),
                 "feat-1": BranchMetadata.branch("feat-1", parent="main", children=["feat-2"]),
@@ -223,7 +223,7 @@ def test_dry_run_shows_all_operations() -> None:
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             dry_run=False,
@@ -266,7 +266,7 @@ def test_dry_run_does_not_delete_branches() -> None:
             },
         )
 
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"]),
                 "feat-1": BranchMetadata.branch("feat-1", parent="main"),
@@ -286,7 +286,7 @@ def test_dry_run_does_not_delete_branches() -> None:
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             dry_run=False,
@@ -322,7 +322,7 @@ def test_dry_run_does_not_update_pr_bases() -> None:
             },
         )
 
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"]),
                 "feat-1": BranchMetadata.branch("feat-1", parent="main", children=["feat-2"]),
@@ -347,7 +347,7 @@ def test_dry_run_does_not_update_pr_bases() -> None:
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             dry_run=False,

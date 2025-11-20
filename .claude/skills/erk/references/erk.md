@@ -1127,7 +1127,7 @@ repo = discover_repo_context(ctx, Path.cwd())
 **List worktrees:**
 
 ```python
-worktrees = ctx.git_ops.list_worktrees(repo.root)
+worktrees = ctx.git.list_worktrees(repo.root)
 # Returns: list[WorktreeInfo]
 ```
 
@@ -1176,7 +1176,7 @@ def test_list_worktrees():
     )
     ctx = ErkContext(git_ops=git_ops, ...)
 
-    worktrees = ctx.git_ops.list_worktrees(Path("/repo"))
+    worktrees = ctx.git.list_worktrees(Path("/repo"))
     assert len(worktrees) == 2
 ```
 
@@ -1189,7 +1189,7 @@ Commands behave differently based on current directory:
 repo = discover_repo_context(ctx, Path.cwd())
 
 # Different behavior in root vs worktree
-current_branch = ctx.git_ops.get_current_branch(Path.cwd())
+current_branch = ctx.git.get_current_branch(Path.cwd())
 if current_branch == repo.default_branch:
     # In root worktree
 else:
@@ -1203,7 +1203,7 @@ Check if Graphite is available:
 ```python
 if ctx.global_config and ctx.global_config.use_graphite:
     # Use Graphite features
-    parent = ctx.graphite_ops.get_parent_branch(branch)
+    parent = ctx.graphite.get_parent_branch(branch)
 ```
 
 ### GitHub Integration

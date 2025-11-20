@@ -426,7 +426,7 @@ def test_create_uses_graphite_when_enabled() -> None:
             default_branches={env.cwd: "main"},
             current_branches={env.cwd: "main"},
         )
-        graphite_ops = FakeGraphite()
+        graphite = FakeGraphite()
 
         repo = RepoContext(
             root=env.cwd,
@@ -437,7 +437,7 @@ def test_create_uses_graphite_when_enabled() -> None:
 
         test_ctx = env.build_context(
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             local_config=local_config,
             repo=repo,
         )
@@ -875,7 +875,7 @@ def test_from_current_branch_with_main_in_use_prefers_graphite_parent() -> None:
                 repo_root: git_dir,
             },
         )
-        graphite_ops = FakeGraphite(branches=branch_metadata)
+        graphite = FakeGraphite(branches=branch_metadata)
 
         repo = RepoContext(
             root=env.cwd,
@@ -886,7 +886,7 @@ def test_from_current_branch_with_main_in_use_prefers_graphite_parent() -> None:
 
         test_ctx = env.build_context(
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             local_config=local_config,
             repo=repo,
             cwd=current_worktree,

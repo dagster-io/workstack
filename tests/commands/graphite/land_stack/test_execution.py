@@ -28,7 +28,7 @@ def test_land_stack_force_pushes_remaining_branches_after_sync() -> None:
     with erk_inmem_env(runner) as env:
         # Build 4-branch stack: main → feat-1 → feat-2 → feat-3
         # Current: feat-2 (will land feat-1, leaving feat-2 and feat-3 remaining)
-        git_ops, graphite_ops = env.build_ops_from_branches(
+        git_ops, graphite = env.build_ops_from_branches(
             {
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch(
@@ -65,7 +65,7 @@ def test_land_stack_force_pushes_remaining_branches_after_sync() -> None:
         test_ctx = ErkContext.for_test(
             git=git_ops,
             global_config=global_config_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             dry_run=False,
@@ -108,7 +108,7 @@ def test_land_stack_force_pushes_after_each_pr_landed() -> None:
     with erk_inmem_env(runner) as env:
         # Build 5-branch stack: main → feat-1 → feat-2 → feat-3 → feat-4
         # Current: feat-3 (will land feat-1 and feat-2)
-        git_ops, graphite_ops = env.build_ops_from_branches(
+        git_ops, graphite = env.build_ops_from_branches(
             {
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch(
@@ -150,7 +150,7 @@ def test_land_stack_force_pushes_after_each_pr_landed() -> None:
         test_ctx = ErkContext.for_test(
             git=git_ops,
             global_config=global_config_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             dry_run=False,
@@ -205,7 +205,7 @@ def test_land_stack_no_submit_when_landing_top_branch() -> None:
         # Build 3-branch stack: main → feat-1 → feat-2 → feat-3
         # Current: feat-3 (top/leaf branch)
         # Landing all 3 branches, final branch has no remaining upstack
-        git_ops, graphite_ops = env.build_ops_from_branches(
+        git_ops, graphite = env.build_ops_from_branches(
             {
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch(
@@ -242,7 +242,7 @@ def test_land_stack_no_submit_when_landing_top_branch() -> None:
         test_ctx = ErkContext.for_test(
             git=git_ops,
             global_config=global_config_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             dry_run=False,
@@ -300,7 +300,7 @@ def test_land_stack_switches_to_root_when_run_from_linked_worktree() -> None:
         linked_wt = env.create_linked_worktree(name="feat-1-work", branch="feat-1", chdir=False)
 
         # Build ops for simple stack: main → feat-1
-        git_ops, graphite_ops = env.build_ops_from_branches(
+        git_ops, graphite = env.build_ops_from_branches(
             {
                 "main": BranchMetadata(
                     name="main",
@@ -340,7 +340,7 @@ def test_land_stack_switches_to_root_when_run_from_linked_worktree() -> None:
         test_ctx = ErkContext.for_test(
             git=git_ops,
             global_config=global_config_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             dry_run=False,
@@ -371,7 +371,7 @@ def test_land_stack_merge_command_excludes_auto_flag() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Build simple stack with one PR
-        git_ops, graphite_ops = env.build_ops_from_branches(
+        git_ops, graphite = env.build_ops_from_branches(
             {
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
@@ -398,7 +398,7 @@ def test_land_stack_merge_command_excludes_auto_flag() -> None:
         test_ctx = ErkContext.for_test(
             git=git_ops,
             global_config=global_config_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             dry_run=True,
@@ -436,7 +436,7 @@ def test_land_stack_does_not_run_gt_sync() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Build simple 2-branch stack: main → feat-1
-        git_ops, graphite_ops = env.build_ops_from_branches(
+        git_ops, graphite = env.build_ops_from_branches(
             {
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
@@ -455,7 +455,7 @@ def test_land_stack_does_not_run_gt_sync() -> None:
 
         test_ctx = env.build_context(
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             use_graphite=True,
             dry_run=True,
@@ -468,10 +468,10 @@ def test_land_stack_does_not_run_gt_sync() -> None:
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
         # Verify gt sync was NOT called via mutation tracking
-        assert len(graphite_ops.sync_calls) == 0, (
+        assert len(graphite.sync_calls) == 0, (
             f"gt sync should NOT be called automatically. "
-            f"Expected 0 sync calls, got {len(graphite_ops.sync_calls)} calls: "
-            f"{graphite_ops.sync_calls}"
+            f"Expected 0 sync calls, got {len(graphite.sync_calls)} calls: "
+            f"{graphite.sync_calls}"
         )
 
         # Verify gt sync command doesn't appear in execution phases
@@ -498,7 +498,7 @@ def test_land_stack_does_not_run_erk_sync() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Build simple 2-branch stack: main → feat-1
-        git_ops, graphite_ops = env.build_ops_from_branches(
+        git_ops, graphite = env.build_ops_from_branches(
             {
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
@@ -519,7 +519,7 @@ def test_land_stack_does_not_run_erk_sync() -> None:
 
         test_ctx = env.build_context(
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=shell_ops,
             use_graphite=True,
@@ -558,7 +558,7 @@ def test_final_state_shows_next_steps() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Build simple 2-branch stack: main → feat-1
-        git_ops, graphite_ops = env.build_ops_from_branches(
+        git_ops, graphite = env.build_ops_from_branches(
             {
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
@@ -577,7 +577,7 @@ def test_final_state_shows_next_steps() -> None:
 
         test_ctx = env.build_context(
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             use_graphite=True,
             dry_run=True,

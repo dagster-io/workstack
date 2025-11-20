@@ -23,6 +23,15 @@ class WorktreeInfo:
     is_root: bool = False
 
 
+@dataclass(frozen=True)
+class RerootResult:
+    """Result of a rebase operation."""
+
+    success: bool
+    has_conflicts: bool
+    conflicted_files: list[Path]
+
+
 def find_worktree_for_branch(worktrees: list[WorktreeInfo], branch: str) -> Path | None:
     """Find the path of the worktree that has the given branch checked out.
 
@@ -411,5 +420,75 @@ class Git(ABC):
             remote: Remote name (e.g., "origin")
             branch: Branch name to pull
             ff_only: If True, use --ff-only to prevent merge commits
+        """
+        ...
+
+    @abstractmethod
+    def rebase_branch(self, branch: str, onto: str, worktree_path: Path) -> RerootResult:
+        """Rebase a branch onto another branch.
+
+        Args:
+            branch: Branch name to rebase
+            onto: Target branch to rebase onto
+            worktree_path: Path to the worktree where rebase should occur
+
+        Returns:
+            RerootResult with success status and conflict information
+        """
+        ...
+
+    @abstractmethod
+    def get_conflicted_files(self, worktree_path: Path) -> list[Path]:
+        """Get list of files with unresolved conflicts.
+
+        Args:
+            worktree_path: Path to the worktree to check
+
+        Returns:
+            List of file paths with unresolved conflicts
+        """
+        ...
+
+    @abstractmethod
+    def commit_with_message(self, message: str, worktree_path: Path) -> None:
+        """Create a commit with the given message.
+
+        Args:
+            message: Commit message
+            worktree_path: Path to the worktree where commit should be created
+        """
+        ...
+
+    @abstractmethod
+    def is_rebase_in_progress(self, worktree_path: Path) -> bool:
+        """Check if a rebase is currently in progress.
+
+        Args:
+            worktree_path: Path to the worktree to check
+
+        Returns:
+            True if rebase is in progress, False otherwise
+        """
+        ...
+
+    @abstractmethod
+    def abort_rebase(self, worktree_path: Path) -> None:
+        """Abort an in-progress rebase.
+
+        Args:
+            worktree_path: Path to the worktree where rebase should be aborted
+        """
+        ...
+
+    @abstractmethod
+    def get_commit_sha(self, ref: str, cwd: Path) -> str:
+        """Get the commit SHA for a given ref.
+
+        Args:
+            ref: Git ref (branch name, tag, etc.)
+            cwd: Current working directory / worktree path
+
+        Returns:
+            Full commit SHA for the ref
         """
         ...

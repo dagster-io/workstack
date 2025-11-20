@@ -31,7 +31,7 @@ def setup_stack_collector(
         current_branches={worktree_path: branch},
         **(git_kwargs or {}),
     )
-    graphite_ops = FakeGraphite(**(graphite_kwargs or {}))
+    graphite = FakeGraphite(**(graphite_kwargs or {}))
     global_config = GlobalConfig(
         erk_root=Path("/fake/erks"),
         use_graphite=use_graphite,
@@ -40,7 +40,7 @@ def setup_stack_collector(
     )
     ctx = create_test_context(
         git=git_ops,
-        graphite=graphite_ops,
+        graphite=graphite,
         global_config=global_config,
     )
 

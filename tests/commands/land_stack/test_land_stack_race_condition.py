@@ -78,7 +78,7 @@ def test_land_stack_detects_and_updates_stale_pr_base() -> None:
 
         # Configure Graphite metadata
         # After landing feat-1, the stack should look like: main -> feat-2
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-2"]),
                 "feat-2": BranchMetadata.branch("feat-2", parent="main"),
@@ -102,7 +102,7 @@ def test_land_stack_detects_and_updates_stale_pr_base() -> None:
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             dry_run=False,
@@ -172,7 +172,7 @@ def test_land_stack_skips_update_when_pr_base_already_correct() -> None:
             },
         )
 
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"]),
                 "feat-1": BranchMetadata.branch("feat-1", parent="main"),
@@ -195,7 +195,7 @@ def test_land_stack_skips_update_when_pr_base_already_correct() -> None:
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             dry_run=False,
@@ -249,7 +249,7 @@ def test_land_stack_with_multiple_branches_updates_all_stale_bases() -> None:
 
         # Configure Graphite metadata
         # Simulate after feat-1 and feat-2 have landed: main -> feat-3
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-1"]),
                 "feat-1": BranchMetadata.branch("feat-1", parent="main", children=["feat-2"]),
@@ -280,7 +280,7 @@ def test_land_stack_with_multiple_branches_updates_all_stale_bases() -> None:
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
             shell=FakeShell(),
             dry_run=False,

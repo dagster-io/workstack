@@ -7,7 +7,7 @@ operations while delegating read-only operations to the wrapped implementation.
 from pathlib import Path
 
 from erk.cli.output import user_output
-from erk.core.git.abc import Git, WorktreeInfo
+from erk.core.git.abc import Git, RerootResult, WorktreeInfo
 
 # ============================================================================
 # No-op Wrapper
@@ -191,3 +191,30 @@ class NoopGit(Git):
         """No-op for pulling branch in dry-run mode."""
         # Do nothing - prevents actual pull execution
         pass
+
+    def rebase_branch(self, branch: str, onto: str, worktree_path: Path) -> "RerootResult":
+        """No-op for rebasing branch in dry-run mode."""
+        # Delegate to wrapped for read-only inspection
+        return self._wrapped.rebase_branch(branch, onto, worktree_path)
+
+    def get_conflicted_files(self, worktree_path: Path) -> list[Path]:
+        """Get conflicted files (read-only, delegates to wrapped)."""
+        return self._wrapped.get_conflicted_files(worktree_path)
+
+    def commit_with_message(self, message: str, worktree_path: Path) -> None:
+        """No-op for committing in dry-run mode."""
+        # Do nothing - prevents actual commit execution
+        pass
+
+    def is_rebase_in_progress(self, worktree_path: Path) -> bool:
+        """Check rebase status (read-only, delegates to wrapped)."""
+        return self._wrapped.is_rebase_in_progress(worktree_path)
+
+    def abort_rebase(self, worktree_path: Path) -> None:
+        """No-op for aborting rebase in dry-run mode."""
+        # Do nothing - prevents actual rebase abort execution
+        pass
+
+    def get_commit_sha(self, ref: str, cwd: Path) -> str:
+        """Get commit SHA (read-only, delegates to wrapped)."""
+        return self._wrapped.get_commit_sha(ref, cwd)

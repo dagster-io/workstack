@@ -45,7 +45,7 @@ def test_land_stack_navigates_to_root_worktree() -> None:
         )
 
         # Configure Graphite metadata for simple stack
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-branch"]),
                 "feat-branch": BranchMetadata.branch("feat-branch", parent="main"),
@@ -70,7 +70,7 @@ def test_land_stack_navigates_to_root_worktree() -> None:
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
         )
 
@@ -120,7 +120,7 @@ def test_land_stack_no_duplicate_checkout_message() -> None:
         )
 
         # Configure Graphite metadata for simple stack
-        graphite_ops = FakeGraphite(
+        graphite = FakeGraphite(
             branches={
                 "main": BranchMetadata.trunk("main", children=["feat-branch"]),
                 "feat-branch": BranchMetadata.branch("feat-branch", parent="main"),
@@ -145,7 +145,7 @@ def test_land_stack_no_duplicate_checkout_message() -> None:
         test_ctx = env.build_context(
             use_graphite=True,
             git=git_ops,
-            graphite=graphite_ops,
+            graphite=graphite,
             github=github_ops,
         )
 

@@ -257,3 +257,59 @@ def test_text_false_parameter() -> None:
         # Verify text=False was used
         call_kwargs = mock_run.call_args.kwargs
         assert call_kwargs["text"] is False
+
+
+def test_explicit_stderr_with_default_capture_output() -> None:
+    """Test that explicit stderr parameter works with default capture_output=True.
+
+    Regression test: When capture_output=True (the default), passing explicit
+    stdout/stderr parameters should disable capture_output to avoid ValueError.
+    """
+    with patch("erk.core.subprocess.subprocess.run") as mock_run:
+        # Setup successful execution
+        mock_result = Mock(spec=subprocess.CompletedProcess)
+        mock_result.returncode = 0
+        mock_result.stderr = "some output"
+        mock_run.return_value = mock_result
+
+        # Execute with explicit stderr parameter - should NOT raise ValueError
+        result = run_subprocess_with_context(
+            ["gt", "sync"],
+            operation_context="sync with Graphite",
+            stderr=subprocess.PIPE,
+        )
+
+        # Verify it succeeded
+        assert result == mock_result
+
+        # Verify subprocess.run was called with explicit stderr and capture_output=False
+        call_kwargs = mock_run.call_args.kwargs
+        assert call_kwargs["stderr"] == subprocess.PIPE
+        # capture_output should be disabled when explicit stdout/stderr is passed
+        assert call_kwargs["capture_output"] is False
+
+
+def test_explicit_stdout_and_stderr_both_disable_capture_output() -> None:
+    """Test that both stdout and stderr parameters disable capture_output."""
+    with patch("erk.core.subprocess.subprocess.run") as mock_run:
+        # Setup successful execution
+        mock_result = Mock(spec=subprocess.CompletedProcess)
+        mock_result.returncode = 0
+        mock_run.return_value = mock_result
+
+        # Execute with both stdout and stderr explicit
+        result = run_subprocess_with_context(
+            ["gt", "sync"],
+            operation_context="sync with Graphite",
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
+
+        # Verify it succeeded
+        assert result == mock_result
+
+        # Verify subprocess.run was called with both explicit and capture_output=False
+        call_kwargs = mock_run.call_args.kwargs
+        assert call_kwargs["stdout"] == subprocess.DEVNULL
+        assert call_kwargs["stderr"] == subprocess.PIPE
+        assert call_kwargs["capture_output"] is False

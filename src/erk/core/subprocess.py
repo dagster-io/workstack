@@ -10,7 +10,7 @@ For CLI-layer subprocess calls, use run_with_error_reporting() from erk.cli.subp
 import subprocess
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any
+from typing import IO, Any
 
 
 def run_subprocess_with_context(
@@ -21,6 +21,8 @@ def run_subprocess_with_context(
     text: bool = True,
     encoding: str = "utf-8",
     check: bool = True,
+    stdout: int | IO[Any] | None = None,
+    stderr: int | IO[Any] | None = None,
     **kwargs: Any,
 ) -> subprocess.CompletedProcess[str]:
     """Execute subprocess with enriched error reporting for integration layer.
@@ -38,6 +40,10 @@ def run_subprocess_with_context(
         text: Whether to decode output as text (default: True)
         encoding: Text encoding to use (default: "utf-8")
         check: Whether to raise on non-zero exit (default: True)
+        stdout: File descriptor or file object for stdout
+            (e.g., subprocess.PIPE, subprocess.DEVNULL, sys.stdout)
+        stderr: File descriptor or file object for stderr
+            (e.g., subprocess.PIPE, subprocess.DEVNULL, sys.stderr)
         **kwargs: Additional arguments passed to subprocess.run()
 
     Returns:
@@ -75,17 +81,29 @@ def run_subprocess_with_context(
         - For CLI commands that need user-friendly output, use run_with_error_reporting() instead
         - Uses LBYL philosophy: caller should validate inputs before calling
         - Exception chaining preserves original CalledProcessError for debugging
+        - Explicit stdout/stderr parameters disable capture_output to avoid ValueError
     """
+    # Disable capture_output if explicit stdout or stderr provided
+    # subprocess.run raises ValueError if capture_output conflicts with stdout/stderr
+    if stdout is not None or stderr is not None:
+        capture_output = False
+
+    # Build subprocess.run kwargs, only adding stdout/stderr if explicitly provided
+    run_kwargs: dict[str, Any] = {
+        "cwd": cwd,
+        "capture_output": capture_output,
+        "text": text,
+        "encoding": encoding,
+        "check": check,
+        **kwargs,
+    }
+    if stdout is not None:
+        run_kwargs["stdout"] = stdout
+    if stderr is not None:
+        run_kwargs["stderr"] = stderr
+
     try:
-        return subprocess.run(
-            cmd,
-            cwd=cwd,
-            capture_output=capture_output,
-            text=text,
-            encoding=encoding,
-            check=check,
-            **kwargs,
-        )
+        return subprocess.run(cmd, **run_kwargs)
     except subprocess.CalledProcessError as e:
         # Build rich error message with all available context
         error_parts = [f"Failed to {operation_context}"]

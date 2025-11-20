@@ -125,15 +125,37 @@ def generate_compressed_xml(entries: list[dict], source_label: str | None = None
     return "\n".join(xml_lines)
 
 
-def process_log_file(log_path: Path, source_label: str | None = None) -> list[dict]:
-    """Process a single JSONL log file and return filtered entries."""
+def process_log_file(
+    log_path: Path, session_id: str | None = None, source_label: str | None = None
+) -> tuple[list[dict], int, int]:
+    """Process a single JSONL log file and return filtered entries.
+
+    Args:
+        log_path: Path to the JSONL log file
+        session_id: Optional session ID to filter entries by
+        source_label: Optional label for agent logs
+
+    Returns:
+        Tuple of (filtered entries, total entries count, skipped entries count)
+    """
     entries = []
+    total_entries = 0
+    skipped_entries = 0
 
     for line in log_path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
 
         entry = json.loads(line)
+        total_entries += 1
+
+        # Filter by session ID if provided
+        if session_id is not None:
+            entry_session = entry.get("sessionId")
+            # Include if sessionId matches OR if sessionId field missing (backward compat)
+            if entry_session is not None and entry_session != session_id:
+                skipped_entries += 1
+                continue
 
         # Filter out noise entries
         if entry.get("type") == "file-history-snapshot":
@@ -155,7 +177,7 @@ def process_log_file(log_path: Path, source_label: str | None = None) -> list[di
 
         entries.append(filtered)
 
-    return entries
+    return entries, total_entries, skipped_entries
 
 
 def discover_agent_logs(session_log_path: Path) -> list[Path]:
@@ -168,19 +190,39 @@ def discover_agent_logs(session_log_path: Path) -> list[Path]:
 @click.command()
 @click.argument("log_path", type=click.Path(exists=True, path_type=Path))
 @click.option(
+    "--session-id",
+    type=str,
+    default=None,
+    help="Filter JSONL entries by session ID before preprocessing",
+)
+@click.option(
     "--include-agents/--no-include-agents",
     default=True,
     help="Include agent logs from same directory (default: True)",
 )
-def preprocess_session(log_path: Path, include_agents: bool) -> None:
+def preprocess_session(log_path: Path, session_id: str | None, include_agents: bool) -> None:
     """Preprocess session log JSONL to compressed XML format.
 
     By default, automatically discovers and includes agent logs (agent-*.jsonl)
     from the same directory as the main session log.
+
+    Args:
+        log_path: Path to the main session JSONL file
+        session_id: Optional session ID to filter entries by
+        include_agents: Whether to include agent logs
     """
     # Process main session log
-    entries = process_log_file(log_path)
+    entries, total_entries, skipped_entries = process_log_file(log_path, session_id=session_id)
     entries = deduplicate_assistant_messages(entries)
+
+    # Show diagnostic output if filtering by session ID
+    if session_id is not None:
+        click.echo(f"✅ Filtered JSONL by session ID: {session_id[:8]}...", err=True)
+        click.echo(
+            f"📊 Included {total_entries - skipped_entries} entries, "
+            f"skipped {skipped_entries} entries",
+            err=True,
+        )
 
     # Generate main session XML
     xml_sections = [generate_compressed_xml(entries)]
@@ -189,7 +231,9 @@ def preprocess_session(log_path: Path, include_agents: bool) -> None:
     if include_agents:
         agent_logs = discover_agent_logs(log_path)
         for agent_log in agent_logs:
-            agent_entries = process_log_file(agent_log)
+            agent_entries, agent_total, agent_skipped = process_log_file(
+                agent_log, session_id=session_id
+            )
             agent_entries = deduplicate_assistant_messages(agent_entries)
 
             # Generate XML with source label
@@ -201,8 +245,8 @@ def preprocess_session(log_path: Path, include_agents: bool) -> None:
     xml_content = "\n\n".join(xml_sections)
 
     # Write to temp file and print path
-    session_id = log_path.stem  # Extract session ID from filename
-    temp_file = Path(tempfile.gettempdir()) / f"session-{session_id}-compressed.xml"
+    filename_session_id = log_path.stem  # Extract session ID from filename
+    temp_file = Path(tempfile.gettempdir()) / f"session-{filename_session_id}-compressed.xml"
     temp_file.write_text(xml_content, encoding="utf-8")
 
     # Print path to stdout for command capture

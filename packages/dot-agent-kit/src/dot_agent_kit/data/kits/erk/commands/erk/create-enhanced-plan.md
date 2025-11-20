@@ -143,14 +143,33 @@ Please create a plan first:
 
 **Step 3a: Preprocess JSONL logs to XML**
 
-Use the preprocessing CLI command to compress logs before mining:
+Use the preprocessing CLI command to compress logs before mining. **IMPORTANT:** Pass the session ID extracted in Step 1a to filter entries:
 
 ```bash
-# Preprocess main session log (replace with actual paths from Step 1b)
-dot-agent run erk preprocess-session ~/.claude/projects/<project-hash>/<session-id>.jsonl
+# Preprocess main session log with session ID filtering
+# (replace with actual paths from Step 1b and session ID from Step 1a)
+dot-agent run erk preprocess-session --session-id <session-id> ~/.claude/projects/<project-hash>/<session-id>.jsonl
 ```
 
 This outputs a temp file path like: `/tmp/session-<session-id>-compressed.xml`
+
+**Session Filtering (Automatic):**
+
+The preprocessing step now automatically filters JSONL entries by session ID to prevent unrelated conversations from polluting the enhanced plan.
+
+- Extracts session ID from conversation context (Step 1a)
+- Passes to `preprocess-session --session-id <id>`
+- Only includes entries from your current session
+- Reduces token usage by ~95% (1MB → 50KB typical)
+
+If session ID not found in Step 1a:
+
+```
+⚠️ Warning: Session ID not found in conversation context
+
+Proceeding without session filtering (will include all entries).
+This may include unrelated conversations from the same project.
+```
 
 **Benefits:**
 

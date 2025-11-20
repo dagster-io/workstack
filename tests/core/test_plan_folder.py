@@ -462,18 +462,25 @@ def test_copy_plan_to_submission_no_plan(tmp_path: Path) -> None:
 
 
 def test_copy_plan_to_submission_already_exists(tmp_path: Path) -> None:
-    """Test copy_plan_to_submission raises error when .submission/ already exists."""
+    """Test copy_plan_to_submission replaces existing .submission/ (idempotent)."""
     # Create .plan/ folder
     plan_content = "# Test Plan\n\n1. Step"
     create_plan_folder(tmp_path, plan_content)
 
-    # Create .submission/ folder manually
+    # Create .submission/ folder with old content
     submission_folder = tmp_path / ".submission"
     submission_folder.mkdir()
+    old_file = submission_folder / "old.txt"
+    old_file.write_text("old content", encoding="utf-8")
 
-    # Try to copy - should raise error
-    with pytest.raises(FileExistsError, match=".submission/ folder already exists"):
-        copy_plan_to_submission(tmp_path)
+    # Copy should replace existing folder (idempotent)
+    result_folder = copy_plan_to_submission(tmp_path)
+
+    # Verify .submission/ was replaced with .plan/ contents
+    assert result_folder.exists()
+    assert (submission_folder / "plan.md").exists()
+    assert (submission_folder / "progress.md").exists()
+    assert not old_file.exists()  # Old content removed
 
 
 def test_get_submission_path_exists(tmp_path: Path) -> None:

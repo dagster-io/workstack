@@ -200,6 +200,9 @@ def update_progress_frontmatter(worktree_path: Path, completed: int, total: int)
 def copy_plan_to_submission(worktree_path: Path) -> Path:
     """Copy .plan/ folder to .submission/ folder.
 
+    If .submission/ already exists, it will be removed and replaced with
+    the current .plan/ contents (idempotent operation).
+
     Args:
         worktree_path: Path to worktree directory
 
@@ -208,7 +211,6 @@ def copy_plan_to_submission(worktree_path: Path) -> Path:
 
     Raises:
         FileNotFoundError: If .plan/ folder doesn't exist
-        FileExistsError: If .submission/ folder already exists
     """
     plan_folder = worktree_path / ".plan"
     submission_folder = worktree_path / ".submission"
@@ -216,8 +218,9 @@ def copy_plan_to_submission(worktree_path: Path) -> Path:
     if not plan_folder.exists():
         raise FileNotFoundError(f"No .plan/ folder found at {worktree_path}")
 
+    # Remove existing .submission/ folder if it exists (idempotent)
     if submission_folder.exists():
-        raise FileExistsError(f".submission/ folder already exists at {worktree_path}")
+        shutil.rmtree(submission_folder)
 
     shutil.copytree(plan_folder, submission_folder)
     return submission_folder

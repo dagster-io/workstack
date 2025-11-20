@@ -40,14 +40,13 @@ def submit_cmd(ctx: ErkContext, dry_run: bool) -> None:
         )
         raise SystemExit(1)
 
-    # Check if .submission/ already exists
+    # Check if .submission/ already exists and warn
     if get_submission_path(ctx.cwd):
         user_output(
-            click.style("Error: ", fg="red") + ".submission/ folder already exists.\n\n"
-            "This usually means a submission is in progress.\n"
-            "To clean up, delete the folder manually: rm -rf .submission/"
+            click.style("Warning: ", fg="yellow") + ".submission/ folder already exists.\n"
+            "Replacing contents with current .plan/ folder..."
         )
-        raise SystemExit(1)
+        user_output("")
 
     # Get current branch
     current_branch = ctx.git.get_current_branch(ctx.cwd)
@@ -99,11 +98,36 @@ def submit_cmd(ctx: ErkContext, dry_run: bool) -> None:
     # Trigger workflow
     workflow = "implement-plan.yml"
     user_output(f"Triggering workflow: {click.style(workflow, fg='cyan')}")
-    ctx.github.trigger_workflow(
-        repo.root,
-        workflow,
-        {"branch-name": current_branch},
-    )
+    try:
+        ctx.github.trigger_workflow(
+            repo.root,
+            workflow,
+            {"branch-name": current_branch},
+        )
+    except RuntimeError as e:
+        # Handle case where workflow doesn't exist on default branch
+        error_str = str(e)
+        if "workflow_dispatch" in error_str or "HTTP 422" in error_str:
+            user_output("")
+            user_output(
+                click.style("Warning: ", fg="yellow")
+                + "Could not trigger workflow automatically.\n"
+            )
+            user_output(
+                "The workflow file must exist on the default branch (master) "
+                "before it can be triggered.\n"
+            )
+            user_output("To trigger manually once merged to master:")
+            user_output(f"  gh workflow run {workflow} -f branch-name={current_branch}")
+            user_output("")
+            user_output(
+                click.style("ℹ️  ", fg="cyan")
+                + "Submission files have been committed and pushed."
+            )
+            user_output("The workflow will auto-trigger on the next push to this branch.")
+        else:
+            # Re-raise unexpected errors
+            raise
 
     user_output("")
     user_output(click.style("✓", fg="green") + " Submission complete!")

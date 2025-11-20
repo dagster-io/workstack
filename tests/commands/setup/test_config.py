@@ -20,7 +20,7 @@ def test_config_list_displays_global_config() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
@@ -49,7 +49,7 @@ def test_config_list_displays_repo_config() -> None:
     """Test that config list displays repository configuration."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
 
         git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
         # Pass local config directly instead of creating files
@@ -88,7 +88,7 @@ def test_config_list_handles_missing_repo_config() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
@@ -145,7 +145,7 @@ def test_config_get_erk_root() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
@@ -169,7 +169,7 @@ def test_config_get_use_graphite() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
@@ -210,7 +210,7 @@ def test_config_get_env_key() -> None:
     """Test getting env.* config value."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
 
         git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
         # Pass local config directly instead of creating files
@@ -245,7 +245,7 @@ def test_config_get_post_create_shell() -> None:
     """Test getting post_create.shell config value."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
 
         git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
         # Pass local config directly instead of creating files
@@ -280,7 +280,7 @@ def test_config_get_post_create_commands() -> None:
     """Test getting post_create.commands config value."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
 
         git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
         # Pass local config directly instead of creating files
@@ -316,7 +316,7 @@ def test_config_get_env_key_not_found() -> None:
     """Test that getting non-existent env key fails."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
 
         git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
         # Pass empty local config
@@ -352,7 +352,7 @@ def test_config_get_invalid_key_format() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
@@ -377,7 +377,7 @@ def test_config_get_invalid_key() -> None:
     """Test that getting invalid key fails."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
 
         git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
         repo = RepoContext(
@@ -404,7 +404,7 @@ def test_config_key_with_multiple_dots() -> None:
     """Test that keys with multiple dots are handled."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
 
         git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
         repo = RepoContext(

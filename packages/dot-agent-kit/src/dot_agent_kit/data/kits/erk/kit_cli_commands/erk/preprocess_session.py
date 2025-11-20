@@ -245,9 +245,18 @@ def preprocess_session(log_path: Path, session_id: str | None, include_agents: b
     xml_content = "\n\n".join(xml_sections)
 
     # Write to temp file and print path
+    # Use NamedTemporaryFile to avoid conflicts when multiple tests use same filename
     filename_session_id = log_path.stem  # Extract session ID from filename
-    temp_file = Path(tempfile.gettempdir()) / f"session-{filename_session_id}-compressed.xml"
-    temp_file.write_text(xml_content, encoding="utf-8")
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        encoding="utf-8",
+        prefix=f"session-{filename_session_id}-",
+        suffix="-compressed.xml",
+        delete=False,
+        dir=tempfile.gettempdir(),
+    ) as f:
+        f.write(xml_content)
+        temp_file = Path(f.name)
 
     # Print path to stdout for command capture
     click.echo(str(temp_file))

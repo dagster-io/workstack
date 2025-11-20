@@ -339,7 +339,9 @@ def test_preprocess_session_creates_temp_file(tmp_path: Path) -> None:
         # Extract temp file path from output
         temp_path = Path(result.output.strip())
         assert temp_path.exists()
-        assert temp_path.name == "session-session-123-compressed.xml"
+        # Check filename pattern (now includes random suffix for uniqueness)
+        assert temp_path.name.startswith("session-session-123-")
+        assert temp_path.name.endswith("-compressed.xml")
 
 
 def test_preprocess_session_outputs_path(tmp_path: Path) -> None:
@@ -351,8 +353,9 @@ def test_preprocess_session_outputs_path(tmp_path: Path) -> None:
         log_file.write_text(user_json, encoding="utf-8")
 
         result = runner.invoke(preprocess_session, [str(log_file)])
-        # Output should contain temp file path with correct filename
-        assert "session-session-123-compressed.xml" in result.output
+        # Output should contain temp file path with correct filename pattern
+        assert "session-session-123-" in result.output
+        assert "-compressed.xml" in result.output
 
 
 def test_preprocess_session_includes_agents_by_default(tmp_path: Path) -> None:

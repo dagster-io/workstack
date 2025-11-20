@@ -18,7 +18,7 @@ def test_down_with_existing_worktree() -> None:
     """Test down command when parent branch has a worktree."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
 
         git_ops = FakeGit(
             worktrees={
@@ -70,7 +70,7 @@ def test_down_to_trunk_root() -> None:
     """Test down command when parent is trunk checked out in root."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
 
         # Main is checked out in root, feature-1 has its own worktree
         git_ops = FakeGit(
@@ -146,7 +146,7 @@ def test_down_parent_has_no_worktree() -> None:
     """Test down command when parent branch exists but has no worktree - should auto-create."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
 
         # Only feature-2 has a worktree, feature-1 does not (will be auto-created)
         git_ops = FakeGit(
@@ -241,7 +241,7 @@ def test_down_script_flag() -> None:
     """Test down command with --script flag generates activation script."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
 
         git_ops = FakeGit(
             worktrees={
@@ -299,7 +299,7 @@ def test_down_with_mismatched_worktree_name() -> None:
     """
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
 
         # Worktree directories use different naming than branch names
         # Branch: feature/auth -> Worktree: auth-work

@@ -18,7 +18,7 @@ def test_up_with_existing_worktree() -> None:
     """Test up command when child branch has a worktree."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
 
         # The test runs from cwd, so we simulate being in feature-1 by setting
         # cwd's current branch to feature-1
@@ -80,7 +80,7 @@ def test_up_at_top_of_stack() -> None:
     """Test up command when at the top of stack (no children)."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
 
         git_ops = FakeGit(
             worktrees={
@@ -123,7 +123,7 @@ def test_up_child_has_no_worktree() -> None:
     """Test up command when child branch exists but has no worktree - should auto-create."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
 
         # Only feature-1 has a worktree, feature-2 does not (will be auto-created)
         git_ops = FakeGit(
@@ -176,7 +176,7 @@ def test_up_graphite_not_enabled() -> None:
     """Test up command requires Graphite to be enabled."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
 
         git_ops = FakeGit(
             worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch="main")]},
@@ -209,7 +209,7 @@ def test_up_detached_head() -> None:
     """Test up command fails gracefully on detached HEAD."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
 
         # Current branch is None (detached HEAD)
         git_ops = FakeGit(
@@ -237,7 +237,7 @@ def test_up_script_flag() -> None:
     """Test up command with --script flag generates activation script."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
 
         git_ops = FakeGit(
             worktrees={
@@ -290,7 +290,7 @@ def test_up_multiple_children_fails_explicitly() -> None:
     """Test up command fails when branch has multiple children."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
 
         # Set up stack: main -> feature-1 -> [feature-2a, feature-2b]
         # feature-1 has TWO children
@@ -351,7 +351,7 @@ def test_up_with_mismatched_worktree_name() -> None:
     """
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        repo_dir = env.erk_root / "repos" / env.cwd.name
+        repo_dir = env.setup_repo_structure()
 
         # Worktree directories use different naming than branch names
         # Branch: feature/auth -> Worktree: auth-work

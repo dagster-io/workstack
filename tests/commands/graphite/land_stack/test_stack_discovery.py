@@ -4,13 +4,8 @@ from click.testing import CliRunner
 
 from erk.cli.cli import cli
 from erk.core.branch_metadata import BranchMetadata
-from erk.core.config_store import GlobalConfig
-from erk.core.context import ErkContext
-from erk.core.git.abc import WorktreeInfo
-from tests.fakes.git import FakeGit
 from tests.fakes.github import FakeGitHub
-from tests.fakes.graphite import FakeGraphite
-from tests.fakes.shell import FakeShell
+from tests.test_utils.builders import BranchStackBuilder
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
@@ -18,41 +13,20 @@ def test_land_stack_gets_branches_to_land_correctly() -> None:
     """Test that land-stack lands from bottom of stack to current branch."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                ],
-            },
-            current_branches={env.cwd: "feat-2"},
-            existing_paths={env.cwd, env.git_dir},
-        )
-
-        global_config_ops = GlobalConfig(
-            erk_root=env.erk_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-        )
-
         # Stack: main → feat-1 → feat-2 → feat-3
         # Current: feat-2
         # With --down flag: Should land feat-1, feat-2 (bottom to current, not including feat-3)
-        graphite_ops = FakeGraphite(
-            branches={
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
-                "feat-1": BranchMetadata.branch(
-                    "feat-1", "main", children=["feat-2"], commit_sha="def456"
-                ),
-                "feat-2": BranchMetadata.branch(
-                    "feat-2", "feat-1", children=["feat-3"], commit_sha="ghi789"
-                ),
-                "feat-3": BranchMetadata.branch("feat-3", "feat-2", commit_sha="jkl012"),
+                **BranchStackBuilder()
+                .add_linear_stack("feat-1", "feat-2", "feat-3")
+                .with_commit_sha("feat-1", "def456")
+                .with_commit_sha("feat-2", "ghi789")
+                .with_commit_sha("feat-3", "jkl012")
+                .build(),
             },
-            stacks={
-                "feat-2": ["main", "feat-1", "feat-2", "feat-3"],
-            },
+            current_branch="feat-2",
         )
 
         # feat-1 and feat-2 have open PRs (feat-3 not needed)
@@ -67,15 +41,11 @@ def test_land_stack_gets_branches_to_land_correctly() -> None:
             },
         )
 
-        test_ctx = ErkContext.for_test(
+        test_ctx = env.build_context(
             git=git_ops,
-            global_config=global_config_ops,
             graphite=graphite_ops,
             github=github_ops,
-            shell=FakeShell(),
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-            dry_run=False,
+            use_graphite=True,
         )
 
         # Use --force to skip confirmation and --down to land only downstack
@@ -98,44 +68,21 @@ def test_land_stack_from_top_of_stack_lands_all_branches() -> None:
     """
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                ],
-            },
-            current_branches={env.cwd: "feat-4"},
-            existing_paths={env.cwd, env.git_dir},
-        )
-
-        global_config_ops = GlobalConfig(
-            erk_root=env.erk_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-        )
-
         # Stack: main → feat-1 → feat-2 → feat-3 → feat-4
         # Current: feat-4 (at TOP/leaf)
         # Should land: feat-1, feat-2, feat-3, feat-4 (ALL 4 branches)
-        graphite_ops = FakeGraphite(
-            branches={
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
-                "feat-1": BranchMetadata.branch(
-                    "feat-1", "main", children=["feat-2"], commit_sha="def456"
-                ),
-                "feat-2": BranchMetadata.branch(
-                    "feat-2", "feat-1", children=["feat-3"], commit_sha="ghi789"
-                ),
-                "feat-3": BranchMetadata.branch(
-                    "feat-3", "feat-2", children=["feat-4"], commit_sha="jkl012"
-                ),
-                "feat-4": BranchMetadata.branch("feat-4", "feat-3", commit_sha="mno345"),
+                **BranchStackBuilder()
+                .add_linear_stack("feat-1", "feat-2", "feat-3", "feat-4")
+                .with_commit_sha("feat-1", "def456")
+                .with_commit_sha("feat-2", "ghi789")
+                .with_commit_sha("feat-3", "jkl012")
+                .with_commit_sha("feat-4", "mno345")
+                .build(),
             },
-            stacks={
-                "feat-4": ["main", "feat-1", "feat-2", "feat-3", "feat-4"],
-            },
+            current_branch="feat-4",
         )
 
         # All branches have open PRs
@@ -154,15 +101,11 @@ def test_land_stack_from_top_of_stack_lands_all_branches() -> None:
             },
         )
 
-        test_ctx = ErkContext.for_test(
+        test_ctx = env.build_context(
             git=git_ops,
-            global_config=global_config_ops,
             graphite=graphite_ops,
             github=github_ops,
-            shell=FakeShell(),
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-            dry_run=False,
+            use_graphite=True,
         )
 
         # Use --dry-run to avoid actual merging
@@ -189,36 +132,17 @@ def test_land_stack_refreshes_metadata_after_sync() -> None:
     """
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                ],
-            },
-            current_branches={env.cwd: "feat-2"},
-            existing_paths={env.cwd, env.git_dir},
-        )
-
-        global_config_ops = GlobalConfig(
-            erk_root=env.erk_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-        )
-
         # Stack: main → feat-1 → feat-2
-        graphite_ops = FakeGraphite(
-            branches={
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
-                "feat-1": BranchMetadata.branch(
-                    "feat-1", "main", children=["feat-2"], commit_sha="def456"
-                ),
-                "feat-2": BranchMetadata.branch("feat-2", "feat-1", commit_sha="ghi789"),
+                **BranchStackBuilder()
+                .add_linear_stack("feat-1", "feat-2")
+                .with_commit_sha("feat-1", "def456")
+                .with_commit_sha("feat-2", "ghi789")
+                .build(),
             },
-            stacks={
-                "feat-2": ["main", "feat-1", "feat-2"],
-            },
+            current_branch="feat-2",
         )
 
         github_ops = FakeGitHub(
@@ -232,15 +156,11 @@ def test_land_stack_refreshes_metadata_after_sync() -> None:
             },
         )
 
-        test_ctx = ErkContext.for_test(
+        test_ctx = env.build_context(
             git=git_ops,
-            global_config=global_config_ops,
             graphite=graphite_ops,
             github=github_ops,
-            shell=FakeShell(),
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-            dry_run=False,
+            use_graphite=True,
         )
 
         # Execute land-stack - should complete successfully

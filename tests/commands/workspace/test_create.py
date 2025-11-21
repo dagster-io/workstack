@@ -23,12 +23,7 @@ def test_create_basic_worktree() -> None:
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-        )
-
-        test_ctx = env.build_context(git=git_ops)
+        test_ctx = env.build_context()
 
         result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
 
@@ -47,12 +42,7 @@ def test_create_with_custom_branch_name() -> None:
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-        )
-
-        test_ctx = env.build_context(git=git_ops)
+        test_ctx = env.build_context()
 
         result = runner.invoke(
             cli, ["create", "feature", "--branch", "my-custom-branch"], obj=test_ctx
@@ -79,11 +69,6 @@ def test_create_with_plan_file() -> None:
             post_create_shell=None,
         )
 
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-        )
-
         repo = RepoContext(
             root=env.root_worktree,
             repo_name=env.root_worktree.name,
@@ -91,7 +76,7 @@ def test_create_with_plan_file() -> None:
             worktrees_dir=repo_dir / "worktrees",
         )
 
-        test_ctx = env.build_context(git=git_ops, local_config=local_config, repo=repo)
+        test_ctx = env.build_context(local_config=local_config, repo=repo)
 
         result = runner.invoke(cli, ["create", "--plan", str(plan_file)], obj=test_ctx)
 
@@ -122,11 +107,6 @@ def test_create_with_plan_file_removes_plan_word() -> None:
             post_create_shell=None,
         )
 
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-        )
-
         repo = RepoContext(
             root=env.root_worktree,
             repo_name=env.root_worktree.name,
@@ -134,7 +114,7 @@ def test_create_with_plan_file_removes_plan_word() -> None:
             worktrees_dir=repo_dir / "worktrees",
         )
 
-        test_ctx = env.build_context(git=git_ops, local_config=local_config, repo=repo)
+        test_ctx = env.build_context(local_config=local_config, repo=repo)
 
         # Test multiple plan file examples
         from datetime import datetime
@@ -179,12 +159,7 @@ def test_create_sanitizes_worktree_name() -> None:
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-        )
-
-        test_ctx = env.build_context(git=git_ops)
+        test_ctx = env.build_context()
 
         result = runner.invoke(cli, ["create", "Test_Feature!!"], obj=test_ctx)
 
@@ -203,12 +178,7 @@ def test_create_sanitizes_branch_name() -> None:
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-        )
-
-        test_ctx = env.build_context(git=git_ops)
+        test_ctx = env.build_context()
 
         # Branch name should be sanitized differently than worktree name
         result = runner.invoke(cli, ["create", "Test_Feature!!"], obj=test_ctx)
@@ -293,13 +263,8 @@ def test_create_fails_if_worktree_exists() -> None:
         # Create existing worktree directory
         wt_path = repo_dir / "worktrees" / "test-feature"
 
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-        )
-
         # Tell context that wt_path exists
-        test_ctx = env.build_context(git=git_ops, existing_paths={wt_path})
+        test_ctx = env.build_context(existing_paths={wt_path})
 
         result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
 
@@ -320,11 +285,6 @@ def test_create_runs_post_create_commands() -> None:
             post_create_shell=None,
         )
 
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-        )
-
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
@@ -332,7 +292,7 @@ def test_create_runs_post_create_commands() -> None:
             worktrees_dir=repo_dir / "worktrees",
         )
 
-        test_ctx = env.build_context(git=git_ops, local_config=local_config, repo=repo)
+        test_ctx = env.build_context(local_config=local_config, repo=repo)
 
         result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
 
@@ -353,11 +313,6 @@ def test_create_sets_env_variables() -> None:
             post_create_shell=None,
         )
 
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-        )
-
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,
@@ -365,7 +320,7 @@ def test_create_sets_env_variables() -> None:
             worktrees_dir=repo_dir / "worktrees",
         )
 
-        test_ctx = env.build_context(git=git_ops, local_config=local_config, repo=repo)
+        test_ctx = env.build_context(local_config=local_config, repo=repo)
 
         result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
 
@@ -477,12 +432,7 @@ def test_create_uses_git_when_graphite_disabled() -> None:
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-        )
-
-        test_ctx = env.build_context(git=git_ops)
+        test_ctx = env.build_context()
 
         result = runner.invoke(cli, ["create", "test-feature"], obj=test_ctx)
 
@@ -558,12 +508,7 @@ def test_create_no_post_flag_skips_commands() -> None:
             encoding="utf-8",
         )
 
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-        )
-
-        test_ctx = env.build_context(git=git_ops)
+        test_ctx = env.build_context()
 
         result = runner.invoke(cli, ["create", "test-feature", "--no-post"], obj=test_ctx)
 
@@ -602,12 +547,7 @@ def test_create_from_branch() -> None:
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-        )
-
-        test_ctx = env.build_context(git=git_ops)
+        test_ctx = env.build_context()
 
         result = runner.invoke(
             cli, ["create", "feature", "--from-branch", "existing-branch"], obj=test_ctx
@@ -729,11 +669,6 @@ def test_create_with_keep_plan_flag() -> None:
             post_create_shell=None,
         )
 
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-        )
-
         repo = RepoContext(
             root=env.root_worktree,
             repo_name=env.root_worktree.name,
@@ -741,7 +676,7 @@ def test_create_with_keep_plan_flag() -> None:
             worktrees_dir=repo_dir / "worktrees",
         )
 
-        test_ctx = env.build_context(git=git_ops, local_config=local_config, repo=repo)
+        test_ctx = env.build_context(local_config=local_config, repo=repo)
 
         result = runner.invoke(
             cli, ["create", "--plan", str(plan_file), "--keep-plan"], obj=test_ctx
@@ -1048,12 +983,7 @@ def test_create_with_json_output() -> None:
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-        )
-
-        test_ctx = env.build_context(git=git_ops)
+        test_ctx = env.build_context()
 
         result = runner.invoke(cli, ["create", "test-feature", "--json"], obj=test_ctx)
 
@@ -1113,12 +1043,7 @@ def test_create_json_and_script_mutually_exclusive() -> None:
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-        )
-
-        test_ctx = env.build_context(git=git_ops)
+        test_ctx = env.build_context()
 
         result = runner.invoke(cli, ["create", "test-feature", "--json", "--script"], obj=test_ctx)
 
@@ -1144,11 +1069,6 @@ def test_create_with_json_and_plan_file() -> None:
         plan_file = env.cwd / "test-feature-plan.md"
         plan_file.write_text("# Implementation Plan\n\nTest plan content", encoding="utf-8")
 
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-        )
-
         repo = RepoContext(
             root=env.root_worktree,
             repo_name=env.root_worktree.name,
@@ -1156,7 +1076,7 @@ def test_create_with_json_and_plan_file() -> None:
             worktrees_dir=repo_dir / "worktrees",
         )
 
-        test_ctx = env.build_context(git=git_ops, local_config=local_config, repo=repo)
+        test_ctx = env.build_context(local_config=local_config, repo=repo)
 
         # Don't provide NAME - it's derived from plan filename
         result = runner.invoke(
@@ -1195,12 +1115,7 @@ def test_create_with_json_no_plan() -> None:
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-        )
-
-        test_ctx = env.build_context(git=git_ops)
+        test_ctx = env.build_context()
 
         result = runner.invoke(cli, ["create", "test-feature", "--json"], obj=test_ctx)
 
@@ -1221,12 +1136,7 @@ def test_create_with_stay_prevents_script_generation() -> None:
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-        )
-
-        test_ctx = env.build_context(git=git_ops)
+        test_ctx = env.build_context()
 
         result = runner.invoke(cli, ["create", "test-feature", "--script", "--stay"], obj=test_ctx)
 
@@ -1247,12 +1157,7 @@ def test_create_with_stay_and_json() -> None:
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-        )
-
-        test_ctx = env.build_context(git=git_ops)
+        test_ctx = env.build_context()
 
         result = runner.invoke(cli, ["create", "test-feature", "--json", "--stay"], obj=test_ctx)
 
@@ -1283,11 +1188,6 @@ def test_create_with_stay_and_plan() -> None:
             post_create_shell=None,
         )
 
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-        )
-
         repo = RepoContext(
             root=env.root_worktree,
             repo_name=env.root_worktree.name,
@@ -1295,7 +1195,7 @@ def test_create_with_stay_and_plan() -> None:
             worktrees_dir=repo_dir / "worktrees",
         )
 
-        test_ctx = env.build_context(git=git_ops, local_config=local_config, repo=repo)
+        test_ctx = env.build_context(local_config=local_config, repo=repo)
 
         result = runner.invoke(
             cli, ["create", "--plan", str(plan_file), "--script", "--stay"], obj=test_ctx
@@ -1325,12 +1225,7 @@ def test_create_default_behavior_generates_script() -> None:
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-        )
-
-        test_ctx = env.build_context(git=git_ops)
+        test_ctx = env.build_context()
 
         result = runner.invoke(cli, ["create", "test-feature", "--script"], obj=test_ctx)
 
@@ -1350,12 +1245,7 @@ def test_create_with_long_name_truncation() -> None:
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-        )
-
-        test_ctx = env.build_context(git=git_ops)
+        test_ctx = env.build_context()
 
         # Create with name that exceeds 30 characters
         long_name = "this-is-a-very-long-worktree-name-that-exceeds-thirty-characters"
@@ -1383,12 +1273,7 @@ def test_create_with_plan_ensures_uniqueness() -> None:
         config_toml = repo_dir / "config.toml"
         config_toml.write_text("", encoding="utf-8")
 
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-        )
-
-        test_ctx = env.build_context(git=git_ops)
+        test_ctx = env.build_context()
 
         # Create first worktree from plan
         result1 = runner.invoke(cli, ["create", "--plan", str(plan_file)], obj=test_ctx)

@@ -4,14 +4,9 @@ from click.testing import CliRunner
 
 from erk.cli.cli import cli
 from erk.core.branch_metadata import BranchMetadata
-from erk.core.config_store import GlobalConfig
-from erk.core.context import ErkContext
-from erk.core.git.abc import WorktreeInfo
 from erk.core.github.types import PRMergeability
-from tests.fakes.git import FakeGit
 from tests.fakes.github import FakeGitHub
-from tests.fakes.graphite import FakeGraphite
-from tests.fakes.shell import FakeShell
+from tests.test_utils.builders import BranchStackBuilder
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
@@ -19,36 +14,17 @@ def test_land_stack_fails_when_first_pr_has_conflict() -> None:
     """Test that land-stack fails when first PR has merge conflict."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                ],
-            },
-            current_branches={env.cwd: "feat-2"},
-            existing_paths={env.cwd, env.git_dir},
-        )
-
-        global_config_ops = GlobalConfig(
-            erk_root=env.erk_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-        )
-
         # Stack: main → feat-1 → feat-2
-        graphite_ops = FakeGraphite(
-            branches={
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
-                "feat-1": BranchMetadata.branch(
-                    "feat-1", "main", children=["feat-2"], commit_sha="def456"
-                ),
-                "feat-2": BranchMetadata.branch("feat-2", "feat-1", commit_sha="ghi789"),
+                **BranchStackBuilder()
+                .add_linear_stack("feat-1", "feat-2")
+                .with_commit_sha("feat-1", "def456")
+                .with_commit_sha("feat-2", "ghi789")
+                .build(),
             },
-            stacks={
-                "feat-2": ["main", "feat-1", "feat-2"],
-            },
+            current_branch="feat-2",
         )
 
         # feat-1 has CONFLICTING status
@@ -63,15 +39,11 @@ def test_land_stack_fails_when_first_pr_has_conflict() -> None:
             },
         )
 
-        test_ctx = ErkContext.for_test(
+        test_ctx = env.build_context(
             git=git_ops,
-            global_config=global_config_ops,
             graphite=graphite_ops,
             github=github_ops,
-            shell=FakeShell(),
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-            dry_run=False,
+            use_graphite=True,
         )
 
         result = runner.invoke(cli, ["land-stack", "--force"], obj=test_ctx)
@@ -87,39 +59,18 @@ def test_land_stack_fails_when_middle_pr_has_conflict() -> None:
     """Test that land-stack fails when middle PR has merge conflict."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                ],
-            },
-            current_branches={env.cwd: "feat-3"},
-            existing_paths={env.cwd, env.git_dir},
-        )
-
-        global_config_ops = GlobalConfig(
-            erk_root=env.erk_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-        )
-
         # Stack: main → feat-1 → feat-2 → feat-3
-        graphite_ops = FakeGraphite(
-            branches={
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
-                "feat-1": BranchMetadata.branch(
-                    "feat-1", "main", children=["feat-2"], commit_sha="def456"
-                ),
-                "feat-2": BranchMetadata.branch(
-                    "feat-2", "feat-1", children=["feat-3"], commit_sha="ghi789"
-                ),
-                "feat-3": BranchMetadata.branch("feat-3", "feat-2", commit_sha="jkl012"),
+                **BranchStackBuilder()
+                .add_linear_stack("feat-1", "feat-2", "feat-3")
+                .with_commit_sha("feat-1", "def456")
+                .with_commit_sha("feat-2", "ghi789")
+                .with_commit_sha("feat-3", "jkl012")
+                .build(),
             },
-            stacks={
-                "feat-3": ["main", "feat-1", "feat-2", "feat-3"],
-            },
+            current_branch="feat-3",
         )
 
         # feat-2 (middle PR) has CONFLICTING status
@@ -136,15 +87,11 @@ def test_land_stack_fails_when_middle_pr_has_conflict() -> None:
             },
         )
 
-        test_ctx = ErkContext.for_test(
+        test_ctx = env.build_context(
             git=git_ops,
-            global_config=global_config_ops,
             graphite=graphite_ops,
             github=github_ops,
-            shell=FakeShell(),
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-            dry_run=False,
+            use_graphite=True,
         )
 
         result = runner.invoke(cli, ["land-stack", "--force"], obj=test_ctx)
@@ -159,36 +106,17 @@ def test_land_stack_fails_when_last_pr_has_conflict() -> None:
     """Test that land-stack fails when last PR has merge conflict."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                ],
-            },
-            current_branches={env.cwd: "feat-2"},
-            existing_paths={env.cwd, env.git_dir},
-        )
-
-        global_config_ops = GlobalConfig(
-            erk_root=env.erk_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-        )
-
         # Stack: main → feat-1 → feat-2
-        graphite_ops = FakeGraphite(
-            branches={
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
-                "feat-1": BranchMetadata.branch(
-                    "feat-1", "main", children=["feat-2"], commit_sha="def456"
-                ),
-                "feat-2": BranchMetadata.branch("feat-2", "feat-1", commit_sha="ghi789"),
+                **BranchStackBuilder()
+                .add_linear_stack("feat-1", "feat-2")
+                .with_commit_sha("feat-1", "def456")
+                .with_commit_sha("feat-2", "ghi789")
+                .build(),
             },
-            stacks={
-                "feat-2": ["main", "feat-1", "feat-2"],
-            },
+            current_branch="feat-2",
         )
 
         # feat-2 (last PR) has CONFLICTING status
@@ -203,15 +131,11 @@ def test_land_stack_fails_when_last_pr_has_conflict() -> None:
             },
         )
 
-        test_ctx = ErkContext.for_test(
+        test_ctx = env.build_context(
             git=git_ops,
-            global_config=global_config_ops,
             graphite=graphite_ops,
             github=github_ops,
-            shell=FakeShell(),
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-            dry_run=False,
+            use_graphite=True,
         )
 
         result = runner.invoke(cli, ["land-stack", "--force"], obj=test_ctx)
@@ -226,33 +150,13 @@ def test_land_stack_succeeds_with_unknown_mergeability() -> None:
     """Test that land-stack proceeds with warning when PR mergeability is UNKNOWN."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                ],
-            },
-            current_branches={env.cwd: "feat-1"},
-            existing_paths={env.cwd, env.git_dir},
-        )
-
-        global_config_ops = GlobalConfig(
-            erk_root=env.erk_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-        )
-
         # Simple stack: main → feat-1
-        graphite_ops = FakeGraphite(
-            branches={
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
             },
-            stacks={
-                "feat-1": ["main", "feat-1"],
-            },
+            current_branch="feat-1",
         )
 
         # feat-1 has UNKNOWN status (GitHub hasn't computed it yet)
@@ -265,15 +169,11 @@ def test_land_stack_succeeds_with_unknown_mergeability() -> None:
             },
         )
 
-        test_ctx = ErkContext.for_test(
+        test_ctx = env.build_context(
             git=git_ops,
-            global_config=global_config_ops,
             graphite=graphite_ops,
             github=github_ops,
-            shell=FakeShell(),
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-            dry_run=False,
+            use_graphite=True,
         )
 
         result = runner.invoke(cli, ["land-stack", "--force"], obj=test_ctx)
@@ -287,36 +187,17 @@ def test_land_stack_succeeds_when_all_prs_mergeable() -> None:
     """Test that land-stack succeeds when all PRs are MERGEABLE."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                ],
-            },
-            current_branches={env.cwd: "feat-2"},
-            existing_paths={env.cwd, env.git_dir},
-        )
-
-        global_config_ops = GlobalConfig(
-            erk_root=env.erk_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-        )
-
         # Stack: main → feat-1 → feat-2
-        graphite_ops = FakeGraphite(
-            branches={
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
-                "feat-1": BranchMetadata.branch(
-                    "feat-1", "main", children=["feat-2"], commit_sha="def456"
-                ),
-                "feat-2": BranchMetadata.branch("feat-2", "feat-1", commit_sha="ghi789"),
+                **BranchStackBuilder()
+                .add_linear_stack("feat-1", "feat-2")
+                .with_commit_sha("feat-1", "def456")
+                .with_commit_sha("feat-2", "ghi789")
+                .build(),
             },
-            stacks={
-                "feat-2": ["main", "feat-1", "feat-2"],
-            },
+            current_branch="feat-2",
         )
 
         # All PRs are MERGEABLE
@@ -331,15 +212,11 @@ def test_land_stack_succeeds_when_all_prs_mergeable() -> None:
             },
         )
 
-        test_ctx = ErkContext.for_test(
+        test_ctx = env.build_context(
             git=git_ops,
-            global_config=global_config_ops,
             graphite=graphite_ops,
             github=github_ops,
-            shell=FakeShell(),
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-            dry_run=False,
+            use_graphite=True,
         )
 
         result = runner.invoke(cli, ["land-stack", "--force"], obj=test_ctx)

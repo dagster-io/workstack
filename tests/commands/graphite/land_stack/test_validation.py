@@ -6,14 +6,9 @@ from click.testing import CliRunner
 
 from erk.cli.cli import cli
 from erk.core.branch_metadata import BranchMetadata
-from erk.core.config_store import GlobalConfig
-from erk.core.context import ErkContext
 from erk.core.git.abc import WorktreeInfo
-from erk.core.github.types import PullRequestInfo
 from tests.fakes.git import FakeGit
 from tests.fakes.github import FakeGitHub
-from tests.fakes.graphite import FakeGraphite
-from tests.fakes.shell import FakeShell
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
@@ -31,22 +26,10 @@ def test_land_stack_requires_graphite() -> None:
         )
 
         # use_graphite=False: Test that graphite is required
-        global_config_ops = GlobalConfig(
-            erk_root=env.erk_root,
-            use_graphite=False,
-            shell_setup_complete=False,
-            show_pr_info=True,
-        )
-
-        test_ctx = ErkContext.for_test(
+        test_ctx = env.build_context(
             git=git_ops,
-            global_config=global_config_ops,
             graphite=graphite_ops,
-            github=FakeGitHub(),
-            shell=FakeShell(),
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-            dry_run=False,
+            use_graphite=False,
         )
 
         result = runner.invoke(cli, ["land-stack"], obj=test_ctx)
@@ -71,25 +54,7 @@ def test_land_stack_fails_on_detached_head() -> None:
             existing_paths={env.cwd, env.git_dir},
         )
 
-        global_config_ops = GlobalConfig(
-            erk_root=env.erk_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-        )
-
-        graphite_ops = FakeGraphite()
-
-        test_ctx = ErkContext.for_test(
-            git=git_ops,
-            global_config=global_config_ops,
-            graphite=graphite_ops,
-            github=FakeGitHub(),
-            shell=FakeShell(),
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-            dry_run=False,
-        )
+        test_ctx = env.build_context(git=git_ops, use_graphite=True)
 
         result = runner.invoke(cli, ["land-stack"], obj=test_ctx)
 
@@ -101,44 +66,21 @@ def test_land_stack_fails_with_uncommitted_changes() -> None:
     """Test that land-stack fails when current worktree has uncommitted changes."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
-                ],
-            },
-            current_branches={env.cwd: "feat-1"},
-            file_statuses={env.cwd: (["file.txt"], [], [])},  # Has staged changes
-            existing_paths={env.cwd, env.git_dir},
-        )
-
-        global_config_ops = GlobalConfig(
-            erk_root=env.erk_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-        )
-
-        graphite_ops = FakeGraphite(
-            branches={
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
             },
-            stacks={
-                "feat-1": ["main", "feat-1"],
-            },
+            current_branch="feat-1",
         )
 
-        test_ctx = ErkContext.for_test(
+        # Override file_statuses to indicate staged changes
+        git_ops._file_statuses = {env.cwd: (["file.txt"], [], [])}
+
+        test_ctx = env.build_context(
             git=git_ops,
-            global_config=global_config_ops,
             graphite=graphite_ops,
-            github=FakeGitHub(),
-            shell=FakeShell(),
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-            dry_run=False,
+            use_graphite=True,
         )
 
         result = runner.invoke(cli, ["land-stack"], obj=test_ctx)
@@ -184,48 +126,25 @@ def test_land_stack_ignores_root_worktree_changes_on_unrelated_branch() -> None:
             },
         )
 
-        global_config_ops = GlobalConfig(
-            erk_root=env.erk_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-        )
-
-        graphite_ops = FakeGraphite(
-            branches={
+        graphite_ops = env.build_ops_from_branches(
+            {
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
                 # Unrelated branch
                 "test-docs": BranchMetadata.branch("test-docs", "main", commit_sha="xyz999"),
             },
-            stacks={
-                "feat-1": ["main", "feat-1"],
-                "test-docs": ["main", "test-docs"],
-            },
-            pr_info={
-                "feat-1": PullRequestInfo(
-                    number=123,
-                    state="OPEN",
-                    url="https://github.com/owner/repo/pull/123",
-                    is_draft=False,
-                    title=None,
-                    checks_passing=True,
-                    owner="owner",
-                    repo="repo",
-                ),
-            },
-        )
+            current_branch="feat-1",
+        )[1]
 
-        test_ctx = ErkContext.for_test(
+        test_ctx = env.build_context(
             git=git_ops,
-            global_config=global_config_ops,
             graphite=graphite_ops,
             github=FakeGitHub(
                 pr_statuses={
                     "feat-1": ("OPEN", 123, "Add feature 1"),
                 }
             ),
-            shell=FakeShell(),
+            use_graphite=True,
             cwd=current_path,  # Current worktree is clean
             dry_run=True,  # Use dry-run to avoid actual GitHub operations
         )
@@ -245,42 +164,17 @@ def test_land_stack_fails_on_trunk_branch() -> None:
     """Test that land-stack fails when current branch is trunk."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                ],
-            },
-            current_branches={env.cwd: "main"},
-            existing_paths={env.cwd, env.git_dir},
-        )
-
-        global_config_ops = GlobalConfig(
-            erk_root=env.erk_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-        )
-
-        graphite_ops = FakeGraphite(
-            branches={
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
                 "main": BranchMetadata.trunk("main", commit_sha="abc123"),
             },
-            stacks={
-                "main": ["main"],
-            },
+            current_branch="main",
         )
 
-        test_ctx = ErkContext.for_test(
+        test_ctx = env.build_context(
             git=git_ops,
-            global_config=global_config_ops,
             graphite=graphite_ops,
-            github=FakeGitHub(),
-            shell=FakeShell(),
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-            dry_run=False,
+            use_graphite=True,
         )
 
         result = runner.invoke(cli, ["land-stack"], obj=test_ctx)
@@ -304,30 +198,18 @@ def test_land_stack_fails_when_branch_not_tracked() -> None:
             existing_paths={env.cwd, env.git_dir},
         )
 
-        global_config_ops = GlobalConfig(
-            erk_root=env.erk_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-        )
-
         # Branch not in graphite stack
-        graphite_ops = FakeGraphite(
-            branches={
+        graphite_ops = env.build_ops_from_branches(
+            {
                 "main": BranchMetadata.trunk("main", commit_sha="abc123"),
             },
-            stacks={},
-        )
+            current_branch="main",
+        )[1]
 
-        test_ctx = ErkContext.for_test(
+        test_ctx = env.build_context(
             git=git_ops,
-            global_config=global_config_ops,
             graphite=graphite_ops,
-            github=FakeGitHub(),
-            shell=FakeShell(),
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-            dry_run=False,
+            use_graphite=True,
         )
 
         result = runner.invoke(cli, ["land-stack"], obj=test_ctx)
@@ -340,26 +222,8 @@ def test_land_stack_fails_when_pr_missing() -> None:
     """Test that land-stack fails when a branch has no PR."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                ],
-            },
-            current_branches={env.cwd: "feat-1"},
-            existing_paths={env.cwd, env.git_dir},
-        )
-
-        global_config_ops = GlobalConfig(
-            erk_root=env.erk_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-        )
-
-        graphite_ops = FakeGraphite(
-            branches={
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
                 "main": BranchMetadata.trunk(
                     "main", children=["feat-1", "feat-2"], commit_sha="abc123"
                 ),
@@ -368,9 +232,7 @@ def test_land_stack_fails_when_pr_missing() -> None:
                 ),
                 "feat-2": BranchMetadata.branch("feat-2", "feat-1", commit_sha="ghi789"),
             },
-            stacks={
-                "feat-1": ["main", "feat-1", "feat-2"],
-            },
+            current_branch="feat-1",
         )
 
         # feat-1 has no PR (state=NONE)
@@ -381,15 +243,11 @@ def test_land_stack_fails_when_pr_missing() -> None:
             }
         )
 
-        test_ctx = ErkContext.for_test(
+        test_ctx = env.build_context(
             git=git_ops,
-            global_config=global_config_ops,
             graphite=graphite_ops,
             github=github_ops,
-            shell=FakeShell(),
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-            dry_run=False,
+            use_graphite=True,
         )
 
         result = runner.invoke(cli, ["land-stack"], obj=test_ctx)
@@ -403,32 +261,12 @@ def test_land_stack_fails_when_pr_closed() -> None:
     """Test that land-stack fails when a branch's PR is closed."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        git_ops = FakeGit(
-            git_common_dirs={env.cwd: env.git_dir},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                ],
-            },
-            current_branches={env.cwd: "feat-1"},
-            existing_paths={env.cwd, env.git_dir},
-        )
-
-        global_config_ops = GlobalConfig(
-            erk_root=env.erk_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-        )
-
-        graphite_ops = FakeGraphite(
-            branches={
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
                 "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
                 "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
             },
-            stacks={
-                "feat-1": ["main", "feat-1"],
-            },
+            current_branch="feat-1",
         )
 
         # feat-1 PR is closed
@@ -438,15 +276,11 @@ def test_land_stack_fails_when_pr_closed() -> None:
             }
         )
 
-        test_ctx = ErkContext.for_test(
+        test_ctx = env.build_context(
             git=git_ops,
-            global_config=global_config_ops,
             graphite=graphite_ops,
             github=github_ops,
-            shell=FakeShell(),
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-            dry_run=False,
+            use_graphite=True,
         )
 
         result = runner.invoke(cli, ["land-stack"], obj=test_ctx)
@@ -469,13 +303,6 @@ def test_land_stack_excludes_current_branch_from_worktree_conflicts() -> None:
             current_branch="feat-1",
         )
 
-        global_config_ops = GlobalConfig(
-            erk_root=env.erk_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-        )
-
         github_ops = FakeGitHub(
             pr_statuses={
                 "feat-1": ("OPEN", 123, "Add feature 1"),
@@ -485,14 +312,11 @@ def test_land_stack_excludes_current_branch_from_worktree_conflicts() -> None:
             },
         )
 
-        test_ctx = ErkContext.for_test(
+        test_ctx = env.build_context(
             git=git_ops,
-            global_config=global_config_ops,
             graphite=graphite_ops,
             github=github_ops,
-            shell=FakeShell(),
-            script_writer=env.script_writer,
-            cwd=env.cwd,
+            use_graphite=True,
             dry_run=True,
         )
 
@@ -510,6 +334,24 @@ def test_land_stack_detects_worktree_conflicts_in_other_worktrees() -> None:
         # - Current worktree (env.cwd): feat-1 (current branch, OK)
         # - Other worktree: feat-2 (conflict!)
         other_worktree = Path("/other/worktree")
+
+        # Build graphite ops from branch metadata, but we'll use custom git_ops
+        from tests.fakes.graphite import FakeGraphite
+
+        branches = {
+            "main": BranchMetadata.trunk(
+                "main", children=["feat-1", "feat-2"], commit_sha="abc123"
+            ),
+            "feat-1": BranchMetadata.branch(
+                "feat-1", "main", children=["feat-2"], commit_sha="def456"
+            ),
+            "feat-2": BranchMetadata.branch("feat-2", "feat-1", commit_sha="ghi789"),
+        }
+
+        graphite_ops = FakeGraphite(
+            branches=branches,
+            stacks={"feat-1": ["feat-1", "feat-2"]},
+        )
 
         git_ops = FakeGit(
             git_common_dirs={
@@ -533,40 +375,27 @@ def test_land_stack_detects_worktree_conflicts_in_other_worktrees() -> None:
             existing_paths={env.cwd, env.git_dir, other_worktree},
         )
 
-        global_config_ops = GlobalConfig(
-            erk_root=env.erk_root,
-            use_graphite=True,
-            shell_setup_complete=False,
-            show_pr_info=True,
-        )
-
-        graphite_ops = FakeGraphite(
-            branches={
-                "main": BranchMetadata.trunk(
-                    "main", children=["feat-1", "feat-2"], commit_sha="abc123"
-                ),
-                "feat-1": BranchMetadata.branch(
-                    "feat-1", "main", children=["feat-2"], commit_sha="def456"
-                ),
-                "feat-2": BranchMetadata.branch("feat-2", "feat-1", commit_sha="ghi789"),
+        # Add GitHub ops with PR statuses to pass PR validation
+        # Note: feat-2's PR base should be feat-1 since feat-2 is a child of feat-1 in the stack
+        github_ops = FakeGitHub(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Feature 1"),
+                "feat-2": ("OPEN", 200, "Feature 2"),
             },
-            stacks={
-                "feat-1": ["main", "feat-1", "feat-2"],
+            pr_bases={
+                100: "main",
+                200: "feat-1",  # feat-2 is stacked on feat-1
             },
         )
 
-        test_ctx = ErkContext.for_test(
+        test_ctx = env.build_context(
             git=git_ops,
-            global_config=global_config_ops,
             graphite=graphite_ops,
-            github=FakeGitHub(),
-            shell=FakeShell(),
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-            dry_run=False,
+            github=github_ops,
+            use_graphite=True,
         )
 
-        result = runner.invoke(cli, ["land-stack"], obj=test_ctx)
+        result = runner.invoke(cli, ["land-stack", "--force"], obj=test_ctx)
 
         # Should fail with worktree conflict error
         assert result.exit_code == 1

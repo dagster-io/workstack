@@ -5,11 +5,11 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.branch_metadata import BranchMetadata
 from erk.core.git.abc import WorktreeInfo
 from erk.core.repo_discovery import RepoContext
 from tests.fakes.git import FakeGit
 from tests.fakes.graphite import FakeGraphite
+from tests.test_utils.builders import BranchStackBuilder
 from tests.test_utils.cli_helpers import assert_cli_error
 from tests.test_utils.env_helpers import erk_inmem_env, erk_isolated_fs_env
 
@@ -35,13 +35,10 @@ def test_up_with_existing_worktree() -> None:
 
         # Set up stack: main -> feature-1 -> feature-2
         graphite_ops = FakeGraphite(
-            branches={
-                "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
-                "feature-1": BranchMetadata.branch(
-                    "feature-1", "main", children=["feature-2"], commit_sha="def456"
-                ),
-                "feature-2": BranchMetadata.branch("feature-2", "feature-1", commit_sha="ghi789"),
-            }
+            branches=BranchStackBuilder()
+            .add_branch("feature-1", parent="main", children=["feature-2"], commit_sha="def456")
+            .add_branch("feature-2", parent="feature-1", commit_sha="ghi789")
+            .build()
         )
 
         # Create RepoContext to avoid filesystem checks
@@ -84,13 +81,10 @@ def test_up_at_top_of_stack() -> None:
 
         # Set up stack: main -> feature-1 -> feature-2 (at top)
         FakeGraphite(
-            branches={
-                "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
-                "feature-1": BranchMetadata.branch(
-                    "feature-1", "main", children=["feature-2"], commit_sha="def456"
-                ),
-                "feature-2": BranchMetadata.branch("feature-2", "feature-1", commit_sha="ghi789"),
-            }
+            branches=BranchStackBuilder()
+            .add_branch("feature-1", parent="main", children=["feature-2"], commit_sha="def456")
+            .add_branch("feature-2", parent="feature-1", commit_sha="ghi789")
+            .build()
         )
 
         # Create RepoContext to avoid filesystem checks
@@ -125,13 +119,10 @@ def test_up_child_has_no_worktree() -> None:
 
         # Set up stack: main -> feature-1 -> feature-2
         graphite_ops = FakeGraphite(
-            branches={
-                "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
-                "feature-1": BranchMetadata.branch(
-                    "feature-1", "main", children=["feature-2"], commit_sha="def456"
-                ),
-                "feature-2": BranchMetadata.branch("feature-2", "feature-1", commit_sha="ghi789"),
-            }
+            branches=BranchStackBuilder()
+            .add_branch("feature-1", parent="main", children=["feature-2"], commit_sha="def456")
+            .add_branch("feature-2", parent="feature-1", commit_sha="ghi789")
+            .build()
         )
 
         # Create RepoContext to avoid filesystem checks
@@ -232,13 +223,10 @@ def test_up_script_flag() -> None:
 
         # Set up stack: main -> feature-1 -> feature-2
         graphite_ops = FakeGraphite(
-            branches={
-                "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
-                "feature-1": BranchMetadata.branch(
-                    "feature-1", "main", children=["feature-2"], commit_sha="def456"
-                ),
-                "feature-2": BranchMetadata.branch("feature-2", "feature-1", commit_sha="ghi789"),
-            }
+            branches=BranchStackBuilder()
+            .add_branch("feature-1", parent="main", children=["feature-2"], commit_sha="def456")
+            .add_branch("feature-2", parent="feature-1", commit_sha="ghi789")
+            .build()
         )
 
         # Create RepoContext to avoid filesystem checks
@@ -281,14 +269,16 @@ def test_up_multiple_children_fails_explicitly() -> None:
         )
 
         graphite_ops = FakeGraphite(
-            branches={
-                "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
-                "feature-1": BranchMetadata.branch(
-                    "feature-1", "main", children=["feature-2a", "feature-2b"], commit_sha="def456"
-                ),
-                "feature-2a": BranchMetadata.branch("feature-2a", "feature-1", commit_sha="ghi789"),
-                "feature-2b": BranchMetadata.branch("feature-2b", "feature-1", commit_sha="jkl012"),
-            }
+            branches=BranchStackBuilder()
+            .add_branch(
+                "feature-1",
+                parent="main",
+                children=["feature-2a", "feature-2b"],
+                commit_sha="def456",
+            )
+            .add_branch("feature-2a", parent="feature-1", commit_sha="ghi789")
+            .add_branch("feature-2b", parent="feature-1", commit_sha="jkl012")
+            .build()
         )
 
         # Create RepoContext to avoid filesystem checks
@@ -350,17 +340,12 @@ def test_up_with_mismatched_worktree_name() -> None:
         # Set up stack: main -> feature/auth -> feature/auth-tests
         # Branch names contain slashes, but worktree dirs don't
         graphite_ops = FakeGraphite(
-            branches={
-                "main": BranchMetadata.trunk(
-                    "main", children=["feature/auth"], commit_sha="abc123"
-                ),
-                "feature/auth": BranchMetadata.branch(
-                    "feature/auth", "main", children=["feature/auth-tests"], commit_sha="def456"
-                ),
-                "feature/auth-tests": BranchMetadata.branch(
-                    "feature/auth-tests", "feature/auth", commit_sha="ghi789"
-                ),
-            }
+            branches=BranchStackBuilder()
+            .add_branch(
+                "feature/auth", parent="main", children=["feature/auth-tests"], commit_sha="def456"
+            )
+            .add_branch("feature/auth-tests", parent="feature/auth", commit_sha="ghi789")
+            .build()
         )
 
         # Create RepoContext to avoid filesystem checks

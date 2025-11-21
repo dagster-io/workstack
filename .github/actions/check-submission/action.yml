@@ -1,0 +1,21 @@
+name: Check for Submission Folder
+description: Checks if .submission folder exists and sets skip output
+
+outputs:
+  skip:
+    description: Whether to skip CI (true if .submission exists)
+    value: ${{ steps.check.outputs.skip }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check for submission folder
+      id: check
+      shell: bash
+      run: |
+        if [ -d ".submission" ]; then
+          echo "skip=true" >> $GITHUB_OUTPUT
+          echo "⏭️  Skipping CI - .submission folder detected (AI implementation pending)"
+        else
+          echo "skip=false" >> $GITHUB_OUTPUT
+        fi

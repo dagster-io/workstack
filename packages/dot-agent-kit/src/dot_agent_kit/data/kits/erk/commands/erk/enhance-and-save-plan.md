@@ -43,6 +43,7 @@ You are executing the `/erk:enhance-and-save-plan` command. Follow these steps c
 - `Read` - For reading session logs and files
 - `Write` - ONLY for writing to repository root
 - `Bash` - ONLY for log operations in `~/.claude/projects/`
+- `Task` - ONLY for Step 3 mining delegation with general-purpose subagent
 - `AskUserQuestion` - For clarifications
 
 **FORBIDDEN TOOLS:**
@@ -50,7 +51,6 @@ You are executing the `/erk:enhance-and-save-plan` command. Follow these steps c
 - `Edit` - Do NOT modify any existing files
 - `Glob` - Do NOT search the codebase
 - `Grep` - Do NOT search the codebase
-- `Task` - Do NOT launch subagents
 - Any tool not explicitly listed as allowed
 
 **CRITICAL:** If you use any forbidden tool, STOP immediately.
@@ -150,111 +150,156 @@ Please create a plan first:
 4. Then run /erk:enhance-and-save-plan
 ```
 
-### Step 3: Mine Discoveries Semantically from Compressed XML
+### Step 3: Mine Discoveries Using Haiku Subagent
 
-**Use the compressed_xml field from Step 1b JSON output.**
+Delegate mining to a general-purpose agent using haiku model for cost efficiency.
 
-The compressed XML contains the session's tool uses, results, user messages, and assistant reasoning. Your task is to **read and understand** this content semantically to identify valuable discoveries.
+**Use the Task tool with these parameters:**
 
-**DO NOT use regex patterns.** Instead, analyze the XML as a narrative of the planning session, identifying patterns through understanding rather than mechanical extraction.
+- `subagent_type`: `"general-purpose"`
+- `model`: `"haiku"`
+- `description`: `"Mine session log discoveries"`
+- `prompt`: Construct prompt from template below, inserting `compressed_xml` from Step 1b
 
-#### How to Analyze
+**Prompt Template:**
 
-Read through the compressed XML and look for:
+````
+Analyze this compressed XML from a Claude Code planning session to extract valuable discoveries.
 
-**Tool Invocations and Results:**
+The XML represents tool uses, results, user messages, and assistant reasoning from the session.
 
-- What tools were used and for what purpose?
-- What were the assistant searching for?
-- What file paths or code patterns were explored?
-- What commands were executed?
+<compressed_xml>
+{INSERT_COMPRESSED_XML_HERE}
+</compressed_xml>
 
-**Errors and Failures:**
+Your task: Semantically analyze this XML to identify discoveries organized into these categories.
 
-- What errors were encountered?
-- What approaches were attempted but didn't work?
-- Why were certain solutions rejected?
-- What provided the context for these failures?
+**DO NOT use regex patterns.** Read and understand the XML as a narrative of the planning session.
 
-**Assistant Reasoning:**
+## Discovery Categories
 
-- What trade-offs were analyzed?
-- What performance concerns were raised?
-- What architectural decisions were explained?
-- What insights emerged from the reasoning?
-
-**User Interactions:**
-
-- What clarifications did the user provide?
-- What requirements were revealed through questions?
-- What domain knowledge did the user share?
-
-#### Discoveries to Extract
-
-Organize your findings into these categories:
-
-**Discovery Journey:**
-
+### Discovery Journey
 - What search patterns were used to explore the codebase?
 - What files were examined and in what order?
 - How did the exploration sequence reveal the solution?
 
-**Failed Attempts:**
-
+### Failed Attempts
 - What approaches were tried that didn't work, and WHY?
 - What errors provided valuable learning?
 - What solutions were rejected, with their reasoning?
 
-**API/Tool Quirks:**
-
+### API/Tool Quirks
 - What undocumented behaviors were discovered?
 - What edge cases were found through experimentation?
 - What workarounds became necessary?
 
-**Architectural Insights:**
-
+### Architectural Insights
 - WHY were particular design decisions made?
 - What design patterns were found in the codebase?
 - What conventions or idioms were learned?
 
-**Performance Issues:**
-
+### Performance Issues
 - What operations were identified as slow?
 - What timeout or resource risks were discovered?
 - What memory or efficiency concerns emerged?
 
-**Domain Knowledge:**
-
+### Domain Knowledge
 - What business rules were uncovered?
 - What non-obvious requirements surfaced?
 - What hidden constraints affected the design?
 
-**Technical Context:**
-
+### Technical Context
 - What function signatures or APIs were discovered?
 - What parameter requirements were learned?
 - What return value formats or protocols were understood?
 
-**Testing Insights:**
-
+### Testing Insights
 - What test patterns were found?
 - What coverage gaps were identified?
 - What testing challenges were encountered?
 
-#### Focus on Context and WHY
+## Analysis Guidelines
 
-When extracting discoveries, prioritize:
+When analyzing the XML, look for:
+
+**Tool Invocations and Results:**
+- What tools were used and for what purpose?
+- What file paths or code patterns were explored?
+- What commands were executed?
+
+**Errors and Failures:**
+- What errors were encountered?
+- What approaches were attempted but didn't work?
+- Why were certain solutions rejected?
+
+**Assistant Reasoning:**
+- What trade-offs were analyzed?
+- What performance concerns were raised?
+- What architectural decisions were explained?
+
+**User Interactions:**
+- What clarifications did the user provide?
+- What requirements were revealed through questions?
+- What domain knowledge did the user share?
+
+## Output Format
+
+Return a structured report with each category as a section. For each discovery:
+- State the discovery clearly
+- Explain WHY it matters for implementation
+- Connect it to implementation considerations
+
+Example format:
+
+```markdown
+## Discovery Journey
+
+- Initial grep for pattern X failed at /old/path
+- This revealed that the implementation moved to /new/path with refactored structure
+- The refactoring was done for performance reasons (constraint Y)
+
+## Failed Attempts
+
+- Tried reading config at /old/path (FileNotFoundError)
+- This revealed config was migrated to /new/path with schema validation added
+- Important for implementation: Must use JSON schema validation, not plain JSON
+
+## Architectural Insights
+
+- Project uses pattern Y instead of pattern X due to performance constraint Q
+- This was discovered through examining function Z implementation
+- Affects implementation: Must follow pattern Y for consistency
+````
+
+## Focus Guidelines
+
+Prioritize:
 
 - **Context over facts**: Not just "error occurred" but "why it happened and what it revealed"
 - **WHY over WHAT**: Not just "used this pattern" but "why this pattern was chosen"
 - **Insights over data**: What was learned, not just what was seen
 - **Connections**: How discoveries relate to the implementation plan
 
+Focus on insights that will help during implementation.
+
+````
+
+**After Task completes:**
+
+The agent returns a structured report with discoveries organized by category. Store this output for use in Step 4 composition.
+
 ### Step 4: Compose and Save Enhanced Plan
 
 **Step 4a: Compose Enhanced Plan**
 
-Use your semantic understanding from Step 3 to compose an enhanced plan. You already have the discoveries organized by category from Step 3 - directly integrate the plan (Step 2) with discoveries (Step 3).
+Integrate discoveries from the mining agent (Step 3 output) with the plan (Step 2 output) to compose an enhanced plan.
+
+**Inputs:**
+- Plan extracted from conversation (Step 2)
+- Discoveries from haiku mining agent (Step 3 structured report)
+- Session metadata (Step 1b: stats, session_id)
+
+Use the agent's structured report to enhance the plan - the discoveries are already organized by category.
 
 **Generate Appropriate Filename:**
 
@@ -346,7 +391,7 @@ plan_path = Path(repo_root) / filename
 
 # Write your composed content
 plan_path.write_text(enhanced_plan_content, encoding="utf-8")
-```
+````
 
 ### Step 5: Output Summary
 

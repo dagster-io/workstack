@@ -57,6 +57,7 @@ version = "0.2.1"
 artifacts = [
     ".claude/commands/erk/persist-plan.md",
     ".claude/commands/erk/create-enhanced-plan.md",
+    ".claude/commands/erk/save-plan.md",
     ".claude/commands/erk/create-planned-wt.md",
     ".claude/commands/erk/implement-plan.md",
     ".claude/commands/erk/fix-merge-conflicts.md",

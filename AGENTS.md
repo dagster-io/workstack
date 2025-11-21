@@ -69,15 +69,15 @@
 
 ## 📚 Quick Reference
 
-| Need help with...         | See documentation                                                                        |
-| ------------------------- | ---------------------------------------------------------------------------------------- |
-| **Python standards**      | **🔴 LOAD dignified-python skill FIRST** - Checklist rules are excerpts only             |
-| **Project terms**         | [docs/agent/glossary.md](docs/agent/glossary.md)                                         |
-| **Documentation nav**     | [docs/agent/guide.md](docs/agent/guide.md)                                               |
-| **Testing patterns**      | [docs/agent/testing.md](docs/agent/testing.md)                                           |
-| **Hooks**                 | [docs/agent/hooks.md](docs/agent/hooks.md)                                               |
-| **Kit CLI commands**      | [docs/agent/kit-cli-commands.md](docs/agent/kit-cli-commands.md)                         |
-| **Command-agent patterns** | [docs/agent/command-agent-delegation.md](docs/agent/command-agent-delegation.md)         |
+| Need help with...          | See documentation                                                                |
+| -------------------------- | -------------------------------------------------------------------------------- |
+| **Python standards**       | **🔴 LOAD dignified-python skill FIRST** - Checklist rules are excerpts only     |
+| **Project terms**          | [docs/agent/glossary.md](docs/agent/glossary.md)                                 |
+| **Documentation nav**      | [docs/agent/guide.md](docs/agent/guide.md)                                       |
+| **Testing patterns**       | [docs/agent/testing.md](docs/agent/testing.md)                                   |
+| **Hooks**                  | [docs/agent/hooks.md](docs/agent/hooks.md)                                       |
+| **Kit CLI commands**       | [docs/agent/kit-cli-commands.md](docs/agent/kit-cli-commands.md)                 |
+| **Command-agent patterns** | [docs/agent/command-agent-delegation.md](docs/agent/command-agent-delegation.md) |
 
 ## Documentation Structure
 

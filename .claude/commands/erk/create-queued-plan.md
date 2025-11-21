@@ -142,7 +142,7 @@ This command succeeds when ALL of the following are true:
 **Cause:** GitHub Actions workflow may not be enabled or `erk-queue` label not recognized
 **Solution:**
 
-- Verify workflow exists: `.github/workflows/implement-issue-plan.yml`
+- Verify workflow exists: `.github/workflows/dispatch-erk-queue.yml`
 - Check workflow runs: `gh run list`
 - Manually trigger if needed: Add `erk-queue` label to issue
 

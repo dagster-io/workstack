@@ -425,13 +425,13 @@ def test_land_stack_merge_command_excludes_auto_flag() -> None:
 
 
 def test_land_stack_does_not_run_gt_sync() -> None:
-    """Test that gt sync -f is NOT run automatically during landing.
+    """Test that gt sync -f IS run automatically during restack phase.
 
-    After behavior change (execution.py:203-205), gt sync -f is manual, not automatic.
-    This test verifies that graphite_ops.sync() is never called during the landing sequence.
+    After bug fix, gt sync -f runs automatically to rebase upstack branches.
+    This test verifies that graphite_ops.sync() is called with force=True.
 
-    Rationale: Automatic gt sync -f was destructive and ran without user control.
-    Now users must run it manually after landing.
+    Rationale: Without automatic restacking, gt submit fails with
+    "merged commits are not contained in trunk" error.
     """
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -458,31 +458,25 @@ def test_land_stack_does_not_run_gt_sync() -> None:
             graphite=graphite_ops,
             github=github_ops,
             use_graphite=True,
-            dry_run=True,
+            dry_run=False,
         )
 
         # Run land-stack
-        result = runner.invoke(cli, ["land-stack", "--force", "--dry-run"], obj=test_ctx)
+        result = runner.invoke(cli, ["land-stack", "--force"], obj=test_ctx)
 
         # Should succeed
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
-        # Verify gt sync was NOT called via mutation tracking
-        assert len(graphite_ops.sync_calls) == 0, (
-            f"gt sync should NOT be called automatically. "
-            f"Expected 0 sync calls, got {len(graphite_ops.sync_calls)} calls: "
+        # Verify gt sync WAS called via mutation tracking
+        assert len(graphite_ops.sync_calls) == 1, (
+            f"gt sync should be called automatically during restack phase. "
+            f"Expected 1 sync call, got {len(graphite_ops.sync_calls)} calls: "
             f"{graphite_ops.sync_calls}"
         )
 
-        # Verify gt sync command doesn't appear in execution phases
-        # Note: It WILL appear in "Next steps" as a manual suggestion, which is correct
-        # We're verifying it's not executed automatically
-        assert "Executing: gt sync" not in result.output, (
-            f"gt sync should NOT be executed automatically.\nActual output:\n{result.output}"
-        )
-        assert "(dry run) gt sync" not in result.output, (
-            f"gt sync should NOT be shown in dry-run execution.\nActual output:\n{result.output}"
-        )
+        # Verify sync was called with force=True
+        _, force_arg, _ = graphite_ops.sync_calls[0]
+        assert force_arg is True, "sync must be called with force=True"
 
 
 def test_land_stack_does_not_run_erk_sync() -> None:
@@ -608,3 +602,181 @@ def test_final_state_shows_next_steps() -> None:
         assert "These commands are now manual to give you full control" in result.output, (
             f"Expected manual control note in output.\nActual output:\n{result.output}"
         )
+
+
+def test_land_stack_runs_gt_sync_in_restack_phase() -> None:
+    """Verify gt sync -f runs automatically during restack phase.
+
+    This test ensures that after landing a PR, gt sync -f is called to:
+    1. Update Graphite metadata about merged branches
+    2. Rebase remaining upstack branches onto new trunk state
+
+    Without this, gt submit will fail with "merged commits are not contained in trunk".
+    """
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        # Setup simple stack: main → feat-1
+        # This is sufficient to test that sync is called after landing
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
+                "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
+            },
+            current_branch="feat-1",
+        )
+
+        github_ops = FakeGitHub(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Feature 1"),
+            },
+            pr_bases={
+                100: "main",
+            },
+        )
+
+        test_ctx = env.build_context(
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            use_graphite=True,
+            dry_run=False,
+        )
+
+        # Act: Land feat-1 (no upstack branches, but sync should still be called)
+        result = runner.invoke(cli, ["land-stack", "--force"], obj=test_ctx)
+
+        # Assert: Verify sync was called with force=True
+        assert result.exit_code == 0, f"Command failed: {result.output}"
+        assert len(graphite_ops.sync_calls) >= 1, (
+            f"Expected at least 1 sync call, got {len(graphite_ops.sync_calls)}"
+        )
+
+        # Verify sync was called with correct parameters
+        for _repo_root_arg, force_arg, quiet_arg in graphite_ops.sync_calls:
+            assert force_arg is True, "sync must be called with force=True"
+            assert quiet_arg is True, "sync should be quiet in default mode (verbose=False)"
+
+
+def test_land_stack_skips_gt_sync_with_down_flag() -> None:
+    """Verify gt sync is NOT called when using --down flag.
+
+    The --down flag provides manual control by skipping upstack rebase operations.
+    When used, no restack phase should run.
+    """
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        # Setup simple stack: main → feat-1
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
+                "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
+            },
+            current_branch="feat-1",
+        )
+
+        github_ops = FakeGitHub(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Feature 1"),
+            },
+            pr_bases={
+                100: "main",
+            },
+        )
+
+        test_ctx = env.build_context(
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            use_graphite=True,
+            dry_run=False,
+        )
+
+        # Act: Land with --down flag (skip restacking)
+        result = runner.invoke(cli, ["land-stack", "--force", "--down"], obj=test_ctx)
+
+        # Assert: Verify sync was NOT called
+        assert result.exit_code == 0, f"Command failed: {result.output}"
+        assert len(graphite_ops.sync_calls) == 0, (
+            f"With --down flag, sync should NOT be called. "
+            f"Got {len(graphite_ops.sync_calls)} calls: {graphite_ops.sync_calls}"
+        )
+
+
+def test_land_stack_restack_respects_verbose_flag() -> None:
+    """Verify quiet parameter is set correctly based on verbose flag.
+
+    The quiet parameter should be the inverse of verbose:
+    - Without --verbose (default): quiet=True (suppress output)
+    - With --verbose: quiet=False (show detailed output)
+    """
+    runner = CliRunner()
+
+    # Test 1: Without --verbose (default)
+    with erk_inmem_env(runner) as env:
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
+                "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
+            },
+            current_branch="feat-1",
+        )
+
+        github_ops = FakeGitHub(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Feature 1"),
+            },
+            pr_bases={
+                100: "main",
+            },
+        )
+
+        test_ctx = env.build_context(
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            use_graphite=True,
+            dry_run=False,
+        )
+
+        result = runner.invoke(cli, ["land-stack", "--force"], obj=test_ctx)
+
+        assert result.exit_code == 0, f"Command failed: {result.output}"
+        assert len(graphite_ops.sync_calls) >= 1, "Expected at least 1 sync call"
+        _, _, quiet_arg = graphite_ops.sync_calls[0]
+        assert quiet_arg is True, "Without --verbose, quiet should be True (verbose=False)"
+
+    # Test 2: With --verbose
+    with erk_inmem_env(runner) as env:
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
+                "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
+            },
+            current_branch="feat-1",
+        )
+
+        github_ops = FakeGitHub(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Feature 1"),
+            },
+            pr_bases={
+                100: "main",
+            },
+        )
+
+        test_ctx = env.build_context(
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            use_graphite=True,
+            dry_run=False,
+        )
+
+        result = runner.invoke(
+            cli, ["land-stack", "--force", "--verbose"], obj=test_ctx
+        )
+
+        assert result.exit_code == 0, f"Command failed: {result.output}"
+        assert len(graphite_ops.sync_calls) >= 1, "Expected at least 1 sync call"
+        _, _, quiet_arg = graphite_ops.sync_calls[0]
+        assert quiet_arg is False, "With --verbose, quiet should be False (verbose=True)"

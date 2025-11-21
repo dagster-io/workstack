@@ -196,15 +196,22 @@ def _execute_restack_phase(
 ) -> None:
     """Execute restack phase using Graphite sync.
 
+    Runs `gt sync -f` to:
+    1. Update Graphite metadata about merged branches
+    2. Rebase remaining upstack branches onto new trunk state
+
+    This is necessary before submitting upstack branches, otherwise
+    gt submit will fail with "merged commits are not contained in trunk".
+
+    The --down flag can be used to skip restacking if manual control is desired.
+
     Args:
         ctx: ErkContext with access to operations
         repo_root: Repository root directory
         verbose: If True, show detailed output
         script_mode: True when running in --script mode (output to stderr)
     """
-    # Note: gt sync -f is NOT run automatically to prevent destructive rebasing.
-    # User should run 'gt sync -f' manually after landing if needed.
-    pass
+    ctx.graphite.sync(repo_root, force=True, quiet=not verbose)
 
 
 def _force_push_upstack_branches(

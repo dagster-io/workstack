@@ -86,9 +86,9 @@ For each branch from bottom to top:
 - Commands like `gt up` / `gt down` navigate this direction
 
 **Restacking:**
-After PRs are merged, remaining upstack branches need to be rebased onto the new trunk state to maintain stack integrity. This is done manually by running `gt sync -f` after landing completes.
+After PRs are merged, remaining upstack branches need to be rebased onto the new trunk state to maintain stack integrity. The land-stack command automatically runs `gt sync -f` after each PR is merged to rebase upstack branches. This ensures upstack PRs can be submitted successfully without "merged commits are not contained in trunk" errors.
 
-**Manual Control:** The land-stack command does NOT automatically run `gt sync -f`. This gives you full control over when restacking and cleanup happen, allowing you to inspect the state between operations.
+**Manual Control:** Use the `--down` flag to land only downstack branches (toward trunk) and skip automatic restacking. This gives you control over when restacking happens if you have uncommitted changes or work-in-progress in upstack branches.
 
 **Worktree Conflicts:**
 Git prevents checking out a branch in multiple worktrees. Phase 1 validation detects ANY branch in the stack that is checked out in ANY worktree (including the current worktree) and requires `erk consolidate` to fix. This ensures all landing operations happen from a consistent location (the root worktree).

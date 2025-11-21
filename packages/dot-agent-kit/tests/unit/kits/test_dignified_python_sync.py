@@ -4,12 +4,13 @@ import pytest
 
 
 def test_shared_files_exist():
-    """Verify all universal files exist in unified kit's shared directory."""
-    package_root = Path(__file__).parent.parent.parent.parent
-    kits_dir = package_root / "src" / "dot_agent_kit" / "data" / "kits"
-    shared_dir = kits_dir / "dignified-python" / "shared"
+    """Verify all universal files exist in .claude/docs/dignified-python/ directory."""
+    # Documentation now lives in .claude/docs/dignified-python/ (project-level)
+    # This test verifies the installed documentation structure
+    repo_root = Path(__file__).parent.parent.parent.parent.parent.parent
+    docs_dir = repo_root / ".claude" / "docs" / "dignified-python"
 
-    # Check shared universal reference files
+    # Check universal reference files at root level
     universal_files = [
         "exception-handling.md",
         "path-operations.md",
@@ -20,38 +21,49 @@ def test_shared_files_exist():
         "code-smells-dagster.md",
         "core-standards-universal.md",
         "patterns-reference-universal.md",
+        "type-annotations-base.md",
     ]
 
     for filename in universal_files:
-        file_path = shared_dir / filename
+        file_path = docs_dir / filename
         if not file_path.exists():
-            pytest.fail(f"Shared file missing: dignified-python/shared/{filename}")
+            pytest.fail(f"Documentation file missing: .claude/docs/dignified-python/{filename}")
 
 
 def test_type_annotations_files_exist():
     """Verify all version-specific type annotation files exist."""
-    package_root = Path(__file__).parent.parent.parent.parent
-    kits_dir = package_root / "src" / "dot_agent_kit" / "data" / "kits"
-    type_annotations_dir = kits_dir / "dignified-python" / "shared" / "type-annotations"
+    repo_root = Path(__file__).parent.parent.parent.parent.parent.parent
+    docs_dir = repo_root / ".claude" / "docs" / "dignified-python"
+    version_specific_dir = docs_dir / "version-specific"
 
-    if not type_annotations_dir.exists():
-        pytest.fail("Type annotations directory missing: dignified-python/shared/type-annotations/")
+    if not version_specific_dir.exists():
+        pytest.fail(
+            "Version-specific directory missing: .claude/docs/dignified-python/version-specific/"
+        )
 
-    # Check type annotation files for each version
-    type_files = [
-        "type-annotations-base.md",
-        "type-annotations-310.md",
-        "type-annotations-311.md",
-        "type-annotations-312.md",
-        "type-annotations-313.md",
+    # Check version-specific files for each version
+    versions = ["310", "311", "312", "313"]
+    version_files = [
+        "type-annotations.md",
+        "pattern-table.md",
+        "checklist.md",
     ]
 
-    for filename in type_files:
-        file_path = type_annotations_dir / filename
-        if not file_path.exists():
+    for version in versions:
+        version_dir = version_specific_dir / version
+        if not version_dir.exists():
             pytest.fail(
-                f"Type annotation file missing: dignified-python/shared/type-annotations/{filename}"
+                f"Version directory missing: "
+                f".claude/docs/dignified-python/version-specific/{version}/"
             )
+
+        for filename in version_files:
+            file_path = version_dir / filename
+            if not file_path.exists():
+                pytest.fail(
+                    f"Version-specific file missing: "
+                    f".claude/docs/dignified-python/version-specific/{version}/{filename}"
+                )
 
 
 def test_unified_kit_structure():
@@ -89,7 +101,7 @@ def test_unified_kit_structure():
 
 
 def test_skill_references_correct_types():
-    """Verify each SKILL.md references correct type-annotations file."""
+    """Verify each SKILL.md references correct documentation paths."""
     package_root = Path(__file__).parent.parent.parent.parent
     kits_dir = package_root / "src" / "dot_agent_kit" / "data" / "kits"
 
@@ -103,45 +115,78 @@ def test_skill_references_correct_types():
             continue  # Skip if file doesn't exist (caught by other test)
 
         content = skill_md.read_text(encoding="utf-8")
-        expected_type_annotations = f"type-annotations-{version}.md"
-        expected_pattern_table = f"pattern-table-{version}.md"
 
-        # Check if SKILL.md references type-annotations directly or via pattern-table
-        has_direct_reference = expected_type_annotations in content
-        has_pattern_table_reference = expected_pattern_table in content
+        # Check that SKILL.md references .claude/docs/dignified-python/ paths
+        expected_docs_path = "@.claude/docs/dignified-python/"
+        expected_version_specific = f"@.claude/docs/dignified-python/version-specific/{version}/"
 
-        if not (has_direct_reference or has_pattern_table_reference):
+        has_docs_reference = expected_docs_path in content
+        has_version_specific_reference = expected_version_specific in content
+
+        if not (has_docs_reference and has_version_specific_reference):
             pytest.fail(
-                f"Skill {version} SKILL.md does not reference {expected_type_annotations}\n"
-                f"Expected to find either direct reference to type-annotations-{version}.md "
-                f"or include of pattern-table-{version}.md"
+                f"Skill {version} SKILL.md does not properly reference documentation paths.\n"
+                f"Expected to find both:\n"
+                f"  - {expected_docs_path}\n"
+                f"  - {expected_version_specific}"
             )
 
 
-def test_no_version_specific_language_in_shared():
-    """Verify shared files don't contain 'Python 3.13+' or similar."""
-    package_root = Path(__file__).parent.parent.parent.parent
-    kits_dir = package_root / "src" / "dot_agent_kit" / "data" / "kits"
-    shared_dir = kits_dir / "dignified-python" / "shared"
+def test_skill_components_exist():
+    """Verify skill-components directory exists with expected files."""
+    repo_root = Path(__file__).parent.parent.parent.parent.parent.parent
+    docs_dir = repo_root / ".claude" / "docs" / "dignified-python"
+    skill_components_dir = docs_dir / "skill-components"
 
-    # Patterns that should NOT appear in shared files
+    if not skill_components_dir.exists():
+        pytest.fail(
+            "Skill components directory missing: .claude/docs/dignified-python/skill-components/"
+        )
+
+    # Check skill component files
+    component_files = [
+        "core-philosophy.md",
+        "checklist-universal.md",
+        "loading-instructions.md",
+    ]
+
+    for filename in component_files:
+        file_path = skill_components_dir / filename
+        if not file_path.exists():
+            pytest.fail(
+                f"Skill component file missing: "
+                f".claude/docs/dignified-python/skill-components/{filename}"
+            )
+
+
+def test_no_version_specific_language_in_universal():
+    """Verify universal documentation files don't contain version-specific language."""
+    repo_root = Path(__file__).parent.parent.parent.parent.parent.parent
+    docs_dir = repo_root / ".claude" / "docs" / "dignified-python"
+
+    # Patterns that should NOT appear in universal files
     prohibited_patterns = [
         "Python 3.13+",
         "3.13 and above",
         "3.13 or higher",
         "Python 3.13 only",
+        "Python 3.10+",
+        "3.10 and above",
+        "3.10 or higher",
+        "Python 3.10 only",
     ]
 
-    # Get all markdown files in shared directory (excluding type-annotations subdirectory)
-    shared_files = [f for f in shared_dir.glob("*.md")]
+    # Get all markdown files at root level
+    # (excluding version-specific and skill-components subdirectories)
+    universal_files = [f for f in docs_dir.glob("*.md") if f.is_file() and f.parent == docs_dir]
 
-    for file_path in shared_files:
+    for file_path in universal_files:
         content = file_path.read_text(encoding="utf-8")
 
         for pattern in prohibited_patterns:
             if pattern in content:
                 pytest.fail(
-                    f"Shared file {file_path.name} contains version-specific "
+                    f"Universal documentation file {file_path.name} contains version-specific "
                     f"language: '{pattern}'\n"
-                    f"Shared files must be version-neutral."
+                    f"Universal files must be version-neutral."
                 )

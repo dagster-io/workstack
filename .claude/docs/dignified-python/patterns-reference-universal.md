@@ -1,6 +1,6 @@
 # Common Implementation Patterns
 
-This document contains common patterns for CLI development, file I/O, dataclasses, and code organization applicable across Python 3.10+. For quick reference, see the main SKILL.md file.
+This document contains common patterns for CLI development, file I/O, dataclasses, and code organization applicable across modern Python versions. For quick reference, see the main SKILL.md file.
 
 ---
 

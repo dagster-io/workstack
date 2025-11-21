@@ -49,7 +49,7 @@
 | `from .module import`                                            | → Use absolute imports only                                                                          |
 | `print(...)` in CLI code                                         | → Use `click.echo()`                                                                                 |
 | `subprocess.run(..., check=True)`                                | → Use `run_subprocess_with_context()` from erk.core.subprocess for rich errors                       |
-| Creating or executing implementation plans                       | → Use /erk:persist-plan, /erk:create-planned-wt, /erk:implement-plan, erk submit                     |
+| Creating or executing implementation plans                       | → Use /erk:persist-plan, /erk:create-planned-issue, /erk:create-planned-wt, /erk:implement-plan, /erk:implement-planned-issue, erk submit |
 | Submitting a branch with Graphite                                | → Use /gt:submit-branch command (delegates to gt-branch-submitter agent)                             |
 | Updating an existing PR                                          | → Use /gt:update-pr command                                                                          |
 | Systematic Python changes (migrate calls, rename, batch updates) | → Use libcst-refactor agent (Task tool); for multi-file transformations                              |

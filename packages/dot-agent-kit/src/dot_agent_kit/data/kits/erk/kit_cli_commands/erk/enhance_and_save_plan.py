@@ -8,14 +8,24 @@ Phase 1 (discover):
 1. Find Claude Code project directory by matching cwd
 2. Locate session log file by session ID
 3. Preprocess session logs directly (no subprocess)
-4. Return compressed XML and stats as JSON
+4. Optionally chunk XML into batches (streaming mode)
+5. Return compressed XML/batches and stats as JSON
 
 Phase 2 (assemble):
 1. Parse plan content and discoveries from input
 2. Return raw inputs for LLM composition (NO templates or text generation)
 
+Streaming Mode:
+    When --streaming flag is used, large XML sessions are chunked into batches
+    of ~10 tool sequences each. This enables:
+    - Incremental processing with better latency perception
+    - Memory-efficient analysis with smaller context per batch
+    - Automatic fallback to single-pass for small sessions
+    - Foundation for future parallel processing
+
 Usage:
     dot-agent run erk enhance-and-save-plan discover --session-id <id> --cwd <path>
+    dot-agent run erk enhance-and-save-plan discover --session-id <id> --cwd <path> --streaming
     dot-agent run erk enhance-and-save-plan assemble <plan-file> <discoveries-file>
 
 Output:
@@ -31,14 +41,23 @@ Error Types:
     - preprocessing_failed: Failed to preprocess session logs
 
 Examples:
+    # Standard mode (single XML)
     $ dot-agent run erk enhance-and-save-plan discover --session-id abc123 --cwd /Users/foo/repo
     {"compressed_xml": "<session>...</session>", "stats": {...}}
 
+    # Streaming mode (batched XML)
+    $ dot-agent run erk enhance-and-save-plan discover --session-id abc123 \\
+        --cwd /Users/foo/repo --streaming
+    {"mode": "streaming", "batches": ["<session>...</session>", ...], \\
+        "batch_count": 3, "stats": {...}}
+
+    # Assemble phase
     $ dot-agent run erk enhance-and-save-plan assemble plan.md discoveries.json
     {"plan_content": "## Plan...", "discoveries": {...}}
 """
 
 import json
+import xml.etree.ElementTree as ET
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -62,6 +81,19 @@ class DiscoverResult:
 
     success: bool
     compressed_xml: str
+    log_path: str
+    session_id: str
+    stats: dict[str, str | int]
+
+
+@dataclass
+class StreamingDiscoverResult:
+    """Success result from discover phase in streaming mode."""
+
+    success: bool
+    mode: str
+    batches: list[str]
+    batch_count: int
     log_path: str
     session_id: str
     stats: dict[str, str | int]
@@ -236,15 +268,139 @@ def _preprocess_logs(log_path: Path, session_id: str) -> tuple[str, dict[str, st
     return xml_content, stats
 
 
-def execute_discover(session_id: str, cwd: Path) -> DiscoverResult | DiscoverError:
+def _chunk_xml_by_natural_boundaries(xml_content: str, target_sections: int = 10) -> list[str]:
+    """Chunk XML into batches by natural conversation boundaries.
+
+    Groups tool sequences (user → tool_use → tool_result → assistant reasoning)
+    into batches of approximately target_sections sequences each.
+
+    Args:
+        xml_content: Full compressed XML session content
+        target_sections: Target number of tool sequences per batch (default: 10)
+
+    Returns:
+        List of XML chunks, each containing a <session> wrapper with batched content
+    """
+    # Parse XML to identify sequences
+    try:
+        root = ET.fromstring(xml_content)
+    except ET.ParseError:
+        # If XML is malformed, return as single batch
+        return [xml_content]
+
+    # Extract metadata (first element is usually <meta>)
+    meta_element = root.find("meta")
+    meta_str = ""
+    if meta_element is not None:
+        branch = meta_element.get("branch", "")
+        if branch:
+            meta_str = f'  <meta branch="{branch}" />\n'
+
+    # Group children into sequences
+    sequences: list[list[ET.Element]] = []
+    current_sequence: list[ET.Element] = []
+
+    for child in root:
+        if child.tag == "meta":
+            continue  # Skip meta, handled separately
+
+        current_sequence.append(child)
+
+        # A sequence typically ends with an assistant message after tool results
+        if child.tag == "assistant" and len(current_sequence) > 1:
+            sequences.append(current_sequence)
+            current_sequence = []
+
+    # Handle any remaining elements
+    if current_sequence:
+        sequences.append(current_sequence)
+
+    # If we have fewer sequences than target, return as single batch
+    if len(sequences) <= target_sections:
+        return [xml_content]
+
+    # Batch sequences
+    batches: list[str] = []
+    for i in range(0, len(sequences), target_sections):
+        batch_sequences = sequences[i : i + target_sections]
+
+        # Reconstruct XML for this batch
+        batch_lines = ["<session>"]
+        if meta_str:
+            batch_lines.append(meta_str.rstrip())
+
+        for sequence in batch_sequences:
+            for elem in sequence:
+                batch_lines.append(_element_to_xml_string(elem))
+
+        batch_lines.append("</session>")
+        batches.append("\n".join(batch_lines))
+
+    return batches
+
+
+def _element_to_xml_string(elem: ET.Element, indent: str = "  ") -> str:
+    """Convert an XML element back to string format with proper indentation.
+
+    Args:
+        elem: XML element to convert
+        indent: Indentation string (default: 2 spaces)
+
+    Returns:
+        String representation of the element
+    """
+    lines: list[str] = []
+
+    # Opening tag with attributes
+    if elem.attrib:
+        attrs = " ".join(f'{k}="{v}"' for k, v in elem.attrib.items())
+        opening_tag = f"{indent}<{elem.tag} {attrs}>"
+    else:
+        opening_tag = f"{indent}<{elem.tag}>"
+
+    # Handle self-closing or empty elements
+    if not elem.text and not list(elem):
+        if elem.attrib:
+            attrs = " ".join(f'{k}="{v}"' for k, v in elem.attrib.items())
+            return f"{indent}<{elem.tag} {attrs} />"
+        return f"{indent}<{elem.tag} />"
+
+    lines.append(opening_tag)
+
+    # Add text content if present
+    if elem.text and elem.text.strip():
+        text = elem.text.strip()
+        if "\n" in text:
+            # Multi-line text
+            for line in text.split("\n"):
+                lines.append(line)
+        else:
+            # Single line text
+            lines[-1] = f"{opening_tag}{text}</{elem.tag}>"
+            return lines[-1]
+
+    # Add child elements
+    for child in elem:
+        lines.append(_element_to_xml_string(child, indent + "  "))
+
+    # Closing tag
+    lines.append(f"{indent}</{elem.tag}>")
+
+    return "\n".join(lines)
+
+
+def execute_discover(
+    session_id: str, cwd: Path, streaming: bool = False
+) -> DiscoverResult | StreamingDiscoverResult | DiscoverError:
     """Execute discovery phase and return structured result.
 
     Args:
         session_id: Session ID to locate and process
         cwd: Current working directory
+        streaming: If True, chunk XML into batches for incremental processing
 
     Returns:
-        DiscoverResult on success, DiscoverError on failure
+        DiscoverResult or StreamingDiscoverResult on success, DiscoverError on failure
     """
     # Find project directory
     project_dir = _find_project_dir(cwd)
@@ -277,7 +433,20 @@ def execute_discover(session_id: str, cwd: Path) -> DiscoverResult | DiscoverErr
             context={"log_path": str(log_path)},
         )
 
-    # Return structured result (NO temp file needed)
+    # Return streaming result if requested
+    if streaming:
+        batches = _chunk_xml_by_natural_boundaries(compressed_xml)
+        return StreamingDiscoverResult(
+            success=True,
+            mode="streaming",
+            batches=batches,
+            batch_count=len(batches),
+            log_path=str(log_path),
+            session_id=session_id,
+            stats=stats,
+        )
+
+    # Return standard result (NO temp file needed)
     return DiscoverResult(
         success=True,
         compressed_xml=compressed_xml,
@@ -323,10 +492,16 @@ def enhance_and_save_plan() -> None:
     type=click.Path(exists=True, path_type=Path),
     help="Current working directory",
 )
-def discover(session_id: str, cwd: Path) -> None:
+@click.option(
+    "--streaming",
+    is_flag=True,
+    default=False,
+    help="Enable streaming mode (chunk XML into batches for incremental processing)",
+)
+def discover(session_id: str, cwd: Path, streaming: bool) -> None:
     """Phase 1: Discover and preprocess session logs."""
     try:
-        result = execute_discover(session_id, cwd)
+        result = execute_discover(session_id, cwd, streaming=streaming)
         click.echo(json.dumps(asdict(result), indent=2))
 
         if isinstance(result, DiscoverError):

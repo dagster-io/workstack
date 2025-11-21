@@ -25,10 +25,27 @@ This command solves the critical problem where planning sessions lose valuable d
 ## How It Works
 
 1. **Locates session logs** for the current Claude Code project
-2. **Mines discoveries** from tool invocations and assistant reasoning
+2. **Mines discoveries** from tool invocations and assistant reasoning using streaming analysis
 3. **Extracts the plan** from the conversation
 4. **Enhances the plan** with mined context
 5. **Saves enhanced plan** to repository root
+
+### Streaming Analysis
+
+The command uses streaming mode by default (`--streaming` flag), which:
+
+- **Chunks large sessions** into batches of ~10 tool sequences
+- **Processes incrementally** for better latency perception
+- **Maintains completeness** by processing all batches (no early exit)
+- **Falls back automatically** to single-pass for small sessions
+- **Uses cost-efficient Haiku** model for batch processing
+
+Benefits:
+
+- Shows progress incrementally vs waiting for full analysis
+- More memory-efficient with smaller context per inference
+- Foundation for future parallel processing enhancements
+- No quality loss - processes full XML in smaller chunks
 
 ---
 
@@ -89,10 +106,31 @@ Use the kit CLI command to discover and preprocess session logs (NO permission p
 CWD=$(pwd)
 
 # Run discover phase with session ID from Step 1a
-dot-agent run erk enhance-and-save-plan discover --session-id <SESSION_ID> --cwd "$CWD"
+# Using --streaming flag for batched processing
+dot-agent run erk enhance-and-save-plan discover --session-id <SESSION_ID> --cwd "$CWD" --streaming
 ```
 
-This outputs JSON with structure:
+This outputs JSON with structure (streaming mode):
+
+```json
+{
+  "success": true,
+  "mode": "streaming",
+  "batches": ["<session>...</session>", "<session>...</session>", ...],
+  "batch_count": 5,
+  "log_path": "/Users/.../.jsonl",
+  "session_id": "abc-123",
+  "stats": {
+    "entries_processed": 37,
+    "entries_skipped": 142,
+    "token_reduction_pct": "85.8%",
+    "original_size": 227612,
+    "compressed_size": 32337
+  }
+}
+```
+
+Or single-pass mode (if XML is small enough):
 
 ```json
 {
@@ -152,14 +190,44 @@ Please create a plan first:
 
 ### Step 3: Mine Discoveries Using Haiku Subagent
 
-Delegate mining to a general-purpose agent using haiku model for cost efficiency.
+**Step 3a: Detect Mode**
 
-**Use the Task tool with these parameters:**
+Check the JSON output from Step 1b to determine processing mode:
+
+- If `"mode": "streaming"` present: Use batched processing (Step 3b)
+- Otherwise: Use single-pass processing (Step 3c)
+
+**Step 3b: Batched Processing (Streaming Mode)**
+
+If streaming mode detected:
+
+1. Extract the `batches` array from Step 1b JSON
+2. For each batch in the array:
+   - Launch Task tool with haiku subagent (parameters below)
+   - Insert the current batch XML into the prompt template
+   - Collect discoveries from the agent's response
+3. After all batches processed, merge discoveries into a single structured report
+
+Merge strategy:
+
+- Combine discoveries by category
+- Remove duplicates (same discovery from multiple batches)
+- Preserve all unique insights
+
+**Step 3c: Single-Pass Processing (Fallback)**
+
+If single-pass mode (no `"mode"` field or XML is small):
+
+1. Extract `compressed_xml` from Step 1b JSON
+2. Launch Task tool once with haiku subagent (parameters below)
+3. Use the complete compressed XML in the prompt template
+
+**Subagent Parameters (both modes):**
 
 - `subagent_type`: `"general-purpose"`
 - `model`: `"haiku"`
 - `description`: `"Mine session log discoveries"`
-- `prompt`: Construct prompt from template below, inserting `compressed_xml` from Step 1b
+- `prompt`: Construct prompt from template below, inserting batch or full XML
 
 **Prompt Template:**
 

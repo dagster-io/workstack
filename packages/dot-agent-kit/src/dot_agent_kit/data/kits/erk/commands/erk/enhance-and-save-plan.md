@@ -41,6 +41,7 @@ The command uses streaming mode by default (`--streaming` flag), which:
 - **Uses cost-efficient Haiku** model for batch processing
 
 Benefits:
+
 - Shows progress incrementally vs waiting for full analysis
 - More memory-efficient with smaller context per inference
 - Foundation for future parallel processing enhancements
@@ -208,6 +209,7 @@ If streaming mode detected:
 3. After all batches processed, merge discoveries into a single structured report
 
 Merge strategy:
+
 - Combine discoveries by category
 - Remove duplicates (same discovery from multiple batches)
 - Preserve all unique insights

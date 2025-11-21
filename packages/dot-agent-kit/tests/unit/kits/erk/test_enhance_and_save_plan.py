@@ -413,7 +413,9 @@ def test_execute_discover_streaming_mode_with_small_session(tmp_path: Path, monk
         assert result.batch_count == 1
 
 
-def test_execute_discover_non_streaming_mode_returns_single_xml(tmp_path: Path, monkeypatch) -> None:
+def test_execute_discover_non_streaming_mode_returns_single_xml(
+    tmp_path: Path, monkeypatch
+) -> None:
     """Test non-streaming mode returns single compressed XML."""
     # Set up mock project structure
     projects_dir = tmp_path / ".claude" / "projects"

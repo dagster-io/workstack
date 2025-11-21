@@ -46,8 +46,10 @@ Examples:
     {"compressed_xml": "<session>...</session>", "stats": {...}}
 
     # Streaming mode (batched XML)
-    $ dot-agent run erk enhance-and-save-plan discover --session-id abc123 --cwd /Users/foo/repo --streaming
-    {"mode": "streaming", "batches": ["<session>...</session>", ...], "batch_count": 3, "stats": {...}}
+    $ dot-agent run erk enhance-and-save-plan discover --session-id abc123 \\
+        --cwd /Users/foo/repo --streaming
+    {"mode": "streaming", "batches": ["<session>...</session>", ...], \\
+        "batch_count": 3, "stats": {...}}
 
     # Assemble phase
     $ dot-agent run erk enhance-and-save-plan assemble plan.md discoveries.json
@@ -387,7 +389,9 @@ def _element_to_xml_string(elem: ET.Element, indent: str = "  ") -> str:
     return "\n".join(lines)
 
 
-def execute_discover(session_id: str, cwd: Path, streaming: bool = False) -> DiscoverResult | StreamingDiscoverResult | DiscoverError:
+def execute_discover(
+    session_id: str, cwd: Path, streaming: bool = False
+) -> DiscoverResult | StreamingDiscoverResult | DiscoverError:
     """Execute discovery phase and return structured result.
 
     Args:

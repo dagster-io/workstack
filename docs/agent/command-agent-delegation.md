@@ -2,15 +2,15 @@
 
 ## Overview
 
-**Command-agent delegation** is a design pattern for organizing complex workflow orchestration in Claude Code. Instead of embedding detailed step-by-step instructions directly in slash commands, commands delegate to specialized agents that handle all orchestration, error handling, and result reporting.
+**Command-agent delegation** is an architectural pattern where slash commands serve as lightweight entry points that delegate complete workflows to specialized agents. The command defines _what_ needs to happen (prerequisites, high-level flow), while the agent implements _how_ it happens (orchestration, error handling, result reporting).
 
 **Benefits:**
 
-- **Separation of concerns**: Commands define "what", agents implement "how"
-- **Maintainability**: Workflow logic centralized in agent files
+- **Separation of concerns**: Commands are user-facing contracts; agents are implementation details
+- **Maintainability**: Complex logic lives in one place (agent), not scattered across commands
 - **Reusability**: Multiple commands can delegate to the same agent
-- **Cost efficiency**: Agents can use lighter models (haiku) for mechanical tasks
-- **Consistent error handling**: Agents provide uniform error formatting
+- **Testability**: Agents can be tested independently of command invocation
+- **Cost efficiency**: Agents can use appropriate models (haiku for orchestration, sonnet for analysis)
 
 ## When to Delegate
 
@@ -18,19 +18,32 @@ Use this decision framework to determine if delegation is appropriate:
 
 ### ✅ Good Candidates for Delegation
 
-- **Multi-step workflows** (3+ sequential operations)
-- **Complex error handling** (multiple failure modes with context-specific guidance)
-- **State management** (tracking workflow progress across steps)
-- **Tool orchestration** (coordinating git, CLI tools, JSON parsing)
-- **Repeated patterns** (same workflow used in multiple commands)
+- **Multi-step workflows** - Command orchestrates 3+ distinct steps
+- **Complex error handling** - Command needs extensive error formatting and recovery guidance
+- **State management** - Command tracks progress across multiple operations
+- **Tool orchestration** - Command coordinates multiple CLI tools or APIs
+- **Repeated patterns** - Multiple commands share similar workflow logic
 
-### ❌ Keep Inline (No Delegation)
+### ❌ Poor Candidates for Delegation
 
-- **Simple wrappers** (single tool invocation with no logic)
-- **Direct pass-through** (command just forwards to another tool)
-- **Trivial operations** (1-2 steps with no error handling)
+- **Simple wrappers** - Command just calls a single tool with pass-through arguments
+- **Pure routing** - Command only selects between other commands or agents
+- **Configuration** - Command just reads/writes config (minimal logic)
+- **Status display** - Command only queries and formats existing state
 
-### Decision Examples
+### Decision Tree
+
+```
+Does command orchestrate 3+ steps?
+├─ YES → Consider delegation
+└─ NO → Is error handling extensive (>50 lines)?
+    ├─ YES → Consider delegation
+    └─ NO → Does it manage complex state?
+        ├─ YES → Consider delegation
+        └─ NO → Keep command inline (no delegation needed)
+```
+
+**Examples:**
 
 | Scenario                                                        | Delegate? | Rationale                                                          |
 | --------------------------------------------------------------- | --------- | ------------------------------------------------------------------ |
@@ -44,14 +57,16 @@ Use this decision framework to determine if delegation is appropriate:
 
 ### Pattern 1: Simple Tool Delegation
 
-**Use case:** Delegate to a specialized tool runner that handles parsing and error reporting.
+**When to use:** Command needs specialized parsing or formatting of tool output.
 
 **Example:** `/fast-ci` and `/all-ci` → `devrun` agent
 
 **Characteristics:**
 
-- Agent runs development tools (pytest, pyright, ruff, etc.)
-- Specialized output parsing per tool
+- Agent wraps a single category of tools (pytest, pyright, ruff, etc.)
+- Provides specialized output parsing
+- Formats results consistently
+- Commands share agent but may pass different parameters
 - Iterative error fixing
 - Cost efficiency with lighter model
 
@@ -59,23 +74,34 @@ Use this decision framework to determine if delegation is appropriate:
 
 ```markdown
 ---
-description: Run fast CI checks iteratively (unit tests only)
+description: Run fast CI checks iteratively
 ---
 
 # /fast-ci
 
-Delegates to the `devrun` agent to run unit tests and type checking...
+Run fast CI checks iteratively (unit tests + pyright) until all pass.
+
+## Implementation
+
+Delegates to the devrun agent:
 
 Task(
 subagent_type="devrun",
 description="Run fast CI checks",
-prompt="Run pytest tests/unit and pyright"
+prompt="Run unit tests with pytest, then run pyright. Fix any failures iteratively."
 )
 ```
 
+**Agent responsibilities:**
+
+- Parse tool-specific output formats
+- Extract failures and provide context
+- Format results for user consumption
+- Iterate until success or max attempts
+
 ### Pattern 2: Workflow Orchestration
 
-**Use case:** Multi-step workflow with complex orchestration and error handling.
+**When to use:** Command manages a multi-step workflow with dependencies between steps.
 
 **Examples:**
 
@@ -84,10 +110,10 @@ prompt="Run pytest tests/unit and pyright"
 
 **Characteristics:**
 
-- Agent coordinates multiple operations (git, CLI tools, parsing)
-- Rich error messages with context-aware suggestions
-- JSON parsing and validation
-- Formatted user-facing output
+- Agent coordinates multiple tools in sequence
+- Each step may depend on previous step's output
+- Complex error handling at each step
+- Rich user feedback throughout workflow
 - Typically uses haiku model for cost efficiency
 
 **Command structure:**
@@ -99,7 +125,18 @@ description: Create worktree from existing plan file on disk
 
 # /erk:create-planned-wt
 
-Delegates the complete worktree creation workflow to the `planned-wt-creator` agent...
+Create a erk worktree from an existing plan file on disk.
+
+## What This Command Does
+
+Delegates the complete worktree creation workflow to the `planned-wt-creator` agent, which handles:
+
+1. Auto-detect most recent plan file at repository root
+2. Validate plan file (exists, readable, not empty)
+3. Run `erk create --plan` with JSON output
+4. Display plan location and next steps
+
+## Implementation
 
 Task(
 subagent_type="planned-wt-creator",
@@ -108,51 +145,76 @@ prompt="Execute the complete planned worktree creation workflow"
 )
 ```
 
+**Agent responsibilities:**
+
+- Execute workflow steps in order
+- Parse outputs from each step
+- Handle errors at each boundary
+- Format final results for user
+
 ### Pattern 3: Shared Workflow Documentation
 
-**Use case:** Multiple commands share the same underlying workflow logic.
+**When to use:** Multiple commands delegate to the same agent or share workflow logic.
 
 **Example:** `/fast-ci` and `/all-ci` both reference `.claude/docs/ci-iteration.md`
 
 **Characteristics:**
 
-- Shared workflow document in `.claude/docs/`
-- Multiple commands reference via `@` syntax
+- Workflow documentation lives in `.claude/docs/`
+- Commands reference shared doc with `@` syntax
+- Single source of truth for workflow details
 - Reduces duplication across commands
 - Agent implements shared workflow
 
-**Shared doc reference:**
+**Shared doc pattern:**
 
 ```markdown
-@.claude/docs/ci-iteration.md
+# CI Iteration Workflow
+
+This document describes the iterative CI workflow used by /fast-ci and /all-ci commands.
+
+## Workflow Steps
+
+1. Run specified CI checks
+2. Capture failures
+3. If failures: analyze and suggest fixes
+4. Retry until success or max attempts
+5. Report final status
+
+## Agent Invocation
+
+Both commands delegate to devrun agent:
+
+- /fast-ci: "Run pytest tests/ && pyright"
+- /all-ci: "Run make all-ci"
 ```
 
 ## Implementation Guide
+
+Follow these steps to implement command-agent delegation:
 
 ### Step 1: Create Agent File
 
 **Location:** `.claude/agents/<category>/<agent-name>.md`
 
-Example: `.claude/agents/erk/planned-wt-creator.md`
-
-**Required frontmatter:**
+**Frontmatter requirements:**
 
 ```yaml
 ---
 name: agent-name # Used in Task subagent_type
-description: One-line summary # Shown in kit registry
-model: haiku # haiku | sonnet | opus
-color: blue # UI color coding
+description: One-line summary # Shows in kit registry
+model: haiku | sonnet | opus # Model selection (see below)
+color: blue | green | red | cyan # UI color coding
 tools: Read, Bash, Task # Available tools
 ---
 ```
 
-**Agent structure:**
+**Content structure:**
 
 ```markdown
-You are a specialized agent that [purpose]...
+You are a specialized agent for [purpose]. You orchestrate [high-level workflow].
 
-**Philosophy**: [Design principles and goals]
+**Philosophy**: [Why this agent exists, design principles]
 
 ## Your Core Responsibilities
 
@@ -162,47 +224,90 @@ You are a specialized agent that [purpose]...
 
 ## Complete Workflow
 
-### Step 1: [First Major Step]
+### Step 1: [First Step Name]
 
-[Detailed instructions for this step]
+[Detailed instructions for step 1]
 
 **Error handling:**
-[How to handle errors in this step]
 
-### Step 2: [Second Major Step]
+- Error case 1 → formatted error message
+- Error case 2 → formatted error message
+
+### Step 2: [Second Step Name]
+
+[Detailed instructions for step 2]
 
 ...
 
 ## Best Practices
 
-[Agent-specific patterns and anti-patterns]
+- [Practice 1]
+- [Practice 2]
 
 ## Quality Standards
 
-[Verification checklist]
+Before completing your work, verify:
+✅ [Success criterion 1]
+✅ [Success criterion 2]
 ```
 
-### Step 2: Update Command to Delegate
+### Step 2: Define Agent Workflow Steps
 
-**Location:** `.claude/commands/<category>/<command-name>.md`
+Break the workflow into clear, sequential steps:
 
-Example: `.claude/commands/erk/create-planned-wt.md`
+1. **Input validation** - Check prerequisites and inputs
+2. **Orchestration** - Execute operations in order
+3. **Output formatting** - Present results to user
+4. **Error handling** - Format errors with context and guidance
 
-**Command structure:**
+Each step should include:
+
+- Clear instructions for the agent
+- Expected inputs and outputs
+- Error scenarios with formatted error templates
+- Success criteria
+
+### Step 3: Implement Error Handling
+
+All errors must follow a consistent template:
+
+```
+❌ Error: [Brief description in 5-10 words]
+
+Details: [Specific error message, relevant context, diagnostic info]
+
+Suggested action:
+  1. [Concrete step to resolve]
+  2. [Alternative approach]
+  3. [Fallback option]
+```
+
+**Error handling principles:**
+
+- Catch errors at each step boundary
+- Provide diagnostic context
+- Suggest 1-3 concrete actions
+- Never let raw exceptions reach the user
+
+### Step 4: Update Command to Delegation-Only
+
+**Target:** <50 lines total
+
+**Structure:**
 
 ````markdown
 ---
-description: Brief one-line summary
+description: One-line summary
 ---
 
 # /command-name
 
-[Brief description of what the command does]
+Brief description of what command does.
 
 ## Usage
 
 ```bash
-/command-name [arguments]
+/command-name [optional-arg]
 ```
 ````
 
@@ -210,15 +315,14 @@ description: Brief one-line summary
 
 Delegates to the `agent-name` agent, which handles:
 
-1. [Step 1]
-2. [Step 2]
+1. [High-level step 1]
+2. [High-level step 2]
    ...
 
 ## Prerequisites
 
 - [Prerequisite 1]
 - [Prerequisite 2]
-  ...
 
 ## Implementation
 
@@ -228,7 +332,7 @@ When this command is invoked, delegate to the agent:
 Task(
     subagent_type="agent-name",
     description="Brief task description",
-    prompt="Execute the complete workflow"
+    prompt="Execute the complete [workflow name] workflow"
 )
 ```
 
@@ -236,390 +340,336 @@ The agent handles all workflow orchestration, error handling, and result reporti
 
 ````
 
-**Target:** <50 lines total for the command file
+### Step 5: Add to Kit Registry (if bundled)
 
-### Step 3: Choose Agent Model
+If the agent is part of a kit (not project-specific), update the kit registry:
 
-**Model selection criteria:**
+**File:** `.agent/kits/<kit-name>/registry-entry.md`
 
-| Model | Use Case | Examples |
-|-------|----------|----------|
-| **haiku** | Fast, cost-efficient orchestration; mechanical workflows | devrun, planned-wt-creator, git-branch-submitter |
-| **sonnet** | Balanced; requires analysis and reasoning | (none currently, but suitable for complex analysis) |
-| **opus** | Rare; highly complex reasoning requiring most capable model | (avoid unless necessary) |
-
-**Default:** Use `haiku` for workflow orchestration unless you need complex reasoning.
-
-### Step 4: Add to Kit Registry (if bundled)
-
-If the agent is part of a bundled kit (not project-specific), add to the kit's registry entry:
-
-**Location:** `.agent/kits/<kit-name>/registry-entry.md`
-
-Update the "Available Agents" section:
-
+Add agent documentation:
 ```markdown
-## Available Agents
+### Agents
 
-- **agent-name**: [Brief description]. Use Task tool with `subagent_type="agent-name"`
+- **agent-name** - [Description]. Use Task tool with `subagent_type="agent-name"`.
 ````
 
 ## Agent Specifications
 
 ### Frontmatter Requirements
 
-All agents MUST include frontmatter with these fields:
+All agents must include frontmatter with these fields:
 
 ```yaml
----
-name: agent-name # Unique name, kebab-case
-description: Brief summary # Shown in registry and UI
-model: haiku # Model selection
-color: blue # UI color (blue, green, red, cyan)
-tools: Read, Bash, Task # Available tools (comma-separated)
----
+name: agent-name # REQUIRED: Used in Task subagent_type parameter
+description: Summary # REQUIRED: One-line purpose (shown in registry)
+model: haiku # REQUIRED: Model selection (see below)
+color: blue # REQUIRED: UI color (blue, green, red, cyan, yellow)
+tools: Read, Bash, Task # REQUIRED: Available tools (comma-separated)
 ```
 
-**Naming convention:**
+**Field constraints:**
 
-- Use `kebab-case` (hyphens, not underscores)
-- Pattern: `{product}-{noun}-{verb}` (e.g., `git-branch-submitter`)
-- Alternative: `{noun}-{verb}` (e.g., `planned-wt-creator`)
-- Must be unique across kit + project agents
+- `name`: Must be unique across all agents (kit + project), kebab-case
+- `description`: One sentence, no period at end
+- `model`: Must be one of: haiku, sonnet, opus
+- `color`: Must be one of: blue, green, red, cyan, yellow, magenta
+- `tools`: Comma-separated list from available tools
 
-### Error Handling Template
+### Model Selection
 
-All agents MUST use a consistent error format:
+Choose the appropriate model based on agent's cognitive requirements:
 
-```
-❌ Error: [Brief description in 5-10 words]
+| Model      | Cost        | Speed       | Use Cases                                                                                                       |
+| ---------- | ----------- | ----------- | --------------------------------------------------------------------------------------------------------------- |
+| **haiku**  | 💰 Low      | ⚡⚡⚡ Fast | • Workflow orchestration<br>• Tool invocation<br>• JSON parsing<br>• Simple formatting<br>• Iterative execution |
+| **sonnet** | 💰💰 Medium | ⚡⚡ Medium | • Complex analysis<br>• Code review<br>• Diff analysis<br>• Decision-making<br>• Pattern matching               |
+| **opus**   | 💰💰💰 High | ⚡ Slower   | • Highly complex reasoning<br>• Novel problem solving<br>• Multi-step planning<br>• Rare, specialized tasks     |
 
-Details: [Specific error message, relevant context, or diagnostic info]
+**Guidelines:**
 
-Suggested action:
-  1. [First concrete step to resolve]
-  2. [Second concrete step if needed]
-  3. [Third concrete step if needed]
-```
+- **Default to haiku** for orchestration and tool coordination
+- **Use sonnet** when analysis or reasoning is primary task
+- **Avoid opus** unless absolutely necessary (cost implications)
 
-**Key principles:**
+**Examples:**
 
-- Brief, scannable error description
-- Specific diagnostic details
-- Actionable suggestions (not vague)
-- Numbered steps for clarity
+- `devrun` (haiku) - Runs tools, parses output, iterates
+- `gt-branch-submitter` (haiku) - Orchestrates git/gh operations
+- `planned-wt-creator` (haiku) - Detects files, validates, creates worktree
+- Code review agent (sonnet) - Analyzes code quality and patterns
 
-### Best Practices for Agents
+### Tools Available
 
-**DO:**
+Agents can specify which tools they need:
 
-- ✅ Use absolute paths (never `cd`)
-- ✅ Parse command output directly (no temporary files)
-- ✅ Provide rich error context
-- ✅ Trust JSON output from tools
-- ✅ Include quality standards checklist
-- ✅ Document scope constraints clearly
+| Tool        | Purpose                                      |
+| ----------- | -------------------------------------------- |
+| `Read`      | Read files from filesystem                   |
+| `Write`     | Write files to filesystem                    |
+| `Edit`      | Edit existing files                          |
+| `Bash`      | Execute shell commands                       |
+| `Task`      | Delegate to other agents or run kit commands |
+| `Glob`      | Find files by pattern                        |
+| `Grep`      | Search file contents                         |
+| `WebFetch`  | Fetch web content                            |
+| `WebSearch` | Search the web                               |
 
-**DON'T:**
-
-- ❌ Change directories (`cd` commands)
-- ❌ Write temporary files unnecessarily
-- ❌ Mix orchestration with implementation logic
-- ❌ Assume agent can navigate filesystem interactively
-- ❌ Skip error handling for edge cases
+**Principle:** Only request tools the agent will actually use. Fewer tools = clearer scope.
 
 ## Examples from Codebase
 
-### Example 1: Simple Tool Delegation
+### Example 1: /fast-ci → devrun
 
-**Command:** `/fast-ci`
+**Pattern:** Simple tool delegation
 
-**Delegates to:** `devrun` agent
-
-**Pattern:** Command delegates to specialized tool runner for parsing and error reporting
-
-**Command file (simplified):**
+**Command:** `.claude/commands/fast-ci.md` (minimal)
 
 ```markdown
----
-description: Run fast CI checks iteratively (unit tests only)
----
-
-# /fast-ci
-
-Task(
-subagent_type="devrun",
-description="Run fast CI checks",
-prompt="Run pytest tests/unit and pyright iteratively until all pass"
-)
+Delegates to devrun agent to run pytest and pyright iteratively.
 ```
 
-**Why delegation:**
+**Agent:** `.claude/agents/devrun.md`
 
-- Specialized output parsing (pytest, pyright)
-- Iterative error fixing
-- Cost efficient (haiku model)
+- Specializes in running development tools
+- Parses tool-specific output formats
+- Iterates until success or max attempts
+- Used by multiple commands (/fast-ci, /all-ci)
 
-### Example 2: Workflow Orchestration
+**Key insight:** One agent serves multiple commands by accepting different tool invocations.
 
-**Command:** `/erk:create-planned-wt`
+### Example 2: /gt:submit-branch → gt-branch-submitter
 
-**Delegates to:** `planned-wt-creator` agent
+**Pattern:** Workflow orchestration
 
-**Pattern:** Multi-step workflow with validation, tool invocation, JSON parsing, formatted output
-
-**Command file:**
+**Command:** `.claude/commands/gt/submit-branch.md` (43 lines)
 
 ```markdown
----
-description: Create worktree from existing plan file on disk
----
-
-# /erk:create-planned-wt
-
-Delegates the complete worktree creation workflow to the `planned-wt-creator` agent, which handles:
-
-1. Auto-detect most recent `*-plan.md` file at repository root
-2. Validate plan file (exists, readable, not empty)
-3. Run `erk create --plan <file>` with JSON output
-4. Display plan location and next steps
-
-Task(
-subagent_type="planned-wt-creator",
-description="Create worktree from plan",
-prompt="Execute the complete planned worktree creation workflow"
-)
+Delegates the complete submit-branch workflow to the `gt-branch-submitter` agent.
 ```
 
-**Agent responsibilities:**
+**Agent:** `.claude/agents/gt/gt-branch-submitter.md`
+
+- Pre-analysis phase (check changes, squash commits)
+- Diff analysis phase (understand changes)
+- Commit message generation
+- Post-analysis phase (amend, submit, update PR)
+- Comprehensive error handling at each step
+
+**Key insight:** Agent coordinates multiple steps with dependencies, handling errors at each boundary.
+
+### Example 3: /erk:create-planned-wt → planned-wt-creator
+
+**Pattern:** Workflow orchestration
+
+**Command:** `.claude/commands/erk/create-planned-wt.md` (42 lines)
+
+- Reduced from 338 lines (87% reduction)
+- All orchestration moved to agent
+
+**Agent:** `.claude/agents/erk/planned-wt-creator.md`
 
 - Plan file detection and validation
-- Execute `erk create --plan` with JSON parsing
-- Rich error handling with helpful suggestions
-- Formatted output with next steps
+- Worktree creation via erk CLI
+- JSON output parsing
+- Next steps display
 
-**Why delegation:**
-
-- Multi-step orchestration (detect → validate → create → report)
-- Complex error handling (5+ error modes with context-specific guidance)
-- JSON parsing and validation
-- Formatted user-facing output
-
-**Result:** Command reduced from 338 lines to 43 lines (87% reduction)
-
-### Example 3: Git Workflow Orchestration
-
-**Command:** `/git:submit-branch`
-
-**Delegates to:** `git-branch-submitter` agent
-
-**Pattern:** Complex git workflow with staging, diff analysis, commit generation, PR creation
-
-**Command file:**
-
-```markdown
----
-description: Create git commit and submit branch as PR using git + GitHub CLI
----
-
-# /git:submit-branch
-
-Delegates to the `git-branch-submitter` agent, which handles:
-
-1. Check for uncommitted changes and commit them if needed
-2. Run pre-analysis phase (get branch info)
-3. Analyze all changes and generate commit message
-4. Create commit and push to remote
-5. Create PR with GitHub CLI
-
-Task(
-subagent_type="git-branch-submitter",
-description="Submit branch workflow",
-prompt="Execute the complete submit-branch workflow for the current branch"
-)
-```
-
-**Agent responsibilities:**
-
-- Git status verification
-- Staging uncommitted changes
-- Diff analysis for commit message generation
-- Git commit creation
-- Push to remote with upstream tracking
-- PR creation via GitHub CLI
-
-**Why delegation:**
-
-- Complex workflow (6+ sequential steps)
-- Rich diff analysis and commit message generation
-- Multiple external tools (git, gh CLI)
-- Error handling for git authentication, branch state, etc.
+**Key insight:** Delegation enables massive simplification of command while maintaining all functionality.
 
 ## Anti-Patterns
 
 ### ❌ Don't: Run Tools Directly When Agent Exists
 
-**Wrong:**
-
 ```markdown
-# Command that manually runs pytest
+# ❌ WRONG: Command runs pytest directly
 
-Execute: `pytest tests/unit`
-Parse output...
+/fast-ci:
+bash: pytest tests/
+
+# ✅ CORRECT: Command delegates to devrun agent
+
+/fast-ci:
+Task(subagent_type="devrun", prompt="Run pytest tests/")
 ```
 
-**Right:**
-
-```markdown
-# Command that delegates to devrun
-
-Task(
-subagent_type="devrun",
-prompt="Run pytest tests/unit"
-)
-```
+**Why:** Bypasses specialized parsing and error handling in agent.
 
 ### ❌ Don't: Embed Orchestration in Command Files
 
-**Wrong:**
-
 ```markdown
-# Command with 300+ lines of step-by-step instructions
+# ❌ WRONG: 338 lines of orchestration in command
 
-## Step 1: Detect files
+/erk:create-planned-wt:
 
-## Step 2: Validate
+## Step 1: Detect plan file
 
-## Step 3: Execute
+[50 lines of instructions]
 
+## Step 2: Validate plan
+
+[50 lines of instructions]
 ...
+
+# ✅ CORRECT: Command delegates to agent
+
+/erk:create-planned-wt:
+Task(subagent_type="planned-wt-creator", prompt="...")
 ```
 
-**Right:**
-
-```markdown
-# Command delegates to agent
-
-Task(subagent_type="agent-name", ...)
-```
+**Why:** Commands become hard to maintain and test. Duplication across similar commands.
 
 ### ❌ Don't: Duplicate Error Handling Across Commands
 
-**Wrong:**
-
 ```markdown
-# Command 1 with inline error handling
+# ❌ WRONG: Each command duplicates error templates
 
-If error X: print "Error: ..."
+/command-1: [200 lines with error handling]
+/command-2: [200 lines with same error handling]
 
-# Command 2 with duplicate inline error handling
+# ✅ CORRECT: Agent handles errors once
 
-If error X: print "Error: ..."
+Agent: [Complete error handling]
+/command-1: Task(subagent_type="agent")
+/command-2: Task(subagent_type="agent")
 ```
 
-**Right:**
-
-```markdown
-# Both commands delegate to same agent
-
-# Agent handles all errors consistently
-
-Task(subagent_type="shared-agent", ...)
-```
+**Why:** Inconsistent error messages, harder to update error handling.
 
 ### ❌ Don't: Mix Delegation and Inline Logic
 
-**Wrong:**
-
 ```markdown
-# Command that partly delegates but also has inline steps
+# ❌ WRONG: Command partially delegates
 
-Step 1: Do X inline
-Step 2: Task(subagent_type="agent", ...)
-Step 3: Do Y inline
+/command:
+[30 lines of inline logic]
+Task(subagent_type="agent", ...)
+[30 lines more inline logic]
+
+# ✅ CORRECT: Full delegation
+
+/command:
+Task(subagent_type="agent", prompt="Execute complete workflow")
 ```
 
-**Right:**
+**Why:** Unclear separation of concerns, harder to test and maintain.
 
-```markdown
-# Command fully delegates
+## Delegation vs Inline: Quick Reference
 
-Task(subagent_type="agent", prompt="Complete workflow")
-```
+| Characteristic      | Inline Command             | Delegated Command               |
+| ------------------- | -------------------------- | ------------------------------- |
+| **Lines of code**   | 100-500+                   | <50                             |
+| **Error handling**  | Embedded in command        | In agent                        |
+| **Orchestration**   | Step-by-step in command    | In agent                        |
+| **Reusability**     | Copy-paste across commands | One agent, multiple commands    |
+| **Testing**         | Test command invocation    | Test agent independently        |
+| **Model selection** | Uses main session model    | Agent chooses appropriate model |
+| **Maintenance**     | Update multiple commands   | Update one agent                |
 
 ## Agent Discovery
 
-When you need to find available agents:
+### Finding Available Agents
 
-1. **Check kit registry:** `.agent/kits/kit-registry.md`
-   - Lists all installed kits with their agents
-   - Shows how to invoke each agent
+**Method 1: Kit Registry**
 
-2. **Browse agents directory:** `.claude/agents/`
-   - Project-specific agents organized by category
-   - Read agent files for detailed capabilities
+```markdown
+@.agent/kits/kit-registry.md
+```
 
-3. **Check AGENTS.md checklist:**
-   - Quick reference table for common tasks
-   - Links to relevant agents and documentation
+Shows all installed kits with their agents and usage patterns.
+
+**Method 2: Browse Agent Directory**
+
+```bash
+ls .claude/agents/
+```
+
+Project-specific agents live here.
+
+**Method 3: Check AGENTS.md**
+Checklist table links to delegation pattern documentation.
+
+### Using Agents in Commands
+
+**Task tool invocation:**
+
+```python
+Task(
+    subagent_type="agent-name",  # Must match agent's "name" in frontmatter
+    description="Brief description",  # Shown in UI progress
+    prompt="Detailed instructions for agent"  # Agent receives this
+)
+```
+
+**Parameters:**
+
+- `subagent_type` (required): Agent name from frontmatter
+- `description` (required): Short task description (3-5 words)
+- `prompt` (required): Complete instructions for agent
+- `model` (optional): Override agent's default model
 
 ## Quality Standards
 
-### For Commands
+### Command Quality Standards
 
-✅ **Target metrics:**
+Commands using delegation must meet these standards:
 
-- <50 lines total
-- Single Task tool invocation
-- Clear prerequisites section
-- Brief "What This Command Does" with numbered steps
+✅ **Line count**: <50 lines total (including frontmatter)
+✅ **Prerequisites section**: Clear list of requirements
+✅ **Single delegation**: One Task tool invocation, no inline logic
+✅ **Reference agent**: Point to agent for implementation details
+✅ **User-facing**: Focus on "what" not "how"
 
-✅ **Required sections:**
+### Agent Quality Standards
 
-- Usage examples
-- Prerequisites
-- What This Command Does (with delegation statement)
-- Implementation (Task tool invocation)
+Agents must meet these standards:
 
-### For Agents
+✅ **Comprehensive error handling**: Formatted error for every failure mode
+✅ **Self-contained workflow**: No external dependencies on command logic
+✅ **Clear step structure**: Sequential steps with clear boundaries
+✅ **Best practices section**: Guidance for agent execution
+✅ **Quality checklist**: Success criteria before completion
+✅ **Model appropriate**: Use haiku for orchestration, sonnet for analysis
 
-✅ **Required structure:**
+## Progressive Disclosure
 
-- Complete frontmatter (name, description, model, color, tools)
-- Philosophy statement
-- Core responsibilities list
-- Complete workflow (step-by-step)
-- Error handling (with consistent format)
-- Best practices section
-- Quality standards checklist
+Documentation follows a progressive disclosure model:
 
-✅ **Error handling:**
+1. **Quick reference** - AGENTS.md checklist entry
+   - One line: "Creating command that orchestrates workflow → command-agent-delegation.md"
 
-- Consistent error template
-- Specific diagnostic details
-- Actionable suggestions
+2. **Pattern documentation** - This document (docs/agent/command-agent-delegation.md)
+   - Complete patterns, examples, anti-patterns
 
-✅ **Scope constraints:**
+3. **Implementation examples** - Actual commands and agents in codebase
+   - `/fast-ci` → `devrun` (simple delegation)
+   - `/gt:submit-branch` → `gt-branch-submitter` (workflow orchestration)
+   - `/erk:create-planned-wt` → `planned-wt-creator` (workflow orchestration)
 
-- Clear list of agent responsibilities
-- Clear list of forbidden actions
+**Navigation:**
 
-## Migration Checklist
+- `AGENTS.md` → Quick lookup during coding
+- `docs/agent/guide.md` → Navigation hub to all patterns
+- This doc → Complete delegation pattern reference
 
-When refactoring an existing command to use delegation:
+## Summary
 
-- [ ] Create agent file with frontmatter
-- [ ] Migrate workflow steps from command to agent
-- [ ] Migrate error handling from command to agent
-- [ ] Update command to delegation-only (<50 lines)
-- [ ] Add agent to kit registry (if bundled)
-- [ ] Update AGENTS.md checklist (if pattern is common)
-- [ ] Update docs/agent/guide.md navigation
-- [ ] Test agent workflow end-to-end
-- [ ] Verify error handling for all failure modes
+**When to delegate:**
 
-## Related Documentation
+- Multi-step workflows (3+ steps)
+- Complex error handling needed
+- State management across operations
+- Tool orchestration required
 
-- [AGENTS.md](../../AGENTS.md) - Quick reference checklist
-- [docs/agent/guide.md](guide.md) - Documentation navigation
-- [.agent/kits/kit-registry.md](../../.agent/kits/kit-registry.md) - Installed kits and agents
+**How to delegate:**
+
+1. Create agent with frontmatter and workflow steps
+2. Implement comprehensive error handling
+3. Update command to delegation-only (<50 lines)
+4. Add agent to kit registry if bundled
+
+**Key principles:**
+
+- Commands define _what_ (user contract)
+- Agents implement _how_ (orchestration, error handling)
+- One agent can serve multiple commands
+- Use appropriate model (haiku for orchestration)
+- Follow progressive disclosure (checklist → docs → implementation)

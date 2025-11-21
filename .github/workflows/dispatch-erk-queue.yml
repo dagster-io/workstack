@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ github.token }}
 
       - name: Derive branch name from issue title
         id: branch_name
@@ -151,9 +151,10 @@ jobs:
           exit 0  # Don't fail the workflow
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
 
       - name: Commit and push changes
+        id: commit
         # SECURITY: Use env block for consistency and safety
         # While ISSUE_NUMBER is not user-controlled, using env block maintains consistent pattern
         # and prevents accidental introduction of vulnerabilities in future edits
@@ -166,11 +167,21 @@ jobs:
             git commit -m "Implement plan from issue #$ISSUE_NUMBER"
             git push origin "$BRANCH_NAME"
             echo "✓ Changes committed and pushed"
+            echo "changes_pushed=true" >> $GITHUB_OUTPUT
           else
             echo "No changes to commit"
+            echo "changes_pushed=false" >> $GITHUB_OUTPUT
           fi
 
+      # Token Permissions:
+      # Uses github.token (not secrets.GITHUB_TOKEN) to match the working pattern in implement-plan.yml
+      # Requires repository setting: Settings > Actions > General > "Allow GitHub Actions to create and approve pull requests"
+      # If this step fails with "not permitted" error, check:
+      # 1. Repository settings (above)
+      # 2. Organization settings (if in an org)
+      # 3. Enterprise settings (if applicable)
       - name: Create pull request
+        if: steps.commit.outputs.changes_pushed == 'true'
         # SECURITY: Use env block to prevent code injection attacks
         # User-controlled inputs (issue title, issue body) must not be directly interpolated
         # Direct interpolation like PR_TITLE="${{ github.event.issue.title }}" would allow:
@@ -187,7 +198,7 @@ jobs:
           SERVER_URL: ${{ github.server_url }}
           REPOSITORY: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           # Check if PR already exists
           if gh pr view "$BRANCH_NAME" --json number &> /dev/null; then
@@ -236,12 +247,13 @@ jobs:
           echo "✓ Created PR: $ISSUE_TITLE"
 
       - name: Trigger CI workflows
+        if: steps.commit.outputs.changes_pushed == 'true'
         # SECURITY: Use env block for consistency
         # BRANCH_NAME is derived from sanitized user input (see branch derivation step)
         # Using env block maintains security best practices throughout workflow
         env:
           BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           echo "Triggering CI workflows for branch: $BRANCH_NAME"
 

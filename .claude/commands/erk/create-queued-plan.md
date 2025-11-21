@@ -146,6 +146,16 @@ This command succeeds when ALL of the following are true:
 - Check workflow runs: `gh run list`
 - Manually trigger if needed: Add `erk-queue` label to issue
 
+### "PR creation failed: not permitted to create pull requests"
+
+**Cause:** GitHub Actions token lacks permission to create PRs
+**Solution:**
+
+1. Navigate to **Settings > Actions > General**
+2. Enable "Allow GitHub Actions to create and approve pull requests"
+3. If in organization: Also check **Organization Settings > Actions**
+4. Re-run the workflow
+
 ## Integration with Workflow
 
 **Typical workflow (automatic implementation):**

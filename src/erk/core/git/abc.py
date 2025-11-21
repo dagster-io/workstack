@@ -413,3 +413,17 @@ class Git(ABC):
             ff_only: If True, use --ff-only to prevent merge commits
         """
         ...
+
+    @abstractmethod
+    def branch_exists_on_remote(self, repo_root: Path, remote: str, branch: str) -> bool:
+        """Check if a branch exists on a remote.
+
+        Args:
+            repo_root: Path to the git repository root
+            remote: Remote name (e.g., "origin")
+            branch: Branch name to check
+
+        Returns:
+            True if branch exists on remote, False otherwise
+        """
+        ...

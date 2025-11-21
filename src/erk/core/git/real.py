@@ -545,3 +545,14 @@ class RealGit(Git):
             operation_context=f"pull branch '{branch}' from remote '{remote}'",
             cwd=repo_root,
         )
+
+    def branch_exists_on_remote(self, repo_root: Path, remote: str, branch: str) -> bool:
+        """Check if a branch exists on a remote."""
+        result = subprocess.run(
+            ["git", "ls-remote", remote, branch],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return bool(result.stdout.strip())

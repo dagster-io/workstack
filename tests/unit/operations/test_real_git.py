@@ -95,3 +95,68 @@ def test_create_tracking_branch_with_different_names() -> None:
         mock_run.assert_called_once()
         call_args = mock_run.call_args
         assert call_args[0][0] == ["git", "branch", "--track", "local-name", "upstream/remote-name"]
+
+
+def test_branch_exists_on_remote_when_exists() -> None:
+    """Test git ls-remote returns True when branch exists on remote."""
+    with patch("subprocess.run") as mock_run:
+        # Arrange: Configure mock to return branch ref (branch exists)
+        mock_run.return_value = MagicMock(
+            stdout="abc123def456\trefs/heads/feature-branch\n",
+            returncode=0,
+        )
+
+        # Act: Call the method
+        ops = RealGit()
+        exists = ops.branch_exists_on_remote(Path("/test/repo"), "origin", "feature-branch")
+
+        # Assert: Verify command construction
+        mock_run.assert_called_once()
+        call_args = mock_run.call_args
+        assert call_args[0][0] == ["git", "ls-remote", "origin", "feature-branch"]
+        assert call_args[1]["cwd"] == Path("/test/repo")
+        assert call_args[1]["capture_output"] is True
+        assert call_args[1]["text"] is True
+        assert call_args[1]["check"] is False
+
+        # Assert: Verify result
+        assert exists is True
+
+
+def test_branch_exists_on_remote_when_not_exists() -> None:
+    """Test git ls-remote returns False when branch doesn't exist on remote."""
+    with patch("subprocess.run") as mock_run:
+        # Arrange: Configure mock to return empty output (branch doesn't exist)
+        mock_run.return_value = MagicMock(
+            stdout="",
+            returncode=0,
+        )
+
+        # Act: Call the method
+        ops = RealGit()
+        exists = ops.branch_exists_on_remote(Path("/test/repo"), "origin", "nonexistent-branch")
+
+        # Assert: Verify command construction
+        mock_run.assert_called_once()
+        call_args = mock_run.call_args
+        assert call_args[0][0] == ["git", "ls-remote", "origin", "nonexistent-branch"]
+
+        # Assert: Verify result
+        assert exists is False
+
+
+def test_branch_exists_on_remote_with_whitespace() -> None:
+    """Test git ls-remote handles whitespace correctly."""
+    with patch("subprocess.run") as mock_run:
+        # Arrange: Configure mock with whitespace
+        mock_run.return_value = MagicMock(
+            stdout="  abc123def456\trefs/heads/feature-branch  \n\n",
+            returncode=0,
+        )
+
+        # Act: Call the method
+        ops = RealGit()
+        exists = ops.branch_exists_on_remote(Path("/test/repo"), "origin", "feature-branch")
+
+        # Assert: Verify result (whitespace stripped before checking)
+        assert exists is True

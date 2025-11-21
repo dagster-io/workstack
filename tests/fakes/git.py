@@ -389,6 +389,16 @@ class FakeGit(Git):
         """Pull a specific branch from a remote (tracks mutation)."""
         self._pulled_branches.append((remote, branch, ff_only))
 
+    def branch_exists_on_remote(self, repo_root: Path, remote: str, branch: str) -> bool:
+        """Check if a branch exists on a remote (fake implementation).
+
+        Returns True if the branch exists in the configured remote branches.
+        Checks for the branch in format: remote/branch (e.g., origin/feature).
+        """
+        remote_branches = self._remote_branches.get(repo_root, [])
+        remote_ref = f"{remote}/{branch}"
+        return remote_ref in remote_branches
+
     @property
     def deleted_branches(self) -> list[str]:
         """Get the list of branches that have been deleted.

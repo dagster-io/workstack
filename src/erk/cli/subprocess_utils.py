@@ -22,6 +22,7 @@ def run_with_error_reporting(
     cwd: Path | None = None,
     error_prefix: str = "Command failed",
     troubleshooting: list[str] | None = None,
+    show_output: bool = False,
 ) -> subprocess.CompletedProcess[str]:
     """Run subprocess command with user-friendly error reporting for CLI layer.
 
@@ -34,6 +35,7 @@ def run_with_error_reporting(
         cwd: Working directory for the command
         error_prefix: Prefix for error message
         troubleshooting: Optional list of troubleshooting suggestions
+        show_output: If True, show stdout/stderr in real-time (default: False)
 
     Returns:
         CompletedProcess if successful
@@ -54,21 +56,32 @@ def run_with_error_reporting(
         - For integration layer code, use run_subprocess_with_context() instead
         - Uses check=False and manually handles errors for user-friendly output
         - Displays stderr/stdout to user before raising SystemExit
+        - When show_output=True, output streams directly to terminal
     """
-    result = subprocess.run(cmd, cwd=cwd, check=False, capture_output=True, text=True)
+    result = subprocess.run(
+        cmd, cwd=cwd, check=False, capture_output=not show_output, text=True
+    )
 
     if result.returncode != 0:
-        error_msg = result.stderr.strip() if result.stderr else result.stdout.strip()
+        # When show_output=True, output already displayed, only show error context
+        if show_output:
+            message_parts = [
+                f"Error: {error_prefix}.\n",
+                f"Command: {' '.join(cmd)}",
+                f"Exit code: {result.returncode}\n",
+            ]
+        else:
+            error_msg = result.stderr.strip() if result.stderr else result.stdout.strip()
 
-        # Build error message
-        message_parts = [
-            f"Error: {error_prefix}.\n",
-            f"Command: {' '.join(cmd)}",
-            f"Exit code: {result.returncode}\n",
-        ]
+            # Build error message
+            message_parts = [
+                f"Error: {error_prefix}.\n",
+                f"Command: {' '.join(cmd)}",
+                f"Exit code: {result.returncode}\n",
+            ]
 
-        if error_msg:
-            message_parts.append(f"Output:\n{error_msg}\n")
+            if error_msg:
+                message_parts.append(f"Output:\n{error_msg}\n")
 
         if troubleshooting:
             message_parts.append("Troubleshooting:")

@@ -26,6 +26,7 @@ class FakeGitHub(GitHub):
         pr_bases: dict[int, str] | None = None,
         pr_mergeability: dict[int, PRMergeability | None] | None = None,
         workflow_runs: list[WorkflowRun] | None = None,
+        run_logs: dict[str, str] | None = None,
     ) -> None:
         """Create FakeGitHub with pre-configured state.
 
@@ -36,6 +37,7 @@ class FakeGitHub(GitHub):
             pr_bases: Mapping of pr_number -> base_branch
             pr_mergeability: Mapping of pr_number -> PRMergeability (None for API errors)
             workflow_runs: List of WorkflowRun objects to return from list_workflow_runs
+            run_logs: Mapping of run_id -> log string
         """
         if prs is not None and pr_statuses is not None:
             msg = "Cannot specify both prs and pr_statuses"
@@ -65,6 +67,7 @@ class FakeGitHub(GitHub):
         self._pr_bases = pr_bases or {}
         self._pr_mergeability = pr_mergeability or {}
         self._workflow_runs = workflow_runs or []
+        self._run_logs = run_logs or {}
         self._updated_pr_bases: list[tuple[int, str]] = []
         self._merged_prs: list[int] = []
         self._get_prs_for_repo_calls: list[tuple[Path, bool]] = []
@@ -219,3 +222,13 @@ class FakeGitHub(GitHub):
         parameters are accepted but ignored - fake returns all pre-configured runs.
         """
         return self._workflow_runs
+
+    def get_run_logs(self, repo_root: Path, run_id: str) -> str:
+        """Return pre-configured log string for run_id.
+
+        Raises RuntimeError if run_id not found, mimicking gh CLI behavior.
+        """
+        if run_id not in self._run_logs:
+            msg = f"Run {run_id} not found"
+            raise RuntimeError(msg)
+        return self._run_logs[run_id]

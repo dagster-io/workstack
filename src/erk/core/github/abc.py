@@ -174,3 +174,19 @@ class GitHub(ABC):
             List of workflow runs, ordered by creation time (newest first)
         """
         ...
+
+    @abstractmethod
+    def get_run_logs(self, repo_root: Path, run_id: str) -> str:
+        """Get logs for a workflow run.
+
+        Args:
+            repo_root: Repository root directory
+            run_id: GitHub Actions run ID
+
+        Returns:
+            Log text as string
+
+        Raises:
+            RuntimeError: If gh CLI command fails
+        """
+        ...

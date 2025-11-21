@@ -6,6 +6,7 @@ before delegating to the wrapped implementation.
 
 from pathlib import Path
 
+from erk.cli.output import user_output
 from erk.core.git.abc import Git, WorktreeInfo
 from erk.core.printing_base import PrintingBase
 
@@ -189,3 +190,12 @@ class PrintingGit(PrintingBase, Git):
     def get_file_status(self, cwd: Path) -> tuple[list[str], list[str], list[str]]:
         """Get file status (read-only, no printing)."""
         return self._wrapped.get_file_status(cwd)
+
+    def set_branch_issue(self, repo_root: Path, branch: str, issue_number: int) -> None:
+        """Set branch issue with printing."""
+        user_output(f"Would set issue #{issue_number} for branch '{branch}'")
+        self._wrapped.set_branch_issue(repo_root, branch, issue_number)
+
+    def get_branch_issue(self, repo_root: Path, branch: str) -> int | None:
+        """Get branch issue (read-only, no printing)."""
+        return self._wrapped.get_branch_issue(repo_root, branch)

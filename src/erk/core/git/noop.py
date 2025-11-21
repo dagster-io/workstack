@@ -199,3 +199,12 @@ class NoopGit(Git):
         """No-op check - always returns True in dry-run mode."""
         # Return True to allow dry-run to continue
         return True
+
+    def set_branch_issue(self, repo_root: Path, branch: str, issue_number: int) -> None:
+        """No-op for setting branch issue in dry-run mode."""
+        # Do nothing - prevents actual git config write
+        pass
+
+    def get_branch_issue(self, repo_root: Path, branch: str) -> int | None:
+        """Get branch issue (read-only, delegates to wrapped)."""
+        return self._wrapped.get_branch_issue(repo_root, branch)

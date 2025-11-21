@@ -11,8 +11,11 @@ from erk.core.plan_folder import (
     get_plan_path,
     get_progress_path,
     get_submission_path,
+    has_issue_reference,
     parse_progress_frontmatter,
+    read_issue_reference,
     remove_submission_folder,
+    save_issue_reference,
     update_progress,
     update_progress_frontmatter,
 )
@@ -527,3 +530,237 @@ def test_remove_submission_folder_not_exists(tmp_path: Path) -> None:
     # Verify still doesn't exist
     submission_folder = tmp_path / ".submission"
     assert not submission_folder.exists()
+
+
+# ============================================================================
+# Issue Reference Storage Tests
+# ============================================================================
+
+
+def test_save_issue_reference_success(tmp_path: Path) -> None:
+    """Test saving issue reference to .plan/issue.json."""
+    # Create .plan/ directory
+    plan_dir = tmp_path / ".plan"
+    plan_dir.mkdir()
+
+    # Save issue reference
+    save_issue_reference(
+        plan_dir, issue_number=42, issue_url="https://github.com/owner/repo/issues/42"
+    )
+
+    # Verify file created
+    issue_file = plan_dir / "issue.json"
+    assert issue_file.exists()
+
+    # Verify content
+    content = issue_file.read_text(encoding="utf-8")
+    import json
+
+    data = json.loads(content)
+    assert data["issue_number"] == 42
+    assert data["issue_url"] == "https://github.com/owner/repo/issues/42"
+    assert "created_at" in data
+    assert "synced_at" in data
+
+
+def test_save_issue_reference_plan_dir_not_exists(tmp_path: Path) -> None:
+    """Test save_issue_reference raises error when plan dir doesn't exist."""
+    plan_dir = tmp_path / ".plan"
+    # Don't create the directory
+
+    with pytest.raises(FileNotFoundError, match="Plan directory does not exist"):
+        save_issue_reference(plan_dir, 42, "http://url")
+
+
+def test_save_issue_reference_overwrites_existing(tmp_path: Path) -> None:
+    """Test save_issue_reference overwrites existing issue.json."""
+    plan_dir = tmp_path / ".plan"
+    plan_dir.mkdir()
+
+    # Save first reference
+    save_issue_reference(plan_dir, 10, "http://url/10")
+
+    # Overwrite with new reference
+    save_issue_reference(plan_dir, 20, "http://url/20")
+
+    # Verify latest reference saved
+    ref = read_issue_reference(plan_dir)
+    assert ref is not None
+    assert ref.issue_number == 20
+    assert ref.issue_url == "http://url/20"
+
+
+def test_save_issue_reference_timestamps(tmp_path: Path) -> None:
+    """Test save_issue_reference generates ISO 8601 timestamps."""
+    plan_dir = tmp_path / ".plan"
+    plan_dir.mkdir()
+
+    save_issue_reference(plan_dir, 1, "http://url")
+
+    issue_file = plan_dir / "issue.json"
+    import json
+
+    data = json.loads(issue_file.read_text(encoding="utf-8"))
+
+    # Verify timestamps are ISO 8601 format
+    assert "T" in data["created_at"]
+    assert ":" in data["created_at"]
+    assert "T" in data["synced_at"]
+    assert ":" in data["synced_at"]
+
+
+def test_read_issue_reference_success(tmp_path: Path) -> None:
+    """Test reading existing issue reference."""
+    plan_dir = tmp_path / ".plan"
+    plan_dir.mkdir()
+
+    # Save reference
+    save_issue_reference(plan_dir, 42, "https://github.com/owner/repo/issues/42")
+
+    # Read it back
+    ref = read_issue_reference(plan_dir)
+
+    assert ref is not None
+    assert ref.issue_number == 42
+    assert ref.issue_url == "https://github.com/owner/repo/issues/42"
+    assert ref.created_at is not None
+    assert ref.synced_at is not None
+
+
+def test_read_issue_reference_not_exists(tmp_path: Path) -> None:
+    """Test read_issue_reference returns None when file doesn't exist."""
+    plan_dir = tmp_path / ".plan"
+    plan_dir.mkdir()
+
+    ref = read_issue_reference(plan_dir)
+
+    assert ref is None
+
+
+def test_read_issue_reference_invalid_json(tmp_path: Path) -> None:
+    """Test read_issue_reference returns None for invalid JSON."""
+    plan_dir = tmp_path / ".plan"
+    plan_dir.mkdir()
+
+    # Create invalid JSON file
+    issue_file = plan_dir / "issue.json"
+    issue_file.write_text("not valid json", encoding="utf-8")
+
+    ref = read_issue_reference(plan_dir)
+
+    assert ref is None
+
+
+def test_read_issue_reference_missing_fields(tmp_path: Path) -> None:
+    """Test read_issue_reference returns None when required fields missing."""
+    plan_dir = tmp_path / ".plan"
+    plan_dir.mkdir()
+
+    # Create JSON with missing fields
+    issue_file = plan_dir / "issue.json"
+    import json
+
+    data = {"issue_number": 42}  # Missing other required fields
+    issue_file.write_text(json.dumps(data), encoding="utf-8")
+
+    ref = read_issue_reference(plan_dir)
+
+    assert ref is None
+
+
+def test_read_issue_reference_all_fields_present(tmp_path: Path) -> None:
+    """Test read_issue_reference returns IssueReference with all fields."""
+    plan_dir = tmp_path / ".plan"
+    plan_dir.mkdir()
+
+    # Create complete JSON
+    issue_file = plan_dir / "issue.json"
+    import json
+
+    data = {
+        "issue_number": 123,
+        "issue_url": "https://github.com/owner/repo/issues/123",
+        "created_at": "2025-01-01T10:00:00Z",
+        "synced_at": "2025-01-01T11:00:00Z",
+    }
+    issue_file.write_text(json.dumps(data), encoding="utf-8")
+
+    ref = read_issue_reference(plan_dir)
+
+    assert ref is not None
+    assert ref.issue_number == 123
+    assert ref.issue_url == "https://github.com/owner/repo/issues/123"
+    assert ref.created_at == "2025-01-01T10:00:00Z"
+    assert ref.synced_at == "2025-01-01T11:00:00Z"
+
+
+def test_has_issue_reference_exists(tmp_path: Path) -> None:
+    """Test has_issue_reference returns True when file exists."""
+    plan_dir = tmp_path / ".plan"
+    plan_dir.mkdir()
+
+    save_issue_reference(plan_dir, 42, "http://url")
+
+    assert has_issue_reference(plan_dir) is True
+
+
+def test_has_issue_reference_not_exists(tmp_path: Path) -> None:
+    """Test has_issue_reference returns False when file doesn't exist."""
+    plan_dir = tmp_path / ".plan"
+    plan_dir.mkdir()
+
+    assert has_issue_reference(plan_dir) is False
+
+
+def test_has_issue_reference_plan_dir_not_exists(tmp_path: Path) -> None:
+    """Test has_issue_reference returns False when plan dir doesn't exist."""
+    plan_dir = tmp_path / ".plan"
+    # Don't create directory
+
+    assert has_issue_reference(plan_dir) is False
+
+
+def test_issue_reference_roundtrip(tmp_path: Path) -> None:
+    """Test complete workflow: save -> read -> verify."""
+    plan_dir = tmp_path / ".plan"
+    plan_dir.mkdir()
+
+    # Save reference
+    issue_num = 999
+    issue_url = "https://github.com/test/repo/issues/999"
+    save_issue_reference(plan_dir, issue_num, issue_url)
+
+    # Verify has_issue_reference detects it
+    assert has_issue_reference(plan_dir) is True
+
+    # Read reference back
+    ref = read_issue_reference(plan_dir)
+
+    # Verify all fields match
+    assert ref is not None
+    assert ref.issue_number == issue_num
+    assert ref.issue_url == issue_url
+    # Timestamps should exist (not testing exact values since they're generated)
+    assert len(ref.created_at) > 0
+    assert len(ref.synced_at) > 0
+
+
+def test_issue_reference_with_plan_folder(tmp_path: Path) -> None:
+    """Test issue reference integration with plan folder creation."""
+    # Create plan folder
+    plan_content = "# Test Plan\n\n1. Step one"
+    plan_folder = create_plan_folder(tmp_path, plan_content)
+
+    # Initially no issue reference
+    assert has_issue_reference(plan_folder) is False
+
+    # Save issue reference
+    save_issue_reference(plan_folder, 42, "http://url/42")
+
+    # Verify reference exists
+    assert has_issue_reference(plan_folder) is True
+
+    # Read and verify
+    ref = read_issue_reference(plan_folder)
+    assert ref is not None
+    assert ref.issue_number == 42

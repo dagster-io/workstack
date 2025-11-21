@@ -427,3 +427,32 @@ class Git(ABC):
             True if branch exists on remote, False otherwise
         """
         ...
+
+    @abstractmethod
+    def set_branch_issue(self, repo_root: Path, branch: str, issue_number: int) -> None:
+        """Associate a GitHub issue number with a branch via git config.
+
+        Stores the issue number in git config at branch.<branch>.issue.
+        This association persists even if worktree is removed and recreated.
+
+        Args:
+            repo_root: Path to the git repository root
+            branch: Branch name to associate with issue
+            issue_number: GitHub issue number
+        """
+        ...
+
+    @abstractmethod
+    def get_branch_issue(self, repo_root: Path, branch: str) -> int | None:
+        """Get GitHub issue number associated with a branch from git config.
+
+        Reads the issue number from git config at branch.<branch>.issue.
+
+        Args:
+            repo_root: Path to the git repository root
+            branch: Branch name to lookup
+
+        Returns:
+            Issue number if set, None otherwise
+        """
+        ...

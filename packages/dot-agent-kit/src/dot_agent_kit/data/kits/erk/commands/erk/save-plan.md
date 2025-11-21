@@ -4,7 +4,7 @@ description: Extract plan from conversation and save to disk (no enhancements)
 
 # /erk:save-plan
 
-Extracts an implementation plan from the conversation and saves it to disk with minimal frontmatter. This is a simplified alternative to `/erk:create-enhanced-plan` that skips all discovery mining and enhancement steps.
+Extracts an implementation plan from the conversation and saves it to disk with minimal frontmatter. This is a simplified alternative to `/erk:enhance-and-save-plan` that skips all discovery mining and enhancement steps.
 
 ## Usage
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Create enhanced implementation plan from session logs (two-phase).
 
-This script handles file operations for the create-enhanced-plan workflow,
+This script handles file operations for the enhance-and-save-plan workflow,
 leaving only AI-driven analysis in the Claude command layer. It operates in two phases:
 
 Phase 1 (discover):
@@ -15,8 +15,8 @@ Phase 2 (assemble):
 2. Return raw inputs for LLM composition (NO templates or text generation)
 
 Usage:
-    dot-agent run erk create-enhanced-plan discover --session-id <id> --cwd <path>
-    dot-agent run erk create-enhanced-plan assemble <plan-file> <discoveries-file>
+    dot-agent run erk enhance-and-save-plan discover --session-id <id> --cwd <path>
+    dot-agent run erk enhance-and-save-plan assemble <plan-file> <discoveries-file>
 
 Output:
     JSON object with either success or error information
@@ -31,10 +31,10 @@ Error Types:
     - preprocessing_failed: Failed to preprocess session logs
 
 Examples:
-    $ dot-agent run erk create-enhanced-plan discover --session-id abc123 --cwd /Users/foo/repo
+    $ dot-agent run erk enhance-and-save-plan discover --session-id abc123 --cwd /Users/foo/repo
     {"compressed_xml": "<session>...</session>", "stats": {...}}
 
-    $ dot-agent run erk create-enhanced-plan assemble plan.md discoveries.json
+    $ dot-agent run erk enhance-and-save-plan assemble plan.md discoveries.json
     {"plan_content": "## Plan...", "discoveries": {...}}
 """
 
@@ -310,7 +310,7 @@ def execute_assemble(plan_content: str, discoveries: dict) -> AssembleResult | A
 
 
 @click.group()
-def create_enhanced_plan() -> None:
+def enhance_and_save_plan() -> None:
     """Create enhanced implementation plan from session logs."""
     pass
 
@@ -370,5 +370,5 @@ def assemble(plan_content, discoveries) -> None:
 
 
 # Register subcommands
-create_enhanced_plan.add_command(discover)
-create_enhanced_plan.add_command(assemble)
+enhance_and_save_plan.add_command(discover)
+enhance_and_save_plan.add_command(assemble)

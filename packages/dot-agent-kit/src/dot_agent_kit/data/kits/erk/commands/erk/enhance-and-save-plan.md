@@ -2,14 +2,14 @@
 description: Extract plan from conversation and enhance using session log discoveries
 ---
 
-# /erk:create-enhanced-plan
+# /erk:enhance-and-save-plan
 
 Extracts an implementation plan from the conversation and enhances it with discoveries mined from Claude Code session logs. This preserves all computational work from the planning session without triggering any implementation behavior.
 
 ## Usage
 
 ```bash
-/erk:create-enhanced-plan
+/erk:enhance-and-save-plan
 ```
 
 ## Purpose
@@ -34,7 +34,7 @@ This command solves the critical problem where planning sessions lose valuable d
 
 ## Agent Instructions
 
-You are executing the `/erk:create-enhanced-plan` command. Follow these steps carefully using ONLY the allowed tools.
+You are executing the `/erk:enhance-and-save-plan` command. Follow these steps carefully using ONLY the allowed tools.
 
 ### CRITICAL: Tool Restrictions
 
@@ -89,7 +89,7 @@ Use the kit CLI command to discover and preprocess session logs (NO permission p
 CWD=$(pwd)
 
 # Run discover phase with session ID from Step 1a
-dot-agent run erk create-enhanced-plan discover --session-id <SESSION_ID> --cwd "$CWD"
+dot-agent run erk enhance-and-save-plan discover --session-id <SESSION_ID> --cwd "$CWD"
 ```
 
 This outputs JSON with structure:
@@ -147,7 +147,7 @@ Please create a plan first:
 1. Enter Plan mode
 2. Create your implementation plan
 3. Exit Plan mode
-4. Then run /erk:create-enhanced-plan
+4. Then run /erk:enhance-and-save-plan
 ```
 
 ### Step 3: Mine Discoveries Semantically from Compressed XML

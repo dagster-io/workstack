@@ -5,7 +5,7 @@ license: MIT
 artifacts:
   command:
     - commands/erk/persist-plan.md
-    - commands/erk/create-enhanced-plan.md
+    - commands/erk/enhance-and-save-plan.md
     - commands/erk/save-plan.md
     - commands/erk/create-planned-wt.md
     - commands/erk/implement-plan.md
@@ -13,8 +13,8 @@ artifacts:
   doc:
     - docs/erk/EXAMPLES.md
 kit_cli_commands:
-  - name: create-enhanced-plan
-    path: kit_cli_commands/erk/create_enhanced_plan.py
+  - name: enhance-and-save-plan
+    path: kit_cli_commands/erk/enhance_and_save_plan.py
     description: Create enhanced implementation plan from session logs (two-phase - discover and assemble)
   - name: find-project-dir
     path: kit_cli_commands/erk/find_project_dir.py
@@ -30,5 +30,5 @@ hooks:
     lifecycle: UserPromptSubmit
     matcher: "*"
     invocation: dot-agent run erk session-id-injector-hook
-    description: Injects session ID into context when /erk:create-enhanced-plan is invoked
+    description: Injects session ID into context when /erk:enhance-and-save-plan is invoked
     timeout: 30

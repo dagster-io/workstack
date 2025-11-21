@@ -171,9 +171,15 @@ class FakeGitHub(GitHub):
         repo_root: Path,
         workflow: str,
         inputs: dict[str, str],
-    ) -> None:
-        """Record workflow trigger in mutation tracking list."""
+        ref: str | None = None,
+    ) -> str:
+        """Record workflow trigger in mutation tracking list.
+
+        Returns:
+            A fake run ID for testing
+        """
         self._triggered_workflows.append((workflow, inputs))
+        return "1234567890"
 
     @property
     def updated_pr_bases(self) -> list[tuple[int, str]]:

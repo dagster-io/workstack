@@ -122,7 +122,7 @@ class GitHub(ABC):
         workflow: str,
         inputs: dict[str, str],
         ref: str | None = None,
-    ) -> None:
+    ) -> str:
         """Trigger a GitHub Actions workflow via gh CLI.
 
         Args:
@@ -130,5 +130,8 @@ class GitHub(ABC):
             workflow: Workflow filename (e.g., "implement-plan.yml")
             inputs: Workflow inputs as key-value pairs
             ref: Branch or tag to run workflow from (default: repository default branch)
+
+        Returns:
+            The GitHub Actions run ID as a string
         """
         ...

@@ -157,10 +157,8 @@ def land_stack(
         ctx, repo.root, branches_to_land, script_mode=script
     )
 
-    # Validate no merge conflicts
-    _validate_pr_mergeability(ctx, repo.root, valid_branches, script_mode=script)
-
     # Get trunk branch (parent of first branch to land)
+    # Must get this BEFORE validation so we can pass it to _validate_pr_mergeability
     if not valid_branches:
         _emit("No branches to land.", script_mode=script, error=True)
         raise SystemExit(1)
@@ -171,6 +169,9 @@ def land_stack(
         error_msg = f"Error: Could not determine trunk branch for {first_branch}"
         _emit(error_msg, script_mode=script, error=True)
         raise SystemExit(1)
+
+    # Validate no merge conflicts (now with correct trunk_branch)
+    _validate_pr_mergeability(ctx, repo.root, valid_branches, trunk_branch, script_mode=script)
 
     # Show plan and get confirmation
     logger.debug("About to show landing plan: branches=%d, force=%s", len(valid_branches), force)

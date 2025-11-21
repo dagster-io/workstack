@@ -1,0 +1,13 @@
+name: libcst
+version: 0.1.0
+description: LibCST code transformation kit for safe execution of generated transformers
+license: MIT
+artifacts:
+  agent:
+    - agents/libcst/libcst-refactor.md
+  skill:
+    - skills/libcst/SKILL.md
+kit_cli_commands:
+  - name: execute
+    path: kit_cli_commands/libcst/execute.py
+    description: Execute LibCST transformation code safely

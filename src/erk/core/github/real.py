@@ -385,7 +385,7 @@ query {{
         workflow: str,
         inputs: dict[str, str],
         ref: str | None = None,
-    ) -> None:
+    ) -> str:
         """Trigger GitHub Actions workflow via gh CLI.
 
         Args:
@@ -393,8 +393,11 @@ query {{
             workflow: Workflow file name (e.g., "implement-plan.yml")
             inputs: Workflow inputs as key-value pairs
             ref: Branch or tag to run workflow from (default: repository default branch)
+
+        Returns:
+            The GitHub Actions run ID as a string
         """
-        cmd = ["gh", "workflow", "run", workflow]
+        cmd = ["gh", "workflow", "run", workflow, "--json"]
 
         # Add --ref flag if specified
         if ref:
@@ -404,8 +407,20 @@ query {{
         for key, value in inputs.items():
             cmd.extend(["-f", f"{key}={value}"])
 
-        run_subprocess_with_context(
+        result = run_subprocess_with_context(
             cmd,
             operation_context=f"trigger workflow '{workflow}'",
             cwd=repo_root,
         )
+
+        # Parse JSON output to extract run ID
+        data = json.loads(result.stdout)
+        if "id" not in data:
+            msg = (
+                "GitHub workflow triggered but run ID not found in response. "
+                f"Raw output: {result.stdout[:200]}"
+            )
+            raise RuntimeError(msg)
+
+        run_id = data["id"]
+        return str(run_id)

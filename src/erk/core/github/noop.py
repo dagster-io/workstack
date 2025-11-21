@@ -71,7 +71,11 @@ class NoopGitHub(GitHub):
         workflow: str,
         inputs: dict[str, str],
         ref: str | None = None,
-    ) -> None:
-        """No-op for triggering workflow in dry-run mode."""
-        # Do nothing - prevents actual workflow trigger
-        pass
+    ) -> str:
+        """No-op for triggering workflow in dry-run mode.
+
+        Returns:
+            A fake run ID for dry-run mode
+        """
+        # Return fake run ID - prevents actual workflow trigger
+        return "noop-run-12345"

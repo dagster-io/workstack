@@ -120,7 +120,7 @@ def submit_cmd(ctx: ErkContext, dry_run: bool) -> None:
     workflow = "implement-plan.yml"
     user_output(f"Triggering workflow: {click.style(workflow, fg='cyan')}")
     try:
-        ctx.github.trigger_workflow(
+        run_id = ctx.github.trigger_workflow(
             repo.root,
             workflow,
             {"branch-name": current_branch},
@@ -133,8 +133,13 @@ def submit_cmd(ctx: ErkContext, dry_run: bool) -> None:
         raise SystemExit(1)
 
     user_output("")
-    user_output(click.style("✓", fg="green") + " Submission complete!")
+    user_output(
+        click.style("✓", fg="green")
+        + f" Submission complete! Run ID: {click.style(run_id, fg='cyan')}"
+    )
     user_output("")
-    user_output("Monitor progress:")
-    user_output("  gh run list --workflow=implement-plan.yml")
-    user_output("  gh run watch")
+    user_output("View in browser:")
+    user_output(f"  gh run view {run_id} --web")
+    user_output("")
+    user_output("Monitor in terminal:")
+    user_output(f"  gh run watch {run_id}")

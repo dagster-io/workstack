@@ -15,6 +15,8 @@ from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.enhance_and_save_plan impo
     AssembleResult,
     DiscoverError,
     DiscoverResult,
+    StreamingDiscoverResult,
+    _chunk_xml_by_natural_boundaries,
     _find_project_dir,
     _locate_session_log,
     _preprocess_logs,
@@ -229,6 +231,260 @@ def test_preprocess_logs_raises_on_empty_session(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="Empty session"):
         _preprocess_logs(log_file, "session-123")
+
+
+# ============================================================================
+# 3. XML Chunking Tests (5 tests)
+# ============================================================================
+
+
+def test_chunk_xml_returns_batches_for_large_sessions() -> None:
+    """Test that large XML sessions are chunked into batches."""
+    # Create XML with 25 tool sequences (should split into ~3 batches with target=10)
+    sequences = []
+    for i in range(25):
+        sequences.append(f"  <user>Message {i}</user>")
+        sequences.append(f'  <tool_use name="Read" id="tool-{i}"></tool_use>')
+        sequences.append(f'  <tool_result tool="tool-{i}">Result {i}</tool_result>')
+        sequences.append(f"  <assistant>Response {i}</assistant>")
+
+    xml_content = "<session>\n" + "\n".join(sequences) + "\n</session>"
+
+    batches = _chunk_xml_by_natural_boundaries(xml_content, target_sections=10)
+
+    # Should create multiple batches (25 sequences / 10 target = ~3 batches)
+    assert len(batches) > 1
+    assert len(batches) <= 3
+
+    # Each batch should be valid XML
+    for batch in batches:
+        assert batch.startswith("<session>")
+        assert batch.endswith("</session>")
+
+
+def test_chunk_xml_preserves_meta_tag() -> None:
+    """Test that meta tags are preserved in each batch."""
+    xml_content = """<session>
+  <meta branch="test-branch" />
+  <user>Message 1</user>
+  <assistant>Response 1</assistant>
+  <user>Message 2</user>
+  <assistant>Response 2</assistant>
+</session>"""
+
+    batches = _chunk_xml_by_natural_boundaries(xml_content, target_sections=1)
+
+    # Each batch should contain the meta tag
+    for batch in batches:
+        assert '<meta branch="test-branch"' in batch
+
+
+def test_chunk_xml_returns_single_batch_for_small_sessions() -> None:
+    """Test that small XML sessions are not chunked."""
+    xml_content = """<session>
+  <user>Message 1</user>
+  <assistant>Response 1</assistant>
+</session>"""
+
+    batches = _chunk_xml_by_natural_boundaries(xml_content, target_sections=10)
+
+    # Should return single batch (only 1 sequence, less than target)
+    assert len(batches) == 1
+    assert batches[0] == xml_content
+
+
+def test_chunk_xml_handles_malformed_xml() -> None:
+    """Test graceful handling of malformed XML."""
+    malformed_xml = "<session>Invalid XML without closing tag"
+
+    batches = _chunk_xml_by_natural_boundaries(malformed_xml)
+
+    # Should return as-is (single batch fallback)
+    assert len(batches) == 1
+    assert batches[0] == malformed_xml
+
+
+def test_chunk_xml_groups_tool_sequences() -> None:
+    """Test that tool sequences are grouped together."""
+    # Create 3 complete tool sequences
+    xml_content = """<session>
+  <user>Query 1</user>
+  <tool_use name="Read" id="tool-1"></tool_use>
+  <tool_result tool="tool-1">Result 1</tool_result>
+  <assistant>Analysis 1</assistant>
+  <user>Query 2</user>
+  <tool_use name="Read" id="tool-2"></tool_use>
+  <tool_result tool="tool-2">Result 2</tool_result>
+  <assistant>Analysis 2</assistant>
+  <user>Query 3</user>
+  <assistant>Final response</assistant>
+</session>"""
+
+    batches = _chunk_xml_by_natural_boundaries(xml_content, target_sections=2)
+
+    # Should create 2 batches (3 sequences / 2 target = 2 batches)
+    assert len(batches) == 2
+
+    # Each batch should contain complete sequences
+    for batch in batches:
+        assert batch.startswith("<session>")
+        assert batch.endswith("</session>")
+
+
+# ============================================================================
+# 4. Execute Discover Streaming Tests (4 tests)
+# ============================================================================
+
+
+def test_execute_discover_streaming_mode_returns_batches(tmp_path: Path, monkeypatch) -> None:
+    """Test streaming mode returns batches instead of single XML."""
+    # Set up mock project structure
+    projects_dir = tmp_path / ".claude" / "projects"
+    projects_dir.mkdir(parents=True)
+
+    cwd = tmp_path / "repo"
+    project_dir = projects_dir / str(cwd).replace("/", "-")
+    project_dir.mkdir()
+
+    session_id = "test-123"
+    log_file = project_dir / f"{session_id}.jsonl"
+    log_file.write_text('{"type": "user", "message": {"content": "test"}}', encoding="utf-8")
+
+    # Create large XML that will be chunked
+    sequences = []
+    for i in range(25):
+        sequences.append(f"<user>Message {i}</user>")
+        sequences.append(f'<tool_use name="Read" id="tool-{i}"></tool_use>')
+        sequences.append(f'<tool_result tool="tool-{i}">Result {i}</tool_result>')
+        sequences.append(f"<assistant>Response {i}</assistant>")
+
+    mock_xml = "<session>\n" + "\n".join(sequences) + "\n</session>"
+    mock_stats = {
+        "entries_processed": 25,
+        "entries_skipped": 0,
+        "token_reduction_pct": "50.0%",
+        "original_size": 1000,
+        "compressed_size": 500,
+    }
+
+    with patch(
+        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.enhance_and_save_plan._preprocess_logs"
+    ) as mock_preprocess:
+        mock_preprocess.return_value = (mock_xml, mock_stats)
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+        result = execute_discover(session_id, cwd, streaming=True)
+
+        assert isinstance(result, StreamingDiscoverResult)
+        assert result.success is True
+        assert result.mode == "streaming"
+        assert len(result.batches) > 1
+        assert result.batch_count == len(result.batches)
+        assert result.stats == mock_stats
+
+
+def test_execute_discover_streaming_mode_with_small_session(tmp_path: Path, monkeypatch) -> None:
+    """Test streaming mode returns single batch for small sessions."""
+    # Set up mock project structure
+    projects_dir = tmp_path / ".claude" / "projects"
+    projects_dir.mkdir(parents=True)
+
+    cwd = tmp_path / "repo"
+    project_dir = projects_dir / str(cwd).replace("/", "-")
+    project_dir.mkdir()
+
+    session_id = "test-123"
+    log_file = project_dir / f"{session_id}.jsonl"
+    log_file.write_text('{"type": "user", "message": {"content": "test"}}', encoding="utf-8")
+
+    # Small XML that won't be chunked
+    mock_xml = "<session><user>test</user><assistant>response</assistant></session>"
+    mock_stats = {"entries_processed": 1, "entries_skipped": 0}
+
+    with patch(
+        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.enhance_and_save_plan._preprocess_logs"
+    ) as mock_preprocess:
+        mock_preprocess.return_value = (mock_xml, mock_stats)
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+        result = execute_discover(session_id, cwd, streaming=True)
+
+        assert isinstance(result, StreamingDiscoverResult)
+        assert result.batch_count == 1
+
+
+def test_execute_discover_non_streaming_mode_returns_single_xml(tmp_path: Path, monkeypatch) -> None:
+    """Test non-streaming mode returns single compressed XML."""
+    # Set up mock project structure
+    projects_dir = tmp_path / ".claude" / "projects"
+    projects_dir.mkdir(parents=True)
+
+    cwd = tmp_path / "repo"
+    project_dir = projects_dir / str(cwd).replace("/", "-")
+    project_dir.mkdir()
+
+    session_id = "test-123"
+    log_file = project_dir / f"{session_id}.jsonl"
+    log_file.write_text('{"type": "user", "message": {"content": "test"}}', encoding="utf-8")
+
+    mock_xml = "<session><user>test</user></session>"
+    mock_stats = {"entries_processed": 1, "entries_skipped": 0}
+
+    with patch(
+        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.enhance_and_save_plan._preprocess_logs"
+    ) as mock_preprocess:
+        mock_preprocess.return_value = (mock_xml, mock_stats)
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+        result = execute_discover(session_id, cwd, streaming=False)
+
+        assert isinstance(result, DiscoverResult)
+        assert result.success is True
+        assert result.compressed_xml == mock_xml
+
+
+def test_cli_discover_command_with_streaming_flag(tmp_path: Path, monkeypatch) -> None:
+    """Test CLI discover command with --streaming flag."""
+    runner = CliRunner()
+
+    # Set up test environment
+    projects_dir = tmp_path / ".claude" / "projects"
+    projects_dir.mkdir(parents=True)
+
+    cwd = tmp_path / "repo"
+    cwd.mkdir(parents=True)
+    project_dir = projects_dir / str(cwd).replace("/", "-")
+    project_dir.mkdir()
+
+    session_id = "test-123"
+    log_file = project_dir / f"{session_id}.jsonl"
+    log_file.write_text('{"type": "user", "message": {"content": "test"}}', encoding="utf-8")
+
+    # Create large XML
+    sequences = []
+    for i in range(25):
+        sequences.append(f"<user>Message {i}</user>")
+        sequences.append(f"<assistant>Response {i}</assistant>")
+
+    mock_xml = "<session>\n" + "\n".join(sequences) + "\n</session>"
+
+    with patch(
+        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.enhance_and_save_plan._preprocess_logs"
+    ) as mock:
+        mock.return_value = (mock_xml, {"entries_processed": 25})
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+        result = runner.invoke(
+            enhance_and_save_plan,
+            ["discover", "--session-id", session_id, "--cwd", str(cwd), "--streaming"],
+        )
+
+        assert result.exit_code == 0
+        output = json.loads(result.output)
+        assert output["success"] is True
+        assert output["mode"] == "streaming"
+        assert "batches" in output
+        assert output["batch_count"] > 0
 
 
 # ============================================================================

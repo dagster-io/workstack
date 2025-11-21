@@ -86,7 +86,10 @@ jobs:
       - name: Commit and push implementation changes
         if: steps.check_submission.outputs.has_submission == 'true'
         run: |
-          # Stage all changes made by implementation
+          # Delete submission folder (no longer needed after implementation)
+          rm -rf .submission
+
+          # Stage all changes made by implementation (including deletion)
           git add .
 
           # Commit with descriptive message

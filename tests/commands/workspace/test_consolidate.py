@@ -881,15 +881,17 @@ def test_consolidate_allows_uncommitted_changes_in_protected_worktrees() -> None
         assert wt4_path not in test_ctx.git.removed_worktrees  # Current
 
 
-def test_consolidate_with_name_tracks_temp_branch_with_graphite() -> None:
-    """Test that temporary branch created during consolidate --name is tracked by Graphite.
+def test_consolidate_with_name_does_not_track_temp_branch() -> None:
+    """Test that temporary branch created during consolidate --name is NOT tracked by Graphite.
 
-    This is a regression test for the bug where:
-    1. `erk consolidate` creates temp branch but doesn't track it with Graphite
-    2. Second `erk consolidate --name <name>` call fails with "not tracked by Graphite" error
+    The temporary branch is a Git-only implementation detail that exists for ~100 lines of code
+    and is never queried by Graphite. Tracking it creates ghost entries in Graphite metadata
+    that cause `erk land-stack` to fail with "No PR found" errors.
 
-    The fix ensures that after creating the temporary branch, we call
-    ctx.graphite_ops.track_branch() to register it in Graphite's cache.
+    This test ensures:
+    1. `erk consolidate --name` succeeds without tracking the temp branch
+    2. No Graphite tracking calls occur during consolidation
+    3. The workflow completes without "not tracked by Graphite" errors
     """
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
@@ -916,15 +918,11 @@ def test_consolidate_with_name_tracks_temp_branch_with_graphite() -> None:
 
         assert result.exit_code == 0, result.output
 
-        # Verify that temporary branch was tracked with Graphite
-        # The fix ensures ctx.graphite_ops.track_branch() is called
-        assert len(graphite_ops.track_branch_calls) == 1
-
-        # Verify the track call parameters
-        cwd, temp_branch_name, parent_branch = graphite_ops.track_branch_calls[0]
-        assert cwd == env.cwd  # Tracking happens in current worktree
-        assert temp_branch_name.startswith("temp-consolidate-")  # Temp branch naming pattern
-        assert parent_branch == "feature-2"  # Parent is current branch
+        # Verify that temporary branch was NOT tracked with Graphite
+        # The temp branch is Git-only and should not appear in Graphite metadata
+        assert len(graphite_ops.track_branch_calls) == 0, (
+            "Temporary branch should not be tracked by Graphite"
+        )
 
 
 def test_consolidate_with_name_changes_directory_before_removal() -> None:

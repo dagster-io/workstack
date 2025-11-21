@@ -1,10 +1,38 @@
 """Runs command implementation."""
 
+import json
+
 import click
 
 from erk.cli.core import discover_repo_context
-from erk.cli.output import user_output
+from erk.cli.output import machine_output, user_output
 from erk.core.context import ErkContext
+from erk.core.github.types import WorkflowRun
+
+
+def _workflow_run_to_json(run: WorkflowRun | None, *, error: str | None = None) -> str:
+    """Convert WorkflowRun to JSON or return status object.
+
+    Args:
+        run: WorkflowRun object or None
+        error: Optional error message for error state
+
+    Returns:
+        JSON string representing the run or status
+    """
+    if error:
+        return json.dumps({"status": "error", "error": error})
+
+    if run is None:
+        return json.dumps({"status": "no_run"})
+
+    return json.dumps({
+        "run_id": run.run_id,
+        "status": run.status,
+        "conclusion": run.conclusion,
+        "branch": run.branch,
+        "head_sha": run.head_sha,
+    })
 
 
 @click.group("runs", invoke_without_command=True)
@@ -122,3 +150,39 @@ def logs(click_ctx: click.Context, run_id: str | None) -> None:
     except RuntimeError as e:
         click.echo(click.style("Error: ", fg="red") + str(e), err=True)
         raise SystemExit(1) from None
+
+
+@runs_cmd.command()
+@click.pass_context
+def current(click_ctx: click.Context) -> None:
+    """Get current branch's most recent workflow run as JSON.
+
+    Returns JSON object with run information if found, or status marker if not.
+    Suitable for use in scripting scenarios.
+    """
+    ctx: ErkContext = click_ctx.obj
+
+    # Discover repository context
+    repo = discover_repo_context(ctx, ctx.cwd)
+
+    # Get current branch
+    current_branch = ctx.git.get_current_branch(ctx.cwd)
+    if current_branch is None:
+        json_output = _workflow_run_to_json(None, error="Could not determine current branch")
+        machine_output(json_output)
+        raise SystemExit(1)
+
+    # Query workflow runs
+    runs = ctx.github.list_workflow_runs(repo.root, "implement-plan.yml", limit=50)
+
+    # Filter by current branch
+    branch_runs = [r for r in runs if r.branch == current_branch]
+
+    # Return most recent run if found, otherwise no_run object
+    if branch_runs:
+        # Most recent is first (list_workflow_runs returns newest first)
+        json_output = _workflow_run_to_json(branch_runs[0])
+    else:
+        json_output = _workflow_run_to_json(None)
+
+    machine_output(json_output)

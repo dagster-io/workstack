@@ -15,6 +15,8 @@ on:
 jobs:
   implement:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Enable commit and push operations
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,8 +43,23 @@ jobs:
           cd $GITHUB_WORKSPACE
           uv tool install --from . erk
 
+          # Install development dependencies (pyright, ruff, etc.)
+          uv sync --group dev
+
+          # Install prettier for markdown formatting
+          npm install -g prettier
+
+          # Install Graphite CLI for PR submission
+          npm install -g @withgraphite/graphite-cli
+
           # Install Claude Code
-          npm install -g @anthropic-ai/claude-code
+          curl -fsSL https://claude.ai/install.sh | bash
+
+          # Install dot-agent from local package
+          uv tool install --from ./packages/dot-agent-kit dot-agent-kit
+
+          # Add uv tools to PATH for current and future steps
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
           # Install erk kit for Claude Code
           dot-agent kit install erk
@@ -53,11 +70,38 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Authenticate Graphite CLI
+        if: steps.check_submission.outputs.has_submission == 'true'
+        run: |
+          gt auth --token ${{ secrets.GRAPHITE_AUTH_TOKEN }}
+        env:
+          GRAPHITE_AUTH_TOKEN: ${{ secrets.GRAPHITE_AUTH_TOKEN }}
+
       - name: Run implementation with CI loop
         if: steps.check_submission.outputs.has_submission == 'true'
         run: |
-          dot-agent command "/erk:implement-plan" \
-            --permission-mode dangerouslySkipPermissions
+          # Copy .submission/ to .plan/ for implementation
+          cp -r .submission .plan
+
+          # Configure Claude Code to use API key from environment
+          mkdir -p ~/.config/claude
+          echo "{\"apiKey\": \"$ANTHROPIC_API_KEY\"}" > ~/.config/claude/config.json
+
+          # Run implementation with streaming JSON output
+          claude --dangerously-skip-permissions --verbose --output-format stream-json "/erk:implement-plan"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Submit branch with Graphite
+        if: steps.check_submission.outputs.has_submission == 'true'
+        run: |
+          # Delete submission folder (no longer needed after implementation)
+          rm -rf .submission
+
+          # Use Graphite submit-branch to create PR with high-quality commit message
+          # This will: analyze changes, generate commit message, commit, push, create/update PR
+          claude --dangerously-skip-permissions --verbose --output-format stream-json "/gt:submit-branch"
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

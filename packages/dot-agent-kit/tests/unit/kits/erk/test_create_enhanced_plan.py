@@ -67,6 +67,24 @@ def test_find_project_dir_returns_none_if_projects_dir_missing(tmp_path: Path, m
     assert result is None
 
 
+def test_find_project_dir_handles_dots_in_path(tmp_path: Path, monkeypatch) -> None:
+    """Test that dots in paths are properly encoded (bug fix verification)."""
+    projects_dir = tmp_path / ".claude" / "projects"
+    projects_dir.mkdir(parents=True)
+
+    # Create path with hidden directory (contains dot)
+    test_cwd = tmp_path / ".erk" / "repos" / "test"
+    # Proper encoding: /tmp/.erk/repos/test → -tmp--erk-repos-test
+    escaped_name = str(test_cwd).replace("/", "-").replace(".", "-")
+    project_dir = projects_dir / escaped_name
+    project_dir.mkdir()
+
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+    result = _find_project_dir(test_cwd)
+    assert result == project_dir
+
+
 def test_locate_session_log_finds_jsonl_file(tmp_path: Path) -> None:
     """Test session log location."""
     project_dir = tmp_path / "project"

@@ -7,11 +7,11 @@ the down_only flag.
 from pathlib import Path
 
 from erk.cli.commands.land_stack.discovery import _get_branches_to_land
-from erk.core.branch_metadata import BranchMetadata
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
 from tests.fakes.git import FakeGit
 from tests.fakes.graphite import FakeGraphite
+from tests.test_utils.builders import BranchStackBuilder
 
 
 def test_get_branches_to_land_full_stack_default() -> None:
@@ -24,32 +24,7 @@ def test_get_branches_to_land_full_stack_default() -> None:
         stacks={
             "feat-2": ["main", "feat-1", "feat-2", "feat-3"],
         },
-        branches={
-            "main": BranchMetadata(
-                name="main", parent=None, is_trunk=True, children=["feat-1"], commit_sha="abc123"
-            ),
-            "feat-1": BranchMetadata(
-                name="feat-1",
-                parent="main",
-                is_trunk=False,
-                children=["feat-2"],
-                commit_sha="def456",
-            ),
-            "feat-2": BranchMetadata(
-                name="feat-2",
-                parent="feat-1",
-                is_trunk=False,
-                children=["feat-3"],
-                commit_sha="ghi789",
-            ),
-            "feat-3": BranchMetadata(
-                name="feat-3",
-                parent="feat-2",
-                is_trunk=False,
-                children=[],
-                commit_sha="jkl012",
-            ),
-        },
+        branches=BranchStackBuilder().add_linear_stack("feat-1", "feat-2", "feat-3").build(),
     )
 
     ctx = ErkContext.for_test(
@@ -81,32 +56,7 @@ def test_get_branches_to_land_down_only_true() -> None:
         stacks={
             "feat-2": ["main", "feat-1", "feat-2", "feat-3"],
         },
-        branches={
-            "main": BranchMetadata(
-                name="main", parent=None, is_trunk=True, children=["feat-1"], commit_sha="abc123"
-            ),
-            "feat-1": BranchMetadata(
-                name="feat-1",
-                parent="main",
-                is_trunk=False,
-                children=["feat-2"],
-                commit_sha="def456",
-            ),
-            "feat-2": BranchMetadata(
-                name="feat-2",
-                parent="feat-1",
-                is_trunk=False,
-                children=["feat-3"],
-                commit_sha="ghi789",
-            ),
-            "feat-3": BranchMetadata(
-                name="feat-3",
-                parent="feat-2",
-                is_trunk=False,
-                children=[],
-                commit_sha="jkl012",
-            ),
-        },
+        branches=BranchStackBuilder().add_linear_stack("feat-1", "feat-2", "feat-3").build(),
     )
 
     ctx = ErkContext.for_test(
@@ -138,32 +88,7 @@ def test_get_branches_to_land_at_leaf_full_stack() -> None:
         stacks={
             "feat-3": ["main", "feat-1", "feat-2", "feat-3"],
         },
-        branches={
-            "main": BranchMetadata(
-                name="main", parent=None, is_trunk=True, children=["feat-1"], commit_sha="abc123"
-            ),
-            "feat-1": BranchMetadata(
-                name="feat-1",
-                parent="main",
-                is_trunk=False,
-                children=["feat-2"],
-                commit_sha="def456",
-            ),
-            "feat-2": BranchMetadata(
-                name="feat-2",
-                parent="feat-1",
-                is_trunk=False,
-                children=["feat-3"],
-                commit_sha="ghi789",
-            ),
-            "feat-3": BranchMetadata(
-                name="feat-3",
-                parent="feat-2",
-                is_trunk=False,
-                children=[],
-                commit_sha="jkl012",
-            ),
-        },
+        branches=BranchStackBuilder().add_linear_stack("feat-1", "feat-2", "feat-3").build(),
     )
 
     ctx = ErkContext.for_test(
@@ -195,32 +120,7 @@ def test_get_branches_to_land_at_leaf_down_only() -> None:
         stacks={
             "feat-3": ["main", "feat-1", "feat-2", "feat-3"],
         },
-        branches={
-            "main": BranchMetadata(
-                name="main", parent=None, is_trunk=True, children=["feat-1"], commit_sha="abc123"
-            ),
-            "feat-1": BranchMetadata(
-                name="feat-1",
-                parent="main",
-                is_trunk=False,
-                children=["feat-2"],
-                commit_sha="def456",
-            ),
-            "feat-2": BranchMetadata(
-                name="feat-2",
-                parent="feat-1",
-                is_trunk=False,
-                children=["feat-3"],
-                commit_sha="ghi789",
-            ),
-            "feat-3": BranchMetadata(
-                name="feat-3",
-                parent="feat-2",
-                is_trunk=False,
-                children=[],
-                commit_sha="jkl012",
-            ),
-        },
+        branches=BranchStackBuilder().add_linear_stack("feat-1", "feat-2", "feat-3").build(),
     )
 
     ctx = ErkContext.for_test(
@@ -252,32 +152,7 @@ def test_get_branches_to_land_first_branch_full_stack() -> None:
         stacks={
             "feat-1": ["main", "feat-1", "feat-2", "feat-3"],
         },
-        branches={
-            "main": BranchMetadata(
-                name="main", parent=None, is_trunk=True, children=["feat-1"], commit_sha="abc123"
-            ),
-            "feat-1": BranchMetadata(
-                name="feat-1",
-                parent="main",
-                is_trunk=False,
-                children=["feat-2"],
-                commit_sha="def456",
-            ),
-            "feat-2": BranchMetadata(
-                name="feat-2",
-                parent="feat-1",
-                is_trunk=False,
-                children=["feat-3"],
-                commit_sha="ghi789",
-            ),
-            "feat-3": BranchMetadata(
-                name="feat-3",
-                parent="feat-2",
-                is_trunk=False,
-                children=[],
-                commit_sha="jkl012",
-            ),
-        },
+        branches=BranchStackBuilder().add_linear_stack("feat-1", "feat-2", "feat-3").build(),
     )
 
     ctx = ErkContext.for_test(
@@ -309,32 +184,7 @@ def test_get_branches_to_land_first_branch_down_only() -> None:
         stacks={
             "feat-1": ["main", "feat-1", "feat-2", "feat-3"],
         },
-        branches={
-            "main": BranchMetadata(
-                name="main", parent=None, is_trunk=True, children=["feat-1"], commit_sha="abc123"
-            ),
-            "feat-1": BranchMetadata(
-                name="feat-1",
-                parent="main",
-                is_trunk=False,
-                children=["feat-2"],
-                commit_sha="def456",
-            ),
-            "feat-2": BranchMetadata(
-                name="feat-2",
-                parent="feat-1",
-                is_trunk=False,
-                children=["feat-3"],
-                commit_sha="ghi789",
-            ),
-            "feat-3": BranchMetadata(
-                name="feat-3",
-                parent="feat-2",
-                is_trunk=False,
-                children=[],
-                commit_sha="jkl012",
-            ),
-        },
+        branches=BranchStackBuilder().add_linear_stack("feat-1", "feat-2", "feat-3").build(),
     )
 
     ctx = ErkContext.for_test(
@@ -364,11 +214,7 @@ def test_get_branches_to_land_no_stack() -> None:
 
     graphite_ops = FakeGraphite(
         stacks={},  # No stack for unknown branch
-        branches={
-            "main": BranchMetadata(
-                name="main", parent=None, is_trunk=True, children=[], commit_sha="abc123"
-            ),
-        },
+        branches=BranchStackBuilder().build(),
     )
 
     ctx = ErkContext.for_test(
@@ -400,18 +246,7 @@ def test_get_branches_to_land_excludes_trunk() -> None:
         stacks={
             "feat-1": ["main", "feat-1"],
         },
-        branches={
-            "main": BranchMetadata(
-                name="main", parent=None, is_trunk=True, children=["feat-1"], commit_sha="abc123"
-            ),
-            "feat-1": BranchMetadata(
-                name="feat-1",
-                parent="main",
-                is_trunk=False,
-                children=[],
-                commit_sha="def456",
-            ),
-        },
+        branches=BranchStackBuilder().add_linear_stack("feat-1").build(),
     )
 
     ctx = ErkContext.for_test(

@@ -31,6 +31,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from erk.core.branch_metadata import BranchMetadata
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
 from erk.core.github.types import PullRequestInfo
@@ -414,3 +415,171 @@ class WorktreeScenario:
         )
 
         return self
+
+
+class BranchStackBuilder:
+    """Fluent builder for constructing BranchMetadata stacks.
+
+    Simplifies creation of linear and tree-structured branch stacks
+    for testing Graphite workflows.
+
+    Examples:
+        # Simple linear stack
+        branches = BranchStackBuilder().add_linear_stack("feat-1", "feat-2").build()
+
+        # Custom trunk
+        branches = (
+            BranchStackBuilder(trunk="develop")
+            .add_linear_stack("feature-a", "feature-b")
+            .build()
+        )
+
+        # Tree structure
+        branches = (
+            BranchStackBuilder()
+            .add_branch("feat-1", parent="main", children=["feat-2a", "feat-2b"])
+            .add_branch("feat-2a", parent="feat-1")
+            .add_branch("feat-2b", parent="feat-1")
+            .build()
+        )
+
+        # With commit SHAs
+        branches = (
+            BranchStackBuilder()
+            .add_linear_stack("feat-1")
+            .with_commit_sha("feat-1", "abc123")
+            .build()
+        )
+    """
+
+    def __init__(self, trunk: str = "main") -> None:
+        """Initialize builder with trunk branch name.
+
+        Args:
+            trunk: Name of trunk branch (default: "main")
+        """
+        self._trunk = trunk
+        self._branches: dict[str, BranchMetadata] = {}
+        self._commit_shas: dict[str, str] = {}
+
+    def add_linear_stack(self, *branches: str) -> "BranchStackBuilder":
+        """Add branches in linear parent→child order.
+
+        Creates chain: trunk → branch[0] → branch[1] → ... → branch[N]
+
+        Args:
+            *branches: Branch names in stack order (parent to child)
+
+        Returns:
+            Self for method chaining
+
+        Example:
+            >>> builder.add_linear_stack("feat-1", "feat-2", "feat-3")
+            # Creates: main → feat-1 → feat-2 → feat-3
+        """
+        if not branches:
+            return self
+
+        # First branch has trunk as parent
+        parent = self._trunk
+        for i, branch in enumerate(branches):
+            # Determine children
+            children = [branches[i + 1]] if i < len(branches) - 1 else []
+
+            self._branches[branch] = BranchMetadata.branch(
+                name=branch, parent=parent, children=children
+            )
+            parent = branch
+
+        return self
+
+    def add_branch(
+        self,
+        name: str,
+        parent: str,
+        children: list[str] | None = None,
+        commit_sha: str | None = None,
+    ) -> "BranchStackBuilder":
+        """Add a single branch with explicit parent and children.
+
+        Args:
+            name: Branch name
+            parent: Parent branch name
+            children: Optional list of child branch names
+            commit_sha: Optional commit SHA for this branch
+
+        Returns:
+            Self for method chaining
+
+        Example:
+            >>> builder.add_branch("feat-1", parent="main", children=["feat-2a", "feat-2b"])
+        """
+        self._branches[name] = BranchMetadata.branch(
+            name=name, parent=parent, children=children or []
+        )
+
+        if commit_sha is not None:
+            self._commit_shas[name] = commit_sha
+
+        return self
+
+    def with_commit_sha(self, branch: str, sha: str) -> "BranchStackBuilder":
+        """Set commit SHA for a branch.
+
+        Args:
+            branch: Branch name
+            sha: Commit SHA
+
+        Returns:
+            Self for method chaining
+
+        Raises:
+            KeyError: If branch doesn't exist in the stack
+        """
+        if branch not in self._branches:
+            raise KeyError(f"Branch '{branch}' not found in stack")
+
+        self._commit_shas[branch] = sha
+        return self
+
+    def build(self) -> dict[str, BranchMetadata]:
+        """Build and return the branch metadata dictionary.
+
+        Creates trunk branch if not already present and applies any
+        configured commit SHAs.
+
+        Returns:
+            Dictionary mapping branch names to BranchMetadata instances
+        """
+        # Determine trunk children (branches with trunk as parent)
+        trunk_children = [
+            name for name, metadata in self._branches.items() if metadata.parent == self._trunk
+        ]
+
+        # Create trunk branch with proper children
+        result = {
+            self._trunk: BranchMetadata.trunk(
+                name=self._trunk,
+                children=trunk_children,
+                commit_sha=self._commit_shas.get(self._trunk),
+            )
+        }
+
+        # Add all other branches, applying commit SHAs if configured
+        for name, metadata in self._branches.items():
+            # Parent should never be None for feature branches, but type-check requires guard
+            if metadata.parent is None:
+                continue
+
+            if name in self._commit_shas:
+                # Recreate with SHA
+                result[name] = BranchMetadata.branch(
+                    name=metadata.name,
+                    parent=metadata.parent,
+                    children=metadata.children,
+                    commit_sha=self._commit_shas[name],
+                )
+            else:
+                result[name] = metadata
+
+        return result

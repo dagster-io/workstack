@@ -9,12 +9,11 @@ from dataclasses import replace
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.branch_metadata import BranchMetadata
 from erk.core.git.abc import WorktreeInfo
 from tests.fakes.git import FakeGit
 from tests.fakes.github import FakeGitHub
 from tests.fakes.graphite import FakeGraphite
-from tests.test_utils.builders import PullRequestInfoBuilder
+from tests.test_utils.builders import BranchStackBuilder, PullRequestInfoBuilder
 from tests.test_utils.env_helpers import erk_isolated_fs_env
 
 
@@ -46,10 +45,7 @@ def test_land_stack_navigates_to_root_worktree() -> None:
 
         # Configure Graphite metadata for simple stack
         graphite_ops = FakeGraphite(
-            branches={
-                "main": BranchMetadata.trunk("main", children=["feat-branch"]),
-                "feat-branch": BranchMetadata.branch("feat-branch", parent="main"),
-            },
+            branches=BranchStackBuilder().add_linear_stack("feat-branch").build(),
             stacks={
                 "feat-branch": ["main", "feat-branch"],
             },
@@ -121,10 +117,7 @@ def test_land_stack_no_duplicate_checkout_message() -> None:
 
         # Configure Graphite metadata for simple stack
         graphite_ops = FakeGraphite(
-            branches={
-                "main": BranchMetadata.trunk("main", children=["feat-branch"]),
-                "feat-branch": BranchMetadata.branch("feat-branch", parent="main"),
-            },
+            branches=BranchStackBuilder().add_linear_stack("feat-branch").build(),
             stacks={
                 "feat-branch": ["main", "feat-branch"],
             },

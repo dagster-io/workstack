@@ -11,12 +11,11 @@ the root worktree, corrupting its state.
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.branch_metadata import BranchMetadata
 from erk.core.git.abc import WorktreeInfo
 from tests.fakes.git import FakeGit
 from tests.fakes.github import FakeGitHub
 from tests.fakes.graphite import FakeGraphite
-from tests.test_utils.builders import PullRequestInfoBuilder
+from tests.test_utils.builders import BranchStackBuilder, PullRequestInfoBuilder
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
@@ -64,36 +63,9 @@ def test_land_stack_force_pushes_upstack_branches_from_correct_worktree() -> Non
 
         # Configure Graphite metadata for stack
         graphite_ops = FakeGraphite(
-            branches={
-                "main": BranchMetadata.trunk(
-                    "main",
-                    children=["feat-1"],
-                    commit_sha="abc123",
-                ),
-                "feat-1": BranchMetadata.branch(
-                    "feat-1",
-                    parent="main",
-                    children=["feat-2"],
-                    commit_sha="def456",
-                ),
-                "feat-2": BranchMetadata.branch(
-                    "feat-2",
-                    parent="feat-1",
-                    children=["feat-3"],
-                    commit_sha="ghi789",
-                ),
-                "feat-3": BranchMetadata.branch(
-                    "feat-3",
-                    parent="feat-2",
-                    children=["feat-4"],
-                    commit_sha="jkl012",
-                ),
-                "feat-4": BranchMetadata.branch(
-                    "feat-4",
-                    parent="feat-3",
-                    commit_sha="mno345",
-                ),
-            },
+            branches=BranchStackBuilder()
+            .add_linear_stack("feat-1", "feat-2", "feat-3", "feat-4")
+            .build(),
             stacks={
                 "feat-2": ["main", "feat-1", "feat-2", "feat-3", "feat-4"],
             },
@@ -180,24 +152,7 @@ def test_land_stack_force_pushes_branch_not_in_worktree_from_repo_root() -> None
 
         # Configure Graphite metadata for stack (feat-2 not in worktree)
         graphite_ops = FakeGraphite(
-            branches={
-                "main": BranchMetadata.trunk(
-                    "main",
-                    children=["feat-1"],
-                    commit_sha="abc123",
-                ),
-                "feat-1": BranchMetadata.branch(
-                    "feat-1",
-                    parent="main",
-                    children=["feat-2"],
-                    commit_sha="def456",
-                ),
-                "feat-2": BranchMetadata.branch(
-                    "feat-2",
-                    parent="feat-1",
-                    commit_sha="ghi789",
-                ),
-            },
+            branches=BranchStackBuilder().add_linear_stack("feat-1", "feat-2").build(),
             stacks={
                 "feat-1": ["main", "feat-1", "feat-2"],
             },

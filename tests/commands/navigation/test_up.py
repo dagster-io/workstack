@@ -23,13 +23,7 @@ def test_up_with_existing_worktree() -> None:
         # The test runs from cwd, so we simulate being in feature-1 by setting
         # cwd's current branch to feature-1
         git_ops = FakeGit(
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=repo_dir / "feature-1", branch="feature-1"),
-                    WorktreeInfo(path=repo_dir / "feature-2", branch="feature-2"),
-                ]
-            },
+            worktrees=env.build_worktrees("main", ["feature-1", "feature-2"], repo_dir=repo_dir),
             current_branches={
                 env.cwd: "feature-1",  # Simulate being in feature-1 worktree
             },
@@ -73,7 +67,7 @@ def test_up_with_existing_worktree() -> None:
         script_path = Path(result.stdout.strip())
         script_content = env.script_writer.get_script_content(script_path)
         assert script_content is not None
-        assert str(repo_dir / "feature-2") in script_content
+        assert str(repo_dir / "worktrees" / "feature-2") in script_content
 
 
 def test_up_at_top_of_stack() -> None:
@@ -83,12 +77,7 @@ def test_up_at_top_of_stack() -> None:
         repo_dir = env.setup_repo_structure()
 
         git_ops = FakeGit(
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=repo_dir / "feature-2", branch="feature-2"),
-                ]
-            },
+            worktrees=env.build_worktrees("main", ["feature-2"], repo_dir=repo_dir),
             current_branches={env.cwd: "feature-2"},  # Simulate being in feature-2 worktree
             git_common_dirs={env.cwd: env.git_dir},
         )
@@ -127,12 +116,7 @@ def test_up_child_has_no_worktree() -> None:
 
         # Only feature-1 has a worktree, feature-2 does not (will be auto-created)
         git_ops = FakeGit(
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=repo_dir / "feature-1", branch="feature-1"),
-                ]
-            },
+            worktrees=env.build_worktrees("main", ["feature-1"], repo_dir=repo_dir),
             current_branches={env.cwd: "feature-1"},  # Simulate being in feature-1 worktree
             git_common_dirs={env.cwd: env.git_dir},
             # feature-2 exists locally
@@ -179,7 +163,7 @@ def test_up_graphite_not_enabled() -> None:
         repo_dir = env.setup_repo_structure()
 
         git_ops = FakeGit(
-            worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch="main")]},
+            worktrees=env.build_worktrees("main"),
             current_branches={env.cwd: "main"},
             git_common_dirs={env.cwd: env.git_dir},
         )
@@ -213,7 +197,7 @@ def test_up_detached_head() -> None:
 
         # Current branch is None (detached HEAD)
         git_ops = FakeGit(
-            worktrees={env.cwd: [WorktreeInfo(path=env.cwd, branch=None)]},
+            worktrees=env.build_worktrees(None),
             current_branches={env.cwd: None},
             git_common_dirs={env.cwd: env.git_dir},
         )
@@ -240,13 +224,7 @@ def test_up_script_flag() -> None:
         repo_dir = env.setup_repo_structure()
 
         git_ops = FakeGit(
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=repo_dir / "feature-1", branch="feature-1"),
-                    WorktreeInfo(path=repo_dir / "feature-2", branch="feature-2"),
-                ]
-            },
+            worktrees=env.build_worktrees("main", ["feature-1", "feature-2"], repo_dir=repo_dir),
             current_branches={env.cwd: "feature-1"},  # Simulate being in feature-1 worktree
             default_branches={env.cwd: "main"},
             git_common_dirs={env.cwd: env.git_dir},
@@ -283,7 +261,7 @@ def test_up_script_flag() -> None:
         script_content = env.script_writer.get_script_content(script_path)
         assert script_content is not None
         # Verify script contains the target worktree path
-        assert str(repo_dir / "feature-2") in script_content
+        assert str(repo_dir / "worktrees" / "feature-2") in script_content
 
 
 def test_up_multiple_children_fails_explicitly() -> None:
@@ -295,14 +273,9 @@ def test_up_multiple_children_fails_explicitly() -> None:
         # Set up stack: main -> feature-1 -> [feature-2a, feature-2b]
         # feature-1 has TWO children
         git_ops = FakeGit(
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=repo_dir / "feature-1", branch="feature-1"),
-                    WorktreeInfo(path=repo_dir / "feature-2a", branch="feature-2a"),
-                    WorktreeInfo(path=repo_dir / "feature-2b", branch="feature-2b"),
-                ]
-            },
+            worktrees=env.build_worktrees(
+                "main", ["feature-1", "feature-2a", "feature-2b"], repo_dir=repo_dir
+            ),
             current_branches={env.cwd: "feature-1"},
             git_common_dirs={env.cwd: env.git_dir},
         )
@@ -360,9 +333,13 @@ def test_up_with_mismatched_worktree_name() -> None:
         git_ops = FakeGit(
             worktrees={
                 env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main"),
-                    WorktreeInfo(path=repo_dir / "auth-work", branch="feature/auth"),
-                    WorktreeInfo(path=repo_dir / "auth-tests-work", branch="feature/auth-tests"),
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
+                    WorktreeInfo(path=repo_dir / "auth-work", branch="feature/auth", is_root=False),
+                    WorktreeInfo(
+                        path=repo_dir / "auth-tests-work",
+                        branch="feature/auth-tests",
+                        is_root=False,
+                    ),
                 ]
             },
             current_branches={env.cwd: "feature/auth"},  # Simulate being in feature/auth worktree

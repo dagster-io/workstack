@@ -94,23 +94,9 @@ jobs:
             echo "No changes to push"
           fi
 
-      - name: Trigger CI workflows
-        if: steps.check_submission.outputs.has_submission == 'true'
-        run: |
-          BRANCH="${{ github.ref_name }}"
-          echo "Triggering CI workflows for branch: $BRANCH"
-
-          # Trigger each CI workflow explicitly
-          gh workflow run test.yml --ref "$BRANCH"
-          gh workflow run lint.yml --ref "$BRANCH"
-          gh workflow run pyright.yml --ref "$BRANCH"
-          gh workflow run prettier.yml --ref "$BRANCH"
-          gh workflow run check-sync.yml --ref "$BRANCH"
-          gh workflow run md-check.yml --ref "$BRANCH"
-
-          echo "All CI workflows triggered"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Note: CI workflows (test, lint, pyright, prettier, check-sync, md-check)
+      # are automatically triggered by the git push in the previous step.
+      # No need to manually trigger them here.
 
       - name: Cleanup submission folder
         id: cleanup

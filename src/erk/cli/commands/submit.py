@@ -129,4 +129,4 @@ def submit_cmd(ctx: ErkContext, dry_run: bool) -> None:
     user_output(f"  gh run list --branch {current_branch}")
     user_output("")
     user_output("Watch latest run:")
-    user_output(f"  gh run watch --branch {current_branch}")
+    user_output("  gh run watch")

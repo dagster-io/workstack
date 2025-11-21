@@ -88,3 +88,26 @@ class PrintingGitHub(PrintingBase, GitHub):
         run_id = self._wrapped.trigger_workflow(repo_root, workflow, inputs, ref=ref)
         self._emit(f"→ Run ID: {run_id}")
         return run_id
+
+    def create_pr(
+        self,
+        repo_root: Path,
+        branch: str,
+        title: str,
+        body: str,
+        base: str | None = None,
+    ) -> int:
+        """Create PR with printed output.
+
+        Returns:
+            PR number
+        """
+        base_arg = f"--base {base} " if base is not None else ""
+        self._emit(
+            self._format_command(
+                f'gh pr create --head {branch} {base_arg}--title "{title}" --body <body>'
+            )
+        )
+        pr_number = self._wrapped.create_pr(repo_root, branch, title, body, base=base)
+        self._emit(f"→ PR #{pr_number}")
+        return pr_number

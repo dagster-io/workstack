@@ -508,3 +508,131 @@ def test_merge_pr_raises_on_failure() -> None:
             ops.merge_pr(repo_root, pr_number, squash=True, verbose=False)
     finally:
         subprocess.run = original_run
+
+
+# ============================================================================
+# create_pr() Tests
+# ============================================================================
+
+
+def test_create_pr_success() -> None:
+    """Test successful PR creation."""
+    repo_root = Path("/repo")
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        # Verify correct command is called
+        assert cmd == [
+            "gh",
+            "pr",
+            "create",
+            "--head",
+            "feat-test",
+            "--title",
+            "Test PR",
+            "--body",
+            "Test body",
+            "--base",
+            "main",
+        ]
+        assert kwargs["cwd"] == repo_root
+        assert kwargs["capture_output"] is True
+        assert kwargs["text"] is True
+        assert kwargs["check"] is True
+
+        # Return mock PR URL
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="https://github.com/owner/repo/pull/123\n",
+            stderr="",
+        )
+
+    original_run = subprocess.run
+    try:
+        subprocess.run = mock_run
+
+        ops = RealGitHub()
+        pr_number = ops.create_pr(
+            repo_root=repo_root,
+            branch="feat-test",
+            title="Test PR",
+            body="Test body",
+            base="main",
+        )
+
+        assert pr_number == 123
+    finally:
+        subprocess.run = original_run
+
+
+def test_create_pr_without_base() -> None:
+    """Test PR creation without specifying base branch."""
+    repo_root = Path("/repo")
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        # Verify --base flag is NOT included when base=None
+        assert cmd == [
+            "gh",
+            "pr",
+            "create",
+            "--head",
+            "feat-test",
+            "--title",
+            "Test PR",
+            "--body",
+            "Test body",
+        ]
+        assert "--base" not in cmd
+
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="https://github.com/owner/repo/pull/456\n",
+            stderr="",
+        )
+
+    original_run = subprocess.run
+    try:
+        subprocess.run = mock_run
+
+        ops = RealGitHub()
+        pr_number = ops.create_pr(
+            repo_root=repo_root,
+            branch="feat-test",
+            title="Test PR",
+            body="Test body",
+            base=None,
+        )
+
+        assert pr_number == 456
+    finally:
+        subprocess.run = original_run
+
+
+def test_create_pr_failure() -> None:
+    """Test PR creation failure handling."""
+    repo_root = Path("/repo")
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        raise subprocess.CalledProcessError(1, cmd, stderr="Error: PR already exists")
+
+    original_run = subprocess.run
+    try:
+        subprocess.run = mock_run
+
+        ops = RealGitHub()
+
+        # Should raise RuntimeError (from run_subprocess_with_context wrapper)
+        with pytest.raises(RuntimeError) as exc_info:
+            ops.create_pr(
+                repo_root=repo_root,
+                branch="feat-test",
+                title="Test PR",
+                body="Test body",
+                base="main",
+            )
+
+        # Verify error context includes operation description
+        assert "create pull request" in str(exc_info.value)
+    finally:
+        subprocess.run = original_run

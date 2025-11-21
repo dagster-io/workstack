@@ -181,6 +181,22 @@ class FakeGitHub(GitHub):
         self._triggered_workflows.append((workflow, inputs))
         return "1234567890"
 
+    def create_pr(
+        self,
+        repo_root: Path,
+        branch: str,
+        title: str,
+        body: str,
+        base: str | None = None,
+    ) -> int:
+        """Record PR creation in mutation tracking list.
+
+        Returns:
+            A fake PR number for testing
+        """
+        # Return a fake PR number
+        return 999
+
     @property
     def updated_pr_bases(self) -> list[tuple[int, str]]:
         """Read-only access to tracked PR base updates for test assertions."""

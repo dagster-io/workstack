@@ -423,3 +423,52 @@ query {{
 
         run_id = data["id"]
         return str(run_id)
+
+    def create_pr(
+        self,
+        repo_root: Path,
+        branch: str,
+        title: str,
+        body: str,
+        base: str | None = None,
+    ) -> int:
+        """Create a pull request using gh CLI.
+
+        Args:
+            repo_root: Repository root directory
+            branch: Source branch for the PR
+            title: PR title
+            body: PR body (markdown)
+            base: Target base branch (defaults to repository default branch if None)
+
+        Returns:
+            PR number
+        """
+        cmd = [
+            "gh",
+            "pr",
+            "create",
+            "--head",
+            branch,
+            "--title",
+            title,
+            "--body",
+            body,
+        ]
+
+        # Add --base flag if specified
+        if base is not None:
+            cmd.extend(["--base", base])
+
+        result = run_subprocess_with_context(
+            cmd,
+            operation_context=f"create pull request for branch '{branch}'",
+            cwd=repo_root,
+        )
+
+        # Extract PR number from gh output
+        # Format: https://github.com/owner/repo/pull/123
+        pr_url = result.stdout.strip()
+        pr_number = int(pr_url.split("/")[-1])
+
+        return pr_number

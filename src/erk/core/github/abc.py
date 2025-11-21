@@ -135,3 +135,26 @@ class GitHub(ABC):
             The GitHub Actions run ID as a string
         """
         ...
+
+    @abstractmethod
+    def create_pr(
+        self,
+        repo_root: Path,
+        branch: str,
+        title: str,
+        body: str,
+        base: str | None = None,
+    ) -> int:
+        """Create a pull request.
+
+        Args:
+            repo_root: Repository root directory
+            branch: Source branch for the PR
+            title: PR title
+            body: PR body (markdown)
+            base: Target base branch (defaults to trunk branch if None)
+
+        Returns:
+            PR number
+        """
+        ...

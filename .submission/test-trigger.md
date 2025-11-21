@@ -10,4 +10,4 @@ The workflow should now:
 
 This file can be deleted after verification.
 
-Updated: 2025-11-21 - Using claude command directly instead of dot-agent
+Updated: 2025-11-21 - Using claude command with ANTHROPIC_API_KEY secret

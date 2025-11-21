@@ -1,4 +1,4 @@
-name: Implement Issue Plan
+name: Dispatch Erk Queue
 
 on:
   issues:

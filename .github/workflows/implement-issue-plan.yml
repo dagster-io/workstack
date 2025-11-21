@@ -6,7 +6,7 @@ on:
 
 jobs:
   implement:
-    if: contains(github.event.issue.labels.*.name, 'erk-plan')
+    if: contains(github.event.issue.labels.*.name, 'erk-plan-queue')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -19,9 +19,16 @@ jobs:
 
       - name: Derive branch name from issue title
         id: branch_name
+        # SECURITY: Use env block to prevent code injection attacks
+        # Issue titles are user-controlled and could contain malicious code like `curl attacker.com`
+        # Direct interpolation (${{ github.event.issue.title }}) in shell would execute as code
+        # Environment variables treat the input as data, not code
+        # See: https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#understanding-the-risk-of-script-injections
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
           # Convert issue title to kebab-case
-          ISSUE_TITLE="${{ github.event.issue.title }}"
+          # ISSUE_TITLE is now safely in environment, not interpolated in shell
           BRANCH_NAME=$(echo "$ISSUE_TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$//')
 
           # Truncate to 30 characters for git worktree compatibility
@@ -65,19 +72,29 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Create plan folder
+        # SECURITY: Use env block to prevent code injection attacks
+        # Issue bodies are user-controlled and could contain:
+        #   1. Heredoc terminators (EOF) to break out of cat command
+        #   2. Command substitution syntax ($() or ``)
+        #   3. Script injection payloads
+        # Using printf with environment variable prevents interpretation as code
+        # See: https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#understanding-the-risk-of-script-injections
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
         run: |
           mkdir -p .plan
 
-          # Save issue body as plan.md
-          cat > .plan/plan.md <<'EOF'
-          ${{ github.event.issue.body }}
-          EOF
+          # Save issue body as plan.md using printf for safety
+          # This prevents heredoc injection attacks
+          printf '%s\n' "$ISSUE_BODY" > .plan/plan.md
 
-          # Create issue.json reference
+          # Create issue.json reference using environment variables
           cat > .plan/issue.json <<EOF
           {
-            "issue_number": ${{ github.event.issue.number }},
-            "issue_url": "${{ github.event.issue.html_url }}",
+            "issue_number": $ISSUE_NUMBER,
+            "issue_url": "$ISSUE_URL",
             "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "synced_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           }
@@ -128,36 +145,57 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Commit and push changes
+        # SECURITY: Use env block for consistency and safety
+        # While ISSUE_NUMBER is not user-controlled, using env block maintains consistent pattern
+        # and prevents accidental introduction of vulnerabilities in future edits
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
         run: |
           if [[ -n $(git status --porcelain) ]]; then
             git add .
-            git commit -m "Implement plan from issue #${{ github.event.issue.number }}"
-            git push origin "${{ steps.branch_name.outputs.branch_name }}"
+            git commit -m "Implement plan from issue #$ISSUE_NUMBER"
+            git push origin "$BRANCH_NAME"
             echo "✓ Changes committed and pushed"
           else
             echo "No changes to commit"
           fi
 
       - name: Create pull request
+        # SECURITY: Use env block to prevent code injection attacks
+        # User-controlled inputs (issue title, issue body) must not be directly interpolated
+        # Direct interpolation like PR_TITLE="${{ github.event.issue.title }}" would allow:
+        #   - Command injection via backticks or $()
+        #   - Quote escaping to run arbitrary commands
+        #   - Token exfiltration via curl/wget
+        # Environment variables ensure untrusted input is treated as data, not executable code
+        # See: https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#understanding-the-risk-of-script-injections
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+          IMPLEMENTATION_SUCCESS: ${{ steps.implement.outputs.implementation_success }}
+          SERVER_URL: ${{ github.server_url }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Check if PR already exists
-          if gh pr view "${{ steps.branch_name.outputs.branch_name }}" --json number &> /dev/null; then
-            echo "✓ PR already exists for branch ${{ steps.branch_name.outputs.branch_name }}"
+          if gh pr view "$BRANCH_NAME" --json number &> /dev/null; then
+            echo "✓ PR already exists for branch $BRANCH_NAME"
             exit 0
           fi
 
-          PR_TITLE="${{ github.event.issue.title }}"
-
-          # Create PR body based on implementation success
-          if [ "${{ steps.implement.outputs.implementation_success }}" = "true" ]; then
-            cat > pr_body.md <<'EOF'
+          # Create PR body based on implementation success using environment variables
+          if [ "$IMPLEMENTATION_SUCCESS" = "true" ]; then
+            cat > pr_body.md <<EOF
           ## Implementation Complete
 
-          This PR implements the plan from issue #${{ github.event.issue.number }}.
+          This PR implements the plan from issue #$ISSUE_NUMBER.
 
           **Implementation Details:**
-          - Plan source: #${{ github.event.issue.number }}
-          - GitHub Actions run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          - Plan source: #$ISSUE_NUMBER
+          - GitHub Actions run: $SERVER_URL/$REPOSITORY/actions/runs/$RUN_ID
 
           ### Testing Checklist
           - [ ] Review AI-generated code changes
@@ -169,12 +207,12 @@ jobs:
           🤖 Generated with [Claude Code](https://claude.com/claude-code)
           EOF
           else
-            cat > pr_body.md <<'EOF'
+            cat > pr_body.md <<EOF
           ## Implementation Failed
 
-          This PR contains partial implementation from issue #${{ github.event.issue.number }}.
+          This PR contains partial implementation from issue #$ISSUE_NUMBER.
 
-          **⚠️ Implementation encountered errors** - Review the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.
+          **⚠️ Implementation encountered errors** - Review the [workflow run]($SERVER_URL/$REPOSITORY/actions/runs/$RUN_ID) for details.
 
           ### Next Steps
           - Review implementation errors
@@ -185,23 +223,24 @@ jobs:
           EOF
           fi
 
-          gh pr create --head "${{ steps.branch_name.outputs.branch_name }}" --title "$PR_TITLE" --body-file pr_body.md
-          echo "✓ Created PR: $PR_TITLE"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          gh pr create --head "$BRANCH_NAME" --title "$ISSUE_TITLE" --body-file pr_body.md
+          echo "✓ Created PR: $ISSUE_TITLE"
 
       - name: Trigger CI workflows
+        # SECURITY: Use env block for consistency
+        # BRANCH_NAME is derived from sanitized user input (see branch derivation step)
+        # Using env block maintains security best practices throughout workflow
+        env:
+          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BRANCH="${{ steps.branch_name.outputs.branch_name }}"
-          echo "Triggering CI workflows for branch: $BRANCH"
+          echo "Triggering CI workflows for branch: $BRANCH_NAME"
 
-          gh workflow run test.yml --ref "$BRANCH"
-          gh workflow run lint.yml --ref "$BRANCH"
-          gh workflow run pyright.yml --ref "$BRANCH"
-          gh workflow run prettier.yml --ref "$BRANCH"
-          gh workflow run check-sync.yml --ref "$BRANCH"
-          gh workflow run md-check.yml --ref "$BRANCH"
+          gh workflow run test.yml --ref "$BRANCH_NAME"
+          gh workflow run lint.yml --ref "$BRANCH_NAME"
+          gh workflow run pyright.yml --ref "$BRANCH_NAME"
+          gh workflow run prettier.yml --ref "$BRANCH_NAME"
+          gh workflow run check-sync.yml --ref "$BRANCH_NAME"
+          gh workflow run md-check.yml --ref "$BRANCH_NAME"
 
           echo "✓ All CI workflows triggered"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

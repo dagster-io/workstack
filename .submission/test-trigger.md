@@ -10,4 +10,4 @@ The workflow should now:
 
 This file can be deleted after verification.
 
-Updated: 2025-11-21 - Using claude command with streaming JSON output (--output-format stream-json)
+Updated: 2025-11-21 - Using claude command with streaming JSON output (--verbose --output-format stream-json)

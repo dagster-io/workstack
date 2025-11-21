@@ -266,9 +266,6 @@ def consolidate_cmd(
             # Checkout temporary branch in source worktree to free up the original branch
             ctx.git.checkout_branch(current_worktree, temp_branch_name)
 
-            # Track temporary branch with Graphite
-            ctx.graphite.track_branch(current_worktree, temp_branch_name, current_branch)
-
             # Create new worktree with original branch
             # (now available since source is on temp branch)
             ctx.git.add_worktree(

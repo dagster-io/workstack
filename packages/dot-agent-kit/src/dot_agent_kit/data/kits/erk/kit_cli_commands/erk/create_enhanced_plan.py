@@ -99,13 +99,12 @@ class AssembleError:
 def _find_project_dir(cwd: Path) -> Path | None:
     """Locate Claude Code project directory by matching cwd.
 
-    Claude Code encodes filesystem paths to project folder names using:
-    - Replace "/" with "-"
-    - Replace "." with "-"
+    Project directories are stored in ~/.claude/projects/ with escaped paths.
+    Claude Code escapes paths with special rules:
+    - Slashes become hyphens: /Users/foo → -Users-foo
+    - Dot-prefixed directories get double hyphen: /.erk/ → --erk-
 
-    Example:
-        /Users/foo/.config/bar → -Users-foo--config-bar
-        (note the double dash where .config becomes --config)
+    Example: /Users/schrockn/.erk/repos → -Users-schrockn--erk-repos
 
     This function performs exact matching on the encoded path to avoid
     ambiguity when multiple projects share path prefixes.
@@ -120,11 +119,16 @@ def _find_project_dir(cwd: Path) -> Path | None:
     if not projects_dir.exists():
         return None
 
-    # Convert cwd to escaped format (both slashes and dots)
-    encoded_path = str(cwd).replace("/", "-").replace(".", "-")
+    # Convert cwd to Claude Code's escaped format
+    # Replace slashes with hyphens, handling dot-prefixed directories
+    path_str = str(cwd)
+    # Replace /. with -- (dot-prefixed directories)
+    path_str = path_str.replace("/.", "--")
+    # Replace remaining slashes with single hyphens
+    escaped_cwd = path_str.replace("/", "-")
 
     # Use exact match to avoid false positives from substring matching
-    project_dir = projects_dir / encoded_path
+    project_dir = projects_dir / escaped_cwd
     if project_dir.exists() and project_dir.is_dir():
         return project_dir
 

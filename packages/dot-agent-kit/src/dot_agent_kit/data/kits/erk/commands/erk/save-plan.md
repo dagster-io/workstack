@@ -18,7 +18,7 @@ This command provides a fast path for saving plans when you don't need session l
 
 - Extracts the plan as-is from the conversation
 - Generates a descriptive filename from the plan title
-- Adds minimal frontmatter (`saved_by_save_plan: true`, timestamp)
+- Adds minimal frontmatter (`erk_plan: true`, timestamp)
 - Saves to repository root
 
 **What it does NOT do:**
@@ -131,7 +131,7 @@ Prepend YAML frontmatter to the plan content:
 
 ```yaml
 ---
-saved_by_save_plan: true
+erk_plan: true
 created_at: <ISO-8601-timestamp>
 ---
 ```
@@ -142,7 +142,7 @@ created_at: <ISO-8601-timestamp>
 
 ```markdown
 ---
-saved_by_save_plan: true
+erk_plan: true
 created_at: 2025-11-21T10:00:00Z
 ---
 

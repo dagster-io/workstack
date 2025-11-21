@@ -10,4 +10,4 @@ The workflow should now:
 
 This file can be deleted after verification.
 
-Updated: 2025-11-21 - With git commit and push step added
+Updated: 2025-11-21 - With fixed commit message YAML syntax

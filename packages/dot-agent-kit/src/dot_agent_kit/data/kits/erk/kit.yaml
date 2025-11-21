@@ -12,6 +12,9 @@ artifacts:
   doc:
     - docs/erk/EXAMPLES.md
 kit_cli_commands:
+  - name: create-enhanced-plan
+    path: kit_cli_commands/erk/create_enhanced_plan.py
+    description: Create enhanced implementation plan from session logs (two-phase - discover and assemble)
   - name: session-id-injector-hook
     path: kit_cli_commands/erk/session_id_injector_hook.py
     description: Inject session ID into conversation context for plan creation

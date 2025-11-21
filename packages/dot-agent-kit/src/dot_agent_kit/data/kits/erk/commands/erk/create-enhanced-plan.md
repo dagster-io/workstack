@@ -55,7 +55,7 @@ You are executing the `/erk:create-enhanced-plan` command. Follow these steps ca
 
 **CRITICAL:** If you use any forbidden tool, STOP immediately.
 
-### Step 1: Extract Session ID and Locate Session Logs
+### Step 1: Discover and Preprocess Session Logs
 
 **Step 1a: Extract Session ID from Context**
 
@@ -63,7 +63,7 @@ Search the conversation for the session ID injected by the session-id-injector-h
 
 1. Look for system-reminder or reminder messages containing "SESSION_CONTEXT:"
 2. Extract the session ID from format: `SESSION_CONTEXT: session_id={uuid}`
-3. Store the session ID for use in locating log files
+3. Store the session ID for use in the discover phase
 
 Example pattern to match:
 
@@ -77,40 +77,51 @@ If session ID not found in context:
 ⚠️ Warning: Session ID not found in conversation context
 
 The session-id-injector-hook may not be installed or running.
-Falling back to manual log discovery (less reliable).
+Cannot proceed without session ID.
 ```
 
-**Step 1b: Locate Session Logs**
+**Step 1b: Run Discovery Phase**
 
-Using the extracted session ID, find the Claude Code session logs:
+Use the kit CLI command to discover and preprocess session logs (NO permission prompts):
 
 ```bash
-# Get current directory to determine project
-pwd
+# Get current working directory
+CWD=$(pwd)
 
-# List available projects to find project hash
-ls ~/.claude/projects/
-
-# Match current working directory against project directories
-# to identify the correct project hash
-
-# Once project hash identified, locate session log using session ID
-# Log file format: ~/.claude/projects/<project-hash>/<session-id>.jsonl
+# Run discover phase with session ID from Step 1a
+dot-agent run erk create-enhanced-plan discover --session-id <SESSION_ID> --cwd "$CWD"
 ```
 
-Look for:
+This outputs JSON with structure:
 
-- Main session log: `~/.claude/projects/<project-hash>/<session-id>.jsonl`
-- Agent logs: `~/.claude/projects/<project-hash>/agent-*.jsonl` (from same session)
-
-If logs not found or inaccessible:
-
+```json
+{
+  "success": true,
+  "compressed_xml": "<session>...</session>",
+  "log_path": "/Users/.../.jsonl",
+  "session_id": "abc-123",
+  "stats": {
+    "entries_processed": 37,
+    "entries_skipped": 142,
+    "token_reduction_pct": "85.8%",
+    "original_size": 227612,
+    "compressed_size": 32337
+  }
+}
 ```
-⚠️ Warning: Session logs not accessible
 
-Falling back to conversation-only extraction.
-This will miss discoveries made during planning research.
+**If error occurs:**
+
+```json
+{
+  "success": false,
+  "error": "Project directory not found",
+  "help": "Could not find Claude Code project for /path",
+  "context": {"cwd": "/path"}
+}
 ```
+
+Parse the JSON output and extract the `compressed_xml` field for mining in Step 3.
 
 ### Step 2: Extract Plan from Conversation
 
@@ -139,53 +150,11 @@ Please create a plan first:
 4. Then run /erk:create-enhanced-plan
 ```
 
-### Step 3: Preprocess and Mine Session Logs
+### Step 3: Mine Discoveries from Compressed XML
 
-**Step 3a: Preprocess JSONL logs to XML**
+**Use the compressed_xml field from Step 1b JSON output.**
 
-Use the preprocessing CLI command to compress logs before mining. **IMPORTANT:** Pass the session ID extracted in Step 1a to filter entries, and use `--stdout` to output XML directly:
-
-```bash
-# Preprocess main session log with session ID filtering and stdout output (default: all optimizations enabled)
-# (replace with actual paths from Step 1b and session ID from Step 1a)
-dot-agent run erk preprocess-session --session-id <session-id> --stdout ~/.claude/projects/<project-hash>/<session-id>.jsonl
-
-# For raw output without optimizations (rare cases only):
-dot-agent run erk preprocess-session --session-id <session-id> --stdout --no-filtering ~/.claude/projects/<project-hash>/<session-id>.jsonl
-```
-
-**Note:** The `--stdout` flag outputs XML directly to stdout, eliminating the need for file permissions and making the command output immediately available for parsing. Stats and diagnostics are routed to stderr and won't interfere with XML parsing.
-
-**Filtering Optimizations (Enabled by Default):**
-
-The preprocessing command now applies multiple optimization layers by default for 55-65% token reduction:
-
-1. **Session ID filtering** - Only includes entries from current session (prevents cross-contamination)
-2. **Empty session filtering** - Skips sessions with <3 entries or no meaningful content
-3. **Warmup session filtering** - Skips boilerplate "warmup" acknowledgments
-4. **Documentation deduplication** - Replaces repeated command docs with hash markers
-5. **Parameter truncation** - Shortens verbose tool parameters to 200 chars (preserves file path structure)
-6. **Tool result pruning** - Keeps first 30 lines + error lines (prevents 1000+ line results)
-7. **Log discovery filtering** - Removes pwd, ls commands used for log discovery mechanics
-
-Use `--no-filtering` flag to disable all optimizations and get raw output (needed only in rare debugging cases).
-
-**Expected Token Reduction:**
-
-- With filtering (default): **55-65%** compression (1MB → 350-450KB typical)
-- Session ID filtering alone: ~95% (filters other conversations)
-- Combined: ~96-97% total reduction from raw JSONL
-
-**Benefits:**
-
-- Massive token reduction while preserving all semantic value
-- Tool results pruned but errors preserved
-- File paths truncated but remain identifiable
-- Coarse-grained XML structure easy to parse
-
-**Step 3b: Mine discoveries from compressed XML**
-
-Parse the XML content from the command's stdout output. The format uses coarse-grained tags:
+The format uses coarse-grained tags:
 
 ```xml
 <session>
@@ -290,151 +259,70 @@ From assistant text blocks:
 - Coverage gaps
 - Testing challenges
 
-### Step 4: Create Enhanced Plan Structure
+### Step 4: Structure Discoveries as JSON
 
-Build the enhanced plan with this structure:
+After mining discoveries from the compressed XML in Step 3, structure them as JSON for the assemble phase:
 
-```markdown
----
-enriched_by_create_enhanced_plan: true
-session_id: <session-id-from-step-1a>
-discovery_count: <number>
-timestamp: <ISO-8601>
----
-
-# [Plan Title] - Enhanced Implementation Guide
-
-## Executive Summary
-
-[1-2 paragraphs summarizing the goal and approach]
-
-## Critical Context from Planning
-
-### What We Learned
-
-#### [Category 1 - e.g., API Discoveries]
-
-- [Key insight 1]
-- [Key insight 2]
-
-#### [Category 2 - e.g., Architecture]
-
-- [Key insight 1]
-- [Key insight 2]
-
-### What Didn't Work
-
-#### Failed Approaches Discovered
-
-- **[Approach 1]**: [Why it failed]
-- **[Approach 2]**: [Why it failed]
-
-### Raw Discoveries Log
-
-[Chronological list of significant discoveries]
-
-- Discovered: [Finding]
-- Confirmed: [Validation]
-- Learned: [Insight]
-- Found: [Pattern]
-
-## Implementation Plan
-
-### Objective
-
-[Original objective from plan]
-
-### Implementation Steps
-
-#### Phase 1: [Name]
-
-1. **[Step name]**
-   [CRITICAL: Warning if applicable]
-   - Success: [Criteria]
-   - On failure: [Recovery]
-
-   Related Context:
-   - [Link to relevant discovery]
-   - [Why this approach was chosen]
-
-2. **[Step name]**
-   [Details]
-
-   Related Context:
-   - [Link to relevant discovery]
-
-[Continue for all phases...]
-
-### Testing
-
-[Testing requirements from original plan plus insights from logs]
-
-## Progress Tracking
-
-**Current Status:** Planning complete, ready for implementation
-
-**Last Updated:** [Date]
-
-### Implementation Progress
-
-- [ ] Step 1: [Name from plan]
-- [ ] Step 2: [Name from plan]
-      [Continue for all steps...]
-
-### Overall Progress
-
-**Steps Completed:** 0 / [Total]
-
-## Appendices
-
-### A. Commands Run During Planning
-
-[List of significant commands from logs]
-
-### B. Code Examined
-
-[List of files/functions examined with brief notes]
-
-### C. Error Scenarios
-
-[Errors encountered and how to handle them]
-
-### D. Decision Log
-
-[Key decisions made during planning and why]
-
-### E. Key Discoveries Not to Lose
-
-[Critical insights that must not be forgotten]
+```json
+{
+  "session_id": "<session-id-from-step-1a>",
+  "categories": {
+    "API Discoveries": [
+      "Project directories use escaped paths: /Users/foo → -Users-foo",
+      "Session logs stored in JSONL format"
+    ],
+    "Architecture": [
+      "Two-phase pattern enables clean separation",
+      "JSON output eliminates temp file issues"
+    ]
+  },
+  "failed_attempts": [
+    {
+      "name": "Simple permission add",
+      "reason": "Requires manual config, not automatic"
+    }
+  ],
+  "raw_discoveries": [
+    "Discovered: Kit CLI commands bypass all permissions",
+    "Found: Two-phase pattern in submit_branch.py",
+    "Learned: 85.8% token reduction with preprocessing"
+  ]
+}
 ```
 
-### Step 5: Apply Context Linking
+### Step 5: Assemble Enhanced Plan
 
-Link discoveries to implementation steps:
+**Step 5a: Run Assemble Phase**
 
-1. **Inline warnings** for critical issues:
+Use the kit CLI command to build the enhanced plan:
 
-   ```
-   [CRITICAL: Check exists() before resolve() - causes error otherwise]
-   ```
+```bash
+# Create temp files for plan and discoveries
+echo "$PLAN_CONTENT" > /tmp/plan-temp.md
+echo "$DISCOVERIES_JSON" > /tmp/discoveries-temp.json
 
-2. **Related Context subsections** after each step:
+# Run assemble phase
+dot-agent run erk create-enhanced-plan assemble /tmp/plan-temp.md /tmp/discoveries-temp.json
+```
 
-   ```
-   Related Context:
-   - Session logs stored in JSONL format, one JSON per line
-   - Project hash derived from workspace path
-   - Must parse incrementally to avoid memory issues
-   ```
+This outputs JSON with structure:
 
-3. **Cross-references** to appendices:
-   ```
-   (See Appendix A for full command list)
-   ```
+```json
+{
+  "success": true,
+  "content": "---\nenriched_by_create_enhanced_plan: true\n...",
+  "filename": "enhanced-plan.md",
+  "stats": {
+    "discovery_count": 18,
+    "categories": 5,
+    "failed_attempts": 2
+  }
+}
+```
 
-### Step 6: Save Enhanced Plan
+**Step 5b: Write Enhanced Plan to Repository Root**
 
-Generate filename and save to repository root:
+Extract the `content` and `filename` fields from the JSON output and write to repo root:
 
 ```python
 # Determine repo root
@@ -445,26 +333,28 @@ repo_root = subprocess.run(
     check=True
 ).stdout.strip()
 
-# Generate filename (max 30 chars base for worktree compatibility)
-# Example: "session-log-mining-enhanced-plan.md"
-filename = f"{descriptive_name}-enhanced-plan.md"
+# Use filename from assemble output
+filename = assemble_result["filename"]
 
 # Save directly to repo root (NOT to .plan/ folder)
 plan_path = Path(repo_root) / filename
 
-# Write enhanced plan
-plan_path.write_text(enhanced_plan_content, encoding="utf-8")
+# Write enhanced plan content
+plan_path.write_text(assemble_result["content"], encoding="utf-8")
 ```
 
-Output:
+### Step 6: Output Summary
+
+After writing the enhanced plan, output:
 
 ```
 ✅ Enhanced plan saved to: [filename]
 
 Summary:
-- Discoveries mined: [count]
-- Implementation steps: [count]
-- Context links added: [count]
+- Discoveries mined: [count from stats]
+- Discovery categories: [count from stats]
+- Failed attempts documented: [count from stats]
+- Token reduction: [from Step 1b stats]
 
 Next steps:
 1. Review the enhanced plan
@@ -474,20 +364,39 @@ Next steps:
 
 ### Step 7: Handle Errors
 
-**No logs found:**
+**Session ID not found:**
 
-- Continue with conversation-only extraction
-- Warn about missing discoveries
+```
+❌ Error: Session ID not found in conversation context
 
-**Large logs (>25000 tokens):**
+The session-id-injector-hook may not be installed.
+Cannot proceed without session ID.
+```
 
-- Process incrementally line by line
-- Extract key snippets only, not full contents
+**Project directory not found:**
 
-**Corrupted log entries:**
+```
+❌ Error: Claude Code project not found
 
-- Skip malformed JSON lines
-- Continue with remaining entries
+The discover phase returned: "Project directory not found"
+
+Verify:
+1. You're in a Claude Code project directory
+2. The project has session logs in ~/.claude/projects/
+```
+
+**Session log not found:**
+
+```
+❌ Error: Session log not found
+
+The discover phase returned: "Session log not found"
+
+Possible reasons:
+1. Session ID is incorrect
+2. Session logs have been cleaned up
+3. Session was created in a different project
+```
 
 **File already exists:**
 

@@ -143,18 +143,18 @@ Please create a plan first:
 
 **Step 3a: Preprocess JSONL logs to XML**
 
-Use the preprocessing CLI command to compress logs before mining. **IMPORTANT:** Pass the session ID extracted in Step 1a to filter entries:
+Use the preprocessing CLI command to compress logs before mining. **IMPORTANT:** Pass the session ID extracted in Step 1a to filter entries, and use `--stdout` to output XML directly:
 
 ```bash
-# Preprocess main session log with session ID filtering (default: all optimizations enabled)
+# Preprocess main session log with session ID filtering and stdout output (default: all optimizations enabled)
 # (replace with actual paths from Step 1b and session ID from Step 1a)
-dot-agent run erk preprocess-session --session-id <session-id> ~/.claude/projects/<project-hash>/<session-id>.jsonl
+dot-agent run erk preprocess-session --session-id <session-id> --stdout ~/.claude/projects/<project-hash>/<session-id>.jsonl
 
 # For raw output without optimizations (rare cases only):
-dot-agent run erk preprocess-session --session-id <session-id> --no-filtering ~/.claude/projects/<project-hash>/<session-id>.jsonl
+dot-agent run erk preprocess-session --session-id <session-id> --stdout --no-filtering ~/.claude/projects/<project-hash>/<session-id>.jsonl
 ```
 
-This outputs a temp file path like: `/tmp/session-<session-id>-compressed.xml`
+**Note:** The `--stdout` flag outputs XML directly to stdout, eliminating the need for file permissions and making the command output immediately available for parsing. Stats and diagnostics are routed to stderr and won't interfere with XML parsing.
 
 **Filtering Optimizations (Enabled by Default):**
 
@@ -185,7 +185,7 @@ Use `--no-filtering` flag to disable all optimizations and get raw output (neede
 
 **Step 3b: Mine discoveries from compressed XML**
 
-Read the compressed XML file. The format uses coarse-grained tags:
+Parse the XML content from the command's stdout output. The format uses coarse-grained tags:
 
 ```xml
 <session>

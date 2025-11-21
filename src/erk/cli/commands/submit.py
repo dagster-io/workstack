@@ -1,11 +1,10 @@
 """Submit plan for remote AI implementation via GitHub Actions."""
 
-import subprocess
-
 import click
 
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
+from erk.cli.subprocess_utils import run_with_error_reporting
 from erk.core.context import ErkContext
 from erk.core.plan_folder import copy_plan_to_submission, get_submission_path
 from erk.core.repo_discovery import RepoContext
@@ -72,14 +71,13 @@ def submit_cmd(ctx: ErkContext, dry_run: bool) -> None:
 
     # Stage and commit .submission/ folder
     user_output("Committing .submission/ folder...")
-    subprocess.run(
+    run_with_error_reporting(
         ["git", "add", ".submission/"],
         cwd=ctx.cwd,
-        check=True,
-        capture_output=True,
+        error_prefix="Failed to stage .submission/ folder",
     )
 
-    subprocess.run(
+    run_with_error_reporting(
         [
             "git",
             "commit",
@@ -88,17 +86,21 @@ def submit_cmd(ctx: ErkContext, dry_run: bool) -> None:
             "This commit signals GitHub Actions to begin implementation.",
         ],
         cwd=ctx.cwd,
-        check=True,
-        capture_output=True,
+        error_prefix="Failed to commit .submission/ folder",
     )
 
     # Push branch
     user_output("Pushing branch...")
-    subprocess.run(
+    run_with_error_reporting(
         ["git", "push", "-u", "origin", current_branch],
         cwd=ctx.cwd,
-        check=True,
-        capture_output=True,
+        error_prefix="Failed to push branch to remote",
+        troubleshooting=[
+            "Check your network connection",
+            "Verify git credentials: gh auth status",
+            "Ensure remote 'origin' exists: git remote -v",
+            "Check repository permissions",
+        ],
     )
 
     # Trigger workflow

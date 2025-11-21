@@ -62,8 +62,7 @@ jobs:
       - name: Run implementation with CI loop
         if: steps.check_submission.outputs.has_submission == 'true'
         run: |
-          dot-agent command "/erk:implement-plan" \
-            --permission-mode dangerouslySkipPermissions
+          claude --allow-dangerously-skip-permissions "/erk:implement-plan"
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

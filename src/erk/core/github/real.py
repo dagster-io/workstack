@@ -13,7 +13,7 @@ from erk.core.github.parsing import (
     parse_github_pr_list,
     parse_github_pr_status,
 )
-from erk.core.github.types import PRInfo, PRMergeability, PullRequestInfo
+from erk.core.github.types import PRInfo, PRMergeability, PullRequestInfo, WorkflowRun
 from erk.core.subprocess import run_subprocess_with_context
 
 
@@ -472,3 +472,52 @@ query {{
         pr_number = int(pr_url.split("/")[-1])
 
         return pr_number
+
+    def list_workflow_runs(
+        self, repo_root: Path, workflow: str, limit: int = 50
+    ) -> list[WorkflowRun]:
+        """List workflow runs for a specific workflow.
+
+        Note: Uses try/except as an acceptable error boundary for handling gh CLI
+        availability and authentication. We cannot reliably check gh installation
+        and authentication status a priori without duplicating gh's logic.
+        """
+        try:
+            cmd = [
+                "gh",
+                "run",
+                "list",
+                "--workflow",
+                workflow,
+                "--json",
+                "databaseId,status,conclusion,headBranch,headSha",
+                "--limit",
+                str(limit),
+            ]
+
+            result = run_subprocess_with_context(
+                cmd,
+                operation_context=f"list workflow runs for '{workflow}'",
+                cwd=repo_root,
+            )
+
+            # Parse JSON response
+            data = json.loads(result.stdout)
+
+            # Map to WorkflowRun dataclasses
+            runs = []
+            for run in data:
+                workflow_run = WorkflowRun(
+                    run_id=str(run["databaseId"]),
+                    status=run["status"],
+                    conclusion=run.get("conclusion"),
+                    branch=run["headBranch"],
+                    head_sha=run["headSha"],
+                )
+                runs.append(workflow_run)
+
+            return runs
+
+        except (RuntimeError, FileNotFoundError, json.JSONDecodeError, KeyError):
+            # gh not installed, not authenticated, or JSON parsing failed
+            return []

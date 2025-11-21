@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import cast
 
 from erk.core.github.abc import GitHub
-from erk.core.github.types import PRInfo, PRMergeability, PRState, PullRequestInfo
+from erk.core.github.types import PRInfo, PRMergeability, PRState, PullRequestInfo, WorkflowRun
 
 
 class FakeGitHub(GitHub):
@@ -25,6 +25,7 @@ class FakeGitHub(GitHub):
         pr_statuses: dict[str, tuple[str | None, int | None, str | None]] | None = None,
         pr_bases: dict[int, str] | None = None,
         pr_mergeability: dict[int, PRMergeability | None] | None = None,
+        workflow_runs: list[WorkflowRun] | None = None,
     ) -> None:
         """Create FakeGitHub with pre-configured state.
 
@@ -34,6 +35,7 @@ class FakeGitHub(GitHub):
                         Mapping of branch name -> (state, pr_number, title)
             pr_bases: Mapping of pr_number -> base_branch
             pr_mergeability: Mapping of pr_number -> PRMergeability (None for API errors)
+            workflow_runs: List of WorkflowRun objects to return from list_workflow_runs
         """
         if prs is not None and pr_statuses is not None:
             msg = "Cannot specify both prs and pr_statuses"
@@ -62,6 +64,7 @@ class FakeGitHub(GitHub):
 
         self._pr_bases = pr_bases or {}
         self._pr_mergeability = pr_mergeability or {}
+        self._workflow_runs = workflow_runs or []
         self._updated_pr_bases: list[tuple[int, str]] = []
         self._merged_prs: list[int] = []
         self._get_prs_for_repo_calls: list[tuple[Path, bool]] = []
@@ -206,3 +209,13 @@ class FakeGitHub(GitHub):
     def triggered_workflows(self) -> list[tuple[str, dict[str, str]]]:
         """Read-only access to tracked workflow triggers for test assertions."""
         return self._triggered_workflows
+
+    def list_workflow_runs(
+        self, repo_root: Path, workflow: str, limit: int = 50
+    ) -> list[WorkflowRun]:
+        """List workflow runs for a specific workflow (returns pre-configured data).
+
+        Returns the pre-configured list of workflow runs. The workflow and limit
+        parameters are accepted but ignored - fake returns all pre-configured runs.
+        """
+        return self._workflow_runs

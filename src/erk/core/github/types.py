@@ -36,3 +36,14 @@ class PRMergeability:
 
     mergeable: str  # "MERGEABLE", "CONFLICTING", "UNKNOWN"
     merge_state_status: str  # "CLEAN", "BLOCKED", "UNSTABLE", "DIRTY", etc.
+
+
+@dataclass(frozen=True)
+class WorkflowRun:
+    """Information about a GitHub Actions workflow run."""
+
+    run_id: str
+    status: str  # "in_progress", "completed", "queued"
+    conclusion: str | None  # "success", "failure", "cancelled" (None if in progress)
+    branch: str
+    head_sha: str

@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from erk.core.github.types import PRInfo, PRMergeability, PullRequestInfo
+from erk.core.github.types import PRInfo, PRMergeability, PullRequestInfo, WorkflowRun
 
 
 class GitHub(ABC):
@@ -156,5 +156,21 @@ class GitHub(ABC):
 
         Returns:
             PR number
+        """
+        ...
+
+    @abstractmethod
+    def list_workflow_runs(
+        self, repo_root: Path, workflow: str, limit: int = 50
+    ) -> list[WorkflowRun]:
+        """List workflow runs for a specific workflow.
+
+        Args:
+            repo_root: Repository root directory
+            workflow: Workflow filename (e.g., "implement-plan.yml")
+            limit: Maximum number of runs to return (default: 50)
+
+        Returns:
+            List of workflow runs, ordered by creation time (newest first)
         """
         ...

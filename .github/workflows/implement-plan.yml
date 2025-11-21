@@ -62,6 +62,11 @@ jobs:
       - name: Run implementation with CI loop
         if: steps.check_submission.outputs.has_submission == 'true'
         run: |
+          # Configure Claude Code to use API key from environment
+          mkdir -p ~/.config/claude
+          echo "{\"apiKey\": \"$ANTHROPIC_API_KEY\"}" > ~/.config/claude/config.json
+
+          # Run implementation
           claude --allow-dangerously-skip-permissions "/erk:implement-plan"
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

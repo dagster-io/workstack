@@ -636,3 +636,180 @@ def test_create_pr_failure() -> None:
         assert "create pull request" in str(exc_info.value)
     finally:
         subprocess.run = original_run
+
+
+# ============================================================================
+# list_workflow_runs() Tests
+# ============================================================================
+
+
+def test_list_workflow_runs_success() -> None:
+    """Test list_workflow_runs parses gh run list output correctly."""
+    repo_root = Path("/repo")
+
+    sample_response = json.dumps(
+        [
+            {
+                "databaseId": 1234567890,
+                "status": "completed",
+                "conclusion": "success",
+                "headBranch": "feat-1",
+                "headSha": "abc123def456",
+            },
+            {
+                "databaseId": 1234567891,
+                "status": "completed",
+                "conclusion": "failure",
+                "headBranch": "feat-2",
+                "headSha": "def456ghi789",
+            },
+            {
+                "databaseId": 1234567892,
+                "status": "in_progress",
+                "conclusion": None,
+                "headBranch": "feat-3",
+                "headSha": "ghi789jkl012",
+            },
+        ]
+    )
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        # Verify command structure
+        assert cmd == [
+            "gh",
+            "run",
+            "list",
+            "--workflow",
+            "implement-plan.yml",
+            "--json",
+            "databaseId,status,conclusion,headBranch,headSha",
+            "--limit",
+            "50",
+        ]
+
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout=sample_response,
+            stderr="",
+        )
+
+    original_run = subprocess.run
+    try:
+        subprocess.run = mock_run
+
+        ops = RealGitHub()
+        result = ops.list_workflow_runs(repo_root, "implement-plan.yml", limit=50)
+
+        assert len(result) == 3
+        assert result[0].run_id == "1234567890"
+        assert result[0].status == "completed"
+        assert result[0].conclusion == "success"
+        assert result[0].branch == "feat-1"
+        assert result[0].head_sha == "abc123def456"
+
+        assert result[1].conclusion == "failure"
+        assert result[2].status == "in_progress"
+        assert result[2].conclusion is None
+    finally:
+        subprocess.run = original_run
+
+
+def test_list_workflow_runs_custom_limit() -> None:
+    """Test list_workflow_runs respects custom limit parameter."""
+    repo_root = Path("/repo")
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        # Verify custom limit is passed
+        assert "--limit" in cmd
+        assert "10" in cmd
+
+        return subprocess.CompletedProcess(args=cmd, returncode=0, stdout="[]", stderr="")
+
+    original_run = subprocess.run
+    try:
+        subprocess.run = mock_run
+
+        ops = RealGitHub()
+        result = ops.list_workflow_runs(repo_root, "test.yml", limit=10)
+
+        assert result == []
+    finally:
+        subprocess.run = original_run
+
+
+def test_list_workflow_runs_command_failure() -> None:
+    """Test list_workflow_runs returns empty list on command failure."""
+    repo_root = Path("/repo")
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        raise subprocess.CalledProcessError(1, cmd, stderr="gh not authenticated")
+
+    original_run = subprocess.run
+    try:
+        subprocess.run = mock_run
+
+        ops = RealGitHub()
+        result = ops.list_workflow_runs(repo_root, "test.yml")
+
+        # Should gracefully return empty list
+        assert result == []
+    finally:
+        subprocess.run = original_run
+
+
+def test_list_workflow_runs_json_decode_error() -> None:
+    """Test list_workflow_runs returns empty list on malformed JSON."""
+    repo_root = Path("/repo")
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        return subprocess.CompletedProcess(
+            args=cmd, returncode=0, stdout="not valid json", stderr=""
+        )
+
+    original_run = subprocess.run
+    try:
+        subprocess.run = mock_run
+
+        ops = RealGitHub()
+        result = ops.list_workflow_runs(repo_root, "test.yml")
+
+        # Should gracefully return empty list
+        assert result == []
+    finally:
+        subprocess.run = original_run
+
+
+def test_list_workflow_runs_missing_fields() -> None:
+    """Test list_workflow_runs returns empty list when JSON has missing fields."""
+    repo_root = Path("/repo")
+
+    # Missing 'headBranch' field
+    sample_response = json.dumps(
+        [
+            {
+                "databaseId": 123,
+                "status": "completed",
+                "conclusion": "success",
+                # headBranch missing
+                "headSha": "abc123",
+            }
+        ]
+    )
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        return subprocess.CompletedProcess(
+            args=cmd, returncode=0, stdout=sample_response, stderr=""
+        )
+
+    original_run = subprocess.run
+    try:
+        subprocess.run = mock_run
+
+        ops = RealGitHub()
+        result = ops.list_workflow_runs(repo_root, "test.yml")
+
+        # Should gracefully return empty list on KeyError
+        assert result == []
+    finally:
+        subprocess.run = original_run

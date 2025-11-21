@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from erk.core.github.abc import GitHub
-from erk.core.github.types import PRInfo, PRMergeability, PullRequestInfo
+from erk.core.github.types import PRInfo, PRMergeability, PullRequestInfo, WorkflowRun
 
 
 class NoopGitHub(GitHub):
@@ -95,3 +95,9 @@ class NoopGitHub(GitHub):
         """
         # Return sentinel value - prevents actual PR creation
         return -1
+
+    def list_workflow_runs(
+        self, repo_root: Path, workflow: str, limit: int = 50
+    ) -> list[WorkflowRun]:
+        """Delegate read operation to wrapped implementation."""
+        return self._wrapped.list_workflow_runs(repo_root, workflow, limit)

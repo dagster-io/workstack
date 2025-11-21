@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from erk.core.github.types import PRInfo, PullRequestInfo
+from erk.core.github.types import PRInfo, PullRequestInfo, WorkflowRun
 from tests.fakes.github import FakeGitHub
 from tests.test_utils import sentinel_path
 
@@ -403,3 +403,111 @@ def test_fake_github_ops_merged_prs_read_only() -> None:
     merges = ops.merged_prs
     assert len(merges) == 1
     assert merges[0] == 123
+
+
+def test_fake_github_list_workflow_runs_empty() -> None:
+    """Test list_workflow_runs returns empty list when no runs configured."""
+    ops = FakeGitHub()
+
+    result = ops.list_workflow_runs(sentinel_path(), "implement-plan.yml")
+
+    assert result == []
+
+
+def test_fake_github_list_workflow_runs_configured() -> None:
+    """Test list_workflow_runs returns pre-configured runs."""
+    workflow_runs = [
+        WorkflowRun(
+            run_id="123",
+            status="completed",
+            conclusion="success",
+            branch="feat-1",
+            head_sha="abc123",
+        ),
+        WorkflowRun(
+            run_id="456",
+            status="completed",
+            conclusion="failure",
+            branch="feat-2",
+            head_sha="def456",
+        ),
+    ]
+    ops = FakeGitHub(workflow_runs=workflow_runs)
+
+    result = ops.list_workflow_runs(sentinel_path(), "implement-plan.yml")
+
+    assert len(result) == 2
+    assert result[0].run_id == "123"
+    assert result[0].status == "completed"
+    assert result[0].conclusion == "success"
+    assert result[0].branch == "feat-1"
+    assert result[1].run_id == "456"
+    assert result[1].conclusion == "failure"
+
+
+def test_fake_github_list_workflow_runs_ignores_workflow_param() -> None:
+    """Test list_workflow_runs returns all configured runs regardless of workflow."""
+    workflow_runs = [
+        WorkflowRun(
+            run_id="123",
+            status="completed",
+            conclusion="success",
+            branch="feat-1",
+            head_sha="abc123",
+        ),
+    ]
+    ops = FakeGitHub(workflow_runs=workflow_runs)
+
+    # Should return same data regardless of workflow parameter
+    result1 = ops.list_workflow_runs(sentinel_path(), "implement-plan.yml")
+    result2 = ops.list_workflow_runs(sentinel_path(), "other-workflow.yml")
+
+    assert result1 == result2
+    assert len(result1) == 1
+
+
+def test_fake_github_list_workflow_runs_ignores_limit_param() -> None:
+    """Test list_workflow_runs returns all configured runs regardless of limit."""
+    workflow_runs = [
+        WorkflowRun(
+            run_id=str(i),
+            status="completed",
+            conclusion="success",
+            branch=f"feat-{i}",
+            head_sha=f"sha{i}",
+        )
+        for i in range(10)
+    ]
+    ops = FakeGitHub(workflow_runs=workflow_runs)
+
+    # Should return all runs regardless of limit parameter
+    result = ops.list_workflow_runs(sentinel_path(), "implement-plan.yml", limit=5)
+
+    assert len(result) == 10  # All runs returned, limit ignored
+
+
+def test_fake_github_list_workflow_runs_with_in_progress() -> None:
+    """Test list_workflow_runs handles runs with None conclusion (in progress)."""
+    workflow_runs = [
+        WorkflowRun(
+            run_id="123",
+            status="in_progress",
+            conclusion=None,  # No conclusion yet
+            branch="feat-1",
+            head_sha="abc123",
+        ),
+        WorkflowRun(
+            run_id="456",
+            status="queued",
+            conclusion=None,
+            branch="feat-2",
+            head_sha="def456",
+        ),
+    ]
+    ops = FakeGitHub(workflow_runs=workflow_runs)
+
+    result = ops.list_workflow_runs(sentinel_path(), "implement-plan.yml")
+
+    assert len(result) == 2
+    assert result[0].conclusion is None
+    assert result[1].conclusion is None

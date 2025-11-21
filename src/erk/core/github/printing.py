@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from erk.core.github.abc import GitHub
-from erk.core.github.types import PRInfo, PRMergeability, PullRequestInfo
+from erk.core.github.types import PRInfo, PRMergeability, PullRequestInfo, WorkflowRun
 from erk.core.printing_base import PrintingBase
 
 
@@ -49,6 +49,12 @@ class PrintingGitHub(PrintingBase, GitHub):
     ) -> dict[str, PullRequestInfo]:
         """Enrich PRs with CI status and mergeability (read-only, no printing)."""
         return self._wrapped.enrich_prs_with_ci_status_batch(prs, repo_root)
+
+    def list_workflow_runs(
+        self, repo_root: Path, workflow: str, limit: int = 50
+    ) -> list[WorkflowRun]:
+        """List workflow runs (read-only, no printing)."""
+        return self._wrapped.list_workflow_runs(repo_root, workflow, limit)
 
     # Operations that need printing
 

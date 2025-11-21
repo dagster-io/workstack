@@ -18,7 +18,7 @@ from erk.status.models.status_data import PlanStatus
 def detect_enriched_plan(repo_root: Path) -> tuple[Path | None, str | None]:
     """Detect enriched plan file at repository root.
 
-    Scans for *-plan.md files and checks for enriched_by_persist_plan marker.
+    Scans for *-plan.md files and checks for erk_plan marker.
 
     Args:
         repo_root: Repository root path
@@ -44,7 +44,7 @@ def detect_enriched_plan(repo_root: Path) -> tuple[Path | None, str | None]:
         post = frontmatter.load(str(plan_file))
 
         # Check for enrichment marker (handles missing frontmatter gracefully)
-        if post.get("enriched_by_persist_plan") is True:
+        if post.get("erk_plan") is True:
             return plan_file, plan_file.name
 
     return None, None

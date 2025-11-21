@@ -277,7 +277,7 @@ Read the plan objectives and scope, then create a descriptive filename:
 Structure the document with these suggested sections (adapt based on content):
 
 1. **Title and Frontmatter**
-   - Include `enriched_by_create_enhanced_plan: true` in YAML frontmatter
+   - Include `erk_plan: true` in YAML frontmatter
    - Add session_id from discoveries
    - Include generation timestamp
 

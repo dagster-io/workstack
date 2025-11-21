@@ -101,16 +101,36 @@ def submit_cmd(ctx: ErkContext, dry_run: bool) -> None:
             "Ensure remote 'origin' exists: git remote -v",
             "Check repository permissions",
         ],
+        show_output=True,
     )
+
+    # Verify branch exists on remote
+    user_output("Verifying branch on remote...")
+    if not ctx.git.branch_exists_on_remote(repo.root, "origin", current_branch):
+        user_output(
+            click.style("Error: ", fg="red")
+            + "Branch push reported success but branch not found on remote.\n\n"
+            "This may indicate a git configuration issue or network problem.\n"
+            "Try pushing manually: "
+            + click.style(f"git push -u origin {current_branch}", fg="yellow")
+        )
+        raise SystemExit(1)
 
     # Trigger workflow
     workflow = "implement-plan.yml"
     user_output(f"Triggering workflow: {click.style(workflow, fg='cyan')}")
-    ctx.github.trigger_workflow(
-        repo.root,
-        workflow,
-        {"branch-name": current_branch},
-    )
+    try:
+        ctx.github.trigger_workflow(
+            repo.root,
+            workflow,
+            {"branch-name": current_branch},
+            ref=current_branch,
+        )
+    except RuntimeError as e:
+        user_output(
+            click.style("Error: ", fg="red") + f"Failed to trigger workflow.\n\n{e}"
+        )
+        raise SystemExit(1)
 
     user_output("")
     user_output(click.style("✓", fg="green") + " Submission complete!")

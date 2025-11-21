@@ -70,6 +70,7 @@ class NoopGitHub(GitHub):
         repo_root: Path,
         workflow: str,
         inputs: dict[str, str],
+        ref: str | None = None,
     ) -> None:
         """No-op for triggering workflow in dry-run mode."""
         # Do nothing - prevents actual workflow trigger

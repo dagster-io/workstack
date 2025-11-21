@@ -75,8 +75,10 @@ class PrintingGitHub(PrintingBase, GitHub):
         repo_root: Path,
         workflow: str,
         inputs: dict[str, str],
+        ref: str | None = None,
     ) -> None:
         """Trigger workflow with printed output."""
+        ref_arg = f"--ref {ref} " if ref else ""
         input_args = " ".join(f"-f {key}={value}" for key, value in inputs.items())
-        self._emit(self._format_command(f"gh workflow run {workflow} {input_args}"))
-        self._wrapped.trigger_workflow(repo_root, workflow, inputs)
+        self._emit(self._format_command(f"gh workflow run {workflow} {ref_arg}{input_args}"))
+        self._wrapped.trigger_workflow(repo_root, workflow, inputs, ref=ref)

@@ -152,6 +152,11 @@ class PrintingGit(PrintingBase, Git):
         self._emit(self._format_command(f"git pull{ff_flag} {remote} {branch}"))
         self._wrapped.pull_branch(repo_root, remote, branch, ff_only=ff_only)
 
+    def branch_exists_on_remote(self, repo_root: Path, remote: str, branch: str) -> bool:
+        """Check if branch exists on remote (delegates to wrapped implementation)."""
+        # Read-only operation, no output needed
+        return self._wrapped.branch_exists_on_remote(repo_root, remote, branch)
+
     def prune_worktrees(self, repo_root: Path) -> None:
         """Prune worktrees (delegates without printing for now)."""
         # Not used in land-stack

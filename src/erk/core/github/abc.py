@@ -121,6 +121,7 @@ class GitHub(ABC):
         repo_root: Path,
         workflow: str,
         inputs: dict[str, str],
+        ref: str | None = None,
     ) -> None:
         """Trigger a GitHub Actions workflow via gh CLI.
 
@@ -128,5 +129,6 @@ class GitHub(ABC):
             repo_root: Repository root directory
             workflow: Workflow filename (e.g., "implement-plan.yml")
             inputs: Workflow inputs as key-value pairs
+            ref: Branch or tag to run workflow from (default: repository default branch)
         """
         ...

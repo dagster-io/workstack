@@ -384,16 +384,28 @@ query {{
         repo_root: Path,
         workflow: str,
         inputs: dict[str, str],
+        ref: str | None = None,
     ) -> None:
-        """Trigger GitHub Actions workflow via gh CLI."""
+        """Trigger GitHub Actions workflow via gh CLI.
+
+        Args:
+            repo_root: Repository root path
+            workflow: Workflow file name (e.g., "implement-plan.yml")
+            inputs: Workflow inputs as key-value pairs
+            ref: Branch or tag to run workflow from (default: repository default branch)
+        """
         cmd = ["gh", "workflow", "run", workflow]
+
+        # Add --ref flag if specified
+        if ref:
+            cmd.extend(["--ref", ref])
+
+        # Add workflow inputs
         for key, value in inputs.items():
             cmd.extend(["-f", f"{key}={value}"])
 
-        subprocess.run(
+        run_subprocess_with_context(
             cmd,
+            operation_context=f"trigger workflow '{workflow}'",
             cwd=repo_root,
-            capture_output=True,
-            text=True,
-            check=True,
         )

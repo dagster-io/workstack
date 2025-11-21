@@ -194,3 +194,8 @@ class NoopGit(Git):
         """No-op for pulling branch in dry-run mode."""
         # Do nothing - prevents actual pull execution
         pass
+
+    def branch_exists_on_remote(self, repo_root: Path, remote: str, branch: str) -> bool:
+        """No-op check - always returns True in dry-run mode."""
+        # Return True to allow dry-run to continue
+        return True

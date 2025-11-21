@@ -27,4 +27,4 @@ Now .submission/ (git-tracked) is copied to .plan/ (local) before implementation
 
 This file will be auto-deleted after successful workflow execution.
 
-Updated: 2025-11-21 05:45 - Fixed .submission/.plan/ workflow issue
+Updated: 2025-11-21 05:47 - Fixed .submission/.plan/ workflow issue + added write permissions

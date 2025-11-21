@@ -11,7 +11,7 @@ The workflow should now:
 - Successfully execute /erk:implement-plan
 - Delete .submission/ folder
 - Use /gt:submit-branch to create/update PR with high-quality commit message
-- Moar dirty the files
+- Moar morar dirty the files
 
 This file can be deleted after verification.
 

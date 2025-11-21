@@ -100,7 +100,11 @@ def _find_project_dir(cwd: Path) -> Path | None:
     """Locate Claude Code project directory by matching cwd.
 
     Project directories are stored in ~/.claude/projects/ with escaped paths.
-    Example: /Users/foo/bar → -Users-foo-bar
+    Claude Code escapes paths with special rules:
+    - Slashes become hyphens: /Users/foo → -Users-foo
+    - Dot-prefixed directories get double hyphen: /.erk/ → --erk-
+
+    Example: /Users/schrockn/.erk/repos → -Users-schrockn--erk-repos
 
     Args:
         cwd: Current working directory to match
@@ -112,8 +116,13 @@ def _find_project_dir(cwd: Path) -> Path | None:
     if not projects_dir.exists():
         return None
 
-    # Convert cwd to escaped format
-    escaped_cwd = str(cwd).replace("/", "-")
+    # Convert cwd to Claude Code's escaped format
+    # Replace slashes with hyphens, handling dot-prefixed directories
+    path_str = str(cwd)
+    # Replace /. with -- (dot-prefixed directories)
+    path_str = path_str.replace("/.", "--")
+    # Replace remaining slashes with single hyphens
+    escaped_cwd = path_str.replace("/", "-")
 
     # Search for matching project directory
     for project_dir in projects_dir.iterdir():

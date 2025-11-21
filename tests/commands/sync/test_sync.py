@@ -9,59 +9,37 @@ from erk.cli.cli import cli
 from erk.cli.commands.shell_integration import hidden_shell_cmd
 from erk.cli.commands.sync import sync_cmd
 from erk.cli.shell_utils import render_cd_script
-from erk.core.config_store import GlobalConfig
-from erk.core.context import ErkContext
 from erk.core.git.abc import WorktreeInfo
 from tests.fakes.git import FakeGit
 from tests.fakes.github import FakeGitHub
 from tests.fakes.graphite import FakeGraphite
 from tests.fakes.shell import FakeShell
-from tests.test_utils import sentinel_path
 from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def test_sync_requires_graphite() -> None:
     """Test that sync command requires Graphite to be enabled."""
     runner = CliRunner()
-    cwd = sentinel_path()
-    erk_root = cwd / "erks"
+    with erk_inmem_env(runner) as env:
+        git_ops = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
+                ],
+            },
+        )
 
-    # Create minimal git repo structure
-    repo_root = cwd
+        # use_graphite=False: Test that graphite is required
+        test_ctx = env.build_context(
+            git=git_ops,
+            use_graphite=False,
+        )
 
-    git_ops = FakeGit(
-        git_common_dirs={cwd: cwd / ".git"},
-        worktrees={
-            repo_root: [
-                WorktreeInfo(path=repo_root, branch="main"),
-            ],
-        },
-    )
+        result = runner.invoke(cli, ["sync"], obj=test_ctx)
 
-    # use_graphite=False: Test that graphite is required
-    global_config_ops = GlobalConfig(
-        erk_root=erk_root,
-        use_graphite=False,
-        shell_setup_complete=False,
-        show_pr_info=True,
-    )
-
-    graphite_ops = FakeGraphite()
-
-    test_ctx = ErkContext.for_test(
-        git=git_ops,
-        global_config=global_config_ops,
-        graphite=graphite_ops,
-        github=FakeGitHub(),
-        shell=FakeShell(),
-        cwd=cwd,
-        dry_run=False,
-    )
-
-    result = runner.invoke(cli, ["sync"], obj=test_ctx)
-
-    assert result.exit_code == 1
-    assert "requires Graphite" in result.output
+        assert result.exit_code == 1
+        assert "requires Graphite" in result.output
 
 
 def test_sync_runs_gt_sync_from_root() -> None:
@@ -76,14 +54,9 @@ def test_sync_runs_gt_sync_from_root() -> None:
         graphite_ops = FakeGraphite()
 
         test_ctx = env.build_context(
-            use_graphite=True,
             git=git_ops,
             graphite=graphite_ops,
-            github=FakeGitHub(),
-            shell=FakeShell(),
-            script_writer=env.script_writer,
-            cwd=env.cwd,
-            dry_run=False,
+            use_graphite=True,
         )
 
         result = runner.invoke(cli, ["sync"], obj=test_ctx)

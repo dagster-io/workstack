@@ -313,3 +313,59 @@ def test_explicit_stdout_and_stderr_both_disable_capture_output() -> None:
         assert call_kwargs["stdout"] == subprocess.DEVNULL
         assert call_kwargs["stderr"] == subprocess.PIPE
         assert call_kwargs["capture_output"] is False
+
+
+def test_failure_with_stdout_includes_stdout_in_error() -> None:
+    """Test that subprocess failure with stdout includes stdout in error message."""
+    with patch("erk.core.subprocess.subprocess.run") as mock_run:
+        # Setup failed execution with stdout
+        error = subprocess.CalledProcessError(
+            returncode=1,
+            cmd=["gt", "delete", "branch"],
+        )
+        error.stdout = "ERROR: Could not find branch 'branch'"
+        mock_run.side_effect = error
+
+        # Execute and verify exception
+        with pytest.raises(RuntimeError) as exc_info:
+            run_subprocess_with_context(
+                ["gt", "delete", "branch"],
+                operation_context="delete branch 'branch' with Graphite",
+                cwd=Path("/repo"),
+            )
+
+        # Verify error message contains all expected parts including stdout
+        error_message = str(exc_info.value)
+        assert "Failed to delete branch 'branch' with Graphite" in error_message
+        assert "Command: gt delete branch" in error_message
+        assert "Exit code: 1" in error_message
+        assert "stdout: ERROR: Could not find branch 'branch'" in error_message
+
+
+def test_failure_with_both_stdout_and_stderr_includes_both() -> None:
+    """Test that subprocess failure with both outputs includes both in error."""
+    with patch("erk.core.subprocess.subprocess.run") as mock_run:
+        # Setup failed execution with both stdout and stderr
+        error = subprocess.CalledProcessError(
+            returncode=1,
+            cmd=["command", "arg"],
+        )
+        error.stdout = "Output message"
+        error.stderr = "Error message"
+        mock_run.side_effect = error
+
+        # Execute and verify exception
+        with pytest.raises(RuntimeError) as exc_info:
+            run_subprocess_with_context(
+                ["command", "arg"],
+                operation_context="run command",
+                cwd=Path("/repo"),
+            )
+
+        # Verify error message contains both stdout and stderr
+        error_message = str(exc_info.value)
+        assert "Failed to run command" in error_message
+        assert "Command: command arg" in error_message
+        assert "Exit code: 1" in error_message
+        assert "stdout: Output message" in error_message
+        assert "stderr: Error message" in error_message

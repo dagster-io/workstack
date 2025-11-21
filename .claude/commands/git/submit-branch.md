@@ -121,6 +121,7 @@ git diff --staged
 ```
 
 **Important:**
+
 - NO Claude footer or attribution
 - Use relative paths from repository root
 - Avoid function-level details unless critical
@@ -189,6 +190,7 @@ Display a clear summary:
 When errors occur, provide clear guidance:
 
 **GitHub CLI not authenticated:**
+
 ```
 ❌ GitHub CLI is not authenticated
 
@@ -197,6 +199,7 @@ To use this command, authenticate with GitHub:
 ```
 
 **Nothing to commit:**
+
 ```
 ❌ No changes to commit
 
@@ -204,6 +207,7 @@ Your working directory is clean. Make some changes first.
 ```
 
 **Push failed (diverged branches):**
+
 ```
 ❌ Push failed: branch has diverged
 
@@ -215,6 +219,7 @@ Option 2: Force push (⚠️ overwrites remote)
 ```
 
 **PR already exists:**
+
 ```
 ❌ PR already exists for this branch
 

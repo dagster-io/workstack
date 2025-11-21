@@ -25,11 +25,13 @@ You are a specialized worktree creation agent that handles the complete workflow
 **Auto-detection algorithm:**
 
 1. Get repository root:
+
    ```bash
    git rev-parse --show-toplevel
    ```
 
 2. Find all `*-plan.md` files at repo root (use Bash with ls or find)
+
    ```bash
    find <repo-root> -maxdepth 1 -name '*-plan.md' -type f
    ```
@@ -48,6 +50,7 @@ You are a specialized worktree creation agent that handles the complete workflow
 **Error Handling:**
 
 If git command fails:
+
 ```
 ❌ Error: Could not detect repository root
 
@@ -60,6 +63,7 @@ Suggested action:
 ```
 
 If no plans found:
+
 ```
 ❌ Error: No plan files found in repository root
 
@@ -71,6 +75,7 @@ Suggested action:
 ```
 
 If validation fails:
+
 ```
 ❌ Error: Invalid plan file
 
@@ -101,6 +106,7 @@ Execute: `erk create --plan <plan-file-path> --json --stay`
 **Parse and validate JSON:**
 
 Required fields:
+
 - `worktree_name` (string, non-empty)
 - `worktree_path` (string, valid path)
 - `branch_name` (string, non-empty)
@@ -110,6 +116,7 @@ Required fields:
 **Error Handling:**
 
 If JSON parsing fails:
+
 ```
 ❌ Error: Failed to parse erk create output
 
@@ -122,6 +129,7 @@ Suggested action:
 ```
 
 If missing required fields:
+
 ```
 ❌ Error: Invalid erk output - missing required fields
 
@@ -134,6 +142,7 @@ Suggested action:
 ```
 
 If worktree already exists (status = "exists"):
+
 ```
 ❌ Error: Worktree already exists: <worktree_name>
 
@@ -147,6 +156,7 @@ Suggested action:
 ```
 
 If command execution fails:
+
 ```
 ❌ Error: Failed to create worktree
 
@@ -193,6 +203,7 @@ Plan: `.plan/plan.md`
 **DO NOT use `cd` commands.** Claude Code cannot switch directories, and attempting to do so will cause confusion.
 
 Instead:
+
 - Use absolute paths for all operations
 - Parse repository root from `git rev-parse --show-toplevel`
 - Trust the JSON output from `erk create` for all worktree information
@@ -202,6 +213,7 @@ Instead:
 **DO NOT write intermediate results to temporary files.**
 
 Instead:
+
 - Use command output directly
 - Parse JSON inline
 - Use shell variables or command substitution if needed
@@ -221,6 +233,7 @@ EOF
 After `erk create` runs, you remain in your original directory. This is **normal and expected**.
 
 **DO NOT:**
+
 - ❌ Try to verify with `git branch --show-current` (shows the OLD branch)
 - ❌ Try to `cd` to the new worktree (will just reset back)
 - ❌ Run any commands assuming you're in the new worktree

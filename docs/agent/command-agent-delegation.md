@@ -32,13 +32,13 @@ Use this decision framework to determine if delegation is appropriate:
 
 ### Decision Examples
 
-| Scenario | Delegate? | Rationale |
-|----------|-----------|-----------|
-| Run pytest with specialized output parsing | ✅ Yes | Complex parsing, multiple tools (devrun agent) |
-| Create worktree with validation, JSON parsing, formatted output | ✅ Yes | Multi-step workflow with error handling (planned-wt-creator) |
-| Submit branch: stage, diff analysis, commit, PR creation | ✅ Yes | Complex orchestration with git + GitHub CLI (git-branch-submitter) |
-| Run single git command with no processing | ❌ No | Simple wrapper, no orchestration needed |
-| Display help text or documentation | ❌ No | No workflow, just content display |
+| Scenario                                                        | Delegate? | Rationale                                                          |
+| --------------------------------------------------------------- | --------- | ------------------------------------------------------------------ |
+| Run pytest with specialized output parsing                      | ✅ Yes    | Complex parsing, multiple tools (devrun agent)                     |
+| Create worktree with validation, JSON parsing, formatted output | ✅ Yes    | Multi-step workflow with error handling (planned-wt-creator)       |
+| Submit branch: stage, diff analysis, commit, PR creation        | ✅ Yes    | Complex orchestration with git + GitHub CLI (git-branch-submitter) |
+| Run single git command with no processing                       | ❌ No     | Simple wrapper, no orchestration needed                            |
+| Display help text or documentation                              | ❌ No     | No workflow, just content display                                  |
 
 ## Delegation Patterns
 
@@ -49,12 +49,14 @@ Use this decision framework to determine if delegation is appropriate:
 **Example:** `/fast-ci` and `/all-ci` → `devrun` agent
 
 **Characteristics:**
+
 - Agent runs development tools (pytest, pyright, ruff, etc.)
 - Specialized output parsing per tool
 - Iterative error fixing
 - Cost efficiency with lighter model
 
 **Command structure:**
+
 ```markdown
 ---
 description: Run fast CI checks iteratively (unit tests only)
@@ -65,9 +67,9 @@ description: Run fast CI checks iteratively (unit tests only)
 Delegates to the `devrun` agent to run unit tests and type checking...
 
 Task(
-    subagent_type="devrun",
-    description="Run fast CI checks",
-    prompt="Run pytest tests/unit and pyright"
+subagent_type="devrun",
+description="Run fast CI checks",
+prompt="Run pytest tests/unit and pyright"
 )
 ```
 
@@ -76,10 +78,12 @@ Task(
 **Use case:** Multi-step workflow with complex orchestration and error handling.
 
 **Examples:**
+
 - `/gt:submit-branch` → `gt-branch-submitter` agent
 - `/erk:create-planned-wt` → `planned-wt-creator` agent
 
 **Characteristics:**
+
 - Agent coordinates multiple operations (git, CLI tools, parsing)
 - Rich error messages with context-aware suggestions
 - JSON parsing and validation
@@ -87,6 +91,7 @@ Task(
 - Typically uses haiku model for cost efficiency
 
 **Command structure:**
+
 ```markdown
 ---
 description: Create worktree from existing plan file on disk
@@ -97,9 +102,9 @@ description: Create worktree from existing plan file on disk
 Delegates the complete worktree creation workflow to the `planned-wt-creator` agent...
 
 Task(
-    subagent_type="planned-wt-creator",
-    description="Create worktree from plan",
-    prompt="Execute the complete planned worktree creation workflow"
+subagent_type="planned-wt-creator",
+description="Create worktree from plan",
+prompt="Execute the complete planned worktree creation workflow"
 )
 ```
 
@@ -110,12 +115,14 @@ Task(
 **Example:** `/fast-ci` and `/all-ci` both reference `.claude/docs/ci-iteration.md`
 
 **Characteristics:**
+
 - Shared workflow document in `.claude/docs/`
 - Multiple commands reference via `@` syntax
 - Reduces duplication across commands
 - Agent implements shared workflow
 
 **Shared doc reference:**
+
 ```markdown
 @.claude/docs/ci-iteration.md
 ```
@@ -132,11 +139,11 @@ Example: `.claude/agents/erk/planned-wt-creator.md`
 
 ```yaml
 ---
-name: agent-name               # Used in Task subagent_type
-description: One-line summary  # Shown in kit registry
-model: haiku                   # haiku | sonnet | opus
-color: blue                    # UI color coding
-tools: Read, Bash, Task        # Available tools
+name: agent-name # Used in Task subagent_type
+description: One-line summary # Shown in kit registry
+model: haiku # haiku | sonnet | opus
+color: blue # UI color coding
+tools: Read, Bash, Task # Available tools
 ---
 ```
 
@@ -151,7 +158,7 @@ You are a specialized agent that [purpose]...
 
 1. [Responsibility 1]
 2. [Responsibility 2]
-...
+   ...
 
 ## Complete Workflow
 
@@ -183,7 +190,7 @@ Example: `.claude/commands/erk/create-planned-wt.md`
 
 **Command structure:**
 
-```markdown
+````markdown
 ---
 description: Brief one-line summary
 ---
@@ -197,6 +204,7 @@ description: Brief one-line summary
 ```bash
 /command-name [arguments]
 ```
+````
 
 ## What This Command Does
 
@@ -204,13 +212,13 @@ Delegates to the `agent-name` agent, which handles:
 
 1. [Step 1]
 2. [Step 2]
-...
+   ...
 
 ## Prerequisites
 
 - [Prerequisite 1]
 - [Prerequisite 2]
-...
+  ...
 
 ## Implementation
 
@@ -225,7 +233,8 @@ Task(
 ```
 
 The agent handles all workflow orchestration, error handling, and result reporting.
-```
+
+````
 
 **Target:** <50 lines total for the command file
 
@@ -253,7 +262,7 @@ Update the "Available Agents" section:
 ## Available Agents
 
 - **agent-name**: [Brief description]. Use Task tool with `subagent_type="agent-name"`
-```
+````
 
 ## Agent Specifications
 
@@ -263,15 +272,16 @@ All agents MUST include frontmatter with these fields:
 
 ```yaml
 ---
-name: agent-name           # Unique name, kebab-case
+name: agent-name # Unique name, kebab-case
 description: Brief summary # Shown in registry and UI
-model: haiku               # Model selection
-color: blue                # UI color (blue, green, red, cyan)
-tools: Read, Bash, Task    # Available tools (comma-separated)
+model: haiku # Model selection
+color: blue # UI color (blue, green, red, cyan)
+tools: Read, Bash, Task # Available tools (comma-separated)
 ---
 ```
 
 **Naming convention:**
+
 - Use `kebab-case` (hyphens, not underscores)
 - Pattern: `{product}-{noun}-{verb}` (e.g., `git-branch-submitter`)
 - Alternative: `{noun}-{verb}` (e.g., `planned-wt-creator`)
@@ -293,6 +303,7 @@ Suggested action:
 ```
 
 **Key principles:**
+
 - Brief, scannable error description
 - Specific diagnostic details
 - Actionable suggestions (not vague)
@@ -301,6 +312,7 @@ Suggested action:
 ### Best Practices for Agents
 
 **DO:**
+
 - ✅ Use absolute paths (never `cd`)
 - ✅ Parse command output directly (no temporary files)
 - ✅ Provide rich error context
@@ -309,6 +321,7 @@ Suggested action:
 - ✅ Document scope constraints clearly
 
 **DON'T:**
+
 - ❌ Change directories (`cd` commands)
 - ❌ Write temporary files unnecessarily
 - ❌ Mix orchestration with implementation logic
@@ -326,6 +339,7 @@ Suggested action:
 **Pattern:** Command delegates to specialized tool runner for parsing and error reporting
 
 **Command file (simplified):**
+
 ```markdown
 ---
 description: Run fast CI checks iteratively (unit tests only)
@@ -334,13 +348,14 @@ description: Run fast CI checks iteratively (unit tests only)
 # /fast-ci
 
 Task(
-    subagent_type="devrun",
-    description="Run fast CI checks",
-    prompt="Run pytest tests/unit and pyright iteratively until all pass"
+subagent_type="devrun",
+description="Run fast CI checks",
+prompt="Run pytest tests/unit and pyright iteratively until all pass"
 )
 ```
 
 **Why delegation:**
+
 - Specialized output parsing (pytest, pyright)
 - Iterative error fixing
 - Cost efficient (haiku model)
@@ -354,6 +369,7 @@ Task(
 **Pattern:** Multi-step workflow with validation, tool invocation, JSON parsing, formatted output
 
 **Command file:**
+
 ```markdown
 ---
 description: Create worktree from existing plan file on disk
@@ -369,19 +385,21 @@ Delegates the complete worktree creation workflow to the `planned-wt-creator` ag
 4. Display plan location and next steps
 
 Task(
-    subagent_type="planned-wt-creator",
-    description="Create worktree from plan",
-    prompt="Execute the complete planned worktree creation workflow"
+subagent_type="planned-wt-creator",
+description="Create worktree from plan",
+prompt="Execute the complete planned worktree creation workflow"
 )
 ```
 
 **Agent responsibilities:**
+
 - Plan file detection and validation
 - Execute `erk create --plan` with JSON parsing
 - Rich error handling with helpful suggestions
 - Formatted output with next steps
 
 **Why delegation:**
+
 - Multi-step orchestration (detect → validate → create → report)
 - Complex error handling (5+ error modes with context-specific guidance)
 - JSON parsing and validation
@@ -398,6 +416,7 @@ Task(
 **Pattern:** Complex git workflow with staging, diff analysis, commit generation, PR creation
 
 **Command file:**
+
 ```markdown
 ---
 description: Create git commit and submit branch as PR using git + GitHub CLI
@@ -414,13 +433,14 @@ Delegates to the `git-branch-submitter` agent, which handles:
 5. Create PR with GitHub CLI
 
 Task(
-    subagent_type="git-branch-submitter",
-    description="Submit branch workflow",
-    prompt="Execute the complete submit-branch workflow for the current branch"
+subagent_type="git-branch-submitter",
+description="Submit branch workflow",
+prompt="Execute the complete submit-branch workflow for the current branch"
 )
 ```
 
 **Agent responsibilities:**
+
 - Git status verification
 - Staging uncommitted changes
 - Diff analysis for commit message generation
@@ -429,6 +449,7 @@ Task(
 - PR creation via GitHub CLI
 
 **Why delegation:**
+
 - Complex workflow (6+ sequential steps)
 - Rich diff analysis and commit message generation
 - Multiple external tools (git, gh CLI)
@@ -439,69 +460,90 @@ Task(
 ### ❌ Don't: Run Tools Directly When Agent Exists
 
 **Wrong:**
+
 ```markdown
 # Command that manually runs pytest
+
 Execute: `pytest tests/unit`
 Parse output...
 ```
 
 **Right:**
+
 ```markdown
 # Command that delegates to devrun
+
 Task(
-    subagent_type="devrun",
-    prompt="Run pytest tests/unit"
+subagent_type="devrun",
+prompt="Run pytest tests/unit"
 )
 ```
 
 ### ❌ Don't: Embed Orchestration in Command Files
 
 **Wrong:**
+
 ```markdown
 # Command with 300+ lines of step-by-step instructions
+
 ## Step 1: Detect files
+
 ## Step 2: Validate
+
 ## Step 3: Execute
+
 ...
 ```
 
 **Right:**
+
 ```markdown
 # Command delegates to agent
+
 Task(subagent_type="agent-name", ...)
 ```
 
 ### ❌ Don't: Duplicate Error Handling Across Commands
 
 **Wrong:**
+
 ```markdown
 # Command 1 with inline error handling
+
 If error X: print "Error: ..."
 
 # Command 2 with duplicate inline error handling
+
 If error X: print "Error: ..."
 ```
 
 **Right:**
+
 ```markdown
 # Both commands delegate to same agent
+
 # Agent handles all errors consistently
+
 Task(subagent_type="shared-agent", ...)
 ```
 
 ### ❌ Don't: Mix Delegation and Inline Logic
 
 **Wrong:**
+
 ```markdown
 # Command that partly delegates but also has inline steps
+
 Step 1: Do X inline
 Step 2: Task(subagent_type="agent", ...)
 Step 3: Do Y inline
 ```
 
 **Right:**
+
 ```markdown
 # Command fully delegates
+
 Task(subagent_type="agent", prompt="Complete workflow")
 ```
 
@@ -526,12 +568,14 @@ When you need to find available agents:
 ### For Commands
 
 ✅ **Target metrics:**
+
 - <50 lines total
 - Single Task tool invocation
 - Clear prerequisites section
 - Brief "What This Command Does" with numbered steps
 
 ✅ **Required sections:**
+
 - Usage examples
 - Prerequisites
 - What This Command Does (with delegation statement)
@@ -540,6 +584,7 @@ When you need to find available agents:
 ### For Agents
 
 ✅ **Required structure:**
+
 - Complete frontmatter (name, description, model, color, tools)
 - Philosophy statement
 - Core responsibilities list
@@ -549,11 +594,13 @@ When you need to find available agents:
 - Quality standards checklist
 
 ✅ **Error handling:**
+
 - Consistent error template
 - Specific diagnostic details
 - Actionable suggestions
 
 ✅ **Scope constraints:**
+
 - Clear list of agent responsibilities
 - Clear list of forbidden actions
 

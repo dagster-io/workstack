@@ -1,25 +1,25 @@
 ---
-description: Create git commit and submit branch as PR using git + GitHub CLI
+description: Create git commit and push branch as PR using git + GitHub CLI
 argument-hint: <description>
 ---
 
-# Submit Branch (Git Only)
+# Push PR (Git Only)
 
-Automatically create a git commit with a helpful summary message and submit the current branch as a pull request using standard git + GitHub CLI (no Graphite required).
+Automatically create a git commit with a helpful summary message and push the current branch as a pull request using standard git + GitHub CLI (no Graphite required).
 
 ## Usage
 
 ```bash
 # Invoke the command (description argument is optional but recommended)
-/git:submit-branch "Add user authentication feature"
+/git:push-pr "Add user authentication feature"
 
 # Without argument (will analyze changes automatically)
-/git:submit-branch
+/git:push-pr
 ```
 
 ## What This Command Does
 
-Delegates the complete git-only submit-branch workflow to the `git-branch-submitter` agent, which handles:
+Delegates the complete git-only push-pr workflow to the `git-branch-submitter` agent, which handles:
 
 1. Check for uncommitted changes and stage/commit them if needed
 2. Analyze git diff to generate meaningful commit message
@@ -45,7 +45,7 @@ Delegates the complete git-only submit-branch workflow to the `git-branch-submit
 
 ## Implementation
 
-Execute the git-only submit-branch workflow with the following steps:
+Execute the git-only push-pr workflow with the following steps:
 
 ### Step 1: Verify Prerequisites
 

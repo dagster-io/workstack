@@ -41,7 +41,6 @@
 | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | Writing or editing Python code                                   | → **🔴 LOAD dignified-python skill FIRST** - Complete LBYL philosophy (checklist rules are excerpts) |
 | `try:` or `except:`                                              | → [Exception Handling](#exception-handling) - Default: let exceptions bubble                         |
-| `from __future__ import annotations`                             | → **FORBIDDEN** - Python 3.13+ doesn't need it                                                       |
 | `List[...]`, `Dict[...]`, `Union[...]`                           | → Use `list[...]`, `dict[...]`, `X \| Y`                                                             |
 | `typing.Protocol`                                                | → Use `abc.ABC` instead                                                                              |
 | `dict[key]` without checking                                     | → Use `if key in dict:` or `.get()`                                                                  |
@@ -143,12 +142,14 @@ else:
 
 ### 2. Type Annotations 🔴 MUST
 
-**Use Python 3.13+ syntax. NO `from __future__ import annotations`**
+**Use modern Python type syntax (available in Python 3.10+)**
 
 ```python
 # ✅ CORRECT: list[str], dict[str, Any], str | None
 # ❌ WRONG: List[str], Dict[str, Any], Optional[str]
 ```
+
+**Note:** `from __future__ import annotations` usage is version-specific. Consult the dignified-python skill for your Python version.
 
 ### 3. Path Operations 🔴 MUST
 
@@ -238,15 +239,22 @@ The checklist above contains quick-reference excerpts of Python rules. **This is
 - Anti-patterns and code smells from production systems (Dagster Labs)
 - Progressive disclosure with detailed references
 - Unified philosophy connecting all the rules
+- Version-appropriate type annotation guidance
+
+**Selecting the right skill version:**
+
+The dignified-python skill is available for Python 3.10, 3.11, 3.12, and 3.13. Each version provides guidance specific to that Python version:
+
+- **Python 3.10**: Modern type syntax with `from __future__ import annotations` when needed
+- **Python 3.11**: Adds `Self` type for method chaining
+- **Python 3.12**: Adds PEP 695 type parameter syntax (`def func[T](x: T) -> T`)
+- **Python 3.13**: All modern syntax without `from __future__ import`
+
+To load the skill:
 
 ```python
-# ❌ WRONG: Following checklist rules without loading skill
-# You implement code based only on checklist excerpts
-# Missing: WHY behind rules, anti-patterns, unified philosophy
-
-# ✅ CORRECT: Load skill first
 # Use Skill tool with command: "dignified-python"
-# Then implement code with complete understanding
+# The skill will match the installed kit version for this project
 ```
 
 **WHY this matters:**
@@ -255,6 +263,7 @@ The checklist above contains quick-reference excerpts of Python rules. **This is
 - The checklist shows WHAT to do, the skill explains WHY
 - Anti-patterns and code smells prevent specific production bugs
 - Progressive disclosure provides references when you need deeper guidance
+- Version-specific guidance ensures you use appropriate syntax
 
 **Note**: The rules in this document are NOT sufficient on their own. Always load the skill.
 
@@ -402,7 +411,7 @@ Given stack: `main → feat-1 → feat-2 → feat-3`
 
 ### Python Requirements
 
-- **Version**: Python 3.13+ only
+- **Version**: Python 3.10 or higher
 - **Type checking**: `uv run pyright` (must pass)
 - **Formatting**: `uv run ruff format` (100 char lines)
 

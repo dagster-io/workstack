@@ -1,0 +1,4 @@
+- **Always** check `.exists()` before path operations
+- **Always** use absolute imports at module level
+- **Always** use `click.echo()` in CLI code, not `print()`
+- **Always** add `check=True` to `subprocess.run()`

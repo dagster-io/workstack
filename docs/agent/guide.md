@@ -15,7 +15,7 @@ The documentation is organized by audience and purpose:
 
 - [glossary.md](glossary.md) - Project terminology and definitions
 - [testing.md](testing.md) - Testing architecture with fakes and ops patterns
-- [command-agent-delegation.md](command-agent-delegation.md) - Patterns for delegating workflows to agents
+- [command-agent-delegation.md](command-agent-delegation.md) - Command-agent delegation pattern for workflow orchestration
 
 ### For Humans
 

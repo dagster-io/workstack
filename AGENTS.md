@@ -64,20 +64,20 @@
 | Test that invokes subprocess or uses `time.sleep()`              | → **MUST** be integration test - [Test Categorization](#test-categorization-rules)                   |
 | Creating or modifying hooks                                      | → [Hook Guide](docs/agent/hooks.md)                                                                  |
 | Kit CLI commands that call Claude (preprocessing, discovery)     | → [Kit CLI Standards](docs/agent/kit-cli-commands.md) - Python reduces tokens, LLM does inference    |
-| Command with complex workflow orchestration (3+ steps)           | → [Command-Agent Delegation](docs/agent/command-agent-delegation.md) - When/how to delegate          |
+| Creating command that orchestrates workflow                      | → [Command-Agent Delegation](docs/agent/command-agent-delegation.md) - When/how to delegate          |
 | ⚠️ Python patterns above                                         | → These are EXCERPTS ONLY - Load dignified-python skill for complete guidance                        |
 
 ## 📚 Quick Reference
 
-| Need help with...          | See documentation                                                                |
-| -------------------------- | -------------------------------------------------------------------------------- |
-| **Python standards**       | **🔴 LOAD dignified-python skill FIRST** - Checklist rules are excerpts only     |
-| **Project terms**          | [docs/agent/glossary.md](docs/agent/glossary.md)                                 |
-| **Documentation nav**      | [docs/agent/guide.md](docs/agent/guide.md)                                       |
-| **Testing patterns**       | [docs/agent/testing.md](docs/agent/testing.md)                                   |
-| **Hooks**                  | [docs/agent/hooks.md](docs/agent/hooks.md)                                       |
-| **Kit CLI commands**       | [docs/agent/kit-cli-commands.md](docs/agent/kit-cli-commands.md)                 |
-| **Command-agent patterns** | [docs/agent/command-agent-delegation.md](docs/agent/command-agent-delegation.md) |
+| Need help with...            | See documentation                                                                |
+| ---------------------------- | -------------------------------------------------------------------------------- |
+| **Python standards**         | **🔴 LOAD dignified-python skill FIRST** - Checklist rules are excerpts only     |
+| **Project terms**            | [docs/agent/glossary.md](docs/agent/glossary.md)                                 |
+| **Documentation nav**        | [docs/agent/guide.md](docs/agent/guide.md)                                       |
+| **Testing patterns**         | [docs/agent/testing.md](docs/agent/testing.md)                                   |
+| **Hooks**                    | [docs/agent/hooks.md](docs/agent/hooks.md)                                       |
+| **Kit CLI commands**         | [docs/agent/kit-cli-commands.md](docs/agent/kit-cli-commands.md)                 |
+| **Command-agent delegation** | [docs/agent/command-agent-delegation.md](docs/agent/command-agent-delegation.md) |
 
 ## Documentation Structure
 

@@ -101,3 +101,7 @@ class NoopGitHub(GitHub):
     ) -> list[WorkflowRun]:
         """Delegate read operation to wrapped implementation."""
         return self._wrapped.list_workflow_runs(repo_root, workflow, limit)
+
+    def get_run_logs(self, repo_root: Path, run_id: str) -> str:
+        """Delegate read operation to wrapped implementation."""
+        return self._wrapped.get_run_logs(repo_root, run_id)

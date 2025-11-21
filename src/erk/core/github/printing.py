@@ -56,6 +56,10 @@ class PrintingGitHub(PrintingBase, GitHub):
         """List workflow runs (read-only, no printing)."""
         return self._wrapped.list_workflow_runs(repo_root, workflow, limit)
 
+    def get_run_logs(self, repo_root: Path, run_id: str) -> str:
+        """Get run logs (read-only, no printing)."""
+        return self._wrapped.get_run_logs(repo_root, run_id)
+
     # Operations that need printing
 
     def update_pr_base_branch(self, repo_root: Path, pr_number: int, new_base: str) -> None:

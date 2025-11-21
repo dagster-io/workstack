@@ -2,7 +2,7 @@
 """
 Session ID Injector Hook
 
-Injects the current session ID into conversation context for /erk:create-enhanced-plan.
+Injects the current session ID into conversation context for /erk:enhance-and-save-plan.
 This command is invoked via dot-agent run erk session-id-injector-hook.
 """
 

@@ -61,8 +61,7 @@ def test_submit_dry_run_shows_operations(tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert "Would copy .plan/ to .submission/" in result.output
     assert "Would commit and push .submission/" in result.output
-    assert "Would trigger GitHub Actions workflow" in result.output
-    assert len(fake_github.triggered_workflows) == 0
+    # No longer triggers workflow manually - it auto-triggers on push
 
 
 def test_submit_errors_with_existing_submission(tmp_path: Path) -> None:

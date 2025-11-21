@@ -62,7 +62,10 @@ def submit_cmd(ctx: ErkContext, dry_run: bool) -> None:
         dry_run_msg = click.style("(dry run)", fg="bright_black")
         user_output(f"{dry_run_msg} Would copy .plan/ to .submission/")
         user_output(f"{dry_run_msg} Would commit and push .submission/")
-        user_output(f"{dry_run_msg} Would trigger GitHub Actions workflow")
+        user_output(
+            f"{dry_run_msg} GitHub Actions will auto-trigger on push "
+            "(workflow detects .submission/**)"
+        )
         return
 
     # Copy .plan/ to .submission/
@@ -116,28 +119,14 @@ def submit_cmd(ctx: ErkContext, dry_run: bool) -> None:
         )
         raise SystemExit(1)
 
-    # Trigger workflow
-    workflow = "implement-plan.yml"
-    user_output(f"Triggering workflow: {click.style(workflow, fg='cyan')}")
-    try:
-        run_id = ctx.github.trigger_workflow(
-            repo.root,
-            workflow,
-            {"branch-name": current_branch},
-            ref=current_branch,
-        )
-    except RuntimeError as e:
-        user_output(click.style("Error: ", fg="red") + f"Failed to trigger workflow.\n\n{e}")
-        raise SystemExit(1) from e
-
     user_output("")
     user_output(
         click.style("✓", fg="green")
-        + f" Submission complete! Run ID: {click.style(run_id, fg='cyan')}"
+        + " Submission complete! GitHub Actions will begin implementation automatically."
     )
     user_output("")
-    user_output("View in browser:")
-    user_output(f"  gh run view {run_id} --web")
+    user_output("Monitor workflow runs:")
+    user_output(f"  gh run list --branch {current_branch}")
     user_output("")
-    user_output("Monitor in terminal:")
-    user_output(f"  gh run watch {run_id}")
+    user_output("Watch latest run:")
+    user_output(f"  gh run watch --branch {current_branch}")

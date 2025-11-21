@@ -250,70 +250,11 @@ When extracting discoveries, prioritize:
 - **Insights over data**: What was learned, not just what was seen
 - **Connections**: How discoveries relate to the implementation plan
 
-### Step 4: Structure Discoveries as JSON
+### Step 4: Compose and Save Enhanced Plan
 
-After mining discoveries from the compressed XML in Step 3, structure them as JSON for the assemble phase:
+**Step 4a: Compose Enhanced Plan**
 
-```json
-{
-  "session_id": "<session-id-from-step-1a>",
-  "categories": {
-    "API Discoveries": [
-      "Project directories use escaped paths: /Users/foo → -Users-foo",
-      "Session logs stored in JSONL format"
-    ],
-    "Architecture": [
-      "Two-phase pattern enables clean separation",
-      "JSON output eliminates temp file issues"
-    ]
-  },
-  "failed_attempts": [
-    {
-      "name": "Simple permission add",
-      "reason": "Requires manual config, not automatic"
-    }
-  ],
-  "raw_discoveries": [
-    "Discovered: Kit CLI commands bypass all permissions",
-    "Found: Two-phase pattern in submit_branch.py",
-    "Learned: 85.8% token reduction with preprocessing"
-  ]
-}
-```
-
-### Step 5: Compose and Save Enhanced Plan
-
-**Step 5a: Get Inputs from Assemble Phase**
-
-Use the kit CLI command to retrieve plan and discoveries:
-
-```bash
-# Create temp files for plan and discoveries
-echo "$PLAN_CONTENT" > /tmp/plan-temp.md
-echo "$DISCOVERIES_JSON" > /tmp/discoveries-temp.json
-
-# Run assemble phase to get inputs
-dot-agent run erk create-enhanced-plan assemble /tmp/plan-temp.md /tmp/discoveries-temp.json
-```
-
-This outputs JSON with the inputs you need for composition:
-
-```json
-{
-  "success": true,
-  "plan_content": "## Implementation Plan\n...",
-  "discoveries": {
-    "session_id": "abc-123",
-    "categories": {...},
-    "failed_attempts": [...],
-    "raw_discoveries": [...]
-  }
-}
-```
-
-**Step 5b: Compose Enhanced Plan**
-
-Now use your semantic understanding to compose an enhanced plan that integrates the implementation plan with session discoveries.
+Use your semantic understanding from Step 3 to compose an enhanced plan. You already have the discoveries organized by category from Step 3 - directly integrate the plan (Step 2) with discoveries (Step 3).
 
 **Generate Appropriate Filename:**
 
@@ -373,14 +314,14 @@ Structure the document with these suggested sections (adapt based on content):
 - **Emphasize WHY**: Explain reasoning behind decisions
 - **Progressive disclosure**: Summary → Critical info → Details → Raw data
 
-**Step 5c: Write Enhanced Plan to Repository Root**
+**Step 4b: Write Enhanced Plan to Repository Root**
 
 After composing the enhanced plan content and generating the filename, write to repo root:
 
 Use the Write tool to save your composed enhanced plan:
 
 1. Determine the repository root using git
-2. Use the filename you generated in Step 5b
+2. Use the filename you generated in Step 4a
 3. Write the enhanced plan content you composed
 
 Example:
@@ -407,15 +348,15 @@ plan_path = Path(repo_root) / filename
 plan_path.write_text(enhanced_plan_content, encoding="utf-8")
 ```
 
-### Step 6: Output Summary
+### Step 5: Output Summary
 
 After writing the enhanced plan, output a summary based on the discoveries you mined and composed:
 
 Calculate:
 
-- Total discoveries: Count items across all categories in discoveries JSON
-- Number of discovery categories: Count keys in discoveries["categories"]
-- Failed attempts: Count items in discoveries["failed_attempts"]
+- Total discoveries: Count discoveries you identified in Step 3
+- Number of discovery categories: Count categories from Step 3
+- Failed attempts: Count failed attempts you documented
 - Token reduction: From Step 1b stats
 
 Output:
@@ -435,7 +376,7 @@ Next steps:
 3. Switch to worktree and implement
 ```
 
-### Step 7: Handle Errors
+### Step 6: Handle Errors
 
 **Session ID not found:**
 

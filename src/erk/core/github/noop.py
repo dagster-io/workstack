@@ -79,3 +79,19 @@ class NoopGitHub(GitHub):
         """
         # Return fake run ID - prevents actual workflow trigger
         return "noop-run-12345"
+
+    def create_pr(
+        self,
+        repo_root: Path,
+        branch: str,
+        title: str,
+        body: str,
+        base: str | None = None,
+    ) -> int:
+        """No-op for creating PR in dry-run mode.
+
+        Returns:
+            A sentinel value (-1) for dry-run mode
+        """
+        # Return sentinel value - prevents actual PR creation
+        return -1

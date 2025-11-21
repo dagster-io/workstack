@@ -33,11 +33,13 @@ The codebase currently has **two primary delegation patterns**:
 ### Documentation Structure
 
 **Location philosophy** (from `docs/agent/guide.md`):
+
 - `docs/agent/` = Agent-focused reference (patterns, rules, navigation)
 - `docs/writing/` = Human-readable guides
 - Package-specific docs in package READMEs
 
 **Existing pattern docs** in `docs/agent/`:
+
 - `testing.md` - Testing architecture and patterns
 - `hooks.md` - Hooks guide with lifecycle events
 - `kit-cli-commands.md` - Python/LLM boundary patterns
@@ -48,6 +50,7 @@ All follow progressive disclosure: overview → patterns → examples → anti-p
 ### Kit System Architecture
 
 The project uses a **kit registry system** at `.agent/kits/`:
+
 - Each kit has a `registry-entry.md` documenting purpose and artifacts
 - Commands are stored in `.agent/kits/[kit-name]/commands/`
 - Agents are stored in `.agent/kits/[kit-name]/agents/` OR `.claude/agents/`
@@ -58,12 +61,14 @@ The project uses a **kit registry system** at `.agent/kits/`:
 ### Current Command Structure
 
 `/erk:create-planned-wt` currently:
+
 - 338 lines of inline orchestration instructions
 - Detailed step-by-step agent instructions embedded in command
 - Complex error handling templates
 - All logic in command file (no separation of concerns)
 
 Target structure (like `/gt:submit-branch`):
+
 - <50 lines total
 - Frontmatter with description
 - Brief "What This Command Does" section
@@ -77,6 +82,7 @@ Target structure (like `/gt:submit-branch`):
 **File**: `.claude/agents/erk/planned-wt-creator.md`
 
 **Structure**:
+
 ```markdown
 ---
 name: planned-wt-creator
@@ -91,26 +97,33 @@ tools: Read, Bash, Task
 ## Complete Workflow
 
 ### Step 1: Detect and Validate Plan File
+
 [Move detection logic from command]
 
 ### Step 2: Create Worktree with Plan
+
 [Move erk create --plan orchestration from command]
 
 ### Step 3: Display Next Steps
+
 [Move formatted output generation from command]
 
 ## Error Handling
+
 [Move all error formatting from command]
 
 ## Best Practices
+
 - Never change directory (use absolute paths)
 - Never write to temporary files (use heredocs)
 
 ## Quality Standards
+
 [Agent verification checklist]
 ```
 
 **Key migrations**:
+
 - Extract Step 0-3 workflow from command → agent steps
 - Move error handling templates → agent error section
 - Move validation logic → agent
@@ -122,7 +135,8 @@ tools: Read, Bash, Task
 **File**: `.claude/commands/erk/create-planned-wt.md`
 
 **New structure** (following `/gt:submit-branch` pattern):
-```markdown
+
+````markdown
 ---
 description: Create worktree from existing plan file on disk
 ---
@@ -136,6 +150,7 @@ Create a erk worktree from an existing plan file on disk.
 ```bash
 /erk:create-planned-wt
 ```
+````
 
 ## What This Command Does
 
@@ -165,7 +180,8 @@ Task(
 ```
 
 The agent handles all workflow orchestration, error handling, and result reporting.
-```
+
+````
 
 **Line reduction**: 338 lines → ~50 lines (85% reduction)
 
@@ -216,9 +232,10 @@ description: What this agent does
 model: haiku | sonnet | opus
 color: blue | green | red | cyan
 tools: Read, Bash, Task, etc.
-```
+````
 
 ### Model Selection
+
 - haiku: Fast, cost-efficient (CI tools, workflow orchestration)
 - sonnet: Balance (complex analysis)
 - opus: Rare (highly complex reasoning)
@@ -226,12 +243,15 @@ tools: Read, Bash, Task, etc.
 ## Examples from Codebase
 
 ### Example 1: /fast-ci → devrun
+
 [Show delegation pattern]
 
 ### Example 2: /gt:submit-branch → gt-branch-submitter
+
 [Show workflow orchestration]
 
 ### Example 3: /erk:create-planned-wt → planned-wt-creator
+
 [Show new pattern]
 
 ## Anti-Patterns
@@ -249,6 +269,7 @@ tools: Read, Bash, Task, etc.
 ## Agent Discovery
 
 Finding available agents:
+
 1. Check kit registry: `.agent/kits/kit-registry.md`
 2. Browse `.claude/agents/` directory
 3. Check AGENTS.md checklist
@@ -256,17 +277,20 @@ Finding available agents:
 ## Quality Standards
 
 Commands:
+
 - <50 lines total
 - Clear prerequisites section
 - Single Task tool invocation
 - Reference agent for details
 
 Agents:
+
 - Comprehensive error handling
 - Self-contained workflow
 - Clear step-by-step structure
 - Best practices section
-```
+
+````
 
 ### Phase 4: Update Navigation
 
@@ -275,11 +299,12 @@ Agents:
 Add entry in "Available Documentation" section:
 ```markdown
 - [Command-Agent Delegation](command-agent-delegation.md) - Patterns for delegating workflows to agents
-```
+````
 
 **File**: `AGENTS.md`
 
 Add to "BEFORE WRITING CODE" checklist table:
+
 ```markdown
 | Creating command that orchestrates workflow | → [Command-Agent Delegation](docs/agent/command-agent-delegation.md) - When/how to delegate |
 ```
@@ -312,16 +337,19 @@ The exploration used a systematic approach:
 ### Architectural Insights
 
 **Command-Agent Separation of Concerns**:
+
 - **Command**: Entry point, prerequisites, high-level "what"
 - **Agent**: Implementation, orchestration, error handling, "how"
 - **Shared docs**: Workflow details when multiple commands share logic
 
 **Progressive Disclosure Model** (from testing.md):
+
 - Checklist in AGENTS.md → Quick reference
 - Detailed docs in docs/agent/ → Complete patterns
 - Navigation via guide.md → Discoverability
 
 **Kit Registry System Design**:
+
 - Registry entries = "advertisement" of capabilities
 - Commands stored in kit (`.agent/kits/[kit]/commands/`)
 - Agents can be in kit OR `.claude/agents/` (project-specific)
@@ -330,12 +358,14 @@ The exploration used a systematic approach:
 ### Domain Knowledge
 
 **Naming Conventions** (from AGENTS.md checklist):
+
 - Commands: `kebab-case` (e.g., `/erk:create-planned-wt`)
 - Agents: `kebab-case` with pattern `{product}-{noun}-{verb}` (e.g., `gt-branch-submitter`)
   - Alternative patterns: `{noun}-{verb}` (e.g., `worktree-planner`)
   - Must be unique across kit + project agents
 
 **Model Selection Philosophy**:
+
 - Haiku: Cost-efficient for orchestration and tool invocation
   - Used by `gt-branch-submitter` (confirmed in user request)
   - Suitable for `planned-wt-creator` (similar workflow orchestration)
@@ -343,6 +373,7 @@ The exploration used a systematic approach:
 - Opus: Reserved for highly complex reasoning
 
 **Documentation Audience Split**:
+
 - `docs/agent/` → AI assistants (patterns, rules, quick reference)
 - `docs/writing/` → Humans (guides, philosophy, context)
 - Package READMEs → Package-specific implementation details
@@ -350,6 +381,7 @@ The exploration used a systematic approach:
 ### Technical Context
 
 **Task Tool Invocation Pattern**:
+
 ```python
 Task(
     subagent_type="agent-name",  # Must match agent's "name" in frontmatter
@@ -359,21 +391,24 @@ Task(
 ```
 
 **Agent Frontmatter Requirements**:
+
 ```yaml
-name: agent-name           # Used in Task subagent_type
-description: One-line summary  # Shown in kit registry
-model: haiku               # Model selection
-color: blue                # UI color coding
-tools: Read, Bash, Task    # Available tools
+name: agent-name # Used in Task subagent_type
+description: One-line summary # Shown in kit registry
+model: haiku # Model selection
+color: blue # UI color coding
+tools: Read, Bash, Task # Available tools
 ```
 
 **Command Frontmatter**:
+
 ```yaml
-description: One-line summary  # Shown in command list
-argument-hint: <arg>       # Optional, for commands with args
+description: One-line summary # Shown in command list
+argument-hint: <arg> # Optional, for commands with args
 ```
 
 **Reference Pattern** (from ci-iteration.md):
+
 - Commands reference shared docs with `@` syntax
 - Example: `@.claude/docs/ci-iteration.md` in command body
 - Shared docs live in `.claude/docs/` (project-specific workflows)
@@ -381,6 +416,7 @@ argument-hint: <arg>       # Optional, for commands with args
 ### Testing Insights
 
 No explicit test requirements found for commands or agents. Pattern seems to be:
+
 - Commands are thin wrappers (minimal logic to test)
 - Agents are invoked via Task tool (integration-level testing)
 - Kit CLI tools (like `erk create`) have their own tests
@@ -418,6 +454,7 @@ However, the session did reveal **potential pitfalls to avoid**:
 ## Next Steps
 
 After implementation:
+
 1. Review enhanced plan for completeness
 2. Begin Phase 1: Create `planned-wt-creator` agent
 3. Test agent workflow with existing plan files

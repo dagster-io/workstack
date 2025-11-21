@@ -58,9 +58,7 @@ def run_with_error_reporting(
         - Displays stderr/stdout to user before raising SystemExit
         - When show_output=True, output streams directly to terminal
     """
-    result = subprocess.run(
-        cmd, cwd=cwd, check=False, capture_output=not show_output, text=True
-    )
+    result = subprocess.run(cmd, cwd=cwd, check=False, capture_output=not show_output, text=True)
 
     if result.returncode != 0:
         # When show_output=True, output already displayed, only show error context

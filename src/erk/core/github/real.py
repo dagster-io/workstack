@@ -1,7 +1,6 @@
 """Production implementation of GitHub operations."""
 
 import json
-import subprocess
 from dataclasses import replace
 from pathlib import Path
 from typing import Any

@@ -171,6 +171,7 @@ class FakeGitHub(GitHub):
         repo_root: Path,
         workflow: str,
         inputs: dict[str, str],
+        ref: str | None = None,
     ) -> str:
         """Record workflow trigger in mutation tracking list.
 

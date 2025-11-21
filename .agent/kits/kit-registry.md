@@ -4,7 +4,7 @@
 <!-- DO NOT EDIT: Changes will be overwritten. Use 'dot-agent kit sync' -->
 
 <!-- REGISTRY_VERSION: 1 -->
-<!-- GENERATED_AT: 2025-11-20T08:11:50 -->
+<!-- GENERATED_AT: 2025-11-20T21:17:28 -->
 
 <!-- BEGIN_ENTRIES -->
 
@@ -35,6 +35,12 @@
 <!-- ENTRY_START kit_id="gt" version="0.1.0" source="bundled" -->
 
 @.agent/kits/gt/registry-entry.md
+
+<!-- ENTRY_END -->
+
+<!-- ENTRY_START kit_id="libcst" version="0.1.0" source="bundled" -->
+
+@.agent/kits/libcst/registry-entry.md
 
 <!-- ENTRY_END -->
 

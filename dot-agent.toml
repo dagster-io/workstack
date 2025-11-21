@@ -86,3 +86,12 @@ matcher = "*"
 invocation = "dot-agent run erk session-id-injector-hook"
 description = "Injects session ID into context when /erk:create-enhanced-plan is invoked"
 timeout = 30
+
+[kits.libcst]
+kit_id = "libcst"
+source_type = "bundled"
+version = "0.1.0"
+artifacts = [
+    ".claude/agents/libcst/libcst-refactor.md",
+    ".claude/skills/libcst/SKILL.md",
+]

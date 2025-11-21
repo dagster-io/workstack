@@ -49,7 +49,7 @@ def submit_cmd(ctx: ErkContext, dry_run: bool) -> None:
         raise SystemExit(1)
 
     # Get current branch
-    current_branch = ctx.git.get_current_branch(repo.root)
+    current_branch = ctx.git.get_current_branch(ctx.cwd)
     if current_branch is None:
         user_output(click.style("Error: ", fg="red") + "Not on a branch (detached HEAD)")
         raise SystemExit(1)

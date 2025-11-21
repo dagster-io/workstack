@@ -41,8 +41,13 @@ jobs:
           echo "Derived branch name: $BRANCH_NAME"
 
       - name: Create and switch to branch
+        # SECURITY: Use env block for consistency
+        # BRANCH_NAME is derived from sanitized user input (see branch derivation step)
+        # Using env block maintains security best practices throughout workflow
+        env:
+          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
         run: |
-          git checkout -b "${{ steps.branch_name.outputs.branch_name }}"
+          git checkout -b "$BRANCH_NAME"
 
       - name: Setup environment
         run: |

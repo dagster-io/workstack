@@ -6,17 +6,17 @@ description: Create GitHub issue from persisted plan with auto-implementation qu
 
 ## Goal
 
-**Create a GitHub issue from an existing plan file on disk with the `erk-plan-queue` label for automatic implementation.**
+**Create a GitHub issue from an existing plan file on disk with the `erk-queue` label for automatic implementation.**
 
-This command detects plan files at the repository root, selects the most recent one, creates a GitHub issue with the plan content, adds the `erk-plan-queue` label (which triggers automatic implementation), and optionally links it to an existing worktree's `.plan/` folder.
+This command detects plan files at the repository root, selects the most recent one, creates a GitHub issue with the plan content, adds the `erk-queue` label (which triggers automatic implementation), and optionally links it to an existing worktree's `.plan/` folder.
 
 **What this command does:**
 
 - ✅ Auto-detect most recent `*-plan.md` file at repo root
 - ✅ Extract title from plan front matter or first H1 heading
-- ✅ Ensure `erk-plan-queue` label exists (create if needed)
+- ✅ Ensure `erk-queue` label exists (create if needed)
 - ✅ Create GitHub issue with plan body as content
-- ✅ Add label: `erk-plan-queue` (triggers automatic implementation workflow)
+- ✅ Add label: `erk-queue` (triggers automatic implementation workflow)
 - ✅ Save issue reference to `.plan/issue.json` (if worktree exists)
 - ✅ Display issue URL
 
@@ -27,8 +27,8 @@ When you run this command, these steps occur:
 1. **Verify Scope** - Confirm we're in a git repository with gh CLI available
 2. **Detect Plan File** - Find and select most recent `*-plan.md` at repo root
 3. **Parse Plan** - Extract title and body from markdown
-4. **Ensure Label Exists** - Check for `erk-plan-queue` label, create if missing
-5. **Create Issue** - Use gh CLI to create issue with `erk-plan-queue` label
+4. **Ensure Label Exists** - Check for `erk-queue` label, create if missing
+5. **Create Issue** - Use gh CLI to create issue with `erk-queue` label
 6. **Automatic Implementation** - GitHub Actions workflow automatically starts implementation
 7. **Link to Worktree** - If `.plan/` folder exists in current worktree, save issue reference
 8. **Display Result** - Show issue number and URL
@@ -57,7 +57,7 @@ This will save the issue reference without creating a new issue. Use this when:
 ## Key Difference from `/erk:create-planned-issue`
 
 **`/erk:create-planned-issue`**: Creates issue with `erk-plan` label (manual implementation)
-**`/erk:create-queued-plan`**: Creates issue with `erk-plan-queue` label (automatic implementation via GitHub Actions)
+**`/erk:create-queued-plan`**: Creates issue with `erk-queue` label (automatic implementation via GitHub Actions)
 
 Use `/erk:create-queued-plan` when you want the implementation to happen automatically via CI. Use `/erk:create-planned-issue` when you want to manually implement the plan.
 
@@ -79,11 +79,11 @@ This command succeeds when ALL of the following are true:
 ✅ Title extracted from front matter or H1 heading
 
 **Label Pre-flight:**
-✅ `erk-plan-queue` label exists (created if missing)
+✅ `erk-queue` label exists (created if missing)
 
 **Issue Creation:**
 ✅ GitHub issue created with plan content
-✅ Label added: `erk-plan-queue`
+✅ Label added: `erk-queue`
 ✅ Issue URL displayed
 ✅ GitHub Actions workflow triggered automatically
 
@@ -139,12 +139,12 @@ This command succeeds when ALL of the following are true:
 
 ### "Workflow not triggered"
 
-**Cause:** GitHub Actions workflow may not be enabled or `erk-plan-queue` label not recognized
+**Cause:** GitHub Actions workflow may not be enabled or `erk-queue` label not recognized
 **Solution:**
 
 - Verify workflow exists: `.github/workflows/implement-issue-plan.yml`
 - Check workflow runs: `gh run list`
-- Manually trigger if needed: Add `erk-plan-queue` label to issue
+- Manually trigger if needed: Add `erk-queue` label to issue
 
 ## Integration with Workflow
 
@@ -250,18 +250,18 @@ Extract title and body from the selected plan file:
 
 ### Step 5: Ensure Label Exists
 
-Check if the `erk-plan-queue` label exists, and create it if needed:
+Check if the `erk-queue` label exists, and create it if needed:
 
 1. Check for label using gh CLI:
 
    ```bash
-   gh label list --json name --jq '.[] | select(.name == "erk-plan-queue") | .name'
+   gh label list --json name --jq '.[] | select(.name == "erk-queue") | .name'
    ```
 
 2. If label doesn't exist (empty output), create it:
 
    ```bash
-   gh label create "erk-plan-queue" \
+   gh label create "erk-queue" \
      --description "Implementation plan queued for automatic processing by erk" \
      --color "FFA500"
    ```
@@ -273,7 +273,7 @@ Check if the `erk-plan-queue` label exists, and create it if needed:
 4. If label creation fails:
 
    ```
-   ⚠️  Warning: Could not create erk-plan-queue label
+   ⚠️  Warning: Could not create erk-queue label
 
    Command output: <stderr>
 
@@ -292,7 +292,7 @@ Use gh CLI to create the issue:
    gh issue create \
      --title "<extracted-title>" \
      --body-file <path-to-plan-file> \
-     --label "erk-plan-queue" \
+     --label "erk-queue" \
      --repo <owner>/<repo>
    ```
 
@@ -322,7 +322,7 @@ Show success message with issue information:
 
 Issue #<number>: <title>
 URL: <issue-url>
-Label: erk-plan-queue (automatic implementation will begin)
+Label: erk-queue (automatic implementation will begin)
 
 GitHub Actions will automatically:
 - Create branch from issue title
@@ -425,7 +425,7 @@ If user provided `--link <issue-number>`:
 ### Important Notes
 
 - **Automatic implementation**: This command triggers automatic implementation via GitHub Actions
-- **Label difference**: Uses `erk-plan-queue` (auto) vs `erk-plan` (manual)
+- **Label difference**: Uses `erk-queue` (auto) vs `erk-plan` (manual)
 - **Workflow monitoring**: User should monitor GitHub Actions for implementation progress
 - **Graceful degradation**: Creating issue without linking is valid (can link later)
 - **Idempotent linking**: Can run `--link` multiple times safely (overwrites `.plan/issue.json`)

@@ -6,7 +6,7 @@ on:
 
 jobs:
   implement:
-    if: contains(github.event.issue.labels.*.name, 'erk-plan-queue')
+    if: contains(github.event.issue.labels.*.name, 'erk-queue')
     runs-on: ubuntu-latest
     permissions:
       contents: write

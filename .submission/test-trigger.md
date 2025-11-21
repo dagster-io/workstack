@@ -10,4 +10,4 @@ The workflow should now:
 
 This file can be deleted after verification.
 
-Updated: 2025-11-21 - With contents:write permission added
+Updated: 2025-11-21 - With .submission/ deletion before push

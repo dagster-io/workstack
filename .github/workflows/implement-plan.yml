@@ -85,7 +85,9 @@ jobs:
         run: |
           # Check if there are any changes to commit
           if [[ -n $(git status --porcelain) ]]; then
-            echo "Changes detected, pushing to branch..."
+            echo "Changes detected, committing and pushing to branch..."
+            git add .
+            git commit -m "Implement plan changes via AI"
             git push origin ${{ github.ref_name }}
           else
             echo "No changes to push"

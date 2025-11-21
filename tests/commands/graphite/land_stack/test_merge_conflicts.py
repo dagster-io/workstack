@@ -283,6 +283,69 @@ def test_land_stack_succeeds_with_unknown_mergeability() -> None:
         # Should proceed to show landing plan (exit code depends on dry-run success)
 
 
+def test_land_stack_fails_with_conflict_using_master_trunk() -> None:
+    """Test that error messages use correct trunk branch name (master)."""
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        git_ops = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="master"),
+                ],
+            },
+            current_branches={env.cwd: "feat-1"},
+            existing_paths={env.cwd, env.git_dir},
+        )
+
+        global_config_ops = GlobalConfig(
+            erk_root=env.erk_root,
+            use_graphite=True,
+            shell_setup_complete=False,
+            show_pr_info=True,
+        )
+
+        # Stack: master → feat-1
+        graphite_ops = FakeGraphite(
+            branches={
+                "master": BranchMetadata.trunk("master", children=["feat-1"], commit_sha="abc123"),
+                "feat-1": BranchMetadata.branch("feat-1", "master", commit_sha="def456"),
+            },
+            stacks={
+                "feat-1": ["master", "feat-1"],
+            },
+        )
+
+        # feat-1 has CONFLICTING status
+        github_ops = FakeGitHub(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Feature 1"),
+            },
+            pr_mergeability={
+                100: PRMergeability(mergeable="CONFLICTING", merge_state_status="DIRTY"),
+            },
+        )
+
+        test_ctx = ErkContext.for_test(
+            git=git_ops,
+            global_config=global_config_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            shell=FakeShell(),
+            script_writer=env.script_writer,
+            cwd=env.cwd,
+            dry_run=False,
+        )
+
+        result = runner.invoke(cli, ["land-stack", "--force"], obj=test_ctx)
+
+        # Should fail with error messages using "master" not "main"
+        assert result.exit_code == 1
+        assert "Cannot land stack - PRs have merge conflicts" in result.output
+        assert "PR #100 (feat-1): has conflicts with master" in result.output
+        assert "git fetch origin master" in result.output
+
+
 def test_land_stack_succeeds_when_all_prs_mergeable() -> None:
     """Test that land-stack succeeds when all PRs are MERGEABLE."""
     runner = CliRunner()

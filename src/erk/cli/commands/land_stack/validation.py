@@ -223,6 +223,7 @@ def _validate_pr_mergeability(
     ctx: ErkContext,
     repo_root: Path,
     branches: list[BranchPR],
+    trunk_branch: str,
     *,
     script_mode: bool,
 ) -> None:
@@ -258,11 +259,15 @@ def _validate_pr_mergeability(
         )
         for branch, pr_num in conflicts:
             _emit(
-                f"  • PR #{pr_num} ({branch}): has conflicts with main",
+                f"  • PR #{pr_num} ({branch}): has conflicts with {trunk_branch}",
                 script_mode=script_mode,
                 error=True,
             )
         _emit("\nTo fix:", script_mode=script_mode, error=True)
-        _emit("  1. Fetch latest: git fetch origin main", script_mode=script_mode, error=True)
+        _emit(
+            f"  1. Fetch latest: git fetch origin {trunk_branch}",
+            script_mode=script_mode,
+            error=True,
+        )
         _emit("  2. Rebase stack: gt stack rebase", script_mode=script_mode, error=True)
         raise SystemExit(1)

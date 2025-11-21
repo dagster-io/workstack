@@ -521,3 +521,12 @@ query {{
         except (RuntimeError, FileNotFoundError, json.JSONDecodeError, KeyError):
             # gh not installed, not authenticated, or JSON parsing failed
             return []
+
+    def get_run_logs(self, repo_root: Path, run_id: str) -> str:
+        """Get logs for a workflow run using gh CLI."""
+        result = run_subprocess_with_context(
+            ["gh", "run", "view", run_id, "--log"],
+            operation_context=f"fetch logs for run {run_id}",
+            cwd=repo_root,
+        )
+        return result.stdout

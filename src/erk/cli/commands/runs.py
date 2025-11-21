@@ -7,10 +7,19 @@ from erk.cli.output import user_output
 from erk.core.context import ErkContext
 
 
-@click.command("runs")
-@click.pass_obj
-def runs_cmd(ctx: ErkContext) -> None:
-    """Show GitHub Actions workflow runs for plan implementations."""
+@click.group("runs", invoke_without_command=True)
+@click.pass_context
+def runs_cmd(click_ctx: click.Context) -> None:
+    """View GitHub Actions workflow runs for plan implementations."""
+    if click_ctx.invoked_subcommand is None:
+        # Default behavior: show list view
+        _list_runs(click_ctx)
+
+
+def _list_runs(click_ctx: click.Context) -> None:
+    """List workflow runs (default behavior for runs command)."""
+    ctx: ErkContext = click_ctx.obj
+
     # Discover repository context
     repo = discover_repo_context(ctx, ctx.cwd)
 
@@ -67,3 +76,49 @@ def runs_cmd(ctx: ErkContext) -> None:
 
     user_output()
     user_output("View details: gh run view {run_id} --web")
+
+
+@runs_cmd.command()
+@click.argument("run_id", required=False)
+@click.pass_context
+def logs(click_ctx: click.Context, run_id: str | None) -> None:
+    """View logs for a workflow run.
+
+    If RUN_ID is not provided, shows logs for the most recent run
+    on the current branch.
+    """
+    ctx: ErkContext = click_ctx.obj
+
+    # Discover repository context
+    repo = discover_repo_context(ctx, ctx.cwd)
+
+    if run_id is None:
+        # Auto-detect: find most recent run for current branch
+        current_branch = ctx.git.get_current_branch(repo.root)
+        if current_branch is None:
+            user_output(click.style("Error: ", fg="red") + "Could not determine current branch")
+            raise SystemExit(1)
+
+        runs = ctx.github.list_workflow_runs(repo.root, "implement-plan.yml", limit=50)
+        branch_runs = [r for r in runs if r.branch == current_branch]
+
+        if not branch_runs:
+            user_output(
+                f"No workflow runs found for branch: {click.style(current_branch, fg='yellow')}"
+            )
+            raise SystemExit(1)
+
+        # Most recent is first (list_workflow_runs returns newest first)
+        run_id = branch_runs[0].run_id
+        user_output(
+            f"Showing logs for run {click.style(run_id, fg='cyan')} "
+            f"on branch {click.style(current_branch, fg='yellow')}\n"
+        )
+
+    try:
+        log_output = ctx.github.get_run_logs(repo.root, run_id)
+        # Direct output - logs go to stdout for piping
+        click.echo(log_output)
+    except RuntimeError as e:
+        click.echo(click.style("Error: ", fg="red") + str(e), err=True)
+        raise SystemExit(1) from None

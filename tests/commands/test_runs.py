@@ -279,3 +279,129 @@ def test_runs_cmd_shows_help_text(tmp_path: Path) -> None:
     # Assert
     assert result.exit_code == 0
     assert "View details: gh run view" in result.output
+
+
+def test_runs_logs_explicit_run_id(tmp_path: Path) -> None:
+    """Test viewing logs with explicit run ID."""
+    # Arrange
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    git_ops = FakeGit(
+        worktrees={repo_root: [WorktreeInfo(path=repo_root, branch="main")]},
+        current_branches={repo_root: "main"},
+        git_common_dirs={repo_root: repo_root / ".git"},
+    )
+    github_ops = FakeGitHub(run_logs={"12345": "Step 1: Setup\nStep 2: Tests\n"})
+    ctx = create_test_context(git=git_ops, github=github_ops, cwd=repo_root)
+
+    runner = CliRunner()
+
+    # Act
+    result = runner.invoke(runs_cmd, ["logs", "12345"], obj=ctx, catch_exceptions=False)
+
+    # Assert
+    assert result.exit_code == 0
+    assert "Step 1: Setup" in result.output
+    assert "Step 2: Tests" in result.output
+
+
+def test_runs_logs_auto_detect(tmp_path: Path) -> None:
+    """Test auto-detecting most recent run for current branch."""
+    # Arrange
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    git_ops = FakeGit(
+        worktrees={repo_root: [WorktreeInfo(path=repo_root, branch="feature-x")]},
+        current_branches={repo_root: "feature-x"},
+        git_common_dirs={repo_root: repo_root / ".git"},
+    )
+    workflow_runs = [
+        WorkflowRun(
+            run_id="111",
+            status="completed",
+            conclusion="success",
+            branch="main",
+            head_sha="abc",
+        ),
+        WorkflowRun(
+            run_id="222",
+            status="completed",
+            conclusion="success",
+            branch="feature-x",
+            head_sha="def",
+        ),
+    ]
+    github_ops = FakeGitHub(
+        workflow_runs=workflow_runs, run_logs={"222": "Logs for feature-x run\n"}
+    )
+    ctx = create_test_context(git=git_ops, github=github_ops, cwd=repo_root)
+
+    runner = CliRunner()
+
+    # Act
+    result = runner.invoke(runs_cmd, ["logs"], obj=ctx, catch_exceptions=False)
+
+    # Assert
+    assert result.exit_code == 0
+    assert "Showing logs for run 222" in result.output
+    assert "Logs for feature-x run" in result.output
+
+
+def test_runs_logs_run_not_found(tmp_path: Path) -> None:
+    """Test error handling when run doesn't exist."""
+    # Arrange
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    git_ops = FakeGit(
+        worktrees={repo_root: [WorktreeInfo(path=repo_root, branch="main")]},
+        current_branches={repo_root: "main"},
+        git_common_dirs={repo_root: repo_root / ".git"},
+    )
+    github_ops = FakeGitHub(run_logs={})  # No logs configured
+    ctx = create_test_context(git=git_ops, github=github_ops, cwd=repo_root)
+
+    runner = CliRunner()
+
+    # Act
+    result = runner.invoke(runs_cmd, ["logs", "99999"], obj=ctx, catch_exceptions=False)
+
+    # Assert
+    assert result.exit_code == 1
+    assert "Error:" in result.output
+    assert "99999" in result.output
+
+
+def test_runs_logs_no_runs_for_branch(tmp_path: Path) -> None:
+    """Test auto-detect when no runs exist for current branch."""
+    # Arrange
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    git_ops = FakeGit(
+        worktrees={repo_root: [WorktreeInfo(path=repo_root, branch="feature-y")]},
+        current_branches={repo_root: "feature-y"},
+        git_common_dirs={repo_root: repo_root / ".git"},
+    )
+    workflow_runs = [
+        WorkflowRun(
+            run_id="111",
+            status="completed",
+            conclusion="success",
+            branch="main",
+            head_sha="abc",
+        ),
+    ]
+    github_ops = FakeGitHub(workflow_runs=workflow_runs)
+    ctx = create_test_context(git=git_ops, github=github_ops, cwd=repo_root)
+
+    runner = CliRunner()
+
+    # Act
+    result = runner.invoke(runs_cmd, ["logs"], obj=ctx, catch_exceptions=False)
+
+    # Assert
+    assert result.exit_code == 1
+    assert "No workflow runs found for branch: feature-y" in result.output

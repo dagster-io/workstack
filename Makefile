@@ -1,4 +1,4 @@
-.PHONY: format format-check lint prettier prettier-check pyright upgrade-pyright test fast-ci all-ci check md-check clean publish fix
+.PHONY: format format-check lint prettier prettier-check pyright upgrade-pyright test fast-ci all-ci check md-check clean publish fix reinstall-erk-tools
 
 prettier:
 	prettier --write '**/*.md' --ignore-path .gitignore
@@ -93,6 +93,11 @@ clean:
 build: clean
 	uv build --package dot-agent-kit -o dist
 	uv build --package erk -o dist
+
+# Reinstall erk and dot-agent tools in editable mode
+reinstall-erk-tools:
+	uv tool install --force -e .
+	cd packages/dot-agent-kit && uv tool install --force -e .
 
 # Publish packages to PyPI
 # Use erk-dev publish-to-pypi command instead (recommended)

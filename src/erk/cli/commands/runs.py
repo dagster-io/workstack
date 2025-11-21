@@ -94,7 +94,7 @@ def logs(click_ctx: click.Context, run_id: str | None) -> None:
 
     if run_id is None:
         # Auto-detect: find most recent run for current branch
-        current_branch = ctx.git.get_current_branch(repo.root)
+        current_branch = ctx.git.get_current_branch(ctx.cwd)
         if current_branch is None:
             user_output(click.style("Error: ", fg="red") + "Could not determine current branch")
             raise SystemExit(1)

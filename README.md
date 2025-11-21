@@ -999,3 +999,5 @@ Erk includes bundled kits that provide slash commands, agents, and skills for AI
 MIT - Nick Schrock ([@schrockn](https://github.com/schrockn))
 
 Originally developed by [@schrockn](https://github.com/schrockn), now maintained by [Dagster Labs](https://github.com/dagster-io).
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.

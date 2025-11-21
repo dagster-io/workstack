@@ -3,14 +3,18 @@
 This module handles the .plan/ folder structure:
 - plan.md: Immutable implementation plan
 - progress.md: Mutable progress tracking with step checkboxes
+- issue.json: GitHub issue reference (optional)
 
 And the .submission/ folder structure:
 - Ephemeral copy of .plan/ for remote AI implementation
 - Git-tracked, auto-deleted after implementation
 """
 
+import json
 import re
 import shutil
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -273,3 +277,91 @@ def _generate_progress_content(steps: list[str]) -> str:
 
     lines.append("")  # Trailing newline
     return "\n".join(lines)
+
+
+@dataclass(frozen=True)
+class IssueReference:
+    """Reference to a GitHub issue associated with a plan."""
+
+    issue_number: int
+    issue_url: str
+    created_at: str
+    synced_at: str
+
+
+def save_issue_reference(plan_dir: Path, issue_number: int, issue_url: str) -> None:
+    """Save GitHub issue reference to .plan/issue.json.
+
+    Args:
+        plan_dir: Path to .plan/ directory
+        issue_number: GitHub issue number
+        issue_url: Full GitHub issue URL
+
+    Raises:
+        FileNotFoundError: If plan_dir doesn't exist
+    """
+    if not plan_dir.exists():
+        msg = f"Plan directory does not exist: {plan_dir}"
+        raise FileNotFoundError(msg)
+
+    issue_file = plan_dir / "issue.json"
+    now = datetime.now(UTC).isoformat()
+
+    data = {
+        "issue_number": issue_number,
+        "issue_url": issue_url,
+        "created_at": now,
+        "synced_at": now,
+    }
+
+    issue_file.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
+def read_issue_reference(plan_dir: Path) -> IssueReference | None:
+    """Read GitHub issue reference from .plan/issue.json.
+
+    Args:
+        plan_dir: Path to .plan/ directory
+
+    Returns:
+        IssueReference if file exists and is valid, None otherwise
+    """
+    issue_file = plan_dir / "issue.json"
+
+    if not issue_file.exists():
+        return None
+
+    # Gracefully handle JSON parsing errors (third-party API exception handling)
+    try:
+        data = json.loads(issue_file.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+
+    # Validate required fields exist
+    if (
+        "issue_number" not in data
+        or "issue_url" not in data
+        or "created_at" not in data
+        or "synced_at" not in data
+    ):
+        return None
+
+    return IssueReference(
+        issue_number=data["issue_number"],
+        issue_url=data["issue_url"],
+        created_at=data["created_at"],
+        synced_at=data["synced_at"],
+    )
+
+
+def has_issue_reference(plan_dir: Path) -> bool:
+    """Check if .plan/issue.json exists.
+
+    Args:
+        plan_dir: Path to .plan/ directory
+
+    Returns:
+        True if issue.json exists, False otherwise
+    """
+    issue_file = plan_dir / "issue.json"
+    return issue_file.exists()

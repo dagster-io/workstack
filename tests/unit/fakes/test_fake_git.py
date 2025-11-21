@@ -480,3 +480,82 @@ def test_fake_git_is_worktree_clean_with_nonexistent_path() -> None:
 
     result = git_ops.is_worktree_clean(worktree_path)
     assert result is False
+
+
+# ============================================================================
+# Branch-Issue Association Tests
+# ============================================================================
+
+
+def test_fake_git_set_branch_issue() -> None:
+    """Test set_branch_issue stores issue number for branch."""
+    git_ops = FakeGit()
+
+    git_ops.set_branch_issue(Path("/repo"), "feature-branch", 42)
+
+    # Verify stored in fake
+    result = git_ops.get_branch_issue(Path("/repo"), "feature-branch")
+    assert result == 42
+
+
+def test_fake_git_get_branch_issue_not_set() -> None:
+    """Test get_branch_issue returns None when not set."""
+    git_ops = FakeGit()
+
+    result = git_ops.get_branch_issue(Path("/repo"), "feature-branch")
+
+    assert result is None
+
+
+def test_fake_git_set_branch_issue_multiple_branches() -> None:
+    """Test setting issue numbers for multiple branches."""
+    git_ops = FakeGit()
+
+    git_ops.set_branch_issue(Path("/repo"), "branch-1", 10)
+    git_ops.set_branch_issue(Path("/repo"), "branch-2", 20)
+    git_ops.set_branch_issue(Path("/repo"), "branch-3", 30)
+
+    assert git_ops.get_branch_issue(Path("/repo"), "branch-1") == 10
+    assert git_ops.get_branch_issue(Path("/repo"), "branch-2") == 20
+    assert git_ops.get_branch_issue(Path("/repo"), "branch-3") == 30
+
+
+def test_fake_git_set_branch_issue_overwrites() -> None:
+    """Test set_branch_issue overwrites existing association."""
+    git_ops = FakeGit()
+
+    git_ops.set_branch_issue(Path("/repo"), "feature", 10)
+    git_ops.set_branch_issue(Path("/repo"), "feature", 20)
+
+    # Should return latest value
+    result = git_ops.get_branch_issue(Path("/repo"), "feature")
+    assert result == 20
+
+
+def test_fake_git_branch_issue_pre_configured() -> None:
+    """Test FakeGit can be initialized with branch-issue associations."""
+    branch_issues = {
+        "feature-1": 42,
+        "feature-2": 99,
+    }
+    git_ops = FakeGit(branch_issues=branch_issues)
+
+    assert git_ops.get_branch_issue(Path("/repo"), "feature-1") == 42
+    assert git_ops.get_branch_issue(Path("/repo"), "feature-2") == 99
+    assert git_ops.get_branch_issue(Path("/repo"), "other-branch") is None
+
+
+def test_fake_git_branch_issue_mixed_pre_configured_and_set() -> None:
+    """Test mixing pre-configured and dynamically set branch-issue associations."""
+    branch_issues = {"existing-branch": 100}
+    git_ops = FakeGit(branch_issues=branch_issues)
+
+    # Pre-configured should work
+    assert git_ops.get_branch_issue(Path("/repo"), "existing-branch") == 100
+
+    # Set new association
+    git_ops.set_branch_issue(Path("/repo"), "new-branch", 200)
+
+    # Both should be accessible
+    assert git_ops.get_branch_issue(Path("/repo"), "existing-branch") == 100
+    assert git_ops.get_branch_issue(Path("/repo"), "new-branch") == 200

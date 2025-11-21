@@ -159,6 +159,18 @@ class SimpleRenderer:
                 )
             )
 
+            # Show GitHub issue link if available
+            if status.plan.issue_number is not None and status.plan.issue_url:
+                issue_text = click.style(f"#{status.plan.issue_number}", fg="cyan")
+                user_output(f"  Issue: {issue_text}")
+                user_output(
+                    click.style(
+                        f"  {status.plan.issue_url}",
+                        fg="white",
+                        dim=True,
+                    )
+                )
+
         user_output()
 
     def _render_stack(self, status: StatusData) -> None:

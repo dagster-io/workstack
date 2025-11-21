@@ -18,6 +18,7 @@ from erk.core.git.abc import Git
 from erk.core.git.noop import NoopGit
 from erk.core.git.real import RealGit
 from erk.core.github.abc import GitHub
+from erk.core.github.issues import GitHubIssues, NoopGitHubIssues, RealGitHubIssues
 from erk.core.github.noop import NoopGitHub
 from erk.core.github.real import RealGitHub
 from erk.core.graphite.abc import Graphite
@@ -46,6 +47,7 @@ class ErkContext:
 
     git: Git
     github: GitHub
+    issues: GitHubIssues
     graphite: Graphite
     shell: Shell
     completion: Completion
@@ -117,10 +119,12 @@ class ErkContext:
         from tests.fakes.shell import FakeShell
 
         from erk.core.config_store import FakeConfigStore
+        from erk.core.github.issues import FakeGitHubIssues
 
         return ErkContext(
             git=git,
             github=FakeGitHub(),
+            issues=FakeGitHubIssues(),
             graphite=FakeGraphite(),
             shell=FakeShell(),
             completion=FakeCompletion(),
@@ -137,6 +141,7 @@ class ErkContext:
     def for_test(
         git: Git | None = None,
         github: GitHub | None = None,
+        issues: GitHubIssues | None = None,
         graphite: Graphite | None = None,
         shell: Shell | None = None,
         completion: Completion | None = None,
@@ -157,6 +162,8 @@ class ErkContext:
         Args:
             git: Optional Git implementation. If None, creates empty FakeGit.
             github: Optional GitHub implementation. If None, creates empty FakeGitHub.
+            issues: Optional GitHubIssues implementation.
+                       If None, creates empty FakeGitHubIssues.
             graphite: Optional Graphite implementation.
                          If None, creates empty FakeGraphite.
             shell: Optional Shell implementation. If None, creates empty FakeShell.
@@ -203,12 +210,16 @@ class ErkContext:
         from tests.test_utils import sentinel_path
 
         from erk.core.config_store import FakeConfigStore
+        from erk.core.github.issues import FakeGitHubIssues
 
         if git is None:
             git = FakeGit()
 
         if github is None:
             github = FakeGitHub()
+
+        if issues is None:
+            issues = FakeGitHubIssues()
 
         if graphite is None:
             graphite = FakeGraphite()
@@ -244,10 +255,12 @@ class ErkContext:
             git = NoopGit(git)
             graphite = NoopGraphite(graphite)
             github = NoopGitHub(github)
+            issues = NoopGitHubIssues(issues)
 
         return ErkContext(
             git=git,
             github=github,
+            issues=issues,
             graphite=graphite,
             shell=shell,
             completion=completion,
@@ -373,6 +386,7 @@ def create_context(*, dry_run: bool) -> ErkContext:
     git: Git = RealGit()
     graphite: Graphite = RealGraphite()
     github: GitHub = RealGitHub()
+    issues: GitHubIssues = RealGitHubIssues()
 
     # 5. Discover repo (only needs cwd, erk_root, git)
     # If global_config is None, use placeholder path for repo discovery
@@ -391,11 +405,13 @@ def create_context(*, dry_run: bool) -> ErkContext:
         git = NoopGit(git)
         graphite = NoopGraphite(graphite)
         github = NoopGitHub(github)
+        issues = NoopGitHubIssues(issues)
 
     # 8. Create context with all values
     return ErkContext(
         git=git,
         github=github,
+        issues=issues,
         graphite=graphite,
         shell=RealShell(),
         completion=RealCompletion(),

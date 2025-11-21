@@ -9,6 +9,7 @@ from erk.core.plan_folder import (
     get_plan_path,
     get_progress_path,
     parse_progress_frontmatter,
+    read_issue_reference,
     update_progress_frontmatter,
 )
 from erk.status.collectors.base import StatusCollector
@@ -129,6 +130,11 @@ class PlanFileCollector(StatusCollector):
         # Return folder path, not plan.md file path
         plan_folder = worktree_path / ".plan"
 
+        # Read issue reference if present
+        issue_ref = read_issue_reference(plan_folder)
+        issue_number = issue_ref.issue_number if issue_ref else None
+        issue_url = issue_ref.issue_url if issue_ref else None
+
         return PlanStatus(
             exists=True,
             path=plan_folder,
@@ -140,6 +146,8 @@ class PlanFileCollector(StatusCollector):
             completion_percentage=completion_percentage,
             enriched_plan_path=enriched_plan_path,
             enriched_plan_filename=enriched_plan_filename,
+            issue_number=issue_number,
+            issue_url=issue_url,
         )
 
     def _calculate_progress(self, worktree_path: Path) -> tuple[str | None, int | None]:

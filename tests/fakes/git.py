@@ -84,6 +84,7 @@ class FakeGit(Git):
         remote_branches: dict[Path, list[str]] | None = None,
         tracking_branch_failures: dict[str, str] | None = None,
         dirty_worktrees: set[Path] | None = None,
+        branch_issues: dict[str, int] | None = None,
     ) -> None:
         """Create FakeGit with pre-configured state.
 
@@ -108,6 +109,7 @@ class FakeGit(Git):
             tracking_branch_failures: Mapping of branch name -> error message to raise
                 when create_tracking_branch is called for that branch
             dirty_worktrees: Set of worktree paths that have uncommitted/staged/untracked changes
+            branch_issues: Mapping of branch name -> GitHub issue number
         """
         self._worktrees = worktrees or {}
         self._current_branches = current_branches or {}
@@ -127,6 +129,7 @@ class FakeGit(Git):
         self._remote_branches = remote_branches or {}
         self._tracking_branch_failures = tracking_branch_failures or {}
         self._dirty_worktrees = dirty_worktrees or set()
+        self._branch_issues = branch_issues or {}
 
         # Mutation tracking
         self._deleted_branches: list[str] = []
@@ -589,3 +592,11 @@ class FakeGit(Git):
         if path not in self._file_contents:
             raise FileNotFoundError(f"No content for {path}")
         return self._file_contents[path]
+
+    def set_branch_issue(self, repo_root: Path, branch: str, issue_number: int) -> None:
+        """Record branch-issue association in fake storage."""
+        self._branch_issues[branch] = issue_number
+
+    def get_branch_issue(self, repo_root: Path, branch: str) -> int | None:
+        """Get branch-issue association from fake storage."""
+        return self._branch_issues.get(branch)

@@ -440,3 +440,95 @@ def test_fake_github_issues_multiple_comments_same_issue() -> None:
         (42, "Comment 2"),
         (42, "Comment 3"),
     ]
+
+
+def test_fake_github_issues_ensure_label_exists_creates_new() -> None:
+    """Test ensure_label_exists creates label when it doesn't exist."""
+    issues = FakeGitHubIssues()
+
+    issues.ensure_label_exists(
+        sentinel_path(),
+        label="erk-plan",
+        description="Implementation plan created by erk",
+        color="0E8A16",
+    )
+
+    assert "erk-plan" in issues.labels
+    assert issues.created_labels == [("erk-plan", "Implementation plan created by erk", "0E8A16")]
+
+
+def test_fake_github_issues_ensure_label_exists_idempotent() -> None:
+    """Test ensure_label_exists doesn't create duplicate labels."""
+    issues = FakeGitHubIssues(labels={"erk-plan"})
+
+    issues.ensure_label_exists(
+        sentinel_path(),
+        label="erk-plan",
+        description="Implementation plan created by erk",
+        color="0E8A16",
+    )
+
+    # Label already exists, no new creation
+    assert "erk-plan" in issues.labels
+    assert issues.created_labels == []
+
+
+def test_fake_github_issues_ensure_label_exists_multiple() -> None:
+    """Test ensure_label_exists tracks multiple label creations."""
+    issues = FakeGitHubIssues()
+
+    issues.ensure_label_exists(sentinel_path(), "label1", "Description 1", "FF0000")
+    issues.ensure_label_exists(sentinel_path(), "label2", "Description 2", "00FF00")
+    issues.ensure_label_exists(sentinel_path(), "label3", "Description 3", "0000FF")
+
+    assert "label1" in issues.labels
+    assert "label2" in issues.labels
+    assert "label3" in issues.labels
+    assert issues.created_labels == [
+        ("label1", "Description 1", "FF0000"),
+        ("label2", "Description 2", "00FF00"),
+        ("label3", "Description 3", "0000FF"),
+    ]
+
+
+def test_fake_github_issues_ensure_label_exists_mixed_existing_new() -> None:
+    """Test ensure_label_exists with mix of existing and new labels."""
+    issues = FakeGitHubIssues(labels={"existing-label"})
+
+    issues.ensure_label_exists(sentinel_path(), "existing-label", "Desc 1", "111111")
+    issues.ensure_label_exists(sentinel_path(), "new-label", "Desc 2", "222222")
+
+    # Only new label should be in created_labels
+    assert "existing-label" in issues.labels
+    assert "new-label" in issues.labels
+    assert issues.created_labels == [("new-label", "Desc 2", "222222")]
+
+
+def test_fake_github_issues_labels_property_read_only() -> None:
+    """Test labels property returns a copy (read-only access)."""
+    issues = FakeGitHubIssues(labels={"label1"})
+
+    labels = issues.labels
+    labels.add("label2")  # Modify the returned copy
+
+    # Original should be unchanged
+    assert "label2" not in issues.labels
+    assert issues.labels == {"label1"}
+
+
+def test_fake_github_issues_created_labels_empty_initially() -> None:
+    """Test created_labels property is empty list initially."""
+    issues = FakeGitHubIssues()
+
+    assert issues.created_labels == []
+
+
+def test_fake_github_issues_created_labels_read_only() -> None:
+    """Test created_labels property returns list that can be read."""
+    issues = FakeGitHubIssues()
+    issues.ensure_label_exists(sentinel_path(), "test-label", "Test description", "000000")
+
+    # Should be able to read the list
+    created = issues.created_labels
+    assert len(created) == 1
+    assert created[0] == ("test-label", "Test description", "000000")

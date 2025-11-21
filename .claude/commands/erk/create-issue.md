@@ -14,8 +14,9 @@ This command detects plan files at the repository root, selects the most recent 
 
 - ✅ Auto-detect most recent `*-plan.md` file at repo root
 - ✅ Extract title from plan front matter or first H1 heading
+- ✅ Ensure `erk-plan` label exists (create if needed)
 - ✅ Create GitHub issue with plan body as content
-- ✅ Add labels: `plan`, `erk`
+- ✅ Add label: `erk-plan`
 - ✅ Save issue reference to `.plan/issue.json` (if worktree exists)
 - ✅ Display issue URL
 
@@ -26,9 +27,10 @@ When you run this command, these steps occur:
 1. **Verify Scope** - Confirm we're in a git repository with gh CLI available
 2. **Detect Plan File** - Find and select most recent `*-plan.md` at repo root
 3. **Parse Plan** - Extract title and body from markdown
-4. **Create Issue** - Use gh CLI to create issue with labels
-5. **Link to Worktree** - If `.plan/` folder exists in current worktree, save issue reference
-6. **Display Result** - Show issue number and URL
+4. **Ensure Label Exists** - Check for `erk-plan` label, create if missing
+5. **Create Issue** - Use gh CLI to create issue with `erk-plan` label
+6. **Link to Worktree** - If `.plan/` folder exists in current worktree, save issue reference
+7. **Display Result** - Show issue number and URL
 
 ## Usage
 
@@ -68,9 +70,12 @@ This command succeeds when ALL of the following are true:
 ✅ Most recent plan file selected (if multiple exist)
 ✅ Title extracted from front matter or H1 heading
 
+**Label Pre-flight:**
+✅ `erk-plan` label exists (created if missing)
+
 **Issue Creation:**
 ✅ GitHub issue created with plan content
-✅ Labels added: `plan`, `erk`
+✅ Label added: `erk-plan`
 ✅ Issue URL displayed
 
 **Worktree Linking (if applicable):**
@@ -222,7 +227,41 @@ Extract title and body from the selected plan file:
 
 3. Body is the full plan markdown content
 
-### Step 5: Create GitHub Issue
+### Step 5: Ensure Label Exists
+
+Check if the `erk-plan` label exists, and create it if needed:
+
+1. Check for label using gh CLI:
+
+   ```bash
+   gh label list --json name --jq '.[] | select(.name == "erk-plan") | .name'
+   ```
+
+2. If label doesn't exist (empty output), create it:
+
+   ```bash
+   gh label create "erk-plan" \
+     --description "Implementation plan created by erk" \
+     --color "0E8A16"
+   ```
+
+   Note: Color 0E8A16 is GitHub's default green color for planning/enhancement labels.
+
+3. If label already exists: Continue silently (no output needed)
+
+4. If label creation fails:
+
+   ```
+   ⚠️  Warning: Could not create erk-plan label
+
+   Command output: <stderr>
+
+   Continuing with issue creation...
+   ```
+
+   Continue to Step 6 (non-blocking warning - gh will still accept the label even if not in repo's label list)
+
+### Step 6: Create GitHub Issue
 
 Use gh CLI to create the issue:
 
@@ -232,8 +271,7 @@ Use gh CLI to create the issue:
    gh issue create \
      --title "<extracted-title>" \
      --body-file <path-to-plan-file> \
-     --label "plan" \
-     --label "erk" \
+     --label "erk-plan" \
      --repo <owner>/<repo>
    ```
 
@@ -254,7 +292,7 @@ Use gh CLI to create the issue:
 
    Exit with error.
 
-### Step 6: Display Issue URL
+### Step 7: Display Issue URL
 
 Show success message with issue information:
 
@@ -270,7 +308,7 @@ You can now:
 - Or if worktree exists: erk checkout <branch> && /erk:create-issue --link <number>
 ```
 
-### Step 7: Link Issue to Worktree (if .plan/ exists)
+### Step 8: Link Issue to Worktree (if .plan/ exists)
 
 Check if current directory has a `.plan/` folder:
 
@@ -306,7 +344,7 @@ Check if current directory has a `.plan/` folder:
      3. Link issue: /erk:create-issue --link <issue-number>
      ```
 
-### Step 8: Handle --link Flag
+### Step 9: Handle --link Flag
 
 If user provided `--link <issue-number>`:
 
@@ -326,7 +364,7 @@ If user provided `--link <issue-number>`:
 
    Exit with error.
 
-3. Check for `.plan/` directory (same as Step 7)
+3. Check for `.plan/` directory (same as Step 8)
 
 4. If `.plan/` exists:
    - Save issue reference using `save_issue_reference()`

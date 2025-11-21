@@ -95,6 +95,27 @@ class GitHubIssues(ABC):
         """
         ...
 
+    @abstractmethod
+    def ensure_label_exists(
+        self,
+        repo_root: Path,
+        label: str,
+        description: str,
+        color: str,
+    ) -> None:
+        """Ensure a label exists in the repository, creating it if needed.
+
+        Args:
+            repo_root: Repository root directory
+            label: Label name to ensure exists
+            description: Label description (used if creating)
+            color: Label color hex code without '#' (used if creating)
+
+        Raises:
+            RuntimeError: If gh CLI fails (not installed, not authenticated, or command error)
+        """
+        ...
+
 
 class RealGitHubIssues(GitHubIssues):
     """Production implementation using gh CLI.
@@ -193,6 +214,44 @@ class RealGitHubIssues(GitHubIssues):
             for issue in data
         ]
 
+    def ensure_label_exists(
+        self,
+        repo_root: Path,
+        label: str,
+        description: str,
+        color: str,
+    ) -> None:
+        """Ensure label exists in repository, creating it if needed.
+
+        Note: Uses gh's native error handling - gh CLI raises RuntimeError
+        on failures (not installed, not authenticated).
+        """
+        # Check if label exists
+        check_cmd = [
+            "gh",
+            "label",
+            "list",
+            "--json",
+            "name",
+            "--jq",
+            f'.[] | select(.name == "{label}") | .name',
+        ]
+        stdout = self._execute(check_cmd, repo_root)
+
+        # If label doesn't exist (empty output), create it
+        if not stdout.strip():
+            create_cmd = [
+                "gh",
+                "label",
+                "create",
+                label,
+                "--description",
+                description,
+                "--color",
+                color,
+            ]
+            self._execute(create_cmd, repo_root)
+
 
 class FakeGitHubIssues(GitHubIssues):
     """In-memory fake implementation for testing.
@@ -205,17 +264,21 @@ class FakeGitHubIssues(GitHubIssues):
         *,
         issues: dict[int, IssueInfo] | None = None,
         next_issue_number: int = 1,
+        labels: set[str] | None = None,
     ) -> None:
         """Create FakeGitHubIssues with pre-configured state.
 
         Args:
             issues: Mapping of issue number -> IssueInfo
             next_issue_number: Next issue number to assign (for predictable testing)
+            labels: Set of existing label names in the repository
         """
         self._issues = issues or {}
         self._next_issue_number = next_issue_number
+        self._labels = labels or set()
         self._created_issues: list[tuple[str, str, list[str]]] = []
         self._added_comments: list[tuple[int, str]] = []
+        self._created_labels: list[tuple[str, str, str]] = []
 
     @property
     def created_issues(self) -> list[tuple[str, str, list[str]]]:
@@ -232,6 +295,22 @@ class FakeGitHubIssues(GitHubIssues):
         Returns list of (issue_number, body) tuples.
         """
         return self._added_comments
+
+    @property
+    def created_labels(self) -> list[tuple[str, str, str]]:
+        """Read-only access to created labels for test assertions.
+
+        Returns list of (label, description, color) tuples.
+        """
+        return self._created_labels
+
+    @property
+    def labels(self) -> set[str]:
+        """Read-only access to label names in the repository.
+
+        Returns set of label names.
+        """
+        return self._labels.copy()
 
     def create_issue(self, repo_root: Path, title: str, body: str, labels: list[str]) -> int:
         """Create issue in fake storage and track mutation."""
@@ -291,6 +370,18 @@ class FakeGitHubIssues(GitHubIssues):
 
         return issues
 
+    def ensure_label_exists(
+        self,
+        repo_root: Path,
+        label: str,
+        description: str,
+        color: str,
+    ) -> None:
+        """Ensure label exists in fake storage, creating if needed."""
+        if label not in self._labels:
+            self._labels.add(label)
+            self._created_labels.append((label, description, color))
+
 
 class NoopGitHubIssues(GitHubIssues):
     """No-op wrapper for GitHub issue operations.
@@ -333,3 +424,13 @@ class NoopGitHubIssues(GitHubIssues):
     ) -> list[IssueInfo]:
         """Delegate read operation to wrapped implementation."""
         return self._wrapped.list_issues(repo_root, labels=labels, state=state)
+
+    def ensure_label_exists(
+        self,
+        repo_root: Path,
+        label: str,
+        description: str,
+        color: str,
+    ) -> None:
+        """No-op for ensuring label exists in dry-run mode."""
+        pass

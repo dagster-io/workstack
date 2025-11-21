@@ -1,0 +1,207 @@
+name: Implement Issue Plan
+
+on:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  implement:
+    if: contains(github.event.issue.labels.*.name, 'erk-plan')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive branch name from issue title
+        id: branch_name
+        run: |
+          # Convert issue title to kebab-case
+          ISSUE_TITLE="${{ github.event.issue.title }}"
+          BRANCH_NAME=$(echo "$ISSUE_TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$//')
+
+          # Truncate to 30 characters for git worktree compatibility
+          BRANCH_NAME="${BRANCH_NAME:0:30}"
+
+          # Ensure no trailing hyphens after truncation
+          BRANCH_NAME=$(echo "$BRANCH_NAME" | sed 's/-$//')
+
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "Derived branch name: $BRANCH_NAME"
+
+      - name: Create and switch to branch
+        run: |
+          git checkout -b "${{ steps.branch_name.outputs.branch_name }}"
+
+      - name: Setup environment
+        run: |
+          # Install uv
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          source $HOME/.cargo/env
+
+          # Install erk
+          cd $GITHUB_WORKSPACE
+          uv tool install --from . erk
+
+          # Install dot-agent from local package
+          uv tool install --from ./packages/dot-agent-kit dot-agent-kit
+
+          # Install Claude Code
+          npm install -g @anthropic-ai/claude-code
+
+          # Install Prettier
+          npm install -g prettier
+
+          # Install erk kit for Claude Code
+          dot-agent kit install erk
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create plan folder
+        run: |
+          mkdir -p .plan
+
+          # Save issue body as plan.md
+          cat > .plan/plan.md <<'EOF'
+          ${{ github.event.issue.body }}
+          EOF
+
+          # Create issue.json reference
+          cat > .plan/issue.json <<EOF
+          {
+            "issue_number": ${{ github.event.issue.number }},
+            "issue_url": "${{ github.event.issue.html_url }}",
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "synced_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+
+          # Extract steps from plan.md and create progress.md with frontmatter
+          # This uses a simple regex to find numbered steps
+          STEP_COUNT=$(grep -E '^\s*[0-9]+\.' .plan/plan.md | wc -l | tr -d ' ')
+
+          cat > .plan/progress.md <<EOF
+          ---
+          completed_steps: 0
+          total_steps: $STEP_COUNT
+          ---
+
+          # Progress Tracking
+
+          EOF
+
+          # Extract steps and create checkboxes
+          grep -E '^\s*[0-9]+\.' .plan/plan.md | sed 's/^\s*//' | sed 's/^/- [ ] /' >> .plan/progress.md
+
+          echo "Created .plan/ folder structure"
+
+      - name: Run implementation
+        id: implement
+        run: |
+          set +e  # Don't exit on error
+
+          claude --print \
+            --output-format stream-json \
+            --dangerously-skip-permissions \
+            --verbose \
+            "/erk:implement-plan"
+
+          EXIT_CODE=$?
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "implementation_success=true" >> $GITHUB_OUTPUT
+          else
+            echo "implementation_success=false" >> $GITHUB_OUTPUT
+          fi
+
+          exit 0  # Don't fail the workflow
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit and push changes
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            git add .
+            git commit -m "Implement plan from issue #${{ github.event.issue.number }}"
+            git push origin "${{ steps.branch_name.outputs.branch_name }}"
+            echo "✓ Changes committed and pushed"
+          else
+            echo "No changes to commit"
+          fi
+
+      - name: Create pull request
+        run: |
+          # Check if PR already exists
+          if gh pr view "${{ steps.branch_name.outputs.branch_name }}" --json number &> /dev/null; then
+            echo "✓ PR already exists for branch ${{ steps.branch_name.outputs.branch_name }}"
+            exit 0
+          fi
+
+          PR_TITLE="${{ github.event.issue.title }}"
+
+          # Create PR body based on implementation success
+          if [ "${{ steps.implement.outputs.implementation_success }}" = "true" ]; then
+            cat > pr_body.md <<'EOF'
+          ## Implementation Complete
+
+          This PR implements the plan from issue #${{ github.event.issue.number }}.
+
+          **Implementation Details:**
+          - Plan source: #${{ github.event.issue.number }}
+          - GitHub Actions run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          ### Testing Checklist
+          - [ ] Review AI-generated code changes
+          - [ ] Run unit tests locally
+          - [ ] Run integration tests
+          - [ ] Verify type checking
+          - [ ] Test command functionality manually
+
+          🤖 Generated with [Claude Code](https://claude.com/claude-code)
+          EOF
+          else
+            cat > pr_body.md <<'EOF'
+          ## Implementation Failed
+
+          This PR contains partial implementation from issue #${{ github.event.issue.number }}.
+
+          **⚠️ Implementation encountered errors** - Review the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.
+
+          ### Next Steps
+          - Review implementation errors
+          - Fix issues manually or re-trigger workflow
+          - Run tests and type checking
+
+          🤖 Generated with [Claude Code](https://claude.com/claude-code)
+          EOF
+          fi
+
+          gh pr create --head "${{ steps.branch_name.outputs.branch_name }}" --title "$PR_TITLE" --body-file pr_body.md
+          echo "✓ Created PR: $PR_TITLE"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trigger CI workflows
+        run: |
+          BRANCH="${{ steps.branch_name.outputs.branch_name }}"
+          echo "Triggering CI workflows for branch: $BRANCH"
+
+          gh workflow run test.yml --ref "$BRANCH"
+          gh workflow run lint.yml --ref "$BRANCH"
+          gh workflow run pyright.yml --ref "$BRANCH"
+          gh workflow run prettier.yml --ref "$BRANCH"
+          gh workflow run check-sync.yml --ref "$BRANCH"
+          gh workflow run md-check.yml --ref "$BRANCH"
+
+          echo "✓ All CI workflows triggered"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

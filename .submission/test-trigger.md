@@ -5,6 +5,9 @@ This file exists to trigger the GitHub Actions workflow for testing the updated 
 The workflow should now:
 - Install Claude Code using the official install script
 - Install dot-agent from local packages/dot-agent-kit
-- Successfully run the implementation command
+- Run claude command directly with --allow-dangerously-skip-permissions
+- Successfully execute /erk:implement-plan
 
 This file can be deleted after verification.
+
+Updated: 2025-11-21 - Using claude command directly instead of dot-agent

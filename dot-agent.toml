@@ -50,28 +50,6 @@ invocation = "dot-agent run fake-driven-testing fake-driven-testing-reminder-hoo
 description = "Output fake-driven-testing reminder when Python files are in context"
 timeout = 30
 
-[kits.erk]
-kit_id = "erk"
-source_type = "bundled"
-version = "0.2.1"
-artifacts = [
-    ".claude/commands/erk/persist-plan.md",
-    ".claude/commands/erk/enhance-and-save-plan.md",
-    ".claude/commands/erk/save-plan.md",
-    ".claude/commands/erk/create-planned-wt.md",
-    ".claude/commands/erk/implement-plan.md",
-    ".claude/commands/erk/fix-merge-conflicts.md",
-    ".claude/docs/erk/EXAMPLES.md",
-]
-
-[[kits.erk.hooks]]
-id = "session-id-injector-hook"
-lifecycle = "UserPromptSubmit"
-matcher = "*"
-invocation = "dot-agent run erk session-id-injector-hook"
-description = "Injects session ID into context when /erk:enhance-and-save-plan is invoked"
-timeout = 30
-
 [kits.dignified-python]
 kit_id = "dignified-python"
 source_type = "bundled"
@@ -89,4 +67,28 @@ lifecycle = "UserPromptSubmit"
 matcher = "*.py"
 invocation = "dot-agent run dignified-python version-aware-reminder-hook"
 description = "Output dignified-python compliance reminder when Python files are in context"
+timeout = 30
+
+[kits.erk]
+kit_id = "erk"
+source_type = "bundled"
+version = "0.2.1"
+artifacts = [
+    ".claude/agents/erk/planned-issue-wt-creator.md",
+    ".claude/commands/erk/persist-plan.md",
+    ".claude/commands/erk/enhance-and-save-plan.md",
+    ".claude/commands/erk/save-plan.md",
+    ".claude/commands/erk/create-planned-wt.md",
+    ".claude/commands/erk/create-planned-issue-wt.md",
+    ".claude/commands/erk/implement-plan.md",
+    ".claude/commands/erk/fix-merge-conflicts.md",
+    ".claude/docs/erk/EXAMPLES.md",
+]
+
+[[kits.erk.hooks]]
+id = "session-id-injector-hook"
+lifecycle = "UserPromptSubmit"
+matcher = "*"
+invocation = "dot-agent run erk session-id-injector-hook"
+description = "Injects session ID into context when /erk:enhance-and-save-plan is invoked"
 timeout = 30

@@ -42,7 +42,13 @@ jobs:
           uv tool install --from . erk
 
           # Install Claude Code
-          npm install -g @anthropic-ai/claude-code
+          curl -fsSL https://claude.ai/install.sh | bash
+
+          # Install dot-agent from local package
+          uv tool install --from ./packages/dot-agent-kit dot-agent-kit
+
+          # Add uv tools to PATH for current and future steps
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
           # Install erk kit for Claude Code
           dot-agent kit install erk

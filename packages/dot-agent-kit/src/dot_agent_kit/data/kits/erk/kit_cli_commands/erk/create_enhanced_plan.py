@@ -12,10 +12,7 @@ Phase 1 (discover):
 
 Phase 2 (assemble):
 1. Parse plan content and discoveries from input
-2. Build enhanced plan structure with frontmatter
-3. Add Critical Context section with discoveries
-4. Link discoveries to plan steps
-5. Return enhanced plan content as JSON
+2. Return raw inputs for LLM composition (NO templates or text generation)
 
 Usage:
     dot-agent run erk create-enhanced-plan discover --session-id <id> --cwd <path>
@@ -38,12 +35,11 @@ Examples:
     {"compressed_xml": "<session>...</session>", "stats": {...}}
 
     $ dot-agent run erk create-enhanced-plan assemble plan.md discoveries.json
-    {"content": "...", "filename": "enhanced-plan.md"}
+    {"plan_content": "## Plan...", "discoveries": {...}}
 """
 
 import json
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime
 from pathlib import Path
 
 import click
@@ -83,12 +79,11 @@ class DiscoverError:
 
 @dataclass
 class AssembleResult:
-    """Success result from assemble phase."""
+    """Success result from assemble phase (returns inputs for LLM composition)."""
 
     success: bool
-    content: str
-    filename: str
-    stats: dict[str, int]
+    plan_content: str
+    discoveries: dict
 
 
 @dataclass
@@ -284,174 +279,25 @@ def execute_discover(session_id: str, cwd: Path) -> DiscoverResult | DiscoverErr
     )
 
 
-def _extract_title(plan_lines: list[str]) -> str:
-    """Extract plan title from first heading.
-
-    Args:
-        plan_lines: List of plan content lines
-
-    Returns:
-        Extracted title or default
-    """
-    for line in plan_lines:
-        if line.startswith("# "):
-            return line.lstrip("# ").strip()
-    return "Implementation Plan"
-
-
-def _generate_filename(plan_lines: list[str]) -> str:
-    """Generate filename from plan title (max 30 chars base).
-
-    Args:
-        plan_lines: List of plan content lines
-
-    Returns:
-        Slugified filename with enhanced-plan suffix
-    """
-    title = _extract_title(plan_lines)
-    # Slugify title: lowercase, replace spaces with hyphens, limit length
-    slug = title.lower().replace(" ", "-")
-    slug = "".join(c for c in slug if c.isalnum() or c == "-")
-    slug = slug[:30]  # Worktree name limit
-    return f"{slug}-enhanced-plan.md"
-
-
-def _extract_summary(plan_lines: list[str]) -> str:
-    """Extract summary section from plan.
-
-    Args:
-        plan_lines: List of plan content lines
-
-    Returns:
-        Summary text or placeholder
-    """
-    # Find content between first heading and second ## heading
-    in_summary = False
-    summary_lines = []
-
-    for line in plan_lines:
-        if line.startswith("# "):
-            in_summary = True
-            continue
-        if line.startswith("## ") and in_summary:
-            break
-        if in_summary:
-            summary_lines.append(line)
-
-    summary_text = "\n".join(summary_lines).strip()
-    if summary_text:
-        return summary_text + "\n"
-    return "Implementation plan created during planning session.\n"
-
-
-def _format_discovery_categories(categories: dict[str, list[str]]) -> str:
-    """Format discoveries by category.
-
-    Args:
-        categories: Dictionary mapping category names to discovery lists
-
-    Returns:
-        Formatted markdown string
-    """
-    output = []
-    for category, items in categories.items():
-        output.append(f"#### {category}\n")
-        for item in items:
-            output.append(f"- {item}")
-        output.append("")
-    return "\n".join(output)
-
-
-def _format_failed_attempts(attempts: list[dict[str, str]]) -> str:
-    """Format failed attempts section.
-
-    Args:
-        attempts: List of failed attempt dictionaries
-
-    Returns:
-        Formatted markdown string
-    """
-    output = ["#### Failed Approaches Discovered\n"]
-    for attempt in attempts:
-        name = attempt.get("name", "Unknown")
-        reason = attempt.get("reason", "No reason provided")
-        output.append(f"- **{name}**: {reason}")
-    output.append("")
-    return "\n".join(output)
-
-
 def execute_assemble(plan_content: str, discoveries: dict) -> AssembleResult | AssembleError:
-    """Assemble enhanced plan from content and discoveries.
+    """Return plan and discoveries for LLM composition (NO text generation).
+
+    This function does pure infrastructure work: reading inputs and returning them
+    as JSON for the LLM to compose. NO parsing, NO templates, NO text munging.
 
     Args:
         plan_content: Markdown content of the plan
         discoveries: Dictionary containing categorized discoveries
 
     Returns:
-        AssembleResult on success, AssembleError on failure
+        AssembleResult with raw inputs for LLM composition
     """
-    # Parse plan markdown
-    plan_lines = plan_content.splitlines()
-
-    # Parse discoveries structure
-    discovery_categories = discoveries.get("categories", {})
-    failed_attempts = discoveries.get("failed_attempts", [])
-    raw_log = discoveries.get("raw_discoveries", [])
-    session_id = discoveries.get("session_id", "unknown")
-
-    # Generate frontmatter with enrichment metadata
-    timestamp = datetime.now(UTC).isoformat()
-    frontmatter = f"""---
-enriched_by_create_enhanced_plan: true
-session_id: {session_id}
-discovery_count: {len(raw_log)}
-timestamp: {timestamp}
----
-"""
-
-    # Build enhanced structure
-    enhanced_plan = [frontmatter]
-    enhanced_plan.append(f"# {_extract_title(plan_lines)} - Enhanced Implementation Guide\n")
-
-    # Add Executive Summary
-    enhanced_plan.append("## Executive Summary\n")
-    enhanced_plan.append(_extract_summary(plan_lines))
-
-    # Add Critical Context section with discoveries
-    enhanced_plan.append("---\n")
-    enhanced_plan.append("## Critical Context from Planning\n")
-    enhanced_plan.append("### What We Learned\n")
-    if discovery_categories:
-        enhanced_plan.append(_format_discovery_categories(discovery_categories))
-    else:
-        enhanced_plan.append("No categorized discoveries recorded.\n")
-
-    # Add Failed Attempts section
-    if failed_attempts:
-        enhanced_plan.append("### What Didn't Work\n")
-        enhanced_plan.append(_format_failed_attempts(failed_attempts))
-
-    # Add Raw Discoveries Log
-    if raw_log:
-        enhanced_plan.append("### Raw Discoveries Log\n")
-        for discovery in raw_log:
-            enhanced_plan.append(f"- {discovery}")
-        enhanced_plan.append("")
-
-    # Add original plan
-    enhanced_plan.append("---\n")
-    enhanced_plan.append("## Implementation Plan\n")
-    enhanced_plan.append("\n".join(plan_lines))
-
+    # Infrastructure only: return inputs for LLM composition
+    # The LLM will handle all composition, naming, formatting, and structure
     return AssembleResult(
         success=True,
-        content="\n".join(enhanced_plan),
-        filename=_generate_filename(plan_lines),
-        stats={
-            "discovery_count": len(raw_log),
-            "categories": len(discovery_categories),
-            "failed_attempts": len(failed_attempts),
-        },
+        plan_content=plan_content,
+        discoveries=discoveries,
     )
 
 

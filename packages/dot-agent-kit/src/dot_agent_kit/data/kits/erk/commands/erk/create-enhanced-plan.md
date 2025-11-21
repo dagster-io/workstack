@@ -150,114 +150,105 @@ Please create a plan first:
 4. Then run /erk:create-enhanced-plan
 ```
 
-### Step 3: Mine Discoveries from Compressed XML
+### Step 3: Mine Discoveries Semantically from Compressed XML
 
 **Use the compressed_xml field from Step 1b JSON output.**
 
-The format uses coarse-grained tags:
+The compressed XML contains the session's tool uses, results, user messages, and assistant reasoning. Your task is to **read and understand** this content semantically to identify valuable discoveries.
 
-```xml
-<session>
-  <meta branch="..." />
-  <user>User message text</user>
-  <assistant>Assistant reasoning</assistant>
-  <tool_use name="ToolName" id="toolu_123">
-    <param name="param1">value</param>
-  </tool_use>
-  <tool_result tool="toolu_123">
-    Full tool result content preserved verbatim...
-  </tool_result>
-</session>
-```
+**DO NOT use regex patterns.** Instead, analyze the XML as a narrative of the planning session, identifying patterns through understanding rather than mechanical extraction.
 
-Extract discoveries using simple regex patterns:
+#### How to Analyze
 
-```python
-# Extract tool uses
-tool_uses = re.findall(r'<tool_use name="([^"]+)" id="([^"]+)">(.*?)</tool_use>', xml, re.DOTALL)
+Read through the compressed XML and look for:
 
-# Extract tool results (preserve full verbosity)
-tool_results = re.findall(r'<tool_result tool="([^"]+)">(.*?)</tool_result>', xml, re.DOTALL)
+**Tool Invocations and Results:**
 
-# Extract user messages
-user_messages = re.findall(r'<user>(.*?)</user>', xml, re.DOTALL)
+- What tools were used and for what purpose?
+- What were the assistant searching for?
+- What file paths or code patterns were explored?
+- What commands were executed?
 
-# Extract assistant reasoning
-assistant_text = re.findall(r'<assistant>(.*?)</assistant>', xml, re.DOTALL)
-```
+**Errors and Failures:**
 
-#### What to Extract
+- What errors were encountered?
+- What approaches were attempted but didn't work?
+- Why were certain solutions rejected?
+- What provided the context for these failures?
 
-From `tool_use` entries:
+**Assistant Reasoning:**
 
-- Tool name and parameters
-- What was being searched for
-- File paths explored
-- Commands executed
+- What trade-offs were analyzed?
+- What performance concerns were raised?
+- What architectural decisions were explained?
+- What insights emerged from the reasoning?
 
-From `tool_result` entries:
+**User Interactions:**
 
-- Errors encountered
-- File contents discovered (key snippets only)
-- Command outputs
-- Search results
+- What clarifications did the user provide?
+- What requirements were revealed through questions?
+- What domain knowledge did the user share?
 
-From assistant text blocks:
+#### Discoveries to Extract
 
-- Reasoning about approaches
-- Trade-off analysis
-- Rejection explanations
-- Performance observations
-
-#### Categories to Populate
+Organize your findings into these categories:
 
 **Discovery Journey:**
 
-- Search patterns used
-- Files examined
-- Exploration sequence
+- What search patterns were used to explore the codebase?
+- What files were examined and in what order?
+- How did the exploration sequence reveal the solution?
 
 **Failed Attempts:**
 
-- Errors encountered
-- Approaches that didn't work
-- Rejected solutions
+- What approaches were tried that didn't work, and WHY?
+- What errors provided valuable learning?
+- What solutions were rejected, with their reasoning?
 
 **API/Tool Quirks:**
 
-- Undocumented behaviors
-- Edge cases discovered
-- Workarounds needed
+- What undocumented behaviors were discovered?
+- What edge cases were found through experimentation?
+- What workarounds became necessary?
 
 **Architectural Insights:**
 
-- WHY decisions were made
-- Design patterns found
-- Codebase conventions
+- WHY were particular design decisions made?
+- What design patterns were found in the codebase?
+- What conventions or idioms were learned?
 
 **Performance Issues:**
 
-- Slow operations
-- Timeout risks
-- Memory concerns
+- What operations were identified as slow?
+- What timeout or resource risks were discovered?
+- What memory or efficiency concerns emerged?
 
 **Domain Knowledge:**
 
-- Business rules discovered
-- Non-obvious requirements
-- Hidden constraints
+- What business rules were uncovered?
+- What non-obvious requirements surfaced?
+- What hidden constraints affected the design?
 
 **Technical Context:**
 
-- Function signatures
-- Parameter requirements
-- Return value formats
+- What function signatures or APIs were discovered?
+- What parameter requirements were learned?
+- What return value formats or protocols were understood?
 
 **Testing Insights:**
 
-- Test patterns found
-- Coverage gaps
-- Testing challenges
+- What test patterns were found?
+- What coverage gaps were identified?
+- What testing challenges were encountered?
+
+#### Focus on Context and WHY
+
+When extracting discoveries, prioritize:
+
+- **Context over facts**: Not just "error occurred" but "why it happened and what it revealed"
+- **WHY over WHAT**: Not just "used this pattern" but "why this pattern was chosen"
+- **Insights over data**: What was learned, not just what was seen
+- **Connections**: How discoveries relate to the implementation plan
 
 ### Step 4: Structure Discoveries as JSON
 
@@ -290,42 +281,115 @@ After mining discoveries from the compressed XML in Step 3, structure them as JS
 }
 ```
 
-### Step 5: Assemble Enhanced Plan
+### Step 5: Compose and Save Enhanced Plan
 
-**Step 5a: Run Assemble Phase**
+**Step 5a: Get Inputs from Assemble Phase**
 
-Use the kit CLI command to build the enhanced plan:
+Use the kit CLI command to retrieve plan and discoveries:
 
 ```bash
 # Create temp files for plan and discoveries
 echo "$PLAN_CONTENT" > /tmp/plan-temp.md
 echo "$DISCOVERIES_JSON" > /tmp/discoveries-temp.json
 
-# Run assemble phase
+# Run assemble phase to get inputs
 dot-agent run erk create-enhanced-plan assemble /tmp/plan-temp.md /tmp/discoveries-temp.json
 ```
 
-This outputs JSON with structure:
+This outputs JSON with the inputs you need for composition:
 
 ```json
 {
   "success": true,
-  "content": "---\nenriched_by_create_enhanced_plan: true\n...",
-  "filename": "enhanced-plan.md",
-  "stats": {
-    "discovery_count": 18,
-    "categories": 5,
-    "failed_attempts": 2
+  "plan_content": "## Implementation Plan\n...",
+  "discoveries": {
+    "session_id": "abc-123",
+    "categories": {...},
+    "failed_attempts": [...],
+    "raw_discoveries": [...]
   }
 }
 ```
 
-**Step 5b: Write Enhanced Plan to Repository Root**
+**Step 5b: Compose Enhanced Plan**
 
-Extract the `content` and `filename` fields from the JSON output and write to repo root:
+Now use your semantic understanding to compose an enhanced plan that integrates the implementation plan with session discoveries.
+
+**Generate Appropriate Filename:**
+
+Read the plan objectives and scope, then create a descriptive filename:
+
+- Use kebab-case format
+- Maximum 30 characters (git worktree compatibility)
+- Prioritize clarity over mechanical rules
+- End with `-plan.md` suffix
+- Examples: `auth-refactor-plan.md`, `api-migration-plan.md`, `test-framework-plan.md`
+
+**Extract Title and Summary:**
+
+- Identify the plan's main objective
+- Synthesize an executive summary from goals and approach
+- Keep summary concise (2-3 sentences)
+
+**Compose the Enhanced Plan:**
+
+Structure the document with these suggested sections (adapt based on content):
+
+1. **Title and Frontmatter**
+   - Include `enriched_by_create_enhanced_plan: true` in YAML frontmatter
+   - Add session_id from discoveries
+   - Include generation timestamp
+
+2. **Executive Summary**
+   - Synthesize from plan objectives
+   - Highlight key approach
+   - Note critical discoveries that affect implementation
+
+3. **Critical Context** (from discoveries)
+   - API quirks and undocumented behaviors
+   - Architectural insights that guide implementation
+   - Performance considerations
+   - Technical context (signatures, protocols)
+
+4. **Implementation Plan** (from original plan)
+   - Preserve the original plan structure
+   - May add inline notes about relevant discoveries
+
+5. **Session Discoveries** (organized by relevance)
+   - Discovery journey (how solution was found)
+   - Domain knowledge uncovered
+   - Testing insights
+
+6. **Failed Attempts** (what didn't work and why)
+   - Document approaches that were tried
+   - Explain why they failed
+   - Note what was learned from each failure
+
+**Composition Guidelines:**
+
+- **Adapt structure to content**: Reorder, combine, or omit sections as appropriate
+- **Write naturally**: Format discoveries as insights, not bullet dumps
+- **Connect discoveries to plan**: Show how discoveries affect implementation decisions
+- **Emphasize WHY**: Explain reasoning behind decisions
+- **Progressive disclosure**: Summary → Critical info → Details → Raw data
+
+**Step 5c: Write Enhanced Plan to Repository Root**
+
+After composing the enhanced plan content and generating the filename, write to repo root:
+
+Use the Write tool to save your composed enhanced plan:
+
+1. Determine the repository root using git
+2. Use the filename you generated in Step 5b
+3. Write the enhanced plan content you composed
+
+Example:
 
 ```python
-# Determine repo root
+from pathlib import Path
+import subprocess
+
+# Get repo root
 repo_root = subprocess.run(
     ["git", "rev-parse", "--show-toplevel"],
     capture_output=True,
@@ -333,32 +397,41 @@ repo_root = subprocess.run(
     check=True
 ).stdout.strip()
 
-# Use filename from assemble output
-filename = assemble_result["filename"]
+# Use your generated filename
+filename = "your-generated-filename.md"  # From Step 5b
 
-# Save directly to repo root (NOT to .plan/ folder)
+# Construct path (repo root, NOT .plan/ folder)
 plan_path = Path(repo_root) / filename
 
-# Write enhanced plan content
-plan_path.write_text(assemble_result["content"], encoding="utf-8")
+# Write your composed content
+plan_path.write_text(enhanced_plan_content, encoding="utf-8")
 ```
 
 ### Step 6: Output Summary
 
-After writing the enhanced plan, output:
+After writing the enhanced plan, output a summary based on the discoveries you mined and composed:
+
+Calculate:
+
+- Total discoveries: Count items across all categories in discoveries JSON
+- Number of discovery categories: Count keys in discoveries["categories"]
+- Failed attempts: Count items in discoveries["failed_attempts"]
+- Token reduction: From Step 1b stats
+
+Output:
 
 ```
-✅ Enhanced plan saved to: [filename]
+✅ Enhanced plan saved to: [filename you generated]
 
 Summary:
-- Discoveries mined: [count from stats]
-- Discovery categories: [count from stats]
-- Failed attempts documented: [count from stats]
-- Token reduction: [from Step 1b stats]
+- Discoveries mined: [total count]
+- Discovery categories: [category count]
+- Failed attempts documented: [failed attempts count]
+- Token reduction: [from Step 1b stats, e.g., "85.8%"]
 
 Next steps:
 1. Review the enhanced plan
-2. Create worktree: /erk:create-planned-wt [plan-file]
+2. Create worktree: /erk:create-planned-wt [filename]
 3. Switch to worktree and implement
 ```
 

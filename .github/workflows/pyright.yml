@@ -9,6 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Check for submission folder
+        id: check_submission
+        uses: ./.github/actions/check-submission
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -17,4 +20,5 @@ jobs:
       - name: Install dependencies
         run: uv sync
       - name: Run pyright
+        if: steps.check_submission.outputs.has_submission != 'true'
         run: make pyright

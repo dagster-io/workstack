@@ -35,6 +35,12 @@
 
 **Important:** `.submission/` folders should NOT be added to .gitignore. They are meant to be committed as a signal to GitHub Actions.
 
+**CI Behavior:**
+
+- `.submission/` presence: External CI workflows (test, lint, pyright, etc.) skip execution
+- `implement-plan.yml` workflow: Runs comprehensive CI suite (/all-ci) before cleanup
+- After `.submission/` deletion: External CI resumes normal execution on next push
+
 ---
 
 | If you're about to write...                                      | STOP! Check this instead                                                                             |

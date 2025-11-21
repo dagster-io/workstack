@@ -128,7 +128,7 @@ def submit_cmd(ctx: ErkContext, dry_run: bool) -> None:
         )
     except RuntimeError as e:
         user_output(click.style("Error: ", fg="red") + f"Failed to trigger workflow.\n\n{e}")
-        raise SystemExit(1) from e
+        raise SystemExit(1) from None
 
     user_output("")
     user_output(click.style("✓", fg="green") + " Submission complete!")

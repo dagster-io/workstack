@@ -320,7 +320,7 @@ Check if current directory contains `.submission/` folder:
 
 For each attempt:
 
-1. Run the fast CI checks: `/fast-ci` (unit tests + pyright)
+1. Run the comprehensive CI checks: `/all-ci` (unit tests + integration tests + pyright)
 2. If all checks pass: Break out of loop, proceed to cleanup
 3. If checks fail: Read the error output carefully
 4. Analyze the failures and fix them

@@ -137,6 +137,7 @@ version = "0.1.27"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
+    { name = "dot-agent-kit" },
     { name = "python-frontmatter" },
     { name = "tomlkit" },
 ]
@@ -156,6 +157,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = ">=8.1.7" },
+    { name = "dot-agent-kit", editable = "packages/dot-agent-kit" },
     { name = "python-frontmatter", specifier = ">=1.0.0" },
     { name = "tomlkit", specifier = ">=0.12.0" },
 ]

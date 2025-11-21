@@ -36,6 +36,32 @@ This command solves the critical problem where planning sessions lose valuable d
 
 You are executing the `/erk:create-enhanced-plan` command. Follow these steps carefully using ONLY the allowed tools.
 
+### CRITICAL: Plan Mode Check
+
+**BEFORE doing anything else, check if Plan mode is active.**
+
+Look for system-reminder messages containing "Plan mode is active" in the conversation.
+
+**If Plan mode is detected:**
+
+1. Output this error message:
+
+```
+❌ Error: /erk:create-enhanced-plan cannot run in Plan mode
+
+This command needs to write the enhanced plan file to disk, which is blocked in Plan mode.
+
+To fix:
+1. Exit Plan mode: /exit
+2. Re-run this command: /erk:create-enhanced-plan
+
+Plan mode is for PLANNING implementation. This command PERSISTS plans, which is a write operation.
+```
+
+2. STOP immediately. Do NOT proceed with any other steps.
+
+**Only if Plan mode is NOT active, proceed with the steps below.**
+
 ### CRITICAL: Tool Restrictions
 
 **ALLOWED TOOLS:**

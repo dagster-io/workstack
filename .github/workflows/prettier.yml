@@ -26,6 +26,6 @@ jobs:
         with:
           node-version: "20"
       - name: Install prettier
-        run: npm install -g prettier
+        run: npm install -g prettier@3.6.0
       - name: Check markdown formatting
         run: make prettier-check

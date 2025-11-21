@@ -5,9 +5,9 @@ description: This skill should be used when editing Python code in the erk codeb
 
 # Dignified Python - Python 3.12 Coding Standards
 
-@../../shared/skill-components/core-philosophy.md
+@.claude/docs/dignified-python/skill-components/core-philosophy.md
 
-@../../shared/type-annotations/pattern-table-312.md
+@.claude/docs/dignified-python/version-specific/312/pattern-table.md
 
 ## Quick Checklist
 
@@ -15,7 +15,7 @@ Before writing Python code, scan for patterns above and load relevant references
 
 Key rules to remember:
 
-@../../shared/type-annotations/checklist-312.md
-@../../shared/skill-components/checklist-universal.md
+@.claude/docs/dignified-python/version-specific/312/checklist.md
+@.claude/docs/dignified-python/skill-components/checklist-universal.md
 
-@../../shared/skill-components/loading-instructions.md
+@.claude/docs/dignified-python/skill-components/loading-instructions.md

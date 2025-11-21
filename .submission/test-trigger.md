@@ -10,4 +10,4 @@ The workflow should now:
 
 This file can be deleted after verification.
 
-Updated: 2025-11-21 - Using correct permission flag (--dangerously-skip-permissions)
+Updated: 2025-11-21 - With dev dependencies and prettier installed

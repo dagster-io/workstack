@@ -1253,13 +1253,13 @@ Before saving the plan content, prepend YAML front matter to mark it as enriched
 
 ```markdown
 ---
-enriched_by_persist_plan: true
+erk_plan: true
 ---
 
 [plan content here]
 ```
 
-This marker enables detection of enriched plans for status display in both `erk status` and Claude Code status line.
+This marker enables detection of erk plans for status display in both `erk status` and Claude Code status line.
 
 **If filename base validation fails:**
 

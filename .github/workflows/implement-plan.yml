@@ -15,6 +15,8 @@ on:
 jobs:
   implement:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,8 +43,14 @@ jobs:
           cd $GITHUB_WORKSPACE
           uv tool install --from . erk
 
+          # Install dot-agent from local package
+          uv tool install --from ./packages/dot-agent-kit dot-agent-kit
+
           # Install Claude Code
           npm install -g @anthropic-ai/claude-code
+
+          # Install Prettier
+          npm install -g prettier
 
           # Install erk kit for Claude Code
           dot-agent kit install erk
@@ -53,11 +61,46 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Copy submission to plan
+        if: steps.check_submission.outputs.has_submission == 'true'
+        run: |
+          # Copy .submission/ to .plan/ for implementation
+          cp -r .submission .plan
+          echo "Copied .submission/ to .plan/"
+
       - name: Run implementation with CI loop
         if: steps.check_submission.outputs.has_submission == 'true'
         run: |
-          dot-agent command "/erk:implement-plan" \
-            --permission-mode dangerouslySkipPermissions
+          claude --print \
+            --output-format stream-json \
+            --dangerously-skip-permissions \
+            --verbose \
+            "/erk:implement-plan"
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push implementation changes
+        if: steps.check_submission.outputs.has_submission == 'true'
+        run: |
+          # Check if there are any changes to commit
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "Changes detected, pushing to branch..."
+            git push origin ${{ github.ref_name }}
+          else
+            echo "No changes to push"
+          fi
+
+      - name: Cleanup submission folder
+        if: steps.check_submission.outputs.has_submission == 'true'
+        run: |
+          # Delete .submission/ folder after successful implementation
+          rm -rf .submission
+
+          # Commit the deletion if changes exist
+          if [[ -n $(git status --porcelain) ]]; then
+            git add .submission
+            git commit -m "Remove .submission/ after implementation"
+            git push origin ${{ github.ref_name }}
+            echo "Deleted .submission/ folder"
+          fi

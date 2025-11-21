@@ -72,11 +72,13 @@ Exit with error.
 Check that `.plan/issue.json` exists and read the issue number.
 
 1. Check for file:
+
    ```bash
    test -f .plan/issue.json && echo "exists" || echo "not found"
    ```
 
 2. If not found:
+
    ```
    ❌ Error: No GitHub issue linked to this plan
 
@@ -90,6 +92,7 @@ Check that `.plan/issue.json` exists and read the issue number.
    Exit with error.
 
 3. Read issue reference using Read tool:
+
    ```bash
    Read .plan/issue.json
    ```
@@ -101,11 +104,13 @@ Check that `.plan/issue.json` exists and read the issue number.
 Use gh CLI to fetch the issue body from GitHub.
 
 1. Fetch issue:
+
    ```bash
    gh issue view <issue-number> --json body --jq '.body'
    ```
 
 2. If command fails:
+
    ```
    ❌ Error: Failed to fetch GitHub issue #<number>
 
@@ -155,6 +160,7 @@ SlashCommand(command="/erk:implement-plan")
 ```
 
 This will:
+
 - Read `.plan/plan.md` (the issue body you just saved)
 - Execute the implementation steps
 - Update `.plan/progress.md` with checkboxes

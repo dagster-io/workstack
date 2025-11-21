@@ -59,6 +59,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Copy submission to plan
+        if: steps.check_submission.outputs.has_submission == 'true'
+        run: |
+          # Copy .submission/ to .plan/ for implementation
+          cp -r .submission .plan
+          echo "Copied .submission/ to .plan/"
+
       - name: Run implementation with CI loop
         if: steps.check_submission.outputs.has_submission == 'true'
         run: |
@@ -80,4 +87,18 @@ jobs:
             git push origin ${{ github.ref_name }}
           else
             echo "No changes to push"
+          fi
+
+      - name: Cleanup submission folder
+        if: steps.check_submission.outputs.has_submission == 'true'
+        run: |
+          # Delete .submission/ folder after successful implementation
+          rm -rf .submission
+
+          # Commit the deletion if changes exist
+          if [[ -n $(git status --porcelain) ]]; then
+            git add .submission
+            git commit -m "Remove .submission/ after implementation"
+            git push origin ${{ github.ref_name }}
+            echo "Deleted .submission/ folder"
           fi

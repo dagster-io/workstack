@@ -15,6 +15,9 @@ kit_cli_commands:
   - name: create-enhanced-plan
     path: kit_cli_commands/erk/create_enhanced_plan.py
     description: Create enhanced implementation plan from session logs (two-phase - discover and assemble)
+  - name: find-project-dir
+    path: kit_cli_commands/erk/find_project_dir.py
+    description: Find Claude Code project directory for a given filesystem path
   - name: session-id-injector-hook
     path: kit_cli_commands/erk/session_id_injector_hook.py
     description: Inject session ID into conversation context for plan creation

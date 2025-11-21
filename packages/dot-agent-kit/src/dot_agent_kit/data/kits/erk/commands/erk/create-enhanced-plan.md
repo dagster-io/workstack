@@ -117,7 +117,7 @@ This outputs JSON with structure:
   "success": false,
   "error": "Project directory not found",
   "help": "Could not find Claude Code project for /path",
-  "context": {"cwd": "/path"}
+  "context": { "cwd": "/path" }
 }
 ```
 

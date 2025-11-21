@@ -5,14 +5,17 @@ and CLI command entry points.
 """
 
 import json
-from dataclasses import asdict
 from pathlib import Path
-from unittest.mock import Mock, patch
+from typing import cast
+from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
 
 from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.create_enhanced_plan import (
+    AssembleResult,
+    DiscoverError,
+    DiscoverResult,
     _extract_title,
     _find_project_dir,
     _format_discovery_categories,
@@ -24,7 +27,6 @@ from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.create_enhanced_plan impor
     execute_assemble,
     execute_discover,
 )
-
 
 # ============================================================================
 # 1. Project Discovery Tests (6 tests)
@@ -106,32 +108,32 @@ def test_locate_session_log_returns_none_if_project_dir_missing(tmp_path: Path) 
 def test_extract_title_from_heading() -> None:
     """Test title extraction from markdown heading."""
     plan = "# My Implementation Plan\n\nSome content"
-    assert _extract_title(plan.splitlines()) == "My Implementation Plan"
+    assert _extract_title(cast(list[str], plan.splitlines())) == "My Implementation Plan"
 
 
 def test_extract_title_with_extra_whitespace() -> None:
     """Test title extraction handles whitespace."""
     plan = "#   My Plan   \n\nContent"
-    assert _extract_title(plan.splitlines()) == "My Plan"
+    assert _extract_title(cast(list[str], plan.splitlines())) == "My Plan"
 
 
 def test_extract_title_returns_default_if_no_heading() -> None:
     """Test default title when no heading found."""
     plan = "Some content without heading\n\nMore content"
-    assert _extract_title(plan.splitlines()) == "Implementation Plan"
+    assert _extract_title(cast(list[str], plan.splitlines())) == "Implementation Plan"
 
 
 def test_generate_filename_slugifies_title() -> None:
     """Test filename generation with slugification."""
     plan = "# Add New Feature for Users\n"
-    filename = _generate_filename(plan.splitlines())
+    filename = _generate_filename(cast(list[str], plan.splitlines()))
     assert filename == "add-new-feature-for-users-enhanced-plan.md"
 
 
 def test_generate_filename_limits_to_30_chars() -> None:
     """Test filename truncation to 30 characters."""
     plan = "# This Is A Very Long Title That Exceeds Thirty Characters By A Lot\n"
-    filename = _generate_filename(plan.splitlines())
+    filename = _generate_filename(cast(list[str], plan.splitlines()))
     base = filename.replace("-enhanced-plan.md", "")
     assert len(base) <= 30
 
@@ -139,7 +141,7 @@ def test_generate_filename_limits_to_30_chars() -> None:
 def test_generate_filename_removes_special_chars() -> None:
     """Test filename removes non-alphanumeric characters."""
     plan = "# Feature: Auth & Permissions!\n"
-    filename = _generate_filename(plan.splitlines())
+    filename = _generate_filename(cast(list[str], plan.splitlines()))
     # Should only contain alphanumeric and hyphens
     base = filename.replace("-enhanced-plan.md", "")
     assert all(c.isalnum() or c == "-" for c in base)
@@ -228,6 +230,7 @@ def test_execute_discover_success(tmp_path: Path, monkeypatch) -> None:
 
         result = execute_discover(session_id, cwd)
 
+        assert isinstance(result, DiscoverResult)
         assert result.success is True
         assert result.compressed_xml == mock_xml
         assert result.stats == mock_stats
@@ -243,6 +246,7 @@ def test_execute_discover_project_not_found(tmp_path: Path, monkeypatch) -> None
 
     result = execute_discover("test-session", tmp_path / "nonexistent")
 
+    assert isinstance(result, DiscoverError)
     assert result.success is False
     assert result.error == "Project directory not found"
     assert "nonexistent" in result.help
@@ -261,6 +265,7 @@ def test_execute_discover_session_log_not_found(tmp_path: Path, monkeypatch) -> 
 
     result = execute_discover("nonexistent-session", cwd)
 
+    assert isinstance(result, DiscoverError)
     assert result.success is False
     assert result.error == "Session log not found"
 
@@ -286,6 +291,7 @@ def test_execute_discover_preprocessing_failed(tmp_path: Path, monkeypatch) -> N
 
         result = execute_discover(session_id, cwd)
 
+        assert isinstance(result, DiscoverError)
         assert result.success is False
         assert result.error == "Preprocessing failed"
 
@@ -322,6 +328,7 @@ def test_execute_assemble_success() -> None:
 
     result = execute_assemble(plan_content, discoveries)
 
+    assert isinstance(result, AssembleResult)
     assert result.success is True
     assert "enriched_by_create_enhanced_plan: true" in result.content
     assert "API Discoveries" in result.content
@@ -341,6 +348,7 @@ def test_execute_assemble_with_failed_attempts() -> None:
 
     result = execute_assemble(plan_content, discoveries)
 
+    assert isinstance(result, AssembleResult)
     assert result.success is True
     assert "What Didn't Work" in result.content
     assert "Approach A" in result.content
@@ -358,6 +366,7 @@ def test_execute_assemble_empty_discoveries() -> None:
 
     result = execute_assemble(plan_content, discoveries)
 
+    assert isinstance(result, AssembleResult)
     assert result.success is True
     assert "enriched_by_create_enhanced_plan: true" in result.content
     assert result.stats["discovery_count"] == 0
@@ -366,10 +375,16 @@ def test_execute_assemble_empty_discoveries() -> None:
 def test_execute_assemble_generates_valid_filename() -> None:
     """Test assemble generates valid filename."""
     plan_content = "# Add User Authentication\n\nContent"
-    discoveries = {"session_id": "test", "categories": {}, "failed_attempts": [], "raw_discoveries": []}
+    discoveries = {
+        "session_id": "test",
+        "categories": {},
+        "failed_attempts": [],
+        "raw_discoveries": [],
+    }
 
     result = execute_assemble(plan_content, discoveries)
 
+    assert isinstance(result, AssembleResult)
     assert result.success is True
     assert result.filename == "add-user-authentication-enhanced-plan.md"
 
@@ -377,10 +392,16 @@ def test_execute_assemble_generates_valid_filename() -> None:
 def test_execute_assemble_includes_frontmatter() -> None:
     """Test assemble includes all required frontmatter fields."""
     plan_content = "# Test\n\nContent"
-    discoveries = {"session_id": "abc-123", "categories": {}, "failed_attempts": [], "raw_discoveries": ["A", "B"]}
+    discoveries = {
+        "session_id": "abc-123",
+        "categories": {},
+        "failed_attempts": [],
+        "raw_discoveries": ["A", "B"],
+    }
 
     result = execute_assemble(plan_content, discoveries)
 
+    assert isinstance(result, AssembleResult)
     assert result.success is True
     assert "session_id: abc-123" in result.content
     assert "discovery_count: 2" in result.content

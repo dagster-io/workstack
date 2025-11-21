@@ -43,7 +43,7 @@ Examples:
 
 import json
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import click
@@ -217,7 +217,10 @@ def _preprocess_logs(log_path: Path, session_id: str) -> tuple[str, dict[str, st
     # Calculate compression metrics
     original_size = len(log_path.read_text(encoding="utf-8"))
     compressed_size = len(xml_content)
-    reduction_pct = ((original_size - compressed_size) / original_size) * 100 if original_size > 0 else 0
+    if original_size > 0:
+        reduction_pct = ((original_size - compressed_size) / original_size) * 100
+    else:
+        reduction_pct = 0
 
     stats = {
         "entries_processed": total_entries - skipped_entries,
@@ -397,7 +400,7 @@ def execute_assemble(plan_content: str, discoveries: dict) -> AssembleResult | A
     session_id = discoveries.get("session_id", "unknown")
 
     # Generate frontmatter with enrichment metadata
-    timestamp = datetime.now(timezone.utc).isoformat()
+    timestamp = datetime.now(UTC).isoformat()
     frontmatter = f"""---
 enriched_by_create_enhanced_plan: true
 session_id: {session_id}
@@ -461,7 +464,10 @@ def create_enhanced_plan() -> None:
 @click.command()
 @click.option("--session-id", required=True, help="Session ID to process")
 @click.option(
-    "--cwd", required=True, type=click.Path(exists=True, path_type=Path), help="Current working directory"
+    "--cwd",
+    required=True,
+    type=click.Path(exists=True, path_type=Path),
+    help="Current working directory",
 )
 def discover(session_id: str, cwd: Path) -> None:
     """Phase 1: Discover and preprocess session logs."""

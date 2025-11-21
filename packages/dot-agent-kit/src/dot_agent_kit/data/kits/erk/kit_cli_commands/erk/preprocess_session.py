@@ -558,8 +558,13 @@ def discover_agent_logs(session_log_path: Path) -> list[Path]:
     is_flag=True,
     help="Disable all filtering optimizations (raw output)",
 )
+@click.option(
+    "--stdout",
+    is_flag=True,
+    help="Output XML to stdout instead of temp file",
+)
 def preprocess_session(
-    log_path: Path, session_id: str | None, include_agents: bool, no_filtering: bool
+    log_path: Path, session_id: str | None, include_agents: bool, no_filtering: bool, stdout: bool
 ) -> None:
     """Preprocess session log JSONL to compressed XML format.
 
@@ -656,28 +661,33 @@ def preprocess_session(
         compressed_size = len(xml_content)
         if original_size > 0:
             reduction_pct = ((original_size - compressed_size) / original_size) * 100
-            click.echo(
+            stats_msg = (
                 f"📉 Token reduction: {reduction_pct:.1f}% "
-                f"({original_size:,} → {compressed_size:,} chars)",
-                err=True,
+                f"({original_size:,} → {compressed_size:,} chars)"
             )
+            # Route stats to stderr when stdout contains XML
+            click.echo(stats_msg, err=True)
 
-    # Write to temp file and print path
-    # Use NamedTemporaryFile to avoid conflicts when multiple tests use same filename
-    filename_session_id = log_path.stem  # Extract session ID from filename
-    with tempfile.NamedTemporaryFile(
-        mode="w",
-        encoding="utf-8",
-        prefix=f"session-{filename_session_id}-",
-        suffix="-compressed.xml",
-        delete=False,
-        dir=tempfile.gettempdir(),
-    ) as f:
-        f.write(xml_content)
-        temp_file = Path(f.name)
+    if stdout:
+        # Output XML directly to stdout
+        click.echo(xml_content)
+    else:
+        # Write to temp file and print path (backward compatible)
+        # Use NamedTemporaryFile to avoid conflicts when multiple tests use same filename
+        filename_session_id = log_path.stem  # Extract session ID from filename
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            prefix=f"session-{filename_session_id}-",
+            suffix="-compressed.xml",
+            delete=False,
+            dir=tempfile.gettempdir(),
+        ) as f:
+            f.write(xml_content)
+            temp_file = Path(f.name)
 
-    # Print path to stdout for command capture
-    click.echo(str(temp_file))
+        # Print path to stdout for command capture
+        click.echo(str(temp_file))
 
 
 if __name__ == "__main__":

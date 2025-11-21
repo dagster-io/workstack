@@ -689,3 +689,85 @@ def test_full_workflow_deduplicates_correctly(tmp_path: Path) -> None:
         # Second assistant should only have tool_use (text deduplicated)
         assert content.count("I'll help you with that.") == 1  # Only once
         assert '<tool_use name="Edit"' in content  # Tool preserved
+
+
+# ============================================================================
+# 9. Stdout Output Mode Tests
+# ============================================================================
+
+
+def test_preprocess_session_stdout_outputs_xml(tmp_path: Path) -> None:
+    """Test that --stdout flag outputs XML to stdout."""
+    runner = CliRunner()
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        log_file = Path("session-123.jsonl")
+        user_json = json.dumps(json.loads(fixtures.JSONL_USER_MESSAGE_STRING))
+        log_file.write_text(user_json, encoding="utf-8")
+
+        result = runner.invoke(preprocess_session, [str(log_file), "--stdout", "--no-filtering"])
+        assert result.exit_code == 0
+
+        # Output should contain XML directly
+        assert "<session>" in result.output
+        assert "</session>" in result.output
+        assert "<user>" in result.output
+
+
+def test_preprocess_session_stdout_no_temp_file(tmp_path: Path) -> None:
+    """Test that --stdout flag does not create temp file."""
+    runner = CliRunner()
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        log_file = Path("session-123.jsonl")
+        user_json = json.dumps(json.loads(fixtures.JSONL_USER_MESSAGE_STRING))
+        log_file.write_text(user_json, encoding="utf-8")
+
+        result = runner.invoke(preprocess_session, [str(log_file), "--stdout", "--no-filtering"])
+        assert result.exit_code == 0
+
+        # Output should NOT contain temp file path
+        assert "session-session-123-" not in result.output or "<session>" in result.output
+
+
+def test_preprocess_session_stdout_stats_to_stderr(tmp_path: Path) -> None:
+    """Test that stats go to stderr when --stdout enabled."""
+    runner = CliRunner()
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        log_file = Path("session-123.jsonl")
+        # Create multi-line content for stats to be generated (valid JSONL format)
+        # Need both user and assistant messages to pass empty session check
+        user_json = json.dumps(json.loads(fixtures.JSONL_USER_MESSAGE_STRING))
+        assistant_json = json.dumps(json.loads(fixtures.JSONL_ASSISTANT_TEXT))
+        entries = []
+        for _ in range(5):
+            entries.append(user_json)
+            entries.append(assistant_json)
+        log_file.write_text("\n".join(entries), encoding="utf-8")
+
+        result = runner.invoke(preprocess_session, [str(log_file), "--stdout"])
+        assert result.exit_code == 0
+
+        # XML should be in stdout (result.output)
+        assert "<session>" in result.output
+
+        # Stats should NOT pollute stdout
+        assert "Token reduction" not in result.output or "</session>" in result.output
+
+
+def test_preprocess_session_backward_compatibility(tmp_path: Path) -> None:
+    """Test that default behavior (no --stdout) still creates temp file."""
+    runner = CliRunner()
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        log_file = Path("session-123.jsonl")
+        user_json = json.dumps(json.loads(fixtures.JSONL_USER_MESSAGE_STRING))
+        log_file.write_text(user_json, encoding="utf-8")
+
+        # Run without --stdout flag
+        result = runner.invoke(preprocess_session, [str(log_file), "--no-filtering"])
+        assert result.exit_code == 0
+
+        # Output should contain temp file path (backward compatible)
+        assert "session-session-123-" in result.output
+        assert "-compressed.xml" in result.output
+
+        # Should NOT output XML to stdout
+        assert "<session>" not in result.output

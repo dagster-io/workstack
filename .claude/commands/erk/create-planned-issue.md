@@ -2,7 +2,7 @@
 description: Create GitHub issue from persisted plan
 ---
 
-# /erk:create-issue
+# /erk:create-planned-issue
 
 ## Goal
 
@@ -35,7 +35,7 @@ When you run this command, these steps occur:
 ## Usage
 
 ```bash
-/erk:create-issue
+/erk:create-planned-issue
 ```
 
 **No arguments accepted** - This command automatically detects and uses the most recent plan file.
@@ -45,7 +45,7 @@ When you run this command, these steps occur:
 If you want to link an existing issue instead of creating a new one:
 
 ```bash
-/erk:create-issue --link 123
+/erk:create-planned-issue --link 123
 ```
 
 This will save the issue reference without creating a new issue. Use this when:
@@ -126,14 +126,14 @@ This command succeeds when ALL of the following are true:
 - This is expected if you haven't created a worktree yet
 - Create worktree: `/erk:create-planned-wt`
 - Navigate to worktree: `erk checkout <branch>`
-- Re-run: `/erk:create-issue --link <issue-number>`
+- Re-run: `/erk:create-planned-issue --link <issue-number>`
 
 ## Integration with Workflow
 
 **Typical workflow:**
 
 1. Create plan: `/erk:persist-plan`
-2. Create issue: `/erk:create-issue` ← **YOU ARE HERE**
+2. Create issue: `/erk:create-planned-issue` ← **YOU ARE HERE**
 3. Create worktree: `/erk:create-planned-wt`
 4. Navigate and implement: `erk checkout <branch> && claude --permission-mode acceptEdits "/erk:implement-plan"`
 
@@ -142,13 +142,13 @@ This command succeeds when ALL of the following are true:
 1. Create plan: `/erk:persist-plan`
 2. Create worktree: `/erk:create-planned-wt`
 3. Navigate: `erk checkout <branch>`
-4. Create issue: `/erk:create-issue` ← Issue automatically linked to `.plan/` folder
+4. Create issue: `/erk:create-planned-issue` ← Issue automatically linked to `.plan/` folder
 
 ---
 
 ## Agent Instructions
 
-You are executing the `/erk:create-issue` command. Follow these steps carefully:
+You are executing the `/erk:create-planned-issue` command. Follow these steps carefully:
 
 ### Step 1: Check for --link Flag
 
@@ -305,7 +305,7 @@ URL: <issue-url>
 You can now:
 - View issue: gh issue view <number>
 - Create worktree: /erk:create-planned-wt
-- Or if worktree exists: erk checkout <branch> && /erk:create-issue --link <number>
+- Or if worktree exists: erk checkout <branch> && /erk:create-planned-issue --link <number>
 ```
 
 ### Step 8: Link Issue to Worktree (if .plan/ exists)
@@ -341,7 +341,7 @@ Check if current directory has a `.plan/` folder:
      To link this issue to a worktree:
      1. Create worktree: /erk:create-planned-wt
      2. Navigate: erk checkout <branch>
-     3. Link issue: /erk:create-issue --link <issue-number>
+     3. Link issue: /erk:create-planned-issue --link <issue-number>
      ```
 
 ### Step 9: Handle --link Flag
@@ -387,7 +387,7 @@ If user provided `--link <issue-number>`:
    Navigate to a worktree with a plan:
    1. List worktrees: erk list
    2. Navigate: erk checkout <branch>
-   3. Try again: /erk:create-issue --link <issue-number>
+   3. Try again: /erk:create-planned-issue --link <issue-number>
    ```
 
    Exit with error.

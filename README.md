@@ -106,6 +106,7 @@ erk delete NAME            # Delete worktree
 erk sync                   # Sync with Graphite, show cleanup candidates
 erk sync --dry-run         # Show safe-to-delete worktrees (merged PRs)
 erk sync -f                # Sync and auto-remove merged worktrees
+erk submit                 # Submit plan for remote AI implementation (GitHub Actions)
 ```
 
 ### Stack Navigation
@@ -462,6 +463,77 @@ This workflow emerged from experience - checking in planning documents created n
 
 The manual workflow above can be fully automated using kit-installed Claude Code commands. See [Claude Code Integration](#claude-code-integration) for `/erk:persist-plan`, `/erk:create-planned-wt`, and `/erk:implement-plan` commands that automate plan extraction, enhancement, worktree creation, and implementation execution.
 
+### Remote Implementation via GitHub Actions
+
+For teams using GitHub Actions, `erk` supports **remote AI implementation** where GitHub Actions runners execute plans automatically.
+
+#### The Submission Workflow
+
+```bash
+# 1. Create a worktree with a plan (locally)
+/erk:create-planned-wt
+
+# 2. Submit plan for remote implementation
+erk submit
+# This copies .plan/ → .submission/, commits, and pushes
+# GitHub Actions automatically detects the push and begins implementation
+
+# 3. Monitor progress
+gh run watch --branch <your-branch>
+```
+
+**How it works:**
+
+1. **Client-side (`erk submit`):**
+   - Copies `.plan/` folder to `.submission/`
+   - Commits `.submission/` folder to git
+   - Pushes branch to remote
+   - GitHub Actions workflow triggers automatically on push
+
+2. **Server-side (GitHub Actions):**
+   - Workflow detects `.submission/**` path in push event
+   - Copies `.submission/` → `.plan/` on runner
+   - Executes `/erk:implement-plan` with CI checks
+   - Commits implementation changes
+   - Deletes `.submission/` folder (cleanup)
+   - Pushes all changes back to branch
+
+**Key differences: `.plan/` vs `.submission/`**
+
+| Folder         | Purpose                       | Git Tracked | When Used              |
+| -------------- | ----------------------------- | ----------- | ---------------------- |
+| `.plan/`       | Local implementation tracking | ❌ No       | Manual implementation  |
+| `.submission/` | Remote submission signal      | ✅ Yes      | GitHub Actions trigger |
+
+**Why two folders?**
+
+- `.plan/` is in `.gitignore` for local work (keeps PRs clean)
+- `.submission/` is committed as a signal to GitHub Actions
+- This separation allows other workflows to trigger remote implementation
+
+**Workflow configuration:**
+
+The GitHub Actions workflow (`.github/workflows/implement-plan.yml`) triggers on:
+
+```yaml
+on:
+  push:
+    branches:
+      - "**"
+    paths:
+      - ".submission/**"
+```
+
+This means any workflow or tool can create a `.submission/` folder to trigger remote AI implementation - not just `erk submit`.
+
+**Benefits of remote implementation:**
+
+- ✅ No local compute usage - runs on GitHub Actions runners
+- ✅ Parallel implementations - multiple branches can run simultaneously
+- ✅ Consistent environment - same setup across all implementations
+- ✅ CI integration - automatic testing before push
+- ✅ Flexible triggering - any workflow can create `.submission/` folders
+
 ## Claude Code Integration
 
 Erk includes bundled kits that provide Claude Code artifacts for AI-assisted development workflows.
@@ -812,6 +884,20 @@ erk land-stack --down
 | ------------- | ---------------------------------------------- |
 | `-f, --force` | Force gt sync and auto-remove merged worktrees |
 | `--dry-run`   | Show what would be done without executing      |
+
+### `submit` Options
+
+| Option      | Description                               |
+| ----------- | ----------------------------------------- |
+| `--dry-run` | Show what would be done without executing |
+
+**Requirements:**
+
+- Current directory must contain a `.plan/` folder
+- Must be on a branch (not detached HEAD)
+- Remote `origin` must be configured
+
+**See also:** [Remote Implementation via GitHub Actions](#remote-implementation-via-github-actions) for complete workflow documentation.
 
 ### `consolidate` Options
 

@@ -2,6 +2,8 @@
 
 **Git worktree manager designed for parallelized, plan-oriented, agentic engineering workflows.**
 
+Work me.
+
 `erk` enables true parallel development by giving each branch its own isolated workspace with preserved state. Built specifically for modern engineering workflows where AI agents and developers collaborate on multiple workstreams simultaneously, each following structured implementation plans.
 
 ## Core Design Principles

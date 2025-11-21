@@ -41,6 +41,12 @@ jobs:
           cd $GITHUB_WORKSPACE
           uv tool install --from . erk
 
+          # Install development dependencies (pyright, ruff, etc.)
+          uv sync --group dev
+
+          # Install prettier for markdown formatting
+          npm install -g prettier
+
           # Install Claude Code
           curl -fsSL https://claude.ai/install.sh | bash
 

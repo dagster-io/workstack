@@ -304,22 +304,24 @@ Use gh CLI to create the issue with enriched plan content.
 
 **CRITICAL:** Issue body must include YAML front matter from Step 6 with enriched content.
 
-1. Create issue with gh CLI:
+1. Create the issue using the kit CLI command:
 
    ```bash
-   gh issue create \
-     --title "<extracted-title>" \
-     --body "<full-body-with-yaml-frontmatter-and-enriched-content>" \
-     --label "erk-plan"
+   result=$(echo "$enriched_plan" | dot-agent kit-command erk create-issue "$title" --label "erk-plan")
+
+   # Parse JSON output
+   if ! echo "$result" | jq -e '.success' > /dev/null; then
+       echo "❌ Error: Failed to create GitHub issue" >&2
+       exit 1
+   fi
+
+   issue_number=$(echo "$result" | jq -r '.issue_number')
+   issue_url=$(echo "$result" | jq -r '.issue_url')
    ```
 
-   Note: Use shell heredoc or proper escaping for body content
+   Note: The kit CLI command handles body via stdin, eliminating permission prompts
 
-2. Parse issue URL from output (gh returns URL like `https://github.com/owner/repo/issues/123`)
-
-3. Extract issue number from URL
-
-4. If gh command fails:
+2. If kit command fails:
 
    ```
    ❌ Error: Failed to create GitHub issue

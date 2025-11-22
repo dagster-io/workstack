@@ -45,6 +45,9 @@ kit_cli_commands:
   - name: post-completion-comment
     path: kit_cli_commands/erk/post_completion_comment.py
     description: Post completion tracking comment to GitHub issue with structured YAML
+  - name: create-issue
+    path: kit_cli_commands/erk/create_issue.py
+    description: Create GitHub issue with body from stdin (no permission prompts)
 hooks:
   - id: session-id-injector-hook
     lifecycle: UserPromptSubmit

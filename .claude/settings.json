@@ -1,8 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(uv run python:*)",
-      "Bash(python:*)"
+      "Bash(dot-agent:*)"
     ],
     "deny": [],
     "ask": []

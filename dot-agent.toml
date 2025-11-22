@@ -75,12 +75,10 @@ kit_id = "erk"
 source_type = "bundled"
 version = "0.3.0"
 artifacts = [
-    ".claude/agents/erk/planned-issue-wt-creator.md",
     ".claude/commands/erk/save-context-enriched-plan.md",
     ".claude/commands/erk/save-session-enriched-plan.md",
     ".claude/commands/erk/save-plan.md",
     ".claude/commands/erk/create-planned-wt.md",
-    ".claude/commands/erk/create-planned-issue-wt.md",
     ".claude/commands/erk/implement-plan.md",
     ".claude/commands/erk/fix-merge-conflicts.md",
     ".claude/docs/erk/EXAMPLES.md",

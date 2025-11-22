@@ -653,7 +653,7 @@ def test_land_stack_runs_gt_sync_in_restack_phase() -> None:
         )
 
         # Verify sync was called with correct parameters
-        for repo_root_arg, force_arg, quiet_arg in graphite_ops.sync_calls:
+        for _repo_root_arg, force_arg, quiet_arg in graphite_ops.sync_calls:
             assert force_arg is True, "sync must be called with force=True"
             assert quiet_arg is True, "sync should be quiet in default (non-verbose) mode"
 

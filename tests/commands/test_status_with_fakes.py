@@ -127,12 +127,12 @@ def test_status_cmd_displays_all_collector_sections(tmp_path: Path) -> None:
         .with_graphite_stack(["main", "feature"])
     )
 
-    # Create .plan/ folder with plan.md and progress.md
-    plan_folder = scenario.repo_dir / "feature" / ".plan"
-    plan_folder.mkdir(parents=True, exist_ok=True)
-    plan_file = plan_folder / "plan.md"
+    # Create .impl/ folder with plan.md and progress.md
+    impl_folder = scenario.repo_dir / "feature" / ".impl"
+    impl_folder.mkdir(parents=True, exist_ok=True)
+    plan_file = impl_folder / "plan.md"
     plan_file.write_text("# Feature Plan\n## Overview\nImplement new feature", encoding="utf-8")
-    progress_file = plan_folder / "progress.md"
+    progress_file = impl_folder / "progress.md"
     progress_file.write_text("# Progress Tracking\n\n- [ ] Step 1\n- [ ] Step 2", encoding="utf-8")
 
     scenario = scenario.build()
@@ -163,7 +163,8 @@ def test_status_cmd_displays_all_collector_sections(tmp_path: Path) -> None:
     assert "Git Status:" in result.output
     assert "#123" in result.output or "123" in result.output  # PR section
     assert "Stack:" in result.output or "Graphite" in result.output  # Stack section
-    assert "Plan:" in result.output or "Feature Plan" in result.output  # Plan section
+    # Implementation section
+    assert "Implementation:" in result.output or "Feature Plan" in result.output
 
 
 def test_status_cmd_not_in_git_repo(tmp_path: Path) -> None:

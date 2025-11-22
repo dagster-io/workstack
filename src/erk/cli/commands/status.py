@@ -9,7 +9,7 @@ from erk.core.parallel_task_runner import RealParallelTaskRunner
 from erk.status.collectors.git import GitStatusCollector
 from erk.status.collectors.github import GitHubPRCollector
 from erk.status.collectors.graphite import GraphiteStackCollector
-from erk.status.collectors.plan import PlanFileCollector
+from erk.status.collectors.impl import PlanFileCollector
 from erk.status.orchestrator import StatusOrchestrator
 from erk.status.renderers.simple import SimpleRenderer
 

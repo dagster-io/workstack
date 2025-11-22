@@ -23,7 +23,7 @@ from pathlib import Path
 import click
 
 from erk.core.github.issues import RealGitHubIssues
-from erk.core.plan_folder import add_worktree_creation_comment
+from erk.core.impl_folder import add_worktree_creation_comment
 
 
 def get_repo_root() -> Path:

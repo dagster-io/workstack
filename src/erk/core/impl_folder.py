@@ -1,12 +1,12 @@
-"""Plan folder management utilities.
+"""Implementation folder management utilities.
 
-This module handles the .plan/ folder structure:
+This module handles the .impl/ folder structure:
 - plan.md: Immutable implementation plan
 - progress.md: Mutable progress tracking with step checkboxes
 - issue.json: GitHub issue reference (optional)
 
 And the .submission/ folder structure:
-- Ephemeral copy of .plan/ for remote AI implementation
+- Ephemeral copy of .impl/ for remote AI implementation
 - Git-tracked, auto-deleted after implementation
 """
 
@@ -22,43 +22,43 @@ import frontmatter
 import yaml
 
 
-def create_plan_folder(worktree_path: Path, plan_content: str) -> Path:
-    """Create .plan/ folder with plan.md and progress.md files.
+def create_impl_folder(worktree_path: Path, plan_content: str) -> Path:
+    """Create .impl/ folder with plan.md and progress.md files.
 
     Args:
         worktree_path: Path to the worktree directory
         plan_content: Content for plan.md file
 
     Returns:
-        Path to the created .plan/ directory
+        Path to the created .impl/ directory
 
     Raises:
-        FileExistsError: If .plan/ directory already exists
+        FileExistsError: If .impl/ directory already exists
     """
-    plan_folder = worktree_path / ".plan"
+    impl_folder = worktree_path / ".impl"
 
-    if plan_folder.exists():
-        raise FileExistsError(f"Plan folder already exists at {plan_folder}")
+    if impl_folder.exists():
+        raise FileExistsError(f"Implementation folder already exists at {impl_folder}")
 
-    # Create .plan/ directory
-    plan_folder.mkdir(parents=True, exist_ok=False)
+    # Create .impl/ directory
+    impl_folder.mkdir(parents=True, exist_ok=False)
 
     # Write immutable plan.md
-    plan_file = plan_folder / "plan.md"
+    plan_file = impl_folder / "plan.md"
     plan_file.write_text(plan_content, encoding="utf-8")
 
     # Extract steps and generate progress.md
     steps = extract_steps_from_plan(plan_content)
     progress_content = _generate_progress_content(steps)
 
-    progress_file = plan_folder / "progress.md"
+    progress_file = impl_folder / "progress.md"
     progress_file.write_text(progress_content, encoding="utf-8")
 
-    return plan_folder
+    return impl_folder
 
 
-def get_plan_path(worktree_path: Path, git_ops=None) -> Path | None:
-    """Get path to plan.md if it exists.
+def get_impl_path(worktree_path: Path, git_ops=None) -> Path | None:
+    """Get path to plan.md in .impl/ if it exists.
 
     Args:
         worktree_path: Path to the worktree directory
@@ -67,7 +67,7 @@ def get_plan_path(worktree_path: Path, git_ops=None) -> Path | None:
     Returns:
         Path to plan.md if exists, None otherwise
     """
-    plan_file = worktree_path / ".plan" / "plan.md"
+    plan_file = worktree_path / ".impl" / "plan.md"
     path_exists = git_ops.path_exists(plan_file) if git_ops is not None else plan_file.exists()
     if path_exists:
         return plan_file
@@ -83,7 +83,7 @@ def get_progress_path(worktree_path: Path) -> Path | None:
     Returns:
         Path to progress.md if exists, None otherwise
     """
-    progress_file = worktree_path / ".plan" / "progress.md"
+    progress_file = worktree_path / ".impl" / "progress.md"
     if progress_file.exists():
         return progress_file
     return None
@@ -96,7 +96,7 @@ def update_progress(worktree_path: Path, progress_content: str) -> None:
         worktree_path: Path to the worktree directory
         progress_content: New content for progress.md
     """
-    progress_file = worktree_path / ".plan" / "progress.md"
+    progress_file = worktree_path / ".impl" / "progress.md"
     progress_file.write_text(progress_content, encoding="utf-8")
 
 
@@ -176,7 +176,7 @@ def update_progress_frontmatter(worktree_path: Path, completed: int, total: int)
         completed: Number of completed steps
         total: Total number of steps
     """
-    progress_file = worktree_path / ".plan" / "progress.md"
+    progress_file = worktree_path / ".impl" / "progress.md"
 
     # Check if file exists before reading
     if not progress_file.exists():
@@ -201,8 +201,8 @@ def update_progress_frontmatter(worktree_path: Path, completed: int, total: int)
     progress_file.write_text(updated_content, encoding="utf-8")
 
 
-def copy_plan_to_submission(worktree_path: Path) -> Path:
-    """Copy .plan/ folder to .submission/ folder.
+def copy_impl_to_submission(worktree_path: Path) -> Path:
+    """Copy .impl/ folder to .submission/ folder.
 
     Args:
         worktree_path: Path to worktree directory
@@ -211,19 +211,19 @@ def copy_plan_to_submission(worktree_path: Path) -> Path:
         Path to created .submission/ directory
 
     Raises:
-        FileNotFoundError: If .plan/ folder doesn't exist
+        FileNotFoundError: If .impl/ folder doesn't exist
         FileExistsError: If .submission/ folder already exists
     """
-    plan_folder = worktree_path / ".plan"
+    impl_folder = worktree_path / ".impl"
     submission_folder = worktree_path / ".submission"
 
-    if not plan_folder.exists():
-        raise FileNotFoundError(f"No .plan/ folder found at {worktree_path}")
+    if not impl_folder.exists():
+        raise FileNotFoundError(f"No .impl/ folder found at {worktree_path}")
 
     if submission_folder.exists():
         raise FileExistsError(f".submission/ folder already exists at {worktree_path}")
 
-    shutil.copytree(plan_folder, submission_folder)
+    shutil.copytree(impl_folder, submission_folder)
     return submission_folder
 
 
@@ -289,22 +289,22 @@ class IssueReference:
     synced_at: str
 
 
-def save_issue_reference(plan_dir: Path, issue_number: int, issue_url: str) -> None:
-    """Save GitHub issue reference to .plan/issue.json.
+def save_issue_reference(impl_dir: Path, issue_number: int, issue_url: str) -> None:
+    """Save GitHub issue reference to .impl/issue.json.
 
     Args:
-        plan_dir: Path to .plan/ directory
+        impl_dir: Path to .impl/ directory
         issue_number: GitHub issue number
         issue_url: Full GitHub issue URL
 
     Raises:
-        FileNotFoundError: If plan_dir doesn't exist
+        FileNotFoundError: If impl_dir doesn't exist
     """
-    if not plan_dir.exists():
-        msg = f"Plan directory does not exist: {plan_dir}"
+    if not impl_dir.exists():
+        msg = f"Implementation directory does not exist: {impl_dir}"
         raise FileNotFoundError(msg)
 
-    issue_file = plan_dir / "issue.json"
+    issue_file = impl_dir / "issue.json"
     now = datetime.now(UTC).isoformat()
 
     data = {
@@ -317,16 +317,16 @@ def save_issue_reference(plan_dir: Path, issue_number: int, issue_url: str) -> N
     issue_file.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
-def read_issue_reference(plan_dir: Path) -> IssueReference | None:
-    """Read GitHub issue reference from .plan/issue.json.
+def read_issue_reference(impl_dir: Path) -> IssueReference | None:
+    """Read GitHub issue reference from .impl/issue.json.
 
     Args:
-        plan_dir: Path to .plan/ directory
+        impl_dir: Path to .impl/ directory
 
     Returns:
         IssueReference if file exists and is valid, None otherwise
     """
-    issue_file = plan_dir / "issue.json"
+    issue_file = impl_dir / "issue.json"
 
     if not issue_file.exists():
         return None
@@ -354,16 +354,16 @@ def read_issue_reference(plan_dir: Path) -> IssueReference | None:
     )
 
 
-def has_issue_reference(plan_dir: Path) -> bool:
-    """Check if .plan/issue.json exists.
+def has_issue_reference(impl_dir: Path) -> bool:
+    """Check if .impl/issue.json exists.
 
     Args:
-        plan_dir: Path to .plan/ directory
+        impl_dir: Path to .impl/ directory
 
     Returns:
         True if issue.json exists, False otherwise
     """
-    issue_file = plan_dir / "issue.json"
+    issue_file = impl_dir / "issue.json"
     return issue_file.exists()
 
 

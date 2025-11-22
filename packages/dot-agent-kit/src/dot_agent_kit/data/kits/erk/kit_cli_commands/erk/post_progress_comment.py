@@ -30,7 +30,7 @@ from pathlib import Path
 import click
 
 from erk.core.github.issues import RealGitHubIssues
-from erk.core.plan_folder import parse_progress_frontmatter, read_issue_reference
+from erk.core.impl_folder import parse_progress_frontmatter, read_issue_reference
 
 
 @dataclass(frozen=True)
@@ -77,7 +77,7 @@ def get_repo_root() -> Path | None:
 def post_progress_comment(step_description: str) -> None:
     """Post progress tracking comment to GitHub issue.
 
-    Reads progress from .plan/progress.md frontmatter and posts a comment
+    Reads progress from .impl/progress.md frontmatter and posts a comment
     with structured YAML data in a collapsible details section.
 
     STEP_DESCRIPTION: Description of the step just completed
@@ -94,19 +94,19 @@ def post_progress_comment(step_description: str) -> None:
         raise SystemExit(0)
 
     # Read issue reference
-    plan_dir = Path.cwd() / ".plan"
-    issue_ref = read_issue_reference(plan_dir)
+    impl_dir = Path.cwd() / ".impl"
+    issue_ref = read_issue_reference(impl_dir)
     if issue_ref is None:
         result = ProgressError(
             success=False,
             error_type="no_issue_reference",
-            message="No issue reference found in .plan/issue.json",
+            message="No issue reference found in .impl/issue.json",
         )
         click.echo(json.dumps(asdict(result), indent=2))
         raise SystemExit(0)
 
     # Read progress file
-    progress_file = plan_dir / "progress.md"
+    progress_file = impl_dir / "progress.md"
     if not progress_file.exists():
         result = ProgressError(
             success=False,

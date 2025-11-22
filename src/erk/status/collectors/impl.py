@@ -1,12 +1,12 @@
-"""Plan file collector."""
+"""Implementation folder collector."""
 
 from pathlib import Path
 
 import frontmatter
 
 from erk.core.context import ErkContext
-from erk.core.plan_folder import (
-    get_plan_path,
+from erk.core.impl_folder import (
+    get_impl_path,
     get_progress_path,
     parse_progress_frontmatter,
     read_issue_reference,
@@ -52,7 +52,7 @@ def detect_enriched_plan(repo_root: Path) -> tuple[Path | None, str | None]:
 
 
 class PlanFileCollector(StatusCollector):
-    """Collects information about .plan/ folder."""
+    """Collects information about .impl/ folder."""
 
     @property
     def name(self) -> str:
@@ -60,20 +60,20 @@ class PlanFileCollector(StatusCollector):
         return "plan"
 
     def is_available(self, ctx: ErkContext, worktree_path: Path) -> bool:
-        """Check if .plan/plan.md exists.
+        """Check if .impl/plan.md exists.
 
         Args:
             ctx: Erk context
             worktree_path: Path to worktree
 
         Returns:
-            True if .plan/plan.md exists
+            True if .impl/plan.md exists
         """
-        plan_path = get_plan_path(worktree_path, git_ops=ctx.git)
-        return plan_path is not None
+        impl_path = get_impl_path(worktree_path, git_ops=ctx.git)
+        return impl_path is not None
 
     def collect(self, ctx: ErkContext, worktree_path: Path, repo_root: Path) -> PlanStatus | None:
-        """Collect plan folder information.
+        """Collect implementation folder information.
 
         Args:
             ctx: Erk context
@@ -83,12 +83,12 @@ class PlanFileCollector(StatusCollector):
         Returns:
             PlanStatus with folder information or None if collection fails
         """
-        plan_path = get_plan_path(worktree_path, git_ops=ctx.git)
+        impl_path = get_impl_path(worktree_path, git_ops=ctx.git)
 
         # Detect enriched plan at repo root
         enriched_plan_path, enriched_plan_filename = detect_enriched_plan(repo_root)
 
-        if plan_path is None:
+        if impl_path is None:
             return PlanStatus(
                 exists=False,
                 path=None,
@@ -102,7 +102,7 @@ class PlanFileCollector(StatusCollector):
             )
 
         # Read plan.md
-        content = plan_path.read_text(encoding="utf-8")
+        content = impl_path.read_text(encoding="utf-8")
         lines = content.splitlines()
         line_count = len(lines)
 
@@ -128,16 +128,16 @@ class PlanFileCollector(StatusCollector):
         progress_summary, completion_percentage = self._calculate_progress(worktree_path)
 
         # Return folder path, not plan.md file path
-        plan_folder = worktree_path / ".plan"
+        impl_folder = worktree_path / ".impl"
 
         # Read issue reference if present
-        issue_ref = read_issue_reference(plan_folder)
+        issue_ref = read_issue_reference(impl_folder)
         issue_number = issue_ref.issue_number if issue_ref else None
         issue_url = issue_ref.issue_url if issue_ref else None
 
         return PlanStatus(
             exists=True,
-            path=plan_folder,
+            path=impl_folder,
             summary=summary,
             line_count=line_count,
             first_lines=first_lines,

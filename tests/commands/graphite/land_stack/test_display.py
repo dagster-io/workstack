@@ -141,10 +141,10 @@ def test_land_stack_dry_run_shows_submit_commands() -> None:
         )
 
         # Assert: DRY RUN mode means submit_branch should NOT be called on FakeGraphite
-        # (In dry-run, NoopGraphite.submit_branch shows the command but doesn't mutate)
+        # (In dry-run, DryRunGraphite.submit_branch shows the command but doesn't mutate)
         # The test_ctx uses dry_run=True, so FakeGraphite.submit_branch is NOT invoked
-        # Instead, NoopGraphite wrapper shows the command
+        # Instead, DryRunGraphite wrapper shows the command
         #
         # Note: We can't assert len(graphite_ops.submit_branch_calls) == 0 here because
-        # the NoopGraphite wrapper still calls the underlying fake for tracking.
+        # the DryRunGraphite wrapper still calls the underlying fake for tracking.
         # The key is that dry-run mode shows the command in output without real execution.

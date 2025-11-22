@@ -205,7 +205,7 @@ def _delete_worktree(
 
     # 4c. Prune worktree metadata to clean up any stale references
     # This is important if git worktree remove failed or if we manually deleted
-    # Trust NoopGit wrapper to handle dry-run behavior
+    # Trust DryRunGit wrapper to handle dry-run behavior
     _prune_worktrees_safe(ctx.git, repo.root)
 
     # 4c. Delete stack branches (now that worktree is removed)

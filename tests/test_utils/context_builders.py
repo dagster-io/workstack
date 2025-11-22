@@ -6,7 +6,7 @@ ErkContext with appropriate fake implementations.
 """
 
 from erk.core.context import ErkContext
-from erk.core.git.noop import NoopGit
+from erk.core.git.dry_run import DryRunGit
 from tests.fakes.git import FakeGit
 from tests.fakes.github import FakeGitHub
 from tests.fakes.graphite import FakeGraphite
@@ -29,7 +29,7 @@ def build_workspace_test_context(
 
     Args:
         env: Pure or isolated erk environment fixture
-        dry_run: Whether to wrap git operations with NoopGit (default: False)
+        dry_run: Whether to wrap git operations with DryRunGit (default: False)
         use_graphite: Whether to enable Graphite integration (default: False)
         current_branch: Current branch name for FakeGit configuration (default: None)
         **kwargs: Additional arguments passed to env.build_context()
@@ -47,7 +47,7 @@ def build_workspace_test_context(
     if "git" not in kwargs:
         git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
         if dry_run:
-            git_ops = NoopGit(git_ops)
+            git_ops = DryRunGit(git_ops)
         kwargs["git"] = git_ops
 
     # Provide defaults for other integrations if not in kwargs
@@ -75,7 +75,7 @@ def build_graphite_test_context(
 
     Args:
         env: Pure or isolated erk environment fixture
-        dry_run: Whether to wrap git operations with NoopGit (default: False)
+        dry_run: Whether to wrap git operations with DryRunGit (default: False)
         **kwargs: Additional arguments passed to env.build_context()
 
     Returns:

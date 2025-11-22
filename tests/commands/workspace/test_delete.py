@@ -8,7 +8,7 @@ from click.testing import CliRunner
 from erk.cli.cli import cli
 from erk.core.branch_metadata import BranchMetadata
 from erk.core.git.abc import WorktreeInfo
-from erk.core.git.noop import NoopGit
+from erk.core.git.dry_run import DryRunGit
 from tests.fakes.git import FakeGit
 from tests.fakes.github import FakeGitHub
 from tests.fakes.graphite import FakeGraphite
@@ -78,7 +78,7 @@ def test_delete_dry_run_with_delete_stack() -> None:
             worktrees={env.cwd: [WorktreeInfo(path=wt, branch="feature-2")]},
             git_common_dirs={env.cwd: env.git_dir},
         )
-        git_ops = NoopGit(fake_git_ops)
+        git_ops = DryRunGit(fake_git_ops)
 
         # Build graphite ops with branch metadata
         branches = {

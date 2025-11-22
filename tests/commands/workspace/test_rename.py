@@ -6,7 +6,7 @@ This file tests the rename command which renames a worktree workspace.
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.git.noop import NoopGit
+from erk.core.git.dry_run import DryRunGit
 from erk.core.repo_discovery import RepoContext
 from tests.fakes.git import FakeGit
 from tests.fakes.github import FakeGitHub
@@ -137,7 +137,7 @@ def test_rename_dry_run() -> None:
         old_wt = work_dir / "old-name"
 
         git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
-        git_ops = NoopGit(git_ops)
+        git_ops = DryRunGit(git_ops)
         repo = RepoContext(
             root=env.cwd,
             repo_name=env.cwd.name,

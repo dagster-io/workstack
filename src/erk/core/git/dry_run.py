@@ -14,7 +14,7 @@ from erk.core.git.abc import Git, WorktreeInfo
 # ============================================================================
 
 
-class NoopGit(Git):
+class DryRunGit(Git):
     """No-op wrapper that prevents execution of destructive operations.
 
     This wrapper intercepts destructive git operations and either returns without
@@ -23,7 +23,7 @@ class NoopGit(Git):
 
     Usage:
         real_ops = RealGit()
-        noop_ops = NoopGit(real_ops)
+        noop_ops = DryRunGit(real_ops)
 
         # No-op or prints message instead of deleting
         noop_ops.remove_worktree(repo_root, path, force=False)

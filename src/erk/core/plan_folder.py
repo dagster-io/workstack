@@ -365,3 +365,39 @@ def has_issue_reference(plan_dir: Path) -> bool:
     """
     issue_file = plan_dir / "issue.json"
     return issue_file.exists()
+
+
+def get_issue_for_worktree(
+    worktree_path: Path,
+    issues_api: Any,  # GitHubIssues type (avoiding circular import)
+    repo_root: Path,
+) -> Any:  # IssueInfo | None (avoiding circular import)
+    """Read issue reference from .plan/issue.json and fetch full issue data.
+
+    Args:
+        worktree_path: Path to worktree directory
+        issues_api: GitHubIssues instance for fetching issue data
+        repo_root: Repository root directory
+
+    Returns:
+        IssueInfo if issue reference exists and issue is found, None otherwise
+
+    Handles:
+        - Missing .plan/issue.json gracefully (returns None)
+        - Deleted issues (returns None)
+        - Network errors (returns None)
+        - Closed issues (returns data with CLOSED state)
+    """
+    plan_dir = worktree_path / ".plan"
+    issue_ref = read_issue_reference(plan_dir)
+
+    if issue_ref is None:
+        return None
+
+    # Try to fetch the issue, handling errors gracefully
+    # Third-party API exception handling (gh CLI may fail)
+    try:
+        return issues_api.get_issue(repo_root, issue_ref.issue_number)
+    except RuntimeError:
+        # Issue deleted, network error, or other gh CLI failure
+        return None

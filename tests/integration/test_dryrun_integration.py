@@ -287,9 +287,31 @@ def test_noop_github_issues_create_returns_fake_number() -> None:
     assert len(fake.created_issues) == 0
 
 
+def _make_issue(
+    number: int,
+    title: str,
+    body: str,
+    state: str,
+    url: str,
+    labels: list[str] | None = None,
+) -> IssueInfo:
+    """Helper to create IssueInfo with default values."""
+    return IssueInfo(
+        number=number,
+        title=title,
+        body=body,
+        state=state,
+        url=url,
+        labels=labels or [],
+        created_at="2024-01-01T00:00:00Z",
+        updated_at="2024-01-01T00:00:00Z",
+        assignees=[],
+    )
+
+
 def test_noop_github_issues_get_issue_delegates() -> None:
     """Test NoopGitHubIssues get_issue delegates to wrapped implementation."""
-    pre_configured = {42: IssueInfo(42, "Test Issue", "Body", "OPEN", "http://url/42")}
+    pre_configured = {42: _make_issue(42, "Test Issue", "Body", "OPEN", "http://url/42")}
     fake = FakeGitHubIssues(issues=pre_configured)
     noop = NoopGitHubIssues(fake)
 
@@ -302,7 +324,7 @@ def test_noop_github_issues_get_issue_delegates() -> None:
 
 def test_noop_github_issues_add_comment_noop() -> None:
     """Test NoopGitHubIssues add_comment does nothing in dry-run mode."""
-    pre_configured = {42: IssueInfo(42, "Test", "Body", "OPEN", "http://url/42")}
+    pre_configured = {42: _make_issue(42, "Test", "Body", "OPEN", "http://url/42")}
     fake = FakeGitHubIssues(issues=pre_configured)
     noop = NoopGitHubIssues(fake)
 
@@ -316,8 +338,8 @@ def test_noop_github_issues_add_comment_noop() -> None:
 def test_noop_github_issues_list_issues_delegates() -> None:
     """Test NoopGitHubIssues list_issues delegates to wrapped implementation."""
     pre_configured = {
-        1: IssueInfo(1, "Issue 1", "Body 1", "OPEN", "http://url/1"),
-        2: IssueInfo(2, "Issue 2", "Body 2", "CLOSED", "http://url/2"),
+        1: _make_issue(1, "Issue 1", "Body 1", "OPEN", "http://url/1"),
+        2: _make_issue(2, "Issue 2", "Body 2", "CLOSED", "http://url/2"),
     }
     fake = FakeGitHubIssues(issues=pre_configured)
     noop = NoopGitHubIssues(fake)
@@ -333,8 +355,8 @@ def test_noop_github_issues_list_issues_delegates() -> None:
 def test_noop_github_issues_list_with_filters_delegates() -> None:
     """Test NoopGitHubIssues list_issues with filters delegates correctly."""
     pre_configured = {
-        1: IssueInfo(1, "Open Issue", "Body", "OPEN", "http://url/1"),
-        2: IssueInfo(2, "Closed Issue", "Body", "CLOSED", "http://url/2"),
+        1: _make_issue(1, "Open Issue", "Body", "OPEN", "http://url/1", labels=["plan"]),
+        2: _make_issue(2, "Closed Issue", "Body", "CLOSED", "http://url/2"),
     }
     fake = FakeGitHubIssues(issues=pre_configured)
     noop = NoopGitHubIssues(fake)
@@ -365,8 +387,8 @@ def test_noop_github_issues_write_operations_blocked() -> None:
 def test_noop_github_issues_read_operations_work() -> None:
     """Test that NoopGitHubIssues allows read operations in dry-run mode."""
     pre_configured = {
-        42: IssueInfo(42, "Test Issue", "Body content", "OPEN", "http://url/42"),
-        99: IssueInfo(99, "Another Issue", "Other body", "CLOSED", "http://url/99"),
+        42: _make_issue(42, "Test Issue", "Body content", "OPEN", "http://url/42"),
+        99: _make_issue(99, "Another Issue", "Other body", "CLOSED", "http://url/99"),
     }
     fake = FakeGitHubIssues(issues=pre_configured)
     noop = NoopGitHubIssues(fake)

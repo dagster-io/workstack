@@ -142,6 +142,10 @@ def test_workflow_get_issue_after_creation() -> None:
                 body="Body content",
                 state="OPEN",
                 url="https://github.com/owner/repo/issues/42",
+                labels=[],
+                created_at="2024-01-01T00:00:00Z",
+                updated_at="2024-01-01T00:00:00Z",
+                assignees=[],
             )
         },
     )

@@ -88,9 +88,9 @@ def test_fake_github_issues_get_issue_existing() -> None:
             state="OPEN",
             url="https://github.com/owner/repo/issues/42",
             labels=[],
-assignees=[],
+            assignees=[],
             created_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            updated_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC), cb795c85 (Add issue-wt-creator agent and refactor plan worktree creation commands)
+            updated_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
         )
     }
     issues = FakeGitHubIssues(issues=pre_configured)
@@ -142,9 +142,9 @@ def test_fake_github_issues_add_comment_existing_issue() -> None:
             state="OPEN",
             url="https://github.com/owner/repo/issues/42",
             labels=[],
-assignees=[],
+            assignees=[],
             created_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            updated_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC), cb795c85 (Add issue-wt-creator agent and refactor plan worktree creation commands)
+            updated_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
         )
     }
     issues = FakeGitHubIssues(issues=pre_configured)

@@ -11,15 +11,15 @@ class PrintingGitHubAdmin(PrintingBase, GitHubAdmin):
     """Wrapper that prints operations before delegating to inner implementation.
 
     This wrapper prints styled output for operations, then delegates to the
-    wrapped implementation (which could be Real or Noop).
+    wrapped implementation (which could be Real or DryRun).
 
     Usage:
         # For production
         printing_admin = PrintingGitHubAdmin(real_admin, script_mode=False, dry_run=False)
 
         # For dry-run
-        noop_inner = NoopGitHubAdmin(real_admin)
-        printing_admin = PrintingGitHubAdmin(noop_inner, script_mode=False, dry_run=True)
+        dry_run_inner = DryRunGitHubAdmin(real_admin)
+        printing_admin = PrintingGitHubAdmin(dry_run_inner, script_mode=False, dry_run=True)
     """
 
     # Inherits __init__, _emit, and _format_command from PrintingBase

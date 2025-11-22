@@ -7,7 +7,6 @@ import click
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
 from erk.core.context import ErkContext
-from erk.core.implementation_queue.github import RealGitHubAdmin
 
 
 @click.group("admin")
@@ -45,9 +44,8 @@ def github_pr_setting(ctx: ErkContext, action: Literal["enable", "disable"] | No
     # Discover repository context
     repo = discover_repo_context(ctx, ctx.cwd)
 
-    # Create admin interface
-    # TODO: Use injected admin from context when dry-run support is added
-    admin = RealGitHubAdmin()
+    # Use admin from context (supports dry-run)
+    admin = ctx.github_admin
 
     if action is None:
         # Display current setting

@@ -488,3 +488,25 @@ def test_list_issues_parses_all_fields(monkeypatch: MonkeyPatch) -> None:
         assert issue.body == "Multi-line\nbody\nwith\nlinebreaks"
         assert issue.state == "OPEN"
         assert issue.url == "https://github.com/owner/repo/issues/123"
+
+
+def test_list_issues_with_limit(monkeypatch: MonkeyPatch) -> None:
+    """Test list_issues respects limit parameter."""
+    created_commands = []
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        created_commands.append(cmd)
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="[]",
+            stderr="",
+        )
+
+    with mock_subprocess_run(monkeypatch, mock_run):
+        issues = RealGitHubIssues()
+        issues.list_issues(Path("/repo"), limit=10)
+
+        cmd = created_commands[0]
+        assert "--limit" in cmd
+        assert "10" in cmd

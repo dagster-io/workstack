@@ -758,3 +758,52 @@ def test_fake_github_issues_created_labels_read_only() -> None:
     created = issues.created_labels
     assert len(created) == 1
     assert created[0] == ("test-label", "Test description", "000000")
+
+
+def test_list_issues_respects_limit() -> None:
+    """Test list_issues applies limit correctly."""
+    now = datetime.now(UTC)
+    issues_dict = {
+        1: IssueInfo(
+            number=1,
+            title="Issue 1",
+            body="Body 1",
+            state="OPEN",
+            url="http://url/1",
+            labels=[],
+            assignees=[],
+            created_at=now,
+            updated_at=now,
+        ),
+        2: IssueInfo(
+            number=2,
+            title="Issue 2",
+            body="Body 2",
+            state="OPEN",
+            url="http://url/2",
+            labels=[],
+            assignees=[],
+            created_at=now,
+            updated_at=now,
+        ),
+        3: IssueInfo(
+            number=3,
+            title="Issue 3",
+            body="Body 3",
+            state="OPEN",
+            url="http://url/3",
+            labels=[],
+            assignees=[],
+            created_at=now,
+            updated_at=now,
+        ),
+    }
+    fake = FakeGitHubIssues(issues=issues_dict)
+
+    # Test limit=2 returns only 2 issues
+    result = fake.list_issues(sentinel_path(), limit=2)
+    assert len(result) == 2
+
+    # Test limit=None returns all issues
+    result = fake.list_issues(sentinel_path(), limit=None)
+    assert len(result) == 3

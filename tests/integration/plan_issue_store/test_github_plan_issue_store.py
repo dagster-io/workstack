@@ -400,3 +400,41 @@ def test_get_provider_name() -> None:
     fake_github = FakeGitHubIssues()
     store = GitHubPlanIssueStore(fake_github)
     assert store.get_provider_name() == "github"
+
+
+def test_list_plan_issues_passes_limit_to_interface() -> None:
+    """Test list_plan_issues passes limit to GitHubIssues interface."""
+    now = datetime.now(UTC)
+    issues = {
+        1: IssueInfo(
+            number=1,
+            title="Plan 1",
+            body="Body 1",
+            state="OPEN",
+            url="http://url/1",
+            labels=["erk-plan"],
+            assignees=[],
+            created_at=now,
+            updated_at=now,
+        ),
+        2: IssueInfo(
+            number=2,
+            title="Plan 2",
+            body="Body 2",
+            state="OPEN",
+            url="http://url/2",
+            labels=["erk-plan"],
+            assignees=[],
+            created_at=now,
+            updated_at=now,
+        ),
+    }
+    fake_github = FakeGitHubIssues(issues=issues)
+    store = GitHubPlanIssueStore(fake_github)
+
+    # Query with limit=1
+    query = PlanIssueQuery(labels=["erk-plan"], limit=1)
+    results = store.list_plan_issues(Path("/repo"), query)
+
+    # Should only return 1 result (not slice in Python)
+    assert len(results) == 1

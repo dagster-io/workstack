@@ -2,14 +2,14 @@
 description: Extract plan from conversation and enhance using session log discoveries
 ---
 
-# /erk:enhance-and-save-plan
+# /erk:save-session-enriched-plan
 
 Extracts an implementation plan from the conversation and enhances it with discoveries mined from Claude Code session logs. This preserves all computational work from the planning session without triggering any implementation behavior.
 
 ## Usage
 
 ```bash
-/erk:enhance-and-save-plan
+/erk:save-session-enriched-plan
 ```
 
 ## Purpose
@@ -51,7 +51,7 @@ Benefits:
 
 ## Agent Instructions
 
-You are executing the `/erk:enhance-and-save-plan` command. Follow these steps carefully using ONLY the allowed tools.
+You are executing the `/erk:save-session-enriched-plan` command. Follow these steps carefully using ONLY the allowed tools.
 
 ### CRITICAL: Tool Restrictions
 
@@ -107,7 +107,7 @@ CWD=$(pwd)
 
 # Run discover phase with session ID from Step 1a
 # Using --streaming flag for batched processing
-dot-agent run erk enhance-and-save-plan discover --session-id <SESSION_ID> --cwd "$CWD" --streaming
+dot-agent run erk save-session-enriched-plan discover --session-id <SESSION_ID> --cwd "$CWD" --streaming
 ```
 
 This outputs JSON with structure (streaming mode):
@@ -185,7 +185,7 @@ Please create a plan first:
 1. Enter Plan mode
 2. Create your implementation plan
 3. Exit Plan mode
-4. Then run /erk:enhance-and-save-plan
+4. Then run /erk:save-session-enriched-plan
 ```
 
 ### Step 3: Mine Discoveries Using Haiku Subagent

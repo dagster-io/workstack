@@ -37,35 +37,35 @@
 
 ---
 
-| If you're about to write...                                      | STOP! Check this instead                                                                                                                  |
-| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Writing or editing Python code                                   | → **🔴 LOAD dignified-python skill FIRST** - Complete LBYL philosophy (checklist rules are excerpts)                                      |
-| `try:` or `except:`                                              | → [Exception Handling](#exception-handling) - Default: let exceptions bubble                                                              |
-| `List[...]`, `Dict[...]`, `Union[...]`                           | → Use `list[...]`, `dict[...]`, `X \| Y`                                                                                                  |
-| `typing.Protocol`                                                | → Use `abc.ABC` instead                                                                                                                   |
-| `dict[key]` without checking                                     | → Use `if key in dict:` or `.get()`                                                                                                       |
-| `path.resolve()` or `path.is_relative_to()`                      | → Check `path.exists()` first                                                                                                             |
-| Function with default argument                                   | → Make explicit at call sites                                                                                                             |
-| `from .module import`                                            | → Use absolute imports only                                                                                                               |
-| `print(...)` in CLI code                                         | → Use `click.echo()`                                                                                                                      |
-| `subprocess.run(..., check=True)`                                | → Use `run_subprocess_with_context()` from erk.core.subprocess for rich errors                                                            |
-| Creating or executing implementation plans                       | → Use /erk:persist-plan, /erk:create-planned-issue, /erk:create-planned-wt, /erk:implement-plan, /erk:implement-planned-issue, erk submit |
-| Submitting a branch with Graphite                                | → Use /gt:submit-branch command (delegates to gt-branch-submitter agent)                                                                  |
-| Updating an existing PR                                          | → Use /gt:update-pr command                                                                                                               |
-| Systematic Python changes (migrate calls, rename, batch updates) | → Use libcst-refactor agent (Task tool); for multi-file transformations                                                                   |
-| `pytest`, `pyright`, `ruff`, `prettier`, `make`, `gt` commands   | → Use devrun agent (Task tool) - specialized parsing, cost efficiency                                                                     |
-| Stack traversal or "upstack"/"downstack"                         | → [Graphite Stack Terminology](#-graphite-stack-terminology-critical) - main is at BOTTOM                                                 |
-| 4+ levels of indentation                                         | → Extract helper functions                                                                                                                |
-| Code in `__init__.py`                                            | → Keep empty or docstring-only (except top-level public API exports)                                                                      |
-| Tests for speculative features                                   | → **FORBIDDEN** - Only test actively implemented code (TDD is fine)                                                                       |
-| Creating `.claude/` artifacts                                    | → Use `kebab-case` (hyphens) NOT `snake_case` (underscores)                                                                               |
-| `Path("/test/...")` or hardcoded paths                           | → **CATASTROPHIC** - Use `pure_erk_env` fixture - [Test Isolation](#6-test-isolation--must)                                               |
-| Writing or modifying tests                                       | → **🔴 LOAD fake-driven-testing skill FIRST** - Test patterns, architecture, anti-patterns                                                |
-| Test that invokes subprocess or uses `time.sleep()`              | → **MUST** be integration test - [Test Categorization](#test-categorization-rules)                                                        |
-| Creating or modifying hooks                                      | → [Hook Guide](docs/agent/hooks.md)                                                                                                       |
-| Kit CLI commands that call Claude (preprocessing, discovery)     | → [Kit CLI Standards](docs/agent/kit-cli-commands.md) - Python reduces tokens, LLM does inference                                         |
-| Creating command that orchestrates workflow                      | → [Command-Agent Delegation](docs/agent/command-agent-delegation.md) - When/how to delegate                                               |
-| ⚠️ Python patterns above                                         | → These are EXCERPTS ONLY - Load dignified-python skill for complete guidance                                                             |
+| If you're about to write...                                      | STOP! Check this instead                                                                                                                                |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Writing or editing Python code                                   | → **🔴 LOAD dignified-python skill FIRST** - Complete LBYL philosophy (checklist rules are excerpts)                                                    |
+| `try:` or `except:`                                              | → [Exception Handling](#exception-handling) - Default: let exceptions bubble                                                                            |
+| `List[...]`, `Dict[...]`, `Union[...]`                           | → Use `list[...]`, `dict[...]`, `X \| Y`                                                                                                                |
+| `typing.Protocol`                                                | → Use `abc.ABC` instead                                                                                                                                 |
+| `dict[key]` without checking                                     | → Use `if key in dict:` or `.get()`                                                                                                                     |
+| `path.resolve()` or `path.is_relative_to()`                      | → Check `path.exists()` first                                                                                                                           |
+| Function with default argument                                   | → Make explicit at call sites                                                                                                                           |
+| `from .module import`                                            | → Use absolute imports only                                                                                                                             |
+| `print(...)` in CLI code                                         | → Use `click.echo()`                                                                                                                                    |
+| `subprocess.run(..., check=True)`                                | → Use `run_subprocess_with_context()` from erk.core.subprocess for rich errors                                                                          |
+| Creating or executing implementation plans                       | → Use /erk:save-context-enriched-plan, /erk:create-planned-issue, /erk:create-planned-wt, /erk:implement-plan, /erk:implement-planned-issue, erk submit |
+| Submitting a branch with Graphite                                | → Use /gt:submit-branch command (delegates to gt-branch-submitter agent)                                                                                |
+| Updating an existing PR                                          | → Use /gt:update-pr command                                                                                                                             |
+| Systematic Python changes (migrate calls, rename, batch updates) | → Use libcst-refactor agent (Task tool); for multi-file transformations                                                                                 |
+| `pytest`, `pyright`, `ruff`, `prettier`, `make`, `gt` commands   | → Use devrun agent (Task tool) - specialized parsing, cost efficiency                                                                                   |
+| Stack traversal or "upstack"/"downstack"                         | → [Graphite Stack Terminology](#-graphite-stack-terminology-critical) - main is at BOTTOM                                                               |
+| 4+ levels of indentation                                         | → Extract helper functions                                                                                                                              |
+| Code in `__init__.py`                                            | → Keep empty or docstring-only (except top-level public API exports)                                                                                    |
+| Tests for speculative features                                   | → **FORBIDDEN** - Only test actively implemented code (TDD is fine)                                                                                     |
+| Creating `.claude/` artifacts                                    | → Use `kebab-case` (hyphens) NOT `snake_case` (underscores)                                                                                             |
+| `Path("/test/...")` or hardcoded paths                           | → **CATASTROPHIC** - Use `pure_erk_env` fixture - [Test Isolation](#6-test-isolation--must)                                                             |
+| Writing or modifying tests                                       | → **🔴 LOAD fake-driven-testing skill FIRST** - Test patterns, architecture, anti-patterns                                                              |
+| Test that invokes subprocess or uses `time.sleep()`              | → **MUST** be integration test - [Test Categorization](#test-categorization-rules)                                                                      |
+| Creating or modifying hooks                                      | → [Hook Guide](docs/agent/hooks.md)                                                                                                                     |
+| Kit CLI commands that call Claude (preprocessing, discovery)     | → [Kit CLI Standards](docs/agent/kit-cli-commands.md) - Python reduces tokens, LLM does inference                                                       |
+| Creating command that orchestrates workflow                      | → [Command-Agent Delegation](docs/agent/command-agent-delegation.md) - When/how to delegate                                                             |
+| ⚠️ Python patterns above                                         | → These are EXCERPTS ONLY - Load dignified-python skill for complete guidance                                                                           |
 
 ## 📚 Quick Reference
 

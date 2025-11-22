@@ -10,7 +10,7 @@
 - **State isolation**: Each worktree maintains complete environment independence - dependencies, build artifacts, env vars, and file system state
 - **Context preservation**: Implementation context, API constraints, and design decisions persist in plan artifacts, enabling AI agents to maintain full context across sessions
 - **Plan-first development**: Each worktree can be created from a structured plan (`.plan/`) that travels with the workspace, providing persistent context for both human and AI implementers
-- **Agentic optimization**: Seamless integration with Claude Code for AI-driven implementation (`/erk:persist-plan`, `/erk:implement-plan`, `/erk:create-planned-wt`)
+- **Agentic optimization**: Seamless integration with Claude Code for AI-driven implementation (`/erk:save-context-enriched-plan`, `/erk:implement-plan`, `/erk:create-planned-wt`)
 
 ## Why Parallel Worktrees Matter for AI-Native Engineering
 
@@ -461,7 +461,7 @@ This workflow emerged from experience - checking in planning documents created n
 
 **AI-Augmented Planning:**
 
-The manual workflow above can be fully automated using kit-installed Claude Code commands. See [Claude Code Integration](#claude-code-integration) for `/erk:persist-plan`, `/erk:create-planned-issue`, `/erk:create-planned-wt`, `/erk:implement-plan`, and `/erk:implement-planned-issue` commands that automate plan extraction, enhancement, GitHub issue creation, worktree creation, and implementation execution.
+The manual workflow above can be fully automated using kit-installed Claude Code commands. See [Claude Code Integration](#claude-code-integration) for `/erk:save-context-enriched-plan`, `/erk:create-planned-issue`, `/erk:create-planned-wt`, `/erk:implement-plan`, and `/erk:implement-planned-issue` commands that automate plan extraction, enhancement, GitHub issue creation, worktree creation, and implementation execution.
 
 ### Remote Implementation via GitHub Actions
 
@@ -556,13 +556,13 @@ The traditional erk planning workflow can be fully automated with kit-installed 
 **AI-Augmented Approach (With Kits):**
 
 1. Discuss and plan with Claude in conversation
-2. `/erk:persist-plan` - Automatically extracts, enhances, and saves plan
+2. `/erk:save-context-enriched-plan` - Automatically extracts, enhances, and saves plan
 3. `/erk:create-planned-wt` - Creates worktree from saved plan
 4. `/erk:implement-plan` - Executes plan with automated progress tracking
 
 ### Planning Workflow Commands
 
-#### `/erk:persist-plan` - Save Enhanced Plan
+#### `/erk:save-context-enriched-plan` - Save Enhanced Plan
 
 Extracts the implementation plan from your conversation with Claude, interactively enhances it, and saves to disk.
 
@@ -578,10 +578,10 @@ Extracts the implementation plan from your conversation with Claude, interactive
 
 ```bash
 # In conversation with Claude after planning
-/erk:persist-plan
+/erk:save-context-enriched-plan
 
 # With optional guidance corrections
-/erk:persist-plan "Focus on security validation in authentication phase"
+/erk:save-context-enriched-plan "Focus on security validation in authentication phase"
 ```
 
 **Why context preservation matters:**
@@ -608,7 +608,7 @@ Creates a new erk worktree from a saved plan file.
 **Usage:**
 
 ```bash
-# After running /erk:persist-plan
+# After running /erk:save-context-enriched-plan
 /erk:create-planned-wt
 ```
 
@@ -685,7 +685,7 @@ erk checkout root
 # ... discuss with Claude, create implementation plan ...
 
 # 2. Save enhanced plan to disk
-/erk:persist-plan
+/erk:save-context-enriched-plan
 # Output: Saved plan to: Add_User_Auth-plan.md
 
 # 3. Create worktree from plan
@@ -778,7 +778,7 @@ The `erk status` command shows:
 
 Erk bundles several kits that provide Claude Code artifacts:
 
-- **erk** - Planning workflow commands (`/erk:persist-plan`, `/erk:create-planned-issue`, `/erk:create-planned-wt`, `/erk:implement-plan`, `/erk:implement-planned-issue`, `/erk:fix-merge-conflicts`)
+- **erk** - Planning workflow commands (`/erk:save-context-enriched-plan`, `/erk:create-planned-issue`, `/erk:create-planned-wt`, `/erk:implement-plan`, `/erk:implement-planned-issue`, `/erk:fix-merge-conflicts`)
 - **gt** - Graphite integration (`/gt:submit-branch`, `/gt:update-pr`, `gt-graphite` skill)
 - **devrun** - Development tool execution (pytest, pyright, ruff, prettier, make, gt)
 - **dignified-python-313** - Python 3.13+ coding standards
@@ -1115,7 +1115,7 @@ See [`.agent/README.md`](.agent/README.md) for more details.
 Erk includes bundled kits that provide slash commands, agents, and skills for AI-assisted workflows. For comprehensive documentation of all installed kits and their artifacts, see:
 
 - **[Kit Registry](.claude/docs/kit-registry.md)** - Complete catalog of installed kits, commands, agents, and skills
-- **[Planning Workflow Commands](#claude-code-integration)** - `/erk:persist-plan`, `/erk:create-planned-issue`, `/erk:create-planned-wt`, `/erk:implement-plan`, `/erk:implement-planned-issue`
+- **[Planning Workflow Commands](#claude-code-integration)** - `/erk:save-context-enriched-plan`, `/erk:create-planned-issue`, `/erk:create-planned-wt`, `/erk:implement-plan`, `/erk:implement-planned-issue`
 - **[Graphite Workflow Commands](#claude-code-integration)** - `/gt:submit-branch`, `/gt:update-pr`
 
 ## Links

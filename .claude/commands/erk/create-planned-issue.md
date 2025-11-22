@@ -58,7 +58,7 @@ This will save the issue reference without creating a new issue. Use this when:
 - At least one `*-plan.md` file must exist at repository root
 - Current working directory must be in a git repository
 - `gh` CLI must be installed and authenticated
-- Typically run after `/erk:persist-plan`
+- Typically run after `/erk:save-context-enriched-plan`
 - Can run before or after `/erk:create-planned-wt`
 
 ## Success Criteria
@@ -89,7 +89,7 @@ This command succeeds when ALL of the following are true:
 **Cause:** No `*-plan.md` files exist at repository root
 **Solution:**
 
-- Run `/erk:persist-plan` to create a plan first
+- Run `/erk:save-context-enriched-plan` to create a plan first
 - Ensure plan file ends with `-plan.md`
 - Verify you're in the correct repository
 
@@ -132,14 +132,14 @@ This command succeeds when ALL of the following are true:
 
 **Typical workflow:**
 
-1. Create plan: `/erk:persist-plan`
+1. Create plan: `/erk:save-context-enriched-plan`
 2. Create issue: `/erk:create-planned-issue` ← **YOU ARE HERE**
 3. Create worktree: `/erk:create-planned-wt`
 4. Navigate and implement: `erk checkout <branch> && claude --permission-mode acceptEdits "/erk:implement-plan"`
 
 **Alternative workflow (create issue from within worktree):**
 
-1. Create plan: `/erk:persist-plan`
+1. Create plan: `/erk:save-context-enriched-plan`
 2. Create worktree: `/erk:create-planned-wt`
 3. Navigate: `erk checkout <branch>`
 4. Create issue: `/erk:create-planned-issue` ← Issue automatically linked to `.plan/` folder
@@ -204,7 +204,7 @@ Find the most recent `*-plan.md` file at repository root:
    ```
    ❌ Error: No plan files found at repository root
 
-   Run /erk:persist-plan to create a plan first.
+   Run /erk:save-context-enriched-plan to create a plan first.
    ```
 
    Exit with error.

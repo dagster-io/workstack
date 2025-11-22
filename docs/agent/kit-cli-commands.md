@@ -407,7 +407,7 @@ Use this flowchart to decide Python vs LLM:
 
 **Special case - Slugification:** This is mechanical but doesn't reduce tokens AND loses semantic meaning. It's wrong in both Python and LLM. Instead, ask LLM to generate appropriate names directly.
 
-## Case Study: `/erk:enhance-and-save-plan`
+## Case Study: `/erk:save-session-enriched-plan`
 
 ### Before Refactoring (Anti-Patterns)
 

@@ -25,7 +25,7 @@ Delegates the complete worktree creation workflow to the `planned-wt-creator` ag
 
 - At least one `*-plan.md` file at repository root
 - Current working directory in a git repository
-- Typically run after `/erk:persist-plan`
+- Typically run after `/erk:save-context-enriched-plan`
 
 ## Implementation
 

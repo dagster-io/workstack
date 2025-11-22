@@ -30,7 +30,7 @@ git rev-parse --show-toplevel
 **Auto-detection algorithm:**
 
 1. List all `*-plan.md` files at repository root
-2. If no files found → error with guidance to run `/persist-plan`
+2. If no files found → error with guidance to run `/erk:save-context-enriched-plan`
 3. If files found → select most recent by modification time
 4. Validate selected file (exists, readable, not empty)
 
@@ -60,7 +60,7 @@ find "$repo_root" -maxdepth 1 -name "*-plan.md" -type f -print0 | xargs -0 ls -t
 Details: No *-plan.md files exist at <repo-root>
 
 Suggested action:
-  1. Run /erk:persist-plan to create a plan first
+  1. Run /erk:save-context-enriched-plan to create a plan first
   2. Ensure the plan file ends with -plan.md
 ```
 
@@ -74,7 +74,7 @@ Details: File at <path> [does not exist / is not readable / is empty]
 Suggested action:
   1. Verify file exists: ls -la <path>
   2. Check file permissions
-  3. Re-run /erk:persist-plan if needed
+  3. Re-run /erk:save-context-enriched-plan if needed
 ```
 
 **Error: Not in git repository**

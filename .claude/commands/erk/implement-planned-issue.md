@@ -36,7 +36,7 @@ When you run this command:
 
 ## Typical Workflow
 
-1. Create plan: `/erk:persist-plan`
+1. Create plan: `/erk:save-context-enriched-plan`
 2. Create issue: `/erk:create-planned-issue`
 3. Create worktree: `/erk:create-planned-wt`
 4. Navigate: `erk checkout <branch>`

@@ -1,6 +1,6 @@
-"""Unit tests for enhance_and_save_plan kit CLI command.
+"""Unit tests for save_session_enriched_plan kit CLI command.
 
-Tests all functions in enhance_and_save_plan.py including discovery, assembly,
+Tests all functions in save_session_enriched_plan.py including discovery, assembly,
 and CLI command entry points.
 """
 
@@ -11,7 +11,7 @@ from unittest.mock import patch
 import pytest
 from click.testing import CliRunner
 
-from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.enhance_and_save_plan import (
+from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.save_session_enriched_plan import (
     AssembleResult,
     DiscoverError,
     DiscoverResult,
@@ -20,9 +20,9 @@ from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.enhance_and_save_plan impo
     _find_project_dir,
     _locate_session_log,
     _preprocess_logs,
-    enhance_and_save_plan,
     execute_assemble,
     execute_discover,
+    save_session_enriched_plan,
 )
 
 # ============================================================================
@@ -145,7 +145,7 @@ def test_execute_discover_success(tmp_path: Path, monkeypatch) -> None:
     }
 
     with patch(
-        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.enhance_and_save_plan._preprocess_logs"
+        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.save_session_enriched_plan._preprocess_logs"
     ) as mock_preprocess:
         mock_preprocess.return_value = (mock_xml, mock_stats)
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -206,7 +206,7 @@ def test_execute_discover_preprocessing_failed(tmp_path: Path, monkeypatch) -> N
     log_file.write_text('{"type": "user"}', encoding="utf-8")
 
     with patch(
-        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.enhance_and_save_plan._preprocess_logs"
+        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.save_session_enriched_plan._preprocess_logs"
     ) as mock_preprocess:
         mock_preprocess.side_effect = ValueError("Preprocessing error")
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -368,7 +368,7 @@ def test_execute_discover_streaming_mode_returns_batches(tmp_path: Path, monkeyp
     }
 
     with patch(
-        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.enhance_and_save_plan._preprocess_logs"
+        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.save_session_enriched_plan._preprocess_logs"
     ) as mock_preprocess:
         mock_preprocess.return_value = (mock_xml, mock_stats)
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -402,7 +402,7 @@ def test_execute_discover_streaming_mode_with_small_session(tmp_path: Path, monk
     mock_stats = {"entries_processed": 1, "entries_skipped": 0}
 
     with patch(
-        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.enhance_and_save_plan._preprocess_logs"
+        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.save_session_enriched_plan._preprocess_logs"
     ) as mock_preprocess:
         mock_preprocess.return_value = (mock_xml, mock_stats)
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -433,7 +433,7 @@ def test_execute_discover_non_streaming_mode_returns_single_xml(
     mock_stats = {"entries_processed": 1, "entries_skipped": 0}
 
     with patch(
-        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.enhance_and_save_plan._preprocess_logs"
+        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.save_session_enriched_plan._preprocess_logs"
     ) as mock_preprocess:
         mock_preprocess.return_value = (mock_xml, mock_stats)
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -471,13 +471,13 @@ def test_cli_discover_command_with_streaming_flag(tmp_path: Path, monkeypatch) -
     mock_xml = "<session>\n" + "\n".join(sequences) + "\n</session>"
 
     with patch(
-        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.enhance_and_save_plan._preprocess_logs"
+        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.save_session_enriched_plan._preprocess_logs"
     ) as mock:
         mock.return_value = (mock_xml, {"entries_processed": 25})
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
         result = runner.invoke(
-            enhance_and_save_plan,
+            save_session_enriched_plan,
             ["discover", "--session-id", session_id, "--cwd", str(cwd), "--streaming"],
         )
 
@@ -568,13 +568,13 @@ def test_cli_discover_command_success(tmp_path: Path, monkeypatch) -> None:
 
     # Mock preprocessing
     with patch(
-        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.enhance_and_save_plan._preprocess_logs"
+        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.save_session_enriched_plan._preprocess_logs"
     ) as mock:
         mock.return_value = ("<session></session>", {"entries_processed": 1})
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
         result = runner.invoke(
-            enhance_and_save_plan,
+            save_session_enriched_plan,
             ["discover", "--session-id", session_id, "--cwd", str(cwd)],
         )
 
@@ -598,7 +598,7 @@ def test_cli_discover_command_error(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
     result = runner.invoke(
-        enhance_and_save_plan,
+        save_session_enriched_plan,
         ["discover", "--session-id", "test", "--cwd", str(cwd)],
     )
 
@@ -629,7 +629,7 @@ def test_cli_assemble_command_success(tmp_path: Path) -> None:
     )
 
     result = runner.invoke(
-        enhance_and_save_plan,
+        save_session_enriched_plan,
         ["assemble", str(plan_file), str(discoveries_file)],
     )
 
@@ -651,7 +651,7 @@ def test_cli_assemble_command_with_malformed_json(tmp_path: Path) -> None:
     discoveries_file.write_text("invalid json", encoding="utf-8")
 
     result = runner.invoke(
-        enhance_and_save_plan,
+        save_session_enriched_plan,
         ["assemble", str(plan_file), str(discoveries_file)],
     )
 

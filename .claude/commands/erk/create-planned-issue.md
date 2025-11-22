@@ -305,7 +305,6 @@ URL: <issue-url>
 You can now:
 - View issue: gh issue view <number>
 - Create worktree: /erk:create-planned-wt
-- Or if worktree exists: erk checkout <branch> && /erk:create-planned-issue --link <number>
 ```
 
 ### Step 8: Link Issue to Worktree (if .plan/ exists)
@@ -333,16 +332,7 @@ Check if current directory has a `.plan/` folder:
      ```
 
 3. If `.plan/` doesn't exist:
-   - Display informational message:
-
-     ```
-     ℹ️  Issue created but not linked to a worktree
-
-     To link this issue to a worktree:
-     1. Create worktree: /erk:create-planned-wt
-     2. Navigate: erk checkout <branch>
-     3. Link issue: /erk:create-planned-issue --link <issue-number>
-     ```
+   - Continue silently (no action needed)
 
 ### Step 9: Handle --link Flag
 
@@ -384,10 +374,7 @@ If user provided `--link <issue-number>`:
    ```
    ❌ Error: No .plan/ folder found in current directory
 
-   Navigate to a worktree with a plan:
-   1. List worktrees: erk list
-   2. Navigate: erk checkout <branch>
-   3. Try again: /erk:create-planned-issue --link <issue-number>
+   The --link flag requires a .plan/ folder in the current worktree.
    ```
 
    Exit with error.

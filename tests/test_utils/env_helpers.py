@@ -1152,3 +1152,7 @@ def erk_inmem_env(
         from tests.test_utils.paths import SentinelPath
 
         SentinelPath.clear_file_storage()
+
+# Public API aliases for backwards compatibility and intuitive naming
+simulated_erk_env = erk_isolated_fs_env
+pure_erk_env = erk_inmem_env

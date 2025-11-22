@@ -6,7 +6,7 @@ kit_cli_commands:
   - name: land-branch
     path: kit_cli_commands/gt/land_branch.py
     description: Land a single PR from Graphite stack without affecting upstack branches
-  - name: submit-branch
+  - name: submit-squashed-branch
     path: kit_cli_commands/gt/submit_branch.py
     description: Create git commit and submit current branch with Graphite (two-phase)
   - name: update-pr
@@ -17,7 +17,7 @@ artifacts:
     - agents/gt/gt-branch-submitter.md
     - agents/gt/gt-update-pr-submitter.md
   command:
-    - commands/gt/submit-branch.md
+    - commands/gt/submit-squashed-branch.md
     - commands/gt/update-pr.md
   skill:
     - skills/gt-graphite/SKILL.md

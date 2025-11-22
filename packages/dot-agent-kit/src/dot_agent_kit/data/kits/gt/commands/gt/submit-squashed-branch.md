@@ -1,20 +1,22 @@
 ---
-description: Create git commit and submit current branch with Graphite
+description: Create git commit and submit current branch with Graphite (squashes commits and rebases stack)
 argument-hint: <description>
 ---
 
-# Submit Branch
+# Submit Squashed Branch
 
 Automatically create a git commit with a helpful summary message and submit the current branch as a pull request.
+
+**Note:** This command squashes commits and rebases the stack. If you prefer a simpler workflow that preserves your commit history, use `/git:push-pr` instead.
 
 ## Usage
 
 ```bash
 # Invoke the command (description argument is optional but recommended)
-/gt:submit-branch "Add user authentication feature"
+/gt:submit-squashed-branch "Add user authentication feature"
 
 # Without argument (will analyze changes automatically)
-/gt:submit-branch
+/gt:submit-squashed-branch
 ```
 
 ## What This Command Does

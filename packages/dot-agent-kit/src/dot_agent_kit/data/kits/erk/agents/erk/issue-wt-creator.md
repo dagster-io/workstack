@@ -32,9 +32,22 @@ The command accepts either:
 
 **Parsing logic:**
 
-1. Check if input contains `github.com/`
-2. If yes: Extract issue number using regex `github\.com/[^/]+/[^/]+/issues/(\d+)`
-3. If no: Treat input as issue number directly
+Use the `parse-issue-reference` kit CLI command:
+
+```bash
+parse_result=$(dot-agent run erk parse-issue-reference "<user-input>")
+```
+
+The command returns JSON with either:
+
+- Success: `{"success": true, "issue_number": 123}`
+- Error: `{"success": false, "error": "invalid_format", "message": "..."}`
+
+Parse the JSON to extract `issue_number`:
+
+```bash
+issue_number=$(echo "$parse_result" | jq -r '.issue_number')
+```
 
 **If no argument provided:**
 
@@ -52,12 +65,12 @@ Suggested action:
   2. Ensure issue has erk-plan label
 ```
 
-**If invalid URL format:**
+**If parsing fails (`success: false`):**
 
 ```
-❌ Error: Invalid GitHub URL format
+❌ Error: Invalid issue reference format
 
-Details: Could not extract issue number from: <url>
+Details: <error message from parse_result>
 
 Suggested action:
   1. Use issue number directly: /erk:create-wt-from-plan-issue 123
@@ -353,16 +366,19 @@ Issue: <issue-url>
 #!/bin/bash
 set -e
 
-# Parse input argument
+# Parse input argument using kit CLI command
 issue_arg="<user-input>"
-if [[ "$issue_arg" =~ github\.com/[^/]+/[^/]+/issues/([0-9]+) ]]; then
-    issue_number="${BASH_REMATCH[1]}"
-elif [[ "$issue_arg" =~ ^[0-9]+$ ]]; then
-    issue_number="$issue_arg"
-else
-    echo "Error: Invalid input format"
+parse_result=$(dot-agent run erk parse-issue-reference "$issue_arg")
+
+# Check if parsing succeeded
+if ! echo "$parse_result" | jq -e '.success' > /dev/null; then
+    error_msg=$(echo "$parse_result" | jq -r '.message')
+    echo "Error: $error_msg"
     exit 1
 fi
+
+# Extract issue number
+issue_number=$(echo "$parse_result" | jq -r '.issue_number')
 
 # Get repo root
 repo_root=$(git rev-parse --show-toplevel)

@@ -65,6 +65,7 @@
 | Creating or modifying hooks                                      | → [Hook Guide](docs/agent/hooks.md)                                                                                                                                     |
 | Kit CLI commands that call Claude (preprocessing, discovery)     | → [Kit CLI Standards](docs/agent/kit-cli-commands.md) - Python reduces tokens, LLM does inference                                                                       |
 | Creating command that orchestrates workflow                      | → [Command-Agent Delegation](docs/agent/command-agent-delegation.md) - When/how to delegate                                                                             |
+| Code-like logic in markdown/agents                               | → Use kit CLI command ([Kit CLI Push Down](docs/agentic-engineering-patterns/kit-cli-push-down.md))                                                                     |
 | ⚠️ Python patterns above                                         | → These are EXCERPTS ONLY - Load dignified-python skill for complete guidance                                                                                           |
 
 ## 📚 Quick Reference

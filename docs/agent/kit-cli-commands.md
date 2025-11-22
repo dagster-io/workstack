@@ -109,6 +109,15 @@ def execute_discover(session_id: str, cwd: Path) -> None:
 - Range validation
 - File existence checks
 
+### 5. Input Parsing
+
+- URL parsing and validation
+- Format detection and extraction
+- Data transformation between formats
+- Pattern matching for structured input
+
+**Example:** See the [Kit CLI Push Down pattern](../agentic-engineering-patterns/kit-cli-push-down.md) for a complete example of moving bash parsing logic to tested Python commands.
+
 ## LLM Responsibilities
 
 The LLM handles all operations requiring understanding:

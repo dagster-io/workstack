@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from erk.core.github.issues import FakeGitHubIssues, IssueInfo
+from erk.core.github.issues import FakeGitHubIssues
 from erk.core.plan_folder import (
     create_plan_folder,
     has_issue_reference,
@@ -17,6 +17,7 @@ from erk.core.plan_folder import (
     save_issue_reference,
 )
 from tests.test_utils import sentinel_path
+from tests.test_utils.github_helpers import create_test_issue
 
 
 def test_save_and_read_issue_reference(tmp_path: Path) -> None:
@@ -134,22 +135,7 @@ def test_workflow_issue_creation_tracks_erk_plan_label() -> None:
 
 def test_workflow_get_issue_after_creation() -> None:
     """Test retrieving issue info after creation."""
-    issues = FakeGitHubIssues(
-        next_issue_number=42,
-        issues={
-            42: IssueInfo(
-                number=42,
-                title="Test Issue",
-                body="Body content",
-                state="OPEN",
-                url="https://github.com/owner/repo/issues/42",
-                labels=[],
-                assignees=[],
-                created_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-                updated_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            )
-        },
-    )
+    issues = FakeGitHubIssues(next_issue_number=42, issues={42: create_test_issue(42, "Test Issue", "Body content")})
 
     # Create issue
     issue_num = issues.create_issue(sentinel_path(), "Test Issue", "Body content", ["erk-plan"])

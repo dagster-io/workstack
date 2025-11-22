@@ -10,6 +10,7 @@ artifacts:
     - commands/erk/create-planned-wt.md
     - commands/erk/create-plan-issue-from-context.md
     - commands/erk/implement-plan.md
+    - commands/erk/implement-plan-issue.md
     - commands/erk/fix-merge-conflicts.md
   doc:
     - docs/erk/EXAMPLES.md

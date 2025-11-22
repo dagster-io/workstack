@@ -20,12 +20,6 @@
 
 <!-- ENTRY_END -->
 
-<!-- ENTRY_START kit_id="erk" version="0.3.0" source="bundled" -->
-
-@.agent/kits/erk/registry-entry.md
-
-<!-- ENTRY_END -->
-
 <!-- ENTRY_START kit_id="fake-driven-testing" version="0.1.0" source="bundled" -->
 
 @.agent/kits/fake-driven-testing/registry-entry.md

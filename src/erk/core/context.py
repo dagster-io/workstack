@@ -438,11 +438,8 @@ def create_context(*, dry_run: bool) -> ErkContext:
         git=git,
         github=github,
         issues=issues,
-<<<<<<< HEAD
         plan_issue_store=plan_issue_store,
-=======
         github_admin=github_admin,
->>>>>>> 0c7f34c6 (Add github_admin field to ErkContext for dependency injection and dry-run support)
         graphite=graphite,
         shell=RealShell(),
         completion=RealCompletion(),

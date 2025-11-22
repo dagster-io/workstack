@@ -300,71 +300,61 @@ Apply the complete enrichment process to enhance the extracted plan for autonomo
 - DO NOT use Edit or Write tools except for the final plan file
 - DO NOT implement any code from the plan
 - DO NOT modify any files in the codebase
-- ONLY save ONE markdown file at `<repo-root>/<name>-plan.md`
+- ONLY save ONE markdown file at `<repo-root>/<filename>`
 
-**Filename Extraction Algorithm:**
+**Title Extraction (LLM semantic analysis):**
 
 1. **Try H1 header** - Look for `# Title` at start of document
 2. **Try H2 header** - Look for `## Title` if no H1
-3. **Try prefix patterns** - Look for text after "Plan:", "Implementation Plan:"
+3. **Try prefix patterns** - Look for text after "Plan:", "Implementation Plan:", "Feature Plan:"
 4. **Fallback to first line** - Use first non-empty line as last resort
 
-**Validation and Cleanup:**
+**Filename Transformation (Kit CLI):**
 
-1. Extract raw title using above priority
-2. Convert to lowercase
-3. Replace spaces with hyphens
-4. Remove all special characters except hyphens and alphanumeric
-5. Handle Unicode: Normalize to NFC, remove emojis/special symbols
-6. Strip any trailing hyphens or slashes: `base_name = base_name.rstrip('-/')`
-7. Ensure at least one alphanumeric character remains
+Use the kit CLI command to transform the extracted title to a filename:
 
-**No length restriction:** DO NOT truncate the base name. The base name is limited to 30 characters by `sanitize_worktree_name()`, but the final name (with date suffix) can exceed 30 characters. Erk no longer truncates after adding the date suffix.
+```bash
+filename=$(dot-agent kit-command erk issue-title-to-filename "$extracted_title")
+if [ $? -ne 0 ]; then
+    echo "❌ Error: Failed to generate filename" >&2
+    exit 1
+fi
+```
 
-**Resulting names:**
+The kit CLI command handles:
 
-- Filename: `<kebab-case-base>-plan.md` (any length - no LLM truncation)
-- Worktree name: `<kebab-case-base>-YY-MM-DD` (base ≤30 chars, final can be ~39 chars)
-- Branch name: `<kebab-case-base>-YY-MM-DD` (matches worktree exactly)
+- Lowercase conversion
+- Unicode normalization (NFD decomposition)
+- Emoji and special character removal
+- Hyphen collapse and trimming
+- Validation of at least one alphanumeric character
+- Returns "plan.md" if title is empty after cleanup
+- Appends `-plan.md` suffix automatically
 
-**If extraction fails:**
+**No length restriction:** DO NOT truncate the base name. The base name is limited to 30 characters by `sanitize_worktree_name()` during worktree creation, but filename generation does NOT truncate.
 
-If cleanup results in empty string or no alphanumeric chars, prompt the user:
+**If title extraction fails:**
 
 ```
-❌ Error: Could not extract valid plan name from title
+❌ Error: Could not extract title from plan
 
-Details: Plan title contains only special characters or is empty
+Details: Plan has no headers or first line
 
 Suggested action:
   1. Add a clear title to your plan (e.g., # Feature Name)
   2. Or provide a name: What would you like to name this plan?
 ```
 
-Use AskUserQuestion tool to get the plan name from the user if extraction fails.
+Use AskUserQuestion tool to get the plan title from the user if extraction fails.
 
 **Example transformations:**
 
-- "User Authentication System" →
-  - Base: `user-authentication-system` (27 chars)
-  - Filename: `user-authentication-system-plan.md`
-  - Worktree & Branch: `user-authentication-system-25-11-09` (36 chars - exceeds 30!)
-
-- "Version-Specific Dignified Python Kits Structure" →
-  - Base: `version-dignified-python-kits` (29 chars, intelligently shortened)
-  - Rationale: Removed "specific", "structure"; kept key terms
-  - Filename: `version-dignified-python-kits-plan.md`
-  - Worktree & Branch: `version-dignified-python-kits-25-11-09` (38 chars - exceeds 30!)
-
-- "Fix: Database Connection Issues" →
-  - Base: `fix-database-connection-issues` (30 chars)
-  - Filename: `fix-database-connection-issues-plan.md`
-  - Worktree & Branch: `fix-database-connection-issues-25-11-09` (39 chars - at max!)
-
-- "🚀 Awesome Feature!!!" →
-  - Base: `awesome-feature` (15 chars, emojis removed)
-  - Filename: `awesome-feature-plan.md`
-  - Worktree & Branch: `awesome-feature-25-11-09` (24 chars)
+- "User Authentication System" → `user-authentication-system-plan.md`
+- "Version-Specific Dignified Python Kits Structure" → `version-specific-dignified-python-kits-structure-plan.md`
+- "Fix: Database Connection Issues" → `fix-database-connection-issues-plan.md`
+- "🚀 Awesome Feature!!!" → `awesome-feature-plan.md`
+- "café Feature" → `cafe-feature-plan.md`
+- "测试 Feature" → `feature-plan.md`
 
 ### Step 6: Detect Repository Root
 
@@ -432,14 +422,9 @@ Suggested action:
 - DO NOT use Edit or Write tools except for the final plan file
 - DO NOT implement any code from the plan
 - DO NOT modify any files in the codebase
-- ONLY save ONE markdown file at `<repo-root>/<name>-plan.md`
+- ONLY save ONE markdown file at `<repo-root>/<filename>`
 
-**Pre-save validation:**
-
-1. **Verify filename base length** (CRITICAL):
-   - Extract base name from `<derived-filename>` (remove `-plan.md` suffix)
-   - MUST be ≤ 30 characters
-   - If > 30 characters, this is an implementation bug - the filename generation in Step 5 failed
+**Note:** The `filename` from Step 5 already includes the `-plan.md` suffix (generated by kit CLI command). No need to append it again.
 
 **Add enrichment marker:**
 

@@ -378,13 +378,34 @@ Use the agent's structured report to enhance the plan - the discoveries are alre
 
 **Generate Appropriate Filename:**
 
-Read the plan objectives and scope, then create a descriptive filename:
+Read the plan objectives and scope, then extract a descriptive title and use the kit CLI command to generate the filename:
 
-- Use kebab-case format
-- Maximum 30 characters (git worktree compatibility)
-- Prioritize clarity over mechanical rules
-- End with `-plan.md` suffix
-- Examples: `auth-refactor-plan.md`, `api-migration-plan.md`, `test-framework-plan.md`
+**Title Extraction (LLM semantic analysis):**
+
+1. Extract title from first H1 (`# Title`) or H2 (`## Title`) in the plan
+2. If no headers found, use the plan's main objective as the title
+
+**Filename Transformation (Kit CLI):**
+
+Use the kit CLI command to transform the extracted title to a filename:
+
+```bash
+filename=$(dot-agent kit-command erk issue-title-to-filename "$extracted_title")
+if [ $? -ne 0 ]; then
+    echo "❌ Error: Failed to generate filename" >&2
+    exit 1
+fi
+```
+
+The kit CLI command handles:
+- Lowercase conversion
+- Unicode normalization (NFD)
+- Emoji and special character removal
+- Hyphen collapse and trimming
+- Returns "plan.md" if title is empty after cleanup
+- Appends `-plan.md` suffix automatically
+
+Examples: `auth-refactor-plan.md`, `api-migration-plan.md`, `test-framework-plan.md`
 
 **Extract Title and Summary:**
 

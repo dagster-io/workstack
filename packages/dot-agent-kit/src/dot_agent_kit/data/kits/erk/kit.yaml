@@ -8,6 +8,7 @@ artifacts:
     - commands/erk/save-session-enriched-plan.md
     - commands/erk/save-plan.md
     - commands/erk/create-planned-wt.md
+    - commands/erk/create-plan-issue-from-context.md
     - commands/erk/implement-plan.md
     - commands/erk/fix-merge-conflicts.md
   doc:

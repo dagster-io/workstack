@@ -6,7 +6,7 @@ from erk.core.github.abc import GitHub
 from erk.core.github.types import PRInfo, PRMergeability, PullRequestInfo, WorkflowRun
 
 
-class NoopGitHub(GitHub):
+class DryRunGitHub(GitHub):
     """No-op wrapper for GitHub operations.
 
     Read operations are delegated to the wrapped implementation.

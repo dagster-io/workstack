@@ -88,7 +88,7 @@ from click.testing import CliRunner
 from erk.core.branch_metadata import BranchMetadata
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.git.abc import WorktreeInfo
+from erk.core.git.abc import Git, WorktreeInfo
 from erk.core.repo_discovery import RepoContext
 from erk.core.script_writer import RealScriptWriter
 from tests.fakes.git import FakeGit
@@ -377,7 +377,7 @@ class ErkIsolatedFsEnv:
         trunk_branch: str = "main",
         use_graphite: bool = False,
         show_pr_info: bool = True,
-        git: FakeGit | None = None,
+        git: Git | None = None,
         graphite: FakeGraphite | None = None,
         github: FakeGitHub | None = None,
         shell: FakeShell | None = None,
@@ -401,7 +401,7 @@ class ErkIsolatedFsEnv:
             github: Custom FakeGitHub instance
             shell: Custom FakeShell instance
             repo: Custom RepoContext (default: None)
-            dry_run: Whether to wrap with NoopGit
+            dry_run: Whether to wrap with DryRunGit
             **kwargs: Additional ErkContext.for_test() parameters
 
         Returns:
@@ -451,9 +451,9 @@ class ErkIsolatedFsEnv:
                 },
             )
         else:
-            from erk.core.git.noop import NoopGit
+            from erk.core.git.dry_run import DryRunGit
 
-            unwrapped_ops = git._wrapped if isinstance(git, NoopGit) else git
+            unwrapped_ops = git._wrapped if isinstance(git, DryRunGit) else git
 
             # Add core paths to existing_paths if they're actually git repos
             # Only add paths that are in git_common_dirs (actual repos)
@@ -485,12 +485,12 @@ class ErkIsolatedFsEnv:
 
                 unwrapped_ops._existing_paths.update(core_paths)
 
-        # Wrap with NoopGit for dry-run mode (only if not already wrapped)
+        # Wrap with DryRunGit for dry-run mode (only if not already wrapped)
         if dry_run:
-            from erk.core.git.noop import NoopGit
+            from erk.core.git.dry_run import DryRunGit
 
-            if not isinstance(git, NoopGit):
-                git = NoopGit(git)
+            if not isinstance(git, DryRunGit):
+                git = DryRunGit(git)
 
         # Smart integration defaults
         if graphite is None:
@@ -788,7 +788,7 @@ class ErkInMemEnv:
         trunk_branch: str = "main",
         use_graphite: bool = False,
         show_pr_info: bool = True,
-        git: FakeGit | None = None,
+        git: Git | None = None,
         graphite: FakeGraphite | None = None,
         github: FakeGitHub | None = None,
         shell: FakeShell | None = None,
@@ -816,7 +816,7 @@ class ErkInMemEnv:
             repo: Custom RepoContext (default: None)
             existing_paths: Set of sentinel paths to treat as existing (pure mode only)
             file_contents: Mapping of sentinel paths to file content (pure mode only)
-            dry_run: Whether to wrap with NoopGit
+            dry_run: Whether to wrap with DryRunGit
             **kwargs: Additional ErkContext.for_test() parameters
 
         Returns:
@@ -875,9 +875,9 @@ class ErkInMemEnv:
                 file_contents=file_contents or {},
             )
         else:
-            from erk.core.git.noop import NoopGit
+            from erk.core.git.dry_run import DryRunGit
 
-            unwrapped_ops = git._wrapped if isinstance(git, NoopGit) else git
+            unwrapped_ops = git._wrapped if isinstance(git, DryRunGit) else git
             worktree_paths = {
                 wt.path for worktrees in unwrapped_ops._worktrees.values() for wt in worktrees
             }
@@ -900,12 +900,12 @@ class ErkInMemEnv:
             if file_contents:
                 unwrapped_ops._file_contents.update(file_contents)
 
-        # Wrap with NoopGit for dry-run mode (only if not already wrapped)
+        # Wrap with DryRunGit for dry-run mode (only if not already wrapped)
         if dry_run:
-            from erk.core.git.noop import NoopGit
+            from erk.core.git.dry_run import DryRunGit
 
-            if not isinstance(git, NoopGit):
-                git = NoopGit(git)
+            if not isinstance(git, DryRunGit):
+                git = DryRunGit(git)
 
         # Smart integration defaults
         if graphite is None:

@@ -14,10 +14,10 @@ from erk.cli.cli import cli
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext, create_context
 from erk.core.git.abc import WorktreeInfo
-from erk.core.git.noop import NoopGit
-from erk.core.github.issues import FakeGitHubIssues, IssueInfo, NoopGitHubIssues
-from erk.core.github.noop import NoopGitHub
-from erk.core.graphite.noop import NoopGraphite
+from erk.core.git.dry_run import DryRunGit
+from erk.core.github.dry_run import DryRunGitHub
+from erk.core.github.issues import DryRunGitHubIssues, FakeGitHubIssues, IssueInfo
+from erk.core.graphite.dry_run import DryRunGraphite
 from tests.fakes.git import FakeGit
 from tests.fakes.github import FakeGitHub
 from tests.fakes.graphite import FakeGraphite
@@ -60,16 +60,16 @@ show_pr_info = true
     ctx = create_context(dry_run=True)
 
     assert ctx.dry_run is True
-    # The context should have Noop-wrapped implementations
+    # The context should have DryRun-wrapped implementations
     # We verify this by checking the class names
-    assert "Noop" in type(ctx.git).__name__
+    assert "DryRun" in type(ctx.git).__name__
     # global_config should now be loaded from our test config
     assert ctx.global_config is not None
     assert type(ctx.global_config).__name__ == "GlobalConfig"
     # Config loading resolves paths, so compare resolved paths
     assert ctx.global_config.erk_root == erk_root.resolve()
-    assert "Noop" in type(ctx.github).__name__
-    assert "Noop" in type(ctx.graphite).__name__
+    assert "DryRun" in type(ctx.github).__name__
+    assert "DryRun" in type(ctx.graphite).__name__
 
 
 def test_dryrun_read_operations_still_work(tmp_path: Path) -> None:
@@ -95,10 +95,10 @@ def test_dryrun_read_operations_still_work(tmp_path: Path) -> None:
 
     # Wrap fakes in dry-run wrappers
     ctx = ErkContext.for_test(
-        git=NoopGit(git_ops),
+        git=DryRunGit(git_ops),
         global_config=global_config_ops,
-        github=NoopGitHub(FakeGitHub()),
-        graphite=NoopGraphite(FakeGraphite()),
+        github=DryRunGitHub(FakeGitHub()),
+        graphite=DryRunGraphite(FakeGraphite()),
         shell=FakeShell(),
         cwd=repo,
         dry_run=True,
@@ -270,14 +270,14 @@ def test_dryrun_graphite_operations(tmp_path: Path) -> None:
 
 
 # ============================================================================
-# NoopGitHubIssues Tests
+# DryRunGitHubIssues Tests
 # ============================================================================
 
 
 def test_noop_github_issues_create_returns_fake_number() -> None:
-    """Test NoopGitHubIssues create_issue returns fake number in dry-run mode."""
+    """Test DryRunGitHubIssues create_issue returns fake number in dry-run mode."""
     fake = FakeGitHubIssues()
-    noop = NoopGitHubIssues(fake)
+    noop = DryRunGitHubIssues(fake)
 
     issue_num = noop.create_issue(sentinel_path(), "Title", "Body", ["label"])
 
@@ -288,10 +288,10 @@ def test_noop_github_issues_create_returns_fake_number() -> None:
 
 
 def test_noop_github_issues_get_issue_delegates() -> None:
-    """Test NoopGitHubIssues get_issue delegates to wrapped implementation."""
+    """Test DryRunGitHubIssues get_issue delegates to wrapped implementation."""
     pre_configured = {42: IssueInfo(42, "Test Issue", "Body", "OPEN", "http://url/42")}
     fake = FakeGitHubIssues(issues=pre_configured)
-    noop = NoopGitHubIssues(fake)
+    noop = DryRunGitHubIssues(fake)
 
     result = noop.get_issue(sentinel_path(), 42)
 
@@ -301,10 +301,10 @@ def test_noop_github_issues_get_issue_delegates() -> None:
 
 
 def test_noop_github_issues_add_comment_noop() -> None:
-    """Test NoopGitHubIssues add_comment does nothing in dry-run mode."""
+    """Test DryRunGitHubIssues add_comment does nothing in dry-run mode."""
     pre_configured = {42: IssueInfo(42, "Test", "Body", "OPEN", "http://url/42")}
     fake = FakeGitHubIssues(issues=pre_configured)
-    noop = NoopGitHubIssues(fake)
+    noop = DryRunGitHubIssues(fake)
 
     # Should not raise error
     noop.add_comment(sentinel_path(), 42, "Comment body")
@@ -314,13 +314,13 @@ def test_noop_github_issues_add_comment_noop() -> None:
 
 
 def test_noop_github_issues_list_issues_delegates() -> None:
-    """Test NoopGitHubIssues list_issues delegates to wrapped implementation."""
+    """Test DryRunGitHubIssues list_issues delegates to wrapped implementation."""
     pre_configured = {
         1: IssueInfo(1, "Issue 1", "Body 1", "OPEN", "http://url/1"),
         2: IssueInfo(2, "Issue 2", "Body 2", "CLOSED", "http://url/2"),
     }
     fake = FakeGitHubIssues(issues=pre_configured)
-    noop = NoopGitHubIssues(fake)
+    noop = DryRunGitHubIssues(fake)
 
     result = noop.list_issues(sentinel_path())
 
@@ -331,13 +331,13 @@ def test_noop_github_issues_list_issues_delegates() -> None:
 
 
 def test_noop_github_issues_list_with_filters_delegates() -> None:
-    """Test NoopGitHubIssues list_issues with filters delegates correctly."""
+    """Test DryRunGitHubIssues list_issues with filters delegates correctly."""
     pre_configured = {
         1: IssueInfo(1, "Open Issue", "Body", "OPEN", "http://url/1"),
         2: IssueInfo(2, "Closed Issue", "Body", "CLOSED", "http://url/2"),
     }
     fake = FakeGitHubIssues(issues=pre_configured)
-    noop = NoopGitHubIssues(fake)
+    noop = DryRunGitHubIssues(fake)
 
     result = noop.list_issues(sentinel_path(), labels=["plan"], state="open")
 
@@ -348,9 +348,9 @@ def test_noop_github_issues_list_with_filters_delegates() -> None:
 
 
 def test_noop_github_issues_write_operations_blocked() -> None:
-    """Test that NoopGitHubIssues blocks write operations in dry-run mode."""
+    """Test that DryRunGitHubIssues blocks write operations in dry-run mode."""
     fake = FakeGitHubIssues(next_issue_number=100)
-    noop = NoopGitHubIssues(fake)
+    noop = DryRunGitHubIssues(fake)
 
     # Create issue - should return fake number without mutating wrapped fake
     issue_num = noop.create_issue(sentinel_path(), "Title", "Body", ["label"])
@@ -363,13 +363,13 @@ def test_noop_github_issues_write_operations_blocked() -> None:
 
 
 def test_noop_github_issues_read_operations_work() -> None:
-    """Test that NoopGitHubIssues allows read operations in dry-run mode."""
+    """Test that DryRunGitHubIssues allows read operations in dry-run mode."""
     pre_configured = {
         42: IssueInfo(42, "Test Issue", "Body content", "OPEN", "http://url/42"),
         99: IssueInfo(99, "Another Issue", "Other body", "CLOSED", "http://url/99"),
     }
     fake = FakeGitHubIssues(issues=pre_configured)
-    noop = NoopGitHubIssues(fake)
+    noop = DryRunGitHubIssues(fake)
 
     # Read operations should work
     issue = noop.get_issue(sentinel_path(), 42)

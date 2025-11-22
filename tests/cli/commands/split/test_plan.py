@@ -298,16 +298,16 @@ def test_execute_split_plan_creates_worktrees() -> None:
 
 
 def test_execute_split_plan_with_noop_ops() -> None:
-    """NoopGit doesn't create actual worktrees."""
+    """MockDryRunGit doesn't create actual worktrees."""
 
-    class NoopGit:
-        """Simulates NoopGit behavior for testing."""
+    class MockDryRunGit:
+        """Test mock simulating DryRunGit behavior."""
 
         def __init__(self):
             self.created_worktrees = []
 
         def add_worktree(self, repo_root, path, *, branch=None, ref=None, create_branch=True):
-            # NoopGit would do nothing here
+            # MockDryRunGit does nothing here (simulating DryRunGit)
             pass
 
     plan = SplitPlan(
@@ -321,12 +321,12 @@ def test_execute_split_plan_with_noop_ops() -> None:
         skipped_trunk=True,
     )
 
-    git_ops = NoopGit()
+    git_ops = MockDryRunGit()
     results = execute_split_plan(plan, git_ops)
 
     assert len(results) == 1
     assert results[0] == ("feat-1", Path("/repo/erks/feat-1"))
-    assert len(git_ops.created_worktrees) == 0  # No actual creation due to NoopGit
+    assert len(git_ops.created_worktrees) == 0  # No actual creation due to MockDryRunGit
 
 
 def test_execute_split_plan_empty_plan() -> None:

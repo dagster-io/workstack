@@ -15,14 +15,14 @@ from erk.core.config_store import (
     RealConfigStore,
 )
 from erk.core.git.abc import Git
-from erk.core.git.noop import NoopGit
+from erk.core.git.dry_run import DryRunGit
 from erk.core.git.real import RealGit
 from erk.core.github.abc import GitHub
-from erk.core.github.issues import GitHubIssues, NoopGitHubIssues, RealGitHubIssues
-from erk.core.github.noop import NoopGitHub
+from erk.core.github.dry_run import DryRunGitHub
+from erk.core.github.issues import DryRunGitHubIssues, GitHubIssues, RealGitHubIssues
 from erk.core.github.real import RealGitHub
 from erk.core.graphite.abc import Graphite
-from erk.core.graphite.noop import NoopGraphite
+from erk.core.graphite.dry_run import DryRunGraphite
 from erk.core.graphite.real import RealGraphite
 from erk.core.repo_discovery import (
     NoRepoSentinel,
@@ -252,10 +252,10 @@ class ErkContext:
 
         # Apply dry-run wrappers if needed (matching production behavior)
         if dry_run:
-            git = NoopGit(git)
-            graphite = NoopGraphite(graphite)
-            github = NoopGitHub(github)
-            issues = NoopGitHubIssues(issues)
+            git = DryRunGit(git)
+            graphite = DryRunGraphite(graphite)
+            github = DryRunGitHub(github)
+            issues = DryRunGitHubIssues(issues)
 
         return ErkContext(
             git=git,
@@ -402,10 +402,10 @@ def create_context(*, dry_run: bool) -> ErkContext:
 
     # 7. Apply dry-run wrappers if needed
     if dry_run:
-        git = NoopGit(git)
-        graphite = NoopGraphite(graphite)
-        github = NoopGitHub(github)
-        issues = NoopGitHubIssues(issues)
+        git = DryRunGit(git)
+        graphite = DryRunGraphite(graphite)
+        github = DryRunGitHub(github)
+        issues = DryRunGitHubIssues(issues)
 
     # 8. Create context with all values
     return ErkContext(

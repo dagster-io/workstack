@@ -8,7 +8,7 @@ from erk.core.github.types import PullRequestInfo
 from erk.core.graphite.abc import Graphite
 
 
-class NoopGraphite(Graphite):
+class DryRunGraphite(Graphite):
     """No-op wrapper that prevents execution of destructive operations.
 
     This wrapper intercepts destructive graphite operations and returns without
@@ -16,7 +16,7 @@ class NoopGraphite(Graphite):
 
     Usage:
         real_ops = RealGraphite()
-        noop_ops = NoopGraphite(real_ops)
+        noop_ops = DryRunGraphite(real_ops)
 
         # No-op instead of running gt sync
         noop_ops.sync(repo_root, force=False)

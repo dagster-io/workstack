@@ -467,7 +467,7 @@ Given stack: `main → feat-1 → feat-2 → feat-3`
 
 **This codebase uses dependency injection for dry-run mode, NOT boolean flags.**
 
-🔴 **MUST**: Use Noop wrappers for dry-run mode
+🔴 **MUST**: Use DryRun wrappers for dry-run mode
 🔴 **MUST NOT**: Pass dry_run flags through business logic functions
 🟡 **SHOULD**: Keep dry-run UI logic at the CLI layer only
 
@@ -486,11 +486,11 @@ def execute_plan(plan, git, dry_run=False):
 # ✅ CORRECT: Rely on injected integration implementation
 def execute_plan(plan, git):
     # Always execute - behavior depends on git implementation
-    git.add_worktree(...)  # NoopGit does nothing, RealGit executes
+    git.add_worktree(...)  # DryRunGit does nothing, RealGit executes
 
 # At the context creation level:
 if dry_run:
-    git = NoopGit(real_git)  # or PrintingGit(NoopGit(...))
+    git = DryRunGit(real_git)  # or PrintingGit(DryRunGit(...))
 else:
     git = real_git  # or PrintingGit(real_git)
 ```

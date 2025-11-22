@@ -383,7 +383,7 @@ class FakeGitHubIssues(GitHubIssues):
             self._created_labels.append((label, description, color))
 
 
-class NoopGitHubIssues(GitHubIssues):
+class DryRunGitHubIssues(GitHubIssues):
     """No-op wrapper for GitHub issue operations.
 
     Read operations are delegated to the wrapped implementation.

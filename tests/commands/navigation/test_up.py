@@ -390,3 +390,359 @@ def test_up_with_mismatched_worktree_name() -> None:
         script_content = env.script_writer.get_script_content(script_path)
         assert script_content is not None
         assert str(repo_dir / "auth-tests-work") in script_content
+
+
+def test_up_delete_current_no_children() -> None:
+    """Test --delete-current fails when at top of stack (no children)."""
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        repo_dir = env.setup_repo_structure()
+
+        git_ops = FakeGit(
+            worktrees=env.build_worktrees("main", ["feature-1"], repo_dir=repo_dir),
+            current_branches={env.cwd: "feature-1"},  # At top of stack
+            default_branches={env.cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            file_statuses={env.cwd: ([], [], [])},
+        )
+
+        # Set up stack: main -> feature-1 (at top, no children)
+        graphite_ops = FakeGraphite(
+            branches={
+                "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
+                "feature-1": BranchMetadata.branch("feature-1", "main", commit_sha="def456"),
+            }
+        )
+
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
+        )
+
+        test_ctx = env.build_context(
+            git=git_ops, graphite=graphite_ops, repo=repo, use_graphite=True
+        )
+
+        result = runner.invoke(
+            cli, ["up", "--delete-current"], obj=test_ctx, catch_exceptions=False
+        )
+
+        # Assert: Command failed with error about being at top of stack
+        assert_cli_error(
+            result, 1, "Cannot navigate up: already at top of stack", "gt branch delete"
+        )
+
+        # Assert: No worktrees or branches were deleted
+        assert len(git_ops.removed_worktrees) == 0
+        assert len(git_ops.deleted_branches) == 0
+
+
+def test_up_delete_current_multiple_children() -> None:
+    """Test --delete-current fails when multiple child branches exist."""
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        repo_dir = env.setup_repo_structure()
+
+        # Set up stack: main -> feature-1 -> [feature-2a, feature-2b]
+        git_ops = FakeGit(
+            worktrees=env.build_worktrees(
+                "main", ["feature-1", "feature-2a", "feature-2b"], repo_dir=repo_dir
+            ),
+            current_branches={env.cwd: "feature-1"},  # Has multiple children
+            default_branches={env.cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            file_statuses={env.cwd: ([], [], [])},
+        )
+
+        graphite_ops = FakeGraphite(
+            branches={
+                "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
+                "feature-1": BranchMetadata.branch(
+                    "feature-1", "main", children=["feature-2a", "feature-2b"], commit_sha="def456"
+                ),
+                "feature-2a": BranchMetadata.branch("feature-2a", "feature-1", commit_sha="ghi789"),
+                "feature-2b": BranchMetadata.branch("feature-2b", "feature-1", commit_sha="jkl012"),
+            }
+        )
+
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
+        )
+
+        test_ctx = env.build_context(
+            git=git_ops, graphite=graphite_ops, repo=repo, use_graphite=True
+        )
+
+        result = runner.invoke(
+            cli, ["up", "--delete-current"], obj=test_ctx, catch_exceptions=False
+        )
+
+        # Assert: Command failed with error about multiple children
+        assert_cli_error(result, 1, "Cannot navigate up: multiple child branches exist", "gt up")
+
+        # Assert: No worktrees or branches were deleted
+        assert len(git_ops.removed_worktrees) == 0
+        assert len(git_ops.deleted_branches) == 0
+
+
+def test_up_delete_current_uncommitted_changes() -> None:
+    """Test --delete-current blocks when uncommitted changes exist."""
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        repo_dir = env.setup_repo_structure()
+
+        git_ops = FakeGit(
+            worktrees=env.build_worktrees("main", ["feature-1", "feature-2"], repo_dir=repo_dir),
+            current_branches={env.cwd: "feature-1"},
+            default_branches={env.cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            # HAS uncommitted changes
+            file_statuses={env.cwd: ([], ["modified.py"], [])},
+        )
+
+        # Set up stack: main -> feature-1 -> feature-2
+        graphite_ops = FakeGraphite(
+            branches={
+                "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
+                "feature-1": BranchMetadata.branch(
+                    "feature-1", "main", children=["feature-2"], commit_sha="def456"
+                ),
+                "feature-2": BranchMetadata.branch("feature-2", "feature-1", commit_sha="ghi789"),
+            }
+        )
+
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
+        )
+
+        test_ctx = env.build_context(
+            git=git_ops, graphite=graphite_ops, repo=repo, use_graphite=True
+        )
+
+        result = runner.invoke(
+            cli, ["up", "--delete-current"], obj=test_ctx, catch_exceptions=False
+        )
+
+        # Assert: Command failed with error about uncommitted changes
+        assert_cli_error(
+            result, 1, "Cannot delete current branch with uncommitted changes", "commit or stash"
+        )
+
+        # Assert: No worktrees or branches were deleted
+        assert len(git_ops.removed_worktrees) == 0
+        assert len(git_ops.deleted_branches) == 0
+
+
+def test_up_delete_current_pr_not_merged() -> None:
+    """Test --delete-current blocks when PR not merged."""
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        repo_dir = env.setup_repo_structure()
+
+        git_ops = FakeGit(
+            worktrees=env.build_worktrees("main", ["feature-1", "feature-2"], repo_dir=repo_dir),
+            current_branches={env.cwd: "feature-1"},
+            default_branches={env.cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            file_statuses={env.cwd: ([], [], [])},
+        )
+
+        # Set up stack: main -> feature-1 -> feature-2
+        graphite_ops = FakeGraphite(
+            branches={
+                "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
+                "feature-1": BranchMetadata.branch(
+                    "feature-1", "main", children=["feature-2"], commit_sha="def456"
+                ),
+                "feature-2": BranchMetadata.branch("feature-2", "feature-1", commit_sha="ghi789"),
+            }
+        )
+
+        # PR for feature-1 is OPEN (not merged)
+        from erk.core.github.types import PullRequestInfo
+        from tests.fakes.github import FakeGitHub
+
+        github_ops = FakeGitHub(
+            prs={
+                "feature-1": PullRequestInfo(
+                    number=123,
+                    state="OPEN",
+                    url="https://github.com/owner/repo/pull/123",
+                    is_draft=False,
+                    title="Feature 1",
+                    checks_passing=None,
+                    owner="owner",
+                    repo="repo",
+                    has_conflicts=None,
+                ),
+            }
+        )
+
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
+        )
+
+        test_ctx = env.build_context(
+            git=git_ops, graphite=graphite_ops, github=github_ops, repo=repo, use_graphite=True
+        )
+
+        result = runner.invoke(
+            cli, ["up", "--delete-current"], obj=test_ctx, catch_exceptions=False
+        )
+
+        # Assert: Command failed with error about PR not merged
+        assert_cli_error(
+            result,
+            1,
+            "Pull request for branch 'feature-1' is not merged",
+            "Only merged branches can be deleted",
+        )
+
+        # Assert: No worktrees or branches were deleted
+        assert len(git_ops.removed_worktrees) == 0
+        assert len(git_ops.deleted_branches) == 0
+
+
+def test_up_delete_current_no_pr() -> None:
+    """Test --delete-current blocks when no PR exists."""
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        repo_dir = env.setup_repo_structure()
+
+        git_ops = FakeGit(
+            worktrees=env.build_worktrees("main", ["feature-1", "feature-2"], repo_dir=repo_dir),
+            current_branches={env.cwd: "feature-1"},
+            default_branches={env.cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            file_statuses={env.cwd: ([], [], [])},
+        )
+
+        # Set up stack: main -> feature-1 -> feature-2
+        graphite_ops = FakeGraphite(
+            branches={
+                "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
+                "feature-1": BranchMetadata.branch(
+                    "feature-1", "main", children=["feature-2"], commit_sha="def456"
+                ),
+                "feature-2": BranchMetadata.branch("feature-2", "feature-1", commit_sha="ghi789"),
+            }
+        )
+
+        # No PR for feature-1
+        from tests.fakes.github import FakeGitHub
+
+        github_ops = FakeGitHub(prs={})
+
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
+        )
+
+        test_ctx = env.build_context(
+            git=git_ops, graphite=graphite_ops, github=github_ops, repo=repo, use_graphite=True
+        )
+
+        result = runner.invoke(
+            cli, ["up", "--delete-current"], obj=test_ctx, catch_exceptions=False
+        )
+
+        # Assert: Command failed with error about no PR
+        assert_cli_error(
+            result, 1, "No pull request found for branch 'feature-1'", "Cannot verify merge status"
+        )
+
+        # Assert: No worktrees or branches were deleted
+        assert len(git_ops.removed_worktrees) == 0
+        assert len(git_ops.deleted_branches) == 0
+
+
+def test_up_delete_current_success() -> None:
+    """Test --delete-current flag deletes current branch after navigation."""
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        repo_dir = env.setup_repo_structure()
+
+        # Set up worktrees: main, feature-1, feature-2
+        git_ops = FakeGit(
+            worktrees=env.build_worktrees("main", ["feature-1", "feature-2"], repo_dir=repo_dir),
+            current_branches={env.cwd: "feature-1"},  # Currently on feature-1
+            default_branches={env.cwd: "main"},
+            git_common_dirs={env.cwd: env.git_dir},
+            # No uncommitted changes
+            file_statuses={env.cwd: ([], [], [])},
+        )
+
+        # Set up stack: main -> feature-1 -> feature-2
+        graphite_ops = FakeGraphite(
+            branches={
+                "main": BranchMetadata.trunk("main", children=["feature-1"], commit_sha="abc123"),
+                "feature-1": BranchMetadata.branch(
+                    "feature-1", "main", children=["feature-2"], commit_sha="def456"
+                ),
+                "feature-2": BranchMetadata.branch("feature-2", "feature-1", commit_sha="ghi789"),
+            }
+        )
+
+        # PR for feature-1 is merged
+        from erk.core.github.types import PullRequestInfo
+        from tests.fakes.github import FakeGitHub
+
+        github_ops = FakeGitHub(
+            prs={
+                "feature-1": PullRequestInfo(
+                    number=123,
+                    state="MERGED",
+                    url="https://github.com/owner/repo/pull/123",
+                    is_draft=False,
+                    title="Feature 1",
+                    checks_passing=None,
+                    owner="owner",
+                    repo="repo",
+                    has_conflicts=None,
+                ),
+            }
+        )
+
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            repo_dir=repo_dir,
+            worktrees_dir=repo_dir / "worktrees",
+        )
+
+        test_ctx = env.build_context(
+            git=git_ops, graphite=graphite_ops, github=github_ops, repo=repo, use_graphite=True
+        )
+
+        # Execute: erk up --delete-current --script
+        result = runner.invoke(
+            cli, ["up", "--delete-current", "--script"], obj=test_ctx, catch_exceptions=False
+        )
+
+        assert result.exit_code == 0
+
+        # Assert: Navigated to feature-2
+        script_path = Path(result.stdout.strip())
+        script_content = env.script_writer.get_script_content(script_path)
+        assert script_content is not None
+        assert str(repo_dir / "worktrees" / "feature-2") in script_content
+
+        # Assert: feature-1 worktree was removed
+        feature_1_path = repo_dir / "worktrees" / "feature-1"
+        assert feature_1_path in git_ops.removed_worktrees, "feature-1 worktree should be removed"
+
+        # Assert: feature-1 branch was deleted
+        assert "feature-1" in git_ops.deleted_branches

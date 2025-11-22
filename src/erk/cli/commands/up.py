@@ -1,12 +1,16 @@
 import click
 
+from erk.cli.activation import render_activation_script
 from erk.cli.commands.navigation_helpers import (
     _activate_worktree,
+    _check_clean_working_tree,
+    _delete_branch_and_worktree,
     _ensure_graphite_enabled,
     _resolve_up_navigation,
+    _verify_pr_merged,
 )
 from erk.cli.core import discover_repo_context
-from erk.cli.output import user_output
+from erk.cli.output import machine_output, user_output
 from erk.core.context import ErkContext
 
 
@@ -14,8 +18,13 @@ from erk.core.context import ErkContext
 @click.option(
     "--script", is_flag=True, help="Print only the activation script without usage instructions."
 )
+@click.option(
+    "--delete-current",
+    is_flag=True,
+    help="Delete current branch and worktree after navigating up",
+)
 @click.pass_obj
-def up_cmd(ctx: ErkContext, script: bool) -> None:
+def up_cmd(ctx: ErkContext, script: bool, delete_current: bool) -> None:
     """Move to child branch in Graphite stack.
 
     With shell integration (recommended):
@@ -42,6 +51,42 @@ def up_cmd(ctx: ErkContext, script: bool) -> None:
     # Get all worktrees for checking if target has a worktree
     worktrees = ctx.git.list_worktrees(repo.root)
 
+    # Get child branches for ambiguity checks
+    children = ctx.graphite.get_child_branches(ctx.git, repo.root, current_branch)
+
+    # Check for navigation ambiguity when --delete-current is set
+    if delete_current and len(children) == 0:
+        user_output(
+            click.style("Error: ", fg="red") + "Cannot navigate up: already at top of stack"
+        )
+        user_output("Use 'gt branch delete' to delete this branch")
+        raise SystemExit(1)
+
+    if delete_current and len(children) > 1:
+        user_output(
+            click.style("Error: ", fg="red") + "Cannot navigate up: multiple child branches exist"
+        )
+        user_output("Use 'gt up' to interactively select a branch")
+        raise SystemExit(1)
+
+    # Safety checks before navigation (if --delete-current flag is set)
+    current_worktree_path = None
+    if delete_current:
+        # Store current worktree path for later deletion
+        current_worktree_path = ctx.git.find_worktree_for_branch(repo.root, current_branch)
+        if current_worktree_path is None:
+            user_output(
+                click.style("Error: ", fg="red")
+                + f"Could not find worktree for branch '{current_branch}'"
+            )
+            raise SystemExit(1)
+
+        # Validate clean working tree (no uncommitted changes)
+        _check_clean_working_tree(ctx)
+
+        # Validate PR is merged on GitHub
+        _verify_pr_merged(ctx, repo.root, current_branch)
+
     # Resolve navigation to get target branch (may auto-create worktree)
     target_name, was_created = _resolve_up_navigation(ctx, repo, current_branch, worktrees)
 
@@ -62,4 +107,34 @@ def up_cmd(ctx: ErkContext, script: bool) -> None:
         )
         raise SystemExit(1)
 
-    _activate_worktree(ctx, repo, target_wt_path, script, "up")
+    if delete_current and current_worktree_path is not None:
+        # Handle activation inline when cleanup is needed
+        if not ctx.git.path_exists(target_wt_path):
+            user_output(f"Worktree not found: {target_wt_path}")
+            raise SystemExit(1)
+
+        if script:
+            # Generate activation script for shell integration
+            activation_script = render_activation_script(worktree_path=target_wt_path)
+            result = ctx.script_writer.write_activation_script(
+                activation_script,
+                command_name="up",
+                comment=f"activate {target_wt_path.name}",
+            )
+            machine_output(str(result.path), nl=False)
+        else:
+            # Show user message for manual navigation
+            user_output(
+                "Shell integration not detected. "
+                "Run 'erk init --shell' to set up automatic activation."
+            )
+            user_output("\nOr use: source <(erk up --script)")
+
+        # Perform cleanup: delete branch and worktree
+        _delete_branch_and_worktree(ctx, repo.root, current_branch, current_worktree_path)
+
+        # Exit after cleanup
+        raise SystemExit(0)
+    else:
+        # No cleanup needed, use standard activation
+        _activate_worktree(ctx, repo, target_wt_path, script, "up")

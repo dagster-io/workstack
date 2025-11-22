@@ -1,74 +1,18 @@
-from pathlib import Path
-
 import click
 
 from erk.cli.commands.navigation_helpers import (
     _activate_root_repo,
     _activate_worktree,
+    _check_clean_working_tree,
+    _delete_branch_and_worktree,
     _ensure_graphite_enabled,
     _resolve_down_navigation,
+    _verify_pr_merged,
     render_activation_script,
 )
 from erk.cli.core import discover_repo_context
 from erk.cli.output import machine_output, user_output
 from erk.core.context import ErkContext
-
-
-def _check_clean_working_tree(ctx: ErkContext) -> None:
-    """Check that working tree has no uncommitted changes.
-
-    Raises SystemExit if uncommitted changes found.
-    """
-    if ctx.git.has_uncommitted_changes(ctx.cwd):
-        user_output(
-            click.style("Error: ", fg="red")
-            + "Cannot delete current branch with uncommitted changes.\n"
-            "Please commit or stash your changes first."
-        )
-        raise SystemExit(1)
-
-
-def _verify_pr_merged(ctx: ErkContext, repo_root: Path, branch: str) -> None:
-    """Verify that the branch's PR is merged on GitHub.
-
-    Raises SystemExit if PR not found or not merged.
-    """
-    pr_info = ctx.github.get_pr_status(repo_root, branch, debug=False)
-
-    if pr_info.state == "NONE" or pr_info.pr_number is None:
-        user_output(
-            click.style("Error: ", fg="red") + f"No pull request found for branch '{branch}'.\n"
-            "Cannot verify merge status."
-        )
-        raise SystemExit(1)
-
-    if pr_info.state != "MERGED":
-        user_output(
-            click.style("Error: ", fg="red")
-            + f"Pull request for branch '{branch}' is not merged.\n"
-            "Only merged branches can be deleted with --delete-current."
-        )
-        raise SystemExit(1)
-
-
-def _delete_branch_and_worktree(
-    ctx: ErkContext, repo_root: Path, branch: str, worktree_path: Path
-) -> None:
-    """Delete the specified branch and its worktree.
-
-    Uses two-step deletion: git worktree remove, then manual cleanup.
-    """
-
-    # Remove the worktree
-    ctx.git.remove_worktree(repo_root, worktree_path, force=True)
-    user_output(f"✓ Removed worktree: {click.style(str(worktree_path), fg='green')}")
-
-    # Delete the branch using Git abstraction
-    ctx.git.delete_branch_with_graphite(repo_root, branch, force=True)
-    user_output(f"✓ Deleted branch: {click.style(branch, fg='yellow')}")
-
-    # Prune worktree metadata
-    ctx.git.prune_worktrees(repo_root)
 
 
 @click.command("down")

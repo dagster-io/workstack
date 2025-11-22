@@ -1,0 +1,39 @@
+"""Printing wrapper for GitHub Actions admin operations."""
+
+from pathlib import Path
+from typing import Any
+
+from erk.core.implementation_queue.github.abc import GitHubAdmin
+from erk.core.printing_base import PrintingBase
+
+
+class PrintingGitHubAdmin(PrintingBase, GitHubAdmin):
+    """Wrapper that prints operations before delegating to inner implementation.
+
+    This wrapper prints styled output for operations, then delegates to the
+    wrapped implementation (which could be Real or Noop).
+
+    Usage:
+        # For production
+        printing_admin = PrintingGitHubAdmin(real_admin, script_mode=False, dry_run=False)
+
+        # For dry-run
+        noop_inner = NoopGitHubAdmin(real_admin)
+        printing_admin = PrintingGitHubAdmin(noop_inner, script_mode=False, dry_run=True)
+    """
+
+    # Inherits __init__, _emit, and _format_command from PrintingBase
+
+    def get_workflow_permissions(self, repo_root: Path) -> dict[str, Any]:
+        """Get workflow permissions (read-only, no printing)."""
+        return self._wrapped.get_workflow_permissions(repo_root)
+
+    def set_workflow_pr_permissions(self, repo_root: Path, enabled: bool) -> None:
+        """Set workflow PR permissions with printed output."""
+        self._emit(
+            self._format_command(
+                f"gh api --method PUT .../actions/permissions/workflow "
+                f"(can_approve_pull_request_reviews={str(enabled).lower()})"
+            )
+        )
+        self._wrapped.set_workflow_pr_permissions(repo_root, enabled)

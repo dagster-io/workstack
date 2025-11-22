@@ -1,3 +1,10 @@
+# REQUIRED REPOSITORY SETTING:
+# Settings > Actions > General > Workflow permissions
+# ✓ Enable "Allow GitHub Actions to create and approve pull requests"
+#
+# Without this setting, PR creation will fail with:
+# "GitHub Actions is not permitted to create or approve pull requests"
+
 name: Implement Plan
 
 on:
@@ -22,7 +29,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch-name || github.ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ github.token }}
 
       - name: Check for submission
         id: check_submission

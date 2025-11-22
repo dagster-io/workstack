@@ -473,9 +473,9 @@ def test_land_stack_does_not_run_gt_sync() -> None:
             f"{graphite_ops.sync_calls}"
         )
 
-        # Verify force=True was passed
+        # Verify force=False was passed (safety check - no longer using force)
         _, force_arg, _ = graphite_ops.sync_calls[0]
-        assert force_arg is True, "gt sync should be called with force=True"
+        assert force_arg is False, "gt sync should be called with force=False for safety"
 
 
 def test_land_stack_does_not_run_erk_sync() -> None:
@@ -654,7 +654,7 @@ def test_land_stack_runs_gt_sync_in_restack_phase() -> None:
 
         # Verify sync was called with correct parameters
         for _repo_root_arg, force_arg, quiet_arg in graphite_ops.sync_calls:
-            assert force_arg is True, "sync must be called with force=True"
+            assert force_arg is False, "sync must be called with force=False for safety"
             assert quiet_arg is True, "sync should be quiet in default (non-verbose) mode"
 
 
@@ -783,3 +783,214 @@ def test_land_stack_restack_respects_verbose_flag() -> None:
         assert len(graphite_ops.sync_calls) >= 1
         _, _, quiet_arg = graphite_ops.sync_calls[0]
         assert quiet_arg is False, "quiet should be False in verbose mode (show detailed output)"
+
+
+def test_land_stack_checks_pr_mergeability_before_merge() -> None:
+    """Verify PR mergeability is checked before attempting merge.
+
+    When a PR has merge conflicts (DIRTY state), land-stack should detect this
+    and fail with a helpful error message BEFORE attempting the actual merge.
+    """
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        # Build simple stack: main → feat-1
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
+                "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
+            },
+            current_branch="feat-1",
+        )
+
+        # Configure GitHub to report PR as unmergeable due to conflicts
+        from erk.core.github.types import PRMergeability
+
+        github_ops = FakeGitHub(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Feature 1"),
+            },
+            pr_bases={
+                100: "main",
+            },
+            pr_mergeability={
+                100: PRMergeability(
+                    mergeable="CONFLICTING",
+                    merge_state_status="DIRTY",
+                ),
+            },
+        )
+
+        test_ctx = env.build_context(
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            use_graphite=True,
+        )
+
+        # Act: Try to land the branch
+        result = runner.invoke(cli, ["land-stack", "--force"], obj=test_ctx)
+
+        # Assert: Should fail with helpful error message
+        assert result.exit_code != 0, "Command should fail when PR has conflicts"
+        assert "PR #100" in result.output
+        assert "merge conflicts" in result.output.lower()
+
+        # Verify no PR was merged
+        assert len(github_ops.merged_prs) == 0
+
+
+def test_land_stack_succeeds_when_pr_is_mergeable() -> None:
+    """Verify PR merge proceeds when mergeability check passes.
+
+    When a PR has CLEAN merge state, land-stack should proceed with the merge.
+    """
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        # Build simple stack: main → feat-1
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
+                "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
+            },
+            current_branch="feat-1",
+        )
+
+        # Configure GitHub to report PR as mergeable
+        from erk.core.github.types import PRMergeability
+
+        github_ops = FakeGitHub(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Feature 1"),
+            },
+            pr_bases={
+                100: "main",
+            },
+            pr_mergeability={
+                100: PRMergeability(
+                    mergeable="MERGEABLE",
+                    merge_state_status="CLEAN",
+                ),
+            },
+        )
+
+        test_ctx = env.build_context(
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            use_graphite=True,
+        )
+
+        # Act: Land the branch
+        result = runner.invoke(cli, ["land-stack", "--force"], obj=test_ctx)
+
+        # Assert: Should succeed
+        assert result.exit_code == 0, (
+            f"Command should succeed when PR is mergeable: {result.output}"
+        )
+
+        # Verify PR was merged
+        assert 100 in github_ops.merged_prs
+
+
+def test_land_stack_fails_when_pr_blocked_by_protections() -> None:
+    """Verify PR merge fails helpfully when blocked by branch protections.
+
+    When a PR is blocked by branch protection rules (BLOCKED state), land-stack
+    should fail with a message explaining the protection rules issue.
+    """
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        # Build simple stack: main → feat-1
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
+                "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
+            },
+            current_branch="feat-1",
+        )
+
+        # Configure GitHub to report PR as blocked
+        from erk.core.github.types import PRMergeability
+
+        github_ops = FakeGitHub(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Feature 1"),
+            },
+            pr_bases={
+                100: "main",
+            },
+            pr_mergeability={
+                100: PRMergeability(
+                    mergeable="CONFLICTING",
+                    merge_state_status="BLOCKED",
+                ),
+            },
+        )
+
+        test_ctx = env.build_context(
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            use_graphite=True,
+        )
+
+        # Act: Try to land the branch
+        result = runner.invoke(cli, ["land-stack", "--force"], obj=test_ctx)
+
+        # Assert: Should fail with helpful error message
+        assert result.exit_code != 0
+        assert "PR #100" in result.output
+        assert "merge" in result.output.lower()
+
+        # Verify no PR was merged
+        assert len(github_ops.merged_prs) == 0
+
+
+def test_land_stack_shows_mergeability_check_in_output() -> None:
+    """Verify mergeability check success is shown in output.
+
+    When PR passes mergeability check, this should be visible in the output
+    as a phase completion (similar to other phases).
+    """
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        # Build simple stack: main → feat-1
+        git_ops, graphite_ops = env.build_ops_from_branches(
+            {
+                "main": BranchMetadata.trunk("main", children=["feat-1"], commit_sha="abc123"),
+                "feat-1": BranchMetadata.branch("feat-1", "main", commit_sha="def456"),
+            },
+            current_branch="feat-1",
+        )
+
+        # Configure GitHub to report PR as mergeable
+        from erk.core.github.types import PRMergeability
+
+        github_ops = FakeGitHub(
+            pr_statuses={
+                "feat-1": ("OPEN", 100, "Feature 1"),
+            },
+            pr_bases={
+                100: "main",
+            },
+            pr_mergeability={
+                100: PRMergeability(
+                    mergeable="MERGEABLE",
+                    merge_state_status="CLEAN",
+                ),
+            },
+        )
+
+        test_ctx = env.build_context(
+            git=git_ops,
+            graphite=graphite_ops,
+            github=github_ops,
+            use_graphite=True,
+        )
+
+        # Act: Land the branch
+        result = runner.invoke(cli, ["land-stack", "--force"], obj=test_ctx)
+
+        # Assert: Should show mergeability check in output
+        assert result.exit_code == 0
+        assert "verify PR #100 is mergeable" in result.output

@@ -14,9 +14,8 @@ from click.testing import CliRunner
 
 from erk.cli.commands.plan_issue.get import get_plan_issue
 from erk.cli.commands.plan_issue.list_cmd import list_plan_issues
-from erk.core.github.issues import FakeGitHubIssues
 from erk.core.plan_issue_store import FakePlanIssueStore
-from tests.test_utils.env_helpers import simulated_erk_env
+from tests.test_utils.env_helpers import erk_isolated_fs_env
 
 
 def test_plan_issue_list_uses_repo_root_not_metadata_dir() -> None:
@@ -36,7 +35,7 @@ def test_plan_issue_list_uses_repo_root_not_metadata_dir() -> None:
     After fix: Commands call ensure_repo_dir() for side effects but use repo.root directly.
     """
     runner = CliRunner()
-    with simulated_erk_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Track which directory is passed to gh operations
         captured_repo_root: Path | None = None
 
@@ -68,7 +67,7 @@ def test_plan_issue_get_uses_repo_root_not_metadata_dir() -> None:
     Same regression test as above but for the 'get' command.
     """
     runner = CliRunner()
-    with simulated_erk_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Track which directory is passed to gh operations
         captured_repo_root: Path | None = None
 

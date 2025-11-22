@@ -3,15 +3,15 @@
 This module provides helpers for setting up realistic erk test environments
 with Click's CliRunner. It provides two patterns:
 
-1. simulated_erk_env(): Filesystem-based (uses isolated_filesystem(),
+1. erk_isolated_fs_env(): Filesystem-based (uses isolated_filesystem(),
    creates real directories)
-2. pure_erk_env(): In-memory (uses fakes only, no filesystem I/O)
+2. erk_inmem_env(): In-memory (uses fakes only, no filesystem I/O)
 
 Key Components:
-    - SimulatedWorkstackEnv: Helper class for filesystem-based testing
-    - PureWorkstackEnv: Helper class for in-memory testing
-    - simulated_erk_env(): Context manager for filesystem-based tests
-    - pure_erk_env(): Context manager for in-memory tests
+    - ErkIsolatedFsEnv: Helper class for filesystem-based testing
+    - ErkInMemEnv: Helper class for in-memory testing
+    - erk_isolated_fs_env(): Context manager for filesystem-based tests
+    - erk_inmem_env(): Context manager for in-memory tests
 
 Usage Pattern:
 
@@ -33,11 +33,11 @@ Usage Pattern:
             result = runner.invoke(cli, ["command"], obj=test_ctx)
     ```
 
-    After (using simulated_erk_env - ~10 lines per test):
+    After (using erk_isolated_fs_env - ~10 lines per test):
     ```python
     def test_something() -> None:
         runner = CliRunner()
-        with simulated_erk_env(runner) as env:
+        with erk_isolated_fs_env(runner) as env:
             git = FakeGit(git_common_dirs={env.cwd: env.git_dir})
             global_config_ops = GlobalConfig(...)
             script_writer=env.script_writer,
@@ -50,7 +50,7 @@ Advanced Usage (complex worktree scenarios):
     ```python
     def test_multi_worktree_scenario() -> None:
         runner = CliRunner()
-        with simulated_erk_env(runner) as env:
+        with erk_isolated_fs_env(runner) as env:
             # Create linked worktrees
             env.create_linked_worktree("feat-1", "feat-1", chdir=False)
             env.create_linked_worktree("feat-2", "feat-2", chdir=True)
@@ -75,7 +75,7 @@ Directory Structure Created:
       └── erks/   (parallel to repo, initially empty)
 
 Note: This helper is specifically for CliRunner tests. For pytest's tmp_path fixture,
-use WorktreeScenario from conftest.py instead.
+use alternative patterns or integration tests instead.
 """
 
 import os
@@ -409,7 +409,7 @@ class ErkIsolatedFsEnv:
 
         Example:
             ```python
-            with simulated_erk_env(runner) as env:
+            with erk_isolated_fs_env(runner) as env:
                 # Simple case - use all defaults
                 ctx = env.build_context()
 
@@ -602,8 +602,8 @@ def erk_isolated_fs_env(runner: CliRunner) -> Generator[ErkIsolatedFsEnv]:
         ```python
         def test_something() -> None:
             runner = CliRunner()
-            # Note: simulated_erk_env() handles isolated_filesystem() internally
-            with simulated_erk_env(runner) as env:
+            # Note: erk_isolated_fs_env() handles isolated_filesystem() internally
+            with erk_isolated_fs_env(runner) as env:
                 # env.cwd is available (root worktree)
                 # env.git_dir is available (.git directory)
                 # env.script_writer is available (RealScriptWriter for temp files)
@@ -641,7 +641,7 @@ class ErkInMemEnv:
 
     Use this for tests that verify command logic without needing
     actual filesystem operations. This is faster and simpler than
-    simulated_erk_env() for tests that don't need real directories.
+    erk_isolated_fs_env() for tests that don't need real directories.
 
     Attributes:
         cwd: Sentinel path representing current working directory
@@ -824,7 +824,7 @@ class ErkInMemEnv:
 
         Example:
             ```python
-            with pure_erk_env(runner) as env:
+            with erk_inmem_env(runner) as env:
                 # Simple case - use all defaults
                 ctx = env.build_context()
 
@@ -1084,7 +1084,7 @@ def erk_inmem_env(
 ) -> Generator[ErkInMemEnv]:
     """Create pure in-memory test environment without filesystem I/O.
 
-    This context manager provides a faster alternative to simulated_erk_env()
+    This context manager provides a faster alternative to erk_isolated_fs_env()
     for tests that don't need actual filesystem operations. It uses sentinel paths
     and in-memory fakes exclusively.
 
@@ -1097,7 +1097,7 @@ def erk_inmem_env(
     - Verifying script content without creating temp files
     - Running tests faster without filesystem overhead
 
-    Use simulated_erk_env() when:
+    Use erk_isolated_fs_env() when:
     - Testing actual worktree creation/removal
     - Verifying git integration with real directories
     - Testing filesystem-dependent features
@@ -1113,7 +1113,7 @@ def erk_inmem_env(
         ```python
         def test_jump_pure() -> None:
             runner = CliRunner()
-            with pure_erk_env(runner) as env:
+            with erk_inmem_env(runner) as env:
                 # No filesystem I/O, all operations in-memory
                 git = FakeGit(git_common_dirs={env.cwd: env.git_dir})
                 ctx = ErkContext.for_test(
@@ -1152,7 +1152,3 @@ def erk_inmem_env(
         from tests.test_utils.paths import SentinelPath
 
         SentinelPath.clear_file_storage()
-
-# Public API aliases for backwards compatibility and intuitive naming
-simulated_erk_env = erk_isolated_fs_env
-pure_erk_env = erk_inmem_env

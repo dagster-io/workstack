@@ -14,7 +14,7 @@ from tests.test_utils.env_helpers import erk_inmem_env, erk_isolated_fs_env
 def test_checkout_to_branch_in_single_worktree() -> None:
     """Test jumping to a branch that is checked out in exactly one worktree.
 
-    This test uses pure_erk_env() for in-memory testing without filesystem I/O.
+    This test uses erk_inmem_env() for in-memory testing without filesystem I/O.
     """
     runner = CliRunner()
     with erk_inmem_env(runner) as env:

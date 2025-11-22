@@ -3,6 +3,7 @@
 import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 from erk.core.github.parsing import execute_gh_command
@@ -17,6 +18,10 @@ class IssueInfo:
     body: str
     state: str  # "OPEN" or "CLOSED"
     url: str
+    labels: list[str]  # List of label names
+    assignees: list[str]  # List of assignee usernames
+    created_at: datetime  # When issue was created (UTC)
+    updated_at: datetime  # When issue was last updated (UTC)
 
 
 class GitHubIssues(ABC):
@@ -158,10 +163,20 @@ class RealGitHubIssues(GitHubIssues):
             "view",
             str(number),
             "--json",
-            "number,title,body,state,url",
+            "number,title,body,state,url,labels,assignees,createdAt,updatedAt",
         ]
         stdout = self._execute(cmd, repo_root)
         data = json.loads(stdout)
+
+        # Parse labels from [{"name": "..."}, ...] to list[str]
+        labels = [label["name"] for label in data.get("labels", [])]
+
+        # Parse assignees from [{"login": "..."}, ...] to list[str]
+        assignees = [assignee["login"] for assignee in data.get("assignees", [])]
+
+        # Parse ISO8601 timestamps to datetime objects
+        created_at = datetime.fromisoformat(data["createdAt"].replace("Z", "+00:00"))
+        updated_at = datetime.fromisoformat(data["updatedAt"].replace("Z", "+00:00"))
 
         return IssueInfo(
             number=data["number"],
@@ -169,6 +184,10 @@ class RealGitHubIssues(GitHubIssues):
             body=data["body"],
             state=data["state"],
             url=data["url"],
+            labels=labels,
+            assignees=assignees,
+            created_at=created_at,
+            updated_at=updated_at,
         )
 
     def add_comment(self, repo_root: Path, number: int, body: str) -> None:
@@ -191,7 +210,13 @@ class RealGitHubIssues(GitHubIssues):
         Note: Uses gh's native error handling - gh CLI raises RuntimeError
         on failures (not installed, not authenticated).
         """
-        cmd = ["gh", "issue", "list", "--json", "number,title,body,state,url"]
+        cmd = [
+            "gh",
+            "issue",
+            "list",
+            "--json",
+            "number,title,body,state,url,labels,assignees,createdAt,updatedAt",
+        ]
 
         if labels:
             for label in labels:
@@ -203,16 +228,33 @@ class RealGitHubIssues(GitHubIssues):
         stdout = self._execute(cmd, repo_root)
         data = json.loads(stdout)
 
-        return [
-            IssueInfo(
-                number=issue["number"],
-                title=issue["title"],
-                body=issue["body"],
-                state=issue["state"],
-                url=issue["url"],
+        result = []
+        for issue in data:
+            # Parse labels from [{"name": "..."}, ...] to list[str]
+            issue_labels = [label["name"] for label in issue.get("labels", [])]
+
+            # Parse assignees from [{"login": "..."}, ...] to list[str]
+            issue_assignees = [assignee["login"] for assignee in issue.get("assignees", [])]
+
+            # Parse ISO8601 timestamps to datetime objects
+            created_at = datetime.fromisoformat(issue["createdAt"].replace("Z", "+00:00"))
+            updated_at = datetime.fromisoformat(issue["updatedAt"].replace("Z", "+00:00"))
+
+            result.append(
+                IssueInfo(
+                    number=issue["number"],
+                    title=issue["title"],
+                    body=issue["body"],
+                    state=issue["state"],
+                    url=issue["url"],
+                    labels=issue_labels,
+                    assignees=issue_assignees,
+                    created_at=created_at,
+                    updated_at=updated_at,
+                )
             )
-            for issue in data
-        ]
+
+        return result
 
     def ensure_label_exists(
         self,
@@ -317,12 +359,19 @@ class FakeGitHubIssues(GitHubIssues):
         issue_number = self._next_issue_number
         self._next_issue_number += 1
 
+        # Create issue with current timestamp
+        now = datetime.now(tz=datetime.now().astimezone().tzinfo)
+
         self._issues[issue_number] = IssueInfo(
             number=issue_number,
             title=title,
             body=body,
             state="OPEN",
             url=f"https://github.com/owner/repo/issues/{issue_number}",
+            labels=labels,
+            assignees=[],
+            created_at=now,
+            updated_at=now,
         )
         self._created_issues.append((title, body, labels))
 

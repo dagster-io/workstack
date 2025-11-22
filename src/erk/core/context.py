@@ -397,7 +397,7 @@ def create_context(*, dry_run: bool) -> ErkContext:
     graphite: Graphite = RealGraphite()
     github: GitHub = RealGitHub()
     issues: GitHubIssues = RealGitHubIssues()
-    plan_issue_store: PlanIssueStore = GitHubPlanIssueStore()
+    plan_issue_store: PlanIssueStore = GitHubPlanIssueStore(issues)
 
     # 5. Discover repo (only needs cwd, erk_root, git)
     # If global_config is None, use placeholder path for repo discovery

@@ -7,6 +7,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from erk.core.github.issues import FakeGitHubIssues
 from erk.core.plan_issue_store import (
     GitHubPlanIssueStore,
     PlanIssueQuery,
@@ -30,7 +31,9 @@ def test_get_plan_issue_success() -> None:
     }
 
     mock_execute = Mock(return_value=json.dumps(mock_response))
-    store = GitHubPlanIssueStore(execute_fn=mock_execute)
+    fake_github = FakeGitHubIssues()
+    fake_github._execute = mock_execute  # type: ignore[attr-defined]
+    store = GitHubPlanIssueStore(fake_github)
 
     result = store.get_plan_issue(Path("/fake/repo"), "42")
 
@@ -71,7 +74,9 @@ def test_get_plan_issue_closed_state() -> None:
     }
 
     mock_execute = Mock(return_value=json.dumps(mock_response))
-    store = GitHubPlanIssueStore(execute_fn=mock_execute)
+    fake_github = FakeGitHubIssues()
+    fake_github._execute = mock_execute  # type: ignore[attr-defined]
+    store = GitHubPlanIssueStore(fake_github)
 
     result = store.get_plan_issue(Path("/fake/repo"), "100")
 
@@ -92,7 +97,9 @@ def test_get_plan_issue_empty_body() -> None:
     }
 
     mock_execute = Mock(return_value=json.dumps(mock_response))
-    store = GitHubPlanIssueStore(execute_fn=mock_execute)
+    fake_github = FakeGitHubIssues()
+    fake_github._execute = mock_execute  # type: ignore[attr-defined]
+    store = GitHubPlanIssueStore(fake_github)
 
     result = store.get_plan_issue(Path("/fake/repo"), "50")
 
@@ -102,7 +109,9 @@ def test_get_plan_issue_empty_body() -> None:
 def test_get_plan_issue_not_found() -> None:
     """Test error handling when issue is not found."""
     mock_execute = Mock(side_effect=RuntimeError("Issue not found"))
-    store = GitHubPlanIssueStore(execute_fn=mock_execute)
+    fake_github = FakeGitHubIssues()
+    fake_github._execute = mock_execute  # type: ignore[attr-defined]
+    store = GitHubPlanIssueStore(fake_github)
 
     with pytest.raises(RuntimeError, match="Issue not found"):
         store.get_plan_issue(Path("/fake/repo"), "999")
@@ -136,7 +145,9 @@ def test_list_plan_issues_no_filters() -> None:
     ]
 
     mock_execute = Mock(return_value=json.dumps(mock_response))
-    store = GitHubPlanIssueStore(execute_fn=mock_execute)
+    fake_github = FakeGitHubIssues()
+    fake_github._execute = mock_execute  # type: ignore[attr-defined]
+    store = GitHubPlanIssueStore(fake_github)
 
     query = PlanIssueQuery()
     results = store.list_plan_issues(Path("/fake/repo"), query)
@@ -158,7 +169,9 @@ def test_list_plan_issues_with_labels() -> None:
     """Test filtering by labels (AND logic)."""
     mock_response = []
     mock_execute = Mock(return_value=json.dumps(mock_response))
-    store = GitHubPlanIssueStore(execute_fn=mock_execute)
+    fake_github = FakeGitHubIssues()
+    fake_github._execute = mock_execute  # type: ignore[attr-defined]
+    store = GitHubPlanIssueStore(fake_github)
 
     query = PlanIssueQuery(labels=["erk-plan", "erk-queue"])
     store.list_plan_issues(Path("/fake/repo"), query)
@@ -175,7 +188,9 @@ def test_list_plan_issues_with_state_open() -> None:
     """Test filtering by OPEN state."""
     mock_response = []
     mock_execute = Mock(return_value=json.dumps(mock_response))
-    store = GitHubPlanIssueStore(execute_fn=mock_execute)
+    fake_github = FakeGitHubIssues()
+    fake_github._execute = mock_execute  # type: ignore[attr-defined]
+    store = GitHubPlanIssueStore(fake_github)
 
     query = PlanIssueQuery(state=PlanIssueState.OPEN)
     store.list_plan_issues(Path("/fake/repo"), query)
@@ -191,7 +206,9 @@ def test_list_plan_issues_with_state_closed() -> None:
     """Test filtering by CLOSED state."""
     mock_response = []
     mock_execute = Mock(return_value=json.dumps(mock_response))
-    store = GitHubPlanIssueStore(execute_fn=mock_execute)
+    fake_github = FakeGitHubIssues()
+    fake_github._execute = mock_execute  # type: ignore[attr-defined]
+    store = GitHubPlanIssueStore(fake_github)
 
     query = PlanIssueQuery(state=PlanIssueState.CLOSED)
     store.list_plan_issues(Path("/fake/repo"), query)
@@ -207,7 +224,9 @@ def test_list_plan_issues_with_limit() -> None:
     """Test limiting results."""
     mock_response = []
     mock_execute = Mock(return_value=json.dumps(mock_response))
-    store = GitHubPlanIssueStore(execute_fn=mock_execute)
+    fake_github = FakeGitHubIssues()
+    fake_github._execute = mock_execute  # type: ignore[attr-defined]
+    store = GitHubPlanIssueStore(fake_github)
 
     query = PlanIssueQuery(limit=10)
     store.list_plan_issues(Path("/fake/repo"), query)
@@ -223,7 +242,9 @@ def test_list_plan_issues_combined_filters() -> None:
     """Test combining multiple filters."""
     mock_response = []
     mock_execute = Mock(return_value=json.dumps(mock_response))
-    store = GitHubPlanIssueStore(execute_fn=mock_execute)
+    fake_github = FakeGitHubIssues()
+    fake_github._execute = mock_execute  # type: ignore[attr-defined]
+    store = GitHubPlanIssueStore(fake_github)
 
     query = PlanIssueQuery(
         labels=["erk-plan"],
@@ -254,7 +275,9 @@ def test_timestamp_parsing_with_z_suffix() -> None:
     }
 
     mock_execute = Mock(return_value=json.dumps(mock_response))
-    store = GitHubPlanIssueStore(execute_fn=mock_execute)
+    fake_github = FakeGitHubIssues()
+    fake_github._execute = mock_execute  # type: ignore[attr-defined]
+    store = GitHubPlanIssueStore(fake_github)
 
     result = store.get_plan_issue(Path("/fake/repo"), "1")
 
@@ -282,7 +305,9 @@ def test_label_extraction() -> None:
     }
 
     mock_execute = Mock(return_value=json.dumps(mock_response))
-    store = GitHubPlanIssueStore(execute_fn=mock_execute)
+    fake_github = FakeGitHubIssues()
+    fake_github._execute = mock_execute  # type: ignore[attr-defined]
+    store = GitHubPlanIssueStore(fake_github)
 
     result = store.get_plan_issue(Path("/fake/repo"), "1")
 
@@ -305,7 +330,9 @@ def test_assignee_extraction() -> None:
     }
 
     mock_execute = Mock(return_value=json.dumps(mock_response))
-    store = GitHubPlanIssueStore(execute_fn=mock_execute)
+    fake_github = FakeGitHubIssues()
+    fake_github._execute = mock_execute  # type: ignore[attr-defined]
+    store = GitHubPlanIssueStore(fake_github)
 
     result = store.get_plan_issue(Path("/fake/repo"), "1")
 
@@ -328,7 +355,9 @@ def test_metadata_preserves_github_number() -> None:
     }
 
     mock_execute = Mock(return_value=json.dumps(mock_response))
-    store = GitHubPlanIssueStore(execute_fn=mock_execute)
+    fake_github = FakeGitHubIssues()
+    fake_github._execute = mock_execute  # type: ignore[attr-defined]
+    store = GitHubPlanIssueStore(fake_github)
 
     result = store.get_plan_issue(Path("/fake/repo"), "42")
 
@@ -341,5 +370,6 @@ def test_metadata_preserves_github_number() -> None:
 
 def test_get_provider_name() -> None:
     """Test getting the provider name."""
-    store = GitHubPlanIssueStore()
+    fake_github = FakeGitHubIssues()
+    store = GitHubPlanIssueStore(fake_github)
     assert store.get_provider_name() == "github"

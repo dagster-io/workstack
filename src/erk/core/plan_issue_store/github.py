@@ -4,7 +4,7 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
-from erk.core.github.parsing import execute_gh_command
+from erk.core.github.issues import GitHubIssues
 from erk.core.plan_issue_store.store import PlanIssueStore
 from erk.core.plan_issue_store.types import PlanIssue, PlanIssueQuery, PlanIssueState
 
@@ -15,14 +15,16 @@ class GitHubPlanIssueStore(PlanIssueStore):
     Wraps GitHub issue operations and converts to provider-agnostic PlanIssue format.
     """
 
-    def __init__(self, execute_fn=None):
-        """Initialize GitHubPlanIssueStore with optional command executor.
+    def __init__(self, github_issues: GitHubIssues):
+        """Initialize GitHubPlanIssueStore with GitHub issues interface.
 
         Args:
-            execute_fn: Optional function to execute commands (for testing).
-                       If None, uses execute_gh_command.
+            github_issues: GitHubIssues implementation to use for gh CLI operations
         """
-        self._execute = execute_fn or execute_gh_command
+        self._github_issues = github_issues
+        # Extract the _execute callable for gh CLI operations
+        # All GitHubIssues implementations provide this
+        self._execute = github_issues._execute  # type: ignore[attr-defined]
 
     def get_plan_issue(self, repo_root: Path, plan_issue_identifier: str) -> PlanIssue:
         """Fetch plan issue from GitHub by identifier.

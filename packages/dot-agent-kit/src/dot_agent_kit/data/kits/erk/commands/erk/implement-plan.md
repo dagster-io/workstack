@@ -138,25 +138,8 @@ This keeps progress indicators accurate in real-time during plan execution.
 
 ### Step 2.6: Check for GitHub Issue Reference
 
-Check if `.plan/issue.json` exists to enable progress tracking via GitHub issue comments.
-
-1. Check for `.plan/issue.json`:
-
-   ```python
-   from erk.core.plan_folder import read_issue_reference
-   from pathlib import Path
-
-   issue_ref = read_issue_reference(Path.cwd() / ".plan")
-   ```
-
-2. If issue reference exists:
-   - Store issue number for later use
-   - Plan to post progress comments after each phase
-   - Note: Comment posting should NOT block implementation if it fails
-
-3. If no issue reference:
-   - Continue with implementation normally
-   - Skip issue comment posting (this is fine)
+Progress tracking via GitHub comments is available if `.plan/issue.json` exists.
+The kit CLI commands handle all logic automatically - no manual setup required.
 
 ### Step 3: Create TodoWrite Entries
 
@@ -209,25 +192,13 @@ For each phase in the plan:
      - Edit the `completed_steps:` line in front matter with new count
      - Do NOT change the `total_steps:` line
    - If no front matter exists, skip the front matter update
-7. **Post progress comment to GitHub issue** (if issue reference exists):
-   - Get current progress from `.plan/progress.md` front matter
-   - Format comment:
+7. **Post progress comment to GitHub issue** (if enabled):
 
-     ```markdown
-     ✓ **Step X/Y completed**: [step description]
+   ```bash
+   dot-agent run erk post-progress-comment --step-description "Phase 1: Create abstraction" 2>/dev/null || true
+   ```
 
-     Progress: X/Y steps (Z%)
-     ```
-
-   - Post comment using `ctx.issues.add_comment(repo_root, issue_number, comment_body)`
-   - **IMPORTANT**: Wrap in try/except to prevent blocking implementation:
-     ```python
-     try:
-         ctx.issues.add_comment(repo_root, issue_number, comment_body)
-     except RuntimeError:
-         # Gracefully continue - don't block implementation on API failures
-         pass
-     ```
+   Note: Command fails silently if issue tracking not enabled. This is intentional.
 
 8. **Report progress**: what was done and what's next
 9. **Move to next phase**
@@ -327,27 +298,13 @@ After all phases are complete:
 2. Verify all success criteria are met
 3. Note any deviations from the plan (with justification)
 4. Provide summary of changes
-5. **Post final completion comment to GitHub issue** (if issue reference exists):
-   - Read final progress from `.plan/progress.md`
-   - Format completion comment:
+5. **Post final completion comment to GitHub issue** (if enabled):
 
-     ```markdown
-     ✅ **Implementation complete**
+   ```bash
+   dot-agent run erk post-completion-comment --summary "Brief implementation summary" 2>/dev/null || true
+   ```
 
-     All steps completed: X/X (100%)
-
-     Summary: [Brief summary of what was implemented]
-     ```
-
-   - Post using `ctx.issues.add_comment(repo_root, issue_number, comment_body)`
-   - Wrap in try/except to handle API failures gracefully:
-     ```python
-     try:
-         ctx.issues.add_comment(repo_root, issue_number, final_comment)
-     except RuntimeError:
-         # Log warning but don't block completion
-         pass
-     ```
+   Note: Command fails silently if issue tracking not enabled. This is intentional.
 
 ### Step 8: Final Verification
 

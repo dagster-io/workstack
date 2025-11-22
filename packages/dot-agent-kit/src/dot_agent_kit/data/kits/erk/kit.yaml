@@ -39,6 +39,12 @@ kit_cli_commands:
   - name: issue-title-to-filename
     path: kit_cli_commands/erk/issue_title_to_filename.py
     description: Convert GitHub issue title to plan filename
+  - name: post-progress-comment
+    path: kit_cli_commands/erk/post_progress_comment.py
+    description: Post progress tracking comment to GitHub issue with structured YAML
+  - name: post-completion-comment
+    path: kit_cli_commands/erk/post_completion_comment.py
+    description: Post completion tracking comment to GitHub issue with structured YAML
 hooks:
   - id: session-id-injector-hook
     lifecycle: UserPromptSubmit

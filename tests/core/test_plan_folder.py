@@ -4,7 +4,9 @@ from pathlib import Path
 
 import pytest
 
+from erk.core.github.issues import FakeGitHubIssues, IssueInfo
 from erk.core.plan_folder import (
+    add_worktree_creation_comment,
     copy_plan_to_submission,
     create_plan_folder,
     extract_steps_from_plan,
@@ -764,3 +766,60 @@ def test_issue_reference_with_plan_folder(tmp_path: Path) -> None:
     ref = read_issue_reference(plan_folder)
     assert ref is not None
     assert ref.issue_number == 42
+
+
+# ============================================================================
+# Worktree Creation Comment Tests
+# ============================================================================
+
+
+def test_add_worktree_creation_comment_success(tmp_path: Path) -> None:
+    """Test posting GitHub comment documenting worktree creation."""
+    # Create fake GitHub issues with an existing issue
+    from datetime import UTC, datetime
+
+    issues = FakeGitHubIssues(
+        issues={
+            42: IssueInfo(
+                number=42,
+                title="Test Issue",
+                body="Test body",
+                state="OPEN",
+                url="https://github.com/owner/repo/issues/42",
+                labels=["erk-plan"],
+                assignees=[],
+                created_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
+            )
+        }
+    )
+
+    # Post comment
+    add_worktree_creation_comment(
+        issues, tmp_path, 42, "feature-name", "feature-branch"
+    )
+
+    # Verify comment was added
+    assert len(issues.added_comments) == 1
+    issue_number, comment_body = issues.added_comments[0]
+
+    # Verify comment details
+    assert issue_number == 42
+    assert "✅ Worktree created: **feature-name**" in comment_body
+    assert "Branch: `feature-branch`" in comment_body
+    assert "Created:" in comment_body
+
+    # Verify timestamp format (ISO 8601 UTC)
+    assert "T" in comment_body  # ISO 8601 includes 'T' separator
+    assert ":" in comment_body  # ISO 8601 includes ':' in time
+
+
+def test_add_worktree_creation_comment_issue_not_found(tmp_path: Path) -> None:
+    """Test add_worktree_creation_comment raises error when issue doesn't exist."""
+    issues = FakeGitHubIssues(issues={})  # No issues
+
+    # Should raise RuntimeError (simulating gh CLI error)
+    with pytest.raises(RuntimeError, match="Issue #999 not found"):
+        add_worktree_creation_comment(
+            issues, tmp_path, 999, "feature-name", "feature-branch"
+        )

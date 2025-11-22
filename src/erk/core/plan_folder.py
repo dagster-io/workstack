@@ -365,3 +365,32 @@ def has_issue_reference(plan_dir: Path) -> bool:
     """
     issue_file = plan_dir / "issue.json"
     return issue_file.exists()
+
+
+def add_worktree_creation_comment(
+    github_issues,
+    repo_root: Path,
+    issue_number: int,
+    worktree_name: str,
+    branch_name: str,
+) -> None:
+    """Add a comment to the GitHub issue documenting worktree creation.
+
+    Args:
+        github_issues: GitHubIssues interface for posting comments
+        repo_root: Repository root directory
+        issue_number: GitHub issue number to comment on
+        worktree_name: Name of the created worktree
+        branch_name: Git branch name for the worktree
+
+    Raises:
+        RuntimeError: If gh CLI fails or issue not found
+    """
+    timestamp = datetime.now(UTC).isoformat()
+
+    comment_body = f"""✅ Worktree created: **{worktree_name}**
+
+- Branch: `{branch_name}`
+- Created: {timestamp}"""
+
+    github_issues.add_comment(repo_root, issue_number, comment_body)

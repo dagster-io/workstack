@@ -393,12 +393,20 @@ if [ -z "$has_erk_plan" ]; then
     exit 1
 fi
 
-# Extract issue body
+# Extract issue metadata
+issue_title=$(echo "$issue_json" | jq -r '.title')
 issue_body=$(echo "$issue_json" | jq -r '.body')
 issue_url=$(echo "$issue_json" | jq -r '.url')
 
-# Create temp plan file
-temp_plan=$(mktemp /tmp/erk-plan-XXXXXX.md)
+# Convert title to filename using kit CLI command (matches save-plan logic)
+plan_filename=$(dot-agent kit-command erk issue-title-to-filename "$issue_title")
+if [ $? -ne 0 ]; then
+    echo "❌ Error: Failed to generate filename from title" >&2
+    exit 1
+fi
+
+# Create temp plan file with meaningful name
+temp_plan="/tmp/${plan_filename}"
 trap "rm -f '$temp_plan'" EXIT
 
 cat > "$temp_plan" <<'EOF'

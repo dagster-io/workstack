@@ -36,6 +36,9 @@ kit_cli_commands:
   - name: parse-issue-reference
     path: kit_cli_commands/erk/parse_issue_reference.py
     description: Parse GitHub issue number from URL or plain number
+  - name: issue-title-to-filename
+    path: kit_cli_commands/erk/issue_title_to_filename.py
+    description: Convert GitHub issue title to plan filename
 hooks:
   - id: session-id-injector-hook
     lifecycle: UserPromptSubmit

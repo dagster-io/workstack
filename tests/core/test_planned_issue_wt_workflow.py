@@ -133,6 +133,8 @@ def test_workflow_issue_creation_tracks_erk_plan_label() -> None:
 
 def test_workflow_get_issue_after_creation() -> None:
     """Test retrieving issue info after creation."""
+    from datetime import UTC, datetime
+
     issues = FakeGitHubIssues(
         next_issue_number=42,
         issues={
@@ -142,6 +144,10 @@ def test_workflow_get_issue_after_creation() -> None:
                 body="Body content",
                 state="OPEN",
                 url="https://github.com/owner/repo/issues/42",
+                labels=[],
+                assignees=[],
+                created_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
+                updated_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
             )
         },
     )

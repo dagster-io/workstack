@@ -1,3 +1,10 @@
+# REQUIRED REPOSITORY SETTING:
+# Settings > Actions > General > Workflow permissions
+# ✓ Enable "Allow GitHub Actions to create and approve pull requests"
+#
+# Without this setting, PR creation will fail with:
+# "GitHub Actions is not permitted to create or approve pull requests"
+
 name: Dispatch Erk Queue
 
 on:

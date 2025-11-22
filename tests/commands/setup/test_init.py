@@ -513,7 +513,7 @@ def test_init_fails_without_force_when_exists() -> None:
 def test_init_adds_env_to_gitignore() -> None:
     """Test that init offers to add .env to .gitignore.
 
-    NOTE: Uses simulated_erk_env because this test verifies actual
+    NOTE: Uses erk_isolated_fs_env because this test verifies actual
     .gitignore file content on disk. Cannot migrate to pure mode without
     abstracting file operations in production code.
     """
@@ -552,7 +552,7 @@ def test_init_adds_env_to_gitignore() -> None:
 def test_init_skips_gitignore_entries_if_declined() -> None:
     """Test that init skips .env gitignore entry if user declines.
 
-    NOTE: Uses simulated_erk_env because this test verifies actual
+    NOTE: Uses erk_isolated_fs_env because this test verifies actual
     .gitignore file content on disk. Cannot migrate to pure mode without
     abstracting file operations in production code.
     """
@@ -590,7 +590,7 @@ def test_init_skips_gitignore_entries_if_declined() -> None:
 def test_init_handles_missing_gitignore() -> None:
     """Test that init handles missing .gitignore gracefully.
 
-    NOTE: Uses simulated_erk_env because this test verifies behavior
+    NOTE: Uses erk_isolated_fs_env because this test verifies behavior
     when .gitignore file doesn't exist on disk. Cannot migrate to pure mode
     without abstracting file operations in production code.
     """
@@ -624,7 +624,7 @@ def test_init_handles_missing_gitignore() -> None:
 def test_init_preserves_gitignore_formatting() -> None:
     """Test that init preserves existing gitignore formatting.
 
-    NOTE: Uses simulated_erk_env because this test verifies actual
+    NOTE: Uses erk_isolated_fs_env because this test verifies actual
     .gitignore file formatting on disk. Cannot migrate to pure mode without
     abstracting file operations in production code.
     """

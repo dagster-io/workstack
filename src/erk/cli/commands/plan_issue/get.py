@@ -18,7 +18,8 @@ def get_plan_issue(ctx: ErkContext, identifier: str) -> None:
         identifier: Plan issue identifier (e.g., "42" for GitHub)
     """
     repo = discover_repo_context(ctx, ctx.cwd)
-    repo_root = ensure_repo_dir(repo)
+    ensure_repo_dir(repo)  # Ensure erk metadata directories exist
+    repo_root = repo.root  # Use git repository root for GitHub operations
 
     try:
         plan_issue = ctx.plan_issue_store.get_plan_issue(repo_root, identifier)

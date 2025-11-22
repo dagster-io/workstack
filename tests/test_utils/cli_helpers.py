@@ -4,7 +4,7 @@ This module provides utilities for setting up isolated test environments
 for CLI command tests that require REAL git operations (not fakes), plus
 reusable assertion helpers to reduce CLI test boilerplate.
 
-IMPORTANT: For 95% of CLI tests, use `simulated_erk_env()` from
+IMPORTANT: For 95% of CLI tests, use `erk_isolated_fs_env()` from
 `tests.test_utils.env_helpers` instead. That helper uses FakeGit and
 is faster, better isolated, and easier to use.
 
@@ -14,7 +14,7 @@ Only use `cli_test_repo()` when you specifically need:
 - Real subprocess interactions
 - Integration tests requiring actual git behavior
 
-See: tests.test_utils.env_helpers.simulated_erk_env() for the recommended pattern.
+See: tests.test_utils.env_helpers.erk_isolated_fs_env() for the recommended pattern.
 """
 
 import subprocess
@@ -46,7 +46,7 @@ def cli_test_repo(tmp_path: Path) -> Generator[CLITestRepo]:
     """Set up isolated git repo with REAL git for CLI testing.
 
     ⚠️ WARNING: Only use this helper when you NEED real git operations!
-    For 95% of CLI tests, use `simulated_erk_env()` instead (from
+    For 95% of CLI tests, use `erk_isolated_fs_env()` instead (from
     tests.test_utils.env_helpers), which is faster and better isolated.
 
     Creates a complete test environment with:
@@ -65,9 +65,9 @@ def cli_test_repo(tmp_path: Path) -> Generator[CLITestRepo]:
     - Integration tests requiring actual git behavior
 
     When NOT to use this helper:
-    - Regular CLI command tests → Use simulated_erk_env() instead
+    - Regular CLI command tests → Use erk_isolated_fs_env() instead
     - Unit tests of core logic → Use FakeGit directly
-    - Tests that can use fakes → Use simulated_erk_env() instead
+    - Tests that can use fakes → Use erk_isolated_fs_env() instead
 
     Args:
         tmp_path: Pytest's tmp_path fixture providing isolated test directory
@@ -101,11 +101,11 @@ def cli_test_repo(tmp_path: Path) -> Generator[CLITestRepo]:
     Better alternative for most tests:
         ```python
         from click.testing import CliRunner
-        from tests.test_utils.env_helpers import simulated_erk_env
+        from tests.test_utils.env_helpers import erk_isolated_fs_env
 
         def test_create_command() -> None:
             runner = CliRunner()
-            with simulated_erk_env(runner) as env:
+            with erk_isolated_fs_env(runner) as env:
                 # Much simpler! No HOME setup, no os.chdir, uses fakes
                 git_ops = FakeGit(git_common_dirs={env.cwd: env.git_dir})
                 test_ctx = ErkContext.for_test(git=git_ops, cwd=env.cwd)
@@ -113,7 +113,7 @@ def cli_test_repo(tmp_path: Path) -> Generator[CLITestRepo]:
         ```
 
     See Also:
-        tests.test_utils.env_helpers.simulated_erk_env() - Recommended helper
+        tests.test_utils.env_helpers.erk_isolated_fs_env() - Recommended helper
     """
     # Set up isolated global config
     global_config_dir = tmp_path / ".erk"

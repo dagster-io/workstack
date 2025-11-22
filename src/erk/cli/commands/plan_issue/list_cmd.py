@@ -41,7 +41,8 @@ def list_plan_issues(
         erk plan-issue list --limit 10
     """
     repo = discover_repo_context(ctx, ctx.cwd)
-    repo_root = ensure_repo_dir(repo)
+    ensure_repo_dir(repo)  # Ensure erk metadata directories exist
+    repo_root = repo.root  # Use git repository root for GitHub operations
 
     # Build query from CLI options
     labels_list = list(label) if label else None

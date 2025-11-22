@@ -14,7 +14,7 @@ Extracts an implementation plan from the conversation and enhances it with disco
 
 ## Purpose
 
-This command solves the critical problem where planning sessions lose valuable discoveries when plans are saved. By mining session logs, we preserve:
+This command solves the critical problem where planning sessions lose valuable discoveries when plans are saved. By mining session logs and **filtering to Plan subagent sessions**, we preserve:
 
 - Failed attempts and what didn't work
 - API quirks and undocumented behaviors
@@ -25,7 +25,10 @@ This command solves the critical problem where planning sessions lose valuable d
 ## How It Works
 
 1. **Locates session logs** for the current Claude Code project
-2. **Mines discoveries** from tool invocations and assistant reasoning using streaming analysis
+2. **Mines discoveries** from:
+   - Main session log
+   - Plan subagent sessions only (filters out Explore, devrun, etc.)
+   - Falls back to main session only if no Plan subagents found
 3. **Extracts the plan** from the conversation
 4. **Enhances the plan** with mined context
 5. **Saves enhanced plan** to repository root
@@ -125,7 +128,9 @@ This outputs JSON with structure (streaming mode):
     "entries_skipped": 142,
     "token_reduction_pct": "85.8%",
     "original_size": 227612,
-    "compressed_size": 32337
+    "compressed_size": 32337,
+    "planning_agents_found": 2,
+    "agent_filter_applied": true
   }
 }
 ```
@@ -143,7 +148,9 @@ Or single-pass mode (if XML is small enough):
     "entries_skipped": 142,
     "token_reduction_pct": "85.8%",
     "original_size": 227612,
-    "compressed_size": 32337
+    "compressed_size": 32337,
+    "planning_agents_found": 2,
+    "agent_filter_applied": true
   }
 }
 ```

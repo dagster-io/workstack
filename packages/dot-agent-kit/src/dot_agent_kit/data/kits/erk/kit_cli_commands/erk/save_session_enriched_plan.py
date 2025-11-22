@@ -67,7 +67,7 @@ import click
 from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.preprocess_session import (
     deduplicate_assistant_messages,
     deduplicate_documentation_blocks,
-    discover_agent_logs,
+    discover_planning_agent_logs,
     generate_compressed_xml,
     is_empty_session,
     is_warmup_session,
@@ -190,6 +190,10 @@ def _preprocess_logs(log_path: Path, session_id: str) -> tuple[str, dict[str, st
 
     Calls preprocessing functions directly instead of subprocess for performance.
 
+    Agent logs are filtered to include only Plan subagents.
+    If no Plan subagents are found in the session, only the
+    main session log is processed.
+
     Args:
         log_path: Path to session log file
         session_id: Session ID for filtering
@@ -224,8 +228,11 @@ def _preprocess_logs(log_path: Path, session_id: str) -> tuple[str, dict[str, st
     # Generate main session XML
     xml_sections = [generate_compressed_xml(entries, enable_pruning=True)]
 
-    # Discover and process agent logs
-    agent_logs = discover_agent_logs(log_path)
+    # Discover and process agent logs (filter to Plan subagents)
+    agent_logs = discover_planning_agent_logs(log_path, session_id)
+
+    # Note: If no Plan subagents found, agent_logs will be empty list
+    # This means we only process main session (desired fallback behavior)
     for agent_log in agent_logs:
         agent_entries, agent_total, agent_skipped = process_log_file(
             agent_log, session_id=session_id, enable_filtering=True
@@ -264,6 +271,8 @@ def _preprocess_logs(log_path: Path, session_id: str) -> tuple[str, dict[str, st
         "token_reduction_pct": f"{reduction_pct:.1f}%",
         "original_size": original_size,
         "compressed_size": compressed_size,
+        "planning_agents_found": len(agent_logs),
+        "agent_filter_applied": True,
     }
 
     return xml_content, stats

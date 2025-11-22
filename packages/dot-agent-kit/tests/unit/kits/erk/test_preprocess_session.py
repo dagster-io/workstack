@@ -13,6 +13,7 @@ from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.preprocess_session import 
     deduplicate_assistant_messages,
     deduplicate_documentation_blocks,
     discover_agent_logs,
+    discover_planning_agent_logs,
     escape_xml,
     generate_compressed_xml,
     is_empty_session,
@@ -325,6 +326,226 @@ def test_discover_agent_logs_empty_directory(tmp_path: Path) -> None:
 
     agents = discover_agent_logs(session_log)
     assert agents == []
+
+
+# ============================================================================
+# 5b. Planning Agent Discovery Tests (4 tests)
+# ============================================================================
+
+
+def test_discover_planning_agent_logs_finds_plan_subagents(tmp_path: Path) -> None:
+    """Test that Plan subagents are correctly identified."""
+    session_log = tmp_path / "session-123.jsonl"
+
+    # Create session log with Plan Task tool invocation
+    session_entries = [
+        json.dumps(
+            {
+                "type": "assistant",
+                "message": {
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "name": "Task",
+                            "input": {"subagent_type": "Plan", "prompt": "Create plan"},
+                        }
+                    ],
+                    "timestamp": 1000.0,
+                },
+            }
+        )
+    ]
+    session_log.write_text("\n".join(session_entries), encoding="utf-8")
+
+    # Create matching agent log
+    agent1 = tmp_path / "agent-abc.jsonl"
+    agent1_entry = json.dumps(
+        {
+            "sessionId": "session-123",
+            "message": {"timestamp": 1000.5},  # Within 1 second of Task
+        }
+    )
+    agent1.write_text(agent1_entry, encoding="utf-8")
+
+    # Create non-matching agent log
+    agent2 = tmp_path / "agent-def.jsonl"
+    agent2_entry = json.dumps(
+        {
+            "sessionId": "other-session",
+            "message": {"timestamp": 1000.5},
+        }
+    )
+    agent2.write_text(agent2_entry, encoding="utf-8")
+
+    agents = discover_planning_agent_logs(session_log, "session-123")
+    assert len(agents) == 1
+    assert agent1 in agents
+    assert agent2 not in agents
+
+
+def test_discover_planning_agent_logs_filters_non_plan(tmp_path: Path) -> None:
+    """Test that Explore/devrun subagents are filtered out."""
+    session_log = tmp_path / "session-123.jsonl"
+
+    # Create session with mixed subagent types
+    session_entries = [
+        json.dumps(
+            {
+                "type": "assistant",
+                "message": {
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "name": "Task",
+                            "input": {"subagent_type": "Plan", "prompt": "Create plan"},
+                        }
+                    ],
+                    "timestamp": 1000.0,
+                },
+            }
+        ),
+        json.dumps(
+            {
+                "type": "assistant",
+                "message": {
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "name": "Task",
+                            "input": {"subagent_type": "Explore", "prompt": "Explore code"},
+                        }
+                    ],
+                    "timestamp": 2000.0,
+                },
+            }
+        ),
+    ]
+    session_log.write_text("\n".join(session_entries), encoding="utf-8")
+
+    # Create agent logs matching both
+    agent_plan = tmp_path / "agent-plan.jsonl"
+    agent_plan.write_text(
+        json.dumps(
+            {
+                "sessionId": "session-123",
+                "message": {"timestamp": 1000.5},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    agent_explore = tmp_path / "agent-explore.jsonl"
+    agent_explore.write_text(
+        json.dumps(
+            {
+                "sessionId": "session-123",
+                "message": {"timestamp": 2000.5},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    agents = discover_planning_agent_logs(session_log, "session-123")
+
+    # Only Plan agent should be returned
+    assert len(agents) == 1
+    assert agent_plan in agents
+    assert agent_explore not in agents
+
+
+def test_discover_planning_agent_logs_empty_when_none(tmp_path: Path) -> None:
+    """Test that empty list returned when no Plan subagents."""
+    session_log = tmp_path / "session-123.jsonl"
+
+    # Create session with no Task invocations
+    session_entries = [
+        json.dumps({"type": "user", "message": {"content": "Hello"}}),
+        json.dumps({"type": "assistant", "message": {"content": [{"type": "text", "text": "Hi"}]}}),
+    ]
+    session_log.write_text("\n".join(session_entries), encoding="utf-8")
+
+    # Create some agent logs (should not be returned)
+    agent = tmp_path / "agent-abc.jsonl"
+    agent.write_text(
+        json.dumps(
+            {
+                "sessionId": "session-123",
+                "message": {"timestamp": 1000.0},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    agents = discover_planning_agent_logs(session_log, "session-123")
+    assert agents == []
+
+
+def test_discover_planning_agent_logs_matches_agent_ids(tmp_path: Path) -> None:
+    """Test that agent IDs are correctly extracted and matched."""
+    session_log = tmp_path / "session-123.jsonl"
+
+    # Create session with Plan Tasks
+    session_entries = [
+        json.dumps(
+            {
+                "type": "assistant",
+                "message": {
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "name": "Task",
+                            "input": {"subagent_type": "Plan", "prompt": "First plan"},
+                        }
+                    ],
+                    "timestamp": 1000.0,
+                },
+            }
+        ),
+    ]
+    session_log.write_text("\n".join(session_entries), encoding="utf-8")
+
+    # Create agent logs with different sessionIds and timestamps
+    # This one matches: correct sessionId and within 1 second
+    agent_match = tmp_path / "agent-match.jsonl"
+    agent_match.write_text(
+        json.dumps(
+            {
+                "sessionId": "session-123",
+                "message": {"timestamp": 1000.8},  # Within 1 second
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    # This one doesn't match: wrong sessionId
+    agent_wrong_session = tmp_path / "agent-wrong.jsonl"
+    agent_wrong_session.write_text(
+        json.dumps(
+            {
+                "sessionId": "other-session",
+                "message": {"timestamp": 1000.5},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    # This one doesn't match: timestamp too far
+    agent_wrong_time = tmp_path / "agent-late.jsonl"
+    agent_wrong_time.write_text(
+        json.dumps(
+            {
+                "sessionId": "session-123",
+                "message": {"timestamp": 1005.0},  # More than 1 second away
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    agents = discover_planning_agent_logs(session_log, "session-123")
+
+    # Only the matching agent should be returned
+    assert len(agents) == 1
+    assert agent_match in agents
 
 
 # ============================================================================

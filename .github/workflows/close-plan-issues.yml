@@ -1,0 +1,65 @@
+# REQUIRED REPOSITORY SETTING:
+# Settings > Actions > General > Workflow permissions
+# ✓ Enable "Allow GitHub Actions to create and approve pull requests"
+#
+# This workflow automatically closes issues labeled 'erk-plan' when PRs
+# referencing them are merged to master.
+
+name: Close Plan Issues
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - master
+
+jobs:
+  close-issues:
+    # Only run if PR was actually merged (not just closed)
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Extract issue references from PR
+        id: extract_issues
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # Extract all issue numbers from PR body (format: #123)
+          # Use grep with -o to get only matching text, -E for extended regex
+          ISSUES=$(echo "$PR_BODY" | grep -oE '#[0-9]+' | sed 's/#//' | sort -u || true)
+
+          # Convert to space-separated list
+          ISSUE_LIST=$(echo "$ISSUES" | tr '\n' ' ')
+
+          echo "Found issue references: $ISSUE_LIST"
+          echo "issues=$ISSUE_LIST" >> $GITHUB_OUTPUT
+
+      - name: Close erk-plan issues
+        if: steps.extract_issues.outputs.issues != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUES: ${{ steps.extract_issues.outputs.issues }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Process each issue reference
+          for issue in $ISSUES; do
+            echo "Checking issue #$issue..."
+
+            # Check if issue exists and has erk-plan label
+            if gh issue view "$issue" --repo "$REPO" --json labels --jq '.labels[] | select(.name == "erk-plan")' | grep -q "erk-plan"; then
+              echo "Issue #$issue has erk-plan label, closing..."
+
+              # Close issue with comment linking to merged PR
+              gh issue close "$issue" \
+                --repo "$REPO" \
+                --comment "Closed by merged PR #$PR_NUMBER"
+
+              echo "✓ Closed issue #$issue"
+            else
+              echo "Issue #$issue does not have erk-plan label, skipping"
+            fi
+          done

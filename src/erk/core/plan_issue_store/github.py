@@ -1,10 +1,9 @@
 """GitHub implementation of plan issue storage."""
 
-import json
-from datetime import UTC, datetime
+from datetime import UTC
 from pathlib import Path
 
-from erk.core.github.issues import GitHubIssues
+from erk.core.github.issues import GitHubIssues, IssueInfo
 from erk.core.plan_issue_store.store import PlanIssueStore
 from erk.core.plan_issue_store.types import PlanIssue, PlanIssueQuery, PlanIssueState
 
@@ -19,12 +18,9 @@ class GitHubPlanIssueStore(PlanIssueStore):
         """Initialize GitHubPlanIssueStore with GitHub issues interface.
 
         Args:
-            github_issues: GitHubIssues implementation to use for gh CLI operations
+            github_issues: GitHubIssues implementation to use for issue operations
         """
         self._github_issues = github_issues
-        # Extract the _execute callable for gh CLI operations
-        # All GitHubIssues implementations provide this
-        self._execute = github_issues._execute  # type: ignore[attr-defined]
 
     def get_plan_issue(self, repo_root: Path, plan_issue_identifier: str) -> PlanIssue:
         """Fetch plan issue from GitHub by identifier.
@@ -39,18 +35,9 @@ class GitHubPlanIssueStore(PlanIssueStore):
         Raises:
             RuntimeError: If gh CLI fails or issue not found
         """
-        cmd = [
-            "gh",
-            "issue",
-            "view",
-            plan_issue_identifier,
-            "--json",
-            "number,title,body,state,url,labels,assignees,createdAt,updatedAt",
-        ]
-        stdout = self._execute(cmd, repo_root)
-        data = json.loads(stdout)
-
-        return self._convert_to_plan_issue(data)
+        issue_number = int(plan_issue_identifier)
+        issue_info = self._github_issues.get_issue(repo_root, issue_number)
+        return self._convert_to_plan_issue(issue_info)
 
     def list_plan_issues(self, repo_root: Path, query: PlanIssueQuery) -> list[PlanIssue]:
         """Query plan issues from GitHub.
@@ -65,32 +52,22 @@ class GitHubPlanIssueStore(PlanIssueStore):
         Raises:
             RuntimeError: If gh CLI fails
         """
-        cmd = [
-            "gh",
-            "issue",
-            "list",
-            "--json",
-            "number,title,body,state,url,labels,assignees,createdAt,updatedAt",
-        ]
+        # Map PlanIssueState to GitHub state string
+        state_str = None
+        if query.state == PlanIssueState.OPEN:
+            state_str = "open"
+        elif query.state == PlanIssueState.CLOSED:
+            state_str = "closed"
 
-        # Add label filters (AND logic - all must match)
-        if query.labels:
-            for label in query.labels:
-                cmd.extend(["--label", label])
+        # Call GitHubIssues.list_issues with appropriate filters
+        # Note: GitHubIssues doesn't support limit, so we'll slice the results
+        issues = self._github_issues.list_issues(repo_root, labels=query.labels, state=state_str)
 
-        # Add state filter
-        if query.state:
-            state_str = "open" if query.state == PlanIssueState.OPEN else "closed"
-            cmd.extend(["--state", state_str])
-
-        # Add limit
+        # Apply limit if specified
         if query.limit:
-            cmd.extend(["--limit", str(query.limit)])
+            issues = issues[: query.limit]
 
-        stdout = self._execute(cmd, repo_root)
-        data = json.loads(stdout)
-
-        return [self._convert_to_plan_issue(issue) for issue in data]
+        return [self._convert_to_plan_issue(issue) for issue in issues]
 
     def get_provider_name(self) -> str:
         """Get the provider name.
@@ -100,57 +77,30 @@ class GitHubPlanIssueStore(PlanIssueStore):
         """
         return "github"
 
-    def _convert_to_plan_issue(self, github_data: dict) -> PlanIssue:
-        """Convert GitHub issue JSON to PlanIssue.
+    def _convert_to_plan_issue(self, issue_info: IssueInfo) -> PlanIssue:
+        """Convert IssueInfo to PlanIssue.
 
         Args:
-            github_data: GitHub issue data from gh CLI
+            issue_info: IssueInfo from GitHubIssues interface
 
         Returns:
             PlanIssue with normalized data
         """
-        # Parse timestamps (ISO8601 with 'Z' suffix)
-        created_at = self._parse_timestamp(github_data["createdAt"])
-        updated_at = self._parse_timestamp(github_data["updatedAt"])
-
-        # Extract label names from label objects
-        labels = [label["name"] for label in github_data.get("labels", [])]
-
-        # Extract assignee logins
-        assignees = [assignee["login"] for assignee in github_data.get("assignees", [])]
-
         # Normalize state
-        state_str = github_data["state"]
-        state = PlanIssueState.OPEN if state_str == "OPEN" else PlanIssueState.CLOSED
+        state = PlanIssueState.OPEN if issue_info.state == "OPEN" else PlanIssueState.CLOSED
 
         # Store GitHub-specific number in metadata for future operations
-        metadata = {"number": github_data["number"]}
+        metadata: dict[str, object] = {"number": issue_info.number}
 
         return PlanIssue(
-            plan_issue_identifier=str(github_data["number"]),
-            title=github_data["title"],
-            body=github_data.get("body", ""),
+            plan_issue_identifier=str(issue_info.number),
+            title=issue_info.title,
+            body=issue_info.body,
             state=state,
-            url=github_data["url"],
-            labels=labels,
-            assignees=assignees,
-            created_at=created_at,
-            updated_at=updated_at,
+            url=issue_info.url,
+            labels=issue_info.labels,
+            assignees=issue_info.assignees,
+            created_at=issue_info.created_at.astimezone(UTC),
+            updated_at=issue_info.updated_at.astimezone(UTC),
             metadata=metadata,
         )
-
-    def _parse_timestamp(self, timestamp_str: str) -> datetime:
-        """Parse ISO8601 timestamp with 'Z' suffix to datetime.
-
-        Args:
-            timestamp_str: ISO8601 timestamp string (e.g., "2024-01-15T10:30:00Z")
-
-        Returns:
-            datetime object with UTC timezone
-        """
-        # GitHub returns timestamps with 'Z' suffix (UTC)
-        # Replace 'Z' with '+00:00' for parsing
-        if timestamp_str.endswith("Z"):
-            timestamp_str = timestamp_str[:-1] + "+00:00"
-
-        return datetime.fromisoformat(timestamp_str).astimezone(UTC)

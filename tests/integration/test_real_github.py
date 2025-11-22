@@ -1,7 +1,7 @@
 """Tests for RealGitHub with mocked subprocess execution.
 
 These tests verify that RealGitHub correctly calls gh CLI commands and handles
-responses. We use a mock executor function instead of actual subprocess calls.
+responses. We use pytest monkeypatch to mock subprocess calls.
 """
 
 import json
@@ -9,73 +9,89 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from pytest import MonkeyPatch
 
 from erk.core.github.real import RealGitHub
 from tests.conftest import load_fixture
+from tests.integration.test_helpers import mock_subprocess_run
 
 # ============================================================================
 # get_prs_for_repo() Tests
 # ============================================================================
 
 
-def test_get_prs_for_repo_with_checks() -> None:
+def test_get_prs_for_repo_with_checks(monkeypatch: MonkeyPatch) -> None:
     """Test fetching PRs with CI check status."""
 
-    def mock_execute(cmd: list[str], cwd: Path) -> str:
-        if "pr" in cmd and "list" in cmd:
-            if "statusCheckRollup" in str(cmd):
-                return load_fixture("github/pr_list_with_checks.json")
-        return "[]"
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout=load_fixture("github/pr_list_with_checks.json"),
+            stderr="",
+        )
 
-    ops = RealGitHub(execute_fn=mock_execute)
-    result = ops.get_prs_for_repo(Path("/repo"), include_checks=True)
+    with mock_subprocess_run(monkeypatch, mock_run):
+        ops = RealGitHub()
+        result = ops.get_prs_for_repo(Path("/repo"), include_checks=True)
 
-    assert len(result) == 3
-    assert "feature-branch" in result
-    assert result["feature-branch"].number == 123
-    assert result["feature-branch"].checks_passing is True
+        assert len(result) == 3
+        assert "feature-branch" in result
+        assert result["feature-branch"].number == 123
+        assert result["feature-branch"].checks_passing is True
 
 
-def test_get_prs_for_repo_without_checks() -> None:
+def test_get_prs_for_repo_without_checks(monkeypatch: MonkeyPatch) -> None:
     """Test fetching PRs without CI check status."""
 
-    def mock_execute(cmd: list[str], cwd: Path) -> str:
-        if "pr" in cmd and "list" in cmd:
-            return load_fixture("github/pr_list_no_checks.json")
-        return "[]"
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout=load_fixture("github/pr_list_no_checks.json"),
+            stderr="",
+        )
 
-    ops = RealGitHub(execute_fn=mock_execute)
-    result = ops.get_prs_for_repo(Path("/repo"), include_checks=False)
+    with mock_subprocess_run(monkeypatch, mock_run):
+        ops = RealGitHub()
+        result = ops.get_prs_for_repo(Path("/repo"), include_checks=False)
 
-    assert len(result) == 2
-    assert "main-feature" in result
-    assert result["main-feature"].checks_passing is None
+        assert len(result) == 2
+        assert "main-feature" in result
+        assert result["main-feature"].checks_passing is None
 
 
-def test_get_prs_for_repo_command_failure() -> None:
+def test_get_prs_for_repo_command_failure(monkeypatch: MonkeyPatch) -> None:
     """Test that get_prs_for_repo gracefully handles command failures."""
 
-    def mock_execute_failure(cmd: list[str], cwd: Path) -> str:
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
         raise RuntimeError("Failed to execute gh command")
 
-    ops = RealGitHub(execute_fn=mock_execute_failure)
-    result = ops.get_prs_for_repo(Path("/repo"), include_checks=False)
+    with mock_subprocess_run(monkeypatch, mock_run):
+        ops = RealGitHub()
+        result = ops.get_prs_for_repo(Path("/repo"), include_checks=False)
 
-    # Should return empty dict on failure
-    assert result == {}
+        # Should return empty dict on failure
+        assert result == {}
 
 
-def test_get_prs_for_repo_json_decode_error() -> None:
+def test_get_prs_for_repo_json_decode_error(monkeypatch: MonkeyPatch) -> None:
     """Test that get_prs_for_repo gracefully handles malformed JSON."""
 
-    def mock_execute_bad_json(cmd: list[str], cwd: Path) -> str:
-        return "not valid json"
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="not valid json",
+            stderr="",
+        )
 
-    ops = RealGitHub(execute_fn=mock_execute_bad_json)
-    result = ops.get_prs_for_repo(Path("/repo"), include_checks=False)
+    with mock_subprocess_run(monkeypatch, mock_run):
+        ops = RealGitHub()
+        result = ops.get_prs_for_repo(Path("/repo"), include_checks=False)
 
-    # Should return empty dict on JSON error
-    assert result == {}
+        # Should return empty dict on JSON error
+        assert result == {}
 
 
 # ============================================================================
@@ -83,62 +99,79 @@ def test_get_prs_for_repo_json_decode_error() -> None:
 # ============================================================================
 
 
-def test_get_pr_status_open_pr() -> None:
+def test_get_pr_status_open_pr(monkeypatch: MonkeyPatch) -> None:
     """Test getting PR status for a branch with an open PR."""
 
-    def mock_execute(cmd: list[str], cwd: Path) -> str:
-        if "--head" in cmd and "branch-name" in str(cmd):
-            return load_fixture("github/pr_status_single.json")
-        return "[]"
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout=load_fixture("github/pr_status_single.json"),
+            stderr="",
+        )
 
-    ops = RealGitHub(execute_fn=mock_execute)
-    state, number, title = ops.get_pr_status(Path("/repo"), "branch-name", debug=False)
+    with mock_subprocess_run(monkeypatch, mock_run):
+        ops = RealGitHub()
+        state, number, title = ops.get_pr_status(Path("/repo"), "branch-name", debug=False)
 
-    assert state == "OPEN"
-    assert number == 456
-    assert title == "Add new feature for improved performance"
+        assert state == "OPEN"
+        assert number == 456
+        assert title == "Add new feature for improved performance"
 
 
-def test_get_pr_status_no_pr() -> None:
+def test_get_pr_status_no_pr(monkeypatch: MonkeyPatch) -> None:
     """Test getting PR status when no PR exists."""
 
-    def mock_execute(cmd: list[str], cwd: Path) -> str:
-        return "[]"
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="[]",
+            stderr="",
+        )
 
-    ops = RealGitHub(execute_fn=mock_execute)
-    state, number, title = ops.get_pr_status(Path("/repo"), "no-pr-branch", debug=False)
+    with mock_subprocess_run(monkeypatch, mock_run):
+        ops = RealGitHub()
+        state, number, title = ops.get_pr_status(Path("/repo"), "no-pr-branch", debug=False)
 
-    assert state == "NONE"
-    assert number is None
-    assert title is None
+        assert state == "NONE"
+        assert number is None
+        assert title is None
 
 
-def test_get_pr_status_command_failure() -> None:
+def test_get_pr_status_command_failure(monkeypatch: MonkeyPatch) -> None:
     """Test that get_pr_status gracefully handles command failures."""
 
-    def mock_execute_failure(cmd: list[str], cwd: Path) -> str:
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
         raise RuntimeError("Failed to execute gh command")
 
-    ops = RealGitHub(execute_fn=mock_execute_failure)
-    state, number, title = ops.get_pr_status(Path("/repo"), "branch", debug=False)
+    with mock_subprocess_run(monkeypatch, mock_run):
+        ops = RealGitHub()
+        state, number, title = ops.get_pr_status(Path("/repo"), "branch", debug=False)
 
-    # Should return NONE status on failure
-    assert state == "NONE"
-    assert number is None
-    assert title is None
+        # Should return NONE status on failure
+        assert state == "NONE"
+        assert number is None
+        assert title is None
 
 
-def test_get_pr_status_debug_output(capsys) -> None:
+def test_get_pr_status_debug_output(capsys, monkeypatch: MonkeyPatch) -> None:
     """Test debug output for PR status command."""
 
-    def mock_execute(cmd: list[str], cwd: Path) -> str:
-        return load_fixture("github/pr_status_single.json")
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout=load_fixture("github/pr_status_single.json"),
+            stderr="",
+        )
 
-    ops = RealGitHub(execute_fn=mock_execute)
-    state, number, title = ops.get_pr_status(Path("/repo"), "test-branch", debug=True)
+    with mock_subprocess_run(monkeypatch, mock_run):
+        ops = RealGitHub()
+        state, number, title = ops.get_pr_status(Path("/repo"), "test-branch", debug=True)
 
-    assert state == "OPEN"
-    assert number == 456
+        assert state == "OPEN"
+        assert number == 456
 
 
 # ============================================================================
@@ -146,56 +179,66 @@ def test_get_pr_status_debug_output(capsys) -> None:
 # ============================================================================
 
 
-def test_get_pr_base_branch_success() -> None:
+def test_get_pr_base_branch_success(monkeypatch: MonkeyPatch) -> None:
     """Test getting PR base branch successfully."""
 
-    def mock_execute(cmd: list[str], cwd: Path) -> str:
-        if "pr" in cmd and "view" in cmd and "baseRefName" in str(cmd):
-            return "main\n"
-        return ""
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="main\n",
+            stderr="",
+        )
 
-    ops = RealGitHub(execute_fn=mock_execute)
-    result = ops.get_pr_base_branch(Path("/repo"), 123)
+    with mock_subprocess_run(monkeypatch, mock_run):
+        ops = RealGitHub()
+        result = ops.get_pr_base_branch(Path("/repo"), 123)
 
-    assert result == "main"
+        assert result == "main"
 
 
-def test_get_pr_base_branch_with_whitespace() -> None:
+def test_get_pr_base_branch_with_whitespace(monkeypatch: MonkeyPatch) -> None:
     """Test that get_pr_base_branch strips whitespace."""
 
-    def mock_execute(cmd: list[str], cwd: Path) -> str:
-        if "pr" in cmd and "view" in cmd:
-            return "  feature-branch  \n"
-        return ""
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="  feature-branch  \n",
+            stderr="",
+        )
 
-    ops = RealGitHub(execute_fn=mock_execute)
-    result = ops.get_pr_base_branch(Path("/repo"), 456)
+    with mock_subprocess_run(monkeypatch, mock_run):
+        ops = RealGitHub()
+        result = ops.get_pr_base_branch(Path("/repo"), 456)
 
-    assert result == "feature-branch"
+        assert result == "feature-branch"
 
 
-def test_get_pr_base_branch_command_failure() -> None:
+def test_get_pr_base_branch_command_failure(monkeypatch: MonkeyPatch) -> None:
     """Test that get_pr_base_branch returns None on command failure."""
 
-    def mock_execute_failure(cmd: list[str], cwd: Path) -> str:
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
         raise RuntimeError("Failed to execute gh command")
 
-    ops = RealGitHub(execute_fn=mock_execute_failure)
-    result = ops.get_pr_base_branch(Path("/repo"), 123)
+    with mock_subprocess_run(monkeypatch, mock_run):
+        ops = RealGitHub()
+        result = ops.get_pr_base_branch(Path("/repo"), 123)
 
-    assert result is None
+        assert result is None
 
 
-def test_get_pr_base_branch_file_not_found() -> None:
+def test_get_pr_base_branch_file_not_found(monkeypatch: MonkeyPatch) -> None:
     """Test that get_pr_base_branch returns None when gh CLI not installed."""
 
-    def mock_execute_not_found(cmd: list[str], cwd: Path) -> str:
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
         raise FileNotFoundError("gh command not found")
 
-    ops = RealGitHub(execute_fn=mock_execute_not_found)
-    result = ops.get_pr_base_branch(Path("/repo"), 123)
+    with mock_subprocess_run(monkeypatch, mock_run):
+        ops = RealGitHub()
+        result = ops.get_pr_base_branch(Path("/repo"), 123)
 
-    assert result is None
+        assert result is None
 
 
 # ============================================================================
@@ -203,44 +246,52 @@ def test_get_pr_base_branch_file_not_found() -> None:
 # ============================================================================
 
 
-def test_update_pr_base_branch_success() -> None:
+def test_update_pr_base_branch_success(monkeypatch: MonkeyPatch) -> None:
     """Test updating PR base branch successfully."""
     called_with = []
 
-    def mock_execute(cmd: list[str], cwd: Path) -> str:
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
         called_with.append(cmd)
-        return ""
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="",
+            stderr="",
+        )
 
-    ops = RealGitHub(execute_fn=mock_execute)
-    ops.update_pr_base_branch(Path("/repo"), 123, "new-base")
+    with mock_subprocess_run(monkeypatch, mock_run):
+        ops = RealGitHub()
+        ops.update_pr_base_branch(Path("/repo"), 123, "new-base")
 
-    # Verify command was called correctly
-    assert len(called_with) == 1
-    assert called_with[0] == ["gh", "pr", "edit", "123", "--base", "new-base"]
+        # Verify command was called correctly
+        assert len(called_with) == 1
+        assert called_with[0] == ["gh", "pr", "edit", "123", "--base", "new-base"]
 
 
-def test_update_pr_base_branch_command_failure() -> None:
+def test_update_pr_base_branch_command_failure(monkeypatch: MonkeyPatch) -> None:
     """Test that update_pr_base_branch gracefully handles command failures."""
 
-    def mock_execute_failure(cmd: list[str], cwd: Path) -> str:
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
         raise RuntimeError("Failed to execute gh command")
 
-    ops = RealGitHub(execute_fn=mock_execute_failure)
+    with mock_subprocess_run(monkeypatch, mock_run):
+        ops = RealGitHub()
 
-    # Should not raise exception - graceful degradation
-    ops.update_pr_base_branch(Path("/repo"), 123, "new-base")
+        # Should not raise exception - graceful degradation
+        ops.update_pr_base_branch(Path("/repo"), 123, "new-base")
 
 
-def test_update_pr_base_branch_file_not_found() -> None:
+def test_update_pr_base_branch_file_not_found(monkeypatch: MonkeyPatch) -> None:
     """Test that update_pr_base_branch gracefully handles missing gh CLI."""
 
-    def mock_execute_not_found(cmd: list[str], cwd: Path) -> str:
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
         raise FileNotFoundError("gh command not found")
 
-    ops = RealGitHub(execute_fn=mock_execute_not_found)
+    with mock_subprocess_run(monkeypatch, mock_run):
+        ops = RealGitHub()
 
-    # Should not raise exception - graceful degradation
-    ops.update_pr_base_branch(Path("/repo"), 123, "new-base")
+        # Should not raise exception - graceful degradation
+        ops.update_pr_base_branch(Path("/repo"), 123, "new-base")
 
 
 # ============================================================================

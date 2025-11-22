@@ -256,80 +256,121 @@ When any step fails, parse the error JSON to understand what failed and provide 
 
 **Rationale**: Errors often require user decisions about resolution strategy. You should provide intelligent, context-aware guidance rather than following rigid rules.
 
+## 🔴 CRITICAL: When Errors Occur - STOP and Display
+
+**Your role when any step fails:**
+
+1. ⛔ **STOP EXECUTION** - Do not attempt to fix the error
+2. 📋 **PARSE THE ERROR** - Understand what failed from the JSON response
+3. 💬 **DISPLAY TO USER** - Show the error message and resolution steps
+4. ⏸️ **WAIT FOR USER** - Let the user take action and decide next steps
+5. 🚫 **NEVER AUTO-RETRY** - Do not execute resolution commands yourself
+
+**All resolution commands shown in error handlers are for the USER to run manually.**
+
+You are an orchestrator, not a problem-solver. When things fail, inform the user and stop.
+
+## 🔴 Conflict Resolution Policy
+
+**The agent will NEVER attempt to resolve conflicts automatically.**
+
+This is a hard rule with no exceptions:
+
+- ⛔ Do NOT execute git commands to resolve conflicts
+- ⛔ Do NOT execute gt commands to fix merge issues
+- ⛔ Do NOT execute erk commands to sync or rebase
+- ⛔ Do NOT attempt to parse conflicts and suggest resolutions
+- ⛔ Do NOT retry failed operations automatically
+
+**When conflicts occur:** Display the error, show resolution steps, and STOP.
+
+**Why this matters:** Automated conflict resolution can cause:
+- Data loss from incorrect merge decisions
+- Broken code from wrong conflict choices
+- Security issues from merging incompatible changes
+- Lost work from overwriting user edits
+
+Manual resolution by a human ensures correctness and safety.
+
 ### Specific Error Type Guidance
 
 #### `submit_merged_parent` Error
 
-When parent branches have been merged but those commits aren't in the local `main` yet:
+❌ **Parent branch was merged but not reflected in local trunk**
 
-**Issue:** Your parent branches were merged, but those commits aren't in your local `main` yet. Graphite won't let you submit until the stack is clean.
+**What happened:** One or more parent branches in your stack have been merged to trunk remotely, but your local trunk branch is out of sync.
 
-**Solution:**
+**What you need to do:**
 
-```bash
-# Sync main and restack everything
-gt sync -f
+The agent has stopped and is waiting for you to sync. Follow these steps:
 
-# If you're using erk
-erk sync -f
-```
+1. **Sync your local trunk** (you must do this manually):
+   ```bash
+   gt sync -f
+   # OR if you're using erk:
+   erk sync -f
+   ```
 
-This will:
+2. **After sync completes**, re-run the workflow:
+   ```bash
+   /gt:submit-squashed-branch <description>
+   ```
 
-1. Pull latest `main` with the merged commits
-2. Rebase your entire stack onto the updated `main`
-3. Clean up any merged branches
+**Why this happened:** Your local trunk is behind the remote. Syncing updates your local branches to reflect merged PRs.
 
-**Alternative** (if you just want to update this worktree):
-
-```bash
-# Just update main in this worktree
-git checkout main && git pull origin main
-gt repo sync
-```
-
-The `-f` flag forces the sync even if there are conflicts or merged branches.
+**The agent will NOT run sync commands for you.** Manual sync ensures you review what's being updated.
 
 #### `squash_conflict` Error
 
-When commits contain merge conflicts that prevent squashing:
+❌ **Conflicts detected while squashing commits**
 
-**Issue:** Your commits have conflicting changes that can't be automatically squashed into a single commit.
+**What happened:** Your branch contains commits with conflicting changes that cannot be automatically combined.
 
-**Solution:**
+**What you need to do:**
 
-```bash
-# Manually resolve conflicts during squash
-gt squash
+The agent has stopped and is waiting for you to resolve this. Follow these steps:
 
-# This will open an interactive rebase
-# Follow the prompts to resolve conflicts
-# Once resolved, re-run the submit command
-```
+1. **Run interactive squash** (you must do this manually):
+   ```bash
+   gt squash
+   ```
+
+2. **Follow the interactive prompts** to resolve conflicts in each commit
+
+3. **After resolution completes**, re-run the workflow:
+   ```bash
+   /gt:submit-squashed-branch <description>
+   ```
+
+**The agent will NOT attempt to resolve conflicts for you.** Manual resolution ensures correctness.
 
 #### `submit_conflict` Error
 
-When the branch has merge conflicts with its parent during restack:
+❌ **Merge conflicts detected during branch submission**
 
-**Issue:** Your branch conflicts with changes in the parent branch and can't be automatically rebased.
+**What happened:** Your branch has conflicts with its parent branch that must be resolved before submission.
 
-**Solution:**
+**What you need to do:**
 
+The agent has stopped and is waiting for you to resolve this. Choose one approach:
+
+**Option 1: Rebase onto parent** (recommended)
 ```bash
-# Option 1: Manually rebase onto parent
-gt restack
-
-# Follow prompts to resolve conflicts
-# Then re-run the submit command
-
-# Option 2: Sync with trunk first (if parent was updated)
-gt sync -f
-
-# This pulls latest main and restacks everything
-# May still require manual conflict resolution
+# Manually rebase your branch onto its parent
+gt stack fix
+# Then retry the workflow
+/gt:submit-squashed-branch <description>
 ```
 
-**Note:** The agent will NEVER attempt to resolve conflicts automatically. Manual resolution is required to ensure correctness.
+**Option 2: Sync with trunk first**
+```bash
+# Update your local trunk to match remote
+gt sync -f
+# Then retry the workflow
+/gt:submit-squashed-branch <description>
+```
+
+**The agent will NOT attempt to resolve conflicts for you.** You must choose and execute one of these approaches.
 
 ## Best Practices
 

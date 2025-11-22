@@ -5,7 +5,7 @@
 **Artifacts**:
 
 - agent: agents/erk/planned-issue-wt-creator.md
-- command: commands/erk/save-context-enriched-plan.md, commands/erk/save-session-enriched-plan.md, commands/erk/save-plan.md, commands/erk/create-planned-wt.md, commands/erk/create-planned-issue-wt.md, commands/erk/implement-plan.md, commands/erk/fix-merge-conflicts.md
+- command: commands/erk/save-context-enriched-plan.md, commands/erk/save-session-enriched-plan.md, commands/erk/save-plan.md, commands/erk/create-planned-wt.md, commands/erk/create-planned-issue-wt.md, commands/erk/create-issue-from-context.md, commands/erk/implement-plan.md, commands/erk/fix-merge-conflicts.md
 - doc: docs/erk/EXAMPLES.md
 
 **Usage**:

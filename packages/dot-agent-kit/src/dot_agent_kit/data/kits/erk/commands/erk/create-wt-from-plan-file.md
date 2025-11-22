@@ -2,14 +2,14 @@
 description: Create worktree from existing plan file on disk
 ---
 
-# /erk:create-planned-wt
+# /erk:create-wt-from-plan-file
 
-Create a erk worktree from an existing plan file on disk.
+Create an erk worktree from an existing plan file on disk.
 
 ## Usage
 
 ```bash
-/erk:create-planned-wt
+/erk:create-wt-from-plan-file
 ```
 
 ## What This Command Does

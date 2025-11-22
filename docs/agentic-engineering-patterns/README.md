@@ -38,17 +38,6 @@ Commands that immediately delegate to specialized agents for workflow orchestrat
 
 ---
 
-## Future Patterns
-
-As the project evolves, additional patterns will be documented here:
-
-- Multi-phase agent workflows
-- Fake-driven testing architecture
-- Python preprocessing for LLM workflows
-- Progressive context disclosure
-
----
-
 ## Contributing Patterns
 
 When adding new patterns to this catalog:

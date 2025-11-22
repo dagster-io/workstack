@@ -18,7 +18,7 @@ The command provides a deterministic entry point - users know exactly what will 
 
 ## Why
 
-This pattern addresses two fundamental challenges in AI-assisted workflows:
+This pattern addresses three fundamental challenges:
 
 ### 1. Context Reduction
 

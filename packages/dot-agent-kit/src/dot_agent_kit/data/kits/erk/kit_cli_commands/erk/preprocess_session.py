@@ -540,6 +540,90 @@ def discover_agent_logs(session_log_path: Path) -> list[Path]:
     return agent_logs
 
 
+def discover_planning_agent_logs(session_log_path: Path, parent_session_id: str) -> list[Path]:
+    """
+    Discover agent logs from Plan subagents only.
+
+    Algorithm:
+    1. Parse parent session JSONL to find Task tool invocations
+    2. Filter for entries where input.subagent_type == "Plan"
+    3. Extract agent IDs via temporal correlation with agent logs
+    4. Return only agent logs matching Plan subagents
+
+    Args:
+        session_log_path: Path to the main session log file
+        parent_session_id: Session ID of the parent session
+
+    Returns:
+        List of agent log paths from Plan subagents only.
+        Empty list if no Plan subagents found.
+    """
+    log_dir = session_log_path.parent
+
+    # Step 1: Find all Task tool invocations with subagent_type="Plan"
+    plan_task_timestamps: list[float] = []
+
+    for line in session_log_path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+
+        entry = json.loads(line)
+
+        # Look for assistant messages with tool_use content
+        if entry.get("type") == "assistant":
+            message = entry.get("message", {})
+            content = message.get("content", [])
+
+            if isinstance(content, list):
+                for block in content:
+                    if isinstance(block, dict) and block.get("type") == "tool_use":
+                        # Check if this is a Task tool with subagent_type="Plan"
+                        if block.get("name") == "Task":
+                            tool_input = block.get("input", {})
+                            if tool_input.get("subagent_type") == "Plan":
+                                # Record timestamp for correlation
+                                timestamp = message.get("timestamp")
+                                if timestamp is not None:
+                                    plan_task_timestamps.append(timestamp)
+
+    # If no Plan tasks found, return empty list (fallback to main session only)
+    if not plan_task_timestamps:
+        return []
+
+    # Step 2: Discover all agent logs
+    all_agent_logs = sorted(log_dir.glob("agent-*.jsonl"))
+
+    # Step 3: Filter agent logs by temporal correlation
+    planning_agent_logs: list[Path] = []
+
+    for agent_log in all_agent_logs:
+        # Read first entry to check sessionId and timestamp
+        if not agent_log.exists():
+            continue
+        first_line = agent_log.read_text(encoding="utf-8").splitlines()[0]
+        if not first_line.strip():
+            continue
+
+        first_entry = json.loads(first_line)
+
+        # Check if this agent log belongs to our parent session
+        if first_entry.get("sessionId") != parent_session_id:
+            continue
+
+        # Check if this agent log's timestamp correlates with a Plan Task
+        agent_timestamp = first_entry.get("message", {}).get("timestamp")
+        if agent_timestamp is None:
+            continue
+
+        # Match if within 1 second of any Plan Task timestamp
+        for plan_timestamp in plan_task_timestamps:
+            if abs(agent_timestamp - plan_timestamp) <= 1.0:
+                planning_agent_logs.append(agent_log)
+                break
+
+    return planning_agent_logs
+
+
 @click.command()
 @click.argument("log_path", type=click.Path(exists=True, path_type=Path))
 @click.option(

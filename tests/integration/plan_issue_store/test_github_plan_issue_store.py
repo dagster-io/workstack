@@ -371,5 +371,6 @@ def test_metadata_preserves_github_number() -> None:
 def test_get_provider_name() -> None:
     """Test getting the provider name."""
     fake_github = FakeGitHubIssues()
+    fake_github._execute = Mock()  # type: ignore[attr-defined]
     store = GitHubPlanIssueStore(fake_github)
     assert store.get_provider_name() == "github"

@@ -84,6 +84,7 @@ class GitHubIssues(ABC):
         repo_root: Path,
         labels: list[str] | None = None,
         state: str | None = None,
+        limit: int | None = None,
     ) -> list[IssueInfo]:
         """Query issues by criteria.
 
@@ -91,6 +92,7 @@ class GitHubIssues(ABC):
             repo_root: Repository root directory
             labels: Filter by labels (all labels must match)
             state: Filter by state ("open", "closed", or "all")
+            limit: Maximum number of issues to return (None = no limit)
 
         Returns:
             List of IssueInfo matching the criteria
@@ -188,6 +190,7 @@ class RealGitHubIssues(GitHubIssues):
         repo_root: Path,
         labels: list[str] | None = None,
         state: str | None = None,
+        limit: int | None = None,
     ) -> list[IssueInfo]:
         """Query issues using gh CLI.
 
@@ -208,6 +211,9 @@ class RealGitHubIssues(GitHubIssues):
 
         if state:
             cmd.extend(["--state", state])
+
+        if limit is not None:
+            cmd.extend(["--limit", str(limit)])
 
         stdout = execute_gh_command(cmd, repo_root)
         data = json.loads(stdout)
@@ -373,6 +379,7 @@ class FakeGitHubIssues(GitHubIssues):
         repo_root: Path,
         labels: list[str] | None = None,
         state: str | None = None,
+        limit: int | None = None,
     ) -> list[IssueInfo]:
         """Query issues from fake storage.
 
@@ -385,6 +392,9 @@ class FakeGitHubIssues(GitHubIssues):
         if state and state != "all":
             state_upper = state.upper()
             issues = [issue for issue in issues if issue.state == state_upper]
+
+        if limit is not None:
+            issues = issues[:limit]
 
         return issues
 
@@ -439,9 +449,10 @@ class DryRunGitHubIssues(GitHubIssues):
         repo_root: Path,
         labels: list[str] | None = None,
         state: str | None = None,
+        limit: int | None = None,
     ) -> list[IssueInfo]:
         """Delegate read operation to wrapped implementation."""
-        return self._wrapped.list_issues(repo_root, labels=labels, state=state)
+        return self._wrapped.list_issues(repo_root, labels=labels, state=state, limit=limit)
 
     def ensure_label_exists(
         self,

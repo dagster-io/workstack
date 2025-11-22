@@ -59,13 +59,13 @@ class GitHubPlanIssueStore(PlanIssueStore):
         elif query.state == PlanIssueState.CLOSED:
             state_str = "closed"
 
-        # Call GitHubIssues.list_issues with appropriate filters
-        # Note: GitHubIssues doesn't support limit, so we'll slice the results
-        issues = self._github_issues.list_issues(repo_root, labels=query.labels, state=state_str)
-
-        # Apply limit if specified
-        if query.limit:
-            issues = issues[: query.limit]
+        # Use GitHubIssues native limit support for efficient querying
+        issues = self._github_issues.list_issues(
+            repo_root,
+            labels=query.labels,
+            state=state_str,
+            limit=query.limit,
+        )
 
         return [self._convert_to_plan_issue(issue) for issue in issues]
 

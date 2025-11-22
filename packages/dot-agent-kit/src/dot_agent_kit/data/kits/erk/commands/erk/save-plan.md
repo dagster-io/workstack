@@ -99,31 +99,47 @@ Please create a plan first:
 
 Generate a descriptive filename from the plan content:
 
-**Algorithm:**
+**Title Extraction (LLM semantic analysis):**
 
 1. Extract title from first H1 (`# Title`) or H2 (`## Title`) in the plan
 2. If no headers found, use the first line of content
-3. Convert to lowercase
-4. Replace spaces and special characters with hyphens
-5. Keep only alphanumeric characters and hyphens
-6. Strip trailing hyphens or slashes: `base_name.rstrip('-/')`
-7. NO length limit (will be validated by `sanitize_worktree_name` when creating worktree)
+
+**Filename Transformation (Kit CLI):**
+
+Use the kit CLI command to transform the extracted title to a filename:
+
+```bash
+filename=$(dot-agent kit-command erk issue-title-to-filename "$extracted_title")
+if [ $? -ne 0 ]; then
+    echo "❌ Error: Failed to generate filename" >&2
+    exit 1
+fi
+```
+
+The kit CLI command handles:
+
+- Lowercase conversion
+- Unicode normalization (NFD)
+- Emoji and special character removal
+- Hyphen collapse and trimming
+- Returns "plan.md" if title is empty after cleanup
 
 **Example transformations:**
 
-- "Create Erk Save Command" → `create-erk-save-command`
-- "API Migration (Phase 1)" → `api-migration-phase-1`
-- "Refactor Auth System" → `refactor-auth-system`
+- "Create Erk Save Command" → `create-erk-save-command-plan.md`
+- "API Migration (Phase 1)" → `api-migration-phase-1-plan.md`
+- "Refactor Auth System" → `refactor-auth-system-plan.md`
+- "🚀 Feature Launch" → `feature-launch-plan.md`
 
-**If filename is empty after cleanup:**
+**If title extraction fails:**
 
 ```
-Unable to generate filename from plan title.
+Unable to extract title from plan.
 
 Please provide a short name for this plan (use kebab-case):
 ```
 
-Use `AskUserQuestion` to prompt for filename if extraction fails.
+Use `AskUserQuestion` to prompt for title if extraction fails.
 
 ### Step 3: Add Minimal Frontmatter
 
@@ -158,7 +174,7 @@ Save the plan file to the repository root:
 **Steps:**
 
 1. Get repository root using: `git rev-parse --show-toplevel`
-2. Construct path: `<repo-root>/<filename>-plan.md`
+2. Construct path: `<repo-root>/<filename>` (filename already includes `-plan.md` suffix from kit CLI)
 3. Check if file already exists
 
 **If file exists:**

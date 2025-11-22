@@ -1,5 +1,6 @@
 """Core landing sequence execution for land-stack command."""
 
+import time
 from pathlib import Path
 
 import click
@@ -10,6 +11,76 @@ from erk.cli.commands.land_stack.output import _emit, _format_description
 from erk.cli.commands.land_stack.retry import retry_with_backoff
 from erk.core.context import ErkContext
 from erk.core.git.abc import find_worktree_for_branch
+
+
+@retry_with_backoff(max_attempts=3, base_delay=2.0)
+def _check_pr_mergeable_with_retry(
+    ctx: ErkContext,
+    repo_root: Path,
+    pr_number: int,
+) -> tuple[bool, str, str | None]:
+    """Check if PR is mergeable with retry and backoff.
+
+    Queries GitHub for PR mergeability status and maps the status to user-friendly
+    messages. Uses retry with backoff to handle GitHub's asynchronous merge status
+    recalculation after PR base updates.
+
+    Args:
+        ctx: ErkContext with access to operations
+        repo_root: Repository root directory
+        pr_number: PR number to check
+
+    Returns:
+        Tuple of (is_mergeable, status, reason):
+        - is_mergeable: True if PR can be merged, False otherwise
+        - status: Raw mergeStateStatus from GitHub
+        - reason: User-friendly message explaining why PR is not mergeable (None if mergeable)
+
+    Raises:
+        RuntimeError: If mergeability check fails after retries
+    """
+    mergeability = ctx.github.get_pr_mergeability(repo_root, pr_number)
+
+    if mergeability is None:
+        msg = f"Failed to check mergeability for PR #{pr_number}"
+        raise RuntimeError(msg)
+
+    # Map mergeStateStatus to user-friendly messages
+    status = mergeability.merge_state_status
+
+    if status == "CLEAN":
+        return (True, status, None)
+
+    if status == "DIRTY":
+        return (
+            False,
+            status,
+            "PR has merge conflicts that must be resolved manually",
+        )
+
+    if status == "BLOCKED":
+        return (
+            False,
+            status,
+            "PR is blocked by branch protection rules",
+        )
+
+    if status == "BEHIND":
+        return (
+            False,
+            status,
+            "PR branch is behind base and needs updating",
+        )
+
+    if status == "UNSTABLE":
+        return (
+            False,
+            status,
+            "PR has failing status checks",
+        )
+
+    # Unknown or other status
+    return (False, status, "PR is not in a mergeable state")
 
 
 def _execute_checkout_phase(
@@ -114,6 +185,9 @@ def _verify_and_update_pr_base(
 
         update_pr_base_with_retry()
 
+        # Wait for GitHub to recalculate merge status after base update
+        time.sleep(2.0)
+
         # Show completion message
         desc = _format_description(f"update PR #{pr_number} base to {expected_parent}", check)
         _emit(desc, script_mode=script_mode)
@@ -211,7 +285,7 @@ def _execute_restack_phase(
         verbose: If True, show detailed output
         script_mode: True when running in --script mode (output to stderr)
     """
-    ctx.graphite.sync(repo_root, force=True, quiet=not verbose)
+    ctx.graphite.sync(repo_root, force=False, quiet=not verbose)
 
 
 def _force_push_upstack_branches(
@@ -410,6 +484,20 @@ def land_branch_sequence(
                 verbose=verbose,
                 script_mode=script_mode,
             )
+
+        # Phase 2.75: Check PR mergeability before attempting merge
+        is_mergeable, status, reason = _check_pr_mergeable_with_retry(ctx, repo_root, pr_number)
+        if not is_mergeable:
+            error_msg = f"Cannot merge PR #{pr_number}: {reason or status}\n\n"
+            error_msg += "Suggested action:\n"
+            error_msg += f"1. View PR: gh pr view {pr_number}\n"
+            error_msg += "2. Resolve the issue (conflicts, protections, etc.)\n"
+            error_msg += "3. Retry landing: erk land-stack"
+            raise RuntimeError(error_msg)
+
+        # Show success check for mergeability
+        desc = _format_description(f"verify PR #{pr_number} is mergeable", check)
+        _emit(desc, script_mode=script_mode)
 
         # Phase 3: Merge PR
         _execute_merge_phase(ctx, repo_root, pr_number, verbose=verbose, script_mode=script_mode)

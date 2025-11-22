@@ -3,11 +3,11 @@
 from datetime import UTC, datetime
 
 from click.testing import CliRunner
-from tests.test_utils.context_builders import build_workspace_test_context
-from tests.test_utils.env_helpers import erk_inmem_env
 
 from erk.cli.commands.plan_issue import plan_issue_group
 from erk.core.plan_issue_store import FakePlanIssueStore, PlanIssue, PlanIssueState
+from tests.test_utils.context_builders import build_workspace_test_context
+from tests.test_utils.env_helpers import erk_inmem_env
 
 
 def test_get_plan_issue_displays_issue() -> None:

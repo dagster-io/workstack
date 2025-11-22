@@ -1,1 +1,1 @@
-/Users/schrockn/.erk/repos/erk/worktrees/implement-issue-command-25-11-22/packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/commands/erk/save-plan.md
+../../../packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/commands/erk/save-plan.md

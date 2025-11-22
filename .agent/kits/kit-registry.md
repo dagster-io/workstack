@@ -4,7 +4,7 @@
 <!-- DO NOT EDIT: Changes will be overwritten. Use 'dot-agent kit sync' -->
 
 <!-- REGISTRY_VERSION: 1 -->
-<!-- GENERATED_AT: 2025-11-22T11:05:50 -->
+<!-- GENERATED_AT: 2025-11-22T11:23:49 -->
 
 <!-- BEGIN_ENTRIES -->
 
@@ -17,6 +17,12 @@
 <!-- ENTRY_START kit_id="dignified-python" version="0.2.0" source="bundled" -->
 
 @.agent/kits/dignified-python/registry-entry.md
+
+<!-- ENTRY_END -->
+
+<!-- ENTRY_START kit_id="erk" version="0.3.0" source="bundled" -->
+
+@.agent/kits/erk/registry-entry.md
 
 <!-- ENTRY_END -->
 

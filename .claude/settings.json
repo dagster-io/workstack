@@ -10,16 +10,6 @@
   "hooks": {
     "UserPromptSubmit": [
       {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "DOT_AGENT_KIT_ID=devrun DOT_AGENT_HOOK_ID=devrun-reminder-hook dot-agent kit-command devrun devrun-reminder-hook",
-            "timeout": 30
-          }
-        ]
-      },
-      {
         "matcher": "*.py",
         "hooks": [
           {
@@ -30,6 +20,21 @@
           {
             "type": "command",
             "command": "DOT_AGENT_KIT_ID=dignified-python DOT_AGENT_HOOK_ID=version-aware-reminder-hook dot-agent kit-command dignified-python version-aware-reminder-hook",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "DOT_AGENT_KIT_ID=devrun DOT_AGENT_HOOK_ID=devrun-reminder-hook dot-agent kit-command devrun devrun-reminder-hook",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "DOT_AGENT_KIT_ID=erk DOT_AGENT_HOOK_ID=session-id-injector-hook dot-agent kit-command erk session-id-injector-hook",
             "timeout": 30
           }
         ]

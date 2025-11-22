@@ -401,11 +401,7 @@ class FakeGitHubIssues(GitHubIssues):
 
         # Filter by labels (all labels must match)
         if labels:
-            issues = [
-                issue
-                for issue in issues
-                if all(label in issue.labels for label in labels)
-            ]
+            issues = [issue for issue in issues if all(label in issue.labels for label in labels)]
 
         # Filter by assignee
         if assignee:

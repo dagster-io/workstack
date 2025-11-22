@@ -170,7 +170,8 @@ def format_worktree_line(
         max_issue_info_len: Maximum issue info visible length for alignment (0 = no alignment)
 
     Returns:
-        Formatted line with colorization in format: name (branch) {PR info} {issue info} {plan summary}
+        Formatted line with colorization:
+        name (branch) {PR info} {issue info} {plan summary}
     """
     # Root worktree gets green to distinguish it from regular worktrees
     name_color = "green" if is_root else "cyan"

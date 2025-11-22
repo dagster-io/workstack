@@ -33,6 +33,51 @@ main → feature-a → feature-b
   - **Upstack/Up**: Away from trunk (toward the tip) - `gt up` moves from feature-a → feature-b → feature-c
 - **Trunk**: The main branch (usually `main` or `master`) that all stacks build upon
 
+### Stack Visualization - CRITICAL MENTAL MODEL
+
+**When working with Graphite stacks, always visualize trunk at the BOTTOM:**
+
+```
+TOP ↑    feat-3  ← upstack (leaf)
+         feat-2
+         feat-1
+BOTTOM ↓ main    ← downstack (trunk)
+```
+
+### Directional Terminology - MUST UNDERSTAND
+
+- **UPSTACK / UP** = away from trunk = toward TOP = toward leaves
+- **DOWNSTACK / DOWN** = toward trunk = toward BOTTOM = toward main
+
+### Detailed Examples
+
+Given stack: `main → feat-1 → feat-2 → feat-3`
+
+**If current branch is `feat-1`:**
+
+- Upstack: `feat-2`, `feat-3` (children, toward top)
+- Downstack: `main` (parent, toward bottom)
+
+**If current branch is `feat-3` (at top):**
+
+- Upstack: _(nothing, already at top/leaf)_
+- Downstack: `feat-2`, `feat-1`, `main` (ancestors, toward bottom)
+
+### Why This Mental Model Is Critical
+
+🔴 **Commands depend on this visualization:**
+
+- `gt up` / `gt down` navigate the stack
+- `land-stack` traverses branches in specific direction
+- Stack traversal logic (parent/child relationships)
+
+🔴 **Common mistake:** Thinking "upstack" means "toward trunk"
+
+- **WRONG**: upstack = toward main ❌
+- **CORRECT**: upstack = away from main ✅
+
+🔴 **PR landing order:** Always bottom→top (main first, then each layer up)
+
 ### Metadata Storage
 
 All gt metadata is stored in the shared `.git` directory (accessible across worktrees):

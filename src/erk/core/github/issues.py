@@ -17,6 +17,10 @@ class IssueInfo:
     body: str
     state: str  # "OPEN" or "CLOSED"
     url: str
+    labels: list[str]  # For filtering/display
+    created_at: str  # ISO8601 timestamp
+    updated_at: str  # ISO8601 timestamp
+    assignees: list[str]  # For filtering/display
 
 
 class GitHubIssues(ABC):
@@ -79,6 +83,8 @@ class GitHubIssues(ABC):
         repo_root: Path,
         labels: list[str] | None = None,
         state: str | None = None,
+        assignee: str | None = None,
+        limit: int = 100,
     ) -> list[IssueInfo]:
         """Query issues by criteria.
 
@@ -86,6 +92,8 @@ class GitHubIssues(ABC):
             repo_root: Repository root directory
             labels: Filter by labels (all labels must match)
             state: Filter by state ("open", "closed", or "all")
+            assignee: Filter by assignee (GitHub username or "@me")
+            limit: Maximum number of issues to return
 
         Returns:
             List of IssueInfo matching the criteria
@@ -158,7 +166,7 @@ class RealGitHubIssues(GitHubIssues):
             "view",
             str(number),
             "--json",
-            "number,title,body,state,url",
+            "number,title,body,state,url,labels,createdAt,updatedAt,assignees",
         ]
         stdout = self._execute(cmd, repo_root)
         data = json.loads(stdout)
@@ -169,6 +177,10 @@ class RealGitHubIssues(GitHubIssues):
             body=data["body"],
             state=data["state"],
             url=data["url"],
+            labels=[label["name"] for label in data.get("labels", [])],
+            created_at=data["createdAt"],
+            updated_at=data["updatedAt"],
+            assignees=[assignee["login"] for assignee in data.get("assignees", [])],
         )
 
     def add_comment(self, repo_root: Path, number: int, body: str) -> None:
@@ -185,13 +197,23 @@ class RealGitHubIssues(GitHubIssues):
         repo_root: Path,
         labels: list[str] | None = None,
         state: str | None = None,
+        assignee: str | None = None,
+        limit: int = 100,
     ) -> list[IssueInfo]:
         """Query issues using gh CLI.
 
         Note: Uses gh's native error handling - gh CLI raises RuntimeError
         on failures (not installed, not authenticated).
         """
-        cmd = ["gh", "issue", "list", "--json", "number,title,body,state,url"]
+        cmd = [
+            "gh",
+            "issue",
+            "list",
+            "--json",
+            "number,title,body,state,url,labels,createdAt,updatedAt,assignees",
+            "--limit",
+            str(limit),
+        ]
 
         if labels:
             for label in labels:
@@ -199,6 +221,9 @@ class RealGitHubIssues(GitHubIssues):
 
         if state:
             cmd.extend(["--state", state])
+
+        if assignee:
+            cmd.extend(["--assignee", assignee])
 
         stdout = self._execute(cmd, repo_root)
         data = json.loads(stdout)
@@ -210,6 +235,10 @@ class RealGitHubIssues(GitHubIssues):
                 body=issue["body"],
                 state=issue["state"],
                 url=issue["url"],
+                labels=[label["name"] for label in issue.get("labels", [])],
+                created_at=issue["createdAt"],
+                updated_at=issue["updatedAt"],
+                assignees=[assignee["login"] for assignee in issue.get("assignees", [])],
             )
             for issue in data
         ]
@@ -323,6 +352,10 @@ class FakeGitHubIssues(GitHubIssues):
             body=body,
             state="OPEN",
             url=f"https://github.com/owner/repo/issues/{issue_number}",
+            labels=labels,
+            created_at="2024-01-01T00:00:00Z",
+            updated_at="2024-01-01T00:00:00Z",
+            assignees=[],
         )
         self._created_issues.append((title, body, labels))
 
@@ -355,20 +388,31 @@ class FakeGitHubIssues(GitHubIssues):
         repo_root: Path,
         labels: list[str] | None = None,
         state: str | None = None,
+        assignee: str | None = None,
+        limit: int = 100,
     ) -> list[IssueInfo]:
-        """Query issues from fake storage.
-
-        Note: label filtering is not implemented in fake - returns all issues
-        matching state filter. This is acceptable for testing since we control
-        the fake's state.
-        """
+        """Query issues from fake storage with filtering support."""
         issues = list(self._issues.values())
 
+        # Filter by state
         if state and state != "all":
             state_upper = state.upper()
             issues = [issue for issue in issues if issue.state == state_upper]
 
-        return issues
+        # Filter by labels (all labels must match)
+        if labels:
+            issues = [
+                issue
+                for issue in issues
+                if all(label in issue.labels for label in labels)
+            ]
+
+        # Filter by assignee
+        if assignee:
+            issues = [issue for issue in issues if assignee in issue.assignees]
+
+        # Apply limit
+        return issues[:limit]
 
     def ensure_label_exists(
         self,
@@ -421,9 +465,13 @@ class NoopGitHubIssues(GitHubIssues):
         repo_root: Path,
         labels: list[str] | None = None,
         state: str | None = None,
+        assignee: str | None = None,
+        limit: int = 100,
     ) -> list[IssueInfo]:
         """Delegate read operation to wrapped implementation."""
-        return self._wrapped.list_issues(repo_root, labels=labels, state=state)
+        return self._wrapped.list_issues(
+            repo_root, labels=labels, state=state, assignee=assignee, limit=limit
+        )
 
     def ensure_label_exists(
         self,

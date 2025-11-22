@@ -110,6 +110,10 @@ def test_get_issue_success() -> None:
         "body": "Test issue body content",
         "state": "OPEN",
         "url": "https://github.com/owner/repo/issues/42",
+        "labels": [],
+        "createdAt": "2024-01-01T00:00:00Z",
+        "updatedAt": "2024-01-01T00:00:00Z",
+        "assignees": [],
     }
 
     def mock_execute(cmd: list[str], cwd: Path) -> str:
@@ -140,6 +144,10 @@ def test_get_issue_command_structure() -> None:
                 "body": "Body",
                 "state": "OPEN",
                 "url": "http://url",
+                "labels": [],
+                "createdAt": "2024-01-01T00:00:00Z",
+                "updatedAt": "2024-01-01T00:00:00Z",
+                "assignees": [],
             }
         )
 
@@ -236,6 +244,10 @@ def test_list_issues_all() -> None:
             "body": "Body 1",
             "state": "OPEN",
             "url": "http://url/1",
+            "labels": [],
+            "createdAt": "2024-01-01T00:00:00Z",
+            "updatedAt": "2024-01-01T00:00:00Z",
+            "assignees": [],
         },
         {
             "number": 2,
@@ -243,6 +255,10 @@ def test_list_issues_all() -> None:
             "body": "Body 2",
             "state": "CLOSED",
             "url": "http://url/2",
+            "labels": [],
+            "createdAt": "2024-01-01T00:00:00Z",
+            "updatedAt": "2024-01-01T00:00:00Z",
+            "assignees": [],
         },
     ]
 
@@ -367,6 +383,10 @@ def test_list_issues_parses_all_fields() -> None:
             "body": "Multi-line\nbody\nwith\nlinebreaks",
             "state": "OPEN",
             "url": "https://github.com/owner/repo/issues/123",
+            "labels": [],
+            "createdAt": "2024-01-01T00:00:00Z",
+            "updatedAt": "2024-01-01T00:00:00Z",
+            "assignees": [],
         }
     ]
 

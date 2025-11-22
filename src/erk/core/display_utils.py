@@ -9,6 +9,7 @@ import re
 
 import click
 
+from erk.core.github.issues import IssueInfo
 from erk.core.github.types import PullRequestInfo
 
 
@@ -150,6 +151,8 @@ def format_worktree_line(
     max_name_len: int = 0,
     max_branch_len: int = 0,
     max_pr_info_len: int = 0,
+    issue_info: str | None = None,
+    max_issue_info_len: int = 0,
 ) -> str:
     """Format a single worktree line with colorization and optional alignment.
 
@@ -163,9 +166,11 @@ def format_worktree_line(
         max_name_len: Maximum name length for alignment (0 = no alignment)
         max_branch_len: Maximum branch length for alignment (0 = no alignment)
         max_pr_info_len: Maximum PR info visible length for alignment (0 = no alignment)
+        issue_info: Formatted issue info string (e.g., "#123 (OPEN)") or None
+        max_issue_info_len: Maximum issue info visible length for alignment (0 = no alignment)
 
     Returns:
-        Formatted line with colorization in format: name (branch) {PR info} {plan summary}
+        Formatted line with colorization in format: name (branch) {PR info} {issue info} {plan summary}
     """
     # Root worktree gets green to distinguish it from regular worktrees
     name_color = "green" if is_root else "cyan"
@@ -205,6 +210,17 @@ def format_worktree_line(
     else:
         parts.append(pr_display)
 
+    # Add issue info if provided
+    if issue_info:
+        if max_issue_info_len > 0:
+            # Calculate visible length and add padding
+            visible_len = get_visible_length(issue_info)
+            padding = max_issue_info_len - visible_len
+            issue_display_with_padding = issue_info + (" " * padding)
+            parts.append(issue_display_with_padding)
+        else:
+            parts.append(issue_info)
+
     # Add plan summary or placeholder
     if plan_summary:
         plan_colored = click.style(f"📋 {plan_summary}", fg="bright_magenta")
@@ -221,3 +237,41 @@ def format_worktree_line(
         line += indicator
 
     return line
+
+
+def format_issue_info(issue: IssueInfo, show_labels: bool = False) -> str:
+    """Format GitHub issue info with number, state, and optional labels.
+
+    Format: #123 (OPEN) [erk-plan]
+
+    Components:
+    - Issue number: cyan, clickable (OSC 8)
+    - State: green (OPEN) or red (CLOSED)
+    - Labels: bright_black, optional (only shown if show_labels=True)
+
+    Args:
+        issue: GitHub issue information
+        show_labels: Whether to include label names in output
+
+    Returns:
+        Formatted issue info string
+    """
+    # Format issue number with clickable link
+    issue_text = f"#{issue.number}"
+    colored_issue = click.style(issue_text, fg="cyan")
+    clickable_link = f"\033]8;;{issue.url}\033\\{colored_issue}\033]8;;\033\\"
+
+    # Format state with color
+    state_color = "green" if issue.state == "OPEN" else "red"
+    state_text = click.style(f"({issue.state})", fg=state_color)
+
+    # Combine number and state
+    result = f"{clickable_link} {state_text}"
+
+    # Add labels if requested
+    if show_labels and issue.labels:
+        labels_text = ", ".join(issue.labels)
+        labels_styled = click.style(f"[{labels_text}]", fg="bright_black")
+        result += f" {labels_styled}"
+
+    return result

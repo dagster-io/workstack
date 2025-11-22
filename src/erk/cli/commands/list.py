@@ -7,13 +7,15 @@ from erk.cli.output import user_output
 from erk.core.context import ErkContext
 from erk.core.display_utils import (
     format_branch_without_worktree,
+    format_issue_info,
     format_pr_info,
     format_worktree_line,
     get_visible_length,
 )
 from erk.core.file_utils import extract_plan_title
+from erk.core.github.issues import IssueInfo
 from erk.core.github.types import PullRequestInfo
-from erk.core.plan_folder import get_plan_path
+from erk.core.plan_folder import get_issue_for_worktree, get_plan_path
 from erk.core.repo_discovery import RepoContext
 from erk.core.worktree_utils import find_current_worktree
 
@@ -36,11 +38,56 @@ def _format_plan_summary(worktree_path: Path, ctx: ErkContext) -> str | None:
     return extract_plan_title(plan_path, git_ops=ctx.git)
 
 
-def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
+def _should_display_worktree(
+    worktree_path: Path,
+    issues: dict[Path, IssueInfo],
+    filtered_issue_numbers: set[int] | None,
+    with_issue: bool | None,
+) -> bool:
+    """Determine if worktree should be displayed based on issue filters.
+
+    Args:
+        worktree_path: Path to the worktree
+        issues: Mapping of worktree paths to issue info
+        filtered_issue_numbers: Set of issue numbers matching filters, or None
+        with_issue: Filter by issue presence (True=has issue, False=no issue, None=no filter)
+
+    Returns:
+        True if worktree should be displayed, False otherwise
+    """
+    issue = issues.get(worktree_path)
+
+    # Apply with_issue/without_issue filter
+    if with_issue is not None:
+        has_issue = issue is not None
+        if with_issue and not has_issue:
+            return False
+        if not with_issue and has_issue:
+            return False
+
+    # Apply issue number filter (from label/state/assignee filters)
+    if filtered_issue_numbers is not None:
+        if issue is None:
+            return False
+        if issue.number not in filtered_issue_numbers:
+            return False
+
+    return True
+
+
+def _list_worktrees(
+    ctx: ErkContext,
+    ci: bool,
+    with_issues: bool,
+    issue_state: str | None = None,
+    issue_labels: list[str] | None = None,
+    with_issue: bool | None = None,
+    issue_assignee: str | None = None,
+) -> None:
     """List worktrees with comprehensive branch information.
 
     Shows three sections:
-    1. Worktrees (with PR info and plan summaries)
+    1. Worktrees (with PR info, issue info, and plan summaries)
     2. Graphite branches without worktrees
     3. Local branches without worktrees
     """
@@ -61,6 +108,34 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
     # Determine which worktree the user is currently in
     wt_info = find_current_worktree(worktrees, current_dir)
     current_worktree_path = wt_info.path if wt_info is not None else None
+
+    # Fetch issue information if requested or if any issue filter is active
+    has_issue_filters = (
+        issue_state is not None
+        or issue_labels
+        or with_issue is not None
+        or issue_assignee is not None
+    )
+
+    issues: dict[Path, IssueInfo] = {}
+    filtered_issue_numbers: set[int] | None = None
+
+    if with_issues or has_issue_filters:
+        # If filters are active, fetch matching issues from GitHub first
+        if has_issue_filters and (issue_state or issue_labels or issue_assignee):
+            matching_issues = ctx.issues.list_issues(
+                repo.root,
+                labels=issue_labels if issue_labels else None,
+                state=issue_state,
+                assignee=issue_assignee,
+            )
+            filtered_issue_numbers = {issue.number for issue in matching_issues}
+
+        # Fetch issue info for each worktree with .plan/ folder
+        for wt in worktrees:
+            issue = get_issue_for_worktree(wt.path, ctx.issues, repo.root)
+            if issue is not None:
+                issues[wt.path] = issue
 
     # Fetch PR information based on config and flags
     prs: dict[str, PullRequestInfo] | None = None
@@ -106,11 +181,12 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
     ]
 
     # Calculate maximum widths for alignment
-    # First, collect all names, branches, and PR info to display
+    # First, collect all names, branches, PR info, and issue info to display
     # Start with root
     all_names = ["root"]
     all_branches = []
     all_pr_info = []
+    all_issue_info = []
 
     root_branch = branches.get(repo.root)
     if root_branch:
@@ -128,6 +204,13 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
                 all_pr_info.append("[no PR]")
         else:
             all_pr_info.append("[no PR]")
+
+        # Add root issue info for width calculation
+        if with_issues:
+            root_issue = issues.get(repo.root)
+            if root_issue:
+                root_issue_info_str = format_issue_info(root_issue)
+                all_issue_info.append(root_issue_info_str)
     else:
         all_pr_info.append("[no PR]")
 
@@ -153,14 +236,26 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
                     all_pr_info.append("[no PR]")
             else:
                 all_pr_info.append("[no PR]")
+
+            # Add issue info for width calculation
+            if with_issues:
+                wt_issue = issues.get(wt.path)
+                if wt_issue:
+                    wt_issue_info_str = format_issue_info(wt_issue)
+                    all_issue_info.append(wt_issue_info_str)
         else:
             all_pr_info.append("[no PR]")
 
-    # Calculate max widths using visible length for PR info
+    # Calculate max widths using visible length for PR info and issue info
     max_name_len = max(len(name) for name in all_names) if all_names else 0
     max_branch_len = max(len(branch) for branch in all_branches) if all_branches else 0
     max_pr_info_len = (
         max(get_visible_length(pr_info) for pr_info in all_pr_info) if all_pr_info else 0
+    )
+    max_issue_info_len = (
+        max(get_visible_length(issue_info) for issue_info in all_issue_info)
+        if all_issue_info
+        else 0
     )
 
     # Section 1: Worktrees
@@ -168,30 +263,45 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
     user_output()
 
     # Show root repo first (display as "root" to distinguish from worktrees)
-    is_current_root = repo.root == current_worktree_path
-
-    # Get PR info and plan summary for root
-    root_pr_info = None
-    if prs and root_branch:
-        pr = prs.get(root_branch)
-        if pr:
-            graphite_url = ctx.graphite.get_graphite_url(pr.owner, pr.repo, pr.number)
-            root_pr_info = format_pr_info(pr, graphite_url)
-    root_plan_summary = _format_plan_summary(repo.root, ctx)
-
-    user_output(
-        format_worktree_line(
-            "root",
-            root_branch,
-            pr_info=root_pr_info,
-            plan_summary=root_plan_summary,
-            is_root=True,
-            is_current=is_current_root,
-            max_name_len=max_name_len,
-            max_branch_len=max_branch_len,
-            max_pr_info_len=max_pr_info_len,
-        )
+    # Apply issue filters
+    should_show_root = _should_display_worktree(
+        repo.root, issues, filtered_issue_numbers, with_issue
     )
+
+    if should_show_root:
+        is_current_root = repo.root == current_worktree_path
+
+        # Get PR info, issue info, and plan summary for root
+        root_pr_info = None
+        if prs and root_branch:
+            pr = prs.get(root_branch)
+            if pr:
+                graphite_url = ctx.graphite.get_graphite_url(pr.owner, pr.repo, pr.number)
+                root_pr_info = format_pr_info(pr, graphite_url)
+
+        root_issue_info = None
+        if with_issues or has_issue_filters:
+            root_issue = issues.get(repo.root)
+            if root_issue:
+                root_issue_info = format_issue_info(root_issue)
+
+        root_plan_summary = _format_plan_summary(repo.root, ctx)
+
+        user_output(
+            format_worktree_line(
+                "root",
+                root_branch,
+                pr_info=root_pr_info,
+                plan_summary=root_plan_summary,
+                is_root=True,
+                is_current=is_current_root,
+                max_name_len=max_name_len,
+                max_branch_len=max_branch_len,
+                max_pr_info_len=max_pr_info_len,
+                issue_info=root_issue_info,
+                max_issue_info_len=max_issue_info_len,
+            )
+        )
 
     # Show worktrees - iterate over worktrees instead of filesystem
     for wt in non_root_worktrees:
@@ -199,15 +309,26 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
         wt_path = wt.path
         wt_branch = wt.branch
 
+        # Apply issue filters
+        if not _should_display_worktree(wt_path, issues, filtered_issue_numbers, with_issue):
+            continue
+
         is_current_wt = wt_path == current_worktree_path
 
-        # Get PR info and plan summary for this worktree
+        # Get PR info, issue info, and plan summary for this worktree
         wt_pr_info = None
         if prs and wt_branch:
             pr = prs.get(wt_branch)
             if pr:
                 graphite_url = ctx.graphite.get_graphite_url(pr.owner, pr.repo, pr.number)
                 wt_pr_info = format_pr_info(pr, graphite_url)
+
+        wt_issue_info = None
+        if with_issues or has_issue_filters:
+            wt_issue = issues.get(wt_path)
+            if wt_issue:
+                wt_issue_info = format_issue_info(wt_issue)
+
         wt_plan_summary = _format_plan_summary(wt_path, ctx)
 
         user_output(
@@ -221,6 +342,8 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
                 max_name_len=max_name_len,
                 max_branch_len=max_branch_len,
                 max_pr_info_len=max_pr_info_len,
+                issue_info=wt_issue_info,
+                max_issue_info_len=max_issue_info_len,
             )
         )
 
@@ -283,8 +406,29 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
 
 @click.command("list")
 @click.option("--ci", is_flag=True, help="Fetch CI check status from GitHub (slower)")
+@click.option("--with-issues", is_flag=True, help="Show GitHub issue metadata")
+@click.option(
+    "--issue-state",
+    type=click.Choice(["open", "closed", "all"]),
+    help="Filter by issue state",
+)
+@click.option("--issue-label", multiple=True, help="Filter by issue label (AND logic)")
+@click.option(
+    "--with-issue/--without-issue",
+    default=None,
+    help="Filter by issue presence",
+)
+@click.option("--issue-assignee", help="Filter by issue assignee")
 @click.pass_obj
-def list_cmd(ctx: ErkContext, ci: bool) -> None:
+def list_cmd(
+    ctx: ErkContext,
+    ci: bool,
+    with_issues: bool,
+    issue_state: str | None,
+    issue_label: tuple[str, ...],
+    with_issue: bool | None,
+    issue_assignee: str | None,
+) -> None:
     """List worktrees with comprehensive branch and PR information.
 
     Shows three sections:
@@ -292,13 +436,50 @@ def list_cmd(ctx: ErkContext, ci: bool) -> None:
     2. Graphite-tracked branches without worktrees
     3. Local branches without worktrees
     """
-    _list_worktrees(ctx, ci=ci)
+    _list_worktrees(
+        ctx,
+        ci=ci,
+        with_issues=with_issues,
+        issue_state=issue_state,
+        issue_labels=list(issue_label),
+        with_issue=with_issue,
+        issue_assignee=issue_assignee,
+    )
 
 
 # Register ls as a hidden alias (won't show in help)
 @click.command("ls", hidden=True)
 @click.option("--ci", is_flag=True, help="Fetch CI check status from GitHub (slower)")
+@click.option("--with-issues", is_flag=True, help="Show GitHub issue metadata")
+@click.option(
+    "--issue-state",
+    type=click.Choice(["open", "closed", "all"]),
+    help="Filter by issue state",
+)
+@click.option("--issue-label", multiple=True, help="Filter by issue label (AND logic)")
+@click.option(
+    "--with-issue/--without-issue",
+    default=None,
+    help="Filter by issue presence",
+)
+@click.option("--issue-assignee", help="Filter by issue assignee")
 @click.pass_obj
-def ls_cmd(ctx: ErkContext, ci: bool) -> None:
+def ls_cmd(
+    ctx: ErkContext,
+    ci: bool,
+    with_issues: bool,
+    issue_state: str | None,
+    issue_label: tuple[str, ...],
+    with_issue: bool | None,
+    issue_assignee: str | None,
+) -> None:
     """List worktrees with comprehensive branch and PR information (alias of 'list')."""
-    _list_worktrees(ctx, ci=ci)
+    _list_worktrees(
+        ctx,
+        ci=ci,
+        with_issues=with_issues,
+        issue_state=issue_state,
+        issue_labels=list(issue_label),
+        with_issue=with_issue,
+        issue_assignee=issue_assignee,
+    )

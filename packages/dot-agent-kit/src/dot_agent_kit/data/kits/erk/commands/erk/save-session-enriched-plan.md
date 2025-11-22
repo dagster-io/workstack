@@ -492,7 +492,7 @@ Summary:
 
 Next steps:
 1. Review the enhanced plan
-2. Create worktree: /erk:create-planned-wt [filename]
+2. Create worktree: /erk:create-wt-from-plan-file [filename]
 3. Switch to worktree and implement
 ```
 

@@ -8,7 +8,7 @@ description: Create GitHub issue from persisted plan with auto-implementation qu
 
 **Create a GitHub issue from an existing plan file on disk with the `erk-queue` label for automatic implementation.**
 
-This command detects plan files at the repository root, selects the most recent one, creates a GitHub issue with the plan content, and adds the `erk-queue` label (which triggers automatic implementation).
+This command detects plan files at the repository root, selects the most recent one, creates a GitHub issue with the plan content, adds the `erk-queue` label (which triggers automatic implementation), and optionally links it to an existing worktree's `.plan/` folder.
 
 **What this command does:**
 
@@ -17,6 +17,7 @@ This command detects plan files at the repository root, selects the most recent 
 - ✅ Ensure `erk-queue` label exists (create if needed)
 - ✅ Create GitHub issue with plan body as content
 - ✅ Add label: `erk-queue` (triggers automatic implementation workflow)
+- ✅ Save issue reference to `.plan/issue.json` (if worktree exists)
 - ✅ Display issue URL
 
 ## What Happens
@@ -29,7 +30,8 @@ When you run this command, these steps occur:
 4. **Ensure Label Exists** - Check for `erk-queue` label, create if missing
 5. **Create Issue** - Use gh CLI to create issue with `erk-queue` label
 6. **Automatic Implementation** - GitHub Actions workflow automatically starts implementation
-7. **Display Result** - Show issue number and URL
+7. **Link to Worktree** - If `.plan/` folder exists in current worktree, save issue reference
+8. **Display Result** - Show issue number and URL
 
 ## Usage
 
@@ -38,6 +40,19 @@ When you run this command, these steps occur:
 ```
 
 **No arguments accepted** - This command automatically detects and uses the most recent plan file.
+
+## Optional: Link Existing Issue
+
+If you want to link an existing issue instead of creating a new one:
+
+```bash
+/erk:create-queued-plan --link 123
+```
+
+This will save the issue reference without creating a new issue. Use this when:
+
+- Issue was created manually on GitHub
+- Want to associate an existing issue with a worktree
 
 ## Key Difference from `/erk:create-planned-issue`
 
@@ -71,6 +86,10 @@ This command succeeds when ALL of the following are true:
 ✅ Label added: `erk-queue`
 ✅ Issue URL displayed
 ✅ GitHub Actions workflow triggered automatically
+
+**Worktree Linking (if applicable):**
+✅ If `.plan/` folder exists: issue reference saved to `.plan/issue.json`
+✅ If no `.plan/` folder: issue created but not linked (can link later)
 
 ## Troubleshooting
 
@@ -108,6 +127,16 @@ This command succeeds when ALL of the following are true:
 - Verify repository access: `gh repo view`
 - Check API rate limits: `gh api rate_limit`
 
+### "Issue created but not linked"
+
+**Cause:** No `.plan/` folder in current worktree
+**Solution:**
+
+- This is expected if you haven't created a worktree yet
+- Create worktree: `/erk:create-planned-wt`
+- Navigate to worktree: `erk checkout <branch>`
+- Re-run: `/erk:create-queued-plan --link <issue-number>`
+
 ### "Workflow not triggered"
 
 **Cause:** GitHub Actions workflow may not be enabled or `erk-queue` label not recognized
@@ -135,7 +164,7 @@ This command succeeds when ALL of the following are true:
 2. Create queued issue: `/erk:create-queued-plan` ← **YOU ARE HERE**
 3. GitHub Actions automatically:
    - Creates branch from issue title
-   - Creates worktree with `.plan/` folder structure
+   - Creates `.plan/` folder structure
    - Runs `/erk:implement-plan`
    - Creates pull request
 
@@ -152,7 +181,14 @@ This command succeeds when ALL of the following are true:
 
 You are executing the `/erk:create-queued-plan` command. Follow these steps carefully:
 
-### Step 1: Verify Prerequisites
+### Step 1: Check for --link Flag
+
+Parse user input to check if `--link <issue-number>` was provided:
+
+- If `--link 123` provided: Skip to Step 7 (link existing issue)
+- If no flag: Continue to Step 2 (create new issue)
+
+### Step 2: Verify Prerequisites
 
 Check that required tools are available:
 
@@ -178,7 +214,7 @@ Check that required tools are available:
    ```
    If fails: Show `gh auth login` instructions and exit
 
-### Step 2: Detect Plan File
+### Step 3: Detect Plan File
 
 Find the most recent `*-plan.md` file at repository root:
 
@@ -209,7 +245,7 @@ Find the most recent `*-plan.md` file at repository root:
    ls -t <repo-root>/*-plan.md | head -1
    ```
 
-### Step 3: Parse Plan File
+### Step 4: Parse Plan File
 
 Extract title and body from the selected plan file:
 
@@ -222,7 +258,7 @@ Extract title and body from the selected plan file:
 
 3. Body is the full plan markdown content
 
-### Step 4: Ensure Label Exists
+### Step 5: Ensure Label Exists
 
 Check if the `erk-queue` label exists, and create it if needed:
 
@@ -254,9 +290,9 @@ Check if the `erk-queue` label exists, and create it if needed:
    Continuing with issue creation...
    ```
 
-   Continue to Step 5 (non-blocking warning - gh will still accept the label even if not in repo's label list)
+   Continue to Step 6 (non-blocking warning - gh will still accept the label even if not in repo's label list)
 
-### Step 5: Create GitHub Issue
+### Step 6: Create GitHub Issue
 
 Use gh CLI to create the issue:
 
@@ -287,7 +323,7 @@ Use gh CLI to create the issue:
 
    Exit with error.
 
-### Step 6: Display Issue URL
+### Step 7: Display Issue URL
 
 Show success message with issue information:
 
@@ -310,11 +346,99 @@ You can monitor progress:
 - Check Actions tab: <repo-url>/actions
 ```
 
+### Step 8: Link Issue to Worktree (if .plan/ exists)
+
+Check if current directory has a `.plan/` folder:
+
+1. Check for `.plan/` directory:
+
+   ```bash
+   test -d .plan && echo "exists" || echo "not found"
+   ```
+
+2. If `.plan/` exists:
+   - Use `ctx.issues.get_issue(repo_root, issue_number)` to fetch issue details
+   - Import: `from erk.core.plan_folder import save_issue_reference`
+   - Call: `save_issue_reference(Path.cwd() / ".plan", issue_number, issue_url)`
+   - Display:
+
+     ```
+     📋 Issue linked to worktree
+
+     Issue reference saved to .plan/issue.json
+
+     The issue will be updated with progress during automatic implementation.
+     ```
+
+3. If `.plan/` doesn't exist:
+   - Display informational message:
+
+     ```
+     ℹ️  Issue created but not linked to a worktree
+
+     The GitHub Actions workflow will create a new branch and implement automatically.
+
+     To link this issue to a worktree:
+     1. Wait for workflow to complete and PR to be created
+     2. Checkout the branch: erk checkout <branch>
+     3. Link issue: /erk:create-queued-plan --link <issue-number>
+     ```
+
+### Step 9: Handle --link Flag
+
+If user provided `--link <issue-number>`:
+
+1. Fetch issue using gh CLI:
+
+   ```bash
+   gh issue view <issue-number> --json number,title,url
+   ```
+
+2. If issue not found:
+
+   ```
+   ❌ Error: Issue #<number> not found
+
+   Verify issue exists: gh issue view <number>
+   ```
+
+   Exit with error.
+
+3. Check for `.plan/` directory (same as Step 8)
+
+4. If `.plan/` exists:
+   - Save issue reference using `save_issue_reference()`
+   - Display:
+
+     ```
+     ✅ Issue #<number> linked to worktree
+
+     Issue: <title>
+     URL: <url>
+
+     Issue reference saved to .plan/issue.json
+     ```
+
+5. If `.plan/` doesn't exist:
+
+   ```
+   ❌ Error: No .plan/ folder found in current directory
+
+   Navigate to a worktree with a plan:
+   1. List worktrees: erk list
+   2. Navigate: erk checkout <branch>
+   3. Try again: /erk:create-queued-plan --link <issue-number>
+   ```
+
+   Exit with error.
+
 ### Important Notes
 
 - **Automatic implementation**: This command triggers automatic implementation via GitHub Actions
 - **Label difference**: Uses `erk-queue` (auto) vs `erk-plan` (manual)
 - **Workflow monitoring**: User should monitor GitHub Actions for implementation progress
+- **Graceful degradation**: Creating issue without linking is valid (can link later)
+- **Idempotent linking**: Can run `--link` multiple times safely (overwrites `.plan/issue.json`)
 - **Context usage**: Use `ctx.issues.create_issue()` for issue creation (injected via ErkContext)
 
 ### Error Handling

@@ -377,11 +377,6 @@ Check if current directory has a `.plan/` folder:
      ℹ️  Issue created but not linked to a worktree
 
      The GitHub Actions workflow will create a new branch and implement automatically.
-
-     To link this issue to a worktree:
-     1. Wait for workflow to complete and PR to be created
-     2. Checkout the branch: erk checkout <branch>
-     3. Link issue: /erk:create-queued-plan --link <issue-number>
      ```
 
 ### Step 9: Handle --link Flag
@@ -424,10 +419,7 @@ If user provided `--link <issue-number>`:
    ```
    ❌ Error: No .plan/ folder found in current directory
 
-   Navigate to a worktree with a plan:
-   1. List worktrees: erk list
-   2. Navigate: erk checkout <branch>
-   3. Try again: /erk:create-queued-plan --link <issue-number>
+   The --link flag requires a .plan/ folder in the current worktree.
    ```
 
    Exit with error.

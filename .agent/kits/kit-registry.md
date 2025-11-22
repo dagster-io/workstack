@@ -4,7 +4,7 @@
 <!-- DO NOT EDIT: Changes will be overwritten. Use 'dot-agent kit sync' -->
 
 <!-- REGISTRY_VERSION: 1 -->
-<!-- GENERATED_AT: 2025-11-22T08:00:06 -->
+<!-- GENERATED_AT: 2025-11-22T08:43:23 -->
 
 <!-- BEGIN_ENTRIES -->
 
@@ -20,7 +20,7 @@
 
 <!-- ENTRY_END -->
 
-<!-- ENTRY_START kit_id="erk" version="0.2.1" source="bundled" -->
+<!-- ENTRY_START kit_id="erk" version="0.3.0" source="bundled" -->
 
 @.agent/kits/erk/registry-entry.md
 

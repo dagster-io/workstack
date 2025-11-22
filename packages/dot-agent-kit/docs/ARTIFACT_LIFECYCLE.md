@@ -16,7 +16,7 @@ When working with bundled kits in dev mode, changes must be synchronized across 
 
 ### When to Use This
 
-- Changing a command name (e.g., `/create-from-plan` → `/persist-plan`)
+- Changing a command name (e.g., `/create-from-plan` → `/erk:save-context-enriched-plan`)
 - Standardizing naming conventions
 - Improving clarity or consistency
 

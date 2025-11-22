@@ -28,7 +28,7 @@ Delegates the complete workflow to the `planned-issue-wt-creator` agent, which h
 - At least one `*-plan.md` file at repository root
 - Current working directory in a git repository
 - `gh` CLI installed and authenticated
-- Typically run after `/erk:persist-plan`
+- Typically run after `/erk:save-context-enriched-plan`
 
 ## Optional Flags
 

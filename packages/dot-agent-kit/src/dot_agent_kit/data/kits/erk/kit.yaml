@@ -1,13 +1,13 @@
 name: erk
-version: 0.2.1
+version: 0.3.0
 description: Erk implementation workflow commands for creating worktrees from plans (.PLAN.md) and executing implementation. Includes commands for plan creation, execution, and quick access.
 license: MIT
 artifacts:
   agent:
     - agents/erk/planned-issue-wt-creator.md
   command:
-    - commands/erk/persist-plan.md
-    - commands/erk/enhance-and-save-plan.md
+    - commands/erk/save-context-enriched-plan.md
+    - commands/erk/save-session-enriched-plan.md
     - commands/erk/save-plan.md
     - commands/erk/create-planned-wt.md
     - commands/erk/create-planned-issue-wt.md
@@ -16,8 +16,8 @@ artifacts:
   doc:
     - docs/erk/EXAMPLES.md
 kit_cli_commands:
-  - name: enhance-and-save-plan
-    path: kit_cli_commands/erk/enhance_and_save_plan.py
+  - name: save-session-enriched-plan
+    path: kit_cli_commands/erk/save_session_enriched_plan.py
     description: Create enhanced implementation plan from session logs (two-phase - discover and assemble)
   - name: find-project-dir
     path: kit_cli_commands/erk/find_project_dir.py
@@ -33,5 +33,5 @@ hooks:
     lifecycle: UserPromptSubmit
     matcher: "*"
     invocation: dot-agent kit-command erk session-id-injector-hook
-    description: Injects session ID into context when /erk:enhance-and-save-plan is invoked
+    description: Injects session ID into context when /erk:save-session-enriched-plan is invoked
     timeout: 30

@@ -133,8 +133,8 @@ def deduplicate_documentation_blocks(entries: list[dict]) -> list[dict]:
             is_doc = any(
                 marker in content_str
                 for marker in [
-                    "/erk:enhance-and-save-plan",
-                    "/erk:persist-plan",
+                    "/erk:save-session-enriched-plan",
+                    "/erk:save-context-enriched-plan",
                     "/erk:implement-plan",
                     "/gt:submit-branch",
                     "/gt:update-pr",

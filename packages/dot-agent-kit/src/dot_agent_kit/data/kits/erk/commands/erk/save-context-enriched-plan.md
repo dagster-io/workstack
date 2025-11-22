@@ -2,7 +2,7 @@
 description: Extract plan from conversation, fully enhance it, and save to disk
 ---
 
-# /persist-plan
+# /erk:save-context-enriched-plan
 
 ⚠️ **CRITICAL: This command ONLY saves the plan - it does NOT create worktrees or implement code!**
 
@@ -42,14 +42,14 @@ When you run this command, these steps occur:
 ## Usage
 
 ```bash
-/persist-plan [guidance]
+/erk:save-context-enriched-plan [guidance]
 ```
 
 **Examples:**
 
-- `/persist-plan` - Save enhanced plan to disk
-- `/persist-plan "Make error handling more robust and add retry logic"` - Apply guidance to plan
-- `/persist-plan "Fix: Use LBYL instead of try/except throughout"` - Apply corrections to plan
+- `/erk:save-context-enriched-plan` - Save enhanced plan to disk
+- `/erk:save-context-enriched-plan "Make error handling more robust and add retry logic"` - Apply guidance to plan
+- `/erk:save-context-enriched-plan "Fix: Use LBYL instead of try/except throughout"` - Apply corrections to plan
 
 ## Prerequisites
 
@@ -162,7 +162,7 @@ This command succeeds when ALL of the following are true:
 
 ## Agent Instructions
 
-You are executing the `/persist-plan` command. Follow these steps carefully:
+You are executing the `/erk:save-context-enriched-plan` command. Follow these steps carefully:
 
 ---
 
@@ -337,7 +337,7 @@ Details: Guidance provided: "[first 100 chars of guidance]"
 
 Suggested action:
   1. First create or present an implementation plan
-  2. Then run: /persist-plan "your guidance here"
+  2. Then run: /erk:save-context-enriched-plan "your guidance here"
 ```
 
 **Multi-line guidance limitation:**
@@ -1219,7 +1219,7 @@ Before saving the plan, confirm you ONLY gathered information and did NOT implem
 ```
 ❌ Error: Implementation attempted during plan persistence
 
-Details: You used [tool name] which is forbidden in /persist-plan
+Details: You used [tool name] which is forbidden in /erk:save-context-enriched-plan
 
 This command ONLY writes markdown. Implementation happens in /erk:implement-plan.
 
@@ -1272,7 +1272,7 @@ This is a bug in the filename generation algorithm. The base should have been
 truncated to 30 characters in Step 5.
 
 Suggested action:
-  1. Report this as a bug in /persist-plan
+  1. Report this as a bug in /erk:save-context-enriched-plan
   2. Manually truncate the plan title and rerun the command
 ```
 

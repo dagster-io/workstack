@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Create enhanced implementation plan from session logs (two-phase).
 
-This script handles file operations for the enhance-and-save-plan workflow,
+This script handles file operations for the save-session-enriched-plan workflow,
 leaving only AI-driven analysis in the Claude command layer. It operates in two phases:
 
 Phase 1 (discover):
@@ -24,9 +24,9 @@ Streaming Mode:
     - Foundation for future parallel processing
 
 Usage:
-    dot-agent run erk enhance-and-save-plan discover --session-id <id> --cwd <path>
-    dot-agent run erk enhance-and-save-plan discover --session-id <id> --cwd <path> --streaming
-    dot-agent run erk enhance-and-save-plan assemble <plan-file> <discoveries-file>
+    dot-agent run erk save-session-enriched-plan discover --session-id <id> --cwd <path>
+    dot-agent run erk save-session-enriched-plan discover --session-id <id> --cwd <path> --streaming
+    dot-agent run erk save-session-enriched-plan assemble <plan-file> <discoveries-file>
 
 Output:
     JSON object with either success or error information
@@ -42,17 +42,18 @@ Error Types:
 
 Examples:
     # Standard mode (single XML)
-    $ dot-agent run erk enhance-and-save-plan discover --session-id abc123 --cwd /Users/foo/repo
+    $ dot-agent run erk save-session-enriched-plan discover \
+        --session-id abc123 --cwd /Users/foo/repo
     {"compressed_xml": "<session>...</session>", "stats": {...}}
 
     # Streaming mode (batched XML)
-    $ dot-agent run erk enhance-and-save-plan discover --session-id abc123 \\
+    $ dot-agent run erk save-session-enriched-plan discover --session-id abc123 \\
         --cwd /Users/foo/repo --streaming
     {"mode": "streaming", "batches": ["<session>...</session>", ...], \\
         "batch_count": 3, "stats": {...}}
 
     # Assemble phase
-    $ dot-agent run erk enhance-and-save-plan assemble plan.md discoveries.json
+    $ dot-agent run erk save-session-enriched-plan assemble plan.md discoveries.json
     {"plan_content": "## Plan...", "discoveries": {...}}
 """
 
@@ -479,7 +480,7 @@ def execute_assemble(plan_content: str, discoveries: dict) -> AssembleResult | A
 
 
 @click.group()
-def enhance_and_save_plan() -> None:
+def save_session_enriched_plan() -> None:
     """Create enhanced implementation plan from session logs."""
     pass
 
@@ -545,5 +546,5 @@ def assemble(plan_content, discoveries) -> None:
 
 
 # Register subcommands
-enhance_and_save_plan.add_command(discover)
-enhance_and_save_plan.add_command(assemble)
+save_session_enriched_plan.add_command(discover)
+save_session_enriched_plan.add_command(assemble)

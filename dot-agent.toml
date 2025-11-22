@@ -73,11 +73,11 @@ timeout = 30
 [kits.erk]
 kit_id = "erk"
 source_type = "bundled"
-version = "0.2.1"
+version = "0.3.0"
 artifacts = [
     ".claude/agents/erk/planned-issue-wt-creator.md",
-    ".claude/commands/erk/persist-plan.md",
-    ".claude/commands/erk/enhance-and-save-plan.md",
+    ".claude/commands/erk/save-context-enriched-plan.md",
+    ".claude/commands/erk/save-session-enriched-plan.md",
     ".claude/commands/erk/save-plan.md",
     ".claude/commands/erk/create-planned-wt.md",
     ".claude/commands/erk/create-planned-issue-wt.md",
@@ -91,5 +91,5 @@ id = "session-id-injector-hook"
 lifecycle = "UserPromptSubmit"
 matcher = "*"
 invocation = "dot-agent kit-command erk session-id-injector-hook"
-description = "Injects session ID into context when /erk:enhance-and-save-plan is invoked"
+description = "Injects session ID into context when /erk:save-session-enriched-plan is invoked"
 timeout = 30

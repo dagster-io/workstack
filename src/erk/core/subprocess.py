@@ -115,6 +115,12 @@ def run_subprocess_with_context(
         # Add exit code
         error_parts.append(f"Exit code: {e.returncode}")
 
+        # Add stdout if available and non-empty
+        if e.stdout:
+            stdout_str = e.stdout.strip()
+            if stdout_str:
+                error_parts.append(f"stdout: {stdout_str}")
+
         # Add stderr if available and non-empty
         if e.stderr:
             stderr_str = e.stderr.strip()

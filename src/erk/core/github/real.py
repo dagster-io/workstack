@@ -25,7 +25,6 @@ class RealGitHub(GitHub):
 
     def __init__(self):
         """Initialize RealGitHub."""
-        self._execute = execute_gh_command
 
     def get_prs_for_repo(
         self, repo_root: Path, *, include_checks: bool
@@ -51,7 +50,7 @@ class RealGitHub(GitHub):
                 "--json",
                 json_fields,
             ]
-            stdout = self._execute(cmd, repo_root)
+            stdout = execute_gh_command(cmd, repo_root)
             return parse_github_pr_list(stdout, include_checks)
 
         except (RuntimeError, FileNotFoundError, json.JSONDecodeError):
@@ -84,7 +83,7 @@ class RealGitHub(GitHub):
             if debug:
                 user_output(f"$ {' '.join(cmd)}")
 
-            stdout = self._execute(cmd, repo_root)
+            stdout = execute_gh_command(cmd, repo_root)
             return parse_github_pr_status(stdout)
 
         except (RuntimeError, FileNotFoundError, json.JSONDecodeError):
@@ -109,7 +108,7 @@ class RealGitHub(GitHub):
                 "--jq",
                 ".baseRefName",
             ]
-            stdout = self._execute(cmd, repo_root)
+            stdout = execute_gh_command(cmd, repo_root)
             return stdout.strip()
 
         except (RuntimeError, FileNotFoundError):
@@ -129,7 +128,7 @@ class RealGitHub(GitHub):
         """
         try:
             cmd = ["gh", "pr", "edit", str(pr_number), "--base", new_base]
-            self._execute(cmd, repo_root)
+            execute_gh_command(cmd, repo_root)
         except (RuntimeError, FileNotFoundError):
             # gh not installed, not authenticated, or command failed
             # Graceful degradation - operation skipped
@@ -229,7 +228,7 @@ query {{
             Parsed JSON response
         """
         cmd = ["gh", "api", "graphql", "-f", f"query={query}"]
-        stdout = self._execute(cmd, repo_root)
+        stdout = execute_gh_command(cmd, repo_root)
         return json.loads(stdout)
 
     def _parse_pr_ci_status(self, pr_data: dict[str, Any] | None) -> bool | None:

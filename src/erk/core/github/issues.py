@@ -130,7 +130,6 @@ class RealGitHubIssues(GitHubIssues):
 
     def __init__(self):
         """Initialize RealGitHubIssues."""
-        self._execute = execute_gh_command
 
     def create_issue(self, repo_root: Path, title: str, body: str, labels: list[str]) -> int:
         """Create a new GitHub issue using gh CLI.
@@ -143,7 +142,7 @@ class RealGitHubIssues(GitHubIssues):
             cmd.extend(["--label", label])
         cmd.extend(["--json", "number", "--jq", ".number"])
 
-        stdout = self._execute(cmd, repo_root)
+        stdout = execute_gh_command(cmd, repo_root)
         return int(stdout.strip())
 
     def get_issue(self, repo_root: Path, number: int) -> IssueInfo:
@@ -160,7 +159,7 @@ class RealGitHubIssues(GitHubIssues):
             "--json",
             "number,title,body,state,url,labels,assignees,createdAt,updatedAt",
         ]
-        stdout = self._execute(cmd, repo_root)
+        stdout = execute_gh_command(cmd, repo_root)
         data = json.loads(stdout)
 
         return IssueInfo(
@@ -182,7 +181,7 @@ class RealGitHubIssues(GitHubIssues):
         on failures (not installed, not authenticated, issue not found).
         """
         cmd = ["gh", "issue", "comment", str(number), "--body", body]
-        self._execute(cmd, repo_root)
+        execute_gh_command(cmd, repo_root)
 
     def list_issues(
         self,
@@ -210,7 +209,7 @@ class RealGitHubIssues(GitHubIssues):
         if state:
             cmd.extend(["--state", state])
 
-        stdout = self._execute(cmd, repo_root)
+        stdout = execute_gh_command(cmd, repo_root)
         data = json.loads(stdout)
 
         return [
@@ -250,7 +249,7 @@ class RealGitHubIssues(GitHubIssues):
             "--jq",
             f'.[] | select(.name == "{label}") | .name',
         ]
-        stdout = self._execute(check_cmd, repo_root)
+        stdout = execute_gh_command(check_cmd, repo_root)
 
         # If label doesn't exist (empty output), create it
         if not stdout.strip():
@@ -264,7 +263,7 @@ class RealGitHubIssues(GitHubIssues):
                 "--color",
                 color,
             ]
-            self._execute(create_cmd, repo_root)
+            execute_gh_command(create_cmd, repo_root)
 
 
 class FakeGitHubIssues(GitHubIssues):

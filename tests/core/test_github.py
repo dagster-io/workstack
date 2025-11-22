@@ -1,24 +1,13 @@
 """Tests for GitHub operations batched CI status and mergeability fetching."""
 
+import subprocess
 from pathlib import Path
-from unittest.mock import Mock
 
 import pytest
+from pytest import MonkeyPatch
 
 from erk.core.github.real import RealGitHub
 from erk.core.github.types import PullRequestInfo
-
-
-@pytest.fixture
-def mock_execute():
-    """Create a mock execute function for testing."""
-    return Mock()
-
-
-@pytest.fixture
-def github_ops(mock_execute):
-    """Create RealGitHub instance with mocked executor."""
-    return RealGitHub(execute_fn=mock_execute)
 
 
 @pytest.fixture
@@ -51,11 +40,16 @@ def sample_prs():
 
 
 def test_enrich_prs_with_ci_status_batch_includes_mergeability(
-    github_ops, mock_execute, sample_prs
+    monkeypatch: MonkeyPatch, sample_prs
 ):
     """Test CI batch method also enriches mergeability."""
-    # Mock GraphQL response with both CI status and mergeability data
-    mock_execute.return_value = """{
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        # Mock GraphQL response with both CI status and mergeability data
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="""{
         "data": {
             "repository": {
                 "pr_123": {
@@ -76,8 +70,13 @@ def test_enrich_prs_with_ci_status_batch_includes_mergeability(
                 }
             }
         }
-    }"""
+    }""",
+            stderr="",
+        )
 
+    monkeypatch.setattr("subprocess.run", mock_run)
+
+    github_ops = RealGitHub()
     repo_root = Path("/test/repo")
     result = github_ops.enrich_prs_with_ci_status_batch(sample_prs, repo_root)
 
@@ -90,21 +89,35 @@ def test_enrich_prs_with_ci_status_batch_includes_mergeability(
     assert result["feature-2"].number == 456
 
 
-def test_enrich_prs_with_ci_status_batch_empty(github_ops, mock_execute):
+def test_enrich_prs_with_ci_status_batch_empty(monkeypatch: MonkeyPatch):
     """Test empty input returns empty dict without API call."""
+    call_count = []
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        call_count.append(1)
+        return subprocess.CompletedProcess(args=cmd, returncode=0, stdout="{}", stderr="")
+
+    monkeypatch.setattr("subprocess.run", mock_run)
+
+    github_ops = RealGitHub()
     result = github_ops.enrich_prs_with_ci_status_batch({}, Path("/test/repo"))
 
     # Verify no API call made
-    mock_execute.assert_not_called()
+    assert len(call_count) == 0
 
     # Verify empty dict returned
     assert result == {}
 
 
-def test_enrich_prs_with_ci_status_batch_partial_failure(github_ops, mock_execute, sample_prs):
+def test_enrich_prs_with_ci_status_batch_partial_failure(monkeypatch: MonkeyPatch, sample_prs):
     """Test partial failures don't break entire batch."""
-    # Mock response with one PR missing
-    mock_execute.return_value = """{
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        # Mock response with one PR missing
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="""{
         "data": {
             "repository": {
                 "pr_123": {
@@ -118,8 +131,13 @@ def test_enrich_prs_with_ci_status_batch_partial_failure(github_ops, mock_execut
                 "pr_456": null
             }
         }
-    }"""
+    }""",
+            stderr="",
+        )
 
+    monkeypatch.setattr("subprocess.run", mock_run)
+
+    github_ops = RealGitHub()
     repo_root = Path("/test/repo")
     result = github_ops.enrich_prs_with_ci_status_batch(sample_prs, repo_root)
 
@@ -130,10 +148,15 @@ def test_enrich_prs_with_ci_status_batch_partial_failure(github_ops, mock_execut
     assert result["feature-2"].has_conflicts is None
 
 
-def test_enrich_prs_with_ci_status_batch_unknown_mergeability(github_ops, mock_execute, sample_prs):
+def test_enrich_prs_with_ci_status_batch_unknown_mergeability(monkeypatch: MonkeyPatch, sample_prs):
     """Test UNKNOWN mergeability state handled correctly."""
-    # Mock response with UNKNOWN state
-    mock_execute.return_value = """{
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        # Mock response with UNKNOWN state
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="""{
         "data": {
             "repository": {
                 "pr_123": {
@@ -154,8 +177,13 @@ def test_enrich_prs_with_ci_status_batch_unknown_mergeability(github_ops, mock_e
                 }
             }
         }
-    }"""
+    }""",
+            stderr="",
+        )
 
+    monkeypatch.setattr("subprocess.run", mock_run)
+
+    github_ops = RealGitHub()
     repo_root = Path("/test/repo")
     result = github_ops.enrich_prs_with_ci_status_batch(sample_prs, repo_root)
 
@@ -167,11 +195,16 @@ def test_enrich_prs_with_ci_status_batch_unknown_mergeability(github_ops, mock_e
 
 
 def test_enrich_prs_with_ci_status_batch_missing_mergeable_field(
-    github_ops, mock_execute, sample_prs
+    monkeypatch: MonkeyPatch, sample_prs
 ):
     """Test missing mergeable field handled gracefully."""
-    # Mock response with missing mergeable field
-    mock_execute.return_value = """{
+
+    def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+        # Mock response with missing mergeable field
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="""{
         "data": {
             "repository": {
                 "pr_123": {
@@ -191,8 +224,13 @@ def test_enrich_prs_with_ci_status_batch_missing_mergeable_field(
                 }
             }
         }
-    }"""
+    }""",
+            stderr="",
+        )
 
+    monkeypatch.setattr("subprocess.run", mock_run)
+
+    github_ops = RealGitHub()
     repo_root = Path("/test/repo")
     result = github_ops.enrich_prs_with_ci_status_batch(sample_prs, repo_root)
 
@@ -203,8 +241,9 @@ def test_enrich_prs_with_ci_status_batch_missing_mergeable_field(
     assert result["feature-2"].has_conflicts is False
 
 
-def test_build_batch_pr_query_includes_mergeability(github_ops):
+def test_build_batch_pr_query_includes_mergeability():
     """Test GraphQL query builder includes mergeability fields."""
+    github_ops = RealGitHub()
     pr_numbers = [123, 456]
     owner = "test-owner"
     repo = "test-repo"
@@ -228,35 +267,40 @@ def test_build_batch_pr_query_includes_mergeability(github_ops):
     assert f'repository(owner: "{owner}", name: "{repo}")' in query
 
 
-def test_parse_pr_mergeability_conflicting(github_ops):
+def test_parse_pr_mergeability_conflicting():
     """Test parsing CONFLICTING mergeability status."""
+    github_ops = RealGitHub()
     pr_data = {"mergeable": "CONFLICTING", "mergeStateStatus": "DIRTY"}
     result = github_ops._parse_pr_mergeability(pr_data)
     assert result is True
 
 
-def test_parse_pr_mergeability_mergeable(github_ops):
+def test_parse_pr_mergeability_mergeable():
     """Test parsing MERGEABLE mergeability status."""
+    github_ops = RealGitHub()
     pr_data = {"mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN"}
     result = github_ops._parse_pr_mergeability(pr_data)
     assert result is False
 
 
-def test_parse_pr_mergeability_unknown(github_ops):
+def test_parse_pr_mergeability_unknown():
     """Test parsing UNKNOWN mergeability status."""
+    github_ops = RealGitHub()
     pr_data = {"mergeable": "UNKNOWN", "mergeStateStatus": "UNKNOWN"}
     result = github_ops._parse_pr_mergeability(pr_data)
     assert result is None
 
 
-def test_parse_pr_mergeability_none_input(github_ops):
+def test_parse_pr_mergeability_none_input():
     """Test parsing None input."""
+    github_ops = RealGitHub()
     result = github_ops._parse_pr_mergeability(None)
     assert result is None
 
 
-def test_parse_pr_mergeability_missing_field(github_ops):
+def test_parse_pr_mergeability_missing_field():
     """Test parsing data with missing mergeable field."""
+    github_ops = RealGitHub()
     pr_data = {"mergeStateStatus": "CLEAN"}
     result = github_ops._parse_pr_mergeability(pr_data)
     assert result is None

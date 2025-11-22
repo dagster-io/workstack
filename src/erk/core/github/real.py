@@ -23,14 +23,9 @@ class RealGitHub(GitHub):
     All GitHub operations execute actual gh commands via subprocess.
     """
 
-    def __init__(self, execute_fn=None):
-        """Initialize RealGitHub with optional command executor.
-
-        Args:
-            execute_fn: Optional function to execute commands (for testing).
-                       If None, uses execute_gh_command.
-        """
-        self._execute = execute_fn or execute_gh_command
+    def __init__(self):
+        """Initialize RealGitHub."""
+        self._execute = execute_gh_command
 
     def get_prs_for_repo(
         self, repo_root: Path, *, include_checks: bool

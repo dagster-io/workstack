@@ -3,6 +3,7 @@
 import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
 from erk.core.github.parsing import execute_gh_command
@@ -17,6 +18,10 @@ class IssueInfo:
     body: str
     state: str  # "OPEN" or "CLOSED"
     url: str
+    labels: list[str]
+    assignees: list[str]
+    created_at: datetime
+    updated_at: datetime
 
 
 class GitHubIssues(ABC):
@@ -123,14 +128,9 @@ class RealGitHubIssues(GitHubIssues):
     All GitHub issue operations execute actual gh commands via subprocess.
     """
 
-    def __init__(self, execute_fn=None):
-        """Initialize RealGitHubIssues with optional command executor.
-
-        Args:
-            execute_fn: Optional function to execute commands (for testing).
-                       If None, uses execute_gh_command.
-        """
-        self._execute = execute_fn or execute_gh_command
+    def __init__(self):
+        """Initialize RealGitHubIssues."""
+        self._execute = execute_gh_command
 
     def create_issue(self, repo_root: Path, title: str, body: str, labels: list[str]) -> int:
         """Create a new GitHub issue using gh CLI.
@@ -158,7 +158,7 @@ class RealGitHubIssues(GitHubIssues):
             "view",
             str(number),
             "--json",
-            "number,title,body,state,url",
+            "number,title,body,state,url,labels,assignees,createdAt,updatedAt",
         ]
         stdout = self._execute(cmd, repo_root)
         data = json.loads(stdout)
@@ -169,6 +169,10 @@ class RealGitHubIssues(GitHubIssues):
             body=data["body"],
             state=data["state"],
             url=data["url"],
+            labels=[label["name"] for label in data.get("labels", [])],
+            assignees=[assignee["login"] for assignee in data.get("assignees", [])],
+            created_at=datetime.fromisoformat(data["createdAt"].replace("Z", "+00:00")),
+            updated_at=datetime.fromisoformat(data["updatedAt"].replace("Z", "+00:00")),
         )
 
     def add_comment(self, repo_root: Path, number: int, body: str) -> None:
@@ -191,7 +195,13 @@ class RealGitHubIssues(GitHubIssues):
         Note: Uses gh's native error handling - gh CLI raises RuntimeError
         on failures (not installed, not authenticated).
         """
-        cmd = ["gh", "issue", "list", "--json", "number,title,body,state,url"]
+        cmd = [
+            "gh",
+            "issue",
+            "list",
+            "--json",
+            "number,title,body,state,url,labels,assignees,createdAt,updatedAt",
+        ]
 
         if labels:
             for label in labels:
@@ -210,6 +220,10 @@ class RealGitHubIssues(GitHubIssues):
                 body=issue["body"],
                 state=issue["state"],
                 url=issue["url"],
+                labels=[label["name"] for label in issue.get("labels", [])],
+                assignees=[assignee["login"] for assignee in issue.get("assignees", [])],
+                created_at=datetime.fromisoformat(issue["createdAt"].replace("Z", "+00:00")),
+                updated_at=datetime.fromisoformat(issue["updatedAt"].replace("Z", "+00:00")),
             )
             for issue in data
         ]
@@ -317,12 +331,17 @@ class FakeGitHubIssues(GitHubIssues):
         issue_number = self._next_issue_number
         self._next_issue_number += 1
 
+        now = datetime.now(UTC)
         self._issues[issue_number] = IssueInfo(
             number=issue_number,
             title=title,
             body=body,
             state="OPEN",
             url=f"https://github.com/owner/repo/issues/{issue_number}",
+            labels=labels,
+            assignees=[],
+            created_at=now,
+            updated_at=now,
         )
         self._created_issues.append((title, body, labels))
 

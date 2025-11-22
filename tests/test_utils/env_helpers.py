@@ -93,6 +93,7 @@ from erk.core.repo_discovery import RepoContext
 from erk.core.script_writer import RealScriptWriter
 from tests.fakes.git import FakeGit
 from tests.fakes.github import FakeGitHub
+from tests.fakes.github_admin import FakeGitHubAdmin
 from tests.fakes.graphite import FakeGraphite
 from tests.fakes.script_writer import FakeScriptWriter
 from tests.fakes.shell import FakeShell
@@ -380,6 +381,7 @@ class ErkIsolatedFsEnv:
         git: Git | None = None,
         graphite: FakeGraphite | None = None,
         github: FakeGitHub | None = None,
+        github_admin: FakeGitHubAdmin | None = None,
         shell: FakeShell | None = None,
         repo: RepoContext | None = None,
         dry_run: bool = False,
@@ -499,6 +501,9 @@ class ErkIsolatedFsEnv:
         if github is None:
             github = FakeGitHub()
 
+        if github_admin is None:
+            github_admin = FakeGitHubAdmin()
+
         if shell is None:
             shell = FakeShell()
 
@@ -535,6 +540,7 @@ class ErkIsolatedFsEnv:
             git=git,
             graphite=graphite,
             github=github,
+            github_admin=github_admin,
             shell=shell,
             global_config=global_config,
             repo=repo,
@@ -791,6 +797,7 @@ class ErkInMemEnv:
         git: Git | None = None,
         graphite: FakeGraphite | None = None,
         github: FakeGitHub | None = None,
+        github_admin: FakeGitHubAdmin | None = None,
         shell: FakeShell | None = None,
         repo: RepoContext | None = None,
         existing_paths: set[Path] | None = None,
@@ -914,6 +921,9 @@ class ErkInMemEnv:
         if github is None:
             github = FakeGitHub()
 
+        if github_admin is None:
+            github_admin = FakeGitHubAdmin()
+
         if shell is None:
             shell = FakeShell()
 
@@ -950,6 +960,7 @@ class ErkInMemEnv:
             git=git,
             graphite=graphite,
             github=github,
+            github_admin=github_admin,
             shell=shell,
             global_config=global_config,
             repo=repo,

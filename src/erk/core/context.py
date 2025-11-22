@@ -24,6 +24,9 @@ from erk.core.github.real import RealGitHub
 from erk.core.graphite.abc import Graphite
 from erk.core.graphite.dry_run import DryRunGraphite
 from erk.core.graphite.real import RealGraphite
+from erk.core.implementation_queue.github.abc import GitHubAdmin
+from erk.core.implementation_queue.github.dry_run import DryRunGitHubAdmin
+from erk.core.implementation_queue.github.real import RealGitHubAdmin
 from erk.core.plan_issue_store import GitHubPlanIssueStore, PlanIssueStore
 from erk.core.repo_discovery import (
     NoRepoSentinel,
@@ -50,6 +53,7 @@ class ErkContext:
     github: GitHub
     issues: GitHubIssues
     plan_issue_store: PlanIssueStore
+    github_admin: GitHubAdmin
     graphite: Graphite
     shell: Shell
     completion: Completion
@@ -116,6 +120,7 @@ class ErkContext:
         """
         from tests.fakes.completion import FakeCompletion
         from tests.fakes.github import FakeGitHub
+        from tests.fakes.github_admin import FakeGitHubAdmin
         from tests.fakes.graphite import FakeGraphite
         from tests.fakes.script_writer import FakeScriptWriter
         from tests.fakes.shell import FakeShell
@@ -129,6 +134,7 @@ class ErkContext:
             github=FakeGitHub(),
             issues=FakeGitHubIssues(),
             plan_issue_store=FakePlanIssueStore(),
+            github_admin=FakeGitHubAdmin(),
             graphite=FakeGraphite(),
             shell=FakeShell(),
             completion=FakeCompletion(),
@@ -147,6 +153,7 @@ class ErkContext:
         github: GitHub | None = None,
         issues: GitHubIssues | None = None,
         plan_issue_store: PlanIssueStore | None = None,
+        github_admin: GitHubAdmin | None = None,
         graphite: Graphite | None = None,
         shell: Shell | None = None,
         completion: Completion | None = None,
@@ -209,6 +216,7 @@ class ErkContext:
         from tests.fakes.completion import FakeCompletion
         from tests.fakes.git import FakeGit
         from tests.fakes.github import FakeGitHub
+        from tests.fakes.github_admin import FakeGitHubAdmin
         from tests.fakes.graphite import FakeGraphite
         from tests.fakes.script_writer import FakeScriptWriter
         from tests.fakes.shell import FakeShell
@@ -229,6 +237,9 @@ class ErkContext:
 
         if plan_issue_store is None:
             plan_issue_store = FakePlanIssueStore()
+
+        if github_admin is None:
+            github_admin = FakeGitHubAdmin()
 
         if graphite is None:
             graphite = FakeGraphite()
@@ -265,12 +276,14 @@ class ErkContext:
             graphite = DryRunGraphite(graphite)
             github = DryRunGitHub(github)
             issues = DryRunGitHubIssues(issues)
+            github_admin = DryRunGitHubAdmin(github_admin)
 
         return ErkContext(
             git=git,
             github=github,
             issues=issues,
             plan_issue_store=plan_issue_store,
+            github_admin=github_admin,
             graphite=graphite,
             shell=shell,
             completion=completion,
@@ -398,6 +411,7 @@ def create_context(*, dry_run: bool) -> ErkContext:
     github: GitHub = RealGitHub()
     issues: GitHubIssues = RealGitHubIssues()
     plan_issue_store: PlanIssueStore = GitHubPlanIssueStore(issues)
+    github_admin: GitHubAdmin = RealGitHubAdmin()
 
     # 5. Discover repo (only needs cwd, erk_root, git)
     # If global_config is None, use placeholder path for repo discovery
@@ -417,6 +431,7 @@ def create_context(*, dry_run: bool) -> ErkContext:
         graphite = DryRunGraphite(graphite)
         github = DryRunGitHub(github)
         issues = DryRunGitHubIssues(issues)
+        github_admin = DryRunGitHubAdmin(github_admin)
 
     # 8. Create context with all values
     return ErkContext(
@@ -424,6 +439,7 @@ def create_context(*, dry_run: bool) -> ErkContext:
         github=github,
         issues=issues,
         plan_issue_store=plan_issue_store,
+        github_admin=github_admin,
         graphite=graphite,
         shell=RealShell(),
         completion=RealCompletion(),

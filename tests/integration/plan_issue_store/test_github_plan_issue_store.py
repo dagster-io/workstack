@@ -5,23 +5,22 @@ from pathlib import Path
 
 import pytest
 
-from erk.core.github.issues import FakeGitHubIssues, IssueInfo
+from erk.core.github.issues import FakeGitHubIssues
 from erk.core.plan_issue_store import (
     GitHubPlanIssueStore,
     PlanIssueQuery,
     PlanIssueState,
 )
+from tests.test_utils.github_helpers import create_test_issue
 
 
 def test_get_plan_issue_success() -> None:
     """Test fetching a plan issue from GitHub."""
     # Create fake with pre-configured issue
-    issue = IssueInfo(
+    issue = create_test_issue(
         number=42,
         title="Implement feature X",
         body="Description of feature X",
-        state="OPEN",
-        url="https://github.com/owner/repo/issues/42",
         labels=["erk-plan", "enhancement"],
         assignees=["alice", "bob"],
         created_at=datetime(2024, 1, 15, 10, 30, 0, tzinfo=UTC),
@@ -47,15 +46,10 @@ def test_get_plan_issue_success() -> None:
 
 def test_get_plan_issue_closed_state() -> None:
     """Test that CLOSED state is normalized correctly."""
-    issue = IssueInfo(
+    issue = create_test_issue(
         number=100,
         title="Closed Issue",
-        body="",
         state="CLOSED",
-        url="https://github.com/owner/repo/issues/100",
-        labels=[],
-        assignees=[],
-        created_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
         updated_at=datetime(2024, 1, 2, 0, 0, 0, tzinfo=UTC),
     )
     fake_github = FakeGitHubIssues(issues={100: issue})
@@ -68,16 +62,9 @@ def test_get_plan_issue_closed_state() -> None:
 
 def test_get_plan_issue_empty_body() -> None:
     """Test handling of empty body field."""
-    issue = IssueInfo(
+    issue = create_test_issue(
         number=50,
         title="Issue without body",
-        body="",
-        state="OPEN",
-        url="https://github.com/owner/repo/issues/50",
-        labels=[],
-        assignees=[],
-        created_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        updated_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
     )
     fake_github = FakeGitHubIssues(issues={50: issue})
     store = GitHubPlanIssueStore(fake_github)
@@ -98,25 +85,16 @@ def test_get_plan_issue_not_found() -> None:
 
 def test_list_plan_issues_no_filters() -> None:
     """Test listing all plan issues with no filters."""
-    issue1 = IssueInfo(
+    issue1 = create_test_issue(
         number=1,
         title="Issue 1",
-        body="",
-        state="OPEN",
-        url="https://github.com/owner/repo/issues/1",
         labels=["erk-plan"],
-        assignees=[],
-        created_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        updated_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
     )
-    issue2 = IssueInfo(
+    issue2 = create_test_issue(
         number=2,
         title="Issue 2",
-        body="",
         state="CLOSED",
-        url="https://github.com/owner/repo/issues/2",
         labels=["bug"],
-        assignees=[],
         created_at=datetime(2024, 1, 2, 0, 0, 0, tzinfo=UTC),
         updated_at=datetime(2024, 1, 2, 0, 0, 0, tzinfo=UTC),
     )
@@ -133,25 +111,15 @@ def test_list_plan_issues_no_filters() -> None:
 
 def test_list_plan_issues_with_labels() -> None:
     """Test filtering by labels."""
-    issue1 = IssueInfo(
+    issue1 = create_test_issue(
         number=1,
         title="Issue 1",
-        body="",
-        state="OPEN",
-        url="https://github.com/owner/repo/issues/1",
         labels=["erk-plan", "erk-queue"],
-        assignees=[],
-        created_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        updated_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
     )
-    issue2 = IssueInfo(
+    issue2 = create_test_issue(
         number=2,
         title="Issue 2",
-        body="",
-        state="OPEN",
-        url="https://github.com/owner/repo/issues/2",
         labels=["bug"],
-        assignees=[],
         created_at=datetime(2024, 1, 2, 0, 0, 0, tzinfo=UTC),
         updated_at=datetime(2024, 1, 2, 0, 0, 0, tzinfo=UTC),
     )
@@ -169,25 +137,11 @@ def test_list_plan_issues_with_labels() -> None:
 
 def test_list_plan_issues_with_state_open() -> None:
     """Test filtering by OPEN state."""
-    issue1 = IssueInfo(
-        number=1,
-        title="Open Issue",
-        body="",
-        state="OPEN",
-        url="https://github.com/owner/repo/issues/1",
-        labels=[],
-        assignees=[],
-        created_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        updated_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-    )
-    issue2 = IssueInfo(
+    issue1 = create_test_issue(number=1, title="Open Issue")
+    issue2 = create_test_issue(
         number=2,
         title="Closed Issue",
-        body="",
         state="CLOSED",
-        url="https://github.com/owner/repo/issues/2",
-        labels=[],
-        assignees=[],
         created_at=datetime(2024, 1, 2, 0, 0, 0, tzinfo=UTC),
         updated_at=datetime(2024, 1, 2, 0, 0, 0, tzinfo=UTC),
     )
@@ -205,25 +159,11 @@ def test_list_plan_issues_with_state_open() -> None:
 
 def test_list_plan_issues_with_state_closed() -> None:
     """Test filtering by CLOSED state."""
-    issue1 = IssueInfo(
-        number=1,
-        title="Open Issue",
-        body="",
-        state="OPEN",
-        url="https://github.com/owner/repo/issues/1",
-        labels=[],
-        assignees=[],
-        created_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        updated_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-    )
-    issue2 = IssueInfo(
+    issue1 = create_test_issue(number=1, title="Open Issue")
+    issue2 = create_test_issue(
         number=2,
         title="Closed Issue",
-        body="",
         state="CLOSED",
-        url="https://github.com/owner/repo/issues/2",
-        labels=[],
-        assignees=[],
         created_at=datetime(2024, 1, 2, 0, 0, 0, tzinfo=UTC),
         updated_at=datetime(2024, 1, 2, 0, 0, 0, tzinfo=UTC),
     )
@@ -242,14 +182,9 @@ def test_list_plan_issues_with_state_closed() -> None:
 def test_list_plan_issues_with_limit() -> None:
     """Test limiting results."""
     issues = {
-        i: IssueInfo(
+        i: create_test_issue(
             number=i,
             title=f"Issue {i}",
-            body="",
-            state="OPEN",
-            url=f"https://github.com/owner/repo/issues/{i}",
-            labels=[],
-            assignees=[],
             created_at=datetime(2024, 1, i, 0, 0, 0, tzinfo=UTC),
             updated_at=datetime(2024, 1, i, 0, 0, 0, tzinfo=UTC),
         )
@@ -267,25 +202,16 @@ def test_list_plan_issues_with_limit() -> None:
 
 def test_list_plan_issues_combined_filters() -> None:
     """Test combining multiple filters."""
-    issue1 = IssueInfo(
+    issue1 = create_test_issue(
         number=1,
         title="Open Issue",
-        body="",
-        state="OPEN",
-        url="https://github.com/owner/repo/issues/1",
         labels=["erk-plan"],
-        assignees=[],
-        created_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        updated_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
     )
-    issue2 = IssueInfo(
+    issue2 = create_test_issue(
         number=2,
         title="Closed Issue",
-        body="",
         state="CLOSED",
-        url="https://github.com/owner/repo/issues/2",
         labels=["erk-plan"],
-        assignees=[],
         created_at=datetime(2024, 1, 2, 0, 0, 0, tzinfo=UTC),
         updated_at=datetime(2024, 1, 2, 0, 0, 0, tzinfo=UTC),
     )
@@ -305,14 +231,9 @@ def test_list_plan_issues_combined_filters() -> None:
 
 def test_timestamp_parsing_with_z_suffix() -> None:
     """Test that datetime objects from IssueInfo are correctly converted."""
-    issue = IssueInfo(
+    issue = create_test_issue(
         number=1,
         title="Test",
-        body="",
-        state="OPEN",
-        url="https://github.com/owner/repo/issues/1",
-        labels=[],
-        assignees=[],
         created_at=datetime(2024, 1, 15, 10, 30, 45, tzinfo=UTC),
         updated_at=datetime(2024, 1, 16, 14, 20, 30, tzinfo=UTC),
     )
@@ -328,16 +249,10 @@ def test_timestamp_parsing_with_z_suffix() -> None:
 
 def test_label_extraction() -> None:
     """Test that labels from IssueInfo are correctly converted."""
-    issue = IssueInfo(
+    issue = create_test_issue(
         number=1,
         title="Test",
-        body="",
-        state="OPEN",
-        url="https://github.com/owner/repo/issues/1",
         labels=["erk-plan", "erk-queue", "enhancement"],
-        assignees=[],
-        created_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        updated_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
     )
     fake_github = FakeGitHubIssues(issues={1: issue})
     store = GitHubPlanIssueStore(fake_github)
@@ -350,16 +265,10 @@ def test_label_extraction() -> None:
 
 def test_assignee_extraction() -> None:
     """Test that assignees from IssueInfo are correctly converted."""
-    issue = IssueInfo(
+    issue = create_test_issue(
         number=1,
         title="Test",
-        body="",
-        state="OPEN",
-        url="https://github.com/owner/repo/issues/1",
-        labels=[],
         assignees=["alice", "bob", "charlie"],
-        created_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        updated_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
     )
     fake_github = FakeGitHubIssues(issues={1: issue})
     store = GitHubPlanIssueStore(fake_github)
@@ -372,16 +281,9 @@ def test_assignee_extraction() -> None:
 
 def test_metadata_preserves_github_number() -> None:
     """Test that GitHub issue number is preserved in metadata."""
-    issue = IssueInfo(
+    issue = create_test_issue(
         number=42,
         title="Test",
-        body="",
-        state="OPEN",
-        url="https://github.com/owner/repo/issues/42",
-        labels=[],
-        assignees=[],
-        created_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        updated_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
     )
     fake_github = FakeGitHubIssues(issues={42: issue})
     store = GitHubPlanIssueStore(fake_github)
@@ -406,25 +308,19 @@ def test_list_plan_issues_passes_limit_to_interface() -> None:
     """Test list_plan_issues passes limit to GitHubIssues interface."""
     now = datetime.now(UTC)
     issues = {
-        1: IssueInfo(
+        1: create_test_issue(
             number=1,
             title="Plan 1",
             body="Body 1",
-            state="OPEN",
-            url="http://url/1",
             labels=["erk-plan"],
-            assignees=[],
             created_at=now,
             updated_at=now,
         ),
-        2: IssueInfo(
+        2: create_test_issue(
             number=2,
             title="Plan 2",
             body="Body 2",
-            state="OPEN",
-            url="http://url/2",
             labels=["erk-plan"],
-            assignees=[],
             created_at=now,
             updated_at=now,
         ),

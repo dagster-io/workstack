@@ -8,8 +8,9 @@ from datetime import UTC, datetime
 
 import pytest
 
-from erk.core.github.issues import FakeGitHubIssues, IssueInfo
+from erk.core.github.issues import FakeGitHubIssues
 from tests.test_utils import sentinel_path
+from tests.test_utils.github_helpers import create_test_issue
 
 
 def test_fake_github_issues_initialization() -> None:
@@ -80,19 +81,7 @@ def test_fake_github_issues_created_issues_read_only() -> None:
 
 def test_fake_github_issues_get_issue_existing() -> None:
     """Test get_issue returns stored issue for existing number."""
-    pre_configured = {
-        42: IssueInfo(
-            number=42,
-            title="Existing Issue",
-            body="Existing body",
-            state="OPEN",
-            url="https://github.com/owner/repo/issues/42",
-            labels=[],
-            assignees=[],
-            created_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            updated_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        )
-    }
+    pre_configured = {42: create_test_issue(42, "Existing Issue", "Existing body")}
     issues = FakeGitHubIssues(issues=pre_configured)
 
     result = issues.get_issue(sentinel_path(), 42)
@@ -134,19 +123,7 @@ def test_fake_github_issues_get_issue_created() -> None:
 
 def test_fake_github_issues_add_comment_existing_issue() -> None:
     """Test add_comment tracks mutation for existing issue."""
-    pre_configured = {
-        42: IssueInfo(
-            number=42,
-            title="Test",
-            body="Body",
-            state="OPEN",
-            url="https://github.com/owner/repo/issues/42",
-            labels=[],
-            assignees=[],
-            created_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            updated_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        )
-    }
+    pre_configured = {42: create_test_issue(42, "Test", "Body")}
     issues = FakeGitHubIssues(issues=pre_configured)
 
     issues.add_comment(sentinel_path(), 42, "This is a comment")
@@ -165,28 +142,8 @@ def test_fake_github_issues_add_comment_missing_issue() -> None:
 def test_fake_github_issues_add_comment_multiple() -> None:
     """Test add_comment tracks multiple comments in order."""
     pre_configured = {
-        10: IssueInfo(
-            10,
-            "Issue 10",
-            "Body",
-            "OPEN",
-            "http://url/10",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        ),
-        20: IssueInfo(
-            20,
-            "Issue 20",
-            "Body",
-            "OPEN",
-            "http://url/20",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        ),
+        10: create_test_issue(10, "Issue 10", "Body", url="http://url/10"),
+        20: create_test_issue(20, "Issue 20", "Body", url="http://url/20"),
     }
     issues = FakeGitHubIssues(issues=pre_configured)
 
@@ -210,19 +167,7 @@ def test_fake_github_issues_added_comments_empty_initially() -> None:
 
 def test_fake_github_issues_added_comments_read_only() -> None:
     """Test added_comments property returns list that can be read."""
-    pre_configured = {
-        42: IssueInfo(
-            42,
-            "Test",
-            "Body",
-            "OPEN",
-            "http://url",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        ),
-    }
+    pre_configured = {42: create_test_issue(42, "Test", "Body", url="http://url")}
     issues = FakeGitHubIssues(issues=pre_configured)
     issues.add_comment(sentinel_path(), 42, "Comment")
 
@@ -244,39 +189,9 @@ def test_fake_github_issues_list_issues_empty() -> None:
 def test_fake_github_issues_list_issues_all() -> None:
     """Test list_issues returns all issues when no filters applied."""
     pre_configured = {
-        1: IssueInfo(
-            1,
-            "Issue 1",
-            "Body 1",
-            "OPEN",
-            "http://url/1",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        ),
-        2: IssueInfo(
-            2,
-            "Issue 2",
-            "Body 2",
-            "CLOSED",
-            "http://url/2",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        ),
-        3: IssueInfo(
-            3,
-            "Issue 3",
-            "Body 3",
-            "OPEN",
-            "http://url/3",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        ),
+        1: create_test_issue(1, "Issue 1", "Body 1", url="http://url/1"),
+        2: create_test_issue(2, "Issue 2", "Body 2", "CLOSED", "http://url/2"),
+        3: create_test_issue(3, "Issue 3", "Body 3", url="http://url/3"),
     }
     issues = FakeGitHubIssues(issues=pre_configured)
 
@@ -291,39 +206,9 @@ def test_fake_github_issues_list_issues_all() -> None:
 def test_fake_github_issues_list_issues_filter_open() -> None:
     """Test list_issues filters by state=open."""
     pre_configured = {
-        1: IssueInfo(
-            1,
-            "Issue 1",
-            "Body 1",
-            "OPEN",
-            "http://url/1",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        ),
-        2: IssueInfo(
-            2,
-            "Issue 2",
-            "Body 2",
-            "CLOSED",
-            "http://url/2",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        ),
-        3: IssueInfo(
-            3,
-            "Issue 3",
-            "Body 3",
-            "OPEN",
-            "http://url/3",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        ),
+        1: create_test_issue(1, "Issue 1", "Body 1", url="http://url/1"),
+        2: create_test_issue(2, "Issue 2", "Body 2", "CLOSED", "http://url/2"),
+        3: create_test_issue(3, "Issue 3", "Body 3", url="http://url/3"),
     }
     issues = FakeGitHubIssues(issues=pre_configured)
 
@@ -339,39 +224,9 @@ def test_fake_github_issues_list_issues_filter_open() -> None:
 def test_fake_github_issues_list_issues_filter_closed() -> None:
     """Test list_issues filters by state=closed."""
     pre_configured = {
-        1: IssueInfo(
-            1,
-            "Issue 1",
-            "Body 1",
-            "OPEN",
-            "http://url/1",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        ),
-        2: IssueInfo(
-            2,
-            "Issue 2",
-            "Body 2",
-            "CLOSED",
-            "http://url/2",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        ),
-        3: IssueInfo(
-            3,
-            "Issue 3",
-            "Body 3",
-            "CLOSED",
-            "http://url/3",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        ),
+        1: create_test_issue(1, "Issue 1", "Body 1", url="http://url/1"),
+        2: create_test_issue(2, "Issue 2", "Body 2", "CLOSED", "http://url/2"),
+        3: create_test_issue(3, "Issue 3", "Body 3", "CLOSED", "http://url/3"),
     }
     issues = FakeGitHubIssues(issues=pre_configured)
 
@@ -387,28 +242,8 @@ def test_fake_github_issues_list_issues_filter_closed() -> None:
 def test_fake_github_issues_list_issues_state_all() -> None:
     """Test list_issues with state=all returns all issues."""
     pre_configured = {
-        1: IssueInfo(
-            1,
-            "Issue 1",
-            "Body 1",
-            "OPEN",
-            "http://url/1",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        ),
-        2: IssueInfo(
-            2,
-            "Issue 2",
-            "Body 2",
-            "CLOSED",
-            "http://url/2",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        ),
+        1: create_test_issue(1, "Issue 1", "Body 1", url="http://url/1"),
+        2: create_test_issue(2, "Issue 2", "Body 2", "CLOSED", "http://url/2"),
     }
     issues = FakeGitHubIssues(issues=pre_configured)
 
@@ -434,19 +269,7 @@ def test_fake_github_issues_list_issues_includes_created() -> None:
 def test_fake_github_issues_full_workflow() -> None:
     """Test complete workflow: create, get, comment, list."""
     # Start with one pre-configured issue
-    pre_configured = {
-        100: IssueInfo(
-            100,
-            "Existing",
-            "Body",
-            "OPEN",
-            "http://url/100",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        )
-    }
+    pre_configured = {100: create_test_issue(100, "Existing", "Body", url="http://url/100")}
     issues = FakeGitHubIssues(issues=pre_configured, next_issue_number=200)
 
     # Create new issue
@@ -495,28 +318,8 @@ def test_fake_github_issues_label_filtering_not_implemented() -> None:
     This is acceptable for fake - we control the state in tests.
     """
     pre_configured = {
-        1: IssueInfo(
-            1,
-            "Issue 1",
-            "Body 1",
-            "OPEN",
-            "http://url/1",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        ),
-        2: IssueInfo(
-            2,
-            "Issue 2",
-            "Body 2",
-            "OPEN",
-            "http://url/2",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        ),
+        1: create_test_issue(1, "Issue 1", "Body 1", url="http://url/1"),
+        2: create_test_issue(2, "Issue 2", "Body 2", url="http://url/2"),
     }
     issues = FakeGitHubIssues(issues=pre_configured)
 
@@ -530,28 +333,8 @@ def test_fake_github_issues_label_filtering_not_implemented() -> None:
 def test_fake_github_issues_state_case_sensitivity() -> None:
     """Test state filtering handles uppercase/lowercase properly."""
     pre_configured = {
-        1: IssueInfo(
-            1,
-            "Open Issue",
-            "Body",
-            "OPEN",
-            "http://url/1",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        ),
-        2: IssueInfo(
-            2,
-            "Closed Issue",
-            "Body",
-            "CLOSED",
-            "http://url/2",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        ),
+        1: create_test_issue(1, "Open Issue", "Body", url="http://url/1"),
+        2: create_test_issue(2, "Closed Issue", "Body", "CLOSED", "http://url/2"),
     }
     issues = FakeGitHubIssues(issues=pre_configured)
 
@@ -587,19 +370,7 @@ def test_fake_github_issues_mutation_tracking_independent() -> None:
 
 def test_fake_github_issues_pre_configured_and_created_coexist() -> None:
     """Test that pre-configured and dynamically created issues coexist."""
-    pre_configured = {
-        100: IssueInfo(
-            100,
-            "Pre-configured",
-            "Body",
-            "OPEN",
-            "http://url/100",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        )
-    }
+    pre_configured = {100: create_test_issue(100, "Pre-configured", "Body", url="http://url/100")}
     issues = FakeGitHubIssues(issues=pre_configured, next_issue_number=1)
 
     # Create new issue
@@ -641,19 +412,7 @@ def test_fake_github_issues_created_state_always_open() -> None:
 
 def test_fake_github_issues_multiple_comments_same_issue() -> None:
     """Test adding multiple comments to the same issue."""
-    pre_configured = {
-        42: IssueInfo(
-            42,
-            "Test",
-            "Body",
-            "OPEN",
-            "http://url/42",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        )
-    }
+    pre_configured = {42: create_test_issue(42, "Test", "Body", url="http://url/42")}
     issues = FakeGitHubIssues(issues=pre_configured)
 
     issues.add_comment(sentinel_path(), 42, "Comment 1")
@@ -764,36 +523,24 @@ def test_list_issues_respects_limit() -> None:
     """Test list_issues applies limit correctly."""
     now = datetime.now(UTC)
     issues_dict = {
-        1: IssueInfo(
+        1: create_test_issue(
             number=1,
             title="Issue 1",
             body="Body 1",
-            state="OPEN",
-            url="http://url/1",
-            labels=[],
-            assignees=[],
             created_at=now,
             updated_at=now,
         ),
-        2: IssueInfo(
+        2: create_test_issue(
             number=2,
             title="Issue 2",
             body="Body 2",
-            state="OPEN",
-            url="http://url/2",
-            labels=[],
-            assignees=[],
             created_at=now,
             updated_at=now,
         ),
-        3: IssueInfo(
+        3: create_test_issue(
             number=3,
             title="Issue 3",
             body="Body 3",
-            state="OPEN",
-            url="http://url/3",
-            labels=[],
-            assignees=[],
             created_at=now,
             updated_at=now,
         ),

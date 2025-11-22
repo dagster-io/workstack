@@ -5,7 +5,6 @@ while still allowing read operations.
 """
 
 import subprocess
-from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -17,13 +16,14 @@ from erk.core.context import ErkContext, create_context
 from erk.core.git.abc import WorktreeInfo
 from erk.core.git.dry_run import DryRunGit
 from erk.core.github.dry_run import DryRunGitHub
-from erk.core.github.issues import DryRunGitHubIssues, FakeGitHubIssues, IssueInfo
+from erk.core.github.issues import DryRunGitHubIssues, FakeGitHubIssues
 from erk.core.graphite.dry_run import DryRunGraphite
 from tests.fakes.git import FakeGit
 from tests.fakes.github import FakeGitHub
 from tests.fakes.graphite import FakeGraphite
 from tests.fakes.shell import FakeShell
 from tests.test_utils import sentinel_path
+from tests.test_utils.github_helpers import create_test_issue
 
 
 def init_git_repo(repo_path: Path, default_branch: str = "main") -> None:
@@ -290,19 +290,7 @@ def test_noop_github_issues_create_returns_fake_number() -> None:
 
 def test_noop_github_issues_get_issue_delegates() -> None:
     """Test DryRunGitHubIssues get_issue delegates to wrapped implementation."""
-    pre_configured = {
-        42: IssueInfo(
-            42,
-            "Test Issue",
-            "Body",
-            "OPEN",
-            "http://url/42",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        )
-    }
+    pre_configured = {42: create_test_issue(42, "Test Issue", "Body", url="http://url/42")}
     fake = FakeGitHubIssues(issues=pre_configured)
     noop = DryRunGitHubIssues(fake)
 
@@ -315,19 +303,7 @@ def test_noop_github_issues_get_issue_delegates() -> None:
 
 def test_noop_github_issues_add_comment_noop() -> None:
     """Test DryRunGitHubIssues add_comment does nothing in dry-run mode."""
-    pre_configured = {
-        42: IssueInfo(
-            42,
-            "Test",
-            "Body",
-            "OPEN",
-            "http://url/42",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        )
-    }
+    pre_configured = {42: create_test_issue(42, "Test", "Body", url="http://url/42")}
     fake = FakeGitHubIssues(issues=pre_configured)
     noop = DryRunGitHubIssues(fake)
 
@@ -341,28 +317,8 @@ def test_noop_github_issues_add_comment_noop() -> None:
 def test_noop_github_issues_list_issues_delegates() -> None:
     """Test DryRunGitHubIssues list_issues delegates to wrapped implementation."""
     pre_configured = {
-        1: IssueInfo(
-            1,
-            "Issue 1",
-            "Body 1",
-            "OPEN",
-            "http://url/1",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        ),
-        2: IssueInfo(
-            2,
-            "Issue 2",
-            "Body 2",
-            "CLOSED",
-            "http://url/2",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        ),
+        1: create_test_issue(1, "Issue 1", "Body 1", url="http://url/1"),
+        2: create_test_issue(2, "Issue 2", "Body 2", "CLOSED", "http://url/2"),
     }
     fake = FakeGitHubIssues(issues=pre_configured)
     noop = DryRunGitHubIssues(fake)
@@ -378,28 +334,8 @@ def test_noop_github_issues_list_issues_delegates() -> None:
 def test_noop_github_issues_list_with_filters_delegates() -> None:
     """Test DryRunGitHubIssues list_issues with filters delegates correctly."""
     pre_configured = {
-        1: IssueInfo(
-            1,
-            "Open Issue",
-            "Body",
-            "OPEN",
-            "http://url/1",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        ),
-        2: IssueInfo(
-            2,
-            "Closed Issue",
-            "Body",
-            "CLOSED",
-            "http://url/2",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        ),
+        1: create_test_issue(1, "Open Issue", "Body", url="http://url/1"),
+        2: create_test_issue(2, "Closed Issue", "Body", "CLOSED", "http://url/2"),
     }
     fake = FakeGitHubIssues(issues=pre_configured)
     noop = DryRunGitHubIssues(fake)
@@ -430,28 +366,8 @@ def test_noop_github_issues_write_operations_blocked() -> None:
 def test_noop_github_issues_read_operations_work() -> None:
     """Test that DryRunGitHubIssues allows read operations in dry-run mode."""
     pre_configured = {
-        42: IssueInfo(
-            42,
-            "Test Issue",
-            "Body content",
-            "OPEN",
-            "http://url/42",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        ),
-        99: IssueInfo(
-            99,
-            "Another Issue",
-            "Other body",
-            "CLOSED",
-            "http://url/99",
-            [],
-            [],
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-            datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
-        ),
+        42: create_test_issue(42, "Test Issue", "Body content", url="http://url/42"),
+        99: create_test_issue(99, "Another Issue", "Other body", "CLOSED", "http://url/99"),
     }
     fake = FakeGitHubIssues(issues=pre_configured)
     noop = DryRunGitHubIssues(fake)

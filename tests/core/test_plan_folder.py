@@ -795,9 +795,7 @@ def test_add_worktree_creation_comment_success(tmp_path: Path) -> None:
     )
 
     # Post comment
-    add_worktree_creation_comment(
-        issues, tmp_path, 42, "feature-name", "feature-branch"
-    )
+    add_worktree_creation_comment(issues, tmp_path, 42, "feature-name", "feature-branch")
 
     # Verify comment was added
     assert len(issues.added_comments) == 1
@@ -820,6 +818,4 @@ def test_add_worktree_creation_comment_issue_not_found(tmp_path: Path) -> None:
 
     # Should raise RuntimeError (simulating gh CLI error)
     with pytest.raises(RuntimeError, match="Issue #999 not found"):
-        add_worktree_creation_comment(
-            issues, tmp_path, 999, "feature-name", "feature-branch"
-        )
+        add_worktree_creation_comment(issues, tmp_path, 999, "feature-name", "feature-branch")

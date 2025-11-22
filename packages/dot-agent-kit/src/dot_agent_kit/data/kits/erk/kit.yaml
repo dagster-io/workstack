@@ -33,6 +33,9 @@ kit_cli_commands:
   - name: comment-worktree-creation
     path: kit_cli_commands/erk/comment_worktree_creation.py
     description: Post GitHub comment documenting worktree creation
+  - name: parse-issue-reference
+    path: kit_cli_commands/erk/parse_issue_reference.py
+    description: Parse GitHub issue number from URL or plain number
 hooks:
   - id: session-id-injector-hook
     lifecycle: UserPromptSubmit

@@ -53,9 +53,7 @@ def get_repo_root() -> Path:
 @click.argument("issue_number", type=int)
 @click.argument("worktree_name")
 @click.argument("branch_name")
-def comment_worktree_creation(
-    issue_number: int, worktree_name: str, branch_name: str
-) -> None:
+def comment_worktree_creation(issue_number: int, worktree_name: str, branch_name: str) -> None:
     """Post GitHub comment documenting worktree creation.
 
     ISSUE_NUMBER: GitHub issue number to comment on

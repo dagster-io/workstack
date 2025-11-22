@@ -26,7 +26,7 @@ class PrintingGit(PrintingBase, Git):
         printing_ops = PrintingGit(real_ops, script_mode=False, dry_run=False)
 
         # For dry-run
-        noop_inner = NoopGit(real_ops)
+        noop_inner = DryRunGit(real_ops)
         printing_ops = PrintingGit(noop_inner, script_mode=False, dry_run=True)
     """
 

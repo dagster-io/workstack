@@ -18,7 +18,7 @@ class PrintingGitHub(PrintingBase, GitHub):
         printing_ops = PrintingGitHub(real_ops, script_mode=False, dry_run=False)
 
         # For dry-run
-        noop_inner = NoopGitHub(real_ops)
+        noop_inner = DryRunGitHub(real_ops)
         printing_ops = PrintingGitHub(noop_inner, script_mode=False, dry_run=True)
     """
 

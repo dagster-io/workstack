@@ -114,7 +114,7 @@ def test_dry_run_does_not_execute_merge_operations() -> None:
 def test_dry_run_does_not_execute_checkout_operations() -> None:
     """Test that --dry-run flag prevents git checkout operations from executing.
 
-    This test verifies the fix for the critical bug where NoopGit.checkout_branch()
+    This test verifies the fix for the critical bug where DryRunGit.checkout_branch()
     was incorrectly delegating to the wrapped implementation instead of being a no-op.
     This test MUST FAIL before the fix is applied and PASS after.
     """
@@ -178,7 +178,7 @@ def test_dry_run_does_not_execute_checkout_operations() -> None:
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
         # Assert: checkout_branch should NOT have been called
-        # Note: In dry-run mode, NoopGit wrapper prevents the call from reaching
+        # Note: In dry-run mode, DryRunGit wrapper prevents the call from reaching
         # the underlying FakeGit
         assert checkout_spy.call_count == 0, (
             f"checkout_branch was called {checkout_spy.call_count} times in dry-run mode! "
@@ -358,7 +358,7 @@ def test_dry_run_does_not_delete_branches() -> None:
         # Assert: Command succeeded
         assert result.exit_code == 0
 
-        # Assert: No branches were deleted (NoopGit prevents this)
+        # Assert: No branches were deleted (DryRunGit prevents this)
         assert len(git_ops.deleted_branches) == 0, "No branches should be deleted in dry-run mode"
 
 

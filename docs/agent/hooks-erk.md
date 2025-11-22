@@ -148,7 +148,7 @@ Hooks are bundled in kits, so modifications require reinstallation:
    cat .claude/settings.json | grep -A 5 "devrun-reminder-hook"
 
    # Test hook directly
-   dot-agent run devrun devrun-reminder-hook
+   dot-agent kit-command devrun devrun-reminder-hook
    ```
 
 **Important**: Changes to hook scripts don't take effect until reinstalled. The hook configuration in `.claude/settings.json` is written during `kit install`.
@@ -188,13 +188,13 @@ See comprehensive guide: `packages/dot-agent-kit/docs/HOOKS.md`
      - id: my-reminder-hook
        lifecycle: UserPromptSubmit
        matcher: "*.txt"
-       invocation: "dot-agent run {kit-name} my-reminder-hook"
+       invocation: "dot-agent kit-command {kit-name} my-reminder-hook"
    ```
 
 4. **Install and test**:
    ```bash
    dot-agent kit install {kit-name}
-   dot-agent run {kit-name} my-reminder-hook  # Test directly
+   dot-agent kit-command {kit-name} my-reminder-hook  # Test directly
    ```
 
 ### Testing Hooks
@@ -203,7 +203,7 @@ See comprehensive guide: `packages/dot-agent-kit/docs/HOOKS.md`
 
 ```bash
 # Run hook command directly
-dot-agent run {kit-name} {hook-name}
+dot-agent kit-command {kit-name} {hook-name}
 
 # Or run Python script directly
 python packages/dot-agent-kit/src/dot_agent_kit/data/kits/{kit-name}/kit_cli_commands/{kit-name}/{hook_name}.py
@@ -270,7 +270,7 @@ claude --debug
 
 ```bash
 # Run hook command directly
-dot-agent run {kit-name} {hook-name}
+dot-agent kit-command {kit-name} {hook-name}
 
 # Check exit code
 echo $?  # Should be 0 or 2
@@ -340,7 +340,7 @@ dot-agent kit remove {kit-name}
 dot-agent kit install {kit-name}
 
 # Verify changes
-dot-agent run {kit-name} {hook-name}
+dot-agent kit-command {kit-name} {hook-name}
 ```
 
 **Why**: Hook configuration is written to `.claude/settings.json` during installation. Source file changes don't auto-update installed hooks.

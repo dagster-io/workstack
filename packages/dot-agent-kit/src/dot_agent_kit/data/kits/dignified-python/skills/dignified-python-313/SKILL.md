@@ -7,6 +7,8 @@ description: This skill should be used when editing Python code in the erk codeb
 
 @.claude/docs/dignified-python/skill-components/core-philosophy.md
 
+@.claude/docs/dignified-python/core-standards-universal.md
+
 @.claude/docs/dignified-python/version-specific/313/pattern-table.md
 
 ## Quick Checklist

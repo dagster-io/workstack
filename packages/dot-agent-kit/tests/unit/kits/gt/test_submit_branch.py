@@ -13,7 +13,7 @@ from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch import (
     PreAnalysisResult,
     execute_post_analysis,
     execute_pre_analysis,
-    submit_branch,
+    submit_squashed_branch,
 )
 from tests.unit.kits.gt.fake_ops import FakeGtKitOps
 
@@ -439,7 +439,7 @@ class TestSubmitBranchCLI:
         submit_module.execute_pre_analysis = patched_execute
 
         try:
-            result = runner.invoke(submit_branch, ["pre-analysis"])
+            result = runner.invoke(submit_squashed_branch, ["pre-analysis"])
 
             assert result.exit_code == 0
             output = json.loads(result.output)
@@ -470,7 +470,7 @@ class TestSubmitBranchCLI:
 
         try:
             result = runner.invoke(
-                submit_branch,
+                submit_squashed_branch,
                 [
                     "post-analysis",
                     "--commit-message",

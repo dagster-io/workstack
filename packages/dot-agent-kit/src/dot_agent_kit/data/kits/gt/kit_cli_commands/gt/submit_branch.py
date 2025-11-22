@@ -439,7 +439,7 @@ def execute_post_analysis(
 
 
 @click.group()
-def submit_branch() -> None:
+def submit_squashed_branch() -> None:
     """Create git commit and submit current branch with Graphite (two-phase)."""
     pass
 
@@ -516,6 +516,6 @@ def get_diff_context_cmd() -> None:
 
 
 # Register subcommands
-submit_branch.add_command(pre_analysis)
-submit_branch.add_command(post_analysis)
-submit_branch.add_command(get_diff_context_cmd, name="get-diff-context")
+submit_squashed_branch.add_command(pre_analysis)
+submit_squashed_branch.add_command(post_analysis)
+submit_squashed_branch.add_command(get_diff_context_cmd, name="get-diff-context")

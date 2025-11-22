@@ -1,5 +1,12 @@
 # Command-Agent Delegation Pattern
 
+## Pattern Overview
+
+For architectural context and pattern rationale (WHAT and WHY), see:
+[Agent-Delegating Commands Pattern](../agentic-engineering-patterns/agent-delegating-commands.md)
+
+This guide focuses on HOW to implement the pattern with step-by-step technical instructions.
+
 ## Overview
 
 **Command-agent delegation** is an architectural pattern where slash commands serve as lightweight entry points that delegate complete workflows to specialized agents. The command defines _what_ needs to happen (prerequisites, high-level flow), while the agent implements _how_ it happens (orchestration, error handling, result reporting).

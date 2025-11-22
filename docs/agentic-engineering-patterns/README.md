@@ -1,0 +1,60 @@
+# Agentic Engineering Patterns
+
+This section documents architectural patterns for building AI-powered development tools and workflows. These patterns capture design decisions, rationale, and best practices discovered through building the erk project.
+
+## Purpose
+
+This documentation serves two audiences:
+
+1. **AI Assistants**: Conceptual understanding of WHAT patterns are and WHY they exist
+2. **Human Developers**: Pattern catalog for design decisions and architectural guidance
+
+## Relationship to Other Documentation
+
+This section complements the existing `docs/agent/` folder:
+
+| Section                                | Purpose               | Focus                                                                   |
+| -------------------------------------- | --------------------- | ----------------------------------------------------------------------- |
+| **docs/agentic-engineering-patterns/** | Pattern catalog       | WHAT patterns are (naming, concepts), WHY they exist (design rationale) |
+| **docs/agent/**                        | Implementation guides | HOW to implement (step-by-step, technical details, code examples)       |
+
+Both sections serve complementary roles in the documentation architecture.
+
+## Documented Patterns
+
+### 1. Agent-Delegating Commands
+
+Commands that immediately delegate to specialized agents for workflow orchestration.
+
+**Key Benefits:**
+
+- Context reduction by declining accumulated command context
+- Model selection flexibility (e.g., Haiku for fast execution)
+- Clear separation of concerns (thin commands, thick agents)
+
+**Documentation:** [agent-delegating-commands.md](agent-delegating-commands.md)
+
+**Implementation Guide:** [../agent/command-agent-delegation.md](../agent/command-agent-delegation.md)
+
+---
+
+## Future Patterns
+
+As the project evolves, additional patterns will be documented here:
+
+- Multi-phase agent workflows
+- Fake-driven testing architecture
+- Python preprocessing for LLM workflows
+- Progressive context disclosure
+
+---
+
+## Contributing Patterns
+
+When adding new patterns to this catalog:
+
+1. Create a new markdown file in this directory
+2. Update this README with a brief entry
+3. Cross-link to relevant implementation guides in `docs/agent/`
+4. Include examples from the actual codebase
+5. Explain WHAT and WHY, not just HOW

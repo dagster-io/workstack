@@ -4,6 +4,7 @@ Tests the integration of plan file reading, worktree creation, issue creation,
 and linking them together via .plan/issue.json.
 """
 
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -133,8 +134,6 @@ def test_workflow_issue_creation_tracks_erk_plan_label() -> None:
 
 def test_workflow_get_issue_after_creation() -> None:
     """Test retrieving issue info after creation."""
-    from datetime import UTC, datetime
-
     issues = FakeGitHubIssues(
         next_issue_number=42,
         issues={

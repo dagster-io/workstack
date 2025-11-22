@@ -21,11 +21,6 @@ from erk.core.repo_discovery import ensure_repo_dir
     help="Filter by state",
 )
 @click.option(
-    "--assignee",
-    type=str,
-    help="Filter by assignee username",
-)
-@click.option(
     "--limit",
     type=int,
     help="Maximum number of results to return",
@@ -35,7 +30,6 @@ def list_plan_issues(
     ctx: ErkContext,
     label: tuple[str, ...],
     state: str | None,
-    assignee: str | None,
     limit: int | None,
 ) -> None:
     """List plan issues with optional filters.
@@ -44,7 +38,7 @@ def list_plan_issues(
         erk plan-issue list
         erk plan-issue list --label erk-plan --state open
         erk plan-issue list --label erk-plan --label erk-queue
-        erk plan-issue list --assignee alice --limit 10
+        erk plan-issue list --limit 10
     """
     repo = discover_repo_context(ctx, ctx.cwd)
     repo_root = ensure_repo_dir(repo)
@@ -58,7 +52,6 @@ def list_plan_issues(
     query = PlanIssueQuery(
         labels=labels_list,
         state=state_enum,
-        assignee=assignee,
         limit=limit,
     )
 

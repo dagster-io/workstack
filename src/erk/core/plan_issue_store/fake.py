@@ -10,7 +10,7 @@ class FakePlanIssueStore(PlanIssueStore):
     """In-memory fake implementation for testing.
 
     All state is provided via constructor. Supports filtering by state,
-    labels (AND logic), assignee, and limit.
+    labels (AND logic), and limit.
     """
 
     def __init__(self, plan_issues: dict[str, PlanIssue] | None = None) -> None:
@@ -44,7 +44,7 @@ class FakePlanIssueStore(PlanIssueStore):
 
         Args:
             repo_root: Repository root directory (ignored in fake)
-            query: Filter criteria (labels, state, assignee, limit)
+            query: Filter criteria (labels, state, limit)
 
         Returns:
             List of PlanIssue matching the criteria
@@ -60,10 +60,6 @@ class FakePlanIssueStore(PlanIssueStore):
             issues = [
                 issue for issue in issues if all(label in issue.labels for label in query.labels)
             ]
-
-        # Filter by assignee
-        if query.assignee:
-            issues = [issue for issue in issues if query.assignee in issue.assignees]
 
         # Apply limit
         if query.limit:

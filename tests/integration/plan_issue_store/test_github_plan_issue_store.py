@@ -203,22 +203,6 @@ def test_list_plan_issues_with_state_closed() -> None:
     assert call_args[state_index + 1] == "closed"
 
 
-def test_list_plan_issues_with_assignee() -> None:
-    """Test filtering by assignee."""
-    mock_response = []
-    mock_execute = Mock(return_value=json.dumps(mock_response))
-    store = GitHubPlanIssueStore(execute_fn=mock_execute)
-
-    query = PlanIssueQuery(assignee="alice")
-    store.list_plan_issues(Path("/fake/repo"), query)
-
-    # Verify gh CLI was called with assignee filter
-    call_args = mock_execute.call_args[0][0]
-    assert "--assignee" in call_args
-    assignee_index = call_args.index("--assignee")
-    assert call_args[assignee_index + 1] == "alice"
-
-
 def test_list_plan_issues_with_limit() -> None:
     """Test limiting results."""
     mock_response = []
@@ -244,7 +228,6 @@ def test_list_plan_issues_combined_filters() -> None:
     query = PlanIssueQuery(
         labels=["erk-plan"],
         state=PlanIssueState.OPEN,
-        assignee="alice",
         limit=5,
     )
     store.list_plan_issues(Path("/fake/repo"), query)
@@ -253,7 +236,6 @@ def test_list_plan_issues_combined_filters() -> None:
     call_args = mock_execute.call_args[0][0]
     assert "--label" in call_args
     assert "--state" in call_args
-    assert "--assignee" in call_args
     assert "--limit" in call_args
 
 

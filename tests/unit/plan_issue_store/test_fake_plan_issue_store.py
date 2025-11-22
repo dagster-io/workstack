@@ -158,41 +158,6 @@ def test_list_plan_issues_filter_by_labels_and_logic() -> None:
     assert results[0] == issue_with_both
 
 
-def test_list_plan_issues_filter_by_assignee() -> None:
-    """Test filtering plan issues by assignee."""
-    alice_issue = PlanIssue(
-        plan_issue_identifier="1",
-        title="Alice's Issue",
-        body="",
-        state=PlanIssueState.OPEN,
-        url="https://example.com/issues/1",
-        labels=[],
-        assignees=["alice"],
-        created_at=datetime(2024, 1, 1, tzinfo=UTC),
-        updated_at=datetime(2024, 1, 1, tzinfo=UTC),
-        metadata={},
-    )
-    bob_issue = PlanIssue(
-        plan_issue_identifier="2",
-        title="Bob's Issue",
-        body="",
-        state=PlanIssueState.OPEN,
-        url="https://example.com/issues/2",
-        labels=[],
-        assignees=["bob"],
-        created_at=datetime(2024, 1, 2, tzinfo=UTC),
-        updated_at=datetime(2024, 1, 2, tzinfo=UTC),
-        metadata={},
-    )
-
-    store = FakePlanIssueStore(plan_issues={"1": alice_issue, "2": bob_issue})
-    query = PlanIssueQuery(assignee="alice")
-    results = store.list_plan_issues(Path("/fake/repo"), query)
-
-    assert len(results) == 1
-    assert results[0] == alice_issue
-
-
 def test_list_plan_issues_filter_by_limit() -> None:
     """Test limiting the number of returned plan issues."""
     issue1 = PlanIssue(
@@ -272,7 +237,7 @@ def test_list_plan_issues_combined_filters() -> None:
         state=PlanIssueState.OPEN,
         url="https://example.com/issues/3",
         labels=["erk-plan"],  # Missing "bug"
-        assignees=["alice"],
+        assignees=[],
         created_at=datetime(2024, 1, 3, tzinfo=UTC),
         updated_at=datetime(2024, 1, 3, tzinfo=UTC),
         metadata={},
@@ -284,7 +249,6 @@ def test_list_plan_issues_combined_filters() -> None:
     query = PlanIssueQuery(
         state=PlanIssueState.OPEN,
         labels=["erk-plan", "bug"],
-        assignee="alice",
     )
     results = store.list_plan_issues(Path("/fake/repo"), query)
 

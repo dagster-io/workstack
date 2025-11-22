@@ -147,50 +147,6 @@ def test_list_plan_issues_filter_by_labels() -> None:
         assert "#2" not in result.output
 
 
-def test_list_plan_issues_filter_by_assignee() -> None:
-    """Test filtering plan issues by assignee."""
-    # Arrange
-    alice_issue = PlanIssue(
-        plan_issue_identifier="1",
-        title="Alice's Issue",
-        body="",
-        state=PlanIssueState.OPEN,
-        url="https://github.com/owner/repo/issues/1",
-        labels=[],
-        assignees=["alice"],
-        created_at=datetime(2024, 1, 1, tzinfo=UTC),
-        updated_at=datetime(2024, 1, 1, tzinfo=UTC),
-        metadata={},
-    )
-    bob_issue = PlanIssue(
-        plan_issue_identifier="2",
-        title="Bob's Issue",
-        body="",
-        state=PlanIssueState.OPEN,
-        url="https://github.com/owner/repo/issues/2",
-        labels=[],
-        assignees=["bob"],
-        created_at=datetime(2024, 1, 2, tzinfo=UTC),
-        updated_at=datetime(2024, 1, 2, tzinfo=UTC),
-        metadata={},
-    )
-
-    runner = CliRunner()
-    with erk_inmem_env(runner) as env:
-        store = FakePlanIssueStore(plan_issues={"1": alice_issue, "2": bob_issue})
-        ctx = build_workspace_test_context(env, plan_issue_store=store)
-
-        # Act
-        result = runner.invoke(plan_issue_group, ["list", "--assignee", "alice"], obj=ctx)
-
-        # Assert
-        assert result.exit_code == 0
-        assert "Found 1 plan issue(s)" in result.output
-        assert "#1" in result.output
-        assert "Alice's Issue" in result.output
-        assert "#2" not in result.output
-
-
 def test_list_plan_issues_with_limit() -> None:
     """Test limiting the number of returned plan issues."""
     # Arrange
@@ -232,7 +188,7 @@ def test_list_plan_issues_combined_filters() -> None:
         state=PlanIssueState.OPEN,
         url="https://github.com/owner/repo/issues/1",
         labels=["erk-plan", "bug"],
-        assignees=["alice"],
+        assignees=[],
         created_at=datetime(2024, 1, 1, tzinfo=UTC),
         updated_at=datetime(2024, 1, 1, tzinfo=UTC),
         metadata={},
@@ -244,19 +200,19 @@ def test_list_plan_issues_combined_filters() -> None:
         state=PlanIssueState.CLOSED,
         url="https://github.com/owner/repo/issues/2",
         labels=["erk-plan", "bug"],
-        assignees=["alice"],
+        assignees=[],
         created_at=datetime(2024, 1, 2, tzinfo=UTC),
         updated_at=datetime(2024, 1, 2, tzinfo=UTC),
         metadata={},
     )
-    wrong_assignee = PlanIssue(
+    wrong_labels = PlanIssue(
         plan_issue_identifier="3",
-        title="Wrong Assignee",
+        title="Wrong Labels",
         body="",
         state=PlanIssueState.OPEN,
         url="https://github.com/owner/repo/issues/3",
-        labels=["erk-plan", "bug"],
-        assignees=["bob"],
+        labels=["erk-plan"],
+        assignees=[],
         created_at=datetime(2024, 1, 3, tzinfo=UTC),
         updated_at=datetime(2024, 1, 3, tzinfo=UTC),
         metadata={},
@@ -265,7 +221,7 @@ def test_list_plan_issues_combined_filters() -> None:
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         store = FakePlanIssueStore(
-            plan_issues={"1": matching_issue, "2": wrong_state, "3": wrong_assignee}
+            plan_issues={"1": matching_issue, "2": wrong_state, "3": wrong_labels}
         )
         ctx = build_workspace_test_context(env, plan_issue_store=store)
 
@@ -280,8 +236,6 @@ def test_list_plan_issues_combined_filters() -> None:
                 "erk-plan",
                 "--label",
                 "bug",
-                "--assignee",
-                "alice",
             ],
             obj=ctx,
         )

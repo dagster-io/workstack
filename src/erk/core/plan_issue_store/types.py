@@ -49,11 +49,9 @@ class PlanIssueQuery:
     Fields:
         labels: Filter by labels (all must match - AND logic)
         state: Filter by state (OPEN, CLOSED, or None for all)
-        assignee: Filter by assignee username
         limit: Maximum number of results to return
     """
 
     labels: list[str] | None = None
     state: PlanIssueState | None = None
-    assignee: str | None = None
     limit: int | None = None

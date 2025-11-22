@@ -55,7 +55,7 @@ class GitHubPlanIssueStore(PlanIssueStore):
 
         Args:
             repo_root: Repository root directory
-            query: Filter criteria (labels, state, assignee, limit)
+            query: Filter criteria (labels, state, limit)
 
         Returns:
             List of PlanIssue matching the criteria
@@ -80,10 +80,6 @@ class GitHubPlanIssueStore(PlanIssueStore):
         if query.state:
             state_str = "open" if query.state == PlanIssueState.OPEN else "closed"
             cmd.extend(["--state", state_str])
-
-        # Add assignee filter
-        if query.assignee:
-            cmd.extend(["--assignee", query.assignee])
 
         # Add limit
         if query.limit:

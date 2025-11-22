@@ -21,7 +21,7 @@ from erk.core.naming_utils import (
     strip_plan_from_filename,
 )
 from erk.core.plan_folder import create_plan_folder, get_plan_path
-from erk.core.repo_discovery import RepoContext, ensure_repo_dir
+from erk.core.repo_discovery import RepoContext, ensure_erk_metadata_dir
 
 
 def ensure_worktree_for_branch(
@@ -556,7 +556,7 @@ def create(
         raise SystemExit(1)
 
     repo = discover_repo_context(ctx, ctx.cwd)
-    ensure_repo_dir(repo)
+    ensure_erk_metadata_dir(repo)
     cfg = ctx.local_config
     trunk_branch = ctx.git.get_trunk_branch(repo.root)
 

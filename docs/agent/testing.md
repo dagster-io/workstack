@@ -32,7 +32,7 @@ make test-all
 - ⚡ Very fast (in-memory, uses fakes)
 - Uses `FakeGit`, `FakeGraphite`, `FakeGitHub`, `FakeShell`
 - Uses `CliRunner` for CLI tests (NOT subprocess)
-- Uses `pure_erk_env()` (sentinel paths) or `simulated_erk_env()` (isolated filesystem)
+- Uses `erk_inmem_env()` (sentinel paths) or `erk_isolated_fs_env()` (isolated filesystem)
 - No external system calls
 - No `time.sleep()` calls (use mocking or dependency injection)
 
@@ -151,7 +151,7 @@ cwd=Path("/some/hardcoded/path")
 
 ```python
 # ✅ CORRECT - Use simulated environment
-with simulated_erk_env(runner) as env:
+with erk_isolated_fs_env(runner) as env:
     ctx = ErkContext(..., cwd=env.cwd)
 
 # ✅ CORRECT - Use tmp_path fixture
@@ -791,21 +791,21 @@ def test_dryrun_prevents_mutations() -> None:
 
 ### CliRunner Pattern (PREFERRED)
 
-#### Using simulated_erk_env() (Recommended)
+#### Using erk_isolated_fs_env() (Recommended)
 
-**For most CLI tests, use the `simulated_erk_env()` helper:**
+**For most CLI tests, use the `erk_isolated_fs_env()` helper:**
 
 ```python
 from click.testing import CliRunner
 from erk.cli.cli import cli
-from tests.test_utils.env_helpers import simulated_erk_env
+from tests.test_utils.env_helpers import erk_isolated_fs_env
 from tests.fakes.gitops import FakeGit
 from erk.core.context import ErkContext
 from erk.core.config_store import GlobalConfig
 
 def test_create_command() -> None:
     runner = CliRunner()
-    with simulated_erk_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # Set up configuration and test context
         git = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
@@ -827,7 +827,7 @@ def test_create_command() -> None:
         assert "Created worktree" in result.output
 ```
 
-**What `simulated_erk_env()` provides:**
+**What `erk_isolated_fs_env()` provides:**
 
 - `env.cwd`: Current working directory (root worktree)
 - `env.git_dir`: Path to .git directory
@@ -837,7 +837,7 @@ def test_create_command() -> None:
 - Automatic `runner.isolated_filesystem()` management
 - Directory structure setup (repo/ and erks/ directories)
 
-**Why use `simulated_erk_env()`:**
+**Why use `erk_isolated_fs_env()`:**
 
 - Complete isolation via `runner.isolated_filesystem()`
 - Works with FakeGit (faster than real git)
@@ -878,14 +878,14 @@ def test_git_hook_integration(tmp_path: Path) -> None:
 - `test_env.erks_root`: Configured erks directory
 - `test_env.tmp_path`: Test root with isolated .erk config
 
-**When to use `cli_test_repo()` over `simulated_erk_env()`:**
+**When to use `cli_test_repo()` over `erk_isolated_fs_env()`:**
 
 - Testing git hooks or git worktree edge cases
 - Testing actual filesystem permissions
 - Testing real subprocess interactions
 - Integration tests requiring actual git behavior
 
-**For 95% of CLI tests, use `simulated_erk_env()` instead.**
+**For 95% of CLI tests, use `erk_isolated_fs_env()` instead.**
 
 #### Manual Setup (For Custom Requirements)
 
@@ -940,10 +940,10 @@ def test_create_command(tmp_path: Path) -> None:
 
 **Key components:**
 
-**For `simulated_erk_env()` pattern (recommended):**
+**For `erk_isolated_fs_env()` pattern (recommended):**
 
 - `runner = CliRunner()`: Click's test harness
-- `simulated_erk_env(runner)`: Context manager providing isolated environment
+- `erk_isolated_fs_env(runner)`: Context manager providing isolated environment
 - `runner.invoke(cli, ["command"], obj=test_ctx)`: Pass context explicitly via `obj=`
 - `result.exit_code`: Command exit code (0 = success)
 - `result.output`: Combined stdout/stderr output
@@ -1013,7 +1013,7 @@ from erk.cli.cli import cli
 runner.invoke(cli, ["create", "feature"])
 ```
 
-**❌ Not using simulated_erk_env():**
+**❌ Not using erk_isolated_fs_env():**
 
 ```python
 # HARDER TO MAINTAIN - Manual setup with real git
@@ -1021,12 +1021,12 @@ runner = CliRunner()
 # ... 20+ lines of git setup, config creation, env vars, os.chdir ...
 ```
 
-**✅ Using simulated_erk_env():**
+**✅ Using erk_isolated_fs_env():**
 
 ```python
 # CLEAN AND SIMPLE - Helper provides everything
 runner = CliRunner()
-with simulated_erk_env(runner) as env:
+with erk_isolated_fs_env(runner) as env:
     # Ready to test immediately
     git = FakeGit(git_common_dirs={env.cwd: env.git_dir})
     test_ctx = ErkContext.for_test(git=git, cwd=env.cwd)
@@ -1036,13 +1036,13 @@ with simulated_erk_env(runner) as env:
 
 When converting tests from subprocess to CliRunner:
 
-**Recommended approach (using simulated_erk_env()):**
+**Recommended approach (using erk_isolated_fs_env()):**
 
 - [ ] Import `CliRunner` from `click.testing`
-- [ ] Import `simulated_erk_env` from `tests.test_utils.env_helpers`
+- [ ] Import `erk_isolated_fs_env` from `tests.test_utils.env_helpers`
 - [ ] Import `cli` from `erk.cli.cli`
 - [ ] Set up `runner = CliRunner()`
-- [ ] Use `with simulated_erk_env(runner) as env:` context manager
+- [ ] Use `with erk_isolated_fs_env(runner) as env:` context manager
 - [ ] Create `FakeGit` with `git_common_dirs={env.cwd: env.git_dir}`
 - [ ] Create `ErkContext.for_test()` with fakes and `cwd=env.cwd`
 - [ ] Replace `subprocess.run([...])` with `runner.invoke(cli, [...], obj=test_ctx)`

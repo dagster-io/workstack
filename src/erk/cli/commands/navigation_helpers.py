@@ -9,7 +9,7 @@ from erk.cli.debug import debug_log
 from erk.cli.output import machine_output, user_output
 from erk.core.context import ErkContext, create_context
 from erk.core.git.abc import WorktreeInfo
-from erk.core.repo_discovery import RepoContext, ensure_repo_dir
+from erk.core.repo_discovery import RepoContext, ensure_erk_metadata_dir
 
 
 def _ensure_graphite_enabled(ctx: ErkContext) -> None:
@@ -303,7 +303,7 @@ def complete_worktree_names(
             erk_ctx = create_context(dry_run=False)
 
         repo = discover_repo_context(erk_ctx, erk_ctx.cwd)
-        ensure_repo_dir(repo)
+        ensure_erk_metadata_dir(repo)
 
         names = ["root"] if "root".startswith(incomplete) else []
 
@@ -348,7 +348,7 @@ def complete_branch_names(
             erk_ctx = create_context(dry_run=False)
 
         repo = discover_repo_context(erk_ctx, erk_ctx.cwd)
-        ensure_repo_dir(repo)
+        ensure_erk_metadata_dir(repo)
 
         # Collect all branch names in a set for deduplication
         branch_names = set()

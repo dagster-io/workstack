@@ -10,7 +10,7 @@ from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output
 from erk.core.consolidation_utils import calculate_stack_range, create_consolidation_plan
 from erk.core.context import ErkContext, create_context
-from erk.core.repo_discovery import ensure_repo_dir
+from erk.core.repo_discovery import ensure_erk_metadata_dir
 
 
 def _format_section_header(text: str, separator_length: int = 59) -> str:
@@ -169,7 +169,7 @@ def consolidate_cmd(
 
     # Get repository root
     repo = discover_repo_context(ctx, current_worktree)
-    ensure_repo_dir(repo)
+    ensure_erk_metadata_dir(repo)
 
     # Get current branch's stack
     stack_branches = ctx.graphite.get_branch_stack(ctx.git, repo.root, current_branch)

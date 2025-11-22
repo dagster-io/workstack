@@ -54,7 +54,7 @@ def test_command_behavior() -> None:
 
 🔴 **CRITICAL: Use `env.build_context()` helper instead of manual construction**
 
-The `simulated_erk_env()` context manager provides an `env.build_context()` helper method that eliminates boilerplate when constructing `ErkContext` for tests.
+The `erk_isolated_fs_env()` context manager provides an `env.build_context()` helper method that eliminates boilerplate when constructing `ErkContext` for tests.
 
 ### Anti-Pattern (DO NOT USE)
 

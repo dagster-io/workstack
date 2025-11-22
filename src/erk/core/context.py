@@ -29,7 +29,7 @@ from erk.core.repo_discovery import (
     NoRepoSentinel,
     RepoContext,
     discover_repo_or_sentinel,
-    ensure_repo_dir,
+    ensure_erk_metadata_dir,
 )
 from erk.core.script_writer import RealScriptWriter, ScriptWriter
 from erk.core.shell import RealShell, Shell
@@ -408,7 +408,7 @@ def create_context(*, dry_run: bool) -> ErkContext:
     if isinstance(repo, NoRepoSentinel):
         local_config = LoadedConfig(env={}, post_create_commands=[], post_create_shell=None)
     else:
-        repo_dir = ensure_repo_dir(repo)
+        repo_dir = ensure_erk_metadata_dir(repo)
         local_config = load_config(repo_dir)
 
     # 7. Apply dry-run wrappers if needed

@@ -123,14 +123,14 @@ test_ctx = ErkContext.for_test(  # ✅ Factory method
 
 ### Test Environment Patterns
 
-#### Pattern 1: simulated_erk_env (Preferred)
+#### Pattern 1: erk_isolated_fs_env (Preferred)
 
 ```python
-from tests.test_utils.env_helpers import simulated_erk_env
+from tests.test_utils.env_helpers import erk_isolated_fs_env
 
 def test_something() -> None:
     runner = CliRunner()
-    with simulated_erk_env(runner) as env:
+    with erk_isolated_fs_env(runner) as env:
         # env provides: cwd, git_dir, root_worktree, erks_root
 
         git = FakeGit(git_common_dirs={env.cwd: env.git_dir})
@@ -237,7 +237,7 @@ github_ops = FakeGitHubOps(
 
 ## Troubleshooting
 
-### ImportError: cannot import name 'simulated_erk_env'
+### ImportError: cannot import name 'erk_isolated_fs_env'
 
 **Cause**: File `tests/test_utils/env_helpers.py` doesn't exist
 
@@ -284,14 +284,14 @@ git add tests/commands/
 
 **Solution**:
 
-In `simulated_erk_env`:
+In `erk_isolated_fs_env`:
 
 ```python
 # ❌ WRONG
 cwd=Path("/test/default/cwd")
 
 # ✅ RIGHT
-with simulated_erk_env(runner) as env:
+with erk_isolated_fs_env(runner) as env:
     cwd=env.cwd
 ```
 
@@ -329,7 +329,7 @@ class SimulatedErkEnv:
             self.cwd = linked_wt  # ✅ Add this line
 ```
 
-**Better**: Use centralized `tests.test_utils.env_helpers.simulated_erk_env` instead
+**Better**: Use centralized `tests.test_utils.env_helpers.erk_isolated_fs_env` instead
 
 ---
 
@@ -431,7 +431,7 @@ def fix_test_file(filepath: Path) -> None:
 
     for line in lines:
         # Track context
-        if 'simulated_erk_env(runner)' in line:
+        if 'erk_isolated_fs_env(runner)' in line:
             in_simulated_env = True
             in_isolated_fs = False
         elif 'runner.isolated_filesystem()' in line:
@@ -456,7 +456,7 @@ fix_test_file(Path('tests/commands/graphite/test_land_stack.py'))
 
 - **`tests/test_utils/env_helpers.py`**
   - Centralized simulated environment helper
-  - Provides `simulated_erk_env()` context manager
+  - Provides `erk_isolated_fs_env()` context manager
   - Added in commit `c6516290`
 
 - **`tests/test_utils/builders.py`**

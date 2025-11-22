@@ -85,8 +85,18 @@ def discover_repo_or_sentinel(
     )
 
 
-def ensure_repo_dir(repo: RepoContext) -> Path:
-    """Ensure the repo directory and worktrees subdirectory exist."""
+def ensure_erk_metadata_dir(repo: RepoContext) -> Path:
+    """Ensure the erk metadata directory and worktrees subdirectory exist.
+
+    Creates repo.repo_dir (~/.erk/repos/<repo-name>) and repo.worktrees_dir
+    subdirectory if they don't exist.
+
+    Args:
+        repo: Repository context containing metadata paths
+
+    Returns:
+        Path to the erk metadata directory (repo.repo_dir), not git root
+    """
     repo.repo_dir.mkdir(parents=True, exist_ok=True)
     repo.worktrees_dir.mkdir(parents=True, exist_ok=True)
     return repo.repo_dir

@@ -5,7 +5,7 @@ from pathlib import Path
 import click
 import pytest
 
-from dot_agent_kit.commands.run.group import (
+from dot_agent_kit.commands.kit_command.group import (
     LazyKitGroup,
     _load_single_kit_commands,
 )
@@ -434,7 +434,10 @@ def test_kit_discovery_isolates_manifest_parse_errors(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test that manifest parse errors don't prevent other kits from loading."""
-    from dot_agent_kit.commands.run.group import _load_kit_commands, run_group
+    from dot_agent_kit.commands.kit_command.group import (
+        _load_kit_commands,
+        kit_command_group,
+    )
 
     # Create a mock BundledKitSource that returns two kits
     class MockSource:
@@ -488,27 +491,27 @@ kit_cli_commands:
     )
 
     # Monkeypatch the module to use our test directory
-    from dot_agent_kit.commands.run import group as group_module
+    from dot_agent_kit.commands.kit_command import group as group_module
 
     monkeypatch.setattr(group_module, "BundledKitSource", MockSource)
     monkeypatch.setattr(group_module, "KITS_DATA_DIR", kits_dir)
 
     # Clear any previously loaded commands
-    run_group.commands.clear()
+    kit_command_group.commands.clear()
 
     # This should not raise - bad kit should be isolated
     _load_kit_commands()
 
     # Good kit should have been loaded despite bad kit failure
-    assert "good-kit" in run_group.commands
-    assert "bad-kit" not in run_group.commands
+    assert "good-kit" in kit_command_group.commands
+    assert "bad-kit" not in kit_command_group.commands
 
 
 def test_kit_discovery_isolates_add_command_errors(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test that errors from add_command don't prevent other kits from loading."""
-    from dot_agent_kit.commands.run.group import _load_kit_commands, run_group
+    from dot_agent_kit.commands.kit_command.group import _load_kit_commands, kit_command_group
 
     # Create kit directories
     kits_dir = tmp_path / "kits"
@@ -551,13 +554,13 @@ def test_command():
             return ["kit1", "kit2"]
 
     # Monkeypatch
-    from dot_agent_kit.commands.run import group as group_module
+    from dot_agent_kit.commands.kit_command import group as group_module
 
     monkeypatch.setattr(group_module, "BundledKitSource", MockSource)
     monkeypatch.setattr(group_module, "KITS_DATA_DIR", kits_dir)
 
     # Simulate add_command failure for kit1
-    original_add_command = run_group.add_command
+    original_add_command = kit_command_group.add_command
     call_count = [0]
 
     def failing_add_command(cmd: click.Command) -> None:
@@ -568,13 +571,13 @@ def test_command():
         # Second call succeeds (kit2)
         original_add_command(cmd)
 
-    monkeypatch.setattr(run_group, "add_command", failing_add_command)
+    monkeypatch.setattr(kit_command_group, "add_command", failing_add_command)
 
     # Clear any previously loaded commands
-    run_group.commands.clear()
+    kit_command_group.commands.clear()
 
     # This should not raise - kit1 failure should be isolated
     _load_kit_commands()
 
     # kit2 should have been loaded despite kit1 failure
-    assert "kit2" in run_group.commands
+    assert "kit2" in kit_command_group.commands

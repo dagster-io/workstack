@@ -285,6 +285,7 @@ This is a hard rule with no exceptions:
 **When conflicts occur:** Display the error, show resolution steps, and STOP.
 
 **Why this matters:** Automated conflict resolution can cause:
+
 - Data loss from incorrect merge decisions
 - Broken code from wrong conflict choices
 - Security issues from merging incompatible changes
@@ -305,6 +306,7 @@ Manual resolution by a human ensures correctness and safety.
 The agent has stopped and is waiting for you to sync. Follow these steps:
 
 1. **Sync your local trunk** (you must do this manually):
+
    ```bash
    gt sync -f
    # OR if you're using erk:
@@ -331,6 +333,7 @@ The agent has stopped and is waiting for you to sync. Follow these steps:
 The agent has stopped and is waiting for you to resolve this. Follow these steps:
 
 1. **Run interactive squash** (you must do this manually):
+
    ```bash
    gt squash
    ```
@@ -355,6 +358,7 @@ The agent has stopped and is waiting for you to resolve this. Follow these steps
 The agent has stopped and is waiting for you to resolve this. Choose one approach:
 
 **Option 1: Rebase onto parent** (recommended)
+
 ```bash
 # Manually rebase your branch onto its parent
 gt stack fix
@@ -363,6 +367,7 @@ gt stack fix
 ```
 
 **Option 2: Sync with trunk first**
+
 ```bash
 # Update your local trunk to match remote
 gt sync -f

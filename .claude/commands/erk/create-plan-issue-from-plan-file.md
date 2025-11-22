@@ -263,21 +263,26 @@ Check if the `erk-plan` label exists, and create it if needed:
 
 ### Step 6: Create GitHub Issue
 
-Use gh CLI to create the issue:
+Use the kit CLI command to create the issue:
 
-1. Create issue with gh CLI:
+1. Create issue using kit CLI command:
 
    ```bash
-   gh issue create \
-     --title "<extracted-title>" \
-     --body-file <path-to-plan-file> \
-     --label "erk-plan" \
-     --repo <owner>/<repo>
+   result=$(cat <path-to-plan-file> | dot-agent kit-command erk create-issue "<extracted-title>" --label "erk-plan")
+
+   # Parse JSON output
+   if ! echo "$result" | jq -e '.success' > /dev/null; then
+       echo "❌ Error: Failed to create GitHub issue" >&2
+       exit 1
+   fi
+
+   issue_number=$(echo "$result" | jq -r '.issue_number')
+   issue_url=$(echo "$result" | jq -r '.issue_url')
    ```
 
-2. Parse issue number from output (gh returns URL like `https://github.com/owner/repo/issues/123`)
+   Note: The kit CLI command handles body via stdin, eliminating permission prompts
 
-3. If gh command fails:
+2. If kit command fails:
 
    ```
    ❌ Error: Failed to create GitHub issue

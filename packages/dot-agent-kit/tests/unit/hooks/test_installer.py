@@ -44,7 +44,8 @@ def test_install_hooks_basic(tmp_project: Path) -> None:
 
     hook_entry = lifecycle_hooks[0].hooks[0]
     expected_cmd = (
-        "DOT_AGENT_KIT_ID=test-kit DOT_AGENT_HOOK_ID=test-hook dot-agent kit-command test-kit test-hook"
+        "DOT_AGENT_KIT_ID=test-kit DOT_AGENT_HOOK_ID=test-hook "
+        "dot-agent kit-command test-kit test-hook"
     )
     assert hook_entry.command == expected_cmd
     assert hook_entry.timeout == 30

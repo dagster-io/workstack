@@ -53,6 +53,15 @@ class LazyGroup(click.Group):
         self.add_command(kit_command_group)
         self.add_command(md_group)
 
+        # Add 'run' as an alias for 'kit-command' for backwards compatibility
+        # Users can use either 'dot-agent run' or 'dot-agent kit-command'
+        run_alias = click.Group(
+            name="run",
+            help="(Alias for kit-command) Run kit cli commands from bundled kits.",
+            commands=kit_command_group.commands,
+        )
+        self.add_command(run_alias)
+
         self._commands_registered = True
 
 

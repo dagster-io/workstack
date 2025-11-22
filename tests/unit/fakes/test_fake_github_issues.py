@@ -4,8 +4,6 @@ These tests verify that FakeGitHubIssues correctly simulates GitHub issue operat
 providing reliable test doubles for tests that use issue functionality.
 """
 
-from datetime import UTC, datetime
-
 import pytest
 
 from erk.core.github.issues import FakeGitHubIssues

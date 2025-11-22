@@ -4,7 +4,6 @@ Tests the integration of plan file reading, worktree creation, issue creation,
 and linking them together via .plan/issue.json.
 """
 
-from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest

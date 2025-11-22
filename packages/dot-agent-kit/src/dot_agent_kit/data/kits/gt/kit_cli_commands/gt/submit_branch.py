@@ -51,12 +51,14 @@ Examples:
 import json
 import time
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Literal, NamedTuple
 
 import click
 
 from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.ops import GtKit
 from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops import RealGtKit
+from erk.core.plan_folder import has_issue_reference, read_issue_reference
 
 
 class SubmitResult(NamedTuple):
@@ -318,6 +320,17 @@ def execute_post_analysis(
     lines = commit_message.split("\n", 1)
     pr_title = lines[0]
     pr_body = lines[1].lstrip() if len(lines) > 1 else ""
+
+    # Check for issue reference in .plan/issue.json
+    cwd = Path.cwd()
+    plan_dir = cwd / ".plan"
+
+    if has_issue_reference(plan_dir):
+        issue_ref = read_issue_reference(plan_dir)
+        if issue_ref is not None:
+            # Prepend "Closes #N" to PR body
+            closing_text = f"Closes #{issue_ref.issue_number}\n\n"
+            pr_body = closing_text + pr_body
 
     # Step 1: Get current branch for context
     branch_name = ops.git().get_current_branch()

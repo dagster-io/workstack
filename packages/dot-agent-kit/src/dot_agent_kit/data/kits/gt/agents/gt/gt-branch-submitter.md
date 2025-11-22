@@ -38,6 +38,8 @@ Task(
 - Gets current branch and parent branch
 - Counts commits in the branch (compared to parent)
 - Runs `gt squash` to consolidate commits (only if 2+ commits exist)
+- Checks for issue reference in `.plan/issue.json`
+- Adds "Closes #N" to PR body if issue reference exists
 - Returns JSON with branch info and status
 
 **Parse the JSON output** to get:
@@ -225,11 +227,14 @@ After submission, provide a clear summary using the Graphite URL from the JSON o
 ✓ Created commit with AI-generated message
 ✓ Submitted branch to Graphite
 ✓ Updated PR #<pr_number> metadata
+✓ Linked to issue #<number> (will auto-close on merge)
 
 ### View PR
 
 <graphite_url from JSON>
 ```
+
+**Note:** The "Linked to issue" line should only be displayed if an issue reference was found in `.plan/issue.json`.
 
 **Formatting requirements:**
 
@@ -242,6 +247,18 @@ After submission, provide a clear summary using the Graphite URL from the JSON o
 - Each bullet point must have a newline after it
 
 **CRITICAL**: The Graphite URL MUST be the absolute last line of your output. Do not add any text, confirmations, follow-up questions, or messages after displaying the URL.
+
+## Implementation Details
+
+### Automatic Issue Linking
+
+When a worktree was created from a GitHub issue via `/erk:create-wt-from-plan-issue`, the agent automatically:
+
+- Reads issue reference from `.plan/issue.json`
+- Prepends "Closes #<issue-number>" to PR body
+- GitHub will auto-close the issue when PR is merged
+
+This linking is automatic and requires no user intervention.
 
 ## Error Handling
 

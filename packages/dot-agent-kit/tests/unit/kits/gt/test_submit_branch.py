@@ -1,6 +1,7 @@
 """Tests for submit_branch kit CLI command using fake ops."""
 
 import json
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
@@ -419,6 +420,106 @@ class TestPostAnalysisExecution:
         assert mock_sleep.call_count == 2
         mock_sleep.assert_any_call(0.5)
         mock_sleep.assert_any_call(1.0)
+
+    def test_post_analysis_with_issue_reference(self, tmp_path: Path) -> None:
+        """Test that PR body includes 'Closes #N' when issue.json exists."""
+        # Create .plan/issue.json in temp directory
+        plan_dir = tmp_path / ".plan"
+        plan_dir.mkdir()
+        issue_json = plan_dir / "issue.json"
+        issue_json.write_text(
+            '{"issue_number": 123, "issue_url": "https://github.com/repo/issues/123", '
+            '"created_at": "2025-01-01T00:00:00Z", "synced_at": "2025-01-01T00:00:00Z"}'
+        )
+
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_pr(456, url="https://github.com/repo/pull/456")
+        )
+
+        # Mock Path.cwd() to return our temp directory
+        patch_path = "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        with patch(patch_path) as mock_cwd:
+            mock_cwd.return_value = tmp_path
+
+            result = execute_post_analysis(
+                commit_message="Add feature\n\nFull description",
+                ops=ops,
+            )
+
+        assert isinstance(result, PostAnalysisResult)
+        assert result.success is True
+        # Verify that update_pr_metadata was called with "Closes #123" prepended
+        github_ops = ops.github()
+        github_state = github_ops.get_state()
+        assert github_state.pr_titles[456] == "Add feature"
+        assert github_state.pr_bodies[456] == "Closes #123\n\nFull description"
+
+    def test_post_analysis_without_issue_reference(self, tmp_path: Path) -> None:
+        """Test that PR body is unchanged when issue.json does not exist."""
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_pr(456, url="https://github.com/repo/pull/456")
+        )
+
+        # Mock Path.cwd() to return temp directory without .plan/issue.json
+        patch_path = "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        with patch(patch_path) as mock_cwd:
+            mock_cwd.return_value = tmp_path
+
+            result = execute_post_analysis(
+                commit_message="Add feature\n\nFull description",
+                ops=ops,
+            )
+
+        assert isinstance(result, PostAnalysisResult)
+        assert result.success is True
+        # Verify that PR body is unchanged (no "Closes #N")
+        github_ops = ops.github()
+        github_state = github_ops.get_state()
+        assert github_state.pr_titles[456] == "Add feature"
+        assert github_state.pr_bodies[456] == "Full description"
+
+    def test_post_analysis_with_issue_reference_empty_body(self, tmp_path: Path) -> None:
+        """Test that PR body is just 'Closes #N' when commit message has only title."""
+        # Create .plan/issue.json in temp directory
+        plan_dir = tmp_path / ".plan"
+        plan_dir.mkdir()
+        issue_json = plan_dir / "issue.json"
+        issue_json.write_text(
+            '{"issue_number": 789, "issue_url": "https://github.com/repo/issues/789", '
+            '"created_at": "2025-01-01T00:00:00Z", "synced_at": "2025-01-01T00:00:00Z"}'
+        )
+
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_pr(456, url="https://github.com/repo/pull/456")
+        )
+
+        # Mock Path.cwd() to return our temp directory
+        patch_path = "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        with patch(patch_path) as mock_cwd:
+            mock_cwd.return_value = tmp_path
+
+            # Commit message with only title (no body)
+            result = execute_post_analysis(
+                commit_message="Add feature",
+                ops=ops,
+            )
+
+        assert isinstance(result, PostAnalysisResult)
+        assert result.success is True
+        # Verify that PR body is just "Closes #789\n\n" (no extra content)
+        github_ops = ops.github()
+        github_state = github_ops.get_state()
+        assert github_state.pr_titles[456] == "Add feature"
+        assert github_state.pr_bodies[456] == "Closes #789\n\n"
 
 
 class TestSubmitBranchCLI:

@@ -239,7 +239,7 @@ Two distinct patterns exist:
 Slash commands invoke kit CLI commands and parse their JSON responses:
 
 1. User runs: `/gt:update-pr`
-2. Slash command invokes: `dot-agent run gt update-pr`
+2. Slash command invokes: `dot-agent kit-command gt update-pr`
 3. Kit CLI command executes operations, outputs JSON
 4. Slash command parses JSON and reports to user
 

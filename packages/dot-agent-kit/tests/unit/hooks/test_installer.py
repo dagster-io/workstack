@@ -14,7 +14,7 @@ def test_install_hooks_basic(tmp_project: Path) -> None:
         id="test-hook",
         lifecycle="UserPromptSubmit",
         matcher="**",
-        invocation="dot-agent run test-kit test-hook",
+        invocation="dot-agent kit-command test-kit test-hook",
         description="Test hook",
         timeout=30,
     )
@@ -44,7 +44,8 @@ def test_install_hooks_basic(tmp_project: Path) -> None:
 
     hook_entry = lifecycle_hooks[0].hooks[0]
     expected_cmd = (
-        "DOT_AGENT_KIT_ID=test-kit DOT_AGENT_HOOK_ID=test-hook dot-agent run test-kit test-hook"
+        "DOT_AGENT_KIT_ID=test-kit DOT_AGENT_HOOK_ID=test-hook "
+        "dot-agent kit-command test-kit test-hook"
     )
     assert hook_entry.command == expected_cmd
     assert hook_entry.timeout == 30
@@ -58,7 +59,7 @@ def test_install_multiple_hooks(tmp_project: Path) -> None:
             id="hook-1",
             lifecycle="UserPromptSubmit",
             matcher="**",
-            invocation="dot-agent run multi-kit hook-1",
+            invocation="dot-agent kit-command multi-kit hook-1",
             description="Hook 1",
             timeout=30,
         ),
@@ -66,7 +67,7 @@ def test_install_multiple_hooks(tmp_project: Path) -> None:
             id="hook-2",
             lifecycle="UserPromptSubmit",
             matcher="*.py",
-            invocation="dot-agent run multi-kit hook-2",
+            invocation="dot-agent kit-command multi-kit hook-2",
             description="Hook 2",
             timeout=45,
         ),
@@ -74,7 +75,7 @@ def test_install_multiple_hooks(tmp_project: Path) -> None:
             id="hook-3",
             lifecycle="PostToolUse",
             matcher="**",
-            invocation="dot-agent run multi-kit hook-3",
+            invocation="dot-agent kit-command multi-kit hook-3",
             description="Hook 3",
             timeout=60,
         ),
@@ -113,7 +114,7 @@ def test_install_hooks_missing_script(tmp_project: Path) -> None:
             id="exists",
             lifecycle="UserPromptSubmit",
             matcher="**",
-            invocation="dot-agent run partial-kit exists",
+            invocation="dot-agent kit-command partial-kit exists",
             description="Exists",
             timeout=30,
         ),
@@ -121,7 +122,7 @@ def test_install_hooks_missing_script(tmp_project: Path) -> None:
             id="missing",
             lifecycle="UserPromptSubmit",
             matcher="**",
-            invocation="dot-agent run partial-kit missing",
+            invocation="dot-agent kit-command partial-kit missing",
             description="Missing",
             timeout=30,
         ),
@@ -152,7 +153,7 @@ def test_install_hooks_replaces_existing(tmp_project: Path) -> None:
         id="old",
         lifecycle="UserPromptSubmit",
         matcher="**",
-        invocation="dot-agent run test-kit old",
+        invocation="dot-agent kit-command test-kit old",
         description="Old",
         timeout=30,
     )
@@ -163,7 +164,7 @@ def test_install_hooks_replaces_existing(tmp_project: Path) -> None:
         id="new",
         lifecycle="PostToolUse",
         matcher="*.md",
-        invocation="dot-agent run test-kit new",
+        invocation="dot-agent kit-command test-kit new",
         description="New",
         timeout=45,
     )
@@ -222,7 +223,7 @@ def test_install_hooks_creates_directories(tmp_project: Path) -> None:
         id="test",
         lifecycle="UserPromptSubmit",
         matcher="**",
-        invocation="dot-agent run test-kit test",
+        invocation="dot-agent kit-command test-kit test",
         description="Test",
         timeout=30,
     )
@@ -240,7 +241,7 @@ def test_install_hooks_flattens_nested_scripts(tmp_project: Path) -> None:
         id="nested",
         lifecycle="UserPromptSubmit",
         matcher="**",
-        invocation="dot-agent run test-kit nested",
+        invocation="dot-agent kit-command test-kit nested",
         description="Nested",
         timeout=30,
     )
@@ -252,7 +253,7 @@ def test_install_hooks_flattens_nested_scripts(tmp_project: Path) -> None:
     assert settings.hooks is not None
     hook_entry = settings.hooks["UserPromptSubmit"][0].hooks[0]
     expected_cmd = (
-        "DOT_AGENT_KIT_ID=test-kit DOT_AGENT_HOOK_ID=nested dot-agent run test-kit nested"
+        "DOT_AGENT_KIT_ID=test-kit DOT_AGENT_HOOK_ID=nested dot-agent kit-command test-kit nested"
     )
     assert hook_entry.command == expected_cmd
 
@@ -264,7 +265,7 @@ def test_remove_hooks_basic(tmp_project: Path) -> None:
         id="test",
         lifecycle="UserPromptSubmit",
         matcher="**",
-        invocation="dot-agent run test-kit test",
+        invocation="dot-agent kit-command test-kit test",
         description="Test",
         timeout=30,
     )
@@ -290,7 +291,7 @@ def test_remove_hooks_preserves_other_kits(tmp_project: Path) -> None:
         id="hook-a",
         lifecycle="UserPromptSubmit",
         matcher="**",
-        invocation="dot-agent run kit-a hook-a",
+        invocation="dot-agent kit-command kit-a hook-a",
         description="A",
         timeout=30,
     )
@@ -298,7 +299,7 @@ def test_remove_hooks_preserves_other_kits(tmp_project: Path) -> None:
         id="hook-b",
         lifecycle="UserPromptSubmit",
         matcher="**",
-        invocation="dot-agent run kit-b hook-b",
+        invocation="dot-agent kit-command kit-b hook-b",
         description="B",
         timeout=30,
     )
@@ -358,7 +359,7 @@ def test_remove_hooks_cleans_empty_lifecycles(tmp_project: Path) -> None:
         id="test",
         lifecycle="UserPromptSubmit",
         matcher="**",
-        invocation="dot-agent run test-kit test",
+        invocation="dot-agent kit-command test-kit test",
         description="Test",
         timeout=30,
     )
@@ -380,7 +381,7 @@ def test_hook_entry_metadata_roundtrip(tmp_project: Path) -> None:
         id="metadata-test",
         lifecycle="UserPromptSubmit",
         matcher="**",
-        invocation="dot-agent run metadata-kit metadata-test",
+        invocation="dot-agent kit-command metadata-kit metadata-test",
         description="Metadata test",
         timeout=30,
     )
@@ -419,7 +420,7 @@ def test_install_hook_without_matcher(tmp_project: Path) -> None:
     hook_def = HookDefinition(
         id="test-hook",
         lifecycle="UserPromptSubmit",
-        invocation="dot-agent run test-kit test-hook",
+        invocation="dot-agent kit-command test-kit test-hook",
         description="Test hook without matcher",
         timeout=30,
     )
@@ -463,7 +464,7 @@ def test_install_hooks_includes_type_field(tmp_project: Path) -> None:
         id="test-hook",
         lifecycle="UserPromptSubmit",
         matcher="**",
-        invocation="dot-agent run test-kit test-hook",
+        invocation="dot-agent kit-command test-kit test-hook",
         description="Test hook",
         timeout=30,
     )

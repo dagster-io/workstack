@@ -22,10 +22,10 @@ KITS_MODULE_PREFIX = "dot_agent_kit.data.kits"
 
 @click.group()
 @click.pass_context
-def run_group(ctx: click.Context) -> None:
+def kit_command_group(ctx: click.Context) -> None:
     """Run kit cli commands from bundled kits.
 
-    Lists available kits with kit cli commands. Use 'dot-agent run <kit_id> --help'
+    Lists available kits with kit cli commands. Use 'dot-agent kit-command <kit_id> --help'
     to see available kit cli commands for a specific kit.
     """
 
@@ -234,8 +234,8 @@ def _load_kit_commands() -> None:
             if kit_group is None:
                 continue
 
-            # Add the kit's group to the run group
-            run_group.add_command(kit_group)
+            # Add the kit's group to the kit_command group
+            kit_command_group.add_command(kit_group)
 
         except Exception as e:
             # Isolate individual kit failures - continue processing other kits

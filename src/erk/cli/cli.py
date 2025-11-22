@@ -21,7 +21,6 @@ from erk.cli.commands.shell_integration import hidden_shell_cmd
 from erk.cli.commands.split import split_cmd
 from erk.cli.commands.status import status_cmd
 from erk.cli.commands.submit import submit_cmd
-from erk.cli.commands.sync import sync_cmd
 from erk.cli.commands.up import up_cmd
 from erk.core.context import create_context
 
@@ -62,7 +61,6 @@ cli.add_command(plan_issue_group)
 cli.add_command(runs_cmd)
 cli.add_command(split_cmd)
 cli.add_command(submit_cmd)
-cli.add_command(sync_cmd)
 cli.add_command(hidden_shell_cmd)
 cli.add_command(prepare_cwd_recovery_cmd)
 

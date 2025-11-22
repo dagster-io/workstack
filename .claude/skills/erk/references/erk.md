@@ -589,31 +589,6 @@ erk delete my-feature --dry-run
 
 ### Cleanup & Maintenance
 
-#### `erk sync`
-
-Sync with Graphite and clean up merged worktrees.
-
-```bash
-# Sync and show cleanup candidates
-erk sync
-
-# Force sync and auto-remove merged erks
-erk sync --force
-
-# Preview without executing
-erk sync --dry-run
-```
-
-**What it does:**
-
-1. Switches to root worktree (avoiding conflicts)
-2. Runs `gt repo sync` to update branch tracking
-3. Identifies worktrees with merged/closed PRs
-4. Prompts for confirmation before removal (unless `--force`)
-5. Switches back to original worktree
-
-**Requirements**: Graphite CLI (`gt`) and GitHub CLI (`gh`) installed.
-
 ---
 
 ## Workflow Patterns
@@ -733,12 +708,6 @@ erk create --from-current-branch
 ### Pattern 7: Cleanup After Merging
 
 ```bash
-# Find merged worktrees
-erk sync --dry-run
-
-# Auto-cleanup with sync
-erk sync --force
-
 # Manual deletion
 erk delete merged-feature
 ```
@@ -813,9 +782,6 @@ erk checkout <branch>  # Navigate to specific branch (across worktrees)
 
 # Stack visualization
 erk list --stacks      # Show stack structure
-
-# Sync and cleanup
-erk sync               # Run gt repo sync + cleanup
 ```
 
 **Graphite commands used:**
@@ -838,10 +804,6 @@ Requires GitHub CLI (`gh`) installed and authenticated:
 # PR status in listings
 erk list --stacks
 # Shows: ✅ #123, 🚧 #456, 🟣 #789
-
-# Find merged worktrees
-erk sync --dry-run
-# Identifies worktrees with merged/closed PRs
 ```
 
 **GitHub commands used:**
@@ -972,19 +934,9 @@ echo $DATABASE_URL  # postgresql://localhost/payment-service_db
 ```bash
 # After merging several PRs on GitHub
 
-# Find merged worktrees
-erk sync --dry-run
-# Output:
-# feature-a [feature-a] - merged (PR #123)
-# feature-b [feature-b] - merged (PR #124)
-
 # Manual cleanup
 erk delete feature-a
 erk delete feature-b
-
-# Or automatic cleanup
-erk sync --force
-# Syncs with Graphite and removes all merged worktrees
 ```
 
 ### Example 6: Moving Work

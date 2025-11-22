@@ -18,7 +18,7 @@ Invoke this skill when users:
 - Need help with erk configuration or setup
 - Want to understand the erk mental model or directory structure
 - Ask about integrating erk with Graphite for stacked diffs
-- Need guidance on cleanup, syncing, or maintenance workflows
+- Need guidance on cleanup or maintenance workflows
 - Request help with environment isolation across worktrees
 
 ## Core Concepts
@@ -113,10 +113,8 @@ Load `references/erk.md` and search for "erk list" section to provide:
 
 ### Cleanup and Maintenance
 
-Load `references/erk.md` and search for "erk sync" section to provide:
+Load `references/erk.md` for cleanup guidance:
 
-- Finding merged worktrees: `erk sync --dry-run`
-- Syncing and cleaning with Graphite: `erk sync -f`
 - Manual deletion: `erk delete <name>`
 
 ## Workflow Guidance
@@ -161,7 +159,6 @@ When users need PR status information:
 
 - Load the GitHub Integration section from `references/erk.md`
 - Explain PR status indicators in listings
-- Show `erk sync --dry-run` for finding merged worktrees
 - Note requirement for `gh` CLI
 
 ## Architecture for Contributors

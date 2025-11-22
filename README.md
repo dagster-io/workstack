@@ -103,9 +103,6 @@ erk list                   # List all worktrees (alias: ls)
 erk list --ci              # Fetch CI check status from GitHub (slower)
 erk rename OLD NEW         # Rename a worktree
 erk delete NAME            # Delete worktree
-erk sync                   # Sync with Graphite, show cleanup candidates
-erk sync --dry-run         # Show safe-to-delete worktrees (merged PRs)
-erk sync -f                # Sync and auto-remove merged worktrees
 erk submit                 # Submit plan for remote AI implementation (GitHub Actions)
 ```
 

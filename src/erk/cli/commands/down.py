@@ -37,8 +37,7 @@ def _verify_pr_merged(ctx: ErkContext, repo_root: Path, branch: str) -> None:
 
     if pr_info.state == "NONE" or pr_info.pr_number is None:
         user_output(
-            click.style("Error: ", fg="red")
-            + f"No pull request found for branch '{branch}'.\n"
+            click.style("Error: ", fg="red") + f"No pull request found for branch '{branch}'.\n"
             "Cannot verify merge status."
         )
         raise SystemExit(1)
@@ -53,19 +52,16 @@ def _verify_pr_merged(ctx: ErkContext, repo_root: Path, branch: str) -> None:
 
 
 def _delete_branch_and_worktree(
-    ctx: ErkContext, branch: str, worktree_path: Path
+    ctx: ErkContext, repo_root: Path, branch: str, worktree_path: Path
 ) -> None:
     """Delete the specified branch and its worktree.
 
     Uses two-step deletion: git worktree remove, then manual cleanup.
     """
-    repo_root = ctx.repo.root
 
     # Remove the worktree
     ctx.git.remove_worktree(repo_root, worktree_path, force=True)
-    user_output(
-        f"✓ Removed worktree: {click.style(str(worktree_path), fg='green')}"
-    )
+    user_output(f"✓ Removed worktree: {click.style(str(worktree_path), fg='green')}")
 
     # Delete the branch using Git abstraction
     ctx.git.delete_branch_with_graphite(repo_root, branch, force=True)
@@ -163,8 +159,8 @@ def down_cmd(ctx: ErkContext, script: bool, delete_current: bool) -> None:
             else:
                 user_output(f"Switched to root repo: {root_path}")
 
-            # Perform cleanup (no context regeneration needed - we haven't actually changed directories)
-            _delete_branch_and_worktree(ctx, current_branch, current_worktree_path)
+            # Perform cleanup (no context regeneration needed - we haven't changed dirs)
+            _delete_branch_and_worktree(ctx, repo.root, current_branch, current_worktree_path)
 
             # Exit after cleanup
             raise SystemExit(0)
@@ -198,12 +194,13 @@ def down_cmd(ctx: ErkContext, script: bool, delete_current: bool) -> None:
             machine_output(str(result.path), nl=False)
         else:
             user_output(
-                "Shell integration not detected. Run 'erk init --shell' to set up automatic activation."
+                "Shell integration not detected. "
+                "Run 'erk init --shell' to set up automatic activation."
             )
             user_output("\nOr use: source <(erk down --script)")
 
         # Perform cleanup (no context regeneration needed - we haven't actually changed directories)
-        _delete_branch_and_worktree(ctx, current_branch, current_worktree_path)
+        _delete_branch_and_worktree(ctx, repo.root, current_branch, current_worktree_path)
 
         # Exit after cleanup
         raise SystemExit(0)

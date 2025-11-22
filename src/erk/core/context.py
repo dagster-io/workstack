@@ -24,10 +24,10 @@ from erk.core.github.real import RealGitHub
 from erk.core.graphite.abc import Graphite
 from erk.core.graphite.dry_run import DryRunGraphite
 from erk.core.graphite.real import RealGraphite
-from erk.core.plan_issue_store import GitHubPlanIssueStore, PlanIssueStore
 from erk.core.implementation_queue.github.abc import GitHubAdmin
 from erk.core.implementation_queue.github.dry_run import DryRunGitHubAdmin
 from erk.core.implementation_queue.github.real import RealGitHubAdmin
+from erk.core.plan_issue_store import GitHubPlanIssueStore, PlanIssueStore
 from erk.core.repo_discovery import (
     NoRepoSentinel,
     RepoContext,

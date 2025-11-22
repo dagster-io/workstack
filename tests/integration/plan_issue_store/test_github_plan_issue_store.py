@@ -308,25 +308,19 @@ def test_list_plan_issues_passes_limit_to_interface() -> None:
     """Test list_plan_issues passes limit to GitHubIssues interface."""
     now = datetime.now(UTC)
     issues = {
-        1: IssueInfo(
+        1: create_test_issue(
             number=1,
             title="Plan 1",
             body="Body 1",
-            state="OPEN",
-            url="http://url/1",
             labels=["erk-plan"],
-            assignees=[],
             created_at=now,
             updated_at=now,
         ),
-        2: IssueInfo(
+        2: create_test_issue(
             number=2,
             title="Plan 2",
             body="Body 2",
-            state="OPEN",
-            url="http://url/2",
             labels=["erk-plan"],
-            assignees=[],
             created_at=now,
             updated_at=now,
         ),

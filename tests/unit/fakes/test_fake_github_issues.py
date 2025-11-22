@@ -4,6 +4,8 @@ These tests verify that FakeGitHubIssues correctly simulates GitHub issue operat
 providing reliable test doubles for tests that use issue functionality.
 """
 
+from datetime import UTC, datetime
+
 import pytest
 
 from erk.core.github.issues import FakeGitHubIssues
@@ -521,36 +523,24 @@ def test_list_issues_respects_limit() -> None:
     """Test list_issues applies limit correctly."""
     now = datetime.now(UTC)
     issues_dict = {
-        1: IssueInfo(
+        1: create_test_issue(
             number=1,
             title="Issue 1",
             body="Body 1",
-            state="OPEN",
-            url="http://url/1",
-            labels=[],
-            assignees=[],
             created_at=now,
             updated_at=now,
         ),
-        2: IssueInfo(
+        2: create_test_issue(
             number=2,
             title="Issue 2",
             body="Body 2",
-            state="OPEN",
-            url="http://url/2",
-            labels=[],
-            assignees=[],
             created_at=now,
             updated_at=now,
         ),
-        3: IssueInfo(
+        3: create_test_issue(
             number=3,
             title="Issue 3",
             body="Body 3",
-            state="OPEN",
-            url="http://url/3",
-            labels=[],
-            assignees=[],
             created_at=now,
             updated_at=now,
         ),

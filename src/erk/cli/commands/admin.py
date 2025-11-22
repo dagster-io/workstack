@@ -1,5 +1,7 @@
 """Admin commands for repository configuration."""
 
+from typing import Literal
+
 import click
 
 from erk.cli.core import discover_repo_context
@@ -28,7 +30,7 @@ def admin_group() -> None:
     help="Disable PR creation for GitHub Actions workflows",
 )
 @click.pass_obj
-def github_pr_setting(ctx: ErkContext, action: str | None) -> None:
+def github_pr_setting(ctx: ErkContext, action: Literal["enable", "disable"] | None) -> None:
     """Manage GitHub Actions workflow permission for PR creation.
 
     Without flags: Display current setting

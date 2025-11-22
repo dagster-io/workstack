@@ -412,6 +412,11 @@ cat > "$worktree_path/.plan/issue.json" <<EOF
 }
 EOF
 
+# Post GitHub comment documenting worktree creation
+if ! dot-agent kit-command erk comment-worktree-creation "$issue_number" "$worktree_name" "$branch_name"; then
+    echo "⚠️  Warning: Failed to post comment to issue (worktree created successfully)" >&2
+fi
+
 # Display success message
 echo "✅ Worktree created from issue #$issue_number: **$worktree_name**"
 echo ""

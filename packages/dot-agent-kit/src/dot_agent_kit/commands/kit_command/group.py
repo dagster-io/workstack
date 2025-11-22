@@ -145,7 +145,7 @@ class LazyKitGroup(click.Group):
             command_func = getattr(module, function_name)
 
             # Add the command to the kit's group
-            self.add_command(command_func)
+            self.add_command(command_func, name=command_def.name)
 
         # Validate that at least one command was successfully loaded
         commands_loaded = len(self.commands) - commands_before

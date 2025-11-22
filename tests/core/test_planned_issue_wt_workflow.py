@@ -135,7 +135,9 @@ def test_workflow_issue_creation_tracks_erk_plan_label() -> None:
 
 def test_workflow_get_issue_after_creation() -> None:
     """Test retrieving issue info after creation."""
-    issues = FakeGitHubIssues(next_issue_number=42, issues={42: create_test_issue(42, "Test Issue", "Body content")})
+    issues = FakeGitHubIssues(
+        next_issue_number=42, issues={42: create_test_issue(42, "Test Issue", "Body content")}
+    )
 
     # Create issue
     issue_num = issues.create_issue(sentinel_path(), "Test Issue", "Body content", ["erk-plan"])

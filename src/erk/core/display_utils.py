@@ -221,3 +221,46 @@ def format_worktree_line(
         line += indicator
 
     return line
+
+
+def format_plan_issue_display(
+    plan_issue_identifier: str,
+    state: str,
+    title: str,
+    labels: list[str],
+    url: str | None = None,
+) -> str:
+    """Format a plan issue for display in lists.
+
+    Args:
+        plan_issue_identifier: Issue identifier (e.g., "42", "PROJ-123")
+        state: Issue state ("OPEN" or "CLOSED")
+        title: Issue title
+        labels: List of label names
+        url: Optional URL for clickable link
+
+    Returns:
+        Formatted string: "#42 (OPEN) [erk-plan] Title"
+    """
+    # Format state with color
+    state_color = "green" if state == "OPEN" else "red"
+    state_str = click.style(state, fg=state_color)
+
+    # Format identifier
+    id_text = f"#{plan_issue_identifier}"
+
+    # If we have a URL, make it clickable using OSC 8
+    if url:
+        colored_id = click.style(id_text, fg="cyan")
+        clickable_id = f"\033]8;;{url}\033\\{colored_id}\033]8;;\033\\"
+    else:
+        clickable_id = click.style(id_text, fg="cyan")
+
+    # Format labels
+    labels_str = ""
+    if labels:
+        labels_str = " " + " ".join(
+            click.style(f"[{label}]", fg="bright_magenta") for label in labels
+        )
+
+    return f"{clickable_id} ({state_str}){labels_str} {title}"

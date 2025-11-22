@@ -14,7 +14,7 @@ from erk.core.init_utils import (
     is_repo_named,
     render_config_template,
 )
-from erk.core.repo_discovery import ensure_repo_dir
+from erk.core.repo_discovery import ensure_erk_metadata_dir
 from erk.core.shell import Shell
 
 
@@ -260,7 +260,7 @@ def init_cmd(
         cfg_path = repo_context.root / "config.toml"
     else:
         # Worktree-level config goes in erks_dir
-        repo_dir = ensure_repo_dir(repo_context)
+        repo_dir = ensure_erk_metadata_dir(repo_context)
         cfg_path = repo_dir / "config.toml"
 
     if cfg_path.exists() and not force:

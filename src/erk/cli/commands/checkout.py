@@ -12,7 +12,7 @@ from erk.cli.graphite import find_worktrees_containing_branch
 from erk.cli.output import user_output
 from erk.core.context import ErkContext
 from erk.core.git.abc import WorktreeInfo
-from erk.core.repo_discovery import RepoContext, ensure_repo_dir
+from erk.core.repo_discovery import RepoContext, ensure_erk_metadata_dir
 
 
 def try_switch_root_worktree(ctx: ErkContext, repo: RepoContext, branch: str) -> Path | None:
@@ -213,7 +213,7 @@ def checkout_cmd(ctx: ErkContext, branch: str, script: bool) -> None:
         repo = ctx.repo
     else:
         repo = discover_repo_context(ctx, ctx.cwd)
-    ensure_repo_dir(repo)
+    ensure_erk_metadata_dir(repo)
 
     # Get all worktrees
     worktrees = ctx.git.list_worktrees(repo.root)

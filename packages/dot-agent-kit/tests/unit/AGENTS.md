@@ -11,11 +11,11 @@ This directory contains fast unit tests that run in complete isolation using in-
 
 ## Fixture Preference Hierarchy
 
-1. **`pure_erk_env` (PREFERRED)** - Completely in-memory, zero filesystem I/O
+1. **`erk_inmem_env` (PREFERRED)** - Completely in-memory, zero filesystem I/O
    - Use for testing command logic and output
    - Use for testing business logic without real directories
 
-2. **`simulated_erk_env`** - When real directories needed
+2. **`erk_isolated_fs_env`** - When real directories needed
    - Use for testing filesystem-dependent features
    - Creates actual temp directories with `isolated_filesystem()`
 
@@ -29,7 +29,7 @@ This directory contains fast unit tests that run in complete isolation using in-
 ctx = ErkContext(..., cwd=Path("/test/default/cwd"))
 
 # ✅ CORRECT - Use fixtures
-with pure_erk_env(runner) as env:
+with erk_inmem_env(runner) as env:
     ctx = ErkContext(..., cwd=env.cwd)
 ```
 

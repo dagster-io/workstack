@@ -5,7 +5,7 @@ This test verifies the fix for the bug where erk plan-issue list/get failed with
 commands instead of using repo.root (the actual git repository).
 
 The fix: plan-issue commands now explicitly use repo.root for GitHub operations
-instead of relying on ensure_repo_dir()'s return value.
+instead of relying on ensure_erk_metadata_dir()'s return value.
 """
 
 from pathlib import Path
@@ -26,13 +26,13 @@ def test_plan_issue_list_uses_repo_root_not_metadata_dir() -> None:
     to gh commands instead of repo.root.
 
     The bug call chain was:
-    1. list_cmd.py captured ensure_repo_dir() return value as repo_root
-    2. ensure_repo_dir() returned repo.repo_dir (erk metadata dir)
+    1. list_cmd.py captured ensure_erk_metadata_dir() return value as repo_root
+    2. ensure_erk_metadata_dir() returned repo.repo_dir (erk metadata dir)
     3. repo_root was passed to list_plan_issues(repo_root, ...)
     4. This became cwd for gh subprocess calls
     5. gh failed because metadata dir has no .git
 
-    After fix: Commands call ensure_repo_dir() for side effects but use repo.root directly.
+    After fix: Commands call ensure_erk_metadata_dir() for side effects but use repo.root directly.
     """
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:

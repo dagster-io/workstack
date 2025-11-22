@@ -13,7 +13,7 @@ from erk.cli.core import (
 from erk.cli.output import user_output
 from erk.core.context import ErkContext, create_context, regenerate_context
 from erk.core.git.abc import Git
-from erk.core.repo_discovery import ensure_repo_dir
+from erk.core.repo_discovery import ensure_erk_metadata_dir
 from erk.core.worktree_utils import (
     filter_non_trunk_branches,
     find_worktree_containing_path,
@@ -94,7 +94,7 @@ def _delete_worktree(
     # In pure test mode, ctx.cwd is a sentinel path; in production, it's updated
     # by regenerate_context() to match the actual OS cwd after safe_chdir() calls.
     repo = discover_repo_context(ctx, ctx.cwd)
-    ensure_repo_dir(repo)
+    ensure_erk_metadata_dir(repo)
     wt_path = worktree_path_for(repo.worktrees_dir, name)
 
     # Check if worktree exists using git operations (works with both real and sentinel paths)

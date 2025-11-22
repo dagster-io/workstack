@@ -59,7 +59,7 @@
 | Code in `__init__.py`                                            | → Keep empty or docstring-only (except top-level public API exports)                                                                                 |
 | Tests for speculative features                                   | → **FORBIDDEN** - Only test actively implemented code (TDD is fine)                                                                                  |
 | Creating `.claude/` artifacts                                    | → Use `kebab-case` (hyphens) NOT `snake_case` (underscores)                                                                                          |
-| `Path("/test/...")` or hardcoded paths                           | → **CATASTROPHIC** - Use `pure_erk_env` fixture - [Test Isolation](#6-test-isolation--must)                                                          |
+| `Path("/test/...")` or hardcoded paths                           | → **CATASTROPHIC** - Use `erk_inmem_env` fixture - [Test Isolation](#6-test-isolation--must)                                                         |
 | Writing or modifying tests                                       | → **🔴 LOAD fake-driven-testing skill FIRST** - Test patterns, architecture, anti-patterns                                                           |
 | Test that invokes subprocess or uses `time.sleep()`              | → **MUST** be integration test - [Test Categorization](#test-categorization-rules)                                                                   |
 | Creating or modifying hooks                                      | → [Hook Guide](docs/agent/hooks.md)                                                                                                                  |
@@ -195,11 +195,11 @@ cwd=Path("/test/default/cwd")
 cwd=Path("/some/hardcoded/path")
 
 # ✅ CORRECT - Use pure environment (PREFERRED)
-with pure_erk_env(runner) as env:
+with erk_inmem_env(runner) as env:
     ctx = ErkContext(..., cwd=env.cwd)
 
 # ✅ CORRECT - Use simulated environment (when filesystem I/O needed)
-with simulated_erk_env(runner) as env:
+with erk_isolated_fs_env(runner) as env:
     ctx = ErkContext(..., cwd=env.cwd)
 
 # ✅ CORRECT - Use tmp_path fixture
@@ -209,13 +209,13 @@ def test_something(tmp_path: Path) -> None:
 
 **Test Fixture Preference:**
 
-🟢 **PREFER `pure_erk_env`** - Completely in-memory, zero filesystem I/O
+🟢 **PREFER `erk_inmem_env`** - Completely in-memory, zero filesystem I/O
 
 - Uses sentinel paths that throw errors on filesystem operations
 - Faster and enforces complete test isolation
 - Use for tests verifying command logic and output
 
-🟡 **USE `simulated_erk_env`** - When real directories needed
+🟡 **USE `erk_isolated_fs_env`** - When real directories needed
 
 - Creates actual temp directories with `isolated_filesystem()`
 - Use for testing filesystem-dependent features

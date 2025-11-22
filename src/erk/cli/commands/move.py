@@ -8,7 +8,7 @@ from erk.cli.commands.navigation_helpers import complete_worktree_names
 from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output
 from erk.core.context import ErkContext
-from erk.core.repo_discovery import ensure_repo_dir
+from erk.core.repo_discovery import ensure_erk_metadata_dir
 from erk.core.worktree_utils import (
     MoveOperationType,
     determine_move_operation,
@@ -274,7 +274,7 @@ def move_cmd(
     """
     # Discover repository context
     repo = discover_repo_context(ctx, ctx.cwd)
-    ensure_repo_dir(repo)
+    ensure_erk_metadata_dir(repo)
     trunk_branch = ctx.trunk_branch
 
     # Resolve source worktree

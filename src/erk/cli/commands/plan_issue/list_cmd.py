@@ -6,7 +6,7 @@ from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
 from erk.core.context import ErkContext
 from erk.core.plan_issue_store import PlanIssueQuery, PlanIssueState
-from erk.core.repo_discovery import ensure_repo_dir
+from erk.core.repo_discovery import ensure_erk_metadata_dir
 
 
 @click.command("list")
@@ -41,7 +41,7 @@ def list_plan_issues(
         erk plan-issue list --limit 10
     """
     repo = discover_repo_context(ctx, ctx.cwd)
-    ensure_repo_dir(repo)  # Ensure erk metadata directories exist
+    ensure_erk_metadata_dir(repo)  # Ensure erk metadata directories exist
     repo_root = repo.root  # Use git repository root for GitHub operations
 
     # Build query from CLI options

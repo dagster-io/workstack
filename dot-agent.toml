@@ -78,11 +78,13 @@ artifacts = [
     ".claude/commands/erk/save-context-enriched-plan.md",
     ".claude/commands/erk/save-session-enriched-plan.md",
     ".claude/commands/erk/save-plan.md",
-    ".claude/commands/erk/create-planned-wt.md",
+    ".claude/commands/erk/create-wt-from-plan-file.md",
+    ".claude/commands/erk/create-wt-from-plan-issue.md",
     ".claude/commands/erk/create-plan-issue-from-context.md",
     ".claude/commands/erk/implement-plan.md",
     ".claude/commands/erk/implement-plan-issue.md",
     ".claude/commands/erk/fix-merge-conflicts.md",
+    ".claude/agents/erk/issue-wt-creator.md",
     ".claude/docs/erk/EXAMPLES.md",
 ]
 

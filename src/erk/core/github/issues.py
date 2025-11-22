@@ -116,6 +116,20 @@ class GitHubIssues(ABC):
         """
         ...
 
+    @abstractmethod
+    def add_labels(self, repo_root: Path, issue_number: int, labels: list[str]) -> None:
+        """Add labels to an existing issue.
+
+        Args:
+            repo_root: Repository root directory
+            issue_number: Issue number to add labels to
+            labels: List of label names to add
+
+        Raises:
+            RuntimeError: If gh CLI fails or issue not found
+        """
+        ...
+
 
 class RealGitHubIssues(GitHubIssues):
     """Production implementation using gh CLI.
@@ -252,6 +266,17 @@ class RealGitHubIssues(GitHubIssues):
             ]
             self._execute(create_cmd, repo_root)
 
+    def add_labels(self, repo_root: Path, issue_number: int, labels: list[str]) -> None:
+        """Add labels to issue using gh CLI.
+
+        Note: Uses gh's native error handling - gh CLI raises RuntimeError
+        on failures (not installed, not authenticated, issue not found).
+        """
+        cmd = ["gh", "issue", "edit", str(issue_number)]
+        for label in labels:
+            cmd.extend(["--add-label", label])
+        self._execute(cmd, repo_root)
+
 
 class FakeGitHubIssues(GitHubIssues):
     """In-memory fake implementation for testing.
@@ -279,6 +304,10 @@ class FakeGitHubIssues(GitHubIssues):
         self._created_issues: list[tuple[str, str, list[str]]] = []
         self._added_comments: list[tuple[int, str]] = []
         self._created_labels: list[tuple[str, str, str]] = []
+        self._added_labels: list[tuple[int, list[str]]] = []
+        # Provide _execute attribute for compatibility with GitHubPlanIssueStore
+        # This is a no-op for the fake since it doesn't execute real commands
+        self._execute = lambda cmd, repo_root: ""
 
     @property
     def created_issues(self) -> list[tuple[str, str, list[str]]]:
@@ -311,6 +340,14 @@ class FakeGitHubIssues(GitHubIssues):
         Returns set of label names.
         """
         return self._labels.copy()
+
+    @property
+    def added_labels(self) -> list[tuple[int, list[str]]]:
+        """Read-only access to added labels for test assertions.
+
+        Returns list of (issue_number, labels) tuples.
+        """
+        return self._added_labels
 
     def create_issue(self, repo_root: Path, title: str, body: str, labels: list[str]) -> int:
         """Create issue in fake storage and track mutation."""
@@ -382,6 +419,17 @@ class FakeGitHubIssues(GitHubIssues):
             self._labels.add(label)
             self._created_labels.append((label, description, color))
 
+    def add_labels(self, repo_root: Path, issue_number: int, labels: list[str]) -> None:
+        """Record label additions in mutation tracking.
+
+        Raises:
+            RuntimeError: If issue number not found (simulates gh CLI error)
+        """
+        if issue_number not in self._issues:
+            msg = f"Issue #{issue_number} not found"
+            raise RuntimeError(msg)
+        self._added_labels.append((issue_number, labels))
+
 
 class DryRunGitHubIssues(GitHubIssues):
     """No-op wrapper for GitHub issue operations.
@@ -433,4 +481,8 @@ class DryRunGitHubIssues(GitHubIssues):
         color: str,
     ) -> None:
         """No-op for ensuring label exists in dry-run mode."""
+        pass
+
+    def add_labels(self, repo_root: Path, issue_number: int, labels: list[str]) -> None:
+        """No-op for adding labels in dry-run mode."""
         pass

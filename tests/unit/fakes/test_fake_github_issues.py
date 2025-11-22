@@ -532,3 +532,69 @@ def test_fake_github_issues_created_labels_read_only() -> None:
     created = issues.created_labels
     assert len(created) == 1
     assert created[0] == ("test-label", "Test description", "000000")
+
+
+def test_fake_github_issues_add_labels_existing_issue() -> None:
+    """Test add_labels tracks mutation for existing issue."""
+    pre_configured = {
+        42: IssueInfo(
+            number=42,
+            title="Test",
+            body="Body",
+            state="OPEN",
+            url="https://github.com/owner/repo/issues/42",
+        )
+    }
+    issues = FakeGitHubIssues(issues=pre_configured)
+
+    issues.add_labels(sentinel_path(), 42, ["label1", "label2"])
+
+    assert issues.added_labels == [(42, ["label1", "label2"])]
+
+
+def test_fake_github_issues_add_labels_missing_issue() -> None:
+    """Test add_labels raises RuntimeError for missing issue."""
+    issues = FakeGitHubIssues()
+
+    with pytest.raises(RuntimeError, match="Issue #999 not found"):
+        issues.add_labels(sentinel_path(), 999, ["label"])
+
+
+def test_fake_github_issues_add_labels_multiple() -> None:
+    """Test add_labels tracks multiple label operations in order."""
+    pre_configured = {
+        10: IssueInfo(10, "Issue 10", "Body", "OPEN", "http://url/10"),
+        20: IssueInfo(20, "Issue 20", "Body", "OPEN", "http://url/20"),
+    }
+    issues = FakeGitHubIssues(issues=pre_configured)
+
+    issues.add_labels(sentinel_path(), 10, ["label1"])
+    issues.add_labels(sentinel_path(), 20, ["label2", "label3"])
+    issues.add_labels(sentinel_path(), 10, ["label4"])
+
+    assert issues.added_labels == [
+        (10, ["label1"]),
+        (20, ["label2", "label3"]),
+        (10, ["label4"]),
+    ]
+
+
+def test_fake_github_issues_added_labels_empty_initially() -> None:
+    """Test added_labels property is empty list initially."""
+    issues = FakeGitHubIssues()
+
+    assert issues.added_labels == []
+
+
+def test_fake_github_issues_added_labels_read_only() -> None:
+    """Test added_labels property returns list that can be read."""
+    pre_configured = {
+        42: IssueInfo(42, "Test", "Body", "OPEN", "http://url"),
+    }
+    issues = FakeGitHubIssues(issues=pre_configured)
+    issues.add_labels(sentinel_path(), 42, ["test-label"])
+
+    # Should be able to read the list
+    labels = issues.added_labels
+    assert len(labels) == 1
+    assert labels[0] == (42, ["test-label"])

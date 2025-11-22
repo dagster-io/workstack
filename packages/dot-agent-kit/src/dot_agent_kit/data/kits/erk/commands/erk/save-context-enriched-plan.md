@@ -23,7 +23,7 @@ This command extracts a plan from conversation context, optionally applies guida
 
 **What happens AFTER (in separate commands):**
 
-- ⏭️ Create worktree: `/erk:create-planned-wt`
+- ⏭️ Create worktree: `/erk:create-wt-from-plan-file`
 - ⏭️ Navigate and implement: `erk checkout <branch> && claude --permission-mode acceptEdits "/erk:implement-plan"`
 
 ## What Happens
@@ -222,7 +222,7 @@ Suggested action: [1-3 concrete steps to resolve]
 **IF YOU USE:** Edit, Write (to codebase files), Bash (other commands), Task, NotebookEdit, SlashCommand, etc.
 → 🔴 **YOU ARE IMPLEMENTING, NOT PLANNING. STOP IMMEDIATELY.**
 
-This command only saves the plan. Worktree creation happens via `/erk:create-planned-wt`.
+This command only saves the plan. Worktree creation happens via `/erk:create-wt-from-plan-file`.
 
 ### Step 1: Detect Implementation Plan in Context
 
@@ -1318,7 +1318,7 @@ Suggested action:
 You can now:
 
 1. Review and edit the plan file if needed
-2. Create the worktree: /erk:create-planned-wt
+2. Create the worktree: /erk:create-wt-from-plan-file
 
 ---
 

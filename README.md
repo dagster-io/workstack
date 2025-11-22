@@ -10,7 +10,7 @@
 - **State isolation**: Each worktree maintains complete environment independence - dependencies, build artifacts, env vars, and file system state
 - **Context preservation**: Implementation context, API constraints, and design decisions persist in plan artifacts, enabling AI agents to maintain full context across sessions
 - **Plan-first development**: Each worktree can be created from a structured plan (`.plan/`) that travels with the workspace, providing persistent context for both human and AI implementers
-- **Agentic optimization**: Seamless integration with Claude Code for AI-driven implementation (`/erk:save-context-enriched-plan`, `/erk:implement-plan`, `/erk:create-planned-wt`)
+- **Agentic optimization**: Seamless integration with Claude Code for AI-driven implementation (`/erk:save-context-enriched-plan`, `/erk:implement-plan`, `/erk:create-wt-from-plan-file`)
 
 ## Why Parallel Worktrees Matter for AI-Native Engineering
 
@@ -458,7 +458,7 @@ This workflow emerged from experience - checking in planning documents created n
 
 **AI-Augmented Planning:**
 
-The manual workflow above can be fully automated using kit-installed Claude Code commands. See [Claude Code Integration](#claude-code-integration) for `/erk:save-context-enriched-plan`, `/erk:create-planned-issue`, `/erk:create-planned-wt`, `/erk:implement-plan`, and `/erk:implement-planned-issue` commands that automate plan extraction, enhancement, GitHub issue creation, worktree creation, and implementation execution.
+The manual workflow above can be fully automated using kit-installed Claude Code commands. See [Claude Code Integration](#claude-code-integration) for `/erk:save-context-enriched-plan`, `/erk:create-plan-issue-from-plan-file`, `/erk:create-wt-from-plan-file`, `/erk:implement-plan`, and `/erk:implement-planned-issue` commands that automate plan extraction, enhancement, GitHub issue creation, worktree creation, and implementation execution.
 
 ### Remote Implementation via GitHub Actions
 
@@ -468,7 +468,7 @@ For teams using GitHub Actions, `erk` supports **remote AI implementation** wher
 
 ```bash
 # 1. Create a worktree with a plan (locally)
-/erk:create-planned-wt
+/erk:create-wt-from-plan-file
 
 # 2. Submit plan for remote implementation
 erk submit
@@ -554,7 +554,7 @@ The traditional erk planning workflow can be fully automated with kit-installed 
 
 1. Discuss and plan with Claude in conversation
 2. `/erk:save-context-enriched-plan` - Automatically extracts, enhances, and saves plan
-3. `/erk:create-planned-wt` - Creates worktree from saved plan
+3. `/erk:create-wt-from-plan-file` - Creates worktree from saved plan
 4. `/erk:implement-plan` - Executes plan with automated progress tracking
 
 ### Planning Workflow Commands
@@ -590,7 +590,7 @@ Plans include expensive discoveries made during planning so implementing agents 
 
 This prevents bugs and speeds up implementation. See [Context Preservation Examples](.claude/docs/erk/EXAMPLES.md) for comprehensive details.
 
-#### `/erk:create-planned-wt` - Create Worktree from Plan
+#### `/erk:create-wt-from-plan-file` - Create Worktree from Plan
 
 Creates a new erk worktree from a saved plan file.
 
@@ -606,7 +606,7 @@ Creates a new erk worktree from a saved plan file.
 
 ```bash
 # After running /erk:save-context-enriched-plan
-/erk:create-planned-wt
+/erk:create-wt-from-plan-file
 ```
 
 #### `/erk:implement-plan` - Execute Implementation Plan
@@ -631,7 +631,7 @@ erk checkout <branch>
 claude --permission-mode acceptEdits "/erk:implement-plan"
 ```
 
-#### `/erk:create-planned-issue` - Create GitHub Issue from Plan
+#### `/erk:create-plan-issue-from-plan-file` - Create GitHub Issue from Plan
 
 Creates a GitHub issue from a persisted plan file and optionally links it to a worktree.
 
@@ -648,10 +648,10 @@ Creates a GitHub issue from a persisted plan file and optionally links it to a w
 
 ```bash
 # Create new issue from plan
-/erk:create-planned-issue
+/erk:create-plan-issue-from-plan-file
 
 # Link existing issue to worktree
-/erk:create-planned-issue --link 123
+/erk:create-plan-issue-from-plan-file --link 123
 ```
 
 #### `/erk:implement-planned-issue` - Execute Plan from GitHub Issue
@@ -686,7 +686,7 @@ erk checkout root
 # Output: Saved plan to: Add_User_Auth-plan.md
 
 # 3. Create worktree from plan
-/erk:create-planned-wt
+/erk:create-wt-from-plan-file
 # Output: Created worktree 'add-user-auth' from plan
 
 # 4. Switch to worktree
@@ -775,7 +775,7 @@ The `erk status` command shows:
 
 Erk bundles several kits that provide Claude Code artifacts:
 
-- **erk** - Planning workflow commands (`/erk:save-context-enriched-plan`, `/erk:create-planned-issue`, `/erk:create-planned-wt`, `/erk:implement-plan`, `/erk:implement-planned-issue`, `/erk:fix-merge-conflicts`)
+- **erk** - Planning workflow commands (`/erk:save-context-enriched-plan`, `/erk:create-plan-issue-from-plan-file`, `/erk:create-wt-from-plan-file`, `/erk:implement-plan`, `/erk:implement-planned-issue`, `/erk:fix-merge-conflicts`)
 - **gt** - Graphite integration (`/gt:submit-branch`, `/gt:update-pr`, `gt-graphite` skill)
 - **devrun** - Development tool execution (pytest, pyright, ruff, prettier, make, gt)
 - **dignified-python-313** - Python 3.13+ coding standards
@@ -1112,7 +1112,7 @@ See [`.agent/README.md`](.agent/README.md) for more details.
 Erk includes bundled kits that provide slash commands, agents, and skills for AI-assisted workflows. For comprehensive documentation of all installed kits and their artifacts, see:
 
 - **[Kit Registry](.claude/docs/kit-registry.md)** - Complete catalog of installed kits, commands, agents, and skills
-- **[Planning Workflow Commands](#claude-code-integration)** - `/erk:save-context-enriched-plan`, `/erk:create-planned-issue`, `/erk:create-planned-wt`, `/erk:implement-plan`, `/erk:implement-planned-issue`
+- **[Planning Workflow Commands](#claude-code-integration)** - `/erk:save-context-enriched-plan`, `/erk:create-plan-issue-from-plan-file`, `/erk:create-wt-from-plan-file`, `/erk:implement-plan`, `/erk:implement-planned-issue`
 - **[Graphite Workflow Commands](#claude-code-integration)** - `/gt:submit-branch`, `/gt:update-pr`
 
 ## Links

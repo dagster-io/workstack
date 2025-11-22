@@ -113,7 +113,7 @@ prompt="Run unit tests with pytest, then run pyright. Fix any failures iterative
 **Examples:**
 
 - `/gt:submit-branch` → `gt-branch-submitter` agent
-- `/erk:create-planned-wt` → `planned-wt-creator` agent
+- `/erk:create-wt-from-plan-file` → `planned-wt-creator` agent
 
 **Characteristics:**
 
@@ -130,7 +130,7 @@ prompt="Run unit tests with pytest, then run pyright. Fix any failures iterative
 description: Create worktree from existing plan file on disk
 ---
 
-# /erk:create-planned-wt
+# /erk:create-wt-from-plan-file
 
 Create a erk worktree from an existing plan file on disk.
 
@@ -464,11 +464,11 @@ Delegates the complete submit-branch workflow to the `gt-branch-submitter` agent
 
 **Key insight:** Agent coordinates multiple steps with dependencies, handling errors at each boundary.
 
-### Example 3: /erk:create-planned-wt → planned-wt-creator
+### Example 3: /erk:create-wt-from-plan-file → planned-wt-creator
 
 **Pattern:** Workflow orchestration
 
-**Command:** `.claude/commands/erk/create-planned-wt.md` (42 lines)
+**Command:** `.claude/commands/erk/create-wt-from-plan-file.md` (42 lines)
 
 - Reduced from 338 lines (87% reduction)
 - All orchestration moved to agent
@@ -505,7 +505,7 @@ Task(subagent_type="devrun", prompt="Run pytest tests/")
 ```markdown
 # ❌ WRONG: 338 lines of orchestration in command
 
-/erk:create-planned-wt:
+/erk:create-wt-from-plan-file:
 
 ## Step 1: Detect plan file
 
@@ -518,7 +518,7 @@ Task(subagent_type="devrun", prompt="Run pytest tests/")
 
 # ✅ CORRECT: Command delegates to agent
 
-/erk:create-planned-wt:
+/erk:create-wt-from-plan-file:
 Task(subagent_type="planned-wt-creator", prompt="...")
 ```
 
@@ -649,7 +649,7 @@ Documentation follows a progressive disclosure model:
 3. **Implementation examples** - Actual commands and agents in codebase
    - `/fast-ci` → `devrun` (simple delegation)
    - `/gt:submit-branch` → `gt-branch-submitter` (workflow orchestration)
-   - `/erk:create-planned-wt` → `planned-wt-creator` (workflow orchestration)
+   - `/erk:create-wt-from-plan-file` → `planned-wt-creator` (workflow orchestration)
 
 **Navigation:**
 

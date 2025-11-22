@@ -35,7 +35,7 @@ def submit_cmd(ctx: ErkContext, dry_run: bool) -> None:
         user_output(
             click.style("Error: ", fg="red") + "No .plan/ folder found.\n\n"
             "The current directory must contain a .plan/ folder.\n"
-            "To create one, use: /erk:create-planned-wt"
+            "To create one, use: /erk:create-wt-from-plan-file"
         )
         raise SystemExit(1)
 

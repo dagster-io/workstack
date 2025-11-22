@@ -54,12 +54,12 @@ This will save the issue reference without creating a new issue. Use this when:
 - Issue was created manually on GitHub
 - Want to associate an existing issue with a worktree
 
-## Key Difference from `/erk:create-planned-issue`
+## Key Difference from `/erk:create-plan-issue-from-plan-file`
 
-**`/erk:create-planned-issue`**: Creates issue with `erk-plan` label (manual implementation)
+**`/erk:create-plan-issue-from-plan-file`**: Creates issue with `erk-plan` label (manual implementation)
 **`/erk:create-queued-plan`**: Creates issue with `erk-queue` label (automatic implementation via GitHub Actions)
 
-Use `/erk:create-queued-plan` when you want the implementation to happen automatically via CI. Use `/erk:create-planned-issue` when you want to manually implement the plan.
+Use `/erk:create-queued-plan` when you want the implementation to happen automatically via CI. Use `/erk:create-plan-issue-from-plan-file` when you want to manually implement the plan.
 
 ## Prerequisites
 
@@ -171,8 +171,8 @@ This command succeeds when ALL of the following are true:
 **Alternative workflow (manual implementation):**
 
 1. Create plan: `/erk:save-context-enriched-plan`
-2. Create issue: `/erk:create-planned-issue` (uses `erk-plan` label, no auto-implementation)
-3. Create worktree: `/erk:create-planned-wt`
+2. Create issue: `/erk:create-plan-issue-from-plan-file` (uses `erk-plan` label, no auto-implementation)
+3. Create worktree: `/erk:create-wt-from-plan-file`
 4. Navigate and implement: `erk checkout <branch> && claude --permission-mode acceptEdits "/erk:implement-plan"`
 
 ---

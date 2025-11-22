@@ -2,7 +2,7 @@
 description: Create GitHub issue from persisted plan
 ---
 
-# /erk:create-planned-issue
+# /erk:create-plan-issue-from-plan-file
 
 ## Goal
 
@@ -59,7 +59,7 @@ This will save the issue reference without creating a new issue. Use this when:
 - Current working directory must be in a git repository
 - `gh` CLI must be installed and authenticated
 - Typically run after `/erk:save-context-enriched-plan`
-- Can run before or after `/erk:create-planned-wt`
+- Can run before or after `/erk:create-wt-from-plan-file`
 
 ## Success Criteria
 
@@ -124,7 +124,7 @@ This command succeeds when ALL of the following are true:
 **Solution:**
 
 - This is expected if you haven't created a worktree yet
-- Create worktree: `/erk:create-planned-wt`
+- Create worktree: `/erk:create-wt-from-plan-file`
 - Navigate to worktree: `erk checkout <branch>`
 - Re-run: `/erk:create-planned-issue --link <issue-number>`
 
@@ -134,13 +134,13 @@ This command succeeds when ALL of the following are true:
 
 1. Create plan: `/erk:save-context-enriched-plan`
 2. Create issue: `/erk:create-planned-issue` ← **YOU ARE HERE**
-3. Create worktree: `/erk:create-planned-wt`
+3. Create worktree: `/erk:create-wt-from-plan-file`
 4. Navigate and implement: `erk checkout <branch> && claude --permission-mode acceptEdits "/erk:implement-plan"`
 
 **Alternative workflow (create issue from within worktree):**
 
 1. Create plan: `/erk:save-context-enriched-plan`
-2. Create worktree: `/erk:create-planned-wt`
+2. Create worktree: `/erk:create-wt-from-plan-file`
 3. Navigate: `erk checkout <branch>`
 4. Create issue: `/erk:create-planned-issue` ← Issue automatically linked to `.plan/` folder
 
@@ -304,7 +304,7 @@ URL: <issue-url>
 
 You can now:
 - View issue: gh issue view <number>
-- Create worktree: /erk:create-planned-wt
+- Create worktree: /erk:create-wt-from-plan-file
 ```
 
 ### Step 8: Link Issue to Worktree (if .plan/ exists)

@@ -195,7 +195,7 @@ After successfully writing the plan file, output:
 
 Next steps:
 1. Review the plan if needed
-2. Create worktree: /erk:create-planned-wt <filename>-plan.md
+2. Create worktree: /erk:create-wt-from-plan-file <filename>-plan.md
 3. Switch to worktree and implement
 ```
 
@@ -224,4 +224,4 @@ Next steps:
 - **No discovery mining**: No session log access or analysis
 - **No Kit CLI**: This command uses only basic tools
 - **Simple and fast**: Designed for quick plan saving without preprocessing
-- **Compatible workflow**: Output works with `/erk:create-planned-wt` just like `/erk:save-context-enriched-plan`
+- **Compatible workflow**: Output works with `/erk:create-wt-from-plan-file` just like `/erk:save-context-enriched-plan`

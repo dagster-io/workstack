@@ -98,6 +98,7 @@ erk co BRANCH              # Alias for checkout
 erk goto WORKTREE          # Jump directly to worktree by name
 erk up                     # Navigate to child branch in Graphite stack
 erk down                   # Navigate to parent branch in Graphite stack
+erk down --delete-current  # Navigate down AND delete current branch/worktree
 erk status                 # Show status of current worktree
 erk list                   # List all worktrees (alias: ls)
 erk list --ci              # Fetch CI check status from GitHub (slower)
@@ -180,7 +181,19 @@ Navigate up and down your Graphite stack with dedicated commands:
 erk up       # → feature-3
 erk down     # → feature-1
 erk down     # → root (main)
+
+# Post-merge cleanup workflow
+# After merging feature-2's PR:
+erk down --delete-current  # → Navigate to feature-1 AND delete feature-2 branch/worktree
 ```
+
+**Post-Merge Cleanup:**
+
+The `--delete-current` flag combines navigation with branch/worktree deletion for post-merge workflows:
+
+- Navigates to the parent branch (like `erk down`)
+- Deletes the current branch and worktree after navigation
+- Safety checks ensure the working tree is clean and PR is merged
 
 **Requirements:**
 

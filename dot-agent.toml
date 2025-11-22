@@ -6,7 +6,8 @@ source_type = "bundled"
 version = "0.1.0"
 artifacts = [
     ".claude/agents/gt/gt-branch-submitter.md",
-    ".claude/commands/gt/submit-branch.md",
+    ".claude/agents/gt/gt-update-pr-submitter.md",
+    ".claude/commands/gt/submit-squashed-branch.md",
     ".claude/commands/gt/update-pr.md",
     ".claude/skills/gt-graphite/SKILL.md",
     ".claude/skills/gt-graphite/references/gt-reference.md",

@@ -96,6 +96,17 @@ def down_cmd(ctx: ErkContext, script: bool, delete_current: bool) -> None:
     This will cd to the parent branch's worktree (or root repo if parent is trunk),
     create/activate .venv, and load .env variables.
     Requires Graphite to be enabled: 'erk config set use_graphite true'
+
+    Post-Merge Cleanup:
+      erk down --delete-current
+
+    Navigates to the parent branch AND deletes the current branch and worktree.
+    This is useful after merging a PR to clean up the feature branch automatically.
+
+    Safety checks ensure:
+    - Working tree must be clean (no uncommitted changes)
+    - PR must be merged (verified via GitHub API)
+    - Current branch must have an associated worktree
     """
     _ensure_graphite_enabled(ctx)
     repo = discover_repo_context(ctx, ctx.cwd)

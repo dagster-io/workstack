@@ -886,7 +886,8 @@ def test_check_command_perfect_sync_no_missing_no_obsolete(tmp_path: Path) -> No
                     source_type="bundled",
                     artifacts=[
                         ".claude/agents/gt/gt-branch-submitter.md",
-                        ".claude/commands/gt/submit-branch.md",
+                        ".claude/agents/gt/gt-update-pr-submitter.md",
+                        ".claude/commands/gt/submit-squashed-branch.md",
                         ".claude/commands/gt/update-pr.md",
                         ".claude/skills/gt-graphite/SKILL.md",
                         ".claude/skills/gt-graphite/references/gt-reference.md",
@@ -904,7 +905,8 @@ def test_check_command_perfect_sync_no_missing_no_obsolete(tmp_path: Path) -> No
         if bundled_path is not None:
             for artifact_rel in [
                 "agents/gt/gt-branch-submitter.md",
-                "commands/gt/submit-branch.md",
+                "agents/gt/gt-update-pr-submitter.md",
+                "commands/gt/submit-squashed-branch.md",
                 "commands/gt/update-pr.md",
                 "skills/gt-graphite/SKILL.md",
                 "skills/gt-graphite/references/gt-reference.md",

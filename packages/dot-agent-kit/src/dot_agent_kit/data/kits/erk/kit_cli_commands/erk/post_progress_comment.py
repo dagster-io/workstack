@@ -31,6 +31,10 @@ import click
 
 from erk.core.github.issues import RealGitHubIssues
 from erk.core.impl_folder import parse_progress_frontmatter, read_issue_reference
+from erk.integrations.github.metadata_blocks import (
+    create_progress_status_block,
+    render_metadata_block,
+)
 
 
 @dataclass(frozen=True)
@@ -131,34 +135,30 @@ def post_progress_comment(step_description: str) -> None:
     # Extract progress data
     completed = frontmatter["completed_steps"]
     total = frontmatter["total_steps"]
-    percentage = int((completed / total) * 100) if total > 0 else 0
 
     # Generate timestamp
     timestamp = datetime.now(UTC).isoformat()
 
-    # Escape step_description for YAML (wrap in quotes to protect special chars)
-    yaml_safe_description = step_description.replace('"', '\\"')
+    # Create metadata block using shared library
+    block = create_progress_status_block(
+        status="in_progress",
+        completed_steps=completed,
+        total_steps=total,
+        timestamp=timestamp,
+        step_description=step_description,
+    )
 
-    # Format comment with details + YAML
-    comment_body = f"""✓ Step {completed}/{total} completed
+    # Render metadata block
+    metadata_markdown = render_metadata_block(block)
 
-<details>
-<summary><code>erk-implementation-status</code></summary>
-
-```yaml
-status: in_progress
-completed_steps: {completed}
-total_steps: {total}
-percentage: {percentage}
-step_description: "{yaml_safe_description}"
-timestamp: "{timestamp}"
-```
-</details>"""
+    # Format comment with emoji prefix + metadata
+    comment_body = f"✓ Step {completed}/{total} completed\n\n{metadata_markdown}"
 
     # Post comment to GitHub
     try:
         github = RealGitHubIssues()
         github.add_comment(repo_root, issue_ref.issue_number, comment_body)
+        percentage = int((completed / total) * 100) if total > 0 else 0
         result = ProgressSuccess(
             success=True,
             issue_number=issue_ref.issue_number,

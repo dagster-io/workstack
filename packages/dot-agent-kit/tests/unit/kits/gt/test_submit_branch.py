@@ -440,7 +440,8 @@ class TestPostAnalysisExecution:
         )
 
         # Mock Path.cwd() to return our temp directory
-        with patch("dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd") as mock_cwd:
+        patch_path = "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        with patch(patch_path) as mock_cwd:
             mock_cwd.return_value = tmp_path
 
             result = execute_post_analysis(
@@ -466,7 +467,8 @@ class TestPostAnalysisExecution:
         )
 
         # Mock Path.cwd() to return temp directory without .plan/issue.json
-        with patch("dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd") as mock_cwd:
+        patch_path = "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        with patch(patch_path) as mock_cwd:
             mock_cwd.return_value = tmp_path
 
             result = execute_post_analysis(
@@ -501,7 +503,8 @@ class TestPostAnalysisExecution:
         )
 
         # Mock Path.cwd() to return our temp directory
-        with patch("dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd") as mock_cwd:
+        patch_path = "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        with patch(patch_path) as mock_cwd:
             mock_cwd.return_value = tmp_path
 
             # Commit message with only title (no body)

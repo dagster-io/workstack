@@ -81,6 +81,7 @@ artifacts = [
     ".claude/commands/erk/create-planned-wt.md",
     ".claude/commands/erk/create-plan-issue-from-context.md",
     ".claude/commands/erk/implement-plan.md",
+    ".claude/commands/erk/implement-plan-issue.md",
     ".claude/commands/erk/fix-merge-conflicts.md",
     ".claude/docs/erk/EXAMPLES.md",
 ]

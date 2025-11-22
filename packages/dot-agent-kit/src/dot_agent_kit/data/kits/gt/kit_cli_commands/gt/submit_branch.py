@@ -18,8 +18,8 @@ Phase 2 (post-analysis):
 5. Return PR info and status
 
 Usage:
-    dot-agent run gt submit-branch pre-analysis
-    dot-agent run gt submit-branch post-analysis --commit-message "..."
+    dot-agent run gt submit-squashed-branch pre-analysis
+    dot-agent run gt submit-squashed-branch post-analysis --commit-message "..."
 
 Output:
     JSON object with either success or error information
@@ -40,10 +40,10 @@ Error Types:
     - pr_update_failed: Failed to update PR metadata
 
 Examples:
-    $ dot-agent run gt submit-branch pre-analysis
+    $ dot-agent run gt submit-squashed-branch pre-analysis
     {"success": true, "branch_name": "feature", ...}
 
-    $ dot-agent run gt submit-branch post-analysis --commit-message "feat: add feature"
+    $ dot-agent run gt submit-squashed-branch post-analysis --commit-message "feat: add feature"
         --pr-title "Add feature" --pr-body "Full description"
     {"success": true, "pr_number": 123, ...}
 """

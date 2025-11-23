@@ -8,31 +8,85 @@ from erk.data.kits.erk.plan_utils import (
 
 
 def test_wrap_plan_basic() -> None:
-    """Test basic plan content is returned as-is (stripped).
+    """Test plan content is wrapped in collapsible details block with default intro.
 
-    The function now returns plan content without metadata wrapping.
-    Metadata blocks are added via separate GitHub comments.
+    The function wraps the plan in a <details> block with customizable intro text,
+    making GitHub issues more scannable while preserving all plan details.
     """
     plan = "## My Plan\n\n- Step 1\n- Step 2"
     result = wrap_plan_in_metadata_block(plan)
 
-    # Should return plan content as-is (stripped)
-    assert result == plan
-    # Should NOT wrap in metadata block format
-    assert "<details>" not in result
-    assert "This issue contains an implementation plan:" not in result
+    # Should include default intro text
+    assert "This issue contains an implementation plan:" in result
+    # Should wrap in metadata block format
+    assert "<details>" in result
+    assert "</details>" in result
+    assert "<summary><code>erk-plan</code></summary>" in result
+    # Should include plan content
+    assert plan in result
 
 
 def test_wrap_plan_strips_whitespace() -> None:
-    """Test plan content strips leading/trailing whitespace."""
+    """Test plan content strips leading/trailing whitespace before wrapping."""
     plan = "\n\n  ## My Plan\n\n- Step 1\n- Step 2  \n\n"
     result = wrap_plan_in_metadata_block(plan)
 
     # Should strip whitespace from plan content
-    assert result == "## My Plan\n\n- Step 1\n- Step 2"
-    # Should NOT include metadata block structure
-    assert "<details>" not in result
-    assert "</details>" not in result
+    assert "## My Plan\n\n- Step 1\n- Step 2" in result
+    # Should include metadata block structure
+    assert "<details>" in result
+    assert "</details>" in result
+
+
+def test_wrap_plan_custom_intro_text() -> None:
+    """Test plan wrapping with custom introductory text."""
+    plan = "## My Plan\n\n- Step 1"
+    custom_intro = "Check out this amazing plan:"
+    result = wrap_plan_in_metadata_block(plan, intro_text=custom_intro)
+
+    # Should include custom intro text
+    assert custom_intro in result
+    # Should NOT include default intro text
+    assert "This issue contains an implementation plan:" not in result
+    # Should still wrap in details block
+    assert "<details>" in result
+    assert plan in result
+
+
+def test_wrap_plan_complex_markdown() -> None:
+    """Test plan wrapping preserves complex markdown formatting."""
+    plan = """# Title
+
+## Section
+
+- Item 1
+- Item 2
+
+```python
+def hello():
+    print("world")
+```
+
+**Bold** and *italic* text."""
+    result = wrap_plan_in_metadata_block(plan)
+
+    # Should preserve all markdown content
+    assert "# Title" in result
+    assert "## Section" in result
+    assert "```python" in result
+    assert "**Bold**" in result
+    # Should be wrapped
+    assert "<details>" in result
+
+
+def test_wrap_plan_empty() -> None:
+    """Test plan wrapping with empty plan."""
+    plan = ""
+    result = wrap_plan_in_metadata_block(plan)
+
+    # Should still create structure even with empty plan
+    assert "<details>" in result
+    assert "This issue contains an implementation plan:" in result
 
 
 def test_extract_title_h1() -> None:

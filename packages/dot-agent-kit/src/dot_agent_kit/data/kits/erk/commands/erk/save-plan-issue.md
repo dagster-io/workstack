@@ -446,6 +446,7 @@ Next steps:
 
 1. Review the issue if needed: gh issue view <number> --web
 2. Implement: erk implement <number>
+3. Implement dangerously: erk implement <number> --submit --dangerous
 
 ---
 

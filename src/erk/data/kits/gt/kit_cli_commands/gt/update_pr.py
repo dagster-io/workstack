@@ -68,17 +68,25 @@ class UpdatePRError:
     details: dict[str, str]
 
 
-def execute_update_pr(ops: GtKit | None = None) -> UpdatePRResult | UpdatePRError:
+def execute_update_pr(
+    ops: GtKit | None = None, verbose: bool = False
+) -> UpdatePRResult | UpdatePRError:
     """Execute the update-pr workflow. Returns success or error result."""
     if ops is None:
         ops = RealGtKit()
 
     # Step 1: Get current branch for context
+    if verbose:
+        click.echo("Debug: Getting current branch name...", err=True)
     branch_name = ops.git().get_current_branch()
     if branch_name is None:
         branch_name = "unknown"
+    if verbose:
+        click.echo(f"Debug: Current branch = {branch_name}", err=True)
 
     # Step 2: Check PR exists
+    if verbose:
+        click.echo("Debug: Checking if PR exists for current branch...", err=True)
     pr_info = ops.github().get_pr_info()
 
     if pr_info is None:
@@ -90,39 +98,69 @@ def execute_update_pr(ops: GtKit | None = None) -> UpdatePRResult | UpdatePRErro
         )
 
     pr_number, pr_url = pr_info
+    if verbose:
+        click.echo(f"Debug: Found PR #{pr_number} at {pr_url}", err=True)
 
     # Step 3: Check for uncommitted changes
+    if verbose:
+        click.echo("Debug: Checking for uncommitted changes...", err=True)
     had_changes = ops.git().has_uncommitted_changes()
+    if verbose:
+        click.echo(f"Debug: Has uncommitted changes = {had_changes}", err=True)
 
     if had_changes:
         # Step 4: Stage and commit changes
+        if verbose:
+            click.echo("Debug: Staging changes with git add...", err=True)
         if not ops.git().add_all():
+            if verbose:
+                click.echo("Debug: Failed to stage changes", err=True)
             return UpdatePRError(
                 success=False,
                 error_type="commit_failed",
                 message="Failed to stage uncommitted changes",
                 details={"branch_name": branch_name},
             )
+        if verbose:
+            click.echo("Debug: Creating commit...", err=True)
         if not ops.git().commit("Update changes"):
+            if verbose:
+                click.echo("Debug: Failed to create commit", err=True)
             return UpdatePRError(
                 success=False,
                 error_type="commit_failed",
                 message="Failed to commit uncommitted changes",
                 details={"branch_name": branch_name},
             )
+        if verbose:
+            click.echo("Debug: Successfully committed changes", err=True)
 
     # Step 5: Restack
+    if verbose:
+        click.echo("Debug: Restacking branch...", err=True)
     if not ops.graphite().restack():
+        if verbose:
+            click.echo("Debug: Restack failed (conflicts detected)", err=True)
         return UpdatePRError(
             success=False,
             error_type="restack_failed",
             message="Conflicts occurred during restack",
             details={"branch_name": branch_name},
         )
+    if verbose:
+        click.echo("Debug: Restack successful", err=True)
 
     # Step 6: Submit
-    success, _, _ = ops.graphite().submit(publish=False, restack=False)
-    if not success:
+    if verbose:
+        click.echo("Debug: Submitting PR updates...", err=True)
+    result = ops.graphite().submit(publish=False, restack=False)
+    if verbose:
+        click.echo(
+            f"Debug: submit() returned: success={result.success}, "
+            f"stdout={result.stdout!r}, stderr={result.stderr!r}",
+            err=True,
+        )
+    if not result.success:
         return UpdatePRError(
             success=False,
             error_type="submit_failed",
@@ -153,10 +191,11 @@ def execute_update_pr(ops: GtKit | None = None) -> UpdatePRResult | UpdatePRErro
 
 
 @click.command()
-def update_pr() -> None:
+@click.option("--verbose", is_flag=True, help="Show detailed diagnostic output")
+def update_pr(verbose: bool) -> None:
     """Update PR by staging changes, committing, restacking, and submitting."""
     try:
-        result = execute_update_pr()
+        result = execute_update_pr(verbose=verbose)
         click.echo(json.dumps(asdict(result), indent=2))
 
         if isinstance(result, UpdatePRError):

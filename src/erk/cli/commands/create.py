@@ -12,6 +12,7 @@ from erk.cli.output import user_output
 from erk.cli.shell_utils import render_navigation_script
 from erk.cli.subprocess_utils import run_with_error_reporting
 from erk.core.context import ErkContext
+from erk.core.impl_folder import create_impl_folder, get_impl_path
 from erk.core.naming_utils import (
     default_branch_for_worktree,
     ensure_simple_worktree_name,
@@ -20,7 +21,6 @@ from erk.core.naming_utils import (
     sanitize_worktree_name,
     strip_plan_from_filename,
 )
-from erk.core.plan_folder import create_plan_folder, get_plan_path
 from erk.core.repo_discovery import RepoContext, ensure_erk_metadata_dir
 
 
@@ -474,21 +474,21 @@ def create(
         )
         raise SystemExit(1)
 
-    # Validate .plan directory exists if --copy-plan is used
+    # Validate .impl directory exists if --copy-plan is used
     if copy_plan:
-        plan_source = ctx.cwd / ".plan"
-        if not plan_source.exists():
+        impl_source_check = ctx.cwd / ".impl"
+        if not impl_source_check.exists():
             user_output(
                 click.style("Error: ", fg="red")
-                + f"No .plan directory found in current worktree ({ctx.cwd}). "
+                + f"No .impl directory found in current worktree ({ctx.cwd}). "
                 + "Use 'erk create --plan <file>' to create a worktree with a plan from a file."
             )
             raise SystemExit(1)
 
-        if not plan_source.is_dir():
+        if not impl_source_check.is_dir():
             user_output(
                 click.style("Error: ", fg="red")
-                + f".plan exists but is not a directory ({plan_source})"
+                + f".impl exists but is not a directory ({impl_source_check})"
             )
             raise SystemExit(1)
 
@@ -579,7 +579,7 @@ def create(
         if output_json:
             # For JSON output, emit a status: "exists" response with available info
             existing_branch = ctx.git.get_current_branch(wt_path)
-            plan_path = get_plan_path(wt_path, git_ops=ctx.git)
+            plan_path = get_impl_path(wt_path, git_ops=ctx.git)
             json_response = _create_json_response(
                 worktree_name=name,
                 worktree_path=wt_path,
@@ -684,40 +684,43 @@ def create(
     env_content = make_env_content(cfg, worktree_path=wt_path, repo_root=repo.root, name=name)
     (wt_path / ".env").write_text(env_content, encoding="utf-8")
 
-    # Create plan folder if plan file provided
-    # Track plan folder destination: set to .plan/ path only if --plan was provided
-    plan_folder_destination: Path | None = None
+    # Create impl folder if plan file provided
+    # Track impl folder destination: set to .impl/ path only if --plan was provided
+    impl_folder_destination: Path | None = None
     if plan_file:
         # Read plan content from source file
         plan_content = plan_file.read_text(encoding="utf-8")
 
-        # Create .plan/ folder in new worktree
-        plan_folder_destination = create_plan_folder(wt_path, plan_content)
+        # Create .impl/ folder in new worktree
+        impl_folder_destination = create_impl_folder(wt_path, plan_content)
 
         # Handle --keep-plan flag
         if keep_plan:
             if not script and not output_json:
-                user_output(f"Copied plan to {plan_folder_destination}")
+                user_output(f"Copied plan to {impl_folder_destination}")
         else:
             plan_file.unlink()  # Remove source file
             if not script and not output_json:
-                user_output(f"Moved plan to {plan_folder_destination}")
+                user_output(f"Moved plan to {impl_folder_destination}")
 
-    # Copy .plan directory if --copy-plan flag is set
+    # Copy .impl directory if --copy-plan flag is set
     if copy_plan:
         import shutil
 
-        plan_source = ctx.cwd / ".plan"
-        plan_dest = wt_path / ".plan"
+        impl_source = ctx.cwd / ".impl"
+        impl_dest = wt_path / ".impl"
 
         # Copy entire directory
-        shutil.copytree(plan_source, plan_dest)
+        shutil.copytree(impl_source, impl_dest)
+
+        # Set impl_folder_destination for JSON response
+        impl_folder_destination = impl_dest
 
         if not script and not output_json:
             user_output(
                 "  "
                 + click.style("✓", fg="green")
-                + f" Copied .plan from {click.style(str(ctx.cwd), fg='yellow')}"
+                + f" Copied .impl from {click.style(str(ctx.cwd), fg='yellow')}"
             )
 
     # Post-create commands (suppress output if JSON mode)
@@ -749,7 +752,7 @@ def create(
             worktree_name=name,
             worktree_path=wt_path,
             branch_name=branch,
-            plan_file_path=plan_folder_destination,
+            plan_file_path=impl_folder_destination,
             status="created",
         )
         user_output(json_response)

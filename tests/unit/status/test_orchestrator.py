@@ -27,7 +27,7 @@ from erk.core.context import ErkContext
 from erk.core.parallel_task_runner import RealParallelTaskRunner
 from erk.status.collectors.base import StatusCollector
 from erk.status.collectors.git import GitStatusCollector
-from erk.status.collectors.plan import PlanFileCollector
+from erk.status.collectors.impl import PlanFileCollector
 from erk.status.models.status_data import GitStatus, PlanStatus
 from erk.status.orchestrator import StatusOrchestrator
 from tests.fakes.context import create_test_context
@@ -43,11 +43,11 @@ def test_orchestrator_collects_all_data(tmp_path: Path) -> None:
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
 
-    # Create plan folder with plan.md and progress.md
-    plan_folder = worktree_path / ".plan"
-    plan_folder.mkdir()
-    (plan_folder / "plan.md").write_text("# Test Plan", encoding="utf-8")
-    (plan_folder / "progress.md").write_text("# Progress\n\n- [ ] Step 1", encoding="utf-8")
+    # Create impl folder with plan.md and progress.md
+    impl_folder = worktree_path / ".impl"
+    impl_folder.mkdir()
+    (impl_folder / "plan.md").write_text("# Test Plan", encoding="utf-8")
+    (impl_folder / "progress.md").write_text("# Progress\n\n- [ ] Step 1", encoding="utf-8")
 
     git_ops = FakeGit(
         current_branches={worktree_path: "test-branch"},
@@ -313,10 +313,10 @@ def test_orchestrator_parallel_execution(tmp_path: Path) -> None:
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
 
-    plan_folder = worktree_path / ".plan"
-    plan_folder.mkdir()
-    (plan_folder / "plan.md").write_text("# Plan", encoding="utf-8")
-    (plan_folder / "progress.md").write_text("# Progress\n\n- [ ] Step 1", encoding="utf-8")
+    impl_folder = worktree_path / ".impl"
+    impl_folder.mkdir()
+    (impl_folder / "plan.md").write_text("# Plan", encoding="utf-8")
+    (impl_folder / "progress.md").write_text("# Progress\n\n- [ ] Step 1", encoding="utf-8")
 
     git_ops = FakeGit(
         current_branches={worktree_path: "branch"},
@@ -520,7 +520,7 @@ def test_orchestrator_multiple_collector_types(tmp_path: Path) -> None:
         def collect(self, ctx: ErkContext, worktree_path: Path, repo_root: Path) -> object:
             return PlanStatus(
                 exists=True,
-                path=worktree_path / ".plan",
+                path=worktree_path / ".impl",
                 line_count=5,
                 first_lines=["# Plan"],
                 summary="Test plan",

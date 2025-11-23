@@ -13,7 +13,7 @@ from erk.core.display_utils import (
 )
 from erk.core.file_utils import extract_plan_title
 from erk.core.github.types import PullRequestInfo
-from erk.core.plan_folder import get_plan_path
+from erk.core.impl_folder import get_impl_path
 from erk.core.repo_discovery import RepoContext
 from erk.core.worktree_utils import find_current_worktree
 
@@ -28,8 +28,8 @@ def _format_plan_summary(worktree_path: Path, ctx: ErkContext) -> str | None:
     Returns:
         Plan title string, or None if no plan file
     """
-    # Check for new .plan/ folder format only
-    plan_path = get_plan_path(worktree_path, git_ops=ctx.git)
+    # Check for new .impl/ folder format only
+    plan_path = get_impl_path(worktree_path, git_ops=ctx.git)
     if plan_path is None:
         return None
 

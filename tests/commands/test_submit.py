@@ -5,7 +5,7 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from erk.cli.commands.submit import submit_cmd
-from erk.core.plan_folder import create_plan_folder
+from erk.core.impl_folder import create_impl_folder
 from erk.core.repo_discovery import RepoContext
 from tests.fakes.context import create_test_context
 from tests.fakes.git import FakeGit
@@ -13,7 +13,7 @@ from tests.fakes.github import FakeGitHub
 
 
 def test_submit_errors_without_plan_folder(tmp_path: Path) -> None:
-    """Test submit shows error when no .plan/ folder exists."""
+    """Test submit shows error when no .impl/ folder exists."""
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
 
@@ -32,7 +32,7 @@ def test_submit_errors_without_plan_folder(tmp_path: Path) -> None:
     result = runner.invoke(submit_cmd, [], obj=ctx)
 
     assert result.exit_code == 1
-    assert "No .plan/ folder found" in result.output
+    assert "No .impl/ folder found" in result.output
 
 
 def test_submit_dry_run_shows_operations(tmp_path: Path) -> None:
@@ -40,9 +40,9 @@ def test_submit_dry_run_shows_operations(tmp_path: Path) -> None:
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
 
-    # Create .plan/ folder
+    # Create .impl/ folder
     plan_content = "# Test Plan\n\n1. Step one"
-    create_plan_folder(repo_root, plan_content)
+    create_impl_folder(repo_root, plan_content)
 
     fake_git = FakeGit(current_branches={repo_root: "feature-branch"})
     fake_github = FakeGitHub()
@@ -59,7 +59,7 @@ def test_submit_dry_run_shows_operations(tmp_path: Path) -> None:
     result = runner.invoke(submit_cmd, ["--dry-run"], obj=ctx)
 
     assert result.exit_code == 0
-    assert "Would copy .plan/ to .submission/" in result.output
+    assert "Would copy .impl/ to .submission/" in result.output
     assert "Would commit and push .submission/" in result.output
     # No longer triggers workflow manually - it auto-triggers on push
 
@@ -69,9 +69,9 @@ def test_submit_errors_with_existing_submission(tmp_path: Path) -> None:
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
 
-    # Create both .plan/ and .submission/
+    # Create both .impl/ and .submission/
     plan_content = "# Test Plan\n\n1. Step one"
-    create_plan_folder(repo_root, plan_content)
+    create_impl_folder(repo_root, plan_content)
     (repo_root / ".submission").mkdir()
 
     fake_git = FakeGit(current_branches={repo_root: "feature-branch"})
@@ -97,9 +97,9 @@ def test_submit_errors_on_detached_head(tmp_path: Path) -> None:
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
 
-    # Create .plan/ folder
+    # Create .impl/ folder
     plan_content = "# Test Plan\n\n1. Step one"
-    create_plan_folder(repo_root, plan_content)
+    create_impl_folder(repo_root, plan_content)
 
     # No current branch (detached HEAD)
     fake_git = FakeGit(current_branches={repo_root: None})

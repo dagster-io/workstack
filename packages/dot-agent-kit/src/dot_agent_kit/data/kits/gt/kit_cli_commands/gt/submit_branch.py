@@ -58,7 +58,7 @@ import click
 
 from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.ops import GtKit
 from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops import RealGtKit
-from erk.core.plan_folder import has_issue_reference, read_issue_reference
+from erk.core.impl_folder import has_issue_reference, read_issue_reference
 
 
 class SubmitResult(NamedTuple):
@@ -321,12 +321,12 @@ def execute_post_analysis(
     pr_title = lines[0]
     pr_body = lines[1].lstrip() if len(lines) > 1 else ""
 
-    # Check for issue reference in .plan/issue.json
+    # Check for issue reference in .impl/issue.json
     cwd = Path.cwd()
-    plan_dir = cwd / ".plan"
+    impl_dir = cwd / ".impl"
 
-    if has_issue_reference(plan_dir):
-        issue_ref = read_issue_reference(plan_dir)
+    if has_issue_reference(impl_dir):
+        issue_ref = read_issue_reference(impl_dir)
         if issue_ref is not None:
             # Prepend "Closes #N" to PR body
             closing_text = f"Closes #{issue_ref.issue_number}\n\n"

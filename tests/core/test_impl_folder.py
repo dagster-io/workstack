@@ -1,16 +1,16 @@
-"""Tests for plan folder management utilities."""
+"""Tests for implementation folder management utilities."""
 
 from pathlib import Path
 
 import pytest
 
 from erk.core.github.issues import FakeGitHubIssues, IssueInfo
-from erk.core.plan_folder import (
+from erk.core.impl_folder import (
     add_worktree_creation_comment,
-    copy_plan_to_submission,
-    create_plan_folder,
+    copy_impl_to_submission,
+    create_impl_folder,
     extract_steps_from_plan,
-    get_plan_path,
+    get_impl_path,
     get_progress_path,
     get_submission_path,
     has_issue_reference,
@@ -23,7 +23,7 @@ from erk.core.plan_folder import (
 )
 
 
-def test_create_plan_folder_basic(tmp_path: Path) -> None:
+def test_create_impl_folder_basic(tmp_path: Path) -> None:
     """Test creating a plan folder with basic plan content."""
     plan_content = """# Implementation Plan: Test Feature
 
@@ -37,11 +37,11 @@ Build a test feature.
 3. Update documentation
 """
 
-    plan_folder = create_plan_folder(tmp_path, plan_content)
+    plan_folder = create_impl_folder(tmp_path, plan_content)
 
     # Verify folder structure
     assert plan_folder.exists()
-    assert plan_folder == tmp_path / ".plan"
+    assert plan_folder == tmp_path / ".impl"
 
     # Verify plan.md exists and has correct content
     plan_file = plan_folder / "plan.md"
@@ -57,19 +57,19 @@ Build a test feature.
     assert "- [ ] 3. Update documentation" in progress_content
 
 
-def test_create_plan_folder_already_exists(tmp_path: Path) -> None:
+def test_create_impl_folder_already_exists(tmp_path: Path) -> None:
     """Test that creating a plan folder when one exists raises error."""
     plan_content = "# Test Plan\n\n1. Step one"
 
     # Create first time - should succeed
-    create_plan_folder(tmp_path, plan_content)
+    create_impl_folder(tmp_path, plan_content)
 
     # Try to create again - should raise
-    with pytest.raises(FileExistsError, match="Plan folder already exists"):
-        create_plan_folder(tmp_path, plan_content)
+    with pytest.raises(FileExistsError, match="Implementation folder already exists"):
+        create_impl_folder(tmp_path, plan_content)
 
 
-def test_create_plan_folder_with_nested_steps(tmp_path: Path) -> None:
+def test_create_impl_folder_with_nested_steps(tmp_path: Path) -> None:
     """Test creating plan folder with nested step numbering."""
     plan_content = """# Complex Plan
 
@@ -85,7 +85,7 @@ def test_create_plan_folder_with_nested_steps(tmp_path: Path) -> None:
 2.3. Substep three
 """
 
-    plan_folder = create_plan_folder(tmp_path, plan_content)
+    plan_folder = create_impl_folder(tmp_path, plan_content)
     progress_file = plan_folder / "progress.md"
     progress_content = progress_file.read_text(encoding="utf-8")
 
@@ -99,7 +99,7 @@ def test_create_plan_folder_with_nested_steps(tmp_path: Path) -> None:
     assert "- [ ] 2.3. Substep three" in progress_content
 
 
-def test_create_plan_folder_empty_plan(tmp_path: Path) -> None:
+def test_create_impl_folder_empty_plan(tmp_path: Path) -> None:
     """Test creating plan folder with empty or no-steps plan."""
     plan_content = """# Empty Plan
 
@@ -107,7 +107,7 @@ This plan has no numbered steps.
 Just some text.
 """
 
-    plan_folder = create_plan_folder(tmp_path, plan_content)
+    plan_folder = create_impl_folder(tmp_path, plan_content)
     progress_file = plan_folder / "progress.md"
     progress_content = progress_file.read_text(encoding="utf-8")
 
@@ -116,31 +116,31 @@ Just some text.
     assert "No steps detected" in progress_content
 
 
-def test_get_plan_path_exists(tmp_path: Path) -> None:
+def test_get_impl_path_exists(tmp_path: Path) -> None:
     """Test getting plan path when it exists."""
     plan_content = "# Test\n\n1. Step"
-    create_plan_folder(tmp_path, plan_content)
+    create_impl_folder(tmp_path, plan_content)
 
-    plan_path = get_plan_path(tmp_path)
+    plan_path = get_impl_path(tmp_path)
     assert plan_path is not None
-    assert plan_path == tmp_path / ".plan" / "plan.md"
+    assert plan_path == tmp_path / ".impl" / "plan.md"
     assert plan_path.exists()
 
 
-def test_get_plan_path_not_exists(tmp_path: Path) -> None:
+def test_get_impl_path_not_exists(tmp_path: Path) -> None:
     """Test getting plan path when it doesn't exist."""
-    plan_path = get_plan_path(tmp_path)
+    plan_path = get_impl_path(tmp_path)
     assert plan_path is None
 
 
 def test_get_progress_path_exists(tmp_path: Path) -> None:
     """Test getting progress path when it exists."""
     plan_content = "# Test\n\n1. Step"
-    create_plan_folder(tmp_path, plan_content)
+    create_impl_folder(tmp_path, plan_content)
 
     progress_path = get_progress_path(tmp_path)
     assert progress_path is not None
-    assert progress_path == tmp_path / ".plan" / "progress.md"
+    assert progress_path == tmp_path / ".impl" / "progress.md"
     assert progress_path.exists()
 
 
@@ -153,7 +153,7 @@ def test_get_progress_path_not_exists(tmp_path: Path) -> None:
 def test_update_progress(tmp_path: Path) -> None:
     """Test updating progress.md content."""
     plan_content = "# Test\n\n1. Step one\n2. Step two"
-    create_plan_folder(tmp_path, plan_content)
+    create_impl_folder(tmp_path, plan_content)
 
     # Update progress with completed first step
     new_progress = """# Progress Tracking
@@ -164,7 +164,7 @@ def test_update_progress(tmp_path: Path) -> None:
     update_progress(tmp_path, new_progress)
 
     # Verify update
-    progress_file = tmp_path / ".plan" / "progress.md"
+    progress_file = tmp_path / ".impl" / "progress.md"
     assert progress_file.read_text(encoding="utf-8") == new_progress
 
 
@@ -296,7 +296,7 @@ def test_extract_steps_with_special_characters(tmp_path: Path) -> None:
     assert any("🎉" in s for s in steps)
 
 
-def test_create_plan_folder_generates_frontmatter(tmp_path: Path) -> None:
+def test_create_impl_folder_generates_frontmatter(tmp_path: Path) -> None:
     """Test that creating a plan folder generates YAML front matter in progress.md."""
     plan_content = """# Test Plan
 
@@ -304,7 +304,7 @@ def test_create_plan_folder_generates_frontmatter(tmp_path: Path) -> None:
 2. Second step
 3. Third step
 """
-    plan_folder = create_plan_folder(tmp_path, plan_content)
+    plan_folder = create_impl_folder(tmp_path, plan_content)
     progress_file = plan_folder / "progress.md"
     progress_content = progress_file.read_text(encoding="utf-8")
 
@@ -378,10 +378,10 @@ completed_steps: 3
 def test_update_progress_frontmatter_replaces_existing(tmp_path: Path) -> None:
     """Test updating existing front matter preserves checkbox content."""
     plan_content = "# Test\n\n1. Step one\n2. Step two"
-    create_plan_folder(tmp_path, plan_content)
+    create_impl_folder(tmp_path, plan_content)
 
     # Manually mark first checkbox as completed
-    progress_file = tmp_path / ".plan" / "progress.md"
+    progress_file = tmp_path / ".impl" / "progress.md"
     content = progress_file.read_text(encoding="utf-8")
     content = content.replace("- [ ] 1. Step one", "- [x] 1. Step one")
     progress_file.write_text(content, encoding="utf-8")
@@ -402,7 +402,7 @@ def test_update_progress_frontmatter_replaces_existing(tmp_path: Path) -> None:
 def test_update_progress_frontmatter_adds_if_missing(tmp_path: Path) -> None:
     """Test adding front matter to file that doesn't have it."""
     # Create progress file without front matter
-    plan_folder = tmp_path / ".plan"
+    plan_folder = tmp_path / ".impl"
     plan_folder.mkdir()
     progress_file = plan_folder / "progress.md"
     progress_file.write_text(
@@ -434,11 +434,11 @@ def test_update_progress_frontmatter_no_file(tmp_path: Path) -> None:
     update_progress_frontmatter(tmp_path, 1, 2)
 
 
-def test_copy_plan_to_submission_success(tmp_path: Path) -> None:
+def test_copy_impl_to_submission_success(tmp_path: Path) -> None:
     """Test copying .plan/ folder to .submission/ folder."""
     # Create .plan/ folder with content
     plan_content = "# Test Plan\n\n1. Step one\n2. Step two"
-    plan_folder = create_plan_folder(tmp_path, plan_content)
+    plan_folder = create_impl_folder(tmp_path, plan_content)
 
     # Verify .plan/ exists
     assert plan_folder.exists()
@@ -446,7 +446,7 @@ def test_copy_plan_to_submission_success(tmp_path: Path) -> None:
     assert (plan_folder / "progress.md").exists()
 
     # Copy to .submission/
-    submission_folder = copy_plan_to_submission(tmp_path)
+    submission_folder = copy_impl_to_submission(tmp_path)
 
     # Verify .submission/ exists and has same content
     assert submission_folder.exists()
@@ -459,18 +459,18 @@ def test_copy_plan_to_submission_success(tmp_path: Path) -> None:
     assert (submission_folder / "progress.md").exists()
 
 
-def test_copy_plan_to_submission_no_plan(tmp_path: Path) -> None:
-    """Test copy_plan_to_submission raises error when no .plan/ folder exists."""
-    # No .plan/ folder created
-    with pytest.raises(FileNotFoundError, match="No .plan/ folder found"):
-        copy_plan_to_submission(tmp_path)
+def test_copy_impl_to_submission_no_plan(tmp_path: Path) -> None:
+    """Test copy_impl_to_submission raises error when no .impl/ folder exists."""
+    # No .impl/ folder created
+    with pytest.raises(FileNotFoundError, match="No .impl/ folder found"):
+        copy_impl_to_submission(tmp_path)
 
 
-def test_copy_plan_to_submission_already_exists(tmp_path: Path) -> None:
-    """Test copy_plan_to_submission raises error when .submission/ already exists."""
-    # Create .plan/ folder
+def test_copy_impl_to_submission_already_exists(tmp_path: Path) -> None:
+    """Test copy_impl_to_submission raises error when .submission/ already exists."""
+    # Create .impl/ folder
     plan_content = "# Test Plan\n\n1. Step"
-    create_plan_folder(tmp_path, plan_content)
+    create_impl_folder(tmp_path, plan_content)
 
     # Create .submission/ folder manually
     submission_folder = tmp_path / ".submission"
@@ -478,15 +478,15 @@ def test_copy_plan_to_submission_already_exists(tmp_path: Path) -> None:
 
     # Try to copy - should raise error
     with pytest.raises(FileExistsError, match=".submission/ folder already exists"):
-        copy_plan_to_submission(tmp_path)
+        copy_impl_to_submission(tmp_path)
 
 
 def test_get_submission_path_exists(tmp_path: Path) -> None:
     """Test get_submission_path returns path when .submission/ exists."""
     # Create .plan/ and copy to .submission/
     plan_content = "# Test Plan\n\n1. Step"
-    create_plan_folder(tmp_path, plan_content)
-    copy_plan_to_submission(tmp_path)
+    create_impl_folder(tmp_path, plan_content)
+    copy_impl_to_submission(tmp_path)
 
     # Get submission path
     submission_path = get_submission_path(tmp_path)
@@ -506,8 +506,8 @@ def test_remove_submission_folder_exists(tmp_path: Path) -> None:
     """Test remove_submission_folder removes .submission/ folder."""
     # Create .plan/ and copy to .submission/
     plan_content = "# Test Plan\n\n1. Step"
-    create_plan_folder(tmp_path, plan_content)
-    copy_plan_to_submission(tmp_path)
+    create_impl_folder(tmp_path, plan_content)
+    copy_impl_to_submission(tmp_path)
 
     # Verify .submission/ exists
     submission_folder = tmp_path / ".submission"
@@ -520,7 +520,7 @@ def test_remove_submission_folder_exists(tmp_path: Path) -> None:
     assert not submission_folder.exists()
 
     # Verify .plan/ still exists
-    plan_folder = tmp_path / ".plan"
+    plan_folder = tmp_path / ".impl"
     assert plan_folder.exists()
 
 
@@ -542,7 +542,7 @@ def test_remove_submission_folder_not_exists(tmp_path: Path) -> None:
 def test_save_issue_reference_success(tmp_path: Path) -> None:
     """Test saving issue reference to .plan/issue.json."""
     # Create .plan/ directory
-    plan_dir = tmp_path / ".plan"
+    plan_dir = tmp_path / ".impl"
     plan_dir.mkdir()
 
     # Save issue reference
@@ -567,16 +567,16 @@ def test_save_issue_reference_success(tmp_path: Path) -> None:
 
 def test_save_issue_reference_plan_dir_not_exists(tmp_path: Path) -> None:
     """Test save_issue_reference raises error when plan dir doesn't exist."""
-    plan_dir = tmp_path / ".plan"
+    impl_dir = tmp_path / ".impl"
     # Don't create the directory
 
-    with pytest.raises(FileNotFoundError, match="Plan directory does not exist"):
-        save_issue_reference(plan_dir, 42, "http://url")
+    with pytest.raises(FileNotFoundError, match="Implementation directory does not exist"):
+        save_issue_reference(impl_dir, 42, "http://url")
 
 
 def test_save_issue_reference_overwrites_existing(tmp_path: Path) -> None:
     """Test save_issue_reference overwrites existing issue.json."""
-    plan_dir = tmp_path / ".plan"
+    plan_dir = tmp_path / ".impl"
     plan_dir.mkdir()
 
     # Save first reference
@@ -594,7 +594,7 @@ def test_save_issue_reference_overwrites_existing(tmp_path: Path) -> None:
 
 def test_save_issue_reference_timestamps(tmp_path: Path) -> None:
     """Test save_issue_reference generates ISO 8601 timestamps."""
-    plan_dir = tmp_path / ".plan"
+    plan_dir = tmp_path / ".impl"
     plan_dir.mkdir()
 
     save_issue_reference(plan_dir, 1, "http://url")
@@ -613,7 +613,7 @@ def test_save_issue_reference_timestamps(tmp_path: Path) -> None:
 
 def test_read_issue_reference_success(tmp_path: Path) -> None:
     """Test reading existing issue reference."""
-    plan_dir = tmp_path / ".plan"
+    plan_dir = tmp_path / ".impl"
     plan_dir.mkdir()
 
     # Save reference
@@ -631,7 +631,7 @@ def test_read_issue_reference_success(tmp_path: Path) -> None:
 
 def test_read_issue_reference_not_exists(tmp_path: Path) -> None:
     """Test read_issue_reference returns None when file doesn't exist."""
-    plan_dir = tmp_path / ".plan"
+    plan_dir = tmp_path / ".impl"
     plan_dir.mkdir()
 
     ref = read_issue_reference(plan_dir)
@@ -641,7 +641,7 @@ def test_read_issue_reference_not_exists(tmp_path: Path) -> None:
 
 def test_read_issue_reference_invalid_json(tmp_path: Path) -> None:
     """Test read_issue_reference returns None for invalid JSON."""
-    plan_dir = tmp_path / ".plan"
+    plan_dir = tmp_path / ".impl"
     plan_dir.mkdir()
 
     # Create invalid JSON file
@@ -655,7 +655,7 @@ def test_read_issue_reference_invalid_json(tmp_path: Path) -> None:
 
 def test_read_issue_reference_missing_fields(tmp_path: Path) -> None:
     """Test read_issue_reference returns None when required fields missing."""
-    plan_dir = tmp_path / ".plan"
+    plan_dir = tmp_path / ".impl"
     plan_dir.mkdir()
 
     # Create JSON with missing fields
@@ -672,7 +672,7 @@ def test_read_issue_reference_missing_fields(tmp_path: Path) -> None:
 
 def test_read_issue_reference_all_fields_present(tmp_path: Path) -> None:
     """Test read_issue_reference returns IssueReference with all fields."""
-    plan_dir = tmp_path / ".plan"
+    plan_dir = tmp_path / ".impl"
     plan_dir.mkdir()
 
     # Create complete JSON
@@ -698,7 +698,7 @@ def test_read_issue_reference_all_fields_present(tmp_path: Path) -> None:
 
 def test_has_issue_reference_exists(tmp_path: Path) -> None:
     """Test has_issue_reference returns True when file exists."""
-    plan_dir = tmp_path / ".plan"
+    plan_dir = tmp_path / ".impl"
     plan_dir.mkdir()
 
     save_issue_reference(plan_dir, 42, "http://url")
@@ -708,7 +708,7 @@ def test_has_issue_reference_exists(tmp_path: Path) -> None:
 
 def test_has_issue_reference_not_exists(tmp_path: Path) -> None:
     """Test has_issue_reference returns False when file doesn't exist."""
-    plan_dir = tmp_path / ".plan"
+    plan_dir = tmp_path / ".impl"
     plan_dir.mkdir()
 
     assert has_issue_reference(plan_dir) is False
@@ -716,7 +716,7 @@ def test_has_issue_reference_not_exists(tmp_path: Path) -> None:
 
 def test_has_issue_reference_plan_dir_not_exists(tmp_path: Path) -> None:
     """Test has_issue_reference returns False when plan dir doesn't exist."""
-    plan_dir = tmp_path / ".plan"
+    plan_dir = tmp_path / ".impl"
     # Don't create directory
 
     assert has_issue_reference(plan_dir) is False
@@ -724,7 +724,7 @@ def test_has_issue_reference_plan_dir_not_exists(tmp_path: Path) -> None:
 
 def test_issue_reference_roundtrip(tmp_path: Path) -> None:
     """Test complete workflow: save -> read -> verify."""
-    plan_dir = tmp_path / ".plan"
+    plan_dir = tmp_path / ".impl"
     plan_dir.mkdir()
 
     # Save reference
@@ -751,7 +751,7 @@ def test_issue_reference_with_plan_folder(tmp_path: Path) -> None:
     """Test issue reference integration with plan folder creation."""
     # Create plan folder
     plan_content = "# Test Plan\n\n1. Step one"
-    plan_folder = create_plan_folder(tmp_path, plan_content)
+    plan_folder = create_impl_folder(tmp_path, plan_content)
 
     # Initially no issue reference
     assert has_issue_reference(plan_folder) is False

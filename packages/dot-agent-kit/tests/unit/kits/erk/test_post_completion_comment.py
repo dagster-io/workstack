@@ -24,8 +24,8 @@ from erk.core.github.issues import FakeGitHubIssues
 def test_success_case_complete(tmp_path: Path, monkeypatch) -> None:
     """Test successful completion comment posting."""
     # Setup temp directory structure
-    plan_dir = tmp_path / ".plan"
-    plan_dir.mkdir()
+    impl_dir = tmp_path / ".impl"
+    impl_dir.mkdir()
 
     # Create issue.json
     issue_json = {
@@ -34,7 +34,7 @@ def test_success_case_complete(tmp_path: Path, monkeypatch) -> None:
         "created_at": "2025-11-22T10:00:00Z",
         "synced_at": "2025-11-22T10:00:00Z",
     }
-    (plan_dir / "issue.json").write_text(json.dumps(issue_json), encoding="utf-8")
+    (impl_dir / "issue.json").write_text(json.dumps(issue_json), encoding="utf-8")
 
     # Create progress.md with 100% completion
     progress_content = """---
@@ -50,7 +50,7 @@ total_steps: 5
 - [x] Step 4
 - [x] Step 5
 """
-    (plan_dir / "progress.md").write_text(progress_content, encoding="utf-8")
+    (impl_dir / "progress.md").write_text(progress_content, encoding="utf-8")
 
     # Mock subprocess.run to return tmp_path as repo root
     def mock_run(*args, **kwargs):
@@ -126,8 +126,8 @@ total_steps: 5
 
 def test_not_complete_error(tmp_path: Path, monkeypatch) -> None:
     """Test error when plan is not 100% complete."""
-    plan_dir = tmp_path / ".plan"
-    plan_dir.mkdir()
+    impl_dir = tmp_path / ".impl"
+    impl_dir.mkdir()
 
     # Create issue.json
     issue_json = {
@@ -136,7 +136,7 @@ def test_not_complete_error(tmp_path: Path, monkeypatch) -> None:
         "created_at": "2025-11-22T10:00:00Z",
         "synced_at": "2025-11-22T10:00:00Z",
     }
-    (plan_dir / "issue.json").write_text(json.dumps(issue_json), encoding="utf-8")
+    (impl_dir / "issue.json").write_text(json.dumps(issue_json), encoding="utf-8")
 
     # Create progress.md with 60% completion
     progress_content = """---
@@ -144,7 +144,7 @@ completed_steps: 3
 total_steps: 5
 ---
 """
-    (plan_dir / "progress.md").write_text(progress_content, encoding="utf-8")
+    (impl_dir / "progress.md").write_text(progress_content, encoding="utf-8")
 
     # Mock subprocess.run
     def mock_run(*args, **kwargs):
@@ -179,9 +179,9 @@ total_steps: 5
 
 
 def test_no_issue_reference(tmp_path: Path, monkeypatch) -> None:
-    """Test error when .plan/issue.json missing."""
-    plan_dir = tmp_path / ".plan"
-    plan_dir.mkdir()
+    """Test error when .impl/issue.json missing."""
+    impl_dir = tmp_path / ".impl"
+    impl_dir.mkdir()
 
     # Mock subprocess.run
     def mock_run(*args, **kwargs):
@@ -210,9 +210,9 @@ def test_no_issue_reference(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_no_progress_file(tmp_path: Path, monkeypatch) -> None:
-    """Test error when .plan/progress.md missing."""
-    plan_dir = tmp_path / ".plan"
-    plan_dir.mkdir()
+    """Test error when .impl/progress.md missing."""
+    impl_dir = tmp_path / ".impl"
+    impl_dir.mkdir()
 
     # Create issue.json
     issue_json = {
@@ -221,7 +221,7 @@ def test_no_progress_file(tmp_path: Path, monkeypatch) -> None:
         "created_at": "2025-11-22T10:00:00Z",
         "synced_at": "2025-11-22T10:00:00Z",
     }
-    (plan_dir / "issue.json").write_text(json.dumps(issue_json), encoding="utf-8")
+    (impl_dir / "issue.json").write_text(json.dumps(issue_json), encoding="utf-8")
 
     # Mock subprocess.run
     def mock_run(*args, **kwargs):
@@ -251,8 +251,8 @@ def test_no_progress_file(tmp_path: Path, monkeypatch) -> None:
 
 def test_invalid_progress_format(tmp_path: Path, monkeypatch) -> None:
     """Test error when progress.md has malformed frontmatter."""
-    plan_dir = tmp_path / ".plan"
-    plan_dir.mkdir()
+    impl_dir = tmp_path / ".impl"
+    impl_dir.mkdir()
 
     # Create issue.json
     issue_json = {
@@ -261,10 +261,10 @@ def test_invalid_progress_format(tmp_path: Path, monkeypatch) -> None:
         "created_at": "2025-11-22T10:00:00Z",
         "synced_at": "2025-11-22T10:00:00Z",
     }
-    (plan_dir / "issue.json").write_text(json.dumps(issue_json), encoding="utf-8")
+    (impl_dir / "issue.json").write_text(json.dumps(issue_json), encoding="utf-8")
 
     # Create progress.md with malformed YAML
-    (plan_dir / "progress.md").write_text("Not valid YAML frontmatter", encoding="utf-8")
+    (impl_dir / "progress.md").write_text("Not valid YAML frontmatter", encoding="utf-8")
 
     # Mock subprocess.run
     def mock_run(*args, **kwargs):
@@ -323,8 +323,8 @@ def test_not_in_git_repo(tmp_path: Path, monkeypatch) -> None:
 
 def test_github_api_failure(tmp_path: Path, monkeypatch) -> None:
     """Test error when GitHub API fails."""
-    plan_dir = tmp_path / ".plan"
-    plan_dir.mkdir()
+    impl_dir = tmp_path / ".impl"
+    impl_dir.mkdir()
 
     # Create issue.json
     issue_json = {
@@ -333,7 +333,7 @@ def test_github_api_failure(tmp_path: Path, monkeypatch) -> None:
         "created_at": "2025-11-22T10:00:00Z",
         "synced_at": "2025-11-22T10:00:00Z",
     }
-    (plan_dir / "issue.json").write_text(json.dumps(issue_json), encoding="utf-8")
+    (impl_dir / "issue.json").write_text(json.dumps(issue_json), encoding="utf-8")
 
     # Create progress.md with 100% completion
     progress_content = """---
@@ -341,7 +341,7 @@ completed_steps: 4
 total_steps: 4
 ---
 """
-    (plan_dir / "progress.md").write_text(progress_content, encoding="utf-8")
+    (impl_dir / "progress.md").write_text(progress_content, encoding="utf-8")
 
     # Mock subprocess.run
     def mock_run(*args, **kwargs):
@@ -385,8 +385,8 @@ total_steps: 4
 
 def test_edge_case_unicode_in_summary(tmp_path: Path, monkeypatch) -> None:
     """Test with Unicode characters in summary."""
-    plan_dir = tmp_path / ".plan"
-    plan_dir.mkdir()
+    impl_dir = tmp_path / ".impl"
+    impl_dir.mkdir()
 
     issue_json = {
         "issue_number": 300,
@@ -394,14 +394,14 @@ def test_edge_case_unicode_in_summary(tmp_path: Path, monkeypatch) -> None:
         "created_at": "2025-11-22T10:00:00Z",
         "synced_at": "2025-11-22T10:00:00Z",
     }
-    (plan_dir / "issue.json").write_text(json.dumps(issue_json), encoding="utf-8")
+    (impl_dir / "issue.json").write_text(json.dumps(issue_json), encoding="utf-8")
 
     progress_content = """---
 completed_steps: 3
 total_steps: 3
 ---
 """
-    (plan_dir / "progress.md").write_text(progress_content, encoding="utf-8")
+    (impl_dir / "progress.md").write_text(progress_content, encoding="utf-8")
 
     def mock_run(*args, **kwargs):
         result = MagicMock()
@@ -440,8 +440,8 @@ total_steps: 3
 
 def test_edge_case_colon_in_summary(tmp_path: Path, monkeypatch) -> None:
     """Test YAML escaping with colon in summary."""
-    plan_dir = tmp_path / ".plan"
-    plan_dir.mkdir()
+    impl_dir = tmp_path / ".impl"
+    impl_dir.mkdir()
 
     issue_json = {
         "issue_number": 400,
@@ -449,14 +449,14 @@ def test_edge_case_colon_in_summary(tmp_path: Path, monkeypatch) -> None:
         "created_at": "2025-11-22T10:00:00Z",
         "synced_at": "2025-11-22T10:00:00Z",
     }
-    (plan_dir / "issue.json").write_text(json.dumps(issue_json), encoding="utf-8")
+    (impl_dir / "issue.json").write_text(json.dumps(issue_json), encoding="utf-8")
 
     progress_content = """---
 completed_steps: 4
 total_steps: 4
 ---
 """
-    (plan_dir / "progress.md").write_text(progress_content, encoding="utf-8")
+    (impl_dir / "progress.md").write_text(progress_content, encoding="utf-8")
 
     def mock_run(*args, **kwargs):
         result = MagicMock()
@@ -493,8 +493,8 @@ total_steps: 4
 
 def test_edge_case_quotes_in_summary(tmp_path: Path, monkeypatch) -> None:
     """Test YAML escaping with quotes in summary."""
-    plan_dir = tmp_path / ".plan"
-    plan_dir.mkdir()
+    impl_dir = tmp_path / ".impl"
+    impl_dir.mkdir()
 
     issue_json = {
         "issue_number": 500,
@@ -502,14 +502,14 @@ def test_edge_case_quotes_in_summary(tmp_path: Path, monkeypatch) -> None:
         "created_at": "2025-11-22T10:00:00Z",
         "synced_at": "2025-11-22T10:00:00Z",
     }
-    (plan_dir / "issue.json").write_text(json.dumps(issue_json), encoding="utf-8")
+    (impl_dir / "issue.json").write_text(json.dumps(issue_json), encoding="utf-8")
 
     progress_content = """---
 completed_steps: 2
 total_steps: 2
 ---
 """
-    (plan_dir / "progress.md").write_text(progress_content, encoding="utf-8")
+    (impl_dir / "progress.md").write_text(progress_content, encoding="utf-8")
 
     def mock_run(*args, **kwargs):
         result = MagicMock()

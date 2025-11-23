@@ -280,7 +280,7 @@ def _create_worktree_with_plan_content(
     )
 
     # Output worktree creation diagnostic
-    ctx.feedback.info("Running erk checkout...")
+    ctx.feedback.info(f"Creating branch '{branch}' from {trunk_branch}...")
 
     # Create worktree
     add_worktree(
@@ -300,10 +300,12 @@ def _create_worktree_with_plan_content(
     run_post_worktree_setup(ctx, config, wt_path, repo_root, name)
 
     # Create .impl/ folder with plan content
+    ctx.feedback.info("Creating .impl/ folder with plan...")
     create_impl_folder(
         worktree_path=wt_path,
         plan_content=plan_source.plan_content,
     )
+    ctx.feedback.success("✓ Created .impl/ folder")
 
     return wt_path
 
@@ -384,10 +386,11 @@ def _implement_from_issue(
         return
 
     # Save issue reference for PR linking (issue-specific)
+    ctx.feedback.info("Saving issue reference for PR linking...")
     plan_issue = ctx.plan_issue_store.get_plan_issue(repo.root, issue_number)
     _save_issue_reference(wt_path, issue_number, plan_issue.url)
 
-    ctx.feedback.success("✓ Saved issue reference for PR linking")
+    ctx.feedback.success(f"✓ Saved issue reference: {plan_issue.url}")
 
     # Output activation instructions
     branch = wt_path.name
@@ -422,6 +425,7 @@ def _implement_from_file(
         return
 
     # Delete original plan file (move semantics, file-specific)
+    ctx.feedback.info(f"Removing original plan file: {plan_file.name}...")
     plan_file.unlink()
 
     ctx.feedback.success("✓ Moved plan file to worktree")

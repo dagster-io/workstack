@@ -46,7 +46,7 @@ You are executing the `/erk:implement-plan` command. Follow these steps carefull
 Run the kit command to validate prerequisites:
 
 ```bash
-dot-agent run erk implement-plan --dry-run
+dot-agent run erk check-impl --dry-run
 ```
 
 This validates:

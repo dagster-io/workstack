@@ -1,11 +1,11 @@
-"""Implement a plan from .impl/plan.md with GitHub progress tracking.
+"""Check .impl/ folder structure and validate prerequisites.
 
-This kit CLI command validates the .impl/ folder structure and provides
-instructions for implementing the plan.
+This kit CLI command validates that .impl/ folder has required files
+(plan.md, progress.md) and checks for optional GitHub issue tracking.
 
 Usage:
-    dot-agent run erk implement-plan
-    dot-agent run erk implement-plan --dry-run
+    dot-agent run erk check-impl
+    dot-agent run erk check-impl --dry-run
 
 Output:
     JSON with validation status and tracking info (dry-run mode)
@@ -16,10 +16,10 @@ Exit Codes:
     1: Validation error
 
 Examples:
-    $ dot-agent run erk implement-plan --dry-run
+    $ dot-agent run erk check-impl --dry-run
     {"valid": true, "has_issue_tracking": true, "plan_length": 1234}
 
-    $ dot-agent run erk implement-plan
+    $ dot-agent run erk check-impl
     Plan loaded from .impl/plan.md
     GitHub tracking: ENABLED (issue #123)
     ...
@@ -30,7 +30,6 @@ from pathlib import Path
 from typing import NoReturn
 
 import click
-
 from erk_shared.impl_folder import read_issue_reference
 
 
@@ -122,10 +121,10 @@ The /erk:implement-plan slash command will:
     click.echo(msg)
 
 
-@click.command(name="implement-plan")
-@click.option("--dry-run", is_flag=True, help="Validate without implementing")
-def implement_plan(dry_run: bool) -> None:
-    """Execute implementation plan from .impl/ folder.
+@click.command(name="check-impl")
+@click.option("--dry-run", is_flag=True, help="Validate and output JSON")
+def check_impl(dry_run: bool) -> None:
+    """Check .impl/ folder structure and validate prerequisites.
 
     Validates that .impl/ folder exists with required files (plan.md, progress.md).
     Checks for optional issue.json to enable GitHub progress tracking.

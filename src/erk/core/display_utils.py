@@ -150,6 +150,7 @@ def format_worktree_line(
     max_name_len: int = 0,
     max_branch_len: int = 0,
     max_pr_info_len: int = 0,
+    pr_title: str | None = None,
 ) -> str:
     """Format a single worktree line with colorization and optional alignment.
 
@@ -163,9 +164,10 @@ def format_worktree_line(
         max_name_len: Maximum name length for alignment (0 = no alignment)
         max_branch_len: Maximum branch length for alignment (0 = no alignment)
         max_pr_info_len: Maximum PR info visible length for alignment (0 = no alignment)
+        pr_title: PR title from GitHub (preferred over plan_summary if available)
 
     Returns:
-        Formatted line with colorization in format: name (branch) {PR info} {plan summary}
+        Formatted line: name (branch) {PR info} {PR title or plan summary}
     """
     # Root worktree gets green to distinguish it from regular worktrees
     name_color = "green" if is_root else "cyan"
@@ -205,11 +207,17 @@ def format_worktree_line(
     else:
         parts.append(pr_display)
 
-    # Add plan summary or placeholder
-    if plan_summary:
+    # Add PR title, plan summary, or placeholder (PR title takes precedence)
+    if pr_title:
+        # PR title available - use it without emoji
+        title_colored = click.style(pr_title, fg="bright_magenta")
+        parts.append(title_colored)
+    elif plan_summary:
+        # No PR title but have plan summary - use with emoji
         plan_colored = click.style(f"📋 {plan_summary}", fg="bright_magenta")
         parts.append(plan_colored)
     else:
+        # No PR title and no plan summary
         parts.append(click.style("[no plan]", fg="white", dim=True))
 
     # Build the main line

@@ -9,8 +9,8 @@ from erk.cli.commands.land_stack.execution import (
     _check_pr_mergeable_with_retry,
 )
 from erk.core.context import ErkContext
+from erk.core.github.fake import FakeGitHub
 from erk.core.github.types import PRMergeability
-from tests.fakes.github import FakeGitHub
 
 
 def test_check_pr_mergeable_unknown_triggers_retry() -> None:

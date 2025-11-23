@@ -7,7 +7,6 @@ This unified command provides two modes:
 Both modes create a worktree and invoke Claude for implementation.
 """
 
-import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -217,8 +216,6 @@ def _prepare_plan_source_from_file(ctx: ErkContext, plan_file: Path) -> PlanSour
         base_name=base_name,
         dry_run_description=dry_run_desc,
     )
-
-
 
 
 def _create_worktree_with_plan_content(

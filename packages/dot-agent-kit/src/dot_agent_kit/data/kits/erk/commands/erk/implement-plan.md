@@ -50,6 +50,7 @@ dot-agent run erk implement-plan --dry-run
 ```
 
 This validates:
+
 - .impl/ folder exists
 - plan.md exists
 - progress.md exists

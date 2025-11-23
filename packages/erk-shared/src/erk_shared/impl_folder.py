@@ -339,7 +339,7 @@ def read_issue_reference(impl_dir: Path) -> IssueReference | None:
     # Gracefully handle JSON parsing errors (third-party API exception handling)
     try:
         data = json.loads(issue_file.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as e:
+    except json.JSONDecodeError:
         # Could add logging here if needed for debugging:
         # logger.debug(f"Failed to parse issue.json: {e}")
         return None

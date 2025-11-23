@@ -69,9 +69,7 @@ def test_implement_plan_handles_incomplete_issue_json(tmp_path: Path, monkeypatc
 
     # Create progress.md
     progress_md = impl_dir / "progress.md"
-    progress_md.write_text(
-        "---\ncompleted_steps: 0\ntotal_steps: 1\n---\n\n- [ ] 1. Do thing"
-    )
+    progress_md.write_text("---\ncompleted_steps: 0\ntotal_steps: 1\n---\n\n- [ ] 1. Do thing")
 
     # Write SIMPLE format issue.json (missing timestamps)
     issue_json = impl_dir / "issue.json"
@@ -110,9 +108,7 @@ def test_implement_plan_handles_missing_issue_json(tmp_path: Path, monkeypatch) 
 
     # Create progress.md
     progress_md = impl_dir / "progress.md"
-    progress_md.write_text(
-        "---\ncompleted_steps: 0\ntotal_steps: 1\n---\n\n- [ ] 1. Do thing"
-    )
+    progress_md.write_text("---\ncompleted_steps: 0\ntotal_steps: 1\n---\n\n- [ ] 1. Do thing")
 
     # Change to tmp_path
     monkeypatch.chdir(tmp_path)
@@ -136,9 +132,7 @@ def test_implement_plan_errors_on_missing_plan(tmp_path: Path, monkeypatch) -> N
 
     # Create only progress.md
     progress_md = impl_dir / "progress.md"
-    progress_md.write_text(
-        "---\ncompleted_steps: 0\ntotal_steps: 1\n---\n\n- [ ] 1. Do thing"
-    )
+    progress_md.write_text("---\ncompleted_steps: 0\ntotal_steps: 1\n---\n\n- [ ] 1. Do thing")
 
     # Change to tmp_path
     monkeypatch.chdir(tmp_path)
@@ -198,9 +192,7 @@ def test_implement_plan_normal_mode_with_tracking(tmp_path: Path, monkeypatch) -
     plan_md.write_text("# Test Plan\n\n## Steps\n1. Do thing")
 
     progress_md = impl_dir / "progress.md"
-    progress_md.write_text(
-        "---\ncompleted_steps: 0\ntotal_steps: 1\n---\n\n- [ ] 1. Do thing"
-    )
+    progress_md.write_text("---\ncompleted_steps: 0\ntotal_steps: 1\n---\n\n- [ ] 1. Do thing")
 
     issue_json = impl_dir / "issue.json"
     issue_json.write_text(
@@ -238,9 +230,7 @@ def test_implement_plan_normal_mode_without_tracking(tmp_path: Path, monkeypatch
     plan_md.write_text("# Test Plan\n\n## Steps\n1. Do thing")
 
     progress_md = impl_dir / "progress.md"
-    progress_md.write_text(
-        "---\ncompleted_steps: 0\ntotal_steps: 1\n---\n\n- [ ] 1. Do thing"
-    )
+    progress_md.write_text("---\ncompleted_steps: 0\ntotal_steps: 1\n---\n\n- [ ] 1. Do thing")
 
     # Change to tmp_path
     monkeypatch.chdir(tmp_path)

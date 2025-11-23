@@ -26,7 +26,6 @@ Examples:
 """
 
 import json
-import sys
 from pathlib import Path
 
 import click
@@ -83,9 +82,7 @@ def _get_issue_reference(impl_dir: Path, *, silent: bool = False) -> dict[str, i
     if issue_ref is None:
         # Not an error - just means no GitHub tracking
         if not silent:
-            click.echo(
-                "ℹ️  No issue reference found - GitHub progress tracking disabled", err=True
-            )
+            click.echo("ℹ️  No issue reference found - GitHub progress tracking disabled", err=True)
         return None
 
     return {

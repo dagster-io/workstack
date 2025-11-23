@@ -619,3 +619,62 @@ def test_implement_submit_with_dry_run() -> None:
 
         # Verify no worktree was actually created
         assert len(git.added_worktrees) == 0
+
+
+# Graphite Configuration Tests
+
+
+def test_implement_uses_git_when_graphite_disabled() -> None:
+    """Test that implement uses standard git workflow when use_graphite=false.
+
+    Note: Tests with use_graphite=true require graphite subprocess integration
+    (gt create command), which should be tested at the integration level with
+    real gt commands, not in unit tests.
+    """
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        # Build context with use_graphite=False (default)
+        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store, use_graphite=False)
+
+        result = runner.invoke(implement, ["#42"], obj=ctx)
+
+        assert result.exit_code == 0
+        assert "Created worktree" in result.output
+        # Verify worktree was created
+        assert len(git.added_worktrees) == 1
+
+
+def test_implement_plan_file_uses_git_when_graphite_disabled() -> None:
+    """Test that plan file mode uses standard git workflow when use_graphite=false.
+
+    Note: Tests with use_graphite=true require graphite subprocess integration.
+    """
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        # Build context with use_graphite=False (default)
+        ctx = build_workspace_test_context(env, git=git, use_graphite=False)
+
+        # Create plan file
+        plan_content = "# Implementation Plan\n\nImplement feature X."
+        plan_file = env.cwd / "my-feature-plan.md"
+        plan_file.write_text(plan_content, encoding="utf-8")
+
+        result = runner.invoke(implement, [str(plan_file)], obj=ctx)
+
+        assert result.exit_code == 0
+        assert "Created worktree" in result.output
+        # Verify worktree was created
+        assert len(git.added_worktrees) == 1

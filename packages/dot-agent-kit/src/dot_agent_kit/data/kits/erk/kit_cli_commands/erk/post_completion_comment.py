@@ -33,7 +33,7 @@ from dot_agent_kit.context_helpers import require_github_issues
 from erk.core.impl_folder import parse_progress_frontmatter, read_issue_reference
 from erk.integrations.github.metadata_blocks import (
     create_implementation_status_block,
-    render_metadata_block,
+    render_erk_issue_event,
 )
 
 
@@ -160,11 +160,12 @@ def post_completion_comment(ctx: click.Context, summary: str) -> None:
         summary=summary,
     )
 
-    # Render metadata block
-    metadata_markdown = render_metadata_block(block)
-
-    # Format comment with emoji prefix + metadata
-    comment_body = f"✅ Implementation complete\n\n{metadata_markdown}"
+    # Create comment with consistent format
+    comment_body = render_erk_issue_event(
+        title="✅ Implementation complete",
+        metadata=block,
+        description="",
+    )
 
     # Get GitHub Issues from context (with LBYL check)
     # Convert stderr error to JSON error for graceful degradation (|| true pattern)

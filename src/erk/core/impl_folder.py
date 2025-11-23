@@ -23,7 +23,7 @@ import yaml
 
 from erk.integrations.github.metadata_blocks import (
     create_worktree_creation_block,
-    render_metadata_block,
+    render_erk_issue_event,
 )
 
 
@@ -400,14 +400,9 @@ def add_worktree_creation_comment(
         timestamp=timestamp,
         issue_number=issue_number,
     )
-    block_markdown = render_metadata_block(block)
 
-    # Create human-readable comment with instructions
-    comment_body = f"""✅ Worktree created: **{worktree_name}**
-
-{block_markdown}
-
-The worktree is ready for implementation. You can navigate to it using:
+    # Format instructions for implementation
+    instructions = f"""The worktree is ready for implementation. You can navigate to it using:
 ```bash
 erk checkout {branch_name}
 ```
@@ -416,5 +411,12 @@ To implement the plan:
 ```bash
 claude --permission-mode acceptEdits "/erk:implement-plan"
 ```"""
+
+    # Create comment with consistent format
+    comment_body = render_erk_issue_event(
+        title=f"✅ Worktree created: **{worktree_name}**",
+        metadata=block,
+        description=instructions,
+    )
 
     github_issues.add_comment(repo_root, issue_number, comment_body)

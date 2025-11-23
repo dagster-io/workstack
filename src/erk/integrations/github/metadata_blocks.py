@@ -234,6 +234,55 @@ def render_metadata_block(block: MetadataBlock) -> str:
 <!-- /erk:metadata-block -->"""
 
 
+def render_erk_issue_event(
+    title: str,
+    metadata: MetadataBlock,
+    description: str = "",
+) -> str:
+    """
+    Format a GitHub issue comment for an erk event with consistent structure.
+
+    Creates a comment with:
+    - Title line
+    - Metadata block (collapsible YAML)
+    - Horizontal separator
+    - Optional description/instructions
+
+    Args:
+        title: The event title (e.g., "✓ Step 3/5 completed")
+        metadata: Metadata block with event details
+        description: Optional instructions or additional context
+
+    Returns:
+        Formatted comment body ready for GitHub API
+
+    Example:
+        >>> block = create_progress_status_block(...)
+        >>> comment = render_erk_issue_event(
+        ...     "✓ Step 3/5 completed",
+        ...     block,
+        ...     "Next: implement feature X"
+        ... )
+    """
+    metadata_markdown = render_metadata_block(metadata)
+
+    # Build comment structure
+    parts = [
+        title,
+        "",  # Blank line after title
+        metadata_markdown,
+        "",  # Blank line after metadata
+        "---",
+        "",  # Blank line after separator
+    ]
+
+    # Add description if provided
+    if description:
+        parts.append(description)
+
+    return "\n".join(parts)
+
+
 def create_implementation_status_block(
     status: str,
     completed_steps: int,

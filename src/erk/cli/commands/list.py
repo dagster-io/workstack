@@ -19,7 +19,7 @@ from erk.core.worktree_utils import find_current_worktree
 
 
 def _format_plan_summary(worktree_path: Path, ctx: ErkContext) -> str | None:
-    """Extract plan title from .plan/plan.md if it exists.
+    """Extract plan title from .impl/plan.md if it exists.
 
     Args:
         worktree_path: Path to the worktree directory

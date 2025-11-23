@@ -8,7 +8,7 @@ description: Create GitHub issue from persisted plan
 
 **Create a GitHub issue from an existing plan file on disk.**
 
-This command detects plan files at the repository root, selects the most recent one, creates a GitHub issue with the plan content, and optionally links it to an existing worktree's `.plan/` folder.
+This command detects plan files at the repository root, selects the most recent one, creates a GitHub issue with the plan content, and optionally links it to an existing worktree's `.impl/` folder.
 
 **What this command does:**
 
@@ -17,7 +17,7 @@ This command detects plan files at the repository root, selects the most recent 
 - ✅ Ensure `erk-plan` label exists (create if needed)
 - ✅ Create GitHub issue with plan body as content
 - ✅ Add label: `erk-plan`
-- ✅ Save issue reference to `.plan/issue.json` (if worktree exists)
+- ✅ Save issue reference to `.impl/issue.json` (if worktree exists)
 - ✅ Display issue URL
 
 ## What Happens
@@ -29,7 +29,7 @@ When you run this command, these steps occur:
 3. **Parse Plan** - Extract title and body from markdown
 4. **Ensure Label Exists** - Check for `erk-plan` label, create if missing
 5. **Create Issue** - Use gh CLI to create issue with `erk-plan` label
-6. **Link to Worktree** - If `.plan/` folder exists in current worktree, save issue reference
+6. **Link to Worktree** - If `.impl/` folder exists in current worktree, save issue reference
 7. **Display Result** - Show issue number and URL
 
 ## Usage
@@ -79,8 +79,8 @@ This command succeeds when ALL of the following are true:
 ✅ Issue URL displayed
 
 **Worktree Linking (if applicable):**
-✅ If `.plan/` folder exists: issue reference saved to `.plan/issue.json`
-✅ If no `.plan/` folder: issue created but not linked (can link later)
+✅ If `.impl/` folder exists: issue reference saved to `.impl/issue.json`
+✅ If no `.impl/` folder: issue created but not linked (can link later)
 
 ## Troubleshooting
 
@@ -120,7 +120,7 @@ This command succeeds when ALL of the following are true:
 
 ### "Issue created but not linked"
 
-**Cause:** No `.plan/` folder in current worktree
+**Cause:** No `.impl/` folder in current worktree
 **Solution:**
 
 - This is expected if you haven't created a worktree yet
@@ -142,7 +142,7 @@ This command succeeds when ALL of the following are true:
 1. Create plan: `/erk:save-context-enriched-plan`
 2. Create worktree: `/erk:create-wt-from-plan-file`
 3. Navigate: `erk checkout <branch>`
-4. Create issue: `/erk:create-planned-issue` ← Issue automatically linked to `.plan/` folder
+4. Create issue: `/erk:create-planned-issue` ← Issue automatically linked to `.impl/` folder
 
 ---
 
@@ -312,31 +312,31 @@ You can now:
 - Create worktree: /erk:create-wt-from-plan-file
 ```
 
-### Step 8: Link Issue to Worktree (if .plan/ exists)
+### Step 8: Link Issue to Worktree (if .impl/ exists)
 
-Check if current directory has a `.plan/` folder:
+Check if current directory has a `.impl/` folder:
 
-1. Check for `.plan/` directory:
+1. Check for `.impl/` directory:
 
    ```bash
    test -d .plan && echo "exists" || echo "not found"
    ```
 
-2. If `.plan/` exists:
+2. If `.impl/` exists:
    - Use `ctx.issues.get_issue(repo_root, issue_number)` to fetch issue details
-   - Import: `from erk.core.plan_folder import save_issue_reference`
-   - Call: `save_issue_reference(Path.cwd() / ".plan", issue_number, issue_url)`
+   - Import: `from erk.core.impl_folder import save_issue_reference`
+   - Call: `save_issue_reference(Path.cwd() / ".impl", issue_number, issue_url)`
    - Display:
 
      ```
      📋 Issue linked to worktree
 
-     Issue reference saved to .plan/issue.json
+     Issue reference saved to .impl/issue.json
 
      The issue will be updated with progress during implementation.
      ```
 
-3. If `.plan/` doesn't exist:
+3. If `.impl/` doesn't exist:
    - Continue silently (no action needed)
 
 ### Step 9: Handle --link Flag
@@ -359,9 +359,9 @@ If user provided `--link <issue-number>`:
 
    Exit with error.
 
-3. Check for `.plan/` directory (same as Step 8)
+3. Check for `.impl/` directory (same as Step 8)
 
-4. If `.plan/` exists:
+4. If `.impl/` exists:
    - Save issue reference using `save_issue_reference()`
    - Display:
 
@@ -371,15 +371,15 @@ If user provided `--link <issue-number>`:
      Issue: <title>
      URL: <url>
 
-     Issue reference saved to .plan/issue.json
+     Issue reference saved to .impl/issue.json
      ```
 
-5. If `.plan/` doesn't exist:
+5. If `.impl/` doesn't exist:
 
    ```
-   ❌ Error: No .plan/ folder found in current directory
+   ❌ Error: No .impl/ folder found in current directory
 
-   The --link flag requires a .plan/ folder in the current worktree.
+   The --link flag requires a .impl/ folder in the current worktree.
    ```
 
    Exit with error.
@@ -388,7 +388,7 @@ If user provided `--link <issue-number>`:
 
 - **NO auto-implementation**: This command ONLY creates the GitHub issue
 - **Graceful degradation**: Creating issue without linking is valid (can link later)
-- **Idempotent linking**: Can run `--link` multiple times safely (overwrites `.plan/issue.json`)
+- **Idempotent linking**: Can run `--link` multiple times safely (overwrites `.impl/issue.json`)
 - **Context usage**: Use `ctx.issues.create_issue()` for issue creation (injected via ErkContext)
 
 ### Error Handling

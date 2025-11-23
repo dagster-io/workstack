@@ -115,7 +115,7 @@ class SimpleRenderer:
         if status.plan is None:
             return
 
-        # Check if we have either .plan/ folder or enriched plan
+        # Check if we have either .impl/ folder or enriched plan
         has_plan_folder = status.plan.exists
         has_enriched_plan = status.plan.enriched_plan_filename is not None
 
@@ -125,7 +125,7 @@ class SimpleRenderer:
         # Build plan header with both indicators
         plan_header = "Plan:"
 
-        # Add .plan/ folder progress indicator if exists
+        # Add .impl/ folder progress indicator if exists
         if has_plan_folder and status.plan.completion_percentage is not None:
             # New format with emoji: "Plan: 🟡 7/10"
             emoji = self._get_progress_emoji(status.plan.completion_percentage)
@@ -136,7 +136,7 @@ class SimpleRenderer:
 
         # Add enriched plan indicator if exists
         if has_enriched_plan and status.plan.enriched_plan_filename is not None:
-            # Add spacing if .plan/ folder exists
+            # Add spacing if .impl/ folder exists
             if has_plan_folder and status.plan.completion_percentage is not None:
                 plan_header += "  "
             # Strip suffixes and truncate to max 22 chars for display
@@ -145,7 +145,7 @@ class SimpleRenderer:
 
         user_output(click.style(plan_header, fg="bright_magenta", bold=True))
 
-        # Only show plan content details if .plan/ folder exists
+        # Only show plan content details if .impl/ folder exists
         if has_plan_folder:
             if status.plan.first_lines:
                 for line in status.plan.first_lines:

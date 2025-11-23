@@ -7,9 +7,9 @@ from click.testing import CliRunner
 from erk.cli.cli import cli
 from erk.core.branch_metadata import BranchMetadata
 from erk.core.git.abc import WorktreeInfo
+from erk.core.git.fake import FakeGit
+from erk.core.graphite.fake import FakeGraphite
 from erk.core.repo_discovery import RepoContext
-from tests.fakes.git import FakeGit
-from tests.fakes.graphite import FakeGraphite
 from tests.test_utils.cli_helpers import assert_cli_error
 from tests.test_utils.env_helpers import erk_inmem_env, erk_isolated_fs_env
 
@@ -374,8 +374,8 @@ def test_down_delete_current_success() -> None:
         )
 
         # PR for feature-2 is merged
+        from erk.core.github.fake import FakeGitHub
         from erk.core.github.types import PullRequestInfo
-        from tests.fakes.github import FakeGitHub
 
         github_ops = FakeGitHub(
             prs={
@@ -500,8 +500,8 @@ def test_down_delete_current_pr_not_merged() -> None:
         )
 
         # PR for feature-2 is OPEN (not merged)
+        from erk.core.github.fake import FakeGitHub
         from erk.core.github.types import PullRequestInfo
-        from tests.fakes.github import FakeGitHub
 
         github_ops = FakeGitHub(
             prs={
@@ -572,7 +572,7 @@ def test_down_delete_current_no_pr() -> None:
         )
 
         # No PR for feature-2
-        from tests.fakes.github import FakeGitHub
+        from erk.core.github.fake import FakeGitHub
 
         github_ops = FakeGitHub(prs={})
 
@@ -624,8 +624,8 @@ def test_down_delete_current_trunk_in_root() -> None:
         )
 
         # PR for feature-1 is merged
+        from erk.core.github.fake import FakeGitHub
         from erk.core.github.types import PullRequestInfo
-        from tests.fakes.github import FakeGitHub
 
         github_ops = FakeGitHub(
             prs={

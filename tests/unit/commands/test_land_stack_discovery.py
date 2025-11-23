@@ -9,8 +9,8 @@ from pathlib import Path
 from erk.cli.commands.land_stack.discovery import _get_branches_to_land
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from tests.fakes.git import FakeGit
-from tests.fakes.graphite import FakeGraphite
+from erk.core.git.fake import FakeGit
+from erk.core.graphite.fake import FakeGraphite
 from tests.test_utils.builders import BranchStackBuilder
 
 

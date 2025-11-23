@@ -1,6 +1,6 @@
 import pytest
 
-from tests.fakes.git import FakeGit
+from erk.core.git.fake import FakeGit
 from tests.test_utils import sentinel_path
 
 

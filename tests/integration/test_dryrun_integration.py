@@ -15,12 +15,12 @@ from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext, create_context
 from erk.core.git.abc import WorktreeInfo
 from erk.core.git.dry_run import DryRunGit
+from erk.core.git.fake import FakeGit
 from erk.core.github.dry_run import DryRunGitHub
+from erk.core.github.fake import FakeGitHub
 from erk.core.github.issues import DryRunGitHubIssues, FakeGitHubIssues
 from erk.core.graphite.dry_run import DryRunGraphite
-from tests.fakes.git import FakeGit
-from tests.fakes.github import FakeGitHub
-from tests.fakes.graphite import FakeGraphite
+from erk.core.graphite.fake import FakeGraphite
 from tests.fakes.shell import FakeShell
 from tests.test_utils import sentinel_path
 from tests.test_utils.github_helpers import create_test_issue

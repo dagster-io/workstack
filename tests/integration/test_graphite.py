@@ -9,9 +9,9 @@ from pathlib import Path
 
 import pytest
 
+from erk.core.git.fake import FakeGit
 from erk.core.graphite.real import RealGraphite
 from tests.conftest import load_fixture
-from tests.fakes.git import FakeGit
 
 
 def test_graphite_ops_get_prs_with_real_files(tmp_path: Path):

@@ -16,7 +16,7 @@ from pathlib import Path
 
 import click
 
-from dot_agent_kit.context_helpers import require_github_cli
+from dot_agent_kit.context_helpers import require_github_issues
 from dot_agent_kit.data.kits.erk.plan_utils import extract_title_from_plan
 
 
@@ -47,8 +47,8 @@ def create_plan_issue_from_plan_file(
         dot-agent kit-command erk create-plan-issue-from-plan-file my-feature-plan.md
         dot-agent kit-command erk create-plan-issue-from-plan-file my-plan.md --label erk-queue
     """
-    # Get GitHub CLI from context (LBYL check in helper)
-    github_cli = require_github_cli(ctx)
+    # Get GitHub Issues from context (LBYL check in helper)
+    github = require_github_issues(ctx)
 
     # Read file (Python file I/O, not shell)
     # LBYL: path existence already checked by Click
@@ -63,6 +63,9 @@ def create_plan_issue_from_plan_file(
     title = extract_title_from_plan(plan)
     body = plan.strip()
 
+    # Get current repo root
+    repo_root = Path.cwd()
+
     # Ensure label exists
     # Label description varies based on label type
     if label == "erk-queue":
@@ -70,24 +73,31 @@ def create_plan_issue_from_plan_file(
     else:
         description = "Implementation plan for manual execution"
 
-    _label_result = github_cli.ensure_label_exists(
-        label=label,
-        description=description,
-        color="0E8A16",
-    )
+    try:
+        github.ensure_label_exists(
+            repo_root=repo_root,
+            label=label,
+            description=description,
+            color="0E8A16",
+        )
+    except RuntimeError as e:
+        click.echo(f"Error: Failed to ensure label exists: {e}", err=True)
+        raise SystemExit(1) from e
 
-    # Create issue
-    result = github_cli.create_issue(title, body, [label])
+    # Create issue (ABC interface with EAFP pattern)
+    try:
+        issue_number = github.create_issue(repo_root, title, body, [label])
+    except RuntimeError as e:
+        click.echo(f"Error: Failed to create issue: {e}", err=True)
+        raise SystemExit(1) from e
 
-    # Check result (LBYL pattern)
-    if not result.success:
-        click.echo("Error: Failed to create issue", err=True)
-        raise SystemExit(1)
+    # Construct issue URL (owner/repo extracted by GitHub integration)
+    issue_url = f"https://github.com/owner/repo/issues/{issue_number}"
 
     # Return JSON
     output = {
         "success": True,
-        "issue_number": result.issue_number,
-        "issue_url": result.issue_url,
+        "issue_number": issue_number,
+        "issue_url": issue_url,
     }
     click.echo(json.dumps(output))

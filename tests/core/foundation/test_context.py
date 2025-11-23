@@ -6,10 +6,10 @@ import pytest
 
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
+from erk.core.git.fake import FakeGit
+from erk.core.github.fake import FakeGitHub
+from erk.core.graphite.fake import FakeGraphite
 from erk.core.repo_discovery import RepoContext
-from tests.fakes.git import FakeGit
-from tests.fakes.github import FakeGitHub
-from tests.fakes.graphite import FakeGraphite
 from tests.fakes.shell import FakeShell
 from tests.test_utils import sentinel_path
 

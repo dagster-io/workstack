@@ -12,7 +12,7 @@ from erk.cli.cli import cli
 from erk.core.config_store import FakeConfigStore, GlobalConfig
 from erk.core.context import ErkContext
 from erk.core.git.abc import WorktreeInfo
-from tests.fakes.git import FakeGit
+from erk.core.git.fake import FakeGit
 from tests.test_utils.env_helpers import erk_inmem_env
 
 

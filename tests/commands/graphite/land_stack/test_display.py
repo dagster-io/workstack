@@ -6,7 +6,7 @@ from erk.cli.cli import cli
 from erk.core.branch_metadata import BranchMetadata
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from tests.fakes.github import FakeGitHub
+from erk.core.github.fake import FakeGitHub
 from tests.fakes.shell import FakeShell
 from tests.test_utils.env_helpers import erk_inmem_env
 

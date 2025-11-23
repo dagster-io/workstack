@@ -24,6 +24,8 @@ import time
 from pathlib import Path
 
 from erk.core.context import ErkContext
+from erk.core.git.abc import WorktreeInfo
+from erk.core.git.fake import FakeGit
 from erk.core.parallel_task_runner import RealParallelTaskRunner
 from erk.status.collectors.base import StatusCollector
 from erk.status.collectors.git import GitStatusCollector
@@ -31,7 +33,6 @@ from erk.status.collectors.impl import PlanFileCollector
 from erk.status.models.status_data import GitStatus, PlanStatus
 from erk.status.orchestrator import StatusOrchestrator
 from tests.fakes.context import create_test_context
-from tests.fakes.git import FakeGit, WorktreeInfo
 from tests.fakes.parallel_task_runner import FakeParallelTaskRunner
 
 

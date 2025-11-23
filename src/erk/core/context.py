@@ -91,9 +91,9 @@ class ErkContext:
 
         Example:
             Before (7 lines):
-            >>> from tests.fakes.git import FakeGit
-            >>> from tests.fakes.github import FakeGitHub
-            >>> from tests.fakes.graphite import FakeGraphite
+            >>> from erk.core.git.fake import FakeGit
+            >>> from erk.core.github.fake import FakeGitHub
+            >>> from erk.core.graphite.fake import FakeGraphite
             >>> from tests.fakes.shell import FakeShell
             >>> ctx = ErkContext(
             ...     git=git,
@@ -118,14 +118,14 @@ class ErkContext:
             use ErkContext.for_test() instead.
         """
         from tests.fakes.completion import FakeCompletion
-        from tests.fakes.github import FakeGitHub
-        from tests.fakes.graphite import FakeGraphite
         from tests.fakes.script_writer import FakeScriptWriter
         from tests.fakes.shell import FakeShell
         from tests.fakes.time import FakeTime
 
         from erk.core.config_store import FakeConfigStore
+        from erk.core.github.fake import FakeGitHub
         from erk.core.github.issues import FakeGitHubIssues
+        from erk.core.graphite.fake import FakeGraphite
         from erk.core.plan_issue_store import FakePlanIssueStore
 
         return ErkContext(
@@ -213,16 +213,16 @@ class ErkContext:
             which is more concise.
         """
         from tests.fakes.completion import FakeCompletion
-        from tests.fakes.git import FakeGit
-        from tests.fakes.github import FakeGitHub
-        from tests.fakes.graphite import FakeGraphite
         from tests.fakes.script_writer import FakeScriptWriter
         from tests.fakes.shell import FakeShell
         from tests.fakes.time import FakeTime
         from tests.test_utils import sentinel_path
 
         from erk.core.config_store import FakeConfigStore
+        from erk.core.git.fake import FakeGit
+        from erk.core.github.fake import FakeGitHub
         from erk.core.github.issues import FakeGitHubIssues
+        from erk.core.graphite.fake import FakeGraphite
         from erk.core.plan_issue_store import FakePlanIssueStore
 
         if git is None:

@@ -1,7 +1,7 @@
 """Unit tests for create_issue kit CLI command.
 
 Tests GitHub issue creation with body from stdin and multiple label support.
-Uses FakeDotAgentGitHubCli for fast, reliable testing without subprocess mocking.
+Uses FakeGitHubIssues for fast, reliable testing without subprocess mocking.
 """
 
 import json
@@ -12,7 +12,7 @@ from dot_agent_kit.context import DotAgentContext
 from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.create_issue import (
     create_issue,
 )
-from tests.fakes.fake_github_cli import FakeDotAgentGitHubCli
+from erk.core.github.issues import FakeGitHubIssues
 
 # ============================================================================
 # Success Cases
@@ -21,14 +21,14 @@ from tests.fakes.fake_github_cli import FakeDotAgentGitHubCli
 
 def test_create_issue_success() -> None:
     """Test successful issue creation with single label."""
-    fake_gh = FakeDotAgentGitHubCli()
+    fake_gh = FakeGitHubIssues()
     runner = CliRunner()
 
     result = runner.invoke(
         create_issue,
         ["Test Issue", "--label", "erk-plan"],
         input="Test body content",
-        obj=DotAgentContext.for_test(github_cli=fake_gh),
+        obj=DotAgentContext.for_test(github_issues=fake_gh),
     )
 
     assert result.exit_code == 0
@@ -37,24 +37,24 @@ def test_create_issue_success() -> None:
     assert output["issue_number"] == 1
     assert output["issue_url"] == "https://github.com/owner/repo/issues/1"
 
-    # Verify behavior through fake's state (not implementation details)
-    issue = fake_gh.get_issue(1)
-    assert issue is not None
-    assert issue.title == "Test Issue"
-    assert issue.body == "Test body content"
-    assert issue.labels == ["erk-plan"]
+    # Verify behavior through fake's mutation tracking
+    assert len(fake_gh.created_issues) == 1
+    title, body, labels = fake_gh.created_issues[0]
+    assert title == "Test Issue"
+    assert body == "Test body content"
+    assert labels == ["erk-plan"]
 
 
 def test_create_issue_no_labels() -> None:
     """Test issue creation without labels."""
-    fake_gh = FakeDotAgentGitHubCli()
+    fake_gh = FakeGitHubIssues()
     runner = CliRunner()
 
     result = runner.invoke(
         create_issue,
         ["Test Issue"],
         input="Body content",
-        obj=DotAgentContext.for_test(github_cli=fake_gh),
+        obj=DotAgentContext.for_test(github_issues=fake_gh),
     )
 
     assert result.exit_code == 0
@@ -63,21 +63,21 @@ def test_create_issue_no_labels() -> None:
     assert output["issue_number"] == 1
 
     # Verify behavior: issue created without labels
-    issue = fake_gh.get_issue(1)
-    assert issue is not None
-    assert issue.labels == []
+    assert len(fake_gh.created_issues) == 1
+    _, _, labels = fake_gh.created_issues[0]
+    assert labels == []
 
 
 def test_create_issue_multiple_labels() -> None:
     """Test issue creation with multiple labels."""
-    fake_gh = FakeDotAgentGitHubCli()
+    fake_gh = FakeGitHubIssues()
     runner = CliRunner()
 
     result = runner.invoke(
         create_issue,
         ["Test Issue", "--label", "erk-plan", "--label", "priority-high"],
         input="Body content",
-        obj=DotAgentContext.for_test(github_cli=fake_gh),
+        obj=DotAgentContext.for_test(github_issues=fake_gh),
     )
 
     assert result.exit_code == 0
@@ -85,9 +85,9 @@ def test_create_issue_multiple_labels() -> None:
     assert output["success"] is True
 
     # Verify behavior: issue created with both labels
-    issue = fake_gh.get_issue(1)
-    assert issue is not None
-    assert issue.labels == ["erk-plan", "priority-high"]
+    assert len(fake_gh.created_issues) == 1
+    _, _, labels = fake_gh.created_issues[0]
+    assert labels == ["erk-plan", "priority-high"]
 
 
 # ============================================================================
@@ -97,7 +97,7 @@ def test_create_issue_multiple_labels() -> None:
 
 def test_create_issue_unicode_content() -> None:
     """Test issue creation with Unicode characters in body."""
-    fake_gh = FakeDotAgentGitHubCli()
+    fake_gh = FakeGitHubIssues()
     runner = CliRunner()
     unicode_body = "Testing Unicode: 你好 🎉 café"
 
@@ -105,7 +105,7 @@ def test_create_issue_unicode_content() -> None:
         create_issue,
         ["Test Issue", "--label", "erk-plan"],
         input=unicode_body,
-        obj=DotAgentContext.for_test(github_cli=fake_gh),
+        obj=DotAgentContext.for_test(github_issues=fake_gh),
     )
 
     assert result.exit_code == 0
@@ -113,14 +113,14 @@ def test_create_issue_unicode_content() -> None:
     assert output["success"] is True
 
     # Verify Unicode content preserved
-    issue = fake_gh.get_issue(1)
-    assert issue is not None
-    assert issue.body == unicode_body
+    assert len(fake_gh.created_issues) == 1
+    _, body, _ = fake_gh.created_issues[0]
+    assert body == unicode_body
 
 
 def test_create_issue_yaml_frontmatter() -> None:
     """Test issue creation with YAML front matter in body."""
-    fake_gh = FakeDotAgentGitHubCli()
+    fake_gh = FakeGitHubIssues()
     runner = CliRunner()
     body_with_yaml = """---
 erk_plan: true
@@ -135,7 +135,7 @@ This is the plan content."""
         create_issue,
         ["Test Issue", "--label", "erk-plan"],
         input=body_with_yaml,
-        obj=DotAgentContext.for_test(github_cli=fake_gh),
+        obj=DotAgentContext.for_test(github_issues=fake_gh),
     )
 
     assert result.exit_code == 0
@@ -143,14 +143,14 @@ This is the plan content."""
     assert output["success"] is True
 
     # Verify YAML front matter preserved
-    issue = fake_gh.get_issue(1)
-    assert issue is not None
-    assert issue.body == body_with_yaml
+    assert len(fake_gh.created_issues) == 1
+    _, body, _ = fake_gh.created_issues[0]
+    assert body == body_with_yaml
 
 
 def test_create_issue_special_characters() -> None:
     """Test issue creation with special characters in body and title."""
-    fake_gh = FakeDotAgentGitHubCli()
+    fake_gh = FakeGitHubIssues()
     runner = CliRunner()
     special_title = 'Title with "quotes" and `backticks`'
     special_body = """Body with special chars:
@@ -163,7 +163,7 @@ def test_create_issue_special_characters() -> None:
         create_issue,
         [special_title, "--label", "erk-plan"],
         input=special_body,
-        obj=DotAgentContext.for_test(github_cli=fake_gh),
+        obj=DotAgentContext.for_test(github_issues=fake_gh),
     )
 
     assert result.exit_code == 0
@@ -171,15 +171,15 @@ def test_create_issue_special_characters() -> None:
     assert output["success"] is True
 
     # Verify special characters preserved
-    issue = fake_gh.get_issue(1)
-    assert issue is not None
-    assert issue.title == special_title
-    assert issue.body == special_body
+    assert len(fake_gh.created_issues) == 1
+    title, body, _ = fake_gh.created_issues[0]
+    assert title == special_title
+    assert body == special_body
 
 
 def test_create_issue_large_body() -> None:
     """Test issue creation with large body content (10,000+ chars)."""
-    fake_gh = FakeDotAgentGitHubCli()
+    fake_gh = FakeGitHubIssues()
     runner = CliRunner()
     large_body = "x" * 10000
 
@@ -187,7 +187,7 @@ def test_create_issue_large_body() -> None:
         create_issue,
         ["Test Issue", "--label", "erk-plan"],
         input=large_body,
-        obj=DotAgentContext.for_test(github_cli=fake_gh),
+        obj=DotAgentContext.for_test(github_issues=fake_gh),
     )
 
     assert result.exit_code == 0
@@ -195,10 +195,10 @@ def test_create_issue_large_body() -> None:
     assert output["success"] is True
 
     # Verify large body preserved
-    issue = fake_gh.get_issue(1)
-    assert issue is not None
-    assert issue.body == large_body
-    assert len(issue.body) == 10000
+    assert len(fake_gh.created_issues) == 1
+    _, body, _ = fake_gh.created_issues[0]
+    assert body == large_body
+    assert len(body) == 10000
 
 
 # ============================================================================
@@ -209,26 +209,24 @@ def test_create_issue_large_body() -> None:
 def test_create_issue_gh_failure() -> None:
     """Test error handling when gh CLI fails.
 
-    Note: In the fake pattern, we simulate failure by having the fake
-    return success=False. In real usage, RealDotAgentGitHubCli returns success=False
-    when gh CLI fails (not installed, not authenticated, network error, etc.).
+    Note: FakeGitHubIssues can be configured to raise RuntimeError to simulate
+    gh CLI failures (not installed, not authenticated, network error, etc.).
     """
+    from pathlib import Path
 
     # Create a fake that simulates failure
-    class FailingFakeDotAgentGitHubCli(FakeDotAgentGitHubCli):
-        def create_issue(self, title: str, body: str, labels: list[str]):
-            from dot_agent_kit.integrations.github_cli import IssueCreationResult
+    class FailingFakeGitHubIssues(FakeGitHubIssues):
+        def create_issue(self, repo_root: Path, title: str, body: str, labels: list[str]) -> int:
+            raise RuntimeError("gh: command not found")
 
-            return IssueCreationResult(success=False, issue_number=-1, issue_url="")
-
-    fake_gh = FailingFakeDotAgentGitHubCli()
+    fake_gh = FailingFakeGitHubIssues()
     runner = CliRunner()
 
     result = runner.invoke(
         create_issue,
         ["Test Issue", "--label", "erk-plan"],
         input="Body content",
-        obj=DotAgentContext.for_test(github_cli=fake_gh),
+        obj=DotAgentContext.for_test(github_issues=fake_gh),
     )
 
     assert result.exit_code == 1
@@ -242,14 +240,14 @@ def test_create_issue_gh_failure() -> None:
 
 def test_json_output_structure() -> None:
     """Test JSON output structure on success."""
-    fake_gh = FakeDotAgentGitHubCli()
+    fake_gh = FakeGitHubIssues()
     runner = CliRunner()
 
     result = runner.invoke(
         create_issue,
         ["Test Issue", "--label", "erk-plan"],
         input="Body",
-        obj=DotAgentContext.for_test(github_cli=fake_gh),
+        obj=DotAgentContext.for_test(github_issues=fake_gh),
     )
 
     assert result.exit_code == 0
@@ -273,14 +271,14 @@ def test_json_output_structure() -> None:
 
 def test_json_output_different_issue_numbers() -> None:
     """Test that JSON output correctly reflects different issue numbers."""
-    fake_gh = FakeDotAgentGitHubCli(next_issue_number=12345)
+    fake_gh = FakeGitHubIssues(next_issue_number=12345)
     runner = CliRunner()
 
     result = runner.invoke(
         create_issue,
         ["Test Issue"],
         input="Body",
-        obj=DotAgentContext.for_test(github_cli=fake_gh),
+        obj=DotAgentContext.for_test(github_issues=fake_gh),
     )
 
     assert result.exit_code == 0

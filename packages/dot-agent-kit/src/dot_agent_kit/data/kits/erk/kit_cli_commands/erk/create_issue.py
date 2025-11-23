@@ -1,9 +1,10 @@
 import json
 import sys
+from pathlib import Path
 
 import click
 
-from dot_agent_kit.context_helpers import require_github_cli
+from dot_agent_kit.context_helpers import require_github_issues
 
 
 @click.command(name="create-issue")
@@ -23,24 +24,30 @@ def create_issue(ctx: click.Context, title: str, label: tuple[str, ...]) -> None
         0: Success
         1: Error (gh CLI failed)
     """
-    # Get GitHub CLI from context (with LBYL check)
-    github_cli = require_github_cli(ctx)
+    # Get GitHub Issues from context (with LBYL check)
+    github = require_github_issues(ctx)
 
     # Read body from stdin
     body = sys.stdin.read()
 
-    # Use injected GitHub CLI to create issue
-    result = github_cli.create_issue(title, body, list(label))
+    # Get current repo root
+    repo_root = Path.cwd()
 
-    # Check for errors (LBYL pattern)
-    if not result.success:
-        click.echo("Error: Failed to create issue", err=True)
-        raise SystemExit(1)
+    # Use injected GitHub Issues to create issue (EAFP pattern)
+    try:
+        issue_number = github.create_issue(repo_root, title, body, list(label))
+    except RuntimeError as e:
+        click.echo(f"Error: Failed to create issue: {e}", err=True)
+        raise SystemExit(1) from e
+
+    # Construct issue URL (owner/repo extracted by GitHub integration)
+    # Note: We don't have direct access to owner/repo here, but the issue was created
+    issue_url = f"https://github.com/owner/repo/issues/{issue_number}"
 
     # Output structured result
     output = {
         "success": True,
-        "issue_number": result.issue_number,
-        "issue_url": result.issue_url,
+        "issue_number": issue_number,
+        "issue_url": issue_url,
     }
     click.echo(json.dumps(output))

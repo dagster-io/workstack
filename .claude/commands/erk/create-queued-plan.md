@@ -225,21 +225,27 @@ Check that required tools are available:
 
 ### Step 3: Detect Plan File
 
-Find the most recent `*-plan.md` file at repository root:
+Find the most recent `*-plan.md` file at repository root using the kit CLI command:
 
-1. Get repository root:
-
-   ```bash
-   git rev-parse --show-toplevel
-   ```
-
-2. List plan files:
+1. Use the find-most-recent-plan-file command:
 
    ```bash
-   find <repo-root> -maxdepth 1 -name "*-plan.md" -type f
+   result=$(dot-agent kit-command erk find-most-recent-plan-file)
    ```
 
-3. If no files found:
+2. Parse the JSON result:
+
+   ```bash
+   if ! echo "$result" | jq -e '.success' > /dev/null; then
+       error=$(echo "$result" | jq -r '.message')
+       echo "❌ Error: $error"
+       exit 1
+   fi
+
+   plan_file=$(echo "$result" | jq -r '.plan_file')
+   ```
+
+3. If no files found (success=false with error="no_plan_files_found"):
 
    ```
    ❌ Error: No plan files found at repository root
@@ -248,11 +254,6 @@ Find the most recent `*-plan.md` file at repository root:
    ```
 
    Exit with error.
-
-4. If multiple files found: Select most recent by modification time
-   ```bash
-   ls -t <repo-root>/*-plan.md | head -1
-   ```
 
 ### Step 4: Create GitHub Issue (Single Command)
 

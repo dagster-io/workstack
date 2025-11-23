@@ -12,6 +12,44 @@ from erk.core.git.abc import WorktreeInfo
 from erk.core.repo_discovery import RepoContext, ensure_erk_metadata_dir
 
 
+class Ensure:
+    """Helper class for asserting invariants with consistent error handling."""
+
+    @staticmethod
+    def truthy[T](value: T, error_message: str) -> T:
+        """Ensure value is truthy, otherwise output error and exit.
+
+        Args:
+            value: Value to check for truthiness
+            error_message: Error message to display if value is falsy
+
+        Returns:
+            The value unchanged if truthy
+
+        Raises:
+            SystemExit: If value is falsy (with exit code 1)
+        """
+        if not value:
+            user_output(error_message)
+            raise SystemExit(1)
+        return value
+
+    @staticmethod
+    def invariant(condition: bool, error_message: str) -> None:
+        """Ensure condition is true, otherwise output error and exit.
+
+        Args:
+            condition: Boolean condition to check
+            error_message: Error message to display if condition is false
+
+        Raises:
+            SystemExit: If condition is false (with exit code 1)
+        """
+        if not condition:
+            user_output(error_message)
+            raise SystemExit(1)
+
+
 def _ensure_graphite_enabled(ctx: ErkContext) -> None:
     """Validate that Graphite is enabled.
 
@@ -144,9 +182,7 @@ def _activate_worktree(
     """
     wt_path = target_path
 
-    if not ctx.git.path_exists(wt_path):
-        user_output(f"Worktree not found: {wt_path}")
-        raise SystemExit(1)
+    Ensure.invariant(ctx.git.path_exists(wt_path), f"Worktree not found: {wt_path}")
 
     worktree_name = wt_path.name
 
@@ -191,12 +227,10 @@ def _resolve_up_navigation(
         SystemExit: If navigation fails (at top of stack)
     """
     # Navigate up to child branch
-    children = ctx.graphite.get_child_branches(ctx.git, repo.root, current_branch)
-    if not children:
-        user_output(
-            "Already at the top of the stack (no child branches)",
-        )
-        raise SystemExit(1)
+    children = Ensure.truthy(
+        ctx.graphite.get_child_branches(ctx.git, repo.root, current_branch),
+        "Already at the top of the stack (no child branches)",
+    )
 
     # Fail explicitly if multiple children exist
     if len(children) > 1:

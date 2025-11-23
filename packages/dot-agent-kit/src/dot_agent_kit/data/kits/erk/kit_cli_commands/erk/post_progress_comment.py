@@ -22,14 +22,13 @@ Examples:
 """
 
 import json
-import subprocess
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
 import click
 
-from dot_agent_kit.context_helpers import require_github_issues
+from dot_agent_kit.context_helpers import require_github_issues, require_repo_root
 from erk.core.impl_folder import parse_progress_frontmatter, read_issue_reference
 from erk.integrations.github.metadata_blocks import (
     create_progress_status_block,
@@ -55,27 +54,6 @@ class ProgressError:
     message: str
 
 
-def get_repo_root() -> Path | None:
-    """Get repository root using git rev-parse.
-
-    Returns:
-        Path to repository root, or None if not in a git repo
-
-    LBYL pattern: Check returncode before using stdout
-    """
-    result = subprocess.run(
-        ["git", "rev-parse", "--show-toplevel"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if result.returncode != 0:
-        return None
-
-    return Path(result.stdout.strip())
-
-
 @click.command(name="post-progress-comment")
 @click.option("--step-description", required=True, help="Description of completed step")
 @click.pass_context
@@ -87,16 +65,8 @@ def post_progress_comment(ctx: click.Context, step_description: str) -> None:
 
     STEP_DESCRIPTION: Description of the step just completed
     """
-    # Get repo root (LBYL pattern)
-    repo_root = get_repo_root()
-    if repo_root is None:
-        result = ProgressError(
-            success=False,
-            error_type="not_in_repo",
-            message="Not in a git repository",
-        )
-        click.echo(json.dumps(asdict(result), indent=2))
-        raise SystemExit(0)
+    # Get dependencies from context
+    repo_root = require_repo_root(ctx)
 
     # Read issue reference
     impl_dir = Path.cwd() / ".impl"

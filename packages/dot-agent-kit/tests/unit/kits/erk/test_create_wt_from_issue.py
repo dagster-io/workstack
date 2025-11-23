@@ -10,45 +10,15 @@ from unittest.mock import MagicMock
 import pytest
 from click.testing import CliRunner
 
+from dot_agent_kit.context import DotAgentContext
 from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.create_wt_from_issue import (
     create_wt_from_issue,
-    get_repo_root,
     has_erk_plan_label,
 )
 
 # ============================================================================
 # 1. Helper Function Tests (8 tests)
 # ============================================================================
-
-
-def test_get_repo_root_success(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Test get_repo_root returns Path when in git repo."""
-
-    def mock_run(cmd, *args, **kwargs):
-        result = MagicMock()
-        result.returncode = 0
-        result.stdout = str(tmp_path)
-        return result
-
-    monkeypatch.setattr("subprocess.run", mock_run)
-
-    repo_root = get_repo_root()
-    assert repo_root == tmp_path
-
-
-def test_get_repo_root_not_in_repo(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test get_repo_root returns None when not in git repo."""
-
-    def mock_run(cmd, *args, **kwargs):
-        result = MagicMock()
-        result.returncode = 1
-        result.stderr = "fatal: not a git repository"
-        return result
-
-    monkeypatch.setattr("subprocess.run", mock_run)
-
-    repo_root = get_repo_root()
-    assert repo_root is None
 
 
 def test_has_erk_plan_label_true() -> None:
@@ -141,7 +111,9 @@ def test_create_from_issue_number_success(monkeypatch: pytest.MonkeyPatch, tmp_p
     monkeypatch.setattr("subprocess.run", mock_run)
 
     runner = CliRunner()
-    result = runner.invoke(create_wt_from_issue, ["123"])
+    result = runner.invoke(
+        create_wt_from_issue, ["123"], obj=DotAgentContext.for_test(repo_root=tmp_path)
+    )
 
     assert result.exit_code == 0
     assert "✅ Worktree created" in result.output
@@ -192,7 +164,11 @@ def test_create_from_github_url_success(monkeypatch: pytest.MonkeyPatch, tmp_pat
     monkeypatch.setattr("subprocess.run", mock_run)
 
     runner = CliRunner()
-    result = runner.invoke(create_wt_from_issue, ["https://github.com/owner/repo/issues/456"])
+    result = runner.invoke(
+        create_wt_from_issue,
+        ["https://github.com/owner/repo/issues/456"],
+        obj=DotAgentContext.for_test(repo_root=tmp_path),
+    )
 
     assert result.exit_code == 0
     assert "✅ Worktree created" in result.output
@@ -246,7 +222,9 @@ def test_graceful_degradation_comment_fails(
     monkeypatch.setattr("subprocess.run", mock_run)
 
     runner = CliRunner()
-    result = runner.invoke(create_wt_from_issue, ["789"])
+    result = runner.invoke(
+        create_wt_from_issue, ["789"], obj=DotAgentContext.for_test(repo_root=tmp_path)
+    )
 
     # Still succeeds
     assert result.exit_code == 0
@@ -285,30 +263,12 @@ def test_invalid_issue_reference(monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     monkeypatch.setattr("subprocess.run", mock_run)
 
     runner = CliRunner()
-    result = runner.invoke(create_wt_from_issue, ["invalid"])
+    result = runner.invoke(
+        create_wt_from_issue, ["invalid"], obj=DotAgentContext.for_test(repo_root=tmp_path)
+    )
 
     assert result.exit_code == 1
     assert "Failed to parse issue reference" in result.output
-
-
-def test_not_in_git_repo(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test command fails when not in git repository."""
-
-    def mock_run(cmd, *args, **kwargs):
-        result = MagicMock()
-        if cmd[0] == "git":
-            result.returncode = 1
-        else:
-            result.returncode = 0
-        return result
-
-    monkeypatch.setattr("subprocess.run", mock_run)
-
-    runner = CliRunner()
-    result = runner.invoke(create_wt_from_issue, ["123"])
-
-    assert result.exit_code == 1
-    assert "Not in a git repository" in result.output
 
 
 def test_issue_not_found(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -334,7 +294,9 @@ def test_issue_not_found(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Non
     monkeypatch.setattr("subprocess.run", mock_run)
 
     runner = CliRunner()
-    result = runner.invoke(create_wt_from_issue, ["99999"])
+    result = runner.invoke(
+        create_wt_from_issue, ["99999"], obj=DotAgentContext.for_test(repo_root=tmp_path)
+    )
 
     assert result.exit_code == 1
     assert "Failed to fetch issue #99999" in result.output
@@ -368,7 +330,9 @@ def test_missing_erk_plan_label(monkeypatch: pytest.MonkeyPatch, tmp_path: Path)
     monkeypatch.setattr("subprocess.run", mock_run)
 
     runner = CliRunner()
-    result = runner.invoke(create_wt_from_issue, ["100"])
+    result = runner.invoke(
+        create_wt_from_issue, ["100"], obj=DotAgentContext.for_test(repo_root=tmp_path)
+    )
 
     assert result.exit_code == 1
     assert "does not have the 'erk-plan' label" in result.output
@@ -398,7 +362,9 @@ def test_gh_cli_not_authenticated(monkeypatch: pytest.MonkeyPatch, tmp_path: Pat
     monkeypatch.setattr("subprocess.run", mock_run)
 
     runner = CliRunner()
-    result = runner.invoke(create_wt_from_issue, ["200"])
+    result = runner.invoke(
+        create_wt_from_issue, ["200"], obj=DotAgentContext.for_test(repo_root=tmp_path)
+    )
 
     assert result.exit_code == 1
     assert "Failed to fetch issue #200" in result.output
@@ -436,7 +402,9 @@ def test_erk_create_fails(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> No
     monkeypatch.setattr("subprocess.run", mock_run)
 
     runner = CliRunner()
-    result = runner.invoke(create_wt_from_issue, ["300"])
+    result = runner.invoke(
+        create_wt_from_issue, ["300"], obj=DotAgentContext.for_test(repo_root=tmp_path)
+    )
 
     assert result.exit_code == 1
     assert "Failed to create worktree" in result.output
@@ -472,7 +440,9 @@ def test_worktree_already_exists(monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     monkeypatch.setattr("subprocess.run", mock_run)
 
     runner = CliRunner()
-    result = runner.invoke(create_wt_from_issue, ["400"])
+    result = runner.invoke(
+        create_wt_from_issue, ["400"], obj=DotAgentContext.for_test(repo_root=tmp_path)
+    )
 
     assert result.exit_code == 1
     assert "Failed to create worktree" in result.output
@@ -506,7 +476,9 @@ def test_issue_with_empty_body(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) 
     monkeypatch.setattr("subprocess.run", mock_run)
 
     runner = CliRunner()
-    result = runner.invoke(create_wt_from_issue, ["500"])
+    result = runner.invoke(
+        create_wt_from_issue, ["500"], obj=DotAgentContext.for_test(repo_root=tmp_path)
+    )
 
     assert result.exit_code == 1
     assert "has no body content" in result.output
@@ -545,7 +517,9 @@ def test_issue_with_no_labels(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -
     monkeypatch.setattr("subprocess.run", mock_run)
 
     runner = CliRunner()
-    result = runner.invoke(create_wt_from_issue, ["600"])
+    result = runner.invoke(
+        create_wt_from_issue, ["600"], obj=DotAgentContext.for_test(repo_root=tmp_path)
+    )
 
     assert result.exit_code == 1
     assert "does not have the 'erk-plan' label" in result.output
@@ -595,7 +569,9 @@ def test_issue_with_special_chars_in_title(monkeypatch: pytest.MonkeyPatch, tmp_
     monkeypatch.setattr("subprocess.run", mock_run)
 
     runner = CliRunner()
-    result = runner.invoke(create_wt_from_issue, ["700"])
+    result = runner.invoke(
+        create_wt_from_issue, ["700"], obj=DotAgentContext.for_test(repo_root=tmp_path)
+    )
 
     assert result.exit_code == 0
     assert "✅ Worktree created" in result.output
@@ -651,7 +627,9 @@ def test_multiple_labels_including_erk_plan(
     monkeypatch.setattr("subprocess.run", mock_run)
 
     runner = CliRunner()
-    result = runner.invoke(create_wt_from_issue, ["800"])
+    result = runner.invoke(
+        create_wt_from_issue, ["800"], obj=DotAgentContext.for_test(repo_root=tmp_path)
+    )
 
     assert result.exit_code == 0
     assert "✅ Worktree created" in result.output
@@ -699,7 +677,9 @@ def test_save_issue_reference_warning(monkeypatch: pytest.MonkeyPatch, tmp_path:
     monkeypatch.setattr("subprocess.run", mock_run)
 
     runner = CliRunner()
-    result = runner.invoke(create_wt_from_issue, ["900"])
+    result = runner.invoke(
+        create_wt_from_issue, ["900"], obj=DotAgentContext.for_test(repo_root=tmp_path)
+    )
 
     # Still succeeds
     assert result.exit_code == 0

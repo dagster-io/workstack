@@ -17,36 +17,10 @@ Examples:
     $ dot-agent kit-command erk comment-worktree-creation 123 feature-name feature-branch
 """
 
-import subprocess
-from pathlib import Path
-
 import click
 
-from dot_agent_kit.context_helpers import require_github_issues
+from dot_agent_kit.context_helpers import require_github_issues, require_repo_root
 from erk.core.impl_folder import add_worktree_creation_comment
-
-
-def get_repo_root() -> Path:
-    """Get repository root using git rev-parse.
-
-    Returns:
-        Path to repository root
-
-    Raises:
-        RuntimeError: If not in a git repository or git command fails
-    """
-    result = subprocess.run(
-        ["git", "rev-parse", "--show-toplevel"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if result.returncode != 0:
-        msg = "Not in a git repository"
-        raise RuntimeError(msg)
-
-    return Path(result.stdout.strip())
 
 
 @click.command(name="comment-worktree-creation")
@@ -63,15 +37,9 @@ def comment_worktree_creation(
     WORKTREE_NAME: Name of the created worktree
     BRANCH_NAME: Git branch name for the worktree
     """
-    # Detect repo root
-    try:
-        repo_root = get_repo_root()
-    except RuntimeError as e:
-        click.echo(click.style("Error: ", fg="red") + str(e), err=True)
-        raise SystemExit(1) from e
-
-    # Get GitHub Issues from context (with LBYL check)
+    # Get dependencies from context
     github_issues = require_github_issues(ctx)
+    repo_root = require_repo_root(ctx)
 
     # Post comment
     try:

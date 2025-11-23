@@ -3,10 +3,12 @@
 Layer 3 (Pure Unit Tests): Testing getter functions in isolation.
 """
 
+from pathlib import Path
+
 import pytest
 
 from dot_agent_kit.context import DotAgentContext
-from dot_agent_kit.context_helpers import require_github_issues
+from dot_agent_kit.context_helpers import require_github_issues, require_repo_root
 
 
 def test_require_github_issues_returns_issues_when_context_initialized() -> None:
@@ -39,5 +41,37 @@ def test_require_github_issues_exits_when_context_none() -> None:
     # Act & Assert
     with pytest.raises(SystemExit) as exc_info:
         require_github_issues(mock_click_ctx)
+
+    assert exc_info.value.code == 1
+
+
+def test_require_repo_root_returns_path_when_context_initialized() -> None:
+    """Test that require_repo_root returns repo_root when context is initialized."""
+    from unittest.mock import MagicMock
+
+    # Create context with custom repo_root
+    custom_path = Path("/test/repo")
+    test_ctx = DotAgentContext.for_test(repo_root=custom_path)
+
+    mock_click_ctx = MagicMock()
+    mock_click_ctx.obj = test_ctx
+
+    # Act
+    result = require_repo_root(mock_click_ctx)
+
+    # Assert
+    assert result == custom_path
+
+
+def test_require_repo_root_exits_when_context_none() -> None:
+    """Test that require_repo_root exits with code 1 when context is None."""
+    from unittest.mock import MagicMock
+
+    mock_click_ctx = MagicMock()
+    mock_click_ctx.obj = None
+
+    # Act & Assert
+    with pytest.raises(SystemExit) as exc_info:
+        require_repo_root(mock_click_ctx)
 
     assert exc_info.value.code == 1

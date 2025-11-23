@@ -1,10 +1,9 @@
 import json
 import sys
-from pathlib import Path
 
 import click
 
-from dot_agent_kit.context_helpers import require_github_issues
+from dot_agent_kit.context_helpers import require_github_issues, require_repo_root
 
 
 @click.command(name="create-issue")
@@ -26,12 +25,10 @@ def create_issue(ctx: click.Context, title: str, label: tuple[str, ...]) -> None
     """
     # Get GitHub Issues from context (with LBYL check)
     github = require_github_issues(ctx)
+    repo_root = require_repo_root(ctx)
 
     # Read body from stdin
     body = sys.stdin.read()
-
-    # Get current repo root
-    repo_root = Path.cwd()
 
     # Use injected GitHub Issues to create issue (EAFP pattern)
     try:

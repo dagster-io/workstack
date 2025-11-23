@@ -90,7 +90,7 @@ total_steps: 5
     result = runner.invoke(
         post_progress_comment,
         ["--step-description", "Phase 1: Create abstraction"],
-        obj=DotAgentContext.for_test(github_issues=fake_issues),
+        obj=DotAgentContext.for_test(github_issues=fake_issues, repo_root=tmp_path),
     )
 
     # Verify exit code
@@ -178,7 +178,7 @@ total_steps: 10
     result = runner.invoke(
         post_progress_comment,
         ["--step-description", "Phase 2 complete"],
-        obj=DotAgentContext.for_test(github_issues=fake_issues),
+        obj=DotAgentContext.for_test(github_issues=fake_issues, repo_root=tmp_path),
     )
 
     assert result.exit_code == 0
@@ -196,33 +196,6 @@ total_steps: 10
 # ============================================================================
 # Error Cases
 # ============================================================================
-
-
-def test_error_not_in_repo(tmp_path: Path, monkeypatch) -> None:
-    """Test error when not in a git repository."""
-    impl_dir = tmp_path / ".impl"
-    impl_dir.mkdir()
-
-    # Mock subprocess to simulate not in repo
-    def mock_run(*args, **kwargs):
-        result = MagicMock()
-        result.returncode = 1
-        result.stdout = ""
-        return result
-
-    monkeypatch.setattr(subprocess, "run", mock_run)
-    monkeypatch.chdir(tmp_path)
-
-    runner = CliRunner()
-    result = runner.invoke(
-        post_progress_comment,
-        ["--step-description", "Test"],
-    )
-
-    assert result.exit_code == 0  # Graceful exit
-    output = json.loads(result.output)
-    assert output["success"] is False
-    assert output["error_type"] == "not_in_repo"
 
 
 def test_error_no_issue_reference(tmp_path: Path, monkeypatch) -> None:
@@ -244,6 +217,7 @@ def test_error_no_issue_reference(tmp_path: Path, monkeypatch) -> None:
     result = runner.invoke(
         post_progress_comment,
         ["--step-description", "Test"],
+        obj=DotAgentContext.for_test(repo_root=tmp_path),
     )
 
     assert result.exit_code == 0  # Graceful exit
@@ -279,6 +253,7 @@ def test_error_no_progress_file(tmp_path: Path, monkeypatch) -> None:
     result = runner.invoke(
         post_progress_comment,
         ["--step-description", "Test"],
+        obj=DotAgentContext.for_test(repo_root=tmp_path),
     )
 
     assert result.exit_code == 0  # Graceful exit
@@ -319,6 +294,7 @@ invalid yaml [ : content
     result = runner.invoke(
         post_progress_comment,
         ["--step-description", "Test"],
+        obj=DotAgentContext.for_test(repo_root=tmp_path),
     )
 
     assert result.exit_code == 0  # Graceful exit
@@ -363,7 +339,7 @@ total_steps: 2
     result = runner.invoke(
         post_progress_comment,
         ["--step-description", "Test"],
-        obj=DotAgentContext.for_test(github_issues=fake_issues),
+        obj=DotAgentContext.for_test(github_issues=fake_issues, repo_root=tmp_path),
     )
 
     assert result.exit_code == 0  # Graceful exit

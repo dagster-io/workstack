@@ -1,12 +1,12 @@
 """Submit plan for remote AI implementation via GitHub Actions."""
 
 import click
+from erk_shared.impl_folder import copy_impl_to_worker_impl, get_worker_impl_path
 
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
 from erk.cli.subprocess_utils import run_with_error_reporting
 from erk.core.context import ErkContext
-from erk.core.impl_folder import copy_impl_to_worker_impl, get_worker_impl_path
 from erk.core.repo_discovery import RepoContext
 
 

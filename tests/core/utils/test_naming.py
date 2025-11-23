@@ -2,8 +2,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
-
-from erk.core.naming_utils import (
+from erk_shared.naming import (
     default_branch_for_worktree,
     ensure_unique_worktree_name,
     extract_trailing_number,

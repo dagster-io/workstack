@@ -299,7 +299,7 @@ Save the issue reference to `.impl/issue.json` for progress tracking.
 **Use the plan_folder utilities:**
 
 ```python
-from erk.core.impl_folder import save_issue_reference
+from erk_shared.impl_folder import save_issue_reference
 
 save_issue_reference(
     plan_dir=Path(".impl"),

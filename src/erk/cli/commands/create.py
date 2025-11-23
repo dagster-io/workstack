@@ -6,15 +6,8 @@ from pathlib import Path
 
 import click
 from erk_shared.github.issues import IssueInfo
-
-from erk.cli.config import LoadedConfig
-from erk.cli.core import discover_repo_context, worktree_path_for
-from erk.cli.output import user_output
-from erk.cli.shell_utils import render_navigation_script
-from erk.cli.subprocess_utils import run_with_error_reporting
-from erk.core.context import ErkContext
-from erk.core.impl_folder import create_impl_folder, get_impl_path
-from erk.core.naming_utils import (
+from erk_shared.impl_folder import create_impl_folder, get_impl_path
+from erk_shared.naming import (
     default_branch_for_worktree,
     ensure_simple_worktree_name,
     ensure_unique_worktree_name,
@@ -22,6 +15,13 @@ from erk.core.naming_utils import (
     sanitize_worktree_name,
     strip_plan_from_filename,
 )
+
+from erk.cli.config import LoadedConfig
+from erk.cli.core import discover_repo_context, worktree_path_for
+from erk.cli.output import user_output
+from erk.cli.shell_utils import render_navigation_script
+from erk.cli.subprocess_utils import run_with_error_reporting
+from erk.core.context import ErkContext
 from erk.core.repo_discovery import RepoContext, ensure_erk_metadata_dir
 
 

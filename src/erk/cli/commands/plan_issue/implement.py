@@ -3,7 +3,13 @@
 import json
 
 import click
-from erk_shared.naming import generate_filename_from_title, sanitize_worktree_name
+from erk_shared.impl_folder import create_impl_folder
+from erk_shared.naming import (
+    ensure_unique_worktree_name_with_date,
+    generate_filename_from_title,
+    sanitize_worktree_name,
+    strip_plan_from_filename,
+)
 
 from erk.cli.activation import render_activation_script
 from erk.cli.commands.create import add_worktree, run_post_worktree_setup
@@ -11,11 +17,6 @@ from erk.cli.config import LoadedConfig
 from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output
 from erk.core.context import ErkContext
-from erk.core.impl_folder import create_impl_folder
-from erk.core.naming_utils import (
-    ensure_unique_worktree_name_with_date,
-    strip_plan_from_filename,
-)
 from erk.core.plan_issue_store.types import PlanIssueState
 from erk.core.repo_discovery import ensure_erk_metadata_dir
 

@@ -1,5 +1,7 @@
 """Command to list plan issues with filtering."""
 
+from collections.abc import Callable
+
 import click
 
 from erk.cli.core import discover_repo_context
@@ -7,6 +9,26 @@ from erk.cli.output import user_output
 from erk.core.context import ErkContext
 from erk.core.plan_issue_store import PlanIssueQuery, PlanIssueState
 from erk.core.repo_discovery import ensure_erk_metadata_dir
+
+
+def plan_issue_list_options[**P, T](f: Callable[P, T]) -> Callable[P, T]:
+    """Shared options for list/ls commands."""
+    f = click.option(
+        "--label",
+        multiple=True,
+        help="Filter by label (can be specified multiple times for AND logic)",
+    )(f)
+    f = click.option(
+        "--state",
+        type=click.Choice(["open", "closed"], case_sensitive=False),
+        help="Filter by state",
+    )(f)
+    f = click.option(
+        "--limit",
+        type=int,
+        help="Maximum number of results to return",
+    )(f)
+    return f
 
 
 def _list_plan_issues_impl(
@@ -68,21 +90,7 @@ def _list_plan_issues_impl(
 
 
 @click.command("list")
-@click.option(
-    "--label",
-    multiple=True,
-    help="Filter by label (can be specified multiple times for AND logic)",
-)
-@click.option(
-    "--state",
-    type=click.Choice(["open", "closed"], case_sensitive=False),
-    help="Filter by state",
-)
-@click.option(
-    "--limit",
-    type=int,
-    help="Maximum number of results to return",
-)
+@plan_issue_list_options
 @click.pass_obj
 def list_plan_issues(
     ctx: ErkContext,
@@ -103,21 +111,7 @@ def list_plan_issues(
 
 # Register ls as a hidden alias (won't show in help)
 @click.command("ls", hidden=True)
-@click.option(
-    "--label",
-    multiple=True,
-    help="Filter by label (can be specified multiple times for AND logic)",
-)
-@click.option(
-    "--state",
-    type=click.Choice(["open", "closed"], case_sensitive=False),
-    help="Filter by state",
-)
-@click.option(
-    "--limit",
-    type=int,
-    help="Maximum number of results to return",
-)
+@plan_issue_list_options
 @click.pass_obj
 def ls_plan_issues(
     ctx: ErkContext,

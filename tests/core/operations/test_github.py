@@ -1,5 +1,7 @@
 """Tests for GitHub operations."""
 
+import pytest
+
 from erk.core.github.parsing import _parse_github_pr_url
 from erk.core.github.real import RealGitHub
 
@@ -291,3 +293,202 @@ def test_parse_pr_ci_status_with_pending_checks() -> None:
     # Parser should detect incomplete check
     result = ops._parse_pr_ci_status(response)
     assert result is False
+
+
+def test_build_title_batch_query_structure() -> None:
+    """Test that title query has correct structure with only number and title fields."""
+    ops = RealGitHub()
+
+    query = ops._build_title_batch_query([123, 456], "test-owner", "test-repo")
+
+    # Validate basic GraphQL syntax
+    assert "query {" in query
+    assert 'repository(owner: "test-owner", name: "test-repo")' in query
+
+    # Validate PR aliases are present
+    assert "pr_123: pullRequest(number: 123) {" in query
+    assert "pr_456: pullRequest(number: 456) {" in query
+
+    # Validate required fields (number and title only)
+    assert "number" in query
+    assert "title" in query
+
+    # Verify query does NOT include CI fields
+    assert "statusCheckRollup" not in query
+    assert "mergeable" not in query
+    assert "mergeStateStatus" not in query
+    assert "commits(last: 1)" not in query
+    assert "contexts" not in query
+
+
+def test_fetch_pr_titles_batch_enriches_titles(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test fetch_pr_titles_batch enriches PRs with titles from GraphQL response."""
+    ops = RealGitHub()
+
+    # Create input PRs without titles
+    from pathlib import Path
+
+    from erk.core.github.types import PullRequestInfo
+
+    prs = {
+        "feature-1": PullRequestInfo(
+            number=123,
+            state="OPEN",
+            url="https://github.com/test-owner/test-repo/pull/123",
+            is_draft=False,
+            title=None,  # No title initially
+            checks_passing=None,
+            owner="test-owner",
+            repo="test-repo",
+        ),
+        "feature-2": PullRequestInfo(
+            number=456,
+            state="OPEN",
+            url="https://github.com/test-owner/test-repo/pull/456",
+            is_draft=False,
+            title=None,  # No title initially
+            checks_passing=None,
+            owner="test-owner",
+            repo="test-repo",
+        ),
+    }
+
+    # Mock GraphQL response with titles
+    mock_response = {
+        "data": {
+            "repository": {
+                "pr_123": {
+                    "number": 123,
+                    "title": "Add new feature",
+                },
+                "pr_456": {
+                    "number": 456,
+                    "title": "Fix bug",
+                },
+            }
+        }
+    }
+
+    # Mock _execute_batch_pr_query to return our response
+    monkeypatch.setattr(ops, "_execute_batch_pr_query", lambda query, repo_root: mock_response)
+
+    # Execute
+    result = ops.fetch_pr_titles_batch(prs, Path("/repo"))
+
+    # Verify PRs are enriched with titles
+    assert result["feature-1"].title == "Add new feature"
+    assert result["feature-2"].title == "Fix bug"
+    # Verify other fields are preserved
+    assert result["feature-1"].number == 123
+    assert result["feature-2"].number == 456
+
+
+def test_fetch_pr_titles_batch_empty_input() -> None:
+    """Test fetch_pr_titles_batch returns empty dict for empty input."""
+    ops = RealGitHub()
+
+    from pathlib import Path
+
+    # Call with empty dict
+    result = ops.fetch_pr_titles_batch({}, Path("/repo"))
+
+    # Should return empty dict immediately without API call
+    assert result == {}
+
+
+def test_fetch_pr_titles_batch_partial_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test fetch_pr_titles_batch handles partial failures gracefully."""
+    ops = RealGitHub()
+
+    from pathlib import Path
+
+    from erk.core.github.types import PullRequestInfo
+
+    # Create input PRs
+    prs = {
+        "feature-1": PullRequestInfo(
+            number=123,
+            state="OPEN",
+            url="https://github.com/test-owner/test-repo/pull/123",
+            is_draft=False,
+            title=None,
+            checks_passing=None,
+            owner="test-owner",
+            repo="test-repo",
+        ),
+        "feature-2": PullRequestInfo(
+            number=456,
+            state="OPEN",
+            url="https://github.com/test-owner/test-repo/pull/456",
+            is_draft=False,
+            title=None,
+            checks_passing=None,
+            owner="test-owner",
+            repo="test-repo",
+        ),
+    }
+
+    # Mock GraphQL response with one PR present, one missing (None)
+    mock_response = {
+        "data": {
+            "repository": {
+                "pr_123": {
+                    "number": 123,
+                    "title": "Add new feature",
+                },
+                "pr_456": None,  # PR not found or error
+            }
+        }
+    }
+
+    monkeypatch.setattr(ops, "_execute_batch_pr_query", lambda query, repo_root: mock_response)
+
+    result = ops.fetch_pr_titles_batch(prs, Path("/repo"))
+
+    # Successful PR should have title
+    assert result["feature-1"].title == "Add new feature"
+    # Failed PR should have None title
+    assert result["feature-2"].title is None
+
+
+def test_fetch_pr_titles_batch_missing_title_field(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test fetch_pr_titles_batch handles missing title field gracefully."""
+    ops = RealGitHub()
+
+    from pathlib import Path
+
+    from erk.core.github.types import PullRequestInfo
+
+    # Create input PR
+    prs = {
+        "feature": PullRequestInfo(
+            number=123,
+            state="OPEN",
+            url="https://github.com/test-owner/test-repo/pull/123",
+            is_draft=False,
+            title=None,
+            checks_passing=None,
+            owner="test-owner",
+            repo="test-repo",
+        ),
+    }
+
+    # Mock GraphQL response with PR data but missing title field
+    mock_response = {
+        "data": {
+            "repository": {
+                "pr_123": {
+                    "number": 123,
+                    # title field is missing
+                },
+            }
+        }
+    }
+
+    monkeypatch.setattr(ops, "_execute_batch_pr_query", lambda query, repo_root: mock_response)
+
+    result = ops.fetch_pr_titles_batch(prs, Path("/repo"))
+
+    # Should handle missing field gracefully and set title=None
+    assert result["feature"].title is None
+    assert result["feature"].number == 123

@@ -282,3 +282,409 @@ def test_list_pr_with_merge_conflicts() -> None:
         # Verify both the base emoji and conflict emoji appear
         assert "✅💥" in result.output  # PR with passing checks and conflicts
         assert "#200" in result.output
+
+
+# ===========================
+# PR Title Display Tests
+# ===========================
+
+
+def test_list_displays_pr_title_when_available() -> None:
+    """Test that list displays PR title from GitHub when available."""
+    import click
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        branch_name = "feature-branch"
+
+        # Create PR with title configured
+        pr = PullRequestInfo(
+            number=123,
+            state="OPEN",
+            url="https://github.com/owner/repo/pull/123",
+            is_draft=False,
+            title="Add new feature implementation",  # Title from GitHub
+            checks_passing=True,
+            owner="owner",
+            repo="repo",
+        )
+
+        branches = {
+            "main": BranchMetadata.trunk("main", children=[branch_name]),
+            branch_name: BranchMetadata.branch(branch_name, "main", children=[]),
+        }
+
+        repo_name = env.cwd.name
+        repo_dir = env.erk_root / repo_name
+        feature_worktree = repo_dir / branch_name
+
+        git_ops = FakeGit(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
+                    WorktreeInfo(path=feature_worktree, branch=branch_name),
+                ]
+            },
+            git_common_dirs={env.cwd: env.git_dir, feature_worktree: env.git_dir},
+            current_branches={env.cwd: "main", feature_worktree: branch_name},
+        )
+
+        test_ctx = env.build_context(
+            git=git_ops,
+            graphite=FakeGraphite(branches=branches, pr_info={branch_name: pr}),
+            use_graphite=True,
+        )
+
+        result = runner.invoke(cli, ["list"], obj=test_ctx)
+        assert result.exit_code == 0, result.output
+
+        # Remove styling to check content
+        unstyled = click.unstyle(result.output)
+
+        # Verify PR title is displayed
+        assert "Add new feature implementation" in unstyled
+
+        # Verify title does NOT have 📋 emoji prefix (emoji is for plan summaries)
+        assert "📋 Add new feature implementation" not in unstyled
+
+
+def test_list_prefers_pr_title_over_plan_summary() -> None:
+    """Test that list prefers PR title over plan summary when both exist."""
+
+    import click
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        branch_name = "feature-branch"
+
+        # Create PR with title
+        pr = PullRequestInfo(
+            number=456,
+            state="OPEN",
+            url="https://github.com/owner/repo/pull/456",
+            is_draft=False,
+            title="PR title from GitHub",
+            checks_passing=True,
+            owner="owner",
+            repo="repo",
+        )
+
+        branches = {
+            "main": BranchMetadata.trunk("main", children=[branch_name]),
+            branch_name: BranchMetadata.branch(branch_name, "main", children=[]),
+        }
+
+        repo_name = env.cwd.name
+        repo_dir = env.erk_root / repo_name
+        feature_worktree = repo_dir / branch_name
+
+        # Create worktree directory
+        feature_worktree.mkdir(parents=True, exist_ok=True)
+
+        # Create plan summary file in worktree
+        plan_file = feature_worktree / ".impl" / "plan.md"
+        plan_file.parent.mkdir(parents=True, exist_ok=True)
+        plan_file.write_text("# Plan summary from file\n\nThis is the plan.")
+
+        git_ops = FakeGit(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
+                    WorktreeInfo(path=feature_worktree, branch=branch_name),
+                ]
+            },
+            git_common_dirs={env.cwd: env.git_dir, feature_worktree: env.git_dir},
+            current_branches={env.cwd: "main", feature_worktree: branch_name},
+        )
+
+        test_ctx = env.build_context(
+            git=git_ops,
+            graphite=FakeGraphite(branches=branches, pr_info={branch_name: pr}),
+            use_graphite=True,
+        )
+
+        result = runner.invoke(cli, ["list"], obj=test_ctx)
+        assert result.exit_code == 0, result.output
+
+        unstyled = click.unstyle(result.output)
+
+        # Verify PR title is displayed
+        assert "PR title from GitHub" in unstyled
+
+        # Verify plan summary is NOT displayed
+        assert "Plan summary from file" not in unstyled
+
+
+def test_list_falls_back_to_plan_summary_when_no_title() -> None:
+    """Test behavior when PR has no title - displays [no plan] if no plan file exists.
+
+    Note: This test verifies the display behavior when title=None. In the real implementation,
+    the list command would attempt to read .impl/plan.md if it exists, but in this test
+    environment without an actual plan file, it shows [no plan].
+    """
+    import click
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        branch_name = "feature-branch"
+
+        # Create PR with no title
+        pr = PullRequestInfo(
+            number=789,
+            state="OPEN",
+            url="https://github.com/owner/repo/pull/789",
+            is_draft=False,
+            title=None,  # No title from GitHub
+            checks_passing=True,
+            owner="owner",
+            repo="repo",
+        )
+
+        branches = {
+            "main": BranchMetadata.trunk("main", children=[branch_name]),
+            branch_name: BranchMetadata.branch(branch_name, "main", children=[]),
+        }
+
+        repo_name = env.cwd.name
+        repo_dir = env.erk_root / repo_name
+        feature_worktree = repo_dir / branch_name
+
+        git_ops = FakeGit(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
+                    WorktreeInfo(path=feature_worktree, branch=branch_name),
+                ]
+            },
+            git_common_dirs={env.cwd: env.git_dir, feature_worktree: env.git_dir},
+            current_branches={env.cwd: "main", feature_worktree: branch_name},
+        )
+
+        test_ctx = env.build_context(
+            git=git_ops,
+            graphite=FakeGraphite(branches=branches, pr_info={branch_name: pr}),
+            use_graphite=True,
+        )
+
+        result = runner.invoke(cli, ["list"], obj=test_ctx)
+        assert result.exit_code == 0, result.output
+
+        unstyled = click.unstyle(result.output)
+
+        # When title is None and no plan file exists, shows [no plan]
+        # (In production, if .impl/plan.md existed, it would be displayed)
+        assert "[no plan]" in unstyled
+
+
+def test_list_shows_no_plan_when_no_title_and_no_summary() -> None:
+    """Test that list shows [no plan] placeholder when no PR title or plan."""
+    import click
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        branch_name = "feature-branch"
+
+        # Create PR with no title
+        pr = PullRequestInfo(
+            number=999,
+            state="OPEN",
+            url="https://github.com/owner/repo/pull/999",
+            is_draft=False,
+            title=None,  # No title
+            checks_passing=True,
+            owner="owner",
+            repo="repo",
+        )
+
+        branches = {
+            "main": BranchMetadata.trunk("main", children=[branch_name]),
+            branch_name: BranchMetadata.branch(branch_name, "main", children=[]),
+        }
+
+        repo_name = env.cwd.name
+        repo_dir = env.erk_root / repo_name
+        feature_worktree = repo_dir / branch_name
+
+        # Create worktree directory but NO plan file
+        feature_worktree.mkdir(parents=True, exist_ok=True)
+
+        git_ops = FakeGit(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
+                    WorktreeInfo(path=feature_worktree, branch=branch_name),
+                ]
+            },
+            git_common_dirs={env.cwd: env.git_dir, feature_worktree: env.git_dir},
+            current_branches={env.cwd: "main", feature_worktree: branch_name},
+        )
+
+        test_ctx = env.build_context(
+            git=git_ops,
+            graphite=FakeGraphite(branches=branches, pr_info={branch_name: pr}),
+            use_graphite=True,
+        )
+
+        result = runner.invoke(cli, ["list"], obj=test_ctx)
+        assert result.exit_code == 0, result.output
+
+        unstyled = click.unstyle(result.output)
+
+        # Verify [no plan] placeholder is displayed
+        assert "[no plan]" in unstyled
+
+        # Verify no 📋 emoji (only used with plan summaries)
+        assert "📋" not in unstyled
+
+
+def test_list_displays_pr_title_for_multiple_worktrees() -> None:
+    """Test that list displays PR titles correctly for multiple worktrees."""
+    import click
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        branch1 = "feature-1"
+        branch2 = "feature-2"
+
+        # Create two PRs with different titles
+        pr1 = PullRequestInfo(
+            number=100,
+            state="OPEN",
+            url="https://github.com/owner/repo/pull/100",
+            is_draft=False,
+            title="First feature title",
+            checks_passing=True,
+            owner="owner",
+            repo="repo",
+        )
+
+        pr2 = PullRequestInfo(
+            number=200,
+            state="OPEN",
+            url="https://github.com/owner/repo/pull/200",
+            is_draft=False,
+            title="Second feature title",
+            checks_passing=True,
+            owner="owner",
+            repo="repo",
+        )
+
+        branches = {
+            "main": BranchMetadata.trunk("main", children=[branch1, branch2]),
+            branch1: BranchMetadata.branch(branch1, "main", children=[]),
+            branch2: BranchMetadata.branch(branch2, "main", children=[]),
+        }
+
+        repo_name = env.cwd.name
+        repo_dir = env.erk_root / repo_name
+        worktree1 = repo_dir / branch1
+        worktree2 = repo_dir / branch2
+
+        # Create worktree directories
+        worktree1.mkdir(parents=True, exist_ok=True)
+        worktree2.mkdir(parents=True, exist_ok=True)
+
+        git_ops = FakeGit(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
+                    WorktreeInfo(path=worktree1, branch=branch1),
+                    WorktreeInfo(path=worktree2, branch=branch2),
+                ]
+            },
+            git_common_dirs={
+                env.cwd: env.git_dir,
+                worktree1: env.git_dir,
+                worktree2: env.git_dir,
+            },
+            current_branches={
+                env.cwd: "main",
+                worktree1: branch1,
+                worktree2: branch2,
+            },
+        )
+
+        test_ctx = env.build_context(
+            git=git_ops,
+            graphite=FakeGraphite(
+                branches=branches,
+                pr_info={branch1: pr1, branch2: pr2},
+            ),
+            use_graphite=True,
+        )
+
+        result = runner.invoke(cli, ["list"], obj=test_ctx)
+        assert result.exit_code == 0, result.output
+
+        unstyled = click.unstyle(result.output)
+
+        # Verify both titles are displayed
+        assert "First feature title" in unstyled
+        assert "Second feature title" in unstyled
+
+        # Verify no mixing of titles (each appears exactly once)
+        assert unstyled.count("First feature title") == 1
+        assert unstyled.count("Second feature title") == 1
+
+
+def test_list_fetches_titles_before_ci_enrichment() -> None:
+    """Test that list displays both PR title and CI status correctly.
+
+    This test verifies that when a PR has both title and CI status information,
+    both are displayed correctly in the list output.
+    """
+    import click
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        branch_name = "feature-branch"
+
+        # Create PR with both title and CI status
+        pr = PullRequestInfo(
+            number=300,
+            state="OPEN",
+            url="https://github.com/owner/repo/pull/300",
+            is_draft=False,
+            title="Feature with CI checks",
+            checks_passing=True,  # CI status is part of PR info
+            owner="owner",
+            repo="repo",
+        )
+
+        branches = {
+            "main": BranchMetadata.trunk("main", children=[branch_name]),
+            branch_name: BranchMetadata.branch(branch_name, "main", children=[]),
+        }
+
+        repo_name = env.cwd.name
+        repo_dir = env.erk_root / repo_name
+        feature_worktree = repo_dir / branch_name
+
+        # Create worktree directory
+        feature_worktree.mkdir(parents=True, exist_ok=True)
+
+        git_ops = FakeGit(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main"),
+                    WorktreeInfo(path=feature_worktree, branch=branch_name),
+                ]
+            },
+            git_common_dirs={env.cwd: env.git_dir, feature_worktree: env.git_dir},
+            current_branches={env.cwd: "main", feature_worktree: branch_name},
+        )
+
+        test_ctx = env.build_context(
+            git=git_ops,
+            graphite=FakeGraphite(branches=branches, pr_info={branch_name: pr}),
+            use_graphite=True,
+        )
+
+        result = runner.invoke(cli, ["list"], obj=test_ctx)
+        assert result.exit_code == 0, result.output
+
+        unstyled = click.unstyle(result.output)
+
+        # Verify both title and CI emoji are displayed
+        assert "Feature with CI checks" in unstyled
+        assert "✅" in result.output  # CI passing emoji

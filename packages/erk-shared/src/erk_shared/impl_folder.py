@@ -148,6 +148,35 @@ def extract_steps_from_plan(plan_content: str) -> list[str]:
     return steps
 
 
+def extract_plan_steps(impl_dir: Path) -> list[str]:
+    """Extract step descriptions from .impl/plan.md file.
+
+    Args:
+        impl_dir: Path to .impl/ directory
+
+    Returns:
+        List of step description strings
+
+    Raises:
+        FileNotFoundError: If plan.md doesn't exist
+        ValueError: If plan.md contains no steps
+    """
+    plan_file = impl_dir / "plan.md"
+
+    if not plan_file.exists():
+        msg = f"Plan file not found: {plan_file}"
+        raise FileNotFoundError(msg)
+
+    plan_content = plan_file.read_text(encoding="utf-8")
+    steps = extract_steps_from_plan(plan_content)
+
+    if not steps:
+        msg = f"No steps found in plan file: {plan_file}"
+        raise ValueError(msg)
+
+    return steps
+
+
 def parse_progress_frontmatter(content: str) -> dict[str, Any] | None:
     """Parse YAML front matter from progress.md content.
 

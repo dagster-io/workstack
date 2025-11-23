@@ -128,6 +128,55 @@ class ProgressStatusSchema(MetadataBlockSchema):
 
 
 @dataclass(frozen=True)
+class StartStatusSchema(MetadataBlockSchema):
+    """Schema for erk-implementation-status start blocks."""
+
+    def validate(self, data: dict[str, Any]) -> None:
+        """Validate start status data structure."""
+        required_fields = {
+            "status",
+            "total_steps",
+            "timestamp",
+            "worktree",
+            "branch",
+        }
+
+        # Check required fields exist
+        missing = required_fields - set(data.keys())
+        if missing:
+            raise ValueError(f"Missing required fields: {', '.join(sorted(missing))}")
+
+        # Validate status value
+        if data["status"] != "starting":
+            raise ValueError(f"Invalid status '{data['status']}'. Must be 'starting'")
+
+        # Validate total_steps
+        if not isinstance(data["total_steps"], int):
+            raise ValueError("total_steps must be an integer")
+        if data["total_steps"] < 1:
+            raise ValueError("total_steps must be at least 1")
+
+        # Validate string fields
+        if not isinstance(data["timestamp"], str):
+            raise ValueError("timestamp must be a string")
+        if len(data["timestamp"]) == 0:
+            raise ValueError("timestamp must not be empty")
+
+        if not isinstance(data["worktree"], str):
+            raise ValueError("worktree must be a string")
+        if len(data["worktree"]) == 0:
+            raise ValueError("worktree must not be empty")
+
+        if not isinstance(data["branch"], str):
+            raise ValueError("branch must be a string")
+        if len(data["branch"]) == 0:
+            raise ValueError("branch must not be empty")
+
+    def get_key(self) -> str:
+        return "erk-implementation-status"
+
+
+@dataclass(frozen=True)
 class WorktreeCreationSchema(MetadataBlockSchema):
     """Schema for erk-worktree-creation blocks."""
 
@@ -371,6 +420,42 @@ def create_progress_status_block(
     }
     if step_description is not None:
         data["step_description"] = step_description
+    return create_metadata_block(
+        key=schema.get_key(),
+        data=data,
+        schema=schema,
+    )
+
+
+def create_start_status_block(
+    *,
+    total_steps: int,
+    worktree: str,
+    branch: str,
+) -> MetadataBlock:
+    """Create an erk-implementation-status start block with validation.
+
+    Args:
+        total_steps: Total number of steps in the plan
+        worktree: Name of the worktree
+        branch: Git branch name
+
+    Returns:
+        MetadataBlock with erk-implementation-status schema
+    """
+    from datetime import UTC, datetime
+
+    schema = StartStatusSchema()
+    timestamp = datetime.now(UTC).isoformat()
+
+    data = {
+        "status": "starting",
+        "total_steps": total_steps,
+        "timestamp": timestamp,
+        "worktree": worktree,
+        "branch": branch,
+    }
+
     return create_metadata_block(
         key=schema.get_key(),
         data=data,

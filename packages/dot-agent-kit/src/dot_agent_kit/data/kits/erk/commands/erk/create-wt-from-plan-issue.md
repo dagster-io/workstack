@@ -9,17 +9,28 @@ Create an erk worktree from a GitHub issue containing an implementation plan.
 ## Usage
 
 ```bash
-/erk:create-wt-from-plan-issue <issue-number-or-url>
+/erk:create-wt-from-plan-issue <issue-number-or-url> [worktree-name]
 ```
+
+**Arguments:**
+
+- `issue-number-or-url`: GitHub issue number (e.g., 123) or full URL
+- `worktree-name` (optional): Pre-generated worktree name. If not provided, will be auto-generated from issue title.
 
 **Examples:**
 
 ```bash
-# Using issue number
+# Auto-generate worktree name from issue title
 /erk:create-wt-from-plan-issue 123
 
-# Using GitHub URL
+# Use pre-generated worktree name (from plan issue comment)
+/erk:create-wt-from-plan-issue 123 add-user-authentication
+
+# Using GitHub URL with auto-generated name
 /erk:create-wt-from-plan-issue https://github.com/owner/repo/issues/123
+
+# Using GitHub URL with pre-generated name
+/erk:create-wt-from-plan-issue https://github.com/owner/repo/issues/123 add-user-authentication
 ```
 
 ## What This Command Does
@@ -68,8 +79,10 @@ When this command is invoked, delegate to the issue-wt-creator agent:
 Task(
     subagent_type="issue-wt-creator",
     description="Create worktree from issue plan",
-    prompt="Execute the complete issue worktree creation workflow for issue: {issue}"
+    prompt="Execute the complete issue worktree creation workflow for issue: {issue} [with worktree name: {worktree_name}]"
 )
 ```
 
 The agent handles all workflow orchestration, error handling, and result reporting.
+
+**Note**: If worktree name is provided, include it in the prompt. The agent will use it directly instead of auto-generating from the issue title.

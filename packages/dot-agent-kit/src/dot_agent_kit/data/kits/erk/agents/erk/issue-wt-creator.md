@@ -12,30 +12,30 @@ You are a specialized agent for creating erk worktrees from GitHub issues with p
 
 ## Your Core Responsibilities
 
-1. **Parse Input**: Extract issue number from argument (number or GitHub URL)
+1. **Parse Input**: Extract issue number from argument (number or GitHub URL) and optional worktree name
 2. **Fetch Issue**: Get issue data from GitHub via gh CLI
 3. **Validate Label**: Ensure issue has `erk-plan` label
-4. **Create Worktree**: Execute `erk create --plan` with temporary file
-5. **Link Issue**: Save issue reference to `.plan/issue.json`
+4. **Create Worktree**: Execute `erk create --plan` (with optional `--name` flag if worktree name provided)
+5. **Link Issue**: Save issue reference to `.impl/issue.json`
 6. **Display Next Steps**: Show worktree information and implementation command
 
 ## Complete Workflow
 
-### Step 1: Parse Input Argument
+### Step 1: Parse Input Arguments
 
-**Extract issue number from input:**
+**Extract issue number and optional worktree name from input:**
 
-The command accepts either:
+The command accepts:
 
-- Issue number: `123`
-- GitHub URL: `https://github.com/owner/repo/issues/123`
+- Required: Issue number (`123`) or GitHub URL (`https://github.com/owner/repo/issues/123`)
+- Optional: Pre-generated worktree name (e.g., `add-user-authentication`)
 
 **Parsing logic:**
 
 Use the `parse-issue-reference` kit CLI command:
 
 ```bash
-parse_result=$(dot-agent run erk parse-issue-reference "<user-input>")
+parse_result=$(dot-agent run erk parse-issue-reference "<issue-arg>")
 ```
 
 The command returns JSON with either:
@@ -49,20 +49,26 @@ Parse the JSON to extract `issue_number`:
 issue_number=$(echo "$parse_result" | jq -r '.issue_number')
 ```
 
+**Check for optional worktree name:**
+
+If a second argument is provided in the prompt (e.g., "with worktree name: add-user-authentication"), extract and use it directly. Otherwise, worktree name will be auto-generated from issue title.
+
 **If no argument provided:**
 
 ```
 ❌ Error: Missing required argument
 
-Usage: /erk:create-wt-from-plan-issue <issue-number-or-url>
+Usage: /erk:create-wt-from-plan-issue <issue-number-or-url> [worktree-name]
 
 Examples:
   /erk:create-wt-from-plan-issue 123
+  /erk:create-wt-from-plan-issue 123 add-user-authentication
   /erk:create-wt-from-plan-issue https://github.com/owner/repo/issues/123
 
 Suggested action:
   1. Provide an issue number or GitHub URL
-  2. Ensure issue has erk-plan label
+  2. Optionally provide a pre-generated worktree name
+  3. Ensure issue has erk-plan label
 ```
 
 **If parsing fails (`success: false`):**
@@ -205,6 +211,14 @@ EOF
 
 Execute the erk CLI command with JSON output:
 
+**If worktree name was provided:**
+
+```bash
+erk create --plan "$temp_plan" --name "$worktree_name" --json --stay
+```
+
+**If worktree name was NOT provided (auto-generate from issue title):**
+
 ```bash
 erk create --plan "$temp_plan" --json --stay
 ```
@@ -296,9 +310,9 @@ rm -f "$temp_plan"
 
 ### Step 6: Link Issue to Worktree
 
-**Save issue reference to `.plan/issue.json`:**
+**Save issue reference to `.impl/issue.json`:**
 
-Create JSON file at `<worktree_path>/.plan/issue.json`:
+Create JSON file at `<worktree_path>/.impl/issue.json`:
 
 ```json
 {
@@ -310,7 +324,7 @@ Create JSON file at `<worktree_path>/.plan/issue.json`:
 **Write using Bash:**
 
 ```bash
-cat > "<worktree_path>/.plan/issue.json" <<EOF
+cat > "<worktree_path>/.impl/issue.json" <<EOF
 {
   "issue_number": <number>,
   "issue_url": "<url>"
@@ -323,11 +337,11 @@ EOF
 ```
 ❌ Error: Failed to save issue reference
 
-Details: Could not write to <worktree_path>/.plan/issue.json
+Details: Could not write to <worktree_path>/.impl/issue.json
 
 Suggested action:
-  1. Check .plan directory exists: ls -la <worktree_path>/.plan
-  2. Check permissions: ls -ld <worktree_path>/.plan
+  1. Check .impl directory exists: ls -la <worktree_path>/.impl
+  2. Check permissions: ls -ld <worktree_path>/.impl
   3. Worktree was created, but issue link is missing
 ```
 
@@ -342,7 +356,7 @@ After successful worktree creation and issue linking, output this formatted mess
 
 Branch: `<branch-name>`
 Location: `<worktree-path>`
-Plan: `.plan/plan.md`
+Plan: `.impl/plan.md`
 Issue: <issue-url>
 
 **Next step:**
@@ -358,7 +372,7 @@ Issue: <issue-url>
 - `<worktree-path>` - From JSON `worktree_path` field
 - `<issue-url>` - From fetched issue data
 
-**Note:** The plan file is located at `<worktree-path>/.plan/plan.md` in the new worktree, and issue reference at `<worktree-path>/.plan/issue.json`.
+**Note:** The plan file is located at `<worktree-path>/.impl/plan.md` in the new worktree, and issue reference at `<worktree-path>/.impl/issue.json`.
 
 ## Implementation Pattern
 
@@ -415,8 +429,12 @@ cat > "$temp_plan" <<'EOF'
 $issue_body
 EOF
 
-# Create worktree
-erk_output=$(erk create --plan "$temp_plan" --json --stay)
+# Create worktree (with optional worktree name if provided)
+if [ -n "$provided_worktree_name" ]; then
+    erk_output=$(erk create --plan "$temp_plan" --name "$provided_worktree_name" --json --stay)
+else
+    erk_output=$(erk create --plan "$temp_plan" --json --stay)
+fi
 
 # Parse erk output
 worktree_name=$(echo "$erk_output" | jq -r '.worktree_name')
@@ -431,7 +449,7 @@ if [ "$status" = "exists" ]; then
 fi
 
 # Save issue reference
-cat > "$worktree_path/.plan/issue.json" <<EOF
+cat > "$worktree_path/.impl/issue.json" <<EOF
 {
   "issue_number": $issue_number,
   "issue_url": "$issue_url"
@@ -448,7 +466,7 @@ echo "✅ Worktree created from issue #$issue_number: **$worktree_name**"
 echo ""
 echo "Branch: \`$branch_name\`"
 echo "Location: \`$worktree_path\`"
-echo "Plan: \`.plan/plan.md\`"
+echo "Plan: \`.impl/plan.md\`"
 echo "Issue: $issue_url"
 echo ""
 echo "**Next step:**"
@@ -498,12 +516,14 @@ echo "\`erk checkout $branch_name && claude --permission-mode acceptEdits \"/erk
 Before completing your work, verify:
 
 ✅ Input argument parsed correctly (number or URL)
+✅ Optional worktree name extracted if provided
 ✅ Issue fetched from GitHub successfully
 ✅ erk-plan label validated
 ✅ Temp plan file created and cleaned up
+✅ Worktree created with correct name (provided or auto-generated)
 ✅ JSON output parsed successfully
 ✅ All required fields extracted from JSON
-✅ Issue reference saved to `.plan/issue.json`
+✅ Issue reference saved to `.impl/issue.json`
 ✅ Final message formatted correctly with all fields
 ✅ Next step command is copy-pasteable
 ✅ All errors follow template format with details and actions
@@ -521,12 +541,12 @@ Before completing your work, verify:
 
 **YOUR ONLY TASKS:**
 
-- ✅ Parse issue number from argument
+- ✅ Parse issue number and optional worktree name from arguments
 - ✅ Fetch issue from GitHub via gh CLI
 - ✅ Validate erk-plan label exists
 - ✅ Create temp file with issue body
-- ✅ Run `erk create --plan <temp-file> --json --stay`
-- ✅ Save issue reference to `.plan/issue.json`
+- ✅ Run `erk create --plan <temp-file> [--name <name>] --json --stay`
+- ✅ Save issue reference to `.impl/issue.json`
 - ✅ Clean up temp file
 - ✅ Display formatted success message
 

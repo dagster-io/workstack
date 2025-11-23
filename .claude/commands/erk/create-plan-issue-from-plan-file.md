@@ -263,9 +263,9 @@ Check if the `erk-plan` label exists, and create it if needed:
 
 ### Step 6: Create GitHub Issue
 
-Wrap the plan in a metadata block and create the issue:
+Create the issue with simple body, then post structured comment:
 
-1. Wrap plan content in metadata block:
+1. Wrap plan content (returns raw plan content):
 
    ```bash
    issue_body=$(cat <path-to-plan-file> | dot-agent kit-command erk wrap-plan-in-metadata-block)
@@ -306,6 +306,23 @@ Wrap the plan in a metadata block and create the issue:
    ```
 
    Exit with error.
+
+4. Post structured comment with workflow instructions:
+
+   ```bash
+   comment_result=$(dot-agent run erk post-plan-issue-comment \
+       --issue-number "$issue_number" \
+       --plan-content "$issue_body" \
+       --plan-title "<extracted-title>" \
+       --plan-file "<path-to-plan-file>")
+
+   if [ $? -ne 0 ]; then
+       echo "⚠️  Warning: Failed to post plan comment to issue (issue created successfully)" >&2
+       echo "Issue URL: $issue_url" >&2
+   fi
+   ```
+
+   Note: This posts the structured comment with metadata block and workflow instructions
 
 ### Step 7: Display Issue URL
 

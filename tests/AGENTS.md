@@ -9,6 +9,42 @@ Run all tests: `uv run pytest`
 Run specific test: `uv run pytest tests/commands/workspace/test_delete.py::test_delete_force_removes_directory`
 Run with coverage: `uv run pytest --cov=erk`
 
+## Best Practice: Scope Your Test Runs
+
+**IMPORTANT: Always scope pytest runs to specific test folders or files, not the entire project.**
+
+❌ **BAD - Runs ALL tests (slow, noisy):**
+
+```bash
+uv run pytest
+```
+
+✅ **GOOD - Scope to relevant test folder:**
+
+```bash
+# After changing metadata_blocks.py
+uv run pytest tests/unit/integrations/github/
+
+# After changing a command
+uv run pytest tests/commands/workspace/
+
+# After changing core logic
+uv run pytest tests/core/operations/
+```
+
+**Why scope test runs?**
+
+- **Speed**: Run only affected tests (seconds vs minutes)
+- **Focus**: See only relevant failures
+- **Efficiency**: Faster feedback loop during development
+- **Cost**: Reduce unnecessary compute when using agents
+
+**When to run all tests:**
+
+- Before creating a PR (final verification)
+- After major refactoring
+- When using CI commands (`/fast-ci`, `/all-ci`)
+
 ## Important: Directory Structure Requirements
 
 **Every new subdirectory under `tests/` must include `__init__.py`** to ensure Python recognizes it as a regular package (not a namespace package).

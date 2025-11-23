@@ -305,3 +305,146 @@ def test_ls_alias_works() -> None:
         assert "Found 1 plan issue(s)" in result.output
         assert "#1" in result.output
         assert "Test Issue" in result.output
+
+
+def test_list_plan_issues_shows_worktree_status() -> None:
+    """Test that list command displays worktree names from issue comments."""
+    from erk_shared.github.issues import FakeGitHubIssues
+
+    # Arrange - Create issue with metadata field containing issue number
+    issue1 = PlanIssue(
+        plan_issue_identifier="867",
+        title="Rename Erk Slash Commands",
+        body="",
+        state=PlanIssueState.OPEN,
+        url="https://github.com/owner/repo/issues/867",
+        labels=["erk-plan"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 1, tzinfo=UTC),
+        metadata={"number": 867},
+    )
+
+    issue2 = PlanIssue(
+        plan_issue_identifier="868",
+        title="Issue Without Worktree",
+        body="",
+        state=PlanIssueState.OPEN,
+        url="https://github.com/owner/repo/issues/868",
+        labels=["erk-plan"],
+        assignees=[],
+        created_at=datetime(2024, 1, 2, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 2, tzinfo=UTC),
+        metadata={"number": 868},
+    )
+
+    # Create comment with worktree metadata block
+    comment_with_metadata = """
+<!-- erk:metadata-block:erk-worktree-creation -->
+<details>
+<summary><code>erk-worktree-creation</code></summary>
+
+```yaml
+worktree_name: rename-erk-slash-commands
+branch_name: rename-erk-slash-commands
+timestamp: "2024-11-23T10:00:00Z"
+issue_number: 867
+```
+</details>
+<!-- /erk:metadata-block -->
+"""
+
+    # Configure fake GitHub issues with comments
+    github = FakeGitHubIssues(
+        comments={
+            867: [comment_with_metadata],
+            868: [],  # No comments for issue 868
+        }
+    )
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        store = FakePlanIssueStore(plan_issues={"867": issue1, "868": issue2})
+        ctx = build_workspace_test_context(env, plan_issue_store=store, issues=github)
+
+        # Act
+        result = runner.invoke(plan_issue_group, ["list"], obj=ctx)
+
+        # Assert
+        assert result.exit_code == 0
+        assert "Found 2 plan issue(s)" in result.output
+        assert "#867" in result.output
+        assert "Rename Erk Slash Commands" in result.output
+        assert "rename-erk-slash-commands" in result.output
+        assert "#868" in result.output
+        assert "Issue Without Worktree" in result.output
+
+
+def test_list_plan_issues_shows_most_recent_worktree() -> None:
+    """Test that list command shows the most recent worktree when multiple exist."""
+    from erk_shared.github.issues import FakeGitHubIssues
+
+    # Arrange
+    issue1 = PlanIssue(
+        plan_issue_identifier="900",
+        title="Issue with Multiple Worktrees",
+        body="",
+        state=PlanIssueState.OPEN,
+        url="https://github.com/owner/repo/issues/900",
+        labels=["erk-plan"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 1, tzinfo=UTC),
+        metadata={"number": 900},
+    )
+
+    # Create multiple comments with different timestamps
+    older_comment = """
+<!-- erk:metadata-block:erk-worktree-creation -->
+<details>
+<summary><code>erk-worktree-creation</code></summary>
+
+```yaml
+worktree_name: first-attempt
+branch_name: first-attempt
+timestamp: "2024-11-20T10:00:00Z"
+issue_number: 900
+```
+</details>
+<!-- /erk:metadata-block -->
+"""
+
+    newer_comment = """
+<!-- erk:metadata-block:erk-worktree-creation -->
+<details>
+<summary><code>erk-worktree-creation</code></summary>
+
+```yaml
+worktree_name: second-attempt
+branch_name: second-attempt
+timestamp: "2024-11-23T10:00:00Z"
+issue_number: 900
+```
+</details>
+<!-- /erk:metadata-block -->
+"""
+
+    # Configure fake with both comments
+    github = FakeGitHubIssues(
+        comments={
+            900: [older_comment, newer_comment],
+        }
+    )
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        store = FakePlanIssueStore(plan_issues={"900": issue1})
+        ctx = build_workspace_test_context(env, plan_issue_store=store, issues=github)
+
+        # Act
+        result = runner.invoke(plan_issue_group, ["list"], obj=ctx)
+
+        # Assert - Should show most recent worktree
+        assert result.exit_code == 0
+        assert "second-attempt" in result.output
+        assert "first-attempt" not in result.output

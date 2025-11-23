@@ -49,15 +49,16 @@ Examples:
 """
 
 import json
-import subprocess
 import time
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Literal, NamedTuple
 
 import click
 
 from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.ops import GtKit
 from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops import RealGtKit
+from erk.core.impl_folder import has_issue_reference, read_issue_reference
 
 
 class SubmitResult(NamedTuple):
@@ -320,16 +321,16 @@ def execute_post_analysis(
     pr_title = lines[0]
     pr_body = lines[1].lstrip() if len(lines) > 1 else ""
 
-    # Check for issue reference in .impl/issue.json using get-closing-text CLI command
-    result = subprocess.run(
-        ["dot-agent", "run", "erk", "get-closing-text"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    closing_text = result.stdout if result.returncode == 0 else ""
-    if closing_text:
-        pr_body = closing_text + pr_body
+    # Check for issue reference in .impl/issue.json
+    cwd = Path.cwd()
+    impl_dir = cwd / ".impl"
+
+    if has_issue_reference(impl_dir):
+        issue_ref = read_issue_reference(impl_dir)
+        if issue_ref is not None:
+            # Prepend "Closes #N" to PR body
+            closing_text = f"Closes #{issue_ref.issue_number}\n\n"
+            pr_body = closing_text + pr_body
 
     # Step 1: Get current branch for context
     branch_name = ops.git().get_current_branch()

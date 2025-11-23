@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from click.testing import CliRunner
@@ -423,6 +423,15 @@ class TestPostAnalysisExecution:
 
     def test_post_analysis_with_issue_reference(self, tmp_path: Path) -> None:
         """Test that PR body includes 'Closes #N' when issue.json exists."""
+        # Create .impl/issue.json in temp directory
+        impl_dir = tmp_path / ".impl"
+        impl_dir.mkdir()
+        issue_json = impl_dir / "issue.json"
+        issue_json.write_text(
+            '{"issue_number": 123, "issue_url": "https://github.com/repo/issues/123", '
+            '"created_at": "2025-01-01T00:00:00Z", "synced_at": "2025-01-01T00:00:00Z"}'
+        )
+
         ops = (
             FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
@@ -430,14 +439,10 @@ class TestPostAnalysisExecution:
             .with_pr(456, url="https://github.com/repo/pull/456")
         )
 
-        # Mock subprocess.run() to return closing text
-        patch_path = "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch.subprocess.run"
-        with patch(patch_path) as mock_subprocess:
-            # Simulate get-closing-text returning "Closes #123\n\n"
-            mock_subprocess.return_value = MagicMock(
-                returncode=0,
-                stdout="Closes #123\n\n",
-            )
+        # Mock Path.cwd() to return our temp directory
+        patch_path = "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        with patch(patch_path) as mock_cwd:
+            mock_cwd.return_value = tmp_path
 
             result = execute_post_analysis(
                 commit_message="Add feature\n\nFull description",
@@ -446,13 +451,6 @@ class TestPostAnalysisExecution:
 
         assert isinstance(result, PostAnalysisResult)
         assert result.success is True
-        # Verify that subprocess was called correctly
-        mock_subprocess.assert_called_once_with(
-            ["dot-agent", "run", "erk", "get-closing-text"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
         # Verify that update_pr_metadata was called with "Closes #123" prepended
         github_ops = ops.github()
         github_state = github_ops.get_state()
@@ -468,14 +466,10 @@ class TestPostAnalysisExecution:
             .with_pr(456, url="https://github.com/repo/pull/456")
         )
 
-        # Mock subprocess.run() to return empty string (no issue reference)
-        patch_path = "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch.subprocess.run"
-        with patch(patch_path) as mock_subprocess:
-            # Simulate get-closing-text returning empty string
-            mock_subprocess.return_value = MagicMock(
-                returncode=0,
-                stdout="",
-            )
+        # Mock Path.cwd() to return temp directory without .impl/issue.json
+        patch_path = "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        with patch(patch_path) as mock_cwd:
+            mock_cwd.return_value = tmp_path
 
             result = execute_post_analysis(
                 commit_message="Add feature\n\nFull description",
@@ -492,6 +486,15 @@ class TestPostAnalysisExecution:
 
     def test_post_analysis_with_issue_reference_empty_body(self, tmp_path: Path) -> None:
         """Test that PR body is just 'Closes #N' when commit message has only title."""
+        # Create .impl/issue.json in temp directory
+        impl_dir = tmp_path / ".impl"
+        impl_dir.mkdir()
+        issue_json = impl_dir / "issue.json"
+        issue_json.write_text(
+            '{"issue_number": 789, "issue_url": "https://github.com/repo/issues/789", '
+            '"created_at": "2025-01-01T00:00:00Z", "synced_at": "2025-01-01T00:00:00Z"}'
+        )
+
         ops = (
             FakeGtKitOps()
             .with_branch("feature-branch", parent="main")
@@ -499,14 +502,10 @@ class TestPostAnalysisExecution:
             .with_pr(456, url="https://github.com/repo/pull/456")
         )
 
-        # Mock subprocess.run() to return closing text
-        patch_path = "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch.subprocess.run"
-        with patch(patch_path) as mock_subprocess:
-            # Simulate get-closing-text returning "Closes #789\n\n"
-            mock_subprocess.return_value = MagicMock(
-                returncode=0,
-                stdout="Closes #789\n\n",
-            )
+        # Mock Path.cwd() to return our temp directory
+        patch_path = "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        with patch(patch_path) as mock_cwd:
+            mock_cwd.return_value = tmp_path
 
             # Commit message with only title (no body)
             result = execute_post_analysis(

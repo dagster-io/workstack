@@ -472,7 +472,7 @@ For teams using GitHub Actions, `erk` supports **remote AI implementation** wher
 
 # 2. Submit plan for remote implementation
 erk submit
-# This copies .plan/ → .submission/, commits, and pushes
+# This copies .plan/ → .worker-impl/, commits, and pushes
 # GitHub Actions automatically detects the push and begins implementation
 
 # 3. Monitor progress
@@ -482,30 +482,30 @@ gh run watch --branch <your-branch>
 **How it works:**
 
 1. **Client-side (`erk submit`):**
-   - Copies `.plan/` folder to `.submission/`
-   - Commits `.submission/` folder to git
+   - Copies `.plan/` folder to `.worker-impl/`
+   - Commits `.worker-impl/` folder to git
    - Pushes branch to remote
    - GitHub Actions workflow triggers automatically on push
 
 2. **Server-side (GitHub Actions):**
-   - Workflow detects `.submission/**` path in push event
-   - Copies `.submission/` → `.plan/` on runner
+   - Workflow detects `.worker-impl/**` path in push event
+   - Copies `.worker-impl/` → `.plan/` on runner
    - Executes `/erk:implement-plan` with CI checks
    - Commits implementation changes
-   - Deletes `.submission/` folder (cleanup)
+   - Deletes `.worker-impl/` folder (cleanup)
    - Pushes all changes back to branch
 
-**Key differences: `.plan/` vs `.submission/`**
+**Key differences: `.plan/` vs `.worker-impl/`**
 
-| Folder         | Purpose                       | Git Tracked | When Used              |
-| -------------- | ----------------------------- | ----------- | ---------------------- |
-| `.plan/`       | Local implementation tracking | ❌ No       | Manual implementation  |
-| `.submission/` | Remote submission signal      | ✅ Yes      | GitHub Actions trigger |
+| Folder          | Purpose                         | Git Tracked | When Used              |
+| --------------- | ------------------------------- | ----------- | ---------------------- |
+| `.plan/`        | Local implementation tracking   | ❌ No       | Manual implementation  |
+| `.worker-impl/` | Worker implementation workspace | ✅ Yes      | GitHub Actions trigger |
 
 **Why two folders?**
 
 - `.plan/` is in `.gitignore` for local work (keeps PRs clean)
-- `.submission/` is committed as a signal to GitHub Actions
+- `.worker-impl/` is committed as a signal to GitHub Actions
 - This separation allows other workflows to trigger remote implementation
 
 **Workflow configuration:**
@@ -518,10 +518,10 @@ on:
     branches:
       - "**"
     paths:
-      - ".submission/**"
+      - ".worker-impl/**"
 ```
 
-This means any workflow or tool can create a `.submission/` folder to trigger remote AI implementation - not just `erk submit`.
+This means any workflow or tool can create a `.worker-impl/` folder to trigger remote AI implementation - not just `erk submit`.
 
 **Benefits of remote implementation:**
 
@@ -529,7 +529,7 @@ This means any workflow or tool can create a `.submission/` folder to trigger re
 - ✅ Parallel implementations - multiple branches can run simultaneously
 - ✅ Consistent environment - same setup across all implementations
 - ✅ CI integration - automatic testing before push
-- ✅ Flexible triggering - any workflow can create `.submission/` folders
+- ✅ Flexible triggering - any workflow can create `.worker-impl/` folders
 
 ## Claude Code Integration
 

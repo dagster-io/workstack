@@ -6,7 +6,7 @@ from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
 from erk.cli.subprocess_utils import run_with_error_reporting
 from erk.core.context import ErkContext
-from erk.core.impl_folder import copy_impl_to_submission, get_submission_path
+from erk.core.impl_folder import copy_impl_to_worker_impl, get_worker_impl_path
 from erk.core.repo_discovery import RepoContext
 
 
@@ -16,7 +16,7 @@ from erk.core.repo_discovery import RepoContext
 def submit_cmd(ctx: ErkContext, dry_run: bool) -> None:
     """Submit plan for remote AI implementation via GitHub Actions.
 
-    Copies .impl/ folder to .submission/, commits it, pushes to remote,
+    Copies .impl/ folder to .worker-impl/, commits it, pushes to remote,
     and triggers the GitHub Actions workflow for implementation.
 
     Requires:
@@ -39,12 +39,12 @@ def submit_cmd(ctx: ErkContext, dry_run: bool) -> None:
         )
         raise SystemExit(1)
 
-    # Check if .submission/ already exists
-    if get_submission_path(ctx.cwd):
+    # Check if .worker-impl/ already exists
+    if get_worker_impl_path(ctx.cwd):
         user_output(
-            click.style("Error: ", fg="red") + ".submission/ folder already exists.\n\n"
+            click.style("Error: ", fg="red") + ".worker-impl/ folder already exists.\n\n"
             "This usually means a submission is in progress.\n"
-            "To clean up, delete the folder manually: rm -rf .submission/"
+            "To clean up, delete the folder manually: rm -rf .worker-impl/"
         )
         raise SystemExit(1)
 
@@ -60,24 +60,24 @@ def submit_cmd(ctx: ErkContext, dry_run: bool) -> None:
 
     if dry_run:
         dry_run_msg = click.style("(dry run)", fg="bright_black")
-        user_output(f"{dry_run_msg} Would copy .impl/ to .submission/")
-        user_output(f"{dry_run_msg} Would commit and push .submission/")
+        user_output(f"{dry_run_msg} Would copy .impl/ to .worker-impl/")
+        user_output(f"{dry_run_msg} Would commit and push .worker-impl/")
         user_output(
             f"{dry_run_msg} GitHub Actions will auto-trigger on push "
-            "(workflow detects .submission/**)"
+            "(workflow detects .worker-impl/**)"
         )
         return
 
-    # Copy .impl/ to .submission/
-    user_output("Copying .impl/ to .submission/...")
-    copy_impl_to_submission(ctx.cwd)
+    # Copy .impl/ to .worker-impl/
+    user_output("Copying .impl/ to .worker-impl/...")
+    copy_impl_to_worker_impl(ctx.cwd)
 
-    # Stage and commit .submission/ folder
-    user_output("Committing .submission/ folder...")
+    # Stage and commit .worker-impl/ folder
+    user_output("Committing .worker-impl/ folder...")
     run_with_error_reporting(
-        ["git", "add", ".submission/"],
+        ["git", "add", ".worker-impl/"],
         cwd=ctx.cwd,
-        error_prefix="Failed to stage .submission/ folder",
+        error_prefix="Failed to stage .worker-impl/ folder",
     )
 
     run_with_error_reporting(
@@ -89,7 +89,7 @@ def submit_cmd(ctx: ErkContext, dry_run: bool) -> None:
             "This commit signals GitHub Actions to begin implementation.",
         ],
         cwd=ctx.cwd,
-        error_prefix="Failed to commit .submission/ folder",
+        error_prefix="Failed to commit .worker-impl/ folder",
     )
 
     # Push branch

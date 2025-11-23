@@ -5,8 +5,8 @@ This module handles the .impl/ folder structure:
 - progress.md: Mutable progress tracking with step checkboxes
 - issue.json: GitHub issue reference (optional)
 
-And the .submission/ folder structure:
-- Ephemeral copy of .impl/ for remote AI implementation
+And the .worker-impl/ folder structure:
+- Implementation workspace for remote AI worker
 - Git-tracked, auto-deleted after implementation
 """
 
@@ -201,56 +201,56 @@ def update_progress_frontmatter(worktree_path: Path, completed: int, total: int)
     progress_file.write_text(updated_content, encoding="utf-8")
 
 
-def copy_impl_to_submission(worktree_path: Path) -> Path:
-    """Copy .impl/ folder to .submission/ folder.
+def copy_impl_to_worker_impl(worktree_path: Path) -> Path:
+    """Copy .impl/ folder to .worker-impl/ folder.
 
     Args:
         worktree_path: Path to worktree directory
 
     Returns:
-        Path to created .submission/ directory
+        Path to created .worker-impl/ directory
 
     Raises:
         FileNotFoundError: If .impl/ folder doesn't exist
-        FileExistsError: If .submission/ folder already exists
+        FileExistsError: If .worker-impl/ folder already exists
     """
     impl_folder = worktree_path / ".impl"
-    submission_folder = worktree_path / ".submission"
+    worker_impl_folder = worktree_path / ".worker-impl"
 
     if not impl_folder.exists():
         raise FileNotFoundError(f"No .impl/ folder found at {worktree_path}")
 
-    if submission_folder.exists():
-        raise FileExistsError(f".submission/ folder already exists at {worktree_path}")
+    if worker_impl_folder.exists():
+        raise FileExistsError(f".worker-impl/ folder already exists at {worktree_path}")
 
-    shutil.copytree(impl_folder, submission_folder)
-    return submission_folder
+    shutil.copytree(impl_folder, worker_impl_folder)
+    return worker_impl_folder
 
 
-def get_submission_path(worktree_path: Path) -> Path | None:
-    """Get path to .submission/ folder if it exists.
+def get_worker_impl_path(worktree_path: Path) -> Path | None:
+    """Get path to .worker-impl/ folder if it exists.
 
     Args:
         worktree_path: Path to worktree directory
 
     Returns:
-        Path to .submission/ folder if exists, None otherwise
+        Path to .worker-impl/ folder if exists, None otherwise
     """
-    submission_folder = worktree_path / ".submission"
-    if submission_folder.exists() and submission_folder.is_dir():
-        return submission_folder
+    worker_impl_folder = worktree_path / ".worker-impl"
+    if worker_impl_folder.exists() and worker_impl_folder.is_dir():
+        return worker_impl_folder
     return None
 
 
-def remove_submission_folder(worktree_path: Path) -> None:
-    """Remove .submission/ folder if it exists.
+def remove_worker_impl_folder(worktree_path: Path) -> None:
+    """Remove .worker-impl/ folder if it exists.
 
     Args:
         worktree_path: Path to worktree directory
     """
-    submission_folder = worktree_path / ".submission"
-    if submission_folder.exists():
-        shutil.rmtree(submission_folder)
+    worker_impl_folder = worktree_path / ".worker-impl"
+    if worker_impl_folder.exists():
+        shutil.rmtree(worker_impl_folder)
 
 
 def _generate_progress_content(steps: list[str]) -> str:

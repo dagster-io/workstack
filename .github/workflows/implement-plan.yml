@@ -17,7 +17,7 @@ on:
     branches:
       - '**'
     paths:
-      - '.submission/**'
+      - '.worker-impl/**'
 
 jobs:
   implement:
@@ -31,17 +31,17 @@ jobs:
           ref: ${{ inputs.branch-name || github.ref }}
           token: ${{ github.token }}
 
-      - name: Check for submission
+      - name: Check for worker implementation
         id: check_submission
         run: |
-          if [ -d ".submission" ]; then
-            echo "has_submission=true" >> $GITHUB_OUTPUT
+          if [ -d ".worker-impl" ]; then
+            echo "has_worker_impl=true" >> $GITHUB_OUTPUT
           else
-            echo "has_submission=false" >> $GITHUB_OUTPUT
+            echo "has_worker_impl=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Setup environment
-        if: steps.check_submission.outputs.has_submission == 'true'
+        if: steps.check_submission.outputs.has_worker_impl == 'true'
         run: |
           # Install uv
           curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -64,20 +64,20 @@ jobs:
           dot-agent kit install erk
 
       - name: Configure git
-        if: steps.check_submission.outputs.has_submission == 'true'
+        if: steps.check_submission.outputs.has_worker_impl == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Copy submission to plan
-        if: steps.check_submission.outputs.has_submission == 'true'
+      - name: Copy worker implementation to plan
+        if: steps.check_submission.outputs.has_worker_impl == 'true'
         run: |
-          # Copy .submission/ to .plan/ for implementation
-          cp -r .submission .plan
-          echo "Copied .submission/ to .plan/"
+          # Copy .worker-impl/ to .plan/ for implementation
+          cp -r .worker-impl .plan
+          echo "Copied .worker-impl/ to .plan/"
 
       - name: Run implementation with CI loop
-        if: steps.check_submission.outputs.has_submission == 'true'
+        if: steps.check_submission.outputs.has_worker_impl == 'true'
         run: |
           claude --print \
             --output-format stream-json \
@@ -119,19 +119,19 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Cleanup submission folder
+      - name: Cleanup worker implementation folder
         id: cleanup
-        if: steps.check_submission.outputs.has_submission == 'true'
+        if: steps.check_submission.outputs.has_worker_impl == 'true'
         run: |
-          # Delete .submission/ folder after successful implementation
-          rm -rf .submission
+          # Delete .worker-impl/ folder after successful implementation
+          rm -rf .worker-impl
 
           # Commit the deletion if changes exist
           if [[ -n $(git status --porcelain) ]]; then
-            git add .submission
-            git commit -m "Remove .submission/ after implementation"
+            git add .worker-impl
+            git commit -m "Remove .worker-impl/ after implementation"
             git push origin ${{ github.ref_name }}
-            echo "Deleted .submission/ folder"
+            echo "Deleted .worker-impl/ folder"
           fi
 
       - name: Create or update pull request

@@ -327,11 +327,11 @@ After completing all implementation steps:
 
 4. **Address any failures** by returning to relevant implementation steps
 
-### Step 9: Run CI and Fix Issues Iteratively (if .submission/ present)
+### Step 9: Run CI and Fix Issues Iteratively (if .worker-impl/ present)
 
-**CRITICAL: Only run this step if working in a .submission/ folder (not .plan/)**
+**CRITICAL: Only run this step if working in a .worker-impl/ folder (not .plan/)**
 
-Check if current directory contains `.submission/` folder:
+Check if current directory contains `.worker-impl/` folder:
 
 - If yes: This is a remote submission, run iterative CI
 - If no: This is local implementation, skip to Step 11
@@ -349,11 +349,11 @@ For each attempt:
 
 **After CI passes (or if .plan/ folder):**
 
-If in .submission/ folder:
+If in .worker-impl/ folder:
 
-1. Delete .submission/ folder: `rm -rf .submission/`
-2. Stage deletion: `git add .submission/`
-3. Commit: `git commit -m "Clean up submission artifacts after implementation"`
+1. Delete .worker-impl/ folder: `rm -rf .worker-impl/`
+2. Stage deletion: `git add .worker-impl/`
+3. Commit: `git commit -m "Clean up worker implementation artifacts after implementation"`
 4. Push: `git push`
 
 If in .plan/ folder:
@@ -362,9 +362,9 @@ If in .plan/ folder:
 2. DO NOT auto-commit
 3. Leave changes for user review
 
-### Step 10: Create/Update PR (if .submission/ present)
+### Step 10: Create/Update PR (if .worker-impl/ present)
 
-**Only if .submission/ was present:**
+**Only if .worker-impl/ was present:**
 
 Use gh CLI to create or update PR:
 

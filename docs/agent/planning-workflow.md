@@ -94,9 +94,9 @@ The front matter enables progress indicators in `erk status` output.
 - **Safe to delete after implementation** - Once the work is committed, `.plan/` can be removed
 - **One plan per worktree** - Each worktree has its own `.plan/` folder
 
-## .submission/ Folders (Future)
+## .worker-impl/ Folders (Future)
 
-`.submission/` folders are purposely meant to be checked into git (not covered in this guide).
+`.worker-impl/` folders are purposely meant to be checked into git (not covered in this guide).
 
 ## Commands Reference
 

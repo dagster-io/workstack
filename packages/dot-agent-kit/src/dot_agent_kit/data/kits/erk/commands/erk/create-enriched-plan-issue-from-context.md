@@ -341,6 +341,8 @@ Use gh CLI to create the issue with enriched plan content.
 
 After successfully creating the issue, output:
 
+**IMPORTANT:** Output each field on its own line. Preserve newlines between fields - do not concatenate into a single line.
+
 ```
 ✅ GitHub issue created: #<number>
 

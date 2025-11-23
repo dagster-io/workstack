@@ -410,6 +410,8 @@ If user provided `--link <issue-number>`:
    - Save issue reference using `save_issue_reference()`
    - Display:
 
+     **IMPORTANT:** Output each field on its own line. Preserve newlines between fields - do not concatenate into a single line.
+
      ```
      ✅ Issue #<number> linked to worktree
 

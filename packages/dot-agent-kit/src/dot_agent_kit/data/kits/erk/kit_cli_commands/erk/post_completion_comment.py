@@ -29,7 +29,7 @@ from pathlib import Path
 
 import click
 
-from erk.core.github.issues import RealGitHubIssues
+from dot_agent_kit.context_helpers import require_github_issues
 from erk.core.impl_folder import parse_progress_frontmatter, read_issue_reference
 from erk.integrations.github.metadata_blocks import (
     create_implementation_status_block,
@@ -77,7 +77,8 @@ def get_repo_root() -> Path | None:
 
 @click.command(name="post-completion-comment")
 @click.option("--summary", required=True, help="Brief implementation summary")
-def post_completion_comment(summary: str) -> None:
+@click.pass_context
+def post_completion_comment(ctx: click.Context, summary: str) -> None:
     """Post completion tracking comment to GitHub issue.
 
     Reads progress from .impl/progress.md frontmatter and posts a completion
@@ -165,9 +166,21 @@ def post_completion_comment(summary: str) -> None:
     # Format comment with emoji prefix + metadata
     comment_body = f"✅ Implementation complete\n\n{metadata_markdown}"
 
+    # Get GitHub Issues from context (with LBYL check)
+    # Convert stderr error to JSON error for graceful degradation (|| true pattern)
+    try:
+        github = require_github_issues(ctx)
+    except SystemExit:
+        result = CompletionError(
+            success=False,
+            error_type="context_not_initialized",
+            message="Context not initialized",
+        )
+        click.echo(json.dumps(asdict(result), indent=2))
+        raise SystemExit(0) from None
+
     # Post comment to GitHub
     try:
-        github = RealGitHubIssues()
         github.add_comment(repo_root, issue_ref.issue_number, comment_body)
         result = CompletionSuccess(
             success=True,

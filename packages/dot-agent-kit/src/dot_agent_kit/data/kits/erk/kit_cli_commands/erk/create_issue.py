@@ -1,15 +1,16 @@
 import json
-import re
-import subprocess
 import sys
 
 import click
+
+from dot_agent_kit.context_helpers import require_github_cli
 
 
 @click.command(name="create-issue")
 @click.argument("title")
 @click.option("--label", "-l", multiple=True, help="Labels to add (can be repeated)")
-def create_issue(title: str, label: tuple[str, ...]) -> None:
+@click.pass_context
+def create_issue(ctx: click.Context, title: str, label: tuple[str, ...]) -> None:
     """Create GitHub issue with body from stdin.
 
     Reads issue body from stdin and creates GitHub issue using gh CLI.
@@ -22,43 +23,24 @@ def create_issue(title: str, label: tuple[str, ...]) -> None:
         0: Success
         1: Error (gh CLI failed)
     """
+    # Get GitHub CLI from context (with LBYL check)
+    github_cli = require_github_cli(ctx)
+
     # Read body from stdin
     body = sys.stdin.read()
 
-    # Build gh command with labels - use --body-file - to read from stdin
-    cmd = ["gh", "issue", "create", "--title", title, "--body-file", "-"]
-    for lbl in label:
-        cmd.extend(["--label", lbl])
+    # Use injected GitHub CLI to create issue
+    result = github_cli.create_issue(title, body, list(label))
 
-    # Execute gh with body via stdin
-    result = subprocess.run(
-        cmd,
-        input=body,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    # Check for errors
-    if result.returncode != 0:
-        click.echo(f"Error: {result.stderr}", err=True)
+    # Check for errors (LBYL pattern)
+    if not result.success:
+        click.echo("Error: Failed to create issue", err=True)
         raise SystemExit(1)
-
-    # Parse URL from output (gh returns: https://github.com/owner/repo/issues/123)
-    issue_url = result.stdout.strip()
-
-    # Extract issue number from URL
-    match = re.search(r"/issues/(\d+)$", issue_url)
-    if not match:
-        click.echo(f"Error: Could not parse issue number from URL: {issue_url}", err=True)
-        raise SystemExit(1)
-
-    issue_number = int(match.group(1))
 
     # Output structured result
     output = {
         "success": True,
-        "issue_number": issue_number,
-        "issue_url": issue_url,
+        "issue_number": result.issue_number,
+        "issue_url": result.issue_url,
     }
     click.echo(json.dumps(output))

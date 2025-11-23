@@ -11,6 +11,7 @@ from unittest.mock import MagicMock
 import yaml
 from click.testing import CliRunner
 
+from dot_agent_kit.context import DotAgentContext
 from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.post_completion_comment import (
     post_completion_comment,
 )
@@ -62,7 +63,7 @@ total_steps: 5
 
     monkeypatch.setattr(subprocess, "run", mock_run)
 
-    # Mock RealGitHubIssues with FakeGitHubIssues
+    # Create FakeGitHubIssues and inject via context
     fake_issues = FakeGitHubIssues(
         issues={
             123: MagicMock(
@@ -73,19 +74,16 @@ total_steps: 5
             )
         }
     )
-    monkeypatch.setattr(
-        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.post_completion_comment.RealGitHubIssues",
-        lambda: fake_issues,
-    )
 
     # Change to tmp_path
     monkeypatch.chdir(tmp_path)
 
-    # Run command
+    # Run command with injected fake
     runner = CliRunner()
     result = runner.invoke(
         post_completion_comment,
         ["--summary", "Added progress tracking with structured YAML comments"],
+        obj=DotAgentContext.for_test(github_issues=fake_issues),
     )
 
     # Verify exit code
@@ -351,20 +349,17 @@ total_steps: 4
 
     monkeypatch.setattr(subprocess, "run", mock_run)
 
-    # Mock RealGitHubIssues to raise error (issue not found)
-    fake_issues = FakeGitHubIssues(issues={})  # Empty - issue 999 doesn't exist
-    monkeypatch.setattr(
-        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.post_completion_comment.RealGitHubIssues",
-        lambda: fake_issues,
-    )
+    # Create FakeGitHubIssues (empty - issue 999 doesn't exist)
+    fake_issues = FakeGitHubIssues(issues={})
 
     monkeypatch.chdir(tmp_path)
 
-    # Run command
+    # Run command with injected fake
     runner = CliRunner()
     result = runner.invoke(
         post_completion_comment,
         ["--summary", "Test"],
+        obj=DotAgentContext.for_test(github_issues=fake_issues),
     )
 
     # Verify exit code 0
@@ -411,10 +406,6 @@ total_steps: 3
     monkeypatch.setattr(subprocess, "run", mock_run)
 
     fake_issues = FakeGitHubIssues(issues={300: MagicMock(number=300)})
-    monkeypatch.setattr(
-        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.post_completion_comment.RealGitHubIssues",
-        lambda: fake_issues,
-    )
 
     monkeypatch.chdir(tmp_path)
 
@@ -422,6 +413,7 @@ total_steps: 3
     result = runner.invoke(
         post_completion_comment,
         ["--summary", "Implémentation complète"],
+        obj=DotAgentContext.for_test(github_issues=fake_issues),
     )
 
     assert result.exit_code == 0
@@ -466,10 +458,6 @@ total_steps: 4
     monkeypatch.setattr(subprocess, "run", mock_run)
 
     fake_issues = FakeGitHubIssues(issues={400: MagicMock(number=400)})
-    monkeypatch.setattr(
-        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.post_completion_comment.RealGitHubIssues",
-        lambda: fake_issues,
-    )
 
     monkeypatch.chdir(tmp_path)
 
@@ -477,6 +465,7 @@ total_steps: 4
     result = runner.invoke(
         post_completion_comment,
         ["--summary", "Summary: Complete feature"],
+        obj=DotAgentContext.for_test(github_issues=fake_issues),
     )
 
     assert result.exit_code == 0
@@ -519,10 +508,6 @@ total_steps: 2
     monkeypatch.setattr(subprocess, "run", mock_run)
 
     fake_issues = FakeGitHubIssues(issues={500: MagicMock(number=500)})
-    monkeypatch.setattr(
-        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.post_completion_comment.RealGitHubIssues",
-        lambda: fake_issues,
-    )
 
     monkeypatch.chdir(tmp_path)
 
@@ -530,6 +515,7 @@ total_steps: 2
     result = runner.invoke(
         post_completion_comment,
         ["--summary", "Added 'new' feature"],
+        obj=DotAgentContext.for_test(github_issues=fake_issues),
     )
 
     assert result.exit_code == 0

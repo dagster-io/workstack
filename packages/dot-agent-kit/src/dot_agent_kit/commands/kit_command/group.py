@@ -78,8 +78,8 @@ class LazyKitGroup(click.Group):
 
         # Get debug flag from context if available
         debug = self._debug
-        if ctx.obj and "debug" in ctx.obj:
-            debug = ctx.obj["debug"]
+        if ctx.obj and hasattr(ctx.obj, "debug"):
+            debug = ctx.obj.debug
 
         # Track successful command loads for validation
         commands_before = len(self.commands)

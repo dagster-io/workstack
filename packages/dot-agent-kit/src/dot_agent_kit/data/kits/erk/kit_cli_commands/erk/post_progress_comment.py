@@ -29,7 +29,7 @@ from pathlib import Path
 
 import click
 
-from erk.core.github.issues import RealGitHubIssues
+from dot_agent_kit.context_helpers import require_github_issues
 from erk.core.impl_folder import parse_progress_frontmatter, read_issue_reference
 from erk.integrations.github.metadata_blocks import (
     create_progress_status_block,
@@ -78,7 +78,8 @@ def get_repo_root() -> Path | None:
 
 @click.command(name="post-progress-comment")
 @click.option("--step-description", required=True, help="Description of completed step")
-def post_progress_comment(step_description: str) -> None:
+@click.pass_context
+def post_progress_comment(ctx: click.Context, step_description: str) -> None:
     """Post progress tracking comment to GitHub issue.
 
     Reads progress from .impl/progress.md frontmatter and posts a comment
@@ -154,9 +155,21 @@ def post_progress_comment(step_description: str) -> None:
     # Format comment with emoji prefix + metadata
     comment_body = f"✓ Step {completed}/{total} completed\n\n{metadata_markdown}"
 
+    # Get GitHub Issues from context (with LBYL check)
+    # Convert stderr error to JSON error for graceful degradation (|| true pattern)
+    try:
+        github = require_github_issues(ctx)
+    except SystemExit:
+        result = ProgressError(
+            success=False,
+            error_type="context_not_initialized",
+            message="Context not initialized",
+        )
+        click.echo(json.dumps(asdict(result), indent=2))
+        raise SystemExit(0) from None
+
     # Post comment to GitHub
     try:
-        github = RealGitHubIssues()
         github.add_comment(repo_root, issue_ref.issue_number, comment_body)
         percentage = int((completed / total) * 100) if total > 0 else 0
         result = ProgressSuccess(

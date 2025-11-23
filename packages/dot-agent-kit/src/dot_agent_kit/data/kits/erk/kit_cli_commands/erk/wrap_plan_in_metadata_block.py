@@ -7,10 +7,10 @@ import click
 
 @click.command(name="wrap-plan-in-metadata-block")
 def wrap_plan_in_metadata_block() -> None:
-    """Wrap plan content in collapsible GitHub metadata block.
+    """Return plan content for issue body.
 
-    Reads plan content from stdin and wraps it in a <details> block
-    with erk-plan key for clean GitHub issue presentation.
+    Reads plan content from stdin and returns it as-is.
+    Formatting and workflow instructions will be added via a separate comment.
 
     Usage:
         echo "$plan" | dot-agent kit-command erk wrap-plan-in-metadata-block
@@ -30,17 +30,5 @@ def wrap_plan_in_metadata_block() -> None:
     # Strip any leading/trailing whitespace
     plan_content = plan_content.strip()
 
-    # Create intro text
-    intro_text = "This issue contains an implementation plan:"
-
-    # Create the collapsible block with plan markdown
-    rendered_block = f"""<details>
-<summary><code>erk-plan</code></summary>
-
-{plan_content}
-</details>"""
-
-    # Output the complete issue body
-    click.echo(intro_text)
-    click.echo()
-    click.echo(rendered_block)
+    # Output the plan content as-is
+    click.echo(plan_content)

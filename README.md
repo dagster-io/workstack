@@ -9,7 +9,7 @@
 - **Parallel execution**: Multiple agents or developers can work on separate features simultaneously without environment conflicts or context pollution
 - **State isolation**: Each worktree maintains complete environment independence - dependencies, build artifacts, env vars, and file system state
 - **Context preservation**: Implementation context, API constraints, and design decisions persist in plan artifacts, enabling AI agents to maintain full context across sessions
-- **Plan-first development**: Each worktree can be created from a structured plan (`.plan/`) that travels with the workspace, providing persistent context for both human and AI implementers
+- **Plan-first development**: Each worktree can be created from a structured plan (`.impl/`) that travels with the workspace, providing persistent context for both human and AI implementers
 - **Agentic optimization**: Seamless integration with Claude Code for AI-driven implementation (`/erk:save-context-enriched-plan`, `/erk:implement-plan`, `/erk:create-wt-from-plan-file`)
 
 ## Why Parallel Worktrees Matter for AI-Native Engineering
@@ -37,7 +37,7 @@ Note: `erk` was designed to work with `gt` (graphite) for managing stacks of bra
 
 ## Plan Orientation
 
-`erk` has first-class support for planning workflows. You can create plan documents and then use the `--plan` flag on `create` to create new worktrees that contain planning documents in `.plan`, which by default is in `.gitignore`. There are also bundled claude code commands (installable via `dot-agent`) that facilitate the creation, enrichement, and implementation of these plans.
+`erk` has first-class support for planning workflows. You can create plan documents and then use the `--plan` flag on `create` to create new worktrees that contain planning documents in `.impl`, which by default is in `.gitignore`. There are also bundled claude code commands (installable via `dot-agent`) that facilitate the creation, enrichement, and implementation of these plans.
 
 ## Installation
 
@@ -87,7 +87,7 @@ erk create login --from-branch feature/login # Creates worktree 'login' from bra
 erk create --from-current-branch             # Move current branch to new worktree
 
 # From a plan file
-erk create --plan Add_Auth.md                # Creates worktree with .plan/ folder
+erk create --plan Add_Auth.md                # Creates worktree with .impl/ folder
 ```
 
 ### Managing Worktrees
@@ -437,18 +437,18 @@ erk checkout root
 erk create --plan Add_User_Auth.md
 # This automatically:
 #   - Creates worktree named 'add-user-auth'
-#   - Creates .plan/ folder with plan.md (immutable) and progress.md (mutable)
-#   - .plan/ is already in .gitignore (added by erk init)
+#   - Creates .impl/ folder with plan.md (immutable) and progress.md (mutable)
+#   - .impl/ is already in .gitignore (added by erk init)
 
 # 4. Switch and execute
 erk checkout add-user-auth
-# Your plan is now at .plan/plan.md for reference during implementation
-# Progress tracking in .plan/progress.md shows step completion
+# Your plan is now at .impl/plan.md for reference during implementation
+# Progress tracking in .impl/progress.md shows step completion
 ```
 
 **Why this works:**
 
-- Plans don't clutter PR reviews (`.plan/` in `.gitignore`)
+- Plans don't clutter PR reviews (`.impl/` in `.gitignore`)
 - Each worktree has its own plan context
 - Clean separation between thinking and doing
 - Progress tracking separates plan content from completion status
@@ -472,7 +472,7 @@ For teams using GitHub Actions, `erk` supports **remote AI implementation** wher
 
 # 2. Submit plan for remote implementation
 erk submit
-# This copies .plan/ → .worker-impl/, commits, and pushes
+# This copies .impl/ → .worker-impl/, commits, and pushes
 # GitHub Actions automatically detects the push and begins implementation
 
 # 3. Monitor progress
@@ -482,29 +482,29 @@ gh run watch --branch <your-branch>
 **How it works:**
 
 1. **Client-side (`erk submit`):**
-   - Copies `.plan/` folder to `.worker-impl/`
+   - Copies `.impl/` folder to `.worker-impl/`
    - Commits `.worker-impl/` folder to git
    - Pushes branch to remote
    - GitHub Actions workflow triggers automatically on push
 
 2. **Server-side (GitHub Actions):**
    - Workflow detects `.worker-impl/**` path in push event
-   - Copies `.worker-impl/` → `.plan/` on runner
+   - Copies `.worker-impl/` → `.impl/` on runner
    - Executes `/erk:implement-plan` with CI checks
    - Commits implementation changes
    - Deletes `.worker-impl/` folder (cleanup)
    - Pushes all changes back to branch
 
-**Key differences: `.plan/` vs `.worker-impl/`**
+**Key differences: `.impl/` vs `.worker-impl/`**
 
 | Folder          | Purpose                         | Git Tracked | When Used              |
 | --------------- | ------------------------------- | ----------- | ---------------------- |
-| `.plan/`        | Local implementation tracking   | ❌ No       | Manual implementation  |
+| `.impl/`        | Local implementation tracking   | ❌ No       | Manual implementation  |
 | `.worker-impl/` | Worker implementation workspace | ✅ Yes      | GitHub Actions trigger |
 
 **Why two folders?**
 
-- `.plan/` is in `.gitignore` for local work (keeps PRs clean)
+- `.impl/` is in `.gitignore` for local work (keeps PRs clean)
 - `.worker-impl/` is committed as a signal to GitHub Actions
 - This separation allows other workflows to trigger remote implementation
 
@@ -598,8 +598,8 @@ Creates a new erk worktree from a saved plan file.
 
 - Auto-detects most recent `*-plan.md` at repo root
 - Runs `erk create --plan <file>`
-- Moves plan to `.plan/plan.md` in new worktree
-- Creates `.plan/progress.md` for tracking step completion
+- Moves plan to `.impl/plan.md` in new worktree
+- Creates `.impl/progress.md` for tracking step completion
 - Displays plan content and next steps
 
 **Usage:**
@@ -615,10 +615,10 @@ Executes the implementation plan in the current worktree with automated progress
 
 **What it does:**
 
-- Reads `.plan/plan.md` in current directory
+- Reads `.impl/plan.md` in current directory
 - Creates TodoWrite entries for progress tracking
 - Executes each phase sequentially following coding standards
-- Updates `.plan/progress.md` with step completions
+- Updates `.impl/progress.md` with step completions
 - Updates YAML front matter for `erk status` progress indicators
 - Reports progress after each phase
 - Runs final verification (CI checks if documented)
@@ -637,11 +637,11 @@ Creates a GitHub issue from a persisted plan file and optionally links it to a w
 
 **What it does:**
 
-- Auto-detects most recent `*-plan.md` at repo root (or uses plan in `.plan/` if present)
+- Auto-detects most recent `*-plan.md` at repo root (or uses plan in `.impl/` if present)
 - Extracts title from plan front matter or H1 heading
 - Ensures `erk-plan` label exists (creates if needed)
 - Creates GitHub issue with plan content as body
-- Saves issue reference to `.plan/issue.json` (if worktree exists)
+- Saves issue reference to `.impl/issue.json` (if worktree exists)
 - Enables progress tracking via issue comments
 
 **Usage:**
@@ -660,9 +660,9 @@ Fetches a GitHub issue body and executes it as an implementation plan.
 
 **What it does:**
 
-- Reads `.plan/issue.json` to get issue number
+- Reads `.impl/issue.json` to get issue number
 - Fetches issue body from GitHub
-- Saves issue body to `.plan/plan.md`
+- Saves issue body to `.impl/plan.md`
 - Delegates to `/erk:implement-plan` for execution
 - Posts progress comments back to the issue
 
@@ -743,10 +743,10 @@ Updates an existing PR by staging changes, committing, restacking, and submittin
 
 ### Progress Tracking System
 
-The `.plan/` folder structure enables automated progress tracking:
+The `.impl/` folder structure enables automated progress tracking:
 
 ```
-.plan/
+.impl/
 ├── plan.md       # Immutable reference (never edited during implementation)
 └── progress.md   # Mutable tracking (checkboxes + YAML front matter)
 ```
@@ -933,7 +933,7 @@ erk land-stack --down
 
 **Requirements:**
 
-- Current directory must contain a `.plan/` folder
+- Current directory must contain a `.impl/` folder
 - Must be on a branch (not detached HEAD)
 - Remote `origin` must be configured
 

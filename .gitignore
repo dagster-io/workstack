@@ -17,8 +17,6 @@ activate.sh
 
 # Local implementation and configuration (not tracked in git)
 .impl/
-# .plan file during transition
-.plan/
 .env
 
 CLAUDE.local.md

@@ -100,14 +100,14 @@ jobs:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
         run: |
-          mkdir -p .plan
+          mkdir -p .impl
 
           # Save issue body as plan.md using printf for safety
           # This prevents heredoc injection attacks
-          printf '%s\n' "$ISSUE_BODY" > .plan/plan.md
+          printf '%s\n' "$ISSUE_BODY" > .impl/plan.md
 
           # Create issue.json reference using environment variables
-          cat > .plan/issue.json <<EOF
+          cat > .impl/issue.json <<EOF
           {
             "issue_number": $ISSUE_NUMBER,
             "issue_url": "$ISSUE_URL",
@@ -118,9 +118,9 @@ jobs:
 
           # Extract steps from plan.md and create progress.md with frontmatter
           # This uses a simple regex to find numbered steps
-          STEP_COUNT=$(grep -E '^\s*[0-9]+\.' .plan/plan.md | wc -l | tr -d ' ')
+          STEP_COUNT=$(grep -E '^\s*[0-9]+\.' .impl/plan.md | wc -l | tr -d ' ')
 
-          cat > .plan/progress.md <<EOF
+          cat > .impl/progress.md <<EOF
           ---
           completed_steps: 0
           total_steps: $STEP_COUNT
@@ -131,9 +131,9 @@ jobs:
           EOF
 
           # Extract steps and create checkboxes
-          grep -E '^\s*[0-9]+\.' .plan/plan.md | sed 's/^\s*//' | sed 's/^/- [ ] /' >> .plan/progress.md
+          grep -E '^\s*[0-9]+\.' .impl/plan.md | sed 's/^\s*//' | sed 's/^/- [ ] /' >> .impl/progress.md
 
-          echo "Created .plan/ folder structure"
+          echo "Created .impl/ folder structure"
 
       - name: Run implementation
         id: implement

@@ -482,7 +482,7 @@ repo_root = subprocess.run(
 # Use your generated filename
 filename = "your-generated-filename.md"  # From Step 5b
 
-# Construct path (repo root, NOT .plan/ folder)
+# Construct path (repo root, NOT .impl/ folder)
 plan_path = Path(repo_root) / filename
 
 # Write your composed content

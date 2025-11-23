@@ -4,7 +4,7 @@ description: Execute implementation plan from GitHub issue with erk-plan label
 
 # /erk:implement-plan-issue
 
-Take over an existing worktree by fetching a GitHub issue with the `erk-plan` label and executing its implementation plan. This command creates a `.plan/` folder from the issue and delegates to `/erk:implement-plan` for execution.
+Take over an existing worktree by fetching a GitHub issue with the `erk-plan` label and executing its implementation plan. This command creates a `.impl/` folder from the issue and delegates to `/erk:implement-plan` for execution.
 
 ## Usage
 
@@ -24,7 +24,7 @@ Take over an existing worktree by fetching a GitHub issue with the `erk-plan` la
 
 ## Prerequisites
 
-- Must be in a worktree directory that does NOT have a `.plan/` folder
+- Must be in a worktree directory that does NOT have a `.impl/` folder
 - Issue must have `erk-plan` label on GitHub
 - GitHub CLI (`gh`) must be authenticated
 
@@ -33,17 +33,17 @@ Take over an existing worktree by fetching a GitHub issue with the `erk-plan` la
 When you run this command:
 
 1. Parses input (issue number or GitHub URL)
-2. Checks that `.plan/` folder does NOT exist (errors if exists)
+2. Checks that `.impl/` folder does NOT exist (errors if exists)
 3. Fetches issue from GitHub
 4. Validates issue has `erk-plan` label (errors if missing)
-5. Creates `.plan/` directory
-6. Saves issue body to `.plan/plan.md`
-7. Saves issue reference to `.plan/issue.json`
+5. Creates `.impl/` directory
+6. Saves issue body to `.impl/plan.md`
+7. Saves issue reference to `.impl/issue.json`
 8. Delegates to `/erk:implement-plan` for execution
 
 ## Expected Outcome
 
-- `.plan/` folder created with issue contents
+- `.impl/` folder created with issue contents
 - Plan execution starts with progress tracking
 - Progress comments posted back to the issue
 - Clear completion summary
@@ -67,8 +67,8 @@ erk checkout my-feature
 
 | Command                        | Use Case                                                      |
 | ------------------------------ | ------------------------------------------------------------- |
-| `/erk:implement-plan`          | Execute existing `.plan/plan.md` in current directory         |
-| `/erk:implement-plan-issue`    | **THIS COMMAND** - Fetch issue, create `.plan/`, then execute |
+| `/erk:implement-plan`          | Execute existing `.impl/plan.md` in current directory         |
+| `/erk:implement-plan-issue`    | **THIS COMMAND** - Fetch issue, create `.impl/`, then execute |
 | `/erk:create-planned-issue-wt` | Create BOTH issue and worktree from plan file                 |
 
 ---
@@ -122,9 +122,9 @@ Exit with error.
 
 **Store the extracted issue number for Step 3.**
 
-### Step 2: Verify .plan/ Folder Does NOT Exist
+### Step 2: Verify .impl/ Folder Does NOT Exist
 
-Check that `.plan/` folder does NOT exist in the current directory.
+Check that `.impl/` folder does NOT exist in the current directory.
 
 **Use Bash to check:**
 
@@ -132,13 +132,13 @@ Check that `.plan/` folder does NOT exist in the current directory.
 test -d .plan && echo "exists" || echo "not found"
 ```
 
-**If .plan/ exists:**
+**If .impl/ exists:**
 
 ```
-❌ Error: Cannot take over worktree that already has .plan/ folder
+❌ Error: Cannot take over worktree that already has .impl/ folder
 
-This command creates a new .plan/ folder from a GitHub issue.
-The current directory already has a .plan/ folder with existing content.
+This command creates a new .impl/ folder from a GitHub issue.
+The current directory already has a .impl/ folder with existing content.
 
 To execute the existing plan:
   /erk:implement-plan
@@ -228,9 +228,9 @@ Exit with error.
 
 **If label found:** Continue to Step 5.
 
-### Step 5: Create .plan/ Directory
+### Step 5: Create .impl/ Directory
 
-Create the `.plan/` folder in the current directory.
+Create the `.impl/` folder in the current directory.
 
 **Use Bash:**
 
@@ -241,7 +241,7 @@ mkdir .plan
 **If creation fails:**
 
 ```
-❌ Error: Failed to create .plan/ directory
+❌ Error: Failed to create .impl/ directory
 
 Details: <error message>
 
@@ -252,15 +252,15 @@ Check:
 
 Exit with error.
 
-### Step 6: Save Issue Body as .plan/plan.md
+### Step 6: Save Issue Body as .impl/plan.md
 
-Write the issue body to `.plan/plan.md`.
+Write the issue body to `.impl/plan.md`.
 
 **Use Write tool:**
 
 ```python
 Write(
-    file_path=".plan/plan.md",
+    file_path=".impl/plan.md",
     content=issue.body
 )
 ```
@@ -273,7 +273,7 @@ Write(
 Details: <error message>
 
 Check:
-  - .plan/ directory was created
+  - .impl/ directory was created
   - File permissions
 ```
 
@@ -285,28 +285,28 @@ Exit with error.
 📋 Plan loaded from GitHub issue #<number>
 
 Title: <issue.title>
-Saved to: .plan/plan.md
+Saved to: .impl/plan.md
 
 Now executing the plan...
 ```
 
 ### Step 7: Save Issue Reference
 
-Save the issue reference to `.plan/issue.json` for progress tracking.
+Save the issue reference to `.impl/issue.json` for progress tracking.
 
 **Use the plan_folder utilities:**
 
 ```python
-from erk.core.plan_folder import save_issue_reference
+from erk.core.impl_folder import save_issue_reference
 
 save_issue_reference(
-    plan_dir=Path(".plan"),
+    plan_dir=Path(".impl"),
     issue_number=issue.number,
     issue_url=issue.url
 )
 ```
 
-**This creates `.plan/issue.json` with:**
+**This creates `.impl/issue.json` with:**
 
 ```json
 {
@@ -342,10 +342,10 @@ SlashCommand(command="/erk:implement-plan")
 
 This will:
 
-- Read `.plan/plan.md` (the issue body you just saved)
+- Read `.impl/plan.md` (the issue body you just saved)
 - Execute the implementation steps
-- Update `.plan/progress.md` with checkboxes
-- Post progress comments back to the GitHub issue (via `.plan/issue.json`)
+- Update `.impl/progress.md` with checkboxes
+- Post progress comments back to the GitHub issue (via `.impl/issue.json`)
 - Provide completion summary
 
 **The /erk:implement-plan command handles:**
@@ -357,7 +357,7 @@ This will:
 
 ### Important Notes
 
-- **Safety first**: `.plan/` existence check prevents accidental overwrites
+- **Safety first**: `.impl/` existence check prevents accidental overwrites
 - **Label requirement**: Only issues with `erk-plan` label can be executed
 - **Integration layer**: Uses `ctx.issues.get_issue()` for testability and consistency
 - **Delegation pattern**: All plan execution logic lives in `/erk:implement-plan`
@@ -379,7 +379,7 @@ All errors follow the standard format:
 
 - No argument provided
 - Invalid argument format
-- .plan/ folder already exists
+- .impl/ folder already exists
 - Issue fetch fails
 - erk-plan label missing
 - Directory creation fails
@@ -396,9 +396,9 @@ After implementation, verify:
 - [ ] Accepts issue numbers (e.g., 123)
 - [ ] Accepts GitHub URLs (e.g., https://github.com/owner/repo/issues/123)
 - [ ] Errors if no argument provided
-- [ ] Errors if .plan/ exists
+- [ ] Errors if .impl/ exists
 - [ ] Errors if issue missing erk-plan label
-- [ ] Creates .plan/ directory
-- [ ] Saves issue body to .plan/plan.md
-- [ ] Saves issue reference to .plan/issue.json
+- [ ] Creates .impl/ directory
+- [ ] Saves issue body to .impl/plan.md
+- [ ] Saves issue reference to .impl/issue.json
 - [ ] Delegates to /erk:implement-plan successfully

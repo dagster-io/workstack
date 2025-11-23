@@ -361,7 +361,7 @@ def _create_json_response(
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
     help=(
         "Path to a plan markdown file. Will derive worktree name from filename "
-        "and create .plan/ folder with plan.md in the worktree. "
+        "and create .impl/ folder with plan.md in the worktree. "
         "Worktree names are automatically suffixed with the current date (-YY-MM-DD) "
         "and versioned if duplicates exist."
     ),
@@ -376,7 +376,7 @@ def _create_json_response(
     is_flag=True,
     default=False,
     help=(
-        "Copy .plan directory from current worktree to new worktree. "
+        "Copy .impl directory from current worktree to new worktree. "
         "Useful for multi-phase workflows where each phase builds on the previous plan. "
         "Mutually exclusive with --plan."
     ),
@@ -440,7 +440,7 @@ def create(
 
     Reads config.toml for env templates and post-create commands (if present).
     If --plan is provided, derives name from the plan filename and creates
-    .plan/ folder in the worktree.
+    .impl/ folder in the worktree.
     If --from-current-branch is provided, moves the current branch to the new worktree.
     If --from-branch is provided, creates a worktree from an existing branch.
 

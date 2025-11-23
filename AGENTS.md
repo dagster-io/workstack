@@ -26,7 +26,7 @@
 | Run pytest, pyright, ruff, prettier, make, or gt | → Use `devrun` agent (Task tool), NOT Bash                                         |
 | Work with Graphite stacks                        | → Load `gt-graphite` skill for stack visualization and terminology                 |
 | Understand erk architecture patterns             | → [docs/agent/erk-architecture.md](docs/agent/erk-architecture.md)                 |
-| Use planning workflow (.plan/ folders)           | → [docs/agent/planning-workflow.md](docs/agent/planning-workflow.md)               |
+| Use planning workflow (.impl/ folders)           | → [docs/agent/planning-workflow.md](docs/agent/planning-workflow.md)               |
 | Style CLI output                                 | → [docs/agent/cli-output-styling.md](docs/agent/cli-output-styling.md)             |
 | Use subprocess wrappers                          | → [docs/agent/subprocess-wrappers.md](docs/agent/subprocess-wrappers.md)           |
 | Create kit CLI commands                          | → [docs/agent/kit-cli-commands.md](docs/agent/kit-cli-commands.md)                 |

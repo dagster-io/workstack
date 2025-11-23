@@ -291,7 +291,7 @@ class DependencyStatus:
 
 @dataclass(frozen=True)
 class PlanStatus:
-    """Status of .plan/ folder and enriched plans."""
+    """Status of .impl/ folder and enriched plans."""
 
     exists: bool
     path: Path | None

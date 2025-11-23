@@ -1,10 +1,10 @@
 ---
-description: Execute the implementation plan from .plan/ folder in current directory
+description: Execute the implementation plan from .impl/ folder in current directory
 ---
 
 # /erk:implement-plan
 
-This command reads and executes the `.plan/plan.md` file from the current directory. It is designed to be run after switching to a worktree created by `/erk:save-context-enriched-plan` and `/erk:create-wt-from-plan-file`.
+This command reads and executes the `.impl/plan.md` file from the current directory. It is designed to be run after switching to a worktree created by `/erk:save-context-enriched-plan` and `/erk:create-wt-from-plan-file`.
 
 ## Usage
 
@@ -14,19 +14,19 @@ This command reads and executes the `.plan/plan.md` file from the current direct
 
 ## Prerequisites
 
-- Must be in a worktree directory that contains `.plan/` folder
+- Must be in a worktree directory that contains `.impl/` folder
 - Typically run after `erk checkout <branch>`
-- `.plan/plan.md` should contain a valid implementation plan
+- `.impl/plan.md` should contain a valid implementation plan
 
 ## What Happens
 
 When you run this command:
 
-1. Verifies `.plan/plan.md` exists in the current directory
+1. Verifies `.impl/plan.md` exists in the current directory
 2. Reads and parses the implementation plan
 3. Creates todo list for tracking progress
 4. Executes each phase of the plan sequentially
-5. Updates `.plan/progress.md` with step completions
+5. Updates `.impl/progress.md` with step completions
 6. Provides progress updates and summary
 
 ## Expected Outcome
@@ -41,16 +41,16 @@ When you run this command:
 
 You are executing the `/erk:implement-plan` command. Follow these steps carefully:
 
-### Step 1: Verify .plan/plan.md Exists
+### Step 1: Verify .impl/plan.md Exists
 
-Check that `.plan/plan.md` exists in the current directory.
+Check that `.impl/plan.md` exists in the current directory.
 
 If not found:
 
 ```
 ❌ Error: No plan folder found in current directory
 
-This command must be run from a worktree directory that contains a .plan/ folder with plan.md.
+This command must be run from a worktree directory that contains a .impl/ folder with plan.md.
 
 To create a worktree with a plan:
 1. Run /erk:save-context-enriched-plan to save your enhanced plan to disk
@@ -61,7 +61,7 @@ To create a worktree with a plan:
 
 ### Step 2: Read the Plan File
 
-Read `.plan/plan.md` from the current directory to get the full implementation plan.
+Read `.impl/plan.md` from the current directory to get the full implementation plan.
 
 Parse the plan to understand:
 
@@ -97,7 +97,7 @@ Pay special attention to:
 
 ### Step 2.5: Understanding Progress.md Structure
 
-The `.plan/progress.md` file tracks implementation progress using checkboxes AND YAML front matter (for files created after 2025-01-17).
+The `.impl/progress.md` file tracks implementation progress using checkboxes AND YAML front matter (for files created after 2025-01-17).
 
 **Front Matter Format:**
 
@@ -138,7 +138,7 @@ This keeps progress indicators accurate in real-time during plan execution.
 
 ### Step 2.6: Check for GitHub Issue Reference
 
-Progress tracking via GitHub comments is available if `.plan/issue.json` exists.
+Progress tracking via GitHub comments is available if `.impl/issue.json` exists.
 The kit CLI commands handle all logic automatically - no manual setup required.
 
 ### Step 3: Create TodoWrite Entries
@@ -186,7 +186,7 @@ For each phase in the plan:
    - If plan mentions tests, follow patterns in project test documentation (if available)
 5. **Verify implementation** against standards
 6. **Mark phase as completed** when done:
-   - Edit `.plan/progress.md` to change checkbox from `- [ ]` to `- [x]`
+   - Edit `.impl/progress.md` to change checkbox from `- [ ]` to `- [x]`
    - If front matter exists (file starts with `---`):
      - Count total checked boxes in the entire file
      - Edit the `completed_steps:` line in front matter with new count
@@ -205,15 +205,15 @@ For each phase in the plan:
 
 **IMPORTANT - Progress Tracking:**
 
-The new `.plan/` folder structure separates concerns:
+The new `.impl/` folder structure separates concerns:
 
-1. **`.plan/plan.md` (immutable reference)**: Contains Objective, Context & Understanding, Implementation Steps/Phases, Testing. This file should NEVER be edited during implementation.
+1. **`.impl/plan.md` (immutable reference)**: Contains Objective, Context & Understanding, Implementation Steps/Phases, Testing. This file should NEVER be edited during implementation.
 
-2. **`.plan/progress.md` (mutable tracking)**: Contains checkboxes for all steps extracted from plan.md. This is the ONLY file that should be updated during implementation.
+2. **`.impl/progress.md` (mutable tracking)**: Contains checkboxes for all steps extracted from plan.md. This is the ONLY file that should be updated during implementation.
 
 When updating progress:
 
-- Only edit `.plan/progress.md` - never touch `.plan/plan.md`
+- Only edit `.impl/progress.md` - never touch `.impl/plan.md`
 - Mark checkboxes as completed: `- [x]` instead of `- [ ]`
 - Simple find-replace operation: no risk of corrupting the plan
 - Progress format example:
@@ -329,7 +329,7 @@ After completing all implementation steps:
 
 ### Step 9: Run CI and Fix Issues Iteratively (if .worker-impl/ present)
 
-**CRITICAL: Only run this step if working in a .worker-impl/ folder (not .plan/)**
+**CRITICAL: Only run this step if working in a .worker-impl/ folder (not .impl/)**
 
 Check if current directory contains `.worker-impl/` folder:
 
@@ -347,7 +347,7 @@ For each attempt:
 5. Increment attempt counter
 6. If max attempts reached: Exit with error, DO NOT proceed
 
-**After CI passes (or if .plan/ folder):**
+**After CI passes (or if .impl/ folder):**
 
 If in .worker-impl/ folder:
 
@@ -356,9 +356,9 @@ If in .worker-impl/ folder:
 3. Commit: `git commit -m "Clean up worker implementation artifacts after implementation"`
 4. Push: `git push`
 
-If in .plan/ folder:
+If in .impl/ folder:
 
-1. DO NOT delete .plan/
+1. DO NOT delete .impl/
 2. DO NOT auto-commit
 3. Leave changes for user review
 

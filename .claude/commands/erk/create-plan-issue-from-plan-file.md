@@ -263,12 +263,22 @@ Check if the `erk-plan` label exists, and create it if needed:
 
 ### Step 6: Create GitHub Issue
 
-Use the kit CLI command to create the issue:
+Wrap the plan in a metadata block and create the issue:
 
-1. Create issue using kit CLI command:
+1. Wrap plan content in metadata block:
 
    ```bash
-   result=$(cat <path-to-plan-file> | dot-agent kit-command erk create-issue "<extracted-title>" --label "erk-plan")
+   issue_body=$(cat <path-to-plan-file> | dot-agent kit-command erk wrap-plan-in-metadata-block)
+   if [ $? -ne 0 ]; then
+       echo "❌ Error: Failed to wrap plan in metadata block" >&2
+       exit 1
+   fi
+   ```
+
+2. Create issue using kit CLI command:
+
+   ```bash
+   result=$(echo "$issue_body" | dot-agent kit-command erk create-issue "<extracted-title>" --label "erk-plan")
 
    # Parse JSON output
    if ! echo "$result" | jq -e '.success' > /dev/null; then
@@ -280,9 +290,9 @@ Use the kit CLI command to create the issue:
    issue_url=$(echo "$result" | jq -r '.issue_url')
    ```
 
-   Note: The kit CLI command handles body via stdin, eliminating permission prompts
+   Note: The kit CLI commands handle content via stdin, eliminating permission prompts
 
-2. If kit command fails:
+3. If kit command fails:
 
    ```
    ❌ Error: Failed to create GitHub issue

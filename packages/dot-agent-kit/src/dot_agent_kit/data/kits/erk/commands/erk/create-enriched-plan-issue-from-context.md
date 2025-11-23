@@ -51,7 +51,7 @@ This command combines:
 1. **Verify Prerequisites** - Check git repo and gh CLI
 2. **Extract Plan** - Find implementation plan in conversation
    3-5. **[ENRICHMENT PROCESS]** - Apply guidance, extract understanding, enhance interactively
-3. **Add YAML Front Matter** - Mark as erk plan
+3. **Wrap in Metadata Block** - Use collapsible `<details>` with `erk-plan` key
 4. **Extract Title** - Derive from plan content
 5. **Ensure Label Exists** - Create erk-plan label if needed
 6. **Create GitHub Issue** - Submit with enriched content
@@ -208,40 +208,41 @@ Apply the complete enrichment process to enhance the extracted plan for autonomo
 
 Store the enriched plan content for use in subsequent steps.
 
-### Step 6: Add YAML Front Matter
+### Step 6: Wrap Plan in Metadata Block
 
-Prepend YAML front matter to the enriched plan content.
+Use the kit CLI command to wrap the enriched plan content in a collapsible metadata block.
 
 **Algorithm:**
 
-1. Get current timestamp in ISO8601 format (e.g., `2025-11-22T09:00:00Z`)
-2. Construct front matter:
+1. Pass the enriched plan content to the kit CLI command:
 
-   ```yaml
-   ---
-   erk_plan: true
-   created_at: <timestamp>
-   ---
+   ```bash
+   issue_body=$(echo "$enriched_plan" | dot-agent kit-command erk wrap-plan-in-metadata-block)
+   if [ $? -ne 0 ]; then
+       echo "❌ Error: Failed to wrap plan in metadata block" >&2
+       exit 1
+   fi
    ```
 
-3. Prepend to enriched plan content with double newline after closing `---`
-
-**CRITICAL:** YAML delimiters must be on separate lines with newlines before and after.
+2. This creates a collapsible `<details>` block with the plan content embedded in YAML
 
 **Example output structure:**
 
-```markdown
----
-erk_plan: true
-created_at: 2025-11-22T09:00:00Z
----
+````markdown
+This issue contains an implementation plan:
 
+<details>
+<summary><code>erk-plan</code></summary>
+```yaml
 # [Enriched Plan Title]
 
 [Enriched plan content with Context & Understanding sections...]
+````
+
+</details>
 ```
 
-**Store this as the full issue body** for use in Step 9.
+**Store this as `$issue_body`** for use in Step 9.
 
 ### Step 7: Extract Title from Plan
 
@@ -302,12 +303,12 @@ Check if the `erk-plan` label exists, and create it if needed.
 
 Use gh CLI to create the issue with enriched plan content.
 
-**CRITICAL:** Issue body must include YAML front matter from Step 6 with enriched content.
+**CRITICAL:** Issue body must include the metadata block from Step 6 with enriched content.
 
 1. Create the issue using the kit CLI command:
 
    ```bash
-   result=$(echo "$enriched_plan" | dot-agent kit-command erk create-issue "$title" --label "erk-plan")
+   result=$(echo "$issue_body" | dot-agent kit-command erk create-issue "$title" --label "erk-plan")
 
    # Parse JSON output
    if ! echo "$result" | jq -e '.success' > /dev/null; then

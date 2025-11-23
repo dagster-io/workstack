@@ -67,13 +67,14 @@ def sanitize_branch_component(name: str) -> str:
     - Replaces characters outside `[A-Za-z0-9._/-]` with `-`
     - Collapses consecutive `-`
     - Strips leading/trailing `-` and `/`
+    - Truncates to 30 characters maximum (matches worktree behavior)
     Returns `"work"` if the result is empty.
 
     Args:
         name: Arbitrary string to sanitize
 
     Returns:
-        Sanitized branch component name
+        Sanitized branch component name (max 30 chars)
 
     Examples:
         >>> sanitize_branch_component("My Feature!")
@@ -82,12 +83,18 @@ def sanitize_branch_component(name: str) -> str:
         "fix/bug-123"
         >>> sanitize_branch_component("")
         "work"
+        >>> sanitize_branch_component("a" * 40)
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"  # 30 chars
     """
     lowered = name.strip().lower()
     replaced = _SAFE_COMPONENT_RE.sub("-", lowered)
     collapsed = re.sub(r"-+", "-", replaced)
     trimmed = collapsed.strip("-/")
     result = trimmed or "work"
+
+    # Truncate to 30 characters and strip trailing hyphens (matching worktree behavior)
+    if len(result) > 30:
+        result = result[:30].rstrip("-")
 
     return result
 

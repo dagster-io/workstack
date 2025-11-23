@@ -19,28 +19,28 @@ from erk_shared.naming import (
         (" Foo Bar ", "foo-bar"),
         ("A/B C", "a/b-c"),
         ("@@weird!!name??", "weird-name"),
-        # Test no truncation - long names are preserved
-        ("a" * 35, "a" * 35),
+        # Test truncation to 30 characters
+        ("a" * 35, "a" * 30),
         (
             "this-is-a-very-long-branch-name-that-exceeds-thirty-characters",
-            "this-is-a-very-long-branch-name-that-exceeds-thirty-characters",
+            "this-is-a-very-long-branch-nam",
         ),
         ("exactly-30-characters-long-ok", "exactly-30-characters-long-ok"),
         (
             "31-characters-long-should-be-ab",
-            "31-characters-long-should-be-ab",
-        ),  # No longer truncates
+            "31-characters-long-should-be-a",
+        ),  # Truncates to 30
         ("short", "short"),
         # Test long names with trailing hyphens are stripped
         (
             "branch-name-with-dash-at-position-30-",
-            "branch-name-with-dash-at-position-30",
+            "branch-name-with-dash-at-posit",
         ),
-        # Test very long names preserve content
+        # Test very long names truncate to 30
         (
             "12345678901234567890123456789-extra",
-            "12345678901234567890123456789-extra",
-        ),  # No truncation
+            "12345678901234567890123456789",
+        ),  # Hyphen at position 30 stripped
     ],
 )
 def test_sanitize_branch_component(value: str, expected: str) -> None:
@@ -239,3 +239,27 @@ def test_ensure_unique_worktree_name_with_existing_number(tmp_path: Path) -> Non
     result2 = ensure_unique_worktree_name("fix-v3", repo_dir, git_ops)
 
     assert result2 == f"fix-v3-{date_suffix}-2"
+
+
+def test_sanitize_branch_component_truncates_at_30_chars() -> None:
+    """Branch names should truncate to 30 characters maximum."""
+    # Exactly 30 characters
+    assert len(sanitize_branch_component("a" * 30)) == 30
+
+    # 31 characters truncates to 30
+    assert len(sanitize_branch_component("a" * 31)) == 30
+
+    # Long descriptive name gets truncated
+    long_name = "fix-dependency-injection-in-simplesubmitpy-to-eliminate-test-mocking"
+    result = sanitize_branch_component(long_name)
+    assert len(result) == 30
+    assert not result.endswith("-")  # No trailing hyphens after truncation
+
+
+def test_sanitize_branch_component_matches_worktree_length() -> None:
+    """Branch and worktree names should have same length for same input."""
+    test_name = "very-long-feature-name-that-exceeds-thirty-characters-easily"
+    branch = sanitize_branch_component(test_name)
+    worktree = sanitize_worktree_name(test_name)
+    assert len(branch) == len(worktree)
+    assert len(branch) == 30

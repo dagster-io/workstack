@@ -1,10 +1,8 @@
 """Unit tests for plan utility functions."""
 
-from erk.data.kits.erk.plan_utils import (
-    extract_title_from_plan,
-    generate_filename_from_title,
-    wrap_plan_in_metadata_block,
-)
+from erk_shared.naming import generate_filename_from_title
+
+from erk.data.kits.erk.plan_utils import extract_title_from_plan, wrap_plan_in_metadata_block
 
 
 def test_wrap_plan_basic() -> None:

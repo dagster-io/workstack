@@ -25,11 +25,9 @@ import subprocess
 from pathlib import Path
 
 import click
+from erk_shared.naming import generate_filename_from_title
 
-from dot_agent_kit.data.kits.erk.plan_utils import (
-    extract_title_from_plan,
-    generate_filename_from_title,
-)
+from dot_agent_kit.data.kits.erk.plan_utils import extract_title_from_plan
 from dot_agent_kit.data.kits.erk.session_plan_extractor import get_latest_plan
 
 

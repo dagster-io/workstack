@@ -29,6 +29,7 @@ def run_post_worktree_setup(
     worktree_path: Path,
     repo_root: Path,
     name: str,
+    script: bool = False,
 ) -> None:
     """Run post-worktree-creation setup: .env file and post-create commands.
 
@@ -37,6 +38,7 @@ def run_post_worktree_setup(
         worktree_path: Path to the newly created worktree
         repo_root: Path to repository root
         name: Worktree name
+        script: Whether to suppress diagnostic output
     """
     # Write .env file if template exists
     env_content = make_env_content(
@@ -52,6 +54,7 @@ def run_post_worktree_setup(
             commands=config.post_create_commands,
             worktree_path=worktree_path,
             shell=config.post_create_shell,
+            script=script,
         )
 
 
@@ -784,16 +787,25 @@ def create(
 
 
 def run_commands_in_worktree(
-    *, commands: Iterable[str], worktree_path: Path, shell: str | None
+    *, commands: Iterable[str], worktree_path: Path, shell: str | None, script: bool = False
 ) -> None:
     """Run commands serially in the worktree directory.
 
     Each command is executed in its own subprocess. If `shell` is provided, commands
     run through that shell (e.g., "bash -lc <cmd>"). Otherwise, commands are tokenized
     via `shlex.split` and run directly.
+
+    Args:
+        commands: Iterable of commands to run
+        worktree_path: Path to worktree where commands should run
+        shell: Optional shell to use for command execution
+        script: Whether to suppress diagnostic output
     """
 
     for cmd in commands:
+        # Output per-command diagnostic
+        if not script:
+            user_output(f"Running: {cmd}")
         cmd_list = [shell, "-lc", cmd] if shell else shlex.split(cmd)
         run_with_error_reporting(
             cmd_list,

@@ -210,11 +210,11 @@ def format_worktree_line(
     # Add PR title, plan summary, or placeholder (PR title takes precedence)
     if pr_title:
         # PR title available - use it without emoji
-        title_colored = click.style(pr_title, fg="bright_magenta")
+        title_colored = click.style(pr_title, fg="cyan")
         parts.append(title_colored)
     elif plan_summary:
         # No PR title but have plan summary - use with emoji
-        plan_colored = click.style(f"📋 {plan_summary}", fg="cyan")
+        plan_colored = click.style(f"📋 {plan_summary}", fg="bright_magenta")
         parts.append(plan_colored)
     else:
         # No PR title and no plan summary

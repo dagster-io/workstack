@@ -4,9 +4,7 @@ import json
 
 import click
 
-from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.issue_title_to_filename import (
-    plan_title_to_filename,
-)
+from dot_agent_kit.data.kits.erk.plan_utils import generate_filename_from_title
 from erk.cli.activation import render_activation_script
 from erk.cli.commands.create import add_worktree, run_post_worktree_setup
 from erk.cli.config import LoadedConfig
@@ -34,7 +32,7 @@ def _generate_worktree_name_from_title(ctx: ErkContext, title: str) -> str:
         Generated filename stem (without extension)
     """
     # Convert title to filename directly (no subprocess)
-    filename = plan_title_to_filename(title)
+    filename = generate_filename_from_title(title)
 
     # Remove extension and "-plan" suffix to get worktree name
     # "my-feature-plan.md" -> "my-feature-plan" -> "my-feature"

@@ -142,10 +142,12 @@ class RealGitHubIssues(GitHubIssues):
         cmd = ["gh", "issue", "create", "--title", title, "--body", body]
         for label in labels:
             cmd.extend(["--label", label])
-        cmd.extend(["--json", "number", "--jq", ".number"])
 
         stdout = execute_gh_command(cmd, repo_root)
-        return int(stdout.strip())
+        # gh issue create returns a URL like: https://github.com/owner/repo/issues/123
+        url = stdout.strip()
+        issue_number_str = url.rstrip("/").split("/")[-1]
+        return int(issue_number_str)
 
     def get_issue(self, repo_root: Path, number: int) -> IssueInfo:
         """Fetch issue data using gh CLI.

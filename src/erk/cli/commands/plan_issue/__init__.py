@@ -3,6 +3,7 @@
 import click
 
 from erk.cli.commands.plan_issue.get import get_plan_issue
+from erk.cli.commands.plan_issue.implement import implement_plan_issue
 from erk.cli.commands.plan_issue.list_cmd import list_plan_issues
 
 
@@ -14,4 +15,5 @@ def plan_issue_group() -> None:
 
 # Register subcommands
 plan_issue_group.add_command(get_plan_issue)
+plan_issue_group.add_command(implement_plan_issue)
 plan_issue_group.add_command(list_plan_issues)

@@ -24,6 +24,37 @@ from erk.core.naming_utils import (
 from erk.core.repo_discovery import RepoContext, ensure_erk_metadata_dir
 
 
+def run_post_worktree_setup(
+    config: LoadedConfig,
+    worktree_path: Path,
+    repo_root: Path,
+    name: str,
+) -> None:
+    """Run post-worktree-creation setup: .env file and post-create commands.
+
+    Args:
+        config: Loaded local configuration
+        worktree_path: Path to the newly created worktree
+        repo_root: Path to repository root
+        name: Worktree name
+    """
+    # Write .env file if template exists
+    env_content = make_env_content(
+        config, worktree_path=worktree_path, repo_root=repo_root, name=name
+    )
+    if env_content:
+        env_path = worktree_path / ".env"
+        env_path.write_text(env_content, encoding="utf-8")
+
+    # Run post-create commands
+    if config.post_create_commands:
+        run_commands_in_worktree(
+            commands=config.post_create_commands,
+            worktree_path=worktree_path,
+            shell=config.post_create_shell,
+        )
+
+
 def ensure_worktree_for_branch(
     ctx: ErkContext,
     repo: RepoContext,
@@ -154,19 +185,8 @@ def ensure_worktree_for_branch(
 
     user_output(click.style(f"✓ Created worktree: {name}", fg="green"))
 
-    # Write .env file if template exists
-    env_content = make_env_content(config, worktree_path=wt_path, repo_root=repo.root, name=name)
-    if env_content:
-        env_path = wt_path / ".env"
-        env_path.write_text(env_content, encoding="utf-8")
-
-    # Run post-create commands
-    if config.post_create_commands:
-        run_commands_in_worktree(
-            commands=config.post_create_commands,
-            worktree_path=wt_path,
-            shell=config.post_create_shell,
-        )
+    # Run post-worktree setup (.env and post-create commands)
+    run_post_worktree_setup(config, wt_path, repo.root, name)
 
     return wt_path, True
 

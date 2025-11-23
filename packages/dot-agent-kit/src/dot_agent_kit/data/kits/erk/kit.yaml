@@ -23,6 +23,9 @@ kit_cli_commands:
   - name: save-session-enriched-plan
     path: kit_cli_commands/erk/save_session_enriched_plan.py
     description: Create enhanced implementation plan from session logs (two-phase - discover and assemble)
+  - name: find-most-recent-plan-file
+    path: kit_cli_commands/erk/find_most_recent_plan_file.py
+    description: Find most recent *-plan.md file at repository root
   - name: find-project-dir
     path: kit_cli_commands/erk/find_project_dir.py
     description: Find Claude Code project directory for a given filesystem path

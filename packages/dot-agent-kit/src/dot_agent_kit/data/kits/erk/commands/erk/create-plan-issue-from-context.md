@@ -184,23 +184,46 @@ Suggested action:
 
 Exit with error.
 
-### Step 3: Wrap Plan in Metadata Block
+### Step 3: Wrap Plan with Git Context and Metadata Block
 
-Use the kit CLI command to wrap the plan content in a collapsible metadata block.
+Wrap the plan content with both the plan metadata block AND git context metadata.
 
 **Algorithm:**
 
-1. Pass the extracted plan content to the kit CLI command:
+1. First wrap the plan in its metadata block:
 
    ```bash
-   issue_body=$(echo "$plan_content" | dot-agent kit-command erk wrap-plan-in-metadata-block)
+   plan_with_block=$(echo "$plan_content" | dot-agent kit-command erk wrap-plan-in-metadata-block)
    if [ $? -ne 0 ]; then
        echo "❌ Error: Failed to wrap plan in metadata block" >&2
        exit 1
    fi
    ```
 
-2. This creates a collapsible `<details>` block with the plan content embedded in YAML
+2. Then add git context metadata using Python utility:
+
+   ```python
+   from pathlib import Path
+   from erk.integrations.github.plan_issues import wrap_plan_with_context
+
+   # Get current working directory
+   cwd = Path.cwd()
+
+   # Wrap the plan with git context
+   try:
+       issue_body = wrap_plan_with_context(plan_with_block, cwd)
+   except Exception as e:
+       print(f"❌ Error: Failed to collect git context: {e}", file=sys.stderr)
+       sys.exit(1)
+   ```
+
+   Note: This adds an `erk-plan-context` metadata block with:
+   - base_commit: Current HEAD SHA
+   - branch: Current branch name
+   - recent_commits: Last 5 commits for context
+   - timestamp: ISO 8601 timestamp
+
+3. This creates TWO collapsible `<details>` blocks: one for the plan and one for git context
 
 **Example output structure:**
 
@@ -216,7 +239,27 @@ This issue contains an implementation plan:
 ````
 
 </details>
-```
+
+<details>
+<summary><code>erk-plan-context</code></summary>
+```yaml
+base_commit: "abc123def456..."
+branch: "master"
+recent_commits:
+  - sha: "abc123"
+    message: "Fix all .plan/ to .impl/ references"
+    author: "John Doe"
+    date: "2 hours ago"
+  - sha: "def456"
+    message: "Replace YAML front matter"
+    author: "Jane Smith"
+    date: "3 hours ago"
+  # ... more commits
+timestamp: "2025-11-22T19:00:00Z"
+````
+
+</details>
+````
 
 **Store this as `$issue_body`** for use in Step 6.
 

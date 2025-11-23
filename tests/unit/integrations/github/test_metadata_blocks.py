@@ -8,6 +8,7 @@ from erk.integrations.github.metadata_blocks import (
     ProgressStatusSchema,
     create_implementation_status_block,
     create_metadata_block,
+    create_plan_context_block,
     create_progress_status_block,
     extract_metadata_value,
     extract_raw_metadata_blocks,
@@ -908,3 +909,44 @@ def test_rendered_plan_block_is_parseable() -> None:
     assert "<summary><code>erk-plan</code></summary>" in wrapped
     assert plan_content in wrapped
     assert "</details>" in wrapped
+
+
+def test_create_plan_context_block() -> None:
+    """Test create_plan_context_block function."""
+    git_context = {
+        "base_commit": "abc123def456789012345678901234567890123",
+        "branch": "main",
+        "recent_commits": [
+            {
+                "sha": "abc123",
+                "message": "Fix bug",
+                "author": "John Doe",
+                "date": "1 hour ago",
+            },
+            {
+                "sha": "def456",
+                "message": "Add feature",
+                "author": "Jane Smith",
+                "date": "2 hours ago",
+            },
+        ],
+        "timestamp": "2025-11-22T19:00:00Z",
+    }
+
+    block = create_plan_context_block(git_context)
+
+    # Verify block structure
+    assert block.key == "erk-plan-context"
+    assert block.data["base_commit"] == "abc123def456789012345678901234567890123"
+    assert block.data["branch"] == "main"
+    assert len(block.data["recent_commits"]) == 2
+    assert block.data["recent_commits"][0]["sha"] == "abc123"
+    assert block.data["timestamp"] == "2025-11-22T19:00:00Z"
+
+    # Verify it renders correctly
+    rendered = render_metadata_block(block)
+    assert "<details>" in rendered
+    assert "<summary><code>erk-plan-context</code></summary>" in rendered
+    assert "base_commit:" in rendered
+    assert "branch:" in rendered
+    assert "recent_commits:" in rendered

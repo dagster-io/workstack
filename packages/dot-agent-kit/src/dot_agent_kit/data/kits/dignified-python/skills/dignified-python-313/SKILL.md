@@ -9,6 +9,11 @@ description: This skill should be used when editing Python code in the erk codeb
 
 @.claude/docs/dignified-python/core-essentials.md
 @.claude/docs/dignified-python/routing-patterns.md
+@.claude/docs/dignified-python/exception-handling.md
+@.claude/docs/dignified-python/path-operations.md
+@.claude/docs/dignified-python/imports.md
+@.claude/docs/dignified-python/dependency-injection.md
+@.claude/docs/dignified-python/version-specific/313/type-annotations.md
 
 ## Version-Specific Checklist
 
@@ -18,17 +23,12 @@ description: This skill should be used when editing Python code in the erk codeb
 
 Use the routing index in routing-patterns.md (already loaded above) to determine which additional files to load.
 
-**IMPORTANT:** Only load files when you detect specific patterns in the task. Do NOT load all files preemptively.
+**IMPORTANT:** Core files above are already loaded. Only load these additional files when you detect specific patterns in the task.
 
 Pattern detection examples:
 
-- If task mentions "dict", "key", or "KeyError" → Load exception-handling.md
-- If task mentions "path", "file", or "directory" → Load path-operations.md
-- If task mentions "import" or "circular" → Load imports.md
-- If task mentions "ABC" or "interface" → Load dependency-injection.md
 - If task mentions "click" or "CLI" → Load cli-patterns.md
 - If task mentions "subprocess" → Load subprocess.md
-- If task mentions type hints → Load type-annotations.md
 
 ## Comprehensive Reference (If Needed)
 
@@ -39,9 +39,8 @@ If unsure which specific file to load, or need full overview:
 
 ## How to Use This Skill
 
-1. **Core essentials** are loaded automatically (LBYL, pathlib, ABC, imports)
-2. **Scan your task** for patterns (see routing-patterns.md)
-3. **Load relevant files** based on detected patterns
-4. **Each file is self-contained** with complete guidance for its domain
+1. **Core knowledge** is loaded automatically (LBYL, pathlib, ABC, imports, exceptions, type annotations)
+2. **Additional patterns** may require extra loading (CLI patterns, subprocess)
+3. **Each file is self-contained** with complete guidance for its domain
 
-**Token efficiency:** Loads ~740 tokens average (70% reduction from previous approach)
+**Note:** Most common patterns are now loaded by default for convenience

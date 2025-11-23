@@ -9,7 +9,6 @@ artifacts:
     - commands/erk/save-plan.md
     - commands/erk/create-wt-from-plan-file.md
     - commands/erk/create-wt-from-plan-issue.md
-    - commands/erk/create-plan-issue-from-context.md
     - commands/erk/implement-plan.md
     - commands/erk/implement-plan-issue.md
     - commands/erk/fix-merge-conflicts.md

@@ -1,16 +1,16 @@
 ---
-description: Extract plan from conversation, fully enhance it, and save to disk
+description: Extract plan from conversation, fully enhance it, and create GitHub issue directly
 ---
 
 # /erk:save-context-enriched-plan
 
-⚠️ **CRITICAL: This command ONLY saves the plan - it does NOT create worktrees or implement code!**
+⚠️ **CRITICAL: This command creates a GitHub issue with the plan - it does NOT create worktrees or implement code!**
 
 ## Goal
 
-**Extract an implementation plan from conversation, enhance it for autonomous execution, and save it to disk.**
+**Extract an implementation plan from conversation, enhance it for autonomous execution, and create a GitHub issue directly.**
 
-This command extracts a plan from conversation context, optionally applies guidance, interactively enhances it through clarifying questions, and saves it to the repository root as a markdown file.
+This command extracts a plan from conversation context, optionally applies guidance, interactively enhances it through clarifying questions, and creates a GitHub issue with the enhanced plan content.
 
 **What this command does:**
 
@@ -19,12 +19,11 @@ This command extracts a plan from conversation context, optionally applies guida
 - ✅ Interactively enhance plan for autonomous execution
 - ✅ Extract semantic understanding and context
 - ✅ Structure complex plans into phases (when beneficial)
-- ✅ Save enhanced plan to disk
+- ✅ Create GitHub issue with enhanced plan
 
-**What happens AFTER (in separate commands):**
+**What happens AFTER:**
 
-- ⏭️ Create worktree: `/erk:create-wt-from-plan-file`
-- ⏭️ Navigate and implement: `erk checkout <branch> && claude --permission-mode acceptEdits "/erk:implement-plan"`
+- ⏭️ Implement directly: `erk implement #<issue>`
 
 ## What Happens
 
@@ -33,9 +32,8 @@ When you run this command, these steps occur:
 1. **Verify Scope** - Confirm we're in a git repository
 2. **Detect Plan** - Search conversation for implementation plan
    3-5. **Enrichment Process** - Apply guidance, extract understanding, and enhance interactively
-3. **Generate Filename** - Derive filename from plan title
-4. **Detect Root** - Find repository root directory
-5. **Save Plan** - Write enhanced plan to disk as markdown file
+3. **Validate Repository** - Ensure GitHub CLI is available and repository has issues enabled
+4. **Create GitHub Issue** - Create issue with enhanced plan content and `erk-plan` label
 
 ## Usage
 
@@ -45,7 +43,7 @@ When you run this command, these steps occur:
 
 **Examples:**
 
-- `/erk:save-context-enriched-plan` - Save enhanced plan to disk
+- `/erk:save-context-enriched-plan` - Create GitHub issue with enhanced plan
 - `/erk:save-context-enriched-plan "Make error handling more robust and add retry logic"` - Apply guidance to plan
 - `/erk:save-context-enriched-plan "Fix: Use LBYL instead of try/except throughout"` - Apply corrections to plan
 
@@ -53,6 +51,8 @@ When you run this command, these steps occur:
 
 - An implementation plan must exist in conversation
 - Current working directory must be in a git repository
+- GitHub CLI (gh) must be installed and authenticated
+- Repository must have issues enabled
 - (Optional) Guidance text for final corrections/additions to the plan
 
 ## Semantic Understanding & Context Preservation
@@ -121,12 +121,13 @@ This command succeeds when ALL of the following are true:
 ✅ If guidance provided, it has been applied to the plan
 ✅ Semantic understanding extracted and integrated
 
-**File Creation:**
-✅ Plan saved to `<repo-root>/<filename>-plan.md`
-✅ File is valid markdown and contains enhanced content
+**Issue Creation:**
+✅ GitHub issue created with enhanced plan content
+✅ Issue has `erk-plan` label applied
+✅ Issue title matches plan title
 
 **Output:**
-✅ JSON output provided with file path and status
+✅ JSON output provided with issue URL and number
 ✅ Next steps clearly communicated to user
 
 ## Troubleshooting
@@ -140,13 +141,24 @@ This command succeeds when ALL of the following are true:
 - Plan should have headers like "## Implementation Plan" or numbered steps
 - Re-paste plan in conversation if needed
 
-### "Plan file already exists"
+### "GitHub authentication failed"
 
-**Cause:** File with same name exists at repository root
+**Cause:** GitHub CLI not authenticated or credentials expired
 **Solution:**
 
-- Change plan title to generate different filename
-- Delete existing file: `rm <repo-root>/<filename>-plan.md`
+- Run `gh auth login` to authenticate
+- Check authentication status: `gh auth status`
+- Verify you have permission to create issues in the repository
+
+### "Failed to create GitHub issue"
+
+**Cause:** Network error, repository has issues disabled, or API failure
+**Solution:**
+
+- Check network connectivity
+- Verify repository has issues enabled in GitHub settings
+- Check GitHub API status: https://www.githubstatus.com
+- Retry the command after resolving the issue
 
 ### Enhancement suggestions not applied correctly
 
@@ -164,23 +176,23 @@ You are executing the `/erk:save-context-enriched-plan` command. Follow these st
 
 ---
 
-🔴 **CRITICAL: YOU ARE ONLY WRITING MARKDOWN - DO NOT IMPLEMENT**
+🔴 **CRITICAL: YOU ARE ONLY CREATING A GITHUB ISSUE - DO NOT IMPLEMENT**
 
-- DO NOT use Edit or Write tools except for the final plan file
+- DO NOT use Edit or Write tools to modify codebase
 - DO NOT implement any code from the plan
 - DO NOT modify any files in the codebase
-- ONLY save ONE markdown file at `<repo-root>/<name>-plan.md`
+- ONLY create a GitHub issue with the enhanced plan
 
 ---
 
 ### Step 0: Verify Scope and Constraints
 
-🔴 **REMINDER: YOU ARE ONLY WRITING MARKDOWN**
+🔴 **REMINDER: YOU ARE ONLY CREATING A GITHUB ISSUE**
 
-- DO NOT use Edit or Write tools except for the final plan file
+- DO NOT use Edit or Write tools to modify codebase
 - DO NOT implement any code from the plan
 - DO NOT modify any files in the codebase
-- ONLY save ONE markdown file at `<repo-root>/<name>-plan.md`
+- ONLY create a GitHub issue with the enhanced plan
 
 **Error Handling Template:**
 All errors must follow this format:
@@ -199,37 +211,35 @@ Suggested action: [1-3 concrete steps to resolve]
 2. Apply guidance modifications if provided
 3. Extract semantic understanding from planning discussion
 4. Interactively enhance plan for autonomous execution
-5. Save enhanced plan to disk as markdown file
-6. Provide JSON output with file path
+5. Create GitHub issue with enhanced plan content
+6. Provide JSON output with issue URL and number
 
 **FORBIDDEN ACTIONS:**
 
 - Writing ANY code files (.py, .ts, .js, etc.)
 - Making ANY edits to existing codebase
 - Creating ANY worktrees
-- Running ANY commands except `git rev-parse`
 - Implementing ANY part of the plan
 
 **ALLOWED TOOLS ONLY:**
 
 - ✅ Read (to examine conversation context)
 - ✅ AskUserQuestion (for clarification)
-- ✅ Bash (ONLY `git rev-parse --show-toplevel`)
-- ✅ Write (ONLY for final plan file at `<repo-root>/*-plan.md`)
+- ✅ Bash (for git commands and kit CLI commands)
 
-**IF YOU USE:** Edit, Write (to codebase files), Bash (other commands), Task, NotebookEdit, SlashCommand, etc.
+**IF YOU USE:** Edit, Write (to codebase files), Task, NotebookEdit, SlashCommand, etc.
 → 🔴 **YOU ARE IMPLEMENTING, NOT PLANNING. STOP IMMEDIATELY.**
 
-This command only saves the plan. Worktree creation happens via `/erk:create-wt-from-plan-file`.
+This command only creates the GitHub issue. Implementation happens via `erk implement #<issue>`.
 
 ### Step 1: Detect Implementation Plan in Context
 
-🔴 **REMINDER: YOU ARE ONLY WRITING MARKDOWN**
+🔴 **REMINDER: YOU ARE ONLY CREATING A GITHUB ISSUE**
 
-- DO NOT use Edit or Write tools except for the final plan file
+- DO NOT use Edit or Write tools to modify codebase
 - DO NOT implement any code from the plan
 - DO NOT modify any files in the codebase
-- ONLY save ONE markdown file at `<repo-root>/<name>-plan.md`
+- ONLY create a GitHub issue with the enhanced plan
 
 Search conversation history for an implementation plan:
 
@@ -291,83 +301,20 @@ Apply the complete enrichment process to enhance the extracted plan for autonomo
 - Step 2: Extract semantic understanding from planning discussion
 - Step 3: Interactive enhancement with clarifying questions
 
-[Continue with Step 5: Generate Filename from Plan...]
+[Continue with Step 5: Validate Repository...]
 
-### Step 5: Generate Filename from Plan
+### Step 5: Validate Repository and GitHub CLI
 
-🔴 **REMINDER: YOU ARE ONLY WRITING MARKDOWN**
+🔴 **REMINDER: YOU ARE ONLY CREATING A GITHUB ISSUE**
 
-- DO NOT use Edit or Write tools except for the final plan file
+- DO NOT use Edit or Write tools to modify codebase
 - DO NOT implement any code from the plan
 - DO NOT modify any files in the codebase
-- ONLY save ONE markdown file at `<repo-root>/<filename>`
-
-**Title Extraction (LLM semantic analysis):**
-
-1. **Try H1 header** - Look for `# Title` at start of document
-2. **Try H2 header** - Look for `## Title` if no H1
-3. **Try prefix patterns** - Look for text after "Plan:", "Implementation Plan:", "Feature Plan:"
-4. **Fallback to first line** - Use first non-empty line as last resort
-
-**Filename Transformation (Kit CLI):**
-
-Use the kit CLI command to transform the extracted title to a filename:
-
-```bash
-filename=$(dot-agent kit-command erk issue-title-to-filename "$extracted_title")
-if [ $? -ne 0 ]; then
-    echo "❌ Error: Failed to generate filename" >&2
-    exit 1
-fi
-```
-
-The kit CLI command handles:
-
-- Lowercase conversion
-- Unicode normalization (NFD decomposition)
-- Emoji and special character removal
-- Hyphen collapse and trimming
-- Validation of at least one alphanumeric character
-- Returns "plan.md" if title is empty after cleanup
-- Appends `-plan.md` suffix automatically
-
-**No length restriction:** DO NOT truncate the base name. The base name is limited to 30 characters by `sanitize_worktree_name()` during worktree creation, but filename generation does NOT truncate.
-
-**If title extraction fails:**
-
-```
-❌ Error: Could not extract title from plan
-
-Details: Plan has no headers or first line
-
-Suggested action:
-  1. Add a clear title to your plan (e.g., # Feature Name)
-  2. Or provide a name: What would you like to name this plan?
-```
-
-Use AskUserQuestion tool to get the plan title from the user if extraction fails.
-
-**Example transformations:**
-
-- "User Authentication System" → `user-authentication-system-plan.md`
-- "Version-Specific Dignified Python Kits Structure" → `version-specific-dignified-python-kits-structure-plan.md`
-- "Fix: Database Connection Issues" → `fix-database-connection-issues-plan.md`
-- "🚀 Awesome Feature!!!" → `awesome-feature-plan.md`
-- "café Feature" → `cafe-feature-plan.md`
-- "测试 Feature" → `feature-plan.md`
-
-### Step 6: Detect Repository Root
-
-🔴 **REMINDER: YOU ARE ONLY WRITING MARKDOWN**
-
-- DO NOT use Edit or Write tools except for the final plan file
-- DO NOT implement any code from the plan
-- DO NOT modify any files in the codebase
-- ONLY save ONE markdown file at `<repo-root>/<name>-plan.md`
+- ONLY create a GitHub issue with the enhanced plan
 
 Execute: `git rev-parse --show-toplevel`
 
-This returns the absolute path to the root of the current repository. Store this as `<repo-root>` for use in subsequent steps.
+This confirms we're in a git repository and returns the repository root path.
 
 **If the command fails:**
 
@@ -382,53 +329,67 @@ Suggested action:
   3. Check if .git directory exists
 ```
 
-### Step 6.5: Verify You Did Not Implement
+**Verify GitHub CLI is available:**
+
+Check that `gh` command is available and authenticated.
+
+**If GitHub CLI is not available or not authenticated:**
+
+```
+❌ Error: GitHub CLI not available or not authenticated
+
+Details: gh command failed or returned authentication error
+
+Suggested action:
+  1. Install GitHub CLI: https://cli.github.com/
+  2. Authenticate with: gh auth login
+  3. Verify authentication: gh auth status
+```
+
+### Step 6: Verify You Did Not Implement
 
 🔴 **CRITICAL: VERIFY YOU ONLY GATHERED INFORMATION**
 
-Before saving the plan, confirm you ONLY gathered information and did NOT implement anything.
+Before creating the GitHub issue, confirm you ONLY gathered information and did NOT implement anything.
 
 **Check your tool usage in this session:**
 
 - ✅ Did you use Read to examine conversation? → CORRECT
 - ✅ Did you use AskUserQuestion for clarifications? → CORRECT
-- ✅ Did you use Bash(git rev-parse) to find repo root? → CORRECT
+- ✅ Did you use Bash for git/kit commands? → CORRECT
 - ❌ Did you use Edit on ANY file? → **VIOLATION - STOP**
-- ❌ Did you use Write on ANY codebase file (not plan)? → **VIOLATION - STOP**
+- ❌ Did you use Write to modify codebase? → **VIOLATION - STOP**
 - ❌ Did you use Task, SlashCommand, or other tools? → **VIOLATION - STOP**
-- ❌ Did you run ANY bash commands besides git rev-parse? → **VIOLATION - STOP**
 
 **If you violated restrictions:**
 
 ```
-❌ Error: Implementation attempted during plan persistence
+❌ Error: Implementation attempted during plan creation
 
 Details: You used [tool name] which is forbidden in /erk:save-context-enriched-plan
 
-This command ONLY writes markdown. Implementation happens in /erk:implement-plan.
+This command ONLY creates a GitHub issue. Implementation happens in erk implement.
 
 Suggested action:
-  1. Stop immediately - do NOT save the plan
+  1. Stop immediately - do NOT create the issue
   2. Report what tools you used incorrectly
   3. User should restart the command without implementing
 ```
 
-**If all checks passed:** Proceed to Step 7 to save the plan.
+**If all checks passed:** Proceed to Step 7 to create the GitHub issue.
 
-### Step 7: Save Plan to Disk
+### Step 7: Create GitHub Issue
 
-🔴 **REMINDER: YOU ARE ONLY WRITING MARKDOWN**
+🔴 **REMINDER: YOU ARE ONLY CREATING A GITHUB ISSUE**
 
-- DO NOT use Edit or Write tools except for the final plan file
+- DO NOT use Edit or Write tools to modify codebase
 - DO NOT implement any code from the plan
 - DO NOT modify any files in the codebase
-- ONLY save ONE markdown file at `<repo-root>/<filename>`
-
-**Note:** The `filename` from Step 5 already includes the `-plan.md` suffix (generated by kit CLI command). No need to append it again.
+- ONLY create a GitHub issue with the enhanced plan
 
 **Add enrichment marker:**
 
-Before saving the plan content, prepend YAML front matter to mark it as enriched:
+Before creating the issue, prepend YAML front matter to mark it as an erk plan:
 
 ```markdown
 ---
@@ -438,85 +399,68 @@ erk_plan: true
 [plan content here]
 ```
 
-This marker enables detection of erk plans for status display in both `erk status` and Claude Code status line.
+This marker enables detection of erk plans by the `erk implement` command.
 
-**If filename base validation fails:**
+**Create the issue using kit CLI command:**
+
+```bash
+issue_url=$(echo "$enhanced_plan_content" | dot-agent kit-command erk create-enriched-plan-issue-from-context)
+if [ $? -ne 0 ]; then
+    echo "❌ Error: Failed to create GitHub issue" >&2
+    exit 1
+fi
+```
+
+The kit CLI command:
+
+- Reads plan content from stdin
+- Extracts title from plan for issue title
+- Creates issue with `erk-plan` label
+- Returns issue URL
+
+**Extract issue number from URL:**
+
+Parse the issue number from the returned URL (e.g., `https://github.com/org/repo/issues/123` → `123`)
+
+**If issue creation fails:**
 
 ```
-❌ Error: Internal error - filename base exceeds 30 characters
+❌ Error: Failed to create GitHub issue
 
-Details: Generated base name '<base>' is <length> characters (max: 30)
-
-This is a bug in the filename generation algorithm. The base should have been
-truncated to 30 characters in Step 5.
+Details: [specific error from kit CLI command]
 
 Suggested action:
-  1. Report this as a bug in /erk:save-context-enriched-plan
-  2. Manually truncate the plan title and rerun the command
-```
-
-**If file already exists:**
-
-```
-❌ Error: Plan file already exists
-
-Details: File exists at: <repo-root>/<derived-filename>
-
-Suggested action:
-  1. Change plan title to generate different filename
-  2. Or delete existing: rm <repo-root>/<derived-filename>
-  3. Or choose different plan name
-```
-
-**Save the plan:**
-
-Use the Write tool to save:
-
-- Path: `<repo-root>/<derived-filename>`
-- Content: Full enhanced plan markdown content
-- Verify file creation
-
-**If save fails:**
-
-```
-❌ Error: Failed to save plan file
-
-Details: [specific write error from tool]
-
-Suggested action:
-  1. Check file permissions in repository root
-  2. Verify available disk space
-  3. Ensure path is valid: <repo-root>/<derived-filename>
+  1. Verify GitHub CLI (gh) is installed and authenticated
+  2. Check repository has issues enabled
+  3. Verify network connectivity
+  4. Check gh auth status
 ```
 
 **Output success message:**
 
 ```markdown
-✅ Plan saved: <repo-root>/<derived-filename>
+✅ GitHub issue created: #<number>
+<issue-url>
 
-You can now:
+Next steps:
 
-1. Review and edit the plan file if needed
-2. Create GitHub issue: /erk:create-plan-issue-from-plan-file
-3. Implement with unified command: erk implement #<issue_number>
-
-Alternative (file-based workflow):
-
-- Create worktree directly: /erk:create-wt-from-plan-file
+1. Review the issue if needed: gh issue view <number> --web
+2. Implement: erk implement #<number>
 
 ---
 
-{"plan_file": "<repo-root>/<derived-filename>", "status": "created"}
+{"issue_number": <number>, "issue_url": "<url>", "status": "created"}
 ```
 
 ## Important Notes
 
-- 🔴 **This command does NOT create worktrees** - only saves enhanced plan
+- 🔴 **This command does NOT create worktrees** - only creates GitHub issue with enhanced plan
 - Searches conversation for implementation plans
 - Enhances plans through clarifying questions when helpful
 - Suggests phase decomposition for complex plans with multiple features
 - All enhancements are optional - users can dismiss suggestions
-- Filename derived from plan title, prompts user if extraction fails
+- GitHub issue title derived from plan title
 - All errors follow consistent template with details and suggested actions
-- User can edit the plan file after creation before creating worktree
+- User can edit the issue after creation using GitHub UI or `gh issue edit`
 - Always provide clear feedback at each step
+- Issue becomes immediate source of truth (no disk files involved)

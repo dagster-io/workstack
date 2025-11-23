@@ -4,6 +4,10 @@ description: Create GitHub issue from persisted plan
 
 # /erk:create-plan-issue-from-plan-file
 
+⚠️ **DEPRECATED**: This command is deprecated. Use `/erk:save-context-enriched-plan` or `/erk:save-plan` instead, which create GitHub issues directly without requiring disk files.
+
+This command remains functional for backward compatibility with existing plan files on disk.
+
 ## Goal
 
 **Create a GitHub issue from an existing plan file on disk.**

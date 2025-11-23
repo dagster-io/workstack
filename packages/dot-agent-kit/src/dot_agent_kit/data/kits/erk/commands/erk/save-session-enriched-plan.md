@@ -1,10 +1,10 @@
 ---
-description: Extract plan from conversation and enhance using session log discoveries
+description: Extract plan from conversation, enhance using session log discoveries, and create GitHub issue directly
 ---
 
 # /erk:save-session-enriched-plan
 
-Extracts an implementation plan from the conversation and enhances it with discoveries mined from Claude Code session logs. This preserves all computational work from the planning session without triggering any implementation behavior.
+Extracts an implementation plan from the conversation and enhances it with discoveries mined from Claude Code session logs. Creates a GitHub issue directly with the enhanced plan, preserving all computational work from the planning session.
 
 ## Usage
 
@@ -31,7 +31,7 @@ This command solves the critical problem where planning sessions lose valuable d
    - Falls back to main session only if no Plan subagents found
 3. **Extracts the plan** from the conversation
 4. **Enhances the plan** with mined context
-5. **Saves enhanced plan** to repository root
+5. **Creates GitHub issue** with enhanced plan content and `erk-plan` label
 
 ### Streaming Analysis
 
@@ -61,14 +61,14 @@ You are executing the `/erk:save-session-enriched-plan` command. Follow these st
 **ALLOWED TOOLS:**
 
 - `Read` - For reading session logs and files
-- `Write` - ONLY for writing to repository root
-- `Bash` - ONLY for log operations in `~/.claude/projects/`
+- `Bash` - For git commands, log operations, and kit CLI commands
 - `Task` - ONLY for Step 3 mining delegation with general-purpose subagent
 - `AskUserQuestion` - For clarifications
 
 **FORBIDDEN TOOLS:**
 
 - `Edit` - Do NOT modify any existing files
+- `Write` - Do NOT write to codebase (only creating GitHub issue)
 - `Glob` - Do NOT search the codebase
 - `Grep` - Do NOT search the codebase
 - Any tool not explicitly listed as allowed
@@ -363,9 +363,7 @@ Focus on insights that will help during implementation.
 
 The agent returns a structured report with discoveries organized by category. Store this output for use in Step 4 composition.
 
-### Step 4: Compose and Save Enhanced Plan
-
-**Step 4a: Compose Enhanced Plan**
+### Step 4: Compose Enhanced Plan
 
 Integrate discoveries from the mining agent (Step 3 output) with the plan (Step 2 output) to compose an enhanced plan.
 
@@ -376,40 +374,9 @@ Integrate discoveries from the mining agent (Step 3 output) with the plan (Step 
 
 Use the agent's structured report to enhance the plan - the discoveries are already organized by category.
 
-**Generate Appropriate Filename:**
-
-Read the plan objectives and scope, then extract a descriptive title and use the kit CLI command to generate the filename:
-
-**Title Extraction (LLM semantic analysis):**
-
-1. Extract title from first H1 (`# Title`) or H2 (`## Title`) in the plan
-2. If no headers found, use the plan's main objective as the title
-
-**Filename Transformation (Kit CLI):**
-
-Use the kit CLI command to transform the extracted title to a filename:
-
-```bash
-filename=$(dot-agent kit-command erk issue-title-to-filename "$extracted_title")
-if [ $? -ne 0 ]; then
-    echo "❌ Error: Failed to generate filename" >&2
-    exit 1
-fi
-```
-
-The kit CLI command handles:
-- Lowercase conversion
-- Unicode normalization (NFD)
-- Emoji and special character removal
-- Hyphen collapse and trimming
-- Returns "plan.md" if title is empty after cleanup
-- Appends `-plan.md` suffix automatically
-
-Examples: `auth-refactor-plan.md`, `api-migration-plan.md`, `test-framework-plan.md`
-
 **Extract Title and Summary:**
 
-- Identify the plan's main objective
+- Identify the plan's main objective from the first H1 (`# Title`) or H2 (`## Title`)
 - Synthesize an executive summary from goals and approach
 - Keep summary concise (2-3 sentences)
 
@@ -455,43 +422,75 @@ Structure the document with these suggested sections (adapt based on content):
 - **Emphasize WHY**: Explain reasoning behind decisions
 - **Progressive disclosure**: Summary → Critical info → Details → Raw data
 
-**Step 4b: Write Enhanced Plan to Repository Root**
+### Step 5: Validate Repository and Create GitHub Issue
 
-After composing the enhanced plan content and generating the filename, write to repo root:
+After composing the enhanced plan, create a GitHub issue with the content.
 
-Use the Write tool to save your composed enhanced plan:
+**Step 5a: Validate Repository and GitHub CLI**
 
-1. Determine the repository root using git
-2. Use the filename you generated in Step 4a
-3. Write the enhanced plan content you composed
+Verify we're in a git repository and GitHub CLI is available:
 
-Example:
+1. Verify git repository using: `git rev-parse --show-toplevel`
+2. Verify GitHub CLI is authenticated
 
-```python
-from pathlib import Path
-import subprocess
+**If not in git repository:**
 
-# Get repo root
-repo_root = subprocess.run(
-    ["git", "rev-parse", "--show-toplevel"],
-    capture_output=True,
-    text=True,
-    check=True
-).stdout.strip()
+```
+❌ Error: Not in a git repository
 
-# Use your generated filename
-filename = "your-generated-filename.md"  # From Step 5b
+This command must be run from within a git repository.
+```
 
-# Construct path (repo root, NOT .impl/ folder)
-plan_path = Path(repo_root) / filename
+**If GitHub CLI not available or not authenticated:**
 
-# Write your composed content
-plan_path.write_text(enhanced_plan_content, encoding="utf-8")
-````
+```
+❌ Error: GitHub CLI not available or not authenticated
 
-### Step 5: Output Summary
+Suggested action:
+  1. Install GitHub CLI: https://cli.github.com/
+  2. Authenticate with: gh auth login
+  3. Verify authentication: gh auth status
+```
 
-After writing the enhanced plan, output a summary based on the discoveries you mined and composed:
+**Step 5b: Create GitHub Issue**
+
+Create a GitHub issue with the enhanced plan content using the kit CLI command:
+
+```bash
+issue_url=$(echo "$enhanced_plan_content" | dot-agent kit-command erk create-enriched-plan-issue-from-context)
+if [ $? -ne 0 ]; then
+    echo "❌ Error: Failed to create GitHub issue" >&2
+    exit 1
+fi
+```
+
+The kit CLI command:
+- Reads enhanced plan content from stdin
+- Extracts title from plan for issue title
+- Creates issue with `erk-plan` label
+- Returns issue URL
+
+**Extract issue number from URL:**
+
+Parse the issue number from the returned URL (e.g., `https://github.com/org/repo/issues/123` → `123`)
+
+**If issue creation fails:**
+
+```
+❌ Error: Failed to create GitHub issue
+
+Details: [specific error from kit CLI command]
+
+Suggested action:
+  1. Verify GitHub CLI (gh) is installed and authenticated
+  2. Check repository has issues enabled
+  3. Verify network connectivity
+  4. Check gh auth status
+```
+
+### Step 6: Output Summary
+
+After creating the GitHub issue, output a summary based on the discoveries you mined and composed:
 
 Calculate:
 
@@ -503,7 +502,8 @@ Calculate:
 Output:
 
 ```
-✅ Enhanced plan saved to: [filename you generated]
+✅ GitHub issue created: #<number>
+   <issue-url>
 
 Summary:
 - Discoveries mined: [total count]
@@ -512,12 +512,15 @@ Summary:
 - Token reduction: [from Step 1b stats, e.g., "85.8%"]
 
 Next steps:
-1. Review the enhanced plan
-2. Create worktree: /erk:create-wt-from-plan-file [filename]
-3. Switch to worktree and implement
+1. Review the issue if needed: gh issue view <number> --web
+2. Implement: erk implement #<number>
+
+---
+
+{"issue_number": <number>, "issue_url": "<url>", "status": "created"}
 ```
 
-### Step 6: Handle Errors
+### Step 7: Handle Errors
 
 **Session ID not found:**
 
@@ -553,10 +556,29 @@ Possible reasons:
 3. Session was created in a different project
 ```
 
-**File already exists:**
+**GitHub CLI not available:**
 
 ```
-File [name] already exists in repository root.
+❌ Error: GitHub CLI not available or not authenticated
+
+Suggested action:
+  1. Install GitHub CLI: https://cli.github.com/
+  2. Authenticate with: gh auth login
+  3. Verify authentication: gh auth status
+```
+
+**GitHub issue creation failed:**
+
+```
+❌ Error: Failed to create GitHub issue
+
+Details: [specific error from kit CLI command]
+
+Suggested action:
+  1. Verify GitHub CLI (gh) is installed and authenticated
+  2. Check repository has issues enabled
+  3. Verify network connectivity
+  4. Check gh auth status
 
 Options:
 1. Use different name
@@ -604,3 +626,4 @@ This becomes:
 - **Key snippets only**: Don't include full file contents from logs
 - **Tool boundaries**: Strictly enforce allowed/forbidden tools
 - **Progressive disclosure**: Summary → Details → Raw data
+````

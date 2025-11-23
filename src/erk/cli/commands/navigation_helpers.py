@@ -12,6 +12,25 @@ from erk.core.git.abc import WorktreeInfo
 from erk.core.repo_discovery import RepoContext, ensure_erk_metadata_dir
 
 
+def _ensure_truthy[T](value: T, error_message: str) -> T:
+    """Ensure value is truthy, otherwise output error and exit.
+
+    Args:
+        value: Value to check for truthiness
+        error_message: Error message to display if value is falsy
+
+    Returns:
+        The value unchanged if truthy
+
+    Raises:
+        SystemExit: If value is falsy (with exit code 1)
+    """
+    if not value:
+        user_output(error_message)
+        raise SystemExit(1)
+    return value
+
+
 def _ensure_graphite_enabled(ctx: ErkContext) -> None:
     """Validate that Graphite is enabled.
 
@@ -191,12 +210,10 @@ def _resolve_up_navigation(
         SystemExit: If navigation fails (at top of stack)
     """
     # Navigate up to child branch
-    children = ctx.graphite.get_child_branches(ctx.git, repo.root, current_branch)
-    if not children:
-        user_output(
-            "Already at the top of the stack (no child branches)",
-        )
-        raise SystemExit(1)
+    children = _ensure_truthy(
+        ctx.graphite.get_child_branches(ctx.git, repo.root, current_branch),
+        "Already at the top of the stack (no child branches)",
+    )
 
     # Fail explicitly if multiple children exist
     if len(children) > 1:

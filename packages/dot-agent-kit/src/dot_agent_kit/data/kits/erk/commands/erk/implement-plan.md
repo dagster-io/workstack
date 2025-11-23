@@ -41,6 +41,23 @@ When you run this command:
 
 You are executing the `/erk:implement-plan` command. Follow these steps carefully:
 
+### Step 0: Validate Environment
+
+Run the kit command to validate prerequisites:
+
+```bash
+dot-agent run erk implement-plan --dry-run
+```
+
+This validates:
+
+- .impl/ folder exists
+- plan.md exists
+- progress.md exists
+- issue.json format (if present)
+
+If validation fails, the kit command outputs a clear error message. Display it to the user and stop.
+
 ### Step 1: Verify .impl/plan.md Exists
 
 Check that `.impl/plan.md` exists in the current directory.
@@ -198,7 +215,7 @@ For each phase in the plan:
    dot-agent run erk post-progress-comment --step-description "Phase 1: Create abstraction" 2>/dev/null || true
    ```
 
-   Note: Command fails silently if issue tracking not enabled. This is intentional.
+   If issue tracking is not enabled (no valid issue.json), this will output an info message and exit gracefully.
 
 8. **Report progress**: what was done and what's next
 9. **Move to next phase**
@@ -298,13 +315,13 @@ After all phases are complete:
 2. Verify all success criteria are met
 3. Note any deviations from the plan (with justification)
 4. Provide summary of changes
-5. **Post final completion comment to GitHub issue** (if enabled):
+5. **Post final completion comment to GitHub issue**:
 
    ```bash
    dot-agent run erk post-completion-comment --summary "Brief implementation summary" 2>/dev/null || true
    ```
 
-   Note: Command fails silently if issue tracking not enabled. This is intentional.
+   If issue tracking is not enabled (no valid issue.json), this will output an info message and exit gracefully.
 
 ### Step 8: Final Verification
 

@@ -4,7 +4,7 @@ description: Extract plan from Claude session and save to disk (no enhancements)
 
 # /erk:save-plan
 
-Extracts the latest implementation plan from Claude session files and saves it to disk with minimal frontmatter. This command uses deterministic session file parsing instead of conversation context searching.
+Extracts the latest implementation plan from Claude session files and saves it to disk. This command uses deterministic session file parsing instead of conversation context searching.
 
 ## Usage
 
@@ -18,7 +18,7 @@ This command provides a fast, deterministic path for saving plans. It:
 
 - Extracts the latest `ExitPlanMode` plan from Claude session files
 - Generates a descriptive filename from the plan title
-- Adds minimal frontmatter (`erk_plan: true`, timestamp)
+- Saves plan content as-is (no frontmatter generation)
 - Saves to repository root
 
 **What it does NOT do:**
@@ -32,7 +32,7 @@ This command provides a fast, deterministic path for saving plans. It:
 
 1. **Searches Claude session files** for the latest ExitPlanMode plan
 2. **Generates filename** from plan title using kebab-case
-3. **Adds minimal frontmatter** with marker and timestamp
+3. **Saves plan content as-is** (no frontmatter added)
 4. **Saves to repository root** as `<name>-plan.md`
 
 ---
@@ -72,7 +72,7 @@ This command:
 - Searches Claude session files for the latest ExitPlanMode plan
 - Extracts the plan text
 - Generates filename from plan title
-- Adds minimal frontmatter
+- Saves plan content as-is (no frontmatter)
 - Saves to repository root
 - Displays formatted output (or errors) directly
 

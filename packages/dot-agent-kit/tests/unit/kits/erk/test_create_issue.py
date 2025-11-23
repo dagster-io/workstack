@@ -119,12 +119,12 @@ def test_create_issue_unicode_content() -> None:
 
 
 def test_create_issue_yaml_frontmatter() -> None:
-    """Test issue creation with YAML front matter in body."""
+    """Test issue creation preserves any YAML front matter in body."""
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()
     body_with_yaml = """---
-erk_plan: true
 priority: high
+custom_field: value
 ---
 
 # Implementation Plan
@@ -142,7 +142,7 @@ This is the plan content."""
     output = json.loads(result.output)
     assert output["success"] is True
 
-    # Verify YAML front matter preserved
+    # Verify YAML front matter preserved (any frontmatter, not specific to erk_plan)
     assert len(fake_gh.created_issues) == 1
     _, body, _ = fake_gh.created_issues[0]
     assert body == body_with_yaml

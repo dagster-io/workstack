@@ -22,7 +22,6 @@ Exit Codes:
 
 import json
 import subprocess
-from datetime import UTC, datetime
 from pathlib import Path
 
 import click
@@ -130,16 +129,8 @@ def save_plan_from_session(session_id: str | None, output_format: str) -> None:
             click.echo(json.dumps(result))
         raise SystemExit(1)
 
-    # Step 6: Add minimal frontmatter
-    timestamp = datetime.now(UTC).isoformat()
-    content = f"""---
-erk_plan: true
-created_at: {timestamp}
----
-
-{plan_text}"""
-
-    # Step 7: Write file
+    # Step 6: Write file (no frontmatter generation)
+    content = plan_text
     file_path.write_text(content, encoding="utf-8")
 
     # Return success result
@@ -151,6 +142,5 @@ created_at: {timestamp}
             "file_path": str(file_path),
             "filename": filename,
             "title": title,
-            "timestamp": timestamp,
         }
         click.echo(json.dumps(result))

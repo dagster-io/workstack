@@ -38,9 +38,9 @@ def test_create_with_plan_file() -> None:
         # Create test context using env.build_context() helper
         test_ctx = env.build_context(git=git_ops)
 
-        # Run erk create with --plan
+        # Run erk create with --from-plan
         result = runner.invoke(
-            cli, ["create", "--plan", "Add_Auth_Feature.md", "--no-post"], obj=test_ctx
+            cli, ["create", "--from-plan", "Add_Auth_Feature.md", "--no-post"], obj=test_ctx
         )
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
@@ -90,9 +90,9 @@ def test_create_with_plan_name_sanitization() -> None:
         # Create test context using env.build_context() helper
         test_ctx = env.build_context(git=git_ops)
 
-        # Run erk create with --plan
+        # Run erk create with --from-plan
         result = runner.invoke(
-            cli, ["create", "--plan", "MY_COOL_Plan_File.md", "--no-post"], obj=test_ctx
+            cli, ["create", "--from-plan", "MY_COOL_Plan_File.md", "--no-post"], obj=test_ctx
         )
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
@@ -111,7 +111,7 @@ def test_create_with_plan_name_sanitization() -> None:
 
 
 def test_create_with_both_name_and_plan_fails() -> None:
-    """Test that providing both NAME and --plan is an error."""
+    """Test that providing both NAME and --from-plan is an error."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
         # Create a plan file
@@ -148,12 +148,12 @@ def test_create_with_both_name_and_plan_fails() -> None:
             cwd=env.root_worktree,
         )
 
-        # Run erk create with both NAME and --plan
-        result = runner.invoke(cli, ["create", "myname", "--plan", "plan.md"], obj=test_ctx)
+        # Run erk create with both NAME and --from-plan
+        result = runner.invoke(cli, ["create", "myname", "--from-plan", "plan.md"], obj=test_ctx)
 
         # Should fail
         assert result.exit_code != 0
-        assert "Cannot specify both NAME and --plan" in result.output
+        assert "Cannot specify both NAME and --from-plan" in result.output
 
 
 def test_create_rejects_reserved_name_root() -> None:

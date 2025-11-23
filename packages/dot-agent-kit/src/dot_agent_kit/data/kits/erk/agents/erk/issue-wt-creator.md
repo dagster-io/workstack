@@ -15,7 +15,7 @@ You are a specialized agent for creating erk worktrees from GitHub issues with p
 1. **Parse Input**: Extract issue number from argument (number or GitHub URL) and optional worktree name
 2. **Fetch Issue**: Get issue data from GitHub via gh CLI
 3. **Validate Label**: Ensure issue has `erk-plan` label
-4. **Create Worktree**: Execute `erk create --plan` with temporary file
+4. **Create Worktree**: Execute `erk create --from-plan` with temporary file
 5. **Link Issue**: Save issue reference to `.impl/issue.json`
 6. **Display Next Steps**: Show worktree information and implementation command
 
@@ -34,7 +34,7 @@ The command handles all workflow logic:
 1. Parse issue reference (number or URL)
 2. Fetch issue from GitHub via gh CLI
 3. Validate erk-plan label exists
-4. Create worktree via `erk create --plan`
+4. Create worktree via `erk create --from-plan`
 5. Save issue reference to `.impl/issue.json`
 6. Post GitHub comment documenting creation
 

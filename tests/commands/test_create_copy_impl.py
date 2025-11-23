@@ -106,7 +106,7 @@ def test_create_copy_plan_missing_plan_error() -> None:
 
 
 def test_create_copy_plan_mutual_exclusion_with_plan() -> None:
-    """Test --copy-plan and --plan are mutually exclusive."""
+    """Test --copy-plan and --from-plan are mutually exclusive."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
         # Setup: Create .impl directory and plan file
@@ -130,10 +130,10 @@ def test_create_copy_plan_mutual_exclusion_with_plan() -> None:
 
         test_ctx = env.build_context(git=git)
 
-        # Act: Try to use both --copy-plan and --plan
+        # Act: Try to use both --copy-plan and --from-plan
         result = runner.invoke(
             cli,
-            ["create", "--plan", str(plan_file), "--copy-plan"],
+            ["create", "--from-plan", str(plan_file), "--copy-plan"],
             obj=test_ctx,
             catch_exceptions=False,
         )
@@ -144,7 +144,7 @@ def test_create_copy_plan_mutual_exclusion_with_plan() -> None:
         # Assert: Error message explains mutual exclusion
         assert "mutually exclusive" in result.output
         assert "--copy-plan" in result.output
-        assert "--plan" in result.output
+        assert "--from-plan" in result.output
 
 
 def test_create_copy_plan_preserves_progress() -> None:

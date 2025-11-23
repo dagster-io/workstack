@@ -165,7 +165,7 @@ def create_worktree_from_plan(plan_content: str, temp_dir: Path) -> dict[str, st
     temp_file.write_text(plan_content, encoding="utf-8")
 
     result = subprocess.run(
-        ["erk", "create", "--plan", str(temp_file), "--json", "--stay"],
+        ["erk", "create", "--from-plan", str(temp_file), "--json", "--stay"],
         capture_output=True,
         text=True,
         check=False,

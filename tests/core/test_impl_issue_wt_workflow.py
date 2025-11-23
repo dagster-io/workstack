@@ -90,7 +90,7 @@ Test the workflow.
 2. Step two
 """
 
-    # Step 1: Create plan folder (simulates erk create --plan)
+    # Step 1: Create plan folder (simulates erk create --from-plan)
     impl_folder = create_impl_folder(tmp_path, plan_content)
 
     # Step 2: Create issue (simulates gh issue create)

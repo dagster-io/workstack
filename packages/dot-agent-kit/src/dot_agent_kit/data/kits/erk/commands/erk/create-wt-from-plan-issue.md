@@ -40,7 +40,7 @@ Delegates the complete worktree creation workflow to the `issue-wt-creator` agen
 1. Parse issue number from argument (number or GitHub URL)
 2. Fetch issue from GitHub via gh CLI
 3. Validate issue has `erk-plan` label
-4. Create worktree from issue body via `erk create --plan`
+4. Create worktree from issue body via `erk create --from-plan`
 5. Save issue reference to `.impl/issue.json`
 6. Display plan location and next steps
 

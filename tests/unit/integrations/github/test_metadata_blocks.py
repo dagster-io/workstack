@@ -629,16 +629,14 @@ def test_wrap_simple_plan_format() -> None:
 
 <details>
 <summary><code>erk-plan</code></summary>
-```yaml
+
 {plan_content}
-```
 </details>"""
 
     # Verify structure
     assert expected_intro in wrapped
     assert "<details>" in wrapped
     assert "<summary><code>erk-plan</code></summary>" in wrapped
-    assert "```yaml" in wrapped
     assert plan_content in wrapped
     assert "</details>" in wrapped
 
@@ -662,9 +660,8 @@ def test_wrap_plan_preserves_formatting() -> None:
 
 <details>
 <summary><code>erk-plan</code></summary>
-```yaml
+
 {plan_content}
-```
 </details>"""
 
     # Verify all formatting elements are preserved
@@ -688,9 +685,8 @@ def test_wrap_plan_with_special_characters() -> None:
 
 <details>
 <summary><code>erk-plan</code></summary>
-```yaml
+
 {plan_content}
-```
 </details>"""
 
     # Verify special characters are preserved
@@ -703,19 +699,19 @@ def test_wrap_plan_with_special_characters() -> None:
 
 
 def test_rendered_plan_block_is_parseable() -> None:
-    """Test that wrapped plan can be parsed back."""
+    """Test that wrapped plan has correct HTML structure."""
     plan_content = "# Test Plan\n1. First step\n2. Second step"
 
     wrapped = f"""This issue contains an implementation plan:
 
 <details>
 <summary><code>erk-plan</code></summary>
-```yaml
+
 {plan_content}
-```
 </details>"""
 
-    # Should be able to find the erk-plan block
-    block = find_metadata_block(wrapped, "erk-plan")
-    # Note: This will actually fail to parse because the YAML content is just
-    # markdown text, not valid YAML. But the structure is correct for GitHub rendering.
+    # Verify structure is correct for GitHub rendering
+    assert "<details>" in wrapped
+    assert "<summary><code>erk-plan</code></summary>" in wrapped
+    assert plan_content in wrapped
+    assert "</details>" in wrapped

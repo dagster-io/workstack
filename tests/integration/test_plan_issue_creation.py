@@ -39,11 +39,9 @@ This is a test plan for verification.
     assert "This issue contains an implementation plan:" in output
     assert "<details>" in output
     assert "<summary><code>erk-plan</code></summary>" in output
-    assert "```yaml" in output
-    assert "```" in output
     assert "</details>" in output
 
-    # Verify plan content is preserved
+    # Verify plan content is preserved (raw markdown, no YAML fence)
     assert "# Test Implementation Plan" in output
     assert "## Overview" in output
     assert "## Implementation Steps" in output

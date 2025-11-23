@@ -33,12 +33,11 @@ def wrap_plan_in_metadata_block() -> None:
     # Create intro text
     intro_text = "This issue contains an implementation plan:"
 
-    # Create the collapsible block with plan embedded in YAML
+    # Create the collapsible block with plan markdown
     rendered_block = f"""<details>
 <summary><code>erk-plan</code></summary>
-```yaml
+
 {plan_content}
-```
 </details>"""
 
     # Output the complete issue body

@@ -292,7 +292,7 @@ Wrap the plan in a metadata block and create the issue:
 
    Note: The kit CLI commands handle content via stdin, eliminating permission prompts
 
-2. If kit command fails:
+3. If kit command fails:
 
    ```
    ❌ Error: Failed to create GitHub issue

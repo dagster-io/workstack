@@ -228,7 +228,7 @@ Use the kit CLI command to wrap the enriched plan content in a collapsible metad
 
 **Example output structure:**
 
-```markdown
+````markdown
 This issue contains an implementation plan:
 
 <details>
@@ -237,7 +237,8 @@ This issue contains an implementation plan:
 # [Enriched Plan Title]
 
 [Enriched plan content with Context & Understanding sections...]
-```
+````
+
 </details>
 ```
 

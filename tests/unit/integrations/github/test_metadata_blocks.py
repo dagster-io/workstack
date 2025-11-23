@@ -674,12 +674,12 @@ def test_wrap_plan_preserves_formatting() -> None:
 
 def test_wrap_plan_with_special_characters() -> None:
     """Test that special characters are handled in wrapped plans."""
-    plan_content = '''# Plan with Special Characters
+    plan_content = """# Plan with Special Characters
 
 - Quotes: "double" and 'single'
 - Backticks: `code`
 - Symbols: @#$%^&*()
-- Unicode: 🔥 ✅ ❌'''
+- Unicode: 🔥 ✅ ❌"""
 
     wrapped = f"""This issue contains an implementation plan:
 

@@ -204,7 +204,7 @@ Use the kit CLI command to wrap the plan content in a collapsible metadata block
 
 **Example output structure:**
 
-```markdown
+````markdown
 This issue contains an implementation plan:
 
 <details>
@@ -213,7 +213,8 @@ This issue contains an implementation plan:
 # Original Plan Title
 
 [Original plan content unchanged...]
-```
+````
+
 </details>
 ```
 

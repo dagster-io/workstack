@@ -5,7 +5,6 @@ Uses subprocess to call the actual kit CLI command.
 """
 
 import subprocess
-from pathlib import Path
 
 
 def test_wrap_plan_command_produces_valid_output() -> None:

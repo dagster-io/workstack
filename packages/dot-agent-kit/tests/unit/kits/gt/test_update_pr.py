@@ -145,8 +145,8 @@ class TestUpdatePRCLI:
 
         original_execute = update_pr_module.execute_update_pr
 
-        def patched_execute(ops_param: object | None = None) -> object:
-            return original_execute(ops)
+        def patched_execute(ops_param: object | None = None, verbose: bool = False) -> object:
+            return original_execute(ops, verbose=verbose)
 
         update_pr_module.execute_update_pr = patched_execute
 
@@ -172,8 +172,8 @@ class TestUpdatePRCLI:
 
         original_execute = update_pr_module.execute_update_pr
 
-        def patched_execute(ops_param: object | None = None) -> object:
-            return original_execute(ops)
+        def patched_execute(ops_param: object | None = None, verbose: bool = False) -> object:
+            return original_execute(ops, verbose=verbose)
 
         update_pr_module.execute_update_pr = patched_execute
 

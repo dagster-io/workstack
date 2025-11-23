@@ -1,7 +1,7 @@
 ---
 name: gt-simple-update-pr-submitter
 description: Simplified Graphite update-pr workflow for testing
-model: haiku
+model: sonnet 
 color: blue
 tools: Bash
 ---

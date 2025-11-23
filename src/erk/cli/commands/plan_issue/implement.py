@@ -156,7 +156,7 @@ def implement_plan_issue(
         user_output(dry_run_header + " No changes will be made\n")
         user_output(f"Would create worktree '{name}' from issue #{issue_number}")
         user_output(f"  Title: {plan_issue.title}")
-        user_output(f'  Then run: {_build_claude_command("/erk:implement-plan", dangerous)}')
+        user_output(f"  Then run: {_build_claude_command('/erk:implement-plan', dangerous)}")
         return
 
     # Step 4: Create worktree from plan issue
@@ -230,7 +230,7 @@ def implement_plan_issue(
         )
 
         # Append Claude invocation command
-        claude_command = f'{_build_claude_command("/erk:implement-plan", dangerous)}\n'
+        claude_command = f"{_build_claude_command('/erk:implement-plan', dangerous)}\n"
         full_script = base_script + claude_command
 
         # Write activation script using script writer

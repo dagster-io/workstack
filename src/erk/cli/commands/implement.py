@@ -280,7 +280,7 @@ def _create_worktree_with_plan_content(
     )
 
     # Output worktree creation diagnostic
-    ctx.feedback.info("Running erk checkout...")
+    ctx.feedback.info(f"Creating branch '{branch}' from {trunk_branch}...")
 
     # Create worktree
     add_worktree(
@@ -390,7 +390,7 @@ def _implement_from_issue(
     plan_issue = ctx.plan_issue_store.get_plan_issue(repo.root, issue_number)
     _save_issue_reference(wt_path, issue_number, plan_issue.url)
 
-    ctx.feedback.success("✓ Saved issue reference for PR linking")
+    ctx.feedback.success(f"✓ Saved issue reference: {plan_issue.url}")
 
     # Output activation instructions
     branch = wt_path.name

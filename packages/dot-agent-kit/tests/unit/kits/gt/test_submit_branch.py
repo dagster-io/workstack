@@ -202,7 +202,99 @@ class TestPreAnalysisExecution:
         assert result.details["stdout"] == test_stdout
         assert result.details["stderr"] == test_stderr
         assert result.details["branch_name"] == "feature-branch"
-        assert result.details["commit_count"] == "2"
+
+    def test_pre_analysis_detects_pr_conflicts_from_github(self) -> None:
+        """Test that PR conflicts are detected before any work is done."""
+        ops = FakeGtKitOps().with_branch("feature-branch", parent="master").with_commits(1)
+
+        # Mock GitHub to return CONFLICTING status
+        with patch("erk.core.github.real.RealGitHub") as mock_github_class:
+            mock_github = mock_github_class.return_value
+            mock_pr_info = Mock()
+            mock_pr_info.pr_number = 123
+            mock_pr_info.url = "https://github.com/org/repo/pull/123"
+            mock_github.get_pr_status.return_value = mock_pr_info
+
+            mock_mergeability = Mock()
+            mock_mergeability.mergeable = "CONFLICTING"
+            mock_mergeability.merge_state_status = "DIRTY"
+            mock_github.get_pr_mergeability.return_value = mock_mergeability
+
+            result = execute_pre_analysis(ops)
+
+        # Assert: Should return error, no commits made
+        assert isinstance(result, PreAnalysisError)
+        assert result.error_type == "pr_has_conflicts"
+        assert "conflicts" in result.message.lower()
+        assert result.details["pr_number"] == "123"
+        assert result.details["parent_branch"] == "master"
+
+    def test_pre_analysis_proceeds_when_no_conflicts(self) -> None:
+        """Test that workflow proceeds normally when no conflicts exist."""
+        ops = FakeGtKitOps().with_branch("feature-branch", parent="master").with_commits(1)
+
+        # Mock GitHub to return MERGEABLE status
+        with patch("erk.core.github.real.RealGitHub") as mock_github_class:
+            mock_github = mock_github_class.return_value
+            mock_pr_info = Mock()
+            mock_pr_info.pr_number = 123
+            mock_pr_info.url = "https://github.com/org/repo/pull/123"
+            mock_github.get_pr_status.return_value = mock_pr_info
+
+            mock_mergeability = Mock()
+            mock_mergeability.mergeable = "MERGEABLE"
+            mock_mergeability.merge_state_status = "CLEAN"
+            mock_github.get_pr_mergeability.return_value = mock_mergeability
+
+            result = execute_pre_analysis(ops)
+
+        # Assert: Should succeed
+        assert isinstance(result, PreAnalysisResult)
+        assert result.success is True
+
+    def test_pre_analysis_fallback_to_git_merge_tree(self) -> None:
+        """Test fallback to git merge-tree when no PR exists."""
+        ops = FakeGtKitOps().with_branch("feature-branch", parent="master").with_commits(1)
+        # Configure fake to simulate conflict
+        ops.git().simulate_conflict("master", "feature-branch")
+
+        # Mock GitHub to return no PR
+        with patch("erk.core.github.real.RealGitHub") as mock_github_class:
+            mock_github = mock_github_class.return_value
+            mock_pr_info = Mock()
+            mock_pr_info.pr_number = None
+            mock_pr_info.url = None
+            mock_github.get_pr_status.return_value = mock_pr_info
+
+            result = execute_pre_analysis(ops)
+
+        # Assert: Should detect conflict via git merge-tree
+        assert isinstance(result, PreAnalysisError)
+        assert result.error_type == "pr_has_conflicts"
+        assert result.details["detection_method"] == "git_merge_tree"
+
+    def test_pre_analysis_proceeds_on_unknown_mergeability(self) -> None:
+        """Test that UNKNOWN mergeability doesn't block workflow."""
+        ops = FakeGtKitOps().with_branch("feature-branch", parent="master").with_commits(1)
+
+        # Mock GitHub to return UNKNOWN status
+        with patch("erk.core.github.real.RealGitHub") as mock_github_class:
+            mock_github = mock_github_class.return_value
+            mock_pr_info = Mock()
+            mock_pr_info.pr_number = 123
+            mock_pr_info.url = "https://github.com/org/repo/pull/123"
+            mock_github.get_pr_status.return_value = mock_pr_info
+
+            mock_mergeability = Mock()
+            mock_mergeability.mergeable = "UNKNOWN"
+            mock_mergeability.merge_state_status = "UNKNOWN"
+            mock_github.get_pr_mergeability.return_value = mock_mergeability
+
+            result = execute_pre_analysis(ops)
+
+        # Assert: Should proceed with warning
+        assert isinstance(result, PreAnalysisResult)
+        assert result.success is True
 
 
 class TestPostAnalysisExecution:

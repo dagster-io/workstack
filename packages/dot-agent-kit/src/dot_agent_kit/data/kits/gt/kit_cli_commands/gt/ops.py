@@ -125,6 +125,20 @@ class GitGtKit(ABC):
             subprocess.CalledProcessError: If diff command fails
         """
 
+    @abstractmethod
+    def check_merge_conflicts(self, base_branch: str, head_branch: str) -> bool:
+        """Check if merging head_branch into base_branch would have conflicts.
+
+        Uses git merge-tree to simulate merge without touching working tree.
+
+        Args:
+            base_branch: Base branch name (e.g., "master", "main")
+            head_branch: Head branch name (current branch)
+
+        Returns:
+            True if conflicts detected, False otherwise
+        """
+
 
 class GraphiteGtKit(ABC):
     """Graphite (gt) operations interface for GT kit commands."""

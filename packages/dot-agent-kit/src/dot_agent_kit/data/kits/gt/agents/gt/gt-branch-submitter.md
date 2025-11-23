@@ -364,6 +364,57 @@ The agent has stopped and is waiting for you to resolve this. Follow these steps
 
 **The agent will NOT attempt to resolve conflicts for you.** Manual resolution ensures correctness.
 
+#### `pr_has_conflicts` Error
+
+❌ **Branch has merge conflicts with parent**
+
+**What happened:** Your branch has conflicts that must be resolved before submission.
+
+**Details:**
+
+- Branch: {branch_name}
+- Parent: {parent_branch}
+- PR: #{pr_number} (if exists)
+
+**What you need to do:**
+
+1. **Rebase onto parent** (you must do this manually):
+
+   ```bash
+   gt stack fix
+   ```
+
+2. **Resolve conflicts** in your editor - look for conflict markers:
+
+   ```
+   <<<<<<< HEAD
+   =======
+   >>>>>>> branch
+   ```
+
+3. **Stage resolved files**:
+
+   ```bash
+   git add <resolved-files>
+   ```
+
+4. **Continue rebase**:
+
+   ```bash
+   git rebase --continue
+   ```
+
+5. **After resolution**, re-run this workflow:
+   ```bash
+   /gt:submit-squashed-branch <description>
+   ```
+
+**Alternative:** If rebase is too complex, you can:
+
+```bash
+gt sync -f  # Force sync with parent
+```
+
 #### `submit_conflict` Error
 
 ❌ **Merge conflicts detected during branch submission**

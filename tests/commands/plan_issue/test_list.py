@@ -309,7 +309,7 @@ def test_ls_alias_works() -> None:
 
 def test_list_plan_issues_shows_worktree_status() -> None:
     """Test that list command displays worktree names from issue comments."""
-    from erk.core.github.issues import FakeGitHubIssues
+    from erk_shared.github.issues import FakeGitHubIssues
 
     # Arrange - Create issue with metadata field containing issue number
     issue1 = PlanIssue(
@@ -382,7 +382,7 @@ issue_number: 867
 
 def test_list_plan_issues_shows_most_recent_worktree() -> None:
     """Test that list command shows the most recent worktree when multiple exist."""
-    from erk.core.github.issues import FakeGitHubIssues
+    from erk_shared.github.issues import FakeGitHubIssues
 
     # Arrange
     issue1 = PlanIssue(

@@ -2,8 +2,9 @@
 
 from pathlib import Path
 
+from erk_shared.github.issues import FakeGitHubIssues
+
 from erk.cli.commands.plan_issue.list_cmd import get_worktree_status
-from erk.core.github.issues import FakeGitHubIssues
 
 
 def test_get_worktree_status_with_single_worktree() -> None:

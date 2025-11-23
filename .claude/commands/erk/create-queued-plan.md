@@ -292,14 +292,37 @@ Check if the `erk-queue` label exists, and create it if needed:
 
    Continue to Step 6 (non-blocking warning - gh will still accept the label even if not in repo's label list)
 
-### Step 6: Create GitHub Issue
+### Step 6: Create GitHub Issue with Git Context
 
-Use the kit CLI command to create the issue:
+Use the kit CLI command to create the issue with git context metadata:
 
-1. Create issue using kit CLI command:
+1. First, wrap the plan with git context using Python utility:
+
+   ```python
+   from pathlib import Path
+   from erk.integrations.github.plan_issues import wrap_plan_with_context
+
+   # Read the plan file
+   plan_path = Path("<path-to-plan-file>")
+   plan_content = plan_path.read_text(encoding="utf-8")
+
+   # Get current working directory
+   cwd = Path.cwd()
+
+   # Wrap the plan with git context
+   try:
+       issue_body = wrap_plan_with_context(plan_content, cwd)
+   except Exception as e:
+       print(f"❌ Error: Failed to collect git context: {e}", file=sys.stderr)
+       sys.exit(1)
+   ```
+
+   Note: This adds an `erk-plan-context` metadata block with base commit, branch, recent commits, and timestamp.
+
+2. Create issue using kit CLI command:
 
    ```bash
-   result=$(cat <path-to-plan-file> | dot-agent kit-command erk create-issue "<extracted-title>" --label "erk-queue")
+   result=$(echo "$issue_body" | dot-agent kit-command erk create-issue "<extracted-title>" --label "erk-queue")
 
    # Parse JSON output
    if ! echo "$result" | jq -e '.success' > /dev/null; then
@@ -313,7 +336,7 @@ Use the kit CLI command to create the issue:
 
    Note: The kit CLI command handles body via stdin, eliminating permission prompts
 
-2. If kit command fails:
+3. If kit command fails:
 
    ```
    ❌ Error: Failed to create GitHub issue

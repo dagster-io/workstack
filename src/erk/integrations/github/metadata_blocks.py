@@ -321,6 +321,37 @@ def create_worktree_creation_block(
     )
 
 
+def create_plan_context_block(git_context: dict[str, Any]) -> MetadataBlock:
+    """Create an erk-plan-context metadata block from git context.
+
+    Converts git context dictionary into structured metadata block
+    for embedding in plan issues to track creation state.
+
+    Args:
+        git_context: Dictionary with base_commit, branch, recent_commits, timestamp
+
+    Returns:
+        MetadataBlock with erk-plan-context key
+
+    Note:
+        No schema validation for plan context blocks - structure is flexible
+        to accommodate future additions without breaking existing issues.
+    """
+    # Structure the data for YAML serialization
+    data = {
+        "base_commit": git_context["base_commit"],
+        "branch": git_context["branch"],
+        "recent_commits": git_context["recent_commits"],
+        "timestamp": git_context["timestamp"],
+    }
+
+    return create_metadata_block(
+        key="erk-plan-context",
+        data=data,
+        schema=None,  # No strict schema for flexibility
+    )
+
+
 def extract_raw_metadata_blocks(text: str) -> list[RawMetadataBlock]:
     """
     Extract raw metadata blocks using HTML comment markers (Phase 1).
@@ -396,7 +427,6 @@ def parse_metadata_block_body(body: str) -> dict[str, Any]:
         raise ValueError(f"YAML content is not a dict, got {type(data).__name__}")
 
     return data
-
 
 def parse_metadata_blocks(text: str) -> list[MetadataBlock]:
     """

@@ -35,7 +35,7 @@ def test_create_issue_success() -> None:
     output = json.loads(result.output)
     assert output["success"] is True
     assert output["issue_number"] == 1
-    assert output["issue_url"] == "https://github.com/owner/repo/issues/1"
+    assert output["issue_url"] == "https://github.com/test-owner/test-repo/issues/1"
 
     # Verify behavior through fake's mutation tracking
     assert len(fake_gh.created_issues) == 1
@@ -215,8 +215,12 @@ def test_create_issue_gh_failure() -> None:
     from pathlib import Path
 
     # Create a fake that simulates failure
+    from erk_shared.github.issues import CreateIssueResult
+
     class FailingFakeGitHubIssues(FakeGitHubIssues):
-        def create_issue(self, repo_root: Path, title: str, body: str, labels: list[str]) -> int:
+        def create_issue(
+            self, repo_root: Path, title: str, body: str, labels: list[str]
+        ) -> CreateIssueResult:
             raise RuntimeError("gh: command not found")
 
     fake_gh = FailingFakeGitHubIssues()
@@ -266,7 +270,7 @@ def test_json_output_structure() -> None:
     # Verify values
     assert output["success"] is True
     assert output["issue_number"] == 1
-    assert output["issue_url"] == "https://github.com/owner/repo/issues/1"
+    assert output["issue_url"] == "https://github.com/test-owner/test-repo/issues/1"
 
 
 def test_json_output_different_issue_numbers() -> None:
@@ -286,4 +290,4 @@ def test_json_output_different_issue_numbers() -> None:
 
     # Verify URL parsing mapped correctly
     assert output["issue_number"] == 12345
-    assert output["issue_url"] == "https://github.com/owner/repo/issues/12345"
+    assert output["issue_url"] == "https://github.com/test-owner/test-repo/issues/12345"

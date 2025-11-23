@@ -31,7 +31,7 @@ def test_create_issue_success(monkeypatch: MonkeyPatch) -> None:
 
     with mock_subprocess_run(monkeypatch, mock_run):
         issues = RealGitHubIssues()
-        issue_num = issues.create_issue(
+        result = issues.create_issue(
             Path("/repo"),
             title="Test Issue",
             body="Test body content",
@@ -39,7 +39,8 @@ def test_create_issue_success(monkeypatch: MonkeyPatch) -> None:
         )
 
         # Verify issue number extracted from URL
-        assert issue_num == 42
+        assert result.number == 42
+        assert result.url == "https://github.com/owner/repo/issues/42"
 
         # Verify gh command structure
         assert len(created_commands) == 1

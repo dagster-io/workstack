@@ -24,6 +24,19 @@ class IssueInfo:
     updated_at: datetime
 
 
+@dataclass(frozen=True)
+class CreateIssueResult:
+    """Result from creating a GitHub issue.
+
+    Attributes:
+        number: Issue number (e.g., 123)
+        url: Full GitHub URL (e.g., https://github.com/owner/repo/issues/123)
+    """
+
+    number: int
+    url: str
+
+
 class GitHubIssues(ABC):
     """Abstract interface for GitHub issue operations.
 
@@ -31,7 +44,9 @@ class GitHubIssues(ABC):
     """
 
     @abstractmethod
-    def create_issue(self, repo_root: Path, title: str, body: str, labels: list[str]) -> int:
+    def create_issue(
+        self, repo_root: Path, title: str, body: str, labels: list[str]
+    ) -> CreateIssueResult:
         """Create a new GitHub issue.
 
         Args:
@@ -41,7 +56,7 @@ class GitHubIssues(ABC):
             labels: List of label names to apply
 
         Returns:
-            Issue number of the created issue
+            CreateIssueResult with issue number and full GitHub URL
 
         Raises:
             RuntimeError: If gh CLI fails (not installed, not authenticated, or command error)
@@ -171,7 +186,9 @@ class RealGitHubIssues(GitHubIssues):
     def __init__(self):
         """Initialize RealGitHubIssues."""
 
-    def create_issue(self, repo_root: Path, title: str, body: str, labels: list[str]) -> int:
+    def create_issue(
+        self, repo_root: Path, title: str, body: str, labels: list[str]
+    ) -> CreateIssueResult:
         """Create a new GitHub issue using gh CLI.
 
         Note: Uses gh's native error handling - gh CLI raises RuntimeError
@@ -185,7 +202,11 @@ class RealGitHubIssues(GitHubIssues):
         # gh issue create returns a URL like: https://github.com/owner/repo/issues/123
         url = stdout.strip()
         issue_number_str = url.rstrip("/").split("/")[-1]
-        return int(issue_number_str)
+
+        return CreateIssueResult(
+            number=int(issue_number_str),
+            url=url,
+        )
 
     def get_issue(self, repo_root: Path, number: int) -> IssueInfo:
         """Fetch issue data using gh CLI.
@@ -435,10 +456,15 @@ class FakeGitHubIssues(GitHubIssues):
         """
         return self._labels.copy()
 
-    def create_issue(self, repo_root: Path, title: str, body: str, labels: list[str]) -> int:
+    def create_issue(
+        self, repo_root: Path, title: str, body: str, labels: list[str]
+    ) -> CreateIssueResult:
         """Create issue in fake storage and track mutation."""
         issue_number = self._next_issue_number
         self._next_issue_number += 1
+
+        # Create realistic fake URL for testing
+        url = f"https://github.com/test-owner/test-repo/issues/{issue_number}"
 
         now = datetime.now(UTC)
         self._issues[issue_number] = IssueInfo(
@@ -446,7 +472,7 @@ class FakeGitHubIssues(GitHubIssues):
             title=title,
             body=body,
             state="OPEN",
-            url=f"https://github.com/owner/repo/issues/{issue_number}",
+            url=url,
             labels=labels,
             assignees=[],
             created_at=now,
@@ -454,7 +480,7 @@ class FakeGitHubIssues(GitHubIssues):
         )
         self._created_issues.append((title, body, labels))
 
-        return issue_number
+        return CreateIssueResult(number=issue_number, url=url)
 
     def get_issue(self, repo_root: Path, number: int) -> IssueInfo:
         """Get issue from fake storage.
@@ -555,12 +581,14 @@ class DryRunGitHubIssues(GitHubIssues):
         """
         self._wrapped = wrapped
 
-    def create_issue(self, repo_root: Path, title: str, body: str, labels: list[str]) -> int:
+    def create_issue(
+        self, repo_root: Path, title: str, body: str, labels: list[str]
+    ) -> CreateIssueResult:
         """No-op for creating issue in dry-run mode.
 
-        Returns a fake issue number (1) to allow dry-run workflows to continue.
+        Returns a fake CreateIssueResult to allow dry-run workflows to continue.
         """
-        return 1
+        return CreateIssueResult(number=1, url="https://github.com/dry-run/dry-run/issues/1")
 
     def get_issue(self, repo_root: Path, number: int) -> IssueInfo:
         """Delegate read operation to wrapped implementation."""

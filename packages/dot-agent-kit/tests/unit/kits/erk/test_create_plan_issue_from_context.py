@@ -28,7 +28,7 @@ def test_create_plan_issue_success() -> None:
     output = json.loads(result.output)
     assert output["success"] is True
     assert output["issue_number"] == 1
-    assert "github.com/owner/repo/issues/1" in output["issue_url"]
+    assert "github.com/test-owner/test-repo/issues/1" in output["issue_url"]
 
     # Verify behavior through fake's mutation tracking
     assert len(fake_gh.created_issues) == 1

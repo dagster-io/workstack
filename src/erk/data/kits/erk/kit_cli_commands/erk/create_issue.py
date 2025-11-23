@@ -32,19 +32,15 @@ def create_issue(ctx: click.Context, title: str, label: tuple[str, ...]) -> None
 
     # Use injected GitHub Issues to create issue (EAFP pattern)
     try:
-        issue_number = github.create_issue(repo_root, title, body, list(label))
+        result = github.create_issue(repo_root, title, body, list(label))
     except RuntimeError as e:
         click.echo(f"Error: Failed to create issue: {e}", err=True)
         raise SystemExit(1) from e
 
-    # Construct issue URL (owner/repo extracted by GitHub integration)
-    # Note: We don't have direct access to owner/repo here, but the issue was created
-    issue_url = f"https://github.com/owner/repo/issues/{issue_number}"
-
     # Output structured result
     output = {
         "success": True,
-        "issue_number": issue_number,
-        "issue_url": issue_url,
+        "issue_number": result.number,
+        "issue_url": result.url,
     }
     click.echo(json.dumps(output))

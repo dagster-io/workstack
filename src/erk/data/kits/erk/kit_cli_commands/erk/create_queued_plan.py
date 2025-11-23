@@ -70,18 +70,15 @@ def create_queued_plan(
 
     # Create issue with erk-queue label (EAFP pattern)
     try:
-        issue_number = github.create_issue(repo_root, title, body, ["erk-queue"])
+        result = github.create_issue(repo_root, title, body, ["erk-queue"])
     except RuntimeError as e:
         click.echo(f"Error: Failed to create issue: {e}", err=True)
         raise SystemExit(1) from e
 
-    # Construct issue URL (owner/repo extracted by GitHub integration)
-    issue_url = f"https://github.com/owner/repo/issues/{issue_number}"
-
     # Return JSON
     output = {
         "success": True,
-        "issue_number": issue_number,
-        "issue_url": issue_url,
+        "issue_number": result.number,
+        "issue_url": result.url,
     }
     click.echo(json.dumps(output))

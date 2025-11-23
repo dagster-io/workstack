@@ -21,6 +21,23 @@ from erk.core.plan_issue_store.types import PlanIssueState
 from erk.core.repo_discovery import ensure_erk_metadata_dir
 
 
+def _build_claude_command(slash_command: str, dangerous: bool) -> str:
+    """Build a Claude CLI invocation with appropriate flags.
+
+    Args:
+        slash_command: The slash command to execute (e.g., "/erk:implement-plan")
+        dangerous: Whether to skip permission prompts
+
+    Returns:
+        Complete Claude CLI command string
+    """
+    cmd = "claude --permission-mode acceptEdits"
+    if dangerous:
+        cmd += " --dangerously-skip-permissions"
+    cmd += f' "{slash_command}"'
+    return cmd
+
+
 def _generate_worktree_name_from_title(ctx: ErkContext, title: str) -> str:
     """Generate worktree name from plan issue title.
 
@@ -56,6 +73,12 @@ def _generate_worktree_name_from_title(ctx: ErkContext, title: str) -> str:
     help="Print what would be executed without doing it",
 )
 @click.option(
+    "--dangerous",
+    is_flag=True,
+    default=False,
+    help="Skip permission prompts by passing --dangerously-skip-permissions to Claude",
+)
+@click.option(
     "--script",
     is_flag=True,
     hidden=True,
@@ -67,6 +90,7 @@ def implement_plan_issue(
     issue_number: int,
     worktree_name: str | None,
     dry_run: bool,
+    dangerous: bool,
     script: bool,
 ) -> None:
     """Create worktree from plan issue and invoke Claude for implementation.
@@ -132,7 +156,7 @@ def implement_plan_issue(
         user_output(dry_run_header + " No changes will be made\n")
         user_output(f"Would create worktree '{name}' from issue #{issue_number}")
         user_output(f"  Title: {plan_issue.title}")
-        user_output('  Then run: claude --permission-mode acceptEdits "/erk:implement-plan"')
+        user_output(f'  Then run: {_build_claude_command("/erk:implement-plan", dangerous)}')
         return
 
     # Step 4: Create worktree from plan issue
@@ -206,7 +230,7 @@ def implement_plan_issue(
         )
 
         # Append Claude invocation command
-        claude_command = 'claude --permission-mode acceptEdits "/erk:implement-plan"\n'
+        claude_command = f'{_build_claude_command("/erk:implement-plan", dangerous)}\n'
         full_script = base_script + claude_command
 
         # Write activation script using script writer
@@ -223,7 +247,7 @@ def implement_plan_issue(
     # Step 8: Provide fallback instructions (if no shell integration)
     user_output("\n" + click.style("Next steps:", fg="cyan", bold=True))
     user_output(f"  1. Change to worktree:  erk checkout {branch}")
-    claude_cmd = 'claude --permission-mode acceptEdits "/erk:implement-plan"'
+    claude_cmd = _build_claude_command("/erk:implement-plan", dangerous)
     user_output(f"  2. Run implementation:  {claude_cmd}")
     user_output("\n" + click.style("Shell integration not detected.", fg="yellow"))
     user_output("To activate environment and run implementation, use:")

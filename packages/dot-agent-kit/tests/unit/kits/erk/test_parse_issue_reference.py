@@ -10,8 +10,8 @@ from click.testing import CliRunner
 from erk.data.kits.erk.kit_cli_commands.erk.parse_issue_reference import (
     ParsedIssue,
     ParseError,
-    _parse_issue_reference_impl,
     parse_issue_reference,
+    parse_issue_reference_command,
 )
 
 # ============================================================================
@@ -21,7 +21,7 @@ from erk.data.kits.erk.kit_cli_commands.erk.parse_issue_reference import (
 
 def test_parse_plain_number_success() -> None:
     """Test parsing plain issue number."""
-    result = _parse_issue_reference_impl("776")
+    result = parse_issue_reference("776")
     assert isinstance(result, ParsedIssue)
     assert result.success is True
     assert result.issue_number == 776
@@ -29,7 +29,7 @@ def test_parse_plain_number_success() -> None:
 
 def test_parse_plain_number_single_digit() -> None:
     """Test parsing single digit issue number."""
-    result = _parse_issue_reference_impl("5")
+    result = parse_issue_reference("5")
     assert isinstance(result, ParsedIssue)
     assert result.success is True
     assert result.issue_number == 5
@@ -37,7 +37,7 @@ def test_parse_plain_number_single_digit() -> None:
 
 def test_parse_plain_number_large() -> None:
     """Test parsing large issue number."""
-    result = _parse_issue_reference_impl("99999")
+    result = parse_issue_reference("99999")
     assert isinstance(result, ParsedIssue)
     assert result.success is True
     assert result.issue_number == 99999
@@ -45,7 +45,7 @@ def test_parse_plain_number_large() -> None:
 
 def test_parse_plain_number_zero_fails() -> None:
     """Test that zero issue number is rejected."""
-    result = _parse_issue_reference_impl("0")
+    result = parse_issue_reference("0")
     assert isinstance(result, ParseError)
     assert result.success is False
     assert result.error == "invalid_number"
@@ -59,7 +59,7 @@ def test_parse_plain_number_zero_fails() -> None:
 
 def test_parse_github_url_success() -> None:
     """Test parsing full GitHub URL."""
-    result = _parse_issue_reference_impl("https://github.com/dagster-io/erk/issues/776")
+    result = parse_issue_reference("https://github.com/dagster-io/erk/issues/776")
     assert isinstance(result, ParsedIssue)
     assert result.success is True
     assert result.issue_number == 776
@@ -67,7 +67,7 @@ def test_parse_github_url_success() -> None:
 
 def test_parse_github_url_different_owner() -> None:
     """Test parsing GitHub URL with different owner."""
-    result = _parse_issue_reference_impl("https://github.com/owner/repo/issues/123")
+    result = parse_issue_reference("https://github.com/owner/repo/issues/123")
     assert isinstance(result, ParsedIssue)
     assert result.success is True
     assert result.issue_number == 123
@@ -75,7 +75,7 @@ def test_parse_github_url_different_owner() -> None:
 
 def test_parse_github_url_with_hyphens() -> None:
     """Test parsing GitHub URL with hyphenated owner/repo names."""
-    result = _parse_issue_reference_impl("https://github.com/some-org/my-repo/issues/42")
+    result = parse_issue_reference("https://github.com/some-org/my-repo/issues/42")
     assert isinstance(result, ParsedIssue)
     assert result.success is True
     assert result.issue_number == 42
@@ -83,7 +83,7 @@ def test_parse_github_url_with_hyphens() -> None:
 
 def test_parse_github_url_with_query_params() -> None:
     """Test parsing GitHub URL with query parameters."""
-    result = _parse_issue_reference_impl("https://github.com/owner/repo/issues/100?foo=bar&baz=qux")
+    result = parse_issue_reference("https://github.com/owner/repo/issues/100?foo=bar&baz=qux")
     assert isinstance(result, ParsedIssue)
     assert result.success is True
     assert result.issue_number == 100
@@ -91,9 +91,7 @@ def test_parse_github_url_with_query_params() -> None:
 
 def test_parse_github_url_with_fragment() -> None:
     """Test parsing GitHub URL with fragment."""
-    result = _parse_issue_reference_impl(
-        "https://github.com/owner/repo/issues/200#issuecomment-123"
-    )
+    result = parse_issue_reference("https://github.com/owner/repo/issues/200#issuecomment-123")
     assert isinstance(result, ParsedIssue)
     assert result.success is True
     assert result.issue_number == 200
@@ -101,7 +99,7 @@ def test_parse_github_url_with_fragment() -> None:
 
 def test_parse_github_url_http_protocol() -> None:
     """Test parsing GitHub URL with http:// protocol."""
-    result = _parse_issue_reference_impl("http://github.com/owner/repo/issues/50")
+    result = parse_issue_reference("http://github.com/owner/repo/issues/50")
     assert isinstance(result, ParsedIssue)
     assert result.success is True
     assert result.issue_number == 50
@@ -109,7 +107,7 @@ def test_parse_github_url_http_protocol() -> None:
 
 def test_parse_github_url_zero_issue_fails() -> None:
     """Test that GitHub URL with zero issue number is rejected."""
-    result = _parse_issue_reference_impl("https://github.com/owner/repo/issues/0")
+    result = parse_issue_reference("https://github.com/owner/repo/issues/0")
     assert isinstance(result, ParseError)
     assert result.success is False
     assert result.error == "invalid_number"
@@ -118,7 +116,7 @@ def test_parse_github_url_zero_issue_fails() -> None:
 
 def test_parse_github_url_large_issue() -> None:
     """Test parsing GitHub URL with large issue number."""
-    result = _parse_issue_reference_impl("https://github.com/owner/repo/issues/888888")
+    result = parse_issue_reference("https://github.com/owner/repo/issues/888888")
     assert isinstance(result, ParsedIssue)
     assert result.success is True
     assert result.issue_number == 888888
@@ -131,7 +129,7 @@ def test_parse_github_url_large_issue() -> None:
 
 def test_parse_invalid_non_numeric() -> None:
     """Test rejection of non-numeric plain input."""
-    result = _parse_issue_reference_impl("not-a-number")
+    result = parse_issue_reference("not-a-number")
     assert isinstance(result, ParseError)
     assert result.success is False
     assert result.error == "invalid_format"
@@ -140,7 +138,7 @@ def test_parse_invalid_non_numeric() -> None:
 
 def test_parse_invalid_empty_string() -> None:
     """Test rejection of empty string."""
-    result = _parse_issue_reference_impl("")
+    result = parse_issue_reference("")
     assert isinstance(result, ParseError)
     assert result.success is False
     assert result.error == "invalid_format"
@@ -148,7 +146,7 @@ def test_parse_invalid_empty_string() -> None:
 
 def test_parse_invalid_negative_number() -> None:
     """Test rejection of negative number."""
-    result = _parse_issue_reference_impl("-123")
+    result = parse_issue_reference("-123")
     assert isinstance(result, ParseError)
     assert result.success is False
     assert result.error == "invalid_format"
@@ -156,7 +154,7 @@ def test_parse_invalid_negative_number() -> None:
 
 def test_parse_invalid_malformed_url() -> None:
     """Test rejection of malformed GitHub URL."""
-    result = _parse_issue_reference_impl("https://github.com/owner/issues/123")
+    result = parse_issue_reference("https://github.com/owner/issues/123")
     assert isinstance(result, ParseError)
     assert result.success is False
     assert result.error == "invalid_format"
@@ -164,7 +162,7 @@ def test_parse_invalid_malformed_url() -> None:
 
 def test_parse_invalid_wrong_host() -> None:
     """Test rejection of non-GitHub URL."""
-    result = _parse_issue_reference_impl("https://gitlab.com/owner/repo/issues/123")
+    result = parse_issue_reference("https://gitlab.com/owner/repo/issues/123")
     assert isinstance(result, ParseError)
     assert result.success is False
     assert result.error == "invalid_format"
@@ -172,7 +170,7 @@ def test_parse_invalid_wrong_host() -> None:
 
 def test_parse_invalid_missing_issue_number() -> None:
     """Test rejection of URL without issue number."""
-    result = _parse_issue_reference_impl("https://github.com/owner/repo/issues/")
+    result = parse_issue_reference("https://github.com/owner/repo/issues/")
     assert isinstance(result, ParseError)
     assert result.success is False
     assert result.error == "invalid_format"
@@ -180,7 +178,7 @@ def test_parse_invalid_missing_issue_number() -> None:
 
 def test_parse_invalid_pull_request_url() -> None:
     """Test rejection of pull request URL (not issue)."""
-    result = _parse_issue_reference_impl("https://github.com/owner/repo/pull/123")
+    result = parse_issue_reference("https://github.com/owner/repo/pull/123")
     assert isinstance(result, ParseError)
     assert result.success is False
     assert result.error == "invalid_format"
@@ -194,7 +192,7 @@ def test_parse_invalid_pull_request_url() -> None:
 def test_cli_success_plain_number() -> None:
     """Test CLI command with plain issue number."""
     runner = CliRunner()
-    result = runner.invoke(parse_issue_reference, ["776"])
+    result = runner.invoke(parse_issue_reference_command, ["776"])
 
     assert result.exit_code == 0
     output = json.loads(result.output)
@@ -206,7 +204,7 @@ def test_cli_success_github_url() -> None:
     """Test CLI command with GitHub URL."""
     runner = CliRunner()
     result = runner.invoke(
-        parse_issue_reference,
+        parse_issue_reference_command,
         ["https://github.com/dagster-io/erk/issues/776"],
     )
 
@@ -219,7 +217,7 @@ def test_cli_success_github_url() -> None:
 def test_cli_invalid_input_exit_code() -> None:
     """Test CLI command exits with error code on invalid input."""
     runner = CliRunner()
-    result = runner.invoke(parse_issue_reference, ["not-a-number"])
+    result = runner.invoke(parse_issue_reference_command, ["not-a-number"])
 
     assert result.exit_code == 1
     output = json.loads(result.output)
@@ -230,7 +228,7 @@ def test_cli_invalid_input_exit_code() -> None:
 def test_cli_json_output_structure_success() -> None:
     """Test that JSON output has expected structure on success."""
     runner = CliRunner()
-    result = runner.invoke(parse_issue_reference, ["123"])
+    result = runner.invoke(parse_issue_reference_command, ["123"])
 
     assert result.exit_code == 0
     output = json.loads(result.output)
@@ -247,7 +245,7 @@ def test_cli_json_output_structure_success() -> None:
 def test_cli_json_output_structure_error() -> None:
     """Test that JSON output has expected structure on error."""
     runner = CliRunner()
-    result = runner.invoke(parse_issue_reference, ["invalid"])
+    result = runner.invoke(parse_issue_reference_command, ["invalid"])
 
     assert result.exit_code == 1
     output = json.loads(result.output)

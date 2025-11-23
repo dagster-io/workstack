@@ -1,6 +1,7 @@
 """Tests for unified implement command."""
 
 from datetime import UTC, datetime
+from pathlib import Path
 
 from click.testing import CliRunner
 
@@ -466,4 +467,155 @@ def test_implement_fails_when_branch_exists_file_mode() -> None:
         assert result.exit_code == 1
         assert "Error" in result.output
         assert "already exists" in result.output
+        assert len(git.added_worktrees) == 0
+
+
+# Submit Flag Tests
+
+
+def test_implement_with_submit_flag_from_issue() -> None:
+    """Test --submit flag from issue includes command chain in manual instructions."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+
+        result = runner.invoke(implement, ["#42", "--submit"], obj=ctx)
+
+        assert result.exit_code == 0
+        assert "Created worktree" in result.output
+
+        # Verify manual instructions show all three commands
+        assert "/erk:implement-plan" in result.output
+        assert "/fast-ci" in result.output
+        assert "/gt:submit-squashed-branch" in result.output
+
+        # Verify script flag hint shows --submit
+        assert "--submit --script" in result.output
+
+
+def test_implement_with_submit_flag_from_file() -> None:
+    """Test implementing from file with --submit flag includes command chain."""
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        ctx = build_workspace_test_context(env, git=git)
+
+        # Create plan file
+        plan_file = env.cwd / "feature-plan.md"
+        plan_file.write_text("# Feature Plan\n\nImplement feature.", encoding="utf-8")
+
+        result = runner.invoke(implement, [str(plan_file), "--submit"], obj=ctx)
+
+        assert result.exit_code == 0
+        assert "Created worktree" in result.output
+
+        # Verify manual instructions show all three commands
+        assert "/erk:implement-plan" in result.output
+        assert "/fast-ci" in result.output
+        assert "/gt:submit-squashed-branch" in result.output
+
+        # Verify plan file was deleted (moved to worktree)
+        assert not plan_file.exists()
+
+
+def test_implement_without_submit_uses_default_command() -> None:
+    """Test that default behavior (without --submit) still works unchanged."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+
+        result = runner.invoke(implement, ["#42"], obj=ctx)
+
+        assert result.exit_code == 0
+        assert "Created worktree" in result.output
+
+        # Verify manual instructions show only implement-plan
+        assert "/erk:implement-plan" in result.output
+        assert "/fast-ci" not in result.output
+        assert "/gt:submit-squashed-branch" not in result.output
+
+        # Verify script flag hint doesn't show --submit
+        assert "--submit" not in result.output or "--submit --script" not in result.output
+
+
+def test_implement_submit_in_script_mode() -> None:
+    """Test that --script --submit combination generates correct activation script."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+
+        result = runner.invoke(implement, ["#42", "--submit", "--script"], obj=ctx)
+
+        assert result.exit_code == 0
+
+        # Verify script path is output
+        assert result.stdout
+        script_path = Path(result.stdout.strip())
+
+        # Verify script file exists and read its content
+        assert script_path.exists()
+        script_content = script_path.read_text(encoding="utf-8")
+
+        # Verify script content contains chained commands
+        assert "/erk:implement-plan" in script_content
+        assert "/fast-ci" in script_content
+        assert "/gt:submit-squashed-branch" in script_content
+
+        # Verify commands are chained with &&
+        assert "&&" in script_content
+
+
+def test_implement_submit_with_dry_run() -> None:
+    """Test that --submit --dry-run shows all commands that would be executed."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+
+        result = runner.invoke(implement, ["#42", "--submit", "--dry-run"], obj=ctx)
+
+        assert result.exit_code == 0
+        assert "Dry-run mode" in result.output
+
+        # Verify all three commands shown in dry-run output
+        assert "/erk:implement-plan" in result.output
+        assert "/fast-ci" in result.output
+        assert "/gt:submit-squashed-branch" in result.output
+
+        # Verify no worktree was actually created
         assert len(git.added_worktrees) == 0

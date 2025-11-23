@@ -7,12 +7,12 @@ Uses FakeGitHubIssues for fast, reliable testing without subprocess mocking.
 import json
 
 from click.testing import CliRunner
+from erk_shared.github.issues import FakeGitHubIssues
 
 from dot_agent_kit.context import DotAgentContext
-from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.create_issue import (
+from erk.data.kits.erk.kit_cli_commands.erk.create_issue import (
     create_issue,
 )
-from erk.core.github.issues import FakeGitHubIssues
 
 # ============================================================================
 # Success Cases

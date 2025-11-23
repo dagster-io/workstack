@@ -11,6 +11,7 @@ members = [
     "dot-agent-kit",
     "erk",
     "erk-dev",
+    "erk-shared",
 ]
 
 [[package]]
@@ -110,7 +111,7 @@ version = "0.1.27"
 source = { editable = "packages/dot-agent-kit" }
 dependencies = [
     { name = "click" },
-    { name = "erk" },
+    { name = "erk-shared" },
     { name = "pathspec" },
     { name = "pydantic" },
     { name = "python-frontmatter" },
@@ -123,7 +124,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = ">=8.1.0" },
-    { name = "erk", editable = "." },
+    { name = "erk-shared", editable = "packages/erk-shared" },
     { name = "pathspec", specifier = ">=0.12.0" },
     { name = "pydantic", specifier = ">=2.0" },
     { name = "python-frontmatter", specifier = ">=1.0.0" },
@@ -140,6 +141,7 @@ source = { editable = "." }
 dependencies = [
     { name = "click" },
     { name = "dot-agent-kit" },
+    { name = "erk-shared" },
     { name = "python-frontmatter" },
     { name = "tomlkit" },
 ]
@@ -160,6 +162,7 @@ dev = [
 requires-dist = [
     { name = "click", specifier = ">=8.1.7" },
     { name = "dot-agent-kit", editable = "packages/dot-agent-kit" },
+    { name = "erk-shared", editable = "packages/erk-shared" },
     { name = "python-frontmatter", specifier = ">=1.0.0" },
     { name = "tomlkit", specifier = ">=0.12.0" },
 ]
@@ -186,6 +189,21 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "click", specifier = ">=8.1.7" }]
+
+[[package]]
+name = "erk-shared"
+version = "0.1.0"
+source = { editable = "packages/erk-shared" }
+dependencies = [
+    { name = "python-frontmatter" },
+    { name = "pyyaml" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "python-frontmatter", specifier = ">=1.0.0" },
+    { name = "pyyaml", specifier = ">=6.0" },
+]
 
 [[package]]
 name = "execnet"

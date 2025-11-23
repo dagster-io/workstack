@@ -1,6 +1,6 @@
 """Tests for plan title to filename conversion."""
 
-from dot_agent_kit.data.kits.erk.plan_utils import generate_filename_from_title
+from erk.data.kits.erk.plan_utils import generate_filename_from_title
 
 # Alias for backward compatibility with existing tests
 plan_title_to_filename = generate_filename_from_title

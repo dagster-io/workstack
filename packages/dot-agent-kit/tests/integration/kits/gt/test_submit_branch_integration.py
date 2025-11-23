@@ -75,7 +75,7 @@ class TestSubmitBranchIntegration:
 
     def test_real_git_merge_tree_detects_conflicts(self) -> None:
         """Integration test: Verify git merge-tree actually detects conflicts."""
-        from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops import (
+        from erk.data.kits.gt.kit_cli_commands.gt.real_ops import (
             RealGitGtKit,
         )
 

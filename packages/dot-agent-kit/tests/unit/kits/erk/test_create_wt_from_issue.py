@@ -11,7 +11,7 @@ import pytest
 from click.testing import CliRunner
 
 from dot_agent_kit.context import DotAgentContext
-from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.create_wt_from_issue import (
+from erk.data.kits.erk.kit_cli_commands.erk.create_wt_from_issue import (
     create_wt_from_issue,
     has_erk_plan_label,
 )

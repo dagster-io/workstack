@@ -13,8 +13,7 @@ This eliminates code duplication across kit CLI commands.
 from pathlib import Path
 
 import click
-
-from erk.core.github.issues import GitHubIssues
+from erk_shared.github.issues import GitHubIssues
 
 
 def require_github_issues(ctx: click.Context) -> GitHubIssues:

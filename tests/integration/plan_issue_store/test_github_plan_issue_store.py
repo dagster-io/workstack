@@ -4,8 +4,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
+from erk_shared.github.issues import FakeGitHubIssues
 
-from erk.core.github.issues import FakeGitHubIssues
 from erk.core.plan_issue_store import (
     GitHubPlanIssueStore,
     PlanIssueQuery,

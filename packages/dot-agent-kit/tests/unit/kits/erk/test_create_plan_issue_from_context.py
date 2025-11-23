@@ -3,12 +3,12 @@
 import json
 
 from click.testing import CliRunner
+from erk_shared.github.issues import FakeGitHubIssues
 
 from dot_agent_kit.context import DotAgentContext
-from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.create_plan_issue_from_context import (
+from erk.data.kits.erk.kit_cli_commands.erk.create_plan_issue_from_context import (
     create_plan_issue_from_context,
 )
-from erk.core.github.issues import FakeGitHubIssues
 
 
 def test_create_plan_issue_success() -> None:

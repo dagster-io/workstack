@@ -5,7 +5,7 @@ import json
 import pytest
 from click.testing import CliRunner
 
-from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.update_pr import (
+from erk.data.kits.gt.kit_cli_commands.gt.update_pr import (
     UpdatePRError,
     UpdatePRResult,
     execute_update_pr,
@@ -141,7 +141,7 @@ class TestUpdatePRCLI:
         )
 
         # Monkey patch execute_update_pr to use our fake ops
-        import dot_agent_kit.data.kits.gt.kit_cli_commands.gt.update_pr as update_pr_module
+        import erk.data.kits.gt.kit_cli_commands.gt.update_pr as update_pr_module
 
         original_execute = update_pr_module.execute_update_pr
 
@@ -168,7 +168,7 @@ class TestUpdatePRCLI:
         ops = FakeGtKitOps().with_branch("feature-branch", parent="main")
 
         # Monkey patch execute_update_pr to use our fake ops
-        import dot_agent_kit.data.kits.gt.kit_cli_commands.gt.update_pr as update_pr_module
+        import erk.data.kits.gt.kit_cli_commands.gt.update_pr as update_pr_module
 
         original_execute = update_pr_module.execute_update_pr
 

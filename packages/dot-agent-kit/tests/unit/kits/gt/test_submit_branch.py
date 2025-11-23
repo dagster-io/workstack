@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 import pytest
 from click.testing import CliRunner
 
-from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch import (
+from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
     PostAnalysisError,
     PostAnalysisResult,
     PreAnalysisError,
@@ -300,7 +300,7 @@ class TestPreAnalysisExecution:
 class TestPostAnalysisExecution:
     """Tests for post-analysis phase execution logic."""
 
-    @patch("dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch.time.sleep")
+    @patch("erk.data.kits.gt.kit_cli_commands.gt.submit_branch.time.sleep")
     def test_post_analysis_creates_pr(self, mock_sleep: Mock) -> None:
         """Test successfully creating new PR."""
         ops = FakeGtKitOps().with_branch("feature-branch", parent="main").with_commits(1)
@@ -488,7 +488,7 @@ class TestPostAnalysisExecution:
         assert result.error_type == "pr_update_failed"
         assert "failed to update PR #123 metadata" in result.message
 
-    @patch("dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch.time.sleep")
+    @patch("erk.data.kits.gt.kit_cli_commands.gt.submit_branch.time.sleep")
     def test_post_analysis_pr_info_delayed(self, mock_sleep: Mock) -> None:
         """Test that PR metadata update succeeds even when PR info is delayed."""
         ops = (
@@ -532,7 +532,7 @@ class TestPostAnalysisExecution:
         )
 
         # Mock Path.cwd() to return our temp directory
-        patch_path = "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
         with patch(patch_path) as mock_cwd:
             mock_cwd.return_value = tmp_path
 
@@ -559,7 +559,7 @@ class TestPostAnalysisExecution:
         )
 
         # Mock Path.cwd() to return temp directory without .impl/issue.json
-        patch_path = "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
         with patch(patch_path) as mock_cwd:
             mock_cwd.return_value = tmp_path
 
@@ -595,7 +595,7 @@ class TestPostAnalysisExecution:
         )
 
         # Mock Path.cwd() to return our temp directory
-        patch_path = "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
+        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
         with patch(patch_path) as mock_cwd:
             mock_cwd.return_value = tmp_path
 
@@ -622,7 +622,7 @@ class TestSubmitBranchCLI:
         ops = FakeGtKitOps().with_branch("feature-branch", parent="main").with_commits(1)
 
         # Monkey patch execute_pre_analysis to use our fake ops
-        import dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch as submit_module
+        import erk.data.kits.gt.kit_cli_commands.gt.submit_branch as submit_module
 
         original_execute = submit_module.execute_pre_analysis
 
@@ -652,7 +652,7 @@ class TestSubmitBranchCLI:
         )
 
         # Monkey patch execute_post_analysis to use our fake ops
-        import dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch as submit_module
+        import erk.data.kits.gt.kit_cli_commands.gt.submit_branch as submit_module
 
         original_execute = submit_module.execute_post_analysis
 

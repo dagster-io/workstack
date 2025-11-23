@@ -20,8 +20,7 @@ from typing import Any
 
 import frontmatter
 import yaml
-
-from erk.integrations.github.metadata_blocks import (
+from erk_shared.github.metadata import (
     create_worktree_creation_block,
     render_erk_issue_event,
 )

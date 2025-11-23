@@ -3,7 +3,8 @@
 from datetime import UTC
 from pathlib import Path
 
-from erk.core.github.issues import GitHubIssues, IssueInfo
+from erk_shared.github.issues import GitHubIssues, IssueInfo
+
 from erk.core.plan_issue_store.store import PlanIssueStore
 from erk.core.plan_issue_store.types import PlanIssue, PlanIssueQuery, PlanIssueState
 

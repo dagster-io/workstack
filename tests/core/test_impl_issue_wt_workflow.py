@@ -7,8 +7,8 @@ and linking them together via .impl/issue.json.
 from pathlib import Path
 
 import pytest
+from erk_shared.github.issues import FakeGitHubIssues
 
-from erk.core.github.issues import FakeGitHubIssues
 from erk.core.impl_folder import (
     create_impl_folder,
     has_issue_reference,

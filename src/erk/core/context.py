@@ -5,6 +5,7 @@ from pathlib import Path
 
 import click
 import tomlkit
+from erk_shared.github.issues import DryRunGitHubIssues, GitHubIssues, RealGitHubIssues
 
 from erk.cli.config import LoadedConfig, load_config
 from erk.cli.output import user_output
@@ -19,7 +20,6 @@ from erk.core.git.dry_run import DryRunGit
 from erk.core.git.real import RealGit
 from erk.core.github.abc import GitHub
 from erk.core.github.dry_run import DryRunGitHub
-from erk.core.github.issues import DryRunGitHubIssues, GitHubIssues, RealGitHubIssues
 from erk.core.github.real import RealGitHub
 from erk.core.graphite.abc import Graphite
 from erk.core.graphite.dry_run import DryRunGraphite
@@ -119,6 +119,7 @@ class ErkContext:
             For more complex test setup with custom configs or multiple integration classes,
             use ErkContext.for_test() instead.
         """
+        from erk_shared.github.issues import FakeGitHubIssues
         from tests.fakes.completion import FakeCompletion
         from tests.fakes.script_writer import FakeScriptWriter
         from tests.fakes.shell import FakeShell
@@ -127,7 +128,6 @@ class ErkContext:
 
         from erk.core.config_store import FakeConfigStore
         from erk.core.github.fake import FakeGitHub
-        from erk.core.github.issues import FakeGitHubIssues
         from erk.core.graphite.fake import FakeGraphite
         from erk.core.plan_issue_store import FakePlanIssueStore
 
@@ -219,6 +219,7 @@ class ErkContext:
             For simple cases that only need git, use ErkContext.minimal()
             which is more concise.
         """
+        from erk_shared.github.issues import FakeGitHubIssues
         from tests.fakes.completion import FakeCompletion
         from tests.fakes.script_writer import FakeScriptWriter
         from tests.fakes.shell import FakeShell
@@ -229,7 +230,6 @@ class ErkContext:
         from erk.core.config_store import FakeConfigStore
         from erk.core.git.fake import FakeGit
         from erk.core.github.fake import FakeGitHub
-        from erk.core.github.issues import FakeGitHubIssues
         from erk.core.graphite.fake import FakeGraphite
         from erk.core.plan_issue_store import FakePlanIssueStore
 

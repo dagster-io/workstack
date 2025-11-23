@@ -13,7 +13,7 @@ Design:
 
 from dataclasses import dataclass, field, replace
 
-from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.ops import (
+from erk.data.kits.gt.kit_cli_commands.gt.ops import (
     CommandResult,
     GitGtKit,
     GitHubGtKit,

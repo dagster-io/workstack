@@ -103,6 +103,22 @@ class GitHubIssues(ABC):
         ...
 
     @abstractmethod
+    def get_issue_comments(self, repo_root: Path, number: int) -> list[str]:
+        """Fetch all comment bodies for an issue.
+
+        Args:
+            repo_root: Path to repository root
+            number: Issue number
+
+        Returns:
+            List of comment bodies (markdown strings)
+
+        Raises:
+            RuntimeError: If gh CLI fails or issue not found
+        """
+        ...
+
+    @abstractmethod
     def ensure_label_exists(
         self,
         repo_root: Path,
@@ -235,6 +251,26 @@ class RealGitHubIssues(GitHubIssues):
             for issue in data
         ]
 
+    def get_issue_comments(self, repo_root: Path, number: int) -> list[str]:
+        """Fetch all comment bodies for an issue using gh CLI.
+
+        Note: Uses gh's native error handling - gh CLI raises RuntimeError
+        on failures (not installed, not authenticated, issue not found).
+        """
+        cmd = [
+            "gh",
+            "api",
+            f"repos/{{owner}}/{{repo}}/issues/{number}/comments",
+            "--jq",
+            ".[].body",
+        ]
+        stdout = execute_gh_command(cmd, repo_root)
+
+        if not stdout.strip():
+            return []
+
+        return stdout.strip().split("\n")
+
     def ensure_label_exists(
         self,
         repo_root: Path,
@@ -286,6 +322,7 @@ class FakeGitHubIssues(GitHubIssues):
         issues: dict[int, IssueInfo] | None = None,
         next_issue_number: int = 1,
         labels: set[str] | None = None,
+        comments: dict[int, list[str]] | None = None,
     ) -> None:
         """Create FakeGitHubIssues with pre-configured state.
 
@@ -293,10 +330,12 @@ class FakeGitHubIssues(GitHubIssues):
             issues: Mapping of issue number -> IssueInfo
             next_issue_number: Next issue number to assign (for predictable testing)
             labels: Set of existing label names in the repository
+            comments: Mapping of issue number -> list of comment bodies
         """
         self._issues = issues or {}
         self._next_issue_number = next_issue_number
         self._labels = labels or set()
+        self._comments = comments or {}
         self._created_issues: list[tuple[str, str, list[str]]] = []
         self._added_comments: list[tuple[int, str]] = []
         self._created_labels: list[tuple[str, str, str]] = []
@@ -400,6 +439,14 @@ class FakeGitHubIssues(GitHubIssues):
 
         return issues
 
+    def get_issue_comments(self, repo_root: Path, number: int) -> list[str]:
+        """Get comments for issue from fake storage.
+
+        Returns:
+            List of comment bodies, or empty list if no comments exist
+        """
+        return self._comments.get(number, [])
+
     def ensure_label_exists(
         self,
         repo_root: Path,
@@ -455,6 +502,10 @@ class DryRunGitHubIssues(GitHubIssues):
     ) -> list[IssueInfo]:
         """Delegate read operation to wrapped implementation."""
         return self._wrapped.list_issues(repo_root, labels=labels, state=state, limit=limit)
+
+    def get_issue_comments(self, repo_root: Path, number: int) -> list[str]:
+        """Delegate read operation to wrapped implementation."""
+        return self._wrapped.get_issue_comments(repo_root, number)
 
     def ensure_label_exists(
         self,

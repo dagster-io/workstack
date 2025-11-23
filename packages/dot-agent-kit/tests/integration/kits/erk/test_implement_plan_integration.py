@@ -6,6 +6,7 @@ Tests the complete validation workflow for .impl/ folder structure and issue tra
 import json
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.implement_plan import (
@@ -13,43 +14,50 @@ from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.implement_plan import (
 )
 
 
-def test_implement_plan_validates_complete_issue_json(tmp_path: Path, monkeypatch) -> None:
-    """Test that implement-plan validates issue.json has all required fields."""
-    # Create .impl/ folder structure
+@pytest.fixture
+def impl_folder(tmp_path: Path) -> Path:
+    """Create .impl/ folder with test files."""
     impl_dir = tmp_path / ".impl"
     impl_dir.mkdir()
 
     # Create plan.md
     plan_md = impl_dir / "plan.md"
-    plan_md.write_text("# Test Plan\n\n## Steps\n1. Do thing\n2. Do other thing")
+    plan_md.write_text(
+        "# Test Plan\n\n## Steps\n1. Do thing\n2. Do other thing",
+        encoding="utf-8",
+    )
 
     # Create progress.md
     progress_md = impl_dir / "progress.md"
     progress_md.write_text(
-        "---\ncompleted_steps: 0\ntotal_steps: 2\n---\n\n- [ ] 1. Do thing\n- [ ] 2. Do other thing"
+        "---\ncompleted_steps: 0\ntotal_steps: 2\n---\n\n- [ ] 1. Do thing\n- [ ] 2. Do other thing",
+        encoding="utf-8",
     )
 
-    # Write COMPLETE format issue.json
-    issue_json = impl_dir / "issue.json"
-    issue_json.write_text(
-        json.dumps(
-            {
-                "issue_number": 123,
-                "issue_url": "https://github.com/org/repo/issues/123",
-                "created_at": "2025-01-01T00:00:00Z",
-                "synced_at": "2025-01-01T00:00:00Z",
-            }
-        )
-    )
+    return impl_dir
 
-    # Change to tmp_path
-    monkeypatch.chdir(tmp_path)
 
-    # Run command
+def test_implement_plan_validates_complete_issue_json(
+    impl_folder: Path, monkeypatch
+) -> None:
+    """Test that implement-plan validates issue.json has all required fields."""
+    issue_json = impl_folder / "issue.json"
+
+    # Write COMPLETE format
+    issue_data = {
+        "issue_number": 123,
+        "issue_url": "https://github.com/org/repo/issues/123",
+        "created_at": "2025-01-01T00:00:00Z",
+        "synced_at": "2025-01-01T00:00:00Z",
+    }
+    issue_json.write_text(json.dumps(issue_data), encoding="utf-8")
+
+    # Change to parent directory for test
+    monkeypatch.chdir(impl_folder.parent)
+
     runner = CliRunner()
     result = runner.invoke(implement_plan, ["--dry-run"])
 
-    # Verify success
     assert result.exit_code == 0
     data = json.loads(result.output)
     assert data["valid"] is True
@@ -57,67 +65,43 @@ def test_implement_plan_validates_complete_issue_json(tmp_path: Path, monkeypatc
     assert data["plan_length"] > 0
 
 
-def test_implement_plan_handles_incomplete_issue_json(tmp_path: Path, monkeypatch) -> None:
+def test_implement_plan_handles_incomplete_issue_json(
+    impl_folder: Path, monkeypatch
+) -> None:
     """Test that incomplete issue.json is detected and tracking disabled."""
-    # Create .impl/ folder structure
-    impl_dir = tmp_path / ".impl"
-    impl_dir.mkdir()
+    issue_json = impl_folder / "issue.json"
 
-    # Create plan.md
-    plan_md = impl_dir / "plan.md"
-    plan_md.write_text("# Test Plan\n\n## Steps\n1. Do thing")
+    # Write SIMPLE format (missing timestamps)
+    issue_data = {
+        "issue_number": 123,
+        "issue_url": "https://github.com/org/repo/issues/123",
+    }
+    issue_json.write_text(json.dumps(issue_data), encoding="utf-8")
 
-    # Create progress.md
-    progress_md = impl_dir / "progress.md"
-    progress_md.write_text("---\ncompleted_steps: 0\ntotal_steps: 1\n---\n\n- [ ] 1. Do thing")
+    # Change to parent directory for test
+    monkeypatch.chdir(impl_folder.parent)
 
-    # Write SIMPLE format issue.json (missing timestamps)
-    issue_json = impl_dir / "issue.json"
-    issue_json.write_text(
-        json.dumps(
-            {
-                "issue_number": 123,
-                "issue_url": "https://github.com/org/repo/issues/123",
-            }
-        )
-    )
-
-    # Change to tmp_path
-    monkeypatch.chdir(tmp_path)
-
-    # Run command
     runner = CliRunner()
     result = runner.invoke(implement_plan, ["--dry-run"])
 
-    # Verify success but tracking disabled
     assert result.exit_code == 0
     data = json.loads(result.output)
     assert data["valid"] is True
     assert data["has_issue_tracking"] is False  # Tracking disabled due to incomplete format
 
 
-def test_implement_plan_handles_missing_issue_json(tmp_path: Path, monkeypatch) -> None:
+def test_implement_plan_handles_missing_issue_json(
+    impl_folder: Path, monkeypatch
+) -> None:
     """Test that missing issue.json is handled gracefully."""
-    # Create .impl/ folder structure WITHOUT issue.json
-    impl_dir = tmp_path / ".impl"
-    impl_dir.mkdir()
+    # No issue.json file created
 
-    # Create plan.md
-    plan_md = impl_dir / "plan.md"
-    plan_md.write_text("# Test Plan\n\n## Steps\n1. Do thing")
+    # Change to parent directory for test
+    monkeypatch.chdir(impl_folder.parent)
 
-    # Create progress.md
-    progress_md = impl_dir / "progress.md"
-    progress_md.write_text("---\ncompleted_steps: 0\ntotal_steps: 1\n---\n\n- [ ] 1. Do thing")
-
-    # Change to tmp_path
-    monkeypatch.chdir(tmp_path)
-
-    # Run command
     runner = CliRunner()
     result = runner.invoke(implement_plan, ["--dry-run"])
 
-    # Verify success without tracking
     assert result.exit_code == 0
     data = json.loads(result.output)
     assert data["valid"] is True
@@ -126,75 +110,63 @@ def test_implement_plan_handles_missing_issue_json(tmp_path: Path, monkeypatch) 
 
 def test_implement_plan_errors_on_missing_plan(tmp_path: Path, monkeypatch) -> None:
     """Test error when plan.md is missing."""
-    # Create .impl/ folder WITHOUT plan.md
     impl_dir = tmp_path / ".impl"
     impl_dir.mkdir()
 
-    # Create only progress.md
+    # Create progress.md but NOT plan.md
     progress_md = impl_dir / "progress.md"
-    progress_md.write_text("---\ncompleted_steps: 0\ntotal_steps: 1\n---\n\n- [ ] 1. Do thing")
+    progress_md.write_text("# Progress\n\n- [ ] Step 1", encoding="utf-8")
 
-    # Change to tmp_path
+    # Change to parent directory for test
     monkeypatch.chdir(tmp_path)
 
-    # Run command
     runner = CliRunner()
     result = runner.invoke(implement_plan, ["--dry-run"])
 
-    # Verify error
     assert result.exit_code == 1
     assert "No plan.md found" in result.output
 
 
 def test_implement_plan_errors_on_missing_progress(tmp_path: Path, monkeypatch) -> None:
     """Test error when progress.md is missing."""
-    # Create .impl/ folder WITHOUT progress.md
     impl_dir = tmp_path / ".impl"
     impl_dir.mkdir()
 
-    # Create only plan.md
+    # Create plan.md but NOT progress.md
     plan_md = impl_dir / "plan.md"
-    plan_md.write_text("# Test Plan\n\n## Steps\n1. Do thing")
+    plan_md.write_text("# Plan\n\n1. Do thing", encoding="utf-8")
 
-    # Change to tmp_path
+    # Change to parent directory for test
     monkeypatch.chdir(tmp_path)
 
-    # Run command
     runner = CliRunner()
     result = runner.invoke(implement_plan, ["--dry-run"])
 
-    # Verify error
     assert result.exit_code == 1
     assert "No progress.md found" in result.output
 
 
-def test_implement_plan_errors_on_missing_impl_folder(tmp_path: Path, monkeypatch) -> None:
+def test_implement_plan_errors_on_missing_impl_folder(
+    tmp_path: Path, monkeypatch
+) -> None:
     """Test error when .impl/ folder doesn't exist."""
-    # Don't create .impl/ folder at all
+    # No .impl/ folder created
+
+    # Change to directory for test
     monkeypatch.chdir(tmp_path)
 
-    # Run command
     runner = CliRunner()
     result = runner.invoke(implement_plan, ["--dry-run"])
 
-    # Verify error
     assert result.exit_code == 1
     assert "No .impl/ folder found" in result.output
 
 
-def test_implement_plan_normal_mode_with_tracking(tmp_path: Path, monkeypatch) -> None:
+def test_implement_plan_normal_mode_with_tracking(
+    impl_folder: Path, monkeypatch
+) -> None:
     """Test normal mode outputs instructions with tracking enabled."""
-    # Create .impl/ folder structure with complete issue.json
-    impl_dir = tmp_path / ".impl"
-    impl_dir.mkdir()
-
-    plan_md = impl_dir / "plan.md"
-    plan_md.write_text("# Test Plan\n\n## Steps\n1. Do thing")
-
-    progress_md = impl_dir / "progress.md"
-    progress_md.write_text("---\ncompleted_steps: 0\ntotal_steps: 1\n---\n\n- [ ] 1. Do thing")
-
-    issue_json = impl_dir / "issue.json"
+    issue_json = impl_folder / "issue.json"
     issue_json.write_text(
         json.dumps(
             {
@@ -203,43 +175,34 @@ def test_implement_plan_normal_mode_with_tracking(tmp_path: Path, monkeypatch) -
                 "created_at": "2025-01-01T00:00:00Z",
                 "synced_at": "2025-01-01T00:00:00Z",
             }
-        )
+        ),
+        encoding="utf-8",
     )
 
-    # Change to tmp_path
-    monkeypatch.chdir(tmp_path)
+    # Change to parent directory for test
+    monkeypatch.chdir(impl_folder.parent)
 
-    # Run command in normal mode (no --dry-run)
     runner = CliRunner()
     result = runner.invoke(implement_plan, [])
 
-    # Verify success and instructions output
     assert result.exit_code == 0
     assert "Plan loaded from .impl/plan.md" in result.output
     assert "GitHub tracking: ENABLED (issue #456)" in result.output
     assert "/erk:implement-plan" in result.output
 
 
-def test_implement_plan_normal_mode_without_tracking(tmp_path: Path, monkeypatch) -> None:
+def test_implement_plan_normal_mode_without_tracking(
+    impl_folder: Path, monkeypatch
+) -> None:
     """Test normal mode outputs instructions with tracking disabled."""
-    # Create .impl/ folder structure WITHOUT issue.json
-    impl_dir = tmp_path / ".impl"
-    impl_dir.mkdir()
+    # No issue.json file created
 
-    plan_md = impl_dir / "plan.md"
-    plan_md.write_text("# Test Plan\n\n## Steps\n1. Do thing")
+    # Change to parent directory for test
+    monkeypatch.chdir(impl_folder.parent)
 
-    progress_md = impl_dir / "progress.md"
-    progress_md.write_text("---\ncompleted_steps: 0\ntotal_steps: 1\n---\n\n- [ ] 1. Do thing")
-
-    # Change to tmp_path
-    monkeypatch.chdir(tmp_path)
-
-    # Run command in normal mode
     runner = CliRunner()
     result = runner.invoke(implement_plan, [])
 
-    # Verify success and instructions output
     assert result.exit_code == 0
     assert "Plan loaded from .impl/plan.md" in result.output
     assert "GitHub tracking: DISABLED (no issue.json)" in result.output

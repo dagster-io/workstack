@@ -27,18 +27,16 @@ Examples:
 
 import json
 from pathlib import Path
+from typing import NoReturn
 
 import click
+
 from erk_shared.impl_folder import read_issue_reference
 
 
-def _error(message: str) -> None:
-    """Output error message and exit.
-
-    Args:
-        message: Error message to display
-    """
-    click.echo(f"Error: {message}", err=True)
+def _error(msg: str) -> NoReturn:
+    """Output error message and exit with code 1."""
+    click.echo(f"❌ Error: {msg}", err=True)
     raise SystemExit(1)
 
 
@@ -82,7 +80,10 @@ def _get_issue_reference(impl_dir: Path, *, silent: bool = False) -> dict[str, i
     if issue_ref is None:
         # Not an error - just means no GitHub tracking
         if not silent:
-            click.echo("ℹ️  No issue reference found - GitHub progress tracking disabled", err=True)
+            click.echo(
+                "ℹ️  No issue reference found - GitHub progress tracking disabled",
+                err=True,
+            )
         return None
 
     return {
@@ -98,16 +99,15 @@ def _execute_plan(plan_content: str, issue_info: dict[str, int | str] | None) ->
         plan_content: Content of plan.md
         issue_info: Issue info dict or None
     """
-    tracking_status = (
-        f"GitHub tracking: ENABLED (issue #{issue_info['issue_number']})"
-        if issue_info
-        else "GitHub tracking: DISABLED (no issue.json)"
-    )
+    if issue_info:
+        tracking_msg = f"GitHub tracking: ENABLED (issue #{issue_info['issue_number']})"
+    else:
+        tracking_msg = "GitHub tracking: DISABLED (no issue.json)"
 
     msg = f"""
 Plan loaded from .impl/plan.md
 
-{tracking_status}
+{tracking_msg}
 
 To implement:
   claude --permission-mode acceptEdits "/erk:implement-plan"
@@ -141,15 +141,12 @@ def implement_plan(dry_run: bool) -> None:
     plan_content = plan_file.read_text(encoding="utf-8")
 
     if dry_run:
-        click.echo(
-            json.dumps(
-                {
-                    "valid": True,
-                    "has_issue_tracking": issue_info is not None,
-                    "plan_length": len(plan_content),
-                }
-            )
-        )
+        result = {
+            "valid": True,
+            "has_issue_tracking": issue_info is not None,
+            "plan_length": len(plan_content),
+        }
+        click.echo(json.dumps(result))
         return
 
     _execute_plan(plan_content, issue_info)

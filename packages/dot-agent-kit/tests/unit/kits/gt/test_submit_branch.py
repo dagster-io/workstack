@@ -423,10 +423,10 @@ class TestPostAnalysisExecution:
 
     def test_post_analysis_with_issue_reference(self, tmp_path: Path) -> None:
         """Test that PR body includes 'Closes #N' when issue.json exists."""
-        # Create .plan/issue.json in temp directory
-        plan_dir = tmp_path / ".plan"
-        plan_dir.mkdir()
-        issue_json = plan_dir / "issue.json"
+        # Create .impl/issue.json in temp directory
+        impl_dir = tmp_path / ".impl"
+        impl_dir.mkdir()
+        issue_json = impl_dir / "issue.json"
         issue_json.write_text(
             '{"issue_number": 123, "issue_url": "https://github.com/repo/issues/123", '
             '"created_at": "2025-01-01T00:00:00Z", "synced_at": "2025-01-01T00:00:00Z"}'
@@ -466,7 +466,7 @@ class TestPostAnalysisExecution:
             .with_pr(456, url="https://github.com/repo/pull/456")
         )
 
-        # Mock Path.cwd() to return temp directory without .plan/issue.json
+        # Mock Path.cwd() to return temp directory without .impl/issue.json
         patch_path = "dot_agent_kit.data.kits.gt.kit_cli_commands.gt.submit_branch.Path.cwd"
         with patch(patch_path) as mock_cwd:
             mock_cwd.return_value = tmp_path
@@ -486,10 +486,10 @@ class TestPostAnalysisExecution:
 
     def test_post_analysis_with_issue_reference_empty_body(self, tmp_path: Path) -> None:
         """Test that PR body is just 'Closes #N' when commit message has only title."""
-        # Create .plan/issue.json in temp directory
-        plan_dir = tmp_path / ".plan"
-        plan_dir.mkdir()
-        issue_json = plan_dir / "issue.json"
+        # Create .impl/issue.json in temp directory
+        impl_dir = tmp_path / ".impl"
+        impl_dir.mkdir()
+        issue_json = impl_dir / "issue.json"
         issue_json.write_text(
             '{"issue_number": 789, "issue_url": "https://github.com/repo/issues/789", '
             '"created_at": "2025-01-01T00:00:00Z", "synced_at": "2025-01-01T00:00:00Z"}'

@@ -110,12 +110,12 @@ erk submit                 # Submit plan for remote AI implementation (GitHub Ac
 
 ```bash
 # From GitHub issue (must have 'erk-plan' label)
-erk implement 123                                   # Create worktree from issue #123
+erk implement 123                                   # Create worktree from issue 123
 erk implement https://github.com/user/repo/issues/123  # From issue URL
 
-# From plan file (anything without # prefix or URL pattern)
+# From plan file (no issue number or URL in argument)
 erk implement ./my-feature-plan.md                   # Create worktree from plan file
-erk implement 123                                    # File named "123" (no # = file path)
+erk implement 123                                    # File named "123" (when not an issue number)
 
 # With custom worktree name
 erk implement 123 --worktree-name custom-name       # Override auto-generated name

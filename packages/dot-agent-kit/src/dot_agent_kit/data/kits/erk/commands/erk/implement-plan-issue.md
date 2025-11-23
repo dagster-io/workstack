@@ -281,6 +281,8 @@ Exit with error.
 
 **Display confirmation:**
 
+**IMPORTANT:** Output each field on its own line. Preserve newlines between fields - do not concatenate into a single line.
+
 ```
 📋 Plan loaded from GitHub issue #<number>
 

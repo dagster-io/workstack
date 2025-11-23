@@ -179,6 +179,8 @@ Suggested action:
 
 After successful worktree creation, output this formatted message:
 
+**IMPORTANT:** Output each field on its own line. Preserve newlines between fields - do not concatenate into a single line.
+
 ```markdown
 ✅ Worktree created: **<worktree-name>**
 

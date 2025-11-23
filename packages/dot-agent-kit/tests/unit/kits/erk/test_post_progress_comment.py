@@ -116,9 +116,10 @@ total_steps: 5
     assert parsed_yaml["status"] == "in_progress"
     assert parsed_yaml["completed_steps"] == 3
     assert parsed_yaml["total_steps"] == 5
-    assert parsed_yaml["percentage"] == 60
     assert parsed_yaml["step_description"] == "Phase 1: Create abstraction"
     assert "timestamp" in parsed_yaml
+    # Verify percentage is NOT present (removed per refactoring)
+    assert "percentage" not in parsed_yaml
 
 
 def test_success_case_100_percent(tmp_path: Path, monkeypatch) -> None:

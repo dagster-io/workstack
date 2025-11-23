@@ -5,8 +5,10 @@ import pytest
 from erk.integrations.github.metadata_blocks import (
     ImplementationStatusSchema,
     MetadataBlock,
+    ProgressStatusSchema,
     create_implementation_status_block,
     create_metadata_block,
+    create_progress_status_block,
     extract_metadata_value,
     find_metadata_block,
     parse_metadata_blocks,
@@ -33,7 +35,6 @@ def test_create_block_with_valid_schema() -> None:
         "status": "complete",
         "completed_steps": 5,
         "total_steps": 5,
-        "summary": "All done",
         "timestamp": "2025-11-22T12:00:00Z",
     }
     block = create_metadata_block(
@@ -52,7 +53,6 @@ def test_create_block_with_invalid_data_raises() -> None:
         "status": "invalid-status",
         "completed_steps": 3,
         "total_steps": 5,
-        "summary": "Test",
         "timestamp": "2025-11-22T12:00:00Z",
     }
 
@@ -131,7 +131,7 @@ def test_render_special_characters() -> None:
 
 
 def test_schema_validation_accepts_valid_data() -> None:
-    """Test ImplementationStatusSchema accepts valid data."""
+    """Test ImplementationStatusSchema accepts valid data with summary."""
     schema = ImplementationStatusSchema()
     data = {
         "status": "in_progress",
@@ -149,7 +149,7 @@ def test_schema_validation_rejects_missing_fields() -> None:
     data = {
         "status": "complete",
         "completed_steps": 5,
-        # Missing total_steps, summary, timestamp
+        # Missing total_steps, timestamp
     }
 
     with pytest.raises(ValueError) as exc_info:
@@ -157,7 +157,6 @@ def test_schema_validation_rejects_missing_fields() -> None:
 
     error_msg = str(exc_info.value)
     assert "Missing required fields" in error_msg
-    assert "summary" in error_msg
     assert "timestamp" in error_msg
     assert "total_steps" in error_msg
 
@@ -169,7 +168,6 @@ def test_schema_validation_rejects_invalid_status() -> None:
         "status": "invalid-status",
         "completed_steps": 3,
         "total_steps": 5,
-        "summary": "Test",
         "timestamp": "2025-11-22T12:00:00Z",
     }
 
@@ -184,7 +182,6 @@ def test_schema_validation_rejects_non_integer_completed_steps() -> None:
         "status": "complete",
         "completed_steps": "not-an-int",
         "total_steps": 5,
-        "summary": "Test",
         "timestamp": "2025-11-22T12:00:00Z",
     }
 
@@ -199,7 +196,6 @@ def test_schema_validation_rejects_non_integer_total_steps() -> None:
         "status": "complete",
         "completed_steps": 5,
         "total_steps": 5.5,
-        "summary": "Test",
         "timestamp": "2025-11-22T12:00:00Z",
     }
 
@@ -214,7 +210,6 @@ def test_schema_validation_rejects_negative_completed_steps() -> None:
         "status": "complete",
         "completed_steps": -1,
         "total_steps": 5,
-        "summary": "Test",
         "timestamp": "2025-11-22T12:00:00Z",
     }
 
@@ -229,7 +224,6 @@ def test_schema_validation_rejects_zero_total_steps() -> None:
         "status": "complete",
         "completed_steps": 0,
         "total_steps": 0,
-        "summary": "Test",
         "timestamp": "2025-11-22T12:00:00Z",
     }
 
@@ -244,7 +238,6 @@ def test_schema_validation_rejects_completed_exceeds_total() -> None:
         "status": "complete",
         "completed_steps": 10,
         "total_steps": 5,
-        "summary": "Test",
         "timestamp": "2025-11-22T12:00:00Z",
     }
 
@@ -256,6 +249,105 @@ def test_schema_get_key() -> None:
     """Test schema returns correct key."""
     schema = ImplementationStatusSchema()
     assert schema.get_key() == "erk-implementation-status"
+
+
+def test_implementation_status_schema_accepts_without_summary() -> None:
+    """Test ImplementationStatusSchema accepts data without optional summary."""
+    schema = ImplementationStatusSchema()
+    data = {
+        "status": "complete",
+        "completed_steps": 5,
+        "total_steps": 5,
+        "timestamp": "2025-11-22T12:00:00Z",
+    }
+    schema.validate(data)  # Should not raise
+
+
+# === ProgressStatusSchema Tests ===
+
+
+def test_progress_schema_validates_valid_data() -> None:
+    """Test ProgressStatusSchema accepts valid data."""
+    schema = ProgressStatusSchema()
+    data = {
+        "status": "in_progress",
+        "completed_steps": 3,
+        "total_steps": 5,
+        "timestamp": "2025-11-22T12:00:00Z",
+        "step_description": "Phase 1 complete",
+    }
+    schema.validate(data)  # Should not raise
+
+
+def test_progress_schema_validates_without_step_description() -> None:
+    """Test ProgressStatusSchema accepts data without optional step_description."""
+    schema = ProgressStatusSchema()
+    data = {
+        "status": "in_progress",
+        "completed_steps": 2,
+        "total_steps": 5,
+        "timestamp": "2025-11-22T12:00:00Z",
+    }
+    schema.validate(data)  # Should not raise
+
+
+def test_progress_schema_rejects_missing_required_field() -> None:
+    """Test ProgressStatusSchema rejects missing required fields."""
+    schema = ProgressStatusSchema()
+    data = {
+        "status": "in_progress",
+        "completed_steps": 3,
+        # missing total_steps
+        "timestamp": "2025-11-22T12:00:00Z",
+    }
+    with pytest.raises(ValueError, match="Missing required fields: total_steps"):
+        schema.validate(data)
+
+
+def test_progress_schema_rejects_invalid_status() -> None:
+    """Test ProgressStatusSchema rejects invalid status values."""
+    schema = ProgressStatusSchema()
+    data = {
+        "status": "invalid",
+        "completed_steps": 3,
+        "total_steps": 5,
+        "timestamp": "2025-11-22T12:00:00Z",
+    }
+    with pytest.raises(ValueError, match="Invalid status"):
+        schema.validate(data)
+
+
+def test_progress_schema_get_key() -> None:
+    """Test ProgressStatusSchema returns correct key."""
+    schema = ProgressStatusSchema()
+    assert schema.get_key() == "erk-implementation-status"
+
+
+def test_create_progress_status_block_with_description() -> None:
+    """Test create_progress_status_block with step_description."""
+    block = create_progress_status_block(
+        status="in_progress",
+        completed_steps=3,
+        total_steps=5,
+        timestamp="2025-11-22T12:00:00Z",
+        step_description="Phase 1 complete",
+    )
+    assert block.key == "erk-implementation-status"
+    assert block.data["status"] == "in_progress"
+    assert block.data["completed_steps"] == 3
+    assert block.data["step_description"] == "Phase 1 complete"
+
+
+def test_create_progress_status_block_without_description() -> None:
+    """Test create_progress_status_block without step_description."""
+    block = create_progress_status_block(
+        status="in_progress",
+        completed_steps=2,
+        total_steps=5,
+        timestamp="2025-11-22T12:00:00Z",
+    )
+    assert block.key == "erk-implementation-status"
+    assert "step_description" not in block.data
 
 
 # === Parsing Tests ===
@@ -449,8 +541,8 @@ def test_convenience_function_create_implementation_status_block() -> None:
         status="in_progress",
         completed_steps=3,
         total_steps=5,
-        summary="Making progress",
         timestamp="2025-11-22T12:00:00Z",
+        summary="Making progress",
     )
 
     assert block.key == "erk-implementation-status"
@@ -461,6 +553,20 @@ def test_convenience_function_create_implementation_status_block() -> None:
     assert block.data["timestamp"] == "2025-11-22T12:00:00Z"
 
 
+def test_convenience_function_create_implementation_status_block_without_summary() -> None:
+    """Test create_implementation_status_block without optional summary."""
+    block = create_implementation_status_block(
+        status="complete",
+        completed_steps=5,
+        total_steps=5,
+        timestamp="2025-11-22T12:00:00Z",
+    )
+
+    assert block.key == "erk-implementation-status"
+    assert block.data["status"] == "complete"
+    assert "summary" not in block.data
+
+
 def test_convenience_function_validates_data() -> None:
     """Test convenience function validates data."""
     with pytest.raises(ValueError, match="Invalid status"):
@@ -468,8 +574,8 @@ def test_convenience_function_validates_data() -> None:
             status="bad-status",
             completed_steps=3,
             total_steps=5,
-            summary="Test",
             timestamp="2025-11-22T12:00:00Z",
+            summary="Test",
         )
 
 

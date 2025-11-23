@@ -31,6 +31,10 @@ import click
 
 from erk.core.github.issues import RealGitHubIssues
 from erk.core.impl_folder import parse_progress_frontmatter, read_issue_reference
+from erk.integrations.github.metadata_blocks import (
+    create_implementation_status_block,
+    render_metadata_block,
+)
 
 
 @dataclass(frozen=True)
@@ -146,23 +150,20 @@ def post_completion_comment(summary: str) -> None:
     # Generate timestamp
     timestamp = datetime.now(UTC).isoformat()
 
-    # Escape summary for YAML (wrap in quotes to protect special chars)
-    yaml_safe_summary = summary.replace('"', '\\"')
+    # Create metadata block using shared library
+    block = create_implementation_status_block(
+        status="complete",
+        completed_steps=total,
+        total_steps=total,
+        timestamp=timestamp,
+        summary=summary,
+    )
 
-    # Format completion comment with details + YAML
-    comment_body = f"""✅ Implementation complete
+    # Render metadata block
+    metadata_markdown = render_metadata_block(block)
 
-<details>
-<summary><code>erk-implementation-status</code></summary>
-
-```yaml
-status: complete
-completed_steps: {total}
-total_steps: {total}
-summary: "{yaml_safe_summary}"
-timestamp: "{timestamp}"
-```
-</details>"""
+    # Format comment with emoji prefix + metadata
+    comment_body = f"✅ Implementation complete\n\n{metadata_markdown}"
 
     # Post comment to GitHub
     try:

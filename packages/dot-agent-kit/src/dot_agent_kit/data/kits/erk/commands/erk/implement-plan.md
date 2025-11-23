@@ -192,6 +192,7 @@ dot-agent run erk post-start-comment 2>/dev/null || true
 ```
 
 This posts a comment containing:
+
 - Worktree name and branch name
 - Complete list of all implementation steps
 - Structured YAML metadata

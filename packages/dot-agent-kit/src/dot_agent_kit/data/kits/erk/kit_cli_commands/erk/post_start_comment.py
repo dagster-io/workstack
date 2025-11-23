@@ -31,9 +31,16 @@ from erk_shared.github.metadata import (
     create_start_status_block,
     render_erk_issue_event,
 )
-from erk_shared.impl_folder import extract_plan_steps, parse_progress_frontmatter, read_issue_reference
+from erk_shared.impl_folder import (
+    extract_plan_steps,
+    parse_progress_frontmatter,
+    read_issue_reference,
+)
 
-from dot_agent_kit.context_helpers import require_github_issues, require_repo_root
+from dot_agent_kit.context_helpers import (
+    require_github_issues,
+    require_repo_root,
+)
 
 
 @dataclass(frozen=True)
@@ -161,7 +168,7 @@ def post_start_comment(ctx: click.Context) -> None:
             message=str(e),
         )
         click.echo(json.dumps(asdict(result), indent=2))
-        raise SystemExit(0)
+        raise SystemExit(0) from e
     except ValueError as e:
         result = StartError(
             success=False,
@@ -169,7 +176,7 @@ def post_start_comment(ctx: click.Context) -> None:
             message=str(e),
         )
         click.echo(json.dumps(asdict(result), indent=2))
-        raise SystemExit(0)
+        raise SystemExit(0) from e
 
     # Read total steps from progress.md frontmatter
     progress_file = impl_dir / "progress.md"

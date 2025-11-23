@@ -37,7 +37,7 @@ Note: `erk` was designed to work with `gt` (graphite) for managing stacks of bra
 
 ## Plan Orientation
 
-`erk` has first-class support for planning workflows. You can create plan documents and then use the `--plan` flag on `create` to create new worktrees that contain planning documents in `.impl`, which by default is in `.gitignore`. There are also bundled claude code commands (installable via `dot-agent`) that facilitate the creation, enrichement, and implementation of these plans.
+`erk` has first-class support for planning workflows. You can create plan documents and then use the `--from-plan` flag on `create` to create new worktrees that contain planning documents in `.impl`, which by default is in `.gitignore`. There are also bundled claude code commands (installable via `dot-agent`) that facilitate the creation, enrichement, and implementation of these plans.
 
 ## Installation
 
@@ -87,7 +87,7 @@ erk create login --from-branch feature/login # Creates worktree 'login' from bra
 erk create --from-current-branch             # Move current branch to new worktree
 
 # From a plan file
-erk create --plan Add_Auth.md                # Creates worktree with .impl/ folder
+erk create --from-plan Add_Auth.md           # Creates worktree with .impl/ folder
 ```
 
 ### Managing Worktrees
@@ -466,7 +466,7 @@ erk checkout root
 # 2. Create your plan and save it to disk (e.g. Add_User_Auth.md)
 
 # 3. Create worktree from plan
-erk create --plan Add_User_Auth.md
+erk create --from-plan Add_User_Auth.md
 # This automatically:
 #   - Creates worktree named 'add-user-auth'
 #   - Creates .impl/ folder with plan.md (immutable) and progress.md (mutable)
@@ -579,7 +579,7 @@ The traditional erk planning workflow can be fully automated with kit-installed 
 
 1. Discuss and plan with Claude in conversation
 2. Manually copy/save plan to a markdown file
-3. Run `erk create --plan <file>.md`
+3. Run `erk create --from-plan <file>.md`
 4. Manually track implementation progress
 
 **AI-Augmented Approach (With Kits):**
@@ -629,7 +629,7 @@ Creates a new erk worktree from a saved plan file.
 **What it does:**
 
 - Auto-detects most recent `*-plan.md` at repo root
-- Runs `erk create --plan <file>`
+- Runs `erk create --from-plan <file>`
 - Moves plan to `.impl/plan.md` in new worktree
 - Creates `.impl/progress.md` for tracking step completion
 - Displays plan content and next steps

@@ -14,7 +14,7 @@ You are a specialized agent for creating erk worktrees from plan files. You orch
 
 1. **Detect Plan File**: Auto-detect the most recent `*-plan.md` file at repository root
 2. **Validate Plan**: Ensure plan file exists, is readable, and not empty
-3. **Create Worktree**: Execute `erk create --plan` with JSON output parsing
+3. **Create Worktree**: Execute `erk create --from-plan` with JSON output parsing
 4. **Display Next Steps**: Show worktree information and implementation command
 
 ## Complete Workflow
@@ -95,7 +95,7 @@ Suggested action:
 Execute the erk CLI command with JSON output:
 
 ```bash
-erk create --plan <plan-file-path> --json --stay
+erk create --from-plan <plan-file-path> --json --stay
 ```
 
 **Parse JSON output:**
@@ -143,7 +143,7 @@ Details: [parse error message]
 Suggested action:
   1. Check erk version: erk --version
   2. Ensure --json flag is supported (v0.2.0+)
-  3. Try running manually: erk create --plan <file> --json
+  3. Try running manually: erk create --from-plan <file> --json
 ```
 
 **Error: Worktree already exists**
@@ -254,7 +254,7 @@ Before completing your work, verify:
 
 - ✅ Detect plan file at repository root
 - ✅ Validate plan file (exists, readable, not empty)
-- ✅ Run `erk create --plan <file> --json --stay`
+- ✅ Run `erk create --from-plan <file> --json --stay`
 - ✅ Parse JSON output
 - ✅ Display formatted success message
 

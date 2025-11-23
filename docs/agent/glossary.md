@@ -316,7 +316,7 @@ class DryRunGit(Git):
 
 A `.plan/` folder containing implementation plans and progress tracking for a feature.
 
-**Usage**: `erk create --plan my-plan.md my-feature`
+**Usage**: `erk create --from-plan my-plan.md my-feature`
 
 **Behavior**:
 
@@ -340,7 +340,7 @@ A `.plan/` folder containing implementation plans and progress tracking for a fe
 echo "## Implementation Plan\n1. Step 1\n2. Step 2" > plan.md
 
 # Create worktree from plan
-erk create --plan plan.md my-feature
+erk create --from-plan plan.md my-feature
 
 # Plan structure created:
 # ~/erks/erk/my-feature/.plan/

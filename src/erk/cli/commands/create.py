@@ -376,8 +376,8 @@ def _create_json_response(
     help="Skip running post-create commands from config.toml.",
 )
 @click.option(
-    "--plan",
-    "plan_file",
+    "--from-plan",
+    "from_plan",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
     help=(
         "Path to a plan markdown file. Will derive worktree name from filename "
@@ -389,7 +389,7 @@ def _create_json_response(
 @click.option(
     "--keep-plan",
     is_flag=True,
-    help="Copy the plan file instead of moving it (requires --plan).",
+    help="Copy the plan file instead of moving it (requires --from-plan).",
 )
 @click.option(
     "--copy-plan",
@@ -398,7 +398,7 @@ def _create_json_response(
     help=(
         "Copy .impl directory from current worktree to new worktree. "
         "Useful for multi-phase workflows where each phase builds on the previous plan. "
-        "Mutually exclusive with --plan."
+        "Mutually exclusive with --from-plan."
     ),
 )
 @click.option(
@@ -446,7 +446,7 @@ def create(
     branch: str | None,
     ref: str | None,
     no_post: bool,
-    plan_file: Path | None,
+    from_plan: Path | None,
     keep_plan: bool,
     copy_plan: bool,
     from_current_branch: bool,
@@ -459,7 +459,7 @@ def create(
     """Create a worktree and write a .env file.
 
     Reads config.toml for env templates and post-create commands (if present).
-    If --plan is provided, derives name from the plan filename and creates
+    If --from-plan is provided, derives name from the plan filename and creates
     .impl/ folder in the worktree.
     If --from-current-branch is provided, moves the current branch to the new worktree.
     If --from-branch is provided, creates a worktree from an existing branch.
@@ -470,9 +470,9 @@ def create(
     """
 
     # Validate mutually exclusive options
-    flags_set = sum([from_current_branch, from_branch is not None, plan_file is not None])
+    flags_set = sum([from_current_branch, from_branch is not None, from_plan is not None])
     if flags_set > 1:
-        user_output("Cannot use multiple of: --from-current-branch, --from-branch, --plan")
+        user_output("Cannot use multiple of: --from-current-branch, --from-branch, --from-plan")
         raise SystemExit(1)
 
     # Validate --json and --script are mutually exclusive
@@ -480,17 +480,18 @@ def create(
         user_output("Error: Cannot use both --json and --script")
         raise SystemExit(1)
 
-    # Validate --keep-plan requires --plan
-    if keep_plan and not plan_file:
-        user_output("Error: --keep-plan requires --plan")
+    # Validate --keep-plan requires --from-plan
+    if keep_plan and not from_plan:
+        user_output("Error: --keep-plan requires --from-plan")
         raise SystemExit(1)
 
-    # Validate --copy-plan and --plan are mutually exclusive
-    if copy_plan and plan_file is not None:
+    # Validate --copy-plan and --from-plan are mutually exclusive
+    if copy_plan and from_plan is not None:
         user_output(
             click.style("Error: ", fg="red")
-            + "--copy-plan and --plan are mutually exclusive. "
-            + "Use --copy-plan to copy from current worktree OR --plan <file> to use a plan file."
+            + "--copy-plan and --from-plan are mutually exclusive. "
+            + "Use --copy-plan to copy from current worktree OR "
+            + "--from-plan <file> to use a plan file."
         )
         raise SystemExit(1)
 
@@ -501,7 +502,8 @@ def create(
             user_output(
                 click.style("Error: ", fg="red")
                 + f"No .impl directory found in current worktree ({ctx.cwd}). "
-                + "Use 'erk create --plan <file>' to create a worktree with a plan from a file."
+                + "Use 'erk create --from-plan <file>' to create a worktree "
+                + "with a plan from a file."
             )
             raise SystemExit(1)
 
@@ -539,13 +541,13 @@ def create(
         if not name:
             name = sanitize_worktree_name(from_branch)
 
-    # Handle --plan flag
-    elif plan_file:
+    # Handle --from-plan flag
+    elif from_plan:
         if name:
-            user_output("Cannot specify both NAME and --plan. Use one or the other.")
+            user_output("Cannot specify both NAME and --from-plan. Use one or the other.")
             raise SystemExit(1)
         # Derive name from plan filename (strip extension)
-        plan_stem = plan_file.stem  # filename without extension
+        plan_stem = from_plan.stem  # filename without extension
         cleaned_stem = strip_plan_from_filename(plan_stem)
         base_name = sanitize_worktree_name(cleaned_stem)
         # Note: Apply ensure_unique_worktree_name() and truncation after getting erks_dir
@@ -555,7 +557,7 @@ def create(
     else:
         if not name:
             user_output(
-                "Must provide NAME or --plan or --from-branch or --from-current-branch option."
+                "Must provide NAME or --from-plan or --from-branch or --from-current-branch option."
             )
             raise SystemExit(1)
 
@@ -563,7 +565,7 @@ def create(
     assert name is not None, "name must be set by now"
 
     # Track if name came from plan file (will need unique naming)
-    is_plan_derived = plan_file is not None
+    is_plan_derived = from_plan is not None
 
     # Sanitize the name to ensure consistency (truncate to 30 chars, normalize)
     # This applies to user-provided names as well as derived names
@@ -705,11 +707,11 @@ def create(
     (wt_path / ".env").write_text(env_content, encoding="utf-8")
 
     # Create impl folder if plan file provided
-    # Track impl folder destination: set to .impl/ path only if --plan was provided
+    # Track impl folder destination: set to .impl/ path only if --from-plan was provided
     impl_folder_destination: Path | None = None
-    if plan_file:
+    if from_plan:
         # Read plan content from source file
-        plan_content = plan_file.read_text(encoding="utf-8")
+        plan_content = from_plan.read_text(encoding="utf-8")
 
         # Create .impl/ folder in new worktree
         impl_folder_destination = create_impl_folder(wt_path, plan_content)
@@ -719,7 +721,7 @@ def create(
             if not script and not output_json:
                 user_output(f"Copied plan to {impl_folder_destination}")
         else:
-            plan_file.unlink()  # Remove source file
+            from_plan.unlink()  # Remove source file
             if not script and not output_json:
                 user_output(f"Moved plan to {impl_folder_destination}")
 

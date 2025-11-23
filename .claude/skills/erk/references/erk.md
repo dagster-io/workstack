@@ -356,7 +356,7 @@ erk create my-work --from-branch feature/existing
 erk create --from-current-branch
 
 # Create from plan file
-erk create --plan implementation-plan.md
+erk create --from-plan implementation-plan.md
 erk create auth --plan add-auth.md
 
 # Skip post-create commands
@@ -376,7 +376,7 @@ erk create my-feature --ref develop
 **Plan folder behavior:**
 
 ```bash
-erk create --plan plan.md my-feature
+erk create --from-plan plan.md my-feature
 # 1. Creates worktree ~/erks/repo/my-feature/
 # 2. Creates .plan/ folder with:
 #    - plan.md (immutable - original plan content)
@@ -623,7 +623,7 @@ cd /path/to/repo/root
 # Create plan file: Add_User_Auth.md
 
 # 2. Create worktree from plan
-erk create --plan Add_User_Auth.md
+erk create --from-plan Add_User_Auth.md
 # Creates worktree "add-user-auth"
 # Creates .plan/ folder with plan.md and progress.md
 
@@ -867,7 +867,7 @@ cd /path/to/repo/root
 # Create plan: Add_Authentication.md
 
 # 2. Create worktree from plan
-erk create --plan Add_Authentication.md
+erk create --from-plan Add_Authentication.md
 
 # 3. Implement
 erk checkout add-authentication

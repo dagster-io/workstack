@@ -80,6 +80,10 @@ def _detect_target_type(target: str) -> TargetInfo:
         issue_number = match.group(1)
         return TargetInfo(target_type="issue_url", issue_number=issue_number)
 
+    # Check if plain digits (issue number without # prefix)
+    if target.isdigit():
+        return TargetInfo(target_type="issue_number", issue_number=target)
+
     # Otherwise, treat as file path
     return TargetInfo(target_type="file_path", issue_number=None)
 
@@ -472,17 +476,21 @@ def implement(
     """Create worktree from GitHub issue or plan file and invoke Claude.
 
     TARGET can be:
-    - GitHub issue number with # prefix (e.g., #123)
+    - GitHub issue number (e.g., #123 or 123)
     - GitHub issue URL (e.g., https://github.com/user/repo/issues/123)
-    - Path to plan file (e.g., ./my-feature-plan.md or 123)
+    - Path to plan file (e.g., ./my-feature-plan.md)
+
+    Note: Plain numbers (e.g., 809) are always interpreted as GitHub issues.
+          For files with numeric names, use ./ prefix (e.g., ./809).
 
     For GitHub issues, the issue must have the 'erk-plan' label.
 
     Examples:
 
     \b
-      # From GitHub issue number (requires # prefix)
-      erk implement #123
+      # From GitHub issue number (# prefix optional)
+      erk implement 809
+      erk implement #809
 
     \b
       # From GitHub issue URL
@@ -493,16 +501,16 @@ def implement(
       erk implement ./my-feature-plan.md
 
     \b
-      # File named "123" (no # prefix means file path)
-      erk implement 123
+      # File named "809" (use ./ prefix for numeric filenames)
+      erk implement ./809
 
     \b
       # With custom worktree name
-      erk implement #123 --worktree-name my-custom-name
+      erk implement 809 --worktree-name my-custom-name
 
     \b
       # Dry run to see what would happen
-      erk implement #123 --dry-run
+      erk implement 809 --dry-run
     """
     # Detect target type
     target_info = _detect_target_type(target)

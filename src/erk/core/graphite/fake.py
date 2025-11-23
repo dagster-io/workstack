@@ -23,6 +23,7 @@ class FakeGraphite(Graphite):
         self,
         *,
         sync_raises: Exception | None = None,
+        restack_raises: Exception | None = None,
         submit_branch_raises: Exception | None = None,
         track_branch_raises: Exception | None = None,
         pr_info: dict[str, PullRequestInfo] | None = None,
@@ -33,6 +34,7 @@ class FakeGraphite(Graphite):
 
         Args:
             sync_raises: Exception to raise when sync() is called (for testing error cases)
+            restack_raises: Exception to raise when restack() is called
             submit_branch_raises: Exception to raise when submit_branch() is called
             track_branch_raises: Exception to raise when track_branch() is called
             pr_info: Mapping of branch name -> PullRequestInfo for get_prs_from_graphite()
@@ -40,9 +42,11 @@ class FakeGraphite(Graphite):
             stacks: Mapping of branch name -> stack (list of branches from trunk to leaf)
         """
         self._sync_raises = sync_raises
+        self._restack_raises = restack_raises
         self._submit_branch_raises = submit_branch_raises
         self._track_branch_raises = track_branch_raises
         self._sync_calls: list[tuple[Path, bool, bool]] = []
+        self._restack_calls: list[tuple[Path, bool, bool]] = []
         self._submit_branch_calls: list[tuple[Path, str, bool]] = []
         self._track_branch_calls: list[tuple[Path, str, str]] = []
         self._pr_info = pr_info if pr_info is not None else {}
@@ -62,6 +66,16 @@ class FakeGraphite(Graphite):
 
         if self._sync_raises is not None:
             raise self._sync_raises
+
+    def restack(self, repo_root: Path, *, no_interactive: bool, quiet: bool) -> None:
+        """Fake restack operation.
+
+        Tracks calls for verification and raises configured exception if set.
+        """
+        self._restack_calls.append((repo_root, no_interactive, quiet))
+
+        if self._restack_raises is not None:
+            raise self._restack_raises
 
     def get_prs_from_graphite(self, git_ops: Git, repo_root: Path) -> dict[str, PullRequestInfo]:
         """Return pre-configured PR info for tests."""
@@ -144,6 +158,16 @@ class FakeGraphite(Graphite):
         This property is for test assertions only.
         """
         return self._sync_calls
+
+    @property
+    def restack_calls(self) -> list[tuple[Path, bool, bool]]:
+        """Get the list of restack() calls that were made.
+
+        Returns list of (repo_root, no_interactive, quiet) tuples.
+
+        This property is for test assertions only.
+        """
+        return self._restack_calls
 
     @property
     def track_branch_calls(self) -> list[tuple[Path, str, str]]:

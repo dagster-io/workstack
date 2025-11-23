@@ -81,6 +81,42 @@ class RealGraphite(Graphite):
         # Invalidate branches cache - gt sync modifies Graphite metadata
         self._branches_cache = None
 
+    def restack(self, repo_root: Path, *, no_interactive: bool, quiet: bool) -> None:
+        """Run gt restack to rebase the current stack.
+
+        More surgical than sync - only affects the current stack, not all branches
+        in the repository. Safe to use with --no-interactive in automated workflows.
+
+        Error output (stderr) is always captured to ensure RuntimeError
+        includes complete error messages for debugging. In verbose mode (!quiet),
+        stderr is displayed to the user after successful execution.
+
+        Args:
+            repo_root: Repository root directory
+            no_interactive: If True, pass --no-interactive flag to prevent prompts
+            quiet: If True, pass --quiet flag to gt restack for minimal output
+        """
+        cmd = ["gt", "restack"]
+        if no_interactive:
+            cmd.append("--no-interactive")
+        if quiet:
+            cmd.append("--quiet")
+
+        result = run_subprocess_with_context(
+            cmd,
+            operation_context="restack with Graphite (gt restack)",
+            cwd=repo_root,
+            stdout=DEVNULL if quiet else sys.stdout,
+            stderr=subprocess.PIPE,
+        )
+
+        # Display stderr in verbose mode after successful execution
+        if not quiet and result.stderr:
+            user_output(result.stderr, nl=False)
+
+        # Invalidate branches cache - gt restack modifies Graphite metadata
+        self._branches_cache = None
+
     def get_prs_from_graphite(self, git_ops: Git, repo_root: Path) -> dict[str, PullRequestInfo]:
         """Get PR information from Graphite's .git/.graphite_pr_info file."""
         git_dir = git_ops.get_git_common_dir(repo_root)

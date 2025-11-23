@@ -276,13 +276,13 @@ def _create_worktree_with_plan_content(
         user_output(f"Would create worktree '{name}'")
         user_output(f"  {plan_source.dry_run_description}")
         if submit:
-            user_output(f'  Then run: {_build_claude_command("/erk:implement-plan", dangerous)}')
-            user_output(f'  Then run: {_build_claude_command("/fast-ci", dangerous)}')
+            user_output(f"  Then run: {_build_claude_command('/erk:implement-plan', dangerous)}")
+            user_output(f"  Then run: {_build_claude_command('/fast-ci', dangerous)}")
             user_output(
-                f'  Then run: {_build_claude_command("/gt:submit-squashed-branch", dangerous)}'
+                f"  Then run: {_build_claude_command('/gt:submit-squashed-branch', dangerous)}"
             )
         else:
-            user_output(f'  Then run: {_build_claude_command("/erk:implement-plan", dangerous)}')
+            user_output(f"  Then run: {_build_claude_command('/erk:implement-plan', dangerous)}")
         return None
 
     # Create worktree
@@ -373,12 +373,12 @@ def _output_activation_instructions(
         # Conditionally select command sequence based on submit flag
         if submit:
             claude_command = (
-                f'{_build_claude_command("/erk:implement-plan", dangerous)} && '
-                f'{_build_claude_command("/fast-ci", dangerous)} && '
-                f'{_build_claude_command("/gt:submit-squashed-branch", dangerous)}\n'
+                f"{_build_claude_command('/erk:implement-plan', dangerous)} && "
+                f"{_build_claude_command('/fast-ci', dangerous)} && "
+                f"{_build_claude_command('/gt:submit-squashed-branch', dangerous)}\n"
             )
         else:
-            claude_command = f'{_build_claude_command("/erk:implement-plan", dangerous)}\n'
+            claude_command = f"{_build_claude_command('/erk:implement-plan', dangerous)}\n"
 
         full_script = base_script + claude_command
 
@@ -396,9 +396,9 @@ def _output_activation_instructions(
         user_output(f"  1. Change to worktree:  erk checkout {branch}")
         if submit:
             user_output("  2. Run implementation, CI, and submit PR:")
-            user_output(f'     {_build_claude_command("/erk:implement-plan", dangerous)}')
-            user_output(f'     {_build_claude_command("/fast-ci", dangerous)}')
-            user_output(f'     {_build_claude_command("/gt:submit-squashed-branch", dangerous)}')
+            user_output(f"     {_build_claude_command('/erk:implement-plan', dangerous)}")
+            user_output(f"     {_build_claude_command('/fast-ci', dangerous)}")
+            user_output(f"     {_build_claude_command('/gt:submit-squashed-branch', dangerous)}")
         else:
             claude_cmd = _build_claude_command("/erk:implement-plan", dangerous)
             user_output(f"  2. Run implementation:  {claude_cmd}")

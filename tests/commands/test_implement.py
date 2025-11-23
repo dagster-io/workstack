@@ -678,3 +678,233 @@ def test_implement_plan_file_uses_git_when_graphite_disabled() -> None:
         assert "Created worktree" in result.output
         # Verify worktree was created
         assert len(git.added_worktrees) == 1
+
+
+# Dangerous Flag Tests
+
+
+def test_implement_with_dangerous_flag_in_script_mode() -> None:
+    """Test that --dangerous flag adds --dangerously-skip-permissions to generated script."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+
+        result = runner.invoke(implement, ["#42", "--dangerous", "--script"], obj=ctx)
+
+        assert result.exit_code == 0
+
+        # Verify script path is output
+        assert result.stdout
+        script_path = Path(result.stdout.strip())
+
+        # Verify script file exists and read its content
+        assert script_path.exists()
+        script_content = script_path.read_text(encoding="utf-8")
+
+        # Verify --dangerously-skip-permissions flag is present
+        assert "--dangerously-skip-permissions" in script_content
+        expected_cmd = (
+            "claude --permission-mode acceptEdits --dangerously-skip-permissions "
+            '"/erk:implement-plan"'
+        )
+        assert expected_cmd in script_content
+
+
+def test_implement_without_dangerous_flag_in_script_mode() -> None:
+    """Test that script without --dangerous flag does not include --dangerously-skip-permissions."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+
+        result = runner.invoke(implement, ["#42", "--script"], obj=ctx)
+
+        assert result.exit_code == 0
+
+        # Verify script path is output
+        assert result.stdout
+        script_path = Path(result.stdout.strip())
+
+        # Verify script file exists and read its content
+        assert script_path.exists()
+        script_content = script_path.read_text(encoding="utf-8")
+
+        # Verify --dangerously-skip-permissions flag is NOT present
+        assert "--dangerously-skip-permissions" not in script_content
+        # But standard flags should be present
+        assert 'claude --permission-mode acceptEdits "/erk:implement-plan"' in script_content
+
+
+def test_implement_with_dangerous_and_submit_flags() -> None:
+    """Test that --dangerous --submit combination adds flag to all three commands."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+
+        result = runner.invoke(implement, ["#42", "--dangerous", "--submit", "--script"], obj=ctx)
+
+        assert result.exit_code == 0
+
+        # Verify script path is output
+        assert result.stdout
+        script_path = Path(result.stdout.strip())
+
+        # Verify script file exists and read its content
+        assert script_path.exists()
+        script_content = script_path.read_text(encoding="utf-8")
+
+        # Verify all three commands have the dangerous flag
+        assert script_content.count("--dangerously-skip-permissions") == 3
+        expected_implement = (
+            "claude --permission-mode acceptEdits --dangerously-skip-permissions "
+            '"/erk:implement-plan"'
+        )
+        expected_ci = (
+            'claude --permission-mode acceptEdits --dangerously-skip-permissions "/fast-ci"'
+        )
+        expected_submit = (
+            "claude --permission-mode acceptEdits --dangerously-skip-permissions "
+            '"/gt:submit-squashed-branch"'
+        )
+        assert expected_implement in script_content
+        assert expected_ci in script_content
+        assert expected_submit in script_content
+
+
+def test_implement_with_dangerous_flag_in_dry_run() -> None:
+    """Test that --dangerous flag shows in dry-run output."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+
+        result = runner.invoke(implement, ["#42", "--dangerous", "--dry-run"], obj=ctx)
+
+        assert result.exit_code == 0
+        assert "Dry-run mode" in result.output
+
+        # Verify dangerous flag is shown in the command
+        assert "--dangerously-skip-permissions" in result.output
+        expected_cmd = (
+            "claude --permission-mode acceptEdits --dangerously-skip-permissions "
+            '"/erk:implement-plan"'
+        )
+        assert expected_cmd in result.output
+
+        # Verify no worktree was created
+        assert len(git.added_worktrees) == 0
+
+
+def test_implement_with_dangerous_and_submit_in_dry_run() -> None:
+    """Test that --dangerous --submit shows flag in all three commands during dry-run."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+
+        result = runner.invoke(implement, ["#42", "--dangerous", "--submit", "--dry-run"], obj=ctx)
+
+        assert result.exit_code == 0
+        assert "Dry-run mode" in result.output
+
+        # Verify all three commands show the dangerous flag
+        assert result.output.count("--dangerously-skip-permissions") == 3
+
+        # Verify no worktree was created
+        assert len(git.added_worktrees) == 0
+
+
+def test_implement_plan_file_with_dangerous_flag() -> None:
+    """Test that --dangerous flag works with plan file mode."""
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        ctx = build_workspace_test_context(env, git=git)
+
+        # Create plan file
+        plan_content = "# Implementation Plan\n\nImplement feature X."
+        plan_file = env.cwd / "my-feature-plan.md"
+        plan_file.write_text(plan_content, encoding="utf-8")
+
+        result = runner.invoke(implement, [str(plan_file), "--dangerous", "--script"], obj=ctx)
+
+        assert result.exit_code == 0
+
+        # Verify script path is output
+        assert result.stdout
+        script_path = Path(result.stdout.strip())
+
+        # Verify script file exists and read its content
+        assert script_path.exists()
+        script_content = script_path.read_text(encoding="utf-8")
+
+        # Verify dangerous flag is present
+        assert "--dangerously-skip-permissions" in script_content
+
+        # Verify plan file was moved to worktree (deleted from original location)
+        assert not plan_file.exists()
+
+
+def test_implement_with_dangerous_shows_in_manual_instructions() -> None:
+    """Test that --dangerous flag appears in manual instructions when shell integration disabled."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+
+        # Don't use --script flag to trigger manual instructions
+        result = runner.invoke(implement, ["#42", "--dangerous"], obj=ctx)
+
+        assert result.exit_code == 0
+        assert "Next steps:" in result.output
+
+        # Verify dangerous flag shown in manual instructions
+        assert "--dangerously-skip-permissions" in result.output

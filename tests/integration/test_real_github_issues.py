@@ -16,15 +16,16 @@ from tests.integration.test_helpers import mock_subprocess_run
 
 
 def test_create_issue_success(monkeypatch: MonkeyPatch) -> None:
-    """Test create_issue calls gh CLI with correct arguments."""
+    """Test create_issue calls gh CLI with correct arguments and parses URL."""
     created_commands = []
 
     def mock_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
         created_commands.append(cmd)
+        # gh issue create returns a URL, not JSON
         return subprocess.CompletedProcess(
             args=cmd,
             returncode=0,
-            stdout="42",
+            stdout="https://github.com/owner/repo/issues/42\n",
             stderr="",
         )
 
@@ -37,7 +38,7 @@ def test_create_issue_success(monkeypatch: MonkeyPatch) -> None:
             labels=["plan", "erk"],
         )
 
-        # Verify issue number returned
+        # Verify issue number extracted from URL
         assert issue_num == 42
 
         # Verify gh command structure
@@ -53,8 +54,9 @@ def test_create_issue_success(monkeypatch: MonkeyPatch) -> None:
         assert "--label" in cmd
         assert "plan" in cmd
         assert "erk" in cmd
-        assert "--json" in cmd
-        assert "number" in cmd
+        # Verify --json and --jq are NOT used (they're not supported by gh issue create)
+        assert "--json" not in cmd
+        assert "--jq" not in cmd
 
 
 def test_create_issue_multiple_labels(monkeypatch: MonkeyPatch) -> None:
@@ -66,7 +68,7 @@ def test_create_issue_multiple_labels(monkeypatch: MonkeyPatch) -> None:
         return subprocess.CompletedProcess(
             args=cmd,
             returncode=0,
-            stdout="1",
+            stdout="https://github.com/owner/repo/issues/1\n",
             stderr="",
         )
 
@@ -96,7 +98,7 @@ def test_create_issue_no_labels(monkeypatch: MonkeyPatch) -> None:
         return subprocess.CompletedProcess(
             args=cmd,
             returncode=0,
-            stdout="1",
+            stdout="https://github.com/owner/repo/issues/1\n",
             stderr="",
         )
 

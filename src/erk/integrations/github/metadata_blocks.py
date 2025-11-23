@@ -119,6 +119,33 @@ class ProgressStatusSchema(MetadataBlockSchema):
         return "erk-implementation-status"
 
 
+@dataclass(frozen=True)
+class WorktreeCreationSchema(MetadataBlockSchema):
+    """Schema for erk-worktree-creation blocks."""
+
+    def validate(self, data: dict[str, Any]) -> None:
+        """Validate erk-worktree-creation data structure."""
+        required_fields = {"worktree_name", "branch_name", "timestamp"}
+
+        # Check required fields exist
+        missing = required_fields - set(data.keys())
+        if missing:
+            raise ValueError(f"Missing required fields: {', '.join(sorted(missing))}")
+
+        # Validate all fields are strings
+        for field in required_fields:
+            if not isinstance(data[field], str):
+                raise ValueError(f"{field} must be a string")
+
+        # Validate non-empty strings
+        for field in required_fields:
+            if len(data[field]) == 0:
+                raise ValueError(f"{field} must not be empty")
+
+    def get_key(self) -> str:
+        return "erk-worktree-creation"
+
+
 def create_metadata_block(
     key: str,
     data: dict[str, Any],
@@ -216,6 +243,25 @@ def create_progress_status_block(
     }
     if step_description is not None:
         data["step_description"] = step_description
+    return create_metadata_block(
+        key=schema.get_key(),
+        data=data,
+        schema=schema,
+    )
+
+
+def create_worktree_creation_block(
+    worktree_name: str,
+    branch_name: str,
+    timestamp: str,
+) -> MetadataBlock:
+    """Create an erk-worktree-creation block with validation."""
+    schema = WorktreeCreationSchema()
+    data = {
+        "worktree_name": worktree_name,
+        "branch_name": branch_name,
+        "timestamp": timestamp,
+    }
     return create_metadata_block(
         key=schema.get_key(),
         data=data,

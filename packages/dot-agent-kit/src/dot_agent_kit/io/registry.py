@@ -3,7 +3,6 @@
 import re
 import shutil
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 
 import yaml
@@ -93,9 +92,6 @@ def generate_doc_registry_content(entries: list[DocRegistryEntry]) -> str:
     # Sort entries alphabetically by kit_id
     sorted_entries = sorted(entries, key=lambda e: e.kit_id)
 
-    # Generate timestamp
-    timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-
     # Build registry content
     lines = [
         "# Kit Documentation Registry",
@@ -104,7 +100,6 @@ def generate_doc_registry_content(entries: list[DocRegistryEntry]) -> str:
         "<!-- DO NOT EDIT: Changes will be overwritten. Use 'dot-agent kit sync' -->",
         "",
         "<!-- REGISTRY_VERSION: 1 -->",
-        f"<!-- GENERATED_AT: {timestamp} -->",
         "",
         "<!-- BEGIN_ENTRIES -->",
     ]

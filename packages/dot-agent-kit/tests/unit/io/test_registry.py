@@ -301,7 +301,6 @@ def test_generate_doc_registry_content() -> None:
     assert "BEGIN_ENTRIES" in content
     assert "END_ENTRIES" in content
     assert "REGISTRY_VERSION: 1" in content
-    assert "GENERATED_AT:" in content
 
     # Should be sorted alphabetically (kit-a before kit-b)
     kit_a_pos = content.find('kit_id="kit-a"')

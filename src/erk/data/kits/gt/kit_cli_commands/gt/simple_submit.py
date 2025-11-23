@@ -255,8 +255,8 @@ def complete_submission(
         pr_title = lines[0]
         pr_body = lines[1].lstrip() if len(lines) > 1 else ""
 
-        # Prepend "Closes #N" to PR body
-        pr_body_with_issue = f"Closes #{issue_number}\n\n{pr_body}"
+        # Append "Closes #N" to PR body
+        pr_body_with_issue = f"{pr_body}\n\nCloses #{issue_number}"
 
         if not ops.github().update_pr_metadata(pr_title, pr_body_with_issue):
             if verbose:

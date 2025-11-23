@@ -4,8 +4,7 @@ from pathlib import Path
 
 import pytest
 from erk_shared.github.issues import FakeGitHubIssues, IssueInfo
-
-from erk.core.impl_folder import (
+from erk_shared.impl_folder import (
     add_worktree_creation_comment,
     copy_impl_to_worker_impl,
     create_impl_folder,
@@ -21,6 +20,7 @@ from erk.core.impl_folder import (
     update_progress,
     update_progress_frontmatter,
 )
+
 from erk.integrations.github.metadata_blocks import (
     find_metadata_block,
     parse_metadata_blocks,

@@ -8,13 +8,13 @@ from pathlib import Path
 
 import pytest
 from erk_shared.github.issues import FakeGitHubIssues
-
-from erk.core.impl_folder import (
+from erk_shared.impl_folder import (
     create_impl_folder,
     has_issue_reference,
     read_issue_reference,
     save_issue_reference,
 )
+
 from tests.test_utils import sentinel_path
 from tests.test_utils.github_helpers import create_test_issue
 

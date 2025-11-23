@@ -3,11 +3,11 @@
 from pathlib import Path
 
 from click.testing import CliRunner
+from erk_shared.impl_folder import create_impl_folder
 
 from erk.cli.commands.submit import submit_cmd
 from erk.core.git.fake import FakeGit
 from erk.core.github.fake import FakeGitHub
-from erk.core.impl_folder import create_impl_folder
 from erk.core.repo_discovery import RepoContext
 from tests.fakes.context import create_test_context
 

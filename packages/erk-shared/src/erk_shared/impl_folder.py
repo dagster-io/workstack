@@ -1,15 +1,18 @@
 """Implementation folder utilities for erk and dot-agent-kit.
 
 This module provides shared utilities for managing .impl/ folder structures:
-- issue.json: GitHub issue reference management
-- progress.md: Progress tracking with YAML front matter
-- Worktree creation comments
+- plan.md: Immutable implementation plan
+- progress.md: Mutable progress tracking with step checkboxes
+- issue.json: GitHub issue reference (optional)
+- .worker-impl/: Implementation workspace for remote AI worker
 
 These utilities are used by both erk (for local operations) and dot-agent-kit
 (for kit CLI commands).
 """
 
 import json
+import re
+import shutil
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -22,6 +25,127 @@ from erk_shared.github.metadata import (
     create_worktree_creation_block,
     render_erk_issue_event,
 )
+
+
+def create_impl_folder(worktree_path: Path, plan_content: str) -> Path:
+    """Create .impl/ folder with plan.md and progress.md files.
+
+    Args:
+        worktree_path: Path to the worktree directory
+        plan_content: Content for plan.md file
+
+    Returns:
+        Path to the created .impl/ directory
+
+    Raises:
+        FileExistsError: If .impl/ directory already exists
+    """
+    impl_folder = worktree_path / ".impl"
+
+    if impl_folder.exists():
+        raise FileExistsError(f"Implementation folder already exists at {impl_folder}")
+
+    # Create .impl/ directory
+    impl_folder.mkdir(parents=True, exist_ok=False)
+
+    # Write immutable plan.md
+    plan_file = impl_folder / "plan.md"
+    plan_file.write_text(plan_content, encoding="utf-8")
+
+    # Extract steps and generate progress.md
+    steps = extract_steps_from_plan(plan_content)
+    progress_content = _generate_progress_content(steps)
+
+    progress_file = impl_folder / "progress.md"
+    progress_file.write_text(progress_content, encoding="utf-8")
+
+    return impl_folder
+
+
+def get_impl_path(worktree_path: Path, git_ops=None) -> Path | None:
+    """Get path to plan.md in .impl/ if it exists.
+
+    Args:
+        worktree_path: Path to the worktree directory
+        git_ops: Optional Git interface for path checking (uses .exists() if None)
+
+    Returns:
+        Path to plan.md if exists, None otherwise
+    """
+    plan_file = worktree_path / ".impl" / "plan.md"
+    path_exists = git_ops.path_exists(plan_file) if git_ops is not None else plan_file.exists()
+    if path_exists:
+        return plan_file
+    return None
+
+
+def get_progress_path(worktree_path: Path) -> Path | None:
+    """Get path to progress.md if it exists.
+
+    Args:
+        worktree_path: Path to the worktree directory
+
+    Returns:
+        Path to progress.md if exists, None otherwise
+    """
+    progress_file = worktree_path / ".impl" / "progress.md"
+    if progress_file.exists():
+        return progress_file
+    return None
+
+
+def update_progress(worktree_path: Path, progress_content: str) -> None:
+    """Update progress.md with new content.
+
+    Args:
+        worktree_path: Path to the worktree directory
+        progress_content: New content for progress.md
+    """
+    progress_file = worktree_path / ".impl" / "progress.md"
+    progress_file.write_text(progress_content, encoding="utf-8")
+
+
+def extract_steps_from_plan(plan_content: str) -> list[str]:
+    """Extract numbered steps from plan markdown.
+
+    Handles various numbering formats:
+    - "1. Step description"
+    - "1) Step description"
+    - "Step 1: description"
+    - Nested: "1.1", "1.2", "2.1"
+
+    Args:
+        plan_content: Full plan markdown content
+
+    Returns:
+        List of step descriptions with their numbers
+    """
+    steps = []
+    lines = plan_content.split("\n")
+
+    # Patterns for step detection
+    # Match: "1. ", "1) ", "1.1. ", "1.1) "
+    numbered_pattern = re.compile(r"^\s*(\d+(?:\.\d+)*)[.)]")
+
+    # Match: "Step 1:", "Step 1.1:"
+    step_word_pattern = re.compile(r"^\s*Step (\d+(?:\.\d+)*):?")
+
+    for line in lines:
+        # Check numbered pattern first
+        match = numbered_pattern.match(line)
+        if match:
+            # Extract the full line as step description
+            step_text = line.strip()
+            steps.append(step_text)
+            continue
+
+        # Check "Step X:" pattern
+        match = step_word_pattern.match(line)
+        if match:
+            step_text = line.strip()
+            steps.append(step_text)
+
+    return steps
 
 
 def parse_progress_frontmatter(content: str) -> dict[str, Any] | None:
@@ -45,6 +169,119 @@ def parse_progress_frontmatter(content: str) -> dict[str, Any] | None:
         return None
 
     return metadata
+
+
+def update_progress_frontmatter(worktree_path: Path, completed: int, total: int) -> None:
+    """Update YAML front matter in progress.md with current progress.
+
+    Replaces or adds front matter section while preserving all checkbox content.
+
+    Args:
+        worktree_path: Path to the worktree directory
+        completed: Number of completed steps
+        total: Total number of steps
+    """
+    progress_file = worktree_path / ".impl" / "progress.md"
+
+    # Check if file exists before reading
+    if not progress_file.exists():
+        return
+
+    content = progress_file.read_text(encoding="utf-8")
+
+    # Generate new front matter
+    new_front_matter = f"---\ncompleted_steps: {completed}\ntotal_steps: {total}\n---\n\n"
+
+    # Check if existing front matter exists
+    front_matter_pattern = re.compile(r"^---\s*\n.*?\n---\s*\n\n", re.DOTALL)
+    match = front_matter_pattern.match(content)
+
+    if match:
+        # Replace existing front matter
+        updated_content = front_matter_pattern.sub(new_front_matter, content)
+    else:
+        # Add front matter at the beginning
+        updated_content = new_front_matter + content
+
+    progress_file.write_text(updated_content, encoding="utf-8")
+
+
+def copy_impl_to_worker_impl(worktree_path: Path) -> Path:
+    """Copy .impl/ folder to .worker-impl/ folder.
+
+    Args:
+        worktree_path: Path to worktree directory
+
+    Returns:
+        Path to created .worker-impl/ directory
+
+    Raises:
+        FileNotFoundError: If .impl/ folder doesn't exist
+        FileExistsError: If .worker-impl/ folder already exists
+    """
+    impl_folder = worktree_path / ".impl"
+    worker_impl_folder = worktree_path / ".worker-impl"
+
+    if not impl_folder.exists():
+        raise FileNotFoundError(f"No .impl/ folder found at {worktree_path}")
+
+    if worker_impl_folder.exists():
+        raise FileExistsError(f".worker-impl/ folder already exists at {worktree_path}")
+
+    shutil.copytree(impl_folder, worker_impl_folder)
+    return worker_impl_folder
+
+
+def get_worker_impl_path(worktree_path: Path) -> Path | None:
+    """Get path to .worker-impl/ folder if it exists.
+
+    Args:
+        worktree_path: Path to worktree directory
+
+    Returns:
+        Path to .worker-impl/ folder if exists, None otherwise
+    """
+    worker_impl_folder = worktree_path / ".worker-impl"
+    if worker_impl_folder.exists() and worker_impl_folder.is_dir():
+        return worker_impl_folder
+    return None
+
+
+def remove_worker_impl_folder(worktree_path: Path) -> None:
+    """Remove .worker-impl/ folder if it exists.
+
+    Args:
+        worktree_path: Path to worktree directory
+    """
+    worker_impl_folder = worktree_path / ".worker-impl"
+    if worker_impl_folder.exists():
+        shutil.rmtree(worker_impl_folder)
+
+
+def _generate_progress_content(steps: list[str]) -> str:
+    """Generate progress.md content with YAML front matter and checkboxes.
+
+    Args:
+        steps: List of step descriptions
+
+    Returns:
+        Formatted progress markdown with front matter and unchecked boxes
+    """
+    if not steps:
+        return "# Progress Tracking\n\nNo steps detected in plan.\n"
+
+    # Generate YAML front matter
+    total_steps = len(steps)
+    front_matter = f"---\ncompleted_steps: 0\ntotal_steps: {total_steps}\n---\n\n"
+
+    lines = [front_matter + "# Progress Tracking\n"]
+
+    for step in steps:
+        # Create checkbox: - [ ] Step description
+        lines.append(f"- [ ] {step}")
+
+    lines.append("")  # Trailing newline
+    return "\n".join(lines)
 
 
 @dataclass(frozen=True)

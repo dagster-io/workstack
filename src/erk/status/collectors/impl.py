@@ -4,16 +4,14 @@ from pathlib import Path
 
 import frontmatter
 from erk_shared.impl_folder import (
+    get_impl_path,
+    get_progress_path,
     parse_progress_frontmatter,
     read_issue_reference,
+    update_progress_frontmatter,
 )
 
 from erk.core.context import ErkContext
-from erk.core.impl_folder import (
-    get_impl_path,
-    get_progress_path,
-    update_progress_frontmatter,
-)
 from erk.status.collectors.base import StatusCollector
 from erk.status.models.status_data import PlanStatus
 

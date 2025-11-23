@@ -234,6 +234,7 @@ def _save_issue_reference(wt_path: Path, issue_number: str, issue_url: str) -> N
 
 def _create_worktree_with_plan_content(
     ctx: ErkContext,
+    *,
     plan_source: PlanSource,
     worktree_name: str | None,
     dry_run: bool,
@@ -344,6 +345,7 @@ def _create_worktree_with_plan_content(
 
 def _output_activation_instructions(
     ctx: ErkContext,
+    *,
     wt_path: Path,
     branch: str,
     script: bool,
@@ -410,6 +412,7 @@ def _output_activation_instructions(
 
 def _implement_from_issue(
     ctx: ErkContext,
+    *,
     issue_number: str,
     worktree_name: str | None,
     dry_run: bool,
@@ -437,7 +440,12 @@ def _implement_from_issue(
 
     # Create worktree with plan content
     wt_path = _create_worktree_with_plan_content(
-        ctx, plan_source, worktree_name, dry_run, submit, dangerous
+        ctx,
+        plan_source=plan_source,
+        worktree_name=worktree_name,
+        dry_run=dry_run,
+        submit=submit,
+        dangerous=dangerous,
     )
 
     # Early return for dry-run mode
@@ -455,12 +463,19 @@ def _implement_from_issue(
     branch = wt_path.name
     target_description = f"#{issue_number}"
     _output_activation_instructions(
-        ctx, wt_path, branch, script, submit, dangerous, target_description
+        ctx,
+        wt_path=wt_path,
+        branch=branch,
+        script=script,
+        submit=submit,
+        dangerous=dangerous,
+        target_description=target_description,
     )
 
 
 def _implement_from_file(
     ctx: ErkContext,
+    *,
     plan_file: Path,
     worktree_name: str | None,
     dry_run: bool,
@@ -484,7 +499,12 @@ def _implement_from_file(
 
     # Create worktree with plan content
     wt_path = _create_worktree_with_plan_content(
-        ctx, plan_source, worktree_name, dry_run, submit, dangerous
+        ctx,
+        plan_source=plan_source,
+        worktree_name=worktree_name,
+        dry_run=dry_run,
+        submit=submit,
+        dangerous=dangerous,
     )
 
     # Early return for dry-run mode
@@ -501,7 +521,13 @@ def _implement_from_file(
     branch = wt_path.name
     target_description = str(plan_file)
     _output_activation_instructions(
-        ctx, wt_path, branch, script, submit, dangerous, target_description
+        ctx,
+        wt_path=wt_path,
+        branch=branch,
+        script=script,
+        submit=submit,
+        dangerous=dangerous,
+        target_description=target_description,
     )
 
 
@@ -601,9 +627,23 @@ def implement(
             raise SystemExit(1)
 
         _implement_from_issue(
-            ctx, target_info.issue_number, worktree_name, dry_run, submit, dangerous, script
+            ctx,
+            issue_number=target_info.issue_number,
+            worktree_name=worktree_name,
+            dry_run=dry_run,
+            submit=submit,
+            dangerous=dangerous,
+            script=script,
         )
     else:
         # Plan file mode
         plan_file = Path(target)
-        _implement_from_file(ctx, plan_file, worktree_name, dry_run, submit, dangerous, script)
+        _implement_from_file(
+            ctx,
+            plan_file=plan_file,
+            worktree_name=worktree_name,
+            dry_run=dry_run,
+            submit=submit,
+            dangerous=dangerous,
+            script=script,
+        )

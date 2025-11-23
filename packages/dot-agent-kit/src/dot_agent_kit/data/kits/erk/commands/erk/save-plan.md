@@ -1,10 +1,10 @@
 ---
-description: Extract plan from conversation and save to disk (no enhancements)
+description: Extract plan from Claude session and save to disk (no enhancements)
 ---
 
 # /erk:save-plan
 
-Extracts an implementation plan from the conversation and saves it to disk with minimal frontmatter. This is a simplified alternative to `/erk:save-session-enriched-plan` that skips all discovery mining and enhancement steps.
+Extracts the latest implementation plan from Claude session files and saves it to disk with minimal frontmatter. This command uses deterministic session file parsing instead of conversation context searching.
 
 ## Usage
 
@@ -14,9 +14,9 @@ Extracts an implementation plan from the conversation and saves it to disk with 
 
 ## Purpose
 
-This command provides a fast path for saving plans when you don't need session log discoveries or enhancements. It:
+This command provides a fast, deterministic path for saving plans. It:
 
-- Extracts the plan as-is from the conversation
+- Extracts the latest `ExitPlanMode` plan from Claude session files
 - Generates a descriptive filename from the plan title
 - Adds minimal frontmatter (`erk_plan: true`, timestamp)
 - Saves to repository root
@@ -26,12 +26,11 @@ This command provides a fast path for saving plans when you don't need session l
 - ❌ No session log discovery or mining
 - ❌ No plan enhancement or enrichment
 - ❌ No interactive clarifying questions
-- ❌ No Kit CLI invocations
 - ❌ No complex analysis
 
 ## How It Works
 
-1. **Extracts the plan** from the conversation (as-is)
+1. **Searches Claude session files** for the latest ExitPlanMode plan
 2. **Generates filename** from plan title using kebab-case
 3. **Adds minimal frontmatter** with marker and timestamp
 4. **Saves to repository root** as `<name>-plan.md`
@@ -40,178 +39,78 @@ This command provides a fast path for saving plans when you don't need session l
 
 ## Agent Instructions
 
-You are executing the `/erk:save-plan` command. Follow these steps carefully using ONLY the allowed tools.
+You are executing the `/erk:save-plan` command. This command uses the kit CLI to extract plans from Claude session files.
 
 ### CRITICAL: Tool Restrictions
 
 **ALLOWED TOOLS:**
 
-- `Read` - For examining the conversation
-- `Bash` - ONLY for `git rev-parse --show-toplevel`
-- `Write` - ONLY for writing the plan file to repository root
-- `AskUserQuestion` - ONLY if filename extraction fails
+- `Bash` - For calling kit CLI command
+- `AskUserQuestion` - ONLY for error recovery if needed
 
 **FORBIDDEN TOOLS:**
 
+- `Read` - Do NOT read conversation manually
 - `Edit` - Do NOT modify any existing files
+- `Write` - Do NOT write files manually (kit CLI handles this)
 - `Glob` - Do NOT search the codebase
 - `Grep` - Do NOT search the codebase
 - `Task` - Do NOT launch subagents
-- Any Kit CLI commands
-- Any tool not explicitly listed as allowed
 
 **CRITICAL:** If you use any forbidden tool, STOP immediately.
 
-### Step 1: Extract Plan from Conversation
+### Step 1: Extract Plan from Session and Save
 
-Search backwards from recent messages in the conversation for an implementation plan.
-
-**Where to look:**
-
-1. `ExitPlanMode` tool results containing the plan
-2. Sections like "## Implementation Plan" or "### Implementation Steps"
-3. Structured markdown with numbered lists of implementation tasks
-
-**What to extract:**
-
-- Complete plan content (minimum 100 characters)
-- Must have structure (headers, lists, or numbered steps)
-- Extract as-is - NO modifications or enhancements
-
-**Validation:**
-
-- Plan must be ≥100 characters
-- Plan must have structure (headers and/or lists)
-
-**If no plan found:**
-
-```
-❌ Error: No implementation plan found in conversation
-
-Please create a plan first:
-1. Enter Plan mode
-2. Create your implementation plan
-3. Exit Plan mode
-4. Then run /erk:save-plan
-```
-
-### Step 2: Generate Filename
-
-Generate a descriptive filename from the plan content:
-
-**Title Extraction (LLM semantic analysis):**
-
-1. Extract title from first H1 (`# Title`) or H2 (`## Title`) in the plan
-2. If no headers found, use the first line of content
-
-**Filename Transformation (Kit CLI):**
-
-Use the kit CLI command to transform the extracted title to a filename:
+Use the kit CLI command to extract the latest plan from Claude session files and save it:
 
 ```bash
-filename=$(dot-agent kit-command erk issue-title-to-filename "$extracted_title")
-if [ $? -ne 0 ]; then
-    echo "❌ Error: Failed to generate filename" >&2
+result=$(dot-agent kit-command erk save-plan-from-session)
+```
+
+This command:
+
+- Searches Claude session files for the latest ExitPlanMode plan
+- Extracts the plan text
+- Generates filename from plan title
+- Adds minimal frontmatter
+- Saves to repository root
+- Returns JSON result
+
+**Parse the JSON result:**
+
+```bash
+# Check if successful
+if ! echo "$result" | jq -e '.success' > /dev/null 2>&1; then
+    error_msg=$(echo "$result" | jq -r '.error')
+    echo "❌ Error: $error_msg" >&2
     exit 1
 fi
+
+# Extract result fields
+file_path=$(echo "$result" | jq -r '.file_path')
+filename=$(echo "$result" | jq -r '.filename')
+title=$(echo "$result" | jq -r '.title')
 ```
 
-The kit CLI command handles:
+**Common errors:**
 
-- Lowercase conversion
-- Unicode normalization (NFD)
-- Emoji and special character removal
-- Hyphen collapse and trimming
-- Returns "plan.md" if title is empty after cleanup
+- **No plan found**: No ExitPlanMode found in session files
+- **File already exists**: Plan file already exists at target path
+- **Not in git repository**: Current directory is not in a git repo
 
-**Example transformations:**
+### Step 2: Display Success Output
 
-- "Create Erk Save Command" → `create-erk-save-command-plan.md`
-- "API Migration (Phase 1)" → `api-migration-phase-1-plan.md`
-- "Refactor Auth System" → `refactor-auth-system-plan.md`
-- "🚀 Feature Launch" → `feature-launch-plan.md`
-
-**If title extraction fails:**
+After successfully saving the plan file, output:
 
 ```
-Unable to extract title from plan.
+✅ Plan saved to: <filename>
 
-Please provide a short name for this plan (use kebab-case):
-```
-
-Use `AskUserQuestion` to prompt for title if extraction fails.
-
-### Step 3: Add Minimal Frontmatter
-
-Prepend YAML frontmatter to the plan content:
-
-```yaml
----
-erk_plan: true
-created_at: <ISO-8601-timestamp>
----
-```
-
-**DO NOT modify the plan content** - append it exactly as extracted from Step 1.
-
-**Example output structure:**
-
-```markdown
----
-erk_plan: true
-created_at: 2025-11-21T10:00:00Z
----
-
-# Original Plan Title
-
-[Original plan content unchanged...]
-```
-
-### Step 4: Write to Repository Root
-
-Save the plan file to the repository root:
-
-**Steps:**
-
-1. Get repository root using: `git rev-parse --show-toplevel`
-2. Construct path: `<repo-root>/<filename>` (filename already includes `-plan.md` suffix from kit CLI)
-3. Check if file already exists
-
-**If file exists:**
-
-```
-❌ Error: Plan file already exists
-
-File exists at: <path>
-
-Options:
-1. Choose a different name
-2. Delete the existing file first
-3. Cancel the operation
-```
-
-**If not in git repository:**
-
-```
-❌ Error: Not in a git repository
-
-This command must be run from within a git repository.
-```
-
-**On success:**
-
-Write the file with frontmatter + plan content using the Write tool.
-
-### Step 5: Output Success Message
-
-After successfully writing the plan file, output:
-
-```
-✅ Plan saved to: <filename>-plan.md
+📋 Title: <title>
+📁 Path: <file_path>
 
 Next steps:
 1. Review the plan if needed
-2. Create worktree: /erk:create-wt-from-plan-file <filename>-plan.md
+2. Create worktree: /erk:create-wt-from-plan-file
 3. Switch to worktree and implement
 ```
 
@@ -229,15 +128,70 @@ Next steps:
 
 **Common error cases:**
 
-1. **No plan found** - See Step 1
-2. **Filename extraction failed** - Prompt user for name (Step 2)
-3. **File already exists** - See Step 4
-4. **Not in git repo** - See Step 4
+1. **No plan found in session files**
+
+```
+❌ Error: No plan found in Claude session files
+
+Details: No ExitPlanMode tool uses found in session history
+
+Suggested action:
+1. Create a plan first (enter Plan mode, create plan, exit Plan mode)
+2. Ensure you exited Plan mode with ExitPlanMode tool
+3. Try again after creating a plan
+```
+
+2. **File already exists**
+
+```
+❌ Error: Plan file already exists
+
+Details: File exists at <path>
+
+Suggested action:
+1. Review existing plan file
+2. Delete it if you want to replace: rm <path>
+3. Choose a different plan title
+```
+
+3. **Not in git repository**
+
+```
+❌ Error: Not in a git repository
+
+Details: Current directory is not within a git repository
+
+Suggested action:
+1. Navigate to your git repository
+2. Run the command from within the repository
+```
 
 ## Important Notes
 
-- **No enhancements**: Save the plan exactly as found in the conversation
-- **No discovery mining**: No session log access or analysis
-- **No Kit CLI**: This command uses only basic tools
-- **Simple and fast**: Designed for quick plan saving without preprocessing
-- **Compatible workflow**: Output works with `/erk:create-wt-from-plan-file` just like `/erk:save-context-enriched-plan`
+- **Deterministic**: Searches session files, not conversation context
+- **No enhancements**: Saves plan exactly as found in ExitPlanMode
+- **Fast**: No additional processing or analysis
+- **Latest plan**: Automatically finds the most recent plan by timestamp
+- **Compatible workflow**: Output works with `/erk:create-wt-from-plan-file`
+
+## Technical Details
+
+**Session file location:**
+
+- Base: `~/.claude/projects/`
+- Project directory: Working directory path with `/` replaced by `-` and prepended with `-`
+- Example: `/Users/user/code/myproject` → `~/.claude/projects/-Users-user-code-myproject/`
+
+**Search pattern:**
+
+- Parses JSONL files (one JSON object per line)
+- Looks for `type: "tool_use"` with `name: "ExitPlanMode"`
+- Extracts `input.plan` field
+- Sorts by timestamp to find latest
+
+**Filename generation:**
+
+- Extracts title from plan (H1 → H2 → first line)
+- Converts to kebab-case
+- Removes emojis and special characters
+- Appends `-plan.md` suffix

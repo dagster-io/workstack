@@ -19,7 +19,7 @@ Extract implementation plan from the current conversation and create a GitHub is
 This command provides a fast path for creating GitHub issues when you don't need a local plan file. It:
 
 - Extracts the plan as-is from the conversation
-- Adds YAML front matter with `erk_plan` marker
+- Wraps plan in collapsible metadata block
 - Creates GitHub issue with `erk-plan` label
 - Displays issue URL
 
@@ -34,7 +34,7 @@ This command provides a fast path for creating GitHub issues when you don't need
 ## How It Works
 
 1. **Extracts plan** from conversation (minimum 100 chars, must have structure)
-2. **Adds YAML front matter** with erk_plan marker and timestamp
+2. **Wraps in metadata block** using collapsible `<details>` with `erk-plan` key
 3. **Extracts title** from plan (H1 → H2 → first line)
 4. **Ensures label exists** (creates `erk-plan` label if needed)
 5. **Creates GitHub issue** with plan body and label
@@ -184,40 +184,40 @@ Suggested action:
 
 Exit with error.
 
-### Step 3: Add YAML Front Matter
+### Step 3: Wrap Plan in Metadata Block
 
-Prepend YAML front matter to the extracted plan content.
+Use the kit CLI command to wrap the plan content in a collapsible metadata block.
 
 **Algorithm:**
 
-1. Get current timestamp in ISO8601 format (e.g., `2025-11-22T09:00:00Z`)
-2. Construct front matter:
+1. Pass the extracted plan content to the kit CLI command:
 
-   ```yaml
-   ---
-   erk_plan: true
-   created_at: <timestamp>
-   ---
+   ```bash
+   issue_body=$(echo "$plan_content" | dot-agent kit-command erk wrap-plan-in-metadata-block)
+   if [ $? -ne 0 ]; then
+       echo "❌ Error: Failed to wrap plan in metadata block" >&2
+       exit 1
+   fi
    ```
 
-3. Prepend to plan content with double newline after closing `---`
-
-**CRITICAL:** YAML delimiters must be on separate lines with newlines before and after.
+2. This creates a collapsible `<details>` block with the plan content embedded in YAML
 
 **Example output structure:**
 
 ```markdown
----
-erk_plan: true
-created_at: 2025-11-22T09:00:00Z
----
+This issue contains an implementation plan:
 
+<details>
+<summary><code>erk-plan</code></summary>
+```yaml
 # Original Plan Title
 
 [Original plan content unchanged...]
 ```
+</details>
+```
 
-**Store this as the full issue body** for use in Step 6.
+**Store this as `$issue_body`** for use in Step 6.
 
 ### Step 4: Extract Title from Plan
 
@@ -278,12 +278,12 @@ Check if the `erk-plan` label exists, and create it if needed.
 
 Use gh CLI to create the issue with plan content.
 
-**CRITICAL:** Issue body must include YAML front matter from Step 3.
+**CRITICAL:** Issue body must include the metadata block from Step 3.
 
 1. Create the issue using the kit CLI command:
 
    ```bash
-   result=$(echo "$plan_with_frontmatter" | dot-agent kit-command erk create-issue "$title" --label "erk-plan")
+   result=$(echo "$issue_body" | dot-agent kit-command erk create-issue "$title" --label "erk-plan")
 
    # Parse JSON output
    if ! echo "$result" | jq -e '.success' > /dev/null; then

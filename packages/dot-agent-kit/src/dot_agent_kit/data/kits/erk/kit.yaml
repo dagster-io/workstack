@@ -48,6 +48,9 @@ kit_cli_commands:
   - name: create-issue
     path: kit_cli_commands/erk/create_issue.py
     description: Create GitHub issue with body from stdin (no permission prompts)
+  - name: wrap-plan-in-metadata-block
+    path: kit_cli_commands/erk/wrap_plan_in_metadata_block.py
+    description: Wrap plan content in collapsible GitHub metadata block
 hooks:
   - id: session-id-injector-hook
     lifecycle: UserPromptSubmit

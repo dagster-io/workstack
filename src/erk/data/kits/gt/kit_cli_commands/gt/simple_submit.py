@@ -18,15 +18,19 @@ from pathlib import Path
 import click
 from erk_shared.impl_folder import has_issue_reference, read_issue_reference
 
+from erk.data.kits.gt.kit_cli_commands.gt.ops import GtKit
 from erk.data.kits.gt.kit_cli_commands.gt.real_ops import RealGtKit
 
 
-def execute_simple_submit(description: str | None = None, verbose: bool = False) -> dict:
+def execute_simple_submit(
+    description: str | None = None, verbose: bool = False, ops: GtKit | None = None
+) -> dict:
     """Execute the simplified submit preparation phase.
 
     Args:
         description: Optional description for the commit
         verbose: Show detailed diagnostic output
+        ops: Optional GtKit instance for dependency injection
 
     Returns:
         JSON dict with:
@@ -36,15 +40,16 @@ def execute_simple_submit(description: str | None = None, verbose: bool = False)
         - parent: str (if successful)
         - error: str (if failed)
     """
-    kit = RealGtKit()
+    if ops is None:
+        ops = RealGtKit()
 
     # 1. Check for uncommitted changes and commit if any
     if verbose:
         click.echo("Debug: Checking for uncommitted changes...", err=True)
-    if kit.git().has_uncommitted_changes():
+    if ops.git().has_uncommitted_changes():
         if verbose:
             click.echo("Debug: Found uncommitted changes, staging...", err=True)
-        if not kit.git().add_all():
+        if not ops.git().add_all():
             if verbose:
                 click.echo("Debug: Failed to stage changes", err=True)
             return {"success": False, "error": "Failed to stage changes"}
@@ -52,7 +57,7 @@ def execute_simple_submit(description: str | None = None, verbose: bool = False)
         commit_message = description or "WIP: Prepare for submission"
         if verbose:
             click.echo(f"Debug: Creating commit with message: {commit_message!r}", err=True)
-        if not kit.git().commit(commit_message):
+        if not ops.git().commit(commit_message):
             if verbose:
                 click.echo("Debug: Failed to commit changes", err=True)
             return {"success": False, "error": "Failed to commit changes"}
@@ -65,7 +70,7 @@ def execute_simple_submit(description: str | None = None, verbose: bool = False)
     # 2. Restack to ensure clean state
     if verbose:
         click.echo("Debug: Restacking branch...", err=True)
-    result = kit.graphite().restack()
+    result = ops.graphite().restack()
     if not result:
         if verbose:
             click.echo("Debug: Restack failed", err=True)
@@ -76,7 +81,7 @@ def execute_simple_submit(description: str | None = None, verbose: bool = False)
     # 3. Get current branch and parent
     if verbose:
         click.echo("Debug: Getting current branch name...", err=True)
-    branch = kit.git().get_current_branch()
+    branch = ops.git().get_current_branch()
     if not branch:
         if verbose:
             click.echo("Debug: Could not determine current branch", err=True)
@@ -86,7 +91,7 @@ def execute_simple_submit(description: str | None = None, verbose: bool = False)
 
     if verbose:
         click.echo("Debug: Getting parent branch...", err=True)
-    parent = kit.graphite().get_parent_branch()
+    parent = ops.graphite().get_parent_branch()
     if not parent:
         if verbose:
             click.echo("Debug: Could not determine parent branch", err=True)
@@ -97,7 +102,7 @@ def execute_simple_submit(description: str | None = None, verbose: bool = False)
     # 4. Get diff for AI analysis
     if verbose:
         click.echo("Debug: Getting diff to parent...", err=True)
-    diff = kit.git().get_diff_to_parent(parent)
+    diff = ops.git().get_diff_to_parent(parent)
     if verbose:
         click.echo(f"Debug: Diff length = {len(diff)} bytes", err=True)
 
@@ -133,6 +138,7 @@ def complete_submission(
     squash: bool = True,
     verbose: bool = False,
     issue_number: int | None = None,
+    ops: GtKit | None = None,
 ) -> dict:
     """Complete the submission by amending commit and submitting PR.
 
@@ -141,6 +147,7 @@ def complete_submission(
         squash: Whether to squash commits (default: True)
         verbose: Show detailed diagnostic output
         issue_number: Optional GitHub issue number for linking
+        ops: Optional GtKit instance for dependency injection
 
     Returns:
         JSON dict with:
@@ -150,7 +157,8 @@ def complete_submission(
         - issue_number: int | None (if issue linking enabled)
         - error: str (if failed)
     """
-    kit = RealGtKit()
+    if ops is None:
+        ops = RealGtKit()
 
     # 1. Add "Closes #N" to commit message if issue number provided
     final_commit_message = commit_message
@@ -163,7 +171,7 @@ def complete_submission(
     # 2. Amend commit with final message
     if verbose:
         click.echo(f"Debug: Amending commit with message: {final_commit_message!r}", err=True)
-    if not kit.git().amend_commit(final_commit_message):
+    if not ops.git().amend_commit(final_commit_message):
         if verbose:
             click.echo("Debug: Failed to amend commit", err=True)
         return {"success": False, "error": "Failed to amend commit"}
@@ -176,16 +184,16 @@ def complete_submission(
     if squash:
         if verbose:
             click.echo("Debug: Checking if squashing is needed...", err=True)
-        parent = kit.graphite().get_parent_branch()
+        parent = ops.graphite().get_parent_branch()
         if parent:
-            commit_count = kit.git().count_commits_in_branch(parent)
+            commit_count = ops.git().count_commits_in_branch(parent)
             if verbose:
                 click.echo(f"Debug: Commit count in branch = {commit_count}", err=True)
             if commit_count > 1:
                 # Squash commits first
                 if verbose:
                     click.echo("Debug: Squashing commits...", err=True)
-                squash_result = kit.graphite().squash_commits()
+                squash_result = ops.graphite().squash_commits()
                 if not squash_result.success:
                     if verbose:
                         click.echo(f"Debug: Squash failed: {squash_result.stderr}", err=True)
@@ -196,7 +204,7 @@ def complete_submission(
     # 3. Submit the PR
     if verbose:
         click.echo("Debug: Submitting PR...", err=True)
-    result = kit.graphite().submit(publish=True, restack=True)
+    result = ops.graphite().submit(publish=True, restack=True)
     if verbose:
         click.echo(
             f"Debug: submit() returned: success={result.success}, "
@@ -211,7 +219,7 @@ def complete_submission(
     # 4. Get PR info
     if verbose:
         click.echo("Debug: Getting PR info...", err=True)
-    pr_info = kit.github().get_pr_info()
+    pr_info = ops.github().get_pr_info()
     if not pr_info:
         # PR might have been created but we can't get its info
         return {
@@ -228,7 +236,7 @@ def complete_submission(
     # 5. Mark PR as ready for review (not draft)
     if verbose:
         click.echo("Debug: Marking PR as ready for review...", err=True)
-    if not kit.github().mark_pr_ready():
+    if not ops.github().mark_pr_ready():
         if verbose:
             click.echo("Debug: Failed to mark PR as ready", err=True)
         # Don't fail the entire operation - PR is created, just might be in draft
@@ -250,7 +258,7 @@ def complete_submission(
         # Prepend "Closes #N" to PR body
         pr_body_with_issue = f"Closes #{issue_number}\n\n{pr_body}"
 
-        if not kit.github().update_pr_metadata(pr_title, pr_body_with_issue):
+        if not ops.github().update_pr_metadata(pr_title, pr_body_with_issue):
             if verbose:
                 click.echo("Debug: Failed to update PR metadata", err=True)
             # Don't fail the entire operation, just note it
@@ -261,7 +269,7 @@ def complete_submission(
     # 7. Get Graphite URL if possible
     if verbose:
         click.echo("Debug: Getting Graphite PR URL...", err=True)
-    graphite_url = kit.github().get_graphite_pr_url(pr_number)
+    graphite_url = ops.github().get_graphite_pr_url(pr_number)
     if verbose:
         click.echo(f"Debug: Graphite URL = {graphite_url}", err=True)
 

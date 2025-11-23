@@ -35,6 +35,7 @@ from erk.core.script_writer import RealScriptWriter, ScriptWriter
 from erk.core.shell import RealShell, Shell
 from erk.core.time.abc import Time
 from erk.core.time.real import RealTime
+from erk.core.user_feedback import InteractiveFeedback, SuppressedFeedback, UserFeedback
 
 
 @dataclass(frozen=True)
@@ -58,6 +59,7 @@ class ErkContext:
     time: Time
     config_store: ConfigStore
     script_writer: ScriptWriter
+    feedback: UserFeedback
     cwd: Path  # Current working directory at CLI invocation
     global_config: GlobalConfig | None
     local_config: LoadedConfig
@@ -121,6 +123,7 @@ class ErkContext:
         from tests.fakes.script_writer import FakeScriptWriter
         from tests.fakes.shell import FakeShell
         from tests.fakes.time import FakeTime
+        from tests.fakes.user_feedback import FakeUserFeedback
 
         from erk.core.config_store import FakeConfigStore
         from erk.core.github.fake import FakeGitHub
@@ -139,6 +142,7 @@ class ErkContext:
             time=FakeTime(),
             config_store=FakeConfigStore(config=None),
             script_writer=FakeScriptWriter(),
+            feedback=FakeUserFeedback(),
             cwd=cwd,
             global_config=None,
             local_config=LoadedConfig(env={}, post_create_commands=[], post_create_shell=None),
@@ -158,6 +162,7 @@ class ErkContext:
         time: Time | None = None,
         config_store: ConfigStore | None = None,
         script_writer: ScriptWriter | None = None,
+        feedback: UserFeedback | None = None,
         cwd: Path | None = None,
         global_config: GlobalConfig | None = None,
         local_config: LoadedConfig | None = None,
@@ -184,6 +189,8 @@ class ErkContext:
                               If None, creates FakeConfigStore with test config.
             script_writer: Optional ScriptWriter implementation.
                           If None, creates empty FakeScriptWriter.
+            feedback: Optional UserFeedback implementation.
+                        If None, creates FakeUserFeedback.
             cwd: Optional current working directory. If None, uses Path("/test/default/cwd").
             global_config: Optional GlobalConfig. If None, uses test defaults.
             local_config: Optional LoadedConfig. If None, uses empty defaults.
@@ -216,6 +223,7 @@ class ErkContext:
         from tests.fakes.script_writer import FakeScriptWriter
         from tests.fakes.shell import FakeShell
         from tests.fakes.time import FakeTime
+        from tests.fakes.user_feedback import FakeUserFeedback
         from tests.test_utils import sentinel_path
 
         from erk.core.config_store import FakeConfigStore
@@ -252,6 +260,9 @@ class ErkContext:
         if script_writer is None:
             script_writer = FakeScriptWriter()
 
+        if feedback is None:
+            feedback = FakeUserFeedback()
+
         if global_config is None:
             global_config = GlobalConfig(
                 erk_root=Path("/test/erks"),
@@ -287,6 +298,7 @@ class ErkContext:
             time=time,
             config_store=config_store,
             script_writer=script_writer,
+            feedback=feedback,
             cwd=cwd or sentinel_path(),
             global_config=global_config,
             local_config=local_config,
@@ -361,7 +373,7 @@ def safe_cwd() -> tuple[Path | None, str | None]:
         )
 
 
-def create_context(*, dry_run: bool) -> ErkContext:
+def create_context(*, dry_run: bool, script: bool = False) -> ErkContext:
     """Create production context with real implementations.
 
     Called at CLI entry point to create the context for the entire
@@ -370,13 +382,15 @@ def create_context(*, dry_run: bool) -> ErkContext:
     Args:
         dry_run: If True, wrap all dependencies with dry-run wrappers that
                  print intended actions without executing them
+        script: If True, use SuppressedFeedback to suppress diagnostic output
+                for shell integration mode (default False)
 
     Returns:
         ErkContext with real implementations, wrapped in dry-run
         wrappers if dry_run=True
 
     Example:
-        >>> ctx = create_context(dry_run=False)
+        >>> ctx = create_context(dry_run=False, script=False)
         >>> worktrees = ctx.git.list_worktrees(Path("/repo"))
         >>> erk_root = ctx.global_config.erk_root
     """
@@ -422,14 +436,21 @@ def create_context(*, dry_run: bool) -> ErkContext:
         repo_dir = ensure_erk_metadata_dir(repo)
         local_config = load_config(repo_dir)
 
-    # 7. Apply dry-run wrappers if needed
+    # 7. Choose feedback implementation based on mode
+    feedback: UserFeedback
+    if script:
+        feedback = SuppressedFeedback()  # Suppress diagnostics
+    else:
+        feedback = InteractiveFeedback()  # Show all messages
+
+    # 8. Apply dry-run wrappers if needed
     if dry_run:
         git = DryRunGit(git)
         graphite = DryRunGraphite(graphite)
         github = DryRunGitHub(github)
         issues = DryRunGitHubIssues(issues)
 
-    # 8. Create context with all values
+    # 9. Create context with all values
     return ErkContext(
         git=git,
         github=github,
@@ -441,6 +462,7 @@ def create_context(*, dry_run: bool) -> ErkContext:
         time=RealTime(),
         config_store=RealConfigStore(),
         script_writer=RealScriptWriter(),
+        feedback=feedback,
         cwd=cwd,
         global_config=global_config,
         local_config=local_config,

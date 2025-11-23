@@ -177,7 +177,7 @@ def implement_plan_issue(
         user_output(click.style(f"✓ Created worktree: {name}", fg="green"))
 
     # Run post-worktree setup (.env and post-create commands)
-    run_post_worktree_setup(config, wt_path, repo_root, name)
+    run_post_worktree_setup(ctx, config, wt_path, repo_root, name)
 
     # Step 5: Create .impl/ folder with plan content
     create_impl_folder(

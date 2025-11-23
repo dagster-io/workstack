@@ -80,7 +80,7 @@ def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellInt
     result = runner.invoke(
         command,
         script_args,
-        obj=create_context(dry_run=False),
+        obj=create_context(dry_run=False, script=True),
         standalone_mode=False,
     )
 

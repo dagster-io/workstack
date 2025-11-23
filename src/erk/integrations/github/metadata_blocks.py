@@ -360,7 +360,6 @@ def parse_metadata_block_body(body: str) -> dict[str, Any]:
     return data
 
 
-
 def parse_metadata_blocks(text: str) -> list[MetadataBlock]:
     """
     Extract all metadata blocks from markdown text (two-phase parsing).

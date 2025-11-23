@@ -4,9 +4,8 @@ description: Erk implementation workflow commands for creating worktrees from pl
 license: MIT
 artifacts:
   command:
-    - commands/erk/save-context-enriched-plan.md
-    - commands/erk/save-session-enriched-plan.md
-    - commands/erk/save-plan.md
+    - commands/erk/save-plan-issue.md
+    - commands/erk/save-raw-plan-issue.md
     - commands/erk/create-wt-from-plan-file.md
     - commands/erk/create-wt-from-plan-issue.md
     - commands/erk/implement-plan.md
@@ -17,15 +16,6 @@ artifacts:
   doc:
     - docs/erk/EXAMPLES.md
 kit_cli_commands:
-  - name: save-plan-from-session
-    path: kit_cli_commands/erk/save_plan_from_session.py
-    description: Extract plan from Claude session and save to disk with minimal frontmatter
-  - name: save-session-enriched-plan
-    path: kit_cli_commands/erk/save_session_enriched_plan.py
-    description: Create enhanced implementation plan from session logs (two-phase - discover and assemble)
-  - name: find-most-recent-plan-file
-    path: kit_cli_commands/erk/find_most_recent_plan_file.py
-    description: Find most recent *-plan.md file at repository root
   - name: find-project-dir
     path: kit_cli_commands/erk/find_project_dir.py
     description: Find Claude Code project directory for a given filesystem path
@@ -76,5 +66,5 @@ hooks:
     lifecycle: UserPromptSubmit
     matcher: "*"
     invocation: dot-agent kit-command erk session-id-injector-hook
-    description: Injects session ID into context when /erk:save-session-enriched-plan is invoked
+    description: Injects session ID into context when /erk:save-plan-issue is invoked
     timeout: 30

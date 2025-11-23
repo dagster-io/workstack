@@ -18,6 +18,7 @@ import click
 from dot_agent_kit.data.kits.erk.plan_utils import generate_filename_from_title
 from erk.cli.activation import render_activation_script
 from erk.cli.commands.create import add_worktree, run_post_worktree_setup
+from erk.cli.commands.navigation_helpers import complete_plan_files
 from erk.cli.config import LoadedConfig
 from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output
@@ -442,7 +443,7 @@ def _implement_from_file(
 
 
 @click.command("implement")
-@click.argument("target")
+@click.argument("target", shell_complete=complete_plan_files)
 @click.option(
     "--worktree-name",
     type=str,

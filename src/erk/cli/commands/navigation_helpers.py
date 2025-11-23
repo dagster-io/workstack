@@ -374,3 +374,44 @@ def complete_branch_names(
     except Exception:
         # Shell completion error boundary: return empty list for graceful degradation
         return []
+
+
+def complete_plan_files(
+    ctx: click.Context, param: click.Parameter | None, incomplete: str
+) -> list[str]:
+    """Shell completion for plan files (markdown files in current directory).
+
+    This is a shell completion function, which is an acceptable error boundary.
+    Exceptions are caught to provide graceful degradation - if completion fails,
+    we return an empty list rather than breaking the user's shell experience.
+
+    Args:
+        ctx: Click context
+        param: Click parameter (unused, but required by Click's completion protocol)
+        incomplete: Partial input string to complete
+
+    Returns:
+        List of completion candidates (filenames matching incomplete text)
+    """
+    try:
+        # During shell completion, ctx.obj may be None if the CLI group callback
+        # hasn't run yet. Create a default context in this case.
+        erk_ctx = ctx.find_root().obj
+        if erk_ctx is None:
+            erk_ctx = create_context(dry_run=False)
+
+        # Get current working directory from erk context
+        cwd = erk_ctx.cwd
+
+        # Find all .md files in current directory
+        candidates = []
+        for md_file in cwd.glob("*.md"):
+            # Filter by incomplete prefix if provided
+            if md_file.name.startswith(incomplete):
+                candidates.append(md_file.name)
+
+        return sorted(candidates)
+    except Exception:
+        # Shell completion error boundary: return empty list on any error
+        # This ensures shell doesn't show Python tracebacks during tab-completion
+        return []

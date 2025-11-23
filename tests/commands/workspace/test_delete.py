@@ -9,9 +9,9 @@ from erk.cli.cli import cli
 from erk.core.branch_metadata import BranchMetadata
 from erk.core.git.abc import WorktreeInfo
 from erk.core.git.dry_run import DryRunGit
-from tests.fakes.git import FakeGit
-from tests.fakes.github import FakeGitHub
-from tests.fakes.graphite import FakeGraphite
+from erk.core.git.fake import FakeGit
+from erk.core.github.fake import FakeGitHub
+from erk.core.graphite.fake import FakeGraphite
 from tests.fakes.shell import FakeShell
 from tests.test_utils.cli_helpers import assert_cli_error, assert_cli_success
 from tests.test_utils.context_builders import build_workspace_test_context

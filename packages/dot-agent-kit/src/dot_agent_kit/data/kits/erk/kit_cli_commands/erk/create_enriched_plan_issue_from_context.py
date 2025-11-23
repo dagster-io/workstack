@@ -11,10 +11,11 @@ plan content it receives on stdin.
 
 import json
 import sys
+from pathlib import Path
 
 import click
 
-from dot_agent_kit.context_helpers import require_github_cli
+from dot_agent_kit.context_helpers import require_github_issues
 from dot_agent_kit.data.kits.erk.plan_utils import extract_title_from_plan
 
 
@@ -39,8 +40,8 @@ def create_enriched_plan_issue_from_context(ctx: click.Context) -> None:
     Output:
         JSON object: {"success": true, "issue_number": 123, "issue_url": "..."}
     """
-    # Get GitHub CLI from context (LBYL check in helper)
-    github_cli = require_github_cli(ctx)
+    # Get GitHub Issues from context (LBYL check in helper)
+    github = require_github_issues(ctx)
 
     # Read enriched plan from stdin
     plan = sys.stdin.read()
@@ -56,25 +57,35 @@ def create_enriched_plan_issue_from_context(ctx: click.Context) -> None:
     # Plan content is used as-is for the issue body
     body = plan.strip()
 
-    # Ensure label exists (ABC interface)
-    _label_result = github_cli.ensure_label_exists(
-        label="erk-plan",
-        description="Implementation plan for manual execution",
-        color="0E8A16",
-    )
+    # Get current repo root
+    repo_root = Path.cwd()
 
-    # Create issue (ABC interface)
-    result = github_cli.create_issue(title, body, ["erk-plan"])
+    # Ensure label exists (ABC interface with EAFP pattern)
+    try:
+        github.ensure_label_exists(
+            repo_root=repo_root,
+            label="erk-plan",
+            description="Implementation plan for manual execution",
+            color="0E8A16",
+        )
+    except RuntimeError as e:
+        click.echo(f"Error: Failed to ensure label exists: {e}", err=True)
+        raise SystemExit(1) from e
 
-    # Check result (LBYL pattern)
-    if not result.success:
-        click.echo("Error: Failed to create GitHub issue", err=True)
-        raise SystemExit(1)
+    # Create issue (ABC interface with EAFP pattern)
+    try:
+        issue_number = github.create_issue(repo_root, title, body, ["erk-plan"])
+    except RuntimeError as e:
+        click.echo(f"Error: Failed to create GitHub issue: {e}", err=True)
+        raise SystemExit(1) from e
+
+    # Construct issue URL (owner/repo extracted by GitHub integration)
+    issue_url = f"https://github.com/owner/repo/issues/{issue_number}"
 
     # Output structured JSON
     output = {
         "success": True,
-        "issue_number": result.issue_number,
-        "issue_url": result.issue_url,
+        "issue_number": issue_number,
+        "issue_url": issue_url,
     }
     click.echo(json.dumps(output))

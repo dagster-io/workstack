@@ -12,7 +12,7 @@ from pathlib import Path
 
 import click
 
-from dot_agent_kit.context_helpers import require_github_cli
+from dot_agent_kit.context_helpers import require_github_issues
 from dot_agent_kit.data.kits.erk.plan_utils import extract_title_from_plan
 
 
@@ -40,8 +40,8 @@ def create_queued_plan(
     Usage:
         dot-agent kit-command erk create-queued-plan my-feature-plan.md
     """
-    # Get GitHub CLI from context (LBYL check in helper)
-    github_cli = require_github_cli(ctx)
+    # Get GitHub Issues from context (LBYL check in helper)
+    github = require_github_issues(ctx)
 
     # Read file (Python file I/O, not shell)
     plan = plan_file.read_text(encoding="utf-8")
@@ -55,25 +55,35 @@ def create_queued_plan(
     title = extract_title_from_plan(plan)
     body = plan.strip()
 
-    # Ensure erk-queue label exists
-    _label_result = github_cli.ensure_label_exists(
-        label="erk-queue",
-        description="Automatic implementation queue",
-        color="0E8A16",
-    )
+    # Get current repo root
+    repo_root = Path.cwd()
 
-    # Create issue with erk-queue label
-    result = github_cli.create_issue(title, body, ["erk-queue"])
+    # Ensure erk-queue label exists (EAFP pattern)
+    try:
+        github.ensure_label_exists(
+            repo_root=repo_root,
+            label="erk-queue",
+            description="Automatic implementation queue",
+            color="0E8A16",
+        )
+    except RuntimeError as e:
+        click.echo(f"Error: Failed to ensure label exists: {e}", err=True)
+        raise SystemExit(1) from e
 
-    # Check result (LBYL pattern)
-    if not result.success:
-        click.echo("Error: Failed to create issue", err=True)
-        raise SystemExit(1)
+    # Create issue with erk-queue label (EAFP pattern)
+    try:
+        issue_number = github.create_issue(repo_root, title, body, ["erk-queue"])
+    except RuntimeError as e:
+        click.echo(f"Error: Failed to create issue: {e}", err=True)
+        raise SystemExit(1) from e
+
+    # Construct issue URL (owner/repo extracted by GitHub integration)
+    issue_url = f"https://github.com/owner/repo/issues/{issue_number}"
 
     # Return JSON
     output = {
         "success": True,
-        "issue_number": result.issue_number,
-        "issue_url": result.issue_url,
+        "issue_number": issue_number,
+        "issue_url": issue_url,
     }
     click.echo(json.dumps(output))

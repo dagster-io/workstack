@@ -9,9 +9,9 @@ from erk.core.branch_metadata import BranchMetadata
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
 from erk.core.git.abc import WorktreeInfo
+from erk.core.github.fake import FakeGitHub
 from erk.core.github.types import PullRequestInfo
-from tests.fakes.github import FakeGitHub
-from tests.fakes.graphite import FakeGraphite
+from erk.core.graphite.fake import FakeGraphite
 from tests.fakes.shell import FakeShell
 from tests.test_utils.env_helpers import erk_inmem_env
 
@@ -26,7 +26,7 @@ def test_land_stack_ignores_root_worktree_changes_on_unrelated_branch() -> None:
         root_path = Path("/root")
         current_path = env.cwd
 
-        from tests.fakes.git import FakeGit
+        from erk.core.git.fake import FakeGit
 
         git_ops = FakeGit(
             git_common_dirs={

@@ -9,9 +9,9 @@ from pathlib import Path
 import pytest
 
 from erk.core.branch_metadata import BranchMetadata
+from erk.core.git.fake import FakeGit
 from erk.core.github.types import PullRequestInfo
-from tests.fakes.git import FakeGit
-from tests.fakes.graphite import FakeGraphite
+from erk.core.graphite.fake import FakeGraphite
 
 
 def test_fake_graphite_ops_initialization() -> None:

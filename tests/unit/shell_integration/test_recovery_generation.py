@@ -5,9 +5,9 @@ from pathlib import Path
 from erk.cli.commands.prepare_cwd_recovery import generate_recovery_script
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
+from erk.core.git.fake import FakeGit
 from erk.core.script_writer import RealScriptWriter
 from tests.fakes.context import create_test_context
-from tests.fakes.git import FakeGit
 
 
 def build_ctx(repo_root: Path | None, erk_root: Path, cwd: Path | None = None) -> ErkContext:

@@ -8,12 +8,16 @@ from dot_agent_kit.data.kits.erk.plan_utils import (
 
 
 def test_wrap_plan_basic() -> None:
-    """Test basic plan wrapping (currently returns as-is)."""
+    """Test basic plan wrapping in metadata block."""
     plan = "## My Plan\n\n- Step 1\n- Step 2"
     result = wrap_plan_in_metadata_block(plan)
 
-    # Currently just strips whitespace
-    assert result == plan
+    # Should wrap in metadata block format
+    assert "This issue contains an implementation plan:" in result
+    assert "<details>" in result
+    assert "<summary><code>erk-plan</code></summary>" in result
+    assert "</details>" in result
+    assert plan in result
 
 
 def test_wrap_plan_strips_whitespace() -> None:
@@ -21,7 +25,11 @@ def test_wrap_plan_strips_whitespace() -> None:
     plan = "\n\n  ## My Plan\n\n- Step 1\n- Step 2  \n\n"
     result = wrap_plan_in_metadata_block(plan)
 
-    assert result == "## My Plan\n\n- Step 1\n- Step 2"
+    # Should strip whitespace from plan content
+    assert "## My Plan\n\n- Step 1\n- Step 2" in result
+    # Should include metadata block structure
+    assert "<details>" in result
+    assert "</details>" in result
 
 
 def test_extract_title_h1() -> None:

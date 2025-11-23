@@ -8,12 +8,12 @@ from dot_agent_kit.context import DotAgentContext
 from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.create_plan_issue_from_context import (
     create_plan_issue_from_context,
 )
-from tests.fakes.fake_github_cli import FakeDotAgentGitHubCli
+from erk.core.github.issues import FakeGitHubIssues
 
 
 def test_create_plan_issue_success() -> None:
     """Test successful issue creation from plan."""
-    fake_gh = FakeDotAgentGitHubCli()
+    fake_gh = FakeGitHubIssues()
     runner = CliRunner()
 
     plan = "# My Feature\n\n- Step 1\n- Step 2"
@@ -21,7 +21,7 @@ def test_create_plan_issue_success() -> None:
     result = runner.invoke(
         create_plan_issue_from_context,
         input=plan,
-        obj=DotAgentContext.for_test(github_cli=fake_gh),
+        obj=DotAgentContext.for_test(github_issues=fake_gh),
     )
 
     assert result.exit_code == 0
@@ -30,23 +30,23 @@ def test_create_plan_issue_success() -> None:
     assert output["issue_number"] == 1
     assert "github.com/owner/repo/issues/1" in output["issue_url"]
 
-    # Verify behavior through fake
-    issue = fake_gh.get_issue(1)
-    assert issue is not None
-    assert issue.title == "My Feature"
-    assert "erk-plan" in issue.labels
-    assert "Step 1" in issue.body
+    # Verify behavior through fake's mutation tracking
+    assert len(fake_gh.created_issues) == 1
+    title, body, labels = fake_gh.created_issues[0]
+    assert title == "My Feature"
+    assert "erk-plan" in labels
+    assert "Step 1" in body
 
 
 def test_create_plan_issue_empty_plan() -> None:
     """Test error handling for empty plan."""
-    fake_gh = FakeDotAgentGitHubCli()
+    fake_gh = FakeGitHubIssues()
     runner = CliRunner()
 
     result = runner.invoke(
         create_plan_issue_from_context,
         input="",
-        obj=DotAgentContext.for_test(github_cli=fake_gh),
+        obj=DotAgentContext.for_test(github_issues=fake_gh),
     )
 
     assert result.exit_code == 1
@@ -55,7 +55,7 @@ def test_create_plan_issue_empty_plan() -> None:
 
 def test_create_plan_issue_unicode() -> None:
     """Test issue creation with unicode content."""
-    fake_gh = FakeDotAgentGitHubCli()
+    fake_gh = FakeGitHubIssues()
     runner = CliRunner()
 
     plan = "# café Feature 你好\n\n- Unicode test"
@@ -63,19 +63,17 @@ def test_create_plan_issue_unicode() -> None:
     result = runner.invoke(
         create_plan_issue_from_context,
         input=plan,
-        obj=DotAgentContext.for_test(github_cli=fake_gh),
+        obj=DotAgentContext.for_test(github_issues=fake_gh),
     )
 
     assert result.exit_code == 0
-    issue = fake_gh.get_issue(1)
-    # Title will have unicode characters stripped by generate_filename_from_title
-    # but issue title extraction keeps original characters up to markdown cleanup
-    assert issue is not None
+    # Verify issue was created (title will have unicode characters)
+    assert len(fake_gh.created_issues) == 1
 
 
 def test_create_plan_issue_ensures_label() -> None:
     """Test that command ensures erk-plan label exists."""
-    fake_gh = FakeDotAgentGitHubCli()
+    fake_gh = FakeGitHubIssues()
     runner = CliRunner()
 
     plan = "# Test Plan\n\n- Step"
@@ -83,16 +81,21 @@ def test_create_plan_issue_ensures_label() -> None:
     result = runner.invoke(
         create_plan_issue_from_context,
         input=plan,
-        obj=DotAgentContext.for_test(github_cli=fake_gh),
+        obj=DotAgentContext.for_test(github_issues=fake_gh),
     )
 
     assert result.exit_code == 0
-    assert "erk-plan" in fake_gh.labels
+    # Verify label was created
+    assert len(fake_gh.created_labels) == 1
+    label, description, color = fake_gh.created_labels[0]
+    assert label == "erk-plan"
+    assert description == "Implementation plan for manual execution"
+    assert color == "0E8A16"
 
 
 def test_create_plan_issue_h2_title() -> None:
     """Test title extraction falls back to H2."""
-    fake_gh = FakeDotAgentGitHubCli()
+    fake_gh = FakeGitHubIssues()
     runner = CliRunner()
 
     plan = "## Secondary Title\n\n- Step"
@@ -100,18 +103,19 @@ def test_create_plan_issue_h2_title() -> None:
     result = runner.invoke(
         create_plan_issue_from_context,
         input=plan,
-        obj=DotAgentContext.for_test(github_cli=fake_gh),
+        obj=DotAgentContext.for_test(github_issues=fake_gh),
     )
 
     assert result.exit_code == 0
-    issue = fake_gh.get_issue(1)
-    assert issue is not None
-    assert issue.title == "Secondary Title"
+    # Verify issue was created with H2 title
+    assert len(fake_gh.created_issues) == 1
+    title, _body, _labels = fake_gh.created_issues[0]
+    assert title == "Secondary Title"
 
 
 def test_create_plan_issue_preserves_body() -> None:
     """Test that full plan content is preserved in issue body."""
-    fake_gh = FakeDotAgentGitHubCli()
+    fake_gh = FakeGitHubIssues()
     runner = CliRunner()
 
     plan = """# Feature Plan
@@ -133,13 +137,14 @@ Test instructions
     result = runner.invoke(
         create_plan_issue_from_context,
         input=plan,
-        obj=DotAgentContext.for_test(github_cli=fake_gh),
+        obj=DotAgentContext.for_test(github_issues=fake_gh),
     )
 
     assert result.exit_code == 0
-    issue = fake_gh.get_issue(1)
-    assert issue is not None
-    assert "## Context" in issue.body
-    assert "## Steps" in issue.body
-    assert "## Testing" in issue.body
-    assert "First step" in issue.body
+    # Verify full plan content is preserved
+    assert len(fake_gh.created_issues) == 1
+    _title, body, _labels = fake_gh.created_issues[0]
+    assert "## Context" in body
+    assert "## Steps" in body
+    assert "## Testing" in body
+    assert "First step" in body

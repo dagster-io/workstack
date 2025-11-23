@@ -7,10 +7,10 @@ import pytest
 
 from erk.core.branch_metadata import BranchMetadata
 from erk.core.config_store import GlobalConfig
+from erk.core.git.fake import FakeGit
+from erk.core.graphite.fake import FakeGraphite
 from erk.status.collectors.graphite import GraphiteStackCollector
 from tests.fakes.context import create_test_context
-from tests.fakes.git import FakeGit
-from tests.fakes.graphite import FakeGraphite
 
 
 def setup_stack_collector(

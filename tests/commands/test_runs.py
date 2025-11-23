@@ -18,10 +18,11 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from erk.cli.commands.runs import runs_cmd
+from erk.core.git.abc import WorktreeInfo
+from erk.core.git.fake import FakeGit
+from erk.core.github.fake import FakeGitHub
 from erk.core.github.types import WorkflowRun
 from tests.fakes.context import create_test_context
-from tests.fakes.git import FakeGit, WorktreeInfo
-from tests.fakes.github import FakeGitHub
 
 
 def test_runs_cmd_empty_state(tmp_path: Path) -> None:

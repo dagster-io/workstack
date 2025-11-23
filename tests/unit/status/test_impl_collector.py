@@ -7,9 +7,9 @@ including issue references for status display.
 from pathlib import Path
 
 from erk.core.context import ErkContext
+from erk.core.git.fake import FakeGit
 from erk.core.impl_folder import create_impl_folder, save_issue_reference
 from erk.status.collectors.impl import PlanFileCollector
-from tests.fakes.git import FakeGit
 
 
 def test_plan_collector_no_plan_folder(tmp_path: Path) -> None:

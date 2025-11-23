@@ -7,6 +7,8 @@ description: This skill should be used when writing tests, fixing bugs, adding f
 
 **Use this skill when**: Writing tests, fixing bugs, adding features, or modifying integration class/gateway/integration layers in Python projects.
 
+**Prerequisites**: For Python code standards, load the `dignified-python-313` skill first. This skill focuses on testing architecture, not Python syntax.
+
 ## Overview
 
 This skill provides a **defense-in-depth testing strategy** with five layers for Python applications:

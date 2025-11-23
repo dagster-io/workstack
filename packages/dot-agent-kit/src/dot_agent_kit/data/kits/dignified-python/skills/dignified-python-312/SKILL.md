@@ -9,6 +9,11 @@ description: This skill should be used when editing Python code in the erk codeb
 
 @.claude/docs/dignified-python/core-essentials.md
 @.claude/docs/dignified-python/routing-patterns.md
+@.claude/docs/dignified-python/exception-handling.md
+@.claude/docs/dignified-python/path-operations.md
+@.claude/docs/dignified-python/imports.md
+@.claude/docs/dignified-python/dependency-injection.md
+@.claude/docs/dignified-python/version-specific/312/type-annotations.md
 
 ## Version-Specific Checklist
 
@@ -18,13 +23,8 @@ description: This skill should be used when editing Python code in the erk codeb
 
 Use the routing index in @routing-patterns.md to determine which additional files to load:
 
-- **Dictionary/key operations** → @.claude/docs/dignified-python/exception-handling.md
-- **File system operations** → @.claude/docs/dignified-python/path-operations.md
-- **Import organization** → @.claude/docs/dignified-python/imports.md
-- **Dependency injection** → @.claude/docs/dignified-python/dependency-injection.md
 - **CLI development** → @.claude/docs/dignified-python/cli-patterns.md
 - **Subprocess operations** → @.claude/docs/dignified-python/subprocess.md
-- **Type annotations** → @.claude/docs/dignified-python/version-specific/312/type-annotations.md
 
 ## Comprehensive Reference (If Needed)
 
@@ -35,9 +35,8 @@ If unsure which specific file to load, or need full overview:
 
 ## How to Use This Skill
 
-1. **Core essentials** are loaded automatically (LBYL, pathlib, ABC, imports)
-2. **Scan your task** for patterns (see routing-patterns.md)
-3. **Load relevant files** based on detected patterns
-4. **Each file is self-contained** with complete guidance for its domain
+1. **Core knowledge** is loaded automatically (LBYL, pathlib, ABC, imports, exceptions, type annotations)
+2. **Additional patterns** may require extra loading (CLI patterns, subprocess)
+3. **Each file is self-contained** with complete guidance for its domain
 
-**Token efficiency:** Loads ~740 tokens average (70% reduction from previous approach)
+**Note:** Most common patterns are now loaded by default for convenience

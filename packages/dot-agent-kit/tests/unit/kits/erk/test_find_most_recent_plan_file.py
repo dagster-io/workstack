@@ -33,7 +33,8 @@ def test_find_single_plan_file(tmp_path: Path) -> None:
     assert result.success is True
     assert result.plan_file == str(plan_file)
     assert result.all_plan_files_count == 1
-    assert result.modified_at.endswith("+00:00") or result.modified_at.endswith("Z")  # ISO format with UTC
+    # ISO format with UTC (either +00:00 or Z)
+    assert result.modified_at.endswith("+00:00") or result.modified_at.endswith("Z")
 
 
 def test_find_most_recent_among_multiple(tmp_path: Path) -> None:

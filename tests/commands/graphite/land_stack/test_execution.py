@@ -425,11 +425,11 @@ def test_land_stack_merge_command_excludes_auto_flag() -> None:
 
 
 def test_land_stack_does_not_run_gt_sync() -> None:
-    """Test that gt sync IS run automatically during restack phase.
+    """Test that gt restack IS run automatically during restack phase.
 
     This test was updated after fixing the restack phase bug. Previously, the restack
-    phase was a no-op, causing upstack branches to fail submission. Now gt sync -f
-    runs automatically to rebase upstack branches after each merge.
+    phase was a no-op, causing upstack branches to fail submission. Now gt restack
+    --no-interactive runs automatically to rebase upstack branches after each merge.
 
     The --down flag can be used to skip automatic restacking if manual control is desired.
     """
@@ -466,16 +466,16 @@ def test_land_stack_does_not_run_gt_sync() -> None:
         # Should succeed
         assert result.exit_code == 0, f"Command failed: {result.output}"
 
-        # Verify gt sync WAS called via mutation tracking
-        assert len(graphite_ops.sync_calls) == 1, (
-            f"gt sync should be called automatically. "
-            f"Expected 1 sync call, got {len(graphite_ops.sync_calls)} calls: "
-            f"{graphite_ops.sync_calls}"
+        # Verify gt restack WAS called via mutation tracking
+        assert len(graphite_ops.restack_calls) == 1, (
+            f"gt restack should be called automatically. "
+            f"Expected 1 restack call, got {len(graphite_ops.restack_calls)} calls: "
+            f"{graphite_ops.restack_calls}"
         )
 
-        # Verify force=False was passed (safety check - no longer using force)
-        _, force_arg, _ = graphite_ops.sync_calls[0]
-        assert force_arg is False, "gt sync should be called with force=False for safety"
+        # Verify no_interactive=True was passed (required for non-interactive mode)
+        _, no_interactive_arg, _ = graphite_ops.restack_calls[0]
+        assert no_interactive_arg is True, "gt restack should be called with no_interactive=True"
 
 
 def test_land_stack_does_not_run_erk_sync() -> None:
@@ -604,16 +604,16 @@ def test_final_state_shows_next_steps() -> None:
 
 
 def test_land_stack_runs_gt_sync_in_restack_phase() -> None:
-    """Verify gt sync -f runs automatically during restack phase.
+    """Verify gt restack --no-interactive runs automatically during restack phase.
 
     After each PR is merged with squash merge, upstack branches still reference
-    old commits in their history. The restack phase must run gt sync -f to:
+    old commits in their history. The restack phase must run gt restack to:
     1. Update Graphite metadata about merged branches
     2. Rebase upstack branches onto new trunk state
 
     Without this, gt submit fails with "merged commits are not contained in trunk".
 
-    This test uses a simple 1-branch stack to verify sync is called without needing
+    This test uses a simple 1-branch stack to verify restack is called without needing
     complex state management across multiple branch landings.
     """
     runner = CliRunner()
@@ -646,16 +646,18 @@ def test_land_stack_runs_gt_sync_in_restack_phase() -> None:
         # Act: Land the branch (without --down flag)
         result = runner.invoke(cli, ["land-stack", "--force"], obj=test_ctx)
 
-        # Assert: Verify sync was called with force=True
+        # Assert: Verify restack was called
         assert result.exit_code == 0, f"Command failed: {result.output}"
-        assert len(graphite_ops.sync_calls) >= 1, (
-            f"Expected at least 1 sync call, got {len(graphite_ops.sync_calls)}"
+        assert len(graphite_ops.restack_calls) >= 1, (
+            f"Expected at least 1 restack call, got {len(graphite_ops.restack_calls)}"
         )
 
-        # Verify sync was called with correct parameters
-        for _repo_root_arg, force_arg, quiet_arg in graphite_ops.sync_calls:
-            assert force_arg is False, "sync must be called with force=False for safety"
-            assert quiet_arg is True, "sync should be quiet in default (non-verbose) mode"
+        # Verify restack was called with correct parameters
+        for _repo_root_arg, no_interactive_arg, quiet_arg in graphite_ops.restack_calls:
+            assert no_interactive_arg is True, (
+                "restack must be called with no_interactive=True for non-interactive mode"
+            )
+            assert quiet_arg is True, "restack should be quiet in default (non-verbose) mode"
 
 
 def test_land_stack_skips_gt_sync_with_down_flag() -> None:
@@ -708,7 +710,7 @@ def test_land_stack_skips_gt_sync_with_down_flag() -> None:
 def test_land_stack_restack_respects_verbose_flag() -> None:
     """Verify quiet parameter is set correctly based on verbose flag.
 
-    The gt sync command has a --quiet flag. The quiet parameter should be:
+    The gt restack command has a --quiet flag. The quiet parameter should be:
     - True in default mode (quiet=not verbose, verbose=False → quiet=True)
     - False in --verbose mode (quiet=not verbose, verbose=True → quiet=False)
 
@@ -747,8 +749,8 @@ def test_land_stack_restack_respects_verbose_flag() -> None:
         result = runner.invoke(cli, ["land-stack", "--force"], obj=test_ctx)
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
-        assert len(graphite_ops.sync_calls) >= 1
-        _, _, quiet_arg = graphite_ops.sync_calls[0]
+        assert len(graphite_ops.restack_calls) >= 1
+        _, _, quiet_arg = graphite_ops.restack_calls[0]
         assert quiet_arg is True, "quiet should be True in default (non-verbose) mode"
 
     # Test 2: With --verbose - should NOT be quiet
@@ -780,8 +782,8 @@ def test_land_stack_restack_respects_verbose_flag() -> None:
         result = runner.invoke(cli, ["land-stack", "--force", "--verbose"], obj=test_ctx)
 
         assert result.exit_code == 0, f"Command failed: {result.output}"
-        assert len(graphite_ops.sync_calls) >= 1
-        _, _, quiet_arg = graphite_ops.sync_calls[0]
+        assert len(graphite_ops.restack_calls) >= 1
+        _, _, quiet_arg = graphite_ops.restack_calls[0]
         assert quiet_arg is False, "quiet should be False in verbose mode (show detailed output)"
 
 

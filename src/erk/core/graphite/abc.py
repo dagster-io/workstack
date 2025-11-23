@@ -40,6 +40,21 @@ class Graphite(ABC):
         ...
 
     @abstractmethod
+    def restack(self, repo_root: Path, *, no_interactive: bool, quiet: bool) -> None:
+        """Run gt restack to rebase the current stack.
+
+        This is more surgical than sync - it only affects the current stack,
+        not all branches in the repository. Safe to use in non-interactive
+        mode during automated workflows.
+
+        Args:
+            repo_root: Repository root directory
+            no_interactive: If True, pass --no-interactive flag to prevent prompts
+            quiet: If True, pass --quiet flag to gt restack for minimal output
+        """
+        ...
+
+    @abstractmethod
     def get_prs_from_graphite(self, git_ops: Git, repo_root: Path) -> dict[str, PullRequestInfo]:
         """Get PR information from Graphite's local cache.
 

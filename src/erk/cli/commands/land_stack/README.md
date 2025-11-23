@@ -36,22 +36,22 @@ For each branch from bottom to top:
 4. **Merge PR** via `gh pr merge --squash --auto`
 5. **Sync trunk** with remote (fetch + checkout + pull --ff-only + checkout back)
 
-**Note:** Restacking (`gt sync -f`) and force-pushing remaining branches (`gt submit`) are NOT run automatically to give users full control. After landing completes, you can manually run these commands if needed.
+**Note:** Restacking (`gt restack`) and force-pushing remaining branches (`gt submit`) happen automatically after each merge. The command uses `gt restack --no-interactive` for surgical rebasing that only affects the current stack.
 
 ### Phase 4: Cleanup
 
 - Navigate to safe branch (trunk or next unmerged branch)
 - Regenerate context after directory changes
 
-**Note:** Worktree cleanup (`gt sync -f`) is NOT run automatically. After landing, you can manually run `gt sync -f` to remove worktrees for merged branches.
+**Note:** Worktree cleanup (`gt sync`) is NOT run automatically. After landing, you can manually run `gt sync` to remove worktrees for merged branches.
 
 ### Phase 5: Final State
 
 - Display what was accomplished
 - Show current branch and merged branches
 - Display next steps for manual operations:
-  - Run `gt sync -f` to remove worktrees for merged branches
-  - Run `gt sync -f` to rebase remaining stack branches (if needed)
+  - Run `gt sync` to remove worktrees for merged branches
+  - Remaining stack branches are already rebased (handled automatically during landing)
 
 ## Phase 2.5: PR Base Verification (Race Condition Prevention)
 
@@ -86,7 +86,7 @@ For each branch from bottom to top:
 - Commands like `gt up` / `gt down` navigate this direction
 
 **Restacking:**
-After PRs are merged, remaining upstack branches need to be rebased onto the new trunk state to maintain stack integrity. The land-stack command runs `gt sync -f` automatically after each merge to rebase upstack branches onto the updated trunk.
+After PRs are merged, remaining upstack branches need to be rebased onto the new trunk state to maintain stack integrity. The land-stack command runs `gt restack --no-interactive` automatically after each merge to rebase upstack branches onto the updated trunk. This surgical approach only affects the current stack, not all branches in the repository.
 
 **Manual Control:** Use the `--down` flag to land only downstack branches and skip automatic restacking. This gives you full control over when restacking happens if you need to inspect state or have work-in-progress in upstack branches.
 

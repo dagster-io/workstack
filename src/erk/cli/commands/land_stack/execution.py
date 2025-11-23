@@ -289,14 +289,19 @@ def _execute_restack_phase(
     verbose: bool,
     script_mode: bool,
 ) -> None:
-    """Execute restack phase using Graphite sync.
+    """Execute restack phase using Graphite restack.
 
-    Runs `gt sync -f` to:
+    Runs `gt restack --no-interactive` to:
     1. Update Graphite metadata about merged branches
     2. Rebase remaining upstack branches onto new trunk state
 
     This is necessary before submitting upstack branches, otherwise
     gt submit will fail with "merged commits are not contained in trunk".
+
+    Uses gt restack instead of gt sync because:
+    - Only affects current stack (surgical approach)
+    - Works in non-interactive mode without prompts
+    - Safer than gt sync -f which affects all branches
 
     The --down flag can be used to skip restacking if manual control is desired.
 
@@ -306,7 +311,7 @@ def _execute_restack_phase(
         verbose: If True, show detailed output
         script_mode: True when running in --script mode (output to stderr)
     """
-    ctx.graphite.sync(repo_root, force=False, quiet=not verbose)
+    ctx.graphite.restack(repo_root, no_interactive=True, quiet=not verbose)
 
 
 def _force_push_upstack_branches(
@@ -320,7 +325,7 @@ def _force_push_upstack_branches(
 ) -> list[str]:
     """Force-push all upstack branches after restack.
 
-    After gt sync -f rebases remaining branches locally, push them to GitHub
+    After gt restack rebases remaining branches locally, push them to GitHub
     so subsequent PR merges will succeed.
 
     Args:

@@ -8,7 +8,7 @@ from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.issue_title_to_filename im
     plan_title_to_filename,
 )
 from erk.cli.activation import render_activation_script
-from erk.cli.commands.create import add_worktree
+from erk.cli.commands.create import add_worktree, run_post_worktree_setup
 from erk.cli.config import LoadedConfig
 from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output
@@ -134,16 +134,9 @@ def implement_plan_issue(
     if dry_run:
         dry_run_header = click.style("Dry-run mode:", fg="cyan", bold=True)
         user_output(dry_run_header + " No changes will be made\n")
-        user_output(f"Would fetch plan issue: #{issue_number}")
+        user_output(f"Would create worktree '{name}' from issue #{issue_number}")
         user_output(f"  Title: {plan_issue.title}")
-        user_output(f"  URL: {plan_issue.url}")
-        user_output(f"Would create worktree: {name}")
-        user_output(f"  Path: {wt_path}")
-        user_output("Would create .impl/ folder with plan content")
-        user_output("Would save issue reference: .impl/issue.json")
-        user_output(f"Would change directory to: {wt_path}")
-        user_output("Would activate environment (venv + .env)")
-        user_output('Would execute: claude --permission-mode acceptEdits "/erk:implement-plan"')
+        user_output('  Then run: claude --permission-mode acceptEdits "/erk:implement-plan"')
         return
 
     # Step 4: Create worktree from plan issue
@@ -187,23 +180,8 @@ def implement_plan_issue(
     if not script:
         user_output(click.style(f"✓ Created worktree: {name}", fg="green"))
 
-    # Write .env file if template exists
-    from erk.cli.commands.create import make_env_content
-
-    env_content = make_env_content(config, worktree_path=wt_path, repo_root=repo_root, name=name)
-    if env_content:
-        env_path = wt_path / ".env"
-        env_path.write_text(env_content, encoding="utf-8")
-
-    # Run post-create commands
-    if config.post_create_commands:
-        from erk.cli.commands.create import run_commands_in_worktree
-
-        run_commands_in_worktree(
-            commands=config.post_create_commands,
-            worktree_path=wt_path,
-            shell=config.post_create_shell,
-        )
+    # Run post-worktree setup (.env and post-create commands)
+    run_post_worktree_setup(config, wt_path, repo_root, name)
 
     # Step 5: Create .impl/ folder with plan content
     create_impl_folder(

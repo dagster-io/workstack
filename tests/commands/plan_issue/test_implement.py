@@ -180,9 +180,7 @@ def test_implement_dry_run_mode_no_side_effects() -> None:
         assert result.exit_code == 0
         assert "Dry-run mode" in result.output
         assert "Would create worktree" in result.output
-        assert "Would fetch plan issue" in result.output
         assert "Add Authentication Feature" in result.output
-        assert "Would save issue reference" in result.output
         assert 'claude --permission-mode acceptEdits "/erk:implement-plan"' in result.output
 
         # Verify NO worktree created

@@ -393,17 +393,28 @@ def add_worktree_creation_comment(
     """
     timestamp = datetime.now(UTC).isoformat()
 
-    # Create human-readable text
-    human_text = f"""✅ Worktree created: **{worktree_name}**
-
-- Branch: `{branch_name}`
-- Created: {timestamp}"""
-
-    # Create metadata block
-    block = create_worktree_creation_block(worktree_name, branch_name, timestamp)
+    # Create metadata block with issue number
+    block = create_worktree_creation_block(
+        worktree_name=worktree_name,
+        branch_name=branch_name,
+        timestamp=timestamp,
+        issue_number=issue_number,
+    )
     block_markdown = render_metadata_block(block)
 
-    # Combine both
-    comment_body = f"{human_text}\n\n{block_markdown}"
+    # Create human-readable comment with instructions
+    comment_body = f"""✅ Worktree created: **{worktree_name}**
+
+{block_markdown}
+
+The worktree is ready for implementation. You can navigate to it using:
+```bash
+erk checkout {branch_name}
+```
+
+To implement the plan:
+```bash
+claude --permission-mode acceptEdits "/erk:implement-plan"
+```"""
 
     github_issues.add_comment(repo_root, issue_number, comment_body)

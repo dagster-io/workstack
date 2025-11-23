@@ -192,7 +192,32 @@ git push -u origin "$(git branch --show-current)"
 - Sets upstream tracking (`-u` flag) so future `git pull` works
 - Creates remote branch if it doesn't exist
 
-### Step 6: Create GitHub PR
+### Step 6: Check for Issue Reference and Prepare Closing Text
+
+Before creating the PR, check if this worktree was created from a GitHub issue:
+
+```bash
+# Get closing text if issue reference exists (silent failure if not)
+closing_text=$(dot-agent run erk get-closing-text 2>/dev/null || echo "")
+```
+
+**What this does:**
+
+- Checks if `.impl/issue.json` exists (created by worktree-from-issue workflow)
+- Returns `"Closes #N\n\n"` if issue reference found
+- Returns empty string if no issue reference exists
+- Silently continues on any errors (backward compatibility)
+
+**Error handling:**
+
+- Command always succeeds (exit code 0)
+- No output if `.impl/issue.json` doesn't exist
+- No output if JSON is malformed
+- Stderr redirected to /dev/null to suppress warnings
+
+**Rationale:** Issue linking is optional functionality. Worktrees created manually (without an issue) should still work seamlessly. The workflow degrades gracefully when `.impl/issue.json` is absent.
+
+### Step 7: Create GitHub PR
 
 Extract PR title (first line) and body (remaining lines) from commit message, then create PR:
 
@@ -205,6 +230,11 @@ pr_title=$(echo "$commit_msg" | head -n 1)
 
 # Extract remaining lines as body
 pr_body=$(echo "$commit_msg" | tail -n +2 | sed '/^$/d')
+
+# Prepend closing text if issue found (from Step 6)
+if [ -n "$closing_text" ]; then
+    pr_body="${closing_text}${pr_body}"
+fi
 
 # Create PR using GitHub CLI
 gh pr create --title "$pr_title" --body "$pr_body"
@@ -226,7 +256,7 @@ gh pr create --title "$pr_title" --body "$pr_body"
 - GitHub CLI will output the PR URL
 - Extract and store for final report
 
-### Step 7: Show Results
+### Step 8: Show Results
 
 After submission, provide a clear summary with the PR URL.
 
@@ -413,6 +443,8 @@ Before completing, verify:
 - [ ] File paths are relative to repository root
 - [ ] Commit created successfully
 - [ ] Branch pushed to origin with upstream tracking
+- [ ] Issue reference checked (if `.impl/issue.json` exists)
+- [ ] Closing text prepended to PR body (if issue found)
 - [ ] GitHub PR created successfully
 - [ ] PR URL extracted from output
 - [ ] Results displayed with "What Was Done" section listing actions

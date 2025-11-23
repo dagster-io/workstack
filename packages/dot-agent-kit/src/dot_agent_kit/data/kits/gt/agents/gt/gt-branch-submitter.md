@@ -38,7 +38,7 @@ Task(
 - Gets current branch and parent branch
 - Counts commits in the branch (compared to parent)
 - Runs `gt squash` to consolidate commits (only if 2+ commits exist)
-- Checks for issue reference in `.plan/issue.json`
+- Checks for issue reference in `.impl/issue.json`
 - Adds "Closes #N" to PR body if issue reference exists
 - Returns JSON with branch info and status
 
@@ -234,7 +234,7 @@ After submission, provide a clear summary using the Graphite URL from the JSON o
 <graphite_url from JSON>
 ```
 
-**Note:** The "Linked to issue" line should only be displayed if an issue reference was found in `.plan/issue.json`.
+**Note:** The "Linked to issue" line should only be displayed if an issue reference was found in `.impl/issue.json`.
 
 **Formatting requirements:**
 
@@ -254,7 +254,7 @@ After submission, provide a clear summary using the Graphite URL from the JSON o
 
 When a worktree was created from a GitHub issue via `/erk:create-wt-from-plan-issue`, the agent automatically:
 
-- Reads issue reference from `.plan/issue.json`
+- Reads issue reference from `.impl/issue.json`
 - Prepends "Closes #<issue-number>" to PR body
 - GitHub will auto-close the issue when PR is merged
 

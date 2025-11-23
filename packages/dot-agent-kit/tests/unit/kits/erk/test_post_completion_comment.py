@@ -15,6 +15,7 @@ from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.post_completion_comment im
     post_completion_comment,
 )
 from erk.core.github.issues import FakeGitHubIssues
+from erk.integrations.github.metadata_blocks import parse_metadata_blocks
 
 # ============================================================================
 # 1. Success Case Tests (1 test)
@@ -102,21 +103,19 @@ total_steps: 5
 
     # Verify comment format
     assert "✅ Implementation complete" in comment_body
-    assert "<details>" in comment_body
-    assert "<summary><code>erk-implementation-status</code></summary>" in comment_body
-    assert "```yaml" in comment_body
+    assert "<!-- WARNING:" in comment_body
 
-    # Parse and verify YAML
-    yaml_start = comment_body.find("```yaml\n") + len("```yaml\n")
-    yaml_end = comment_body.find("\n```", yaml_start)
-    yaml_content = comment_body[yaml_start:yaml_end]
-    parsed_yaml = yaml.safe_load(yaml_content)
+    # Parse metadata block using parse-based validation
+    blocks = parse_metadata_blocks(comment_body)
+    assert len(blocks) == 1
 
-    assert parsed_yaml["status"] == "complete"
-    assert parsed_yaml["completed_steps"] == 5
-    assert parsed_yaml["total_steps"] == 5
-    assert parsed_yaml["summary"] == "Added progress tracking with structured YAML comments"
-    assert "timestamp" in parsed_yaml
+    block = blocks[0]
+    assert block.key == "erk-implementation-status"
+    assert block.data["status"] == "complete"
+    assert block.data["completed_steps"] == 5
+    assert block.data["total_steps"] == 5
+    assert block.data["summary"] == "Added progress tracking with structured YAML comments"
+    assert "timestamp" in block.data
 
 
 # ============================================================================

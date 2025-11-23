@@ -246,6 +246,33 @@ class TestCompleteSubmission:
         assert result["pr_url"] is None
         assert "PR submitted but could not retrieve PR info" in result["message"]
 
+    def test_complete_stages_uncommitted_changes_before_amend(self) -> None:
+        """Test that complete phase stages uncommitted changes before amending commit.
+
+        This ensures the working directory is clean after submission completes.
+        Regression test for: uncommitted changes were left unstaged after simple-submit.
+        """
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)  # Start with 1 commit
+            .with_uncommitted_files(["new_file.py", "modified_file.py"])  # Add uncommitted changes
+            .with_pr(123, url="https://github.com/repo/pull/123")
+        )
+
+        # Before complete_submission, verify we have uncommitted changes
+        assert ops.git().has_uncommitted_changes() is True
+
+        result = complete_submission("Add feature\n\nFull description", ops=ops)
+
+        assert result["success"] is True
+        # After complete_submission, working directory should be clean
+        assert ops.git().has_uncommitted_changes() is False
+        # The uncommitted files should now be part of the amended commit
+        git_state = ops.git().get_state()
+        assert "new_file.py" in git_state.tracked_files
+        assert "modified_file.py" in git_state.tracked_files
+
 
 class TestIssueLinkling:
     """Tests for GitHub issue linking functionality."""

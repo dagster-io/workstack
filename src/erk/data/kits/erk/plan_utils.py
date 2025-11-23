@@ -12,29 +12,45 @@ import re
 import unicodedata
 
 
-def wrap_plan_in_metadata_block(plan: str) -> str:
-    """Return plan content for issue body.
+def wrap_plan_in_metadata_block(
+    plan: str, intro_text: str = "This issue contains an implementation plan:"
+) -> str:
+    """Return plan content wrapped in collapsible details block for issue body.
 
-    Returns plan content as-is (stripped). Metadata formatting and workflow
-    instructions are now added via separate GitHub comments, not embedded
-    in the issue body.
-
-    This change allows the issue body to contain pure plan content while
-    metadata blocks are added programmatically via comments.
+    Wraps the full plan in a collapsible <details> block with customizable
+    introductory text, making GitHub issues more scannable while preserving
+    all plan details.
 
     Args:
         plan: Raw plan content as markdown string
+        intro_text: Optional introductory text displayed before the collapsible
+            block. Defaults to "This issue contains an implementation plan:"
 
     Returns:
-        Plan content stripped of leading/trailing whitespace
+        Plan wrapped in details block with intro text
 
     Example:
         >>> plan = "## My Plan\\n\\n- Step 1\\n- Step 2"
         >>> result = wrap_plan_in_metadata_block(plan)
-        >>> result == plan.strip()
+        >>> "<details>" in result
+        True
+        >>> "This issue contains an implementation plan:" in result
+        True
+        >>> plan in result
         True
     """
-    return plan.strip()
+    plan_content = plan.strip()
+
+    # Build the wrapped format with proper spacing for GitHub markdown rendering
+    # Blank lines around content inside <details> are required for proper rendering
+    return f"""{intro_text}
+
+<details>
+<summary><code>erk-plan</code></summary>
+
+{plan_content}
+
+</details>"""
 
 
 def extract_title_from_plan(plan: str) -> str:

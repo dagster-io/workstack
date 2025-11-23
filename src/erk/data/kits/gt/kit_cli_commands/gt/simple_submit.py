@@ -160,7 +160,23 @@ def complete_submission(
     if ops is None:
         ops = RealGtKit()
 
-    # 1. Add "Closes #N" to commit message if issue number provided
+    # 1. Stage any uncommitted changes before amending
+    if verbose:
+        click.echo("Debug: Checking for uncommitted changes before amend...", err=True)
+    if ops.git().has_uncommitted_changes():
+        if verbose:
+            click.echo("Debug: Found uncommitted changes, staging...", err=True)
+        if not ops.git().add_all():
+            if verbose:
+                click.echo("Debug: Failed to stage changes", err=True)
+            return {"success": False, "error": "Failed to stage changes"}
+        if verbose:
+            click.echo("Debug: Successfully staged changes", err=True)
+    else:
+        if verbose:
+            click.echo("Debug: No uncommitted changes found", err=True)
+
+    # 2. Add "Closes #N" to commit message if issue number provided
     final_commit_message = commit_message
     if issue_number is not None:
         if verbose:
@@ -168,7 +184,7 @@ def complete_submission(
         # Append "Closes #N" to the end of the commit message
         final_commit_message = f"{commit_message}\n\nCloses #{issue_number}"
 
-    # 2. Amend commit with final message
+    # 3. Amend commit with final message
     if verbose:
         click.echo(f"Debug: Amending commit with message: {final_commit_message!r}", err=True)
     if not ops.git().amend_commit(final_commit_message):
@@ -178,7 +194,7 @@ def complete_submission(
     if verbose:
         click.echo("Debug: Successfully amended commit", err=True)
 
-    # 2. Submit with appropriate flags
+    # 4. Submit with appropriate flags
     # Note: Since GraphiteGtKit.submit() doesn't have a squash parameter yet,
     # we'll need to squash manually if multiple commits exist
     if squash:
@@ -201,7 +217,7 @@ def complete_submission(
                 if verbose:
                     click.echo("Debug: Successfully squashed commits", err=True)
 
-    # 3. Submit the PR
+    # 5. Submit the PR
     if verbose:
         click.echo("Debug: Submitting PR...", err=True)
     result = ops.graphite().submit(publish=True, restack=True)
@@ -216,7 +232,7 @@ def complete_submission(
     if verbose:
         click.echo("Debug: PR submitted successfully", err=True)
 
-    # 4. Get PR info
+    # 6. Get PR info
     if verbose:
         click.echo("Debug: Getting PR info...", err=True)
     pr_info = ops.github().get_pr_info()
@@ -233,7 +249,7 @@ def complete_submission(
     if verbose:
         click.echo(f"Debug: Found PR #{pr_number} at {pr_url}", err=True)
 
-    # 5. Mark PR as ready for review (not draft)
+    # 7. Mark PR as ready for review (not draft)
     if verbose:
         click.echo("Debug: Marking PR as ready for review...", err=True)
     if not ops.github().mark_pr_ready():
@@ -244,7 +260,7 @@ def complete_submission(
         if verbose:
             click.echo("Debug: Successfully marked PR as ready", err=True)
 
-    # 6. Update PR body with "Closes #N" if issue number provided
+    # 8. Update PR body with "Closes #N" if issue number provided
     if issue_number is not None and pr_number is not None:
         if verbose:
             click.echo(f"Debug: Updating PR with issue reference #{issue_number}", err=True)
@@ -266,7 +282,7 @@ def complete_submission(
             if verbose:
                 click.echo("Debug: Successfully updated PR metadata", err=True)
 
-    # 7. Get Graphite URL if possible
+    # 9. Get Graphite URL if possible
     if verbose:
         click.echo("Debug: Getting Graphite PR URL...", err=True)
     graphite_url = ops.github().get_graphite_pr_url(pr_number)

@@ -32,6 +32,7 @@ class GitState:
     branch_parents: dict[str, str] = field(default_factory=dict)
     add_success: bool = True
     trunk_branch: str = "main"
+    tracked_files: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -86,23 +87,49 @@ class FakeGitGtKitOps(GitGtKit):
 
     def add_all(self) -> bool:
         """Stage all changes with configurable success/failure."""
-        return self._state.add_success
+        if not self._state.add_success:
+            return False
+
+        # Track staged files separately for proper simulation
+        # In a real git workflow, add_all stages files but doesn't commit them
+        # For our fake, we'll track this via a staged_files field
+        if not hasattr(self, "_staged_files"):
+            self._staged_files: list[str] = []
+        self._staged_files = list(self._state.uncommitted_files)
+        return True
 
     def commit(self, message: str) -> bool:
         """Create a commit and clear uncommitted files."""
         # Create new state with commit added and uncommitted files cleared
         new_commits = [*self._state.commits, message]
-        self._state = replace(self._state, commits=new_commits, uncommitted_files=[])
+        # Track committed files in the state
+        tracked_files = getattr(self._state, "tracked_files", [])
+        new_tracked = list(set(tracked_files + self._state.uncommitted_files))
+        self._state = replace(
+            self._state, commits=new_commits, uncommitted_files=[], tracked_files=new_tracked
+        )
+        # Clear staged files after commit
+        if hasattr(self, "_staged_files"):
+            self._staged_files = []
         return True
 
     def amend_commit(self, message: str) -> bool:
-        """Amend the current commit message."""
+        """Amend the current commit message and include any staged changes."""
         if not self._state.commits:
             return False
 
         # Replace last commit message
         new_commits = [*self._state.commits[:-1], message]
-        self._state = replace(self._state, commits=new_commits)
+        # Amend should include staged files and clear uncommitted files
+        # (since they're now part of the amended commit)
+        tracked_files = getattr(self._state, "tracked_files", [])
+        new_tracked = list(set(tracked_files + self._state.uncommitted_files))
+        self._state = replace(
+            self._state, commits=new_commits, uncommitted_files=[], tracked_files=new_tracked
+        )
+        # Clear staged files after amend
+        if hasattr(self, "_staged_files"):
+            self._staged_files = []
         return True
 
     def count_commits_in_branch(self, parent_branch: str) -> int:

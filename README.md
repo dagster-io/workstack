@@ -106,6 +106,38 @@ erk delete NAME            # Delete worktree
 erk submit                 # Submit plan for remote AI implementation (GitHub Actions)
 ```
 
+### Implementing from Plans or Issues
+
+```bash
+# From GitHub issue (must have 'erk-plan' label, requires # prefix)
+erk implement #123                                   # Create worktree from issue #123
+erk implement https://github.com/user/repo/issues/123  # From issue URL
+
+# From plan file (anything without # prefix or URL pattern)
+erk implement ./my-feature-plan.md                   # Create worktree from plan file
+erk implement 123                                    # File named "123" (no # = file path)
+
+# With custom worktree name
+erk implement #123 --worktree-name custom-name       # Override auto-generated name
+
+# Dry run (see what would happen)
+erk implement #123 --dry-run                         # Preview without creating
+```
+
+The `erk implement` command is a unified interface for creating worktrees from either GitHub issues or local plan files. It automatically:
+
+- Creates a new worktree with an auto-generated or custom name
+- Sets up the `.impl/` folder with plan content
+- For GitHub issues: saves issue reference for PR linking (requires `#` prefix)
+- For plan files: moves the file into the worktree (uses move semantics)
+- Provides next steps for running `/erk:implement-plan` with Claude
+
+**Target detection:**
+
+- `#123` → GitHub issue number (requires `#` prefix)
+- `https://github.com/user/repo/issues/123` → GitHub issue URL
+- Anything else → File path (including plain numbers like `123`)
+
 ### Stack Navigation
 
 With Graphite enabled, navigate your stacks directly:

@@ -8,7 +8,11 @@ import subprocess
 
 
 def test_wrap_plan_command_produces_valid_output() -> None:
-    """Test wrap-plan-in-metadata-block command produces correct format."""
+    """Test wrap-plan-in-metadata-block command returns plan as-is.
+
+    The command now returns the plan content unchanged. Metadata wrapping
+    is handled separately via erk.integrations.github.metadata_blocks module.
+    """
     plan_content = """# Test Implementation Plan
 
 ## Overview
@@ -34,13 +38,7 @@ This is a test plan for verification.
 
     output = result.stdout
 
-    # Verify output structure
-    assert "This issue contains an implementation plan:" in output
-    assert "<details>" in output
-    assert "<summary><code>erk-plan</code></summary>" in output
-    assert "</details>" in output
-
-    # Verify plan content is preserved (raw markdown, no YAML fence)
+    # Verify plan content is returned as-is (no wrapper)
     assert "# Test Implementation Plan" in output
     assert "## Overview" in output
     assert "## Implementation Steps" in output
@@ -48,8 +46,10 @@ This is a test plan for verification.
     assert "2. Second step" in output
     assert "## Success Criteria" in output
 
-    # Verify no 'open' attribute (collapsed by default)
-    assert "open" not in output.lower()
+    # Verify NO metadata wrapping (that's handled separately)
+    assert "This issue contains an implementation plan:" not in output
+    assert "<details>" not in output
+    assert "</details>" not in output
 
 
 def test_wrap_plan_command_handles_empty_input() -> None:
@@ -101,7 +101,11 @@ def test_wrap_plan_command_preserves_special_characters() -> None:
 
 
 def test_wrap_plan_command_with_very_long_plan() -> None:
-    """Test wrap-plan-in-metadata-block handles large plans."""
+    """Test wrap-plan-in-metadata-block handles large plans.
+
+    The command now returns the plan content unchanged. Metadata wrapping
+    is handled separately via erk.integrations.github.metadata_blocks module.
+    """
     # Create a large plan (simulate a realistic size)
     sections = []
     for i in range(20):
@@ -121,13 +125,13 @@ def test_wrap_plan_command_with_very_long_plan() -> None:
 
     output = result.stdout
 
-    # Verify structure is maintained
-    assert "This issue contains an implementation plan:" in output
-    assert "<details>" in output
-    assert "</details>" in output
-
-    # Verify content is complete (check first and last sections)
+    # Verify content is returned as-is and complete
     assert "## Phase 1" in output
     assert "## Phase 20" in output
     assert "Task 1.1" in output
     assert "Task 20.10" in output
+
+    # Verify NO metadata wrapping (that's handled separately)
+    assert "This issue contains an implementation plan:" not in output
+    assert "<details>" not in output
+    assert "</details>" not in output

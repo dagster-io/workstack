@@ -10,6 +10,7 @@ from erk.cli.commands.current import current_cmd
 from erk.cli.commands.delete import del_cmd, delete_cmd
 from erk.cli.commands.down import down_cmd
 from erk.cli.commands.goto import goto_cmd
+from erk.cli.commands.implement import implement
 from erk.cli.commands.init import init_cmd
 from erk.cli.commands.land_stack import land_stack
 from erk.cli.commands.list import list_cmd, ls_cmd
@@ -44,6 +45,7 @@ cli.add_command(completion_group)
 cli.add_command(consolidate_cmd)
 cli.add_command(create)
 cli.add_command(current_cmd)
+cli.add_command(implement)
 cli.add_command(down_cmd)
 cli.add_command(checkout_cmd)
 cli.add_command(checkout_cmd, name="co")  # Alias

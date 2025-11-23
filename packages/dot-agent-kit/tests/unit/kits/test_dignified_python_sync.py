@@ -11,6 +11,9 @@ def test_shared_files_exist():
     docs_dir = repo_root / ".claude" / "docs" / "dignified-python"
 
     # Check universal reference files at root level
+    # Note: code-smells-dagster.md, patterns-reference-universal.md, and
+    # performance-patterns.md have been moved to .claude/docs/code-review/
+    # to reduce auto-loaded token usage
     universal_files = [
         "exception-handling.md",
         "path-operations.md",
@@ -18,9 +21,7 @@ def test_shared_files_exist():
         "imports.md",
         "cli-patterns.md",
         "subprocess.md",
-        "code-smells-dagster.md",
         "core-standards-universal.md",
-        "patterns-reference-universal.md",
         "type-annotations-base.md",
     ]
 

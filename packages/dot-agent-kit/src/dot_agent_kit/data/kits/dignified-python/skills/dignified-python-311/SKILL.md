@@ -20,18 +20,18 @@ Use the routing index in @routing-patterns.md to determine which additional file
 
 - **Dictionary/key operations** → @.claude/docs/dignified-python/exception-handling.md
 - **File system operations** → @.claude/docs/dignified-python/path-operations.md
-- **Properties/magic methods** → @.claude/docs/dignified-python/performance-patterns.md
 - **Import organization** → @.claude/docs/dignified-python/imports.md
 - **Dependency injection** → @.claude/docs/dignified-python/dependency-injection.md
 - **CLI development** → @.claude/docs/dignified-python/cli-patterns.md
 - **Subprocess operations** → @.claude/docs/dignified-python/subprocess.md
 - **Type annotations** → @.claude/docs/dignified-python/version-specific/311/type-annotations.md
-- **Code smells/refactoring** → @.claude/docs/dignified-python/code-smells-dagster.md
 
 ## Comprehensive Reference (If Needed)
 
 If unsure which specific file to load, or need full overview:
-@.claude/docs/dignified-python/core-standards-universal.md
+.claude/docs/dignified-python/core-standards-universal.md
+
+**For code reviews:** See `.claude/docs/code-review/` for code smell patterns and refactoring guidance (not auto-loaded).
 
 ## How to Use This Skill
 

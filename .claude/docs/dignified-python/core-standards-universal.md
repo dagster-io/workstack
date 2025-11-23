@@ -8,7 +8,6 @@ For detailed guidance, see the specialized reference files:
 - Path operations → @path-operations.md
 - Dependency injection → @dependency-injection.md
 - Import organization → @imports.md
-- Performance patterns → @performance-patterns.md
 - CLI patterns → @cli-patterns.md
 - Subprocess usage → @subprocess.md
 
@@ -100,7 +99,7 @@ def fetch_size_from_db(self) -> int:
     return self._fetch_from_db()
 ```
 
-**See @performance-patterns.md for complete guidance.**
+**For performance guidance:** See `.claude/docs/code-review/performance-patterns.md` for complete guidance (manual reference, not auto-loaded).
 
 ---
 

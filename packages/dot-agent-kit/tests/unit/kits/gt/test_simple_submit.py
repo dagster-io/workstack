@@ -27,11 +27,7 @@ class TestExecuteSimpleSubmit:
     def test_prepare_with_no_uncommitted_changes(self) -> None:
         """Test prepare phase when no uncommitted changes exist."""
         ops = FakeGtKitOps().with_branch("feature-branch", parent="main").with_commits(1)
-
-        # Mock RealGtKit to return our fake ops
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
-            mock_kit.return_value = ops
-            result = execute_simple_submit()
+        result = execute_simple_submit(ops=ops)
 
         assert result["success"] is True
         assert result["branch"] == "feature-branch"
@@ -47,10 +43,7 @@ class TestExecuteSimpleSubmit:
             .with_uncommitted_files(["file.py"])
             .with_commits(0)
         )
-
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
-            mock_kit.return_value = ops
-            result = execute_simple_submit(description="WIP changes")
+        result = execute_simple_submit(description="WIP changes", ops=ops)
 
         assert result["success"] is True
         # Verify commit was created
@@ -64,10 +57,7 @@ class TestExecuteSimpleSubmit:
             .with_uncommitted_files(["file.py"])
             .with_commits(0)
         )
-
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
-            mock_kit.return_value = ops
-            result = execute_simple_submit()  # No description provided
+        result = execute_simple_submit(ops=ops)  # No description provided
 
         assert result["success"] is True
         # Check default message was used
@@ -81,10 +71,7 @@ class TestExecuteSimpleSubmit:
             .with_uncommitted_files(["file.py"])
             .with_add_failure()  # Configure add to fail
         )
-
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
-            mock_kit.return_value = ops
-            result = execute_simple_submit()
+        result = execute_simple_submit(ops=ops)
 
         assert result["success"] is False
         assert result["error"] == "Failed to stage changes"
@@ -97,10 +84,7 @@ class TestExecuteSimpleSubmit:
             .with_commits(1)
             .with_restack_failure()
         )
-
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
-            mock_kit.return_value = ops
-            result = execute_simple_submit()
+        result = execute_simple_submit(ops=ops)
 
         assert result["success"] is False
         assert result["error"] == "Failed to restack branch"
@@ -112,10 +96,7 @@ class TestExecuteSimpleSubmit:
         from dataclasses import replace
 
         ops.git()._state = replace(ops.git().get_state(), current_branch="")
-
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
-            mock_kit.return_value = ops
-            result = execute_simple_submit()
+        result = execute_simple_submit(ops=ops)
 
         assert result["success"] is False
         assert result["error"] == "Could not determine current branch"
@@ -128,10 +109,7 @@ class TestExecuteSimpleSubmit:
 
         gt_state = ops.graphite().get_state()
         ops.graphite()._state = replace(gt_state, branch_parents={})
-
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
-            mock_kit.return_value = ops
-            result = execute_simple_submit()
+        result = execute_simple_submit(ops=ops)
 
         assert result["success"] is False
         assert result["error"] == "Could not determine parent branch"
@@ -151,13 +129,9 @@ class TestExecuteSimpleSubmit:
 
         # Mock Path.cwd() to return our temp directory
         patch_path = "erk.data.kits.gt.kit_cli_commands.gt.simple_submit.Path.cwd"
-        with (
-            patch(patch_path) as mock_cwd,
-            patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit,
-        ):
+        with patch(patch_path) as mock_cwd:
             mock_cwd.return_value = tmp_path
-            mock_kit.return_value = ops
-            result = execute_simple_submit()
+            result = execute_simple_submit(ops=ops)
 
         assert result["success"] is True
         assert result["issue_number"] == 123
@@ -168,13 +142,9 @@ class TestExecuteSimpleSubmit:
 
         # Mock Path.cwd() to return temp directory without .impl/issue.json
         patch_path = "erk.data.kits.gt.kit_cli_commands.gt.simple_submit.Path.cwd"
-        with (
-            patch(patch_path) as mock_cwd,
-            patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit,
-        ):
+        with patch(patch_path) as mock_cwd:
             mock_cwd.return_value = tmp_path
-            mock_kit.return_value = ops
-            result = execute_simple_submit()
+            result = execute_simple_submit(ops=ops)
 
         assert result["success"] is True
         assert result["issue_number"] is None
@@ -191,10 +161,7 @@ class TestCompleteSubmission:
             .with_commits(1)
             .with_pr(123, url="https://github.com/repo/pull/123")
         )
-
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
-            mock_kit.return_value = ops
-            result = complete_submission("Add feature\n\nFull description")
+        result = complete_submission("Add feature\n\nFull description", ops=ops)
 
         assert result["success"] is True
         assert result["pr_number"] == 123
@@ -205,10 +172,7 @@ class TestCompleteSubmission:
         ops = (
             FakeGtKitOps().with_branch("feature-branch", parent="main").with_commits(1).with_pr(123)
         )
-
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
-            mock_kit.return_value = ops
-            result = complete_submission("Add feature", squash=True)
+        result = complete_submission("Add feature", squash=True, ops=ops)
 
         assert result["success"] is True
         # No squash should have been attempted (count == 1)
@@ -221,10 +185,7 @@ class TestCompleteSubmission:
             .with_commits(3)  # Multiple commits
             .with_pr(123)
         )
-
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
-            mock_kit.return_value = ops
-            result = complete_submission("Add feature", squash=True)
+        result = complete_submission("Add feature", squash=True, ops=ops)
 
         assert result["success"] is True
 
@@ -233,10 +194,7 @@ class TestCompleteSubmission:
         ops = (
             FakeGtKitOps().with_branch("feature-branch", parent="main").with_commits(3).with_pr(123)
         )
-
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
-            mock_kit.return_value = ops
-            result = complete_submission("Add feature", squash=False)
+        result = complete_submission("Add feature", squash=False, ops=ops)
 
         assert result["success"] is True
         # Squash should have been skipped
@@ -245,10 +203,7 @@ class TestCompleteSubmission:
         """Test error when git commit --amend fails."""
         ops = FakeGtKitOps().with_branch("feature-branch", parent="main")
         # No commits, so amend will fail
-
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
-            mock_kit.return_value = ops
-            result = complete_submission("Add feature")
+        result = complete_submission("Add feature", ops=ops)
 
         assert result["success"] is False
         assert result["error"] == "Failed to amend commit"
@@ -261,10 +216,7 @@ class TestCompleteSubmission:
             .with_commits(3)
             .with_squash_failure(stderr="Squash conflict")
         )
-
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
-            mock_kit.return_value = ops
-            result = complete_submission("Add feature", squash=True)
+        result = complete_submission("Add feature", squash=True, ops=ops)
 
         assert result["success"] is False
         assert "Failed to squash" in result["error"]
@@ -278,10 +230,7 @@ class TestCompleteSubmission:
             .with_commits(1)
             .with_submit_failure(stderr="Submit error")
         )
-
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
-            mock_kit.return_value = ops
-            result = complete_submission("Add feature")
+        result = complete_submission("Add feature", ops=ops)
 
         assert result["success"] is False
         assert result["error"] == "Submit error"
@@ -290,10 +239,7 @@ class TestCompleteSubmission:
         """Test success with message when PR info cannot be retrieved."""
         ops = FakeGtKitOps().with_branch("feature-branch", parent="main").with_commits(1)
         # No PR configured, so get_pr_info() will return None
-
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
-            mock_kit.return_value = ops
-            result = complete_submission("Add feature")
+        result = complete_submission("Add feature", ops=ops)
 
         assert result["success"] is True
         assert result["pr_number"] is None
@@ -309,13 +255,11 @@ class TestIssueLinkling:
         ops = (
             FakeGtKitOps().with_branch("feature-branch", parent="main").with_commits(1).with_pr(456)
         )
-
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
-            mock_kit.return_value = ops
-            result = complete_submission(
-                "Add feature\n\nFull description",
-                issue_number=123,
-            )
+        result = complete_submission(
+            "Add feature\n\nFull description",
+            issue_number=123,
+            ops=ops,
+        )
 
         assert result["success"] is True
         assert result["issue_number"] == 123
@@ -331,13 +275,11 @@ class TestIssueLinkling:
             .with_commits(1)
             .with_pr(456, url="https://github.com/repo/pull/456")
         )
-
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
-            mock_kit.return_value = ops
-            result = complete_submission(
-                "Add feature\n\nFull description",
-                issue_number=123,
-            )
+        result = complete_submission(
+            "Add feature\n\nFull description",
+            issue_number=123,
+            ops=ops,
+        )
 
         assert result["success"] is True
         # Verify PR body was updated with "Closes #123" (should appear only once)
@@ -350,13 +292,11 @@ class TestIssueLinkling:
         ops = (
             FakeGtKitOps().with_branch("feature-branch", parent="main").with_commits(1).with_pr(456)
         )
-
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
-            mock_kit.return_value = ops
-            result = complete_submission(
-                "Add feature",  # Title only, no body
-                issue_number=789,
-            )
+        result = complete_submission(
+            "Add feature",  # Title only, no body
+            issue_number=789,
+            ops=ops,
+        )
 
         assert result["success"] is True
         # Verify PR body is just "Closes #789\n\n"
@@ -369,13 +309,11 @@ class TestIssueLinkling:
         ops = (
             FakeGtKitOps().with_branch("feature-branch", parent="main").with_commits(1).with_pr(456)
         )
-
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
-            mock_kit.return_value = ops
-            result = complete_submission(
-                "Add feature\n\nFull description",
-                issue_number=None,
-            )
+        result = complete_submission(
+            "Add feature\n\nFull description",
+            issue_number=None,
+            ops=ops,
+        )
 
         assert result["success"] is True
         # Verify commit message unchanged
@@ -394,10 +332,7 @@ class TestMarkPRReady:
             .with_commits(1)
             .with_pr(123, url="https://github.com/repo/pull/123")
         )
-
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
-            mock_kit.return_value = ops
-            result = complete_submission("Add feature")
+        result = complete_submission("Add feature", ops=ops)
 
         assert result["success"] is True
         # mark_pr_ready was called (verified by fake implementation)
@@ -407,10 +342,7 @@ class TestMarkPRReady:
         """Test that workflow continues even if mark_pr_ready fails."""
         ops = FakeGtKitOps().with_branch("feature-branch", parent="main").with_commits(1)
         # No PR configured, so mark_pr_ready will fail (returns False)
-
-        with patch("erk.data.kits.gt.kit_cli_commands.gt.simple_submit.RealGtKit") as mock_kit:
-            mock_kit.return_value = ops
-            result = complete_submission("Add feature")
+        result = complete_submission("Add feature", ops=ops)
 
         # Should still succeed even though mark_pr_ready failed
         assert result["success"] is True

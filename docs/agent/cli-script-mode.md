@@ -8,7 +8,7 @@ Script mode is a command flag (`--script`) that suppresses diagnostic output to 
 
 Shell integration allows commands to automatically activate worktrees and switch directories. For this to work, the shell must:
 
-1. Execute a command with `--script` flag: `source <(erk implement #123 --script)`
+1. Execute a command with `--script` flag: `source <(erk implement 123 --script)`
 2. Parse the command's stdout to find the activation script path
 3. Source the activation script to change directory and set environment
 
@@ -19,7 +19,7 @@ This requires **clean stdout** - any diagnostic output would break parsing.
 Without script mode, commands produce mixed output:
 
 ```bash
-$ erk implement #123
+$ erk implement 123
 Fetching issue from GitHub...
 Issue: Add Authentication Feature
 Creating worktree 'add-authentication-feature'...
@@ -147,7 +147,7 @@ ctx = ErkContext(
 ### Without --script (Interactive Mode)
 
 ```bash
-$ erk implement #123
+$ erk implement 123
 Fetching issue from GitHub...
 Issue: Add Authentication Feature
 Creating worktree 'add-authentication-feature'...
@@ -161,13 +161,13 @@ Next steps:
 
 Shell integration not detected.
 To activate environment and run implementation, use:
-  source <(erk implement #123 --script)
+  source <(erk implement 123 --script)
 ```
 
 ### With --script (Script Mode)
 
 ```bash
-$ erk implement #123 --script
+$ erk implement 123 --script
 /tmp/erk-activation-scripts/implement-20250123-142530.sh
 ```
 
@@ -234,9 +234,9 @@ Don't add script mode to:
 
 ## Shell Integration Flow
 
-1. User runs command with shell wrapper: `erk implement #123`
+1. User runs command with shell wrapper: `erk implement 123`
 2. Wrapper checks if shell integration is active
-3. If active, wrapper runs: `source <(erk implement #123 --script)`
+3. If active, wrapper runs: `source <(erk implement 123 --script)`
 4. Command with `--script`:
    - Suppresses diagnostics via `SuppressedFeedback`
    - Writes activation script to temp file

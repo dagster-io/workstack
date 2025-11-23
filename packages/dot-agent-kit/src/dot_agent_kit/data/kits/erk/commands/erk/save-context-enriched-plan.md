@@ -23,7 +23,7 @@ This command extracts a plan from conversation context, optionally applies guida
 
 **What happens AFTER:**
 
-- ⏭️ Implement directly: `erk implement #<issue>`
+- ⏭️ Implement directly: `erk implement <issue>`
 
 ## What Happens
 
@@ -230,7 +230,7 @@ Suggested action: [1-3 concrete steps to resolve]
 **IF YOU USE:** Edit, Write (to codebase files), Task, NotebookEdit, SlashCommand, etc.
 → 🔴 **YOU ARE IMPLEMENTING, NOT PLANNING. STOP IMMEDIATELY.**
 
-This command only creates the GitHub issue. Implementation happens via `erk implement #<issue>`.
+This command only creates the GitHub issue. Implementation happens via `erk implement <issue>`.
 
 ### Step 1: Detect Implementation Plan in Context
 
@@ -445,7 +445,7 @@ Suggested action:
 Next steps:
 
 1. Review the issue if needed: gh issue view <number> --web
-2. Implement: erk implement #<number>
+2. Implement: erk implement <number>
 
 ---
 

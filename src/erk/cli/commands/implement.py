@@ -476,7 +476,6 @@ def implement(
     \b
       # From GitHub issue number (# prefix optional)
       erk implement 809
-      erk implement #809
 
     \b
       # From GitHub issue URL

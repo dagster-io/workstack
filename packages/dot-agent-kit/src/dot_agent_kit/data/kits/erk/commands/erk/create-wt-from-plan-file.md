@@ -4,7 +4,7 @@ description: Create worktree from existing plan file on disk
 
 # /erk:create-wt-from-plan-file
 
-⚠️ **DEPRECATED**: This command is deprecated. Use `erk implement #<issue>` instead, which creates worktrees directly from GitHub issues.
+⚠️ **DEPRECATED**: This command is deprecated. Use `erk implement <issue>` instead, which creates worktrees directly from GitHub issues.
 
 This command remains functional for backward compatibility with existing plan files on disk.
 

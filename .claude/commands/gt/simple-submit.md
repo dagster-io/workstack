@@ -1,0 +1,1 @@
+../../../src/erk/data/kits/gt/commands/gt/simple-submit.md

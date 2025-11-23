@@ -12,13 +12,18 @@ kit_cli_commands:
   - name: update-pr
     path: kit_cli_commands/gt/update_pr.py
     description: Update PR by staging changes, committing, restacking, and submitting
+  - name: simple-submit
+    path: kit_cli_commands/gt/simple_submit.py
+    description: Simplified submit workflow for testing and comparison
 artifacts:
   agent:
     - agents/gt/gt-branch-submitter.md
     - agents/gt/gt-update-pr-submitter.md
+    - agents/gt/gt-simple-submitter.md
   command:
     - commands/gt/submit-squashed-branch.md
     - commands/gt/update-pr.md
+    - commands/gt/simple-submit.md
   skill:
     - skills/gt-graphite/SKILL.md
     - skills/gt-graphite/references/gt-reference.md

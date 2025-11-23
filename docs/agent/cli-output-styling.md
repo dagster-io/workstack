@@ -11,6 +11,7 @@ Use consistent colors and styling for CLI output via `click.style()`:
 | Branch names             | `yellow`         | No   | `click.style(branch, fg="yellow")`                  |
 | PR numbers               | `cyan`           | No   | `click.style(f"PR #{pr}", fg="cyan")`               |
 | PR titles                | `bright_magenta` | No   | `click.style(title, fg="bright_magenta")`           |
+| Plan titles              | `cyan`           | No   | `click.style(f"📋 {plan}", fg="cyan")`              |
 | Success messages (✓)     | `green`          | No   | `click.style("✓ Done", fg="green")`                 |
 | Section headers          | -                | Yes  | `click.style(header, bold=True)`                    |
 | Current/active branches  | `bright_green`   | Yes  | `click.style(branch, fg="bright_green", bold=True)` |

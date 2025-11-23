@@ -18,7 +18,7 @@ This command provides a fast path for saving plans when you don't need session l
 
 - Extracts the plan as-is from the conversation
 - Generates a descriptive filename from the plan title
-- Adds minimal frontmatter (`erk_plan: true`, timestamp)
+- Saves plan content as-is (no frontmatter generation)
 - Saves to repository root
 
 **What it does NOT do:**
@@ -143,25 +143,11 @@ Use `AskUserQuestion` to prompt for title if extraction fails.
 
 ### Step 3: Add Minimal Frontmatter
 
-Prepend YAML frontmatter to the plan content:
-
-```yaml
----
-erk_plan: true
-created_at: <ISO-8601-timestamp>
----
-```
-
-**DO NOT modify the plan content** - append it exactly as extracted from Step 1.
+**DO NOT modify the plan content** - use it exactly as extracted from Step 1.
 
 **Example output structure:**
 
 ```markdown
----
-erk_plan: true
-created_at: 2025-11-21T10:00:00Z
----
-
 # Original Plan Title
 
 [Original plan content unchanged...]

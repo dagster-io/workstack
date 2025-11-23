@@ -170,7 +170,6 @@ def test_workflow_title_extraction_yaml_frontmatter(tmp_path: Path) -> None:
     """Test that plan with YAML front matter title is used for issue."""
     plan_content = """---
 title: Custom Title from YAML
-erk_plan: true
 ---
 
 # Some Other Heading

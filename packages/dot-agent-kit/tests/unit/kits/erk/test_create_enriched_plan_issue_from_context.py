@@ -151,11 +151,7 @@ def test_create_enriched_plan_issue_yaml_frontmatter() -> None:
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()
 
-    plan = """---
-erk_plan: true
----
-
-# Feature Plan
+    plan = """# Feature Plan
 
 - Step 1
 """
@@ -167,9 +163,9 @@ erk_plan: true
     )
 
     assert result.exit_code == 0
-    # Verify YAML frontmatter extracted properly
+    # Verify plan content preserved
     assert len(fake_gh.created_issues) == 1
     title, body, _labels = fake_gh.created_issues[0]
     assert title == "Feature Plan"
-    # Body should contain frontmatter
-    assert "erk_plan: true" in body
+    # Body should contain plan content
+    assert "- Step 1" in body

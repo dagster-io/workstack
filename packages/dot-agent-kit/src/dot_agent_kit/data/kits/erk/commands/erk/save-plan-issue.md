@@ -387,20 +387,6 @@ Suggested action:
 - DO NOT modify any files in the codebase
 - ONLY create a GitHub issue with the enhanced plan
 
-**Add enrichment marker:**
-
-Before creating the issue, prepend YAML front matter to mark it as an erk plan:
-
-```markdown
----
-erk_plan: true
----
-
-[plan content here]
-```
-
-This marker enables detection of erk plans by the `erk implement` command.
-
 **Create the issue using kit CLI command:**
 
 ```bash

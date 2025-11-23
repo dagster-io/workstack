@@ -6,7 +6,11 @@ It follows the immutable state pattern from erk's GT kit fakes.
 
 from dataclasses import dataclass, field
 
-from dot_agent_kit.integrations.github_cli import DotAgentGitHubCli, IssueCreationResult
+from dot_agent_kit.integrations.github_cli import (
+    DotAgentGitHubCli,
+    IssueCreationResult,
+    LabelResult,
+)
 
 
 def _empty_str_list() -> list[str]:
@@ -54,15 +58,18 @@ class FakeDotAgentGitHubCli(DotAgentGitHubCli):
         *,
         issues: dict[int, GitHubIssueState] | None = None,
         next_issue_number: int = 1,
+        labels: set[str] | None = None,
     ) -> None:
         """Create FakeGitHubCli with pre-configured state.
 
         Args:
             issues: Mapping of issue number -> GitHubIssueState
             next_issue_number: Next issue number to assign (for predictable testing)
+            labels: Set of existing label names
         """
         self._issues = issues or {}
         self._next_issue_number = next_issue_number
+        self._labels = labels or set()
         self._created_issues: list[tuple[str, str, list[str]]] = []
 
     @property
@@ -82,6 +89,15 @@ class FakeDotAgentGitHubCli(DotAgentGitHubCli):
             Mapping of issue number to GitHubIssueState
         """
         return self._issues.copy()
+
+    @property
+    def labels(self) -> set[str]:
+        """Read-only access to all labels.
+
+        Returns:
+            Set of label names
+        """
+        return self._labels.copy()
 
     def with_issue(
         self,
@@ -157,3 +173,18 @@ class FakeDotAgentGitHubCli(DotAgentGitHubCli):
             issue_number=issue_number,
             issue_url=url,
         )
+
+    def ensure_label_exists(
+        self,
+        label: str,
+        description: str,
+        color: str,
+    ) -> LabelResult:
+        """Track labels in memory.
+
+        Checks if label exists, creates if needed, and returns result.
+        """
+        existed = label in self._labels
+        if not existed:
+            self._labels.add(label)
+        return LabelResult(exists=existed, created=not existed)

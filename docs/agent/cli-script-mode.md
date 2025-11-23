@@ -1,0 +1,257 @@
+# CLI Script Mode
+
+## Overview
+
+Script mode is a command flag (`--script`) that suppresses diagnostic output to keep stdout clean for programmatic parsing by the shell integration handler.
+
+## Motivation
+
+Shell integration allows commands to automatically activate worktrees and switch directories. For this to work, the shell must:
+
+1. Execute a command with `--script` flag: `source <(erk implement #123 --script)`
+2. Parse the command's stdout to find the activation script path
+3. Source the activation script to change directory and set environment
+
+This requires **clean stdout** - any diagnostic output would break parsing.
+
+## The Problem: Mixed Output
+
+Without script mode, commands produce mixed output:
+
+```bash
+$ erk implement #123
+Fetching issue from GitHub...
+Issue: Add Authentication Feature
+Creating worktree 'add-authentication-feature'...
+✓ Created worktree: add-authentication-feature
+✓ Saved issue reference for PR linking
+
+Next steps:
+  1. Change to worktree:  erk checkout add-authentication-feature
+  2. Run implementation:  claude --permission-mode acceptEdits "/erk:implement-plan"
+```
+
+The shell integration handler can't parse this - it needs only the script path.
+
+## The Solution: UserFeedback Abstraction
+
+The `UserFeedback` abstraction eliminates threading `script` booleans through function signatures. Instead, functions call `ctx.feedback` methods which automatically handle output suppression based on the current mode.
+
+### Two Implementations
+
+**InteractiveFeedback** (default, `script=False`):
+
+- `info()` → outputs to stderr
+- `success()` → outputs to stderr with green styling
+- `error()` → outputs to stderr with red styling
+
+**SuppressedFeedback** (`script=True`):
+
+- `info()` → suppressed
+- `success()` → suppressed
+- `error()` → still outputs to stderr (errors always surface)
+
+### Activation Script Output
+
+Commands still output activation scripts via `user_output()`:
+
+```python
+# Diagnostic output (suppressed in script mode)
+ctx.feedback.info("Creating worktree...")
+ctx.feedback.success("✓ Created worktree")
+
+# Activation script (always output)
+if script:
+    script_content = render_activation_script(...)
+    result = ctx.script_writer.write_activation_script(...)
+    result.output_for_shell_integration()  # Prints script path to stdout
+```
+
+## Implementation Pattern
+
+### 1. Add --script Flag
+
+```python
+@click.command("implement")
+@click.option(
+    "--script",
+    is_flag=True,
+    hidden=True,  # Hide from --help (internal use)
+    help="Output activation script for shell integration",
+)
+@click.pass_obj
+def implement(
+    ctx: ErkContext,
+    target: str,
+    script: bool,
+) -> None:
+    """Create worktree from GitHub issue or plan file."""
+    # Implementation...
+```
+
+### 2. Use ctx.feedback for Diagnostics
+
+Replace direct `user_output()` calls with `ctx.feedback` methods:
+
+```python
+# ❌ BAD: Direct output (always visible)
+user_output("Fetching issue from GitHub...")
+user_output(click.style("✓ Created worktree", fg="green"))
+
+# ✅ GOOD: Mode-aware output (suppressed in script mode)
+ctx.feedback.info("Fetching issue from GitHub...")
+ctx.feedback.success("✓ Created worktree")
+```
+
+### 3. Provide Two Output Modes
+
+```python
+if script:
+    # Output activation script for shell integration
+    script_content = render_activation_script(
+        worktree_path=wt_path,
+        final_message='echo "Activated worktree: $(pwd)"',
+        comment="implement activation",
+    )
+    result = ctx.script_writer.write_activation_script(
+        script_content,
+        command_name="implement",
+        comment=f"activate {wt_path.name}",
+    )
+    result.output_for_shell_integration()
+else:
+    # Provide manual instructions
+    user_output("\n" + click.style("Next steps:", fg="cyan", bold=True))
+    user_output(f"  1. Change to worktree:  erk checkout {branch}")
+    user_output(f"  2. Run implementation:  claude ...")
+```
+
+### 4. Inject Correct Feedback Implementation
+
+Context construction handles this automatically:
+
+```python
+# In ErkContext creation (src/erk/core/context.py)
+feedback = (
+    SuppressedFeedback() if script else InteractiveFeedback()
+)
+
+ctx = ErkContext(
+    feedback=feedback,
+    # ... other dependencies
+)
+```
+
+## Example: implement Command
+
+### Without --script (Interactive Mode)
+
+```bash
+$ erk implement #123
+Fetching issue from GitHub...
+Issue: Add Authentication Feature
+Creating worktree 'add-authentication-feature'...
+Running erk checkout...
+✓ Created worktree: add-authentication-feature
+✓ Saved issue reference for PR linking
+
+Next steps:
+  1. Change to worktree:  erk checkout add-authentication-feature
+  2. Run implementation:  claude --permission-mode acceptEdits "/erk:implement-plan"
+
+Shell integration not detected.
+To activate environment and run implementation, use:
+  source <(erk implement #123 --script)
+```
+
+### With --script (Script Mode)
+
+```bash
+$ erk implement #123 --script
+/tmp/erk-activation-scripts/implement-20250123-142530.sh
+```
+
+Clean stdout with only the script path - perfect for shell integration.
+
+## Testing Guidance
+
+### Testing with FakeUserFeedback
+
+The `FakeUserFeedback` fake both captures messages and outputs them so `CliRunner` can capture them:
+
+```python
+def test_implement_from_issue() -> None:
+    """Test implementing from GitHub issue number."""
+    # Arrange
+    git = FakeGit(...)
+    store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+    ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+
+    # Act
+    result = runner.invoke(implement, ["#42"], obj=ctx)
+
+    # Assert: Check CLI output (captured by CliRunner)
+    assert result.exit_code == 0
+    assert "Created worktree" in result.output  # From ctx.feedback.success()
+    assert "Next steps:" in result.output       # From user_output()
+
+    # Could also assert on captured messages if needed
+    # assert "INFO: Fetching issue" in ctx.feedback.messages
+```
+
+### Testing Script Mode
+
+```python
+def test_implement_outputs_script_path_in_script_mode() -> None:
+    """Test that --script flag outputs only the script path."""
+    # Arrange
+    git = FakeGit(...)
+    ctx = build_workspace_test_context(env, git=git)
+
+    # Act
+    result = runner.invoke(implement, ["#42", "--script"], obj=ctx)
+
+    # Assert: Only script path in output, no diagnostics
+    assert result.exit_code == 0
+    assert "/tmp/erk-activation-scripts/" in result.output
+    assert "Fetching issue" not in result.output
+    assert "Created worktree" not in result.output
+```
+
+## When to Use Script Mode
+
+Add `--script` flag support to commands that:
+
+1. **Create worktrees** (implement, create)
+2. **Switch directories** (checkout, switch)
+3. **Need shell integration** for automatic activation
+
+Don't add script mode to:
+
+- Read-only commands (status, list, tree)
+- Commands with no directory changes
+- Commands that don't benefit from shell integration
+
+## Shell Integration Flow
+
+1. User runs command with shell wrapper: `erk implement #123`
+2. Wrapper checks if shell integration is active
+3. If active, wrapper runs: `source <(erk implement #123 --script)`
+4. Command with `--script`:
+   - Suppresses diagnostics via `SuppressedFeedback`
+   - Writes activation script to temp file
+   - Outputs only script path to stdout
+5. Shell sources the script, activating worktree
+
+## Related Files
+
+- `src/erk/core/user_feedback.py` - UserFeedback abstraction and implementations
+- `tests/fakes/user_feedback.py` - FakeUserFeedback for testing
+- `src/erk/cli/commands/implement.py` - Example command with script mode
+- `src/erk/cli/activation.py` - Activation script rendering
+
+## See Also
+
+- [cli-output-styling.md](cli-output-styling.md) - CLI output formatting guidelines
+- [shell-integration.md](shell-integration.md) - Shell integration architecture
+- [command-agent-delegation.md](command-agent-delegation.md) - Delegating to agents from commands

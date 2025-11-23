@@ -84,7 +84,7 @@ def _detect_target_type(target: str) -> TargetInfo:
 
 
 def _prepare_plan_source_from_issue(
-    ctx: ErkContext, repo_root: Path, issue_number: str
+    ctx: ErkContext, repo_root: Path, issue_number: str, script: bool = False
 ) -> PlanSource:
     """Prepare plan source from GitHub issue.
 
@@ -92,6 +92,7 @@ def _prepare_plan_source_from_issue(
         ctx: Erk context
         repo_root: Repository root path
         issue_number: GitHub issue number
+        script: Whether to suppress diagnostic output
 
     Returns:
         PlanSource with plan content and metadata
@@ -99,12 +100,20 @@ def _prepare_plan_source_from_issue(
     Raises:
         SystemExit: If issue not found or doesn't have erk-plan label
     """
+    # Output fetching diagnostic
+    if not script:
+        user_output("Fetching issue from GitHub...")
+
     # Fetch plan issue from GitHub
     try:
         plan_issue = ctx.plan_issue_store.get_plan_issue(repo_root, issue_number)
     except RuntimeError as e:
         user_output(click.style("Error: ", fg="red") + str(e))
         raise SystemExit(1) from e
+
+    # Output issue title
+    if not script:
+        user_output(f"Issue: {plan_issue.title}")
 
     # Validate issue has erk-plan label
     if "erk-plan" not in plan_issue.labels:
@@ -138,11 +147,12 @@ def _prepare_plan_source_from_issue(
     )
 
 
-def _prepare_plan_source_from_file(plan_file: Path) -> PlanSource:
+def _prepare_plan_source_from_file(plan_file: Path, script: bool = False) -> PlanSource:
     """Prepare plan source from file.
 
     Args:
         plan_file: Path to plan file
+        script: Whether to suppress diagnostic output
 
     Returns:
         PlanSource with plan content and metadata
@@ -155,8 +165,25 @@ def _prepare_plan_source_from_file(plan_file: Path) -> PlanSource:
         user_output(click.style("Error: ", fg="red") + f"Plan file not found: {plan_file}")
         raise SystemExit(1)
 
+    # Output reading diagnostic
+    if not script:
+        user_output("Reading plan file...")
+
     # Read plan content
     plan_content = plan_file.read_text(encoding="utf-8")
+
+    # Extract title from plan content for display
+    title = plan_file.stem
+    for line in plan_content.split("\n"):
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            # Extract title from first heading
+            title = stripped.lstrip("#").strip()
+            break
+
+    # Output plan title
+    if not script:
+        user_output(f"Plan: {title}")
 
     # Derive base name from filename
     plan_stem = plan_file.stem
@@ -257,6 +284,10 @@ def _create_worktree_with_plan_content(
         else LoadedConfig(env={}, post_create_commands=[], post_create_shell=None)
     )
 
+    # Output worktree creation diagnostic
+    if not script:
+        user_output("Running erk checkout...")
+
     # Create worktree
     add_worktree(
         ctx,
@@ -273,7 +304,7 @@ def _create_worktree_with_plan_content(
         user_output(click.style(f"✓ Created worktree: {name}", fg="green"))
 
     # Run post-worktree setup
-    run_post_worktree_setup(config, wt_path, repo_root, name)
+    run_post_worktree_setup(config, wt_path, repo_root, name, script)
 
     # Create .impl/ folder with plan content
     create_impl_folder(
@@ -350,7 +381,7 @@ def _implement_from_issue(
     ensure_erk_metadata_dir(repo)
 
     # Prepare plan source from issue
-    plan_source = _prepare_plan_source_from_issue(ctx, repo.root, issue_number)
+    plan_source = _prepare_plan_source_from_issue(ctx, repo.root, issue_number, script)
 
     # Create worktree with plan content
     wt_path = _create_worktree_with_plan_content(ctx, plan_source, worktree_name, dry_run, script)
@@ -389,7 +420,7 @@ def _implement_from_file(
         script: Whether to output activation script
     """
     # Prepare plan source from file
-    plan_source = _prepare_plan_source_from_file(plan_file)
+    plan_source = _prepare_plan_source_from_file(plan_file, script)
 
     # Create worktree with plan content
     wt_path = _create_worktree_with_plan_content(ctx, plan_source, worktree_name, dry_run, script)
@@ -474,6 +505,12 @@ def implement(
     """
     # Detect target type
     target_info = _detect_target_type(target)
+
+    # Output target detection diagnostic
+    if not script and target_info.target_type in ("issue_number", "issue_url"):
+        user_output(f"Detected GitHub issue #{target_info.issue_number}")
+    elif not script and target_info.target_type == "file_path":
+        user_output(f"Detected plan file: {target}")
 
     if target_info.target_type in ("issue_number", "issue_url"):
         # GitHub issue mode

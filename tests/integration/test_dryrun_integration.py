@@ -280,10 +280,10 @@ def test_noop_github_issues_create_returns_fake_number() -> None:
     fake = FakeGitHubIssues()
     noop = DryRunGitHubIssues(fake)
 
-    issue_num = noop.create_issue(sentinel_path(), "Title", "Body", ["label"])
+    result = noop.create_issue(sentinel_path(), "Title", "Body", ["label"])
 
     # Should return fake number (1) without calling wrapped implementation
-    assert issue_num == 1
+    assert result.number == 1
     # Wrapped fake should not track the creation
     assert len(fake.created_issues) == 0
 
@@ -354,8 +354,8 @@ def test_noop_github_issues_write_operations_blocked() -> None:
     noop = DryRunGitHubIssues(fake)
 
     # Create issue - should return fake number without mutating wrapped fake
-    issue_num = noop.create_issue(sentinel_path(), "Title", "Body", ["label"])
-    assert issue_num == 1  # Fake number
+    result = noop.create_issue(sentinel_path(), "Title", "Body", ["label"])
+    assert result.number == 1  # Fake number
     assert len(fake.created_issues) == 0  # Wrapped fake not mutated
 
     # Add comment - should do nothing without mutating wrapped fake

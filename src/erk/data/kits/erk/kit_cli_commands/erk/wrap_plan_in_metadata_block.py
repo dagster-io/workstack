@@ -4,14 +4,12 @@ import sys
 
 import click
 
-from erk.data.kits.erk.plan_utils import wrap_plan_in_metadata_block as _wrap
-
 
 @click.command(name="wrap-plan-in-metadata-block")
 def wrap_plan_in_metadata_block() -> None:
     """Return plan content for issue body.
 
-    Reads plan content from stdin and returns it as-is.
+    Reads plan content from stdin and returns it as-is (stripped).
     Formatting and workflow instructions will be added via a separate comment.
 
     Usage:
@@ -29,8 +27,6 @@ def wrap_plan_in_metadata_block() -> None:
         click.echo("Error: Empty plan content received", err=True)
         raise SystemExit(1)
 
-    # Call pure function
-    result = _wrap(plan_content)
-
-    # Output the result
-    click.echo(result)
+    # Return plan as-is (just stripped)
+    # Metadata wrapping happens via separate GitHub comments
+    click.echo(plan_content.strip())

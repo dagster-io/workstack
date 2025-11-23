@@ -466,7 +466,7 @@ Delegates the complete submit-branch workflow to the `gt-branch-submitter` agent
 
 ### Example 3: /erk:create-wt-from-plan-file → planned-wt-creator
 
-⚠️ **Note:** This command is now deprecated. The recommended workflow is to use `erk implement #<issue>` instead, which creates worktrees directly from GitHub issues. This example is preserved for architectural reference.
+⚠️ **Note:** This command is now deprecated. The recommended workflow is to use `erk implement <issue>` instead, which creates worktrees directly from GitHub issues. This example is preserved for architectural reference.
 
 **Pattern:** Workflow orchestration
 

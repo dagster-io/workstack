@@ -193,7 +193,7 @@ After successfully creating the GitHub issue, output:
 
 Next steps:
 1. Review the issue if needed: gh issue view <number> --web
-2. Implement: erk implement #<number>
+2. Implement: erk implement <number>
 
 ---
 
@@ -224,5 +224,5 @@ Next steps:
 - **No enhancements**: Create issue with the plan exactly as found in the conversation
 - **No discovery mining**: No session log access or analysis
 - **Simple and fast**: Designed for quick issue creation without preprocessing
-- **Compatible workflow**: Output works with `erk implement #<issue>` just like `/erk:save-context-enriched-plan`
+- **Compatible workflow**: Output works with `erk implement <issue>` just like `/erk:save-context-enriched-plan`
 - **GitHub is source of truth**: Issue becomes immediate source of truth (no disk files involved)

@@ -44,7 +44,7 @@ This creates a GitHub issue with the enhanced plan content and the `erk-plan` la
 Use the unified `erk implement` command to create a worktree and start implementation:
 
 ```bash
-erk implement #<issue-number>
+erk implement <issue-number>
 ```
 
 This command:
@@ -69,7 +69,7 @@ The agent reads `.impl/plan.md`, executes each phase, and updates `.impl/progres
 For backward compatibility with existing plan files on disk, you can still use:
 
 ```bash
-/erk:create-wt-from-plan-file  # Deprecated - use erk implement #<issue> instead
+/erk:create-wt-from-plan-file  # Deprecated - use erk implement <issue> instead
 ```
 
 This workflow is deprecated and will be removed in a future version.
@@ -112,10 +112,10 @@ The front matter enables progress indicators in `erk status` output.
 - `/erk:save-context-enriched-plan` - Create GitHub issue with enriched plan from conversation
 - `/erk:save-plan` - Create GitHub issue with basic plan (no enrichment)
 - `/erk:save-session-enriched-plan` - Create GitHub issue with plan enhanced by session discoveries
-- `erk implement #<issue>` - Create worktree and implement plan from GitHub issue
+- `erk implement <issue>` - Create worktree and implement plan from GitHub issue
 - `/erk:implement-plan` - Execute plan in current worktree (called by `erk implement`)
 
 ### Deprecated Commands (File-Based)
 
-- `/erk:create-wt-from-plan-file` - Create worktree from plan on disk (use `erk implement #<issue>` instead)
+- `/erk:create-wt-from-plan-file` - Create worktree from plan on disk (use `erk implement <issue>` instead)
 - `/erk:create-plan-issue-from-plan-file` - Create issue from plan file (use save commands instead)

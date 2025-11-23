@@ -7,16 +7,16 @@ import pytest
 from erk.core.github.issues import FakeGitHubIssues, IssueInfo
 from erk.core.impl_folder import (
     add_worktree_creation_comment,
-    copy_impl_to_submission,
+    copy_impl_to_worker_impl,
     create_impl_folder,
     extract_steps_from_plan,
     get_impl_path,
     get_progress_path,
-    get_submission_path,
+    get_worker_impl_path,
     has_issue_reference,
     parse_progress_frontmatter,
     read_issue_reference,
-    remove_submission_folder,
+    remove_worker_impl_folder,
     save_issue_reference,
     update_progress,
     update_progress_frontmatter,
@@ -434,8 +434,8 @@ def test_update_progress_frontmatter_no_file(tmp_path: Path) -> None:
     update_progress_frontmatter(tmp_path, 1, 2)
 
 
-def test_copy_impl_to_submission_success(tmp_path: Path) -> None:
-    """Test copying .plan/ folder to .submission/ folder."""
+def test_copy_impl_to_worker_impl_success(tmp_path: Path) -> None:
+    """Test copying .plan/ folder to .worker-impl/ folder."""
     # Create .plan/ folder with content
     plan_content = "# Test Plan\n\n1. Step one\n2. Step two"
     plan_folder = create_impl_folder(tmp_path, plan_content)
@@ -445,93 +445,93 @@ def test_copy_impl_to_submission_success(tmp_path: Path) -> None:
     assert (plan_folder / "plan.md").exists()
     assert (plan_folder / "progress.md").exists()
 
-    # Copy to .submission/
-    submission_folder = copy_impl_to_submission(tmp_path)
+    # Copy to .worker-impl/
+    worker_impl_folder = copy_impl_to_worker_impl(tmp_path)
 
-    # Verify .submission/ exists and has same content
-    assert submission_folder.exists()
-    assert submission_folder == tmp_path / ".submission"
-    assert (submission_folder / "plan.md").exists()
-    assert (submission_folder / "progress.md").exists()
+    # Verify .worker-impl/ exists and has same content
+    assert worker_impl_folder.exists()
+    assert worker_impl_folder == tmp_path / ".worker-impl"
+    assert (worker_impl_folder / "plan.md").exists()
+    assert (worker_impl_folder / "progress.md").exists()
 
     # Verify content matches
-    assert (submission_folder / "plan.md").read_text(encoding="utf-8") == plan_content
-    assert (submission_folder / "progress.md").exists()
+    assert (worker_impl_folder / "plan.md").read_text(encoding="utf-8") == plan_content
+    assert (worker_impl_folder / "progress.md").exists()
 
 
-def test_copy_impl_to_submission_no_plan(tmp_path: Path) -> None:
-    """Test copy_impl_to_submission raises error when no .impl/ folder exists."""
+def test_copy_impl_to_worker_impl_no_plan(tmp_path: Path) -> None:
+    """Test copy_impl_to_worker_impl raises error when no .impl/ folder exists."""
     # No .impl/ folder created
     with pytest.raises(FileNotFoundError, match="No .impl/ folder found"):
-        copy_impl_to_submission(tmp_path)
+        copy_impl_to_worker_impl(tmp_path)
 
 
-def test_copy_impl_to_submission_already_exists(tmp_path: Path) -> None:
-    """Test copy_impl_to_submission raises error when .submission/ already exists."""
+def test_copy_impl_to_worker_impl_already_exists(tmp_path: Path) -> None:
+    """Test copy_impl_to_worker_impl raises error when .worker-impl/ already exists."""
     # Create .impl/ folder
     plan_content = "# Test Plan\n\n1. Step"
     create_impl_folder(tmp_path, plan_content)
 
-    # Create .submission/ folder manually
-    submission_folder = tmp_path / ".submission"
-    submission_folder.mkdir()
+    # Create .worker-impl/ folder manually
+    worker_impl_folder = tmp_path / ".worker-impl"
+    worker_impl_folder.mkdir()
 
     # Try to copy - should raise error
-    with pytest.raises(FileExistsError, match=".submission/ folder already exists"):
-        copy_impl_to_submission(tmp_path)
+    with pytest.raises(FileExistsError, match=".worker-impl/ folder already exists"):
+        copy_impl_to_worker_impl(tmp_path)
 
 
-def test_get_submission_path_exists(tmp_path: Path) -> None:
-    """Test get_submission_path returns path when .submission/ exists."""
-    # Create .plan/ and copy to .submission/
+def test_get_worker_impl_path_exists(tmp_path: Path) -> None:
+    """Test get_worker_impl_path returns path when .worker-impl/ exists."""
+    # Create .plan/ and copy to .worker-impl/
     plan_content = "# Test Plan\n\n1. Step"
     create_impl_folder(tmp_path, plan_content)
-    copy_impl_to_submission(tmp_path)
+    copy_impl_to_worker_impl(tmp_path)
 
-    # Get submission path
-    submission_path = get_submission_path(tmp_path)
+    # Get worker impl path
+    worker_impl_path = get_worker_impl_path(tmp_path)
 
-    assert submission_path is not None
-    assert submission_path == tmp_path / ".submission"
-    assert submission_path.exists()
-
-
-def test_get_submission_path_not_exists(tmp_path: Path) -> None:
-    """Test get_submission_path returns None when .submission/ doesn't exist."""
-    submission_path = get_submission_path(tmp_path)
-    assert submission_path is None
+    assert worker_impl_path is not None
+    assert worker_impl_path == tmp_path / ".worker-impl"
+    assert worker_impl_path.exists()
 
 
-def test_remove_submission_folder_exists(tmp_path: Path) -> None:
-    """Test remove_submission_folder removes .submission/ folder."""
-    # Create .plan/ and copy to .submission/
+def test_get_worker_impl_path_not_exists(tmp_path: Path) -> None:
+    """Test get_worker_impl_path returns None when .worker-impl/ doesn't exist."""
+    worker_impl_path = get_worker_impl_path(tmp_path)
+    assert worker_impl_path is None
+
+
+def test_remove_worker_impl_folder_exists(tmp_path: Path) -> None:
+    """Test remove_worker_impl_folder removes .worker-impl/ folder."""
+    # Create .plan/ and copy to .worker-impl/
     plan_content = "# Test Plan\n\n1. Step"
     create_impl_folder(tmp_path, plan_content)
-    copy_impl_to_submission(tmp_path)
+    copy_impl_to_worker_impl(tmp_path)
 
-    # Verify .submission/ exists
-    submission_folder = tmp_path / ".submission"
-    assert submission_folder.exists()
+    # Verify .worker-impl/ exists
+    worker_impl_folder = tmp_path / ".worker-impl"
+    assert worker_impl_folder.exists()
 
-    # Remove .submission/
-    remove_submission_folder(tmp_path)
+    # Remove .worker-impl/
+    remove_worker_impl_folder(tmp_path)
 
-    # Verify .submission/ is gone
-    assert not submission_folder.exists()
+    # Verify .worker-impl/ is gone
+    assert not worker_impl_folder.exists()
 
     # Verify .plan/ still exists
     plan_folder = tmp_path / ".impl"
     assert plan_folder.exists()
 
 
-def test_remove_submission_folder_not_exists(tmp_path: Path) -> None:
-    """Test remove_submission_folder does nothing when .submission/ doesn't exist."""
+def test_remove_worker_impl_folder_not_exists(tmp_path: Path) -> None:
+    """Test remove_worker_impl_folder does nothing when .worker-impl/ doesn't exist."""
     # Should not raise error
-    remove_submission_folder(tmp_path)
+    remove_worker_impl_folder(tmp_path)
 
     # Verify still doesn't exist
-    submission_folder = tmp_path / ".submission"
-    assert not submission_folder.exists()
+    worker_impl_folder = tmp_path / ".worker-impl"
+    assert not worker_impl_folder.exists()
 
 
 # ============================================================================

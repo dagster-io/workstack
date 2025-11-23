@@ -183,6 +183,22 @@ Example:
 ]
 ```
 
+### Step 3.5: Post Start Comment to GitHub Issue
+
+Post a single comprehensive start comment with implementation context:
+
+```bash
+dot-agent run erk post-start-comment 2>/dev/null || true
+```
+
+This posts a comment containing:
+
+- Worktree name and branch name
+- Complete list of all implementation steps
+- Structured YAML metadata
+
+If issue tracking is not enabled (no valid issue.json), this will output an info message and exit gracefully.
+
 ### Step 4: Execute Each Phase Sequentially
 
 For each phase in the plan:
@@ -209,16 +225,8 @@ For each phase in the plan:
      - Edit the `completed_steps:` line in front matter with new count
      - Do NOT change the `total_steps:` line
    - If no front matter exists, skip the front matter update
-7. **Post progress comment to GitHub issue** (if enabled):
-
-   ```bash
-   dot-agent run erk post-progress-comment --step-description "Phase 1: Create abstraction" 2>/dev/null || true
-   ```
-
-   If issue tracking is not enabled (no valid issue.json), this will output an info message and exit gracefully.
-
-8. **Report progress**: what was done and what's next
-9. **Move to next phase**
+7. **Report progress**: what was done and what's next
+8. **Move to next phase**
 
 **IMPORTANT - Progress Tracking:**
 
@@ -315,13 +323,6 @@ After all phases are complete:
 2. Verify all success criteria are met
 3. Note any deviations from the plan (with justification)
 4. Provide summary of changes
-5. **Post final completion comment to GitHub issue**:
-
-   ```bash
-   dot-agent run erk post-completion-comment --summary "Brief implementation summary" 2>/dev/null || true
-   ```
-
-   If issue tracking is not enabled (no valid issue.json), this will output an info message and exit gracefully.
 
 ### Step 8: Final Verification
 

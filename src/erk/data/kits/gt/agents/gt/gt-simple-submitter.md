@@ -1,7 +1,7 @@
 ---
 name: gt-simple-submitter
 description: Simplified Graphite submit workflow for testing and comparison
-model: haiku
+model: sonnet
 color: blue
 tools: Bash
 ---

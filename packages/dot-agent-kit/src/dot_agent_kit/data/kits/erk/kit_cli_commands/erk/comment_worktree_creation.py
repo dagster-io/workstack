@@ -22,7 +22,7 @@ from pathlib import Path
 
 import click
 
-from erk.core.github.issues import RealGitHubIssues
+from dot_agent_kit.context_helpers import require_github_issues
 from erk.core.impl_folder import add_worktree_creation_comment
 
 
@@ -53,7 +53,10 @@ def get_repo_root() -> Path:
 @click.argument("issue_number", type=int)
 @click.argument("worktree_name")
 @click.argument("branch_name")
-def comment_worktree_creation(issue_number: int, worktree_name: str, branch_name: str) -> None:
+@click.pass_context
+def comment_worktree_creation(
+    ctx: click.Context, issue_number: int, worktree_name: str, branch_name: str
+) -> None:
     """Post GitHub comment documenting worktree creation.
 
     ISSUE_NUMBER: GitHub issue number to comment on
@@ -67,8 +70,8 @@ def comment_worktree_creation(issue_number: int, worktree_name: str, branch_name
         click.echo(click.style("Error: ", fg="red") + str(e), err=True)
         raise SystemExit(1) from e
 
-    # Create GitHub issues interface
-    github_issues = RealGitHubIssues()
+    # Get GitHub Issues from context (with LBYL check)
+    github_issues = require_github_issues(ctx)
 
     # Post comment
     try:

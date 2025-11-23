@@ -51,6 +51,9 @@ kit_cli_commands:
   - name: wrap-plan-in-metadata-block
     path: kit_cli_commands/erk/wrap_plan_in_metadata_block.py
     description: Wrap plan content in collapsible GitHub metadata block
+  - name: create-wt-from-issue
+    path: kit_cli_commands/erk/create_wt_from_issue.py
+    description: Create worktree from GitHub issue with erk-plan label
 hooks:
   - id: session-id-injector-hook
     lifecycle: UserPromptSubmit

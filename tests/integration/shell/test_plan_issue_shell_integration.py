@@ -1,6 +1,6 @@
 """Tests for plan-issue shell integration with Click groups."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from click.testing import CliRunner
 
@@ -33,7 +33,7 @@ def test_shell_integration_plan_issue_implement_invokes_successfully() -> None:
         )
 
         # Set up fake plan issue store with a test issue
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         test_issue = PlanIssue(
             plan_issue_identifier="123",
             title="Test Implementation Plan",
@@ -61,7 +61,9 @@ def test_shell_integration_plan_issue_implement_invokes_successfully() -> None:
         if result.exit_code == 0:
             script_path_str = result.stdout.strip()
             assert script_path_str != "", "Should produce script path for directory switching"
-            assert script_path_str != "__ERK_PASSTHROUGH__", "Should not passthrough for this command"
+            assert script_path_str != "__ERK_PASSTHROUGH__", (
+                "Should not passthrough for this command"
+            )
 
 
 def test_shell_integration_plan_issue_get_invokes_successfully() -> None:
@@ -78,7 +80,7 @@ def test_shell_integration_plan_issue_get_invokes_successfully() -> None:
             },
         )
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         test_issue = PlanIssue(
             plan_issue_identifier="123",
             title="Test Plan",

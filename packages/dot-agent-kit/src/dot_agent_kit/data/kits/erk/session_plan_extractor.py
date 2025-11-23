@@ -13,6 +13,31 @@ import os
 from pathlib import Path
 
 
+def construct_claude_project_name(working_dir: str) -> str:
+    """Convert working directory path to Claude project directory name.
+
+    Claude converts all special characters (slashes, dots, etc.) to hyphens
+    when creating project directory names.
+
+    Args:
+        working_dir: Absolute path to working directory
+
+    Returns:
+        Project directory name with leading hyphen
+
+    Example:
+        >>> construct_claude_project_name("/Users/schrockn/code/erk")
+        '-Users-schrockn-code-erk'
+        >>> construct_claude_project_name("/Users/schrockn/.erk/repos/erk")
+        '-Users-schrockn--erk-repos-erk'
+        >>> construct_claude_project_name("/Users/schrockn/.config/app")
+        '-Users-schrockn--config-app'
+    """
+    # Replace slashes and dots with hyphens, then prepend with hyphen
+    # Claude converts all special characters to hyphens when creating project directories
+    return "-" + working_dir.replace("/", "-").replace(".", "-").lstrip("-")
+
+
 def get_claude_project_dir(working_dir: str) -> Path:
     """Convert working directory to Claude project directory path.
 
@@ -25,12 +50,14 @@ def get_claude_project_dir(working_dir: str) -> Path:
     Example:
         >>> get_claude_project_dir("/Users/schrockn/code/erk")
         Path('/Users/schrockn/.claude/projects/-Users-schrockn-code-erk')
+        >>> get_claude_project_dir("/Users/schrockn/.erk/repos/erk")
+        Path('/Users/schrockn/.claude/projects/-Users-schrockn--erk-repos-erk')
     """
-    # Replace slashes with hyphens and prepend with hyphen
-    project_name = "-" + working_dir.replace("/", "-").lstrip("-")
-
     # Get Claude base directory from home
     claude_base = Path.home() / ".claude" / "projects"
+
+    # Convert working directory to project name
+    project_name = construct_claude_project_name(working_dir)
 
     return claude_base / project_name
 
@@ -76,6 +103,9 @@ def extract_plan_from_session_line(data: dict) -> str | None:
 def get_latest_plan_from_session(project_dir: Path, session_id: str | None = None) -> str | None:
     """Extract the latest plan from Claude session files.
 
+    Searches all session files including agent subprocess files for ExitPlanMode entries.
+    Plans can be created in Plan agent subprocesses, so agent files must be included.
+
     Args:
         project_dir: Path to Claude project directory (e.g., -Users-schrockn-code-erk)
         session_id: Optional session ID to search within. If None, searches all sessions.
@@ -94,12 +124,14 @@ def get_latest_plan_from_session(project_dir: Path, session_id: str | None = Non
         # Search only the specified session
         files = [project_dir / f"{session_id}.jsonl"]
     else:
-        # Search all session files, excluding agent files
-        files = [
-            f
-            for f in project_dir.glob("*.jsonl")
-            if f.is_file() and not f.name.startswith("agent-")
-        ]
+        # Search all session files including agent files
+        # Agent files may contain plans created in Plan agent subprocesses
+        # Sort files by modification time (most recent first) for efficiency
+        files = sorted(
+            [f for f in project_dir.glob("*.jsonl") if f.is_file()],
+            key=lambda f: f.stat().st_mtime,
+            reverse=True,
+        )
 
     # Search for ExitPlanMode occurrences
     for session_file in files:

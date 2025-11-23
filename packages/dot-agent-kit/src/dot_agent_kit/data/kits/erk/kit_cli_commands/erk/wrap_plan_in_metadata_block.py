@@ -27,6 +27,8 @@ def wrap_plan_in_metadata_block() -> None:
         click.echo("Error: Empty plan content received", err=True)
         raise SystemExit(1)
 
-    # Return plan as-is (just stripped)
-    # Metadata wrapping happens via separate GitHub comments
-    click.echo(plan_content.strip())
+    # Return plan content as-is (metadata wrapping delegated to separate comments)
+    result = plan_content.strip()
+
+    # Output the result
+    click.echo(result)

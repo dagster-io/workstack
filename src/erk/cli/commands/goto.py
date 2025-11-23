@@ -3,8 +3,8 @@
 import click
 
 from erk.cli.commands.navigation_helpers import (
-    _activate_root_repo,
-    _activate_worktree,
+    activate_root_repo,
+    activate_worktree,
     complete_worktree_names,
 )
 from erk.cli.core import discover_repo_context
@@ -42,7 +42,7 @@ def goto_cmd(ctx: ErkContext, worktree_name: str, script: bool) -> None:
 
     # Special case: "root" jumps to root repository
     if worktree_name == "root":
-        _activate_root_repo(ctx, repo, script, "goto")
+        activate_root_repo(ctx, repo, script, "goto")
         return  # _activate_root_repo raises SystemExit, but explicit return for clarity
 
     # Validate worktree exists
@@ -93,4 +93,4 @@ def goto_cmd(ctx: ErkContext, worktree_name: str, script: bool) -> None:
         user_output(f"Switched to worktree {styled_wt} [{styled_branch}]")
 
     # Activate the worktree
-    _activate_worktree(ctx, repo, worktree_path, script, "goto")
+    activate_worktree(ctx, repo, worktree_path, script, "goto")

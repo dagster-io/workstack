@@ -50,7 +50,7 @@ class Ensure:
             raise SystemExit(1)
 
 
-def _ensure_graphite_enabled(ctx: ErkContext) -> None:
+def ensure_graphite_enabled(ctx: ErkContext) -> None:
     """Validate that Graphite is enabled.
 
     Args:
@@ -67,7 +67,7 @@ def _ensure_graphite_enabled(ctx: ErkContext) -> None:
         raise SystemExit(1)
 
 
-def _check_clean_working_tree(ctx: ErkContext) -> None:
+def check_clean_working_tree(ctx: ErkContext) -> None:
     """Check that working tree has no uncommitted changes.
 
     Raises SystemExit if uncommitted changes found.
@@ -81,7 +81,7 @@ def _check_clean_working_tree(ctx: ErkContext) -> None:
         raise SystemExit(1)
 
 
-def _verify_pr_merged(ctx: ErkContext, repo_root: Path, branch: str) -> None:
+def verify_pr_merged(ctx: ErkContext, repo_root: Path, branch: str) -> None:
     """Verify that the branch's PR is merged on GitHub.
 
     Raises SystemExit if PR not found or not merged.
@@ -104,7 +104,7 @@ def _verify_pr_merged(ctx: ErkContext, repo_root: Path, branch: str) -> None:
         raise SystemExit(1)
 
 
-def _delete_branch_and_worktree(
+def delete_branch_and_worktree(
     ctx: ErkContext, repo_root: Path, branch: str, worktree_path: Path
 ) -> None:
     """Delete the specified branch and its worktree.
@@ -124,9 +124,7 @@ def _delete_branch_and_worktree(
     ctx.git.prune_worktrees(repo_root)
 
 
-def _activate_root_repo(
-    ctx: ErkContext, repo: RepoContext, script: bool, command_name: str
-) -> None:
+def activate_root_repo(ctx: ErkContext, repo: RepoContext, script: bool, command_name: str) -> None:
     """Activate the root repository and exit.
 
     Args:
@@ -161,7 +159,7 @@ def _activate_root_repo(
     raise SystemExit(0)
 
 
-def _activate_worktree(
+def activate_worktree(
     ctx: ErkContext,
     repo: RepoContext,
     target_path: Path,
@@ -207,7 +205,7 @@ def _activate_worktree(
     raise SystemExit(0)
 
 
-def _resolve_up_navigation(
+def resolve_up_navigation(
     ctx: ErkContext, repo: RepoContext, current_branch: str, worktrees: list[WorktreeInfo]
 ) -> tuple[str, bool]:
     """Resolve --up navigation to determine target branch name.
@@ -254,7 +252,7 @@ def _resolve_up_navigation(
     return target_branch, False
 
 
-def _resolve_down_navigation(
+def resolve_down_navigation(
     ctx: ErkContext,
     repo: RepoContext,
     current_branch: str,

@@ -1,5 +1,6 @@
 """Tests for the shell_integration command."""
 
+from datetime import UTC
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -607,7 +608,7 @@ def test_shell_integration_implement_invokes_successfully() -> None:
         )
 
         # Create a fake plan issue store with a test issue
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         from erk.core.plan_issue_store.types import PlanIssue, PlanIssueState
 
@@ -619,8 +620,8 @@ def test_shell_integration_implement_invokes_successfully() -> None:
             state=PlanIssueState.OPEN,
             labels=["erk-plan"],
             assignees=[],
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
             metadata={"number": 123},
         )
         fake_plan_store = FakePlanIssueStore(plan_issues={"123": test_issue})

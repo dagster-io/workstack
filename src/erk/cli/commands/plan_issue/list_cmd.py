@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 import click
+from erk_shared.github.issues import GitHubIssues
 
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
@@ -12,7 +13,6 @@ from erk.core.context import ErkContext
 from erk.core.plan_issue_store import PlanIssueQuery, PlanIssueState
 from erk.core.repo_discovery import ensure_erk_metadata_dir
 from erk.integrations.github.metadata_blocks import parse_metadata_blocks
-from erk_shared.github.issues import GitHubIssues
 
 
 def plan_issue_list_options[**P, T](f: Callable[P, T]) -> Callable[P, T]:

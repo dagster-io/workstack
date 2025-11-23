@@ -312,11 +312,7 @@ class RealGitHubIssues(GitHubIssues):
                 f"number comments(first: 100) {{ nodes {{ body }} }} }}"
             )
 
-        query = (
-            'query { repository(owner: "$owner", name: "$repo") { '
-            + " ".join(aliases)
-            + " } }"
-        )
+        query = 'query { repository(owner: "$owner", name: "$repo") { ' + " ".join(aliases) + " } }"
 
         cmd = ["gh", "api", "graphql", "-f", f"query={query}"]
         stdout = execute_gh_command(cmd, repo_root)

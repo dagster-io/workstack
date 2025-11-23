@@ -175,6 +175,7 @@ class RealGitHub(GitHub):
         # Define the fragment once at the top of the query
         fragment_definition = """fragment PRCICheckFields on PullRequest {
   number
+  title
   mergeable
   mergeStateStatus
   commits(last: 1) {
@@ -343,11 +344,92 @@ query {{
             # Parse mergeability status
             has_conflicts = self._parse_pr_mergeability(pr_data)
 
-            # Create enriched PR with updated CI status and mergeability
-            enriched_pr = replace(pr, checks_passing=ci_status, has_conflicts=has_conflicts)
+            # Extract title from PR data
+            title = pr_data.get("title") if pr_data else None
+
+            # Create enriched PR with updated CI status, mergeability, and title
+            enriched_pr = replace(
+                pr, checks_passing=ci_status, has_conflicts=has_conflicts, title=title
+            )
             enriched_prs[branch] = enriched_pr
 
         return enriched_prs
+
+    def fetch_pr_titles_batch(
+        self, prs: dict[str, PullRequestInfo], repo_root: Path
+    ) -> dict[str, PullRequestInfo]:
+        """Fetch PR titles for all PRs in a single batched GraphQL query.
+
+        This is a lighter-weight alternative to enrich_prs_with_ci_status_batch
+        that only fetches titles, not CI status or mergeability.
+
+        Args:
+            prs: Dictionary mapping branch names to PullRequestInfo objects
+            repo_root: Repository root path
+
+        Returns:
+            Dictionary with same keys, but PullRequestInfo objects enriched with titles
+        """
+        # Early exit for empty input
+        if not prs:
+            return {}
+
+        # Extract PR numbers and owner/repo from first PR
+        pr_numbers = [pr.number for pr in prs.values()]
+        first_pr = next(iter(prs.values()))
+        owner = first_pr.owner
+        repo = first_pr.repo
+
+        # Build simplified GraphQL query for just titles
+        query = self._build_title_batch_query(pr_numbers, owner, repo)
+        response = self._execute_batch_pr_query(query, repo_root)
+
+        # Extract repository data from response
+        repo_data = response["data"]["repository"]
+
+        # Enrich each PR with title
+        enriched_prs = {}
+        for branch, pr in prs.items():
+            # Get PR data from GraphQL response using alias
+            alias = f"pr_{pr.number}"
+            pr_data = repo_data.get(alias)
+
+            # Extract title from PR data
+            title = pr_data.get("title") if pr_data else None
+
+            # Create enriched PR with title
+            enriched_pr = replace(pr, title=title)
+            enriched_prs[branch] = enriched_pr
+
+        return enriched_prs
+
+    def _build_title_batch_query(self, pr_numbers: list[int], owner: str, repo: str) -> str:
+        """Build GraphQL query to fetch just titles for multiple PRs.
+
+        Args:
+            pr_numbers: List of PR numbers to query
+            owner: Repository owner
+            repo: Repository name
+
+        Returns:
+            GraphQL query string
+        """
+        # Build aliased PR queries for titles only
+        pr_queries = []
+        for pr_num in pr_numbers:
+            pr_query = f"""    pr_{pr_num}: pullRequest(number: {pr_num}) {{
+      number
+      title
+    }}"""
+            pr_queries.append(pr_query)
+
+        # Combine into single query
+        query = f"""query {{
+  repository(owner: "{owner}", name: "{repo}") {{
+{chr(10).join(pr_queries)}
+  }}
+}}"""
+        return query
 
     def merge_pr(
         self,

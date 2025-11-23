@@ -82,6 +82,9 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
             )
             raise SystemExit(1)
 
+        # Always fetch PR titles (lighter weight than full CI enrichment)
+        prs = ctx.github.fetch_pr_titles_batch(prs, repo.root)
+
         # If --ci flag set, enrich with CI status and mergeability using batched GraphQL query
         if ci:
             prs = ctx.github.enrich_prs_with_ci_status_batch(prs, repo.root)
@@ -172,11 +175,13 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
 
     # Get PR info and plan summary for root
     root_pr_info = None
+    root_pr_title = None
     if prs and root_branch:
         pr = prs.get(root_branch)
         if pr:
             graphite_url = ctx.graphite.get_graphite_url(pr.owner, pr.repo, pr.number)
             root_pr_info = format_pr_info(pr, graphite_url)
+            root_pr_title = pr.title
     root_plan_summary = _format_plan_summary(repo.root, ctx)
 
     user_output(
@@ -190,6 +195,7 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
             max_name_len=max_name_len,
             max_branch_len=max_branch_len,
             max_pr_info_len=max_pr_info_len,
+            pr_title=root_pr_title,
         )
     )
 
@@ -203,11 +209,13 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
 
         # Get PR info and plan summary for this worktree
         wt_pr_info = None
+        wt_pr_title = None
         if prs and wt_branch:
             pr = prs.get(wt_branch)
             if pr:
                 graphite_url = ctx.graphite.get_graphite_url(pr.owner, pr.repo, pr.number)
                 wt_pr_info = format_pr_info(pr, graphite_url)
+                wt_pr_title = pr.title
         wt_plan_summary = _format_plan_summary(wt_path, ctx)
 
         user_output(
@@ -221,6 +229,7 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
                 max_name_len=max_name_len,
                 max_branch_len=max_branch_len,
                 max_pr_info_len=max_pr_info_len,
+                pr_title=wt_pr_title,
             )
         )
 

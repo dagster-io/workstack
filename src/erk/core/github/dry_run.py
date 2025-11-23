@@ -47,6 +47,12 @@ class DryRunGitHub(GitHub):
         """Delegate read operation to wrapped implementation."""
         return self._wrapped.get_pr_mergeability(repo_root, pr_number)
 
+    def fetch_pr_titles_batch(
+        self, prs: dict[str, PullRequestInfo], repo_root: Path
+    ) -> dict[str, PullRequestInfo]:
+        """Delegate read operation to wrapped implementation."""
+        return self._wrapped.fetch_pr_titles_batch(prs, repo_root)
+
     def enrich_prs_with_ci_status_batch(
         self, prs: dict[str, PullRequestInfo], repo_root: Path
     ) -> dict[str, PullRequestInfo]:

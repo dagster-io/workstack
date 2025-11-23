@@ -79,6 +79,24 @@ class GitHub(ABC):
         ...
 
     @abstractmethod
+    def fetch_pr_titles_batch(
+        self, prs: dict[str, PullRequestInfo], repo_root: Path
+    ) -> dict[str, PullRequestInfo]:
+        """Fetch PR titles for all PRs in a single batched GraphQL query.
+
+        This is a lighter-weight alternative to enrich_prs_with_ci_status_batch
+        that only fetches titles, not CI status or mergeability.
+
+        Args:
+            prs: Mapping of branch name to PullRequestInfo (without titles)
+            repo_root: Repository root directory
+
+        Returns:
+            Mapping of branch name to PullRequestInfo (with titles enriched)
+        """
+        ...
+
+    @abstractmethod
     def enrich_prs_with_ci_status_batch(
         self, prs: dict[str, PullRequestInfo], repo_root: Path
     ) -> dict[str, PullRequestInfo]:

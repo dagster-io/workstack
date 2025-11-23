@@ -43,7 +43,7 @@ def my_command():
         raise SystemExit(1)
 ```
 
-**For complete exception guidance:** Load @exception-handling.md
+**For complete exception guidance:** See routing-patterns.md for when to load additional files
 
 ---
 
@@ -77,7 +77,7 @@ if path.exists():
 resolved = path.resolve()
 ```
 
-**For complete path guidance:** Load @path-operations.md
+**For complete path guidance:** See routing-patterns.md for when to load additional files
 
 ---
 
@@ -113,7 +113,7 @@ class Repository(Protocol):
 - Better IDE support
 - Clear contract definition
 
-**For complete DI guidance:** Load @dependency-injection.md
+**For complete DI guidance:** See routing-patterns.md for when to load additional files
 
 ---
 
@@ -144,7 +144,7 @@ def my_function():
 - Conditional features (dry-run mode, debug mode)
 - Expensive imports (>5s load time, documented)
 
-**For complete import guidance:** Load @imports.md
+**For complete import guidance:** See routing-patterns.md for when to load additional files
 
 ---
 
@@ -199,7 +199,7 @@ def my_command():
 - Testing-friendly (Click's test runner captures it)
 - Consistent CLI experience
 
-**For complete CLI guidance:** Load @cli-patterns.md
+**For complete CLI guidance:** See routing-patterns.md for when to load additional files
 
 ---
 
@@ -230,7 +230,7 @@ if result.returncode != 0:
 - Consistent with LBYL (error bubbles to boundary)
 - Prevents silent failures
 
-**For complete subprocess guidance:** Load @subprocess.md
+**For complete subprocess guidance:** See routing-patterns.md for when to load additional files
 
 ---
 
@@ -318,15 +318,6 @@ __all__ = ["Process"]
 
 ## Loading Additional Guidance
 
-For task-specific patterns, load the appropriate reference:
+**See routing-patterns.md (already loaded) for automatic pattern detection and which files to load based on your task.**
 
-| Task Pattern               | Load Reference           |
-| -------------------------- | ------------------------ |
-| Exception handling details | @exception-handling.md   |
-| Path operations            | @path-operations.md      |
-| Dependency injection       | @dependency-injection.md |
-| Import organization        | @imports.md              |
-| CLI development            | @cli-patterns.md         |
-| Subprocess usage           | @subprocess.md           |
-
-**See @routing-patterns.md for automatic pattern detection.**
+The routing-patterns.md file contains the complete mapping of task patterns to documentation files.

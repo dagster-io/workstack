@@ -16,15 +16,19 @@ description: This skill should be used when editing Python code in the erk codeb
 
 ## Conditional Loading (Load Based on Task Patterns)
 
-Use the routing index in @routing-patterns.md to determine which additional files to load:
+Use the routing index in routing-patterns.md (already loaded above) to determine which additional files to load.
 
-- **Dictionary/key operations** → @.claude/docs/dignified-python/exception-handling.md
-- **File system operations** → @.claude/docs/dignified-python/path-operations.md
-- **Import organization** → @.claude/docs/dignified-python/imports.md
-- **Dependency injection** → @.claude/docs/dignified-python/dependency-injection.md
-- **CLI development** → @.claude/docs/dignified-python/cli-patterns.md
-- **Subprocess operations** → @.claude/docs/dignified-python/subprocess.md
-- **Type annotations** → @.claude/docs/dignified-python/version-specific/313/type-annotations.md
+**IMPORTANT:** Only load files when you detect specific patterns in the task. Do NOT load all files preemptively.
+
+Pattern detection examples:
+
+- If task mentions "dict", "key", or "KeyError" → Load exception-handling.md
+- If task mentions "path", "file", or "directory" → Load path-operations.md
+- If task mentions "import" or "circular" → Load imports.md
+- If task mentions "ABC" or "interface" → Load dependency-injection.md
+- If task mentions "click" or "CLI" → Load cli-patterns.md
+- If task mentions "subprocess" → Load subprocess.md
+- If task mentions type hints → Load type-annotations.md
 
 ## Comprehensive Reference (If Needed)
 

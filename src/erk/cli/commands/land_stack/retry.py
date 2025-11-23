@@ -11,12 +11,13 @@ The decorator implements exponential backoff to avoid overwhelming services
 with rapid retries.
 """
 
-import time
 from collections.abc import Callable
 from functools import wraps
 from typing import Any, TypeVar
 
 import click
+
+from erk.cli.commands.land_stack.time_provider import RealTime, Time
 
 # Type variable for decorated function return type
 T = TypeVar("T")
@@ -27,6 +28,7 @@ def retry_with_backoff(
     base_delay: float = 1.0,
     *,
     backoff_factor: float = 2.0,
+    time_provider: Time | None = None,
 ) -> Callable[[Callable[..., T]], Callable[..., T]]:
     """Retry function with exponential backoff for transient failures.
 
@@ -41,6 +43,7 @@ def retry_with_backoff(
         max_attempts: Maximum number of attempts (default: 3)
         base_delay: Initial delay in seconds (default: 1.0)
         backoff_factor: Multiplier for exponential backoff (default: 2.0)
+        time_provider: Time abstraction for sleep (default: RealTime())
 
     Returns:
         Decorator function that wraps the target function with retry logic
@@ -54,6 +57,8 @@ def retry_with_backoff(
     Raises:
         Exception: Re-raises the last exception after max_attempts exhausted
     """
+    # Use RealTime if no time provider specified
+    time_impl = time_provider if time_provider is not None else RealTime()
 
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         @wraps(func)
@@ -69,7 +74,7 @@ def retry_with_backoff(
                         f"Retrying after {delay:.1f}s (attempt {attempt + 1}/{max_attempts})...",
                         err=True,
                     )
-                    time.sleep(delay)
+                    time_impl.sleep(delay)
 
                 # Attempt to execute the function
                 try:

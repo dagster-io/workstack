@@ -13,7 +13,24 @@ from erk.core.context import ErkContext
 from erk.core.git.abc import find_worktree_for_branch
 
 
-@retry_with_backoff(max_attempts=3, base_delay=2.0)
+class MergeabilityUnknownError(Exception):
+    """Raised when PR mergeability status is UNKNOWN and needs retry.
+
+    This exception triggers the @retry_with_backoff decorator to retry
+    the mergeability check, giving GitHub time to recalculate merge status
+    after PR base updates.
+    """
+
+    def __init__(self, pr_number: int, attempt: int):
+        self.pr_number = pr_number
+        self.attempt = attempt
+        super().__init__(
+            f"PR #{pr_number} mergeability status is UNKNOWN (attempt {attempt}). "
+            "GitHub may still be recalculating after base update."
+        )
+
+
+@retry_with_backoff(max_attempts=5, base_delay=2.0, backoff_factor=2.0)
 def _check_pr_mergeable_with_retry(
     ctx: ErkContext,
     repo_root: Path,
@@ -79,8 +96,13 @@ def _check_pr_mergeable_with_retry(
             "PR has failing status checks",
         )
 
+    # Handle UNKNOWN status by raising exception to trigger retry
+    if status == "UNKNOWN":
+        # Note: retry decorator will catch this and retry with backoff
+        raise MergeabilityUnknownError(pr_number, attempt=1)  # attempt tracked by decorator
+
     # Unknown or other status
-    return (False, status, "PR is not in a mergeable state")
+    return (False, status, f"PR is not in a mergeable state (status: {status})")
 
 
 def _execute_checkout_phase(

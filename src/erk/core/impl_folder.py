@@ -21,6 +21,11 @@ from typing import Any
 import frontmatter
 import yaml
 
+from erk.integrations.github.metadata_blocks import (
+    create_worktree_creation_block,
+    render_metadata_block,
+)
+
 
 def create_impl_folder(worktree_path: Path, plan_content: str) -> Path:
     """Create .impl/ folder with plan.md and progress.md files.
@@ -388,9 +393,17 @@ def add_worktree_creation_comment(
     """
     timestamp = datetime.now(UTC).isoformat()
 
-    comment_body = f"""✅ Worktree created: **{worktree_name}**
+    # Create human-readable text
+    human_text = f"""✅ Worktree created: **{worktree_name}**
 
 - Branch: `{branch_name}`
 - Created: {timestamp}"""
+
+    # Create metadata block
+    block = create_worktree_creation_block(worktree_name, branch_name, timestamp)
+    block_markdown = render_metadata_block(block)
+
+    # Combine both
+    comment_body = f"{human_text}\n\n{block_markdown}"
 
     github_issues.add_comment(repo_root, issue_number, comment_body)

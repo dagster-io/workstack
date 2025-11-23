@@ -21,6 +21,10 @@ from erk.core.impl_folder import (
     update_progress,
     update_progress_frontmatter,
 )
+from erk.integrations.github.metadata_blocks import (
+    find_metadata_block,
+    parse_metadata_blocks,
+)
 
 
 def test_create_impl_folder_basic(tmp_path: Path) -> None:
@@ -810,6 +814,19 @@ def test_add_worktree_creation_comment_success(tmp_path: Path) -> None:
     # Verify timestamp format (ISO 8601 UTC)
     assert "T" in comment_body  # ISO 8601 includes 'T' separator
     assert ":" in comment_body  # ISO 8601 includes ':' in time
+
+    # Round-trip verification: Parse metadata block back out
+    blocks = parse_metadata_blocks(comment_body)
+    assert len(blocks) == 1
+
+    block = find_metadata_block(comment_body, "erk-worktree-creation")
+    assert block is not None
+    assert block.key == "erk-worktree-creation"
+    assert block.data["worktree_name"] == "feature-name"
+    assert block.data["branch_name"] == "feature-branch"
+    assert "timestamp" in block.data
+    assert isinstance(block.data["timestamp"], str)
+    assert len(block.data["timestamp"]) > 0
 
 
 def test_add_worktree_creation_comment_issue_not_found(tmp_path: Path) -> None:

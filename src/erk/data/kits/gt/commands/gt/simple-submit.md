@@ -77,12 +77,12 @@ All gt commands run non-interactively with appropriate flags. The agent prioriti
 | Lines of code  | ~250             | 580+                      |
 | Agent size     | ~150 lines       | 520+ lines                |
 | Error types    | Natural messages | 10+ categorized types     |
-| Execution time | <30 seconds*     | 4+ minutes                |
+| Execution time | <30 seconds\*    | 4+ minutes                |
 | Token usage    | Minimal          | Extensive                 |
 | Error recovery | Fail fast        | Multiple retry strategies |
 | Issue linking  | ✅ Yes           | ✅ Yes                    |
 
-*Note: Execution time may increase slightly (~1s) when validating GitHub issues
+\*Note: Execution time may increase slightly (~1s) when validating GitHub issues
 
 ## When to Use
 

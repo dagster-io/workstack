@@ -225,7 +225,18 @@ def complete_submission(
     if verbose:
         click.echo(f"Debug: Found PR #{pr_number} at {pr_url}", err=True)
 
-    # 5. Update PR body with "Closes #N" if issue number provided
+    # 5. Mark PR as ready for review (not draft)
+    if verbose:
+        click.echo("Debug: Marking PR as ready for review...", err=True)
+    if not kit.github().mark_pr_ready():
+        if verbose:
+            click.echo("Debug: Failed to mark PR as ready", err=True)
+        # Don't fail the entire operation - PR is created, just might be in draft
+    else:
+        if verbose:
+            click.echo("Debug: Successfully marked PR as ready", err=True)
+
+    # 6. Update PR body with "Closes #N" if issue number provided
     if issue_number is not None and pr_number is not None:
         if verbose:
             click.echo(f"Debug: Updating PR with issue reference #{issue_number}", err=True)
@@ -246,7 +257,7 @@ def complete_submission(
             if verbose:
                 click.echo("Debug: Successfully updated PR metadata", err=True)
 
-    # 6. Get Graphite URL if possible
+    # 7. Get Graphite URL if possible
     if verbose:
         click.echo("Debug: Getting Graphite PR URL...", err=True)
     graphite_url = kit.github().get_graphite_pr_url(pr_number)

@@ -228,6 +228,16 @@ class GitHubGtKit(ABC):
         """
 
     @abstractmethod
+    def mark_pr_ready(self) -> bool:
+        """Mark PR as ready for review using gh pr ready.
+
+        Converts a draft PR to ready status. If PR is already ready, this is a no-op.
+
+        Returns:
+            True on success, False on failure
+        """
+
+    @abstractmethod
     def merge_pr(self) -> bool:
         """Merge the PR using squash merge.
 

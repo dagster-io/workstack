@@ -9,7 +9,6 @@ dependencies or I/O operations.
 """
 
 import re
-import unicodedata
 
 
 def wrap_plan_in_metadata_block(
@@ -130,70 +129,3 @@ def extract_title_from_plan(plan: str) -> str:
                 return title[:100] if len(title) > 100 else title
 
     return "Implementation Plan"
-
-
-def generate_filename_from_title(title: str) -> str:
-    """Convert title to kebab-case filename with -plan.md suffix.
-
-    Comprehensive transformation:
-    1. Lowercase
-    2. Replace spaces with hyphens
-    3. Unicode normalization (NFD)
-    4. Remove emojis and non-alphanumeric characters (except hyphens)
-    5. Collapse consecutive hyphens
-    6. Strip leading/trailing hyphens
-    7. Validate at least one alphanumeric character remains
-    8. Append "-plan.md"
-
-    Returns "plan.md" if title is empty after cleanup.
-
-    Args:
-        title: Plan title to convert
-
-    Returns:
-        Sanitized filename ending with -plan.md
-
-    Example:
-        >>> generate_filename_from_title("User Auth Feature")
-        'user-auth-feature-plan.md'
-
-        >>> generate_filename_from_title("Fix: Bug #123")
-        'fix-bug-123-plan.md'
-
-        >>> generate_filename_from_title("🚀 Feature Launch 🎉")
-        'feature-launch-plan.md'
-
-        >>> generate_filename_from_title("café")
-        'cafe-plan.md'
-    """
-    # Step 1: Lowercase and strip whitespace
-    lowered = title.strip().lower()
-
-    # Step 2: Unicode normalization (NFD form for decomposition)
-    # Decompose combined characters (é → e + ´)
-    normalized = unicodedata.normalize("NFD", lowered)
-
-    # Step 3: Remove emojis and non-ASCII characters, convert to ASCII
-    # Keep only ASCII alphanumeric, spaces, and hyphens
-    cleaned = ""
-    for char in normalized:
-        # Keep ASCII alphanumeric, spaces, and hyphens
-        if ord(char) < 128 and (char.isalnum() or char in (" ", "-")):
-            cleaned += char
-        # Skip combining marks (accents) and emoji
-        # Skip non-ASCII characters (CJK, emoji, special symbols)
-
-    # Step 4: Replace spaces with hyphens
-    replaced = cleaned.replace(" ", "-")
-
-    # Step 5: Collapse consecutive hyphens
-    collapsed = re.sub(r"-+", "-", replaced)
-
-    # Step 6: Strip leading/trailing hyphens
-    trimmed = collapsed.strip("-")
-
-    # Step 7: Validate at least one alphanumeric character
-    if not trimmed or not any(c.isalnum() for c in trimmed):
-        return "plan.md"
-
-    return f"{trimmed}-plan.md"

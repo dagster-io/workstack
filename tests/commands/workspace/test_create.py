@@ -1424,20 +1424,19 @@ def test_create_with_plan_ensures_uniqueness() -> None:
 def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
     """Test that long plan names produce matching branch/worktree names.
 
-    Without post-date truncation.
-
-    This test verifies the updated behavior where:
-    - Base name is truncated to 30 chars by sanitize_worktree_name()
-    - Date suffix (-YY-MM-DD) is added to the base name
-    - Final name can exceed 30 characters (up to ~39 chars)
-    - Result: worktree name == branch name (both can be >30 chars)
+    This test verifies the behavior with consistent 30-char truncation:
+    - Worktree base name is truncated to 30 chars by sanitize_worktree_name()
+    - Date suffix (-YY-MM-DD, 9 chars) is added to worktree name → 39 chars total
+    - Branch name is truncated to 30 chars by sanitize_branch_component()
+    - Branch name does NOT get date suffix → 30 chars max
+    - Result: branch name matches the BASE of the worktree name (before date)
     """
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
-        # Create plan file with very long name that will exceed 30 chars with date suffix
-        # The base will be truncated to 30 chars, then date suffix added
-        # Example: base "fix-branch-worktree-name-misma" (30 chars) + date "-25-11-08"
-        # (9 chars) = 39 chars total
+        # Create plan file with very long name
+        # The base will be truncated to 30 chars for both branch and worktree base
+        # Branch: "fix-branch-worktree-name-misma" (30 chars, no date)
+        # Worktree: "fix-branch-worktree-name-misma-YY-MM-DD" (39 chars with date)
         long_plan_name = "fix-branch-worktree-name-mismatch-in-erk-plan-workflow-plan.md"
         plan_file = env.cwd / long_plan_name
         plan_file.write_text("# Fix Branch Worktree Name Mismatch\n", encoding="utf-8")
@@ -1485,30 +1484,33 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
         added_worktree_path, actual_branch_name = git_ops.added_worktrees[0]
         assert actual_branch_name is not None, "Branch name should not be None"
 
-        # CRITICAL: Branch name MUST match worktree name
-        assert actual_branch_name == actual_worktree_name, (
-            f"Branch '{actual_branch_name}' != worktree '{actual_worktree_name}'"
+        # Branch name should be 30 chars (truncated, no date suffix)
+        assert len(actual_branch_name) == 30, (
+            f"Branch name: expected exactly 30 chars, got {len(actual_branch_name)}"
         )
 
-        # Both should exceed 30 characters (base is 30, date suffix adds 9 more)
-        # Expected: fix-branch-worktree-name-misma-YY-MM-DD (39 chars)
+        # Worktree name should be >30 chars (30 char base + 9 char date suffix)
         assert len(actual_worktree_name) > 30, (
             f"Worktree name: expected >30 chars, got {len(actual_worktree_name)}"
         )
-        assert len(actual_branch_name) > 30, (
-            f"Branch name: expected >30 chars, got {len(actual_branch_name)}"
-        )
 
-        # Both should end with date suffix (-YY-MM-DD)
+        # Worktree name should end with date suffix (-YY-MM-DD)
         from datetime import datetime
 
         date_suffix = datetime.now().strftime("%y-%m-%d")
         assert actual_worktree_name.endswith(date_suffix), (
             f"Worktree name should end with '{date_suffix}', got: {actual_worktree_name}"
         )
-        assert actual_branch_name.endswith(date_suffix), (
-            f"Branch name should end with '{date_suffix}', got: {actual_branch_name}"
+
+        # Branch name should match worktree base (worktree name without date suffix)
+        worktree_base = actual_worktree_name.removesuffix(f"-{date_suffix}")
+        assert actual_branch_name == worktree_base, (
+            f"Branch '{actual_branch_name}' should match worktree base '{worktree_base}'"
         )
+
+        # Both branch and worktree base should be exactly 30 chars
+        assert len(actual_branch_name) == 30
+        assert len(worktree_base) == 30
 
 
 def test_create_fails_when_branch_exists_on_remote() -> None:

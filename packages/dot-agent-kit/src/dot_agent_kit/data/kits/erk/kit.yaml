@@ -64,7 +64,7 @@ kit_cli_commands:
     description: Create GitHub issue from plan content (stdin) with erk-plan label
   - name: create-enriched-plan-issue-from-context
     path: kit_cli_commands/erk/create_enriched_plan_issue_from_context.py
-    description: Create GitHub issue from enriched plan (stdin) with erk-plan label
+    description: Create GitHub issue from enriched plan (--plan-content option) with erk-plan label
   - name: create-plan-issue-from-plan-file
     path: kit_cli_commands/erk/create_plan_issue_from_plan_file.py
     description: Create GitHub issue from plan file on disk

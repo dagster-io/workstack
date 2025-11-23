@@ -1,4 +1,4 @@
-"""Create GitHub issue from enriched plan (via stdin) with erk-plan label.
+"""Create GitHub issue from enriched plan (via --plan-content option) with erk-plan label.
 
 This kit CLI command is identical to create_plan_issue_from_context but is used
 by the /erk:create-enriched-plan-issue-from-context slash command which handles
@@ -6,11 +6,10 @@ plan enrichment before passing the enriched plan to this command.
 
 The enrichment happens in the agent's logic (adding context, architectural notes, etc.)
 before calling this command. This command simply creates the issue from whatever
-plan content it receives on stdin.
+plan content it receives via the --plan-content option.
 """
 
 import json
-import sys
 
 import click
 
@@ -19,18 +18,20 @@ from erk.data.kits.erk.plan_utils import extract_title_from_plan
 
 
 @click.command(name="create-enriched-plan-issue-from-context")
+@click.option("--plan-content", required=True, help="Plan content")
 @click.pass_context
-def create_enriched_plan_issue_from_context(ctx: click.Context) -> None:
-    """Create GitHub issue from enriched plan (via stdin).
+def create_enriched_plan_issue_from_context(ctx: click.Context, plan_content: str) -> None:
+    """Create GitHub issue from enriched plan (via --plan-content option).
 
-    Reads enriched plan content from stdin, extracts title, ensures erk-plan label
-    exists, creates issue, and returns JSON result.
+    Reads enriched plan content from --plan-content option, extracts title,
+    ensures erk-plan label exists, creates issue, and returns JSON result.
 
     The plan should already be enriched by the calling agent before being passed
     to this command.
 
     Usage:
-        echo "$enriched_plan" | dot-agent kit-command erk create-enriched-plan-issue-from-context
+        dot-agent kit-command erk create-enriched-plan-issue-from-context \\
+            --plan-content "$enriched_plan"
 
     Exit Codes:
         0: Success
@@ -43,8 +44,8 @@ def create_enriched_plan_issue_from_context(ctx: click.Context) -> None:
     github = require_github_issues(ctx)
     repo_root = require_repo_root(ctx)
 
-    # Read enriched plan from stdin
-    plan = sys.stdin.read()
+    # Use plan content from parameter
+    plan = plan_content
 
     # Validate plan not empty
     if not plan or not plan.strip():

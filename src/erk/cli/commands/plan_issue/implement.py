@@ -160,6 +160,9 @@ def implement_plan_issue(
         else LoadedConfig(env={}, post_create_commands=[], post_create_shell=None)
     )
 
+    # Respect global use_graphite config (matching erk create behavior)
+    use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
+
     # Create worktree
     add_worktree(
         ctx,
@@ -168,7 +171,7 @@ def implement_plan_issue(
         branch=branch,
         ref=trunk_branch,
         use_existing_branch=False,
-        use_graphite=False,
+        use_graphite=use_graphite,
         skip_remote_check=True,
     )
 

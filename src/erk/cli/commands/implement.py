@@ -291,6 +291,9 @@ def _create_worktree_with_plan_content(
     # Output worktree creation diagnostic
     ctx.feedback.info(f"Creating branch '{branch}' from {trunk_branch}...")
 
+    # Respect global use_graphite config (matching erk create behavior)
+    use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
+
     # Create worktree
     add_worktree(
         ctx,
@@ -299,7 +302,7 @@ def _create_worktree_with_plan_content(
         branch=branch,
         ref=trunk_branch,
         use_existing_branch=False,
-        use_graphite=False,
+        use_graphite=use_graphite,
         skip_remote_check=True,
     )
 

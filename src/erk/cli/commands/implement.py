@@ -85,7 +85,7 @@ def _detect_target_type(target: str) -> TargetInfo:
 
 
 def _prepare_plan_source_from_issue(
-    ctx: ErkContext, repo_root: Path, issue_number: str, script: bool = False
+    ctx: ErkContext, repo_root: Path, issue_number: str
 ) -> PlanSource:
     """Prepare plan source from GitHub issue.
 
@@ -93,7 +93,6 @@ def _prepare_plan_source_from_issue(
         ctx: Erk context
         repo_root: Repository root path
         issue_number: GitHub issue number
-        script: Whether to suppress diagnostic output
 
     Returns:
         PlanSource with plan content and metadata
@@ -102,19 +101,17 @@ def _prepare_plan_source_from_issue(
         SystemExit: If issue not found or doesn't have erk-plan label
     """
     # Output fetching diagnostic
-    if not script:
-        user_output("Fetching issue from GitHub...")
+    ctx.feedback.info("Fetching issue from GitHub...")
 
     # Fetch plan issue from GitHub
     try:
         plan_issue = ctx.plan_issue_store.get_plan_issue(repo_root, issue_number)
     except RuntimeError as e:
-        user_output(click.style("Error: ", fg="red") + str(e))
+        ctx.feedback.error(f"Error: {e}")
         raise SystemExit(1) from e
 
     # Output issue title
-    if not script:
-        user_output(f"Issue: {plan_issue.title}")
+    ctx.feedback.info(f"Issue: {plan_issue.title}")
 
     # Validate issue has erk-plan label
     if "erk-plan" not in plan_issue.labels:
@@ -148,12 +145,12 @@ def _prepare_plan_source_from_issue(
     )
 
 
-def _prepare_plan_source_from_file(plan_file: Path, script: bool = False) -> PlanSource:
+def _prepare_plan_source_from_file(ctx: ErkContext, plan_file: Path) -> PlanSource:
     """Prepare plan source from file.
 
     Args:
+        ctx: Erk context
         plan_file: Path to plan file
-        script: Whether to suppress diagnostic output
 
     Returns:
         PlanSource with plan content and metadata
@@ -163,12 +160,11 @@ def _prepare_plan_source_from_file(plan_file: Path, script: bool = False) -> Pla
     """
     # Validate plan file exists
     if not plan_file.exists():
-        user_output(click.style("Error: ", fg="red") + f"Plan file not found: {plan_file}")
+        ctx.feedback.error(f"Error: Plan file not found: {plan_file}")
         raise SystemExit(1)
 
     # Output reading diagnostic
-    if not script:
-        user_output("Reading plan file...")
+    ctx.feedback.info("Reading plan file...")
 
     # Read plan content
     plan_content = plan_file.read_text(encoding="utf-8")
@@ -183,8 +179,7 @@ def _prepare_plan_source_from_file(plan_file: Path, script: bool = False) -> Pla
             break
 
     # Output plan title
-    if not script:
-        user_output(f"Plan: {title}")
+    ctx.feedback.info(f"Plan: {title}")
 
     # Derive base name from filename
     plan_stem = plan_file.stem
@@ -221,7 +216,6 @@ def _create_worktree_with_plan_content(
     plan_source: PlanSource,
     worktree_name: str | None,
     dry_run: bool,
-    script: bool,
 ) -> Path | None:
     """Create worktree with plan content.
 
@@ -230,7 +224,6 @@ def _create_worktree_with_plan_content(
         plan_source: Plan source with content and metadata
         worktree_name: Optional custom worktree name
         dry_run: Whether to perform dry run
-        script: Whether to output activation script
 
     Returns:
         Path to created worktree, or None if dry-run mode
@@ -261,8 +254,7 @@ def _create_worktree_with_plan_content(
         return None
 
     # Create worktree
-    if not script:
-        user_output(f"Creating worktree '{name}'...")
+    ctx.feedback.info(f"Creating worktree '{name}'...")
 
     trunk_branch = ctx.trunk_branch
     branch = name
@@ -270,9 +262,8 @@ def _create_worktree_with_plan_content(
     # Check if branch already exists
     local_branches = ctx.git.list_local_branches(repo_root)
     if branch in local_branches:
-        user_output(
-            click.style("Error: ", fg="red")
-            + f"Branch '{branch}' already exists.\n"
+        ctx.feedback.error(
+            f"Error: Branch '{branch}' already exists.\n"
             + "Cannot create worktree with existing branch name.\n"
             + "Use --worktree-name to specify a different name."
         )
@@ -286,8 +277,7 @@ def _create_worktree_with_plan_content(
     )
 
     # Output worktree creation diagnostic
-    if not script:
-        user_output("Running erk checkout...")
+    ctx.feedback.info("Running erk checkout...")
 
     # Create worktree
     add_worktree(
@@ -301,11 +291,10 @@ def _create_worktree_with_plan_content(
         skip_remote_check=True,
     )
 
-    if not script:
-        user_output(click.style(f"✓ Created worktree: {name}", fg="green"))
+    ctx.feedback.success(f"✓ Created worktree: {name}")
 
     # Run post-worktree setup
-    run_post_worktree_setup(config, wt_path, repo_root, name, script)
+    run_post_worktree_setup(ctx, config, wt_path, repo_root, name)
 
     # Create .impl/ folder with plan content
     create_impl_folder(
@@ -382,10 +371,10 @@ def _implement_from_issue(
     ensure_erk_metadata_dir(repo)
 
     # Prepare plan source from issue
-    plan_source = _prepare_plan_source_from_issue(ctx, repo.root, issue_number, script)
+    plan_source = _prepare_plan_source_from_issue(ctx, repo.root, issue_number)
 
     # Create worktree with plan content
-    wt_path = _create_worktree_with_plan_content(ctx, plan_source, worktree_name, dry_run, script)
+    wt_path = _create_worktree_with_plan_content(ctx, plan_source, worktree_name, dry_run)
 
     # Early return for dry-run mode
     if wt_path is None:
@@ -395,8 +384,7 @@ def _implement_from_issue(
     plan_issue = ctx.plan_issue_store.get_plan_issue(repo.root, issue_number)
     _save_issue_reference(wt_path, issue_number, plan_issue.url)
 
-    if not script:
-        user_output(click.style("✓ Saved issue reference for PR linking", fg="green"))
+    ctx.feedback.success("✓ Saved issue reference for PR linking")
 
     # Output activation instructions
     branch = wt_path.name
@@ -421,10 +409,10 @@ def _implement_from_file(
         script: Whether to output activation script
     """
     # Prepare plan source from file
-    plan_source = _prepare_plan_source_from_file(plan_file, script)
+    plan_source = _prepare_plan_source_from_file(ctx, plan_file)
 
     # Create worktree with plan content
-    wt_path = _create_worktree_with_plan_content(ctx, plan_source, worktree_name, dry_run, script)
+    wt_path = _create_worktree_with_plan_content(ctx, plan_source, worktree_name, dry_run)
 
     # Early return for dry-run mode
     if wt_path is None:
@@ -433,8 +421,7 @@ def _implement_from_file(
     # Delete original plan file (move semantics, file-specific)
     plan_file.unlink()
 
-    if not script:
-        user_output(click.style("✓ Moved plan file to worktree", fg="green"))
+    ctx.feedback.success("✓ Moved plan file to worktree")
 
     # Output activation instructions
     branch = wt_path.name
@@ -508,10 +495,10 @@ def implement(
     target_info = _detect_target_type(target)
 
     # Output target detection diagnostic
-    if not script and target_info.target_type in ("issue_number", "issue_url"):
-        user_output(f"Detected GitHub issue #{target_info.issue_number}")
-    elif not script and target_info.target_type == "file_path":
-        user_output(f"Detected plan file: {target}")
+    if target_info.target_type in ("issue_number", "issue_url"):
+        ctx.feedback.info(f"Detected GitHub issue #{target_info.issue_number}")
+    elif target_info.target_type == "file_path":
+        ctx.feedback.info(f"Detected plan file: {target}")
 
     if target_info.target_type in ("issue_number", "issue_url"):
         # GitHub issue mode

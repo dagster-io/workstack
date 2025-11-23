@@ -82,3 +82,7 @@ See these commands for examples:
 - `src/erk/cli/commands/sync.py` - Uses custom `_emit()` helper
 - `src/erk/cli/commands/jump.py` - Uses both user_output() and machine_output()
 - `src/erk/cli/commands/consolidate.py` - Uses both abstractions
+
+## See Also
+
+- [cli-script-mode.md](cli-script-mode.md) - Script mode for shell integration (suppressing diagnostics)

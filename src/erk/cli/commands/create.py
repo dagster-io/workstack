@@ -26,20 +26,20 @@ from erk.core.repo_discovery import RepoContext, ensure_erk_metadata_dir
 
 
 def run_post_worktree_setup(
+    ctx: ErkContext,
     config: LoadedConfig,
     worktree_path: Path,
     repo_root: Path,
     name: str,
-    script: bool = False,
 ) -> None:
     """Run post-worktree-creation setup: .env file and post-create commands.
 
     Args:
+        ctx: Erk context
         config: Loaded local configuration
         worktree_path: Path to the newly created worktree
         repo_root: Path to repository root
         name: Worktree name
-        script: Whether to suppress diagnostic output
     """
     # Write .env file if template exists
     env_content = make_env_content(
@@ -52,10 +52,10 @@ def run_post_worktree_setup(
     # Run post-create commands
     if config.post_create_commands:
         run_commands_in_worktree(
+            ctx=ctx,
             commands=config.post_create_commands,
             worktree_path=worktree_path,
             shell=config.post_create_shell,
-            script=script,
         )
 
 
@@ -190,7 +190,7 @@ def ensure_worktree_for_branch(
     user_output(click.style(f"✓ Created worktree: {name}", fg="green"))
 
     # Run post-worktree setup (.env and post-create commands)
-    run_post_worktree_setup(config, wt_path, repo.root, name)
+    run_post_worktree_setup(ctx, config, wt_path, repo.root, name)
 
     return wt_path, True
 
@@ -902,6 +902,7 @@ def create(
         if not output_json:
             user_output("Running post-create commands...")
         run_commands_in_worktree(
+            ctx=ctx,
             commands=cfg.post_create_commands,
             worktree_path=wt_path,
             shell=cfg.post_create_shell,
@@ -936,7 +937,11 @@ def create(
 
 
 def run_commands_in_worktree(
-    *, commands: Iterable[str], worktree_path: Path, shell: str | None, script: bool = False
+    *,
+    ctx: ErkContext,
+    commands: Iterable[str],
+    worktree_path: Path,
+    shell: str | None,
 ) -> None:
     """Run commands serially in the worktree directory.
 
@@ -945,16 +950,15 @@ def run_commands_in_worktree(
     via `shlex.split` and run directly.
 
     Args:
+        ctx: Erk context
         commands: Iterable of commands to run
         worktree_path: Path to worktree where commands should run
         shell: Optional shell to use for command execution
-        script: Whether to suppress diagnostic output
     """
 
     for cmd in commands:
         # Output per-command diagnostic
-        if not script:
-            user_output(f"Running: {cmd}")
+        ctx.feedback.info(f"Running: {cmd}")
         cmd_list = [shell, "-lc", cmd] if shell else shlex.split(cmd)
         run_with_error_reporting(
             cmd_list,

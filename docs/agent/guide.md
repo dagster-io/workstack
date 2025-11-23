@@ -56,5 +56,7 @@ docs/
 | Writing tests with fakes/ops      | [testing.md](testing.md)                                                                                       |
 | Understanding or modifying hooks  | [hooks-erk.md](hooks-erk.md) → General: [hooks.md](hooks.md)                                                   |
 | Creating command-agent delegation | [command-agent-delegation.md](command-agent-delegation.md)                                                     |
+| Implementing script mode          | [cli-script-mode.md](cli-script-mode.md)                                                                       |
+| Styling CLI output                | [cli-output-styling.md](cli-output-styling.md)                                                                 |
 | Python coding standards           | Load `dignified-python` skill                                                                                  |
 | Understanding agentic programming | [../writing/agentic-programming/agentic-programming.md](../writing/agentic-programming/agentic-programming.md) |

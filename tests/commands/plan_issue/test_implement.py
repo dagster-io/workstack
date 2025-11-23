@@ -224,26 +224,28 @@ def test_implement_with_closed_issue_shows_warning() -> None:
         assert len(git.added_worktrees) == 1  # Worktree still created
 
 
-def test_implement_fails_when_branch_already_exists() -> None:
-    """Test that command fails when generated branch name already exists."""
+def test_implement_fails_when_custom_branch_already_exists() -> None:
+    """Test that command fails when custom worktree name conflicts with existing branch."""
     # Arrange
     plan_issue = _create_sample_plan_issue()
 
     runner = CliRunner()
-    with erk_inmem_env(runner) as env:
-        # Pre-create branch that would conflict
+    with erk_isolated_fs_env(runner) as env:
+        # Pre-create branch that would conflict with custom name
         git = FakeGit(
             git_common_dirs={env.cwd: env.git_dir},
             local_branches={
-                env.cwd: ["main", "add-authentication-feature-25-11-22"]  # Existing branch
+                env.cwd: ["main", "my-custom-feature"]  # Existing branch
             },
             default_branches={env.cwd: "main"},
         )
         store = FakePlanIssueStore(plan_issues={"42": plan_issue})
         ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
 
-        # Act
-        result = runner.invoke(plan_issue_group, ["implement", "42"], obj=ctx)
+        # Act - try to use custom name that already exists as a branch
+        result = runner.invoke(
+            plan_issue_group, ["implement", "42", "--worktree-name", "my-custom-feature"], obj=ctx
+        )
 
         # Assert
         assert result.exit_code == 1

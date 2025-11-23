@@ -118,14 +118,12 @@ def implement_plan_issue(
 
     # Step 2: Determine worktree name
     if worktree_name:
-        # User provided custom name
+        # User provided custom name - use as-is without date suffix
         name = sanitize_worktree_name(worktree_name)
     else:
-        # Auto-generate from issue title
-        name = _generate_worktree_name_from_title(ctx, plan_issue.title)
-
-    # Ensure unique name with date suffix (plan-derived worktree)
-    name = ensure_unique_worktree_name_with_date(name, repo.worktrees_dir, ctx.git)
+        # Auto-generate from issue title with date suffix for uniqueness
+        base_name = _generate_worktree_name_from_title(ctx, plan_issue.title)
+        name = ensure_unique_worktree_name_with_date(base_name, repo.worktrees_dir, ctx.git)
 
     # Calculate worktree path
     wt_path = worktree_path_for(repo.worktrees_dir, name)

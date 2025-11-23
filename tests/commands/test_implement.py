@@ -37,11 +37,11 @@ def test_detect_issue_number_with_hash() -> None:
     assert target_info.issue_number == "123"
 
 
-def test_detect_plain_number_as_file_path() -> None:
-    """Test that plain numbers without # are treated as file paths."""
+def test_detect_plain_number_as_issue() -> None:
+    """Test that plain numbers are treated as GitHub issue numbers."""
     target_info = _detect_target_type("123")
-    assert target_info.target_type == "file_path"
-    assert target_info.issue_number is None
+    assert target_info.target_type == "issue_number"
+    assert target_info.issue_number == "123"
 
 
 def test_detect_issue_url() -> None:
@@ -60,6 +60,21 @@ def test_detect_issue_url_with_path() -> None:
     assert target_info.issue_number == "789"
 
 
+def test_detect_relative_numeric_file() -> None:
+    """Test that numeric files with ./ prefix are treated as file paths."""
+    target_info = _detect_target_type("./123")
+    assert target_info.target_type == "file_path"
+    assert target_info.issue_number is None
+
+
+def test_plain_and_prefixed_numbers_equivalent() -> None:
+    """Test that plain and prefixed numbers both resolve to issue numbers."""
+    result_plain = _detect_target_type("809")
+    result_prefixed = _detect_target_type("#809")
+    assert result_plain.target_type == result_prefixed.target_type == "issue_number"
+    assert result_plain.issue_number == result_prefixed.issue_number == "809"
+
+
 def test_detect_file_path() -> None:
     """Test detection of file paths."""
     target_info = _detect_target_type("./my-feature-plan.md")
@@ -72,6 +87,40 @@ def test_detect_file_path_with_special_chars() -> None:
     target_info = _detect_target_type("/path/to/my-plan.md")
     assert target_info.target_type == "file_path"
     assert target_info.issue_number is None
+
+
+# GitHub Issue Mode Tests
+
+
+def test_implement_from_plain_issue_number() -> None:
+    """Test implementing from GitHub issue number without # prefix."""
+    plan_issue = _create_sample_plan_issue("123")
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"123": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+
+        # Test with plain number (no # prefix)
+        result = runner.invoke(implement, ["123"], obj=ctx)
+
+        assert result.exit_code == 0
+        assert "Created worktree" in result.output
+        assert "add-authentication-feature" in result.output
+
+        # Verify worktree was created
+        assert len(git.added_worktrees) == 1
+
+        # Verify .impl/ folder exists with correct issue number
+        worktree_paths = [wt[0] for wt in git.added_worktrees]
+        issue_json_path = worktree_paths[0] / ".impl" / "issue.json"
+        issue_json_content = issue_json_path.read_text(encoding="utf-8")
+        assert '"issue_number": 123' in issue_json_content
 
 
 # GitHub Issue Mode Tests

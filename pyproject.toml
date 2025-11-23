@@ -70,6 +70,9 @@ reportMissingImports = "warning"
 [tool.pytest.ini_options]
 addopts = "-q"
 testpaths = ["tests", "packages/erk-dev/tests", "packages/dot-agent-kit/tests"]
+markers = [
+    "docker: marks tests that require Docker daemon (run with: pytest -m docker)",
+]
 
 [tool.dot-agent]
 dev_mode = true

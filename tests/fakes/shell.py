@@ -47,6 +47,7 @@ class FakeShell(Shell):
         *,
         detected_shell: tuple[str, Path] | None = None,
         installed_tools: dict[str, str] | None = None,
+        command_exit_code: int = 0,
     ) -> None:
         """Initialize fake with predetermined shell and tool availability.
 
@@ -55,9 +56,12 @@ class FakeShell(Shell):
                 should be detected. Format: (shell_name, rc_file_path)
             installed_tools: Mapping of tool name to executable path. Tools not in
                 this mapping will return None from get_installed_tool_path()
+            command_exit_code: Exit code to return from run_command() (default: 0)
         """
         self._detected_shell = detected_shell
         self._installed_tools = installed_tools or {}
+        self._command_exit_code = command_exit_code
+        self._command_calls: list[tuple[list[str], Path | None]] = []
         self._sync_calls: list[tuple[Path, bool, bool]] = []
 
     def detect_shell(self) -> tuple[str, Path] | None:
@@ -68,6 +72,18 @@ class FakeShell(Shell):
         """Return the tool path if configured, None otherwise."""
         return self._installed_tools.get(tool_name)
 
+    def run_command(self, command: list[str], cwd: Path | None = None) -> int:
+        """Track call to run_command and return configured exit code.
+
+        This method records the call parameters for test assertions.
+        It does not execute any actual subprocess operations.
+
+        Returns:
+            Configured exit code (from command_exit_code parameter)
+        """
+        self._command_calls.append((command, cwd))
+        return self._command_exit_code
+
     def run_erk_sync(self, repo_root: Path, *, force: bool, verbose: bool) -> None:
         """Track call to run_erk_sync without executing anything.
 
@@ -75,6 +91,16 @@ class FakeShell(Shell):
         It does not execute any actual subprocess operations.
         """
         self._sync_calls.append((repo_root, force, verbose))
+
+    @property
+    def command_calls(self) -> list[tuple[list[str], Path | None]]:
+        """Get the list of run_command() calls that were made.
+
+        Returns list of (command, cwd) tuples.
+
+        This property is for test assertions only.
+        """
+        return self._command_calls.copy()
 
     @property
     def sync_calls(self) -> list[tuple[Path, bool, bool]]:

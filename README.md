@@ -875,6 +875,169 @@ erk land-stack --down
 - All PRs must be in mergeable state
 - No uncommitted changes (unless using `--down`)
 
+## Docker-Based Implementation
+
+Execute implementation plans in isolated Docker containers for reproducible builds and environment isolation.
+
+### Overview
+
+The `erk implement` command runs `/erk:implement-plan` either natively on your host or inside ephemeral Docker containers. Docker mode provides:
+
+- **Environment isolation**: Dependencies and tools isolated from your host system
+- **Reproducibility**: Consistent execution environment across machines
+- **Branch-specific environments**: Each branch can have different Docker configurations
+- **Ephemeral execution**: Containers created on start, destroyed on completion
+
+### Quick Start
+
+```bash
+# 1. Create sandbox Dockerfile (one-time setup)
+mkdir -p .erk/sandboxes/default
+cp docs/examples/sandboxes/python-example/Dockerfile .erk/sandboxes/default/
+
+# 2. Customize for your project needs
+vim .erk/sandboxes/default/Dockerfile
+
+# 3. Run implementation in Docker
+erk implement --docker
+```
+
+### Usage
+
+```bash
+# Native execution (runs on host)
+erk implement
+
+# Docker execution (runs in container)
+erk implement --docker
+
+# Dry-run mode (show what would happen)
+erk implement --dry-run
+erk implement --docker --dry-run
+```
+
+### Sandbox Architecture
+
+Erk uses a multi-sandbox architecture to support different Docker environments per package:
+
+```
+.erk/sandboxes/
+├── default/          # Default Python development environment
+│   ├── Dockerfile    # Container configuration
+│   └── README.md     # Sandbox documentation
+├── package-a/        # Custom environment for package A
+│   ├── Dockerfile
+│   └── README.md
+└── package-b/        # Custom environment for package B
+    ├── Dockerfile
+    └── README.md
+```
+
+**Current behavior**: Uses `default` sandbox only
+**Future**: `--sandbox <name>` flag to select specific sandbox
+
+### How It Works
+
+When you run `erk implement --docker`:
+
+1. **Image Build**: Builds Docker image from `.erk/sandboxes/default/Dockerfile`
+2. **Volume Mounts**: Mounts your worktree at `/workspace` (read-write)
+3. **Credentials**: Mounts git config and SSH keys (read-only) for authenticated operations
+4. **Execution**: Runs `claude --permission-mode acceptEdits /erk:implement-plan`
+5. **Cleanup**: Destroys container automatically when done
+
+### Dockerfile Requirements
+
+Your sandbox Dockerfile must include:
+
+- **Claude Code CLI**: Required to execute `/erk:implement-plan` command
+- **Development tools**: `uv`, `git`, `openssh-client` for erk operations
+- **Project dependencies**: Any tools your project needs (Node.js, databases, etc.)
+
+**Example sandbox** (see `docs/examples/sandboxes/python-example/`):
+
+```dockerfile
+FROM python:3.13-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git openssh-client curl build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv (Python package manager)
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+# Install Claude Code CLI
+RUN curl -fsSL https://raw.githubusercontent.com/anthropics/claude-code/main/install.sh | sh
+
+WORKDIR /workspace
+ENV PYTHONUNBUFFERED=1 UV_SYSTEM_PYTHON=1
+CMD ["/bin/bash"]
+```
+
+### Customizing Sandboxes
+
+Create custom sandboxes for different projects or packages:
+
+```bash
+# Copy example template
+cp -r docs/examples/sandboxes/python-example .erk/sandboxes/my-project
+
+# Customize Dockerfile
+vim .erk/sandboxes/my-project/Dockerfile
+
+# Future: Use specific sandbox
+erk implement --docker --sandbox my-project  # (coming soon)
+```
+
+### Troubleshooting
+
+**Docker daemon not running:**
+
+```
+Error: Docker daemon not running
+→ Start Docker Desktop or run: sudo systemctl start docker
+```
+
+**Missing sandbox Dockerfile:**
+
+```
+Error: Sandbox Dockerfile not found: .erk/sandboxes/default/Dockerfile
+→ Create from template: cp -r docs/examples/sandboxes/python-example .erk/sandboxes/default
+```
+
+**No plan found:**
+
+```
+Error: No plan found in current directory
+→ Create plan first: /erk:persist-plan or /erk:create-planned-wt
+```
+
+**Performance issues on macOS:**
+Docker volume mounts can be slow on macOS. Consider using native mode (`erk implement` without `--docker`) for faster execution.
+
+### When to Use Docker Mode
+
+**Use Docker (`erk implement --docker`) when:**
+
+- Testing changes in isolation from your host environment
+- Ensuring reproducible builds across machines
+- Working with potentially unstable dependencies
+- Need different environments per branch/package
+
+**Use Native (`erk implement`) when:**
+
+- Fastest execution needed
+- Docker not available
+- Host environment is already configured
+- Debugging Docker issues
+
+### See Also
+
+- `docs/docker-sandboxes.md` - Comprehensive sandbox guide
+- `docs/examples/sandboxes/` - Example templates
+- `docs/agent/docker-implementation.md` - Agent guide
+
 ## Command Reference
 
 ### `create` Options

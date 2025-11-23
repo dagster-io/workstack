@@ -11,11 +11,10 @@ plan content it receives on stdin.
 
 import json
 import sys
-from pathlib import Path
 
 import click
 
-from dot_agent_kit.context_helpers import require_github_issues
+from dot_agent_kit.context_helpers import require_github_issues, require_repo_root
 from dot_agent_kit.data.kits.erk.plan_utils import extract_title_from_plan
 
 
@@ -42,6 +41,7 @@ def create_enriched_plan_issue_from_context(ctx: click.Context) -> None:
     """
     # Get GitHub Issues from context (LBYL check in helper)
     github = require_github_issues(ctx)
+    repo_root = require_repo_root(ctx)
 
     # Read enriched plan from stdin
     plan = sys.stdin.read()
@@ -56,9 +56,6 @@ def create_enriched_plan_issue_from_context(ctx: click.Context) -> None:
 
     # Plan content is used as-is for the issue body
     body = plan.strip()
-
-    # Get current repo root
-    repo_root = Path.cwd()
 
     # Ensure label exists (ABC interface with EAFP pattern)
     try:

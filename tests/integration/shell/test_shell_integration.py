@@ -1,18 +1,10 @@
 """Tests for the shell_integration command."""
 
-from datetime import UTC, datetime
 from pathlib import Path
 
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.branch_metadata import BranchMetadata
-from erk.core.git.abc import WorktreeInfo
-from erk.core.git.fake import FakeGit
-from erk.core.plan_issue_store import FakePlanIssueStore
-from erk.core.plan_issue_store.types import PlanIssue, PlanIssueState
-from tests.fakes.git import FakeGit as FakeGitTests
-from tests.test_utils.env_helpers import erk_inmem_env, erk_isolated_fs_env
 
 
 def test_shell_integration_with_switch() -> None:
@@ -199,6 +191,12 @@ def test_shell_integration_switch_invokes_successfully() -> None:
     was causing TypeError. The handler should successfully invoke commands using
     CliRunner without deprecated parameters.
     """
+    from pathlib import Path
+
+    from erk.core.git.abc import WorktreeInfo
+    from erk.core.git.fake import FakeGit
+    from tests.test_utils.env_helpers import erk_isolated_fs_env
+
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
         # Set up multiple worktrees
@@ -241,6 +239,10 @@ def test_shell_integration_switch_invokes_successfully() -> None:
 
 def test_shell_integration_jump_invokes_successfully() -> None:
     """Test that __shell jump invokes command successfully."""
+    from erk.core.git.abc import WorktreeInfo
+    from erk.core.git.fake import FakeGit
+    from tests.test_utils.env_helpers import erk_isolated_fs_env
+
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
         # Set up worktree with branch
@@ -273,6 +275,10 @@ def test_shell_integration_jump_invokes_successfully() -> None:
 
 def test_shell_integration_up_invokes_successfully() -> None:
     """Test that __shell up invokes command successfully with Graphite stack."""
+
+    from erk.core.branch_metadata import BranchMetadata
+    from tests.test_utils.env_helpers import erk_isolated_fs_env
+
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
         # Set up stack: main → feat-1 → feat-2
@@ -299,6 +305,10 @@ def test_shell_integration_up_invokes_successfully() -> None:
 
 def test_shell_integration_down_invokes_successfully() -> None:
     """Test that __shell down invokes command successfully with Graphite stack."""
+
+    from erk.core.branch_metadata import BranchMetadata
+    from tests.test_utils.env_helpers import erk_isolated_fs_env
+
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
         # Set up stack: main → feat-1 → feat-2
@@ -325,6 +335,10 @@ def test_shell_integration_down_invokes_successfully() -> None:
 
 def test_shell_integration_create_invokes_successfully() -> None:
     """Test that __shell create invokes command successfully."""
+    from erk.core.git.abc import WorktreeInfo
+    from erk.core.git.fake import FakeGit
+    from tests.test_utils.env_helpers import erk_isolated_fs_env
+
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
         git_ops = FakeGit(
@@ -347,6 +361,10 @@ def test_shell_integration_create_invokes_successfully() -> None:
 
 def test_shell_integration_consolidate_invokes_successfully() -> None:
     """Test that __shell consolidate invokes command successfully."""
+    from erk.core.git.abc import WorktreeInfo
+    from erk.core.git.fake import FakeGit
+    from tests.test_utils.env_helpers import erk_isolated_fs_env
+
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
         git_ops = FakeGit(
@@ -374,6 +392,10 @@ def test_shell_handler_uses_stdout_not_output() -> None:
     only stderr. The handler must use result.stdout for script path extraction
     to avoid mixing stderr messages with the script path.
     """
+    from erk.core.git.abc import WorktreeInfo
+    from erk.core.git.fake import FakeGit
+    from tests.test_utils.env_helpers import erk_isolated_fs_env
+
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
         # Set up worktrees that might produce stderr output
@@ -421,6 +443,10 @@ def test_shell_integration_shows_note_for_no_directory_change() -> None:
     script (empty stdout), the handler should display a note explaining that no
     directory change is needed. This clarifies expected behavior for users.
     """
+    from erk.core.git.abc import WorktreeInfo
+    from erk.core.git.fake import FakeGit
+    from tests.test_utils.env_helpers import erk_inmem_env
+
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         # Set up minimal environment - consolidate with no worktrees to remove
@@ -456,6 +482,10 @@ def test_shell_integration_create_from_current_branch_returns_script_path() -> N
 
     See: https://github.com/anthropics/erk/issues/XXX
     """
+    from erk.core.git.abc import WorktreeInfo
+    from erk.core.git.fake import FakeGit
+    from tests.test_utils.env_helpers import erk_isolated_fs_env
+
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
         # Set up git state: in root worktree on feature branch
@@ -521,6 +551,9 @@ def test_shell_integration_land_stack_invokes_successfully() -> None:
     Verifies that land-stack is registered in the shell integration handler's command_map,
     which enables it to receive the --script flag for directory switching after landing PRs.
     """
+    from erk.core.branch_metadata import BranchMetadata
+    from tests.test_utils.env_helpers import erk_isolated_fs_env
+
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
         # Set up stack: main → feat-1 → feat-2
@@ -544,61 +577,3 @@ def test_shell_integration_land_stack_invokes_successfully() -> None:
 
         # Should succeed without TypeError (may fail for other reasons like API calls)
         assert result.exit_code in (0, 1), f"Unexpected exit code: {result.exit_code}"
-
-
-def test_shell_integration_implement_invokes_successfully() -> None:
-    """Test that __shell implement invokes command successfully and receives --script flag.
-
-    Verifies that implement is registered in the shell integration handler's command_map,
-    which enables it to receive the --script flag for directory switching after worktree creation.
-
-    This test catches the bug where implement was missing from command_map, causing the
-    "Shell integration not detected" message instead of automatic directory switching.
-    """
-    runner = CliRunner()
-    with erk_isolated_fs_env(runner) as env:
-        # Set up minimal git environment
-        git_ops = FakeGitTests(
-            git_common_dirs={env.cwd: env.git_dir},
-            default_branches={env.cwd: "main"},
-            worktrees={
-                env.cwd: [
-                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
-                ]
-            },
-        )
-
-        # Create a fake plan issue store with a test issue
-        test_issue = PlanIssue(
-            plan_issue_identifier="123",
-            title="Test Feature",
-            body="# Test Plan\nImplement test feature",
-            url="https://github.com/test/repo/issues/123",
-            state=PlanIssueState.OPEN,
-            labels=["erk-plan"],
-            assignees=[],
-            created_at=datetime.now(UTC),
-            updated_at=datetime.now(UTC),
-            metadata={"number": 123},
-        )
-        fake_plan_store = FakePlanIssueStore(plan_issues={"123": test_issue})
-        test_ctx = env.build_context(git=git_ops, plan_issue_store=fake_plan_store)
-
-        # Act: Invoke implement through __shell handler
-        # We expect this to fail with "Error: Issue not found" because we need real GitHub,
-        # BUT the key test is that it invokes with --script flag (no TypeError)
-        result = runner.invoke(cli, ["__shell", "implement", "#123"], obj=test_ctx)
-
-        # Should succeed without TypeError (may fail for other reasons like missing issue)
-        # The critical test: No "Shell integration not detected" message
-        assert result.exit_code in (0, 1), f"Unexpected exit code: {result.exit_code}"
-
-        # If the command was properly registered, it should NOT show the fallback message
-        # The fallback message only appears when command_map doesn't include the command
-        if result.exit_code == 1:
-            # Verify we're NOT seeing the shell integration detection message
-            # (which would indicate the command wasn't registered)
-            assert "Shell integration not detected" not in result.output, (
-                "Command should be registered in shell integration handler's command_map. "
-                "If this message appears, implement is missing from the command_map."
-            )

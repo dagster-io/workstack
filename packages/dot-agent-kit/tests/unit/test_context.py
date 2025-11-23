@@ -4,6 +4,7 @@ Layer 3 (Pure Unit Tests): Zero dependencies, testing context factory functions.
 """
 
 from dataclasses import FrozenInstanceError
+from pathlib import Path
 
 import pytest
 
@@ -64,3 +65,30 @@ def test_context_attributes_accessible() -> None:
     # Should not raise AttributeError
     _ = ctx.github_issues
     _ = ctx.debug
+    _ = ctx.repo_root
+
+
+def test_context_has_repo_root_field() -> None:
+    """Test that DotAgentContext has repo_root field."""
+    ctx = DotAgentContext(
+        github_issues=FakeGitHubIssues(),
+        debug=False,
+        repo_root=Path("/test/repo"),
+    )
+
+    assert ctx.repo_root == Path("/test/repo")
+
+
+def test_for_test_uses_default_repo_root() -> None:
+    """Test that for_test() uses default repo_root when not provided."""
+    ctx = DotAgentContext.for_test()
+
+    assert ctx.repo_root == Path("/fake/repo")
+
+
+def test_for_test_accepts_custom_repo_root() -> None:
+    """Test that for_test() accepts custom repo_root."""
+    custom_path = Path("/custom/path")
+    ctx = DotAgentContext.for_test(repo_root=custom_path)
+
+    assert ctx.repo_root == custom_path

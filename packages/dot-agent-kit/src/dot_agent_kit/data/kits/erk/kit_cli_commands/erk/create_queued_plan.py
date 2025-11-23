@@ -12,7 +12,7 @@ from pathlib import Path
 
 import click
 
-from dot_agent_kit.context_helpers import require_github_issues
+from dot_agent_kit.context_helpers import require_github_issues, require_repo_root
 from dot_agent_kit.data.kits.erk.plan_utils import extract_title_from_plan
 
 
@@ -42,6 +42,7 @@ def create_queued_plan(
     """
     # Get GitHub Issues from context (LBYL check in helper)
     github = require_github_issues(ctx)
+    repo_root = require_repo_root(ctx)
 
     # Read file (Python file I/O, not shell)
     plan = plan_file.read_text(encoding="utf-8")
@@ -54,9 +55,6 @@ def create_queued_plan(
     # Extract title and prepare body (pure functions)
     title = extract_title_from_plan(plan)
     body = plan.strip()
-
-    # Get current repo root
-    repo_root = Path.cwd()
 
     # Ensure erk-queue label exists (EAFP pattern)
     try:

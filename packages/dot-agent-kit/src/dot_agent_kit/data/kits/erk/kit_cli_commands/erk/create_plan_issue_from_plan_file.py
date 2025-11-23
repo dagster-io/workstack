@@ -16,7 +16,7 @@ from pathlib import Path
 
 import click
 
-from dot_agent_kit.context_helpers import require_github_issues
+from dot_agent_kit.context_helpers import require_github_issues, require_repo_root
 from dot_agent_kit.data.kits.erk.plan_utils import extract_title_from_plan
 
 
@@ -49,6 +49,7 @@ def create_plan_issue_from_plan_file(
     """
     # Get GitHub Issues from context (LBYL check in helper)
     github = require_github_issues(ctx)
+    repo_root = require_repo_root(ctx)
 
     # Read file (Python file I/O, not shell)
     # LBYL: path existence already checked by Click
@@ -62,9 +63,6 @@ def create_plan_issue_from_plan_file(
     # Extract title and prepare body (pure functions)
     title = extract_title_from_plan(plan)
     body = plan.strip()
-
-    # Get current repo root
-    repo_root = Path.cwd()
 
     # Ensure label exists
     # Label description varies based on label type

@@ -7,7 +7,11 @@ The DotAgentContext dataclass holds all dependencies (GitHub integrations, confi
 and is created once at CLI entry point, then threaded through the application.
 """
 
+import subprocess
 from dataclasses import dataclass
+from pathlib import Path
+
+import click
 
 from erk.core.github.issues import GitHubIssues, RealGitHubIssues
 
@@ -23,15 +27,18 @@ class DotAgentContext:
     Attributes:
         github_issues: GitHub Issues integration for querying/commenting
         debug: Debug flag for error handling (full stack traces)
+        repo_root: Repository root directory (detected at CLI entry)
     """
 
     github_issues: GitHubIssues
     debug: bool
+    repo_root: Path
 
     @staticmethod
     def for_test(
         github_issues: GitHubIssues | None = None,
         debug: bool = False,
+        repo_root: Path | None = None,
     ) -> "DotAgentContext":
         """Create test context with optional pre-configured implementations.
 
@@ -41,6 +48,7 @@ class DotAgentContext:
         Args:
             github_issues: Optional GitHubIssues implementation. If None, creates FakeGitHubIssues.
             debug: Whether to enable debug mode (default False).
+            repo_root: Repository root path (defaults to Path("/fake/repo"))
 
         Returns:
             DotAgentContext configured with provided values and test defaults
@@ -48,7 +56,9 @@ class DotAgentContext:
         Example:
             >>> from erk.core.github.issues import FakeGitHubIssues
             >>> github = FakeGitHubIssues()
-            >>> ctx = DotAgentContext.for_test(github_issues=github, debug=True)
+            >>> ctx = DotAgentContext.for_test(
+            ...     github_issues=github, debug=True, repo_root=Path("/tmp/test")
+            ... )
         """
         from erk.core.github.issues import FakeGitHubIssues
 
@@ -56,10 +66,12 @@ class DotAgentContext:
         resolved_github_issues: GitHubIssues = (
             github_issues if github_issues is not None else FakeGitHubIssues()
         )
+        resolved_repo_root: Path = repo_root if repo_root is not None else Path("/fake/repo")
 
         return DotAgentContext(
             github_issues=resolved_github_issues,
             debug=debug,
+            repo_root=resolved_repo_root,
         )
 
 
@@ -70,17 +82,32 @@ def create_context(*, debug: bool) -> DotAgentContext:
     Called once at CLI entry point to create the context for the entire
     command execution.
 
+    Detects repository root using git rev-parse. Exits with error if not in a git repository.
+
     Args:
         debug: If True, enable debug mode (full stack traces in error handling)
 
     Returns:
-        DotAgentContext with real GitHub integrations
+        DotAgentContext with real GitHub integrations and detected repo_root
 
     Example:
         >>> ctx = create_context(debug=False)
-        >>> issue_number = ctx.github_issues.create_issue(repo_root, title, body, labels)
+        >>> issue_number = ctx.github_issues.create_issue(ctx.repo_root, title, body, labels)
     """
+    # Detect repo root using git rev-parse
+    result = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    if result.returncode != 0:
+        click.echo("Error: Not in a git repository", err=True)
+        raise SystemExit(1)
+
     return DotAgentContext(
         github_issues=RealGitHubIssues(),
         debug=debug,
+        repo_root=Path(result.stdout.strip()),
     )

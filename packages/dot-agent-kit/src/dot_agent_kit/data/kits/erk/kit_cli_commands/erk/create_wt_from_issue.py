@@ -261,25 +261,6 @@ import click
 from erk.core.impl_folder import save_issue_reference
 
 
-def get_repo_root() -> Path | None:
-    """Get repository root using git rev-parse.
-
-    Returns:
-        Path to repository root, or None if not in git repo
-    """
-    result = subprocess.run(
-        ["git", "rev-parse", "--show-toplevel"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if result.returncode != 0:
-        return None
-
-    return Path(result.stdout.strip())
-
-
 def parse_issue_reference(issue_arg: str) -> dict[str, str | int | bool]:
     """Parse issue reference using parse-issue-reference command.
 
@@ -438,18 +419,13 @@ def post_creation_comment(issue_number: int, worktree_name: str, branch_name: st
 
 @click.command()
 @click.argument("issue_reference")
-def create_wt_from_issue(issue_reference: str) -> None:
+@click.pass_context
+def create_wt_from_issue(ctx: click.Context, issue_reference: str) -> None:
     """Create worktree from GitHub issue with erk-plan label.
 
     ISSUE_REFERENCE: GitHub issue number or full URL
     """
-    # Step 1: Check if in git repository
-    repo_root = get_repo_root()
-    if repo_root is None:
-        click.echo(click.style("Error: ", fg="red") + "Not in a git repository", err=True)
-        raise SystemExit(1)
-
-    # Step 2: Parse issue reference
+    # Step 1: Parse issue reference
     parse_result = parse_issue_reference(issue_reference)
     if not parse_result.get("success"):
         click.echo(

@@ -12,6 +12,7 @@ from erk.cli.output import user_output
 from erk.cli.shell_utils import render_navigation_script
 from erk.cli.subprocess_utils import run_with_error_reporting
 from erk.core.context import ErkContext
+from erk.core.github.issues import IssueInfo
 from erk.core.impl_folder import create_impl_folder, get_impl_path
 from erk.core.naming_utils import (
     default_branch_for_worktree,
@@ -327,6 +328,49 @@ def quote_env_value(value: str) -> str:
     return f'"{escaped}"'
 
 
+def parse_issue_number(issue_input: str) -> str:
+    """Parse GitHub issue number from URL or plain number.
+
+    Args:
+        issue_input: Either a plain issue number (e.g., "123") or a GitHub URL
+                    (e.g., "https://github.com/owner/repo/issues/456")
+
+    Returns:
+        Issue number as string
+
+    Raises:
+        SystemExit: If input format is invalid
+
+    Examples:
+        >>> parse_issue_number("123")
+        "123"
+        >>> parse_issue_number("https://github.com/owner/repo/issues/456")
+        "456"
+        >>> parse_issue_number("https://github.com/owner/repo/issues/789#issuecomment-123")
+        "789"
+    """
+    import re
+
+    # Pattern matches:
+    # - Optional "issues/" prefix
+    # - Digits
+    # - Optional query string or fragment
+    pattern = r"(?:issues/)?(\d+)(?:[?#].*)?$"
+    match = re.search(pattern, issue_input)
+
+    if not match:
+        user_output(
+            click.style("Error: ", fg="red")
+            + f"Invalid issue number or URL: {issue_input}\n\n"
+            + "Expected formats:\n"
+            + "  • Plain number: 123\n"
+            + "  • GitHub URL: https://github.com/owner/repo/issues/456"
+        )
+        raise SystemExit(1)
+
+    return match.group(1)
+
+
 def _create_json_response(
     *,
     worktree_name: str,
@@ -395,6 +439,17 @@ def _create_json_response(
     help="Copy the plan file instead of moving it (requires --from-plan).",
 )
 @click.option(
+    "--from-issue",
+    "from_issue",
+    type=str,
+    help=(
+        "GitHub issue number or URL with erk-plan label. Fetches issue content "
+        "and creates worktree with .impl/ folder and .impl/issue.json metadata. "
+        "Worktree names are automatically suffixed with the current date (-YY-MM-DD) "
+        "and versioned if duplicates exist."
+    ),
+)
+@click.option(
     "--copy-plan",
     is_flag=True,
     default=False,
@@ -451,6 +506,7 @@ def create(
     no_post: bool,
     from_plan: Path | None,
     keep_plan: bool,
+    from_issue: str | None,
     copy_plan: bool,
     from_current_branch: bool,
     from_branch: str | None,
@@ -464,6 +520,8 @@ def create(
     Reads config.toml for env templates and post-create commands (if present).
     If --from-plan is provided, derives name from the plan filename and creates
     .impl/ folder in the worktree.
+    If --from-issue is provided, fetches the GitHub issue, validates the erk-plan label,
+    derives name from the issue title, and creates .impl/ folder with issue.json metadata.
     If --from-current-branch is provided, moves the current branch to the new worktree.
     If --from-branch is provided, creates a worktree from an existing branch.
 
@@ -473,9 +531,19 @@ def create(
     """
 
     # Validate mutually exclusive options
-    flags_set = sum([from_current_branch, from_branch is not None, from_plan is not None])
+    flags_set = sum(
+        [
+            from_current_branch,
+            from_branch is not None,
+            from_plan is not None,
+            from_issue is not None,
+        ]
+    )
     if flags_set > 1:
-        user_output("Cannot use multiple of: --from-current-branch, --from-branch, --from-plan")
+        user_output(
+            "Cannot use multiple of: "
+            "--from-current-branch, --from-branch, --from-plan, --from-issue"
+        )
         raise SystemExit(1)
 
     # Validate --json and --script are mutually exclusive
@@ -488,13 +556,14 @@ def create(
         user_output("Error: --keep-plan requires --from-plan")
         raise SystemExit(1)
 
-    # Validate --copy-plan and --from-plan are mutually exclusive
-    if copy_plan and from_plan is not None:
+    # Validate --copy-plan and --from-plan/--from-issue are mutually exclusive
+    if copy_plan and (from_plan is not None or from_issue is not None):
         user_output(
             click.style("Error: ", fg="red")
-            + "--copy-plan and --from-plan are mutually exclusive. "
+            + "--copy-plan and --from-plan/--from-issue are mutually exclusive. "
             + "Use --copy-plan to copy from current worktree OR "
-            + "--from-plan <file> to use a plan file."
+            + "--from-plan <file> to use a plan file OR "
+            + "--from-issue <number> to use a GitHub issue."
         )
         raise SystemExit(1)
 
@@ -516,6 +585,10 @@ def create(
                 + f".impl exists but is not a directory ({impl_source_check})"
             )
             raise SystemExit(1)
+
+    # Initialize variables used in conditional blocks (for type checking)
+    issue_number_parsed: str | None = None
+    issue_info: IssueInfo | None = None
 
     # Handle --from-current-branch flag
     if from_current_branch:
@@ -556,19 +629,73 @@ def create(
         # Note: Apply ensure_unique_worktree_name() and truncation after getting erks_dir
         name = base_name
 
+    # Handle --from-issue flag
+    elif from_issue:
+        if name:
+            user_output("Cannot specify both NAME and --from-issue. Use one or the other.")
+            raise SystemExit(1)
+        # Parse issue number from URL or plain number
+        issue_number_parsed = parse_issue_number(from_issue)
+        # Note: name will be derived from issue title after fetching
+        # Defer fetch until after repo discovery below
+        name = None  # Will be set after fetching issue
+
     # Regular create (no special flags)
     else:
         if not name:
             user_output(
-                "Must provide NAME or --from-plan or --from-branch or --from-current-branch option."
+                "Must provide NAME or --from-plan or --from-branch "
+                "or --from-current-branch or --from-issue option."
             )
             raise SystemExit(1)
 
+    # Track if name came from plan file or issue (will need unique naming)
+    is_plan_derived = from_plan is not None or from_issue is not None
+
+    # Discover repo context (needed for all paths)
+    repo = discover_repo_context(ctx, ctx.cwd)
+    ensure_erk_metadata_dir(repo)
+
+    # Handle issue fetching after repo discovery
+    if from_issue:
+        # Type narrowing: issue_number_parsed must be set if from_issue is True
+        assert issue_number_parsed is not None, (
+            "issue_number_parsed must be set when from_issue is True"
+        )
+
+        # Fetch issue using integration layer
+        try:
+            issue_info = ctx.issues.get_issue(repo.root, int(issue_number_parsed))
+        except RuntimeError as e:
+            user_output(
+                click.style("Error: ", fg="red")
+                + f"Failed to fetch issue #{issue_number_parsed}\n"
+                + f"Details: {e}\n\n"
+                + "Troubleshooting:\n"
+                + "  • Verify issue number is correct\n"
+                + "  • Check repository access: gh auth status\n"
+                + f"  • Try viewing manually: gh issue view {issue_number_parsed}"
+            )
+            raise SystemExit(1) from e
+
+        # Validate erk-plan label
+        if "erk-plan" not in issue_info.labels:
+            user_output(
+                click.style("Error: ", fg="red")
+                + f"Issue #{issue_number_parsed} must have 'erk-plan' label\n\n"
+                + "To add the label:\n"
+                + f"  gh issue edit {issue_number_parsed} --add-label erk-plan\n\n"
+                + "Or create issues via:\n"
+                + "  /erk:create-plan-issue-from-plan-file"
+            )
+            raise SystemExit(1)
+
+        # Derive name from issue title
+        base_name = sanitize_worktree_name(issue_info.title)
+        name = base_name
+
     # At this point, name should always be set
     assert name is not None, "name must be set by now"
-
-    # Track if name came from plan file (will need unique naming)
-    is_plan_derived = from_plan is not None
 
     # Sanitize the name to ensure consistency (truncate to 30 chars, normalize)
     # This applies to user-provided names as well as derived names
@@ -580,8 +707,6 @@ def create(
         user_output('Error: "root" is a reserved name and cannot be used for a worktree.')
         raise SystemExit(1)
 
-    repo = discover_repo_context(ctx, ctx.cwd)
-    ensure_erk_metadata_dir(repo)
     cfg = ctx.local_config
     trunk_branch = ctx.git.get_trunk_branch(repo.root)
 
@@ -710,7 +835,8 @@ def create(
     (wt_path / ".env").write_text(env_content, encoding="utf-8")
 
     # Create impl folder if plan file provided
-    # Track impl folder destination: set to .impl/ path only if --from-plan was provided
+    # Track impl folder destination: set to .impl/ path only if
+    # --from-plan or --from-issue was provided
     impl_folder_destination: Path | None = None
     if from_plan:
         # Read plan content from source file
@@ -727,6 +853,29 @@ def create(
             from_plan.unlink()  # Remove source file
             if not script and not output_json:
                 user_output(f"Moved plan to {impl_folder_destination}")
+
+    # Create impl folder if issue provided
+    if from_issue:
+        # Type narrowing: issue_info must be set if from_issue is True
+        assert issue_info is not None, "issue_info must be set when from_issue is True"
+
+        # Use issue body as plan content
+        plan_content = issue_info.body
+
+        # Create .impl/ folder in new worktree
+        impl_folder_destination = create_impl_folder(wt_path, plan_content)
+
+        # Create .impl/issue.json metadata
+        issue_json_path = wt_path / ".impl" / "issue.json"
+        issue_metadata = {
+            "number": issue_info.number,
+            "url": issue_info.url,
+            "title": issue_info.title,
+        }
+        issue_json_path.write_text(json.dumps(issue_metadata, indent=2), encoding="utf-8")
+
+        if not script and not output_json:
+            user_output(f"Created worktree from issue #{issue_info.number}: {issue_info.title}")
 
     # Copy .impl directory if --copy-plan flag is set
     if copy_plan:

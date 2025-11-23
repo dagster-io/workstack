@@ -33,6 +33,8 @@ from erk.core.repo_discovery import (
 )
 from erk.core.script_writer import RealScriptWriter, ScriptWriter
 from erk.core.shell import RealShell, Shell
+from erk.core.time.abc import Time
+from erk.core.time.real import RealTime
 
 
 @dataclass(frozen=True)
@@ -53,6 +55,7 @@ class ErkContext:
     graphite: Graphite
     shell: Shell
     completion: Completion
+    time: Time
     config_store: ConfigStore
     script_writer: ScriptWriter
     cwd: Path  # Current working directory at CLI invocation
@@ -119,6 +122,7 @@ class ErkContext:
         from tests.fakes.graphite import FakeGraphite
         from tests.fakes.script_writer import FakeScriptWriter
         from tests.fakes.shell import FakeShell
+        from tests.fakes.time import FakeTime
 
         from erk.core.config_store import FakeConfigStore
         from erk.core.github.issues import FakeGitHubIssues
@@ -132,6 +136,7 @@ class ErkContext:
             graphite=FakeGraphite(),
             shell=FakeShell(),
             completion=FakeCompletion(),
+            time=FakeTime(),
             config_store=FakeConfigStore(config=None),
             script_writer=FakeScriptWriter(),
             cwd=cwd,
@@ -150,6 +155,7 @@ class ErkContext:
         graphite: Graphite | None = None,
         shell: Shell | None = None,
         completion: Completion | None = None,
+        time: Time | None = None,
         config_store: ConfigStore | None = None,
         script_writer: ScriptWriter | None = None,
         cwd: Path | None = None,
@@ -212,6 +218,7 @@ class ErkContext:
         from tests.fakes.graphite import FakeGraphite
         from tests.fakes.script_writer import FakeScriptWriter
         from tests.fakes.shell import FakeShell
+        from tests.fakes.time import FakeTime
         from tests.test_utils import sentinel_path
 
         from erk.core.config_store import FakeConfigStore
@@ -238,6 +245,9 @@ class ErkContext:
 
         if completion is None:
             completion = FakeCompletion()
+
+        if time is None:
+            time = FakeTime()
 
         if script_writer is None:
             script_writer = FakeScriptWriter()
@@ -274,6 +284,7 @@ class ErkContext:
             graphite=graphite,
             shell=shell,
             completion=completion,
+            time=time,
             config_store=config_store,
             script_writer=script_writer,
             cwd=cwd or sentinel_path(),
@@ -427,6 +438,7 @@ def create_context(*, dry_run: bool) -> ErkContext:
         graphite=graphite,
         shell=RealShell(),
         completion=RealCompletion(),
+        time=RealTime(),
         config_store=RealConfigStore(),
         script_writer=RealScriptWriter(),
         cwd=cwd,

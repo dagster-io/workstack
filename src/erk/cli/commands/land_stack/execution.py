@@ -182,7 +182,7 @@ def _verify_and_update_pr_base(
     check = click.style("✓", fg="green")
 
     # Get current PR base from GitHub (with retry for transient failures)
-    @retry_with_backoff(max_attempts=3, base_delay=1.0)
+    @retry_with_backoff(max_attempts=3, base_delay=1.0, ctx=ctx)
     def get_pr_base_with_retry() -> str | None:
         return ctx.github.get_pr_base_branch(repo_root, pr_number)
 
@@ -201,7 +201,7 @@ def _verify_and_update_pr_base(
             _emit(msg, script_mode=script_mode)
 
         # Update PR base (with retry for transient failures)
-        @retry_with_backoff(max_attempts=3, base_delay=1.0)
+        @retry_with_backoff(max_attempts=3, base_delay=1.0, ctx=ctx)
         def update_pr_base_with_retry() -> None:
             ctx.github.update_pr_base_branch(repo_root, pr_number, expected_parent)
 

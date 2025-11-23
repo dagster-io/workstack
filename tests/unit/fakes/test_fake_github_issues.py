@@ -25,27 +25,28 @@ def test_fake_github_issues_create_issue_returns_number() -> None:
     """Test create_issue returns predictable issue number."""
     issues = FakeGitHubIssues(next_issue_number=42)
 
-    issue_num = issues.create_issue(
+    result = issues.create_issue(
         sentinel_path(),
         title="Test Issue",
         body="Test body",
         labels=["plan", "erk"],
     )
 
-    assert issue_num == 42
+    assert result.number == 42
+    assert result.url == "https://github.com/test-owner/test-repo/issues/42"
 
 
 def test_fake_github_issues_create_issue_increments_number() -> None:
     """Test create_issue increments issue numbers sequentially."""
     issues = FakeGitHubIssues(next_issue_number=1)
 
-    num1 = issues.create_issue(sentinel_path(), "Issue 1", "Body 1", ["label1"])
-    num2 = issues.create_issue(sentinel_path(), "Issue 2", "Body 2", ["label2"])
-    num3 = issues.create_issue(sentinel_path(), "Issue 3", "Body 3", ["label3"])
+    result1 = issues.create_issue(sentinel_path(), "Issue 1", "Body 1", ["label1"])
+    result2 = issues.create_issue(sentinel_path(), "Issue 2", "Body 2", ["label2"])
+    result3 = issues.create_issue(sentinel_path(), "Issue 3", "Body 3", ["label3"])
 
-    assert num1 == 1
-    assert num2 == 2
-    assert num3 == 3
+    assert result1.number == 1
+    assert result2.number == 2
+    assert result3.number == 3
 
 
 def test_fake_github_issues_create_issue_tracks_mutation() -> None:
@@ -105,20 +106,20 @@ def test_fake_github_issues_get_issue_created() -> None:
     """Test get_issue returns issue that was created via create_issue."""
     issues = FakeGitHubIssues(next_issue_number=10)
 
-    issue_num = issues.create_issue(
+    created = issues.create_issue(
         sentinel_path(),
         title="Created Issue",
         body="Created body",
         labels=["test"],
     )
 
-    result = issues.get_issue(sentinel_path(), issue_num)
+    result = issues.get_issue(sentinel_path(), created.number)
 
     assert result.number == 10
     assert result.title == "Created Issue"
     assert result.body == "Created body"
     assert result.state == "OPEN"
-    assert result.url == "https://github.com/owner/repo/issues/10"
+    assert result.url == "https://github.com/test-owner/test-repo/issues/10"
 
 
 def test_fake_github_issues_add_comment_existing_issue() -> None:
@@ -273,13 +274,13 @@ def test_fake_github_issues_full_workflow() -> None:
     issues = FakeGitHubIssues(issues=pre_configured, next_issue_number=200)
 
     # Create new issue
-    new_num = issues.create_issue(
+    new_result = issues.create_issue(
         sentinel_path(),
         title="New Issue",
         body="New body",
         labels=["plan", "erk"],
     )
-    assert new_num == 200
+    assert new_result.number == 200
 
     # Get created issue
     new_issue = issues.get_issue(sentinel_path(), 200)
@@ -306,9 +307,9 @@ def test_fake_github_issues_empty_labels() -> None:
     """Test create_issue with empty labels list."""
     issues = FakeGitHubIssues()
 
-    issue_num = issues.create_issue(sentinel_path(), "Title", "Body", [])
+    result = issues.create_issue(sentinel_path(), "Title", "Body", [])
 
-    assert issue_num == 1
+    assert result.number == 1
     assert issues.created_issues == [("Title", "Body", [])]
 
 
@@ -350,12 +351,12 @@ def test_fake_github_issues_mutation_tracking_independent() -> None:
     issues = FakeGitHubIssues(next_issue_number=1)
 
     # Create issues
-    num1 = issues.create_issue(sentinel_path(), "Issue 1", "Body 1", ["label1"])
-    num2 = issues.create_issue(sentinel_path(), "Issue 2", "Body 2", ["label2"])
+    result1 = issues.create_issue(sentinel_path(), "Issue 1", "Body 1", ["label1"])
+    result2 = issues.create_issue(sentinel_path(), "Issue 2", "Body 2", ["label2"])
 
     # Add comments
-    issues.add_comment(sentinel_path(), num1, "Comment 1")
-    issues.add_comment(sentinel_path(), num2, "Comment 2")
+    issues.add_comment(sentinel_path(), result1.number, "Comment 1")
+    issues.add_comment(sentinel_path(), result2.number, "Comment 2")
 
     # Verify both tracking lists are independent
     assert len(issues.created_issues) == 2
@@ -374,13 +375,13 @@ def test_fake_github_issues_pre_configured_and_created_coexist() -> None:
     issues = FakeGitHubIssues(issues=pre_configured, next_issue_number=1)
 
     # Create new issue
-    new_num = issues.create_issue(sentinel_path(), "New", "Body", ["label"])
+    new_result = issues.create_issue(sentinel_path(), "New", "Body", ["label"])
 
     # Both should be retrievable
     pre_issue = issues.get_issue(sentinel_path(), 100)
     assert pre_issue.title == "Pre-configured"
 
-    new_issue = issues.get_issue(sentinel_path(), new_num)
+    new_issue = issues.get_issue(sentinel_path(), new_result.number)
     assert new_issue.title == "New"
 
     # List should include both
@@ -392,20 +393,20 @@ def test_fake_github_issues_url_generation() -> None:
     """Test that created issues get properly formatted URLs."""
     issues = FakeGitHubIssues(next_issue_number=42)
 
-    issue_num = issues.create_issue(sentinel_path(), "Title", "Body", [])
+    result = issues.create_issue(sentinel_path(), "Title", "Body", [])
 
-    created_issue = issues.get_issue(sentinel_path(), issue_num)
+    created_issue = issues.get_issue(sentinel_path(), result.number)
 
-    assert created_issue.url == "https://github.com/owner/repo/issues/42"
+    assert created_issue.url == "https://github.com/test-owner/test-repo/issues/42"
 
 
 def test_fake_github_issues_created_state_always_open() -> None:
     """Test that created issues always have OPEN state."""
     issues = FakeGitHubIssues()
 
-    issue_num = issues.create_issue(sentinel_path(), "Title", "Body", [])
+    result = issues.create_issue(sentinel_path(), "Title", "Body", [])
 
-    created_issue = issues.get_issue(sentinel_path(), issue_num)
+    created_issue = issues.get_issue(sentinel_path(), result.number)
 
     assert created_issue.state == "OPEN"
 

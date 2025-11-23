@@ -95,13 +95,12 @@ Test the workflow.
 
     # Step 2: Create issue (simulates gh issue create)
     issues = FakeGitHubIssues(next_issue_number=123)
-    issue_num = issues.create_issue(sentinel_path(), "Test Plan", plan_content, ["erk-plan"])
+    result = issues.create_issue(sentinel_path(), "Test Plan", plan_content, ["erk-plan"])
 
-    assert issue_num == 123
+    assert result.number == 123
 
     # Step 3: Link issue to plan folder
-    issue_url = f"https://github.com/owner/repo/issues/{issue_num}"
-    save_issue_reference(impl_folder, issue_num, issue_url)
+    save_issue_reference(impl_folder, result.number, result.url)
 
     # Step 4: Verify link was created
     assert has_issue_reference(impl_folder)
@@ -110,7 +109,7 @@ Test the workflow.
     ref = read_issue_reference(impl_folder)
     assert ref is not None
     assert ref.issue_number == 123
-    assert ref.issue_url == issue_url
+    assert ref.issue_url == result.url
 
 
 def test_workflow_issue_creation_tracks_erk_plan_label() -> None:
@@ -139,15 +138,15 @@ def test_workflow_get_issue_after_creation() -> None:
     )
 
     # Create issue
-    issue_num = issues.create_issue(sentinel_path(), "Test Issue", "Body content", ["erk-plan"])
+    result = issues.create_issue(sentinel_path(), "Test Issue", "Body content", ["erk-plan"])
 
     # Retrieve issue info
-    info = issues.get_issue(sentinel_path(), issue_num)
+    info = issues.get_issue(sentinel_path(), result.number)
 
     assert info is not None
     assert info.number == 42
     assert info.title == "Test Issue"
-    assert info.url == "https://github.com/owner/repo/issues/42"
+    assert info.url == "https://github.com/test-owner/test-repo/issues/42"
     assert info.state == "OPEN"
 
 
@@ -155,13 +154,13 @@ def test_workflow_multiple_issues_increment_numbers() -> None:
     """Test that multiple issue creations increment issue numbers."""
     issues = FakeGitHubIssues(next_issue_number=10)
 
-    num1 = issues.create_issue(sentinel_path(), "Issue 1", "Body 1", ["label1"])
-    num2 = issues.create_issue(sentinel_path(), "Issue 2", "Body 2", ["label2"])
-    num3 = issues.create_issue(sentinel_path(), "Issue 3", "Body 3", ["label3"])
+    result1 = issues.create_issue(sentinel_path(), "Issue 1", "Body 1", ["label1"])
+    result2 = issues.create_issue(sentinel_path(), "Issue 2", "Body 2", ["label2"])
+    result3 = issues.create_issue(sentinel_path(), "Issue 3", "Body 3", ["label3"])
 
-    assert num1 == 10
-    assert num2 == 11
-    assert num3 == 12
+    assert result1.number == 10
+    assert result2.number == 11
+    assert result3.number == 12
 
     assert len(issues.created_issues) == 3
 

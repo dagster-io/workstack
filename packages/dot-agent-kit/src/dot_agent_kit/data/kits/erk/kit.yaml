@@ -62,6 +62,9 @@ kit_cli_commands:
   - name: create-queued-plan
     path: kit_cli_commands/erk/create_queued_plan.py
     description: Create GitHub issue with erk-queue label for automatic implementation
+  - name: check-impl
+    path: kit_cli_commands/erk/check_impl.py
+    description: Check .impl/ folder structure and validate prerequisites
 hooks:
   - id: session-id-injector-hook
     lifecycle: UserPromptSubmit

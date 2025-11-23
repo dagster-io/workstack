@@ -1,10 +1,10 @@
 ---
-description: Create GitHub issue directly from plan in conversation (no disk file)
+description: Extract plan from Claude session and create GitHub issue
 ---
 
 # /erk:create-plan-issue-from-context
 
-Extract implementation plan from the current conversation and create a GitHub issue directly, without saving a plan file to disk. This provides a streamlined workflow for quick issue creation from conversational context.
+Extract the latest implementation plan from Claude session files and create a GitHub issue directly, without saving a plan file to disk. This provides a streamlined workflow for quick issue creation using deterministic session file parsing.
 
 ## Usage
 
@@ -12,15 +12,15 @@ Extract implementation plan from the current conversation and create a GitHub is
 /erk:create-plan-issue-from-context
 ```
 
-**No arguments accepted** - This command automatically extracts the plan from the conversation.
+**No arguments accepted** - This command automatically extracts the latest plan from Claude session files.
 
 ## Purpose
 
-This command provides a fast path for creating GitHub issues when you don't need a local plan file. It:
+This command provides a fast path for creating GitHub issues. It:
 
-- Extracts the plan as-is from the conversation
-- Wraps plan in collapsible metadata block
-- Creates GitHub issue with `erk-plan` label
+- Extracts the latest `ExitPlanMode` plan from Claude session files
+- Creates GitHub issue with plan content
+- Adds `erk-plan` label automatically
 - Displays issue URL
 
 **What it does NOT do:**
@@ -28,21 +28,19 @@ This command provides a fast path for creating GitHub issues when you don't need
 - ❌ No disk persistence (issue-only workflow)
 - ❌ No plan enhancement or enrichment
 - ❌ No interactive clarifying questions
-- ❌ No worktree creation (use `/erk:create-planned-wt` separately)
-- ❌ Cannot be used with `/erk:create-planned-wt` later (requires plan file)
+- ❌ No worktree creation (use `/erk:create-wt-from-plan-issue` separately)
 
 ## How It Works
 
-1. **Extracts plan** from conversation (minimum 100 chars, must have structure)
-2. **Wraps in metadata block** using collapsible `<details>` with `erk-plan` key
-3. **Extracts title** from plan (H1 → H2 → first line)
-4. **Ensures label exists** (creates `erk-plan` label if needed)
-5. **Creates GitHub issue** with plan body and label
-6. **Displays result** with issue number and URL
+1. **Searches Claude session files** for the latest ExitPlanMode plan
+2. **Extracts title** from plan (H1 → H2 → first line)
+3. **Ensures label exists** (creates `erk-plan` label if needed)
+4. **Creates GitHub issue** with plan body and label
+5. **Displays result** with issue number and URL
 
 ## Prerequisites
 
-- Plan must exist in conversation (≥100 chars with headers or lists)
+- Latest plan must exist in Claude session files
 - Must be in a git repository
 - `gh` CLI must be installed and authenticated
 - GitHub repository must be accessible
@@ -53,11 +51,11 @@ This command provides a fast path for creating GitHub issues when you don't need
 
 - Cannot create worktree from this issue later (requires plan file on disk)
 - No local backup of plan content (exists only in GitHub issue)
-- Cannot edit plan file before issue creation
+- Cannot edit plan before issue creation
 
 **If you need worktree workflow:**
 
-1. Use `/erk:save-plan` or `/erk:save-context-enriched-plan` to save plan to disk
+1. Use `/erk:save-plan` to save plan to disk
 2. Use `/erk:create-wt-from-plan-file` to create worktree
 3. Use `/erk:create-plan-issue-from-plan-file` to create issue
 
@@ -65,206 +63,106 @@ This command provides a fast path for creating GitHub issues when you don't need
 
 ## Agent Instructions
 
-You are executing the `/erk:create-plan-issue-from-context` command. Follow these steps carefully using ONLY the allowed tools.
+You are executing the `/erk:create-plan-issue-from-context` command. This command uses the kit CLI to extract plans from Claude session files.
 
 ### CRITICAL: Tool Restrictions
 
 **ALLOWED TOOLS:**
 
-- `Read` - For examining the conversation
-- `Bash` - ONLY for `gh` commands and `git rev-parse`
-- `AskUserQuestion` - ONLY for error recovery
+- `Bash` - For calling kit CLI command
+- `AskUserQuestion` - ONLY for error recovery if needed
 
 **FORBIDDEN TOOLS:**
 
+- `Read` - Do NOT read conversation manually
 - `Edit` - Do NOT modify any existing files
 - `Write` - Do NOT write any files (issue-only workflow)
 - `Glob` - Do NOT search the codebase
 - `Grep` - Do NOT search the codebase
 - `Task` - Do NOT launch subagents
-- Any tool not explicitly listed as allowed
 
 **CRITICAL:** If you use any forbidden tool, STOP immediately.
 
 ### Step 1: Verify Prerequisites
 
-Check that required tools are available:
+Check that gh CLI is available and authenticated:
 
-1. Verify we're in a git repository:
+```bash
+# Check gh CLI availability
+if ! command -v gh &> /dev/null; then
+    echo "❌ Error: gh CLI not found" >&2
+    echo "" >&2
+    echo "Install gh CLI:" >&2
+    echo "- macOS: brew install gh" >&2
+    echo "- See: https://cli.github.com" >&2
+    exit 1
+fi
 
-   ```bash
-   git rev-parse --git-dir
-   ```
-
-   If fails:
-
-   ```
-   ❌ Error: Not in a git repository
-
-   This command must be run from within a git repository.
-   ```
-
-   Exit with error.
-
-2. Check if gh CLI is available:
-
-   ```bash
-   gh --version
-   ```
-
-   If fails:
-
-   ```
-   ❌ Error: gh CLI not found
-
-   Install gh CLI:
-   - macOS: brew install gh
-   - See: https://cli.github.com
-
-   After installation, authenticate:
-   gh auth login
-   ```
-
-   Exit with error.
-
-3. Check gh authentication:
-
-   ```bash
-   gh auth status
-   ```
-
-   If fails:
-
-   ```
-   ❌ Error: gh CLI not authenticated
-
-   Run: gh auth login
-   Follow prompts to authenticate with GitHub.
-   ```
-
-   Exit with error.
-
-### Step 2: Extract Plan from Conversation
-
-Search backwards from recent messages in the conversation for an implementation plan.
-
-**Where to look:**
-
-1. `ExitPlanMode` tool results containing the plan
-2. Sections like "## Implementation Plan" or "### Implementation Steps"
-3. Structured markdown with numbered lists of implementation tasks
-4. Any substantial markdown content with headers and lists
-
-**What to extract:**
-
-- Complete plan content (minimum 100 characters)
-- Must have structure (headers, lists, or numbered steps)
-- Extract as-is - NO modifications or enhancements
-
-**Validation criteria:**
-
-- Plan must be ≥100 characters
-- Plan must have structure:
-  - Contains headers (# or ##) OR
-  - Contains numbered lists (1. 2. 3.) OR
-  - Contains bulleted lists (- or \*)
-
-**If no valid plan found:**
-
-```
-❌ Error: No implementation plan found in conversation
-
-Details: Could not find valid plan with structure (headers or lists) and ≥100 characters
-
-Suggested action:
-1. Ensure plan is in conversation
-2. Plan should have headers or numbered/bulleted lists
-3. Re-paste plan in conversation if needed
+# Check authentication
+if ! gh auth status &> /dev/null; then
+    echo "❌ Error: gh CLI not authenticated" >&2
+    echo "" >&2
+    echo "Run: gh auth login" >&2
+    echo "Follow prompts to authenticate with GitHub." >&2
+    exit 1
+fi
 ```
 
-Exit with error.
+### Step 2: Extract Plan from Session and Create Issue
 
-### Step 3: Create GitHub Issue (Single Command)
+Use the kit CLI command to extract the latest plan from Claude session files and create a GitHub issue:
 
-Use the new composite kit CLI command that handles the complete workflow:
+```bash
+result=$(dot-agent kit-command erk create-issue-from-session)
+```
 
-- Extracts title from plan
-- Ensures erk-plan label exists
-- Creates GitHub issue with plan body
-- Returns structured JSON result
+This command:
 
-**Algorithm:**
-
-1. Save plan to temporary file (for clean stdin handling):
-
-   ```bash
-   temp_plan=$(mktemp)
-   echo "$plan_content" > "$temp_plan"
-   ```
-
-2. Call the composite kit command:
-
-   ```bash
-   result=$(cat "$temp_plan" | dot-agent kit-command erk create-plan-issue-from-context)
-   rm "$temp_plan"
-
-   # Parse JSON output
-   if ! echo "$result" | jq -e '.success' > /dev/null; then
-       echo "❌ Error: Failed to create GitHub issue" >&2
-       exit 1
-   fi
-
-   issue_number=$(echo "$result" | jq -r '.issue_number')
-   issue_url=$(echo "$result" | jq -r '.issue_url')
-   ```
-
-3. If command fails:
-
-   ```
-   ❌ Error: Failed to create GitHub issue
-
-   Suggested action:
-   1. Check authentication: gh auth status
-   2. Verify repository access: gh repo view
-   3. Check network connectivity
-   ```
-
-   Exit with error.
-
-**What this command does internally:**
-
-- Extracts title (H1 → H2 → first line fallback)
+- Searches Claude session files for the latest ExitPlanMode plan
+- Extracts the plan text and title
 - Ensures erk-plan label exists (creates if needed)
-- Creates issue with full plan as body
-- Returns JSON: `{"success": true, "issue_number": 123, "issue_url": "..."}`
+- Creates GitHub issue with plan as body
+- Returns JSON result
 
-### Step 4: Display Success Output
+**Parse the JSON result:**
+
+```bash
+# Check if successful
+if ! echo "$result" | jq -e '.success' > /dev/null 2>&1; then
+    error_msg=$(echo "$result" | jq -r '.error')
+    echo "❌ Error: $error_msg" >&2
+    exit 1
+fi
+
+# Extract result fields
+issue_number=$(echo "$result" | jq -r '.issue_number')
+issue_url=$(echo "$result" | jq -r '.issue_url')
+title=$(echo "$result" | jq -r '.title')
+```
+
+**Common errors:**
+
+- **No plan found**: No ExitPlanMode found in session files
+- **gh CLI not available**: gh command not found or not authenticated
+- **GitHub API error**: Network or permission issues
+
+### Step 3: Display Success Output
 
 After successfully creating the issue, output:
 
 ```
-✅ GitHub issue created: #<number>
+✅ GitHub issue created: #<issue_number>
 
-🔗 <issue_url>
+📋 Title: <title>
+🔗 URL: <issue_url>
 
-📝 Note: This issue was created without a local plan file. To create a worktree, first save the plan with `/erk:save-plan` or `/erk:save-context-enriched-plan`.
+📝 Note: This issue was created without a local plan file.
 
 Next steps:
 1. Review issue content on GitHub
-2. Implement manually or assign to team member
+2. To create worktree, first save plan with /erk:save-plan
 3. Track progress in GitHub issue
-
----
-
-{"issue_number": <number>, "issue_url": "<url>", "status": "created"}
 ```
-
-**Format notes:**
-
-- Use emoji for visual clarity
-- Include limitation note (brief, as requested)
-- JSON output for potential scripting integration
-- Clear next steps
 
 ### Error Handling
 
@@ -280,16 +178,79 @@ Next steps:
 
 **Common error cases:**
 
-1. **Not in git repository** - See Step 1
-2. **gh CLI not found** - See Step 1
-3. **gh not authenticated** - See Step 1
-4. **No plan found** - See Step 2
-5. **Issue creation failed** - See Step 3 (kit command handles label creation internally)
+1. **No plan found in session files**
+
+```
+❌ Error: No plan found in Claude session files
+
+Details: No ExitPlanMode tool uses found in session history
+
+Suggested action:
+1. Create a plan first (enter Plan mode, create plan, exit Plan mode)
+2. Ensure you exited Plan mode with ExitPlanMode tool
+3. Try again after creating a plan
+```
+
+2. **gh CLI not found**
+
+```
+❌ Error: gh CLI not found
+
+Install gh CLI:
+- macOS: brew install gh
+- See: https://cli.github.com
+
+After installation, authenticate:
+gh auth login
+```
+
+3. **gh CLI not authenticated**
+
+```
+❌ Error: gh CLI not authenticated
+
+Run: gh auth login
+Follow prompts to authenticate with GitHub.
+```
+
+4. **GitHub API error**
+
+```
+❌ Error: Failed to create GitHub issue
+
+Details: <specific error message>
+
+Suggested action:
+1. Check authentication: gh auth status
+2. Verify repository access: gh repo view
+3. Check network connectivity
+```
 
 ## Important Notes
 
-- **No disk persistence**: Plan exists only in GitHub issue
-- **No enhancement**: Extract plan as-is from conversation
-- **Manual label only**: Always uses `erk-plan` label
+- **Deterministic**: Searches session files, not conversation context
+- **No local file**: Plan exists only in GitHub issue
+- **Automatic labeling**: Always uses `erk-plan` label
+- **Latest plan**: Automatically finds the most recent plan by timestamp
 - **Issue-only workflow**: Cannot create worktree from this issue later
-- **Speed over reusability**: Trade-off for streamlined workflow
+
+## Technical Details
+
+**Session file location:**
+
+- Base: `~/.claude/projects/`
+- Project directory: Working directory path with `/` replaced by `-` and prepended with `-`
+- Example: `/Users/user/code/myproject` → `~/.claude/projects/-Users-user-code-myproject/`
+
+**Search pattern:**
+
+- Parses JSONL files (one JSON object per line)
+- Looks for `type: "tool_use"` with `name: "ExitPlanMode"`
+- Extracts `input.plan` field
+- Sorts by timestamp to find latest
+
+**Label management:**
+
+- Automatically creates `erk-plan` label if it doesn't exist
+- Label color: `0E8A16` (green)
+- Label description: "Implementation plan for erk workflow"

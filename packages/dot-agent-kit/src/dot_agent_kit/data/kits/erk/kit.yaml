@@ -18,6 +18,9 @@ artifacts:
   doc:
     - docs/erk/EXAMPLES.md
 kit_cli_commands:
+  - name: save-plan-from-session
+    path: kit_cli_commands/erk/save_plan_from_session.py
+    description: Extract plan from Claude session and save to disk with minimal frontmatter
   - name: save-session-enriched-plan
     path: kit_cli_commands/erk/save_session_enriched_plan.py
     description: Create enhanced implementation plan from session logs (two-phase - discover and assemble)

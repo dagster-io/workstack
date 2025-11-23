@@ -67,7 +67,7 @@ class ParseError:
     message: str
 
 
-def parse_issue_reference(reference: str) -> ParsedIssue | ParseError:
+def _parse_issue_reference_impl(reference: str) -> ParsedIssue | ParseError:
     """Parse GitHub issue reference from plain number or URL.
 
     Args:
@@ -110,15 +110,15 @@ def parse_issue_reference(reference: str) -> ParsedIssue | ParseError:
     )
 
 
-@click.command()
+@click.command(name="parse-issue-reference")
 @click.argument("issue_reference")
-def parse_issue_reference_command(issue_reference: str) -> None:
+def parse_issue_reference(issue_reference: str) -> None:
     """Parse GitHub issue reference from plain number or URL.
 
     Accepts either a plain issue number (e.g., "776") or a full GitHub URL
     (e.g., "https://github.com/owner/repo/issues/776").
     """
-    result = parse_issue_reference(issue_reference)
+    result = _parse_issue_reference_impl(issue_reference)
 
     # Output JSON result
     click.echo(json.dumps(asdict(result), indent=2))

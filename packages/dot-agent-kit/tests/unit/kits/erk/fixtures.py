@@ -142,3 +142,101 @@ File contents:
      1→def hello():
      2→    print('Hello')
   </tool_result>"""
+
+
+# ExitPlanMode fixtures for plan extraction testing
+
+# Assistant message with ExitPlanMode tool use
+JSONL_ASSISTANT_EXIT_PLAN_MODE = (
+    """{"type": "assistant", "message": {"role": "assistant", "content": ["""
+    """{"type": "tool_use", "id": "toolu_plan123", "name": "ExitPlanMode", """
+    """"input": {"plan": "## Fix Session Plan Extraction\\n\\n"""
+    """**Problem:** Path construction doesn't handle dots.\\n\\n"""
+    """**Solution:** Convert dots to hyphens.\\n\\n"""
+    """### Changes Required\\n\\n1. Update path conversion logic\\n2. Add tests"}}], """
+    """"usage": {"input_tokens": 500, "output_tokens": 200}}, """
+    """"parentUuid": "parent_plan", "sessionId": "session_plan_test", """
+    """"gitBranch": "fix-plan-extraction", "cwd": "/test/dir", """
+    """"timestamp": "2025-11-23T10:00:00.000Z"}"""
+)
+
+# Second plan with later timestamp (for testing timestamp sorting)
+JSONL_ASSISTANT_EXIT_PLAN_MODE_LATER = (
+    """{"type": "assistant", "message": {"role": "assistant", "content": ["""
+    """{"type": "tool_use", "id": "toolu_plan456", "name": "ExitPlanMode", """
+    """"input": {"plan": "## Updated Plan\\n\\n**Problem:** This is the newer plan.\\n\\n"""
+    """**Solution:** Should be returned when multiple plans exist."}}]}, """
+    """"sessionId": "session_plan_test2", "timestamp": "2025-11-23T12:00:00.000Z"}"""
+)
+
+# Earlier plan (for testing timestamp sorting)
+JSONL_ASSISTANT_EXIT_PLAN_MODE_EARLIER = (
+    """{"type": "assistant", "message": {"role": "assistant", "content": ["""
+    """{"type": "tool_use", "id": "toolu_plan789", "name": "ExitPlanMode", """
+    """"input": {"plan": "## Old Plan\\n\\n**Problem:** This is the older plan.\\n\\n"""
+    """**Solution:** Should NOT be returned when newer plan exists."}}]}, """
+    """"sessionId": "session_plan_test3", "timestamp": "2025-11-23T08:00:00.000Z"}"""
+)
+
+# Expected plan text from JSONL_ASSISTANT_EXIT_PLAN_MODE
+EXPECTED_PLAN_TEXT = """## Fix Session Plan Extraction
+
+**Problem:** Path construction doesn't handle dots.
+
+**Solution:** Convert dots to hyphens.
+
+### Changes Required
+
+1. Update path conversion logic
+2. Add tests"""
+
+# Expected plan text from JSONL_ASSISTANT_EXIT_PLAN_MODE_LATER
+EXPECTED_PLAN_TEXT_LATER = """## Updated Plan
+
+**Problem:** This is the newer plan.
+
+**Solution:** Should be returned when multiple plans exist."""
+
+
+# Complete session file fixtures for integration testing
+
+# Complete session with a plan
+SESSION_WITH_PLAN = [
+    JSONL_USER_MESSAGE_STRING,
+    JSONL_ASSISTANT_TEXT,
+    JSONL_ASSISTANT_EXIT_PLAN_MODE,
+]
+
+# Session with multiple plans at different timestamps
+SESSION_MULTIPLE_PLANS = [
+    JSONL_ASSISTANT_EXIT_PLAN_MODE_EARLIER,
+    JSONL_USER_MESSAGE_STRING,
+    JSONL_ASSISTANT_EXIT_PLAN_MODE_LATER,
+]
+
+# Session in agent subprocess file (should be included in search)
+SESSION_AGENT_FILE_PLAN = [
+    JSONL_USER_MESSAGE_STRING,
+    JSONL_ASSISTANT_EXIT_PLAN_MODE,
+]
+
+
+def create_session_file(path, entries: list[str]) -> None:
+    """Write JSONL entries to a session file.
+
+    JSONL format requires each JSON object on a single line with no internal newlines.
+    This function parses each entry and writes it as compact single-line JSON.
+
+    Args:
+        path: Path object or string path to write to
+        entries: List of JSONL entry strings to write (can be pretty-printed)
+    """
+    import json
+    from pathlib import Path
+
+    file_path = Path(path)
+    with open(file_path, "w", encoding="utf-8") as f:
+        for entry in entries:
+            # Parse JSON and write back as compact single-line
+            data = json.loads(entry)
+            f.write(json.dumps(data) + "\n")

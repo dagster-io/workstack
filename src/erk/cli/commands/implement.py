@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 import click
-from erk_shared.impl_folder import create_impl_folder
+from erk_shared.impl_folder import create_impl_folder, save_issue_reference
 from erk_shared.naming import (
     ensure_unique_worktree_name_with_date,
     generate_filename_from_title,
@@ -219,17 +219,6 @@ def _prepare_plan_source_from_file(ctx: ErkContext, plan_file: Path) -> PlanSour
     )
 
 
-def _save_issue_reference(wt_path: Path, issue_number: str, issue_url: str) -> None:
-    """Save issue reference to .impl/issue.json for PR linking.
-
-    Args:
-        wt_path: Worktree path
-        issue_number: GitHub issue number
-        issue_url: GitHub issue URL
-    """
-    issue_json = {"issue_number": int(issue_number), "issue_url": issue_url}
-    issue_json_path = wt_path / ".impl" / "issue.json"
-    issue_json_path.write_text(json.dumps(issue_json, indent=2) + "\n", encoding="utf-8")
 
 
 def _create_worktree_with_plan_content(
@@ -455,7 +444,8 @@ def _implement_from_issue(
     # Save issue reference for PR linking (issue-specific)
     ctx.feedback.info("Saving issue reference for PR linking...")
     plan_issue = ctx.plan_issue_store.get_plan_issue(repo.root, issue_number)
-    _save_issue_reference(wt_path, issue_number, plan_issue.url)
+    impl_dir = wt_path / ".impl"
+    save_issue_reference(impl_dir, int(issue_number), plan_issue.url)
 
     ctx.feedback.success(f"✓ Saved issue reference: {plan_issue.url}")
 

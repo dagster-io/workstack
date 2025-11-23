@@ -339,16 +339,18 @@ def read_issue_reference(impl_dir: Path) -> IssueReference | None:
     # Gracefully handle JSON parsing errors (third-party API exception handling)
     try:
         data = json.loads(issue_file.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        # Could add logging here if needed for debugging:
+        # logger.debug(f"Failed to parse issue.json: {e}")
         return None
 
     # Validate required fields exist
-    if (
-        "issue_number" not in data
-        or "issue_url" not in data
-        or "created_at" not in data
-        or "synced_at" not in data
-    ):
+    required_fields = ["issue_number", "issue_url", "created_at", "synced_at"]
+    missing_fields = [f for f in required_fields if f not in data]
+
+    if missing_fields:
+        # Could add logging here for debugging:
+        # logger.debug(f"issue.json missing required fields: {missing_fields}")
         return None
 
     return IssueReference(

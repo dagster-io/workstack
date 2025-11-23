@@ -49,6 +49,7 @@ Examples:
 """
 
 import json
+import sys
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -75,6 +76,7 @@ PreAnalysisErrorType = Literal[
     "no_commits",
     "squash_failed",
     "squash_conflict",
+    "pr_has_conflicts",
 ]
 
 PostAnalysisErrorType = Literal[
@@ -239,6 +241,52 @@ def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAna
             message=f"Could not determine parent branch for: {branch_name}",
             details={"branch_name": branch_name},
         )
+
+    # Step 2.5: Check for merge conflicts EARLY
+    # First try GitHub API if PR exists (most accurate)
+    from erk.core.github.real import RealGitHub
+
+    github = RealGitHub()
+    repo_root = Path(ops.git().get_repository_root())
+    pr_info = github.get_pr_status(repo_root, branch_name, debug=False)
+
+    if pr_info.pr_number is not None:
+        # PR exists - check mergeability
+        mergeability = github.get_pr_mergeability(repo_root, pr_info.pr_number)
+
+        if mergeability and mergeability.mergeable == "CONFLICTING":
+            return PreAnalysisError(
+                success=False,
+                error_type="pr_has_conflicts",
+                message=f"PR #{pr_info.pr_number} has merge conflicts with {parent_branch}",
+                details={
+                    "branch_name": branch_name,
+                    "pr_number": str(pr_info.pr_number),
+                    "parent_branch": parent_branch,
+                    "merge_state": mergeability.merge_state_status,
+                },
+            )
+
+        # UNKNOWN status: proceed with warning (GitHub hasn't computed yet)
+        if mergeability and mergeability.mergeable == "UNKNOWN":
+            print(
+                "⚠️  Warning: PR mergeability status is UNKNOWN, proceeding anyway",
+                file=sys.stderr,
+            )
+
+    else:
+        # No PR yet - fallback to local git merge-tree check
+        if ops.git().check_merge_conflicts(parent_branch, branch_name):
+            return PreAnalysisError(
+                success=False,
+                error_type="pr_has_conflicts",
+                message=f"Branch has local merge conflicts with {parent_branch}",
+                details={
+                    "branch_name": branch_name,
+                    "parent_branch": parent_branch,
+                    "detection_method": "git_merge_tree",
+                },
+            )
 
     # Step 3: Count commits in branch
     commit_count = ops.git().count_commits_in_branch(parent_branch)

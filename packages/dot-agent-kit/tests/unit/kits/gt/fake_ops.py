@@ -132,6 +132,19 @@ class FakeGitGtKitOps(GitGtKit):
             "+new"
         )
 
+    def check_merge_conflicts(self, base_branch: str, head_branch: str) -> bool:
+        """Fake conflict checker - returns False unless configured otherwise."""
+        # Check if fake has been configured to simulate conflicts
+        if hasattr(self, "_simulated_conflicts"):
+            return (base_branch, head_branch) in self._simulated_conflicts
+        return False
+
+    def simulate_conflict(self, base_branch: str, head_branch: str) -> None:
+        """Configure fake to simulate conflicts for specific branch pair."""
+        if not hasattr(self, "_simulated_conflicts"):
+            self._simulated_conflicts: set[tuple[str, str]] = set()
+        self._simulated_conflicts.add((base_branch, head_branch))
+
 
 class FakeGraphiteGtKitOps(GraphiteGtKit):
     """Fake Graphite operations with in-memory state."""

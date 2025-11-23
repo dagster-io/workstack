@@ -157,6 +157,20 @@ class RealGitGtKit(GitGtKit):
         )
         return result.stdout
 
+    def check_merge_conflicts(self, base_branch: str, head_branch: str) -> bool:
+        """Check for merge conflicts using git merge-tree."""
+        # Use modern --write-tree mode which properly reports conflicts
+        result = subprocess.run(
+            ["git", "merge-tree", "--write-tree", base_branch, head_branch],
+            capture_output=True,
+            text=True,
+            check=False,  # Don't raise on non-zero exit
+        )
+
+        # Modern merge-tree: returns non-zero exit code if conflicts exist
+        # Exit code 1 = conflicts, 0 = clean merge
+        return result.returncode != 0
+
 
 class RealGraphiteGtKit(GraphiteGtKit):
     """Real Graphite operations using subprocess."""

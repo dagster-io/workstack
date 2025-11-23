@@ -72,3 +72,90 @@ class TestSubmitBranchIntegration:
             )
 
             assert message_with_backticks in result.stdout
+
+    def test_real_git_merge_tree_detects_conflicts(self) -> None:
+        """Integration test: Verify git merge-tree actually detects conflicts."""
+        from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops import (
+            RealGitGtKit,
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo_path = Path(tmpdir)
+
+            # Initialize repo with explicit branch name
+            subprocess.run(
+                ["git", "init", "-b", "main"], cwd=repo_path, check=True, capture_output=True
+            )
+            subprocess.run(
+                ["git", "config", "user.email", "test@example.com"],
+                cwd=repo_path,
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.name", "Test User"],
+                cwd=repo_path,
+                check=True,
+                capture_output=True,
+            )
+
+            # Create file on main
+            (repo_path / "file.txt").write_text("line 1\nline 2\nline 3\n", encoding="utf-8")
+            subprocess.run(
+                ["git", "add", "file.txt"], cwd=repo_path, check=True, capture_output=True
+            )
+            subprocess.run(
+                ["git", "commit", "-m", "Initial"],
+                cwd=repo_path,
+                check=True,
+                capture_output=True,
+            )
+
+            # Create branch and modify same lines
+            subprocess.run(
+                ["git", "checkout", "-b", "feature"],
+                cwd=repo_path,
+                check=True,
+                capture_output=True,
+            )
+            (repo_path / "file.txt").write_text(
+                "line 1 CHANGED\nline 2\nline 3\n", encoding="utf-8"
+            )
+            subprocess.run(
+                ["git", "commit", "-am", "Change on feature"],
+                cwd=repo_path,
+                check=True,
+                capture_output=True,
+            )
+
+            # Modify same lines on main
+            subprocess.run(
+                ["git", "checkout", "main"],
+                cwd=repo_path,
+                check=True,
+                capture_output=True,
+            )
+            (repo_path / "file.txt").write_text(
+                "line 1 DIFFERENT\nline 2\nline 3\n", encoding="utf-8"
+            )
+            subprocess.run(
+                ["git", "commit", "-am", "Change on main"],
+                cwd=repo_path,
+                check=True,
+                capture_output=True,
+            )
+
+            # Test: Check for conflicts using real implementation
+            # Change to repo directory so git commands work
+            import os
+
+            original_cwd = os.getcwd()
+            try:
+                os.chdir(repo_path)
+                ops = RealGitGtKit()
+                has_conflicts = ops.check_merge_conflicts("main", "feature")
+            finally:
+                os.chdir(original_cwd)
+
+            # Assert: Should detect conflicts
+            assert has_conflicts is True

@@ -19,6 +19,14 @@ class MetadataBlock:
     data: dict[str, Any]
 
 
+@dataclass(frozen=True)
+class RawMetadataBlock:
+    """A raw metadata block with unparsed body content."""
+
+    key: str
+    body: str  # Raw content between HTML comment markers
+
+
 class MetadataBlockSchema(ABC):
     """Base class for metadata block schemas."""
 
@@ -174,15 +182,18 @@ def create_metadata_block(
 
 def render_metadata_block(block: MetadataBlock) -> str:
     """
-    Render a metadata block as markdown.
+    Render a metadata block as markdown with HTML comment wrappers.
 
     Returns markdown like:
+    <!-- WARNING: Machine-generated. Manual edits may break erk tooling. -->
+    <!-- erk:metadata-block:{key} -->
     <details>
     <summary><code>{key}</code></summary>
     ```yaml
     {yaml_content}
     ```
     </details>
+    <!-- /erk:metadata-block -->
     """
     yaml_content = yaml.safe_dump(
         block.data,
@@ -194,12 +205,15 @@ def render_metadata_block(block: MetadataBlock) -> str:
     # Remove trailing newline from YAML dump
     yaml_content = yaml_content.rstrip("\n")
 
-    return f"""<details>
+    return f"""<!-- WARNING: Machine-generated. Manual edits may break erk tooling. -->
+<!-- erk:metadata-block:{block.key} -->
+<details>
 <summary><code>{block.key}</code></summary>
 ```yaml
 {yaml_content}
 ```
-</details>"""
+</details>
+<!-- /erk:metadata-block -->"""
 
 
 def create_implementation_status_block(
@@ -269,9 +283,91 @@ def create_worktree_creation_block(
     )
 
 
+def extract_raw_metadata_blocks(text: str) -> list[RawMetadataBlock]:
+    """
+    Extract raw metadata blocks using HTML comment markers (Phase 1).
+
+    Extracts blocks delimited by:
+    <!-- erk:metadata-block:key --> ... <!-- /erk:metadata-block -->
+
+    Does NOT validate or parse the body structure. Returns raw body content
+    for caller to parse.
+
+    Args:
+        text: Markdown text potentially containing metadata blocks
+
+    Returns:
+        List of RawMetadataBlock instances with unparsed body content
+    """
+    raw_blocks: list[RawMetadataBlock] = []
+
+    # Phase 1 pattern: Extract only using HTML comment markers
+    # Captures key and raw body content between markers
+    pattern = r"<!-- erk:metadata-block:(.+?) -->(.+?)<!-- /erk:metadata-block -->"
+
+    matches = re.finditer(pattern, text, re.DOTALL)
+
+    for match in matches:
+        key = match.group(1).strip()
+        body = match.group(2).strip()
+        raw_blocks.append(RawMetadataBlock(key=key, body=body))
+
+    return raw_blocks
+
+
+def parse_metadata_block_body(body: str) -> dict[str, Any]:
+    """
+    Parse the body of a metadata block (Phase 2).
+
+    Expects body format:
+    <details>
+    <summary><code>key</code></summary>
+    ```yaml
+    content
+    ```
+    </details>
+
+    Args:
+        body: Raw body content from a metadata block
+
+    Returns:
+        The parsed YAML data as a dict
+
+    Raises:
+        ValueError: If body format is invalid or YAML parsing fails
+    """
+    # Phase 2 pattern: Extract YAML content from details structure
+    pattern = (
+        r"<details>\s*<summary><code>[^<]+</code></summary>\s*"
+        r"```yaml\s*(.*?)\s*```\s*</details>"
+    )
+
+    match = re.search(pattern, body, re.DOTALL)
+    if not match:
+        raise ValueError("Body does not match expected <details> structure")
+
+    yaml_content = match.group(1)
+
+    # Parse YAML (strict - raises on error)
+    try:
+        data = yaml.safe_load(yaml_content)
+    except yaml.YAMLError as e:
+        raise ValueError(f"Failed to parse YAML content: {e}") from e
+
+    if not isinstance(data, dict):
+        raise ValueError(f"YAML content is not a dict, got {type(data).__name__}")
+
+    return data
+
+
 def parse_metadata_blocks(text: str) -> list[MetadataBlock]:
     """
-    Extract all metadata blocks from markdown text.
+    Extract all metadata blocks from markdown text (two-phase parsing).
+
+    Phase 1: Extract raw blocks using HTML comment markers
+    Phase 2: Parse body content (details/yaml structure)
+
+    Maintains lenient behavior: logs warnings and skips blocks with parsing errors.
 
     Args:
         text: Markdown text potentially containing metadata blocks
@@ -281,27 +377,17 @@ def parse_metadata_blocks(text: str) -> list[MetadataBlock]:
     """
     blocks: list[MetadataBlock] = []
 
-    # Regex pattern to match metadata blocks
-    pattern = (
-        r"<details>\s*<summary><code>([^<]+)</code></summary>\s*"
-        r"```yaml\s*(.*?)\s*```\s*</details>"
-    )
+    # Phase 1: Extract raw blocks
+    raw_blocks = extract_raw_metadata_blocks(text)
 
-    matches = re.finditer(pattern, text, re.DOTALL)
-
-    for match in matches:
-        key = match.group(1).strip()
-        yaml_content = match.group(2)
-
-        # Lenient parsing - return None on failure
+    # Phase 2: Parse each body
+    for raw_block in raw_blocks:
         try:
-            data = yaml.safe_load(yaml_content)
-            if not isinstance(data, dict):
-                logger.warning(f"Metadata block '{key}' YAML did not parse to dict, skipping")
-                continue
-            blocks.append(MetadataBlock(key=key, data=data))
-        except yaml.YAMLError as e:
-            logger.warning(f"Failed to parse YAML for metadata block '{key}': {e}")
+            data = parse_metadata_block_body(raw_block.body)
+            blocks.append(MetadataBlock(key=raw_block.key, data=data))
+        except ValueError as e:
+            # Lenient: log warning and skip bad blocks
+            logger.warning(f"Failed to parse metadata block '{raw_block.key}': {e}")
             continue
 
     return blocks

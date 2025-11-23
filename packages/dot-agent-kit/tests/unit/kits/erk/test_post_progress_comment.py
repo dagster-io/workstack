@@ -15,6 +15,7 @@ from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.post_progress_comment impo
     post_progress_comment,
 )
 from erk.core.github.issues import FakeGitHubIssues
+from erk.integrations.github.metadata_blocks import parse_metadata_blocks
 
 # ============================================================================
 # 1. Success Case Tests (2 tests)
@@ -103,23 +104,21 @@ total_steps: 5
 
     # Verify comment format
     assert "✓ Step 3/5 completed" in comment_body
-    assert "<details>" in comment_body
-    assert "<summary><code>erk-implementation-status</code></summary>" in comment_body
-    assert "```yaml" in comment_body
+    assert "<!-- WARNING:" in comment_body
 
-    # Parse and verify YAML
-    yaml_start = comment_body.find("```yaml\n") + len("```yaml\n")
-    yaml_end = comment_body.find("\n```", yaml_start)
-    yaml_content = comment_body[yaml_start:yaml_end]
-    parsed_yaml = yaml.safe_load(yaml_content)
+    # Parse metadata block using parse-based validation
+    blocks = parse_metadata_blocks(comment_body)
+    assert len(blocks) == 1
 
-    assert parsed_yaml["status"] == "in_progress"
-    assert parsed_yaml["completed_steps"] == 3
-    assert parsed_yaml["total_steps"] == 5
-    assert parsed_yaml["step_description"] == "Phase 1: Create abstraction"
-    assert "timestamp" in parsed_yaml
+    block = blocks[0]
+    assert block.key == "erk-implementation-status"
+    assert block.data["status"] == "in_progress"
+    assert block.data["completed_steps"] == 3
+    assert block.data["total_steps"] == 5
+    assert block.data["step_description"] == "Phase 1: Create abstraction"
+    assert "timestamp" in block.data
     # Verify percentage is NOT present (removed per refactoring)
-    assert "percentage" not in parsed_yaml
+    assert "percentage" not in block.data
 
 
 def test_success_case_100_percent(tmp_path: Path, monkeypatch) -> None:

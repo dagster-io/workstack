@@ -808,12 +808,8 @@ def test_add_worktree_creation_comment_success(tmp_path: Path) -> None:
     # Verify comment details
     assert issue_number == 42
     assert "✅ Worktree created: **feature-name**" in comment_body
-    assert "Branch: `feature-branch`" in comment_body
-    assert "Created:" in comment_body
-
-    # Verify timestamp format (ISO 8601 UTC)
-    assert "T" in comment_body  # ISO 8601 includes 'T' separator
-    assert ":" in comment_body  # ISO 8601 includes ':' in time
+    assert "erk checkout feature-branch" in comment_body
+    assert "/erk:implement-plan" in comment_body
 
     # Round-trip verification: Parse metadata block back out
     blocks = parse_metadata_blocks(comment_body)
@@ -824,9 +820,14 @@ def test_add_worktree_creation_comment_success(tmp_path: Path) -> None:
     assert block.key == "erk-worktree-creation"
     assert block.data["worktree_name"] == "feature-name"
     assert block.data["branch_name"] == "feature-branch"
+    assert block.data["issue_number"] == 42
     assert "timestamp" in block.data
     assert isinstance(block.data["timestamp"], str)
     assert len(block.data["timestamp"]) > 0
+
+    # Verify timestamp format (ISO 8601 UTC)
+    assert "T" in block.data["timestamp"]  # ISO 8601 includes 'T' separator
+    assert ":" in block.data["timestamp"]  # ISO 8601 includes ':' in time
 
 
 def test_add_worktree_creation_comment_issue_not_found(tmp_path: Path) -> None:

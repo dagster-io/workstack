@@ -219,6 +219,7 @@ def _create_worktree_with_plan_content(
     plan_source: PlanSource,
     worktree_name: str | None,
     dry_run: bool,
+    submit: bool,
 ) -> Path | None:
     """Create worktree with plan content.
 
@@ -227,6 +228,7 @@ def _create_worktree_with_plan_content(
         plan_source: Plan source with content and metadata
         worktree_name: Optional custom worktree name
         dry_run: Whether to perform dry run
+        submit: Whether to auto-submit PR after implementation
 
     Returns:
         Path to created worktree, or None if dry-run mode
@@ -253,7 +255,14 @@ def _create_worktree_with_plan_content(
         user_output(dry_run_header + " No changes will be made\n")
         user_output(f"Would create worktree '{name}'")
         user_output(f"  {plan_source.dry_run_description}")
-        user_output('  Then run: claude --permission-mode acceptEdits "/erk:implement-plan"')
+        if submit:
+            user_output('  Then run: claude --permission-mode acceptEdits "/erk:implement-plan"')
+            user_output('  Then run: claude --permission-mode acceptEdits "/fast-ci"')
+            user_output(
+                '  Then run: claude --permission-mode acceptEdits "/gt:submit-squashed-branch"'
+            )
+        else:
+            user_output('  Then run: claude --permission-mode acceptEdits "/erk:implement-plan"')
         return None
 
     # Create worktree
@@ -313,6 +322,7 @@ def _output_activation_instructions(
     wt_path: Path,
     branch: str,
     script: bool,
+    submit: bool,
     target_description: str,
 ) -> None:
     """Output activation script or manual instructions.
@@ -322,6 +332,7 @@ def _output_activation_instructions(
         wt_path: Worktree path
         branch: Branch name
         script: Whether to output activation script
+        submit: Whether to auto-submit PR after implementation
         target_description: Description of target for user messages
     """
     if script:
@@ -332,13 +343,23 @@ def _output_activation_instructions(
             comment="implement activation",
         )
 
-        claude_command = 'claude --permission-mode acceptEdits "/erk:implement-plan"\n'
+        # Conditionally select command sequence based on submit flag
+        if submit:
+            claude_command = (
+                'claude --permission-mode acceptEdits "/erk:implement-plan" && '
+                'claude --permission-mode acceptEdits "/fast-ci" && '
+                'claude --permission-mode acceptEdits "/gt:submit-squashed-branch"\n'
+            )
+        else:
+            claude_command = 'claude --permission-mode acceptEdits "/erk:implement-plan"\n'
+
         full_script = base_script + claude_command
 
+        comment_suffix = "implement, CI, and submit" if submit else "implement"
         result = ctx.script_writer.write_activation_script(
             full_script,
             command_name="implement",
-            comment=f"activate {wt_path.name} and run /erk:implement-plan",
+            comment=f"activate {wt_path.name} and {comment_suffix}",
         )
 
         result.output_for_shell_integration()
@@ -346,11 +367,18 @@ def _output_activation_instructions(
         # Provide manual instructions
         user_output("\n" + click.style("Next steps:", fg="cyan", bold=True))
         user_output(f"  1. Change to worktree:  erk checkout {branch}")
-        claude_cmd = 'claude --permission-mode acceptEdits "/erk:implement-plan"'
-        user_output(f"  2. Run implementation:  {claude_cmd}")
+        if submit:
+            user_output("  2. Run implementation, CI, and submit PR:")
+            user_output('     claude --permission-mode acceptEdits "/erk:implement-plan"')
+            user_output('     claude --permission-mode acceptEdits "/fast-ci"')
+            user_output('     claude --permission-mode acceptEdits "/gt:submit-squashed-branch"')
+        else:
+            claude_cmd = 'claude --permission-mode acceptEdits "/erk:implement-plan"'
+            user_output(f"  2. Run implementation:  {claude_cmd}")
         user_output("\n" + click.style("Shell integration not detected.", fg="yellow"))
-        user_output("To activate environment and run implementation, use:")
-        user_output(f"  source <(erk implement {target_description} --script)")
+        user_output("To activate environment and run commands, use:")
+        script_flag = "--submit --script" if submit else "--script"
+        user_output(f"  source <(erk implement {target_description} {script_flag})")
 
 
 def _implement_from_issue(
@@ -358,6 +386,7 @@ def _implement_from_issue(
     issue_number: str,
     worktree_name: str | None,
     dry_run: bool,
+    submit: bool,
     script: bool,
 ) -> None:
     """Implement feature from GitHub issue.
@@ -367,6 +396,7 @@ def _implement_from_issue(
         issue_number: GitHub issue number
         worktree_name: Optional custom worktree name
         dry_run: Whether to perform dry run
+        submit: Whether to auto-submit PR after implementation
         script: Whether to output activation script
     """
     # Discover repo context for issue fetch
@@ -377,7 +407,7 @@ def _implement_from_issue(
     plan_source = _prepare_plan_source_from_issue(ctx, repo.root, issue_number)
 
     # Create worktree with plan content
-    wt_path = _create_worktree_with_plan_content(ctx, plan_source, worktree_name, dry_run)
+    wt_path = _create_worktree_with_plan_content(ctx, plan_source, worktree_name, dry_run, submit)
 
     # Early return for dry-run mode
     if wt_path is None:
@@ -392,7 +422,7 @@ def _implement_from_issue(
     # Output activation instructions
     branch = wt_path.name
     target_description = f"#{issue_number}"
-    _output_activation_instructions(ctx, wt_path, branch, script, target_description)
+    _output_activation_instructions(ctx, wt_path, branch, script, submit, target_description)
 
 
 def _implement_from_file(
@@ -400,6 +430,7 @@ def _implement_from_file(
     plan_file: Path,
     worktree_name: str | None,
     dry_run: bool,
+    submit: bool,
     script: bool,
 ) -> None:
     """Implement feature from plan file.
@@ -409,13 +440,14 @@ def _implement_from_file(
         plan_file: Path to plan file
         worktree_name: Optional custom worktree name
         dry_run: Whether to perform dry run
+        submit: Whether to auto-submit PR after implementation
         script: Whether to output activation script
     """
     # Prepare plan source from file
     plan_source = _prepare_plan_source_from_file(ctx, plan_file)
 
     # Create worktree with plan content
-    wt_path = _create_worktree_with_plan_content(ctx, plan_source, worktree_name, dry_run)
+    wt_path = _create_worktree_with_plan_content(ctx, plan_source, worktree_name, dry_run, submit)
 
     # Early return for dry-run mode
     if wt_path is None:
@@ -429,7 +461,7 @@ def _implement_from_file(
     # Output activation instructions
     branch = wt_path.name
     target_description = str(plan_file)
-    _output_activation_instructions(ctx, wt_path, branch, script, target_description)
+    _output_activation_instructions(ctx, wt_path, branch, script, submit, target_description)
 
 
 @click.command("implement")
@@ -446,6 +478,11 @@ def _implement_from_file(
     help="Print what would be executed without doing it",
 )
 @click.option(
+    "--submit",
+    is_flag=True,
+    help="Automatically run CI validation and submit PR after implementation",
+)
+@click.option(
     "--script",
     is_flag=True,
     hidden=True,
@@ -457,6 +494,7 @@ def implement(
     target: str,
     worktree_name: str | None,
     dry_run: bool,
+    submit: bool,
     script: bool,
 ) -> None:
     """Create worktree from GitHub issue or plan file and invoke Claude.
@@ -515,8 +553,8 @@ def implement(
             )
             raise SystemExit(1)
 
-        _implement_from_issue(ctx, target_info.issue_number, worktree_name, dry_run, script)
+        _implement_from_issue(ctx, target_info.issue_number, worktree_name, dry_run, submit, script)
     else:
         # Plan file mode
         plan_file = Path(target)
-        _implement_from_file(ctx, plan_file, worktree_name, dry_run, script)
+        _implement_from_file(ctx, plan_file, worktree_name, dry_run, submit, script)

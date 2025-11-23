@@ -262,6 +262,13 @@ class FakeGitHubGtKitOps(GitHubGtKit):
         self._state = replace(self._state, pr_titles=new_titles, pr_bodies=new_bodies)
         return True
 
+    def mark_pr_ready(self) -> bool:
+        """Mark PR as ready for review (fake always succeeds if PR exists)."""
+        if self._current_branch not in self._state.pr_numbers:
+            return False
+        # In the fake, marking as ready always succeeds if PR exists
+        return True
+
     def merge_pr(self) -> bool:
         """Merge the PR with configurable success/failure."""
         if self._current_branch not in self._state.pr_numbers:

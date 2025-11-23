@@ -43,9 +43,12 @@ If successful, you'll receive:
   "success": true,
   "diff": "...",
   "branch": "current-branch",
-  "parent": "parent-branch"
+  "parent": "parent-branch",
+  "issue_number": 123
 }
 ```
+
+The `issue_number` field will be present if `.impl/issue.json` exists (from erk workflows), otherwise it will be `null`.
 
 ### Step 2: Analyze Diff
 
@@ -76,9 +79,23 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 Types: feat, fix, docs, style, refactor, test, chore
 
+**Note**: Do NOT add "Closes #N" to the commit message yourself. The backend will automatically append it when submitting.
+
 ### Step 4: Submit
 
-Execute the complete command with the commit message:
+Execute the complete command with the commit message and issue number (if present):
+
+```bash
+dot-agent run gt simple-submit --complete --message "$(cat <<'EOF'
+Your commit message here
+
+🤖 Generated with Claude Code
+Co-Authored-By: Claude <noreply@anthropic.com>
+EOF
+)" --issue-number 123
+```
+
+**If `issue_number` was null in Step 1**, omit the `--issue-number` flag:
 
 ```bash
 dot-agent run gt simple-submit --complete --message "$(cat <<'EOF'
@@ -99,13 +116,25 @@ If successful, you'll receive:
   "success": true,
   "pr_number": 123,
   "pr_url": "https://github.com/...",
-  "graphite_url": "https://app.graphite.dev/..."
+  "graphite_url": "https://app.graphite.dev/...",
+  "issue_number": 123
 }
 ```
 
 ### Step 5: Show Result
 
-Display the PR information:
+Display the PR information. If `issue_number` is present, include the issue linking message:
+
+```
+✅ PR created successfully!
+
+✓ Linked to issue #123 (will auto-close on merge)
+
+PR #123: https://github.com/...
+Graphite: https://app.graphite.dev/...
+```
+
+If `issue_number` is null, omit the issue linking line:
 
 ```
 ✅ PR created successfully!

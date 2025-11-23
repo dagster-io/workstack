@@ -303,6 +303,16 @@ class RealGitHubGtKit(GitHubGtKit):
         )
         return result.returncode == 0
 
+    def mark_pr_ready(self) -> bool:
+        """Mark PR as ready for review using gh pr ready."""
+        result = subprocess.run(
+            ["gh", "pr", "ready"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return result.returncode == 0
+
     def merge_pr(self) -> bool:
         """Merge the PR using squash merge with gh pr merge."""
         result = subprocess.run(

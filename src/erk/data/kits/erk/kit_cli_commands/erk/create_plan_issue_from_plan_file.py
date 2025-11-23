@@ -1,7 +1,7 @@
 """Create GitHub issue from plan file on disk.
 
 This kit CLI command creates a GitHub issue from a plan file stored on disk
-(typically created by /erk:save-plan or /erk:save-context-enriched-plan).
+(typically created by /erk:save-raw-plan-issue or /erk:save-plan-issue).
 
 Handles the complete workflow:
 1. Read plan file from disk

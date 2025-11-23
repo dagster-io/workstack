@@ -709,7 +709,7 @@ def test_deduplicate_documentation_blocks_keeps_first() -> None:
 
 def test_deduplicate_documentation_blocks_replaces_duplicate() -> None:
     """Test that duplicate documentation blocks are replaced with markers."""
-    long_doc = "/erk:save-session-enriched-plan" + ("x" * 600)
+    long_doc = "/erk:save-plan-issue" + ("x" * 600)
     entries = [
         {"type": "user", "message": {"content": long_doc}},
         {"type": "user", "message": {"content": long_doc}},

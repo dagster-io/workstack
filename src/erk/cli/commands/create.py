@@ -5,6 +5,7 @@ from collections.abc import Iterable, Mapping
 from pathlib import Path
 
 import click
+from erk_shared.github.issues import IssueInfo
 
 from erk.cli.config import LoadedConfig
 from erk.cli.core import discover_repo_context, worktree_path_for
@@ -12,7 +13,6 @@ from erk.cli.output import user_output
 from erk.cli.shell_utils import render_navigation_script
 from erk.cli.subprocess_utils import run_with_error_reporting
 from erk.core.context import ErkContext
-from erk.core.github.issues import IssueInfo
 from erk.core.impl_folder import create_impl_folder, get_impl_path
 from erk.core.naming_utils import (
     default_branch_for_worktree,

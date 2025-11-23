@@ -10,12 +10,12 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 from click.testing import CliRunner
+from erk_shared.github.issues import FakeGitHubIssues, IssueInfo
 
 from dot_agent_kit.context import DotAgentContext
-from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.post_progress_comment import (
+from erk.data.kits.erk.kit_cli_commands.erk.post_progress_comment import (
     post_progress_comment,
 )
-from erk.core.github.issues import FakeGitHubIssues, IssueInfo
 from erk.integrations.github.metadata_blocks import parse_metadata_blocks
 
 # ============================================================================

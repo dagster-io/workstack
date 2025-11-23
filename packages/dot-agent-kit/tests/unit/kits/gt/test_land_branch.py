@@ -5,7 +5,7 @@ from dataclasses import replace
 import pytest
 from click.testing import CliRunner
 
-from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.land_branch import (
+from erk.data.kits.gt.kit_cli_commands.gt.land_branch import (
     LandBranchError,
     LandBranchSuccess,
     execute_land_branch,

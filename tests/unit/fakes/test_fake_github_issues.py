@@ -7,8 +7,8 @@ providing reliable test doubles for tests that use issue functionality.
 from datetime import UTC, datetime
 
 import pytest
+from erk_shared.github.issues import FakeGitHubIssues
 
-from erk.core.github.issues import FakeGitHubIssues
 from tests.test_utils import sentinel_path
 from tests.test_utils.github_helpers import create_test_issue
 

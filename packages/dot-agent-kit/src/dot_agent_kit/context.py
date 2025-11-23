@@ -12,8 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import click
-
-from erk.core.github.issues import GitHubIssues, RealGitHubIssues
+from erk_shared.github.issues import GitHubIssues, RealGitHubIssues
 
 
 @dataclass(frozen=True)
@@ -54,13 +53,13 @@ class DotAgentContext:
             DotAgentContext configured with provided values and test defaults
 
         Example:
-            >>> from erk.core.github.issues import FakeGitHubIssues
+            >>> from erk_shared.github.issues import FakeGitHubIssues
             >>> github = FakeGitHubIssues()
             >>> ctx = DotAgentContext.for_test(
             ...     github_issues=github, debug=True, repo_root=Path("/tmp/test")
             ... )
         """
-        from erk.core.github.issues import FakeGitHubIssues
+        from erk_shared.github.issues import FakeGitHubIssues
 
         # Provide defaults - ensures non-None values for type checker
         resolved_github_issues: GitHubIssues = (

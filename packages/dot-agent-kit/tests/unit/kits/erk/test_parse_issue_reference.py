@@ -7,7 +7,7 @@ import json
 
 from click.testing import CliRunner
 
-from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.parse_issue_reference import (
+from erk.data.kits.erk.kit_cli_commands.erk.parse_issue_reference import (
     ParsedIssue,
     ParseError,
     parse_issue_reference,

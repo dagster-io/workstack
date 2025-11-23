@@ -9,21 +9,6 @@
   "hooks": {
     "UserPromptSubmit": [
       {
-        "matcher": "*.py",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "DOT_AGENT_KIT_ID=fake-driven-testing DOT_AGENT_HOOK_ID=fake-driven-testing-reminder-hook dot-agent kit-command fake-driven-testing fake-driven-testing-reminder-hook",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "command": "DOT_AGENT_KIT_ID=dignified-python DOT_AGENT_HOOK_ID=version-aware-reminder-hook dot-agent kit-command dignified-python version-aware-reminder-hook",
-            "timeout": 30
-          }
-        ]
-      },
-      {
         "matcher": "*",
         "hooks": [
           {
@@ -34,6 +19,21 @@
           {
             "type": "command",
             "command": "DOT_AGENT_KIT_ID=erk DOT_AGENT_HOOK_ID=session-id-injector-hook dot-agent kit-command erk session-id-injector-hook",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "*.py",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "DOT_AGENT_KIT_ID=fake-driven-testing DOT_AGENT_HOOK_ID=fake-driven-testing-reminder-hook dot-agent kit-command fake-driven-testing fake-driven-testing-reminder-hook",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "DOT_AGENT_KIT_ID=dignified-python DOT_AGENT_HOOK_ID=version-aware-reminder-hook dot-agent kit-command dignified-python version-aware-reminder-hook",
             "timeout": 30
           }
         ]

@@ -3,8 +3,8 @@
 import json
 
 import click
+from erk_shared.naming import generate_filename_from_title, sanitize_worktree_name
 
-from dot_agent_kit.data.kits.erk.plan_utils import generate_filename_from_title
 from erk.cli.activation import render_activation_script
 from erk.cli.commands.create import add_worktree, run_post_worktree_setup
 from erk.cli.config import LoadedConfig
@@ -14,7 +14,6 @@ from erk.core.context import ErkContext
 from erk.core.impl_folder import create_impl_folder
 from erk.core.naming_utils import (
     ensure_unique_worktree_name_with_date,
-    sanitize_worktree_name,
     strip_plan_from_filename,
 )
 from erk.core.plan_issue_store.types import PlanIssueState

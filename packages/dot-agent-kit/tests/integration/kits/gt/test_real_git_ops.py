@@ -14,7 +14,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from dot_agent_kit.data.kits.gt.kit_cli_commands.gt.real_ops import (
+from erk.data.kits.gt.kit_cli_commands.gt.real_ops import (
     RealGitGtKit,
     RealGraphiteGtKit,
 )

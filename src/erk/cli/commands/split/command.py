@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import click
+from erk_shared.naming import sanitize_worktree_name
 
 from erk.cli.commands.split.display import (
     confirm_split,
@@ -18,7 +19,6 @@ from erk.cli.commands.split.plan import (
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
 from erk.core.context import ErkContext
-from erk.core.naming_utils import sanitize_worktree_name
 
 # Validation functions
 

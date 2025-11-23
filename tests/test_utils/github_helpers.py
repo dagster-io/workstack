@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime
 
-from erk.core.github.issues import IssueInfo
+from erk_shared.github.issues import IssueInfo
 
 
 def create_test_issue(

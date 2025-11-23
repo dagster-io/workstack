@@ -3,8 +3,8 @@
 from pathlib import Path
 
 import pytest
+from erk_shared.github.issues import FakeGitHubIssues, IssueInfo
 
-from erk.core.github.issues import FakeGitHubIssues, IssueInfo
 from erk.core.impl_folder import (
     add_worktree_creation_comment,
     copy_impl_to_worker_impl,

@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "click>=8.1.0",
-    "erk",
+    "erk-shared",
     "pathspec>=0.12.0",
     "pydantic>=2.0",
     "pyyaml>=6.0",
@@ -20,7 +20,7 @@ dependencies = [
 dot-agent = "dot_agent_kit.cli:main"
 
 [tool.uv.sources]
-erk = { workspace = true }
+erk-shared = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

@@ -7,9 +7,9 @@ from dataclasses import FrozenInstanceError
 from pathlib import Path
 
 import pytest
+from erk_shared.github.issues import FakeGitHubIssues, RealGitHubIssues
 
 from dot_agent_kit.context import DotAgentContext, create_context
-from erk.core.github.issues import FakeGitHubIssues, RealGitHubIssues
 
 
 def test_create_context_returns_real_implementations() -> None:

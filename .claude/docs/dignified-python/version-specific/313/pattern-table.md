@@ -11,6 +11,6 @@ When you detect these patterns in code, load the corresponding reference file:
 | Import statements, `from .`, relative imports                          | → Load `@.claude/docs/dignified-python/imports.md`                               |
 | `click.`, `@click.`, CLI commands, `print()` in CLI                    | → Load `@.claude/docs/dignified-python/cli-patterns.md`                          |
 | `subprocess.run`, `subprocess.Popen`, shell commands                   | → Load `@.claude/docs/dignified-python/subprocess.md`                            |
-| 10+ parameters, 50+ methods, context objects, code complexity          | → Load `@.claude/docs/dignified-python/code-smells-dagster.md`                   |
+| Code review, refactoring, complexity analysis                          | → Reference `.claude/docs/code-review/` (manual, not auto-loaded)                |
 | Need core standards                                                    | → Load `@.claude/docs/dignified-python/core-standards-universal.md`              |
-| Need implementation examples                                           | → Load `@.claude/docs/dignified-python/patterns-reference-universal.md`          |
+| Need implementation examples                                           | → Reference `.claude/docs/code-review/patterns-reference-universal.md` (manual)  |

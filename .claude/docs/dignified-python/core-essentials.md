@@ -326,7 +326,6 @@ For task-specific patterns, load the appropriate reference:
 | Path operations            | @path-operations.md      |
 | Dependency injection       | @dependency-injection.md |
 | Import organization        | @imports.md              |
-| Performance (`@property`)  | @performance-patterns.md |
 | CLI development            | @cli-patterns.md         |
 | Subprocess usage           | @subprocess.md           |
 

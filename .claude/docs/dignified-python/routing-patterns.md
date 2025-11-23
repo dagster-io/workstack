@@ -40,11 +40,11 @@ When you detect specific keywords or patterns in your task, load the correspondi
 
 **Patterns:** `@property`, `__len__`, `__bool__`, `__str__`, `__repr__`, `cached_property`, performance
 
-**Load:** @performance-patterns.md
+**Reference:** `.claude/docs/code-review/performance-patterns.md` (manual reference, not auto-loaded)
 
-**Why:** Properties and magic methods must be O(1). This file explains the performance contract, shows real production bugs from violations, and provides patterns for expensive operations.
+**Why:** Performance anti-patterns for properties and magic methods are valuable during code reviews but add ~2.4k tokens if auto-loaded. Reference manually when needed.
 
-**Usage frequency:** ~10% of Python code
+**Usage frequency:** During code review and refactoring
 
 ---
 
@@ -96,13 +96,13 @@ When you detect specific keywords or patterns in your task, load the correspondi
 
 ---
 
-### Code Complexity and Smells
+### Code Review and Refactoring
 
-**Patterns:** `too many parameters`, `large class`, `>50 methods`, context objects, `10+ parameters`, code organization
+**Patterns:** Code reviews, refactoring, complexity analysis
 
-**Load:** @code-smells-dagster.md
+**Reference:** `.claude/docs/code-review/code-smells-dagster.md` (manual reference, not auto-loaded)
 
-**Why:** Provides production-tested patterns from Dagster Labs for identifying and refactoring code smells: parameter complexity, method proliferation, context object antipatterns.
+**Why:** Production-tested code smell patterns are valuable during code reviews but add ~14k tokens if auto-loaded. Reference manually when needed.
 
 **Usage frequency:** During refactoring and code review
 
@@ -141,7 +141,6 @@ Based on patterns detected in your task:
 ```
 Task mentions dictionaries/keys → Load @exception-handling.md
 Task involves file operations → Load @path-operations.md
-Task uses @property → Load @performance-patterns.md
 Task organizes imports → Load @imports.md
 Task creates interfaces → Load @dependency-injection.md
 Task builds CLI → Load @cli-patterns.md
@@ -195,13 +194,12 @@ Detected patterns:
 | --------------------- | ---------------------------------------- |
 | dict, key, KeyError   | @exception-handling.md                   |
 | path, file, directory | @path-operations.md                      |
-| @property, **len**    | @performance-patterns.md                 |
 | import, circular      | @imports.md                              |
 | ABC, interface        | @dependency-injection.md                 |
 | click, CLI            | @cli-patterns.md                         |
 | subprocess            | @subprocess.md                           |
 | type hints            | @version-specific/\*/type-annotations.md |
-| code smells, refactor | @code-smells-dagster.md                  |
+| code review, refactor | .claude/docs/code-review/ (manual ref)   |
 
 ---
 

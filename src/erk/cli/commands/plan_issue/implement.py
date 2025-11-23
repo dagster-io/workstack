@@ -1,10 +1,12 @@
 """Command to create worktree from plan issue and invoke Claude implementation."""
 
 import json
-import subprocess
 
 import click
 
+from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.issue_title_to_filename import (
+    plan_title_to_filename,
+)
 from erk.cli.activation import render_activation_script
 from erk.cli.commands.create import add_worktree
 from erk.cli.config import LoadedConfig
@@ -22,7 +24,7 @@ from erk.core.repo_discovery import ensure_erk_metadata_dir
 
 
 def _generate_worktree_name_from_title(ctx: ErkContext, title: str) -> str:
-    """Generate worktree name from plan issue title using dot-agent kit command.
+    """Generate worktree name from plan issue title.
 
     Args:
         ctx: Erk context
@@ -30,24 +32,9 @@ def _generate_worktree_name_from_title(ctx: ErkContext, title: str) -> str:
 
     Returns:
         Generated filename stem (without extension)
-
-    Raises:
-        RuntimeError: If dot-agent command fails
     """
-    # Use dot-agent kit-command to convert title to filename
-    result = subprocess.run(
-        ["dot-agent", "kit-command", "erk", "issue-title-to-filename", title],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if result.returncode != 0:
-        error_msg = result.stderr.strip() if result.stderr else "Unknown error"
-        raise RuntimeError(f"Failed to generate filename from title: {error_msg}")
-
-    # Get filename (e.g., "my-feature-plan.md")
-    filename = result.stdout.strip()
+    # Convert title to filename directly (no subprocess)
+    filename = plan_title_to_filename(title)
 
     # Remove extension and "-plan" suffix to get worktree name
     # "my-feature-plan.md" -> "my-feature-plan" -> "my-feature"
@@ -135,11 +122,7 @@ def implement_plan_issue(
         name = sanitize_worktree_name(worktree_name)
     else:
         # Auto-generate from issue title
-        try:
-            name = _generate_worktree_name_from_title(ctx, plan_issue.title)
-        except RuntimeError as e:
-            user_output(click.style("Error: ", fg="red") + str(e))
-            raise SystemExit(1) from e
+        name = _generate_worktree_name_from_title(ctx, plan_issue.title)
 
     # Ensure unique name with date suffix (plan-derived worktree)
     name = ensure_unique_worktree_name_with_date(name, repo.worktrees_dir, ctx.git)
@@ -164,7 +147,8 @@ def implement_plan_issue(
         return
 
     # Step 4: Create worktree from plan issue
-    user_output(f"Creating worktree '{name}' for issue #{issue_number}...")
+    if not script:
+        user_output(f"Creating worktree '{name}' for issue #{issue_number}...")
 
     # Create branch from trunk
     trunk_branch = ctx.trunk_branch
@@ -200,7 +184,8 @@ def implement_plan_issue(
         skip_remote_check=True,
     )
 
-    user_output(click.style(f"✓ Created worktree: {name}", fg="green"))
+    if not script:
+        user_output(click.style(f"✓ Created worktree: {name}", fg="green"))
 
     # Write .env file if template exists
     from erk.cli.commands.create import make_env_content
@@ -231,7 +216,8 @@ def implement_plan_issue(
     issue_json_path = wt_path / ".impl" / "issue.json"
     issue_json_path.write_text(json.dumps(issue_json, indent=2) + "\n", encoding="utf-8")
 
-    user_output(click.style("✓ Saved issue reference for PR linking", fg="green"))
+    if not script:
+        user_output(click.style("✓ Saved issue reference for PR linking", fg="green"))
 
     # Step 7: Generate activation script (if --script flag)
     if script:

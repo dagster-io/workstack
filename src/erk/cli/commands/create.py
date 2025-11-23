@@ -621,7 +621,8 @@ def create(
     )
     if flags_set > 1:
         user_output(
-            "Cannot use multiple of: --from-current-branch, --from-branch, --from-plan, --from-issue"
+            "Cannot use multiple of: --from-current-branch, --from-branch, "
+            "--from-plan, --from-issue"
         )
         raise SystemExit(1)
 
@@ -889,7 +890,8 @@ def create(
     (wt_path / ".env").write_text(env_content, encoding="utf-8")
 
     # Create impl folder if plan file provided
-    # Track impl folder destination: set to .impl/ path only if --from-plan or --from-issue was provided
+    # Track impl folder destination: set to .impl/ path only if --from-plan or
+    # --from-issue was provided
     impl_folder_destination: Path | None = None
     if from_plan:
         # Read plan content from source file

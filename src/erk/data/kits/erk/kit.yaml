@@ -9,7 +9,6 @@ artifacts:
     - commands/erk/save-plan.md
     - commands/erk/create-wt-from-plan-file.md
     - commands/erk/create-wt-from-plan-issue.md
-    - commands/erk/create-plan-issue-from-context.md
     - commands/erk/implement-plan.md
     - commands/erk/implement-plan-issue.md
     - commands/erk/fix-merge-conflicts.md
@@ -18,9 +17,15 @@ artifacts:
   doc:
     - docs/erk/EXAMPLES.md
 kit_cli_commands:
+  - name: save-plan-from-session
+    path: kit_cli_commands/erk/save_plan_from_session.py
+    description: Extract plan from Claude session and save to disk with minimal frontmatter
   - name: save-session-enriched-plan
     path: kit_cli_commands/erk/save_session_enriched_plan.py
     description: Create enhanced implementation plan from session logs (two-phase - discover and assemble)
+  - name: find-most-recent-plan-file
+    path: kit_cli_commands/erk/find_most_recent_plan_file.py
+    description: Find most recent *-plan.md file at repository root
   - name: find-project-dir
     path: kit_cli_commands/erk/find_project_dir.py
     description: Find Claude Code project directory for a given filesystem path
@@ -59,7 +64,7 @@ kit_cli_commands:
     description: Create GitHub issue from plan content (stdin) with erk-plan label
   - name: create-enriched-plan-issue-from-context
     path: kit_cli_commands/erk/create_enriched_plan_issue_from_context.py
-    description: Create GitHub issue from enriched plan (stdin) with erk-plan label
+    description: Create GitHub issue from enriched plan (--plan-content option) with erk-plan label
   - name: create-plan-issue-from-plan-file
     path: kit_cli_commands/erk/create_plan_issue_from_plan_file.py
     description: Create GitHub issue from plan file on disk

@@ -404,7 +404,7 @@ This marker enables detection of erk plans by the `erk implement` command.
 **Create the issue using kit CLI command:**
 
 ```bash
-issue_url=$(echo "$enhanced_plan_content" | dot-agent kit-command erk create-enriched-plan-issue-from-context)
+issue_url=$(dot-agent kit-command erk create-enriched-plan-issue-from-context --plan-content "$enhanced_plan_content")
 if [ $? -ne 0 ]; then
     echo "❌ Error: Failed to create GitHub issue" >&2
     exit 1
@@ -413,7 +413,7 @@ fi
 
 The kit CLI command:
 
-- Reads plan content from stdin
+- Reads plan content from --plan-content option
 - Extracts title from plan for issue title
 - Creates issue with `erk-plan` label
 - Returns issue URL

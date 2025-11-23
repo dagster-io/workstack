@@ -274,3 +274,34 @@ def test_list_plan_issues_empty_results() -> None:
         # Assert
         assert result.exit_code == 0
         assert "No plan issues found matching the criteria" in result.output
+
+
+def test_ls_alias_works() -> None:
+    """Test that ls alias invokes the same logic as list command."""
+    # Arrange
+    issue1 = PlanIssue(
+        plan_issue_identifier="1",
+        title="Test Issue",
+        body="",
+        state=PlanIssueState.OPEN,
+        url="https://github.com/owner/repo/issues/1",
+        labels=["erk-plan"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 1, tzinfo=UTC),
+        metadata={},
+    )
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        store = FakePlanIssueStore(plan_issues={"1": issue1})
+        ctx = build_workspace_test_context(env, plan_issue_store=store)
+
+        # Act - Use ls alias instead of list
+        result = runner.invoke(plan_issue_group, ["ls"], obj=ctx)
+
+        # Assert - Should produce same output as list command
+        assert result.exit_code == 0
+        assert "Found 1 plan issue(s)" in result.output
+        assert "#1" in result.output
+        assert "Test Issue" in result.output

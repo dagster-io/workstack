@@ -554,3 +554,93 @@ def test_list_issues_respects_limit() -> None:
     # Test limit=None returns all issues
     result = fake.list_issues(sentinel_path(), limit=None)
     assert len(result) == 3
+
+
+def test_get_issue_comments_empty() -> None:
+    """Test get_issue_comments returns empty list when no comments exist."""
+    fake = FakeGitHubIssues()
+
+    result = fake.get_issue_comments(sentinel_path(), 123)
+
+    assert result == []
+
+
+def test_get_issue_comments_with_comments() -> None:
+    """Test get_issue_comments returns comments for issue."""
+    comments = {
+        42: ["First comment", "Second comment"],
+        100: ["Another comment"],
+    }
+    fake = FakeGitHubIssues(comments=comments)
+
+    result = fake.get_issue_comments(sentinel_path(), 42)
+
+    assert result == ["First comment", "Second comment"]
+
+
+def test_get_multiple_issue_comments_empty_list() -> None:
+    """Test get_multiple_issue_comments with empty issue list."""
+    fake = FakeGitHubIssues()
+
+    result = fake.get_multiple_issue_comments(sentinel_path(), [])
+
+    assert result == {}
+
+
+def test_get_multiple_issue_comments_no_comments() -> None:
+    """Test get_multiple_issue_comments when issues have no comments."""
+    fake = FakeGitHubIssues()
+
+    result = fake.get_multiple_issue_comments(sentinel_path(), [1, 2, 3])
+
+    assert result == {1: [], 2: [], 3: []}
+
+
+def test_get_multiple_issue_comments_with_comments() -> None:
+    """Test get_multiple_issue_comments returns all comments for multiple issues."""
+    comments = {
+        1: ["Comment on issue 1"],
+        2: ["First comment on 2", "Second comment on 2"],
+        3: [],
+        4: ["Comment on issue 4"],
+    }
+    fake = FakeGitHubIssues(comments=comments)
+
+    result = fake.get_multiple_issue_comments(sentinel_path(), [1, 2, 3, 4])
+
+    assert result == {
+        1: ["Comment on issue 1"],
+        2: ["First comment on 2", "Second comment on 2"],
+        3: [],
+        4: ["Comment on issue 4"],
+    }
+
+
+def test_get_multiple_issue_comments_partial_match() -> None:
+    """Test get_multiple_issue_comments with mix of existing and non-existing issues."""
+    comments = {
+        10: ["Comment on 10"],
+        20: ["Comment on 20"],
+    }
+    fake = FakeGitHubIssues(comments=comments)
+
+    # Request issues 10, 20, 30 - only 10 and 20 have comments
+    result = fake.get_multiple_issue_comments(sentinel_path(), [10, 20, 30])
+
+    assert result == {
+        10: ["Comment on 10"],
+        20: ["Comment on 20"],
+        30: [],  # No comments for issue 30
+    }
+
+
+def test_get_multiple_issue_comments_single_issue() -> None:
+    """Test get_multiple_issue_comments works with single issue."""
+    comments = {
+        42: ["Single comment"],
+    }
+    fake = FakeGitHubIssues(comments=comments)
+
+    result = fake.get_multiple_issue_comments(sentinel_path(), [42])
+
+    assert result == {42: ["Single comment"]}

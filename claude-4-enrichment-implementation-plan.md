@@ -19,6 +19,7 @@ Systematically enhance erk's enrichment and implementation commands to leverage 
 **File**: `packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/commands/docs/enrichment-process.md`
 
 Add Claude 4.5-specific sections:
+
 - Parallel context gathering instructions
 - Research-oriented exploration guidance
 - Context verification checkpoint (Step 2.5)
@@ -50,6 +51,7 @@ Search for information in a structured way. As you gather data about the codebas
 ### 1.2 Improve Interactive Enhancement
 
 Update Step 3 in enrichment-process.md:
+
 - Add communication transparency guidance
 - Enhance question batching with impact explanations
 - Include "why this matters" for each clarifying question
@@ -78,6 +80,7 @@ Why this matters: Ambiguous file references are the #1 cause of implementation d
 **File**: `.claude/commands/erk/save-session-enriched-plan.md`
 
 Add Claude 4.5 mining guidelines:
+
 - Develop competing hypotheses while reading logs
 - Track confidence levels for discoveries
 - Self-critique extraction quality
@@ -90,6 +93,7 @@ Add Claude 4.5 mining guidelines:
 **File**: `packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/commands/erk/implement-plan.md`
 
 New sections after line 42:
+
 - Context consumption protocol (mandatory)
 - Reflection after tool use
 - Incremental progress focus
@@ -120,6 +124,7 @@ After completing each implementation step and receiving tool results (test outpu
 ### 2.2 Enhance Context Verification (Step 2)
 
 Make context internalization mandatory:
+
 - Read Context & Understanding completely
 - Create mental context map (step → relevant context)
 - Output acknowledgment before proceeding
@@ -146,21 +151,26 @@ Before proceeding to implementation, verify you've internalized the context:
 
 3. **Acknowledge Context Consumption**
    Before beginning implementation, output:
-   ```
-   📋 Context Review Complete
+```
 
-   Key context items identified:
-   - [API Quirk] Webhook timing race condition (affects Step 3)
-   - [Architectural Insight] 4-phase migration pattern (affects Steps 2-5)
-   - [Known Pitfall] DO NOT use bulk_create (affects Step 4)
+📋 Context Review Complete
 
-   Total context items: X from Y categories
-   ```
+Key context items identified:
+
+- [API Quirk] Webhook timing race condition (affects Step 3)
+- [Architectural Insight] 4-phase migration pattern (affects Steps 2-5)
+- [Known Pitfall] DO NOT use bulk_create (affects Step 4)
+
+Total context items: X from Y categories
+
+```
+
 ```
 
 ### 2.3 Add Reflection Checkpoints (Step 4.5)
 
 New reflection protocol after each phase:
+
 - Quality check against plan intent
 - Progress verification with tests
 - Forward planning for next steps
@@ -200,6 +210,7 @@ Forward: Phase 2 will need extra attention to timing constraints (context item #
 ### 2.4 Enhance Progress Reporting (Step 6)
 
 Show context awareness in updates:
+
 - Reference specific context items applied
 - Note pitfalls avoided
 - Include verification results
@@ -208,6 +219,7 @@ Show context awareness in updates:
 ### 2.5 Add Final Quality Validation (Step 7.5)
 
 Comprehensive validation before completion:
+
 - Context application audit (all categories)
 - Critical tag verification
 - Related context verification
@@ -220,6 +232,7 @@ Comprehensive validation before completion:
 **New file**: `packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/commands/docs/claude-4-optimizations.md`
 
 Central reference containing:
+
 - Parallel tool usage patterns
 - Research-oriented exploration
 - Reflection protocols
@@ -230,6 +243,7 @@ Central reference containing:
 ### 3.2 Update Related Commands
 
 Commands that reference enrichment-process.md automatically inherit improvements:
+
 - `create-enriched-plan-issue-from-context.md`
 - `save-context-enriched-plan.md`
 
@@ -240,6 +254,7 @@ Commands that reference enrichment-process.md automatically inherit improvements
 **New file**: `docs/agentic-engineering-patterns/erk-claude-4-best-practices.md`
 
 User-facing documentation:
+
 - Overview of Claude 4.5 enhancements
 - How enrichment leverages research capabilities
 - How implementation uses context awareness
@@ -251,6 +266,7 @@ User-facing documentation:
 **File**: `packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/docs/erk/EXAMPLES.md`
 
 Add section showing:
+
 - Context consumption in practice
 - Reflection checkpoint examples
 - Enhanced progress updates

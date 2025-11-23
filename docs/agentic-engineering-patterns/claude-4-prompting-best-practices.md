@@ -6,7 +6,7 @@
 
 This guide provides specific prompt engineering techniques for Claude 4.x models, with specific guidance for Sonnet 4.5 and Haiku 4.5. These models have been trained for more precise instruction following than previous generations of Claude models.
 <Tip>
-  For an overview of Claude 4.5's new capabilities, see [What's new in Claude 4.5](/docs/en/about-claude/models/whats-new-claude-4-5). For migration guidance from previous models, see [Migrating to Claude 4.5](/docs/en/about-claude/models/migrating-to-claude-4).
+For an overview of Claude 4.5's new capabilities, see [What's new in Claude 4.5](/docs/en/about-claude/models/whats-new-claude-4-5). For migration guidance from previous models, see [Migrating to Claude 4.5](/docs/en/about-claude/models/migrating-to-claude-4).
 </Tip>
 
 ## General principles
@@ -18,11 +18,13 @@ Claude 4.x models respond well to clear, explicit instructions. Being specific a
 <section title="Example: Creating an analytics dashboard">
 
 **Less effective:**
+
 ```text
 Create an analytics dashboard
 ```
 
 **More effective:**
+
 ```text
 Create an analytics dashboard. Include as many relevant features and interactions as possible. Go beyond the basics to create a fully-featured implementation.
 ```
@@ -36,11 +38,13 @@ Providing context or motivation behind your instructions, such as explaining to 
 <section title="Example: Formatting preferences">
 
 **Less effective:**
+
 ```text
 NEVER use ellipses
 ```
 
 **More effective:**
+
 ```text
 Your response will be read aloud by a text-to-speech engine, so never use ellipses since the text-to-speech engine will not know how to pronounce them.
 ```
@@ -107,9 +111,9 @@ This is a very long task, so it may be beneficial to plan out your work clearly.
 // Structured state file (tests.json)
 {
   "tests": [
-    {"id": 1, "name": "authentication_flow", "status": "passing"},
-    {"id": 2, "name": "user_management", "status": "failing"},
-    {"id": 3, "name": "api_endpoints", "status": "not_started"}
+    { "id": 1, "name": "authentication_flow", "status": "passing" },
+    { "id": 2, "name": "user_management", "status": "failing" },
+    { "id": 3, "name": "api_endpoints", "status": "not_started" }
   ],
   "total": 200,
   "passing": 150,
@@ -160,16 +164,19 @@ For Claude to take action, be more explicit:
 <section title="Example: Explicit instructions">
 
 **Less effective (Claude will only suggest):**
+
 ```text
 Can you suggest some changes to improve this function?
 ```
 
 **More effective (Claude will make the changes):**
+
 ```text
 Change this function to improve its performance.
 ```
 
 Or:
+
 ```text
 Make these edits to the authentication flow.
 ```
@@ -197,12 +204,10 @@ Do not jump into implementatation or changes files unless clearly instructed to 
 There are a few ways that we have found to be particularly effective in steering output formatting in Claude 4.x models:
 
 1. **Tell Claude what to do instead of what not to do**
-
    - Instead of: "Do not use markdown in your response"
    - Try: "Your response should be composed of smoothly flowing prose paragraphs."
 
 2. **Use XML format indicators**
-
    - Try: "Write the prose sections of your response in \<smoothly_flowing_prose_paragraphs\> tags."
 
 3. **Match your prompt style to the desired output**
@@ -213,7 +218,7 @@ There are a few ways that we have found to be particularly effective in steering
 
    For more control over markdown and formatting usage, provide explicit guidance:
 
-```text Sample prompt to minimize markdown
+````text Sample prompt to minimize markdown
 <avoid_excessive_markdown_and_bullet_points>
 When writing reports, documents, technical explanations, analyses, or any long-form content, write in clear, flowing prose using complete paragraphs and sentences. Use standard paragraph breaks for organization and reserve markdown primarily for `inline code`, code blocks (```...```), and simple headings (###, and ###). Avoid using **bold** and *italics*.
 
@@ -223,7 +228,7 @@ Instead of listing items with bullets or numbers, incorporate them naturally int
 
 Your goal is readable, flowing text that guides the reader naturally through ideas rather than fragmenting information into isolated points.
 </avoid_excessive_markdown_and_bullet_points>
-```
+````
 
 ### Research and information gathering
 

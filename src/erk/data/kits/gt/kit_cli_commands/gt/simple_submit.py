@@ -240,9 +240,10 @@ def complete_submission(
     if issue_number is not None and pr_number is not None:
         if verbose:
             click.echo(f"Debug: Updating PR with issue reference #{issue_number}", err=True)
-        # Extract title from commit message (first line)
-        # and body (remaining lines)
-        lines = final_commit_message.split("\n", 1)
+        # Extract title from ORIGINAL commit message (first line)
+        # and body (remaining lines) - use original message, not final_commit_message
+        # to avoid duplicating the "Closes #N" that was already added
+        lines = commit_message.split("\n", 1)
         pr_title = lines[0]
         pr_body = lines[1].lstrip() if len(lines) > 1 else ""
 

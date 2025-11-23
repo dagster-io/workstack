@@ -4,6 +4,15 @@ description: Create GitHub issue from persisted plan with auto-implementation qu
 
 # /erk:create-queued-plan
 
+⚠️ **DEPRECATED**: This command is deprecated. The workflow has been simplified to create GitHub issues directly from conversation without requiring disk files.
+
+**For automatic implementation via GitHub Actions**, consider updating your automation to:
+
+1. Use `/erk:save-context-enriched-plan` or `/erk:save-plan` to create the issue
+2. Add the `erk-queue` label to the created issue using `gh issue edit <number> --add-label erk-queue`
+
+This command remains functional for backward compatibility with existing plan files on disk and automation workflows.
+
 ## Goal
 
 **Create a GitHub issue from an existing plan file on disk with the `erk-queue` label for automatic implementation.**

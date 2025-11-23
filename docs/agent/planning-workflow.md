@@ -29,43 +29,50 @@ Erk uses `.impl/` folders to track implementation progress for plans executed lo
 
 ## Local Implementation Workflow
 
-### 1. Create a Plan
+### 1. Create a Plan and GitHub Issue
 
-Start by creating an enriched plan from your conversation:
+Start by creating an enriched plan from your conversation, which creates a GitHub issue directly:
 
 ```bash
 /erk:save-context-enriched-plan
 ```
 
-This creates a `.impl/` folder in the current directory with the implementation plan.
+This creates a GitHub issue with the enhanced plan content and the `erk-plan` label. The issue becomes the source of truth.
 
-### 2. Create Worktree from Plan
+### 2. Implement from Issue
 
-Create a dedicated worktree for implementing the plan:
-
-```bash
-/erk:create-wt-from-plan-file
-```
-
-This creates a new worktree with the `.impl/` folder copied into it.
-
-### 3. Switch to Worktree
-
-Navigate to the newly created worktree:
+Use the unified `erk implement` command to create a worktree and start implementation:
 
 ```bash
-erk checkout <branch-name>
+erk implement #<issue-number>
 ```
 
-### 4. Execute the Plan
+This command:
 
-Run the implementation command:
+- Creates a dedicated worktree for the issue
+- Sets up the `.impl/` folder with plan content from the issue
+- Links the worktree to the GitHub issue for progress tracking
+- Automatically switches to the new worktree
+
+### 3. Execute the Plan (if not auto-implemented)
+
+If you didn't use `erk implement` (which auto-implements), run the implementation command manually:
 
 ```bash
 /erk:implement-plan
 ```
 
 The agent reads `.impl/plan.md`, executes each phase, and updates `.impl/progress.md` as steps complete.
+
+## Alternative: File-Based Workflow (Deprecated)
+
+For backward compatibility with existing plan files on disk, you can still use:
+
+```bash
+/erk:create-wt-from-plan-file  # Deprecated - use erk implement #<issue> instead
+```
+
+This workflow is deprecated and will be removed in a future version.
 
 ## Progress Tracking
 
@@ -100,6 +107,15 @@ The front matter enables progress indicators in `erk status` output.
 
 ## Commands Reference
 
-- `/erk:save-context-enriched-plan` - Create enriched plan from conversation
-- `/erk:create-wt-from-plan-file` - Create worktree from plan on disk
-- `/erk:implement-plan` - Execute plan in current worktree
+### Primary Workflow (Issue-Based)
+
+- `/erk:save-context-enriched-plan` - Create GitHub issue with enriched plan from conversation
+- `/erk:save-plan` - Create GitHub issue with basic plan (no enrichment)
+- `/erk:save-session-enriched-plan` - Create GitHub issue with plan enhanced by session discoveries
+- `erk implement #<issue>` - Create worktree and implement plan from GitHub issue
+- `/erk:implement-plan` - Execute plan in current worktree (called by `erk implement`)
+
+### Deprecated Commands (File-Based)
+
+- `/erk:create-wt-from-plan-file` - Create worktree from plan on disk (use `erk implement #<issue>` instead)
+- `/erk:create-plan-issue-from-plan-file` - Create issue from plan file (use save commands instead)

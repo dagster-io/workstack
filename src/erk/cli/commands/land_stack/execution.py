@@ -1,6 +1,5 @@
 """Core landing sequence execution for land-stack command."""
 
-import time
 from pathlib import Path
 
 import click
@@ -208,7 +207,7 @@ def _verify_and_update_pr_base(
         update_pr_base_with_retry()
 
         # Wait for GitHub to recalculate merge status after base update
-        time.sleep(2.0)
+        ctx.time.sleep(2.0)
 
         # Show completion message
         desc = _format_description(f"update PR #{pr_number} base to {expected_parent}", check)

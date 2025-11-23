@@ -285,7 +285,7 @@ class TestIssueLinkling:
         # Verify PR body was updated with "Closes #123" (should appear only once)
         github_state = ops.github().get_state()
         assert github_state.pr_titles[456] == "Add feature"
-        assert github_state.pr_bodies[456] == "Closes #123\n\nFull description"
+        assert github_state.pr_bodies[456] == "Full description\n\nCloses #123"
 
     def test_complete_with_issue_number_title_only_commit(self) -> None:
         """Test that PR body is 'Closes #N' when commit message has only title."""
@@ -299,10 +299,10 @@ class TestIssueLinkling:
         )
 
         assert result["success"] is True
-        # Verify PR body is just "Closes #789\n\n"
+        # Verify PR body is just "\n\nCloses #789"
         github_state = ops.github().get_state()
         assert github_state.pr_titles[456] == "Add feature"
-        assert github_state.pr_bodies[456] == "Closes #789\n\n"
+        assert github_state.pr_bodies[456] == "\n\nCloses #789"
 
     def test_complete_without_issue_number_no_closes_added(self) -> None:
         """Test that no 'Closes #N' is added when issue_number is None."""

@@ -1,7 +1,7 @@
 ---
 name: gt-simple-update-pr-submitter
 description: Simplified Graphite update-pr workflow for testing
-model: sonnet 
+model: sonnet
 color: blue
 tools: Bash
 ---
@@ -29,6 +29,7 @@ dot-agent run gt simple-update-pr
 Parse the JSON response and display appropriate message:
 
 **Success response:**
+
 ```json
 {
   "success": true,
@@ -40,6 +41,7 @@ Parse the JSON response and display appropriate message:
 Display: `✅ PR #123 updated: https://github.com/org/repo/pull/123`
 
 **Error response:**
+
 ```json
 {
   "success": false,

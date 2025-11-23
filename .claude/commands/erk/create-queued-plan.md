@@ -245,61 +245,22 @@ Find the most recent `*-plan.md` file at repository root:
    ls -t <repo-root>/*-plan.md | head -1
    ```
 
-### Step 4: Parse Plan File
+### Step 4: Create GitHub Issue (Single Command)
 
-Extract title and body from the selected plan file:
+Use the composite kit CLI command that handles the complete workflow for queued plans:
 
-1. Read file contents using Read tool
+- Reads plan file from disk
+- Extracts title from plan
+- Ensures erk-queue label exists
+- Creates GitHub issue with plan body and erk-queue label
+- Returns structured JSON result
 
-2. Extract title (try in order):
-   a. First, check for YAML front matter with `title:` field
-   b. If no front matter, extract first H1 heading (line starting with `# `)
-   c. If no H1, use filename without `-plan.md` suffix as title
+**Algorithm:**
 
-3. Body is the full plan markdown content
-
-### Step 5: Ensure Label Exists
-
-Check if the `erk-queue` label exists, and create it if needed:
-
-1. Check for label using gh CLI:
+1. Call the composite kit command with the plan file path:
 
    ```bash
-   gh label list --json name --jq '.[] | select(.name == "erk-queue") | .name'
-   ```
-
-2. If label doesn't exist (empty output), create it:
-
-   ```bash
-   gh label create "erk-queue" \
-     --description "Implementation plan queued for automatic processing by erk" \
-     --color "FFA500"
-   ```
-
-   Note: Color FFA500 is orange, indicating "queued for processing".
-
-3. If label already exists: Continue silently (no output needed)
-
-4. If label creation fails:
-
-   ```
-   ⚠️  Warning: Could not create erk-queue label
-
-   Command output: <stderr>
-
-   Continuing with issue creation...
-   ```
-
-   Continue to Step 6 (non-blocking warning - gh will still accept the label even if not in repo's label list)
-
-### Step 6: Create GitHub Issue
-
-Use the kit CLI command to create the issue:
-
-1. Create issue using kit CLI command:
-
-   ```bash
-   result=$(cat <path-to-plan-file> | dot-agent kit-command erk create-issue "<extracted-title>" --label "erk-queue")
+   result=$(dot-agent kit-command erk create-queued-plan "<path-to-plan-file>")
 
    # Parse JSON output
    if ! echo "$result" | jq -e '.success' > /dev/null; then
@@ -311,24 +272,31 @@ Use the kit CLI command to create the issue:
    issue_url=$(echo "$result" | jq -r '.issue_url')
    ```
 
-   Note: The kit CLI command handles body via stdin, eliminating permission prompts
-
-2. If kit command fails:
+2. If command fails:
 
    ```
    ❌ Error: Failed to create GitHub issue
 
-   Command output: <stderr>
-
    Troubleshooting:
-   - Check network connectivity
+   - Check file exists and is readable
+   - Check authentication: gh auth status
    - Verify repository access: gh repo view
-   - Check API rate limits: gh api rate_limit
+   - Check network connectivity
    ```
 
    Exit with error.
 
-### Step 7: Display Issue URL
+**What this command does internally:**
+
+- Reads plan file using Python (not shell cat)
+- Extracts title (H1 → H2 → first line fallback)
+- Ensures erk-queue label exists (creates if needed with orange color)
+- Creates issue with full plan as body and erk-queue label
+- Returns JSON: `{"success": true, "issue_number": 123, "issue_url": "..."}`
+
+**Note:** The erk-queue label indicates this issue is queued for automatic implementation by the erk system, as opposed to erk-plan which is for manual execution.
+
+### Step 5: Display Issue URL
 
 Show success message with issue information:
 
@@ -351,7 +319,7 @@ You can monitor progress:
 - Check Actions tab: <repo-url>/actions
 ```
 
-### Step 8: Link Issue to Worktree (if .impl/ exists)
+### Step 6: Link Issue to Worktree (if .impl/ exists)
 
 Check if current directory has a `.impl/` folder:
 
@@ -384,7 +352,7 @@ Check if current directory has a `.impl/` folder:
      The GitHub Actions workflow will create a new branch and implement automatically.
      ```
 
-### Step 9: Handle --link Flag
+### Step 7: Handle --link Flag
 
 If user provided `--link <issue-number>`:
 

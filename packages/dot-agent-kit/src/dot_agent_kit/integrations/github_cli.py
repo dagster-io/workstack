@@ -19,6 +19,14 @@ class IssueCreationResult:
     issue_url: str
 
 
+@dataclass(frozen=True)
+class LabelResult:
+    """Result of ensuring a label exists."""
+
+    exists: bool  # True if label existed before call
+    created: bool  # True if label was created by this call
+
+
 class DotAgentGitHubCli(ABC):
     """Abstract interface for GitHub CLI operations.
 
@@ -45,6 +53,28 @@ class DotAgentGitHubCli(ABC):
 
         Note:
             Uses LBYL pattern - returns success=False on error rather than raising exceptions.
+        """
+        ...
+
+    @abstractmethod
+    def ensure_label_exists(
+        self,
+        label: str,
+        description: str,
+        color: str,
+    ) -> LabelResult:
+        """Ensure GitHub label exists, creating if needed.
+
+        Args:
+            label: Label name
+            description: Label description for creation
+            color: Hex color code (e.g., "0E8A16")
+
+        Returns:
+            LabelResult indicating if label existed or was created
+
+        Note:
+            Uses LBYL pattern - checks if label exists before attempting creation.
         """
         ...
 
@@ -107,3 +137,55 @@ class RealDotAgentGitHubCli(DotAgentGitHubCli):
             issue_number=issue_number,
             issue_url=issue_url,
         )
+
+    def ensure_label_exists(
+        self,
+        label: str,
+        description: str,
+        color: str,
+    ) -> LabelResult:
+        """Ensure label exists using gh CLI.
+
+        First checks if label exists, then creates it if needed.
+        """
+        # Check if label exists using gh CLI
+        jq_filter = f'.[] | select(.name == "{label}") | .name'
+        check_cmd = ["gh", "label", "list", "--json", "name", "--jq", jq_filter]
+        check_result = subprocess.run(
+            check_cmd,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        # LBYL pattern: Check returncode and output
+        if check_result.returncode == 0 and check_result.stdout.strip() == label:
+            # Label exists
+            return LabelResult(exists=True, created=False)
+
+        # Label doesn't exist - create it
+        create_cmd = [
+            "gh",
+            "label",
+            "create",
+            label,
+            "--description",
+            description,
+            "--color",
+            color,
+        ]
+        create_result = subprocess.run(
+            create_cmd,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        # LBYL pattern: Check returncode
+        if create_result.returncode != 0:
+            # Creation failed - might be because label already exists
+            # This is acceptable (non-blocking)
+            return LabelResult(exists=True, created=False)
+
+        # Label created successfully
+        return LabelResult(exists=False, created=True)

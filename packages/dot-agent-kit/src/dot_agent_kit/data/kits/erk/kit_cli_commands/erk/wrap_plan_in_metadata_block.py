@@ -4,6 +4,8 @@ import sys
 
 import click
 
+from dot_agent_kit.data.kits.erk.plan_utils import wrap_plan_in_metadata_block as _wrap
+
 
 @click.command(name="wrap-plan-in-metadata-block")
 def wrap_plan_in_metadata_block() -> None:
@@ -27,8 +29,8 @@ def wrap_plan_in_metadata_block() -> None:
         click.echo("Error: Empty plan content received", err=True)
         raise SystemExit(1)
 
-    # Strip any leading/trailing whitespace
-    plan_content = plan_content.strip()
+    # Call pure function
+    result = _wrap(plan_content)
 
-    # Output the plan content as-is
-    click.echo(plan_content)
+    # Output the result
+    click.echo(result)

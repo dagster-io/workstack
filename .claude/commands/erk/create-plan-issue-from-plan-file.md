@@ -214,71 +214,22 @@ Find the most recent `*-plan.md` file at repository root:
    ls -t <repo-root>/*-plan.md | head -1
    ```
 
-### Step 4: Parse Plan File
+### Step 4: Create GitHub Issue (Single Command)
 
-Extract title and body from the selected plan file:
+Use the composite kit CLI command that handles the complete workflow from plan file:
 
-1. Read file contents using Read tool
+- Reads plan file from disk
+- Extracts title from plan
+- Ensures erk-plan label exists
+- Creates GitHub issue with plan body
+- Returns structured JSON result
 
-2. Extract title (try in order):
-   a. First, check for YAML front matter with `title:` field
-   b. If no front matter, extract first H1 heading (line starting with `# `)
-   c. If no H1, use filename without `-plan.md` suffix as title
+**Algorithm:**
 
-3. Body is the full plan markdown content
-
-### Step 5: Ensure Label Exists
-
-Check if the `erk-plan` label exists, and create it if needed:
-
-1. Check for label using gh CLI:
+1. Call the composite kit command with the plan file path:
 
    ```bash
-   gh label list --json name --jq '.[] | select(.name == "erk-plan") | .name'
-   ```
-
-2. If label doesn't exist (empty output), create it:
-
-   ```bash
-   gh label create "erk-plan" \
-     --description "Implementation plan created by erk" \
-     --color "0E8A16"
-   ```
-
-   Note: Color 0E8A16 is GitHub's default green color for planning/enhancement labels.
-
-3. If label already exists: Continue silently (no output needed)
-
-4. If label creation fails:
-
-   ```
-   ⚠️  Warning: Could not create erk-plan label
-
-   Command output: <stderr>
-
-   Continuing with issue creation...
-   ```
-
-   Continue to Step 6 (non-blocking warning - gh will still accept the label even if not in repo's label list)
-
-### Step 6: Create GitHub Issue
-
-Create the issue with simple body, then post structured comment:
-
-1. Wrap plan content (returns raw plan content):
-
-   ```bash
-   issue_body=$(cat <path-to-plan-file> | dot-agent kit-command erk wrap-plan-in-metadata-block)
-   if [ $? -ne 0 ]; then
-       echo "❌ Error: Failed to wrap plan in metadata block" >&2
-       exit 1
-   fi
-   ```
-
-2. Create issue using kit CLI command:
-
-   ```bash
-   result=$(echo "$issue_body" | dot-agent kit-command erk create-issue "<extracted-title>" --label "erk-plan")
+   result=$(dot-agent kit-command erk create-plan-issue-from-plan-file "<path-to-plan-file>")
 
    # Parse JSON output
    if ! echo "$result" | jq -e '.success' > /dev/null; then
@@ -290,41 +241,29 @@ Create the issue with simple body, then post structured comment:
    issue_url=$(echo "$result" | jq -r '.issue_url')
    ```
 
-   Note: The kit CLI commands handle content via stdin, eliminating permission prompts
-
-3. If kit command fails:
+2. If command fails:
 
    ```
    ❌ Error: Failed to create GitHub issue
 
-   Command output: <stderr>
-
    Troubleshooting:
-   - Check network connectivity
+   - Check file exists and is readable
+   - Check authentication: gh auth status
    - Verify repository access: gh repo view
-   - Check API rate limits: gh api rate_limit
+   - Check network connectivity
    ```
 
    Exit with error.
 
-4. Post structured comment with workflow instructions:
+**What this command does internally:**
 
-   ```bash
-   comment_result=$(dot-agent run erk post-plan-issue-comment \
-       --issue-number "$issue_number" \
-       --plan-content "$issue_body" \
-       --plan-title "<extracted-title>" \
-       --plan-file "<path-to-plan-file>")
+- Reads plan file using Python (not shell cat)
+- Extracts title (H1 → H2 → first line fallback)
+- Ensures erk-plan label exists (creates if needed)
+- Creates issue with full plan as body
+- Returns JSON: `{"success": true, "issue_number": 123, "issue_url": "..."}`
 
-   if [ $? -ne 0 ]; then
-       echo "⚠️  Warning: Failed to post plan comment to issue (issue created successfully)" >&2
-       echo "Issue URL: $issue_url" >&2
-   fi
-   ```
-
-   Note: This posts the structured comment with metadata block and workflow instructions
-
-### Step 7: Display Issue URL
+### Step 5: Display Issue URL
 
 Show success message with issue information:
 
@@ -339,7 +278,7 @@ You can now:
 - Create worktree: /erk:create-wt-from-plan-file
 ```
 
-### Step 8: Link Issue to Worktree (if .impl/ exists)
+### Step 6: Link Issue to Worktree (if .impl/ exists)
 
 Check if current directory has a `.impl/` folder:
 
@@ -366,7 +305,7 @@ Check if current directory has a `.impl/` folder:
 3. If `.impl/` doesn't exist:
    - Continue silently (no action needed)
 
-### Step 9: Handle --link Flag
+### Step 7: Handle --link Flag
 
 If user provided `--link <issue-number>`:
 

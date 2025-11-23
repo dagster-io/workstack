@@ -184,107 +184,29 @@ Suggested action:
 
 Exit with error.
 
-### Step 3: Wrap Plan in Metadata Block
+### Step 3: Create GitHub Issue (Single Command)
 
-Use the kit CLI command to wrap the plan content in a collapsible metadata block.
+Use the new composite kit CLI command that handles the complete workflow:
+
+- Extracts title from plan
+- Ensures erk-plan label exists
+- Creates GitHub issue with plan body
+- Returns structured JSON result
 
 **Algorithm:**
 
-1. Pass the extracted plan content to the kit CLI command:
+1. Save plan to temporary file (for clean stdin handling):
 
    ```bash
-   issue_body=$(echo "$plan_content" | dot-agent kit-command erk wrap-plan-in-metadata-block)
-   if [ $? -ne 0 ]; then
-       echo "❌ Error: Failed to wrap plan in metadata block" >&2
-       exit 1
-   fi
+   temp_plan=$(mktemp)
+   echo "$plan_content" > "$temp_plan"
    ```
 
-2. This creates a collapsible `<details>` block with the plan content embedded in YAML
-
-**Example output structure:**
-
-````markdown
-This issue contains an implementation plan:
-
-<details>
-<summary><code>erk-plan</code></summary>
-```yaml
-# Original Plan Title
-
-[Original plan content unchanged...]
-````
-
-</details>
-```
-
-**Store this as `$issue_body`** for use in Step 6.
-
-### Step 4: Extract Title from Plan
-
-Extract title from the plan content to use as GitHub issue title.
-
-**Algorithm (try in priority order):**
-
-1. Check for YAML front matter `title:` field in extracted plan
-2. Extract first H1 heading (`# Title`)
-3. Extract first H2 heading (`## Title`)
-4. Fallback: Use first non-empty line
-
-**Title cleanup:**
-
-- Remove markdown formatting (`#`, `##`, backticks, etc.)
-- Trim leading/trailing whitespace
-- Limit to 100 characters (GitHub recommendation)
-
-**If title extraction completely fails:**
-
-Use fallback title: `"Implementation Plan"`
-
-### Step 5: Ensure GitHub Label Exists
-
-Check if the `erk-plan` label exists, and create it if needed.
-
-1. Check for label using gh CLI:
+2. Call the composite kit command:
 
    ```bash
-   gh label list --json name --jq '.[] | select(.name == "erk-plan") | .name'
-   ```
-
-2. If label doesn't exist (empty output), create it:
-
-   ```bash
-   gh label create "erk-plan" \
-     --description "Implementation plan for manual execution" \
-     --color "0E8A16"
-   ```
-
-   Note: Color 0E8A16 is GitHub's default green color for planning labels.
-
-3. If label already exists: Continue silently (no output needed)
-
-4. If label creation fails:
-
-   ```
-   ⚠️  Warning: Could not create erk-plan label
-
-   Command output: <stderr>
-
-   Continuing with issue creation...
-   ```
-
-   Continue to Step 6 (non-blocking warning - gh will accept the label even if not in repo's label list)
-
-### Step 6: Create GitHub Issue
-
-Use gh CLI to create the issue with plan content.
-
-**CRITICAL:** Issue body must include the metadata block from Step 3.
-
-1. Create the issue using the kit CLI command:
-
-   ```bash
-   result=$(echo "$issue_body" | dot-agent kit-command erk create-issue "$title" --label "erk-plan")
+   result=$(cat "$temp_plan" | dot-agent kit-command erk create-plan-issue-from-context)
+   rm "$temp_plan"
 
    # Parse JSON output
    if ! echo "$result" | jq -e '.success' > /dev/null; then
@@ -296,14 +218,10 @@ Use gh CLI to create the issue with plan content.
    issue_url=$(echo "$result" | jq -r '.issue_url')
    ```
 
-   Note: The kit CLI command handles body via stdin, eliminating permission prompts
-
-2. If kit command fails:
+3. If command fails:
 
    ```
    ❌ Error: Failed to create GitHub issue
-
-   Details: <stderr>
 
    Suggested action:
    1. Check authentication: gh auth status
@@ -313,7 +231,14 @@ Use gh CLI to create the issue with plan content.
 
    Exit with error.
 
-### Step 7: Display Success Output
+**What this command does internally:**
+
+- Extracts title (H1 → H2 → first line fallback)
+- Ensures erk-plan label exists (creates if needed)
+- Creates issue with full plan as body
+- Returns JSON: `{"success": true, "issue_number": 123, "issue_url": "..."}`
+
+### Step 4: Display Success Output
 
 After successfully creating the issue, output:
 
@@ -359,8 +284,7 @@ Next steps:
 2. **gh CLI not found** - See Step 1
 3. **gh not authenticated** - See Step 1
 4. **No plan found** - See Step 2
-5. **Label creation failed** - See Step 5 (non-blocking warning)
-6. **Issue creation failed** - See Step 6
+5. **Issue creation failed** - See Step 3 (kit command handles label creation internally)
 
 ## Important Notes
 

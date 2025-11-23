@@ -150,9 +150,7 @@ def has_erk_plan_label(issue_data: dict[str, Any]) -> bool:
     return False
 
 
-def create_worktree_from_plan(
-    plan_content: str, temp_dir: Path
-) -> dict[str, str] | None:
+def create_worktree_from_plan(plan_content: str, temp_dir: Path) -> dict[str, str] | None:
     """Create worktree using erk create command.
 
     Args:
@@ -189,9 +187,7 @@ def create_worktree_from_plan(
         return None
 
 
-def post_creation_comment(
-    issue_number: int, worktree_name: str, branch_name: str
-) -> bool:
+def post_creation_comment(issue_number: int, worktree_name: str, branch_name: str) -> bool:
     """Post worktree creation comment to GitHub issue.
 
     Args:
@@ -272,17 +268,14 @@ def create_wt_from_issue(issue_reference: str) -> None:
             err=True,
         )
         click.echo(f"Current labels: {label_list}", err=True)
-        click.echo(
-            "\nAdd the 'erk-plan' label to the issue and try again.", err=True
-        )
+        click.echo("\nAdd the 'erk-plan' label to the issue and try again.", err=True)
         raise SystemExit(1)
 
     # Step 5: Extract plan from issue body
     body = issue_data.get("body", "")
     if not body or not body.strip():
         click.echo(
-            click.style("Error: ", fg="red")
-            + f"Issue #{issue_number} has no body content",
+            click.style("Error: ", fg="red") + f"Issue #{issue_number} has no body content",
             err=True,
         )
         raise SystemExit(1)
@@ -314,8 +307,7 @@ def create_wt_from_issue(issue_reference: str) -> None:
         except Exception as e:
             # Non-fatal: warn but don't fail
             click.echo(
-                click.style("Warning: ", fg="yellow")
-                + f"Failed to save issue reference: {e}",
+                click.style("Warning: ", fg="yellow") + f"Failed to save issue reference: {e}",
                 err=True,
             )
 
@@ -339,5 +331,6 @@ def create_wt_from_issue(issue_reference: str) -> None:
     click.echo("**Next step:**")
     click.echo("")
     click.echo(
-        f"`erk checkout {branch_name} && claude --permission-mode acceptEdits \"/erk:implement-plan\"`"
+        f"`erk checkout {branch_name} && "
+        f'claude --permission-mode acceptEdits "/erk:implement-plan"`'
     )

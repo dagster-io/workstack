@@ -3,12 +3,14 @@
 **Location**: `src/erk/data/kits/erk/kit_cli_commands/erk/post_progress_comment.py:85-92`
 
 **Changes**:
+
 1. Replace the manual `if not progress_file.exists()` block with `Ensure.path_exists(ctx, progress_file, f"Progress file not found: {progress_file}")`
 2. Remove the now-unused `ProgressError` dataclass import and definition (if it's only used for this error case)
 3. Remove the `json` and `asdict` imports if they're only used for this error case
 4. Note: Success responses will remain as JSON with `ProgressSuccess` dataclass (per clarification)
 
 **Result**:
+
 - Standardizes error handling with other erk commands as part of the Ensure expansion initiative (commit 1e241317)
 - Error output changes from JSON to styled text: `Error: Progress file not found: /path/to/file`
 - Exit code changes from 0 to 1 (standard error exit, breaking the || true pattern)
@@ -80,6 +82,7 @@
 **Clarifications**: User confirmed that success responses should remain as JSON (ProgressSuccess dataclass), while only error responses are converted to styled text via Ensure
 
 **Key Decision Points**:
+
 1. This is incremental standardization - part of broader Ensure migration (1e241317)
 2. Exit code changes from 0 to 1, which is a breaking change for callers using `|| true` pattern
 3. Partial JSON → styled text conversion may create output format inconsistency

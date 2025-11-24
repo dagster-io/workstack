@@ -1,7 +1,7 @@
 ---
 name: gt-update-pr-submitter
 description: Specialized agent for the Graphite update-pr workflow. Handles the complete workflow for updating an existing PR by staging changes, committing with a simple message, restacking, and submitting. Optimized for speed with mechanical operations only.
-model: sonnet
+model: haiku
 color: blue
 tools: Bash
 ---

@@ -397,6 +397,58 @@ class WorkflowStartedSchema(MetadataBlockSchema):
         return "workflow-started"
 
 
+@dataclass(frozen=True)
+class PlanRetrySchema(MetadataBlockSchema):
+    """Schema for plan-retry blocks (posted by erk plan retry)."""
+
+    def validate(self, data: dict[str, Any]) -> None:
+        """Validate plan-retry data structure."""
+        required_fields = {
+            "retry_timestamp",
+            "triggered_by",
+            "retry_count",
+        }
+        optional_fields = {"previous_retry_timestamp"}
+
+        # Check required fields exist
+        missing = required_fields - set(data.keys())
+        if missing:
+            raise ValueError(f"Missing required fields: {', '.join(sorted(missing))}")
+
+        # Validate string fields
+        if not isinstance(data["retry_timestamp"], str):
+            raise ValueError("retry_timestamp must be a string")
+        if len(data["retry_timestamp"]) == 0:
+            raise ValueError("retry_timestamp must not be empty")
+
+        if not isinstance(data["triggered_by"], str):
+            raise ValueError("triggered_by must be a string")
+        if len(data["triggered_by"]) == 0:
+            raise ValueError("triggered_by must not be empty")
+
+        # Validate retry_count
+        if not isinstance(data["retry_count"], int):
+            raise ValueError("retry_count must be an integer")
+        if data["retry_count"] < 1:
+            raise ValueError("retry_count must be at least 1")
+
+        # Validate optional fields
+        if "previous_retry_timestamp" in data:
+            if not isinstance(data["previous_retry_timestamp"], str):
+                raise ValueError("previous_retry_timestamp must be a string")
+            if len(data["previous_retry_timestamp"]) == 0:
+                raise ValueError("previous_retry_timestamp must not be empty")
+
+        # Check for unexpected fields
+        known_fields = required_fields | optional_fields
+        unknown_fields = set(data.keys()) - known_fields
+        if unknown_fields:
+            raise ValueError(f"Unknown fields: {', '.join(sorted(unknown_fields))}")
+
+    def get_key(self) -> str:
+        return "plan-retry"
+
+
 # Backward compatibility alias
 PlanIssueSchema = PlanSchema
 

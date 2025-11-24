@@ -34,9 +34,10 @@ jobs:
           curl -LsSf https://astral.sh/uv/install.sh | sh
           source $HOME/.cargo/env
 
-          # Install dot-agent from local package
+          # Install dot-agent from local package with erk in its environment
+          # This allows dot-agent-kit to import from erk (needed for kit commands)
           cd $GITHUB_WORKSPACE
-          uv tool install --from ./packages/dot-agent-kit dot-agent-kit
+          uv tool install --from ./packages/dot-agent-kit --with . dot-agent-kit
 
       - name: Post workflow started comment
         env:
@@ -97,8 +98,9 @@ jobs:
           cd $GITHUB_WORKSPACE
           uv tool install --from . erk
 
-          # Install dot-agent from local package
-          uv tool install --from ./packages/dot-agent-kit dot-agent-kit
+          # Install dot-agent from local package with erk in its environment
+          # This allows dot-agent-kit to import from erk (needed for kit commands)
+          uv tool install --from ./packages/dot-agent-kit --with . dot-agent-kit
 
           # Install Claude Code
           npm install -g @anthropic-ai/claude-code

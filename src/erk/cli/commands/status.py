@@ -3,7 +3,7 @@
 import click
 
 from erk.cli.core import discover_repo_context
-from erk.cli.output import user_output
+from erk.cli.ensure import Ensure
 from erk.core.context import ErkContext
 from erk.core.parallel_task_runner import RealParallelTaskRunner
 from erk.status.collectors.git import GitStatusCollector
@@ -35,9 +35,9 @@ def status_cmd(ctx: ErkContext) -> None:
                 current_worktree_path = wt_path_resolved
                 break
 
-    if current_worktree_path is None:
-        user_output("Error: Not in a git worktree")
-        raise SystemExit(1)
+    Ensure.in_git_worktree(ctx, current_worktree_path)
+    # After Ensure check, we know current_worktree_path is not None
+    assert current_worktree_path is not None
 
     # Create collectors
     collectors = [

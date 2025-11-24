@@ -333,11 +333,20 @@ jobs:
           source $HOME/.cargo/env
           WORKFLOW_RUN_URL="$SERVER_URL/$REPOSITORY/actions/runs/$WORKFLOW_RUN_ID"
 
-          dot-agent run erk post-workflow-started-comment \
+          echo "Posting workflow started comment to issue #$ISSUE_NUMBER..."
+          RESULT=$(dot-agent run erk post-workflow-started-comment \
             --issue-number "$ISSUE_NUMBER" \
             --workflow-run-id "$WORKFLOW_RUN_ID" \
-            --workflow-run-url "$WORKFLOW_RUN_URL" \
-            2>/dev/null || true
+            --workflow-run-url "$WORKFLOW_RUN_URL" 2>&1) || true
+
+          echo "$RESULT"
+
+          # Check if successful
+          if echo "$RESULT" | grep -q '"success": true'; then
+            echo "✓ Workflow started comment posted successfully"
+          else
+            echo "⚠️  Failed to post workflow started comment (workflow will continue)"
+          fi
 
       - name: Setup environment
         run: |

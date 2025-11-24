@@ -1,15 +1,15 @@
 ---
-description: Extract plan from Claude session and create GitHub issue (no enrichment) (v2 - agent-based)
+description: Extract plan from Claude session and create GitHub issue (no enrichment)
 ---
 
-# /erk:save-raw-plan-v2
+# /erk:save-raw-plan
 
-Extracts the latest implementation plan from Claude session files and creates a GitHub issue with the raw plan content. This is the **v2 agent-based version** that uses structural enforcement instead of text warnings.
+Extracts the latest implementation plan from Claude session files and creates a GitHub issue with the raw plan content. This command uses an **agent-based architecture** with structural enforcement instead of text warnings.
 
 ## Usage
 
 ```bash
-/erk:save-raw-plan-v2
+/erk:save-raw-plan
 ```
 
 ## Purpose
@@ -31,15 +31,15 @@ This command provides a **fast path** for creating GitHub issues from session pl
 
 **Fast Path vs Enriched Path:**
 
-- **save-raw-plan-v2** (this command): Session files → Raw plan → GitHub issue (fast, deterministic)
-- **save-plan-v2**: Conversation context → Enriched plan → GitHub issue (interactive, comprehensive)
+- **save-raw-plan** (this command): Session files → Raw plan → GitHub issue (fast, deterministic)
+- **save-plan**: Conversation context → Enriched plan → GitHub issue (interactive, comprehensive)
 
 ## Architecture
 
 This command uses the same **plan-extractor agent** but in `raw` mode:
 
 ```
-/erk:save-raw-plan-v2 (orchestrator)
+/erk:save-raw-plan (orchestrator)
   ↓
   ├─→ Validate prerequisites (git repo, gh auth)
   ├─→ Determine session ID (from environment or current session)
@@ -56,7 +56,7 @@ This command uses the same **plan-extractor agent** but in `raw` mode:
   └─→ Display results (issue URL + copy-pastable commands)
 ```
 
-**Key Innovation:** Same structural safety as save-plan-v2 - agent physically cannot edit files.
+**Key Innovation:** Same structural safety as save-plan - agent physically cannot edit files.
 
 ## How It Works
 
@@ -70,7 +70,7 @@ This command uses the same **plan-extractor agent** but in `raw` mode:
 
 ## Command Instructions
 
-You are executing the `/erk:save-raw-plan-v2` command. Follow these steps carefully:
+You are executing the `/erk:save-raw-plan` command. Follow these steps carefully:
 
 ### Step 1: Validate Prerequisites
 
@@ -193,7 +193,7 @@ Common causes:
 Try:
 - Ensure you used ExitPlanMode to present a plan
 - Check session files exist: ls ~/.claude/projects/[session_id]/data/
-- Use /erk:save-plan-v2 with conversation context instead
+- Use /erk:save-plan with conversation context instead
 ```
 
 ### Step 4: Parse Agent Response
@@ -326,7 +326,7 @@ Details: No ExitPlanMode tool use found in session JSONL files
 Suggested action:
   1. Ensure you used ExitPlanMode to present a plan in this session
   2. Check session files: ls ~/.claude/projects/[session_id]/data/
-  3. Try /erk:save-plan-v2 with conversation context instead
+  3. Try /erk:save-plan with conversation context instead
 ```
 
 ### Session Files Not Found
@@ -340,7 +340,7 @@ Expected location: ~/.claude/projects/[session_id]/data/*.jsonl
 Suggested action:
   1. Verify session ID is correct
   2. Check directory exists and has read permissions
-  3. Use /erk:save-plan-v2 with conversation context instead
+  3. Use /erk:save-plan with conversation context instead
 ```
 
 ### GitHub CLI Not Authenticated
@@ -355,12 +355,12 @@ To use this command, authenticate with GitHub:
 Then try again.
 ```
 
-## Comparison with v1
+## Architecture Benefits
 
-| Feature         | v1 (save-raw-plan)    | v2 (save-raw-plan-v2)            |
+| Aspect          | Previous Design       | Current Design                   |
 | --------------- | --------------------- | -------------------------------- |
 | Enforcement     | Text warnings         | Structural (tool restrictions)   |
-| Agent           | Inline command logic  | Dedicated agent (raw mode)       |
+| Implementation  | Inline command logic  | Dedicated agent (raw mode)       |
 | Safety          | Behavioral compliance | Physically impossible to violate |
 | Session parsing | Kit CLI direct        | Agent delegation                 |
 | Bypass-safe     | ❌ No                 | ✅ Yes                           |
@@ -400,8 +400,8 @@ If multiple ExitPlanMode entries exist, the agent selects the most recent by fil
 - **Bypass-Safe**: Works correctly even with bypass permissions
 - **Reuses Agent**: Same plan-extractor agent, just in raw mode
 - **Command Comparison**:
-  - `save-raw-plan-v2`: Session files → Raw plan → GitHub issue (this command)
-  - `save-plan-v2`: Conversation → Enriched plan → GitHub issue (interactive)
+  - `save-raw-plan`: Session files → Raw plan → GitHub issue (this command)
+  - `save-plan`: Conversation → Enriched plan → GitHub issue (interactive)
 
 ## Development Notes
 

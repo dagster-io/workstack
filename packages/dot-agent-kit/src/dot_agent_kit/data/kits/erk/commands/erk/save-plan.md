@@ -1,8 +1,8 @@
 ---
-description: Extract plan from conversation, fully enhance it, and create GitHub issue directly (v2 - agent-based)
+description: Extract plan from conversation, fully enhance it, and create GitHub issue directly
 ---
 
-# /erk:save-plan-v2
+# /erk:save-plan
 
 ⚠️ **CRITICAL: This command creates a GitHub issue with the plan - it does NOT implement code!**
 
@@ -10,7 +10,7 @@ description: Extract plan from conversation, fully enhance it, and create GitHub
 
 **Extract an implementation plan from conversation, enhance it for autonomous execution, and create a GitHub issue directly.**
 
-This is the **v2 agent-based version** that uses structural enforcement (tool restrictions) instead of text warnings to prevent accidental code implementation.
+This command uses an **agent-based architecture** with structural enforcement (tool restrictions) to prevent accidental code implementation.
 
 **What this command does:**
 
@@ -34,14 +34,14 @@ This is the **v2 agent-based version** that uses structural enforcement (tool re
 ## Usage
 
 ```bash
-/erk:save-plan-v2 [guidance]
+/erk:save-plan [guidance]
 ```
 
 **Examples:**
 
-- `/erk:save-plan-v2` - Create GitHub issue with enhanced plan
-- `/erk:save-plan-v2 "Make error handling more robust and add retry logic"` - Apply guidance to plan
-- `/erk:save-plan-v2 "Fix: Use LBYL instead of try/except throughout"` - Apply corrections to plan
+- `/erk:save-plan` - Create GitHub issue with enhanced plan
+- `/erk:save-plan "Make error handling more robust and add retry logic"` - Apply guidance to plan
+- `/erk:save-plan "Fix: Use LBYL instead of try/except throughout"` - Apply corrections to plan
 
 ## Prerequisites
 
@@ -56,7 +56,7 @@ This is the **v2 agent-based version** that uses structural enforcement (tool re
 This command uses a **specialized agent** for plan extraction/enrichment instead of inline command logic:
 
 ```
-/erk:save-plan-v2 (orchestrator)
+/erk:save-plan (orchestrator)
   ↓
   ├─→ Validate prerequisites (git repo, gh auth)
   ├─→ Launch plan-extractor agent (Task tool)
@@ -132,7 +132,7 @@ This command succeeds when ALL of the following are true:
 
 ## Command Instructions
 
-You are executing the `/erk:save-plan-v2` command. Follow these steps carefully:
+You are executing the `/erk:save-plan` command. Follow these steps carefully:
 
 ### Step 1: Validate Prerequisites
 
@@ -393,14 +393,14 @@ Common causes:
 - GitHub API rate limit
 ```
 
-## Comparison with v1
+## Architecture Benefits
 
-| Feature       | v1 (save-plan)                  | v2 (save-plan-v2)                |
+| Aspect        | Previous Design                 | Current Design                   |
 | ------------- | ------------------------------- | -------------------------------- |
 | Enforcement   | Text warnings (7 instances)     | Structural (tool restrictions)   |
-| Agent         | Inline command logic            | Dedicated agent                  |
-| Safety        | Relies on behavioral compliance | Physically impossible to violate |
-| Lines of code | 402 lines                       | ~120 lines (orchestrator)        |
+| Implementation| Inline command logic            | Dedicated agent                  |
+| Safety        | Behavioral compliance           | Physically impossible to violate |
+| Code size     | 402 lines                       | ~120 lines (orchestrator)        |
 | Bypass-safe   | ❌ No                           | ✅ Yes                           |
 
 ## Troubleshooting
@@ -436,7 +436,7 @@ Common causes:
 
 **For maintainers:**
 
-This v2 command demonstrates the **agent-based orchestration pattern**:
+This command demonstrates the **agent-based orchestration pattern**:
 
 1. Command validates prerequisites
 2. Command launches specialized agent with tool restrictions

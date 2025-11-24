@@ -292,3 +292,26 @@ class GitHub(ABC):
             Only includes entries for titles that have matching workflow runs.
         """
         ...
+
+    @abstractmethod
+    def poll_for_workflow_run(
+        self,
+        repo_root: Path,
+        workflow: str,
+        branch_name: str,
+        timeout: int = 30,
+        poll_interval: int = 2,
+    ) -> str | None:
+        """Poll for a workflow run matching branch name within timeout.
+
+        Args:
+            repo_root: Repository root directory
+            workflow: Workflow filename (e.g., "dispatch-erk-queue.yml")
+            branch_name: Expected branch name to match
+            timeout: Maximum seconds to poll (default: 30)
+            poll_interval: Seconds between poll attempts (default: 2)
+
+        Returns:
+            Run ID as string if found within timeout, None otherwise
+        """
+        ...

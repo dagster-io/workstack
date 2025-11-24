@@ -1,0 +1,160 @@
+"""Command to retry a queued plan."""
+
+import subprocess
+from datetime import UTC, datetime
+from urllib.parse import urlparse
+
+import click
+from erk_shared.github.metadata import (
+    PlanRetrySchema,
+    create_metadata_block,
+    parse_metadata_blocks,
+    render_erk_issue_event,
+)
+
+from erk.cli.core import discover_repo_context
+from erk.cli.output import user_output
+from erk.core.context import ErkContext
+from erk.core.repo_discovery import ensure_erk_metadata_dir
+
+ERK_QUEUE_LABEL = "erk-queue"
+ERK_PLAN_LABEL = "erk-plan"
+
+
+@click.command("retry")
+@click.argument("identifier", type=str)
+@click.pass_obj
+def retry_plan(ctx: ErkContext, identifier: str) -> None:
+    """Retry a queued plan by re-triggering the GitHub Actions workflow.
+
+    Removes and re-adds the erk-queue label to trigger the workflow again.
+    Tracks retry count via metadata comments.
+
+    Args:
+        identifier: Plan identifier (e.g., "42" or GitHub URL)
+    """
+    repo = discover_repo_context(ctx, ctx.cwd)
+    ensure_erk_metadata_dir(repo)
+    repo_root = repo.root
+
+    # Parse identifier to get issue number
+    if identifier.isdigit():
+        issue_number = int(identifier)
+    else:
+        # Parse GitHub URL
+        parsed = urlparse(identifier)
+        if parsed.hostname == "github.com" and parsed.path:
+            parts = parsed.path.rstrip("/").split("/")
+            if len(parts) >= 2 and parts[-2] == "issues":
+                try:
+                    issue_number = int(parts[-1])
+                except ValueError as e:
+                    user_output(click.style("Error: ", fg="red") + "Invalid issue number in URL")
+                    raise SystemExit(1) from e
+            else:
+                user_output(click.style("Error: ", fg="red") + "Invalid GitHub issue URL")
+                raise SystemExit(1)
+        else:
+            user_output(
+                click.style("Error: ", fg="red")
+                + "Invalid identifier. Use issue number or GitHub URL"
+            )
+            raise SystemExit(1)
+
+    # Fetch issue from GitHub
+    try:
+        issue = ctx.issues.get_issue(repo_root, issue_number)
+    except RuntimeError as e:
+        user_output(click.style("Error: ", fg="red") + str(e))
+        raise SystemExit(1) from e
+
+    # Validate issue state (LBYL pattern)
+    if issue.state != "OPEN":
+        user_output(click.style("Error: ", fg="red") + "Cannot retry closed plan")
+        raise SystemExit(1)
+
+    if ERK_PLAN_LABEL not in issue.labels:
+        user_output(click.style("Error: ", fg="red") + "Issue is not an erk plan")
+        raise SystemExit(1)
+
+    if ERK_QUEUE_LABEL not in issue.labels:
+        user_output(
+            click.style("Error: ", fg="red")
+            + "Plan has not been queued yet (use 'erk submit' first)"
+        )
+        raise SystemExit(1)
+
+    # Calculate retry count by parsing all comments
+    try:
+        comments = ctx.issues.get_issue_comments(repo_root, issue_number)
+    except RuntimeError as e:
+        user_output(click.style("Error: ", fg="red") + str(e))
+        raise SystemExit(1) from e
+
+    # Parse all comments to find previous retry metadata
+    previous_retry_count = 0
+    previous_retry_timestamp = None
+
+    for comment_body in comments:
+        blocks = parse_metadata_blocks(comment_body)
+        for block in blocks:
+            if block.key == "plan-retry":
+                retry_count = block.data.get("retry_count", 0)
+                if retry_count > previous_retry_count:
+                    previous_retry_count = retry_count
+                    previous_retry_timestamp = block.data.get("retry_timestamp")
+
+    new_retry_count = previous_retry_count + 1
+
+    # Get current user from git config
+    try:
+        result = subprocess.run(
+            ["git", "config", "user.name"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        triggered_by = result.stdout.strip()
+    except subprocess.CalledProcessError:
+        triggered_by = "unknown"
+
+    if not triggered_by:
+        triggered_by = "unknown"
+
+    # Remove and re-add the erk-queue label
+    try:
+        ctx.issues.remove_label_from_issue(repo_root, issue_number, ERK_QUEUE_LABEL)
+        ctx.issues.ensure_label_on_issue(repo_root, issue_number, ERK_QUEUE_LABEL)
+    except RuntimeError as e:
+        user_output(click.style("Error: ", fg="red") + str(e))
+        raise SystemExit(1) from e
+
+    # Post metadata comment with retry information
+    retry_timestamp = datetime.now(UTC).isoformat()
+    metadata_data = {
+        "retry_timestamp": retry_timestamp,
+        "triggered_by": triggered_by,
+        "retry_count": new_retry_count,
+    }
+
+    if previous_retry_timestamp is not None:
+        metadata_data["previous_retry_timestamp"] = previous_retry_timestamp
+
+    schema = PlanRetrySchema()
+    metadata_block = create_metadata_block(
+        key=schema.get_key(),
+        data=metadata_data,
+        schema=schema,
+    )
+    comment_body = render_erk_issue_event(
+        title=f"🔄 Plan requeued (retry #{new_retry_count})",
+        metadata=metadata_block,
+    )
+
+    try:
+        ctx.issues.add_comment(repo_root, issue_number, comment_body)
+    except RuntimeError as e:
+        user_output(click.style("Error: ", fg="red") + str(e))
+        raise SystemExit(1) from e
+
+    user_output(f"✅ Plan #{issue_number} requeued (retry #{new_retry_count})")

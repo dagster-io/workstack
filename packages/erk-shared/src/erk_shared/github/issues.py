@@ -205,6 +205,20 @@ class GitHubIssues(ABC):
         ...
 
     @abstractmethod
+    def remove_label_from_issue(self, repo_root: Path, issue_number: int, label: str) -> None:
+        """Remove a label from an existing issue.
+
+        Args:
+            repo_root: Repository root directory
+            issue_number: Issue number to remove label from
+            label: Label name to remove
+
+        Raises:
+            RuntimeError: If gh CLI fails or issue not found
+        """
+        ...
+
+    @abstractmethod
     def close_issue(self, repo_root: Path, number: int) -> None:
         """Close a GitHub issue.
 
@@ -453,6 +467,16 @@ class RealGitHubIssues(GitHubIssues):
         cmd = ["gh", "issue", "edit", str(issue_number), "--add-label", label]
         execute_gh_command(cmd, repo_root)
 
+    def remove_label_from_issue(self, repo_root: Path, issue_number: int, label: str) -> None:
+        """Remove label from issue using gh CLI.
+
+        Note: Uses gh's native error handling - gh CLI raises RuntimeError
+        on failures (not installed, not authenticated, issue not found).
+        If the label doesn't exist on the issue, gh CLI handles gracefully.
+        """
+        cmd = ["gh", "issue", "edit", str(issue_number), "--remove-label", label]
+        execute_gh_command(cmd, repo_root)
+
     def close_issue(self, repo_root: Path, number: int) -> None:
         """Close issue using gh CLI.
 
@@ -691,6 +715,32 @@ class FakeGitHubIssues(GitHubIssues):
                 updated_at=current_issue.updated_at,
             )
 
+    def remove_label_from_issue(self, repo_root: Path, issue_number: int, label: str) -> None:
+        """Remove label from issue in fake storage.
+
+        Raises:
+            RuntimeError: If issue number not found (simulates gh CLI error)
+        """
+        if issue_number not in self._issues:
+            msg = f"Issue #{issue_number} not found"
+            raise RuntimeError(msg)
+
+        # Get current issue and create updated version without the label
+        current_issue = self._issues[issue_number]
+        if label in current_issue.labels:
+            updated_labels = [lbl for lbl in current_issue.labels if lbl != label]
+            self._issues[issue_number] = IssueInfo(
+                number=current_issue.number,
+                title=current_issue.title,
+                body=current_issue.body,
+                state=current_issue.state,
+                url=current_issue.url,
+                labels=updated_labels,
+                assignees=current_issue.assignees,
+                created_at=current_issue.created_at,
+                updated_at=current_issue.updated_at,
+            )
+
     def close_issue(self, repo_root: Path, number: int) -> None:
         """Close issue in fake storage.
 
@@ -788,6 +838,10 @@ class DryRunGitHubIssues(GitHubIssues):
 
     def ensure_label_on_issue(self, repo_root: Path, issue_number: int, label: str) -> None:
         """No-op for ensuring label in dry-run mode (idempotent)."""
+        pass
+
+    def remove_label_from_issue(self, repo_root: Path, issue_number: int, label: str) -> None:
+        """No-op for removing label in dry-run mode."""
         pass
 
     def close_issue(self, repo_root: Path, number: int) -> None:

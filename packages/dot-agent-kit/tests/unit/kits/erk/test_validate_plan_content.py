@@ -1,7 +1,6 @@
 """Unit tests for validate-plan-content kit CLI command."""
 
 import json
-from io import StringIO
 
 from click.testing import CliRunner
 
@@ -9,7 +8,6 @@ from erk.data.kits.erk.kit_cli_commands.erk.validate_plan_content import (
     _validate_plan_content,
     validate_plan_content,
 )
-
 
 # Test the internal validation function
 

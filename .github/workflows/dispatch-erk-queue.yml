@@ -167,45 +167,11 @@ jobs:
           git fetch origin "$TRUNK_BRANCH"
           git checkout -b "$BRANCH_NAME" "origin/$TRUNK_BRANCH"
 
-          # Fetch plan content using erk
+          # Fetch plan content using erk kit CLI command
           echo "Fetching plan content for issue #$ISSUE_NUMBER..."
 
-          # Use erk's Python API to fetch plan and create .erp/ folder
-          uv run --with . python << 'PYTHON_SCRIPT'
-          import sys
-          import os
-          import json
-          from pathlib import Path
-          from erk.core.context import create_context
-          from erk_shared.erp_folder import create_erp_folder
-
-          # Get environment variables
-          issue_number = int(os.environ["ISSUE_NUMBER"])
-          issue_title = os.environ["ISSUE_TITLE"]
-          repo_root = Path.cwd()
-
-          # Create context to access plan store
-          ctx = create_context(dry_run=False, script=True)
-
-          try:
-              # Fetch plan
-              plan = ctx.plan_store.get_plan(repo_root, str(issue_number))
-
-              # Create .erp/ folder
-              create_erp_folder(
-                  plan_content=plan.body,
-                  issue_number=issue_number,
-                  issue_url=plan.url,
-                  issue_title=issue_title,
-                  repo_root=repo_root,
-              )
-
-              print(f"✅ Created .erp/ folder with plan content")
-              sys.exit(0)
-          except Exception as e:
-              print(f"❌ Error: {e}")
-              sys.exit(1)
-          PYTHON_SCRIPT
+          # Use testable kit CLI command instead of inline script
+          dot-agent run erk create-erp-from-issue "$ISSUE_NUMBER" "$ISSUE_TITLE"
 
           if [ $? -ne 0 ]; then
             gh issue comment "$ISSUE_NUMBER" --body "❌ **Branch Setup Failed**

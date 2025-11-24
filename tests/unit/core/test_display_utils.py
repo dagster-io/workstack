@@ -3,8 +3,8 @@
 from erk.core.display_utils import format_worktree_line
 
 
-def test_pr_title_uses_bright_magenta() -> None:
-    """Test that PR titles render with bright_magenta color."""
+def test_pr_title_uses_cyan() -> None:
+    """Test that PR titles render with cyan color."""
     # Arrange
     name = "feature-branch"
     branch = "feature-branch"
@@ -23,14 +23,14 @@ def test_pr_title_uses_bright_magenta() -> None:
         pr_title=pr_title,
     )
 
-    # Assert: Check for bright magenta ANSI escape code (95m)
-    # ANSI bright_magenta is \x1b[95m
-    assert "\x1b[95m" in result, "Expected bright_magenta color code for PR title"
+    # Assert: Check for cyan ANSI escape code (36m)
+    # ANSI cyan is \x1b[36m
+    assert "\x1b[36m" in result, "Expected cyan color code for PR title"
     assert pr_title in result, "Expected PR title in output"
 
 
-def test_plan_title_uses_cyan() -> None:
-    """Test that plan titles render with cyan color."""
+def test_plan_title_uses_bright_magenta() -> None:
+    """Test that plan titles render with bright_magenta color."""
     # Arrange
     name = "feature-branch"
     branch = "feature-branch"
@@ -49,9 +49,9 @@ def test_plan_title_uses_cyan() -> None:
         pr_title=pr_title,
     )
 
-    # Assert: Check for cyan ANSI escape code (36m)
-    # ANSI cyan is \x1b[36m
-    assert "\x1b[36m" in result, "Expected cyan color code for plan title"
+    # Assert: Check for bright magenta ANSI escape code (95m)
+    # ANSI bright_magenta is \x1b[95m
+    assert "\x1b[95m" in result, "Expected bright_magenta color code for plan title"
     assert plan_summary in result, "Expected plan summary in output"
     assert "📋" in result, "Expected plan emoji in output"
 
@@ -76,8 +76,8 @@ def test_pr_title_takes_precedence_over_plan() -> None:
         pr_title=pr_title,
     )
 
-    # Assert: Should have bright_magenta (PR title color), not cyan (plan color)
-    assert "\x1b[95m" in result, "Expected bright_magenta for PR title"
+    # Assert: Should have cyan (PR title color), not bright_magenta (plan color)
+    assert "\x1b[36m" in result, "Expected cyan for PR title"
     assert pr_title in result, "Expected PR title in output"
     # Plan summary should NOT appear when PR title exists
     assert plan_summary not in result, "Plan summary should not appear when PR title exists"

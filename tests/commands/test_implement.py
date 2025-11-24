@@ -2,12 +2,12 @@
 
 from datetime import UTC, datetime
 from pathlib import Path
-from unittest.mock import Mock, patch
 
 from click.testing import CliRunner
 
 from erk.cli.commands.implement import _detect_target_type, implement
 from erk.core.plan_issue_store import FakePlanIssueStore, PlanIssue, PlanIssueState
+from tests.fakes.claude_executor import FakeClaudeExecutor
 from tests.fakes.git import FakeGit
 from tests.test_utils.context_builders import build_workspace_test_context
 from tests.test_utils.env_helpers import erk_isolated_fs_env
@@ -967,10 +967,8 @@ def test_script_and_non_interactive_errors() -> None:
         assert "mutually exclusive" in result.output
 
 
-@patch("erk.cli.commands.implement.subprocess.run", return_value=Mock(returncode=0))
-@patch("erk.cli.commands.implement.shutil.which", return_value="/usr/local/bin/claude")
-def test_non_interactive_executes_single_command(mock_which: Mock, mock_run: Mock) -> None:
-    """Verify --no-interactive runs subprocess for implementation."""
+def test_non_interactive_executes_single_command() -> None:
+    """Verify --no-interactive runs executor for implementation."""
     plan_issue = _create_sample_plan_issue()
 
     runner = CliRunner()
@@ -981,21 +979,23 @@ def test_non_interactive_executes_single_command(mock_which: Mock, mock_run: Moc
             default_branches={env.cwd: "main"},
         )
         store = FakePlanIssueStore(plan_issues={"42": plan_issue})
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+        executor = FakeClaudeExecutor(claude_available=True)
+        ctx = build_workspace_test_context(
+            env, git=git, plan_issue_store=store, claude_executor=executor
+        )
 
         result = runner.invoke(implement, ["#42", "--no-interactive"], obj=ctx)
 
         assert result.exit_code == 0
 
-        # Verify one subprocess call
-        assert mock_run.call_count == 1
-        call_args = mock_run.call_args[0][0]
-        assert "/erk:implement-plan" in str(call_args)
+        # Verify one command execution
+        assert len(executor.executed_commands) == 1
+        command, worktree_path, dangerous = executor.executed_commands[0]
+        assert command == "/erk:implement-plan"
+        assert dangerous is False
 
 
-@patch("erk.cli.commands.implement.subprocess.run", return_value=Mock(returncode=0))
-@patch("erk.cli.commands.implement.shutil.which", return_value="/usr/local/bin/claude")
-def test_non_interactive_with_submit_runs_all_commands(mock_which: Mock, mock_run: Mock) -> None:
+def test_non_interactive_with_submit_runs_all_commands() -> None:
     """Verify --no-interactive --submit runs all three commands."""
     plan_issue = _create_sample_plan_issue()
 
@@ -1007,18 +1007,26 @@ def test_non_interactive_with_submit_runs_all_commands(mock_which: Mock, mock_ru
             default_branches={env.cwd: "main"},
         )
         store = FakePlanIssueStore(plan_issues={"42": plan_issue})
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+        executor = FakeClaudeExecutor(claude_available=True)
+        ctx = build_workspace_test_context(
+            env, git=git, plan_issue_store=store, claude_executor=executor
+        )
 
-        result = runner.invoke(implement, ["#42", "--no-interactive", "--submit"], obj=ctx)
+        result = runner.invoke(
+            implement,
+            ["#42", "--no-interactive", "--submit"],
+            obj=ctx,
+        )
 
         assert result.exit_code == 0
 
-        # Verify three subprocess calls
-        assert mock_run.call_count == 3
-        calls = [call[0][0] for call in mock_run.call_args_list]
-        assert "/erk:implement-plan" in str(calls[0])
-        assert "/fast-ci" in str(calls[1])
-        assert "/gt:submit-squashed-branch" in str(calls[2])
+        # Verify three command executions
+        assert len(executor.executed_commands) == 3
+        commands = [cmd for cmd, _, _ in executor.executed_commands]
+        assert commands[0] == "/erk:implement-plan"
+        assert commands[1] == "/fast-ci"
+        assert commands[2] == "/gt:submit-squashed-branch"
+
 
 
 def test_script_with_submit_includes_all_commands() -> None:

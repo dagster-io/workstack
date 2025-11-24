@@ -31,6 +31,7 @@ from erk.cli.commands.navigation_helpers import complete_plan_files
 from erk.cli.config import LoadedConfig
 from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output
+from erk.core.claude_executor import ClaudeExecutor, RealClaudeExecutor
 from erk.core.context import ErkContext
 from erk.core.plan_issue_store.types import PlanIssueState
 from erk.core.repo_discovery import ensure_erk_metadata_dir
@@ -151,20 +152,21 @@ def _execute_interactive_mode(worktree_path: Path, dangerous: bool) -> None:
 
 
 def _execute_non_interactive_mode(
-    worktree_path: Path, commands: list[str], dangerous: bool
+    worktree_path: Path, commands: list[str], dangerous: bool, executor: ClaudeExecutor
 ) -> None:
-    """Execute commands via subprocess with streaming output.
+    """Execute commands via Claude CLI executor with streaming output.
 
     Args:
         worktree_path: Path to worktree directory
         commands: List of slash commands to execute
         dangerous: Whether to skip permission prompts
+        executor: Claude CLI executor for command execution
 
     Raises:
         click.ClickException: If Claude CLI not found or command fails
     """
     # Verify Claude is available
-    if not shutil.which("claude"):
+    if not executor.is_claude_available():
         raise click.ClickException(
             "Claude CLI not found\nInstall from: https://claude.com/download"
         )
@@ -173,20 +175,11 @@ def _execute_non_interactive_mode(
         # Show progress
         click.echo(f"Running {cmd}...", err=True)
 
-        # Build command
-        cmd_args = _build_claude_args(cmd, dangerous)
-
-        # Execute with streaming output
-        result = subprocess.run(
-            cmd_args,
-            cwd=worktree_path,
-            stdin=subprocess.DEVNULL,  # Prevent interaction
-            # Don't capture stdout/stderr - let output stream to terminal
-        )
-
-        # Check exit code
-        if result.returncode != 0:
-            raise click.ClickException(f"Command {cmd} failed with exit code {result.returncode}")
+        # Execute command
+        try:
+            executor.execute_command(cmd, worktree_path, dangerous)
+        except RuntimeError as e:
+            raise click.ClickException(str(e)) from e
 
 
 def _build_activation_script_with_commands(
@@ -576,6 +569,7 @@ def _implement_from_issue(
     dangerous: bool,
     script: bool,
     no_interactive: bool,
+    executor: ClaudeExecutor,
 ) -> None:
     """Implement feature from GitHub issue.
 
@@ -588,6 +582,7 @@ def _implement_from_issue(
         dangerous: Whether to skip permission prompts
         script: Whether to output activation script
         no_interactive: Whether to execute non-interactively
+        executor: Claude CLI executor for command execution
     """
     # Discover repo context for issue fetch
     repo = discover_repo_context(ctx, ctx.cwd)
@@ -636,7 +631,7 @@ def _implement_from_issue(
     elif no_interactive:
         # Non-interactive mode - execute via subprocess
         commands = _build_command_sequence(submit)
-        _execute_non_interactive_mode(wt_path, commands, dangerous)
+        _execute_non_interactive_mode(wt_path, commands, dangerous, executor)
     else:
         # Interactive mode - hand off to Claude (never returns)
         _execute_interactive_mode(wt_path, dangerous)
@@ -652,6 +647,7 @@ def _implement_from_file(
     dangerous: bool,
     script: bool,
     no_interactive: bool,
+    executor: ClaudeExecutor,
 ) -> None:
     """Implement feature from plan file.
 
@@ -664,6 +660,7 @@ def _implement_from_file(
         dangerous: Whether to skip permission prompts
         script: Whether to output activation script
         no_interactive: Whether to execute non-interactively
+        executor: Claude CLI executor for command execution
     """
     # Prepare plan source from file
     plan_source = _prepare_plan_source_from_file(ctx, plan_file)
@@ -706,7 +703,7 @@ def _implement_from_file(
     elif no_interactive:
         # Non-interactive mode - execute via subprocess
         commands = _build_command_sequence(submit)
-        _execute_non_interactive_mode(wt_path, commands, dangerous)
+        _execute_non_interactive_mode(wt_path, commands, dangerous, executor)
     else:
         # Interactive mode - hand off to Claude (never returns)
         _execute_interactive_mode(wt_path, dangerous)
@@ -829,6 +826,7 @@ def implement(
             dangerous=dangerous,
             script=script,
             no_interactive=no_interactive,
+            executor=ctx.claude_executor,
         )
     else:
         # Plan file mode
@@ -842,4 +840,5 @@ def implement(
             dangerous=dangerous,
             script=script,
             no_interactive=no_interactive,
+            executor=ctx.claude_executor,
         )

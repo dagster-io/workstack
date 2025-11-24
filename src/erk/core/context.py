@@ -9,6 +9,7 @@ from erk_shared.github.issues import DryRunGitHubIssues, GitHubIssues, RealGitHu
 
 from erk.cli.config import LoadedConfig, load_config
 from erk.cli.output import user_output
+from erk.core.claude_executor import ClaudeExecutor, RealClaudeExecutor
 from erk.core.completion import Completion, RealCompletion
 from erk.core.config_store import (
     ConfigStore,
@@ -55,6 +56,7 @@ class ErkContext:
     plan_issue_store: PlanIssueStore
     graphite: Graphite
     shell: Shell
+    claude_executor: ClaudeExecutor
     completion: Completion
     time: Time
     config_store: ConfigStore
@@ -130,6 +132,7 @@ class ErkContext:
         from erk.core.github.fake import FakeGitHub
         from erk.core.graphite.fake import FakeGraphite
         from erk.core.plan_issue_store import FakePlanIssueStore
+        from tests.fakes.claude_executor import FakeClaudeExecutor
 
         return ErkContext(
             git=git,
@@ -138,6 +141,7 @@ class ErkContext:
             plan_issue_store=FakePlanIssueStore(),
             graphite=FakeGraphite(),
             shell=FakeShell(),
+            claude_executor=FakeClaudeExecutor(),
             completion=FakeCompletion(),
             time=FakeTime(),
             config_store=FakeConfigStore(config=None),
@@ -158,6 +162,7 @@ class ErkContext:
         plan_issue_store: PlanIssueStore | None = None,
         graphite: Graphite | None = None,
         shell: Shell | None = None,
+        claude_executor: ClaudeExecutor | None = None,
         completion: Completion | None = None,
         time: Time | None = None,
         config_store: ConfigStore | None = None,
@@ -220,6 +225,7 @@ class ErkContext:
             which is more concise.
         """
         from erk_shared.github.issues import FakeGitHubIssues
+        from tests.fakes.claude_executor import FakeClaudeExecutor
         from tests.fakes.completion import FakeCompletion
         from tests.fakes.script_writer import FakeScriptWriter
         from tests.fakes.shell import FakeShell
@@ -250,6 +256,9 @@ class ErkContext:
 
         if shell is None:
             shell = FakeShell()
+
+        if claude_executor is None:
+            claude_executor = FakeClaudeExecutor()
 
         if completion is None:
             completion = FakeCompletion()
@@ -294,6 +303,7 @@ class ErkContext:
             plan_issue_store=plan_issue_store,
             graphite=graphite,
             shell=shell,
+            claude_executor=claude_executor,
             completion=completion,
             time=time,
             config_store=config_store,
@@ -458,6 +468,7 @@ def create_context(*, dry_run: bool, script: bool = False) -> ErkContext:
         plan_issue_store=plan_issue_store,
         graphite=graphite,
         shell=RealShell(),
+        claude_executor=RealClaudeExecutor(),
         completion=RealCompletion(),
         time=RealTime(),
         config_store=RealConfigStore(),

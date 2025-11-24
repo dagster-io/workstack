@@ -427,6 +427,7 @@ Suggested action:
 **Output success message (REQUIRED - MUST use this exact format):**
 
 After creating the issue, you MUST:
+
 1. Extract the issue number from the URL
 2. Output the message below with the actual issue number substituted
 3. Include ALL four copy-pastable commands
@@ -452,6 +453,7 @@ Yolo One Shot: erk implement <number> --dangerous --submit --no-interactive
 **Verify Output Format:**
 
 Before finishing, confirm your output includes:
+
 - ✅ Issue number and URL on first line
 - ✅ "Next steps:" header
 - ✅ Four commands with actual issue number (not placeholder)

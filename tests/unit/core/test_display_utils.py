@@ -1,6 +1,8 @@
 """Unit tests for display_utils.py color formatting."""
 
-from erk.core.display_utils import format_worktree_line
+from erk_shared.github.types import WorkflowRun
+
+from erk.core.display_utils import format_workflow_run_id, format_worktree_line
 
 
 def test_pr_title_uses_cyan() -> None:
@@ -112,3 +114,55 @@ def test_no_plan_placeholder_uses_dimmed_white() -> None:
     # Check for dim modifier (can be separate or combined)
     assert "\x1b[2m" in result or "2;" in result or ";2m" in result, "Expected dim modifier"
     assert "37m" in result, "Expected white color code"
+
+
+def test_format_workflow_run_id_with_url() -> None:
+    """Test that workflow run ID with URL is linkified and colored cyan."""
+    # Arrange
+    workflow_run = WorkflowRun(
+        run_id="12345678",
+        status="completed",
+        conclusion="success",
+        branch="main",
+        head_sha="abc123",
+    )
+    workflow_url = "https://github.com/owner/repo/actions/runs/12345678"
+
+    # Act
+    result = format_workflow_run_id(workflow_run, workflow_url)
+
+    # Assert: Check for cyan color and OSC 8 link
+    assert "\x1b[36m" in result, "Expected cyan color code for run ID"
+    assert "12345678" in result, "Expected run ID in output"
+    assert "\x1b]8;;" in result, "Expected OSC 8 link escape sequence"
+    assert workflow_url in result, "Expected workflow URL in link"
+
+
+def test_format_workflow_run_id_without_url() -> None:
+    """Test that workflow run ID without URL is colored but not linkified."""
+    # Arrange
+    workflow_run = WorkflowRun(
+        run_id="87654321",
+        status="in_progress",
+        conclusion=None,
+        branch="feature",
+        head_sha="def456",
+    )
+    workflow_url = None
+
+    # Act
+    result = format_workflow_run_id(workflow_run, workflow_url)
+
+    # Assert: Check for cyan color but no OSC 8 link
+    assert "\x1b[36m" in result, "Expected cyan color code for run ID"
+    assert "87654321" in result, "Expected run ID in output"
+    assert "\x1b]8;;" not in result, "Should not have OSC 8 link without URL"
+
+
+def test_format_workflow_run_id_none() -> None:
+    """Test that None workflow run returns empty string."""
+    # Act
+    result = format_workflow_run_id(None, None)
+
+    # Assert
+    assert result == "", "Expected empty string for None workflow run"

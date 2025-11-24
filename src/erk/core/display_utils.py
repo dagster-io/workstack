@@ -155,6 +155,34 @@ def format_workflow_status(workflow_run: WorkflowRun | None, workflow_url: str |
         return f"{emoji} {colored_status_text}"
 
 
+def format_workflow_run_id(workflow_run: WorkflowRun | None, workflow_url: str | None) -> str:
+    """Format workflow run ID with linkification.
+
+    Args:
+        workflow_run: Workflow run information (None if no workflow run)
+        workflow_url: GitHub Actions workflow run URL (None if unavailable)
+
+    Returns:
+        Formatted workflow run ID string (e.g., "12345678") or empty string if no workflow
+    """
+    if workflow_run is None:
+        return ""
+
+    # Format run ID text
+    run_id_text = workflow_run.run_id
+
+    # If we have a URL, make it clickable using OSC 8 terminal escape sequence
+    if workflow_url:
+        # Wrap the link text in cyan color
+        colored_run_id = click.style(run_id_text, fg="cyan")
+        clickable_link = f"\033]8;;{workflow_url}\033\\{colored_run_id}\033]8;;\033\\"
+        return clickable_link
+    else:
+        # No URL available - just show colored text without link
+        colored_run_id = click.style(run_id_text, fg="cyan")
+        return colored_run_id
+
+
 def format_branch_without_worktree(
     branch_name: str,
     pr_info: str | None,

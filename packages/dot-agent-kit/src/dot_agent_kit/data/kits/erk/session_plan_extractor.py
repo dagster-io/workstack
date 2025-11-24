@@ -197,14 +197,26 @@ def get_latest_plan(working_dir: str, session_id: str | None = None) -> str | No
 def get_session_context() -> str | None:
     """Extract current session ID from environment if available.
 
+    Claude Code sets SESSION_CONTEXT with format: session_id=<uuid>
+    Also checks CLAUDE_SESSION_ID for backward compatibility.
+
     Returns:
         Session ID string or None if not in a Claude session
     """
-    # Check for session ID in environment
+    # Check for SESSION_CONTEXT (Claude Code format: session_id=<uuid>)
+    session_context = os.environ.get("SESSION_CONTEXT")
+    if session_context and "session_id=" in session_context:
+        # Extract session_id from "session_id=<uuid>" format
+        parts = session_context.split("session_id=")
+        if len(parts) > 1:
+            session_id = parts[1].strip()
+            if session_id:
+                return session_id
+
+    # Check for CLAUDE_SESSION_ID (legacy format)
     session_id = os.environ.get("CLAUDE_SESSION_ID")
     if session_id:
         return session_id
 
-    # Could also check for session context files or other indicators
-    # For now, return None if not found
+    # Not in a Claude session
     return None

@@ -1213,3 +1213,82 @@ def test_dry_run_shows_command_sequence() -> None:
         assert "/erk:implement-plan" in result.output
         assert "/fast-ci" in result.output
         assert "/gt:simple-submit" in result.output
+
+
+def test_implement_with_yolo_flag() -> None:
+    """Test that --yolo flag expands to --dangerous --no-interactive --submit."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        executor = FakeClaudeExecutor()
+        ctx = build_workspace_test_context(
+            env, git=git, plan_issue_store=store, claude_executor=executor
+        )
+
+        # Test with --yolo in non-interactive mode
+        result = runner.invoke(implement, ["#42", "--yolo"], obj=ctx)
+
+        assert result.exit_code == 0
+
+        # Verify all three commands were executed (from --submit expansion)
+        assert len(executor.executed_commands) == 3
+        commands = [cmd for cmd, _, _ in executor.executed_commands]
+        assert commands[0] == "/erk:implement-plan"
+        assert commands[1] == "/fast-ci"
+        assert commands[2] == "/gt:simple-submit"
+
+        # Verify dangerous flag was passed for all commands (from --dangerous expansion)
+        dangerous_flags = [dangerous for _, _, dangerous in executor.executed_commands]
+        assert all(dangerous_flags), "All commands should have dangerous=True"
+
+
+def test_implement_with_yolo_flag_dry_run() -> None:
+    """Test that --yolo shows expanded flags in dry-run output."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+
+        result = runner.invoke(implement, ["#42", "--yolo", "--dry-run"], obj=ctx)
+
+        assert result.exit_code == 0
+
+        # Verify expanded flags are shown in output
+        assert "Command sequence:" in result.output
+        assert "/erk:implement-plan" in result.output
+        assert "/fast-ci" in result.output
+        assert "/gt:simple-submit" in result.output
+
+
+def test_yolo_conflicts_with_script() -> None:
+    """Test that --yolo cannot be used with --script."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+
+        result = runner.invoke(implement, ["#42", "--yolo", "--script"], obj=ctx)
+
+        assert result.exit_code != 0
+        assert "--yolo cannot be used with --script" in result.output

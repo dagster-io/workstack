@@ -51,17 +51,22 @@ def _build_claude_command(slash_command: str, dangerous: bool) -> str:
     return cmd
 
 
-def _validate_flags(submit: bool, no_interactive: bool, script: bool) -> None:
+def _validate_flags(submit: bool, no_interactive: bool, script: bool, yolo: bool) -> None:
     """Validate flag combinations and raise ClickException if invalid.
 
     Args:
         submit: Whether to auto-submit PR after implementation
         no_interactive: Whether to execute non-interactively
         script: Whether to output shell integration script
+        yolo: Whether to enable yolo mode (dangerous + no-interactive + submit)
 
     Raises:
         click.ClickException: If flag combination is invalid
     """
+    # --yolo conflicts with --script
+    if yolo and script:
+        raise click.ClickException("--yolo cannot be used with --script")
+
     # --submit requires --no-interactive UNLESS using --script mode
     # Script mode generates shell code, so --submit is allowed
     if submit and not no_interactive and not script:
@@ -732,6 +737,12 @@ def _implement_from_file(
     hidden=True,
     help="Output activation script for shell integration",
 )
+@click.option(
+    "--yolo",
+    is_flag=True,
+    default=False,
+    help="Shorthand for --dangerous --no-interactive --submit (You Only Live Once)",
+)
 @click.pass_obj
 def implement(
     ctx: ErkContext,
@@ -742,6 +753,7 @@ def implement(
     dangerous: bool,
     no_interactive: bool,
     script: bool,
+    yolo: bool,
 ) -> None:
     """Create worktree from GitHub issue or plan file and execute implementation.
 
@@ -785,7 +797,13 @@ def implement(
       erk implement ./my-feature-plan.md
     """
     # Validate flag combinations
-    _validate_flags(submit, no_interactive, script)
+    _validate_flags(submit, no_interactive, script, yolo)
+
+    # Expand --yolo shorthand
+    if yolo:
+        dangerous = True
+        no_interactive = True
+        submit = True
 
     # Detect target type
     target_info = _detect_target_type(target)

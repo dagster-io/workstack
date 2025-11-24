@@ -110,5 +110,5 @@ def test_no_plan_placeholder_uses_dimmed_white() -> None:
     assert "\x1b[" in result, "Expected ANSI escape codes"
     assert "[no plan]" in result, "Expected [no plan] placeholder"
     # Check for dim modifier (can be separate or combined)
-    assert ("\x1b[2m" in result or "2;" in result or ";2m" in result), "Expected dim modifier"
+    assert "\x1b[2m" in result or "2;" in result or ";2m" in result, "Expected dim modifier"
     assert "37m" in result, "Expected white color code"

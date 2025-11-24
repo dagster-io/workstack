@@ -8,6 +8,7 @@ Both modes create a worktree and invoke Claude for implementation.
 """
 
 import re
+import shlex
 from dataclasses import dataclass
 from pathlib import Path
 from typing import NamedTuple
@@ -27,6 +28,7 @@ from erk.cli.commands.navigation_helpers import complete_plan_files
 from erk.cli.config import LoadedConfig
 from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output
+from erk.core.claude_executor import ClaudeExecutor
 from erk.core.context import ErkContext
 from erk.core.plan_issue_store.types import PlanIssueState
 from erk.core.repo_discovery import ensure_erk_metadata_dir
@@ -47,6 +49,157 @@ def _build_claude_command(slash_command: str, dangerous: bool) -> str:
         cmd += " --dangerously-skip-permissions"
     cmd += f' "{slash_command}"'
     return cmd
+
+
+def _validate_flags(submit: bool, no_interactive: bool, script: bool) -> None:
+    """Validate flag combinations and raise ClickException if invalid.
+
+    Args:
+        submit: Whether to auto-submit PR after implementation
+        no_interactive: Whether to execute non-interactively
+        script: Whether to output shell integration script
+
+    Raises:
+        click.ClickException: If flag combination is invalid
+    """
+    # --submit requires --no-interactive UNLESS using --script mode
+    # Script mode generates shell code, so --submit is allowed
+    if submit and not no_interactive and not script:
+        raise click.ClickException(
+            "--submit requires --no-interactive\n"
+            "Automated workflows must run non-interactively\n"
+            "(or use --script to generate shell integration code)"
+        )
+
+    if no_interactive and script:
+        raise click.ClickException(
+            "--no-interactive and --script are mutually exclusive\n"
+            "--script generates shell integration code for manual execution\n"
+            "--no-interactive executes commands programmatically"
+        )
+
+
+def _build_command_sequence(submit: bool) -> list[str]:
+    """Build list of slash commands to execute.
+
+    Args:
+        submit: Whether to include full CI/PR workflow
+
+    Returns:
+        List of slash commands to execute in sequence
+    """
+    commands = ["/erk:implement-plan"]
+    if submit:
+        commands.extend(["/fast-ci", "/gt:simple-submit"])
+    return commands
+
+
+def _build_claude_args(slash_command: str, dangerous: bool) -> list[str]:
+    """Build Claude command argument list.
+
+    Args:
+        slash_command: The slash command to execute
+        dangerous: Whether to skip permission prompts
+
+    Returns:
+        List of command arguments suitable for subprocess
+    """
+    args = ["claude", "--permission-mode", "acceptEdits"]
+    if dangerous:
+        args.append("--dangerously-skip-permissions")
+    args.append(slash_command)
+    return args
+
+
+def _execute_interactive_mode(
+    worktree_path: Path, dangerous: bool, executor: ClaudeExecutor
+) -> None:
+    """Execute implementation in interactive mode using executor.
+
+    Args:
+        worktree_path: Path to worktree directory
+        dangerous: Whether to skip permission prompts
+        executor: Claude CLI executor for process replacement
+
+    Raises:
+        click.ClickException: If Claude CLI not found
+
+    Note:
+        This function never returns in production - the process is replaced by Claude
+    """
+    # Show message before handing off to executor
+    click.echo("Entering interactive implementation mode...", err=True)
+
+    # Delegate to executor (never returns in production)
+    try:
+        executor.execute_interactive(worktree_path, dangerous)
+    except RuntimeError as e:
+        raise click.ClickException(str(e)) from e
+
+
+def _execute_non_interactive_mode(
+    worktree_path: Path, commands: list[str], dangerous: bool, executor: ClaudeExecutor
+) -> None:
+    """Execute commands via Claude CLI executor with streaming output.
+
+    Args:
+        worktree_path: Path to worktree directory
+        commands: List of slash commands to execute
+        dangerous: Whether to skip permission prompts
+        executor: Claude CLI executor for command execution
+
+    Raises:
+        click.ClickException: If Claude CLI not found or command fails
+    """
+    # Verify Claude is available
+    if not executor.is_claude_available():
+        raise click.ClickException(
+            "Claude CLI not found\nInstall from: https://claude.com/download"
+        )
+
+    for cmd in commands:
+        # Show progress
+        click.echo(f"Running {cmd}...", err=True)
+
+        # Execute command
+        try:
+            executor.execute_command(cmd, worktree_path, dangerous)
+        except RuntimeError as e:
+            raise click.ClickException(str(e)) from e
+
+
+def _build_activation_script_with_commands(
+    worktree_path: Path, commands: list[str], dangerous: bool
+) -> str:
+    """Build activation script with Claude commands.
+
+    Args:
+        worktree_path: Path to worktree
+        commands: List of slash commands to include
+        dangerous: Whether to skip permission prompts
+
+    Returns:
+        Complete activation script with commands
+    """
+    # Get base activation script (cd + venv + env)
+    script = render_activation_script(
+        worktree_path=worktree_path,
+        final_message="",  # We'll add commands instead
+        comment="implement activation",
+    )
+
+    # Add Claude commands
+    shell_commands = []
+    for cmd in commands:
+        cmd_args = _build_claude_args(cmd, dangerous)
+        # Build shell command string
+        shell_cmd = " ".join(shlex.quote(arg) for arg in cmd_args)
+        shell_commands.append(shell_cmd)
+
+    # Chain commands with && so they only run if previous command succeeded
+    script += " && \\\n".join(shell_commands) + "\n"
+
+    return script
 
 
 class TargetInfo(NamedTuple):
@@ -226,6 +379,7 @@ def _create_worktree_with_plan_content(
     dry_run: bool,
     submit: bool,
     dangerous: bool,
+    no_interactive: bool,
 ) -> Path | None:
     """Create worktree with plan content.
 
@@ -236,6 +390,7 @@ def _create_worktree_with_plan_content(
         dry_run: Whether to perform dry run
         submit: Whether to auto-submit PR after implementation
         dangerous: Whether to skip permission prompts
+        no_interactive: Whether to execute non-interactively
 
     Returns:
         Path to created worktree, or None if dry-run mode
@@ -256,29 +411,9 @@ def _create_worktree_with_plan_content(
     # Calculate worktree path
     wt_path = worktree_path_for(repo.worktrees_dir, name)
 
-    # Handle dry-run mode
-    if dry_run:
-        dry_run_header = click.style("Dry-run mode:", fg="cyan", bold=True)
-        user_output(dry_run_header + " No changes will be made\n")
-        user_output(f"Would create worktree '{name}'")
-        user_output(f"  {plan_source.dry_run_description}")
-        if submit:
-            user_output(f"  Then run: {_build_claude_command('/erk:implement-plan', dangerous)}")
-            user_output(f"  Then run: {_build_claude_command('/fast-ci', dangerous)}")
-            user_output(
-                f"  Then run: {_build_claude_command('/gt:submit-squashed-branch', dangerous)}"
-            )
-        else:
-            user_output(f"  Then run: {_build_claude_command('/erk:implement-plan', dangerous)}")
-        return None
-
-    # Create worktree
-    ctx.feedback.info(f"Creating worktree '{name}'...")
-
+    # Validate branch doesn't exist (before dry-run output)
     trunk_branch = ctx.trunk_branch
     branch = name
-
-    # Check if branch already exists
     local_branches = ctx.git.list_local_branches(repo_root)
     if branch in local_branches:
         ctx.feedback.error(
@@ -287,6 +422,30 @@ def _create_worktree_with_plan_content(
             + "Use --worktree-name to specify a different name."
         )
         raise SystemExit(1)
+
+    # Handle dry-run mode
+    if dry_run:
+        dry_run_header = click.style("Dry-run mode:", fg="cyan", bold=True)
+        user_output(dry_run_header + " No changes will be made\n")
+
+        # Show execution mode
+        mode = "non-interactive" if no_interactive else "interactive"
+        user_output(f"Execution mode: {mode}\n")
+
+        user_output(f"Would create worktree '{name}'")
+        user_output(f"  {plan_source.dry_run_description}")
+
+        # Show command sequence
+        commands = _build_command_sequence(submit)
+        user_output("\nCommand sequence:")
+        for i, cmd in enumerate(commands, 1):
+            cmd_args = _build_claude_args(cmd, dangerous)
+            user_output(f"  {i}. {' '.join(cmd_args)}")
+
+        return None
+
+    # Create worktree
+    ctx.feedback.info(f"Creating worktree '{name}'...")
 
     # Load local config
     config = (
@@ -341,6 +500,9 @@ def _output_activation_instructions(
 ) -> None:
     """Output activation script or manual instructions.
 
+    This is only called when in script mode (for manual shell integration).
+    Interactive and non-interactive modes handle execution directly.
+
     Args:
         ctx: Erk context
         wt_path: Worktree path
@@ -351,24 +513,11 @@ def _output_activation_instructions(
         target_description: Description of target for user messages
     """
     if script:
-        # Generate activation script
-        base_script = render_activation_script(
-            worktree_path=wt_path,
-            final_message='echo "Activated worktree: $(pwd)"',
-            comment="implement activation",
-        )
+        # Build command sequence
+        commands = _build_command_sequence(submit)
 
-        # Conditionally select command sequence based on submit flag
-        if submit:
-            claude_command = (
-                f"{_build_claude_command('/erk:implement-plan', dangerous)} && "
-                f"{_build_claude_command('/fast-ci', dangerous)} && "
-                f"{_build_claude_command('/gt:submit-squashed-branch', dangerous)}\n"
-            )
-        else:
-            claude_command = f"{_build_claude_command('/erk:implement-plan', dangerous)}\n"
-
-        full_script = base_script + claude_command
+        # Generate activation script with commands
+        full_script = _build_activation_script_with_commands(wt_path, commands, dangerous)
 
         comment_suffix = "implement, CI, and submit" if submit else "implement"
         result = ctx.script_writer.write_activation_script(
@@ -405,6 +554,8 @@ def _implement_from_issue(
     submit: bool,
     dangerous: bool,
     script: bool,
+    no_interactive: bool,
+    executor: ClaudeExecutor,
 ) -> None:
     """Implement feature from GitHub issue.
 
@@ -416,6 +567,8 @@ def _implement_from_issue(
         submit: Whether to auto-submit PR after implementation
         dangerous: Whether to skip permission prompts
         script: Whether to output activation script
+        no_interactive: Whether to execute non-interactively
+        executor: Claude CLI executor for command execution
     """
     # Discover repo context for issue fetch
     repo = discover_repo_context(ctx, ctx.cwd)
@@ -432,6 +585,7 @@ def _implement_from_issue(
         dry_run=dry_run,
         submit=submit,
         dangerous=dangerous,
+        no_interactive=no_interactive,
     )
 
     # Early return for dry-run mode
@@ -446,18 +600,27 @@ def _implement_from_issue(
 
     ctx.feedback.success(f"✓ Saved issue reference: {plan_issue.url}")
 
-    # Output activation instructions
-    branch = wt_path.name
-    target_description = f"#{issue_number}"
-    _output_activation_instructions(
-        ctx,
-        wt_path=wt_path,
-        branch=branch,
-        script=script,
-        submit=submit,
-        dangerous=dangerous,
-        target_description=target_description,
-    )
+    # Execute based on mode
+    if script:
+        # Script mode - output activation script
+        branch = wt_path.name
+        target_description = f"#{issue_number}"
+        _output_activation_instructions(
+            ctx,
+            wt_path=wt_path,
+            branch=branch,
+            script=script,
+            submit=submit,
+            dangerous=dangerous,
+            target_description=target_description,
+        )
+    elif no_interactive:
+        # Non-interactive mode - execute via subprocess
+        commands = _build_command_sequence(submit)
+        _execute_non_interactive_mode(wt_path, commands, dangerous, executor)
+    else:
+        # Interactive mode - hand off to Claude (never returns)
+        _execute_interactive_mode(wt_path, dangerous, executor)
 
 
 def _implement_from_file(
@@ -469,6 +632,8 @@ def _implement_from_file(
     submit: bool,
     dangerous: bool,
     script: bool,
+    no_interactive: bool,
+    executor: ClaudeExecutor,
 ) -> None:
     """Implement feature from plan file.
 
@@ -480,6 +645,8 @@ def _implement_from_file(
         submit: Whether to auto-submit PR after implementation
         dangerous: Whether to skip permission prompts
         script: Whether to output activation script
+        no_interactive: Whether to execute non-interactively
+        executor: Claude CLI executor for command execution
     """
     # Prepare plan source from file
     plan_source = _prepare_plan_source_from_file(ctx, plan_file)
@@ -492,6 +659,7 @@ def _implement_from_file(
         dry_run=dry_run,
         submit=submit,
         dangerous=dangerous,
+        no_interactive=no_interactive,
     )
 
     # Early return for dry-run mode
@@ -504,18 +672,27 @@ def _implement_from_file(
 
     ctx.feedback.success("✓ Moved plan file to worktree")
 
-    # Output activation instructions
-    branch = wt_path.name
-    target_description = str(plan_file)
-    _output_activation_instructions(
-        ctx,
-        wt_path=wt_path,
-        branch=branch,
-        script=script,
-        submit=submit,
-        dangerous=dangerous,
-        target_description=target_description,
-    )
+    # Execute based on mode
+    if script:
+        # Script mode - output activation script
+        branch = wt_path.name
+        target_description = str(plan_file)
+        _output_activation_instructions(
+            ctx,
+            wt_path=wt_path,
+            branch=branch,
+            script=script,
+            submit=submit,
+            dangerous=dangerous,
+            target_description=target_description,
+        )
+    elif no_interactive:
+        # Non-interactive mode - execute via subprocess
+        commands = _build_command_sequence(submit)
+        _execute_non_interactive_mode(wt_path, commands, dangerous, executor)
+    else:
+        # Interactive mode - hand off to Claude (never returns)
+        _execute_interactive_mode(wt_path, dangerous, executor)
 
 
 @click.command("implement")
@@ -543,6 +720,12 @@ def _implement_from_file(
     help="Skip permission prompts by passing --dangerously-skip-permissions to Claude",
 )
 @click.option(
+    "--no-interactive",
+    is_flag=True,
+    default=False,
+    help="Execute commands via subprocess without user interaction",
+)
+@click.option(
     "--script",
     is_flag=True,
     hidden=True,
@@ -556,9 +739,13 @@ def implement(
     dry_run: bool,
     submit: bool,
     dangerous: bool,
+    no_interactive: bool,
     script: bool,
 ) -> None:
-    """Create worktree from GitHub issue or plan file and invoke Claude.
+    """Create worktree from GitHub issue or plan file and execute implementation.
+
+    By default, runs in interactive mode where you can interact with Claude
+    during implementation. Use --no-interactive for automated execution.
 
     TARGET can be:
     - GitHub issue number (e.g., #123 or 123)
@@ -573,29 +760,32 @@ def implement(
     Examples:
 
     \b
-      # From GitHub issue number (# prefix optional)
-      erk implement 809
+      # Interactive mode (default)
+      erk implement 123
 
     \b
-      # From GitHub issue URL
-      erk implement https://github.com/user/repo/issues/123
+      # Interactive mode, skip permissions
+      erk implement 123 --dangerous
+
+    \b
+      # Non-interactive mode (automated execution)
+      erk implement 123 --no-interactive
+
+    \b
+      # Full CI/PR workflow (requires --no-interactive)
+      erk implement 123 --no-interactive --submit
+
+    \b
+      # Shell integration
+      source <(erk implement 123 --script)
 
     \b
       # From plan file
       erk implement ./my-feature-plan.md
-
-    \b
-      # File named "809" (use ./ prefix for numeric filenames)
-      erk implement ./809
-
-    \b
-      # With custom worktree name
-      erk implement 809 --worktree-name my-custom-name
-
-    \b
-      # Dry run to see what would happen
-      erk implement 809 --dry-run
     """
+    # Validate flag combinations
+    _validate_flags(submit, no_interactive, script)
+
     # Detect target type
     target_info = _detect_target_type(target)
 
@@ -621,6 +811,8 @@ def implement(
             submit=submit,
             dangerous=dangerous,
             script=script,
+            no_interactive=no_interactive,
+            executor=ctx.claude_executor,
         )
     else:
         # Plan file mode
@@ -633,4 +825,6 @@ def implement(
             submit=submit,
             dangerous=dangerous,
             script=script,
+            no_interactive=no_interactive,
+            executor=ctx.claude_executor,
         )

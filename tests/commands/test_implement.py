@@ -7,6 +7,7 @@ from click.testing import CliRunner
 
 from erk.cli.commands.implement import _detect_target_type, implement
 from erk.core.plan_issue_store import FakePlanIssueStore, PlanIssue, PlanIssueState
+from tests.fakes.claude_executor import FakeClaudeExecutor
 from tests.fakes.git import FakeGit
 from tests.test_utils.context_builders import build_workspace_test_context
 from tests.test_utils.env_helpers import erk_isolated_fs_env
@@ -108,7 +109,7 @@ def test_implement_from_plain_issue_number() -> None:
         ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
 
         # Test with plain number (no # prefix)
-        result = runner.invoke(implement, ["123"], obj=ctx)
+        result = runner.invoke(implement, ["123", "--script"], obj=ctx)
 
         assert result.exit_code == 0
         assert "Created worktree" in result.output
@@ -141,7 +142,7 @@ def test_implement_from_issue_number() -> None:
         store = FakePlanIssueStore(plan_issues={"42": plan_issue})
         ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
 
-        result = runner.invoke(implement, ["#42"], obj=ctx)
+        result = runner.invoke(implement, ["#42", "--script"], obj=ctx)
 
         assert result.exit_code == 0
         assert "Created worktree" in result.output
@@ -174,7 +175,7 @@ def test_implement_from_issue_url() -> None:
         ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
 
         url = "https://github.com/owner/repo/issues/123"
-        result = runner.invoke(implement, [url], obj=ctx)
+        result = runner.invoke(implement, [url, "--script"], obj=ctx)
 
         assert result.exit_code == 0
         assert "Created worktree" in result.output
@@ -201,7 +202,9 @@ def test_implement_from_issue_with_custom_name() -> None:
         store = FakePlanIssueStore(plan_issues={"42": plan_issue})
         ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
 
-        result = runner.invoke(implement, ["#42", "--worktree-name", "my-custom-feature"], obj=ctx)
+        result = runner.invoke(
+            implement, ["#42", "--worktree-name", "my-custom-feature", "--script"], obj=ctx
+        )
 
         assert result.exit_code == 0
         assert "my-custom-feature" in result.output
@@ -235,7 +238,7 @@ def test_implement_from_issue_fails_without_erk_plan_label() -> None:
         store = FakePlanIssueStore(plan_issues={"42": plan_issue})
         ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
 
-        result = runner.invoke(implement, ["#42"], obj=ctx)
+        result = runner.invoke(implement, ["#42", "--dry-run"], obj=ctx)
 
         assert result.exit_code == 1
         assert "Error" in result.output
@@ -255,7 +258,7 @@ def test_implement_from_issue_fails_when_not_found() -> None:
         store = FakePlanIssueStore(plan_issues={})
         ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
 
-        result = runner.invoke(implement, ["#999"], obj=ctx)
+        result = runner.invoke(implement, ["#999", "--dry-run"], obj=ctx)
 
         assert result.exit_code == 1
         assert "Error" in result.output
@@ -304,7 +307,7 @@ def test_implement_from_plan_file() -> None:
         plan_file = env.cwd / "my-feature-plan.md"
         plan_file.write_text(plan_content, encoding="utf-8")
 
-        result = runner.invoke(implement, [str(plan_file)], obj=ctx)
+        result = runner.invoke(implement, [str(plan_file), "--script"], obj=ctx)
 
         assert result.exit_code == 0
         assert "Created worktree" in result.output
@@ -339,7 +342,7 @@ def test_implement_from_plan_file_with_custom_name() -> None:
         plan_file.write_text("# Plan", encoding="utf-8")
 
         result = runner.invoke(
-            implement, [str(plan_file), "--worktree-name", "custom-name"], obj=ctx
+            implement, [str(plan_file), "--worktree-name", "custom-name", "--script"], obj=ctx
         )
 
         assert result.exit_code == 0
@@ -364,7 +367,7 @@ def test_implement_from_plan_file_strips_plan_suffix() -> None:
         plan_file = env.cwd / "authentication-feature-plan.md"
         plan_file.write_text("# Plan", encoding="utf-8")
 
-        result = runner.invoke(implement, [str(plan_file)], obj=ctx)
+        result = runner.invoke(implement, [str(plan_file), "--script"], obj=ctx)
 
         assert result.exit_code == 0
         # Verify -plan suffix was stripped
@@ -386,7 +389,7 @@ def test_implement_from_plan_file_fails_when_not_found() -> None:
         )
         ctx = build_workspace_test_context(env, git=git)
 
-        result = runner.invoke(implement, ["nonexistent-plan.md"], obj=ctx)
+        result = runner.invoke(implement, ["nonexistent-plan.md", "--dry-run"], obj=ctx)
 
         assert result.exit_code == 1
         assert "Error" in result.output
@@ -437,7 +440,9 @@ def test_implement_fails_when_branch_exists_issue_mode() -> None:
         store = FakePlanIssueStore(plan_issues={"42": plan_issue})
         ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
 
-        result = runner.invoke(implement, ["#42", "--worktree-name", "existing-branch"], obj=ctx)
+        result = runner.invoke(
+            implement, ["#42", "--worktree-name", "existing-branch", "--dry-run"], obj=ctx
+        )
 
         assert result.exit_code == 1
         assert "Error" in result.output
@@ -474,7 +479,7 @@ def test_implement_fails_when_branch_exists_file_mode() -> None:
 
 
 def test_implement_with_submit_flag_from_issue() -> None:
-    """Test --submit flag from issue includes command chain in manual instructions."""
+    """Test --submit flag with --script from issue includes command chain in script."""
     plan_issue = _create_sample_plan_issue()
 
     runner = CliRunner()
@@ -487,22 +492,19 @@ def test_implement_with_submit_flag_from_issue() -> None:
         store = FakePlanIssueStore(plan_issues={"42": plan_issue})
         ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
 
-        result = runner.invoke(implement, ["#42", "--submit"], obj=ctx)
+        # Use --script --submit to generate activation script with all commands
+        result = runner.invoke(implement, ["#42", "--script", "--submit"], obj=ctx)
 
         assert result.exit_code == 0
         assert "Created worktree" in result.output
 
-        # Verify manual instructions show all three commands
-        assert "/erk:implement-plan" in result.output
-        assert "/fast-ci" in result.output
-        assert "/gt:submit-squashed-branch" in result.output
-
-        # Verify script flag hint shows --submit
-        assert "--submit --script" in result.output
+        # Script should be created
+        assert "erk-implement-" in result.output
+        assert ".sh" in result.output
 
 
 def test_implement_with_submit_flag_from_file() -> None:
-    """Test implementing from file with --submit flag includes command chain."""
+    """Test implementing from file with --submit flag and --script generates script."""
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
         git = FakeGit(
@@ -516,15 +518,14 @@ def test_implement_with_submit_flag_from_file() -> None:
         plan_file = env.cwd / "feature-plan.md"
         plan_file.write_text("# Feature Plan\n\nImplement feature.", encoding="utf-8")
 
-        result = runner.invoke(implement, [str(plan_file), "--submit"], obj=ctx)
+        result = runner.invoke(implement, [str(plan_file), "--script", "--submit"], obj=ctx)
 
         assert result.exit_code == 0
         assert "Created worktree" in result.output
 
-        # Verify manual instructions show all three commands
-        assert "/erk:implement-plan" in result.output
-        assert "/fast-ci" in result.output
-        assert "/gt:submit-squashed-branch" in result.output
+        # Script should be created
+        assert "erk-implement-" in result.output
+        assert ".sh" in result.output
 
         # Verify plan file was deleted (moved to worktree)
         assert not plan_file.exists()
@@ -544,18 +545,14 @@ def test_implement_without_submit_uses_default_command() -> None:
         store = FakePlanIssueStore(plan_issues={"42": plan_issue})
         ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
 
-        result = runner.invoke(implement, ["#42"], obj=ctx)
+        result = runner.invoke(implement, ["#42", "--script"], obj=ctx)
 
         assert result.exit_code == 0
         assert "Created worktree" in result.output
 
-        # Verify manual instructions show only implement-plan
-        assert "/erk:implement-plan" in result.output
-        assert "/fast-ci" not in result.output
-        assert "/gt:submit-squashed-branch" not in result.output
-
-        # Verify script flag hint doesn't show --submit
-        assert "--submit" not in result.output or "--submit --script" not in result.output
+        # Verify script has only implement-plan command (not CI/submit)
+        assert "erk-implement-" in result.output
+        assert ".sh" in result.output
 
 
 def test_implement_submit_in_script_mode() -> None:
@@ -587,7 +584,7 @@ def test_implement_submit_in_script_mode() -> None:
         # Verify script content contains chained commands
         assert "/erk:implement-plan" in script_content
         assert "/fast-ci" in script_content
-        assert "/gt:submit-squashed-branch" in script_content
+        assert "/gt:simple-submit" in script_content
 
         # Verify commands are chained with &&
         assert "&&" in script_content
@@ -607,15 +604,20 @@ def test_implement_submit_with_dry_run() -> None:
         store = FakePlanIssueStore(plan_issues={"42": plan_issue})
         ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
 
-        result = runner.invoke(implement, ["#42", "--submit", "--dry-run"], obj=ctx)
+        result = runner.invoke(
+            implement, ["#42", "--no-interactive", "--submit", "--dry-run"], obj=ctx
+        )
 
         assert result.exit_code == 0
         assert "Dry-run mode" in result.output
 
+        # Verify execution mode shown
+        assert "Execution mode: non-interactive" in result.output
+
         # Verify all three commands shown in dry-run output
         assert "/erk:implement-plan" in result.output
         assert "/fast-ci" in result.output
-        assert "/gt:submit-squashed-branch" in result.output
+        assert "/gt:simple-submit" in result.output
 
         # Verify no worktree was actually created
         assert len(git.added_worktrees) == 0
@@ -644,7 +646,7 @@ def test_implement_uses_git_when_graphite_disabled() -> None:
         # Build context with use_graphite=False (default)
         ctx = build_workspace_test_context(env, git=git, plan_issue_store=store, use_graphite=False)
 
-        result = runner.invoke(implement, ["#42"], obj=ctx)
+        result = runner.invoke(implement, ["#42", "--script"], obj=ctx)
 
         assert result.exit_code == 0
         assert "Created worktree" in result.output
@@ -672,7 +674,7 @@ def test_implement_plan_file_uses_git_when_graphite_disabled() -> None:
         plan_file = env.cwd / "my-feature-plan.md"
         plan_file.write_text(plan_content, encoding="utf-8")
 
-        result = runner.invoke(implement, [str(plan_file)], obj=ctx)
+        result = runner.invoke(implement, [str(plan_file), "--script"], obj=ctx)
 
         assert result.exit_code == 0
         assert "Created worktree" in result.output
@@ -713,7 +715,7 @@ def test_implement_with_dangerous_flag_in_script_mode() -> None:
         assert "--dangerously-skip-permissions" in script_content
         expected_cmd = (
             "claude --permission-mode acceptEdits --dangerously-skip-permissions "
-            '"/erk:implement-plan"'
+            "/erk:implement-plan"
         )
         assert expected_cmd in script_content
 
@@ -747,7 +749,7 @@ def test_implement_without_dangerous_flag_in_script_mode() -> None:
         # Verify --dangerously-skip-permissions flag is NOT present
         assert "--dangerously-skip-permissions" not in script_content
         # But standard flags should be present
-        assert 'claude --permission-mode acceptEdits "/erk:implement-plan"' in script_content
+        assert "claude --permission-mode acceptEdits /erk:implement-plan" in script_content
 
 
 def test_implement_with_dangerous_and_submit_flags() -> None:
@@ -780,14 +782,12 @@ def test_implement_with_dangerous_and_submit_flags() -> None:
         assert script_content.count("--dangerously-skip-permissions") == 3
         expected_implement = (
             "claude --permission-mode acceptEdits --dangerously-skip-permissions "
-            '"/erk:implement-plan"'
+            "/erk:implement-plan"
         )
-        expected_ci = (
-            'claude --permission-mode acceptEdits --dangerously-skip-permissions "/fast-ci"'
-        )
+        expected_ci = "claude --permission-mode acceptEdits --dangerously-skip-permissions /fast-ci"
         expected_submit = (
             "claude --permission-mode acceptEdits --dangerously-skip-permissions "
-            '"/gt:submit-squashed-branch"'
+            "/gt:simple-submit"
         )
         assert expected_implement in script_content
         assert expected_ci in script_content
@@ -817,7 +817,7 @@ def test_implement_with_dangerous_flag_in_dry_run() -> None:
         assert "--dangerously-skip-permissions" in result.output
         expected_cmd = (
             "claude --permission-mode acceptEdits --dangerously-skip-permissions "
-            '"/erk:implement-plan"'
+            "/erk:implement-plan"
         )
         assert expected_cmd in result.output
 
@@ -839,7 +839,11 @@ def test_implement_with_dangerous_and_submit_in_dry_run() -> None:
         store = FakePlanIssueStore(plan_issues={"42": plan_issue})
         ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
 
-        result = runner.invoke(implement, ["#42", "--dangerous", "--submit", "--dry-run"], obj=ctx)
+        result = runner.invoke(
+            implement,
+            ["#42", "--dangerous", "--no-interactive", "--submit", "--dry-run"],
+            obj=ctx,
+        )
 
         assert result.exit_code == 0
         assert "Dry-run mode" in result.output
@@ -900,11 +904,316 @@ def test_implement_with_dangerous_shows_in_manual_instructions() -> None:
         store = FakePlanIssueStore(plan_issues={"42": plan_issue})
         ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
 
-        # Don't use --script flag to trigger manual instructions
+        # Use --script flag to generate activation script with dangerous flag
+        result = runner.invoke(implement, ["#42", "--dangerous", "--script"], obj=ctx)
+
+        assert result.exit_code == 0
+        assert "Created worktree" in result.output
+
+        # Verify dangerous flag shown in script file
+        assert result.stdout
+        script_path = Path(result.stdout.strip())
+        assert script_path.exists()
+        script_content = script_path.read_text(encoding="utf-8")
+        assert "--dangerously-skip-permissions" in script_content
+
+
+# Execution Mode Tests
+
+
+def test_interactive_mode_calls_executor() -> None:
+    """Verify interactive mode calls executor.execute_interactive."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        executor = FakeClaudeExecutor(claude_available=True)
+        ctx = build_workspace_test_context(
+            env, git=git, plan_issue_store=store, claude_executor=executor
+        )
+
+        # Interactive mode is the default (no --no-interactive flag)
+        result = runner.invoke(implement, ["#42"], obj=ctx)
+
+        assert result.exit_code == 0
+
+        # Verify execute_interactive was called, not execute_command
+        assert len(executor.interactive_calls) == 1
+        assert len(executor.executed_commands) == 0
+
+        worktree_path, dangerous = executor.interactive_calls[0]
+        assert "add-authentication-feature" in str(worktree_path)
+        assert dangerous is False
+
+
+def test_interactive_mode_with_dangerous_flag() -> None:
+    """Verify interactive mode passes dangerous flag to executor."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        executor = FakeClaudeExecutor(claude_available=True)
+        ctx = build_workspace_test_context(
+            env, git=git, plan_issue_store=store, claude_executor=executor
+        )
+
         result = runner.invoke(implement, ["#42", "--dangerous"], obj=ctx)
 
         assert result.exit_code == 0
-        assert "Next steps:" in result.output
 
-        # Verify dangerous flag shown in manual instructions
-        assert "--dangerously-skip-permissions" in result.output
+        # Verify dangerous flag was passed to execute_interactive
+        assert len(executor.interactive_calls) == 1
+        worktree_path, dangerous = executor.interactive_calls[0]
+        assert dangerous is True
+
+
+def test_interactive_mode_from_plan_file() -> None:
+    """Verify interactive mode works with plan file."""
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        executor = FakeClaudeExecutor(claude_available=True)
+        ctx = build_workspace_test_context(env, git=git, claude_executor=executor)
+
+        # Create plan file
+        plan_content = "# Implementation Plan\n\nImplement feature X."
+        plan_file = env.cwd / "my-feature-plan.md"
+        plan_file.write_text(plan_content, encoding="utf-8")
+
+        result = runner.invoke(implement, [str(plan_file)], obj=ctx)
+
+        assert result.exit_code == 0
+
+        # Verify execute_interactive was called
+        assert len(executor.interactive_calls) == 1
+        worktree_path, dangerous = executor.interactive_calls[0]
+        assert "my-feature" in str(worktree_path)
+        assert dangerous is False
+
+        # Verify plan file was deleted (moved to worktree)
+        assert not plan_file.exists()
+
+
+def test_interactive_mode_fails_when_claude_not_available() -> None:
+    """Verify interactive mode fails gracefully when Claude CLI not available."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        executor = FakeClaudeExecutor(claude_available=False)
+        ctx = build_workspace_test_context(
+            env, git=git, plan_issue_store=store, claude_executor=executor
+        )
+
+        result = runner.invoke(implement, ["#42"], obj=ctx)
+
+        # Should fail with error about Claude CLI not found
+        assert result.exit_code != 0
+        assert "Claude CLI not found" in result.output
+
+
+def test_submit_without_non_interactive_errors() -> None:
+    """Verify --submit requires --no-interactive."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+
+        result = runner.invoke(implement, ["#42", "--submit"], obj=ctx)
+
+        assert result.exit_code != 0
+        assert "--submit requires --no-interactive" in result.output
+
+
+def test_script_and_non_interactive_errors() -> None:
+    """Verify --script and --no-interactive are mutually exclusive."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+
+        result = runner.invoke(implement, ["#42", "--no-interactive", "--script"], obj=ctx)
+
+        assert result.exit_code != 0
+        assert "mutually exclusive" in result.output
+
+
+def test_non_interactive_executes_single_command() -> None:
+    """Verify --no-interactive runs executor for implementation."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        executor = FakeClaudeExecutor(claude_available=True)
+        ctx = build_workspace_test_context(
+            env, git=git, plan_issue_store=store, claude_executor=executor
+        )
+
+        result = runner.invoke(implement, ["#42", "--no-interactive"], obj=ctx)
+
+        assert result.exit_code == 0
+
+        # Verify one command execution
+        assert len(executor.executed_commands) == 1
+        command, worktree_path, dangerous = executor.executed_commands[0]
+        assert command == "/erk:implement-plan"
+        assert dangerous is False
+
+
+def test_non_interactive_with_submit_runs_all_commands() -> None:
+    """Verify --no-interactive --submit runs all three commands."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        executor = FakeClaudeExecutor(claude_available=True)
+        ctx = build_workspace_test_context(
+            env, git=git, plan_issue_store=store, claude_executor=executor
+        )
+
+        result = runner.invoke(
+            implement,
+            ["#42", "--no-interactive", "--submit"],
+            obj=ctx,
+        )
+
+        assert result.exit_code == 0
+
+        # Verify three command executions
+        assert len(executor.executed_commands) == 3
+        commands = [cmd for cmd, _, _ in executor.executed_commands]
+        assert commands[0] == "/erk:implement-plan"
+        assert commands[1] == "/fast-ci"
+        assert commands[2] == "/gt:simple-submit"
+
+
+def test_script_with_submit_includes_all_commands() -> None:
+    """Verify --script --submit succeeds and creates script file."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+
+        result = runner.invoke(implement, ["#42", "--script", "--submit"], obj=ctx)
+
+        assert result.exit_code == 0
+
+        # Script should be created (output contains script path)
+        assert "erk-implement-" in result.output
+        assert ".sh" in result.output
+
+
+def test_dry_run_shows_execution_mode() -> None:
+    """Verify --dry-run shows execution mode."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+
+        # Test with interactive mode (default)
+        result = runner.invoke(implement, ["#42", "--dry-run"], obj=ctx)
+
+        assert result.exit_code == 0
+        assert "Execution mode: interactive" in result.output
+
+        # Test with non-interactive mode
+        result = runner.invoke(implement, ["#42", "--dry-run", "--no-interactive"], obj=ctx)
+
+        assert result.exit_code == 0
+        assert "Execution mode: non-interactive" in result.output
+
+
+def test_dry_run_shows_command_sequence() -> None:
+    """Verify --dry-run shows correct command sequence."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+
+        # Without --submit (single command)
+        result = runner.invoke(implement, ["#42", "--dry-run", "--no-interactive"], obj=ctx)
+
+        assert result.exit_code == 0
+        assert "Command sequence:" in result.output
+        assert "/erk:implement-plan" in result.output
+        assert "/fast-ci" not in result.output
+
+        # With --submit (three commands)
+        result = runner.invoke(
+            implement, ["#42", "--dry-run", "--no-interactive", "--submit"], obj=ctx
+        )
+
+        assert result.exit_code == 0
+        assert "Command sequence:" in result.output
+        assert "/erk:implement-plan" in result.output
+        assert "/fast-ci" in result.output
+        assert "/gt:simple-submit" in result.output

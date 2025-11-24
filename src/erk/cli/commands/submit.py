@@ -7,6 +7,10 @@ from erk.cli.output import user_output
 from erk.core.context import ErkContext
 from erk.core.repo_discovery import RepoContext
 
+# Label used to queue issues for automated implementation
+ERK_QUEUE_LABEL = "erk-queue"
+ERK_PLAN_LABEL = "erk-plan"
+
 
 @click.command("submit")
 @click.argument("issue_number", type=int)
@@ -40,10 +44,10 @@ def submit_cmd(ctx: ErkContext, issue_number: int, dry_run: bool) -> None:
         raise SystemExit(1) from None
 
     # Validate: must have erk-plan label
-    if "erk-plan" not in issue.labels:
+    if ERK_PLAN_LABEL not in issue.labels:
         user_output(
             click.style("Error: ", fg="red")
-            + f"Issue #{issue_number} does not have erk-plan label\n\n"
+            + f"Issue #{issue_number} does not have {ERK_PLAN_LABEL} label\n\n"
             "Cannot submit non-plan issues for automated implementation.\n"
             "To create a plan, use: erk plan save"
         )
@@ -58,10 +62,10 @@ def submit_cmd(ctx: ErkContext, issue_number: int, dry_run: bool) -> None:
         raise SystemExit(1)
 
     # Validate: must not already have erk-queue label
-    if "erk-queue" in issue.labels:
+    if ERK_QUEUE_LABEL in issue.labels:
         user_output(
             click.style("Error: ", fg="red")
-            + f"Issue #{issue_number} already has erk-queue label\n\n"
+            + f"Issue #{issue_number} already has {ERK_QUEUE_LABEL} label\n\n"
             "This issue has already been submitted for automated implementation.\n"
             f"View issue: {issue.url}"
         )
@@ -76,16 +80,16 @@ def submit_cmd(ctx: ErkContext, issue_number: int, dry_run: bool) -> None:
 
     if dry_run:
         dry_run_msg = click.style("(dry run)", fg="bright_black")
-        user_output(f"{dry_run_msg} Would add label: erk-queue")
+        user_output(f"{dry_run_msg} Would add label: {ERK_QUEUE_LABEL}")
         user_output(f"{dry_run_msg} Would trigger GitHub Actions workflow")
         user_output("")
         user_output("GitHub Actions workflow:")
         user_output("  https://github.com/{owner}/{repo}/actions/workflows/dispatch-erk-queue.yml")
         return
 
-    # Add erk-queue label to issue
-    user_output("Adding erk-queue label...")
-    ctx.issues.add_label_to_issue(repo.root, issue_number, "erk-queue")
+    # Ensure erk-queue label is on issue (idempotent)
+    user_output(f"Adding {ERK_QUEUE_LABEL} label...")
+    ctx.issues.ensure_label_on_issue(repo.root, issue_number, ERK_QUEUE_LABEL)
 
     # Success output
     user_output("")

@@ -6,7 +6,7 @@ from pathlib import Path
 from click.testing import CliRunner
 from erk_shared.github.issues import FakeGitHubIssues, IssueInfo
 
-from erk.cli.commands.submit import submit_cmd
+from erk.cli.commands.submit import ERK_PLAN_LABEL, ERK_QUEUE_LABEL, submit_cmd
 from erk.core.git.fake import FakeGit
 from erk.core.github.fake import FakeGitHub
 from erk.core.repo_discovery import RepoContext
@@ -14,7 +14,7 @@ from tests.fakes.context import create_test_context
 
 
 def test_submit_valid_issue(tmp_path: Path) -> None:
-    """Test submit adds erk-queue label to valid issue."""
+    """Test submit ensures erk-queue label on valid issue."""
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
 
@@ -26,7 +26,7 @@ def test_submit_valid_issue(tmp_path: Path) -> None:
         body="# Plan\n\nImplementation details...",
         state="OPEN",
         url="https://github.com/test-owner/test-repo/issues/123",
-        labels=["erk-plan"],
+        labels=[ERK_PLAN_LABEL],
         assignees=[],
         created_at=now,
         updated_at=now,
@@ -60,8 +60,8 @@ def test_submit_valid_issue(tmp_path: Path) -> None:
 
     # Verify label was added
     updated_issue = fake_github_issues.get_issue(repo_root, 123)
-    assert "erk-queue" in updated_issue.labels
-    assert "erk-plan" in updated_issue.labels
+    assert ERK_QUEUE_LABEL in updated_issue.labels
+    assert ERK_PLAN_LABEL in updated_issue.labels
 
 
 def test_submit_missing_erk_plan_label(tmp_path: Path) -> None:
@@ -111,7 +111,7 @@ def test_submit_missing_erk_plan_label(tmp_path: Path) -> None:
 
     # Verify label was NOT added
     updated_issue = fake_github_issues.get_issue(repo_root, 123)
-    assert "erk-queue" not in updated_issue.labels
+    assert ERK_QUEUE_LABEL not in updated_issue.labels
 
 
 def test_submit_already_queued(tmp_path: Path) -> None:
@@ -127,7 +127,7 @@ def test_submit_already_queued(tmp_path: Path) -> None:
         body="# Plan\n\nImplementation details...",
         state="OPEN",
         url="https://github.com/test-owner/test-repo/issues/123",
-        labels=["erk-plan", "erk-queue"],
+        labels=[ERK_PLAN_LABEL, ERK_QUEUE_LABEL],
         assignees=[],
         created_at=now,
         updated_at=now,
@@ -173,7 +173,7 @@ def test_submit_closed_issue(tmp_path: Path) -> None:
         body="# Plan\n\nImplementation details...",
         state="CLOSED",
         url="https://github.com/test-owner/test-repo/issues/123",
-        labels=["erk-plan"],
+        labels=[ERK_PLAN_LABEL],
         assignees=[],
         created_at=now,
         updated_at=now,
@@ -207,7 +207,7 @@ def test_submit_closed_issue(tmp_path: Path) -> None:
 
     # Verify label was NOT added
     updated_issue = fake_github_issues.get_issue(repo_root, 123)
-    assert "erk-queue" not in updated_issue.labels
+    assert ERK_QUEUE_LABEL not in updated_issue.labels
 
 
 def test_submit_issue_not_found(tmp_path: Path) -> None:
@@ -256,7 +256,7 @@ def test_submit_dry_run(tmp_path: Path) -> None:
         body="# Plan\n\nImplementation details...",
         state="OPEN",
         url="https://github.com/test-owner/test-repo/issues/123",
-        labels=["erk-plan"],
+        labels=[ERK_PLAN_LABEL],
         assignees=[],
         created_at=now,
         updated_at=now,
@@ -291,8 +291,8 @@ def test_submit_dry_run(tmp_path: Path) -> None:
 
     # Verify label was NOT added in dry-run mode
     updated_issue = fake_github_issues.get_issue(repo_root, 123)
-    assert "erk-queue" not in updated_issue.labels
-    assert "erk-plan" in updated_issue.labels
+    assert ERK_QUEUE_LABEL not in updated_issue.labels
+    assert ERK_PLAN_LABEL in updated_issue.labels
 
 
 def test_submit_fake_integration(tmp_path: Path) -> None:
@@ -308,7 +308,7 @@ def test_submit_fake_integration(tmp_path: Path) -> None:
         body="# Plan\n\nMore details...",
         state="OPEN",
         url="https://github.com/test-owner/test-repo/issues/456",
-        labels=["erk-plan", "enhancement"],
+        labels=[ERK_PLAN_LABEL, "enhancement"],
         assignees=[],
         created_at=now,
         updated_at=now,
@@ -340,7 +340,7 @@ def test_submit_fake_integration(tmp_path: Path) -> None:
 
     # Verify FakeGitHubIssues correctly maintains all labels
     updated_issue = fake_github_issues.get_issue(repo_root, 456)
-    assert "erk-queue" in updated_issue.labels
-    assert "erk-plan" in updated_issue.labels
+    assert ERK_QUEUE_LABEL in updated_issue.labels
+    assert ERK_PLAN_LABEL in updated_issue.labels
     assert "enhancement" in updated_issue.labels
     assert len(updated_issue.labels) == 3

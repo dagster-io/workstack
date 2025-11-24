@@ -177,13 +177,13 @@ class GitHubIssues(ABC):
         ...
 
     @abstractmethod
-    def add_label_to_issue(self, repo_root: Path, issue_number: int, label: str) -> None:
-        """Add a label to an existing issue.
+    def ensure_label_on_issue(self, repo_root: Path, issue_number: int, label: str) -> None:
+        """Ensure a label is present on an existing issue (idempotent).
 
         Args:
             repo_root: Repository root directory
-            issue_number: Issue number to add label to
-            label: Label name to add
+            issue_number: Issue number to ensure label on
+            label: Label name to ensure is present
 
         Raises:
             RuntimeError: If gh CLI fails or issue not found
@@ -407,11 +407,12 @@ class RealGitHubIssues(GitHubIssues):
             ]
             execute_gh_command(create_cmd, repo_root)
 
-    def add_label_to_issue(self, repo_root: Path, issue_number: int, label: str) -> None:
-        """Add label to issue using gh CLI.
+    def ensure_label_on_issue(self, repo_root: Path, issue_number: int, label: str) -> None:
+        """Ensure label is present on issue using gh CLI (idempotent).
 
         Note: Uses gh's native error handling - gh CLI raises RuntimeError
         on failures (not installed, not authenticated, issue not found).
+        The gh CLI --add-label operation is idempotent.
         """
         cmd = ["gh", "issue", "edit", str(issue_number), "--add-label", label]
         execute_gh_command(cmd, repo_root)
@@ -585,8 +586,8 @@ class FakeGitHubIssues(GitHubIssues):
             self._labels.add(label)
             self._created_labels.append((label, description, color))
 
-    def add_label_to_issue(self, repo_root: Path, issue_number: int, label: str) -> None:
-        """Add label to issue in fake storage.
+    def ensure_label_on_issue(self, repo_root: Path, issue_number: int, label: str) -> None:
+        """Ensure label is present on issue in fake storage (idempotent).
 
         Raises:
             RuntimeError: If issue number not found (simulates gh CLI error)
@@ -595,7 +596,7 @@ class FakeGitHubIssues(GitHubIssues):
             msg = f"Issue #{issue_number} not found"
             raise RuntimeError(msg)
 
-        # Get current issue and create updated version with new label
+        # Get current issue and create updated version with new label (if not present)
         current_issue = self._issues[issue_number]
         if label not in current_issue.labels:
             updated_labels = current_issue.labels + [label]
@@ -677,6 +678,6 @@ class DryRunGitHubIssues(GitHubIssues):
         """No-op for ensuring label exists in dry-run mode."""
         pass
 
-    def add_label_to_issue(self, repo_root: Path, issue_number: int, label: str) -> None:
-        """No-op for adding label in dry-run mode."""
+    def ensure_label_on_issue(self, repo_root: Path, issue_number: int, label: str) -> None:
+        """No-op for ensuring label in dry-run mode (idempotent)."""
         pass

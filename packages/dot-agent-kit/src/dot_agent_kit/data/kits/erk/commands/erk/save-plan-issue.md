@@ -128,6 +128,8 @@ This command succeeds when ALL of the following are true:
 
 **Output:**
 ✅ JSON output provided with issue URL and number
+✅ Copy-pastable erk implement commands displayed (3 variants)
+✅ All commands use actual issue number, not placeholders
 ✅ Next steps clearly communicated to user
 
 ## Troubleshooting
@@ -422,7 +424,14 @@ Suggested action:
   4. Check gh auth status
 ```
 
-**Output success message:**
+**Output success message (REQUIRED - MUST use this exact format):**
+
+After creating the issue, you MUST:
+1. Extract the issue number from the URL
+2. Output the message below with the actual issue number substituted
+3. Include ALL three copy-pastable commands
+
+Format:
 
 ```markdown
 ✅ GitHub issue created: #<number>
@@ -438,6 +447,15 @@ Next steps:
 
 {"issue_number": <number>, "issue_url": "<url>", "status": "created"}
 ```
+
+**Verify Output Format:**
+
+Before finishing, confirm your output includes:
+- ✅ Issue number and URL on first line
+- ✅ "Next steps:" header
+- ✅ Three numbered commands with actual issue number (not placeholder)
+- ✅ JSON metadata with issue_number, issue_url, and status
+- ❌ NO placeholders like <number> or <url> in final output
 
 ## Important Notes
 

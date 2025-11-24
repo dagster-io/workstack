@@ -307,7 +307,8 @@ def _prepare_plan_source_from_issue(
     # Generate base name from issue title
     filename = generate_filename_from_title(plan_issue.title)
     stem = filename.removesuffix(".md")
-    base_name = strip_plan_from_filename(stem)
+    cleaned_stem = strip_plan_from_filename(stem)
+    base_name = sanitize_worktree_name(cleaned_stem)
 
     dry_run_desc = f"Would create worktree from issue #{issue_number}\n  Title: {plan_issue.title}"
 

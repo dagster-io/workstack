@@ -662,6 +662,44 @@ query {{
             # gh not installed, not authenticated, or JSON parsing failed
             return []
 
+    def get_workflow_run(self, repo_root: Path, run_id: str) -> WorkflowRun | None:
+        """Get details for a specific workflow run by ID.
+
+        Note: Uses try/except as an acceptable error boundary for handling gh CLI
+        availability and authentication. We cannot reliably check gh installation
+        and authentication status a priori without duplicating gh's logic.
+        """
+        try:
+            cmd = [
+                "gh",
+                "run",
+                "view",
+                run_id,
+                "--json",
+                "databaseId,status,conclusion,headBranch,headSha",
+            ]
+
+            result = run_subprocess_with_context(
+                cmd,
+                operation_context=f"get workflow run details for run {run_id}",
+                cwd=repo_root,
+            )
+
+            # Parse JSON response
+            data = json.loads(result.stdout)
+
+            return WorkflowRun(
+                run_id=str(data["databaseId"]),
+                status=data["status"],
+                conclusion=data.get("conclusion"),
+                branch=data["headBranch"],
+                head_sha=data["headSha"],
+            )
+
+        except (RuntimeError, json.JSONDecodeError, KeyError, FileNotFoundError):
+            # gh not installed, not authenticated, or command failed (e.g., 404)
+            return None
+
     def get_run_logs(self, repo_root: Path, run_id: str) -> str:
         """Get logs for a workflow run using gh CLI."""
         result = run_subprocess_with_context(

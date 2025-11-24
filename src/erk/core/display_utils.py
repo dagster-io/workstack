@@ -8,7 +8,7 @@ filesystem access.
 import re
 
 import click
-from erk_shared.github.types import PullRequestInfo
+from erk_shared.github.types import PullRequestInfo, WorkflowRun
 
 
 def get_visible_length(text: str) -> int:
@@ -99,6 +99,62 @@ def format_pr_info(
         return f"{emoji} {colored_pr_text}"
 
 
+def get_workflow_status_emoji(workflow_run: WorkflowRun) -> str:
+    """Determine the emoji to display for a workflow run based on its status.
+
+    Args:
+        workflow_run: Workflow run information
+
+    Returns:
+        Emoji character representing the workflow's current state
+    """
+    if workflow_run.status == "completed":
+        if workflow_run.conclusion == "success":
+            return "✅"
+        if workflow_run.conclusion == "failure":
+            return "❌"
+        if workflow_run.conclusion == "cancelled":
+            return "⛔"
+        # Other conclusions (skipped, timed_out, etc.)
+        return "❓"
+    if workflow_run.status == "in_progress":
+        return "⟳"
+    if workflow_run.status == "queued":
+        return "⧗"
+    # Unknown status
+    return "❓"
+
+
+def format_workflow_status(workflow_run: WorkflowRun | None, workflow_url: str | None) -> str:
+    """Format workflow run status indicator with emoji and link.
+
+    Args:
+        workflow_run: Workflow run information (None if no workflow run)
+        workflow_url: GitHub Actions workflow run URL (None if unavailable)
+
+    Returns:
+        Formatted workflow status string (e.g., "✅ CI") or empty string if no workflow
+    """
+    if workflow_run is None:
+        return ""
+
+    emoji = get_workflow_status_emoji(workflow_run)
+
+    # Format status text
+    status_text = "CI"
+
+    # If we have a URL, make it clickable using OSC 8 terminal escape sequence
+    if workflow_url:
+        # Wrap the link text in cyan color
+        colored_status_text = click.style(status_text, fg="cyan")
+        clickable_link = f"\033]8;;{workflow_url}\033\\{colored_status_text}\033]8;;\033\\"
+        return f"{emoji} {clickable_link}"
+    else:
+        # No URL available - just show colored text without link
+        colored_status_text = click.style(status_text, fg="cyan")
+        return f"{emoji} {colored_status_text}"
+
+
 def format_branch_without_worktree(
     branch_name: str,
     pr_info: str | None,
@@ -156,6 +212,9 @@ def format_worktree_line(
     max_branch_len: int = 0,
     max_pr_info_len: int = 0,
     pr_title: str | None = None,
+    workflow_run: WorkflowRun | None = None,
+    workflow_url: str | None = None,
+    max_workflow_len: int = 0,
 ) -> str:
     """Format a single worktree line with colorization and optional alignment.
 
@@ -170,9 +229,12 @@ def format_worktree_line(
         max_branch_len: Maximum branch length for alignment (0 = no alignment)
         max_pr_info_len: Maximum PR info visible length for alignment (0 = no alignment)
         pr_title: PR title from GitHub (preferred over plan_summary if available)
+        workflow_run: Workflow run information (None if no workflow)
+        workflow_url: GitHub Actions workflow run URL (None if unavailable)
+        max_workflow_len: Maximum workflow status visible length for alignment (0 = no alignment)
 
     Returns:
-        Formatted line: name (branch) {PR info} {PR title or plan summary}
+        Formatted line: name (branch) {PR info} {workflow status} {PR title or plan summary}
     """
     # Root worktree gets green to distinguish it from regular worktrees
     name_color = "green" if is_root else "cyan"
@@ -211,6 +273,21 @@ def format_worktree_line(
         parts.append(pr_display_with_padding)
     else:
         parts.append(pr_display)
+
+    # Add workflow status with alignment
+    workflow_status = format_workflow_status(workflow_run, workflow_url)
+    if workflow_status:
+        if max_workflow_len > 0:
+            # Calculate visible length and add padding
+            visible_len = get_visible_length(workflow_status)
+            padding = max_workflow_len - visible_len
+            workflow_with_padding = workflow_status + (" " * padding)
+            parts.append(workflow_with_padding)
+        else:
+            parts.append(workflow_status)
+    elif max_workflow_len > 0:
+        # Add spacing to maintain alignment when no workflow
+        parts.append(" " * max_workflow_len)
 
     # Add PR title, plan summary, or placeholder (PR title takes precedence)
     if pr_title:

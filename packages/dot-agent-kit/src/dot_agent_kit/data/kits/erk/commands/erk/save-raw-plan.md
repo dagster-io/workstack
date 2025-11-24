@@ -90,15 +90,14 @@ Extract these fields:
 
 **If error field is present:**
 
-```
-❌ Error: No plan found in session files
-
-Details: [error message from JSON]
-
-Suggested action:
-  1. Ensure you used ExitPlanMode in the session
-  2. Check session files exist in ~/.claude/projects/
-  3. Try running /erk:save-plan with conversation context instead
+```bash
+error_msg=$(echo "$result" | jq -r '.error')
+dot-agent kit-command erk format-error \
+    --brief "No plan found in session files" \
+    --details "$error_msg" \
+    --action "Ensure you used ExitPlanMode in the session" \
+    --action "Check session files exist in ~/.claude/projects/" \
+    --action "Try running /erk:save-plan with conversation context instead"
 ```
 
 ### Step 2: Validate Repository and GitHub CLI
@@ -115,7 +114,19 @@ Replace `$PLAN_CONTENT` with the `plan_content` variable extracted in Step 1:
 
 ### Step 4: Output Success Message
 
-@../docs/success-output-format.md
+After creating the GitHub issue successfully, format the success output using the kit CLI command:
+
+```bash
+# Parse issue number from URL
+issue_number=$(echo "$issue_url" | grep -oE '[0-9]+$')
+
+# Format success output
+dot-agent kit-command erk format-success-output \
+    --issue-number "$issue_number" \
+    --issue-url "$issue_url"
+```
+
+This will output the issue link, next steps commands, and JSON metadata in a consistent format.
 
 ## Important Notes
 

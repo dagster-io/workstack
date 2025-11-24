@@ -196,16 +196,19 @@ You are executing the `/erk:save-context-enriched-plan` command. Follow these st
 - DO NOT modify any files in the codebase
 - ONLY create a GitHub issue with the enhanced plan
 
-**Error Handling Template:**
-All errors must follow this format:
+**Error Handling:**
+All errors must use the format-error kit CLI command:
 
+```bash
+dot-agent kit-command erk format-error \
+    --brief "Brief description (5-10 words)" \
+    --details "Specific error message or context" \
+    --action "Concrete step 1" \
+    --action "Concrete step 2" \
+    --action "Concrete step 3"
 ```
-❌ Error: [Brief description in 5-10 words]
 
-Details: [Specific error message, relevant context, or diagnostic info]
-
-Suggested action: [1-3 concrete steps to resolve]
-```
+This ensures consistent error formatting with brief description, details, and suggested actions.
 
 **YOUR ONLY TASKS:**
 
@@ -265,33 +268,35 @@ Search conversation history for an implementation plan:
 
 **If no plan found:**
 
-```
-❌ Error: No implementation plan found in conversation
-
-Details: Could not find a valid implementation plan in conversation history
-
-Suggested action:
-  1. Ensure plan is in conversation
-  2. Plan should have headers and structure
-  3. Re-paste plan in conversation if needed
+```bash
+dot-agent kit-command erk format-error \
+    --brief "No implementation plan found in conversation" \
+    --details "Could not find a valid implementation plan in conversation history" \
+    --action "Ensure plan is in conversation" \
+    --action "Plan should have headers and structure" \
+    --action "Re-paste plan in conversation if needed"
 ```
 
 **Plan validation:**
 
-- Must be at least 100 characters
-- Must contain structure (numbered lists, bulleted lists, or multiple headers)
-- If invalid, show error:
+After extracting the plan content, validate it using the kit CLI command:
 
+```bash
+# Validate plan structure
+validate_result=$(echo "$plan_content" | dot-agent kit-command erk validate-plan-content)
+if ! echo "$validate_result" | jq -e '.valid' > /dev/null; then
+    error_msg=$(echo "$validate_result" | jq -r '.error')
+    dot-agent kit-command erk format-error \
+        --brief "Plan content is too minimal or invalid" \
+        --details "$error_msg" \
+        --action "Provide a more detailed implementation plan" \
+        --action "Include specific tasks, steps, or phases" \
+        --action "Use headers and lists to structure the plan"
+    exit 1
+fi
 ```
-❌ Error: Plan content is too minimal or invalid
 
-Details: Plan lacks structure or implementation details
-
-Suggested action:
-  1. Provide a more detailed implementation plan
-  2. Include specific tasks, steps, or phases
-  3. Use headers and lists to structure the plan
-```
+This ensures the plan meets minimum requirements (100+ characters, has structure with headers/lists).
 
 ### Steps 2-4: Enrichment Process
 
@@ -335,17 +340,13 @@ Before creating the GitHub issue, confirm you ONLY gathered information and did 
 
 **If you violated restrictions:**
 
-```
-❌ Error: Implementation attempted during plan creation
-
-Details: You used [tool name] which is forbidden in /erk:save-context-enriched-plan
-
-This command ONLY creates a GitHub issue. Implementation happens in erk implement.
-
-Suggested action:
-  1. Stop immediately - do NOT create the issue
-  2. Report what tools you used incorrectly
-  3. User should restart the command without implementing
+```bash
+dot-agent kit-command erk format-error \
+    --brief "Implementation attempted during plan creation" \
+    --details "You used [tool name] which is forbidden in /erk:save-context-enriched-plan. This command ONLY creates a GitHub issue. Implementation happens in erk implement." \
+    --action "Stop immediately - do NOT create the issue" \
+    --action "Report what tools you used incorrectly" \
+    --action "User should restart the command without implementing"
 ```
 
 **If all checks passed:** Proceed to Step 7 to create the GitHub issue.
@@ -363,7 +364,19 @@ Replace `$PLAN_CONTENT` with the `enhanced_plan_content` variable from Step 4:
 
 @../docs/create-github-issue.md
 
-@../docs/success-output-format.md
+After creating the GitHub issue successfully, format the success output using the kit CLI command:
+
+```bash
+# Parse issue number from URL
+issue_number=$(echo "$issue_url" | grep -oE '[0-9]+$')
+
+# Format success output
+dot-agent kit-command erk format-success-output \
+    --issue-number "$issue_number" \
+    --issue-url "$issue_url"
+```
+
+This will output the issue link, next steps commands, and JSON metadata in a consistent format.
 
 ## Important Notes
 

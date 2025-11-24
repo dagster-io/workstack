@@ -67,6 +67,12 @@ kit_cli_commands:
   - name: validate-plan-content
     path: kit_cli_commands/erk/validate_plan_content.py
     description: Validate plan content structure and quality from stdin
+  - name: format-success-output
+    path: kit_cli_commands/erk/format_success_output.py
+    description: Format success output for GitHub issue creation
+  - name: format-error
+    path: kit_cli_commands/erk/format_error.py
+    description: Format consistent error messages with brief/details/actions
 hooks:
   - id: session-id-injector-hook
     lifecycle: UserPromptSubmit

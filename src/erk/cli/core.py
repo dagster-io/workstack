@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from erk.cli.output import user_output
+from erk.cli.ensure import Ensure
 from erk.core.context import ErkContext
 from erk.core.repo_discovery import RepoContext, discover_repo_or_sentinel
 
@@ -52,22 +52,14 @@ def validate_worktree_name_for_deletion(name: str) -> None:
 
     Raises SystemExit(1) with error message if validation fails.
     """
-    if not name or not name.strip():
-        user_output("Error: Worktree name cannot be empty")
-        raise SystemExit(1)
-
-    if name in (".", ".."):
-        user_output(f"Error: Cannot delete '{name}' - directory references not allowed")
-        raise SystemExit(1)
-
-    if name == "root":
-        user_output("Error: Cannot delete 'root' - root worktree name not allowed")
-        raise SystemExit(1)
-
-    if name.startswith("/"):
-        user_output(f"Error: Cannot delete '{name}' - absolute paths not allowed")
-        raise SystemExit(1)
-
-    if "/" in name:
-        user_output(f"Error: Cannot delete '{name}' - path separators not allowed")
-        raise SystemExit(1)
+    Ensure.not_empty(name.strip() if name else "", "Worktree name cannot be empty")
+    Ensure.invariant(
+        name not in (".", ".."),
+        f"Cannot delete '{name}' - directory references not allowed",
+    )
+    Ensure.invariant(name != "root", "Cannot delete 'root' - root worktree name not allowed")
+    Ensure.invariant(
+        not name.startswith("/"),
+        f"Cannot delete '{name}' - absolute paths not allowed",
+    )
+    Ensure.invariant("/" not in name, f"Cannot delete '{name}' - path separators not allowed")

@@ -146,6 +146,106 @@ See these commands for examples:
 - `src/erk/cli/commands/jump.py` - Uses both user_output() and machine_output()
 - `src/erk/cli/commands/consolidate.py` - Uses both abstractions
 
+## Error Message Guidelines
+
+Use the `Ensure` class (from `erk.cli.ensure`) for all CLI validation errors. This provides consistent error styling and messaging.
+
+### Error Message Format
+
+All error messages should follow these principles:
+
+1. **Action-oriented**: Tell the user what went wrong and what they should do
+2. **User-friendly**: Avoid jargon, internal details, or stack traces
+3. **Unique**: Specific enough to search documentation or identify the issue
+4. **Concise**: Clear and brief, no redundant information
+
+### Format Pattern
+
+```
+[Specific issue description] - [Suggested action or context]
+```
+
+**DO NOT** include "Error: " prefix - the `Ensure` class adds it automatically in red.
+
+### Examples
+
+| Good                                                                                             | Bad                       |
+| ------------------------------------------------------------------------------------------------ | ------------------------- |
+| `"Configuration file not found at ~/.erk/config.yml - Run 'erk init' to create it"`              | `"Error: Config missing"` |
+| `"Worktree already exists at path {path} - Use --force to overwrite or choose a different name"` | `"Error: Path exists"`    |
+| `"Branch 'main' has uncommitted changes - Commit or stash changes before proceeding"`            | `"Dirty worktree"`        |
+| `"No child branches found - Already at the top of the stack"`                                    | `"Validation failed"`     |
+
+### Common Validation Patterns
+
+| Situation            | Error Message Template                                      |
+| -------------------- | ----------------------------------------------------------- |
+| Path doesn't exist   | `"{entity} not found: {path}"`                              |
+| Path already exists  | `"{entity} already exists: {path} - {action}"`              |
+| Git state invalid    | `"{branch/worktree} {state} - {required action}"`           |
+| Missing config field | `"Required configuration '{field}' not set - {how to fix}"` |
+| Invalid argument     | `"Invalid {argument}: {value} - {valid options}"`           |
+
+### Using Ensure Methods
+
+```python
+from erk.cli.ensure import Ensure
+
+# Basic invariant check
+Ensure.invariant(
+    condition,
+    "Branch 'main' already has a worktree - Delete it first or use a different branch"
+)
+
+# Truthy check (returns value if truthy)
+children = Ensure.truthy(
+    ctx.graphite.get_child_branches(ctx.git, repo.root, current_branch),
+    "Already at the top of the stack (no child branches)"
+)
+
+# Path existence check
+Ensure.path_exists(
+    ctx,
+    wt_path,
+    f"Worktree not found: {wt_path}"
+)
+```
+
+### Decision Tree: Which Ensure Method to Use?
+
+1. **Checking if a path exists?** → Use `Ensure.path_exists()`
+2. **Need to return a value if truthy?** → Use `Ensure.truthy()`
+3. **Any other boolean condition?** → Use `Ensure.invariant()`
+4. **Complex multi-condition validation?** → Use sequential Ensure calls (see below)
+
+### Complex Validation Patterns
+
+For multi-step validations, use sequential Ensure calls with specific error messages:
+
+```python
+# Multi-condition validation - each check has specific error
+Ensure.path_exists(ctx, wt_path, f"Worktree not found: {wt_path}")
+Ensure.git_branch_exists(ctx, repo.root, branch)
+Ensure.invariant(
+    not has_uncommitted_changes,
+    f"Branch '{branch}' has uncommitted changes - Commit or stash before proceeding"
+)
+
+# Conditional validation - only check if condition met
+if not dry_run:
+    Ensure.config_field_set(cfg, "github_token", "GitHub token required for this operation")
+    Ensure.git_worktree_exists(ctx, wt_path, name)
+
+# Validation with early return - fail fast on first error
+Ensure.not_empty(name, "Worktree name cannot be empty")
+Ensure.invariant(name not in (".", ".."), f"Invalid name '{name}' - directory references not allowed")
+Ensure.invariant("/" not in name, f"Invalid name '{name}' - path separators not allowed")
+```
+
+**Design Principle:** Prefer simple sequential checks over complex validation abstractions. Each check should have a specific, actionable error message. This aligns with the LBYL (Look Before You Leap) philosophy and makes code easier to understand and debug.
+
+**Exit Codes:** All Ensure methods use exit code 1 for validation failures. This is consistent across all CLI commands.
+
 ## See Also
 
 - [cli-script-mode.md](cli-script-mode.md) - Script mode for shell integration (suppressing diagnostics)

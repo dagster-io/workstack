@@ -3,10 +3,17 @@
 This module provides the Ensure class for asserting invariants in CLI commands
 with consistent, user-friendly error messages. All errors use red "Error:" prefix
 for visual consistency.
+
+Domain-Specific Methods:
+- Git state validations (branch checks, worktree existence, clean state)
+- Configuration validations (required fields, format checks)
+- Argument validations (count, type, range)
+- File/path validations (readable, writable, not hidden)
+- String/collection validations (non-empty, non-null)
 """
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import click
 
@@ -89,5 +96,211 @@ class Ensure:
         if not ctx.git.path_exists(path):
             if error_message is None:
                 error_message = f"Path not found: {path}"
+            user_output(click.style("Error: ", fg="red") + error_message)
+            raise SystemExit(1)
+
+    @staticmethod
+    def not_empty(value: str | list | dict | None, error_message: str) -> None:
+        """Ensure value is not empty (non-empty string, list, dict), otherwise exit.
+
+        Args:
+            value: Value to check for emptiness
+            error_message: Error message to display if value is empty.
+                          "Error: " prefix will be added automatically in red.
+
+        Raises:
+            SystemExit: If value is None, empty string, empty list, or empty dict
+
+        Example:
+            >>> Ensure.not_empty(name, "Worktree name cannot be empty")
+            >>> Ensure.not_empty(args, "No arguments provided - specify at least one branch")
+        """
+        if not value:
+            user_output(click.style("Error: ", fg="red") + error_message)
+            raise SystemExit(1)
+
+    @staticmethod
+    def git_worktree_exists(ctx: "ErkContext", wt_path: Path, name: str | None = None) -> None:
+        """Ensure worktree exists at path, otherwise output styled error and exit.
+
+        Args:
+            ctx: Application context with git integration
+            wt_path: Path where worktree should exist
+            name: Optional worktree name for friendlier error message
+
+        Raises:
+            SystemExit: If worktree does not exist
+
+        Example:
+            >>> Ensure.git_worktree_exists(ctx, wt_path, "feature-123")
+            >>> Ensure.git_worktree_exists(ctx, wt_path)  # Uses path in error
+        """
+        if name:
+            error_message = f"Worktree '{name}' does not exist"
+        else:
+            error_message = f"Worktree not found: {wt_path}"
+        Ensure.path_exists(ctx, wt_path, error_message)
+
+    @staticmethod
+    def git_branch_exists(ctx: "ErkContext", repo_root: Path, branch: str) -> None:
+        """Ensure git branch exists, otherwise output styled error and exit.
+
+        Args:
+            ctx: Application context with git integration
+            repo_root: Repository root path
+            branch: Branch name to check
+
+        Raises:
+            SystemExit: If branch does not exist
+
+        Example:
+            >>> Ensure.git_branch_exists(ctx, repo.root, "feature-branch")
+        """
+        local_branches = ctx.git.list_local_branches(repo_root)
+        if branch not in local_branches:
+            user_output(
+                click.style("Error: ", fg="red")
+                + f"Branch '{branch}' does not exist - Create it first or check the name"
+            )
+            raise SystemExit(1)
+
+    @staticmethod
+    def in_git_worktree(ctx: "ErkContext", current_path: Path | None) -> None:
+        """Ensure currently in a git worktree, otherwise output styled error and exit.
+
+        Args:
+            ctx: Application context (for error handling)
+            current_path: Path to check (typically ctx.cwd or result of get_worktree_path)
+
+        Raises:
+            SystemExit: If not in a git worktree
+
+        Example:
+            >>> current_wt = ctx.git.get_worktree_path(repo.root, ctx.cwd)
+            >>> Ensure.in_git_worktree(ctx, current_wt)
+        """
+        if current_path is None:
+            user_output(
+                click.style("Error: ", fg="red")
+                + "Not in a git worktree - Run this command from within a worktree directory"
+            )
+            raise SystemExit(1)
+
+    @staticmethod
+    def argument_count(
+        args: tuple[Any, ...] | list[Any],
+        expected: int,
+        error_message: str | None = None,
+    ) -> None:
+        """Ensure argument count matches expected, otherwise output styled error and exit.
+
+        Args:
+            args: Arguments tuple or list to check
+            expected: Expected number of arguments
+            error_message: Optional custom error message
+
+        Raises:
+            SystemExit: If argument count does not match expected
+
+        Example:
+            >>> Ensure.argument_count(args, 1, "Expected exactly 1 branch name")
+            >>> Ensure.argument_count(args, 0, "This command takes no arguments")
+        """
+        if len(args) != expected:
+            if error_message is None:
+                if expected == 0:
+                    error_message = f"Expected no arguments, got {len(args)}"
+                elif expected == 1:
+                    error_message = f"Expected 1 argument, got {len(args)}"
+                else:
+                    error_message = f"Expected {expected} arguments, got {len(args)}"
+            user_output(click.style("Error: ", fg="red") + error_message)
+            raise SystemExit(1)
+
+    @staticmethod
+    def config_field_set(
+        config: Any,
+        field_name: str,
+        error_message: str | None = None,
+    ) -> None:
+        """Ensure configuration field is set, otherwise output styled error and exit.
+
+        Args:
+            config: Configuration object (must have __getattr__ or __getitem__)
+            field_name: Name of the field to check
+            error_message: Optional custom error message
+
+        Raises:
+            SystemExit: If field is not set (None or missing)
+
+        Example:
+            >>> Ensure.config_field_set(
+            ...     ctx.local_config,
+            ...     "github_token",
+            ...     "GitHub token not configured - Run 'erk config set github_token <token>'"
+            ... )
+        """
+        try:
+            value = getattr(config, field_name, None)
+        except AttributeError:
+            try:
+                value = config[field_name] if hasattr(config, "__getitem__") else None
+            except (KeyError, TypeError):
+                value = None
+
+        if value is None:
+            if error_message is None:
+                error_message = (
+                    f"Required configuration '{field_name}' not set - "
+                    f"Run 'erk config set {field_name} <value>'"
+                )
+            user_output(click.style("Error: ", fg="red") + error_message)
+            raise SystemExit(1)
+
+    @staticmethod
+    def path_is_dir(ctx: "ErkContext", path: Path, error_message: str | None = None) -> None:
+        """Ensure path exists and is a directory, otherwise output styled error and exit.
+
+        Args:
+            ctx: Application context with git integration
+            path: Path to check
+            error_message: Optional custom error message
+
+        Raises:
+            SystemExit: If path doesn't exist or is not a directory
+
+        Example:
+            >>> Ensure.path_is_dir(ctx, repo.worktrees_dir, "Worktrees directory not found")
+        """
+        Ensure.path_exists(ctx, path, error_message)
+        if not path.is_dir():
+            if error_message is None:
+                error_message = f"Path is not a directory: {path}"
+            user_output(click.style("Error: ", fg="red") + error_message)
+            raise SystemExit(1)
+
+    @staticmethod
+    def path_not_exists(ctx: "ErkContext", path: Path, error_message: str) -> None:
+        """Ensure path does NOT exist, otherwise output styled error and exit.
+
+        Inverse of path_exists - used when creating new resources that must not collide.
+
+        Args:
+            ctx: Application context with git integration
+            path: Path to check should not exist
+            error_message: Error message to display if path exists
+
+        Raises:
+            SystemExit: If path already exists
+
+        Example:
+            >>> Ensure.path_not_exists(
+            ...     ctx,
+            ...     new_path,
+            ...     f"Destination already exists: {new_path} - "
+            ...     f"Choose a different name or delete the existing path"
+            ... )
+        """
+        if ctx.git.path_exists(path):
             user_output(click.style("Error: ", fg="red") + error_message)
             raise SystemExit(1)

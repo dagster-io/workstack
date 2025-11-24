@@ -550,7 +550,7 @@ def test_down_delete_current_pr_not_merged() -> None:
 
 
 def test_down_delete_current_no_pr() -> None:
-    """Test --delete-current blocks when no PR exists."""
+    """Test --delete-current warns but proceeds when no PR exists."""
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
         repo_dir = env.setup_repo_structure()
@@ -593,14 +593,16 @@ def test_down_delete_current_no_pr() -> None:
             cli, ["down", "--delete-current"], obj=test_ctx, catch_exceptions=False
         )
 
-        # Assert: Command failed with error about no PR
-        assert_cli_error(
-            result, 1, "No pull request found for branch 'feature-2'", "Cannot verify merge status"
-        )
+        # Assert: Command succeeded with warning about no PR
+        assert result.exit_code == 0, f"Expected exit code 0, got {result.exit_code}: {result.output}"
+        assert "Warning:" in result.output
+        assert "No pull request found for branch 'feature-2'" in result.output
+        assert "Proceeding with deletion without PR verification" in result.output
 
-        # Assert: No worktrees or branches were deleted
-        assert len(git_ops.removed_worktrees) == 0
-        assert len(git_ops.deleted_branches) == 0
+        # Assert: Branch and worktree were deleted
+        assert len(git_ops.removed_worktrees) == 1
+        assert len(git_ops.deleted_branches) == 1
+        assert "feature-2" in git_ops.deleted_branches
 
 
 def test_down_delete_current_trunk_in_root() -> None:

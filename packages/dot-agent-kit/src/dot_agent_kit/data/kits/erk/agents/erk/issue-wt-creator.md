@@ -1,7 +1,7 @@
 ---
 name: issue-wt-creator
 description: Specialized agent for creating worktrees from GitHub issues with erk-plan label. Handles issue fetching, validation, worktree creation via erk CLI, and displaying next steps.
-model: sonnet
+model: haiku
 color: blue
 tools: Read, Write, Bash, Task
 ---

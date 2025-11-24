@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import click
-from erk_shared.github.types import PullRequestInfo
+from erk_shared.github.types import PullRequestInfo, WorkflowRun
 from erk_shared.impl_folder import get_impl_path
 
 from erk.cli.core import discover_repo_context
@@ -10,11 +10,13 @@ from erk.core.context import ErkContext
 from erk.core.display_utils import (
     format_branch_without_worktree,
     format_pr_info,
+    format_workflow_status,
     format_worktree_line,
     get_visible_length,
 )
 from erk.core.file_utils import extract_plan_title
 from erk.core.repo_discovery import RepoContext
+from erk.core.workflow_display import get_workflow_run_for_worktree
 from erk.core.worktree_utils import find_current_worktree
 
 
@@ -89,6 +91,14 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
         if ci:
             prs = ctx.github.enrich_prs_with_ci_status_batch(prs, repo.root)
 
+    # Fetch workflow run information for worktrees with .impl/ folders
+    workflow_info: dict[Path, tuple[WorkflowRun | None, str | None]] = {}
+    for wt in worktrees:
+        workflow_run, workflow_url = get_workflow_run_for_worktree(
+            wt.path, ctx.github, ctx.issues, repo.root
+        )
+        workflow_info[wt.path] = (workflow_run, workflow_url)
+
     # Identify branches without worktrees
     branches_with_worktrees = {wt.branch for wt in worktrees if wt.branch is not None}
 
@@ -109,11 +119,12 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
     ]
 
     # Calculate maximum widths for alignment
-    # First, collect all names, branches, and PR info to display
+    # First, collect all names, branches, PR info, and workflow status to display
     # Start with root
     all_names = ["root"]
     all_branches = []
     all_pr_info = []
+    all_workflow_status = []
 
     root_branch = branches.get(repo.root)
     if root_branch:
@@ -131,6 +142,12 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
                 all_pr_info.append("[no PR]")
         else:
             all_pr_info.append("[no PR]")
+
+        # Add root workflow status for width calculation
+        root_workflow_run, root_workflow_url = workflow_info.get(repo.root, (None, None))
+        root_workflow_status = format_workflow_status(root_workflow_run, root_workflow_url)
+        if root_workflow_status:
+            all_workflow_status.append(root_workflow_status)
     else:
         all_pr_info.append("[no PR]")
 
@@ -156,14 +173,25 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
                     all_pr_info.append("[no PR]")
             else:
                 all_pr_info.append("[no PR]")
+
+            # Add workflow status for width calculation
+            wt_workflow_run, wt_workflow_url = workflow_info.get(wt.path, (None, None))
+            wt_workflow_status = format_workflow_status(wt_workflow_run, wt_workflow_url)
+            if wt_workflow_status:
+                all_workflow_status.append(wt_workflow_status)
         else:
             all_pr_info.append("[no PR]")
 
-    # Calculate max widths using visible length for PR info
+    # Calculate max widths using visible length for PR info and workflow status
     max_name_len = max(len(name) for name in all_names) if all_names else 0
     max_branch_len = max(len(branch) for branch in all_branches) if all_branches else 0
     max_pr_info_len = (
         max(get_visible_length(pr_info) for pr_info in all_pr_info) if all_pr_info else 0
+    )
+    max_workflow_len = (
+        max(get_visible_length(status) for status in all_workflow_status)
+        if all_workflow_status
+        else 0
     )
 
     # Section 1: Worktrees
@@ -173,7 +201,7 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
     # Show root repo first (display as "root" to distinguish from worktrees)
     is_current_root = repo.root == current_worktree_path
 
-    # Get PR info and plan summary for root
+    # Get PR info, workflow info, and plan summary for root
     root_pr_info = None
     root_pr_title = None
     if prs and root_branch:
@@ -183,6 +211,9 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
             root_pr_info = format_pr_info(pr, graphite_url)
             root_pr_title = pr.title
     root_plan_summary = _format_plan_summary(repo.root, ctx)
+
+    # Get workflow info for root
+    root_workflow_run, root_workflow_url = workflow_info.get(repo.root, (None, None))
 
     user_output(
         format_worktree_line(
@@ -196,6 +227,9 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
             max_branch_len=max_branch_len,
             max_pr_info_len=max_pr_info_len,
             pr_title=root_pr_title,
+            workflow_run=root_workflow_run,
+            workflow_url=root_workflow_url,
+            max_workflow_len=max_workflow_len,
         )
     )
 
@@ -207,7 +241,7 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
 
         is_current_wt = wt_path == current_worktree_path
 
-        # Get PR info and plan summary for this worktree
+        # Get PR info, workflow info, and plan summary for this worktree
         wt_pr_info = None
         wt_pr_title = None
         if prs and wt_branch:
@@ -217,6 +251,9 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
                 wt_pr_info = format_pr_info(pr, graphite_url)
                 wt_pr_title = pr.title
         wt_plan_summary = _format_plan_summary(wt_path, ctx)
+
+        # Get workflow info for this worktree
+        wt_workflow_run, wt_workflow_url = workflow_info.get(wt_path, (None, None))
 
         user_output(
             format_worktree_line(
@@ -230,6 +267,9 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
                 max_branch_len=max_branch_len,
                 max_pr_info_len=max_pr_info_len,
                 pr_title=wt_pr_title,
+                workflow_run=wt_workflow_run,
+                workflow_url=wt_workflow_url,
+                max_workflow_len=max_workflow_len,
             )
         )
 

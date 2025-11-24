@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 import click
+from erk_shared.github.emoji import get_checks_status_emoji, get_pr_status_emoji
 from erk_shared.github.issues import GitHubIssues
 from erk_shared.github.types import PullRequestInfo
 from erk_shared.impl_folder import read_issue_reference
@@ -55,21 +56,7 @@ def format_pr_cell(pr: PullRequestInfo) -> str:
     Returns:
         Formatted string for table cell
     """
-    # Map state to emoji (aligned with erk-statusline conventions)
-    emoji_map = {
-        "OPEN": "👀",  # published/open PR
-        "DRAFT": "🚧",  # draft PR
-        "MERGED": "🎉",  # merged PR
-        "CLOSED": "⛔",  # closed PR
-    }
-
-    # Get base emoji for state
-    emoji = emoji_map.get(pr.state, "")
-
-    # Add conflicts indicator for open/draft PRs
-    if pr.state in ("OPEN", "DRAFT") and pr.has_conflicts:
-        emoji += "💥"
-
+    emoji = get_pr_status_emoji(pr)
     return f"#{pr.number} {emoji}"
 
 
@@ -82,14 +69,7 @@ def format_checks_cell(pr: PullRequestInfo | None) -> str:
     Returns:
         Formatted string for table cell
     """
-    if pr is None:
-        return "-"
-
-    if pr.checks_passing is None:
-        return "🔄"  # Pending or no checks
-    if pr.checks_passing:
-        return "✅"  # All pass
-    return "🚫"  # Any failing
+    return get_checks_status_emoji(pr)
 
 
 def determine_action_state(plan: Plan, all_comments: dict[int, list[str]]) -> str:

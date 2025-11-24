@@ -14,7 +14,7 @@ Inspects agent runs from the current Claude Code session, showing performance me
 /agent-inspect bffe43
 
 # Filter by agent type
-/agent-inspect --type gt-simple-submitter
+/agent-inspect --type gt-branch-submitter
 
 # Filter by agent type with full output (not truncated)
 /agent-inspect --type devrun --full
@@ -38,7 +38,7 @@ Inspects agent runs from the current Claude Code session, showing performance me
 ## Options
 
 - `[agent-id]`: Show specific agent (prefix match on agent ID)
-- `--type <agent-type>`: Filter to specific agent type (e.g., devrun, gt-simple-submitter)
+- `--type <agent-type>`: Filter to specific agent type (e.g., devrun, gt-branch-submitter)
 - `--full`: Include complete tool outputs (not truncated to 500 chars)
 - `--all`: Show all agents including successful ones (default shows failed + recent)
 
@@ -63,7 +63,7 @@ Output:
 ```
 Agent ID  Type              Task (truncated)        Duration  Tokens  Cost    Status
 abc123    devrun            Run fast CI checks      12.3s     15.2K   $0.023  ✅
-bffe4320  gt-simple-sub...  Execute simplified...   32.1s     16.3K   $0.025  ✅
+bffe4320  gt-branch-sub...  Execute submit...       32.1s     16.3K   $0.025  ✅
 ```
 
 **Inspect specific agent:**
@@ -77,10 +77,10 @@ Output shows detailed performance metrics, token usage breakdown, and complete t
 **Filter by agent type:**
 
 ```bash
-/agent-inspect --type devrun
+/agent-inspect --type gt-branch-submitter
 ```
 
-Shows only devrun agents from the current session.
+Shows only gt-branch-submitter agents from the current session.
 
 ---
 
@@ -118,7 +118,7 @@ python -m erk.data.kits.erk.kit_cli_commands.erk.debug_agent \
 
 ### Example Execution
 
-**User runs:** `/agent-inspect --type gt-simple-submitter`
+**User runs:** `/agent-inspect --type gt-branch-submitter`
 
 **Your actions:**
 
@@ -128,7 +128,7 @@ python -m erk.data.kits.erk.kit_cli_commands.erk.debug_agent \
    python -m erk.data.kits.erk.kit_cli_commands.erk.debug_agent \
      --session-id ffa93816-a3a5-4341-bff6-aada29be64b5 \
      --all \
-     --agent-type gt-simple-submitter
+     --agent-type gt-branch-submitter
    ```
 3. Display the rich terminal output to user
 

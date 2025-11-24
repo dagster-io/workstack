@@ -4,8 +4,8 @@
 
 **Artifacts**:
 
-- agent: agents/gt/gt-branch-submitter.md, agents/gt/gt-update-pr-submitter.md, agents/gt/gt-simple-submitter.md
-- command: commands/gt/submit-squashed-branch.md, commands/gt/update-pr.md, commands/gt/simple-submit.md
+- agent: agents/gt/gt-branch-submitter.md, agents/gt/gt-update-pr-submitter.md
+- command: commands/gt/submit-pr.md, commands/gt/update-pr.md
 - skill: skills/gt-graphite/SKILL.md, skills/gt-graphite/references/gt-reference.md
 
 **Usage**:

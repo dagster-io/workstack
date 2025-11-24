@@ -27,8 +27,8 @@ Run the Python kit command to handle mechanical git/gt operations:
 ```
 Task(
     subagent_type="runner",
-    description="Run submit-squashed-branch pre-analysis",
-    prompt="Execute: dot-agent run gt submit-squashed-branch pre-analysis"
+    description="Run submit-pr pre-analysis",
+    prompt="Execute: dot-agent run gt submit-pr pre-analysis"
 )
 ```
 
@@ -59,7 +59,7 @@ If the command fails (exit code 1), parse the error JSON and report to user. Do 
 Get all context needed for diff analysis using a single command:
 
 ```bash
-dot-agent run gt submit-squashed-branch get-diff-context
+dot-agent run gt submit-pr get-diff-context
 ```
 
 **What this returns (JSON):**
@@ -167,8 +167,8 @@ With the consolidation of arguments, you only need to pass the complete commit m
 ```
 Task(
     subagent_type="runner",
-    description="Run submit-squashed-branch post-analysis",
-    prompt='Execute: dot-agent run gt submit-squashed-branch post-analysis --commit-message "Full message
+    description="Run submit-pr post-analysis",
+    prompt='Execute: dot-agent run gt submit-pr post-analysis --commit-message "Full message
 with multiple lines
 including all content"'
 )
@@ -177,7 +177,7 @@ including all content"'
 **For complex messages with special characters, use Bash with heredoc:**
 
 ```bash
-dot-agent run gt submit-squashed-branch post-analysis \
+dot-agent run gt submit-pr post-analysis \
   --commit-message "$(cat <<'COMMIT_MSG'
 Full commit message here
 with multiple lines
@@ -332,7 +332,7 @@ The agent has stopped and is waiting for you to sync. Follow these steps:
 
 2. **After sync completes**, re-run the workflow:
    ```bash
-   /gt:submit-squashed-branch <description>
+   /gt:submit-pr <description>
    ```
 
 **Why this happened:** Your local trunk is behind the remote. Syncing updates your local branches to reflect merged PRs.
@@ -359,7 +359,7 @@ The agent has stopped and is waiting for you to resolve this. Follow these steps
 
 3. **After resolution completes**, re-run the workflow:
    ```bash
-   /gt:submit-squashed-branch <description>
+   /gt:submit-pr <description>
    ```
 
 **The agent will NOT attempt to resolve conflicts for you.** Manual resolution ensures correctness.
@@ -406,7 +406,7 @@ The agent has stopped and is waiting for you to resolve this. Follow these steps
 
 5. **After resolution**, re-run this workflow:
    ```bash
-   /gt:submit-squashed-branch <description>
+   /gt:submit-pr <description>
    ```
 
 **Alternative:** If rebase is too complex, you can:
@@ -431,7 +431,7 @@ The agent has stopped and is waiting for you to resolve this. Choose one approac
 # Manually rebase your branch onto its parent
 gt stack fix
 # Then retry the workflow
-/gt:submit-squashed-branch <description>
+/gt:submit-pr <description>
 ```
 
 **Option 2: Sync with trunk first**
@@ -440,7 +440,7 @@ gt stack fix
 # Update your local trunk to match remote
 gt sync -f
 # Then retry the workflow
-/gt:submit-squashed-branch <description>
+/gt:submit-pr <description>
 ```
 
 **The agent will NOT attempt to resolve conflicts for you.** You must choose and execute one of these approaches.

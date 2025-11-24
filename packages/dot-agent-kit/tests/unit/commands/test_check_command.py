@@ -886,10 +886,8 @@ def test_check_command_perfect_sync_no_missing_no_obsolete(tmp_path: Path) -> No
                     source_type="bundled",
                     artifacts=[
                         ".claude/agents/gt/gt-branch-submitter.md",
-                        ".claude/agents/gt/gt-simple-submitter.md",
                         ".claude/agents/gt/gt-update-pr-submitter.md",
-                        ".claude/commands/gt/simple-submit.md",
-                        ".claude/commands/gt/submit-squashed-branch.md",
+                        ".claude/commands/gt/submit-pr.md",
                         ".claude/commands/gt/update-pr.md",
                         ".claude/skills/gt-graphite/SKILL.md",
                         ".claude/skills/gt-graphite/references/gt-reference.md",
@@ -907,10 +905,8 @@ def test_check_command_perfect_sync_no_missing_no_obsolete(tmp_path: Path) -> No
         if bundled_path is not None:
             for artifact_rel in [
                 "agents/gt/gt-branch-submitter.md",
-                "agents/gt/gt-simple-submitter.md",
                 "agents/gt/gt-update-pr-submitter.md",
-                "commands/gt/simple-submit.md",
-                "commands/gt/submit-squashed-branch.md",
+                "commands/gt/submit-pr.md",
                 "commands/gt/update-pr.md",
                 "skills/gt-graphite/SKILL.md",
                 "skills/gt-graphite/references/gt-reference.md",
@@ -923,6 +919,10 @@ def test_check_command_perfect_sync_no_missing_no_obsolete(tmp_path: Path) -> No
                     local_artifact.write_text(bundled_content, encoding="utf-8")
 
             result = runner.invoke(check)
+
+            # Debug: print output if test fails
+            if result.exit_code != 0:
+                print(f"\n=== Check command output ===\n{result.output}\n=== End output ===")
 
             assert result.exit_code == 0
             assert "All checks passed" in result.output

@@ -90,7 +90,7 @@ def summarize_tool_use(tool_use: dict, worktree_path: Path) -> str | None:
         if not isinstance(cmd, str):
             return None
 
-        if "/gt:simple-submit" in cmd or "/git:push-pr" in cmd:
+        if "/gt:submit-pr" in cmd or "/git:push-pr" in cmd:
             return "Creating pull request..."
 
         if "/fast-ci" in cmd or "/all-ci" in cmd:

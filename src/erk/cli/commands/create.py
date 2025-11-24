@@ -686,7 +686,7 @@ def create(
                 + "To add the label:\n"
                 + f"  gh issue edit {issue_number_parsed} --add-label erk-plan\n\n"
                 + "Or create issues via:\n"
-                + "  /erk:create-plan-issue-from-plan-file"
+                + "  /erk:create-plan-from-plan-file"
             )
             raise SystemExit(1)
 

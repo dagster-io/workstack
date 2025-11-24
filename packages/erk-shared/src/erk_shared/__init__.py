@@ -12,7 +12,6 @@ from erk_shared.github.metadata import (
     MetadataBlockSchema,
     create_implementation_status_block,
     create_metadata_block,
-    create_plan_issue_block,
     create_progress_status_block,
     create_worktree_creation_block,
     render_erk_issue_event,
@@ -52,7 +51,6 @@ __all__ = [
     "create_implementation_status_block",
     "create_progress_status_block",
     "create_worktree_creation_block",
-    "create_plan_issue_block",
     # Impl Folder Utilities
     "parse_progress_frontmatter",
     "read_issue_reference",

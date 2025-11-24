@@ -4,7 +4,7 @@ This kit CLI command posts a structured comment to a plan issue containing
 the plan content and workflow instructions for starting work.
 
 Usage:
-    dot-agent run erk post-plan-issue-comment --issue-number 123 \\
+    dot-agent run erk post-plan-comment --issue-number 123 \\
         --plan-content "..." --plan-title "..."
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 import click
 from erk_shared.github.issues import RealGitHubIssues
 from erk_shared.github.metadata import (
-    create_plan_issue_block,
+    create_plan_block,
     render_erk_issue_event,
 )
 from erk_shared.naming import sanitize_worktree_name
@@ -26,7 +26,7 @@ from erk_shared.naming import sanitize_worktree_name
 @click.option("--plan-content", required=True, help="Plan markdown content")
 @click.option("--plan-title", required=True, help="Plan title for worktree name generation")
 @click.option("--plan-file", required=False, help="Optional path to plan file")
-def post_plan_issue_comment(
+def post_plan_comment(
     issue_number: int,
     plan_content: str,
     plan_title: str,
@@ -39,7 +39,7 @@ def post_plan_issue_comment(
     worktree_name = sanitize_worktree_name(plan_title)
 
     # Create metadata block
-    block = create_plan_issue_block(
+    block = create_plan_block(
         issue_number=issue_number,
         worktree_name=worktree_name,
         timestamp=timestamp,
@@ -48,12 +48,12 @@ def post_plan_issue_comment(
 
     # Build workflow instructions
     one_liner = (
-        f'claude --permission-mode acceptEdits -p "/erk:create-wt-from-plan-issue '
+        f'claude --permission-mode acceptEdits -p "/erk:create-wt-from-plan '
         f'#{issue_number} {worktree_name}" && erk co {worktree_name} && '
         f'claude --permission-mode acceptEdits "/erk:implement-plan"'
     )
     step_1_cmd = (
-        f'claude --permission-mode acceptEdits -p "/erk:create-wt-from-plan-issue '
+        f'claude --permission-mode acceptEdits -p "/erk:create-wt-from-plan '
         f'#{issue_number} {worktree_name}"'
     )
     workflow_instructions = f"""## Quick Start
@@ -109,4 +109,4 @@ Or step-by-step:
 
 
 if __name__ == "__main__":
-    post_plan_issue_comment()
+    post_plan_comment()

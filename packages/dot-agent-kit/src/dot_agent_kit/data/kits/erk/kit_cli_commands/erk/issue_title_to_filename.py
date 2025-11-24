@@ -4,8 +4,8 @@ Usage:
     dot-agent kit-command erk issue-title-to-filename "Plan Title"
 
 Single source of truth for filename transformation across:
-- /erk:save-raw-plan-issue
-- /erk:save-plan-issue
+- /erk:save-raw-plan
+- /erk:save-plan
 - issue-wt-creator agent
 
 Output:

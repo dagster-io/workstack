@@ -2,14 +2,14 @@
 description: Create GitHub issue directly from plan in conversation (no disk file)
 ---
 
-# /erk:create-plan-issue-from-context
+# /erk:create-plan-from-context
 
 Extract implementation plan from the current conversation and create a GitHub issue directly, without saving a plan file to disk. This provides a streamlined workflow for quick issue creation from conversational context.
 
 ## Usage
 
 ```bash
-/erk:create-plan-issue-from-context
+/erk:create-plan-from-context
 ```
 
 **No arguments accepted** - This command automatically extracts the plan from the conversation.
@@ -65,7 +65,7 @@ This command provides a fast path for creating GitHub issues when you don't need
 
 ## Agent Instructions
 
-You are executing the `/erk:create-plan-issue-from-context` command. Follow these steps carefully using ONLY the allowed tools.
+You are executing the `/erk:create-plan-from-context` command. Follow these steps carefully using ONLY the allowed tools.
 
 ### CRITICAL: Tool Restrictions
 

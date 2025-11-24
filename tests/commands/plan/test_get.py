@@ -1,4 +1,4 @@
-"""Tests for plan-issue get command."""
+"""Tests for plan get command."""
 
 from datetime import UTC, datetime
 
@@ -13,7 +13,7 @@ from tests.test_utils.env_helpers import erk_inmem_env
 def test_get_plan_displays_issue() -> None:
     """Test fetching and displaying a plan issue."""
     # Arrange
-    plan_issue = Plan(
+    plan = Plan(
         plan_identifier="42",
         title="Test Issue",
         body="This is a test issue description",
@@ -28,7 +28,7 @@ def test_get_plan_displays_issue() -> None:
 
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         ctx = build_workspace_test_context(env, plan_store=store)
 
         # Act
@@ -65,7 +65,7 @@ def test_get_plan_not_found() -> None:
 def test_get_plan_minimal_fields() -> None:
     """Test displaying issue with minimal fields (no labels, assignees, body)."""
     # Arrange
-    plan_issue = Plan(
+    plan = Plan(
         plan_identifier="1",
         title="Minimal Issue",
         body="",
@@ -80,7 +80,7 @@ def test_get_plan_minimal_fields() -> None:
 
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        store = FakePlanStore(plans={"1": plan_issue})
+        store = FakePlanStore(plans={"1": plan})
         ctx = build_workspace_test_context(env, plan_store=store)
 
         # Act
@@ -95,7 +95,7 @@ def test_get_plan_minimal_fields() -> None:
 def test_get_plan_string_identifier() -> None:
     """Test get with non-numeric string identifier (e.g., Jira style)."""
     # Arrange
-    plan_issue = Plan(
+    plan = Plan(
         plan_identifier="PROJ-123",
         title="Jira-style Issue",
         body="",
@@ -110,7 +110,7 @@ def test_get_plan_string_identifier() -> None:
 
     runner = CliRunner()
     with erk_inmem_env(runner) as env:
-        store = FakePlanStore(plans={"PROJ-123": plan_issue})
+        store = FakePlanStore(plans={"PROJ-123": plan})
         ctx = build_workspace_test_context(env, plan_store=store)
 
         # Act

@@ -1,4 +1,4 @@
-"""Tests for plan-issue list command."""
+"""Tests for plan list command."""
 
 from datetime import UTC, datetime
 

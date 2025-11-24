@@ -1,7 +1,7 @@
 """Create GitHub issue from enriched plan (via --plan-content option) with erk-plan label.
 
-This kit CLI command is identical to create_plan_issue_from_context but is used
-by the /erk:create-enriched-plan-issue-from-context slash command which handles
+This kit CLI command is identical to create_plan_from_context but is used
+by the /erk:create-enriched-plan-from-context slash command which handles
 plan enrichment before passing the enriched plan to this command.
 
 The enrichment happens in the agent's logic (adding context, architectural notes, etc.)
@@ -30,7 +30,7 @@ def create_enriched_plan_from_context(ctx: click.Context, plan_content: str) -> 
     to this command.
 
     Usage:
-        dot-agent kit-command erk create-enriched-plan-issue-from-context \\
+        dot-agent kit-command erk create-enriched-plan-from-context \\
             --plan-content "$enriched_plan"
 
     Exit Codes:

@@ -2,7 +2,7 @@
 description: Extract plan from conversation, fully enhance it, and create GitHub issue
 ---
 
-# /erk:create-enriched-plan-issue-from-context
+# /erk:create-enriched-plan-from-context
 
 Extract implementation plan from conversation, enhance it for autonomous execution, and create GitHub issue directly without saving to disk.
 
@@ -10,9 +10,9 @@ Extract implementation plan from conversation, enhance it for autonomous executi
 
 This command combines:
 
-- Plan extraction from conversation (like create-plan-issue-from-context)
+- Plan extraction from conversation (like create-plan-from-context)
 - Full enrichment process (like save-context-enriched-plan)
-- Direct GitHub issue creation (like create-plan-issue-from-context)
+- Direct GitHub issue creation (like create-plan-from-context)
 
 **What This Command Does:**
 
@@ -31,13 +31,13 @@ This command combines:
 ## Usage
 
 ```bash
-/erk:create-enriched-plan-issue-from-context [guidance]
+/erk:create-enriched-plan-from-context [guidance]
 ```
 
 **Examples:**
 
-- `/erk:create-enriched-plan-issue-from-context` - Create enriched issue
-- `/erk:create-enriched-plan-issue-from-context "Add retry logic"` - Apply guidance first
+- `/erk:create-enriched-plan-from-context` - Create enriched issue
+- `/erk:create-enriched-plan-from-context "Add retry logic"` - Apply guidance first
 
 ## Prerequisites
 
@@ -75,7 +75,7 @@ This command combines:
 
 ## Agent Instructions
 
-You are executing the `/erk:create-enriched-plan-issue-from-context` command.
+You are executing the `/erk:create-enriched-plan-from-context` command.
 
 ### CRITICAL: Tool Restrictions
 

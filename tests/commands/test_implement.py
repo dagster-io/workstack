@@ -13,8 +13,8 @@ from tests.test_utils.context_builders import build_workspace_test_context
 from tests.test_utils.env_helpers import erk_isolated_fs_env
 
 
-def _create_sample_plan_issue(issue_number: str = "42") -> Plan:
-    """Create a sample plan issue for testing."""
+def _create_sample_plan(issue_number: str = "42") -> Plan:
+    """Create a sample plan for testing."""
     return Plan(
         plan_identifier=issue_number,
         title="Add Authentication Feature",
@@ -96,7 +96,7 @@ def test_detect_file_path_with_special_chars() -> None:
 
 def test_implement_from_plain_issue_number() -> None:
     """Test implementing from GitHub issue number without # prefix."""
-    plan_issue = _create_sample_plan_issue("123")
+    plan = _create_sample_plan("123")
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -105,7 +105,7 @@ def test_implement_from_plain_issue_number() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"123": plan_issue})
+        store = FakePlanStore(plans={"123": plan})
         ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         # Test with plain number (no # prefix)
@@ -130,7 +130,7 @@ def test_implement_from_plain_issue_number() -> None:
 
 def test_implement_from_issue_number() -> None:
     """Test implementing from GitHub issue number with # prefix."""
-    plan_issue = _create_sample_plan_issue()
+    plan = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -139,7 +139,7 @@ def test_implement_from_issue_number() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(implement, ["#42", "--script"], obj=ctx)
@@ -162,7 +162,7 @@ def test_implement_from_issue_number() -> None:
 
 def test_implement_from_issue_url() -> None:
     """Test implementing from GitHub issue URL."""
-    plan_issue = _create_sample_plan_issue("123")
+    plan = _create_sample_plan("123")
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -171,7 +171,7 @@ def test_implement_from_issue_url() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"123": plan_issue})
+        store = FakePlanStore(plans={"123": plan})
         ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         url = "https://github.com/owner/repo/issues/123"
@@ -190,7 +190,7 @@ def test_implement_from_issue_url() -> None:
 
 def test_implement_from_issue_with_custom_name() -> None:
     """Test implementing from issue with custom worktree name."""
-    plan_issue = _create_sample_plan_issue()
+    plan = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -199,7 +199,7 @@ def test_implement_from_issue_with_custom_name() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(
@@ -215,7 +215,7 @@ def test_implement_from_issue_with_custom_name() -> None:
 
 def test_implement_from_issue_fails_without_erk_plan_label() -> None:
     """Test that command fails when issue doesn't have erk-plan label."""
-    plan_issue = Plan(
+    plan = Plan(
         plan_identifier="42",
         title="Regular Issue",
         body="Not a plan issue",
@@ -235,7 +235,7 @@ def test_implement_from_issue_fails_without_erk_plan_label() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(implement, ["#42", "--dry-run"], obj=ctx)
@@ -267,7 +267,7 @@ def test_implement_from_issue_fails_when_not_found() -> None:
 
 def test_implement_from_issue_dry_run() -> None:
     """Test dry-run mode for issue implementation."""
-    plan_issue = _create_sample_plan_issue()
+    plan = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -276,7 +276,7 @@ def test_implement_from_issue_dry_run() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(implement, ["#42", "--dry-run"], obj=ctx)
@@ -428,7 +428,7 @@ def test_implement_from_plan_file_dry_run() -> None:
 
 def test_implement_fails_when_branch_exists_issue_mode() -> None:
     """Test that issue mode fails when branch already exists."""
-    plan_issue = _create_sample_plan_issue()
+    plan = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -437,7 +437,7 @@ def test_implement_fails_when_branch_exists_issue_mode() -> None:
             local_branches={env.cwd: ["main", "existing-branch"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(
@@ -480,7 +480,7 @@ def test_implement_fails_when_branch_exists_file_mode() -> None:
 
 def test_implement_with_submit_flag_from_issue() -> None:
     """Test --submit flag with --script from issue includes command chain in script."""
-    plan_issue = _create_sample_plan_issue()
+    plan = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -489,7 +489,7 @@ def test_implement_with_submit_flag_from_issue() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         # Use --script --submit to generate activation script with all commands
@@ -533,7 +533,7 @@ def test_implement_with_submit_flag_from_file() -> None:
 
 def test_implement_without_submit_uses_default_command() -> None:
     """Test that default behavior (without --submit) still works unchanged."""
-    plan_issue = _create_sample_plan_issue()
+    plan = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -542,7 +542,7 @@ def test_implement_without_submit_uses_default_command() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(implement, ["#42", "--script"], obj=ctx)
@@ -557,7 +557,7 @@ def test_implement_without_submit_uses_default_command() -> None:
 
 def test_implement_submit_in_script_mode() -> None:
     """Test that --script --submit combination generates correct activation script."""
-    plan_issue = _create_sample_plan_issue()
+    plan = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -566,7 +566,7 @@ def test_implement_submit_in_script_mode() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(implement, ["#42", "--submit", "--script"], obj=ctx)
@@ -592,7 +592,7 @@ def test_implement_submit_in_script_mode() -> None:
 
 def test_implement_submit_with_dry_run() -> None:
     """Test that --submit --dry-run shows all commands that would be executed."""
-    plan_issue = _create_sample_plan_issue()
+    plan = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -601,7 +601,7 @@ def test_implement_submit_with_dry_run() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(
@@ -633,7 +633,7 @@ def test_implement_uses_git_when_graphite_disabled() -> None:
     (gt create command), which should be tested at the integration level with
     real gt commands, not in unit tests.
     """
-    plan_issue = _create_sample_plan_issue()
+    plan = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -642,7 +642,7 @@ def test_implement_uses_git_when_graphite_disabled() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         # Build context with use_graphite=False (default)
         ctx = build_workspace_test_context(env, git=git, plan_store=store, use_graphite=False)
 
@@ -687,7 +687,7 @@ def test_implement_plan_file_uses_git_when_graphite_disabled() -> None:
 
 def test_implement_with_dangerous_flag_in_script_mode() -> None:
     """Test that --dangerous flag adds --dangerously-skip-permissions to generated script."""
-    plan_issue = _create_sample_plan_issue()
+    plan = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -696,7 +696,7 @@ def test_implement_with_dangerous_flag_in_script_mode() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(implement, ["#42", "--dangerous", "--script"], obj=ctx)
@@ -722,7 +722,7 @@ def test_implement_with_dangerous_flag_in_script_mode() -> None:
 
 def test_implement_without_dangerous_flag_in_script_mode() -> None:
     """Test that script without --dangerous flag does not include --dangerously-skip-permissions."""
-    plan_issue = _create_sample_plan_issue()
+    plan = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -731,7 +731,7 @@ def test_implement_without_dangerous_flag_in_script_mode() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(implement, ["#42", "--script"], obj=ctx)
@@ -757,7 +757,7 @@ def test_implement_without_dangerous_flag_in_script_mode() -> None:
 
 def test_implement_with_dangerous_and_submit_flags() -> None:
     """Test that --dangerous --submit combination adds flag to all three commands."""
-    plan_issue = _create_sample_plan_issue()
+    plan = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -766,7 +766,7 @@ def test_implement_with_dangerous_and_submit_flags() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(implement, ["#42", "--dangerous", "--submit", "--script"], obj=ctx)
@@ -802,7 +802,7 @@ def test_implement_with_dangerous_and_submit_flags() -> None:
 
 def test_implement_with_dangerous_flag_in_dry_run() -> None:
     """Test that --dangerous flag shows in dry-run output."""
-    plan_issue = _create_sample_plan_issue()
+    plan = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -811,7 +811,7 @@ def test_implement_with_dangerous_flag_in_dry_run() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(implement, ["#42", "--dangerous", "--dry-run"], obj=ctx)
@@ -833,7 +833,7 @@ def test_implement_with_dangerous_flag_in_dry_run() -> None:
 
 def test_implement_with_dangerous_and_submit_in_dry_run() -> None:
     """Test that --dangerous --submit shows flag in all three commands during dry-run."""
-    plan_issue = _create_sample_plan_issue()
+    plan = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -842,7 +842,7 @@ def test_implement_with_dangerous_and_submit_in_dry_run() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(
@@ -898,7 +898,7 @@ def test_implement_plan_file_with_dangerous_flag() -> None:
 
 def test_implement_with_dangerous_shows_in_manual_instructions() -> None:
     """Test that --dangerous flag appears in manual instructions when shell integration disabled."""
-    plan_issue = _create_sample_plan_issue()
+    plan = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -907,7 +907,7 @@ def test_implement_with_dangerous_shows_in_manual_instructions() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         # Use --script flag to generate activation script with dangerous flag
@@ -929,7 +929,7 @@ def test_implement_with_dangerous_shows_in_manual_instructions() -> None:
 
 def test_interactive_mode_calls_executor() -> None:
     """Verify interactive mode calls executor.execute_interactive."""
-    plan_issue = _create_sample_plan_issue()
+    plan = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -938,7 +938,7 @@ def test_interactive_mode_calls_executor() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         executor = FakeClaudeExecutor(claude_available=True)
         ctx = build_workspace_test_context(env, git=git, plan_store=store, claude_executor=executor)
 
@@ -958,7 +958,7 @@ def test_interactive_mode_calls_executor() -> None:
 
 def test_interactive_mode_with_dangerous_flag() -> None:
     """Verify interactive mode passes dangerous flag to executor."""
-    plan_issue = _create_sample_plan_issue()
+    plan = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -967,7 +967,7 @@ def test_interactive_mode_with_dangerous_flag() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         executor = FakeClaudeExecutor(claude_available=True)
         ctx = build_workspace_test_context(env, git=git, plan_store=store, claude_executor=executor)
 
@@ -1014,7 +1014,7 @@ def test_interactive_mode_from_plan_file() -> None:
 
 def test_interactive_mode_fails_when_claude_not_available() -> None:
     """Verify interactive mode fails gracefully when Claude CLI not available."""
-    plan_issue = _create_sample_plan_issue()
+    plan = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -1023,7 +1023,7 @@ def test_interactive_mode_fails_when_claude_not_available() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         executor = FakeClaudeExecutor(claude_available=False)
         ctx = build_workspace_test_context(env, git=git, plan_store=store, claude_executor=executor)
 
@@ -1036,7 +1036,7 @@ def test_interactive_mode_fails_when_claude_not_available() -> None:
 
 def test_submit_without_non_interactive_errors() -> None:
     """Verify --submit requires --no-interactive."""
-    plan_issue = _create_sample_plan_issue()
+    plan = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -1045,7 +1045,7 @@ def test_submit_without_non_interactive_errors() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(implement, ["#42", "--submit"], obj=ctx)
@@ -1056,7 +1056,7 @@ def test_submit_without_non_interactive_errors() -> None:
 
 def test_script_and_non_interactive_errors() -> None:
     """Verify --script and --no-interactive are mutually exclusive."""
-    plan_issue = _create_sample_plan_issue()
+    plan = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -1065,7 +1065,7 @@ def test_script_and_non_interactive_errors() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(implement, ["#42", "--no-interactive", "--script"], obj=ctx)
@@ -1076,7 +1076,7 @@ def test_script_and_non_interactive_errors() -> None:
 
 def test_non_interactive_executes_single_command() -> None:
     """Verify --no-interactive runs executor for implementation."""
-    plan_issue = _create_sample_plan_issue()
+    plan = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -1085,7 +1085,7 @@ def test_non_interactive_executes_single_command() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         executor = FakeClaudeExecutor(claude_available=True)
         ctx = build_workspace_test_context(env, git=git, plan_store=store, claude_executor=executor)
 
@@ -1102,7 +1102,7 @@ def test_non_interactive_executes_single_command() -> None:
 
 def test_non_interactive_with_submit_runs_all_commands() -> None:
     """Verify --no-interactive --submit runs all three commands."""
-    plan_issue = _create_sample_plan_issue()
+    plan = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -1111,7 +1111,7 @@ def test_non_interactive_with_submit_runs_all_commands() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         executor = FakeClaudeExecutor(claude_available=True)
         ctx = build_workspace_test_context(env, git=git, plan_store=store, claude_executor=executor)
 
@@ -1133,7 +1133,7 @@ def test_non_interactive_with_submit_runs_all_commands() -> None:
 
 def test_script_with_submit_includes_all_commands() -> None:
     """Verify --script --submit succeeds and creates script file."""
-    plan_issue = _create_sample_plan_issue()
+    plan = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -1142,7 +1142,7 @@ def test_script_with_submit_includes_all_commands() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(implement, ["#42", "--script", "--submit"], obj=ctx)
@@ -1156,7 +1156,7 @@ def test_script_with_submit_includes_all_commands() -> None:
 
 def test_dry_run_shows_execution_mode() -> None:
     """Verify --dry-run shows execution mode."""
-    plan_issue = _create_sample_plan_issue()
+    plan = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -1165,7 +1165,7 @@ def test_dry_run_shows_execution_mode() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         # Test with interactive mode (default)
@@ -1183,7 +1183,7 @@ def test_dry_run_shows_execution_mode() -> None:
 
 def test_dry_run_shows_command_sequence() -> None:
     """Verify --dry-run shows correct command sequence."""
-    plan_issue = _create_sample_plan_issue()
+    plan = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -1192,7 +1192,7 @@ def test_dry_run_shows_command_sequence() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanStore(plans={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan})
         ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         # Without --submit (single command)
@@ -1220,7 +1220,7 @@ def test_dry_run_shows_command_sequence() -> None:
 
 def test_yolo_flag_sets_all_flags() -> None:
     """Verify --yolo flag is equivalent to --dangerous --submit --no-interactive."""
-    plan_issue = _create_sample_plan_issue()
+    plan_issue = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -1251,7 +1251,7 @@ def test_yolo_flag_sets_all_flags() -> None:
 
 def test_yolo_flag_in_dry_run() -> None:
     """Verify --yolo flag works with --dry-run."""
-    plan_issue = _create_sample_plan_issue()
+    plan_issue = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:
@@ -1283,7 +1283,7 @@ def test_yolo_flag_in_dry_run() -> None:
 
 def test_yolo_flag_conflicts_with_script() -> None:
     """Verify --yolo and --script are mutually exclusive."""
-    plan_issue = _create_sample_plan_issue()
+    plan_issue = _create_sample_plan()
 
     runner = CliRunner()
     with erk_isolated_fs_env(runner) as env:

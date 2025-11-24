@@ -6,8 +6,8 @@ from click.testing import CliRunner
 from erk_shared.github.issues import FakeGitHubIssues
 
 from dot_agent_kit.context import DotAgentContext
-from erk.data.kits.erk.kit_cli_commands.erk.create_plan_issue_from_context import (
-    create_plan_issue_from_context,
+from erk.data.kits.erk.kit_cli_commands.erk.create_plan_from_context import (
+    create_plan_from_context,
 )
 
 
@@ -19,7 +19,7 @@ def test_create_plan_issue_success() -> None:
     plan = "# My Feature\n\n- Step 1\n- Step 2"
 
     result = runner.invoke(
-        create_plan_issue_from_context,
+        create_plan_from_context,
         input=plan,
         obj=DotAgentContext.for_test(github_issues=fake_gh),
     )
@@ -44,7 +44,7 @@ def test_create_plan_issue_empty_plan() -> None:
     runner = CliRunner()
 
     result = runner.invoke(
-        create_plan_issue_from_context,
+        create_plan_from_context,
         input="",
         obj=DotAgentContext.for_test(github_issues=fake_gh),
     )
@@ -61,7 +61,7 @@ def test_create_plan_issue_unicode() -> None:
     plan = "# café Feature 你好\n\n- Unicode test"
 
     result = runner.invoke(
-        create_plan_issue_from_context,
+        create_plan_from_context,
         input=plan,
         obj=DotAgentContext.for_test(github_issues=fake_gh),
     )
@@ -79,7 +79,7 @@ def test_create_plan_issue_ensures_label() -> None:
     plan = "# Test Plan\n\n- Step"
 
     result = runner.invoke(
-        create_plan_issue_from_context,
+        create_plan_from_context,
         input=plan,
         obj=DotAgentContext.for_test(github_issues=fake_gh),
     )
@@ -101,7 +101,7 @@ def test_create_plan_issue_h2_title() -> None:
     plan = "## Secondary Title\n\n- Step"
 
     result = runner.invoke(
-        create_plan_issue_from_context,
+        create_plan_from_context,
         input=plan,
         obj=DotAgentContext.for_test(github_issues=fake_gh),
     )
@@ -135,7 +135,7 @@ Test instructions
 """
 
     result = runner.invoke(
-        create_plan_issue_from_context,
+        create_plan_from_context,
         input=plan,
         obj=DotAgentContext.for_test(github_issues=fake_gh),
     )

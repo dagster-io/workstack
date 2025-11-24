@@ -451,11 +451,11 @@ issue_number: 900
 def test_list_plans_shows_worktree_from_local_impl() -> None:
     """Test that list command detects worktree from local .impl/issue.json file."""
     import json
-    from pathlib import Path
+
+    from erk_shared.github.issues import FakeGitHubIssues
 
     from erk.core.git.abc import WorktreeInfo
     from erk.core.git.fake import FakeGit
-    from erk_shared.github.issues import FakeGitHubIssues
 
     # Arrange
     issue1 = Plan(
@@ -518,11 +518,11 @@ def test_list_plans_shows_worktree_from_local_impl() -> None:
 def test_list_plans_prefers_local_over_github() -> None:
     """Test that local .impl/issue.json detection takes precedence over GitHub comments."""
     import json
-    from pathlib import Path
+
+    from erk_shared.github.issues import FakeGitHubIssues
 
     from erk.core.git.abc import WorktreeInfo
     from erk.core.git.fake import FakeGit
-    from erk_shared.github.issues import FakeGitHubIssues
 
     # Arrange
     issue1 = Plan(
@@ -648,13 +648,13 @@ issue_number: 970
 
 
 def test_list_plans_handles_multiple_local_worktrees() -> None:
-    """Test that first-found worktree is shown when multiple local worktrees reference same issue."""
+    """Test first-found worktree shown when multiple worktrees reference same issue."""
     import json
-    from pathlib import Path
+
+    from erk_shared.github.issues import FakeGitHubIssues
 
     from erk.core.git.abc import WorktreeInfo
     from erk.core.git.fake import FakeGit
-    from erk_shared.github.issues import FakeGitHubIssues
 
     # Arrange
     issue1 = Plan(

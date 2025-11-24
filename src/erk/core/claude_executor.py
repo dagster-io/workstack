@@ -106,7 +106,7 @@ class RealClaudeExecutor(ClaudeExecutor):
         result = subprocess.run(
             cmd_args,
             cwd=worktree_path,
-            stdin=subprocess.DEVNULL,  # Prevent interaction
+            # Let Claude Code access stdin for Ink UI initialization
             # Don't capture stdout/stderr - let output stream to terminal
         )
 

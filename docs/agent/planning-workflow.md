@@ -64,7 +64,6 @@ If you didn't use `erk implement` (which auto-implements), run the implementatio
 
 The agent reads `.impl/plan.md`, executes each phase, and updates `.impl/progress.md` as steps complete.
 
-
 ## Progress Tracking
 
 The `.impl/progress.md` file tracks completion status:

@@ -64,7 +64,6 @@ version = "0.3.0"
 artifacts = [
     ".claude/commands/erk/save-plan.md",
     ".claude/commands/erk/save-raw-plan.md",
-    ".claude/commands/erk/create-wt-from-plan-file.md",
     ".claude/commands/erk/implement-plan.md",
     ".claude/commands/erk/fix-merge-conflicts.md",
     ".claude/agents/erk/issue-wt-creator.md",

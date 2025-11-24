@@ -483,10 +483,11 @@ class TestPostAnalysisExecution:
             ops=ops,
         )
 
-        assert isinstance(result, PostAnalysisError)
-        assert result.success is False
-        assert result.error_type == "pr_update_failed"
-        assert "failed to update PR #123 metadata" in result.message
+        # PR update failure is now treated as a warning, not an error
+        assert isinstance(result, PostAnalysisResult)
+        assert result.success is True
+        assert result.pr_number == 123
+        assert "Failed to update PR metadata" in result.message
 
     @patch("erk.data.kits.gt.kit_cli_commands.gt.submit_branch.time.sleep")
     def test_post_analysis_pr_info_delayed(self, mock_sleep: Mock) -> None:
@@ -672,7 +673,27 @@ class TestSubmitBranchCLI:
             )
 
             assert result.exit_code == 0
-            output = json.loads(result.output)
+            # Parse JSON from output (may contain progress messages and multi-line JSON)
+            # Find the JSON object by looking for { and matching }
+            output_text = result.output
+            json_start = output_text.find("{")
+            assert json_start >= 0, f"No JSON object found in output: {output_text}"
+
+            # Find matching closing brace
+            brace_count = 0
+            json_end = -1
+            for i in range(json_start, len(output_text)):
+                if output_text[i] == "{":
+                    brace_count += 1
+                elif output_text[i] == "}":
+                    brace_count -= 1
+                    if brace_count == 0:
+                        json_end = i + 1
+                        break
+
+            assert json_end > json_start, f"No complete JSON object in output: {output_text}"
+            json_text = output_text[json_start:json_end]
+            output = json.loads(json_text)
             assert output["success"] is True
             assert output["pr_number"] == 123
         finally:

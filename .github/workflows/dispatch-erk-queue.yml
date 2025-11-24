@@ -176,7 +176,7 @@ jobs:
           import os
           import json
           from pathlib import Path
-          from erk.core.context import ErkContext
+          from erk.core.context import create_context
           from erk_shared.erp_folder import create_erp_folder
 
           # Get environment variables
@@ -185,7 +185,7 @@ jobs:
           repo_root = Path.cwd()
 
           # Create context to access plan store
-          ctx = ErkContext(cwd=repo_root)
+          ctx = create_context(dry_run=False, script=True)
 
           try:
               # Fetch plan

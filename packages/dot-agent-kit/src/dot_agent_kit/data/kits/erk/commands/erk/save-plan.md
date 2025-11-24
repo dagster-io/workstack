@@ -314,39 +314,9 @@ Apply the complete enrichment process to enhance the extracted plan for autonomo
 - DO NOT modify any files in the codebase
 - ONLY create a GitHub issue with the enhanced plan
 
-Execute: `git rev-parse --show-toplevel`
+@../docs/validate-git-repository.md
 
-This confirms we're in a git repository and returns the repository root path.
-
-**If the command fails:**
-
-```
-❌ Error: Could not detect repository root
-
-Details: Not in a git repository or git command failed
-
-Suggested action:
-  1. Ensure you are in a valid git repository
-  2. Run: git status (to verify git is working)
-  3. Check if .git directory exists
-```
-
-**Verify GitHub CLI is available:**
-
-Check that `gh` command is available and authenticated.
-
-**If GitHub CLI is not available or not authenticated:**
-
-```
-❌ Error: GitHub CLI not available or not authenticated
-
-Details: gh command failed or returned authentication error
-
-Suggested action:
-  1. Install GitHub CLI: https://cli.github.com/
-  2. Authenticate with: gh auth login
-  3. Verify authentication: gh auth status
-```
+@../docs/validate-github-cli.md
 
 ### Step 6: Verify You Did Not Implement
 
@@ -389,89 +359,11 @@ Suggested action:
 - DO NOT modify any files in the codebase
 - ONLY create a GitHub issue with the enhanced plan
 
-**Create the issue using kit CLI command:**
+Replace `$PLAN_CONTENT` with the `enhanced_plan_content` variable from Step 4:
 
-```bash
-# Write enhanced plan to temp file
-tmpfile=$(mktemp)
-cat > "$tmpfile" << 'EOF'
-$enhanced_plan_content
-EOF
+@../docs/create-github-issue.md
 
-# Create issue from file
-issue_url=$(dot-agent kit-command erk create-enriched-plan-from-context --plan-file "$tmpfile")
-exit_code=$?
-
-# Clean up temp file
-rm "$tmpfile"
-
-# Check for errors
-if [ $exit_code -ne 0 ]; then
-    echo "❌ Error: Failed to create GitHub issue" >&2
-    exit 1
-fi
-```
-
-The kit CLI command:
-
-- Reads plan content from file specified by --plan-file option
-- Extracts title from plan for issue title
-- Creates issue with `erk-plan` label
-- Returns issue URL
-
-**Extract issue number from URL:**
-
-Parse the issue number from the returned URL (e.g., `https://github.com/org/repo/issues/123` → `123`)
-
-**If issue creation fails:**
-
-```
-❌ Error: Failed to create GitHub issue
-
-Details: [specific error from kit CLI command]
-
-Suggested action:
-  1. Verify GitHub CLI (gh) is installed and authenticated
-  2. Check repository has issues enabled
-  3. Verify network connectivity
-  4. Check gh auth status
-```
-
-**Output success message (REQUIRED - MUST use this exact format):**
-
-After creating the issue, you MUST:
-
-1. Extract the issue number from the URL
-2. Output the message below with the actual issue number substituted
-3. Include ALL four copy-pastable commands
-
-Format:
-
-```markdown
-✅ GitHub issue created: #<number>
-<issue-url>
-
-Next steps:
-
-View Issue: gh issue view <number> --web
-Interactive Execution: erk implement <number>
-Dangerous Interactive Execution: erk implement <number> --dangerous
-Yolo One Shot: erk implement <number> --yolo
-
----
-
-{"issue_number": <number>, "issue_url": "<url>", "status": "created"}
-```
-
-**Verify Output Format:**
-
-Before finishing, confirm your output includes:
-
-- ✅ Issue number and URL on first line
-- ✅ "Next steps:" header
-- ✅ Four commands with actual issue number (not placeholder)
-- ✅ JSON metadata with issue_number, issue_url, and status
-- ❌ NO placeholders like <number> or <url> in final output
+@../docs/success-output-format.md
 
 ## Important Notes
 

@@ -473,7 +473,7 @@ query {{
         Returns:
             The GitHub Actions run ID as a string
         """
-        cmd = ["gh", "workflow", "run", workflow, "--json"]
+        cmd = ["gh", "workflow", "run", workflow]
 
         # Add --ref flag if specified
         if ref:
@@ -483,22 +483,43 @@ query {{
         for key, value in inputs.items():
             cmd.extend(["-f", f"{key}={value}"])
 
-        result = run_subprocess_with_context(
+        run_subprocess_with_context(
             cmd,
             operation_context=f"trigger workflow '{workflow}'",
             cwd=repo_root,
         )
 
+        # The gh workflow run command doesn't return JSON output by default
+        # We need to get the run ID from the workflow runs list
+        # Query for the most recent run of this workflow
+        runs_cmd = [
+            "gh",
+            "run",
+            "list",
+            "--workflow",
+            workflow,
+            "--json",
+            "databaseId",
+            "--limit",
+            "1",
+        ]
+
+        runs_result = run_subprocess_with_context(
+            runs_cmd,
+            operation_context=f"get run ID for workflow '{workflow}'",
+            cwd=repo_root,
+        )
+
         # Parse JSON output to extract run ID
-        data = json.loads(result.stdout)
-        if "id" not in data:
+        runs_data = json.loads(runs_result.stdout)
+        if not runs_data or not isinstance(runs_data, list) or len(runs_data) == 0:
             msg = (
-                "GitHub workflow triggered but run ID not found in response. "
-                f"Raw output: {result.stdout[:200]}"
+                "GitHub workflow triggered but could not find run ID. "
+                f"Raw output: {runs_result.stdout[:200]}"
             )
             raise RuntimeError(msg)
 
-        run_id = data["id"]
+        run_id = runs_data[0]["databaseId"]
         return str(run_id)
 
     def create_pr(

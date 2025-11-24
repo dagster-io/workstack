@@ -1240,13 +1240,13 @@ def test_yolo_flag_sets_all_flags() -> None:
 
         # Verify three command executions (submit mode)
         assert len(executor.executed_commands) == 3
-        commands = [cmd for cmd, _, dangerous in executor.executed_commands]
+        commands = [cmd for cmd, _, dangerous, _ in executor.executed_commands]
         assert commands[0] == "/erk:implement-plan"
         assert commands[1] == "/fast-ci"
         assert commands[2] == "/gt:simple-submit"
 
         # Verify dangerous flag was set for all commands
-        for _, _, dangerous in executor.executed_commands:
+        for _, _, dangerous, _ in executor.executed_commands:
             assert dangerous is True
 
 

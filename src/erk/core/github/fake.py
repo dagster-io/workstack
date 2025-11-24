@@ -28,6 +28,8 @@ class FakeGitHub(GitHub):
         workflow_runs: list[WorkflowRun] | None = None,
         run_logs: dict[str, str] | None = None,
         pr_issue_linkages: dict[int, list[PullRequestInfo]] | None = None,
+        repo_owner: str = "test-owner",
+        repo_name: str = "test-repo",
     ) -> None:
         """Create FakeGitHub with pre-configured state.
 
@@ -40,6 +42,8 @@ class FakeGitHub(GitHub):
             workflow_runs: List of WorkflowRun objects to return from list_workflow_runs
             run_logs: Mapping of run_id -> log string
             pr_issue_linkages: Mapping of issue_number -> list[PullRequestInfo]
+            repo_owner: Repository owner for get_repo_info()
+            repo_name: Repository name for get_repo_info()
         """
         if prs is not None and pr_statuses is not None:
             msg = "Cannot specify both prs and pr_statuses"
@@ -73,6 +77,8 @@ class FakeGitHub(GitHub):
         self._workflow_runs = workflow_runs or []
         self._run_logs = run_logs or {}
         self._pr_issue_linkages = pr_issue_linkages or {}
+        self._repo_owner = repo_owner
+        self._repo_name = repo_name
         self._updated_pr_bases: list[tuple[int, str]] = []
         self._merged_prs: list[int] = []
         self._get_prs_for_repo_calls: list[tuple[Path, bool]] = []
@@ -261,3 +267,12 @@ class FakeGitHub(GitHub):
             if issue_num in self._pr_issue_linkages:
                 result[issue_num] = self._pr_issue_linkages[issue_num]
         return result
+
+    def get_repo_info(self, repo_root: Path) -> tuple[str, str] | None:
+        """Get repository owner and name from configured state.
+
+        Returns the pre-configured owner and name, or None if not set.
+        """
+        if self._repo_owner and self._repo_name:
+            return (self._repo_owner, self._repo_name)
+        return None

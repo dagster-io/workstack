@@ -857,3 +857,33 @@ query {{
             result[issue_number] = [pr for pr, _ in prs_with_timestamps]
 
         return result
+
+    def get_repo_info(self, repo_root: Path) -> tuple[str, str] | None:
+        """Get repository owner and name from GitHub.
+
+        Note: Uses try/except as an acceptable error boundary for handling gh CLI
+        availability and authentication. We cannot reliably check gh installation
+        and authentication status a priori without duplicating gh's logic.
+        """
+        try:
+            # Query for any PR to extract owner/repo from URL
+            cmd = ["gh", "pr", "list", "--limit", "1", "--json", "url"]
+            stdout = execute_gh_command(cmd, repo_root)
+            pr_list = json.loads(stdout)
+
+            # If no PRs exist, return None
+            if not pr_list:
+                return None
+
+            # Extract owner/repo from PR URL
+            # Format: https://github.com/owner/repo/pull/123
+            pr_url = pr_list[0]["url"]
+            parts = pr_url.split("/")
+            owner = parts[-4]
+            repo = parts[-3]
+
+            return (owner, repo)
+
+        except (RuntimeError, FileNotFoundError, json.JSONDecodeError, KeyError, IndexError):
+            # gh not installed, not authenticated, or parsing failed
+            return None

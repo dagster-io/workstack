@@ -73,6 +73,10 @@ class PrintingGitHub(PrintingBase, GitHub):
         """Get PRs linked to issues (read-only, no printing)."""
         return self._wrapped.get_prs_linked_to_issues(repo_root, issue_numbers)
 
+    def get_repo_info(self, repo_root: Path) -> tuple[str, str] | None:
+        """Get repository owner and name (read-only, no printing)."""
+        return self._wrapped.get_repo_info(repo_root)
+
     # Operations that need printing
 
     def update_pr_base_branch(self, repo_root: Path, pr_number: int, new_base: str) -> None:

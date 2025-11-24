@@ -117,3 +117,7 @@ class DryRunGitHub(GitHub):
     ) -> dict[int, list[PullRequestInfo]]:
         """Delegate read operation to wrapped implementation."""
         return self._wrapped.get_prs_linked_to_issues(repo_root, issue_numbers)
+
+    def get_repo_info(self, repo_root: Path) -> tuple[str, str] | None:
+        """Delegate read operation to wrapped implementation."""
+        return self._wrapped.get_repo_info(repo_root)

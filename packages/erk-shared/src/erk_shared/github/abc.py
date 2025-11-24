@@ -229,3 +229,15 @@ class GitHub(ABC):
             Returns empty dict if no PRs link to any of the issues.
         """
         ...
+
+    @abstractmethod
+    def get_repo_info(self, repo_root: Path) -> tuple[str, str] | None:
+        """Get repository owner and name from GitHub.
+
+        Args:
+            repo_root: Repository root directory
+
+        Returns:
+            Tuple of (owner, repo_name) or None if not available
+        """
+        ...

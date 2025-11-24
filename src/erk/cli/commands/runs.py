@@ -1,6 +1,9 @@
 """Runs command implementation."""
 
 import click
+from erk_shared.impl_folder import read_issue_reference
+from rich.console import Console
+from rich.table import Table
 
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
@@ -38,44 +41,84 @@ def _list_runs(click_ctx: click.Context) -> None:
         user_output("No workflow runs found for implement-plan.yml")
         return
 
-    # Display results
-    user_output("Plan Implementation Runs:\n")
+    # Get repository owner/name for URL construction
+    repo_info = ctx.github.get_repo_info(repo.root)
+    if repo_info is None:
+        # Fallback to simple display if repo info unavailable
+        user_output("Plan Implementation Runs:\n")
+        for branch in sorted(branch_to_latest.keys()):
+            run_id, status, conclusion = branch_to_latest[branch]
+            user_output(f"  {branch}: run {run_id} - {status}")
+        return
 
-    for branch, (run_id, status, conclusion) in branch_to_latest.items():
-        # Format status indicator with color
+    owner, repo_name = repo_info
+
+    # Build worktree-to-issue mapping for Plan column
+    worktree_by_branch: dict[str, int] = {}
+    worktrees = ctx.git.list_worktrees(repo.root)
+    for wt in worktrees:
+        if wt.branch is None:
+            continue
+        impl_folder = wt.path / ".impl"
+        if impl_folder.exists():
+            issue_ref = read_issue_reference(impl_folder)
+            if issue_ref:
+                worktree_by_branch[wt.branch] = issue_ref.issue_number
+
+    # Create Rich table
+    console = Console()
+    table = Table(title="Plan Implementation Runs")
+    table.add_column("Branch", style="yellow")
+    table.add_column("Status")
+    table.add_column("Run", style="cyan")
+    table.add_column("PR", style="cyan")
+    table.add_column("Plan", style="cyan")
+
+    # Add rows in alphabetical order by branch
+    for branch in sorted(branch_to_latest.keys()):
+        run_id, status, conclusion = branch_to_latest[branch]
+
+        # Format status column
         if status == "completed":
             if conclusion == "success":
-                indicator = click.style("✓", fg="green")
-                status_text = click.style("success", fg="green")
+                status_cell = "[green]✓ pass[/green]"
             elif conclusion == "failure":
-                indicator = click.style("✗", fg="red")
-                status_text = click.style("failure", fg="red")
+                status_cell = "[red]✗ fail[/red]"
             elif conclusion == "cancelled":
-                indicator = click.style("⭕", fg="bright_black")
-                status_text = click.style("cancelled", fg="bright_black")
+                status_cell = "[dim]⭕ cancelled[/dim]"
             else:
-                indicator = "?"
-                status_text = conclusion or "unknown"
+                status_cell = f"? {conclusion or 'unknown'}"
         elif status == "in_progress":
-            indicator = click.style("⏳", fg="yellow")
-            status_text = click.style("in_progress", fg="yellow")
+            status_cell = "[yellow]⏳ running[/yellow]"
         elif status == "queued":
-            indicator = click.style("⏸", fg="bright_black")
-            status_text = click.style("queued", fg="bright_black")
+            status_cell = "[dim]⏸ queued[/dim]"
         else:
-            indicator = "?"
-            status_text = status
+            status_cell = f"? {status}"
 
-        # Format branch name
-        branch_styled = click.style(branch, fg="yellow")
+        # Format Run column with clickable link
+        run_url = f"https://github.com/{owner}/{repo_name}/actions/runs/{run_id}"
+        run_cell = f"[link={run_url}]{run_id}[/link]"
 
-        # Format run ID
-        run_id_styled = click.style(f"run: {run_id}", fg="white", dim=True)
+        # Look up PR for this branch
+        pr_info = ctx.github.get_pr_status(repo.root, branch, debug=False)
+        if pr_info.pr_number:
+            pr_url = f"https://github.com/{owner}/{repo_name}/pull/{pr_info.pr_number}"
+            pr_cell = f"[link={pr_url}]#{pr_info.pr_number}[/link]"
+        else:
+            pr_cell = "-"
 
-        user_output(f"  {branch_styled}  {indicator} {status_text}  ({run_id_styled})")
+        # Look up Plan from local worktree
+        plan_number = worktree_by_branch.get(branch)
+        if plan_number:
+            plan_url = f"https://github.com/{owner}/{repo_name}/issues/{plan_number}"
+            plan_cell = f"[link={plan_url}]#{plan_number}[/link]"
+        else:
+            plan_cell = "-"
 
-    user_output()
-    user_output("View details: gh run view {run_id} --web")
+        table.add_row(branch, status_cell, run_cell, pr_cell, plan_cell)
+
+    # Display table
+    console.print(table)
 
 
 @runs_cmd.command()

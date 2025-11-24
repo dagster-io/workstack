@@ -79,9 +79,9 @@ def test_runs_cmd_single_success_run(tmp_path: Path) -> None:
 
     # Assert
     assert result.exit_code == 0
-    assert "Plan Implementation Runs:" in result.output
+    assert "Plan Implementation Runs" in result.output
     assert "feat-1" in result.output
-    assert "success" in result.output
+    assert "pass" in result.output
     assert "1234567890" in result.output
 
 
@@ -132,9 +132,9 @@ def test_runs_cmd_multiple_runs_different_branches(tmp_path: Path) -> None:
     assert "feat-1" in result.output
     assert "feat-2" in result.output
     assert "feat-3" in result.output
-    assert "success" in result.output
-    assert "failure" in result.output
-    assert "in_progress" in result.output
+    assert "pass" in result.output
+    assert "fail" in result.output
+    assert "running" in result.output
 
 
 def test_runs_cmd_groups_by_branch_keeps_latest(tmp_path: Path) -> None:
@@ -178,9 +178,9 @@ def test_runs_cmd_groups_by_branch_keeps_latest(tmp_path: Path) -> None:
     # Should show newer run, not older
     assert "newer-run" in result.output
     assert "older-run" not in result.output
-    assert "success" in result.output
+    assert "pass" in result.output
     # Should NOT show failure from older run
-    assert result.output.count("failure") == 0
+    assert result.output.count("fail") == 0
 
 
 def test_runs_cmd_handles_cancelled_status(tmp_path: Path) -> None:
@@ -249,8 +249,8 @@ def test_runs_cmd_handles_queued_status(tmp_path: Path) -> None:
     assert "queued" in result.output
 
 
-def test_runs_cmd_shows_help_text(tmp_path: Path) -> None:
-    """Test runs command shows help text at the end."""
+def test_runs_cmd_displays_table(tmp_path: Path) -> None:
+    """Test runs command displays table with columns."""
     # Arrange
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
@@ -279,7 +279,10 @@ def test_runs_cmd_shows_help_text(tmp_path: Path) -> None:
 
     # Assert
     assert result.exit_code == 0
-    assert "View details: gh run view" in result.output
+    # Check for table columns
+    assert "Branch" in result.output
+    assert "Status" in result.output
+    assert "Run" in result.output
 
 
 def test_runs_logs_explicit_run_id(tmp_path: Path) -> None:

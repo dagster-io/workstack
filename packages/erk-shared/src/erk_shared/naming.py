@@ -24,23 +24,23 @@ def sanitize_worktree_name(name: str) -> str:
     - Replaces characters outside `[A-Za-z0-9.-]` with `-`
     - Collapses consecutive `-`
     - Strips leading/trailing `-`
-    - Truncates to 30 characters maximum (matches branch component sanitization)
+    - Truncates to 31 characters maximum (matches branch component sanitization)
     Returns `"work"` if the result is empty.
 
-    The 30-character limit ensures worktree names match their corresponding branch
+    The 31-character limit ensures worktree names match their corresponding branch
     names, maintaining consistency across the worktree/branch model.
 
     Args:
         name: Arbitrary string to sanitize
 
     Returns:
-        Sanitized worktree name (max 30 chars)
+        Sanitized worktree name (max 31 chars)
 
     Examples:
         >>> sanitize_worktree_name("My_Feature")
         "my-feature"
         >>> sanitize_worktree_name("a" * 40)
-        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"  # 30 chars
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"  # 31 chars
     """
     lowered = name.strip().lower()
     # Replace underscores with hyphens
@@ -53,9 +53,9 @@ def sanitize_worktree_name(name: str) -> str:
     trimmed = collapsed.strip("-")
     result = trimmed or "work"
 
-    # Truncate to 30 characters and strip trailing hyphens
-    if len(result) > 30:
-        result = result[:30].rstrip("-")
+    # Truncate to 31 characters and strip trailing hyphens
+    if len(result) > 31:
+        result = result[:31].rstrip("-")
 
     return result
 
@@ -67,14 +67,14 @@ def sanitize_branch_component(name: str) -> str:
     - Replaces characters outside `[A-Za-z0-9._/-]` with `-`
     - Collapses consecutive `-`
     - Strips leading/trailing `-` and `/`
-    - Truncates to 30 characters maximum (matches worktree behavior)
+    - Truncates to 31 characters maximum (matches worktree behavior)
     Returns `"work"` if the result is empty.
 
     Args:
         name: Arbitrary string to sanitize
 
     Returns:
-        Sanitized branch component name (max 30 chars)
+        Sanitized branch component name (max 31 chars)
 
     Examples:
         >>> sanitize_branch_component("My Feature!")
@@ -84,7 +84,7 @@ def sanitize_branch_component(name: str) -> str:
         >>> sanitize_branch_component("")
         "work"
         >>> sanitize_branch_component("a" * 40)
-        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"  # 30 chars
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"  # 31 chars
     """
     lowered = name.strip().lower()
     replaced = _SAFE_COMPONENT_RE.sub("-", lowered)
@@ -92,9 +92,9 @@ def sanitize_branch_component(name: str) -> str:
     trimmed = collapsed.strip("-/")
     result = trimmed or "work"
 
-    # Truncate to 30 characters and strip trailing hyphens (matching worktree behavior)
-    if len(result) > 30:
-        result = result[:30].rstrip("-")
+    # Truncate to 31 characters and strip trailing hyphens (matching worktree behavior)
+    if len(result) > 31:
+        result = result[:31].rstrip("-")
 
     return result
 

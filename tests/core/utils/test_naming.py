@@ -19,28 +19,28 @@ from erk_shared.naming import (
         (" Foo Bar ", "foo-bar"),
         ("A/B C", "a/b-c"),
         ("@@weird!!name??", "weird-name"),
-        # Test truncation to 30 characters
-        ("a" * 35, "a" * 30),
+        # Test truncation to 31 characters
+        ("a" * 35, "a" * 31),
         (
             "this-is-a-very-long-branch-name-that-exceeds-thirty-characters",
-            "this-is-a-very-long-branch-nam",
+            "this-is-a-very-long-branch-name",
         ),
-        ("exactly-30-characters-long-ok", "exactly-30-characters-long-ok"),
+        ("exactly-31-characters-long-oka", "exactly-31-characters-long-oka"),
         (
-            "31-characters-long-should-be-ab",
-            "31-characters-long-should-be-a",
-        ),  # Truncates to 30
+            "32-characters-long-should-be-abc",
+            "32-characters-long-should-be-ab",
+        ),  # Truncates to 31
         ("short", "short"),
         # Test long names with trailing hyphens are stripped
         (
-            "branch-name-with-dash-at-position-30-",
-            "branch-name-with-dash-at-posit",
+            "branch-name-with-dash-at-position-31-",
+            "branch-name-with-dash-at-positi",
         ),
-        # Test very long names truncate to 30
+        # Test very long names truncate to 31
         (
-            "12345678901234567890123456789-extra",
-            "12345678901234567890123456789",
-        ),  # Hyphen at position 30 stripped
+            "1234567890123456789012345678901-extra",
+            "1234567890123456789012345678901",
+        ),  # Hyphen at position 31 stripped
     ],
 )
 def test_sanitize_branch_component(value: str, expected: str) -> None:
@@ -65,33 +65,33 @@ def test_default_branch_for_worktree(value: str, expected: str) -> None:
         ("Add_Auth_Feature", "add-auth-feature"),
         ("My_Cool_Plan", "my-cool-plan"),
         ("FOO_BAR_BAZ", "foo-bar-baz"),
-        ("feature__with___multiple___underscores", "feature-with-multiple-undersco"),
+        ("feature__with___multiple___underscores", "feature-with-multiple-underscor"),
         ("name-with-hyphens", "name-with-hyphens"),
         ("Mixed_Case-Hyphen_Underscore", "mixed-case-hyphen-underscore"),
         ("@@weird!!name??", "weird-name"),
         ("   spaces   ", "spaces"),
         ("---", "work"),
-        # Test truncation to 30 characters
-        ("a" * 35, "a" * 30),
+        # Test truncation to 31 characters
+        ("a" * 35, "a" * 31),
         (
             "this-is-a-very-long-worktree-name-that-exceeds-thirty-characters",
-            "this-is-a-very-long-worktree-n",
+            "this-is-a-very-long-worktree-na",
         ),
-        ("exactly-30-characters-long-ok", "exactly-30-characters-long-ok"),
+        ("exactly-31-characters-long-oka", "exactly-31-characters-long-oka"),
         (
-            "31-characters-long-should-be-ab",
-            "31-characters-long-should-be-a",
-        ),  # Truncates to 30
+            "32-characters-long-should-be-abc",
+            "32-characters-long-should-be-ab",
+        ),  # Truncates to 31
         # Test truncation with trailing hyphen removal
         (
-            "worktree-name-with-dash-at-position-30-",
-            "worktree-name-with-dash-at-pos",
+            "worktree-name-with-dash-at-position-31-",
+            "worktree-name-with-dash-at-posi",
         ),
         # Test truncation that ends with hyphen is stripped
         (
-            "12345678901234567890123456789-extra",
-            "12345678901234567890123456789",
-        ),  # Hyphen at position 30 stripped
+            "1234567890123456789012345678901-extra",
+            "1234567890123456789012345678901",
+        ),  # Hyphen at position 31 stripped
     ],
 )
 def test_sanitize_worktree_name(value: str, expected: str) -> None:
@@ -241,18 +241,18 @@ def test_ensure_unique_worktree_name_with_existing_number(tmp_path: Path) -> Non
     assert result2 == f"fix-v3-{date_suffix}-2"
 
 
-def test_sanitize_branch_component_truncates_at_30_chars() -> None:
-    """Branch names should truncate to 30 characters maximum."""
-    # Exactly 30 characters
-    assert len(sanitize_branch_component("a" * 30)) == 30
+def test_sanitize_branch_component_truncates_at_31_chars() -> None:
+    """Branch names should truncate to 31 characters maximum."""
+    # Exactly 31 characters
+    assert len(sanitize_branch_component("a" * 31)) == 31
 
-    # 31 characters truncates to 30
-    assert len(sanitize_branch_component("a" * 31)) == 30
+    # 32 characters truncates to 31
+    assert len(sanitize_branch_component("a" * 32)) == 31
 
     # Long descriptive name gets truncated
     long_name = "fix-dependency-injection-in-simplesubmitpy-to-eliminate-test-mocking"
     result = sanitize_branch_component(long_name)
-    assert len(result) == 30
+    assert len(result) == 31
     assert not result.endswith("-")  # No trailing hyphens after truncation
 
 
@@ -262,4 +262,33 @@ def test_sanitize_branch_component_matches_worktree_length() -> None:
     branch = sanitize_branch_component(test_name)
     worktree = sanitize_worktree_name(test_name)
     assert len(branch) == len(worktree)
-    assert len(branch) == 30
+    assert len(branch) == 31
+
+
+def test_very_long_title_truncates_to_40_chars_total() -> None:
+    """Regression test: 99-char title should truncate to max 40 chars total with date suffix.
+
+    This tests the bug fix where `erk implement` created excessively long branch names.
+    Example: "refactor erk implement command to support interactive and
+    non-interactive execution modes"
+
+    Note: The 31-char limit includes rstrip("-") after truncation,
+    so actual length may be <= 31.
+    """
+    # 89-character title that caused the original bug
+    long_title = (
+        "refactor erk implement command to support interactive and non-interactive execution modes"
+    )
+
+    # Sanitize the worktree name (should be <= 31 chars max, trailing hyphens stripped)
+    base_name = sanitize_worktree_name(long_title)
+    assert len(base_name) <= 31
+
+    # With date suffix (-YY-MM-DD = 9 chars including hyphen), total should be <= 40 chars
+    date_suffix = "25-11-23"
+    name_with_date = f"{base_name}-{date_suffix}"
+    assert len(name_with_date) <= 40
+
+    # Verify the base name is correctly truncated (30 chars after rstrip of trailing hyphen)
+    assert base_name == "refactor-erk-implement-command"
+    assert len(base_name) == 30  # 31 chars truncated, then trailing hyphen stripped

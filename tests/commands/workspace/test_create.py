@@ -1362,12 +1362,12 @@ def test_create_with_long_name_truncation() -> None:
         result = runner.invoke(cli, ["create", long_name], obj=test_ctx)
 
         assert result.exit_code == 0, result.output
-        # Worktree base name should be truncated to 30 chars
+        # Worktree base name should be truncated to 31 chars
         # Note: worktree name doesn't include sanitize_worktree_name truncation in this flow
-        # as create without --plan uses sanitize_worktree_name which truncates to 30
-        expected_truncated = "this-is-a-very-long-worktree-n"  # 30 chars
+        # as create without --plan uses sanitize_worktree_name which truncates to 31
+        expected_truncated = "this-is-a-very-long-worktree-na"  # 31 chars
         repo_dir / expected_truncated
-        assert len(expected_truncated) == 30, "Truncated base name should be exactly 30 chars"
+        assert len(expected_truncated) == 31, "Truncated base name should be exactly 31 chars"
 
 
 def test_create_with_plan_ensures_uniqueness() -> None:
@@ -1484,14 +1484,14 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
         added_worktree_path, actual_branch_name = git_ops.added_worktrees[0]
         assert actual_branch_name is not None, "Branch name should not be None"
 
-        # Branch name should be 30 chars (truncated, no date suffix)
-        assert len(actual_branch_name) == 30, (
-            f"Branch name: expected exactly 30 chars, got {len(actual_branch_name)}"
+        # Branch name should be 31 chars (truncated, no date suffix)
+        assert len(actual_branch_name) == 31, (
+            f"Branch name: expected exactly 31 chars, got {len(actual_branch_name)}"
         )
 
-        # Worktree name should be >30 chars (30 char base + 9 char date suffix)
-        assert len(actual_worktree_name) > 30, (
-            f"Worktree name: expected >30 chars, got {len(actual_worktree_name)}"
+        # Worktree name should be >31 chars (31 char base + 9 char date suffix)
+        assert len(actual_worktree_name) > 31, (
+            f"Worktree name: expected >31 chars, got {len(actual_worktree_name)}"
         )
 
         # Worktree name should end with date suffix (-YY-MM-DD)
@@ -1508,9 +1508,9 @@ def test_create_with_long_plan_name_matches_branch_and_worktree() -> None:
             f"Branch '{actual_branch_name}' should match worktree base '{worktree_base}'"
         )
 
-        # Both branch and worktree base should be exactly 30 chars
-        assert len(actual_branch_name) == 30
-        assert len(worktree_base) == 30
+        # Both branch and worktree base should be exactly 31 chars
+        assert len(actual_branch_name) == 31
+        assert len(worktree_base) == 31
 
 
 def test_create_fails_when_branch_exists_on_remote() -> None:

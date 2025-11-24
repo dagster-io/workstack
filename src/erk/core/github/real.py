@@ -16,6 +16,7 @@ from erk.core.github.parsing import (
     parse_github_pr_list,
     parse_github_pr_status,
 )
+from erk.core.time.abc import Time
 
 
 class RealGitHub(GitHub):
@@ -24,8 +25,13 @@ class RealGitHub(GitHub):
     All GitHub operations execute actual gh commands via subprocess.
     """
 
-    def __init__(self):
-        """Initialize RealGitHub."""
+    def __init__(self, time: Time):
+        """Initialize RealGitHub.
+
+        Args:
+            time: Time abstraction for sleep operations
+        """
+        self._time = time
 
     def get_prs_for_repo(
         self, repo_root: Path, *, include_checks: bool
@@ -491,36 +497,54 @@ query {{
 
         # The gh workflow run command doesn't return JSON output by default
         # We need to get the run ID from the workflow runs list
-        # Query for the most recent run of this workflow
-        runs_cmd = [
-            "gh",
-            "run",
-            "list",
-            "--workflow",
-            workflow,
-            "--json",
-            "databaseId",
-            "--limit",
-            "1",
-        ]
+        # Retry logic handles race condition where GitHub hasn't created run yet
+        max_attempts = 5
+        for attempt in range(max_attempts):
+            # Query for recent runs with status and conclusion to filter skipped/cancelled
+            runs_cmd = [
+                "gh",
+                "run",
+                "list",
+                "--workflow",
+                workflow,
+                "--json",
+                "databaseId,status,conclusion",
+                "--limit",
+                "10",
+            ]
 
-        runs_result = run_subprocess_with_context(
-            runs_cmd,
-            operation_context=f"get run ID for workflow '{workflow}'",
-            cwd=repo_root,
-        )
-
-        # Parse JSON output to extract run ID
-        runs_data = json.loads(runs_result.stdout)
-        if not runs_data or not isinstance(runs_data, list) or len(runs_data) == 0:
-            msg = (
-                "GitHub workflow triggered but could not find run ID. "
-                f"Raw output: {runs_result.stdout[:200]}"
+            runs_result = run_subprocess_with_context(
+                runs_cmd,
+                operation_context=f"get run ID for workflow '{workflow}'",
+                cwd=repo_root,
             )
-            raise RuntimeError(msg)
 
-        run_id = runs_data[0]["databaseId"]
-        return str(run_id)
+            # Parse JSON output to extract run ID
+            runs_data = json.loads(runs_result.stdout)
+            if not runs_data or not isinstance(runs_data, list):
+                msg = (
+                    "GitHub workflow triggered but could not find run ID. "
+                    f"Raw output: {runs_result.stdout[:200]}"
+                )
+                raise RuntimeError(msg)
+
+            # Filter out skipped and cancelled runs
+            for run in runs_data:
+                conclusion = run.get("conclusion")
+                if conclusion not in ("skipped", "cancelled"):
+                    run_id = run["databaseId"]
+                    return str(run_id)
+
+            # No valid run found, retry if attempts remaining
+            if attempt < max_attempts - 1:
+                self._time.sleep(1)
+
+        # All attempts exhausted without finding valid run
+        msg = (
+            "GitHub workflow triggered but could not find active run ID. "
+            "All recent runs were skipped or cancelled."
+        )
+        raise RuntimeError(msg)
 
     def create_pr(
         self,

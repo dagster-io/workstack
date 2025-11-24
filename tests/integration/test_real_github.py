@@ -13,6 +13,7 @@ from pytest import MonkeyPatch
 
 from erk.core.github.real import RealGitHub
 from tests.conftest import load_fixture
+from tests.fakes.time import FakeTime
 from tests.integration.test_helpers import mock_subprocess_run
 
 # ============================================================================
@@ -32,7 +33,7 @@ def test_get_prs_for_repo_with_checks(monkeypatch: MonkeyPatch) -> None:
         )
 
     with mock_subprocess_run(monkeypatch, mock_run):
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         result = ops.get_prs_for_repo(Path("/repo"), include_checks=True)
 
         assert len(result) == 3
@@ -53,7 +54,7 @@ def test_get_prs_for_repo_without_checks(monkeypatch: MonkeyPatch) -> None:
         )
 
     with mock_subprocess_run(monkeypatch, mock_run):
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         result = ops.get_prs_for_repo(Path("/repo"), include_checks=False)
 
         assert len(result) == 2
@@ -68,7 +69,7 @@ def test_get_prs_for_repo_command_failure(monkeypatch: MonkeyPatch) -> None:
         raise RuntimeError("Failed to execute gh command")
 
     with mock_subprocess_run(monkeypatch, mock_run):
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         result = ops.get_prs_for_repo(Path("/repo"), include_checks=False)
 
         # Should return empty dict on failure
@@ -87,7 +88,7 @@ def test_get_prs_for_repo_json_decode_error(monkeypatch: MonkeyPatch) -> None:
         )
 
     with mock_subprocess_run(monkeypatch, mock_run):
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         result = ops.get_prs_for_repo(Path("/repo"), include_checks=False)
 
         # Should return empty dict on JSON error
@@ -111,7 +112,7 @@ def test_get_pr_status_open_pr(monkeypatch: MonkeyPatch) -> None:
         )
 
     with mock_subprocess_run(monkeypatch, mock_run):
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         state, number, title = ops.get_pr_status(Path("/repo"), "branch-name", debug=False)
 
         assert state == "OPEN"
@@ -131,7 +132,7 @@ def test_get_pr_status_no_pr(monkeypatch: MonkeyPatch) -> None:
         )
 
     with mock_subprocess_run(monkeypatch, mock_run):
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         state, number, title = ops.get_pr_status(Path("/repo"), "no-pr-branch", debug=False)
 
         assert state == "NONE"
@@ -146,7 +147,7 @@ def test_get_pr_status_command_failure(monkeypatch: MonkeyPatch) -> None:
         raise RuntimeError("Failed to execute gh command")
 
     with mock_subprocess_run(monkeypatch, mock_run):
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         state, number, title = ops.get_pr_status(Path("/repo"), "branch", debug=False)
 
         # Should return NONE status on failure
@@ -167,7 +168,7 @@ def test_get_pr_status_debug_output(capsys, monkeypatch: MonkeyPatch) -> None:
         )
 
     with mock_subprocess_run(monkeypatch, mock_run):
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         state, number, title = ops.get_pr_status(Path("/repo"), "test-branch", debug=True)
 
         assert state == "OPEN"
@@ -191,7 +192,7 @@ def test_get_pr_base_branch_success(monkeypatch: MonkeyPatch) -> None:
         )
 
     with mock_subprocess_run(monkeypatch, mock_run):
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         result = ops.get_pr_base_branch(Path("/repo"), 123)
 
         assert result == "main"
@@ -209,7 +210,7 @@ def test_get_pr_base_branch_with_whitespace(monkeypatch: MonkeyPatch) -> None:
         )
 
     with mock_subprocess_run(monkeypatch, mock_run):
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         result = ops.get_pr_base_branch(Path("/repo"), 456)
 
         assert result == "feature-branch"
@@ -222,7 +223,7 @@ def test_get_pr_base_branch_command_failure(monkeypatch: MonkeyPatch) -> None:
         raise RuntimeError("Failed to execute gh command")
 
     with mock_subprocess_run(monkeypatch, mock_run):
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         result = ops.get_pr_base_branch(Path("/repo"), 123)
 
         assert result is None
@@ -235,7 +236,7 @@ def test_get_pr_base_branch_file_not_found(monkeypatch: MonkeyPatch) -> None:
         raise FileNotFoundError("gh command not found")
 
     with mock_subprocess_run(monkeypatch, mock_run):
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         result = ops.get_pr_base_branch(Path("/repo"), 123)
 
         assert result is None
@@ -260,7 +261,7 @@ def test_update_pr_base_branch_success(monkeypatch: MonkeyPatch) -> None:
         )
 
     with mock_subprocess_run(monkeypatch, mock_run):
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         ops.update_pr_base_branch(Path("/repo"), 123, "new-base")
 
         # Verify command was called correctly
@@ -275,7 +276,7 @@ def test_update_pr_base_branch_command_failure(monkeypatch: MonkeyPatch) -> None
         raise RuntimeError("Failed to execute gh command")
 
     with mock_subprocess_run(monkeypatch, mock_run):
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
 
         # Should not raise exception - graceful degradation
         ops.update_pr_base_branch(Path("/repo"), 123, "new-base")
@@ -288,7 +289,7 @@ def test_update_pr_base_branch_file_not_found(monkeypatch: MonkeyPatch) -> None:
         raise FileNotFoundError("gh command not found")
 
     with mock_subprocess_run(monkeypatch, mock_run):
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
 
         # Should not raise exception - graceful degradation
         ops.update_pr_base_branch(Path("/repo"), 123, "new-base")
@@ -327,7 +328,7 @@ def test_get_pr_mergeability_mergeable() -> None:
     try:
         subprocess.run = mock_run
 
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         result = ops.get_pr_mergeability(repo_root, 123)
 
         assert result is not None
@@ -354,7 +355,7 @@ def test_get_pr_mergeability_conflicting() -> None:
     try:
         subprocess.run = mock_run
 
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         result = ops.get_pr_mergeability(repo_root, 456)
 
         assert result is not None
@@ -381,7 +382,7 @@ def test_get_pr_mergeability_unknown() -> None:
     try:
         subprocess.run = mock_run
 
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         result = ops.get_pr_mergeability(repo_root, 789)
 
         assert result is not None
@@ -404,7 +405,7 @@ def test_get_pr_mergeability_command_failure() -> None:
     try:
         subprocess.run = mock_run
 
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         result = ops.get_pr_mergeability(repo_root, 999)
 
         assert result is None
@@ -426,7 +427,7 @@ def test_get_pr_mergeability_json_decode_error() -> None:
     try:
         subprocess.run = mock_run
 
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         result = ops.get_pr_mergeability(repo_root, 123)
 
         assert result is None
@@ -449,7 +450,7 @@ def test_get_pr_mergeability_missing_key() -> None:
     try:
         subprocess.run = mock_run
 
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         result = ops.get_pr_mergeability(repo_root, 123)
 
         assert result is None
@@ -468,7 +469,7 @@ def test_get_pr_mergeability_file_not_found() -> None:
     try:
         subprocess.run = mock_run
 
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         result = ops.get_pr_mergeability(repo_root, 123)
 
         assert result is None
@@ -506,7 +507,7 @@ def test_merge_pr_with_squash() -> None:
     try:
         subprocess.run = mock_run
 
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         # Should not raise
         ops.merge_pr(repo_root, pr_number, squash=True, verbose=False)
     finally:
@@ -534,7 +535,7 @@ def test_merge_pr_without_squash() -> None:
     try:
         subprocess.run = mock_run
 
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         ops.merge_pr(repo_root, pr_number, squash=False, verbose=False)
     finally:
         subprocess.run = original_run
@@ -552,7 +553,7 @@ def test_merge_pr_raises_on_failure() -> None:
     try:
         subprocess.run = mock_run
 
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
 
         # Should raise RuntimeError (from run_subprocess_with_context wrapper)
         with pytest.raises(RuntimeError):
@@ -602,7 +603,7 @@ def test_create_pr_success() -> None:
     try:
         subprocess.run = mock_run
 
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         pr_number = ops.create_pr(
             repo_root=repo_root,
             branch="feat-test",
@@ -646,7 +647,7 @@ def test_create_pr_without_base() -> None:
     try:
         subprocess.run = mock_run
 
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         pr_number = ops.create_pr(
             repo_root=repo_root,
             branch="feat-test",
@@ -671,7 +672,7 @@ def test_create_pr_failure() -> None:
     try:
         subprocess.run = mock_run
 
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
 
         # Should raise RuntimeError (from run_subprocess_with_context wrapper)
         with pytest.raises(RuntimeError) as exc_info:
@@ -749,7 +750,7 @@ def test_list_workflow_runs_success() -> None:
     try:
         subprocess.run = mock_run
 
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         result = ops.list_workflow_runs(repo_root, "implement-plan.yml", limit=50)
 
         assert len(result) == 3
@@ -781,7 +782,7 @@ def test_list_workflow_runs_custom_limit() -> None:
     try:
         subprocess.run = mock_run
 
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         result = ops.list_workflow_runs(repo_root, "test.yml", limit=10)
 
         assert result == []
@@ -800,7 +801,7 @@ def test_list_workflow_runs_command_failure() -> None:
     try:
         subprocess.run = mock_run
 
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         result = ops.list_workflow_runs(repo_root, "test.yml")
 
         # Should gracefully return empty list
@@ -822,7 +823,7 @@ def test_list_workflow_runs_json_decode_error() -> None:
     try:
         subprocess.run = mock_run
 
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         result = ops.list_workflow_runs(repo_root, "test.yml")
 
         # Should gracefully return empty list
@@ -857,7 +858,7 @@ def test_list_workflow_runs_missing_fields() -> None:
     try:
         subprocess.run = mock_run
 
-        ops = RealGitHub()
+        ops = RealGitHub(FakeTime())
         result = ops.list_workflow_runs(repo_root, "test.yml")
 
         # Should gracefully return empty list on KeyError

@@ -428,9 +428,11 @@ def create_context(*, dry_run: bool, script: bool = False) -> ErkContext:
         global_config = None
 
     # 4. Create integration classes (need git for repo discovery)
+    # Create time first so it can be injected into other classes
+    time: Time = RealTime()
     git: Git = RealGit()
     graphite: Graphite = RealGraphite()
-    github: GitHub = RealGitHub()
+    github: GitHub = RealGitHub(time)
     issues: GitHubIssues = RealGitHubIssues()
     plan_store: PlanStore = GitHubPlanStore(issues)
 
@@ -470,7 +472,7 @@ def create_context(*, dry_run: bool, script: bool = False) -> ErkContext:
         shell=RealShell(),
         claude_executor=RealClaudeExecutor(),
         completion=RealCompletion(),
-        time=RealTime(),
+        time=time,
         config_store=RealConfigStore(),
         script_writer=RealScriptWriter(),
         feedback=feedback,

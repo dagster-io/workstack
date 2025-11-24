@@ -8,6 +8,7 @@ from erk_shared.github.types import PullRequestInfo
 from pytest import MonkeyPatch
 
 from erk.core.github.real import RealGitHub
+from tests.fakes.time import FakeTime
 
 
 @pytest.fixture
@@ -76,7 +77,7 @@ def test_enrich_prs_with_ci_status_batch_includes_mergeability(
 
     monkeypatch.setattr("subprocess.run", mock_run)
 
-    github_ops = RealGitHub()
+    github_ops = RealGitHub(FakeTime())
     repo_root = Path("/test/repo")
     result = github_ops.enrich_prs_with_ci_status_batch(sample_prs, repo_root)
 
@@ -99,7 +100,7 @@ def test_enrich_prs_with_ci_status_batch_empty(monkeypatch: MonkeyPatch):
 
     monkeypatch.setattr("subprocess.run", mock_run)
 
-    github_ops = RealGitHub()
+    github_ops = RealGitHub(FakeTime())
     result = github_ops.enrich_prs_with_ci_status_batch({}, Path("/test/repo"))
 
     # Verify no API call made
@@ -137,7 +138,7 @@ def test_enrich_prs_with_ci_status_batch_partial_failure(monkeypatch: MonkeyPatc
 
     monkeypatch.setattr("subprocess.run", mock_run)
 
-    github_ops = RealGitHub()
+    github_ops = RealGitHub(FakeTime())
     repo_root = Path("/test/repo")
     result = github_ops.enrich_prs_with_ci_status_batch(sample_prs, repo_root)
 
@@ -183,7 +184,7 @@ def test_enrich_prs_with_ci_status_batch_unknown_mergeability(monkeypatch: Monke
 
     monkeypatch.setattr("subprocess.run", mock_run)
 
-    github_ops = RealGitHub()
+    github_ops = RealGitHub(FakeTime())
     repo_root = Path("/test/repo")
     result = github_ops.enrich_prs_with_ci_status_batch(sample_prs, repo_root)
 
@@ -230,7 +231,7 @@ def test_enrich_prs_with_ci_status_batch_missing_mergeable_field(
 
     monkeypatch.setattr("subprocess.run", mock_run)
 
-    github_ops = RealGitHub()
+    github_ops = RealGitHub(FakeTime())
     repo_root = Path("/test/repo")
     result = github_ops.enrich_prs_with_ci_status_batch(sample_prs, repo_root)
 
@@ -243,7 +244,7 @@ def test_enrich_prs_with_ci_status_batch_missing_mergeable_field(
 
 def test_build_batch_pr_query_includes_mergeability():
     """Test GraphQL query builder includes mergeability fields."""
-    github_ops = RealGitHub()
+    github_ops = RealGitHub(FakeTime())
     pr_numbers = [123, 456]
     owner = "test-owner"
     repo = "test-repo"
@@ -269,7 +270,7 @@ def test_build_batch_pr_query_includes_mergeability():
 
 def test_parse_pr_mergeability_conflicting():
     """Test parsing CONFLICTING mergeability status."""
-    github_ops = RealGitHub()
+    github_ops = RealGitHub(FakeTime())
     pr_data = {"mergeable": "CONFLICTING", "mergeStateStatus": "DIRTY"}
     result = github_ops._parse_pr_mergeability(pr_data)
     assert result is True
@@ -277,7 +278,7 @@ def test_parse_pr_mergeability_conflicting():
 
 def test_parse_pr_mergeability_mergeable():
     """Test parsing MERGEABLE mergeability status."""
-    github_ops = RealGitHub()
+    github_ops = RealGitHub(FakeTime())
     pr_data = {"mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN"}
     result = github_ops._parse_pr_mergeability(pr_data)
     assert result is False
@@ -285,7 +286,7 @@ def test_parse_pr_mergeability_mergeable():
 
 def test_parse_pr_mergeability_unknown():
     """Test parsing UNKNOWN mergeability status."""
-    github_ops = RealGitHub()
+    github_ops = RealGitHub(FakeTime())
     pr_data = {"mergeable": "UNKNOWN", "mergeStateStatus": "UNKNOWN"}
     result = github_ops._parse_pr_mergeability(pr_data)
     assert result is None
@@ -293,14 +294,14 @@ def test_parse_pr_mergeability_unknown():
 
 def test_parse_pr_mergeability_none_input():
     """Test parsing None input."""
-    github_ops = RealGitHub()
+    github_ops = RealGitHub(FakeTime())
     result = github_ops._parse_pr_mergeability(None)
     assert result is None
 
 
 def test_parse_pr_mergeability_missing_field():
     """Test parsing data with missing mergeable field."""
-    github_ops = RealGitHub()
+    github_ops = RealGitHub(FakeTime())
     pr_data = {"mergeStateStatus": "CLEAN"}
     result = github_ops._parse_pr_mergeability(pr_data)
     assert result is None

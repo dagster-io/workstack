@@ -1,0 +1,5 @@
+{
+  "number": 1067,
+  "url": "https://github.com/dagster-io/erk/issues/1067",
+  "title": "Fix /gt:update-pr command to handle PR creation when no PR exists"
+}

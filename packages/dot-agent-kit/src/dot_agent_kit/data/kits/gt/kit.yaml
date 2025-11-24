@@ -15,20 +15,15 @@ kit_cli_commands:
   - name: simple-submit
     path: kit_cli_commands/gt/simple_submit.py
     description: Simplified Graphite submit workflow (two-phase)
-  - name: simple-update-pr
-    path: kit_cli_commands/gt/simple_update_pr.py
-    description: Simplified Graphite update-pr workflow
 artifacts:
   agent:
     - agents/gt/gt-branch-submitter.md
     - agents/gt/gt-update-pr-submitter.md
     - agents/gt/gt-simple-submitter.md
-    - agents/gt/gt-simple-update-pr-submitter.md
   command:
     - commands/gt/submit-squashed-branch.md
     - commands/gt/update-pr.md
     - commands/gt/simple-submit.md
-    - commands/gt/simple-update-pr.md
   skill:
     - skills/gt-graphite/SKILL.md
     - skills/gt-graphite/references/gt-reference.md

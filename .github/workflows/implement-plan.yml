@@ -11,13 +11,13 @@ on:
   workflow_dispatch:
     inputs:
       branch-name:
-        description: 'Branch name to implement'
+        description: "Branch name to implement"
         required: true
   push:
     branches:
-      - '**'
+      - "**"
     paths:
-      - '.worker-impl/**'
+      - ".worker-impl/**"
 
 jobs:
   implement:
@@ -105,24 +105,6 @@ jobs:
           else
             echo "No changes to push"
           fi
-
-      - name: Trigger CI workflows
-        if: steps.check_submission.outputs.has_submission == 'true'
-        run: |
-          BRANCH="${{ github.ref_name }}"
-          echo "Triggering CI workflows for branch: $BRANCH"
-
-          # Trigger each CI workflow explicitly
-          gh workflow run test.yml --ref "$BRANCH"
-          gh workflow run lint.yml --ref "$BRANCH"
-          gh workflow run pyright.yml --ref "$BRANCH"
-          gh workflow run prettier.yml --ref "$BRANCH"
-          gh workflow run check-sync.yml --ref "$BRANCH"
-          gh workflow run md-check.yml --ref "$BRANCH"
-
-          echo "All CI workflows triggered"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Cleanup worker implementation folder
         id: cleanup

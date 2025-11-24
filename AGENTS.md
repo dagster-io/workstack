@@ -24,6 +24,7 @@
 | Write Python code                                | → Load `dignified-python-313` skill FIRST                                              |
 | Write or modify tests                            | → Load `fake-driven-testing` skill FIRST                                               |
 | Run pytest, pyright, ruff, prettier, make, or gt | → Use `devrun` agent (Task tool), NOT Bash                                             |
+| Import time or use time.sleep()                  | → Use `context.time.sleep()` instead (see erk-architecture.md#time-abstraction)        |
 | Work with Graphite stacks                        | → Load `gt-graphite` skill for stack visualization and terminology                     |
 | Understand erk architecture patterns             | → [docs/agent/erk-architecture.md](docs/agent/erk-architecture.md)                     |
 | Use planning workflow (.impl/ folders)           | → [docs/agent/planning-workflow.md](docs/agent/planning-workflow.md)                   |

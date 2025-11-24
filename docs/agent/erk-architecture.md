@@ -84,6 +84,155 @@ Erk uses a two-layer pattern for subprocess execution to provide consistent erro
 
 **Full guide**: See [subprocess-wrappers.md](subprocess-wrappers.md) for complete documentation and examples.
 
+## Time Abstraction for Testing
+
+**NEVER import `time` module directly. ALWAYS use `context.time` abstraction.**
+
+🔴 **MUST**: Use `context.time.sleep()` instead of `time.sleep()`
+🔴 **MUST**: Inject Time dependency through ErkContext
+🟡 **SHOULD**: Use FakeTime in tests to avoid actual sleeping
+
+### Wrong Pattern
+
+```python
+# ❌ WRONG: Direct time.sleep() import
+import time
+
+def retry_operation(attempt: int) -> None:
+    delay = 2.0 ** attempt
+    time.sleep(delay)  # Tests will actually sleep!
+```
+
+### Correct Pattern
+
+```python
+# ✅ CORRECT: Use context.time.sleep()
+def retry_operation(context: ErkContext, attempt: int) -> None:
+    delay = 2.0 ** attempt
+    context.time.sleep(delay)  # Fast in tests with FakeTime
+
+# At CLI entry point, RealTime is injected
+# In tests, FakeTime is injected
+```
+
+### Implementations
+
+**Production (RealTime)**:
+
+```python
+from erk.core.time.real import RealTime
+
+time = RealTime()
+time.sleep(2.0)  # Actually sleeps for 2 seconds
+```
+
+**Testing (FakeTime)**:
+
+```python
+from tests.fakes.time import FakeTime
+
+fake_time = FakeTime()
+fake_time.sleep(2.0)  # Returns immediately, tracks call
+
+# Assert sleep was called with expected duration
+assert fake_time.sleep_calls == [2.0]
+```
+
+### Real-World Examples
+
+**Retry with exponential backoff** (`src/erk/cli/commands/land_stack/retry.py:100`):
+
+```python
+def with_retry(context: ErkContext, func, max_attempts: int = 3):
+    for attempt in range(max_attempts):
+        try:
+            return func()
+        except Exception as e:
+            if attempt < max_attempts - 1:
+                delay = base_delay * (backoff_factor ** attempt)
+                context.time.sleep(delay)  # Fast in tests!
+            else:
+                raise
+```
+
+**GitHub API stabilization** (`src/erk/cli/commands/land_stack/execution.py:210`):
+
+```python
+# Wait for GitHub to recalculate merge status after base update
+ctx.time.sleep(2.0)  # Instant in tests, real wait in production
+```
+
+### Testing Benefits
+
+**Without Time abstraction**:
+
+```python
+def test_retry_logic():
+    # This test takes 6+ seconds to run!
+    retry_operation(max_attempts=3, delay=2.0)
+    assert operation_succeeded
+```
+
+**With Time abstraction**:
+
+```python
+def test_retry_logic():
+    fake_time = FakeTime()
+    ctx = ErkContext.minimal(git=FakeGit(...), cwd=Path("/tmp"))
+    ctx = dataclasses.replace(ctx, time=fake_time)
+
+    retry_operation(ctx, max_attempts=3, delay=2.0)
+
+    # Test completes instantly!
+    assert fake_time.sleep_calls == [2.0, 4.0, 8.0]
+    assert operation_succeeded
+```
+
+### Interface
+
+**ABC (src/erk/core/time/abc.py)**:
+
+```python
+from abc import ABC, abstractmethod
+
+class Time(ABC):
+    """Abstract time operations for dependency injection."""
+
+    @abstractmethod
+    def sleep(self, seconds: float) -> None:
+        """Sleep for specified number of seconds.
+
+        Args:
+            seconds: Number of seconds to sleep
+        """
+        ...
+```
+
+### When to Use
+
+Use `context.time.sleep()` for:
+
+- Retry delays and exponential backoff
+- API rate limiting delays
+- Waiting for external system stabilization (GitHub API, CI systems)
+- Polling intervals
+
+### Migration Path
+
+If you find code using `time.sleep()`:
+
+1. **Add Time parameter**: Add `context: ErkContext` parameter (or just `time: Time`)
+2. **Replace call**: Change `time.sleep(n)` to `context.time.sleep(n)`
+3. **Update tests**: Use `FakeTime` and verify `sleep_calls`
+
+### Rationale
+
+- **Fast tests**: Tests complete instantly instead of waiting for actual sleep
+- **Deterministic**: Test behavior is predictable and reproducible
+- **Observable**: Track exact sleep durations called in tests
+- **Dependency injection**: Follows erk's DI pattern for all integrations
+- **Consistent**: Same pattern as Git, GitHub, Graphite abstractions
+
 ## Design Principles
 
 These patterns reflect erk's core design principles:

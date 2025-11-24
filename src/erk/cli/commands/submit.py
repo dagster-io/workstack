@@ -87,56 +87,13 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
     user_output(f"  State:  {click.style(issue.state, fg='green')}")
     user_output("")
 
-    # Add erk-queue label to trigger workflow
+    # Add erk-queue label to trigger workflow via webhook
     user_output(f"Adding {ERK_QUEUE_LABEL} label...")
     ctx.issues.ensure_label_on_issue(repo.root, issue_number, ERK_QUEUE_LABEL)
-
-    # Trigger workflow via workflow_dispatch API
-    user_output("Triggering GitHub Actions workflow...")
-    try:
-        # Get trunk branch
-        trunk_branch = ctx.trunk_branch
-        if trunk_branch is None:
-            user_output(click.style("Error: ", fg="red") + "Could not detect trunk branch")
-            raise SystemExit(1)
-
-        # Trigger workflow and get run ID
-        run_id = ctx.github.trigger_workflow(
-            repo_root=repo.root,
-            workflow="dispatch-erk-queue.yml",
-            inputs={"issue_number": str(issue_number)},
-            ref=trunk_branch,
-        )
-
-        # Extract owner and repo from issue URL
-        # URL format: https://github.com/owner/repo/issues/123
-        url_parts = issue.url.rstrip("/").split("/")
-        if len(url_parts) >= 5 and url_parts[2] == "github.com":
-            owner = url_parts[3]
-            repo_name = url_parts[4]
-            workflow_url = f"https://github.com/{owner}/{repo_name}/actions/runs/{run_id}"
-        else:
-            # Fallback if URL parsing fails
-            workflow_url = f"(Run ID: {run_id})"
-
-        user_output(click.style("✓", fg="green") + " Workflow triggered successfully")
-        user_output("")
-        user_output("Workflow started:")
-        user_output(f"  {click.style(workflow_url, fg='cyan')}")
-    except Exception as e:
-        # Fail fast - abort the entire operation
-        user_output("")
-        user_output(click.style("✗ Failed to trigger workflow via API", fg="red"))
-        user_output(f"  Error: {str(e)}")
-        user_output("")
-        user_output("Troubleshooting:")
-        user_output("  • Check GitHub CLI authentication: gh auth status")
-        user_output("  • Verify workflow dispatch permissions")
-        user_output("  • Try manual submission: gh workflow run dispatch-erk-queue.yml")
-        user_output("")
-        user_output(f"Note: The {ERK_QUEUE_LABEL} label was still added to the issue.")
-        user_output("The workflow may still be triggered via webhook, but this is not guaranteed.")
-        raise SystemExit(1) from None
+    user_output(
+        click.style("✓", fg="green")
+        + " Label added. Workflow will start via webhook (typically <1 second)."
+    )
 
     # Gather submission metadata
     queued_at = datetime.now(UTC).isoformat()

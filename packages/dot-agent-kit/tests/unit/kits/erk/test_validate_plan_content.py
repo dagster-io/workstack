@@ -1,7 +1,6 @@
 """Unit tests for validate-plan-content kit CLI command."""
 
 import json
-from io import StringIO
 
 from click.testing import CliRunner
 
@@ -9,7 +8,6 @@ from erk.data.kits.erk.kit_cli_commands.erk.validate_plan_content import (
     _validate_plan_content,
     validate_plan_content,
 )
-
 
 # Test the internal validation function
 
@@ -39,8 +37,10 @@ def test_validate_plan_with_lists_valid() -> None:
     """Test validation passes for plan with lists."""
     plan = """Implementation Tasks:
 
-- Task 1: Create the database schema with proper indexes and constraints for optimal query performance
-- Task 2: Implement the API endpoints with proper validation and error handling patterns
+- Task 1: Create the database schema with proper indexes and constraints for optimal
+query performance
+- Task 2: Implement the API endpoints with proper validation and error handling
+patterns
 - Task 3: Add comprehensive test coverage including unit tests and integration tests"""
 
     valid, error, details = _validate_plan_content(plan)
@@ -57,7 +57,8 @@ def test_validate_plan_with_headers_and_lists_valid() -> None:
 
 ## Tasks
 
-- Step 1: Design the data model with normalization and proper relationships for scalability
+- Step 1: Design the data model with normalization and proper relationships for
+scalability
 - Step 2: Implement business logic with clear separation of concerns and testability
 - Step 3: Add documentation with examples and usage patterns for future maintenance"""
 
@@ -184,7 +185,10 @@ def test_validate_plan_mixed_list_markers() -> None:
 
 def test_validate_plan_strips_whitespace_before_validation() -> None:
     """Test validation strips leading/trailing whitespace before checking."""
-    plan = "\n\n  # Title\n\n- Item with enough text to pass minimum length requirement here\n- Another item with more detail\n  "
+    plan = (
+        "\n\n  # Title\n\n- Item with enough text to pass minimum length requirement "
+        "here\n- Another item with more detail\n  "
+    )
 
     valid, error, details = _validate_plan_content(plan)
 

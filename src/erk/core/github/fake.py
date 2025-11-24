@@ -280,27 +280,18 @@ class FakeGitHub(GitHub):
     def get_workflow_runs_by_branches(
         self, repo_root: Path, workflow: str, branches: list[str]
     ) -> dict[str, WorkflowRun | None]:
-        """Get most relevant workflow runs for branches (applies same filtering logic as real).
+        """Get the most relevant workflow run for each branch.
 
-        For each branch, returns the most relevant run based on priority:
-        1. In-progress or queued runs (highest priority)
-        2. Failed runs
-        3. Most recent completed run
+        Returns a mapping of branch name -> WorkflowRun for branches that have
+        matching workflow runs. Uses priority: in_progress/queued > failed > success > other.
 
-        Args:
-            repo_root: Repository root directory (ignored in fake)
-            workflow: Workflow filename (ignored in fake - uses pre-configured runs)
-            branches: List of branch names to query
-
-        Returns:
-            Mapping of branch name -> WorkflowRun (or None if no runs found).
-            Only includes branches that have workflow runs.
+        The workflow parameter is accepted but ignored - fake returns runs from
+        all pre-configured workflow runs regardless of workflow name.
         """
-        # Early exit for empty branches
         if not branches:
             return {}
 
-        # Group pre-configured runs by branch
+        # Group runs by branch
         runs_by_branch: dict[str, list[WorkflowRun]] = {}
         for run in self._workflow_runs:
             if run.branch in branches:
@@ -308,27 +299,92 @@ class FakeGitHub(GitHub):
                     runs_by_branch[run.branch] = []
                 runs_by_branch[run.branch].append(run)
 
-        # Select most relevant run for each branch (same logic as real)
+        # Select most relevant run for each branch
         result: dict[str, WorkflowRun | None] = {}
         for branch in branches:
-            branch_runs = runs_by_branch.get(branch, [])
-            if not branch_runs:
+            if branch not in runs_by_branch:
                 continue
 
-            # Priority 1: In-progress or queued runs
+            branch_runs = runs_by_branch[branch]
+
+            # Priority 1: in_progress or queued (active runs)
             active_runs = [r for r in branch_runs if r.status in ("in_progress", "queued")]
             if active_runs:
                 result[branch] = active_runs[0]
                 continue
 
-            # Priority 2: Failed runs
-            failed_runs = [r for r in branch_runs if r.conclusion == "failure"]
+            # Priority 2: failed completed runs
+            failed_runs = [
+                r for r in branch_runs if r.status == "completed" and r.conclusion == "failure"
+            ]
             if failed_runs:
                 result[branch] = failed_runs[0]
                 continue
 
-            # Priority 3: Most recent completed run
+            # Priority 3: successful completed runs (most recent = first in list)
+            completed_runs = [r for r in branch_runs if r.status == "completed"]
+            if completed_runs:
+                result[branch] = completed_runs[0]
+                continue
+
+            # Priority 4: any other runs (unknown status, etc.)
             if branch_runs:
                 result[branch] = branch_runs[0]
+
+        return result
+
+    def get_workflow_runs_by_titles(
+        self, repo_root: Path, workflow: str, titles: list[str]
+    ) -> dict[str, WorkflowRun | None]:
+        """Get the most relevant workflow run for each display title.
+
+        Returns a mapping of title -> WorkflowRun for titles that have
+        matching workflow runs. Uses priority: in_progress/queued > failed > success > other.
+
+        The workflow parameter is accepted but ignored - fake returns runs from
+        all pre-configured workflow runs regardless of workflow name.
+        """
+        if not titles:
+            return {}
+
+        # Group runs by display_title
+        runs_by_title: dict[str, list[WorkflowRun]] = {}
+        for run in self._workflow_runs:
+            if run.display_title in titles:
+                if run.display_title not in runs_by_title:
+                    runs_by_title[run.display_title] = []
+                runs_by_title[run.display_title].append(run)
+
+        # Select most relevant run for each title
+        result: dict[str, WorkflowRun | None] = {}
+        for title in titles:
+            if title not in runs_by_title:
+                continue
+
+            title_runs = runs_by_title[title]
+
+            # Priority 1: in_progress or queued (active runs)
+            active_runs = [r for r in title_runs if r.status in ("in_progress", "queued")]
+            if active_runs:
+                result[title] = active_runs[0]
+                continue
+
+            # Priority 2: failed completed runs
+            failed_runs = [
+                r for r in title_runs if r.status == "completed" and r.conclusion == "failure"
+            ]
+            if failed_runs:
+                result[title] = failed_runs[0]
+                continue
+
+            # Priority 3: successful completed runs (most recent = first in list)
+            completed_runs = [r for r in title_runs if r.status == "completed"]
+            if completed_runs:
+                result[title] = completed_runs[0]
+                continue
+
+            # Priority 4: any other runs (unknown status, etc.)
+            if title_runs:
+                result[title] = title_runs[0]
 
         return result

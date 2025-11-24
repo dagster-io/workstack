@@ -356,6 +356,22 @@ def _list_plans_impl(
         if issue_num is not None and run is not None:
             runs_by_issue[issue_num] = run
 
+    # Build title-to-issue mapping for workflow run lookup
+    # dispatch-erk-queue.yml runs have headBranch=master but display_title=issue title
+    title_by_issue: dict[int, str] = {}
+    for plan in plans:
+        issue_number = plan.metadata.get("number")
+        if isinstance(issue_number, int):
+            title_by_issue[issue_number] = plan.title
+
+    # Query workflow runs by display title (issue title)
+    workflow_runs_by_title: dict[str, WorkflowRun | None] = {}
+    titles_to_query = list(title_by_issue.values())
+    if titles_to_query:
+        workflow_runs_by_title = ctx.github.get_workflow_runs_by_titles(
+            repo_root, "dispatch-erk-queue.yml", titles_to_query
+        )
+
     # Determine use_graphite for URL selection
     use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
 
@@ -438,13 +454,12 @@ def _list_plans_impl(
                 )
                 checks_cell = format_checks_cell(selected_pr)
 
-        # Get workflow run from batch query results
+        # Get workflow run for this plan by title (dispatch-erk-queue uses display_title)
         run_id_cell = "-"
-        if isinstance(issue_number, int) and issue_number in runs_by_issue:
-            workflow_run = runs_by_issue[issue_number]
-            # Build workflow URL
+        workflow_run = workflow_runs_by_title.get(plan.title)
+        if workflow_run is not None:
+            # Build workflow URL from plan metadata
             workflow_url = None
-            # Try to extract owner/repo from plan metadata
             plan_url = plan.metadata.get("url")
             if isinstance(plan_url, str):
                 # Parse owner/repo from URL like https://github.com/owner/repo/issues/123

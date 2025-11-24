@@ -11,7 +11,7 @@ from erk.core.subprocess import run_subprocess_with_context
 
 def test_success_case_returns_completed_process() -> None:
     """Test that successful subprocess execution returns CompletedProcess."""
-    with patch("erk.core.subprocess.subprocess.run") as mock_run:
+    with patch("erk_shared.subprocess_utils.subprocess.run") as mock_run:
         # Setup successful execution
         mock_result = Mock(spec=subprocess.CompletedProcess)
         mock_result.returncode = 0
@@ -39,12 +39,14 @@ def test_success_case_returns_completed_process() -> None:
             text=True,
             encoding="utf-8",
             check=True,
+            stdout=None,
+            stderr=None,
         )
 
 
 def test_failure_with_stderr_includes_stderr_in_error() -> None:
     """Test that subprocess failure with stderr includes stderr in error message."""
-    with patch("erk.core.subprocess.subprocess.run") as mock_run:
+    with patch("erk_shared.subprocess_utils.subprocess.run") as mock_run:
         # Setup failed execution with stderr
         error = subprocess.CalledProcessError(
             returncode=1,
@@ -74,7 +76,7 @@ def test_failure_with_stderr_includes_stderr_in_error() -> None:
 
 def test_failure_without_stderr_handles_gracefully() -> None:
     """Test that subprocess failure without stderr still produces useful error."""
-    with patch("erk.core.subprocess.subprocess.run") as mock_run:
+    with patch("erk_shared.subprocess_utils.subprocess.run") as mock_run:
         # Setup failed execution without stderr
         error = subprocess.CalledProcessError(
             returncode=127,
@@ -101,7 +103,7 @@ def test_failure_without_stderr_handles_gracefully() -> None:
 
 def test_failure_with_empty_stderr_omits_stderr_line() -> None:
     """Test that subprocess failure with empty stderr omits the stderr line."""
-    with patch("erk.core.subprocess.subprocess.run") as mock_run:
+    with patch("erk_shared.subprocess_utils.subprocess.run") as mock_run:
         # Setup failed execution with empty stderr
         error = subprocess.CalledProcessError(
             returncode=1,
@@ -127,7 +129,7 @@ def test_failure_with_empty_stderr_omits_stderr_line() -> None:
 
 def test_exception_chaining_preserved() -> None:
     """Test that original CalledProcessError is preserved via exception chaining."""
-    with patch("erk.core.subprocess.subprocess.run") as mock_run:
+    with patch("erk_shared.subprocess_utils.subprocess.run") as mock_run:
         # Setup failed execution
         original_error = subprocess.CalledProcessError(
             returncode=1,
@@ -150,7 +152,7 @@ def test_exception_chaining_preserved() -> None:
 
 def test_parameter_pass_through() -> None:
     """Test that all kwargs are correctly passed through to subprocess.run."""
-    with patch("erk.core.subprocess.subprocess.run") as mock_run:
+    with patch("erk_shared.subprocess_utils.subprocess.run") as mock_run:
         # Setup successful execution
         mock_result = Mock(spec=subprocess.CompletedProcess)
         mock_result.returncode = 0
@@ -173,6 +175,8 @@ def test_parameter_pass_through() -> None:
             text=True,
             encoding="utf-8",
             check=True,
+            stdout=None,
+            stderr=None,
             timeout=30,
             env={"VAR": "value"},
         )
@@ -180,7 +184,7 @@ def test_parameter_pass_through() -> None:
 
 def test_check_false_behavior_no_exception() -> None:
     """Test that check=False prevents exception on non-zero exit."""
-    with patch("erk.core.subprocess.subprocess.run") as mock_run:
+    with patch("erk_shared.subprocess_utils.subprocess.run") as mock_run:
         # Setup failed execution but with check=False
         mock_result = Mock(spec=subprocess.CompletedProcess)
         mock_result.returncode = 1
@@ -201,7 +205,7 @@ def test_check_false_behavior_no_exception() -> None:
 
 def test_custom_encoding_parameter() -> None:
     """Test that custom encoding parameter is passed through."""
-    with patch("erk.core.subprocess.subprocess.run") as mock_run:
+    with patch("erk_shared.subprocess_utils.subprocess.run") as mock_run:
         # Setup successful execution
         mock_result = Mock(spec=subprocess.CompletedProcess)
         mock_result.returncode = 0
@@ -221,7 +225,7 @@ def test_custom_encoding_parameter() -> None:
 
 def test_capture_output_false_parameter() -> None:
     """Test that capture_output=False is passed through correctly."""
-    with patch("erk.core.subprocess.subprocess.run") as mock_run:
+    with patch("erk_shared.subprocess_utils.subprocess.run") as mock_run:
         # Setup successful execution
         mock_result = Mock(spec=subprocess.CompletedProcess)
         mock_result.returncode = 0
@@ -241,7 +245,7 @@ def test_capture_output_false_parameter() -> None:
 
 def test_text_false_parameter() -> None:
     """Test that text=False is passed through correctly."""
-    with patch("erk.core.subprocess.subprocess.run") as mock_run:
+    with patch("erk_shared.subprocess_utils.subprocess.run") as mock_run:
         # Setup successful execution
         mock_result = Mock(spec=subprocess.CompletedProcess)
         mock_result.returncode = 0
@@ -265,7 +269,7 @@ def test_explicit_stderr_with_default_capture_output() -> None:
     Regression test: When capture_output=True (the default), passing explicit
     stdout/stderr parameters should disable capture_output to avoid ValueError.
     """
-    with patch("erk.core.subprocess.subprocess.run") as mock_run:
+    with patch("erk_shared.subprocess_utils.subprocess.run") as mock_run:
         # Setup successful execution
         mock_result = Mock(spec=subprocess.CompletedProcess)
         mock_result.returncode = 0
@@ -291,7 +295,7 @@ def test_explicit_stderr_with_default_capture_output() -> None:
 
 def test_explicit_stdout_and_stderr_both_disable_capture_output() -> None:
     """Test that both stdout and stderr parameters disable capture_output."""
-    with patch("erk.core.subprocess.subprocess.run") as mock_run:
+    with patch("erk_shared.subprocess_utils.subprocess.run") as mock_run:
         # Setup successful execution
         mock_result = Mock(spec=subprocess.CompletedProcess)
         mock_result.returncode = 0
@@ -317,7 +321,7 @@ def test_explicit_stdout_and_stderr_both_disable_capture_output() -> None:
 
 def test_failure_with_stdout_includes_stdout_in_error() -> None:
     """Test that subprocess failure with stdout includes stdout in error message."""
-    with patch("erk.core.subprocess.subprocess.run") as mock_run:
+    with patch("erk_shared.subprocess_utils.subprocess.run") as mock_run:
         # Setup failed execution with stdout
         error = subprocess.CalledProcessError(
             returncode=1,
@@ -344,7 +348,7 @@ def test_failure_with_stdout_includes_stdout_in_error() -> None:
 
 def test_failure_with_both_stdout_and_stderr_includes_both() -> None:
     """Test that subprocess failure with both outputs includes both in error."""
-    with patch("erk.core.subprocess.subprocess.run") as mock_run:
+    with patch("erk_shared.subprocess_utils.subprocess.run") as mock_run:
         # Setup failed execution with both stdout and stderr
         error = subprocess.CalledProcessError(
             returncode=1,

@@ -5,8 +5,7 @@ import re
 from pathlib import Path
 
 from erk_shared.github.types import PRInfo, PullRequestInfo
-
-from erk.core.subprocess import run_subprocess_with_context
+from erk_shared.subprocess_utils import run_subprocess_with_context
 
 
 def execute_gh_command(cmd: list[str], cwd: Path) -> str:

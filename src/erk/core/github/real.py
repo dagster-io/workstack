@@ -7,6 +7,7 @@ from typing import Any
 
 from erk_shared.github.abc import GitHub
 from erk_shared.github.types import PRInfo, PRMergeability, PullRequestInfo, WorkflowRun
+from erk_shared.subprocess_utils import run_subprocess_with_context
 
 from erk.cli.output import user_output
 from erk.core.github.parsing import (
@@ -15,7 +16,6 @@ from erk.core.github.parsing import (
     parse_github_pr_list,
     parse_github_pr_status,
 )
-from erk.core.subprocess import run_subprocess_with_context
 
 
 class RealGitHub(GitHub):

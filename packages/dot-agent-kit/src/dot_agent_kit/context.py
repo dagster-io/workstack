@@ -118,8 +118,8 @@ def create_context(*, debug: bool) -> DotAgentContext:
         >>> ctx = create_context(debug=False)
         >>> issue_number = ctx.github_issues.create_issue(ctx.repo_root, title, body, labels)
     """
-    from erk.core.git.real import RealGit
-    from erk.core.github.real import RealGitHub
+    from erk_shared.git.real import RealGit
+    from erk_shared.github.real import RealGitHub
 
     # Detect repo root using git rev-parse
     result = subprocess.run(

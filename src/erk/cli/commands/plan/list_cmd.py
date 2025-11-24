@@ -408,7 +408,9 @@ def _list_plans_impl(
                 graphite_url = ctx.graphite.get_graphite_url(
                     selected_pr.owner, selected_pr.repo, selected_pr.number
                 )
-                pr_cell = format_pr_cell(selected_pr, use_graphite=use_graphite, graphite_url=graphite_url)
+                pr_cell = format_pr_cell(
+                    selected_pr, use_graphite=use_graphite, graphite_url=graphite_url
+                )
                 checks_cell = format_checks_cell(selected_pr)
 
         # Add row to table

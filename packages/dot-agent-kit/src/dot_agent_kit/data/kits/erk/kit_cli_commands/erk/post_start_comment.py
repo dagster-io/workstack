@@ -188,16 +188,9 @@ def post_start_comment(ctx: click.Context) -> None:
         branch=branch_name,
     )
 
-    # Format description with worktree info and copy-pastable commands
+    # Format description with worktree info only (commands are now in issue body)
     description = f"""**Worktree:** `{worktree_name}`
-**Branch:** `{branch_name}`
-
-**Commands:**
-```bash
-gh issue view {issue_ref.issue_number} --web
-erk implement {issue_ref.issue_number}
-erk implement {issue_ref.issue_number} --submit --dangerous
-```"""
+**Branch:** `{branch_name}`"""
 
     # Create comment with consistent format
     comment_body = render_erk_issue_event(

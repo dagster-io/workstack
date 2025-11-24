@@ -15,6 +15,7 @@ import json
 import sys
 
 import click
+from erk_shared.github.metadata import format_plan_issue_body
 
 from dot_agent_kit.context_helpers import require_github_issues, require_repo_root
 from erk.data.kits.erk.plan_utils import extract_title_from_plan
@@ -26,7 +27,11 @@ def create_plan_from_context(ctx: click.Context) -> None:
     """Create GitHub issue from plan content with erk-plan label.
 
     Reads plan content from stdin, extracts title, ensures erk-plan label exists,
-    creates issue, and returns JSON result.
+    creates issue with collapsible plan body and execution commands, and returns JSON result.
+
+    Workflow:
+    1. Create issue with plan body wrapped in collapsible metadata block
+    2. Update issue body to include execution commands (using returned issue number)
 
     Usage:
         echo "$plan" | dot-agent kit-command erk create-plan-from-context
@@ -53,9 +58,9 @@ def create_plan_from_context(ctx: click.Context) -> None:
     # Extract title (pure function call)
     title = extract_title_from_plan(plan)
 
-    # Plan content is used as-is for the issue body
-    # Metadata tracking happens via separate comments using render_erk_issue_event()
-    body = plan.strip()
+    # Initial body: just the plan content (without commands, since we don't have issue number yet)
+    # We'll update it after creation with the full formatted body including commands
+    initial_body = plan.strip()
 
     # Ensure label exists (ABC interface with EAFP pattern)
     try:
@@ -71,9 +76,19 @@ def create_plan_from_context(ctx: click.Context) -> None:
 
     # Create issue (ABC interface with EAFP pattern)
     try:
-        result = github.create_issue(repo_root, title, body, ["erk-plan"])
+        result = github.create_issue(repo_root, title, initial_body, ["erk-plan"])
     except RuntimeError as e:
         click.echo(f"Error: Failed to create GitHub issue: {e}", err=True)
+        raise SystemExit(1) from e
+
+    # Now that we have the issue number, format the complete body with commands
+    formatted_body = format_plan_issue_body(plan.strip(), result.number)
+
+    # Update the issue body with the formatted version
+    try:
+        github.update_issue_body(repo_root, result.number, formatted_body)
+    except RuntimeError as e:
+        click.echo(f"Error: Failed to update issue body: {e}", err=True)
         raise SystemExit(1) from e
 
     # Output structured JSON

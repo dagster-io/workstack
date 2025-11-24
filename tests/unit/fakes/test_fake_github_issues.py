@@ -166,6 +166,47 @@ def test_fake_github_issues_added_comments_empty_initially() -> None:
     assert issues.added_comments == []
 
 
+def test_fake_github_issues_update_issue_body_existing_issue() -> None:
+    """Test update_issue_body updates body for existing issue."""
+    pre_configured = {42: create_test_issue(42, "Test", "Original body")}
+    issues = FakeGitHubIssues(issues=pre_configured)
+
+    issues.update_issue_body(sentinel_path(), 42, "Updated body content")
+
+    # Verify body was updated
+    updated_issue = issues.get_issue(sentinel_path(), 42)
+    assert updated_issue.body == "Updated body content"
+    assert updated_issue.title == "Test"  # Title unchanged
+    assert updated_issue.number == 42  # Number unchanged
+
+
+def test_fake_github_issues_update_issue_body_missing_issue() -> None:
+    """Test update_issue_body raises RuntimeError for missing issue."""
+    issues = FakeGitHubIssues()
+
+    with pytest.raises(RuntimeError, match="Issue #999 not found"):
+        issues.update_issue_body(sentinel_path(), 999, "New body")
+
+
+def test_fake_github_issues_update_issue_body_updates_timestamp() -> None:
+    """Test update_issue_body updates the updated_at timestamp."""
+    creation_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
+    pre_configured = {
+        42: create_test_issue(
+            42, "Test", "Original body", created_at=creation_time, updated_at=creation_time
+        )
+    }
+    issues = FakeGitHubIssues(issues=pre_configured)
+
+    # Update the body
+    issues.update_issue_body(sentinel_path(), 42, "Updated body")
+
+    # Verify timestamp was updated (should be later than creation time)
+    updated_issue = issues.get_issue(sentinel_path(), 42)
+    assert updated_issue.created_at == creation_time  # Creation time unchanged
+    assert updated_issue.updated_at > creation_time  # Update time advanced
+
+
 def test_fake_github_issues_added_comments_read_only() -> None:
     """Test added_comments property returns list that can be read."""
     pre_configured = {42: create_test_issue(42, "Test", "Body", url="http://url")}

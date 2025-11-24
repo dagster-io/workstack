@@ -200,15 +200,15 @@ You are executing the `/erk:save-context-enriched-plan` command. Follow these st
 All errors must use the format-error kit CLI command:
 
 ```bash
-dot-agent kit-command erk format-error \
-    --brief "Brief description (5-10 words)" \
-    --details "Specific error message or context" \
-    --action "Concrete step 1" \
-    --action "Concrete step 2" \
-    --action "Concrete step 3"
+formatted_error=$(dot-agent kit-command erk format-error \
+    --brief "[Brief description in 5-10 words]" \
+    --details "[Specific error message, relevant context, or diagnostic info]" \
+    --action "[First concrete step to resolve]" \
+    --action "[Second concrete step (optional)]" \
+    --action "[Third concrete step (optional)]")
+echo "$formatted_error"
+exit 1
 ```
-
-This ensures consistent error formatting with brief description, details, and suggested actions.
 
 **YOUR ONLY TASKS:**
 
@@ -268,35 +268,38 @@ Search conversation history for an implementation plan:
 
 **If no plan found:**
 
+Use the format-error kit CLI command:
+
 ```bash
-dot-agent kit-command erk format-error \
-    --brief "No implementation plan found in conversation" \
+formatted_error=$(dot-agent kit-command erk format-error \
+    --brief "No implementation plan found" \
     --details "Could not find a valid implementation plan in conversation history" \
     --action "Ensure plan is in conversation" \
     --action "Plan should have headers and structure" \
-    --action "Re-paste plan in conversation if needed"
+    --action "Re-paste plan in conversation if needed")
+echo "$formatted_error"
+exit 1
 ```
 
 **Plan validation:**
 
-After extracting the plan content, validate it using the kit CLI command:
+After extracting plan content, validate it using the kit CLI command:
 
 ```bash
 # Validate plan structure
 validate_result=$(echo "$plan_content" | dot-agent kit-command erk validate-plan-content)
 if ! echo "$validate_result" | jq -e '.valid' > /dev/null; then
     error_msg=$(echo "$validate_result" | jq -r '.error')
-    dot-agent kit-command erk format-error \
+    formatted_error=$(dot-agent kit-command erk format-error \
         --brief "Plan content is too minimal or invalid" \
         --details "$error_msg" \
         --action "Provide a more detailed implementation plan" \
         --action "Include specific tasks, steps, or phases" \
-        --action "Use headers and lists to structure the plan"
+        --action "Use headers and lists to structure the plan")
+    echo "$formatted_error"
     exit 1
 fi
 ```
-
-This ensures the plan meets minimum requirements (100+ characters, has structure with headers/lists).
 
 ### Steps 2-4: Enrichment Process
 
@@ -364,19 +367,23 @@ Replace `$PLAN_CONTENT` with the `enhanced_plan_content` variable from Step 4:
 
 @../docs/create-github-issue.md
 
-After creating the GitHub issue successfully, format the success output using the kit CLI command:
+**After successful issue creation:**
+
+Use the format-success-output kit CLI command to generate standardized output:
 
 ```bash
-# Parse issue number from URL
-issue_number=$(echo "$issue_url" | grep -oE '[0-9]+$')
-
-# Format success output
-dot-agent kit-command erk format-success-output \
+# After issue is created, extract issue_number and issue_url
+success_output=$(dot-agent kit-command erk format-success-output \
     --issue-number "$issue_number" \
-    --issue-url "$issue_url"
+    --issue-url "$issue_url")
+echo "$success_output"
 ```
 
-This will output the issue link, next steps commands, and JSON metadata in a consistent format.
+This will output:
+
+- Success message with issue number and URL
+- Next steps (view issue, implement interactively, implement with --dangerous, implement with --yolo)
+- JSON metadata for parsing
 
 ## Important Notes
 
@@ -386,7 +393,9 @@ This will output the issue link, next steps commands, and JSON metadata in a con
 - Suggests phase decomposition for complex plans with multiple features
 - All enhancements are optional - users can dismiss suggestions
 - GitHub issue title derived from plan title
-- All errors follow consistent template with details and suggested actions
+- All errors use format-error kit CLI command for consistency
+- All success output uses format-success-output kit CLI command
+- Plan validation uses validate-plan-content kit CLI command
 - User can edit the issue after creation using GitHub UI or `gh issue edit`
 - Always provide clear feedback at each step
 - Issue becomes immediate source of truth (no disk files involved)

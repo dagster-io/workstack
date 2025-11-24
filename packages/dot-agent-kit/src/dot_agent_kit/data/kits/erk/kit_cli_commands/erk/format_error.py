@@ -1,79 +1,91 @@
-"""Format consistent error messages with brief, details, and actions.
+"""Format error messages with consistent structure.
 
-This kit CLI command generates standardized error output with:
-- Brief error description (5-10 words)
-- Detailed error context
-- Numbered list of 1-3 suggested actions
+This kit CLI command generates standardized error messages with brief description,
+details, and suggested actions.
 
 Usage:
     dot-agent kit-command erk format-error \\
-        --brief "Brief description" \\
+        --brief "Brief error description" \\
         --details "Detailed error message" \\
-        --action "First suggested action" \\
-        --action "Second suggested action"
+        --action "First action" \\
+        --action "Second action"
 
 Output:
-    Formatted error message to stdout
+    Formatted error message with consistent structure
 
 Exit Codes:
-    0: Success (errors are formatted output, not execution failures)
+    0: Success
 
 Examples:
     $ dot-agent kit-command erk format-error \\
-        --brief "Plan content is too minimal" \\
-        --details "Plan has only 50 characters (minimum 100 required)" \\
-        --action "Provide a more detailed implementation plan" \\
-        --action "Include specific tasks, steps, or phases"
+        --brief "No plan found" \\
+        --details "Could not find a valid implementation plan in conversation" \\
+        --action "Ensure plan is in conversation" \\
+        --action "Plan should have headers and structure"
+    ❌ Error: No plan found
 
-    ❌ Error: Plan content is too minimal
+    Details: Could not find a valid implementation plan in conversation
 
-    Details: Plan has only 50 characters (minimum 100 required)
-
-    Suggested actions:
-      1. Provide a more detailed implementation plan
-      2. Include specific tasks, steps, or phases
+    Suggested action:
+      1. Ensure plan is in conversation
+      2. Plan should have headers and structure
 """
 
 import click
 
-from dot_agent_kit.data.kits.erk.plan_utils import format_error as format_error_util
+
+def format_error_message(brief: str, details: str, actions: list[str]) -> str:
+    """Generate consistent error message format.
+
+    Args:
+        brief: Brief description in 5-10 words
+        details: Specific error message or context
+        actions: List of 1-3 concrete steps to resolve
+
+    Returns:
+        Formatted error message following template
+
+    Raises:
+        ValueError: If actions list is empty
+    """
+    if not actions:
+        raise ValueError("At least one action must be provided")
+
+    # Use singular "action" for single action, plural "actions" for multiple
+    action_header = "Suggested action:" if len(actions) == 1 else "Suggested actions:"
+    error_msg = f"❌ Error: {brief}\n\nDetails: {details}\n\n{action_header}"
+
+    for i, action in enumerate(actions, start=1):
+        error_msg += f"\n  {i}. {action}"
+
+    return error_msg
 
 
 @click.command(name="format-error")
-@click.option(
-    "--brief",
-    required=True,
-    type=str,
-    help="Brief error description (5-10 words recommended)",
-)
-@click.option(
-    "--details",
-    required=True,
-    type=str,
-    help="Specific error message or context",
-)
+@click.option("--brief", type=str, required=True, help="Brief error description (5-10 words)")
+@click.option("--details", type=str, required=True, help="Detailed error message or context")
 @click.option(
     "--action",
     "actions",
+    type=str,
     multiple=True,
     required=True,
-    type=str,
-    help="Suggested action (repeatable, 1-3 recommended)",
+    help="Suggested action (can be repeated)",
 )
 def format_error(brief: str, details: str, actions: tuple[str, ...]) -> None:
-    """Format standardized error message with brief, details, and actions.
+    """Format standardized error message.
 
-    Generates consistent error output following the template:
-    - ❌ Error: {brief}
-    - Details: {details}
-    - Suggested actions: numbered list
+    Args:
+        brief: Brief error description
+        details: Detailed error message
+        actions: Tuple of suggested actions (1-3 items)
 
-    The --action option can be repeated to provide multiple suggestions.
+    Outputs:
+        Formatted error message with:
+        - Error header with brief description
+        - Details section with context
+        - Numbered list of suggested actions
     """
-    # Convert tuple to list for the utility function
     actions_list = list(actions)
-
-    # Call the pure utility function
-    error_message = format_error_util(brief, details, actions_list)
-
+    error_message = format_error_message(brief, details, actions_list)
     click.echo(error_message)

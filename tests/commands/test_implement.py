@@ -1299,3 +1299,78 @@ def test_yolo_flag_conflicts_with_script() -> None:
 
         assert result.exit_code != 0
         assert "mutually exclusive" in result.output
+
+
+# Title Validation Tests
+
+
+def test_implement_fails_on_invalid_issue_title_emoji_only() -> None:
+    """Test that implement fails with clear error for issue titles with only emojis."""
+    # Create issue with title that has only emojis
+    plan_issue = Plan(
+        plan_identifier="999",
+        title="🚀🎉🎊",  # Only emojis - no alphanumeric characters
+        body="# Implementation Plan\n\nSome implementation details.",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/999",
+        labels=["erk-plan"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 2, tzinfo=UTC),
+        metadata={},
+    )
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanStore(plans={"999": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
+
+        result = runner.invoke(implement, ["999", "--script"], obj=ctx)
+
+        # Verify command fails with error exit code
+        assert result.exit_code == 1
+
+        # Verify error message mentions the issue
+        assert "GitHub issue title contains no alphanumeric characters" in result.output
+        assert "Cannot generate meaningful plan name" in result.output
+        assert "more descriptive title" in result.output
+
+        # Verify no worktree was created
+        assert len(git.added_worktrees) == 0
+
+
+def test_implement_fails_on_invalid_issue_title_special_chars_only() -> None:
+    """Test that implement fails for issue titles with only special characters."""
+    plan_issue = Plan(
+        plan_identifier="1000",
+        title="!!!???",  # Only special characters - no alphanumeric
+        body="# Implementation Plan\n\nSome implementation details.",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/1000",
+        labels=["erk-plan"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 2, tzinfo=UTC),
+        metadata={},
+    )
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanStore(plans={"1000": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
+
+        result = runner.invoke(implement, ["1000", "--script"], obj=ctx)
+
+        assert result.exit_code == 1
+        assert "GitHub issue title contains no alphanumeric characters" in result.output
+        assert len(git.added_worktrees) == 0

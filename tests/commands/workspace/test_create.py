@@ -1671,3 +1671,51 @@ def test_create_error_message_suggests_wt_create() -> None:
         assert result.exit_code == 1
         # Should mention --branch as a valid option
         assert "--branch" in result.output
+
+
+def test_create_fails_on_invalid_issue_title() -> None:
+    """Test that create --from-issue fails with clear error for invalid issue titles."""
+    from datetime import UTC, datetime
+
+    from erk_shared.github.issues import FakeGitHubIssues, IssueInfo
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        env.setup_repo_structure()
+
+        # Create fake issue with invalid title (only emojis)
+        now = datetime(2024, 1, 1, tzinfo=UTC)
+        fake_issues = FakeGitHubIssues(
+            issues={
+                42: IssueInfo(
+                    number=42,
+                    title="🚀🎉🎊",  # Only emojis - no alphanumeric characters
+                    body="# Implementation Plan\n\nSome details.",
+                    state="open",
+                    url="https://github.com/owner/repo/issues/42",
+                    labels=["erk-plan"],
+                    assignees=[],
+                    created_at=now,
+                    updated_at=now,
+                )
+            }
+        )
+
+        git_ops = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            default_branches={env.cwd: "main"},
+        )
+
+        test_ctx = env.build_context(git=git_ops, issues=fake_issues)
+
+        result = runner.invoke(cli, ["wt", "create", "--from-issue", "42"], obj=test_ctx)
+
+        # Verify command fails with error exit code
+        assert result.exit_code == 1
+
+        # Verify error message mentions the validation issue
+        assert "GitHub issue title contains no alphanumeric characters" in result.output
+        assert "more descriptive title" in result.output
+
+        # Verify no worktree was created
+        assert len(git_ops.added_worktrees) == 0

@@ -14,6 +14,7 @@ from erk_shared.naming import (
     ensure_unique_worktree_name_with_date,
     sanitize_worktree_name,
     strip_plan_from_filename,
+    validate_title_for_plan_naming,
 )
 from erk_shared.output.output import user_output
 
@@ -673,6 +674,20 @@ def create_wt(
                 + "  • Verify issue number is correct\n"
                 + "  • Check repository access: gh auth status\n"
                 + f"  • Try viewing manually: gh issue view {issue_number_parsed}"
+            )
+            raise SystemExit(1) from e
+
+        # Validate title can generate meaningful plan name
+        try:
+            validate_title_for_plan_naming(issue_info.title)
+        except ValueError as e:
+            user_output(
+                click.style("Error: ", fg="red")
+                + str(e)
+                + "\n\n"
+                + click.style("Suggestion: ", fg="yellow")
+                + "Please add a more descriptive title to the GitHub issue.\n"
+                + f'  gh issue edit {issue_number_parsed} --title "Your descriptive title"'
             )
             raise SystemExit(1) from e
 

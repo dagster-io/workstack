@@ -20,6 +20,7 @@ from erk_shared.naming import (
     generate_filename_from_title,
     sanitize_worktree_name,
     strip_plan_from_filename,
+    validate_title_for_plan_naming,
 )
 from erk_shared.output.output import user_output
 
@@ -322,6 +323,19 @@ def _prepare_plan_source_from_issue(
 
     # Output issue title
     ctx.feedback.info(f"Issue: {plan.title}")
+
+    # Validate title can generate meaningful plan name
+    try:
+        validate_title_for_plan_naming(plan.title)
+    except ValueError as e:
+        ctx.feedback.error(str(e))
+        user_output(
+            "\n"
+            + click.style("Suggestion: ", fg="yellow")
+            + "Please add a more descriptive title to the GitHub issue.\n"
+            + f"Issue URL: {plan.url}"
+        )
+        raise SystemExit(1) from e
 
     # Validate issue has erk-plan label
     if "erk-plan" not in plan.labels:

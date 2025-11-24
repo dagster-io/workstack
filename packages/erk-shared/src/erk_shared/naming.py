@@ -169,6 +169,59 @@ def generate_filename_from_title(title: str) -> str:
     return f"{trimmed}-plan.md"
 
 
+def validate_title_for_plan_naming(title: str) -> None:
+    """Validate that a GitHub issue title can generate a meaningful plan name.
+
+    Validates that the title contains at least one alphanumeric character after
+    applying the same cleanup logic as generate_filename_from_title().
+
+    Args:
+        title: GitHub issue title to validate
+
+    Raises:
+        ValueError: If title contains no alphanumeric characters after cleanup
+
+    Example:
+        >>> validate_title_for_plan_naming("Add user authentication")
+        # No error
+
+        >>> validate_title_for_plan_naming("🚀🎉🎊")
+        Traceback (most recent call last):
+        ...
+        ValueError: GitHub issue title contains no alphanumeric characters.
+        Cannot generate meaningful plan name.
+    """
+    # Apply same cleanup logic as generate_filename_from_title
+    # Step 1: Lowercase and strip whitespace
+    lowered = title.strip().lower()
+
+    # Step 2: Unicode normalization (NFD form for decomposition)
+    normalized = unicodedata.normalize("NFD", lowered)
+
+    # Step 3: Remove emojis and non-ASCII characters, convert to ASCII
+    cleaned = ""
+    for char in normalized:
+        # Keep ASCII alphanumeric, spaces, and hyphens
+        if ord(char) < 128 and (char.isalnum() or char in (" ", "-")):
+            cleaned += char
+
+    # Step 4: Replace spaces with hyphens
+    replaced = cleaned.replace(" ", "-")
+
+    # Step 5: Collapse consecutive hyphens
+    collapsed = re.sub(r"-+", "-", replaced)
+
+    # Step 6: Strip leading/trailing hyphens
+    trimmed = collapsed.strip("-")
+
+    # Step 7: Validate at least one alphanumeric character
+    if not trimmed or not any(c.isalnum() for c in trimmed):
+        raise ValueError(
+            "GitHub issue title contains no alphanumeric characters. "
+            "Cannot generate meaningful plan name."
+        )
+
+
 def strip_plan_from_filename(filename: str) -> str:
     """Remove 'plan' or 'implementation plan' from a filename stem intelligently.
 

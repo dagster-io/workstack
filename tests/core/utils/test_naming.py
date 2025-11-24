@@ -11,6 +11,7 @@ from erk_shared.naming import (
     sanitize_branch_component,
     sanitize_worktree_name,
     strip_plan_from_filename,
+    validate_title_for_plan_naming,
 )
 
 
@@ -347,3 +348,45 @@ def test_derive_branch_name_truncates_to_30_chars() -> None:
     result = derive_branch_name_from_title(long_name)
     assert len(result) == 30
     assert not result.endswith("-")  # No trailing hyphens after truncation
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Add user authentication",
+        "Fix bug #123",
+        "Feature: User Dashboard",
+        "café support",  # Unicode that normalizes to alphanumeric
+        "Feature 🚀!!!",  # Mixed valid/invalid - has alphanumeric
+        "123",  # Numbers are alphanumeric
+        "a",  # Single character is fine
+        "Fix: Multiple   Spaces",  # Multiple spaces collapse
+        "---Valid---",  # Hyphens around valid text
+    ],
+)
+def test_validate_title_for_plan_naming_valid(title: str) -> None:
+    """Test that valid titles pass validation."""
+    # Should not raise ValueError
+    validate_title_for_plan_naming(title)
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "🚀🎉🎊",  # Only emojis
+        "!!!???",  # Only special characters
+        "---",  # Only hyphens
+        "   ",  # Only whitespace
+        "",  # Empty string
+        "🔥 💯",  # Only emojis and spaces
+        "！？",  # Unicode special characters only
+    ],
+)
+def test_validate_title_for_plan_naming_invalid(title: str) -> None:
+    """Test that invalid titles raise ValueError."""
+    with pytest.raises(ValueError) as exc_info:
+        validate_title_for_plan_naming(title)
+
+    # Check error message
+    assert "GitHub issue title contains no alphanumeric characters" in str(exc_info.value)
+    assert "Cannot generate meaningful plan name" in str(exc_info.value)

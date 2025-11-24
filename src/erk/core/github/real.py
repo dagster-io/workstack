@@ -716,46 +716,44 @@ query {{
     def _build_issue_pr_linkage_query(self, issue_numbers: list[int], owner: str, repo: str) -> str:
         """Build GraphQL query to fetch PRs linked to issues.
 
+        Query all PRs in the repository and extract their closingIssuesReferences
+        to build the issue-to-PR mapping.
+
         Args:
-            issue_numbers: List of issue numbers to query
+            issue_numbers: List of issue numbers to query (used for filtering results)
             owner: Repository owner
             repo: Repository name
 
         Returns:
             GraphQL query string
         """
-        # Build aliased issue queries
-        issue_queries = []
-        for issue_num in issue_numbers:
-            issue_query = f"""    issue_{issue_num}: issue(number: {issue_num}) {{
-      number
-      timelineItems(last: 100, itemTypes: CONNECTED_EVENT) {{
-        nodes {{
-          ... on ConnectedEvent {{
-            source {{
-              ... on PullRequest {{
-                number
-                state
-                url
-                isDraft
-                title
-                createdAt
-                statusCheckRollup {{
-                  state
-                }}
-                mergeable
-              }}
-            }}
+        # Query PRs with closingIssuesReferences field
+        # We fetch up to 100 PRs at a time - this should cover most repositories
+        query = f"""query {{
+  repository(owner: "{owner}", name: "{repo}") {{
+    pullRequests(
+      first: 100,
+      states: [OPEN, MERGED, CLOSED],
+      orderBy: {{field: CREATED_AT, direction: DESC}}
+    ) {{
+      nodes {{
+        number
+        state
+        url
+        isDraft
+        title
+        createdAt
+        statusCheckRollup {{
+          state
+        }}
+        mergeable
+        closingIssuesReferences(first: 100) {{
+          nodes {{
+            number
           }}
         }}
       }}
-    }}"""
-            issue_queries.append(issue_query)
-
-        # Combine into single query
-        query = f"""query {{
-  repository(owner: "{owner}", name: "{repo}") {{
-{chr(10).join(issue_queries)}
+    }}
   }}
 }}"""
         return query
@@ -765,6 +763,9 @@ query {{
     ) -> dict[int, list[PullRequestInfo]]:
         """Parse GraphQL response to extract issue-to-PR mappings.
 
+        Processes PR data with closingIssuesReferences to build the inverse mapping
+        from issue numbers to PRs that close them.
+
         Args:
             response: GraphQL response data
             owner: Repository owner
@@ -773,88 +774,86 @@ query {{
         Returns:
             Mapping of issue_number -> list of PRs sorted by created_at descending
         """
-        result: dict[int, list[PullRequestInfo]] = {}
+        # Build inverse mapping: issue_number -> list[(pr_info, created_at)]
+        issue_to_prs: dict[int, list[tuple[PullRequestInfo, str]]] = {}
 
         # Extract repository data
         repo_data = response.get("data", {}).get("repository", {})
+        pull_requests = repo_data.get("pullRequests", {})
+        pr_nodes = pull_requests.get("nodes", [])
 
-        # Process each issue alias
-        for key, issue_data in repo_data.items():
-            # Extract issue number from alias (format: "issue_123")
-            if not key.startswith("issue_"):
+        # Process each PR
+        for pr_node in pr_nodes:
+            if pr_node is None:
                 continue
 
-            issue_number = int(key.split("_")[1])
+            # Extract PR fields
+            pr_number = pr_node.get("number")
+            state = pr_node.get("state")
+            url = pr_node.get("url")
+            is_draft = pr_node.get("isDraft")
+            title = pr_node.get("title")
+            created_at = pr_node.get("createdAt")
 
-            # Extract timeline items
-            if issue_data is None:
+            # Skip if essential fields are missing
+            if pr_number is None or state is None or url is None:
                 continue
 
-            timeline_items = issue_data.get("timelineItems", {})
-            nodes = timeline_items.get("nodes", [])
+            # Parse checks status
+            checks_passing = None
+            status_rollup = pr_node.get("statusCheckRollup")
+            if status_rollup is not None:
+                rollup_state = status_rollup.get("state")
+                if rollup_state == "SUCCESS":
+                    checks_passing = True
+                elif rollup_state in ("FAILURE", "ERROR"):
+                    checks_passing = False
 
-            # Extract PR info from timeline items
-            prs_with_timestamps: list[tuple[PullRequestInfo, str]] = []
-            for node in nodes:
-                source = node.get("source")
-                if source is None:
+            # Parse conflicts status
+            has_conflicts = None
+            mergeable = pr_node.get("mergeable")
+            if mergeable == "CONFLICTING":
+                has_conflicts = True
+            elif mergeable == "MERGEABLE":
+                has_conflicts = False
+
+            # Create PullRequestInfo
+            pr_info = PullRequestInfo(
+                number=pr_number,
+                state=state,
+                url=url,
+                is_draft=is_draft if is_draft is not None else False,
+                title=title,
+                checks_passing=checks_passing,
+                owner=owner,
+                repo=repo,
+                has_conflicts=has_conflicts,
+            )
+
+            # Extract linked issues from closingIssuesReferences
+            closing_issues = pr_node.get("closingIssuesReferences", {})
+            issue_nodes = closing_issues.get("nodes", [])
+
+            for issue_node in issue_nodes:
+                if issue_node is None:
                     continue
 
-                # Extract PR fields
-                pr_number = source.get("number")
-                state = source.get("state")
-                url = source.get("url")
-                is_draft = source.get("isDraft")
-                title = source.get("title")
-                created_at = source.get("createdAt")
-
-                # Skip if essential fields are missing
-                if pr_number is None or state is None or url is None:
+                issue_number = issue_node.get("number")
+                if issue_number is None:
                     continue
 
-                # Parse checks status
-                checks_passing = None
-                status_rollup = source.get("statusCheckRollup")
-                if status_rollup is not None:
-                    rollup_state = status_rollup.get("state")
-                    if rollup_state == "SUCCESS":
-                        checks_passing = True
-                    elif rollup_state in ("FAILURE", "ERROR"):
-                        checks_passing = False
-
-                # Parse conflicts status
-                has_conflicts = None
-                mergeable = source.get("mergeable")
-                if mergeable == "CONFLICTING":
-                    has_conflicts = True
-                elif mergeable == "MERGEABLE":
-                    has_conflicts = False
-
-                # Create PullRequestInfo
-                pr_info = PullRequestInfo(
-                    number=pr_number,
-                    state=state,
-                    url=url,
-                    is_draft=is_draft if is_draft is not None else False,
-                    title=title,
-                    checks_passing=checks_passing,
-                    owner=owner,
-                    repo=repo,
-                    has_conflicts=has_conflicts,
-                )
+                # Add this PR to the issue's list
+                if issue_number not in issue_to_prs:
+                    issue_to_prs[issue_number] = []
 
                 # Store with timestamp for sorting
                 if created_at:
-                    prs_with_timestamps.append((pr_info, created_at))
+                    issue_to_prs[issue_number].append((pr_info, created_at))
 
-            # Sort by created_at descending (most recent first)
+        # Sort PRs for each issue by created_at descending (most recent first)
+        result: dict[int, list[PullRequestInfo]] = {}
+        for issue_number, prs_with_timestamps in issue_to_prs.items():
             prs_with_timestamps.sort(key=lambda x: x[1], reverse=True)
-
-            # Extract just the PR info (without timestamps)
-            sorted_prs = [pr for pr, _ in prs_with_timestamps]
-
-            # Only add to result if we found PRs
-            if sorted_prs:
-                result[issue_number] = sorted_prs
+            result[issue_number] = [pr for pr, _ in prs_with_timestamps]
 
         return result

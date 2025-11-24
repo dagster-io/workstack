@@ -1,0 +1,5 @@
+{
+  "number": 1018,
+  "url": "https://github.com/dagster-io/erk/issues/1018",
+  "title": "Allow 'erk down --delete-current' to work without PR (warn but continue)"
+}

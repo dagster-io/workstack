@@ -4,7 +4,9 @@ import subprocess
 from datetime import UTC, datetime
 
 import click
+from erk_shared.erp_folder import create_erp_folder
 from erk_shared.github.metadata import create_submission_queued_block, render_erk_issue_event
+from erk_shared.naming import sanitize_branch_component
 
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
@@ -82,14 +84,178 @@ def submit_cmd(ctx: ErkContext, issue_number: int, dry_run: bool) -> None:
     user_output(f"  State:  {click.style(issue.state, fg='green')}")
     user_output("")
 
+    # Fetch plan content
+    user_output("Fetching plan content...")
+    try:
+        plan = ctx.plan_store.get_plan(repo.root, str(issue_number))
+    except RuntimeError as e:
+        user_output(click.style("Error: ", fg="red") + str(e))
+        raise SystemExit(1) from None
+
+    plan_content = plan.body
+    issue_url = plan.url
+
+    # Generate branch name from issue title
+    branch_name = sanitize_branch_component(issue.title)
+
     if dry_run:
         dry_run_msg = click.style("(dry run)", fg="bright_black")
+        user_output(f"{dry_run_msg} Would create branch: {branch_name}")
+        user_output(f"{dry_run_msg} Would create .erp/ folder with plan")
+        user_output(f"{dry_run_msg} Would commit and push .erp/ folder")
+        user_output(f"{dry_run_msg} Would create draft PR")
         user_output(f"{dry_run_msg} Would add label: {ERK_QUEUE_LABEL}")
         user_output(f"{dry_run_msg} Would trigger GitHub Actions workflow")
         user_output("")
         user_output("GitHub Actions workflow:")
         user_output("  https://github.com/{owner}/{repo}/actions/workflows/dispatch-erk-queue.yml")
         return
+
+    # Get trunk branch
+    trunk_branch = ctx.trunk_branch
+    if trunk_branch is None:
+        user_output(click.style("Error: ", fg="red") + "Could not detect trunk branch")
+        raise SystemExit(1)
+
+    # Create branch from trunk
+    user_output(f"Creating branch: {click.style(branch_name, fg='cyan')}")
+    try:
+        # Check if branch already exists locally
+        existing_branches = ctx.git.list_local_branches(repo.root)
+        if branch_name in existing_branches:
+            user_output(
+                click.style("Error: ", fg="red") + f"Branch '{branch_name}' already exists\n\n"
+                "Please delete the existing branch first or choose a different issue."
+            )
+            raise SystemExit(1)
+
+        # Create new branch from trunk
+        ctx.git.create_branch(repo.root, branch_name, f"origin/{trunk_branch}")
+        ctx.git.checkout_branch(repo.root, branch_name)
+    except Exception as e:
+        user_output(click.style("Error: ", fg="red") + f"Failed to create branch: {e}")
+        raise SystemExit(1) from None
+
+    # Create .erp/ folder with plan
+    user_output("Creating .erp/ folder with plan...")
+    try:
+        create_erp_folder(
+            plan_content=plan_content,
+            issue_number=issue_number,
+            issue_url=issue_url,
+            issue_title=issue.title,
+            repo_root=repo.root,
+        )
+    except Exception as e:
+        # Clean up branch on error
+        user_output(click.style("Error: ", fg="red") + f"Failed to create .erp/ folder: {e}")
+        user_output("Cleaning up branch...")
+        try:
+            ctx.git.checkout_branch(repo.root, trunk_branch)
+            ctx.git.delete_branch(repo.root, branch_name, force=True)
+        except Exception:
+            pass
+        raise SystemExit(1) from None
+
+    # Commit .erp/ folder
+    user_output("Committing plan...")
+    try:
+        subprocess.run(
+            ["git", "add", ".erp"],
+            cwd=repo.root,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        subprocess.run(
+            ["git", "commit", "-m", f"Add plan for issue #{issue_number}"],
+            cwd=repo.root,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError as e:
+        # Clean up on error
+        user_output(click.style("Error: ", fg="red") + f"Failed to commit: {e.stderr}")
+        user_output("Cleaning up...")
+        try:
+            ctx.git.checkout_branch(repo.root, trunk_branch)
+            ctx.git.delete_branch(repo.root, branch_name, force=True)
+        except Exception:
+            pass
+        raise SystemExit(1) from None
+
+    # Push branch to origin
+    user_output("Pushing branch to origin...")
+    try:
+        subprocess.run(
+            ["git", "push", "-u", "origin", branch_name],
+            cwd=repo.root,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError as e:
+        # Clean up on error
+        user_output(click.style("Error: ", fg="red") + f"Failed to push: {e.stderr}")
+        user_output("Cleaning up...")
+        try:
+            ctx.git.checkout_branch(repo.root, trunk_branch)
+            ctx.git.delete_branch(repo.root, branch_name, force=True)
+        except Exception:
+            pass
+        raise SystemExit(1) from None
+
+    # Create draft PR
+    user_output("Creating draft PR...")
+    try:
+        pr_body = (
+            f"Implementation of plan from issue #{issue_number}\n\n"
+            f"{issue_url}\n\n"
+            f"**Status:** Queued for implementation\n\n"
+            f"This PR will be marked ready for review after implementation completes."
+        )
+
+        result = subprocess.run(
+            [
+                "gh",
+                "pr",
+                "create",
+                "--draft",
+                "--title",
+                issue.title,
+                "--body",
+                pr_body,
+                "--head",
+                branch_name,
+            ],
+            cwd=repo.root,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        pr_url = result.stdout.strip()
+        user_output(click.style("✓", fg="green") + f" Draft PR created: {pr_url}")
+    except subprocess.CalledProcessError as e:
+        # Clean up on error
+        user_output(click.style("Error: ", fg="red") + f"Failed to create PR: {e.stderr}")
+        user_output("Cleaning up...")
+        try:
+            # Delete remote branch
+            subprocess.run(
+                ["git", "push", "origin", "--delete", branch_name],
+                cwd=repo.root,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            # Delete local branch
+            ctx.git.checkout_branch(repo.root, trunk_branch)
+            ctx.git.delete_branch(repo.root, branch_name, force=True)
+        except Exception:
+            pass
+        raise SystemExit(1) from None
 
     # Ensure erk-queue label is on issue (idempotent)
     user_output(f"Adding {ERK_QUEUE_LABEL} label...")
@@ -159,7 +325,12 @@ def submit_cmd(ctx: ErkContext, issue_number: int, dry_run: bool) -> None:
         + " Issue submitted! GitHub Actions will begin implementation automatically."
     )
     user_output("")
+    user_output("Created:")
+    user_output(f"  • Branch: {click.style(branch_name, fg='cyan')}")
+    user_output(f"  • Draft PR: {pr_url}")
+    user_output("")
     user_output("Next steps:")
+    user_output(f"  • View PR: {pr_url}")
     user_output(f"  • View issue: {issue.url}")
     user_output("  • Monitor workflow runs:")
     user_output("    gh run list --workflow=dispatch-erk-queue.yml")

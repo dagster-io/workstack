@@ -20,11 +20,11 @@ from dot_agent_kit.context_helpers import require_github_issues, require_repo_ro
 from erk.data.kits.erk.plan_utils import extract_title_from_plan
 
 
-@click.command(name="create-plan-issue-from-plan-file")
+@click.command(name="create-plan-from-plan-file")
 @click.argument("plan_file", type=click.Path(exists=True, path_type=Path))
 @click.option("--label", default="erk-plan", help="Label to apply to issue")
 @click.pass_context
-def create_plan_issue_from_plan_file(
+def create_plan_from_plan_file(
     ctx: click.Context,
     plan_file: Path,
     label: str,

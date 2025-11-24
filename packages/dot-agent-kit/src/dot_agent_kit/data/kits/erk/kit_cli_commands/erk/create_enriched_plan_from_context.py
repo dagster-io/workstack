@@ -1,18 +1,15 @@
-"""Create GitHub issue from plan content (via stdin) with erk-plan label.
+"""Create GitHub issue from enriched plan (via --plan-content option) with erk-plan label.
 
-This kit CLI command handles the complete workflow for creating a plan issue:
-1. Read plan from stdin
-2. Extract title from plan
-3. Ensure erk-plan label exists
-4. Create GitHub issue with plan body and label
-5. Return structured JSON result
+This kit CLI command is identical to create_plan_issue_from_context but is used
+by the /erk:create-enriched-plan-issue-from-context slash command which handles
+plan enrichment before passing the enriched plan to this command.
 
-This replaces the complex shell orchestration in the slash command with a single,
-well-tested Python command that uses the ABC interface for GitHub operations.
+The enrichment happens in the agent's logic (adding context, architectural notes, etc.)
+before calling this command. This command simply creates the issue from whatever
+plan content it receives via the --plan-content option.
 """
 
 import json
-import sys
 
 import click
 
@@ -20,16 +17,21 @@ from dot_agent_kit.context_helpers import require_github_issues, require_repo_ro
 from erk.data.kits.erk.plan_utils import extract_title_from_plan
 
 
-@click.command(name="create-plan-issue-from-context")
+@click.command(name="create-enriched-plan-from-context")
+@click.option("--plan-content", required=True, help="Plan content")
 @click.pass_context
-def create_plan_issue_from_context(ctx: click.Context) -> None:
-    """Create GitHub issue from plan content with erk-plan label.
+def create_enriched_plan_from_context(ctx: click.Context, plan_content: str) -> None:
+    """Create GitHub issue from enriched plan (via --plan-content option).
 
-    Reads plan content from stdin, extracts title, ensures erk-plan label exists,
-    creates issue, and returns JSON result.
+    Reads enriched plan content from --plan-content option, extracts title,
+    ensures erk-plan label exists, creates issue, and returns JSON result.
+
+    The plan should already be enriched by the calling agent before being passed
+    to this command.
 
     Usage:
-        echo "$plan" | dot-agent kit-command erk create-plan-issue-from-context
+        dot-agent kit-command erk create-enriched-plan-issue-from-context \\
+            --plan-content "$enriched_plan"
 
     Exit Codes:
         0: Success
@@ -42,8 +44,8 @@ def create_plan_issue_from_context(ctx: click.Context) -> None:
     github = require_github_issues(ctx)
     repo_root = require_repo_root(ctx)
 
-    # Read plan from stdin
-    plan = sys.stdin.read()
+    # Use plan content from parameter
+    plan = plan_content
 
     # Validate plan not empty
     if not plan or not plan.strip():
@@ -54,7 +56,6 @@ def create_plan_issue_from_context(ctx: click.Context) -> None:
     title = extract_title_from_plan(plan)
 
     # Plan content is used as-is for the issue body
-    # Metadata tracking happens via separate comments using render_erk_issue_event()
     body = plan.strip()
 
     # Ensure label exists (ABC interface with EAFP pattern)

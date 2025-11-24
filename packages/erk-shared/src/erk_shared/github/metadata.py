@@ -222,11 +222,11 @@ class WorktreeCreationSchema(MetadataBlockSchema):
 
 
 @dataclass(frozen=True)
-class PlanIssueSchema(MetadataBlockSchema):
-    """Schema for erk-plan-issue blocks."""
+class PlanSchema(MetadataBlockSchema):
+    """Schema for erk-plan blocks."""
 
     def validate(self, data: dict[str, Any]) -> None:
-        """Validate erk-plan-issue data structure."""
+        """Validate erk-plan data structure."""
         required_fields = {"issue_number", "worktree_name", "timestamp"}
         optional_fields = {"plan_file"}
 
@@ -265,7 +265,11 @@ class PlanIssueSchema(MetadataBlockSchema):
             raise ValueError(f"Unknown fields: {', '.join(sorted(unknown_fields))}")
 
     def get_key(self) -> str:
-        return "erk-plan-issue"
+        return "erk-plan"
+
+
+# Backward compatibility alias
+PlanIssueSchema = PlanSchema
 
 
 def create_metadata_block(
@@ -502,13 +506,13 @@ def create_worktree_creation_block(
     )
 
 
-def create_plan_issue_block(
+def create_plan_block(
     issue_number: int,
     worktree_name: str,
     timestamp: str,
     plan_file: str | None = None,
 ) -> MetadataBlock:
-    """Create an erk-plan-issue block with validation.
+    """Create an erk-plan block with validation.
 
     Args:
         issue_number: GitHub issue number for this plan
@@ -517,9 +521,9 @@ def create_plan_issue_block(
         plan_file: Optional path to the plan file
 
     Returns:
-        MetadataBlock with erk-plan-issue schema
+        MetadataBlock with erk-plan schema
     """
-    schema = PlanIssueSchema()
+    schema = PlanSchema()
     data: dict[str, Any] = {
         "issue_number": issue_number,
         "worktree_name": worktree_name,
@@ -534,6 +538,10 @@ def create_plan_issue_block(
         data=data,
         schema=schema,
     )
+
+
+# Backward compatibility alias
+create_plan_issue_block = create_plan_block
 
 
 def extract_raw_metadata_blocks(text: str) -> list[RawMetadataBlock]:

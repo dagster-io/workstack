@@ -4,26 +4,31 @@ from erk.cli.commands.admin import admin_group
 from erk.cli.commands.checkout import checkout_cmd
 from erk.cli.commands.completion import completion_group
 from erk.cli.commands.config import config_group
-from erk.cli.commands.consolidate import consolidate_cmd
-from erk.cli.commands.create import create
-from erk.cli.commands.current import current_cmd
-from erk.cli.commands.delete import del_cmd, delete_cmd
 from erk.cli.commands.down import down_cmd
-from erk.cli.commands.goto import goto_cmd
 from erk.cli.commands.implement import implement
 from erk.cli.commands.init import init_cmd
-from erk.cli.commands.land_stack import land_stack
-from erk.cli.commands.list import list_cmd, ls_cmd
-from erk.cli.commands.move import move_cmd
 from erk.cli.commands.plan import plan_group
+from erk.cli.commands.plan.close_cmd import close_plan
+from erk.cli.commands.plan.get import get_plan
+from erk.cli.commands.plan.retry_cmd import retry_plan
 from erk.cli.commands.prepare_cwd_recovery import prepare_cwd_recovery_cmd
-from erk.cli.commands.rename import rename_cmd
 from erk.cli.commands.runs import runs_cmd
 from erk.cli.commands.shell_integration import hidden_shell_cmd
-from erk.cli.commands.split import split_cmd
+from erk.cli.commands.stack import stack_group
+from erk.cli.commands.stack.consolidate_cmd import consolidate_stack
+from erk.cli.commands.stack.land_cmd import land_stack_cmd
+from erk.cli.commands.stack.move_cmd import move_stack
+from erk.cli.commands.stack.split_cmd import split_stack
 from erk.cli.commands.status import status_cmd
 from erk.cli.commands.submit import submit_cmd
 from erk.cli.commands.up import up_cmd
+from erk.cli.commands.wt import wt_group
+from erk.cli.commands.wt.create_cmd import create_wt
+from erk.cli.commands.wt.current_cmd import current_wt
+from erk.cli.commands.wt.delete_cmd import del_wt, delete_wt
+from erk.cli.commands.wt.goto_cmd import goto_wt
+from erk.cli.commands.wt.list_cmd import list_wt, ls_wt
+from erk.cli.commands.wt.rename_cmd import rename_wt
 from erk.core.context import create_context
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])  # terse help flags
@@ -41,30 +46,36 @@ def cli(ctx: click.Context) -> None:
 
 # Register all commands
 cli.add_command(admin_group)
-cli.add_command(completion_group)
-cli.add_command(consolidate_cmd)
-cli.add_command(create)
-cli.add_command(current_cmd)
-cli.add_command(implement)
-cli.add_command(down_cmd)
 cli.add_command(checkout_cmd)
 cli.add_command(checkout_cmd, name="co")  # Alias
-cli.add_command(goto_cmd)
-cli.add_command(land_stack)
-cli.add_command(up_cmd)
-cli.add_command(list_cmd)
-cli.add_command(ls_cmd)
-cli.add_command(status_cmd)
-cli.add_command(init_cmd)
-cli.add_command(move_cmd)
-cli.add_command(delete_cmd)
-cli.add_command(del_cmd)
-cli.add_command(rename_cmd)
+cli.add_command(close_plan, name="close")  # Backward compatibility
+cli.add_command(completion_group)
 cli.add_command(config_group)
+cli.add_command(consolidate_stack, name="consolidate")  # Backward compatibility
+cli.add_command(create_wt, name="create")  # Backward compatibility
+cli.add_command(current_wt, name="current")  # Backward compatibility
+cli.add_command(delete_wt, name="delete")  # Backward compatibility
+cli.add_command(del_wt, name="del")  # Backward compatibility
+cli.add_command(down_cmd)
+cli.add_command(get_plan, name="get")  # Backward compatibility
+cli.add_command(goto_wt, name="goto")  # Backward compatibility
+cli.add_command(implement)
+cli.add_command(init_cmd)
+cli.add_command(land_stack_cmd, name="land")  # Backward compatibility
+cli.add_command(land_stack_cmd, name="land-stack")  # Backward compatibility
+cli.add_command(list_wt, name="list")  # Backward compatibility
+cli.add_command(ls_wt, name="ls")  # Backward compatibility
+cli.add_command(move_stack, name="move")  # Backward compatibility
 cli.add_command(plan_group)
+cli.add_command(rename_wt, name="rename")  # Backward compatibility
+cli.add_command(retry_plan, name="retry")  # Backward compatibility
 cli.add_command(runs_cmd)
-cli.add_command(split_cmd)
+cli.add_command(split_stack, name="split")  # Backward compatibility
+cli.add_command(stack_group)
+cli.add_command(status_cmd)
 cli.add_command(submit_cmd)
+cli.add_command(up_cmd)
+cli.add_command(wt_group)
 cli.add_command(hidden_shell_cmd)
 cli.add_command(prepare_cwd_recovery_cmd)
 

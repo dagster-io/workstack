@@ -2,11 +2,8 @@
 
 import click
 
-from erk.cli.commands.navigation_helpers import (
-    activate_root_repo,
-    activate_worktree,
-    complete_worktree_names,
-)
+from erk.cli.commands.completions import complete_worktree_names
+from erk.cli.commands.navigation_helpers import activate_root_repo, activate_worktree
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
 from erk.core.context import ErkContext
@@ -18,7 +15,7 @@ from erk.core.context import ErkContext
     "--script", is_flag=True, help="Print only the activation script without usage instructions."
 )
 @click.pass_obj
-def goto_cmd(ctx: ErkContext, worktree_name: str, script: bool) -> None:
+def goto_wt(ctx: ErkContext, worktree_name: str, script: bool) -> None:
     """Jump directly to a worktree by name.
 
     With shell integration (recommended):

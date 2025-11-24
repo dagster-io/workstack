@@ -5,7 +5,7 @@ from pathlib import Path
 import click
 from erk_shared.git.abc import Git
 
-from erk.cli.commands.navigation_helpers import complete_worktree_names
+from erk.cli.commands.completions import complete_worktree_names
 from erk.cli.core import (
     discover_repo_context,
     validate_worktree_name_for_deletion,
@@ -271,7 +271,7 @@ def _delete_worktree(
     help="Print what would be done without executing destructive operations.",
 )
 @click.pass_obj
-def delete_cmd(ctx: ErkContext, name: str, force: bool, delete_stack: bool, dry_run: bool) -> None:
+def delete_wt(ctx: ErkContext, name: str, force: bool, delete_stack: bool, dry_run: bool) -> None:
     """Delete the worktree directory (alias: del).
 
     With `-f/--force`, skips the confirmation prompt.
@@ -298,6 +298,6 @@ def delete_cmd(ctx: ErkContext, name: str, force: bool, delete_stack: bool, dry_
     help="Print what would be done without executing destructive operations.",
 )
 @click.pass_obj
-def del_cmd(ctx: ErkContext, name: str, force: bool, delete_stack: bool, dry_run: bool) -> None:
+def del_wt(ctx: ErkContext, name: str, force: bool, delete_stack: bool, dry_run: bool) -> None:
     """Delete the worktree directory (alias of 'delete')."""
     _delete_worktree(ctx, name, force, delete_stack, dry_run)

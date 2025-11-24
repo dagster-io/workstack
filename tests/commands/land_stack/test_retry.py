@@ -1,6 +1,6 @@
 """Tests for retry decorator with exponential backoff."""
 
-from erk.cli.commands.land_stack.retry import retry_with_backoff
+from erk.cli.commands.stack.land_old.retry import retry_with_backoff
 from erk.core.context import ErkContext
 
 

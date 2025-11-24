@@ -6,8 +6,8 @@ from pathlib import Path
 
 import click
 
-from erk.cli.commands.land_stack.models import BranchPR
-from erk.cli.commands.land_stack.output import _emit
+from erk.cli.commands.stack.land_old.models import BranchPR
+from erk.cli.commands.stack.land_old.output import _emit
 from erk.core.context import ErkContext
 
 logger = logging.getLogger(__name__)

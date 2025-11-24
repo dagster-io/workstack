@@ -11,8 +11,8 @@ from erk.core.worktree_utils import find_current_worktree, is_root_worktree
 
 @click.command("current", hidden=True)
 @click.pass_obj
-def current_cmd(ctx: ErkContext) -> None:
-    """Show current erk name (hidden command for automation)."""
+def current_wt(ctx: ErkContext) -> None:
+    """Show current worktree name (hidden command for automation)."""
     # Use ctx.repo if it's a valid RepoContext, otherwise discover
     if isinstance(ctx.repo, RepoContext):
         repo = ctx.repo

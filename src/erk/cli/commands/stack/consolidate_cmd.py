@@ -95,7 +95,7 @@ def _format_removal_progress(removed_paths: list[Path]) -> str:
     help="Output shell script for directory change instead of messages.",
 )
 @click.pass_obj
-def consolidate_cmd(
+def consolidate_stack(
     ctx: ErkContext,
     branch: str | None,
     name: str | None,

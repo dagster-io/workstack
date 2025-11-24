@@ -9,7 +9,7 @@ from erk.cli.commands.shell_integration import hidden_shell_cmd
 from erk.cli.shell_utils import render_cd_script
 from erk.core.config_store import FakeConfigStore, GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.git.abc import WorktreeInfo
+from erk_shared.git.abc import WorktreeInfo
 from erk.core.git.fake import FakeGit
 from tests.test_utils.env_helpers import erk_isolated_fs_env
 

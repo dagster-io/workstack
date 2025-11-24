@@ -6,7 +6,7 @@ generation business logic.
 """
 
 from erk.cli.commands.checkout import _perform_checkout
-from erk.core.git.abc import WorktreeInfo
+from erk_shared.git.abc import WorktreeInfo
 from erk.core.git.fake import FakeGit
 from tests.test_utils.env_helpers import erk_inmem_env
 

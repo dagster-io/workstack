@@ -1,5 +1,7 @@
 """Shared utilities and interfaces for erk and dot-agent-kit."""
 
+from erk_shared.git.abc import Git, WorktreeInfo, find_worktree_for_branch
+from erk_shared.github.abc import GitHub
 from erk_shared.github.issues import (
     DryRunGitHubIssues,
     FakeGitHubIssues,
@@ -18,6 +20,13 @@ from erk_shared.github.metadata import (
     render_erk_issue_event,
     render_metadata_block,
 )
+from erk_shared.github.types import (
+    PRInfo,
+    PRMergeability,
+    PRState,
+    PullRequestInfo,
+    WorkflowRun,
+)
 from erk_shared.impl_folder import (
     IssueReference,
     add_worktree_creation_comment,
@@ -34,6 +43,18 @@ from erk_shared.naming import (
 __version__ = "0.1.0"
 
 __all__ = [
+    # Git Interface
+    "Git",
+    "WorktreeInfo",
+    "find_worktree_for_branch",
+    # GitHub Interface
+    "GitHub",
+    # GitHub Types
+    "PRInfo",
+    "PRMergeability",
+    "PRState",
+    "PullRequestInfo",
+    "WorkflowRun",
     # GitHub Issues Interface
     "GitHubIssues",
     "RealGitHubIssues",

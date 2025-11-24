@@ -7,7 +7,7 @@ from typing import Any
 
 from erk.core.branch_metadata import BranchMetadata
 from erk.core.github.parsing import _parse_github_pr_url
-from erk.core.github.types import PullRequestInfo
+from erk_shared.github.types import PullRequestInfo
 
 
 def read_graphite_json_file(file_path: Path, description: str) -> dict[str, Any]:

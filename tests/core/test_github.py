@@ -7,7 +7,7 @@ import pytest
 from pytest import MonkeyPatch
 
 from erk.core.github.real import RealGitHub
-from erk.core.github.types import PullRequestInfo
+from erk_shared.github.types import PullRequestInfo
 
 
 @pytest.fixture

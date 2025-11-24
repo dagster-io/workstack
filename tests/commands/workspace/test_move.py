@@ -3,7 +3,7 @@
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.git.abc import WorktreeInfo
+from erk_shared.git.abc import WorktreeInfo
 from erk.core.git.fake import FakeGit
 from tests.test_utils.env_helpers import erk_inmem_env
 

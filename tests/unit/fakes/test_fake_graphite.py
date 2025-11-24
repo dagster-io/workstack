@@ -10,7 +10,7 @@ import pytest
 
 from erk.core.branch_metadata import BranchMetadata
 from erk.core.git.fake import FakeGit
-from erk.core.github.types import PullRequestInfo
+from erk_shared.github.types import PullRequestInfo
 from erk.core.graphite.fake import FakeGraphite
 
 

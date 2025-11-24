@@ -6,7 +6,7 @@ from erk.cli.cli import cli
 from erk.core.branch_metadata import BranchMetadata
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.git.abc import WorktreeInfo
+from erk_shared.git.abc import WorktreeInfo
 from erk.core.git.fake import FakeGit
 from erk.core.github.fake import FakeGitHub
 from erk.core.graphite.fake import FakeGraphite

@@ -32,7 +32,7 @@ See erk.core.graphite_ops for the abstraction interface.
 from pathlib import Path
 
 from erk.core.context import ErkContext
-from erk.core.git.abc import WorktreeInfo
+from erk_shared.git.abc import WorktreeInfo
 
 
 def find_worktrees_containing_branch(

@@ -9,7 +9,7 @@ import subprocess
 from pathlib import Path
 
 from erk.cli.output import user_output
-from erk.core.git.abc import Git, WorktreeInfo
+from erk_shared.git.abc import Git, WorktreeInfo
 from erk.core.subprocess import run_subprocess_with_context
 
 # ============================================================================

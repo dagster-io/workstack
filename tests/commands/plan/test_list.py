@@ -454,7 +454,7 @@ def test_list_plans_shows_worktree_from_local_impl() -> None:
 
     from erk_shared.github.issues import FakeGitHubIssues
 
-    from erk.core.git.abc import WorktreeInfo
+    from erk_shared.git.abc import WorktreeInfo
     from erk.core.git.fake import FakeGit
 
     # Arrange
@@ -521,7 +521,7 @@ def test_list_plans_prefers_local_over_github() -> None:
 
     from erk_shared.github.issues import FakeGitHubIssues
 
-    from erk.core.git.abc import WorktreeInfo
+    from erk_shared.git.abc import WorktreeInfo
     from erk.core.git.fake import FakeGit
 
     # Arrange
@@ -653,7 +653,7 @@ def test_list_plans_handles_multiple_local_worktrees() -> None:
 
     from erk_shared.github.issues import FakeGitHubIssues
 
-    from erk.core.git.abc import WorktreeInfo
+    from erk_shared.git.abc import WorktreeInfo
     from erk.core.git.fake import FakeGit
 
     # Arrange

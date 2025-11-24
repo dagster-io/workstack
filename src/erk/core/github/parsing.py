@@ -4,7 +4,7 @@ import json
 import re
 from pathlib import Path
 
-from erk.core.github.types import PRInfo, PullRequestInfo
+from erk_shared.github.types import PRInfo, PullRequestInfo
 from erk.core.subprocess import run_subprocess_with_context
 
 

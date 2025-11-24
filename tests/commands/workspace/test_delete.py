@@ -7,7 +7,7 @@ from click.testing import CliRunner
 
 from erk.cli.cli import cli
 from erk.core.branch_metadata import BranchMetadata
-from erk.core.git.abc import WorktreeInfo
+from erk_shared.git.abc import WorktreeInfo
 from erk.core.git.dry_run import DryRunGit
 from erk.core.git.fake import FakeGit
 from erk.core.github.fake import FakeGitHub

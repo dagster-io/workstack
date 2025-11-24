@@ -16,10 +16,10 @@ from erk.core.config_store import (
     GlobalConfig,
     RealConfigStore,
 )
-from erk.core.git.abc import Git
+from erk_shared.git.abc import Git
 from erk.core.git.dry_run import DryRunGit
 from erk.core.git.real import RealGit
-from erk.core.github.abc import GitHub
+from erk_shared.github.abc import GitHub
 from erk.core.github.dry_run import DryRunGitHub
 from erk.core.github.real import RealGitHub
 from erk.core.graphite.abc import Graphite

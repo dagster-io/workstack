@@ -9,7 +9,7 @@ from erk.cli.commands.land_stack.models import BranchPR
 from erk.cli.commands.land_stack.output import _emit, _format_description
 from erk.cli.commands.land_stack.retry import retry_with_backoff
 from erk.core.context import ErkContext
-from erk.core.git.abc import find_worktree_for_branch
+from erk_shared.git.abc import find_worktree_for_branch
 
 
 class MergeabilityUnknownError(Exception):

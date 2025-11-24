@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-from erk.core.github.abc import GitHub
-from erk.core.github.types import PRInfo, PRMergeability, PullRequestInfo, WorkflowRun
+from erk_shared.github.abc import GitHub
+from erk_shared.github.types import PRInfo, PRMergeability, PullRequestInfo, WorkflowRun
 from erk.core.printing_base import PrintingBase
 
 

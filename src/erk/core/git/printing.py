@@ -7,7 +7,7 @@ before delegating to the wrapped implementation.
 from pathlib import Path
 
 from erk.cli.output import user_output
-from erk.core.git.abc import Git, WorktreeInfo
+from erk_shared.git.abc import Git, WorktreeInfo
 from erk.core.printing_base import PrintingBase
 
 # ============================================================================

@@ -10,7 +10,7 @@ from unittest.mock import Mock
 from click.testing import CliRunner
 
 from erk.cli.cli import cli
-from erk.core.git.abc import WorktreeInfo
+from erk_shared.git.abc import WorktreeInfo
 from erk.core.git.fake import FakeGit
 from erk.core.github.fake import FakeGitHub
 from erk.core.graphite.fake import FakeGraphite

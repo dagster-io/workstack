@@ -328,7 +328,7 @@ def test_fetch_pr_titles_batch_enriches_titles(monkeypatch: pytest.MonkeyPatch) 
     # Create input PRs without titles
     from pathlib import Path
 
-    from erk.core.github.types import PullRequestInfo
+    from erk_shared.github.types import PullRequestInfo
 
     prs = {
         "feature-1": PullRequestInfo(
@@ -402,7 +402,7 @@ def test_fetch_pr_titles_batch_partial_failure(monkeypatch: pytest.MonkeyPatch) 
 
     from pathlib import Path
 
-    from erk.core.github.types import PullRequestInfo
+    from erk_shared.github.types import PullRequestInfo
 
     # Create input PRs
     prs = {
@@ -457,7 +457,7 @@ def test_fetch_pr_titles_batch_missing_title_field(monkeypatch: pytest.MonkeyPat
 
     from pathlib import Path
 
-    from erk.core.github.types import PullRequestInfo
+    from erk_shared.github.types import PullRequestInfo
 
     # Create input PR
     prs = {

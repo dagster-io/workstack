@@ -23,6 +23,30 @@ from erk.data.kits.gt.kit_cli_commands.gt.ops import (
 )
 
 
+def _run_subprocess_with_timeout(
+    cmd: list[str],
+    timeout: int,
+    **kwargs,
+) -> subprocess.CompletedProcess[str] | None:
+    """Run subprocess command with timeout handling.
+
+    Returns CompletedProcess on success, None on timeout.
+    This encapsulates TimeoutExpired exception handling at the subprocess boundary.
+
+    Args:
+        cmd: Command and arguments to execute
+        timeout: Timeout in seconds
+        **kwargs: Additional arguments passed to subprocess.run
+
+    Returns:
+        CompletedProcess if command completes within timeout, None if timeout occurs
+    """
+    try:
+        return subprocess.run(cmd, timeout=timeout, **kwargs)
+    except subprocess.TimeoutExpired:
+        return None
+
+
 class RealGitGtKit(GitGtKit):
     """Real git operations using subprocess."""
 
@@ -175,22 +199,6 @@ class RealGitGtKit(GitGtKit):
 class RealGraphiteGtKit(GraphiteGtKit):
     """Real Graphite operations using subprocess."""
 
-    def _run_with_timeout(
-        self,
-        cmd: list[str],
-        timeout: int,
-        **kwargs,
-    ) -> subprocess.CompletedProcess[str] | None:
-        """Run subprocess command with timeout handling.
-
-        Returns CompletedProcess on success or timeout <= duration, None on timeout.
-        This encapsulates TimeoutExpired exception handling at the subprocess boundary.
-        """
-        try:
-            return subprocess.run(cmd, timeout=timeout, **kwargs)
-        except subprocess.TimeoutExpired:
-            return None
-
     def get_parent_branch(self) -> str | None:
         """Get the parent branch using gt parent."""
         result = subprocess.run(
@@ -243,7 +251,7 @@ class RealGraphiteGtKit(GraphiteGtKit):
         if restack:
             args.append("--restack")
 
-        result = self._run_with_timeout(
+        result = _run_subprocess_with_timeout(
             args,
             timeout=120,
             capture_output=True,
@@ -290,25 +298,9 @@ class RealGraphiteGtKit(GraphiteGtKit):
 class RealGitHubGtKit(GitHubGtKit):
     """Real GitHub operations using subprocess."""
 
-    def _run_with_timeout(
-        self,
-        cmd: list[str],
-        timeout: int,
-        **kwargs,
-    ) -> subprocess.CompletedProcess[str] | None:
-        """Run subprocess command with timeout handling.
-
-        Returns CompletedProcess on success or timeout <= duration, None on timeout.
-        This encapsulates TimeoutExpired exception handling at the subprocess boundary.
-        """
-        try:
-            return subprocess.run(cmd, timeout=timeout, **kwargs)
-        except subprocess.TimeoutExpired:
-            return None
-
     def get_pr_info(self) -> tuple[int, str] | None:
         """Get PR number and URL using gh pr view."""
-        result = self._run_with_timeout(
+        result = _run_subprocess_with_timeout(
             ["gh", "pr", "view", "--json", "number,url"],
             timeout=10,
             capture_output=True,
@@ -324,7 +316,7 @@ class RealGitHubGtKit(GitHubGtKit):
 
     def get_pr_state(self) -> tuple[int, str] | None:
         """Get PR number and state using gh pr view."""
-        result = self._run_with_timeout(
+        result = _run_subprocess_with_timeout(
             ["gh", "pr", "view", "--json", "state,number"],
             timeout=10,
             capture_output=True,
@@ -340,7 +332,7 @@ class RealGitHubGtKit(GitHubGtKit):
 
     def update_pr_metadata(self, title: str, body: str) -> bool:
         """Update PR title and body using gh pr edit."""
-        result = self._run_with_timeout(
+        result = _run_subprocess_with_timeout(
             ["gh", "pr", "edit", "--title", title, "--body", body],
             timeout=30,
             capture_output=True,
@@ -375,7 +367,7 @@ class RealGitHubGtKit(GitHubGtKit):
 
     def get_graphite_pr_url(self, pr_number: int) -> str | None:
         """Get Graphite PR URL using gh repo view."""
-        result = self._run_with_timeout(
+        result = _run_subprocess_with_timeout(
             ["gh", "repo", "view", "--json", "owner,name"],
             timeout=10,
             capture_output=True,

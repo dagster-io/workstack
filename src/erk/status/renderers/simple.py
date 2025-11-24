@@ -232,13 +232,17 @@ class SimpleRenderer:
 
         user_output(click.style("Pull Request:", fg="blue", bold=True))
 
-        # PR number and state
-        pr_link = click.style(f"#{pr.number}", fg="cyan")
+        # PR number (clickable) and state
+        # Make PR number clickable using OSC 8
+        pr_number_text = f"#{pr.number}"
+        colored_pr_number = click.style(pr_number_text, fg="cyan")
+        clickable_pr = f"\033]8;;{pr.url}\033\\{colored_pr_number}\033]8;;\033\\"
+
         state_color = (
             "green" if pr.state == "OPEN" else "red" if pr.state == "CLOSED" else "magenta"
         )
         state_text = click.style(pr.state, fg=state_color)
-        user_output(f"  {pr_link} {state_text}")
+        user_output(f"  {clickable_pr} {state_text}")
 
         # Draft status
         if pr.is_draft:
@@ -254,9 +258,6 @@ class SimpleRenderer:
         # Ready to merge
         if pr.ready_to_merge:
             user_output(click.style("  ✓ Ready to merge", fg="green", bold=True))
-
-        # URL
-        user_output(click.style(f"  {pr.url}", fg="white", dim=True))
 
         user_output()
 

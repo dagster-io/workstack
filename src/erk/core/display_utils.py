@@ -63,12 +63,15 @@ def get_pr_status_emoji(pr: PullRequestInfo) -> str:
 def format_pr_info(
     pr: PullRequestInfo | None,
     graphite_url: str | None,
+    *,
+    use_graphite: bool = True,
 ) -> str:
-    """Format PR status indicator with emoji and link.
+    """Format PR status indicator with emoji and clickable link.
 
     Args:
         pr: Pull request information (None if no PR exists)
         graphite_url: Graphite URL for the PR (None if unavailable)
+        use_graphite: If True, use Graphite URL; if False, use GitHub URL from pr.url
 
     Returns:
         Formatted PR info string (e.g., "✅ #23") or empty string if no PR
@@ -81,11 +84,14 @@ def format_pr_info(
     # Format PR number text
     pr_text = f"#{pr.number}"
 
+    # Determine which URL to use based on use_graphite setting
+    url = graphite_url if use_graphite else pr.url
+
     # If we have a URL, make it clickable using OSC 8 terminal escape sequence
-    if graphite_url:
+    if url:
         # Wrap the link text in cyan color to distinguish from non-clickable bright_blue indicators
         colored_pr_text = click.style(pr_text, fg="cyan")
-        clickable_link = f"\033]8;;{graphite_url}\033\\{colored_pr_text}\033]8;;\033\\"
+        clickable_link = f"\033]8;;{url}\033\\{colored_pr_text}\033]8;;\033\\"
         return f"{emoji} {clickable_link}"
     else:
         # No URL available - just show colored text without link

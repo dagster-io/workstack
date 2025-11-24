@@ -2,15 +2,15 @@
 description: Extract plan from conversation, fully enhance it, and create GitHub issue directly
 ---
 
-# /erk:save-context-enriched-plan
+# /erk:save-plan
 
-⚠️ **CRITICAL: This command creates a GitHub issue with the plan - it does NOT create worktrees or implement code!**
+⚠️ **CRITICAL: This command creates a GitHub issue with the plan - it does NOT implement code!**
 
 ## Goal
 
 **Extract an implementation plan from conversation, enhance it for autonomous execution, and create a GitHub issue directly.**
 
-This command extracts a plan from conversation context, optionally applies guidance, interactively enhances it through clarifying questions, and creates a GitHub issue with the enhanced plan content.
+This command uses an **agent-based architecture** with structural enforcement (tool restrictions) to prevent accidental code implementation.
 
 **What this command does:**
 
@@ -21,31 +21,27 @@ This command extracts a plan from conversation context, optionally applies guida
 - ✅ Structure complex plans into phases (when beneficial)
 - ✅ Create GitHub issue with enhanced plan
 
+**What this command CANNOT do:**
+
+- ❌ Edit files on current branch (structurally impossible - agent lacks tools)
+- ❌ Implement code (agent has no Write/Edit capabilities)
+- ❌ Make commits (agent restricted from git mutations)
+
 **What happens AFTER:**
 
 - ⏭️ Implement directly: `erk implement <issue>`
 
-## What Happens
-
-When you run this command, these steps occur:
-
-1. **Verify Scope** - Confirm we're in a git repository
-2. **Detect Plan** - Search conversation for implementation plan
-   3-5. **Enrichment Process** - Apply guidance, extract understanding, and enhance interactively
-3. **Validate Repository** - Ensure GitHub CLI is available and repository has issues enabled
-4. **Create GitHub Issue** - Create issue with enhanced plan content and `erk-plan` label
-
 ## Usage
 
 ```bash
-/erk:save-context-enriched-plan [guidance]
+/erk:save-plan [guidance]
 ```
 
 **Examples:**
 
-- `/erk:save-context-enriched-plan` - Create GitHub issue with enhanced plan
-- `/erk:save-context-enriched-plan "Make error handling more robust and add retry logic"` - Apply guidance to plan
-- `/erk:save-context-enriched-plan "Fix: Use LBYL instead of try/except throughout"` - Apply corrections to plan
+- `/erk:save-plan` - Create GitHub issue with enhanced plan
+- `/erk:save-plan "Make error handling more robust and add retry logic"` - Apply guidance to plan
+- `/erk:save-plan "Fix: Use LBYL instead of try/except throughout"` - Apply corrections to plan
 
 ## Prerequisites
 
@@ -55,62 +51,62 @@ When you run this command, these steps occur:
 - Repository must have issues enabled
 - (Optional) Guidance text for final corrections/additions to the plan
 
+## Architecture
+
+This command uses a **specialized agent** for plan extraction/enrichment instead of inline command logic:
+
+```
+/erk:save-plan (orchestrator)
+  ↓
+  ├─→ Validate prerequisites (git repo, gh auth)
+  ├─→ Launch plan-extractor agent (Task tool)
+  │     ↓
+  │     Agent returns JSON: {plan_title, plan_content, enrichment: {...}}
+  │     (Agent has NO Edit/Write tools - structurally safe)
+  ├─→ Save plan to temp file
+  ├─→ Call kit CLI: dot-agent run erk create-enriched-plan-from-context --plan-file
+  │     ↓
+  │     Kit CLI creates GitHub issue
+  └─→ Display results (issue URL + copy-pastable commands)
+```
+
+**Key Innovation:** The agent has **tool restrictions** in YAML front matter:
+
+```yaml
+---
+name: plan-extractor
+tools: Read, Bash, AskUserQuestion
+---
+```
+
+This makes it **structurally impossible** to accidentally edit files, even with bypass permissions enabled.
+
+## What Happens
+
+When you run this command, these steps occur:
+
+1. **Verify Prerequisites** - Check git repo and GitHub CLI authentication
+2. **Launch Agent** - Delegate to plan-extractor agent (read-only tools)
+3. **Receive JSON** - Agent returns structured plan data
+4. **Create Issue** - Use kit CLI to create GitHub issue
+5. **Display Results** - Show issue URL and next-step commands
+
 ## Semantic Understanding & Context Preservation
 
 **Why This Matters:** Planning agents often discover valuable insights that would be expensive for implementing agents to re-derive. Capturing this context saves time and prevents errors.
 
-**What to Capture:**
+The plan-extractor agent captures **8 categories of context:**
 
-1. **API/Tool Quirks**
-   - Undocumented behaviors, race conditions, timing issues
-   - Example: "Stripe webhooks can arrive before API response returns"
-   - Include: Why it matters, how to handle, what to watch for
+1. **API/Tool Quirks** - Undocumented behaviors, timing issues
+2. **Architectural Insights** - WHY decisions were made
+3. **Domain Logic & Business Rules** - Non-obvious invariants
+4. **Complex Reasoning** - Alternatives considered and rejected
+5. **Known Pitfalls** - Anti-patterns that cause problems
+6. **Raw Discoveries Log** - Everything learned during planning
+7. **Planning Artifacts** - Code examined, commands run
+8. **Implementation Risks** - Uncertainties, performance concerns
 
-2. **Architectural Insights**
-   - WHY code is structured certain ways (not just how)
-   - Design boundaries and their rationale
-   - Example: "Config split across files due to circular imports"
-
-3. **Domain Logic & Business Rules**
-   - Non-obvious invariants, edge cases, compliance requirements
-   - Example: "Never delete audit records, only mark as archived"
-   - Include: Rationale, validation criteria, edge cases
-
-4. **Complex Reasoning**
-   - Alternatives considered and rejected with reasons
-   - Dependencies between choices
-   - Example: "Can't use async here because parent caller is sync"
-
-5. **Known Pitfalls**
-   - Anti-patterns that seem right but cause problems
-   - Framework-specific gotchas
-   - Example: "Don't use .resolve() before checking .exists()"
-
-6. **Raw Discoveries Log**
-   - Everything discovered during planning, even if minor
-   - Examples: Version numbers, config formats, conventions observed
-
-7. **Planning Artifacts**
-   - Code snippets examined, commands run, configurations discovered
-   - Example: "Checked auth.py lines 45-67 for validation pattern"
-
-8. **Implementation Risks**
-   - Technical debt, uncertainties, performance concerns, security considerations
-   - Example: "No caching layer could cause issues at scale"
-
-**Inclusion Philosophy:** Cast a wide net - over-document rather than under-document. Include anything that:
-
-- Took ANY time to discover (even 30 seconds of research)
-- MIGHT influence implementation decisions
-- Could POSSIBLY cause bugs or confusion
-- Wasn't immediately obvious on first glance
-- Required any clarification or discussion
-- Involved ANY decision between alternatives
-- Required looking at documentation or examples
-
-**Remember:** It's easier for implementing agents to skip irrelevant context than to rediscover missing context. When in doubt, include it.
-
-**How It's Used:** This understanding gets captured in the "Context & Understanding" section of enhanced plans, linked to specific implementation steps.
+See agent documentation for full details: `.claude/agents/erk/plan-extractor.md`
 
 ## Success Criteria
 
@@ -128,274 +124,332 @@ This command succeeds when ALL of the following are true:
 
 **Output:**
 ✅ JSON output provided with issue URL and number
-✅ Four copy-pastable commands displayed (1 view, 3 implement variants)
+✅ Copy-pastable commands displayed (view + implement variants)
 ✅ All commands use actual issue number, not placeholders
 ✅ Next steps clearly communicated to user
 
+---
+
+## Command Instructions
+
+You are executing the `/erk:save-plan` command. Follow these steps carefully:
+
+### Step 1: Validate Prerequisites
+
+Check that prerequisites are met:
+
+```bash
+# Verify we're in a git repository
+git rev-parse --is-inside-work-tree
+
+# Verify GitHub CLI is authenticated
+gh auth status
+```
+
+**Error handling:**
+
+If `git rev-parse` fails:
+
+```
+❌ Error: Not in a git repository
+
+This command must be run from within a git repository.
+```
+
+If `gh auth status` fails:
+
+```
+❌ Error: GitHub CLI not authenticated
+
+Run: gh auth login
+```
+
+### Step 2: Launch Plan-Extractor Agent
+
+Use the Task tool to launch the specialized agent:
+
+```
+Launch agent: plan-extractor
+Mode: enriched
+Guidance: [user-provided guidance if any, otherwise null]
+```
+
+**Task tool invocation:**
+
+```json
+{
+  "subagent_type": "plan-extractor",
+  "description": "Extract and enrich plan",
+  "prompt": "Extract the implementation plan from conversation context, apply guidance if provided, ask clarifying questions, extract semantic understanding, and return structured JSON.\n\nInput:\n- Mode: enriched\n- Guidance: [guidance text or 'none']\n\nExpected output: JSON with plan_title, plan_content, and enrichment metadata.",
+  "model": "haiku"
+}
+```
+
+**What the agent does:**
+
+1. Finds plan in conversation
+2. Applies guidance if provided (in-memory)
+3. Asks clarifying questions via AskUserQuestion tool
+4. Extracts semantic understanding (8 categories)
+5. Returns JSON output
+
+**Agent tool restrictions (enforced in YAML):**
+
+- ✅ Read - Can read conversation and files
+- ✅ Bash - Can run git/kit CLI (read-only)
+- ✅ AskUserQuestion - Can clarify ambiguities
+- ❌ Edit - NO access to file editing
+- ❌ Write - NO access to file writing
+- ❌ Task - NO access to subagents
+
+**Error handling:**
+
+If agent returns error JSON:
+
+```
+❌ Error: [agent error message]
+
+[Display agent error details]
+```
+
+### Step 3: Parse Agent Response
+
+The agent returns JSON in this format:
+
+```json
+{
+  "success": true,
+  "plan_title": "Add user authentication",
+  "plan_content": "## Overview\n\n...",
+  "enrichment": {
+    "guidance_applied": true,
+    "questions_asked": 2,
+    "clarifications": ["..."],
+    "context_extracted": true
+  }
+}
+```
+
+**Validate response:**
+
+- Check `success` field is true
+- Ensure `plan_title` and `plan_content` are present
+- Verify `plan_content` is non-empty
+
+**Error handling:**
+
+If `success` is false or fields missing:
+
+```
+❌ Error: Agent returned invalid response
+
+[Display agent response for debugging]
+```
+
+### Step 4: Save Plan to Temporary File
+
+Write plan content to a temporary file for kit CLI:
+
+```bash
+# Create temp file
+temp_plan=$(mktemp /tmp/erk-plan-XXXXXX.md)
+
+# Write plan content
+cat > "$temp_plan" <<'PLAN_EOF'
+[plan_content from agent JSON]
+PLAN_EOF
+```
+
+**Why temp file:** Kit CLI command expects `--plan-file` option for clean separation of concerns.
+
+### Step 5: Create GitHub Issue via Kit CLI
+
+Call the kit CLI command to create the issue:
+
+```bash
+# Call kit CLI with plan file
+result=$(dot-agent run erk create-enriched-plan-from-context --plan-file "$temp_plan")
+
+# Clean up temp file
+rm "$temp_plan"
+
+# Parse JSON result
+echo "$result" | jq .
+```
+
+**Expected output:**
+
+```json
+{
+  "success": true,
+  "issue_number": 123,
+  "issue_url": "https://github.com/owner/repo/issues/123"
+}
+```
+
+**Error handling:**
+
+If command fails:
+
+```
+❌ Error: Failed to create GitHub issue
+
+[Display kit CLI error output]
+```
+
+### Step 6: Display Success Output
+
+Show the user the issue URL and copy-pastable commands:
+
+```
+✅ Plan saved to GitHub issue
+
+**Issue:** [issue_url]
+
+**Next steps:**
+
+View the plan:
+    gh issue view [issue_number]
+
+Implement directly:
+    erk implement [issue_number]
+
+Implement with auto-confirmation (yolo mode):
+    erk implement [issue_number] --yolo
+
+Implement and auto-submit PR (dangerous mode):
+    erk implement [issue_number] --dangerous
+```
+
+**Formatting requirements:**
+
+- Use `✅` for success indicator
+- Bold `**Issue:**` and `**Next steps:**`
+- Show actual issue URL (clickable)
+- Show actual issue number in commands (not `<issue-number>`)
+- Each command should be on its own line with proper indentation
+- Commands should be copy-pastable (no markdown formatting inside)
+
+### Step 7: Enrichment Summary (Optional)
+
+If the agent asked questions or applied guidance, show a summary:
+
+```
+**Enrichment applied:**
+
+- Guidance: [guidance text]
+- Questions asked: [count]
+- Clarifications: [list]
+- Context extracted: [yes/no]
+```
+
+## Error Scenarios
+
+### No Plan Found
+
+```
+❌ Error: No plan found in conversation
+
+Please present an implementation plan in the conversation, then run this command.
+
+A plan typically includes:
+- Overview or objective
+- Implementation steps or phases
+- Success criteria
+```
+
+### Guidance Without Plan
+
+```
+❌ Error: Guidance provided but no plan found
+
+Guidance: "[guidance text]"
+
+Please create a plan first, then apply guidance.
+```
+
+### GitHub CLI Not Authenticated
+
+```
+❌ Error: GitHub CLI not authenticated
+
+To use this command, authenticate with GitHub:
+
+    gh auth login
+
+Then try again.
+```
+
+### Kit CLI Error
+
+```
+❌ Error: Failed to create GitHub issue
+
+[Full kit CLI error output]
+
+Common causes:
+- Repository has issues disabled
+- Network connectivity issue
+- GitHub API rate limit
+```
+
+## Architecture Benefits
+
+| Aspect         | Previous Design             | Current Design                   |
+| -------------- | --------------------------- | -------------------------------- |
+| Enforcement    | Text warnings (7 instances) | Structural (tool restrictions)   |
+| Implementation | Inline command logic        | Dedicated agent                  |
+| Safety         | Behavioral compliance       | Physically impossible to violate |
+| Code size      | 402 lines                   | ~120 lines (orchestrator)        |
+| Bypass-safe    | ❌ No                       | ✅ Yes                           |
+
 ## Troubleshooting
 
-### "No plan found in context"
+### "Agent returned error"
 
-**Cause:** Plan not in conversation or doesn't match detection patterns
+**Cause:** Agent encountered issue during extraction/enrichment
 **Solution:**
 
-- Ensure plan is in conversation history
-- Plan should have headers like "## Implementation Plan" or numbered steps
-- Re-paste plan in conversation if needed
+- Check agent error message for details
+- Ensure plan is in conversation context
+- Verify plan has clear structure
 
-### "GitHub authentication failed"
+### "Invalid JSON from agent"
 
-**Cause:** GitHub CLI not authenticated or credentials expired
+**Cause:** Agent output malformed or unexpected
 **Solution:**
 
-- Run `gh auth login` to authenticate
-- Check authentication status: `gh auth status`
-- Verify you have permission to create issues in the repository
+- Check agent output for debugging
+- Retry command
+- Report issue if persistent
 
-### "Failed to create GitHub issue"
+### "Temp file error"
 
-**Cause:** Network error, repository has issues disabled, or API failure
+**Cause:** Cannot create temporary file (permissions, disk space)
 **Solution:**
 
-- Check network connectivity
-- Verify repository has issues enabled in GitHub settings
-- Check GitHub API status: https://www.githubstatus.com
-- Retry the command after resolving the issue
+- Check `/tmp/` directory permissions
+- Ensure disk space available
+- Check `mktemp` command availability
 
-### Enhancement suggestions not applied correctly
+## Development Notes
 
-**Cause:** Ambiguous user responses or misinterpretation
-**Solution:**
+**For maintainers:**
 
-- Be specific in responses to clarifying questions
-- Use clear action words: "Fix:", "Add:", "Change:", "Reorder:"
+This command demonstrates the **agent-based orchestration pattern**:
 
----
+1. Command validates prerequisites
+2. Command launches specialized agent with tool restrictions
+3. Agent does the work (structurally safe)
+4. Agent returns JSON
+5. Command handles I/O and user feedback
 
-## Agent Instructions
+**Benefits:**
 
-You are executing the `/erk:save-context-enriched-plan` command. Follow these steps carefully:
+- Separation of concerns (orchestration vs. logic)
+- Structural safety (agent can't violate tool restrictions)
+- Reusable agents (plan-extractor can be used elsewhere)
+- Testable components (agent can be tested independently)
+- Shorter commands (orchestration only)
 
----
-
-🔴 **CRITICAL: YOU ARE ONLY CREATING A GITHUB ISSUE - DO NOT IMPLEMENT**
-
-- DO NOT use Edit or Write tools to modify codebase
-- DO NOT implement any code from the plan
-- DO NOT modify any files in the codebase
-- ONLY create a GitHub issue with the enhanced plan
-
----
-
-### Step 0: Verify Scope and Constraints
-
-🔴 **REMINDER: YOU ARE ONLY CREATING A GITHUB ISSUE**
-
-- DO NOT use Edit or Write tools to modify codebase
-- DO NOT implement any code from the plan
-- DO NOT modify any files in the codebase
-- ONLY create a GitHub issue with the enhanced plan
-
-**Error Handling:**
-All errors must use the format-error kit CLI command:
-
-```bash
-formatted_error=$(dot-agent kit-command erk format-error \
-    --brief "[Brief description in 5-10 words]" \
-    --details "[Specific error message, relevant context, or diagnostic info]" \
-    --action "[First concrete step to resolve]" \
-    --action "[Second concrete step (optional)]" \
-    --action "[Third concrete step (optional)]")
-echo "$formatted_error"
-exit 1
-```
-
-**YOUR ONLY TASKS:**
-
-1. Extract implementation plan from conversation
-2. Apply guidance modifications if provided
-3. Extract semantic understanding from planning discussion
-4. Interactively enhance plan for autonomous execution
-5. Create GitHub issue with enhanced plan content
-6. Provide JSON output with issue URL and number
-
-**FORBIDDEN ACTIONS:**
-
-- Writing ANY code files (.py, .ts, .js, etc.)
-- Making ANY edits to existing codebase
-- Creating ANY worktrees
-- Implementing ANY part of the plan
-
-**ALLOWED TOOLS ONLY:**
-
-- ✅ Read (to examine conversation context)
-- ✅ AskUserQuestion (for clarification)
-- ✅ Bash (for git commands and kit CLI commands)
-
-**IF YOU USE:** Edit, Write (to codebase files), Task, NotebookEdit, SlashCommand, etc.
-→ 🔴 **YOU ARE IMPLEMENTING, NOT PLANNING. STOP IMMEDIATELY.**
-
-This command only creates the GitHub issue. Implementation happens via `erk implement <issue>`.
-
-### Step 1: Detect Implementation Plan in Context
-
-🔴 **REMINDER: YOU ARE ONLY CREATING A GITHUB ISSUE**
-
-- DO NOT use Edit or Write tools to modify codebase
-- DO NOT implement any code from the plan
-- DO NOT modify any files in the codebase
-- ONLY create a GitHub issue with the enhanced plan
-
-Search conversation history for an implementation plan:
-
-**Search strategy:**
-
-1. Work backwards from most recent messages
-2. Stop at first complete plan found
-3. Look for markdown content with structure
-
-**What constitutes a complete plan:**
-
-- Minimum 100 characters
-- Contains headers (# or ##) OR numbered lists OR bulleted lists
-- Has title/overview AND implementation steps
-
-**Common plan patterns:**
-
-- Markdown with "Implementation Plan:", "Overview", "Implementation Steps"
-- Structured task lists or step-by-step instructions
-- Headers containing "Plan", "Tasks", "Steps", "Implementation"
-
-**If no plan found:**
-
-Use the format-error kit CLI command:
-
-```bash
-formatted_error=$(dot-agent kit-command erk format-error \
-    --brief "No implementation plan found" \
-    --details "Could not find a valid implementation plan in conversation history" \
-    --action "Ensure plan is in conversation" \
-    --action "Plan should have headers and structure" \
-    --action "Re-paste plan in conversation if needed")
-echo "$formatted_error"
-exit 1
-```
-
-**Plan validation:**
-
-After extracting plan content, validate it using the kit CLI command:
-
-```bash
-# Validate plan structure
-validate_result=$(echo "$plan_content" | dot-agent kit-command erk validate-plan-content)
-if ! echo "$validate_result" | jq -e '.valid' > /dev/null; then
-    error_msg=$(echo "$validate_result" | jq -r '.error')
-    formatted_error=$(dot-agent kit-command erk format-error \
-        --brief "Plan content is too minimal or invalid" \
-        --details "$error_msg" \
-        --action "Provide a more detailed implementation plan" \
-        --action "Include specific tasks, steps, or phases" \
-        --action "Use headers and lists to structure the plan")
-    echo "$formatted_error"
-    exit 1
-fi
-```
-
-### Steps 2-4: Enrichment Process
-
-@../docs/enrichment-process.md
-
-Apply the complete enrichment process to enhance the extracted plan for autonomous execution. This includes:
-
-- Step 1: Apply optional guidance (if provided as command argument)
-- Step 2: Extract semantic understanding from planning discussion
-- Step 3: Interactive enhancement with clarifying questions
-
-[Continue with Step 5: Validate Repository...]
-
-### Step 5: Validate Repository and GitHub CLI
-
-🔴 **REMINDER: YOU ARE ONLY CREATING A GITHUB ISSUE**
-
-- DO NOT use Edit or Write tools to modify codebase
-- DO NOT implement any code from the plan
-- DO NOT modify any files in the codebase
-- ONLY create a GitHub issue with the enhanced plan
-
-@../docs/validate-git-repository.md
-
-@../docs/validate-github-cli.md
-
-### Step 6: Verify You Did Not Implement
-
-🔴 **CRITICAL: VERIFY YOU ONLY GATHERED INFORMATION**
-
-Before creating the GitHub issue, confirm you ONLY gathered information and did NOT implement anything.
-
-**Check your tool usage in this session:**
-
-- ✅ Did you use Read to examine conversation? → CORRECT
-- ✅ Did you use AskUserQuestion for clarifications? → CORRECT
-- ✅ Did you use Bash for git/kit commands? → CORRECT
-- ❌ Did you use Edit on ANY file? → **VIOLATION - STOP**
-- ❌ Did you use Write to modify codebase? → **VIOLATION - STOP**
-- ❌ Did you use Task, SlashCommand, or other tools? → **VIOLATION - STOP**
-
-**If you violated restrictions:**
-
-```bash
-dot-agent kit-command erk format-error \
-    --brief "Implementation attempted during plan creation" \
-    --details "You used [tool name] which is forbidden in /erk:save-context-enriched-plan. This command ONLY creates a GitHub issue. Implementation happens in erk implement." \
-    --action "Stop immediately - do NOT create the issue" \
-    --action "Report what tools you used incorrectly" \
-    --action "User should restart the command without implementing"
-```
-
-**If all checks passed:** Proceed to Step 7 to create the GitHub issue.
-
-### Step 7: Create GitHub Issue
-
-🔴 **REMINDER: YOU ARE ONLY CREATING A GITHUB ISSUE**
-
-- DO NOT use Edit or Write tools to modify codebase
-- DO NOT implement any code from the plan
-- DO NOT modify any files in the codebase
-- ONLY create a GitHub issue with the enhanced plan
-
-Replace `$PLAN_CONTENT` with the `enhanced_plan_content` variable from Step 4:
-
-@../docs/create-github-issue.md
-
-**After successful issue creation:**
-
-Use the format-success-output kit CLI command to generate standardized output:
-
-```bash
-# After issue is created, extract issue_number and issue_url
-success_output=$(dot-agent kit-command erk format-success-output \
-    --issue-number "$issue_number" \
-    --issue-url "$issue_url")
-echo "$success_output"
-```
-
-This will output:
-
-- Success message with issue number and URL
-- Next steps (view issue, implement interactively, implement with --dangerous, implement with --yolo)
-- JSON metadata for parsing
-
-## Important Notes
-
-- 🔴 **This command does NOT create worktrees** - only creates GitHub issue with enhanced plan
-- Searches conversation for implementation plans
-- Enhances plans through clarifying questions when helpful
-- Suggests phase decomposition for complex plans with multiple features
-- All enhancements are optional - users can dismiss suggestions
-- GitHub issue title derived from plan title
-- All errors use format-error kit CLI command for consistency
-- All success output uses format-success-output kit CLI command
-- Plan validation uses validate-plan-content kit CLI command
-- User can edit the issue after creation using GitHub UI or `gh issue edit`
-- Always provide clear feedback at each step
-- Issue becomes immediate source of truth (no disk files involved)
+**Agent file:** `.claude/agents/erk/plan-extractor.md`

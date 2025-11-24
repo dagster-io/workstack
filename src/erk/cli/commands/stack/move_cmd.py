@@ -6,6 +6,7 @@ import click
 
 from erk.cli.commands.completions import complete_worktree_names
 from erk.cli.core import discover_repo_context, worktree_path_for
+from erk.cli.ensure import Ensure
 from erk.cli.output import user_output
 from erk.core.context import ErkContext
 from erk.core.repo_discovery import ensure_erk_metadata_dir
@@ -79,9 +80,7 @@ def resolve_source_worktree(
         # Resolve worktree name to path
         wt_path = worktree_path_for(worktrees_dir, worktree)
         # Validate that the worktree exists
-        if not ctx.git.path_exists(wt_path):
-            user_output(f"Error: Worktree '{worktree}' does not exist")
-            raise SystemExit(1)
+        Ensure.path_exists(ctx, wt_path, f"Worktree '{worktree}' does not exist")
         return wt_path
 
     user_output("Error: Invalid state - no source specified")

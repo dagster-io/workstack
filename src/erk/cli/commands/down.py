@@ -11,6 +11,7 @@ from erk.cli.commands.navigation_helpers import (
     verify_pr_merged,
 )
 from erk.cli.core import discover_repo_context
+from erk.cli.ensure import Ensure
 from erk.cli.output import machine_output, user_output
 from erk.core.context import ErkContext
 
@@ -124,9 +125,7 @@ def down_cmd(ctx: ErkContext, script: bool, delete_current: bool) -> None:
 
     if delete_current and current_worktree_path is not None:
         # Handle activation inline so we can do cleanup before exiting
-        if not ctx.git.path_exists(target_wt_path):
-            user_output(f"Worktree not found: {target_wt_path}")
-            raise SystemExit(1)
+        Ensure.path_exists(ctx, target_wt_path, f"Worktree not found: {target_wt_path}")
 
         if script:
             activation_script = render_activation_script(worktree_path=target_wt_path)

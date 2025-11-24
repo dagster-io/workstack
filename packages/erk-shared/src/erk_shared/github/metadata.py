@@ -548,6 +548,114 @@ def create_plan_block(
 create_plan_issue_block = create_plan_block
 
 
+def create_plan_body_block(plan_content: str) -> MetadataBlock:
+    """Create a metadata block that wraps the plan body content.
+
+    This creates a collapsible block to make the issue more readable,
+    showing the plan content behind a disclosure triangle.
+
+    Args:
+        plan_content: The full plan markdown content
+
+    Returns:
+        MetadataBlock with key "plan-body"
+    """
+    data = {
+        "content": plan_content,
+    }
+    return MetadataBlock(key="plan-body", data=data)
+
+
+def render_plan_body_block(block: MetadataBlock) -> str:
+    """Render a plan-body metadata block with the plan as collapsible markdown.
+
+    Returns markdown like:
+    <!-- WARNING: Machine-generated. Manual edits may break erk tooling. -->
+    <!-- erk:metadata-block:plan-body -->
+    <details>
+    <summary><strong>📋 Implementation Plan</strong></summary>
+
+    {plan_content}
+
+    </details>
+    <!-- /erk:metadata-block:plan-body -->
+    """
+    if "content" not in block.data:
+        raise ValueError("plan-body block must have 'content' field")
+
+    plan_content = block.data["content"]
+
+    return f"""<!-- WARNING: Machine-generated. Manual edits may break erk tooling. -->
+<!-- erk:metadata-block:{block.key} -->
+<details>
+<summary><strong>📋 Implementation Plan</strong></summary>
+
+{plan_content}
+
+</details>
+<!-- /erk:metadata-block:{block.key} -->"""
+
+
+def format_execution_commands(issue_number: int) -> str:
+    """Format execution commands section for plan issues.
+
+    Args:
+        issue_number: GitHub issue number
+
+    Returns:
+        Formatted markdown with copy-pasteable commands
+    """
+    return f"""## Execution Commands
+
+Copy and paste one of these commands to get started:
+
+**View in browser:**
+```bash
+gh issue view {issue_number} --web
+```
+
+**Standard mode (interactive):**
+```bash
+erk implement {issue_number}
+```
+
+**Yolo mode (fully automated, skips confirmation):**
+```bash
+erk implement {issue_number} --yolo
+```
+
+**Dangerous mode (auto-submit PR after implementation):**
+```bash
+erk implement {issue_number} --submit --dangerous
+```"""
+
+
+def format_plan_issue_body(plan_content: str, issue_number: int) -> str:
+    """Format the complete issue body for a plan issue.
+
+    Creates an issue body with:
+    1. Plan content wrapped in collapsible metadata block
+    2. Horizontal rule separator
+    3. Execution commands section
+
+    Args:
+        plan_content: The plan markdown content
+        issue_number: GitHub issue number (for command formatting)
+
+    Returns:
+        Complete issue body ready for GitHub
+    """
+    plan_block = create_plan_body_block(plan_content)
+    plan_markdown = render_plan_body_block(plan_block)
+    commands_section = format_execution_commands(issue_number)
+
+    return f"""{plan_markdown}
+
+---
+
+{commands_section}"""
+
+
 def extract_raw_metadata_blocks(text: str) -> list[RawMetadataBlock]:
     """
     Extract raw metadata blocks using HTML comment markers (Phase 1).

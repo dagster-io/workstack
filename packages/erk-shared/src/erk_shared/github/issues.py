@@ -94,6 +94,20 @@ class GitHubIssues(ABC):
         ...
 
     @abstractmethod
+    def update_issue_body(self, repo_root: Path, number: int, body: str) -> None:
+        """Update the body of an existing issue.
+
+        Args:
+            repo_root: Repository root directory
+            number: Issue number to update
+            body: New issue body markdown
+
+        Raises:
+            RuntimeError: If gh CLI fails or issue not found
+        """
+        ...
+
+    @abstractmethod
     def list_issues(
         self,
         repo_root: Path,
@@ -258,6 +272,15 @@ class RealGitHubIssues(GitHubIssues):
         on failures (not installed, not authenticated, issue not found).
         """
         cmd = ["gh", "issue", "comment", str(number), "--body", body]
+        execute_gh_command(cmd, repo_root)
+
+    def update_issue_body(self, repo_root: Path, number: int, body: str) -> None:
+        """Update issue body using gh CLI.
+
+        Note: Uses gh's native error handling - gh CLI raises RuntimeError
+        on failures (not installed, not authenticated, issue not found).
+        """
+        cmd = ["gh", "issue", "edit", str(number), "--body", body]
         execute_gh_command(cmd, repo_root)
 
     def list_issues(
@@ -528,6 +551,31 @@ class FakeGitHubIssues(GitHubIssues):
             raise RuntimeError(msg)
         self._added_comments.append((number, body))
 
+    def update_issue_body(self, repo_root: Path, number: int, body: str) -> None:
+        """Update issue body in fake storage.
+
+        Raises:
+            RuntimeError: If issue number not found (simulates gh CLI error)
+        """
+        if number not in self._issues:
+            msg = f"Issue #{number} not found"
+            raise RuntimeError(msg)
+
+        # Update the issue body in-place (creates new IssueInfo with updated body)
+        old_issue = self._issues[number]
+        updated_issue = IssueInfo(
+            number=old_issue.number,
+            title=old_issue.title,
+            body=body,  # New body
+            state=old_issue.state,
+            url=old_issue.url,
+            labels=old_issue.labels,
+            assignees=old_issue.assignees,
+            created_at=old_issue.created_at,
+            updated_at=datetime.now(UTC),  # Update timestamp
+        )
+        self._issues[number] = updated_issue
+
     def list_issues(
         self,
         repo_root: Path,
@@ -646,6 +694,10 @@ class DryRunGitHubIssues(GitHubIssues):
 
     def add_comment(self, repo_root: Path, number: int, body: str) -> None:
         """No-op for adding comment in dry-run mode."""
+        pass
+
+    def update_issue_body(self, repo_root: Path, number: int, body: str) -> None:
+        """No-op for updating issue body in dry-run mode."""
         pass
 
     def list_issues(

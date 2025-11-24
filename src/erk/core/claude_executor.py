@@ -99,7 +99,7 @@ class RealClaudeExecutor(ClaudeExecutor):
         - Streams output to terminal (no capture)
         - Raises RuntimeError on non-zero exit code
         """
-        cmd_args = ["claude", "--permission-mode", "acceptEdits", "--output-format", "stream-json"]
+        cmd_args = ["claude", "--print", "--verbose", "--permission-mode", "acceptEdits", "--output-format", "stream-json"]
         if dangerous:
             cmd_args.append("--dangerously-skip-permissions")
         cmd_args.append(command)

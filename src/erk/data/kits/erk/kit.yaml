@@ -65,6 +65,9 @@ kit_cli_commands:
   - name: create-enriched-plan-from-context
     path: kit_cli_commands/erk/create_enriched_plan_from_context.py
     description: Create GitHub issue from enriched plan (--plan-content option) with erk-plan label
+  - name: validate-plan-content
+    path: kit_cli_commands/erk/validate_plan_content.py
+    description: Validate plan content structure and quality from stdin
 hooks:
   - id: session-id-injector-hook
     lifecycle: UserPromptSubmit

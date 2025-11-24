@@ -64,6 +64,9 @@ kit_cli_commands:
   - name: debug-agent
     path: kit_cli_commands/erk/debug_agent.py
     description: Inspect failed agent runs from the current session
+  - name: validate-plan-content
+    path: kit_cli_commands/erk/validate_plan_content.py
+    description: Validate plan content structure and quality from stdin
 hooks:
   - id: session-id-injector-hook
     lifecycle: UserPromptSubmit

@@ -72,6 +72,18 @@ source ~/.zshrc  # or ~/.bashrc
 
 ## Core Commands
 
+Commands are organized into logical groups for better discoverability, while maintaining full backward compatibility with all original command names.
+
+**Command Groups:**
+
+- **Navigation** (top-level): `checkout` (co), `up`, `down` - core navigation workflow
+- **Worktree Operations** (`erk wt`): `create`, `delete`, `goto`, `list`, `rename`, `current`, `status`
+- **Stack Management** (`erk stack`): `land`, `move`, `split`, `consolidate`
+- **Plan Operations** (`erk plan`): `implement`, `submit`, `close`, `get`, `retry`, `runs`
+- **Support** (`erk admin`, `erk config`, `erk completion`): configuration and administration
+
+All commands can be used in either grouped form (`erk wt list`) or flat form (`erk list`) - both work identically. Use whichever form you prefer.
+
 ### Creating Worktrees
 
 ```bash

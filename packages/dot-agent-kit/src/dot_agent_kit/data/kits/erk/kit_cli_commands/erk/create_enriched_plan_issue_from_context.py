@@ -73,8 +73,6 @@ def create_enriched_plan_issue_from_context(ctx: click.Context, plan_content: st
     # Create issue (ABC interface with EAFP pattern)
     try:
         result = github.create_issue(repo_root, title, body, ["erk-plan"])
-        issue_number = result.number
-        issue_url = result.url
     except RuntimeError as e:
         click.echo(f"Error: Failed to create GitHub issue: {e}", err=True)
         raise SystemExit(1) from e
@@ -82,7 +80,7 @@ def create_enriched_plan_issue_from_context(ctx: click.Context, plan_content: st
     # Output structured JSON
     output = {
         "success": True,
-        "issue_number": issue_number,
-        "issue_url": issue_url,
+        "issue_number": result.number,
+        "issue_url": result.url,
     }
     click.echo(json.dumps(output))

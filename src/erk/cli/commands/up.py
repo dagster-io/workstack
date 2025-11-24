@@ -2,12 +2,12 @@ import click
 
 from erk.cli.activation import render_activation_script
 from erk.cli.commands.navigation_helpers import (
-    _activate_worktree,
-    _check_clean_working_tree,
-    _delete_branch_and_worktree,
-    _ensure_graphite_enabled,
-    _resolve_up_navigation,
-    _verify_pr_merged,
+    activate_worktree,
+    check_clean_working_tree,
+    delete_branch_and_worktree,
+    ensure_graphite_enabled,
+    resolve_up_navigation,
+    verify_pr_merged,
 )
 from erk.cli.core import discover_repo_context
 from erk.cli.output import machine_output, user_output
@@ -39,7 +39,7 @@ def up_cmd(ctx: ErkContext, script: bool, delete_current: bool) -> None:
     This will cd to the child branch's worktree, create/activate .venv, and load .env variables.
     Requires Graphite to be enabled: 'erk config set use_graphite true'
     """
-    _ensure_graphite_enabled(ctx)
+    ensure_graphite_enabled(ctx)
     repo = discover_repo_context(ctx, ctx.cwd)
 
     # Get current branch
@@ -82,13 +82,13 @@ def up_cmd(ctx: ErkContext, script: bool, delete_current: bool) -> None:
             raise SystemExit(1)
 
         # Validate clean working tree (no uncommitted changes)
-        _check_clean_working_tree(ctx)
+        check_clean_working_tree(ctx)
 
         # Validate PR is merged on GitHub
-        _verify_pr_merged(ctx, repo.root, current_branch)
+        verify_pr_merged(ctx, repo.root, current_branch)
 
     # Resolve navigation to get target branch (may auto-create worktree)
-    target_name, was_created = _resolve_up_navigation(ctx, repo, current_branch, worktrees)
+    target_name, was_created = resolve_up_navigation(ctx, repo, current_branch, worktrees)
 
     # Show creation message if worktree was just created
     if was_created and not script:
@@ -131,10 +131,10 @@ def up_cmd(ctx: ErkContext, script: bool, delete_current: bool) -> None:
             user_output("\nOr use: source <(erk up --script)")
 
         # Perform cleanup: delete branch and worktree
-        _delete_branch_and_worktree(ctx, repo.root, current_branch, current_worktree_path)
+        delete_branch_and_worktree(ctx, repo.root, current_branch, current_worktree_path)
 
         # Exit after cleanup
         raise SystemExit(0)
     else:
         # No cleanup needed, use standard activation
-        _activate_worktree(ctx, repo, target_wt_path, script, "up")
+        activate_worktree(ctx, repo, target_wt_path, script, "up")

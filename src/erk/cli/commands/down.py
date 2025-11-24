@@ -1,14 +1,14 @@
 import click
 
 from erk.cli.commands.navigation_helpers import (
-    _activate_root_repo,
-    _activate_worktree,
-    _check_clean_working_tree,
-    _delete_branch_and_worktree,
-    _ensure_graphite_enabled,
-    _resolve_down_navigation,
-    _verify_pr_merged,
+    activate_root_repo,
+    activate_worktree,
+    check_clean_working_tree,
+    delete_branch_and_worktree,
+    ensure_graphite_enabled,
     render_activation_script,
+    resolve_down_navigation,
+    verify_pr_merged,
 )
 from erk.cli.core import discover_repo_context
 from erk.cli.output import machine_output, user_output
@@ -41,7 +41,7 @@ def down_cmd(ctx: ErkContext, script: bool, delete_current: bool) -> None:
     create/activate .venv, and load .env variables.
     Requires Graphite to be enabled: 'erk config set use_graphite true'
     """
-    _ensure_graphite_enabled(ctx)
+    ensure_graphite_enabled(ctx)
     repo = discover_repo_context(ctx, ctx.cwd)
     trunk_branch = ctx.trunk_branch
 
@@ -65,14 +65,14 @@ def down_cmd(ctx: ErkContext, script: bool, delete_current: bool) -> None:
 
     # Safety checks before navigation (if --delete-current flag is set)
     if delete_current:
-        _check_clean_working_tree(ctx)
-        _verify_pr_merged(ctx, repo.root, current_branch)
+        check_clean_working_tree(ctx)
+        verify_pr_merged(ctx, repo.root, current_branch)
 
     # Get all worktrees for checking if target has a worktree
     worktrees = ctx.git.list_worktrees(repo.root)
 
     # Resolve navigation to get target branch or 'root' (may auto-create worktree)
-    target_name, was_created = _resolve_down_navigation(
+    target_name, was_created = resolve_down_navigation(
         ctx, repo, current_branch, worktrees, trunk_branch
     )
 
@@ -104,13 +104,13 @@ def down_cmd(ctx: ErkContext, script: bool, delete_current: bool) -> None:
                 user_output(f"Switched to root repo: {root_path}")
 
             # Perform cleanup (no context regeneration needed - we haven't changed dirs)
-            _delete_branch_and_worktree(ctx, repo.root, current_branch, current_worktree_path)
+            delete_branch_and_worktree(ctx, repo.root, current_branch, current_worktree_path)
 
             # Exit after cleanup
             raise SystemExit(0)
         else:
             # No cleanup needed, use standard activation
-            _activate_root_repo(ctx, repo, script, "down")
+            activate_root_repo(ctx, repo, script, "down")
 
     # Resolve target branch to actual worktree path
     target_wt_path = ctx.git.find_worktree_for_branch(repo.root, target_name)
@@ -144,10 +144,10 @@ def down_cmd(ctx: ErkContext, script: bool, delete_current: bool) -> None:
             user_output("\nOr use: source <(erk down --script)")
 
         # Perform cleanup (no context regeneration needed - we haven't actually changed directories)
-        _delete_branch_and_worktree(ctx, repo.root, current_branch, current_worktree_path)
+        delete_branch_and_worktree(ctx, repo.root, current_branch, current_worktree_path)
 
         # Exit after cleanup
         raise SystemExit(0)
     else:
         # No cleanup needed, use standard activation
-        _activate_worktree(ctx, repo, target_wt_path, script, "down")
+        activate_worktree(ctx, repo, target_wt_path, script, "down")

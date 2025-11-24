@@ -1,109 +1,148 @@
 ---
-description: Extract plan from Claude session and save to disk (no enhancements)
+description: Extract plan from Claude session and create GitHub issue (no enrichment)
 ---
 
-# /erk:save-plan
+# /erk:save-raw-plan
 
-Extracts the latest implementation plan from Claude session files and saves it to disk. This command uses deterministic session file parsing instead of conversation context searching.
+Extracts the latest implementation plan from Claude session files and creates a GitHub issue with the raw plan content. This command provides a "fast path" for creating issues with deterministic session file parsing and no enrichment.
 
 ## Usage
 
 ```bash
-/erk:save-plan
+/erk:save-raw-plan
 ```
 
 ## Purpose
 
-This command provides a fast, deterministic path for saving plans. It:
+This command provides a **fast path** for creating GitHub issues from session plans. It:
 
-- Extracts the latest `ExitPlanMode` plan from Claude session files
-- Generates a descriptive filename from the plan title
-- Saves plan content as-is (no frontmatter generation)
-- Saves to repository root
+- Extracts the latest `ExitPlanMode` plan from Claude session files (deterministic)
+- Creates a GitHub issue with `erk-plan` label
+- Preserves plan content exactly as found (no enrichment)
+- Outputs JSON metadata with issue URL and number
 
 **What it does NOT do:**
 
-- ❌ No session log discovery or mining
+- ❌ No conversation context searching
 - ❌ No plan enhancement or enrichment
 - ❌ No interactive clarifying questions
-- ❌ No complex analysis
+- ❌ No semantic understanding extraction
+- ❌ No disk file creation (issue is the artifact)
+
+**Fast Path vs Enriched Path:**
+
+- **save-raw-plan** (this command): Session files → Raw plan → GitHub issue (fast, deterministic)
+- **save-plan**: Conversation context → Enriched plan → GitHub issue (interactive, comprehensive)
 
 ## How It Works
 
-1. **Searches Claude session files** for the latest ExitPlanMode plan
-2. **Generates filename** from plan title using kebab-case
-3. **Saves plan content as-is** (no frontmatter added)
-4. **Saves to repository root** as `<name>-plan.md`
+1. **Extracts plan from session files** - Searches JSONL files for latest ExitPlanMode
+2. **Validates repository** - Confirms git repository and GitHub CLI availability
+3. **Creates GitHub issue** - Creates issue with `erk-plan` label
+4. **Outputs metadata** - Returns JSON with issue URL and number
+5. **Displays next steps** - Shows four copy-pastable commands for implementation
 
 ---
 
 ## Agent Instructions
 
-You are executing the `/erk:save-plan` command. This command uses the kit CLI to extract plans from Claude session files.
+You are executing the `/erk:save-raw-plan` command. This command extracts plans from session files and creates GitHub issues.
 
 ### CRITICAL: Tool Restrictions
 
 **ALLOWED TOOLS:**
 
-- `Bash` - For calling kit CLI command
+- `Bash` - For git commands and kit CLI commands
 - `AskUserQuestion` - ONLY for error recovery if needed
 
 **FORBIDDEN TOOLS:**
 
-- `Read` - Do NOT read conversation manually
+- `Read` - Do NOT read conversation manually (uses session files instead)
 - `Edit` - Do NOT modify any existing files
-- `Write` - Do NOT write files manually (kit CLI handles this)
+- `Write` - Do NOT write files manually (kit CLI handles temp files)
 - `Glob` - Do NOT search the codebase
 - `Grep` - Do NOT search the codebase
 - `Task` - Do NOT launch subagents
 
 **CRITICAL:** If you use any forbidden tool, STOP immediately.
 
-### Step 1: Extract Plan from Session and Save
+### Step 1: Extract Plan from Session Files
 
-Use the kit CLI command with display format to extract the latest plan from Claude session files and save it:
+Execute the kit CLI command to extract the latest plan from session files:
 
 ```bash
-dot-agent kit-command erk save-plan-from-session --format display
+dot-agent kit-command erk save-plan-from-session --format json
 ```
 
 This command:
 
-- Searches Claude session files for the latest ExitPlanMode plan
-- Extracts the plan text
-- Generates filename from plan title
-- Saves plan content as-is (no frontmatter)
-- Saves to repository root
-- Displays formatted output (or errors) directly
+- Searches Claude session JSONL files for latest ExitPlanMode plan
+- Extracts plan content and title
+- Returns JSON with `plan_content`, `plan_title`, or `error` fields
 
-**That's it!** The Python command handles all error checking, formatting, and output. No JSON parsing needed.
+**Parse the JSON output:**
+
+Extract these fields:
+
+- `plan_content` - The raw markdown plan text
+- `plan_title` - The title for the GitHub issue
+- `error` - Present if extraction failed
+
+**If error field is present:**
+
+```
+❌ Error: No plan found in session files
+
+Details: [error message from JSON]
+
+Suggested action:
+  1. Ensure you used ExitPlanMode in the session
+  2. Check session files exist in ~/.claude/projects/
+  3. Try running /erk:save-plan with conversation context instead
+```
+
+### Step 2: Validate Repository and GitHub CLI
+
+@../docs/validate-git-repository.md
+
+@../docs/validate-github-cli.md
+
+### Step 3: Create GitHub Issue
+
+Replace `$PLAN_CONTENT` with the `plan_content` variable extracted in Step 1:
+
+@../docs/create-github-issue.md
+
+### Step 4: Output Success Message
+
+@../docs/success-output-format.md
 
 ## Important Notes
 
-- **Deterministic**: Searches session files, not conversation context
-- **No enhancements**: Saves plan exactly as found in ExitPlanMode
-- **Fast**: No additional processing or analysis
-- **Latest plan**: Automatically finds the most recent plan by timestamp
-- **Compatible workflow**: Output works with `/erk:create-wt-from-plan-file`
+- **Fast Path**: No interactive questions, no enrichment, no semantic analysis
+- **Deterministic**: Uses session file parsing, not conversation context
+- **Raw Content**: Preserves plan exactly as found in ExitPlanMode
+- **Latest Plan**: Automatically finds most recent plan by timestamp
+- **Issue-First**: Creates GitHub issue directly (no disk files)
+- **Command Comparison**:
+  - `save-raw-plan`: Session files → Raw plan → GitHub issue (this command)
+  - `save-plan`: Conversation → Enriched plan → GitHub issue (interactive)
+- **Next Step**: Use `erk implement <issue>` to execute the plan
 
 ## Technical Details
 
-**Session file location:**
+@../docs/session-file-location.md
 
-- Base: `~/.claude/projects/`
-- Project directory: Working directory path with `/` replaced by `-` and prepended with `-`
-- Example: `/Users/user/code/myproject` → `~/.claude/projects/-Users-user-code-myproject/`
+**Issue title extraction:**
 
-**Search pattern:**
+- Extracts title from plan content (H1 → H2 → first line)
+- Converts to title case
+- Truncates to 100 characters if needed
+- Falls back to "Implementation Plan" if no clear title
 
-- Parses JSONL files (one JSON object per line)
-- Looks for `type: "tool_use"` with `name: "ExitPlanMode"`
-- Extracts `input.plan` field
-- Sorts by timestamp to find latest
+**GitHub issue creation:**
 
-**Filename generation:**
-
-- Extracts title from plan (H1 → H2 → first line)
-- Converts to kebab-case
-- Removes emojis and special characters
-- Appends `-plan.md` suffix
+- Creates issue with `erk-plan` label automatically
+- Uses extracted title as issue title
+- Plan content becomes issue body
+- Returns issue URL for next steps

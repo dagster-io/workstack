@@ -2,14 +2,14 @@
 
 from click.testing import CliRunner
 
-from erk.data.kits.erk.kit_cli_commands.erk.format_error import format_error_cli
+from erk.data.kits.erk.kit_cli_commands.erk.format_error import format_error
 
 
 def test_format_error_single_action() -> None:
     """Test error formatting with single action."""
     runner = CliRunner()
     result = runner.invoke(
-        format_error_cli,
+        format_error,
         [
             "--brief",
             "File not found",
@@ -40,7 +40,7 @@ def test_format_error_multiple_actions() -> None:
     """Test error formatting with multiple actions."""
     runner = CliRunner()
     result = runner.invoke(
-        format_error_cli,
+        format_error,
         [
             "--brief",
             "Plan content is too minimal",
@@ -77,7 +77,7 @@ def test_format_error_two_actions() -> None:
     """Test error formatting with exactly two actions."""
     runner = CliRunner()
     result = runner.invoke(
-        format_error_cli,
+        format_error,
         [
             "--brief",
             "Git repository not found",
@@ -119,7 +119,7 @@ def test_format_error_long_text() -> None:
     )
 
     result = runner.invoke(
-        format_error_cli,
+        format_error,
         [
             "--brief",
             long_brief,
@@ -145,7 +145,7 @@ def test_format_error_unicode_content() -> None:
     """Test error formatting handles unicode content."""
     runner = CliRunner()
     result = runner.invoke(
-        format_error_cli,
+        format_error,
         [
             "--brief",
             "配置文件错误",
@@ -171,7 +171,7 @@ def test_format_error_output_structure() -> None:
     """Test error output has correct structure with blank lines."""
     runner = CliRunner()
     result = runner.invoke(
-        format_error_cli,
+        format_error,
         [
             "--brief",
             "Test error",
@@ -204,7 +204,7 @@ def test_format_error_emoji_present() -> None:
     """Test error output includes error emoji."""
     runner = CliRunner()
     result = runner.invoke(
-        format_error_cli,
+        format_error,
         [
             "--brief",
             "Simple error",
@@ -223,7 +223,7 @@ def test_format_error_action_numbering() -> None:
     """Test actions are numbered sequentially starting from 1."""
     runner = CliRunner()
     result = runner.invoke(
-        format_error_cli,
+        format_error,
         [
             "--brief",
             "Test",

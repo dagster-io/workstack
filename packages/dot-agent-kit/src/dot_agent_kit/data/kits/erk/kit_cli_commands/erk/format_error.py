@@ -36,7 +36,7 @@ Examples:
 
 import click
 
-from dot_agent_kit.data.kits.erk.plan_utils import format_error
+from dot_agent_kit.data.kits.erk.plan_utils import format_error as format_error_util
 
 
 @click.command(name="format-error")
@@ -60,7 +60,7 @@ from dot_agent_kit.data.kits.erk.plan_utils import format_error
     type=str,
     help="Suggested action (repeatable, 1-3 recommended)",
 )
-def format_error_cli(brief: str, details: str, actions: tuple[str, ...]) -> None:
+def format_error(brief: str, details: str, actions: tuple[str, ...]) -> None:
     """Format standardized error message with brief, details, and actions.
 
     Generates consistent error output following the template:
@@ -74,6 +74,6 @@ def format_error_cli(brief: str, details: str, actions: tuple[str, ...]) -> None
     actions_list = list(actions)
 
     # Call the pure utility function
-    error_message = format_error(brief, details, actions_list)
+    error_message = format_error_util(brief, details, actions_list)
 
     click.echo(error_message)

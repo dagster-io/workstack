@@ -194,6 +194,19 @@ class GitHub(ABC):
         ...
 
     @abstractmethod
+    def get_workflow_run(self, repo_root: Path, run_id: str) -> WorkflowRun | None:
+        """Get details for a specific workflow run by ID.
+
+        Args:
+            repo_root: Repository root directory
+            run_id: GitHub Actions run ID
+
+        Returns:
+            WorkflowRun with status and conclusion, or None if not found
+        """
+        ...
+
+    @abstractmethod
     def get_run_logs(self, repo_root: Path, run_id: str) -> str:
         """Get logs for a workflow run.
 

@@ -155,6 +155,15 @@ class RealGitHub(GitHub):
         )
         raise NotImplementedError(msg)
 
+    def get_workflow_run(self, repo_root: Path, run_id: str) -> WorkflowRun | None:
+        """Stub method - not implemented in erk-shared."""
+        msg = (
+            "RealGitHub from erk-shared is a stub for context creation only. "
+            "Use the full implementation from erk.core.github.real if you need "
+            "actual GitHub operations."
+        )
+        raise NotImplementedError(msg)
+
     def get_run_logs(self, repo_root: Path, run_id: str) -> str:
         """Stub method - not implemented in erk-shared."""
         msg = (

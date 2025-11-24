@@ -10,8 +10,7 @@ from typing import NamedTuple
 
 import pytest
 from erk_shared.git.abc import Git
-
-from erk.core.git.real import RealGit
+from erk_shared.git.real import RealGit
 
 
 class GitSetup(NamedTuple):

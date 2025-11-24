@@ -1,7 +1,8 @@
 """Production Git implementation using subprocess.
 
 This module provides the real Git implementation that executes actual git
-commands via subprocess.
+commands via subprocess. Located in erk-shared so it can be used by both
+the main erk package and dot-agent-kit without circular dependencies.
 """
 
 import os
@@ -9,13 +10,7 @@ import subprocess
 from pathlib import Path
 
 from erk_shared.git.abc import Git, WorktreeInfo
-
-from erk.cli.output import user_output
-from erk.core.subprocess import run_subprocess_with_context
-
-# ============================================================================
-# Production Implementation
-# ============================================================================
+from erk_shared.subprocess_utils import run_subprocess_with_context
 
 
 class RealGit(Git):
@@ -92,11 +87,11 @@ class RealGit(Git):
             )
             if result.returncode == 0:
                 return configured
-            user_output(
+            error_msg = (
                 f"Error: Configured trunk branch '{configured}' does not exist in repository.\n"
                 f"Update your configuration in pyproject.toml or create the branch."
             )
-            raise SystemExit(1)
+            raise RuntimeError(error_msg)
 
         # Auto-detection: try remote HEAD first
         result = subprocess.run(
@@ -124,8 +119,7 @@ class RealGit(Git):
             if result.returncode == 0:
                 return candidate
 
-        user_output("Error: Could not find 'main' or 'master' branch.")
-        raise SystemExit(1)
+        raise RuntimeError("Error: Could not find 'main' or 'master' branch.")
 
     def get_trunk_branch(self, repo_root: Path) -> str:
         """Get the trunk branch name for the repository.

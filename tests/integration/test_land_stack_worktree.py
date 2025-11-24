@@ -9,11 +9,11 @@ import subprocess
 from pathlib import Path
 
 from click.testing import CliRunner
+from erk_shared.git.real import RealGit
 
 from erk.cli.cli import cli
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk.core.git.real import RealGit
 from erk.core.github.fake import FakeGitHub
 from erk.core.graphite.fake import FakeGraphite
 from tests.fakes.shell import FakeShell

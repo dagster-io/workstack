@@ -169,7 +169,7 @@ def test_detect_default_branch_neither_exists(
 
     git_ops = RealGit()
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError, match="Could not find 'main' or 'master' branch"):
         git_ops.detect_default_branch(repo)
 
 

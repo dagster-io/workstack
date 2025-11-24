@@ -8,7 +8,7 @@ from pathlib import Path
 
 from erk_shared.git.abc import WorktreeInfo
 
-from erk.cli.commands.split.plan import (
+from erk.cli.commands.stack.split_old.plan import (
     SplitPlan,
     create_split_plan,
     execute_split_plan,

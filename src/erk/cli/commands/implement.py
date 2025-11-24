@@ -90,7 +90,7 @@ def _build_command_sequence(submit: bool) -> list[str]:
     """
     commands = ["/erk:implement-plan"]
     if submit:
-        commands.extend(["/fast-ci", "/gt:simple-submit"])
+        commands.extend(["/fast-ci", "/gt:submit-pr"])
     return commands
 
 
@@ -606,7 +606,7 @@ def _output_activation_instructions(
             user_output("  2. Run implementation, CI, and submit PR:")
             user_output(f"     {_build_claude_command('/erk:implement-plan', dangerous)}")
             user_output(f"     {_build_claude_command('/fast-ci', dangerous)}")
-            user_output(f"     {_build_claude_command('/gt:submit-squashed-branch', dangerous)}")
+            user_output(f"     {_build_claude_command('/gt:submit-pr', dangerous)}")
         else:
             claude_cmd = _build_claude_command("/erk:implement-plan", dangerous)
             user_output(f"  2. Run implementation:  {claude_cmd}")

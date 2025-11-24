@@ -18,8 +18,8 @@ Phase 2 (post-analysis):
 5. Return PR info and status
 
 Usage:
-    dot-agent run gt submit-squashed-branch pre-analysis
-    dot-agent run gt submit-squashed-branch post-analysis --commit-message "..."
+    dot-agent run gt submit-pr pre-analysis
+    dot-agent run gt submit-pr post-analysis --commit-message "..."
 
 Output:
     JSON object with either success or error information
@@ -40,10 +40,10 @@ Error Types:
     - pr_update_failed: Failed to update PR metadata
 
 Examples:
-    $ dot-agent run gt submit-squashed-branch pre-analysis
+    $ dot-agent run gt submit-pr pre-analysis
     {"success": true, "branch_name": "feature", ...}
 
-    $ dot-agent run gt submit-squashed-branch post-analysis --commit-message "feat: add feature"
+    $ dot-agent run gt submit-pr post-analysis --commit-message "feat: add feature"
         --pr-title "Add feature" --pr-body "Full description"
     {"success": true, "pr_number": 123, ...}
 """
@@ -500,7 +500,7 @@ def execute_post_analysis(
 
 
 @click.group()
-def submit_squashed_branch() -> None:
+def submit_pr() -> None:
     """Create git commit and submit current branch with Graphite (two-phase)."""
     pass
 
@@ -577,6 +577,6 @@ def get_diff_context_cmd() -> None:
 
 
 # Register subcommands
-submit_squashed_branch.add_command(pre_analysis)
-submit_squashed_branch.add_command(post_analysis)
-submit_squashed_branch.add_command(get_diff_context_cmd, name="get-diff-context")
+submit_pr.add_command(pre_analysis)
+submit_pr.add_command(post_analysis)
+submit_pr.add_command(get_diff_context_cmd, name="get-diff-context")

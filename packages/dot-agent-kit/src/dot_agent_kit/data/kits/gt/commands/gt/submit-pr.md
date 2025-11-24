@@ -3,7 +3,7 @@ description: Create git commit and submit current branch with Graphite (squashes
 argument-hint: <description>
 ---
 
-# Submit Squashed Branch
+# Submit PR
 
 Automatically create a git commit with a helpful summary message and submit the current branch as a pull request.
 
@@ -13,10 +13,10 @@ Automatically create a git commit with a helpful summary message and submit the 
 
 ```bash
 # Invoke the command (description argument is optional but recommended)
-/gt:submit-squashed-branch "Add user authentication feature"
+/gt:submit-pr "Add user authentication feature"
 
 # Without argument (will analyze changes automatically)
-/gt:submit-squashed-branch
+/gt:submit-pr
 ```
 
 ## What This Command Does

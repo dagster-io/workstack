@@ -1,3 +1,5 @@
+from collections.abc import Generator
+from contextlib import contextmanager
 from pathlib import Path
 
 import click
@@ -10,6 +12,38 @@ from erk.cli.output import machine_output, user_output
 from erk.core.context import ErkContext, create_context
 from erk.core.git.abc import WorktreeInfo
 from erk.core.repo_discovery import RepoContext, ensure_erk_metadata_dir
+
+
+@contextmanager
+def shell_completion_error_boundary() -> Generator[None]:
+    """Context manager for shell completion error boundaries.
+
+    Shell completion functions are acceptable error boundaries per Click's protocol.
+    This context manager provides graceful error handling for shell completion by
+    suppressing all exceptions and allowing completion to return an empty list.
+
+    Why this is needed:
+    - Shell completion runs in the user's interactive shell session
+    - Any uncaught exception would break the shell experience with a Python traceback
+    - Click's shell completion protocol expects functions to return empty lists on error
+    - This allows tab-completion to fail gracefully without disrupting the user
+
+    Usage:
+        with shell_completion_error_boundary():
+            # Shell completion logic here
+            # Any exception will be suppressed
+            return completion_candidates
+
+    Reference:
+        Click's shell completion protocol:
+        https://click.palletsprojects.com/en/stable/shell-completion/
+    """
+    try:
+        yield
+    except Exception:
+        # Suppress all exceptions for graceful degradation
+        # Shell completion should never break the user's shell experience
+        pass
 
 
 class Ensure:
@@ -318,16 +352,14 @@ def complete_worktree_names(
 ) -> list[str]:
     """Shell completion for worktree names. Includes 'root' for the repository root.
 
-    This is a shell completion function, which is an acceptable error boundary.
-    Exceptions are caught to provide graceful degradation - if completion fails,
-    we return an empty list rather than breaking the user's shell experience.
+    Uses shell_completion_error_boundary for graceful error handling.
 
     Args:
         ctx: Click context
         param: Click parameter (unused, but required by Click's completion protocol)
         incomplete: Partial input string to complete
     """
-    try:
+    with shell_completion_error_boundary():
         # During shell completion, ctx.obj may be None if the CLI group callback
         # hasn't run yet. Create a default context in this case.
         erk_ctx = ctx.find_root().obj
@@ -349,9 +381,7 @@ def complete_worktree_names(
                 names.append(worktree_name)
 
         return names
-    except Exception:
-        # Shell completion error boundary: return empty list for graceful degradation
-        return []
+    return []
 
 
 def complete_branch_names(
@@ -363,16 +393,14 @@ def complete_branch_names(
     (e.g., 'origin/feature' becomes 'feature').
     Duplicates are removed if a branch exists both locally and remotely.
 
-    This is a shell completion function, which is an acceptable error boundary.
-    Exceptions are caught to provide graceful degradation - if completion fails,
-    we return an empty list rather than breaking the user's shell experience.
+    Uses shell_completion_error_boundary for graceful error handling.
 
     Args:
         ctx: Click context
         param: Click parameter (unused, but required by Click's completion protocol)
         incomplete: Partial input string to complete
     """
-    try:
+    with shell_completion_error_boundary():
         # During shell completion, ctx.obj may be None if the CLI group callback
         # hasn't run yet. Create a default context in this case.
         erk_ctx = ctx.find_root().obj
@@ -403,9 +431,7 @@ def complete_branch_names(
         # Filter by incomplete prefix and return sorted list
         matching_branches = [name for name in branch_names if name.startswith(incomplete)]
         return sorted(matching_branches)
-    except Exception:
-        # Shell completion error boundary: return empty list for graceful degradation
-        return []
+    return []
 
 
 def complete_plan_files(
@@ -413,9 +439,7 @@ def complete_plan_files(
 ) -> list[str]:
     """Shell completion for plan files (markdown files in current directory).
 
-    This is a shell completion function, which is an acceptable error boundary.
-    Exceptions are caught to provide graceful degradation - if completion fails,
-    we return an empty list rather than breaking the user's shell experience.
+    Uses shell_completion_error_boundary for graceful error handling.
 
     Args:
         ctx: Click context
@@ -425,7 +449,7 @@ def complete_plan_files(
     Returns:
         List of completion candidates (filenames matching incomplete text)
     """
-    try:
+    with shell_completion_error_boundary():
         # During shell completion, ctx.obj may be None if the CLI group callback
         # hasn't run yet. Create a default context in this case.
         erk_ctx = ctx.find_root().obj
@@ -443,7 +467,4 @@ def complete_plan_files(
                 candidates.append(md_file.name)
 
         return sorted(candidates)
-    except Exception:
-        # Shell completion error boundary: return empty list on any error
-        # This ensures shell doesn't show Python tracebacks during tab-completion
-        return []
+    return []

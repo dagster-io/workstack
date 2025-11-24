@@ -16,6 +16,7 @@ The documentation is organized by audience and purpose:
 - [glossary.md](glossary.md) - Project terminology and definitions
 - [testing.md](testing.md) - Testing architecture with fakes and ops patterns
 - [command-agent-delegation.md](command-agent-delegation.md) - Command-agent delegation pattern for workflow orchestration
+- [claude-code-session-layout.md](claude-code-session-layout.md) - Claude Code session log structure and format (`~/.claude/projects/`)
 
 ### For Humans
 
@@ -58,5 +59,6 @@ docs/
 | Creating command-agent delegation | [command-agent-delegation.md](command-agent-delegation.md)                                                     |
 | Implementing script mode          | [cli-script-mode.md](cli-script-mode.md)                                                                       |
 | Styling CLI output                | [cli-output-styling.md](cli-output-styling.md)                                                                 |
+| Working with session logs         | [claude-code-session-layout.md](claude-code-session-layout.md)                                                 |
 | Python coding standards           | Load `dignified-python` skill                                                                                  |
 | Understanding agentic programming | [../writing/agentic-programming/agentic-programming.md](../writing/agentic-programming/agentic-programming.md) |

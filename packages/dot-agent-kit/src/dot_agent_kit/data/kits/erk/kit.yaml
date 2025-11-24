@@ -65,6 +65,9 @@ kit_cli_commands:
   - name: check-impl
     path: kit_cli_commands/erk/check_impl.py
     description: Check .impl/ folder structure and validate prerequisites
+  - name: debug-agent
+    path: kit_cli_commands/erk/debug_agent.py
+    description: Inspect failed agent runs from the current session
 hooks:
   - id: session-id-injector-hook
     lifecycle: UserPromptSubmit

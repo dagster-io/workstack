@@ -146,14 +146,14 @@ def find_most_recent_plan_file(repo_root: Path) -> PlanFileSuccess | PlanFileErr
     )
 
 
-@click.command()
+@click.command(name="find-most-recent-plan-file")
 @click.option(
     "--repo-root",
     type=click.Path(exists=False, path_type=Path),
     help="Repository root path (defaults to git rev-parse --show-toplevel)",
 )
 def find_most_recent_plan_file_cli(repo_root: Path | None) -> None:
-    """Find most recent *-plan.md file at repository root.
+    """Find most recent *-plan.md file at repository root (CLI command).
 
     This command searches for plan files matching *-plan.md pattern
     at the repository root and returns the most recent by modification time.

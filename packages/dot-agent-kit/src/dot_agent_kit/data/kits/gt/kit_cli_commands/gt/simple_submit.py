@@ -13,6 +13,7 @@ Design goals:
 
 import json
 import sys
+import time
 from pathlib import Path
 
 import click
@@ -237,6 +238,40 @@ def _submit_pr(ops: GtKit, logger: DebugLogger) -> dict | None:
     return None
 
 
+def _get_pr_info(ops: GtKit, logger: DebugLogger) -> tuple[int, str] | None:
+    """Get PR info from GitHub with exponential backoff retry.
+
+    The GitHub API may not immediately have PR info available after submission,
+    so we retry with exponential backoff (1s, 2s, 4s) up to 3 attempts.
+
+    Args:
+        ops: GtKit operations instance
+        logger: Debug logger
+
+    Returns:
+        Tuple of (pr_number, pr_url) if found, None otherwise
+    """
+    max_attempts = 3
+    backoff_delays = [1, 2, 4]  # Exponential backoff in seconds
+
+    for attempt in range(max_attempts):
+        logger.log(f"Getting PR info (attempt {attempt + 1}/{max_attempts})...")
+        pr_info = ops.github().get_pr_info()
+
+        if pr_info is not None:
+            logger.log(f"Found PR info on attempt {attempt + 1}")
+            return pr_info
+
+        if attempt < max_attempts - 1:
+            delay = backoff_delays[attempt]
+            logger.log(f"PR info not available, retrying in {delay}s...")
+            time.sleep(delay)
+        else:
+            logger.log("PR info not available after all retries")
+
+    return None
+
+
 def _finalize_pr_metadata(
     ops: GtKit,
     logger: DebugLogger,
@@ -322,15 +357,14 @@ def complete_submission(
     if error is not None:
         return error
 
-    # Get PR info
-    logger.log("Getting PR info...")
-    pr_info = ops.github().get_pr_info()
-    if not pr_info:
+    # Get PR info with retry (may not be immediately available)
+    pr_info = _get_pr_info(ops, logger)
+    if pr_info is None:
         return {
             "success": True,
             "pr_number": None,
             "pr_url": None,
-            "message": "PR submitted but could not retrieve PR info",
+            "message": "PR submitted but could not retrieve PR info after retries",
         }
 
     pr_number, pr_url = pr_info

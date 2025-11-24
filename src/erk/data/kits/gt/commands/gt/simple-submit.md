@@ -15,12 +15,16 @@ Streamlined alternative to `/gt:submit-squashed-branch` optimized for speed (<30
 
 ## How It Works
 
+Uses a two-phase workflow executed by the agent:
+
+**Prepare Phase:**
+
 1. Commits any uncommitted changes
-2. Checks for `.impl/issue.json` (from erk workflows)
-3. Restacks the branch
-4. Gets diff and generates commit message
-5. Amends commit and submits PR
-6. Automatically adds "Closes #N" if issue found
+2. Restacks the branch
+3. Gets diff for AI analysis
+4. Checks for `.impl/issue.json` (from erk workflows)
+
+**Complete Phase:** 5. Generates commit message from diff 6. Amends commit with final message 7. Squashes multiple commits if needed 8. Submits PR via Graphite (`gt submit --no-edit`) 9. Retrieves PR info (available immediately after submission) 10. Automatically adds "Closes #N" if issue found
 
 ## GitHub Issue Linking
 

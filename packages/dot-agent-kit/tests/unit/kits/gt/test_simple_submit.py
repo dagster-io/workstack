@@ -24,10 +24,15 @@ def runner() -> CliRunner:
 class TestExecuteSimpleSubmit:
     """Tests for execute_simple_submit() function (prepare phase)."""
 
-    def test_prepare_with_no_uncommitted_changes(self) -> None:
+    def test_prepare_with_no_uncommitted_changes(self, tmp_path: Path) -> None:
         """Test prepare phase when no uncommitted changes exist."""
         ops = FakeGtKitOps().with_branch("feature-branch", parent="main").with_commits(1)
-        result = execute_simple_submit(ops=ops)
+
+        # Mock Path.cwd() to return temp directory without .impl/issue.json
+        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.simple_submit.Path.cwd"
+        with patch(patch_path) as mock_cwd:
+            mock_cwd.return_value = tmp_path
+            result = execute_simple_submit(ops=ops)
 
         assert result["success"] is True
         assert result["branch"] == "feature-branch"
@@ -35,7 +40,7 @@ class TestExecuteSimpleSubmit:
         assert "diff" in result
         assert result["issue_number"] is None
 
-    def test_prepare_with_uncommitted_changes(self) -> None:
+    def test_prepare_with_uncommitted_changes(self, tmp_path: Path) -> None:
         """Test prepare phase commits uncommitted changes."""
         ops = (
             FakeGtKitOps()
@@ -43,13 +48,18 @@ class TestExecuteSimpleSubmit:
             .with_uncommitted_files(["file.py"])
             .with_commits(0)
         )
-        result = execute_simple_submit(description="WIP changes", ops=ops)
+
+        # Mock Path.cwd() to avoid picking up real .impl/issue.json
+        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.simple_submit.Path.cwd"
+        with patch(patch_path) as mock_cwd:
+            mock_cwd.return_value = tmp_path
+            result = execute_simple_submit(description="WIP changes", ops=ops)
 
         assert result["success"] is True
         # Verify commit was created
         assert ops.git().count_commits_in_branch("main") == 1
 
-    def test_prepare_with_uncommitted_changes_default_message(self) -> None:
+    def test_prepare_with_uncommitted_changes_default_message(self, tmp_path: Path) -> None:
         """Test prepare phase uses default commit message when description not provided."""
         ops = (
             FakeGtKitOps()
@@ -57,13 +67,18 @@ class TestExecuteSimpleSubmit:
             .with_uncommitted_files(["file.py"])
             .with_commits(0)
         )
-        result = execute_simple_submit(ops=ops)  # No description provided
+
+        # Mock Path.cwd() to avoid picking up real .impl/issue.json
+        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.simple_submit.Path.cwd"
+        with patch(patch_path) as mock_cwd:
+            mock_cwd.return_value = tmp_path
+            result = execute_simple_submit(ops=ops)  # No description provided
 
         assert result["success"] is True
         # Check default message was used
         assert ops.git().get_state().commits[0] == "WIP: Prepare for submission"
 
-    def test_prepare_fails_when_add_fails(self) -> None:
+    def test_prepare_fails_when_add_fails(self, tmp_path: Path) -> None:
         """Test error when git add fails."""
         ops = (
             FakeGtKitOps()
@@ -71,12 +86,17 @@ class TestExecuteSimpleSubmit:
             .with_uncommitted_files(["file.py"])
             .with_add_failure()  # Configure add to fail
         )
-        result = execute_simple_submit(ops=ops)
+
+        # Mock Path.cwd() to avoid picking up real .impl/issue.json
+        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.simple_submit.Path.cwd"
+        with patch(patch_path) as mock_cwd:
+            mock_cwd.return_value = tmp_path
+            result = execute_simple_submit(ops=ops)
 
         assert result["success"] is False
         assert result["error"] == "Failed to stage changes"
 
-    def test_prepare_fails_when_restack_fails(self) -> None:
+    def test_prepare_fails_when_restack_fails(self, tmp_path: Path) -> None:
         """Test error when restack fails."""
         ops = (
             FakeGtKitOps()
@@ -84,24 +104,34 @@ class TestExecuteSimpleSubmit:
             .with_commits(1)
             .with_restack_failure()
         )
-        result = execute_simple_submit(ops=ops)
+
+        # Mock Path.cwd() to avoid picking up real .impl/issue.json
+        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.simple_submit.Path.cwd"
+        with patch(patch_path) as mock_cwd:
+            mock_cwd.return_value = tmp_path
+            result = execute_simple_submit(ops=ops)
 
         assert result["success"] is False
         assert result["error"] == "Failed to restack branch"
 
-    def test_prepare_fails_when_no_branch(self) -> None:
+    def test_prepare_fails_when_no_branch(self, tmp_path: Path) -> None:
         """Test error when current branch cannot be determined."""
         ops = FakeGtKitOps()
         # Set current_branch to empty to simulate failure
         from dataclasses import replace
 
         ops.git()._state = replace(ops.git().get_state(), current_branch="")
-        result = execute_simple_submit(ops=ops)
+
+        # Mock Path.cwd() to avoid picking up real .impl/issue.json
+        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.simple_submit.Path.cwd"
+        with patch(patch_path) as mock_cwd:
+            mock_cwd.return_value = tmp_path
+            result = execute_simple_submit(ops=ops)
 
         assert result["success"] is False
         assert result["error"] == "Could not determine current branch"
 
-    def test_prepare_fails_when_no_parent(self) -> None:
+    def test_prepare_fails_when_no_parent(self, tmp_path: Path) -> None:
         """Test error when parent branch cannot be determined."""
         ops = FakeGtKitOps().with_branch("orphan-branch", parent="main")
         # Remove parent relationship to simulate gt parent failure
@@ -109,7 +139,12 @@ class TestExecuteSimpleSubmit:
 
         gt_state = ops.graphite().get_state()
         ops.graphite()._state = replace(gt_state, branch_parents={})
-        result = execute_simple_submit(ops=ops)
+
+        # Mock Path.cwd() to avoid picking up real .impl/issue.json
+        patch_path = "erk.data.kits.gt.kit_cli_commands.gt.simple_submit.Path.cwd"
+        with patch(patch_path) as mock_cwd:
+            mock_cwd.return_value = tmp_path
+            result = execute_simple_submit(ops=ops)
 
         assert result["success"] is False
         assert result["error"] == "Could not determine parent branch"
@@ -346,6 +381,41 @@ class TestIssueLinkling:
         # Verify commit message unchanged
         git_state = ops.git().get_state()
         assert git_state.commits[-1] == "Add feature\n\nFull description"
+
+
+class TestPRInfoRetry:
+    """Tests for PR info polling with exponential backoff retry."""
+
+    def test_complete_retries_pr_info_when_initially_unavailable(self) -> None:
+        """Test that PR info is retried when not immediately available after submit."""
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_pr(123, url="https://github.com/repo/pull/123")
+            .with_pr_delay(attempts_until_visible=2)  # PR visible on 2nd attempt
+        )
+        result = complete_submission("Add feature", verbose=True, ops=ops)
+
+        assert result["success"] is True
+        assert result["pr_number"] == 123
+        assert result["pr_url"] == "https://github.com/repo/pull/123"
+        # PR was found after retry
+
+    def test_complete_succeeds_when_pr_info_never_available(self) -> None:
+        """Test that complete succeeds with message when PR info never becomes available."""
+        ops = (
+            FakeGtKitOps()
+            .with_branch("feature-branch", parent="main")
+            .with_commits(1)
+            .with_pr_delay(attempts_until_visible=999)  # PR never visible within retry window
+        )
+        result = complete_submission("Add feature", verbose=True, ops=ops)
+
+        assert result["success"] is True
+        assert result["pr_number"] is None
+        assert result["pr_url"] is None
+        assert "PR submitted but could not retrieve PR info after retries" in result["message"]
 
 
 class TestMarkPRReady:

@@ -1,1 +1,1 @@
-../../../src/erk/data/kits/gt/agents/gt/gt-simple-submitter.md
+../../../packages/dot-agent-kit/src/dot_agent_kit/data/kits/gt/agents/gt/gt-simple-submitter.md

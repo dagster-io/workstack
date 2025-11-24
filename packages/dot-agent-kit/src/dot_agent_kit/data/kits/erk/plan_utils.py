@@ -129,3 +129,58 @@ def extract_title_from_plan(plan: str) -> str:
                 return title[:100] if len(title) > 100 else title
 
     return "Implementation Plan"
+
+
+def format_error(brief: str, details: str, actions: list[str]) -> str:
+    """Format a consistent error message with brief, details, and suggested actions.
+
+    Creates standardized error output following the template:
+    - Brief error description (5-10 words)
+    - Detailed error context
+    - Numbered list of 1-3 suggested actions
+
+    This function is pure (no I/O) and follows LBYL pattern for validation.
+
+    Args:
+        brief: Brief error description (5-10 words recommended)
+        details: Specific error message or context
+        actions: List of 1-3 concrete suggested actions
+
+    Returns:
+        Formatted error message as string
+
+    Example:
+        >>> error = format_error(
+        ...     "Plan content is too minimal",
+        ...     "Plan has only 50 characters (minimum 100 required)",
+        ...     [
+        ...         "Provide a more detailed implementation plan",
+        ...         "Include specific tasks, steps, or phases",
+        ...         "Use headers and lists to structure the plan"
+        ...     ]
+        ... )
+        >>> "❌ Error: Plan content is too minimal" in error
+        True
+        >>> "Details: Plan has only 50 characters" in error
+        True
+        >>> "1. Provide a more detailed" in error
+        True
+    """
+    # LBYL: Check actions list is not empty
+    if not actions:
+        actions = ["Review the error details and try again"]
+
+    # Build error message lines
+    lines = [
+        f"❌ Error: {brief}",
+        "",
+        f"Details: {details}",
+        "",
+        "Suggested action:" if len(actions) == 1 else "Suggested actions:",
+    ]
+
+    # Add numbered actions
+    for i, action in enumerate(actions, start=1):
+        lines.append(f"  {i}. {action}")
+
+    return "\n".join(lines)

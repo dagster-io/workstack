@@ -11,7 +11,6 @@ import os
 import re
 import shlex
 import shutil
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import NamedTuple
@@ -31,7 +30,7 @@ from erk.cli.commands.navigation_helpers import complete_plan_files
 from erk.cli.config import LoadedConfig
 from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output
-from erk.core.claude_executor import ClaudeExecutor, RealClaudeExecutor
+from erk.core.claude_executor import ClaudeExecutor
 from erk.core.context import ErkContext
 from erk.core.plan_issue_store.types import PlanIssueState
 from erk.core.repo_discovery import ensure_erk_metadata_dir

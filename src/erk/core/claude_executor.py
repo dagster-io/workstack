@@ -32,9 +32,7 @@ class ClaudeExecutor(ABC):
         ...
 
     @abstractmethod
-    def execute_command(
-        self, command: str, worktree_path: Path, dangerous: bool
-    ) -> None:
+    def execute_command(self, command: str, worktree_path: Path, dangerous: bool) -> None:
         """Execute a Claude CLI slash command in non-interactive mode.
 
         Args:
@@ -63,9 +61,7 @@ class RealClaudeExecutor(ClaudeExecutor):
         """Check if Claude CLI is in PATH using shutil.which."""
         return shutil.which("claude") is not None
 
-    def execute_command(
-        self, command: str, worktree_path: Path, dangerous: bool
-    ) -> None:
+    def execute_command(self, command: str, worktree_path: Path, dangerous: bool) -> None:
         """Execute Claude CLI command via subprocess.
 
         Implementation details:

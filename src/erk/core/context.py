@@ -122,6 +122,7 @@ class ErkContext:
             use ErkContext.for_test() instead.
         """
         from erk_shared.github.issues import FakeGitHubIssues
+        from tests.fakes.claude_executor import FakeClaudeExecutor
         from tests.fakes.completion import FakeCompletion
         from tests.fakes.script_writer import FakeScriptWriter
         from tests.fakes.shell import FakeShell
@@ -132,7 +133,6 @@ class ErkContext:
         from erk.core.github.fake import FakeGitHub
         from erk.core.graphite.fake import FakeGraphite
         from erk.core.plan_issue_store import FakePlanIssueStore
-        from tests.fakes.claude_executor import FakeClaudeExecutor
 
         return ErkContext(
             git=git,

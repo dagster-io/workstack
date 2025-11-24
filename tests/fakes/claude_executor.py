@@ -59,9 +59,7 @@ class FakeClaudeExecutor(ClaudeExecutor):
         """Return the availability configured at construction time."""
         return self._claude_available
 
-    def execute_command(
-        self, command: str, worktree_path: Path, dangerous: bool
-    ) -> None:
+    def execute_command(self, command: str, worktree_path: Path, dangerous: bool) -> None:
         """Track command execution without running subprocess.
 
         This method records the call parameters for test assertions.

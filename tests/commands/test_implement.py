@@ -1028,7 +1028,6 @@ def test_non_interactive_with_submit_runs_all_commands() -> None:
         assert commands[2] == "/gt:submit-squashed-branch"
 
 
-
 def test_script_with_submit_includes_all_commands() -> None:
     """Verify --script --submit succeeds and creates script file."""
     plan_issue = _create_sample_plan_issue()

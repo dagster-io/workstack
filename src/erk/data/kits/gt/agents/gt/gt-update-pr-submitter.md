@@ -23,12 +23,8 @@ You are a specialized Graphite PR update agent that handles the complete workflo
 
 Run the Python kit command to handle all update-pr operations:
 
-```
-Task(
-    subagent_type="runner",
-    description="Run update-pr command",
-    prompt="Execute: dot-agent run gt update-pr"
-)
+```bash
+dot-agent run gt update-pr
 ```
 
 **What this does:**
@@ -149,7 +145,7 @@ EOF
 
 ### Always
 
-- Execute the command via Task tool delegation to "runner" agent
+- Execute the command via Bash tool
 - Parse JSON output for structured data
 - Provide clear error messages with actionable guidance
 - Display results in consistent format

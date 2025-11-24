@@ -22,27 +22,21 @@ Examples:
 """
 
 import json
-from pathlib import Path
 
 import click
 from erk_shared.erp_folder import create_erp_folder
 
-from erk.core.context import create_context
+from dot_agent_kit.context_helpers import require_github_issues, require_repo_root
 
 
 @click.command(name="create-erp-from-issue")
 @click.argument("issue_number", type=int)
 @click.argument("issue_title")
-@click.option(
-    "--repo-root",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
-    default=None,
-    help="Repository root directory (defaults to current directory)",
-)
+@click.pass_context
 def create_erp_from_issue(
+    ctx: click.Context,
     issue_number: int,
     issue_title: str,
-    repo_root: Path | None,
 ) -> None:
     """Create .erp/ folder from GitHub issue with plan content.
 
@@ -52,33 +46,39 @@ def create_erp_from_issue(
     ISSUE_NUMBER: GitHub issue number containing the plan
     ISSUE_TITLE: Title of the GitHub issue
     """
-    # Default to current directory if not specified
-    if repo_root is None:
-        repo_root = Path.cwd()
+    # Get GitHub Issues from context (LBYL check in helper)
+    github = require_github_issues(ctx)
+    repo_root = require_repo_root(ctx)
 
-    # Create context to access plan store
-    # Use script=True to suppress diagnostic output in CI environments
-    ctx = create_context(dry_run=False, script=True)
-
-    # Fetch plan from GitHub (raises RuntimeError if not found)
+    # Fetch issue from GitHub (raises RuntimeError if not found)
     try:
-        plan = ctx.plan_store.get_plan(repo_root, str(issue_number))
+        issue = github.get_issue(repo_root, issue_number)
     except RuntimeError as e:
         error_output = {
             "success": False,
-            "error": "plan_not_found",
-            "message": f"Could not fetch plan for issue #{issue_number}: {e}. "
-            f"Ensure issue has erk-plan label and plan content.",
+            "error": "issue_not_found",
+            "message": f"Could not fetch issue #{issue_number}: {e}",
         }
         click.echo(json.dumps(error_output), err=True)
         raise SystemExit(1) from e
 
+    # Validate issue has erk-plan label
+    if "erk-plan" not in issue.labels:
+        error_output = {
+            "success": False,
+            "error": "missing_erk_plan_label",
+            "message": f"Issue #{issue_number} does not have 'erk-plan' label. "
+            f"Ensure issue has erk-plan label.",
+        }
+        click.echo(json.dumps(error_output), err=True)
+        raise SystemExit(1)
+
     # Create .erp/ folder with plan content
     erp_path = repo_root / ".erp"
     create_erp_folder(
-        plan_content=plan.body,
+        plan_content=issue.body,
         issue_number=issue_number,
-        issue_url=plan.url,
+        issue_url=issue.url,
         issue_title=issue_title,
         repo_root=repo_root,
     )
@@ -88,6 +88,6 @@ def create_erp_from_issue(
         "success": True,
         "erp_path": str(erp_path),
         "issue_number": issue_number,
-        "issue_url": plan.url,
+        "issue_url": issue.url,
     }
     click.echo(json.dumps(output))

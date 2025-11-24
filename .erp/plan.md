@@ -1,17 +1,21 @@
 ## Fix erk kit command import errors
 
 ### Problem
+
 Three erk kit commands are failing to import with "No module named 'erk'" warnings:
+
 1. `create-plan-from-context`
 2. `create-enriched-plan-from-context`
 3. `create-erp-from-issue`
 
 ### Root Cause
+
 The commands have incorrect import statements using `erk.data.kits.erk` instead of `dot_agent_kit.data.kits.erk`.
 
 ### Implementation Steps
 
 **1. Fix create_plan_from_context.py (line 21)**
+
 ```python
 # Change from:
 from erk.data.kits.erk.plan_utils import extract_title_from_plan
@@ -20,6 +24,7 @@ from dot_agent_kit.data.kits.erk.plan_utils import extract_title_from_plan
 ```
 
 **2. Fix create_enriched_plan_from_context.py (line 18)**
+
 ```python
 # Change from:
 from erk.data.kits.erk.plan_utils import extract_title_from_plan
@@ -28,6 +33,7 @@ from dot_agent_kit.data.kits.erk.plan_utils import extract_title_from_plan
 ```
 
 **3. Fix create_erp_from_issue.py (line 30)**
+
 ```python
 # Change from:
 from erk.core.context import create_context
@@ -37,10 +43,12 @@ from dot_agent_kit.data.kits.erk.plan_utils import extract_title_from_plan
 ```
 
 **4. Verify fixes**
+
 - Run `dot-agent run erk --help` to confirm no import warnings
 - Test each command if possible
 
 ### Files to Edit
+
 - `packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/kit_cli_commands/erk/create_plan_from_context.py`
 - `packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/kit_cli_commands/erk/create_enriched_plan_from_context.py`
 - `packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/kit_cli_commands/erk/create_erp_from_issue.py`
@@ -50,11 +58,13 @@ from dot_agent_kit.data.kits.erk.plan_utils import extract_title_from_plan
 ### Architectural Insights
 
 All kit CLI commands run within the `dot_agent_kit` package namespace. The package structure is:
+
 - Kit commands are located at: `packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/kit_cli_commands/erk/`
 - Utility modules are at: `packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/`
 - At runtime, imports must use `dot_agent_kit.*` paths, not `erk.*` paths
 
 The `erk` package is a separate application package. Kit commands cannot import from it directly because:
+
 1. Kit commands execute in the dot-agent-kit environment
 2. The erk package may not be installed or available in that environment
 3. Kit command utilities (like plan_utils.py) are co-located within dot_agent_kit
@@ -69,7 +79,7 @@ The `erk` package is a separate application package. Kit commands cannot import 
 
 - All three command files use Click CLI framework with EAFP error handling
 - `create_plan_from_context.py` reads from stdin, processes markdown, outputs JSON
-- `create_enriched_plan_from_context.py` reads from file (--plan-file), validates, outputs JSON  
+- `create_enriched_plan_from_context.py` reads from file (--plan-file), validates, outputs JSON
 - `create_erp_from_issue.py` is structurally different - fetches GitHub issue, creates context, invokes plan store
 - Verified `plan_utils.py` exists at `packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/plan_utils.py` with `extract_title_from_plan` function
 - Other working commands in same directory use `from dot_agent_kit.data.kits.erk.*` imports successfully
@@ -86,13 +96,15 @@ The `erk` package is a separate application package. Kit commands cannot import 
 ### Complex Reasoning
 
 The import errors reveal a package architecture boundary:
+
 - **dot-agent-kit** contains kit infrastructure and bundled kits (including the erk kit)
 - **erk** is the main application that uses worktrees and planning workflows
 - Kit commands should be self-contained within dot-agent-kit
 - If a kit command needs erk application functionality, it creates a dependency issue
 
 The fix for the first two commands is straightforward (wrong package name). The third command (`create_erp_from_issue.py`) needs investigation:
-- Does it genuinely need `erk.core.context`? 
+
+- Does it genuinely need `erk.core.context`?
 - If yes: Should erk be a kit command dependency?
 - If no: What alternative approach should it use?
 

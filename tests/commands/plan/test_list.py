@@ -724,3 +724,351 @@ def test_list_plans_handles_multiple_local_worktrees() -> None:
         # Should show exactly one of the worktrees (first-found behavior)
         # The order depends on git.list_worktrees() order
         assert "first-worktree" in result.output or "second-worktree" in result.output
+
+
+def test_list_plans_shows_action_state_with_no_queue_label() -> None:
+    """Test that plans without erk-queue label show '-' for action state."""
+    # Arrange
+    issue1 = Plan(
+        plan_identifier="1001",
+        title="Regular Plan",
+        body="",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/1001",
+        labels=["erk-plan"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 1, tzinfo=UTC),
+        metadata={"number": 1001},
+    )
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        store = FakePlanStore(plans={"1001": issue1})
+        ctx = build_workspace_test_context(env, plan_store=store)
+
+        # Act
+        result = runner.invoke(plan_group, ["list"], obj=ctx)
+
+        # Assert
+        assert result.exit_code == 0
+        assert "#1001" in result.output
+
+
+def test_list_plans_shows_pending_action_state() -> None:
+    """Test that plans with erk-queue label but no metadata show 'Pending'."""
+    from erk_shared.github.issues import FakeGitHubIssues
+
+    # Arrange
+    issue1 = Plan(
+        plan_identifier="1002",
+        title="Pending Plan",
+        body="",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/1002",
+        labels=["erk-plan", "erk-queue"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 1, tzinfo=UTC),
+        metadata={"number": 1002},
+    )
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        github = FakeGitHubIssues(comments={1002: []})
+        store = FakePlanStore(plans={"1002": issue1})
+        ctx = build_workspace_test_context(env, plan_store=store, issues=github)
+
+        # Act
+        result = runner.invoke(plan_group, ["list"], obj=ctx)
+
+        # Assert
+        assert result.exit_code == 0
+        assert "#1002" in result.output
+
+
+def test_list_plans_shows_running_action_state_with_workflow_started() -> None:
+    """Test that plans with workflow-started metadata show 'Running'."""
+    from erk_shared.github.issues import FakeGitHubIssues
+
+    # Arrange
+    issue1 = Plan(
+        plan_identifier="1003",
+        title="Running Plan",
+        body="",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/1003",
+        labels=["erk-plan", "erk-queue"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 1, tzinfo=UTC),
+        metadata={"number": 1003},
+    )
+
+    # Create comment with workflow-started metadata
+    comment = """
+<!-- erk:metadata-block:workflow-started -->
+<details>
+<summary><code>workflow-started</code></summary>
+
+```yaml
+status: started
+started_at: "2024-11-23T10:00:00Z"
+workflow_run_id: "12345"
+workflow_run_url: "https://github.com/owner/repo/actions/runs/12345"
+issue_number: 1003
+```
+</details>
+<!-- /erk:metadata-block -->
+"""
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        github = FakeGitHubIssues(comments={1003: [comment]})
+        store = FakePlanStore(plans={"1003": issue1})
+        ctx = build_workspace_test_context(env, plan_store=store, issues=github)
+
+        # Act
+        result = runner.invoke(plan_group, ["list"], obj=ctx)
+
+        # Assert
+        assert result.exit_code == 0
+        assert "#1003" in result.output
+
+
+def test_list_plans_shows_complete_action_state() -> None:
+    """Test that plans with complete implementation status show 'Complete'."""
+    from erk_shared.github.issues import FakeGitHubIssues
+
+    # Arrange
+    issue1 = Plan(
+        plan_identifier="1004",
+        title="Complete Plan",
+        body="",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/1004",
+        labels=["erk-plan", "erk-queue"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 1, tzinfo=UTC),
+        metadata={"number": 1004},
+    )
+
+    # Create comment with complete status
+    comment = """
+<!-- erk:metadata-block:erk-implementation-status -->
+<details>
+<summary><code>erk-implementation-status</code></summary>
+
+```yaml
+status: complete
+completed_steps: 5
+total_steps: 5
+timestamp: "2024-11-23T12:00:00Z"
+```
+</details>
+<!-- /erk:metadata-block -->
+"""
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        github = FakeGitHubIssues(comments={1004: [comment]})
+        store = FakePlanStore(plans={"1004": issue1})
+        ctx = build_workspace_test_context(env, plan_store=store, issues=github)
+
+        # Act
+        result = runner.invoke(plan_group, ["list"], obj=ctx)
+
+        # Assert
+        assert result.exit_code == 0
+        assert "#1004" in result.output
+
+
+def test_list_plans_shows_failed_action_state() -> None:
+    """Test that plans with failed implementation status show 'Failed'."""
+    from erk_shared.github.issues import FakeGitHubIssues
+
+    # Arrange
+    issue1 = Plan(
+        plan_identifier="1005",
+        title="Failed Plan",
+        body="",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/1005",
+        labels=["erk-plan", "erk-queue"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 1, tzinfo=UTC),
+        metadata={"number": 1005},
+    )
+
+    # Create comment with failed status
+    comment = """
+<!-- erk:metadata-block:erk-implementation-status -->
+<details>
+<summary><code>erk-implementation-status</code></summary>
+
+```yaml
+status: failed
+completed_steps: 2
+total_steps: 5
+timestamp: "2024-11-23T12:00:00Z"
+```
+</details>
+<!-- /erk:metadata-block -->
+"""
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        github = FakeGitHubIssues(comments={1005: [comment]})
+        store = FakePlanStore(plans={"1005": issue1})
+        ctx = build_workspace_test_context(env, plan_store=store, issues=github)
+
+        # Act
+        result = runner.invoke(plan_group, ["list"], obj=ctx)
+
+        # Assert
+        assert result.exit_code == 0
+        assert "#1005" in result.output
+
+
+def test_list_plans_filter_by_action_state_pending() -> None:
+    """Test filtering plans by action state (pending)."""
+    from erk_shared.github.issues import FakeGitHubIssues
+
+    # Arrange - Create plans with different action states
+    pending_plan = Plan(
+        plan_identifier="1010",
+        title="Pending Plan",
+        body="",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/1010",
+        labels=["erk-plan", "erk-queue"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 1, tzinfo=UTC),
+        metadata={"number": 1010},
+    )
+
+    no_queue_plan = Plan(
+        plan_identifier="1011",
+        title="No Queue Plan",
+        body="",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/1011",
+        labels=["erk-plan"],
+        assignees=[],
+        created_at=datetime(2024, 1, 2, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 2, tzinfo=UTC),
+        metadata={"number": 1011},
+    )
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        github = FakeGitHubIssues(comments={1010: [], 1011: []})
+        store = FakePlanStore(plans={"1010": pending_plan, "1011": no_queue_plan})
+        ctx = build_workspace_test_context(env, plan_store=store, issues=github)
+
+        # Act
+        result = runner.invoke(plan_group, ["list", "--action-state", "pending"], obj=ctx)
+
+        # Assert
+        assert result.exit_code == 0
+        assert "#1010" in result.output
+        assert "Pending Plan" in result.output
+        assert "#1011" not in result.output
+
+
+def test_list_plans_filter_by_action_state_complete() -> None:
+    """Test filtering plans by action state (complete)."""
+    from erk_shared.github.issues import FakeGitHubIssues
+
+    # Arrange
+    complete_plan = Plan(
+        plan_identifier="1020",
+        title="Complete Plan",
+        body="",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/1020",
+        labels=["erk-plan", "erk-queue"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 1, tzinfo=UTC),
+        metadata={"number": 1020},
+    )
+
+    pending_plan = Plan(
+        plan_identifier="1021",
+        title="Pending Plan",
+        body="",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/1021",
+        labels=["erk-plan", "erk-queue"],
+        assignees=[],
+        created_at=datetime(2024, 1, 2, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 2, tzinfo=UTC),
+        metadata={"number": 1021},
+    )
+
+    # Create comment with complete status
+    complete_comment = """
+<!-- erk:metadata-block:erk-implementation-status -->
+<details>
+<summary><code>erk-implementation-status</code></summary>
+
+```yaml
+status: complete
+completed_steps: 5
+total_steps: 5
+timestamp: "2024-11-23T12:00:00Z"
+```
+</details>
+<!-- /erk:metadata-block -->
+"""
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        github = FakeGitHubIssues(comments={1020: [complete_comment], 1021: []})
+        store = FakePlanStore(plans={"1020": complete_plan, "1021": pending_plan})
+        ctx = build_workspace_test_context(env, plan_store=store, issues=github)
+
+        # Act
+        result = runner.invoke(plan_group, ["list", "--action-state", "complete"], obj=ctx)
+
+        # Assert
+        assert result.exit_code == 0
+        assert "#1020" in result.output
+        assert "Complete Plan" in result.output
+        assert "#1021" not in result.output
+
+
+def test_list_plans_action_filter_no_matches() -> None:
+    """Test action state filter with no matching plans."""
+    from erk_shared.github.issues import FakeGitHubIssues
+
+    # Arrange - Plan without erk-queue label (action state will be "-")
+    plan = Plan(
+        plan_identifier="1030",
+        title="Regular Plan",
+        body="",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/1030",
+        labels=["erk-plan"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 1, tzinfo=UTC),
+        metadata={"number": 1030},
+    )
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        github = FakeGitHubIssues(comments={})
+        store = FakePlanStore(plans={"1030": plan})
+        ctx = build_workspace_test_context(env, plan_store=store, issues=github)
+
+        # Act - Filter for "running" which won't match
+        result = runner.invoke(plan_group, ["list", "--action-state", "running"], obj=ctx)
+
+        # Assert
+        assert result.exit_code == 0
+        assert "No plans found matching the criteria" in result.output

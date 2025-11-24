@@ -13,9 +13,79 @@ from rich.table import Table
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
 from erk.core.context import ErkContext
-from erk.core.plan_store import PlanQuery, PlanState
+from erk.core.plan_store import Plan, PlanQuery, PlanState
 from erk.core.repo_discovery import ensure_erk_metadata_dir
 from erk.integrations.github.metadata_blocks import parse_metadata_blocks
+
+
+def determine_action_state(plan: Plan, all_comments: dict[int, list[str]]) -> str:
+    """Determine simplified action state from plan metadata.
+
+    Returns one of: "-", "Pending", "Running", "Complete", "Failed"
+
+    Args:
+        plan: The plan to determine state for
+        all_comments: Dict mapping issue numbers to list of comment bodies
+
+    Returns:
+        Action state string for display
+    """
+    # Check if plan has erk-queue label
+    if "erk-queue" not in plan.labels:
+        return "-"
+
+    # Get issue number from metadata
+    issue_number = plan.metadata.get("number")
+    if not isinstance(issue_number, int):
+        return "-"
+
+    # Get comments for this issue
+    if issue_number not in all_comments:
+        # Has label but no comments yet - pending
+        return "Pending"
+
+    comments = all_comments[issue_number]
+
+    # Parse all metadata blocks from all comments
+    # Track most recent by metadata key
+    latest_blocks: dict[str, tuple[datetime, dict[str, object]]] = {}
+
+    for comment_body in comments:
+        blocks = parse_metadata_blocks(comment_body)
+        for block in blocks:
+            # Extract timestamp if present
+            timestamp_str = block.data.get("timestamp")
+            if timestamp_str and isinstance(timestamp_str, str):
+                timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+            else:
+                # Use fallback timestamp if not present
+                timestamp = datetime.min
+
+            # Update if this is the most recent block for this key
+            if block.key not in latest_blocks or timestamp > latest_blocks[block.key][0]:
+                latest_blocks[block.key] = (timestamp, block.data)
+
+    # Check for metadata in priority order
+    # 1. erk-implementation-status - check status field
+    if "erk-implementation-status" in latest_blocks:
+        status = latest_blocks["erk-implementation-status"][1].get("status")
+        if status == "complete":
+            return "Complete"
+        if status == "failed":
+            return "Failed"
+        if status in ("pending", "starting", "in_progress"):
+            return "Running"
+
+    # 2. workflow-started - means workflow is running
+    if "workflow-started" in latest_blocks:
+        return "Running"
+
+    # 3. submission-queued - means queued but not started
+    if "submission-queued" in latest_blocks:
+        return "Pending"
+
+    # Has erk-queue label but no metadata yet
+    return "Pending"
 
 
 def plan_list_options[**P, T](f: Callable[P, T]) -> Callable[P, T]:
@@ -29,6 +99,11 @@ def plan_list_options[**P, T](f: Callable[P, T]) -> Callable[P, T]:
         "--state",
         type=click.Choice(["open", "closed"], case_sensitive=False),
         help="Filter by state",
+    )(f)
+    f = click.option(
+        "--action-state",
+        type=click.Choice(["-", "pending", "running", "complete", "failed"], case_sensitive=False),
+        help="Filter by action state",
     )(f)
     f = click.option(
         "--limit",
@@ -106,6 +181,7 @@ def _list_plans_impl(
     ctx: ErkContext,
     label: tuple[str, ...],
     state: str | None,
+    action_state: str | None,
     limit: int | None,
 ) -> None:
     """Implementation logic for listing plans with optional filters."""
@@ -153,6 +229,22 @@ def _list_plans_impl(
             # If batch fetch fails, continue without worktree status
             pass
 
+    # Apply action state filter if specified
+    if action_state:
+        # Normalize action_state for comparison (user input is lowercase from click.Choice)
+        normalized_filter = action_state.capitalize() if action_state != "-" else "-"
+        filtered_plans: list[Plan] = []
+        for plan in plans:
+            plan_action_state = determine_action_state(plan, all_comments)
+            if plan_action_state == normalized_filter:
+                filtered_plans.append(plan)
+        plans = filtered_plans
+
+        # Check if filtering resulted in no plans
+        if not plans:
+            user_output("No plans found matching the criteria.")
+            return
+
     # Build local worktree mapping from .impl/issue.json files
     worktree_by_issue: dict[int, str] = {}
     worktrees = ctx.git.list_worktrees(repo_root)
@@ -169,8 +261,9 @@ def _list_plans_impl(
     table = Table(show_header=True, header_style="bold")
     table.add_column("Plan", style="cyan", no_wrap=True)
     table.add_column("State", no_wrap=True)
+    table.add_column("Action", no_wrap=True, width=12)
     table.add_column("Title", no_wrap=True)
-    table.add_column("Worktree", style="yellow", no_wrap=True)
+    table.add_column("Local Worktree", style="yellow", no_wrap=True)
 
     # Populate table rows
     for plan in plans:
@@ -180,6 +273,22 @@ def _list_plans_impl(
         # Format state with color
         state_color = "green" if plan.state == PlanState.OPEN else "red"
         state_str = f"[{state_color}]{plan.state.value}[/{state_color}]"
+
+        # Determine action state with color coding
+        action_state = determine_action_state(plan, all_comments)
+        # Apply color styling based on state
+        if action_state == "-":
+            action_str = f"[dim]{action_state}[/dim]"
+        elif action_state == "Pending":
+            action_str = f"[yellow]{action_state}[/yellow]"
+        elif action_state == "Running":
+            action_str = f"[blue]{action_state}[/blue]"
+        elif action_state == "Complete":
+            action_str = f"[green]{action_state}[/green]"
+        elif action_state == "Failed":
+            action_str = f"[red]{action_state}[/red]"
+        else:
+            action_str = action_state
 
         # Truncate title to 50 characters with ellipsis
         title = plan.title
@@ -202,7 +311,7 @@ def _list_plans_impl(
                 worktree_name = parsed_name
 
         # Add row to table
-        table.add_row(issue_id, state_str, title, worktree_name)
+        table.add_row(issue_id, state_str, action_str, title, worktree_name)
 
     # Output table to stderr (consistent with user_output convention)
     # Use width=200 to ensure proper display without truncation
@@ -218,6 +327,7 @@ def list_plans(
     ctx: ErkContext,
     label: tuple[str, ...],
     state: str | None,
+    action_state: str | None,
     limit: int | None,
 ) -> None:
     """List plans with optional filters.
@@ -227,8 +337,10 @@ def list_plans(
         erk plan list --label erk-plan --state open
         erk plan list --label erk-plan --label erk-queue
         erk plan list --limit 10
+        erk plan list --action-state running
+        erk plan list --action-state complete --state open
     """
-    _list_plans_impl(ctx, label, state, limit)
+    _list_plans_impl(ctx, label, state, action_state, limit)
 
 
 # Register ls as a hidden alias (won't show in help)
@@ -239,7 +351,8 @@ def ls_plans(
     ctx: ErkContext,
     label: tuple[str, ...],
     state: str | None,
+    action_state: str | None,
     limit: int | None,
 ) -> None:
     """List plans with optional filters (alias of 'list')."""
-    _list_plans_impl(ctx, label, state, limit)
+    _list_plans_impl(ctx, label, state, action_state, limit)

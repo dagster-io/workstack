@@ -3,11 +3,13 @@
 **Purpose**: Graphite stack management with landing and submission commands
 
 **Artifacts**:
+
 - agent: agents/gt/gt-branch-submitter.md, agents/gt/gt-update-pr-submitter.md, agents/gt/gt-simple-submitter.md
 - command: commands/gt/submit-squashed-branch.md, commands/gt/update-pr.md, commands/gt/simple-submit.md
 - skill: skills/gt-graphite/SKILL.md, skills/gt-graphite/references/gt-reference.md
 
 **Usage**:
+
 - Use Task tool with subagent_type="gt"
 - Run `/gt` command
 - Load `gt-graphite` skill

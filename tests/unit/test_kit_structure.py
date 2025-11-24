@@ -100,7 +100,6 @@ def test_gt_kit_cli_commands_are_symlinks() -> None:
     # Files that should be symlinks (moved to dot-agent-kit)
     symlinked_files = {
         "simple_submit.py",
-        "simple_update_pr.py",
     }
 
     for filename in symlinked_files:

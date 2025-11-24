@@ -86,11 +86,9 @@ artifacts = [
     ".claude/agents/gt/gt-branch-submitter.md",
     ".claude/agents/gt/gt-update-pr-submitter.md",
     ".claude/agents/gt/gt-simple-submitter.md",
-    ".claude/agents/gt/gt-simple-update-pr-submitter.md",
     ".claude/commands/gt/submit-squashed-branch.md",
     ".claude/commands/gt/update-pr.md",
     ".claude/commands/gt/simple-submit.md",
-    ".claude/commands/gt/simple-update-pr.md",
     ".claude/skills/gt-graphite/SKILL.md",
     ".claude/skills/gt-graphite/references/gt-reference.md",
 ]

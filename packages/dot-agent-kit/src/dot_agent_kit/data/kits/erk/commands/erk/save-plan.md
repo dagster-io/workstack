@@ -395,13 +395,13 @@ Common causes:
 
 ## Architecture Benefits
 
-| Aspect        | Previous Design                 | Current Design                   |
-| ------------- | ------------------------------- | -------------------------------- |
-| Enforcement   | Text warnings (7 instances)     | Structural (tool restrictions)   |
-| Implementation| Inline command logic            | Dedicated agent                  |
-| Safety        | Behavioral compliance           | Physically impossible to violate |
-| Code size     | 402 lines                       | ~120 lines (orchestrator)        |
-| Bypass-safe   | ❌ No                           | ✅ Yes                           |
+| Aspect         | Previous Design             | Current Design                   |
+| -------------- | --------------------------- | -------------------------------- |
+| Enforcement    | Text warnings (7 instances) | Structural (tool restrictions)   |
+| Implementation | Inline command logic        | Dedicated agent                  |
+| Safety         | Behavioral compliance       | Physically impossible to violate |
+| Code size      | 402 lines                   | ~120 lines (orchestrator)        |
+| Bypass-safe    | ❌ No                       | ✅ Yes                           |
 
 ## Troubleshooting
 

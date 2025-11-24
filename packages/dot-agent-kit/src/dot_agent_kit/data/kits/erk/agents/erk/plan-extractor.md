@@ -1,7 +1,7 @@
 ---
 name: plan-extractor
 description: Extract and enrich implementation plans. Structurally prevented from implementing code.
-model: sonnet 
+model: sonnet
 color: green
 tools: Read, Bash, AskUserQuestion
 ---

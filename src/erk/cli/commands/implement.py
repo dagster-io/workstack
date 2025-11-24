@@ -44,7 +44,7 @@ def _build_claude_command(slash_command: str, dangerous: bool) -> str:
     Returns:
         Complete Claude CLI command string
     """
-    cmd = "claude --permission-mode acceptEdits"
+    cmd = "claude --permission-mode acceptEdits --output-format stream-json"
     if dangerous:
         cmd += " --dangerously-skip-permissions"
     cmd += f' "{slash_command}"'
@@ -104,7 +104,7 @@ def _build_claude_args(slash_command: str, dangerous: bool) -> list[str]:
     Returns:
         List of command arguments suitable for subprocess
     """
-    args = ["claude", "--permission-mode", "acceptEdits"]
+    args = ["claude", "--permission-mode", "acceptEdits", "--output-format", "stream-json"]
     if dangerous:
         args.append("--dangerously-skip-permissions")
     args.append(slash_command)

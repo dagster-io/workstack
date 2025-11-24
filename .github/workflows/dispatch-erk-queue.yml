@@ -32,8 +32,8 @@ jobs:
       pull-requests: write
       issues: write
     outputs:
-      branch_name: ${{ steps.create_branch.outputs.branch_name }}
-      setup_success: ${{ steps.create_branch.outputs.setup_success }}
+      branch_name: ${{ steps.branch_name.outputs.branch_name }}
+      setup_success: ${{ steps.create_new_branch.outputs.setup_success || steps.reuse_branch.outputs.setup_success }}
       issue_number: ${{ steps.set_issue.outputs.issue_number }}
     steps:
       - name: Set issue number
@@ -108,29 +108,10 @@ jobs:
             echo "✅ Branch $BRANCH_NAME does not exist"
           fi
 
-      - name: Post error comment if branch exists
-        if: steps.check_branch.outputs.branch_exists == 'true'
-        env:
-          ISSUE_NUMBER: ${{ steps.set_issue.outputs.issue_number }}
-          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh issue comment "$ISSUE_NUMBER" --body "❌ **Branch Setup Failed**
 
-          Branch \`$BRANCH_NAME\` already exists. Please delete the existing branch first or choose a different issue.
-
-          To delete the branch:
-          \`\`\`bash
-          git push origin --delete $BRANCH_NAME
-          \`\`\`"
-
-          # Remove erk-queue label to stop workflow
-          gh issue edit "$ISSUE_NUMBER" --remove-label "erk-queue"
-
-          exit 1
-
-      - name: Create branch and .erp/ folder
-        id: create_branch
+      - name: Create new branch and .erp/ folder
+        id: create_new_branch
+        if: steps.check_branch.outputs.branch_exists == 'false'
         env:
           ISSUE_NUMBER: ${{ steps.set_issue.outputs.issue_number }}
           BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
@@ -194,6 +175,86 @@ jobs:
           echo "✅ Branch created and pushed: $BRANCH_NAME"
           echo "setup_success=true" >> $GITHUB_OUTPUT
 
+      - name: Reuse existing branch
+        id: reuse_branch
+        if: steps.check_branch.outputs.branch_exists == 'true'
+        env:
+          ISSUE_NUMBER: ${{ steps.set_issue.outputs.issue_number }}
+          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+          ISSUE_TITLE_FROM_EVENT: ${{ github.event.issue.title }}
+          EVENT_NAME: ${{ github.event_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Get issue title - from event or API
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            ISSUE_TITLE=$(gh issue view "$ISSUE_NUMBER" --json title -q .title)
+          else
+            ISSUE_TITLE="$ISSUE_TITLE_FROM_EVENT"
+          fi
+          export ISSUE_TITLE
+
+          source $HOME/.cargo/env
+
+          # Fetch and checkout existing branch
+          git fetch origin "$BRANCH_NAME"
+          git checkout "$BRANCH_NAME"
+
+          # Verify branch state - check for uncommitted changes
+          if [[ -n $(git status --porcelain) ]]; then
+            gh issue comment "$ISSUE_NUMBER" --body "❌ **Branch Reuse Failed**
+
+          Branch \`$BRANCH_NAME\` has uncommitted changes. Please clean up the branch before retrying."
+            exit 1
+          fi
+
+          # Check if ahead of origin
+          git fetch origin "$BRANCH_NAME"
+          AHEAD=$(git rev-list --count origin/$BRANCH_NAME..$BRANCH_NAME)
+          if [ "$AHEAD" -gt 0 ]; then
+            gh issue comment "$ISSUE_NUMBER" --body "❌ **Branch Reuse Failed**
+
+          Branch \`$BRANCH_NAME\` has unpushed commits. Please push or clean up before retrying."
+            exit 1
+          fi
+
+          # Update .erp/ folder with latest plan
+          # Remove existing .erp/ folder if present
+          rm -rf .erp
+
+          # Fetch fresh plan content from issue
+          dot-agent run erk create-erp-from-issue "$ISSUE_NUMBER" "$ISSUE_TITLE"
+
+          if [ $? -ne 0 ]; then
+            gh issue comment "$ISSUE_NUMBER" --body "❌ **Plan Update Failed**
+
+          Could not fetch plan content for issue #$ISSUE_NUMBER.
+
+          Please ensure issue has \`erk-plan\` label."
+            exit 1
+          fi
+
+          # Commit and push updated plan
+          git add .erp
+
+          # Only commit if there are changes
+          if [[ -n $(git status --porcelain) ]]; then
+            git commit -m "Update plan for issue #$ISSUE_NUMBER (rerun)"
+            git push origin "$BRANCH_NAME"
+            echo "✅ Branch reused with updated plan: $BRANCH_NAME"
+          else
+            echo "✅ Branch reused (plan unchanged): $BRANCH_NAME"
+          fi
+
+          # Set output
+          echo "setup_success=true" >> $GITHUB_OUTPUT
+
+          # Post success comment
+          gh issue comment "$ISSUE_NUMBER" --body "✅ **Reusing Existing Branch**
+
+          Branch \`$BRANCH_NAME\` already exists and will be reused for implementation.
+
+          Plan content has been updated from the issue."
+
       - name: Create draft PR
         env:
           ISSUE_NUMBER: ${{ steps.set_issue.outputs.issue_number }}
@@ -212,8 +273,12 @@ jobs:
             ISSUE_URL="$ISSUE_URL_FROM_EVENT"
           fi
 
-          # Create PR body
-          cat > pr_body.md <<EOF
+          # Check if PR already exists
+          if gh pr view "$BRANCH_NAME" --json number &> /dev/null; then
+            echo "✅ PR already exists for branch $BRANCH_NAME"
+          else
+            # Create PR body
+            cat > pr_body.md <<EOF
           Implementation of plan from issue #$ISSUE_NUMBER
 
           $ISSUE_URL
@@ -223,14 +288,15 @@ jobs:
           This PR will be marked ready for review after implementation completes.
           EOF
 
-          # Create draft PR
-          gh pr create \
-            --draft \
-            --title "$ISSUE_TITLE" \
-            --body-file pr_body.md \
-            --head "$BRANCH_NAME"
+            # Create draft PR
+            gh pr create \
+              --draft \
+              --title "$ISSUE_TITLE" \
+              --body-file pr_body.md \
+              --head "$BRANCH_NAME"
 
-          echo "✅ Draft PR created"
+            echo "✅ Draft PR created"
+          fi
 
   implement:
     needs: setup

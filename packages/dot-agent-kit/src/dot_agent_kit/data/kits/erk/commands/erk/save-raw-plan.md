@@ -282,6 +282,30 @@ If command fails:
 
 ### Step 7: Display Success Output
 
+#### Substep 7a: Generate and Display Execution Summary
+
+After receiving the successful response from the kit CLI, generate a concise summary of what was accomplished:
+
+**Summary Generation Process:**
+
+1. **Extract one-sentence overview** - Create a brief, high-level summary of the plan's main objective from the plan_content
+2. **Extract three key bullet points** - Identify the three most important implementation steps or outcomes from the plan
+3. **Format and display** - Present summary before the issue URL using this format:
+
+```
+**Execution Summary:**
+
+[One sentence overview of what was accomplished]
+
+- [Key bullet point 1]
+- [Key bullet point 2]
+- [Key bullet point 3]
+```
+
+**Implementation note:** Extract summary from the plan_content received from the agent. Raw mode plans may have less structured content than enriched plans, so extract from whatever plan structure exists in the raw content.
+
+#### Substep 7b: Display Issue URL and Next Steps
+
 Show the user the issue URL and copy-pastable commands:
 
 ```

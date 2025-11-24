@@ -6,7 +6,6 @@ artifacts:
   command:
     - commands/erk/save-plan.md
     - commands/erk/save-raw-plan.md
-    - commands/erk/create-wt-from-plan-file.md
     - commands/erk/implement-plan.md
     - commands/erk/fix-merge-conflicts.md
   agent:
@@ -17,9 +16,6 @@ kit_cli_commands:
   - name: save-plan-from-session
     path: kit_cli_commands/erk/save_plan_from_session.py
     description: Extract plan from Claude session and save to disk with minimal frontmatter
-  - name: find-most-recent-plan-file
-    path: kit_cli_commands/erk/find_most_recent_plan_file.py
-    description: Find most recent *-plan.md file at repository root
   - name: find-project-dir
     path: kit_cli_commands/erk/find_project_dir.py
     description: Find Claude Code project directory for a given filesystem path
@@ -56,12 +52,6 @@ kit_cli_commands:
   - name: create-enriched-plan-from-context
     path: kit_cli_commands/erk/create_enriched_plan_from_context.py
     description: Create GitHub issue from enriched plan (--plan-content option) with erk-plan label
-  - name: create-plan-from-plan-file
-    path: kit_cli_commands/erk/create_plan_from_plan_file.py
-    description: Create GitHub issue from plan file on disk
-  - name: create-queued-plan
-    path: kit_cli_commands/erk/create_queued_plan.py
-    description: Create GitHub issue with erk-queue label for automatic implementation
   - name: check-impl
     path: kit_cli_commands/erk/check_impl.py
     description: Check .impl/ folder structure and validate prerequisites

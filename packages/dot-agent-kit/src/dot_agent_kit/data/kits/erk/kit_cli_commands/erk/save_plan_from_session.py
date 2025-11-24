@@ -40,8 +40,8 @@ def _format_success_display(filename: str, title: str, file_path: Path) -> None:
     click.echo()
     click.echo("Next steps:")
     click.echo("1. Review the plan if needed")
-    click.echo("2. Create worktree: /erk:create-wt-from-plan-file")
-    click.echo("3. Switch to worktree and implement")
+    click.echo("2. Create worktree: erk implement <issue>")
+    click.echo("3. Implementation will execute automatically")
 
 
 def _format_error_display(error_message: str, details: str | None = None) -> None:

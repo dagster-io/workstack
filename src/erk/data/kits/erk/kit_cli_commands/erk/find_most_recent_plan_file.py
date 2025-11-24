@@ -1,1 +1,0 @@
-../../../../../../../packages/dot-agent-kit/src/dot_agent_kit/data/kits/erk/kit_cli_commands/erk/find_most_recent_plan_file.py

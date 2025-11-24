@@ -35,7 +35,7 @@ def submit_cmd(ctx: ErkContext, dry_run: bool) -> None:
         user_output(
             click.style("Error: ", fg="red") + "No .impl/ folder found.\n\n"
             "The current directory must contain a .impl/ folder.\n"
-            "To create one, use: /erk:create-wt-from-plan-file"
+            "To create one, use: erk implement <issue>"
         )
         raise SystemExit(1)
 

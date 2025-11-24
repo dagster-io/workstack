@@ -33,7 +33,7 @@ from erk_shared.github.metadata import (
 )
 from erk_shared.impl_folder import parse_progress_frontmatter, read_issue_reference
 
-from dot_agent_kit.context_helpers import require_github_issues, require_repo_root
+from dot_agent_kit.context_helpers import require_git, require_github_issues, require_repo_root
 
 
 @dataclass(frozen=True)
@@ -80,16 +80,14 @@ def post_progress_comment(ctx: click.Context, step_description: str) -> None:
         click.echo(json.dumps(asdict(result), indent=2))
         raise SystemExit(0)
 
+    # Get git integration for path checking
+    git = require_git(ctx)
+
     # Read progress file
     progress_file = impl_dir / "progress.md"
-    if not progress_file.exists():
-        result = ProgressError(
-            success=False,
-            error_type="no_progress_file",
-            message=f"Progress file not found: {progress_file}",
-        )
-        click.echo(json.dumps(asdict(result), indent=2))
-        raise SystemExit(0)
+    if not git.path_exists(progress_file):
+        click.echo(click.style("Error: ", fg="red") + f"Progress file not found: {progress_file}")
+        raise SystemExit(1)
 
     # Parse progress frontmatter
     content = progress_file.read_text(encoding="utf-8")

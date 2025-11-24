@@ -73,6 +73,9 @@ kit_cli_commands:
   - name: format-error
     path: kit_cli_commands/erk/format_error.py
     description: Format error messages with consistent structure and suggested actions
+  - name: create-erp-from-issue
+    path: kit_cli_commands/erk/create_erp_from_issue.py
+    description: Create .erp/ folder from GitHub issue with plan content
 hooks:
   - id: session-id-injector-hook
     lifecycle: UserPromptSubmit

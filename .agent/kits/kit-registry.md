@@ -19,7 +19,7 @@
 
 <!-- ENTRY_END -->
 
-<!-- ENTRY_START kit_id="erk" version="0.3.0" source="bundled" -->
+<!-- ENTRY_START kit_id="erk" version="0.3.1" source="bundled" -->
 
 @.agent/kits/erk/registry-entry.md
 

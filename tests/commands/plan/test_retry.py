@@ -40,7 +40,11 @@ def test_retry_success_first_time() -> None:
 
         # Assert
         assert result.exit_code == 0
-        assert "✅ Plan #42 requeued (retry #1)" in result.output
+        assert "Fetched issue #42" in result.output
+        assert "Parsing 0 comment(s) for retry history" in result.output
+        assert "Updating erk-queue label..." in result.output
+        assert "✓ Plan #42 requeued (retry #1)" in result.output
+        assert "View issue: https://github.com/owner/repo/issues/42" in result.output
 
         # Verify label was removed and re-added
         issue_after = github_issues._issues[42]
@@ -98,7 +102,11 @@ def test_retry_success_subsequent() -> None:
 
         # Assert
         assert result.exit_code == 0
-        assert "✅ Plan #42 requeued (retry #2)" in result.output
+        assert "Fetched issue #42" in result.output
+        assert "Parsing 1 comment(s) for retry history" in result.output
+        assert "Updating erk-queue label..." in result.output
+        assert "✓ Plan #42 requeued (retry #2)" in result.output
+        assert "View issue: https://github.com/owner/repo/issues/42" in result.output
 
         # Verify new comment has retry_count=2
         assert len(github_issues.added_comments) == 1
@@ -255,7 +263,8 @@ def test_retry_with_github_url() -> None:
 
         # Assert
         assert result.exit_code == 0
-        assert "✅ Plan #42 requeued (retry #1)" in result.output
+        assert "✓ Plan #42 requeued (retry #1)" in result.output
+        assert "View issue: https://github.com/owner/repo/issues/42" in result.output
 
 
 def test_retry_with_invalid_url() -> None:

@@ -493,3 +493,290 @@ def test_fetch_pr_titles_batch_missing_title_field(monkeypatch: pytest.MonkeyPat
     # Should handle missing field gracefully and set title=None
     assert result["feature"].title is None
     assert result["feature"].number == 123
+
+
+def test_build_issue_pr_linkage_query_structure() -> None:
+    """Test that issue-PR linkage query has correct structure with closingIssuesReferences."""
+    ops = RealGitHub(FakeTime())
+
+    query = ops._build_issue_pr_linkage_query([100, 200], "test-owner", "test-repo")
+
+    # Validate basic GraphQL syntax
+    assert "query {" in query
+    assert 'repository(owner: "test-owner", name: "test-repo")' in query
+
+    # Validate we're querying PRs with closingIssuesReferences (not issues with timeline)
+    assert "pullRequests(" in query
+    assert "closingIssuesReferences(" in query
+    assert "timelineItems" not in query  # Old approach
+    assert "CONNECTED_EVENT" not in query  # Old approach
+
+    # Validate required PR fields
+    assert "number" in query
+    assert "state" in query
+    assert "url" in query
+    assert "isDraft" in query
+    assert "title" in query
+    assert "createdAt" in query
+    assert "statusCheckRollup" in query
+    assert "mergeable" in query
+
+    # Validate closingIssuesReferences structure
+    assert "closingIssuesReferences(first: 100)" in query
+    assert "nodes {" in query  # Must have nodes wrapper for connection type
+
+
+def test_parse_issue_pr_linkages_with_single_pr() -> None:
+    """Test parsing GraphQL response with single PR linking to an issue."""
+    ops = RealGitHub(FakeTime())
+
+    # Mock response with PR linking to issue 100
+    response = {
+        "data": {
+            "repository": {
+                "pullRequests": {
+                    "nodes": [
+                        {
+                            "number": 200,
+                            "state": "OPEN",
+                            "url": "https://github.com/owner/repo/pull/200",
+                            "isDraft": False,
+                            "title": "Fix bug",
+                            "createdAt": "2024-01-01T00:00:00Z",
+                            "statusCheckRollup": {"state": "SUCCESS"},
+                            "mergeable": "MERGEABLE",
+                            "closingIssuesReferences": {"nodes": [{"number": 100}]},
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    result = ops._parse_issue_pr_linkages(response, "owner", "repo")
+
+    # Should have one issue with one PR
+    assert 100 in result
+    assert len(result[100]) == 1
+
+    pr = result[100][0]
+    assert pr.number == 200
+    assert pr.state == "OPEN"
+    assert pr.url == "https://github.com/owner/repo/pull/200"
+    assert pr.is_draft is False
+    assert pr.title == "Fix bug"
+    assert pr.checks_passing is True
+    assert pr.has_conflicts is False
+
+
+def test_parse_issue_pr_linkages_with_multiple_prs() -> None:
+    """Test parsing response with multiple PRs linking to same issue."""
+    ops = RealGitHub(FakeTime())
+
+    # Mock response with two PRs linking to issue 100
+    response = {
+        "data": {
+            "repository": {
+                "pullRequests": {
+                    "nodes": [
+                        {
+                            "number": 201,
+                            "state": "OPEN",
+                            "url": "https://github.com/owner/repo/pull/201",
+                            "isDraft": False,
+                            "title": "Recent PR",
+                            "createdAt": "2024-01-02T00:00:00Z",
+                            "statusCheckRollup": None,
+                            "mergeable": "UNKNOWN",
+                            "closingIssuesReferences": {"nodes": [{"number": 100}]},
+                        },
+                        {
+                            "number": 200,
+                            "state": "CLOSED",
+                            "url": "https://github.com/owner/repo/pull/200",
+                            "isDraft": False,
+                            "title": "Older PR",
+                            "createdAt": "2024-01-01T00:00:00Z",
+                            "statusCheckRollup": {"state": "FAILURE"},
+                            "mergeable": "MERGEABLE",
+                            "closingIssuesReferences": {"nodes": [{"number": 100}]},
+                        },
+                    ]
+                }
+            }
+        }
+    }
+
+    result = ops._parse_issue_pr_linkages(response, "owner", "repo")
+
+    # Should have one issue with two PRs, sorted by created_at descending
+    assert 100 in result
+    assert len(result[100]) == 2
+
+    # Most recent PR should be first
+    assert result[100][0].number == 201
+    assert result[100][0].title == "Recent PR"
+
+    # Older PR should be second
+    assert result[100][1].number == 200
+    assert result[100][1].title == "Older PR"
+
+
+def test_parse_issue_pr_linkages_with_pr_linking_multiple_issues() -> None:
+    """Test parsing response where single PR links to multiple issues."""
+    ops = RealGitHub(FakeTime())
+
+    # Mock response with one PR linking to issues 100 and 101
+    response = {
+        "data": {
+            "repository": {
+                "pullRequests": {
+                    "nodes": [
+                        {
+                            "number": 200,
+                            "state": "OPEN",
+                            "url": "https://github.com/owner/repo/pull/200",
+                            "isDraft": False,
+                            "title": "Fix multiple bugs",
+                            "createdAt": "2024-01-01T00:00:00Z",
+                            "statusCheckRollup": {"state": "SUCCESS"},
+                            "mergeable": "MERGEABLE",
+                            "closingIssuesReferences": {
+                                "nodes": [
+                                    {"number": 100},
+                                    {"number": 101},
+                                ]
+                            },
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    result = ops._parse_issue_pr_linkages(response, "owner", "repo")
+
+    # Should have two issues, each with the same PR
+    assert 100 in result
+    assert 101 in result
+    assert len(result[100]) == 1
+    assert len(result[101]) == 1
+
+    # Both should point to same PR
+    assert result[100][0].number == 200
+    assert result[101][0].number == 200
+
+
+def test_parse_issue_pr_linkages_handles_empty_closing_references() -> None:
+    """Test parsing handles PRs with no closingIssuesReferences."""
+    ops = RealGitHub(FakeTime())
+
+    # Mock response with PR that doesn't close any issues
+    response = {
+        "data": {
+            "repository": {
+                "pullRequests": {
+                    "nodes": [
+                        {
+                            "number": 200,
+                            "state": "OPEN",
+                            "url": "https://github.com/owner/repo/pull/200",
+                            "isDraft": True,
+                            "title": "WIP PR",
+                            "createdAt": "2024-01-01T00:00:00Z",
+                            "statusCheckRollup": None,
+                            "mergeable": "MERGEABLE",
+                            "closingIssuesReferences": {
+                                "nodes": []  # Empty - no issues linked
+                            },
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    result = ops._parse_issue_pr_linkages(response, "owner", "repo")
+
+    # Should return empty dict since no issues are linked
+    assert result == {}
+
+
+def test_parse_issue_pr_linkages_handles_null_nodes() -> None:
+    """Test parsing handles null values in nodes arrays gracefully."""
+    ops = RealGitHub(FakeTime())
+
+    # Mock response with null PR node and null issue node
+    response = {
+        "data": {
+            "repository": {
+                "pullRequests": {
+                    "nodes": [
+                        None,  # Null PR node
+                        {
+                            "number": 200,
+                            "state": "OPEN",
+                            "url": "https://github.com/owner/repo/pull/200",
+                            "isDraft": False,
+                            "title": "Valid PR",
+                            "createdAt": "2024-01-01T00:00:00Z",
+                            "statusCheckRollup": None,
+                            "mergeable": "MERGEABLE",
+                            "closingIssuesReferences": {
+                                "nodes": [
+                                    None,  # Null issue node
+                                    {"number": 100},
+                                ]
+                            },
+                        },
+                    ]
+                }
+            }
+        }
+    }
+
+    result = ops._parse_issue_pr_linkages(response, "owner", "repo")
+
+    # Should skip null nodes and process valid ones
+    assert 100 in result
+    assert len(result[100]) == 1
+    assert result[100][0].number == 200
+
+
+def test_parse_issue_pr_linkages_handles_missing_optional_fields() -> None:
+    """Test parsing handles missing optional fields (checks, conflicts)."""
+    ops = RealGitHub(FakeTime())
+
+    # Mock response with minimal fields
+    response = {
+        "data": {
+            "repository": {
+                "pullRequests": {
+                    "nodes": [
+                        {
+                            "number": 200,
+                            "state": "MERGED",
+                            "url": "https://github.com/owner/repo/pull/200",
+                            "isDraft": None,  # Missing
+                            "title": None,  # Missing
+                            "createdAt": "2024-01-01T00:00:00Z",
+                            "statusCheckRollup": None,  # No checks
+                            "mergeable": None,  # Unknown
+                            "closingIssuesReferences": {"nodes": [{"number": 100}]},
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    result = ops._parse_issue_pr_linkages(response, "owner", "repo")
+
+    # Should handle missing fields gracefully
+    assert 100 in result
+    pr = result[100][0]
+    assert pr.number == 200
+    assert pr.is_draft is False  # Defaults to False
+    assert pr.title is None
+    assert pr.checks_passing is None
+    assert pr.has_conflicts is None

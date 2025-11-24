@@ -1,5 +1,5 @@
 name: erk
-version: 0.3.0
+version: 0.3.1
 description: Erk implementation workflow commands for creating worktrees from plans (.PLAN.md) and executing implementation. Includes commands for plan creation, execution, and quick access.
 license: MIT
 artifacts:
@@ -17,6 +17,9 @@ kit_cli_commands:
   - name: find-project-dir
     path: kit_cli_commands/erk/find_project_dir.py
     description: Find Claude Code project directory for a given filesystem path
+  - name: get-closing-text
+    path: kit_cli_commands/erk/get_closing_text.py
+    description: Get GitHub issue closing text for PR body
   - name: session-id-injector-hook
     path: kit_cli_commands/erk/session_id_injector_hook.py
     description: Inject session ID into conversation context for plan creation
@@ -38,6 +41,12 @@ kit_cli_commands:
   - name: post-completion-comment
     path: kit_cli_commands/erk/post_completion_comment.py
     description: Post completion tracking comment to GitHub issue with structured YAML
+  - name: post-workflow-started-comment
+    path: kit_cli_commands/erk/post_workflow_started_comment.py
+    description: Post workflow started comment to GitHub issue with run URL
+  - name: post-plan-comment
+    path: kit_cli_commands/erk/post_plan_comment.py
+    description: Post plan issue comment with workflow instructions
   - name: create-issue
     path: kit_cli_commands/erk/create_issue.py
     description: Create GitHub issue with body from stdin (no permission prompts)
@@ -47,18 +56,15 @@ kit_cli_commands:
   - name: create-wt-from-issue
     path: kit_cli_commands/erk/create_wt_from_issue.py
     description: Create worktree from GitHub issue with erk-plan label
+  - name: debug-agent
+    path: kit_cli_commands/erk/debug_agent.py
+    description: Inspect failed agent runs from a session by showing execution logs and errors
   - name: create-plan-from-context
     path: kit_cli_commands/erk/create_plan_from_context.py
     description: Create GitHub issue from plan content (stdin) with erk-plan label
   - name: create-enriched-plan-from-context
     path: kit_cli_commands/erk/create_enriched_plan_from_context.py
     description: Create GitHub issue from enriched plan (--plan-content option) with erk-plan label
-  - name: create-plan-from-file
-    path: kit_cli_commands/erk/create_plan_from_file.py
-    description: Create GitHub issue from plan file on disk
-  - name: create-queued-plan
-    path: kit_cli_commands/erk/create_queued_plan.py
-    description: Create GitHub issue with erk-queue label for automatic implementation
 hooks:
   - id: session-id-injector-hook
     lifecycle: UserPromptSubmit

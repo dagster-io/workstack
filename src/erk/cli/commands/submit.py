@@ -1,6 +1,10 @@
 """Submit issue for remote AI implementation via GitHub Actions."""
 
+import subprocess
+from datetime import UTC, datetime
+
 import click
+from erk_shared.github.metadata import create_submission_queued_block, render_erk_issue_event
 
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
@@ -90,6 +94,63 @@ def submit_cmd(ctx: ErkContext, issue_number: int, dry_run: bool) -> None:
     # Ensure erk-queue label is on issue (idempotent)
     user_output(f"Adding {ERK_QUEUE_LABEL} label...")
     ctx.issues.ensure_label_on_issue(repo.root, issue_number, ERK_QUEUE_LABEL)
+
+    # Gather submission metadata
+    queued_at = datetime.now(UTC).isoformat()
+
+    # Get submitter from git config
+    try:
+        result = subprocess.run(
+            ["git", "config", "user.name"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        submitted_by = result.stdout.strip()
+    except subprocess.CalledProcessError:
+        # Fall back to "unknown" if git config fails
+        submitted_by = "unknown"
+
+    if not submitted_by:
+        submitted_by = "unknown"
+
+    validation_results = {
+        "issue_is_open": True,
+        "has_erk_plan_label": True,
+        "no_erk_queue_label_before": True,
+    }
+
+    # Create and post queued event comment
+    try:
+        metadata_block = create_submission_queued_block(
+            queued_at=queued_at,
+            submitted_by=submitted_by,
+            issue_number=issue_number,
+            validation_results=validation_results,
+            expected_workflow="dispatch-erk-queue",
+        )
+
+        comment_body = render_erk_issue_event(
+            title="🔄 Issue Queued for Implementation",
+            metadata=metadata_block,
+            description=(
+                f"Issue submitted by **{submitted_by}** at {queued_at}.\n\n"
+                f"The `{ERK_QUEUE_LABEL}` label has been added. The GitHub Actions workflow "
+                f"`dispatch-erk-queue` will be triggered automatically via webhook.\n\n"
+                f"Watch for the workflow start comment with a link to the action run."
+            ),
+        )
+
+        user_output("Posting queued event comment...")
+        ctx.issues.add_comment(repo.root, issue_number, comment_body)
+        user_output(click.style("✓", fg="green") + " Queued event comment posted")
+    except Exception as e:
+        # Log warning but don't block workflow - label still triggers it
+        user_output(
+            click.style("Warning: ", fg="yellow")
+            + f"Failed to post queued comment: {e}\n"
+            + "Workflow will still be triggered by label."
+        )
 
     # Success output
     user_output("")

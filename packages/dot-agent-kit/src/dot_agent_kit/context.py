@@ -14,6 +14,9 @@ from pathlib import Path
 import click
 from erk_shared.github.issues import GitHubIssues, RealGitHubIssues
 
+from erk.core.git.abc import Git
+from erk.core.github.abc import GitHub
+
 
 @dataclass(frozen=True)
 class DotAgentContext:
@@ -25,19 +28,28 @@ class DotAgentContext:
 
     Attributes:
         github_issues: GitHub Issues integration for querying/commenting
+        git: Git operations integration for branch/commit queries
+        github: GitHub integration for PR operations
         debug: Debug flag for error handling (full stack traces)
         repo_root: Repository root directory (detected at CLI entry)
+        cwd: Current working directory (worktree path)
     """
 
     github_issues: GitHubIssues
+    git: Git
+    github: GitHub
     debug: bool
     repo_root: Path
+    cwd: Path
 
     @staticmethod
     def for_test(
         github_issues: GitHubIssues | None = None,
+        git: Git | None = None,
+        github: GitHub | None = None,
         debug: bool = False,
         repo_root: Path | None = None,
+        cwd: Path | None = None,
     ) -> "DotAgentContext":
         """Create test context with optional pre-configured implementations.
 
@@ -46,31 +58,45 @@ class DotAgentContext:
 
         Args:
             github_issues: Optional GitHubIssues implementation. If None, creates FakeGitHubIssues.
+            git: Optional Git implementation. If None, creates FakeGit.
+            github: Optional GitHub implementation. If None, creates FakeGitHub.
             debug: Whether to enable debug mode (default False).
             repo_root: Repository root path (defaults to Path("/fake/repo"))
+            cwd: Current working directory (defaults to Path("/fake/worktree"))
 
         Returns:
             DotAgentContext configured with provided values and test defaults
 
         Example:
             >>> from erk_shared.github.issues import FakeGitHubIssues
+            >>> from erk.core.git.fake import FakeGit
             >>> github = FakeGitHubIssues()
+            >>> git_ops = FakeGit()
             >>> ctx = DotAgentContext.for_test(
-            ...     github_issues=github, debug=True, repo_root=Path("/tmp/test")
+            ...     github_issues=github, git=git_ops, debug=True
             ... )
         """
         from erk_shared.github.issues import FakeGitHubIssues
+
+        from erk.core.git.fake import FakeGit
+        from erk.core.github.fake import FakeGitHub
 
         # Provide defaults - ensures non-None values for type checker
         resolved_github_issues: GitHubIssues = (
             github_issues if github_issues is not None else FakeGitHubIssues()
         )
+        resolved_git: Git = git if git is not None else FakeGit()
+        resolved_github: GitHub = github if github is not None else FakeGitHub()
         resolved_repo_root: Path = repo_root if repo_root is not None else Path("/fake/repo")
+        resolved_cwd: Path = cwd if cwd is not None else Path("/fake/worktree")
 
         return DotAgentContext(
             github_issues=resolved_github_issues,
+            git=resolved_git,
+            github=resolved_github,
             debug=debug,
             repo_root=resolved_repo_root,
+            cwd=resolved_cwd,
         )
 
 
@@ -93,6 +119,9 @@ def create_context(*, debug: bool) -> DotAgentContext:
         >>> ctx = create_context(debug=False)
         >>> issue_number = ctx.github_issues.create_issue(ctx.repo_root, title, body, labels)
     """
+    from erk.core.git.real import RealGit
+    from erk.core.github.real import RealGitHub
+
     # Detect repo root using git rev-parse
     result = subprocess.run(
         ["git", "rev-parse", "--show-toplevel"],
@@ -105,8 +134,14 @@ def create_context(*, debug: bool) -> DotAgentContext:
         click.echo("Error: Not in a git repository", err=True)
         raise SystemExit(1)
 
+    repo_root = Path(result.stdout.strip())
+    cwd = Path.cwd()
+
     return DotAgentContext(
         github_issues=RealGitHubIssues(),
+        git=RealGit(),
+        github=RealGitHub(),
         debug=debug,
-        repo_root=Path(result.stdout.strip()),
+        repo_root=repo_root,
+        cwd=cwd,
     )

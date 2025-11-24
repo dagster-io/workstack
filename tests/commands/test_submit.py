@@ -63,6 +63,15 @@ def test_submit_valid_issue(tmp_path: Path) -> None:
     assert ERK_QUEUE_LABEL in updated_issue.labels
     assert ERK_PLAN_LABEL in updated_issue.labels
 
+    # Verify queued comment was posted
+    added_comments = fake_github_issues.added_comments
+    assert len(added_comments) == 1
+    issue_number, comment_body = added_comments[0]
+    assert issue_number == 123
+    assert "Issue Queued for Implementation" in comment_body
+    assert "submission-queued" in comment_body
+    assert "dispatch-erk-queue" in comment_body
+
 
 def test_submit_missing_erk_plan_label(tmp_path: Path) -> None:
     """Test submit rejects issue without erk-plan label."""

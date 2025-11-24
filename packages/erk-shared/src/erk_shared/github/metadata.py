@@ -268,6 +268,135 @@ class PlanSchema(MetadataBlockSchema):
         return "erk-plan"
 
 
+@dataclass(frozen=True)
+class SubmissionQueuedSchema(MetadataBlockSchema):
+    """Schema for submission-queued blocks (posted by erk submit)."""
+
+    def validate(self, data: dict[str, Any]) -> None:
+        """Validate submission-queued data structure."""
+        required_fields = {
+            "status",
+            "queued_at",
+            "submitted_by",
+            "issue_number",
+            "validation_results",
+            "expected_workflow",
+            "trigger_mechanism",
+        }
+
+        # Check required fields exist
+        missing = required_fields - set(data.keys())
+        if missing:
+            raise ValueError(f"Missing required fields: {', '.join(sorted(missing))}")
+
+        # Validate status value
+        if data["status"] != "queued":
+            raise ValueError(f"Invalid status '{data['status']}'. Must be 'queued'")
+
+        # Validate string fields
+        if not isinstance(data["queued_at"], str):
+            raise ValueError("queued_at must be a string")
+        if len(data["queued_at"]) == 0:
+            raise ValueError("queued_at must not be empty")
+
+        if not isinstance(data["submitted_by"], str):
+            raise ValueError("submitted_by must be a string")
+        if len(data["submitted_by"]) == 0:
+            raise ValueError("submitted_by must not be empty")
+
+        if not isinstance(data["expected_workflow"], str):
+            raise ValueError("expected_workflow must be a string")
+        if len(data["expected_workflow"]) == 0:
+            raise ValueError("expected_workflow must not be empty")
+
+        if not isinstance(data["trigger_mechanism"], str):
+            raise ValueError("trigger_mechanism must be a string")
+        if len(data["trigger_mechanism"]) == 0:
+            raise ValueError("trigger_mechanism must not be empty")
+
+        # Validate issue_number
+        if not isinstance(data["issue_number"], int):
+            raise ValueError("issue_number must be an integer")
+        if data["issue_number"] <= 0:
+            raise ValueError("issue_number must be positive")
+
+        # Validate validation_results is a dict
+        if not isinstance(data["validation_results"], dict):
+            raise ValueError("validation_results must be a dict")
+
+    def get_key(self) -> str:
+        return "submission-queued"
+
+
+@dataclass(frozen=True)
+class WorkflowStartedSchema(MetadataBlockSchema):
+    """Schema for workflow-started blocks (posted by GitHub Actions)."""
+
+    def validate(self, data: dict[str, Any]) -> None:
+        """Validate workflow-started data structure."""
+        required_fields = {
+            "status",
+            "started_at",
+            "workflow_run_id",
+            "workflow_run_url",
+            "issue_number",
+        }
+        optional_fields = {"branch_name", "worktree_path"}
+
+        # Check required fields exist
+        missing = required_fields - set(data.keys())
+        if missing:
+            raise ValueError(f"Missing required fields: {', '.join(sorted(missing))}")
+
+        # Validate status value
+        if data["status"] != "started":
+            raise ValueError(f"Invalid status '{data['status']}'. Must be 'started'")
+
+        # Validate string fields
+        if not isinstance(data["started_at"], str):
+            raise ValueError("started_at must be a string")
+        if len(data["started_at"]) == 0:
+            raise ValueError("started_at must not be empty")
+
+        if not isinstance(data["workflow_run_id"], str):
+            raise ValueError("workflow_run_id must be a string")
+        if len(data["workflow_run_id"]) == 0:
+            raise ValueError("workflow_run_id must not be empty")
+
+        if not isinstance(data["workflow_run_url"], str):
+            raise ValueError("workflow_run_url must be a string")
+        if len(data["workflow_run_url"]) == 0:
+            raise ValueError("workflow_run_url must not be empty")
+
+        # Validate issue_number
+        if not isinstance(data["issue_number"], int):
+            raise ValueError("issue_number must be an integer")
+        if data["issue_number"] <= 0:
+            raise ValueError("issue_number must be positive")
+
+        # Validate optional fields if present
+        if "branch_name" in data:
+            if not isinstance(data["branch_name"], str):
+                raise ValueError("branch_name must be a string")
+            if len(data["branch_name"]) == 0:
+                raise ValueError("branch_name must not be empty")
+
+        if "worktree_path" in data:
+            if not isinstance(data["worktree_path"], str):
+                raise ValueError("worktree_path must be a string")
+            if len(data["worktree_path"]) == 0:
+                raise ValueError("worktree_path must not be empty")
+
+        # Check for unexpected fields
+        known_fields = required_fields | optional_fields
+        unknown_fields = set(data.keys()) - known_fields
+        if unknown_fields:
+            raise ValueError(f"Unknown fields: {', '.join(sorted(unknown_fields))}")
+
+    def get_key(self) -> str:
+        return "workflow-started"
+
+
 # Backward compatibility alias
 PlanIssueSchema = PlanSchema
 
@@ -393,8 +522,29 @@ def create_implementation_status_block(
     total_steps: int,
     timestamp: str,
     summary: str | None = None,
+    branch_name: str | None = None,
+    pr_url: str | None = None,
+    commit_sha: str | None = None,
+    worktree_path: str | None = None,
+    status_history: list[dict[str, str]] | None = None,
 ) -> MetadataBlock:
-    """Create an erk-implementation-status block with validation."""
+    """Create an erk-implementation-status block with validation.
+
+    Args:
+        status: Current status (pending, in_progress, complete, failed)
+        completed_steps: Number of completed steps
+        total_steps: Total number of steps
+        timestamp: ISO 8601 timestamp
+        summary: Optional summary text
+        branch_name: Optional git branch name
+        pr_url: Optional pull request URL
+        commit_sha: Optional final commit SHA
+        worktree_path: Optional path to worktree
+        status_history: Optional list of status transitions with timestamps and reasons
+
+    Returns:
+        MetadataBlock with erk-implementation-status schema
+    """
     schema = ImplementationStatusSchema()
     data = {
         "status": status,
@@ -404,6 +554,16 @@ def create_implementation_status_block(
     }
     if summary is not None:
         data["summary"] = summary
+    if branch_name is not None:
+        data["branch_name"] = branch_name
+    if pr_url is not None:
+        data["pr_url"] = pr_url
+    if commit_sha is not None:
+        data["commit_sha"] = commit_sha
+    if worktree_path is not None:
+        data["worktree_path"] = worktree_path
+    if status_history is not None:
+        data["status_history"] = status_history
     return create_metadata_block(
         key=schema.get_key(),
         data=data,
@@ -544,6 +704,86 @@ def create_plan_block(
     )
 
 
+def create_submission_queued_block(
+    queued_at: str,
+    submitted_by: str,
+    issue_number: int,
+    validation_results: dict[str, bool],
+    expected_workflow: str,
+) -> MetadataBlock:
+    """Create a submission-queued block with validation.
+
+    Args:
+        queued_at: ISO 8601 timestamp when submission was queued
+        submitted_by: Username from git config (user.name)
+        issue_number: GitHub issue number
+        validation_results: Dict with validation checks (issue_is_open, has_erk_plan_label, etc.)
+        expected_workflow: Name of the GitHub Actions workflow that will run
+
+    Returns:
+        MetadataBlock with submission-queued schema
+    """
+    schema = SubmissionQueuedSchema()
+    data = {
+        "status": "queued",
+        "queued_at": queued_at,
+        "submitted_by": submitted_by,
+        "issue_number": issue_number,
+        "validation_results": validation_results,
+        "expected_workflow": expected_workflow,
+        "trigger_mechanism": "label-based-webhook",
+    }
+
+    return create_metadata_block(
+        key=schema.get_key(),
+        data=data,
+        schema=schema,
+    )
+
+
+def create_workflow_started_block(
+    started_at: str,
+    workflow_run_id: str,
+    workflow_run_url: str,
+    issue_number: int,
+    branch_name: str | None = None,
+    worktree_path: str | None = None,
+) -> MetadataBlock:
+    """Create a workflow-started block with validation.
+
+    Args:
+        started_at: ISO 8601 timestamp when workflow started
+        workflow_run_id: GitHub Actions run ID
+        workflow_run_url: Full URL to the workflow run
+        issue_number: GitHub issue number
+        branch_name: Optional git branch name
+        worktree_path: Optional path to worktree
+
+    Returns:
+        MetadataBlock with workflow-started schema
+    """
+    schema = WorkflowStartedSchema()
+    data: dict[str, Any] = {
+        "status": "started",
+        "started_at": started_at,
+        "workflow_run_id": workflow_run_id,
+        "workflow_run_url": workflow_run_url,
+        "issue_number": issue_number,
+    }
+
+    if branch_name is not None:
+        data["branch_name"] = branch_name
+
+    if worktree_path is not None:
+        data["worktree_path"] = worktree_path
+
+    return create_metadata_block(
+        key=schema.get_key(),
+        data=data,
+        schema=schema,
+    )
+
+
 # Backward compatibility alias
 create_plan_issue_block = create_plan_block
 
@@ -676,7 +916,8 @@ def extract_raw_metadata_blocks(text: str) -> list[RawMetadataBlock]:
 
     # Phase 1 pattern: Extract only using HTML comment markers
     # Captures key and raw body content between markers
-    pattern = r"<!-- erk:metadata-block:(.+?) -->(.+?)<!-- /erk:metadata-block -->"
+    # Accepts both <!-- /erk:metadata-block --> and <!-- /erk:metadata-block:key -->
+    pattern = r"<!-- erk:metadata-block:(.+?) -->(.+?)<!-- /erk:metadata-block(?::\1)? -->"
 
     matches = re.finditer(pattern, text, re.DOTALL)
 

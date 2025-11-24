@@ -28,6 +28,33 @@ jobs:
         with:
           token: ${{ github.token }}
 
+      - name: Setup environment for workflow started comment
+        run: |
+          # Install uv (needed for dot-agent)
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          source $HOME/.cargo/env
+
+          # Install dot-agent from local package
+          cd $GITHUB_WORKSPACE
+          uv tool install --from ./packages/dot-agent-kit dot-agent-kit
+
+      - name: Post workflow started comment
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          WORKFLOW_RUN_ID: ${{ github.run_id }}
+          SERVER_URL: ${{ github.server_url }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source $HOME/.cargo/env
+          WORKFLOW_RUN_URL="$SERVER_URL/$REPOSITORY/actions/runs/$WORKFLOW_RUN_ID"
+
+          dot-agent run erk post-workflow-started-comment \
+            --issue-number "$ISSUE_NUMBER" \
+            --workflow-run-id "$WORKFLOW_RUN_ID" \
+            --workflow-run-url "$WORKFLOW_RUN_URL" \
+            2>/dev/null || true
+
       - name: Derive branch name from issue title
         id: branch_name
         # SECURITY: Use env block to prevent code injection attacks

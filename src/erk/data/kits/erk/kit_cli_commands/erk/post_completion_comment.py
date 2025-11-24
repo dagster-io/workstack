@@ -24,16 +24,22 @@ Examples:
 import json
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
-from pathlib import Path
 
 import click
 from erk_shared.github.metadata import (
     create_implementation_status_block,
     render_erk_issue_event,
 )
+from erk_shared.github.status_history import build_status_history
 from erk_shared.impl_folder import parse_progress_frontmatter, read_issue_reference
 
-from dot_agent_kit.context_helpers import require_github_issues, require_repo_root
+from dot_agent_kit.context_helpers import (
+    require_cwd,
+    require_git,
+    require_github,
+    require_github_issues,
+    require_repo_root,
+)
 
 
 @dataclass(frozen=True)
@@ -68,9 +74,12 @@ def post_completion_comment(ctx: click.Context, summary: str) -> None:
     """
     # Get dependencies from context
     repo_root = require_repo_root(ctx)
+    git = require_git(ctx)
+    require_github(ctx)
+    cwd = require_cwd(ctx)
 
     # Read issue reference
-    impl_dir = Path.cwd() / ".impl"
+    impl_dir = cwd / ".impl"
     issue_ref = read_issue_reference(impl_dir)
     if issue_ref is None:
         result = CompletionError(
@@ -121,21 +130,14 @@ def post_completion_comment(ctx: click.Context, summary: str) -> None:
     # Generate timestamp
     timestamp = datetime.now(UTC).isoformat()
 
-    # Create metadata block using shared library
-    block = create_implementation_status_block(
-        status="complete",
-        completed_steps=total,
-        total_steps=total,
-        timestamp=timestamp,
-        summary=summary,
-    )
+    # Gather implementation artifacts from Git integration
+    branch_name = git.get_current_branch(cwd)
 
-    # Create comment with consistent format
-    comment_body = render_erk_issue_event(
-        title="✅ Implementation complete",
-        metadata=block,
-        description="",
-    )
+    # Get current HEAD commit SHA using get_recent_commits
+    recent_commits = git.get_recent_commits(cwd, limit=1)
+    commit_sha = recent_commits[0]["sha"] if recent_commits else None
+
+    worktree_path = str(cwd.resolve())
 
     # Get GitHub Issues from context (with LBYL check)
     # Convert stderr error to JSON error for graceful degradation (|| true pattern)
@@ -149,6 +151,41 @@ def post_completion_comment(ctx: click.Context, summary: str) -> None:
         )
         click.echo(json.dumps(asdict(result), indent=2))
         raise SystemExit(0) from None
+
+    # Build status history by fetching previous metadata blocks
+    try:
+        # Fetch all comments from the issue
+        comment_bodies = github.get_issue_comments(repo_root, issue_ref.issue_number)
+        status_history = build_status_history(comment_bodies, timestamp)
+    except Exception:
+        # If we can't fetch history, just include completion event
+        status_history = build_status_history([], timestamp)
+
+    # TODO: Get PR URL from GitHub integration
+    # Need to add get_pr_url(repo_root: Path, pr_number: int) -> str | None to GitHub ABC
+    # For now, leave pr_url as None (it's optional in the metadata block)
+    pr_url = None
+
+    # Create metadata block using shared library
+    block = create_implementation_status_block(
+        status="complete",
+        completed_steps=total,
+        total_steps=total,
+        timestamp=timestamp,
+        summary=summary,
+        branch_name=branch_name,
+        pr_url=pr_url,
+        commit_sha=commit_sha,
+        worktree_path=worktree_path,
+        status_history=status_history,
+    )
+
+    # Create comment with consistent format
+    comment_body = render_erk_issue_event(
+        title="✅ Implementation complete",
+        metadata=block,
+        description="",
+    )
 
     # Post comment to GitHub
     try:

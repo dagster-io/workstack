@@ -64,6 +64,7 @@ def retry_plan(ctx: ErkContext, identifier: str) -> None:
     # Fetch issue from GitHub
     try:
         issue = ctx.issues.get_issue(repo_root, issue_number)
+        ctx.feedback.info(f"Fetched issue #{issue_number}")
     except RuntimeError as e:
         user_output(click.style("Error: ", fg="red") + str(e))
         raise SystemExit(1) from e
@@ -87,6 +88,7 @@ def retry_plan(ctx: ErkContext, identifier: str) -> None:
     # Calculate retry count by parsing all comments
     try:
         comments = ctx.issues.get_issue_comments(repo_root, issue_number)
+        ctx.feedback.info(f"Parsing {len(comments)} comment(s) for retry history")
     except RuntimeError as e:
         user_output(click.style("Error: ", fg="red") + str(e))
         raise SystemExit(1) from e
@@ -122,6 +124,7 @@ def retry_plan(ctx: ErkContext, identifier: str) -> None:
         triggered_by = "unknown"
 
     # Remove and re-add the erk-queue label
+    ctx.feedback.info("Updating erk-queue label...")
     try:
         ctx.issues.remove_label_from_issue(repo_root, issue_number, ERK_QUEUE_LABEL)
         ctx.issues.ensure_label_on_issue(repo_root, issue_number, ERK_QUEUE_LABEL)
@@ -157,4 +160,5 @@ def retry_plan(ctx: ErkContext, identifier: str) -> None:
         user_output(click.style("Error: ", fg="red") + str(e))
         raise SystemExit(1) from e
 
-    user_output(f"✅ Plan #{issue_number} requeued (retry #{new_retry_count})")
+    ctx.feedback.success(f"✓ Plan #{issue_number} requeued (retry #{new_retry_count})")
+    ctx.feedback.success(f"View issue: {issue.url}")

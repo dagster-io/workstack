@@ -368,15 +368,15 @@ class RealGitHubIssues(GitHubIssues):
             "gh",
             "api",
             f"repos/{{owner}}/{{repo}}/issues/{number}/comments",
-            "--jq",
-            ".[].body",
         ]
         stdout = execute_gh_command(cmd, repo_root)
 
         if not stdout.strip():
             return []
 
-        return stdout.strip().split("\n")
+        # Parse JSON properly to handle multi-line comment bodies
+        comments = json.loads(stdout)
+        return [comment["body"] for comment in comments]
 
     def get_multiple_issue_comments(
         self, repo_root: Path, issue_numbers: list[int]

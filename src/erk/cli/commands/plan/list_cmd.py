@@ -6,6 +6,7 @@ from pathlib import Path
 
 import click
 from erk_shared.github.issues import GitHubIssues
+from erk_shared.impl_folder import read_issue_reference
 
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
@@ -150,6 +151,18 @@ def _list_plans_impl(
             # If batch fetch fails, continue without worktree status
             pass
 
+    # Build local worktree mapping from .impl/issue.json files
+    worktree_by_issue: dict[int, str] = {}
+    worktrees = ctx.git.list_worktrees(repo_root)
+    for worktree in worktrees:
+        impl_folder = worktree.path / ".impl"
+        if impl_folder.exists() and impl_folder.is_dir():
+            issue_ref = read_issue_reference(impl_folder)
+            if issue_ref is not None:
+                # If multiple worktrees have same issue, keep first found
+                if issue_ref.issue_number not in worktree_by_issue:
+                    worktree_by_issue[issue_ref.issue_number] = worktree.path.name
+
     for plan in plans:
         # Format state with color
         state_color = "green" if plan.state == PlanState.OPEN else "red"
@@ -165,15 +178,22 @@ def _list_plans_impl(
                 click.style(f"[{label}]", fg="bright_magenta") for label in plan.labels
             )
 
-        # Query worktree status from batch-fetched comments
+        # Query worktree status - check local .impl/issue.json first, then GitHub comments
         worktree_str = ""
         issue_number = plan.metadata.get("number")
-        if isinstance(issue_number, int) and issue_number in all_comments:
+        worktree_name = None
+
+        # Check local mapping first
+        if isinstance(issue_number, int) and issue_number in worktree_by_issue:
+            worktree_name = worktree_by_issue[issue_number]
+        # Fall back to GitHub comments if not found locally
+        elif isinstance(issue_number, int) and issue_number in all_comments:
             comments = all_comments[issue_number]
             # Parse worktree metadata from comments
             worktree_name = _parse_worktree_from_comments(comments)
-            if worktree_name:
-                worktree_str = f" {click.style(worktree_name, fg='yellow')}"
+
+        if worktree_name:
+            worktree_str = f" {click.style(worktree_name, fg='yellow')}"
 
         # Build line
         line = f"{id_str} ({state_str}){labels_str} {plan.title}{worktree_str}"

@@ -7,53 +7,46 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
-import pytest
 from click.testing import CliRunner
+from erk_shared.github.issues import FakeGitHubIssues, IssueInfo
 
+from dot_agent_kit.context import DotAgentContext
 from dot_agent_kit.data.kits.erk.kit_cli_commands.erk.create_erp_from_issue import (
     create_erp_from_issue,
 )
-from erk.core.plan_store import FakePlanStore, Plan, PlanState
 
 
-def test_create_erp_from_issue_success(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_create_erp_from_issue_success(tmp_path: Path) -> None:
     """Test successful .erp/ folder creation from issue."""
-    # Arrange: Set up fake plan store with test data
+    # Arrange: Set up fake GitHub Issues with test data
     plan_content = "# Test Plan\n\nThis is a test plan."
-    plan = Plan(
-        plan_identifier="1028",
+    issue = IssueInfo(
+        number=1028,
         title="Test Issue Title",
         body=plan_content,
-        state=PlanState.OPEN,
+        state="OPEN",
         url="https://github.com/owner/repo/issues/1028",
         labels=["erk-plan"],
         assignees=[],
         created_at=datetime(2024, 1, 1, tzinfo=UTC),
         updated_at=datetime(2024, 1, 2, tzinfo=UTC),
-        metadata={},
     )
 
-    fake_plan_store = FakePlanStore(plans={"1028": plan})
+    fake_github = FakeGitHubIssues(issues={1028: issue})
 
-    # Mock create_context to return context with fake plan store
-    def mock_create_context(dry_run: bool, script: bool) -> object:
-        # Return a minimal context object with just the plan_store
-        class MockContext:
-            def __init__(self) -> None:
-                self.plan_store = fake_plan_store
-
-        return MockContext()
-
-    monkeypatch.setattr(
-        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.create_erp_from_issue.create_context",
-        mock_create_context,
+    # Create context with fake GitHub Issues
+    ctx = DotAgentContext.for_test(
+        github_issues=fake_github,
+        repo_root=tmp_path,
+        cwd=tmp_path,
     )
 
     # Act: Run command
     runner = CliRunner()
     result = runner.invoke(
         create_erp_from_issue,
-        ["1028", "Test Issue Title", "--repo-root", str(tmp_path)],
+        ["1028", "Test Issue Title"],
+        obj=ctx,
     )
 
     # Assert: Command succeeded
@@ -77,31 +70,24 @@ def test_create_erp_from_issue_success(tmp_path: Path, monkeypatch: pytest.Monke
     assert plan_content in plan_content_read
 
 
-def test_create_erp_from_issue_plan_not_found(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Test error handling when plan cannot be fetched."""
-    # Arrange: Set up fake plan store with no plans
-    fake_plan_store = FakePlanStore()
+def test_create_erp_from_issue_issue_not_found(tmp_path: Path) -> None:
+    """Test error handling when issue cannot be fetched."""
+    # Arrange: Set up fake GitHub Issues with no issues
+    fake_github = FakeGitHubIssues(issues={})
 
-    # Mock create_context to return context with empty plan store
-    def mock_create_context(dry_run: bool, script: bool) -> object:
-        class MockContext:
-            def __init__(self) -> None:
-                self.plan_store = fake_plan_store
-
-        return MockContext()
-
-    monkeypatch.setattr(
-        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.create_erp_from_issue.create_context",
-        mock_create_context,
+    # Create context
+    ctx = DotAgentContext.for_test(
+        github_issues=fake_github,
+        repo_root=tmp_path,
+        cwd=tmp_path,
     )
 
     # Act: Run command with non-existent issue
     runner = CliRunner()
     result = runner.invoke(
         create_erp_from_issue,
-        ["999", "Non-existent Issue", "--repo-root", str(tmp_path)],
+        ["999", "Non-existent Issue"],
+        obj=ctx,
     )
 
     # Assert: Command failed with exit code 1
@@ -110,62 +96,56 @@ def test_create_erp_from_issue_plan_not_found(
     # Assert: Error output is valid JSON with error details
     output = json.loads(result.output)
     assert output["success"] is False
-    assert output["error"] == "plan_not_found"
-    assert "Could not fetch plan" in output["message"]
+    assert output["error"] == "issue_not_found"
+    assert "Could not fetch issue" in output["message"]
 
     # Assert: .erp/ folder was NOT created
     erp_path = tmp_path / ".erp"
     assert not erp_path.exists()
 
 
-def test_create_erp_from_issue_uses_cwd_when_no_repo_root(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Test command defaults to current working directory when --repo-root not specified."""
-    # Arrange: Set up fake plan store
-    plan_content = "# Default CWD Test\n\nTesting default behavior."
-    plan = Plan(
-        plan_identifier="100",
-        title="Default CWD Issue",
+def test_create_erp_from_issue_missing_erk_plan_label(tmp_path: Path) -> None:
+    """Test error handling when issue lacks erk-plan label."""
+    # Arrange: Set up issue without erk-plan label
+    plan_content = "# Test Plan\n\nThis is a test plan."
+    issue = IssueInfo(
+        number=100,
+        title="Issue Without Label",
         body=plan_content,
-        state=PlanState.OPEN,
+        state="OPEN",
         url="https://github.com/owner/repo/issues/100",
-        labels=["erk-plan"],
+        labels=["bug"],  # Different label, not erk-plan
         assignees=[],
         created_at=datetime(2024, 1, 1, tzinfo=UTC),
         updated_at=datetime(2024, 1, 2, tzinfo=UTC),
-        metadata={},
     )
 
-    fake_plan_store = FakePlanStore(plans={"100": plan})
+    fake_github = FakeGitHubIssues(issues={100: issue})
 
-    # Mock create_context
-    def mock_create_context(dry_run: bool, script: bool) -> object:
-        class MockContext:
-            def __init__(self) -> None:
-                self.plan_store = fake_plan_store
-
-        return MockContext()
-
-    monkeypatch.setattr(
-        "dot_agent_kit.data.kits.erk.kit_cli_commands.erk.create_erp_from_issue.create_context",
-        mock_create_context,
+    # Create context
+    ctx = DotAgentContext.for_test(
+        github_issues=fake_github,
+        repo_root=tmp_path,
+        cwd=tmp_path,
     )
 
-    # Mock Path.cwd() to return tmp_path
-    monkeypatch.setattr(Path, "cwd", lambda: tmp_path)
-
-    # Act: Run command WITHOUT --repo-root
+    # Act: Run command
     runner = CliRunner()
     result = runner.invoke(
         create_erp_from_issue,
-        ["100", "Default CWD Issue"],
+        ["100", "Issue Without Label"],
+        obj=ctx,
     )
 
-    # Assert: Command succeeded
-    assert result.exit_code == 0
+    # Assert: Command failed with exit code 1
+    assert result.exit_code == 1
 
-    # Assert: .erp/ folder was created in cwd (tmp_path)
+    # Assert: Error output is valid JSON with error details
+    output = json.loads(result.output)
+    assert output["success"] is False
+    assert output["error"] == "missing_erk_plan_label"
+    assert "does not have 'erk-plan' label" in output["message"]
+
+    # Assert: .erp/ folder was NOT created
     erp_path = tmp_path / ".erp"
-    assert erp_path.exists()
-    assert (erp_path / "plan.md").exists()
+    assert not erp_path.exists()

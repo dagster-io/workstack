@@ -2,6 +2,7 @@
 
 from datetime import UTC
 from pathlib import Path
+from urllib.parse import urlparse
 
 from erk_shared.github.issues import GitHubIssues, IssueInfo
 
@@ -77,6 +78,60 @@ class GitHubPlanStore(PlanStore):
             "github"
         """
         return "github"
+
+    def close_plan(self, repo_root: Path, identifier: str) -> None:
+        """Close a plan by its identifier.
+
+        Args:
+            repo_root: Repository root directory
+            identifier: Plan identifier (issue number like "123" or GitHub URL)
+
+        Raises:
+            RuntimeError: If gh CLI fails, plan not found, or invalid identifier
+        """
+        # Parse identifier to extract issue number
+        number = self._parse_identifier(identifier)
+
+        # Add comment before closing
+        comment_body = "Plan completed via erk plan close"
+        self._github_issues.add_comment(repo_root, number, comment_body)
+
+        # Close the issue
+        self._github_issues.close_issue(repo_root, number)
+
+    def _parse_identifier(self, identifier: str) -> int:
+        """Parse identifier to extract issue number.
+
+        Args:
+            identifier: Issue number (e.g., "123") or GitHub URL
+
+        Returns:
+            Issue number as integer
+
+        Raises:
+            RuntimeError: If identifier format is invalid
+        """
+        # Check if it's a simple numeric string
+        if identifier.isdigit():
+            return int(identifier)
+
+        # Check if it's a GitHub URL
+        # Security: Use proper URL parsing to validate hostname
+        parsed = urlparse(identifier)
+        if parsed.hostname == "github.com" and parsed.path:
+            # Extract number from URL: https://github.com/org/repo/issues/123
+            parts = parsed.path.rstrip("/").split("/")
+            if len(parts) >= 2 and parts[-2] == "issues":
+                issue_num_str = parts[-1]
+                if issue_num_str.isdigit():
+                    return int(issue_num_str)
+
+        # Invalid identifier format
+        msg = (
+            f"Invalid identifier format: {identifier}. "
+            "Expected issue number (e.g., '123') or GitHub URL"
+        )
+        raise RuntimeError(msg)
 
     def _convert_to_plan(self, issue_info: IssueInfo) -> Plan:
         """Convert IssueInfo to Plan.

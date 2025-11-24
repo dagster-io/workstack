@@ -3,10 +3,10 @@
 from pathlib import Path
 
 from click.testing import CliRunner
+from erk_shared.git.abc import WorktreeInfo
 
 from erk.cli.cli import cli
 from erk.core.branch_metadata import BranchMetadata
-from erk.core.git.abc import WorktreeInfo
 from erk.core.git.fake import FakeGit
 from erk.core.graphite.fake import FakeGraphite
 from erk.core.repo_discovery import RepoContext
@@ -374,8 +374,9 @@ def test_down_delete_current_success() -> None:
         )
 
         # PR for feature-2 is merged
+        from erk_shared.github.types import PullRequestInfo
+
         from erk.core.github.fake import FakeGitHub
-        from erk.core.github.types import PullRequestInfo
 
         github_ops = FakeGitHub(
             prs={
@@ -500,8 +501,9 @@ def test_down_delete_current_pr_not_merged() -> None:
         )
 
         # PR for feature-2 is OPEN (not merged)
+        from erk_shared.github.types import PullRequestInfo
+
         from erk.core.github.fake import FakeGitHub
-        from erk.core.github.types import PullRequestInfo
 
         github_ops = FakeGitHub(
             prs={
@@ -624,8 +626,9 @@ def test_down_delete_current_trunk_in_root() -> None:
         )
 
         # PR for feature-1 is merged
+        from erk_shared.github.types import PullRequestInfo
+
         from erk.core.github.fake import FakeGitHub
-        from erk.core.github.types import PullRequestInfo
 
         github_ops = FakeGitHub(
             prs={

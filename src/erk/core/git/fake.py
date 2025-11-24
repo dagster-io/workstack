@@ -7,8 +7,7 @@ in its constructor. Construct instances directly with keyword arguments.
 from pathlib import Path
 
 import click
-
-from erk.core.git.abc import Git, WorktreeInfo
+from erk_shared.git.abc import Git, WorktreeInfo
 
 
 class FakeGit(Git):

@@ -6,7 +6,8 @@ tracks mutations, and provides reliable test doubles for CLI tests.
 
 from pathlib import Path
 
-from erk.core.git.abc import WorktreeInfo
+from erk_shared.git.abc import WorktreeInfo
+
 from erk.core.git.fake import FakeGit
 
 

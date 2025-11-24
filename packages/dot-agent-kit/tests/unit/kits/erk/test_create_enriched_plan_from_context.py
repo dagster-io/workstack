@@ -1,6 +1,7 @@
 """Unit tests for create-enriched-plan-from-context command."""
 
 import json
+from pathlib import Path
 
 from click.testing import CliRunner
 from erk_shared.github.issues import FakeGitHubIssues
@@ -12,23 +13,27 @@ from erk.data.kits.erk.kit_cli_commands.erk.create_enriched_plan_from_context im
 
 
 def test_create_enriched_plan_issue_success() -> None:
-    """Test successful issue creation from enriched plan with --plan-content."""
+    """Test successful issue creation from enriched plan with --plan-file."""
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()
 
     plan = "# My Feature\n\n- Step 1\n- Step 2"
 
-    result = runner.invoke(
-        create_enriched_plan_from_context,
-        ["--plan-content", plan],
-        obj=DotAgentContext.for_test(github_issues=fake_gh),
-    )
+    with runner.isolated_filesystem():
+        plan_file = Path("plan.md")
+        plan_file.write_text(plan, encoding="utf-8")
 
-    assert result.exit_code == 0
-    output = json.loads(result.output)
-    assert output["success"] is True
-    assert output["issue_number"] == 1
-    assert "github.com/test-owner/test-repo/issues/1" in output["issue_url"]
+        result = runner.invoke(
+            create_enriched_plan_from_context,
+            ["--plan-file", str(plan_file)],
+            obj=DotAgentContext.for_test(github_issues=fake_gh),
+        )
+
+        assert result.exit_code == 0
+        output = json.loads(result.output)
+        assert output["success"] is True
+        assert output["issue_number"] == 1
+        assert "github.com/test-owner/test-repo/issues/1" in output["issue_url"]
 
     # Verify behavior through fake's mutation tracking
     assert len(fake_gh.created_issues) == 1
@@ -39,7 +44,7 @@ def test_create_enriched_plan_issue_success() -> None:
 
 
 def test_create_enriched_plan_issue_multiline() -> None:
-    """Test --plan-content option with multi-line content."""
+    """Test --plan-file option with multi-line content."""
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()
 
@@ -59,13 +64,18 @@ Background information
 Test instructions
 """
 
-    result = runner.invoke(
-        create_enriched_plan_from_context,
-        ["--plan-content", plan],
-        obj=DotAgentContext.for_test(github_issues=fake_gh),
-    )
+    with runner.isolated_filesystem():
+        plan_file = Path("plan.md")
+        plan_file.write_text(plan, encoding="utf-8")
 
-    assert result.exit_code == 0
+        result = runner.invoke(
+            create_enriched_plan_from_context,
+            ["--plan-file", str(plan_file)],
+            obj=DotAgentContext.for_test(github_issues=fake_gh),
+        )
+
+        assert result.exit_code == 0
+
     # Verify newlines preserved correctly
     assert len(fake_gh.created_issues) == 1
     _title, body, _labels = fake_gh.created_issues[0]
@@ -76,22 +86,26 @@ Test instructions
 
 
 def test_create_enriched_plan_issue_empty_plan() -> None:
-    """Test error when --plan-content is empty."""
+    """Test error when --plan-file contains empty content."""
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()
 
-    result = runner.invoke(
-        create_enriched_plan_from_context,
-        ["--plan-content", ""],
-        obj=DotAgentContext.for_test(github_issues=fake_gh),
-    )
+    with runner.isolated_filesystem():
+        plan_file = Path("plan.md")
+        plan_file.write_text("", encoding="utf-8")
 
-    assert result.exit_code == 1
-    assert "Error: Empty plan content" in result.output
+        result = runner.invoke(
+            create_enriched_plan_from_context,
+            ["--plan-file", str(plan_file)],
+            obj=DotAgentContext.for_test(github_issues=fake_gh),
+        )
+
+        assert result.exit_code == 1
+        assert "Error: Empty plan content" in result.output
 
 
 def test_create_enriched_plan_issue_missing_option() -> None:
-    """Test error when --plan-content not provided."""
+    """Test error when --plan-file not provided."""
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()
 
@@ -103,7 +117,7 @@ def test_create_enriched_plan_issue_missing_option() -> None:
 
     assert result.exit_code != 0
     # Click should mention the missing required option
-    assert "--plan-content" in result.output or "plan-content" in result.output
+    assert "--plan-file" in result.output or "plan-file" in result.output
 
 
 def test_create_enriched_plan_issue_ensures_label() -> None:
@@ -113,13 +127,18 @@ def test_create_enriched_plan_issue_ensures_label() -> None:
 
     plan = "# Test Plan\n\n- Step"
 
-    result = runner.invoke(
-        create_enriched_plan_from_context,
-        ["--plan-content", plan],
-        obj=DotAgentContext.for_test(github_issues=fake_gh),
-    )
+    with runner.isolated_filesystem():
+        plan_file = Path("plan.md")
+        plan_file.write_text(plan, encoding="utf-8")
 
-    assert result.exit_code == 0
+        result = runner.invoke(
+            create_enriched_plan_from_context,
+            ["--plan-file", str(plan_file)],
+            obj=DotAgentContext.for_test(github_issues=fake_gh),
+        )
+
+        assert result.exit_code == 0
+
     # Verify label was created
     assert len(fake_gh.created_labels) == 1
     label, description, color = fake_gh.created_labels[0]
@@ -135,19 +154,24 @@ def test_create_enriched_plan_issue_unicode() -> None:
 
     plan = "# café Feature 你好\n\n- Unicode test"
 
-    result = runner.invoke(
-        create_enriched_plan_from_context,
-        ["--plan-content", plan],
-        obj=DotAgentContext.for_test(github_issues=fake_gh),
-    )
+    with runner.isolated_filesystem():
+        plan_file = Path("plan.md")
+        plan_file.write_text(plan, encoding="utf-8")
 
-    assert result.exit_code == 0
+        result = runner.invoke(
+            create_enriched_plan_from_context,
+            ["--plan-file", str(plan_file)],
+            obj=DotAgentContext.for_test(github_issues=fake_gh),
+        )
+
+        assert result.exit_code == 0
+
     # Verify issue was created (title will have unicode characters)
     assert len(fake_gh.created_issues) == 1
 
 
 def test_create_enriched_plan_issue_yaml_frontmatter() -> None:
-    """Test --plan-content with YAML frontmatter preserved."""
+    """Test --plan-file with YAML frontmatter preserved."""
     fake_gh = FakeGitHubIssues()
     runner = CliRunner()
 
@@ -156,13 +180,18 @@ def test_create_enriched_plan_issue_yaml_frontmatter() -> None:
 - Step 1
 """
 
-    result = runner.invoke(
-        create_enriched_plan_from_context,
-        ["--plan-content", plan],
-        obj=DotAgentContext.for_test(github_issues=fake_gh),
-    )
+    with runner.isolated_filesystem():
+        plan_file = Path("plan.md")
+        plan_file.write_text(plan, encoding="utf-8")
 
-    assert result.exit_code == 0
+        result = runner.invoke(
+            create_enriched_plan_from_context,
+            ["--plan-file", str(plan_file)],
+            obj=DotAgentContext.for_test(github_issues=fake_gh),
+        )
+
+        assert result.exit_code == 0
+
     # Verify plan content preserved
     assert len(fake_gh.created_issues) == 1
     title, body, _labels = fake_gh.created_issues[0]

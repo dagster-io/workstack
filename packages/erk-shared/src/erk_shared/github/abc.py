@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from erk.core.github.types import PRInfo, PRMergeability, PullRequestInfo, WorkflowRun
+from erk_shared.github.types import PRInfo, PRMergeability, PullRequestInfo, WorkflowRun
 
 
 class GitHub(ABC):

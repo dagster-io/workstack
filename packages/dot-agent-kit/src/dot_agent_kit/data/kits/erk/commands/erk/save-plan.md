@@ -392,8 +392,21 @@ Suggested action:
 **Create the issue using kit CLI command:**
 
 ```bash
-issue_url=$(dot-agent kit-command erk create-enriched-plan-from-context --plan-content "$enhanced_plan_content")
-if [ $? -ne 0 ]; then
+# Write enhanced plan to temp file
+tmpfile=$(mktemp)
+cat > "$tmpfile" << 'EOF'
+$enhanced_plan_content
+EOF
+
+# Create issue from file
+issue_url=$(dot-agent kit-command erk create-enriched-plan-from-context --plan-file "$tmpfile")
+exit_code=$?
+
+# Clean up temp file
+rm "$tmpfile"
+
+# Check for errors
+if [ $exit_code -ne 0 ]; then
     echo "❌ Error: Failed to create GitHub issue" >&2
     exit 1
 fi
@@ -401,7 +414,7 @@ fi
 
 The kit CLI command:
 
-- Reads plan content from --plan-content option
+- Reads plan content from file specified by --plan-file option
 - Extracts title from plan for issue title
 - Creates issue with `erk-plan` label
 - Returns issue URL

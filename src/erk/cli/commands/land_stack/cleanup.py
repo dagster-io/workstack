@@ -3,11 +3,11 @@
 from pathlib import Path
 
 import click
+from erk_shared.git.abc import WorktreeInfo
 
 from erk.cli.commands.land_stack.output import _emit, _format_cli_command
 from erk.core.branch_metadata import BranchMetadata
 from erk.core.context import ErkContext, regenerate_context
-from erk.core.git.abc import WorktreeInfo
 
 
 def _find_next_unmerged_child(

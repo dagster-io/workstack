@@ -4,9 +4,10 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from erk_shared.git.abc import WorktreeInfo
+
 from erk.cli.output import user_output
 from erk.core.context import ErkContext
-from erk.core.git.abc import WorktreeInfo
 
 
 @dataclass(frozen=True)

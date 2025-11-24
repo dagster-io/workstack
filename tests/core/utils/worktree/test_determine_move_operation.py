@@ -3,8 +3,8 @@
 from pathlib import Path
 
 import pytest
+from erk_shared.git.abc import WorktreeInfo
 
-from erk.core.git.abc import WorktreeInfo
 from erk.core.worktree_utils import MoveOperationType, determine_move_operation
 
 

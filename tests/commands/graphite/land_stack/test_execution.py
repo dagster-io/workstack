@@ -805,7 +805,7 @@ def test_land_stack_checks_pr_mergeability_before_merge() -> None:
         )
 
         # Configure GitHub to report PR as unmergeable due to conflicts
-        from erk.core.github.types import PRMergeability
+        from erk_shared.github.types import PRMergeability
 
         github_ops = FakeGitHub(
             pr_statuses={
@@ -858,7 +858,7 @@ def test_land_stack_succeeds_when_pr_is_mergeable() -> None:
         )
 
         # Configure GitHub to report PR as mergeable
-        from erk.core.github.types import PRMergeability
+        from erk_shared.github.types import PRMergeability
 
         github_ops = FakeGitHub(
             pr_statuses={
@@ -912,7 +912,7 @@ def test_land_stack_fails_when_pr_blocked_by_protections() -> None:
         )
 
         # Configure GitHub to report PR as blocked
-        from erk.core.github.types import PRMergeability
+        from erk_shared.github.types import PRMergeability
 
         github_ops = FakeGitHub(
             pr_statuses={
@@ -966,7 +966,7 @@ def test_land_stack_shows_mergeability_check_in_output() -> None:
         )
 
         # Configure GitHub to report PR as mergeable
-        from erk.core.github.types import PRMergeability
+        from erk_shared.github.types import PRMergeability
 
         github_ops = FakeGitHub(
             pr_statuses={

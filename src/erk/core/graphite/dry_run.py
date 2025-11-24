@@ -2,9 +2,10 @@
 
 from pathlib import Path
 
+from erk_shared.git.abc import Git
+from erk_shared.github.types import PullRequestInfo
+
 from erk.core.branch_metadata import BranchMetadata
-from erk.core.git.abc import Git
-from erk.core.github.types import PullRequestInfo
 from erk.core.graphite.abc import Graphite
 
 

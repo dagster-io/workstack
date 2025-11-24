@@ -920,7 +920,7 @@ erk implement {issue_number} --yolo
 
 **Dangerous mode (auto-submit PR after implementation):**
 ```bash
-erk implement {issue_number} --submit --dangerous
+erk implement {issue_number} --dangerous
 ```"""
 
 

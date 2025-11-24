@@ -350,7 +350,7 @@ def export_json(agents: list[dict], session_id: str) -> str:
     return json.dumps(output, indent=2)
 
 
-@click.command()
+@click.command(name="debug-agent")
 @click.option(
     "--session-id",
     type=str,

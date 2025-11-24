@@ -174,7 +174,7 @@ def find_project_info(path: Path) -> ProjectInfo | ProjectError:
     )
 
 
-@click.command()
+@click.command(name="find-project-dir")
 @click.option(
     "--path",
     type=click.Path(exists=True, path_type=Path),

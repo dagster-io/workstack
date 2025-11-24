@@ -416,7 +416,7 @@ def post_creation_comment(issue_number: int, worktree_name: str, branch_name: st
     return result.returncode == 0
 
 
-@click.command()
+@click.command(name="create-wt-from-issue")
 @click.argument("issue_reference")
 @click.pass_context
 def create_wt_from_issue(ctx: click.Context, issue_reference: str) -> None:

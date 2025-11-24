@@ -623,7 +623,7 @@ def discover_planning_agent_logs(session_log_path: Path, parent_session_id: str)
     return planning_agent_logs
 
 
-@click.command()
+@click.command(name="preprocess-session")
 @click.argument("log_path", type=click.Path(exists=True, path_type=Path))
 @click.option(
     "--session-id",

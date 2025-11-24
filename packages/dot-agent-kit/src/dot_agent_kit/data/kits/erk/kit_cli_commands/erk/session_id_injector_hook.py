@@ -12,7 +12,7 @@ import sys
 import click
 
 
-@click.command()
+@click.command(name="session-id-injector-hook")
 def session_id_injector_hook() -> None:
     """Inject session ID into conversation context when relevant."""
     # Attempt to read session context from stdin (if Claude Code provides it)

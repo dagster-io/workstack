@@ -35,7 +35,7 @@ from pathlib import Path
 import click
 
 
-@click.command()
+@click.command(name="get-closing-text")
 def get_closing_text() -> None:
     """Get GitHub issue closing text for PR body.
 

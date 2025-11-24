@@ -21,7 +21,7 @@ from erk_shared.github.metadata import (
 from erk_shared.naming import sanitize_worktree_name
 
 
-@click.command()
+@click.command(name="post-plan-comment")
 @click.option("--issue-number", required=True, type=int, help="GitHub issue number")
 @click.option("--plan-content", required=True, help="Plan markdown content")
 @click.option("--plan-title", required=True, help="Plan title for worktree name generation")

@@ -94,7 +94,8 @@ class RealClaudeExecutor(ClaudeExecutor):
 
         Implementation details:
         - Uses subprocess.run() with stdin=DEVNULL for non-interactive execution
-        - Passes --permission-mode acceptEdits, --output-format stream-json, and optional --dangerously-skip-permissions
+        - Passes --permission-mode acceptEdits, --output-format stream-json
+        - Optionally passes --dangerously-skip-permissions when dangerous=True
         - Streams output to terminal (no capture)
         - Raises RuntimeError on non-zero exit code
         """

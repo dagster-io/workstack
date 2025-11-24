@@ -10,14 +10,22 @@ name: Dispatch Erk Queue
 on:
   issues:
     types: [opened, labeled]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'GitHub issue number to implement'
+        required: true
+        type: string
 
 concurrency:
-  group: implement-issue-${{ github.event.issue.number }}
+  group: implement-issue-${{ github.event.issue.number || github.event.inputs.issue_number }}
   cancel-in-progress: true
 
 jobs:
   setup:
-    if: contains(github.event.issue.labels.*.name, 'erk-queue')
+    if: |
+      (github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'erk-queue')) ||
+      (github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -26,7 +34,16 @@ jobs:
     outputs:
       branch_name: ${{ steps.create_branch.outputs.branch_name }}
       setup_success: ${{ steps.create_branch.outputs.setup_success }}
+      issue_number: ${{ steps.set_issue.outputs.issue_number }}
     steps:
+      - name: Set issue number
+        id: set_issue
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "issue_number=${{ inputs.issue_number }}" >> $GITHUB_OUTPUT
+          else
+            echo "issue_number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+          fi
       - uses: actions/checkout@v4
         with:
           token: ${{ github.token }}
@@ -52,8 +69,18 @@ jobs:
       - name: Derive branch name from issue title
         id: branch_name
         env:
-          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_NUMBER: ${{ steps.set_issue.outputs.issue_number }}
+          ISSUE_TITLE_FROM_EVENT: ${{ github.event.issue.title }}
+          EVENT_NAME: ${{ github.event_name }}
+          GH_TOKEN: ${{ github.token }}
         run: |
+          # Get issue title - from event or API
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            ISSUE_TITLE=$(gh issue view "$ISSUE_NUMBER" --json title -q .title)
+          else
+            ISSUE_TITLE="$ISSUE_TITLE_FROM_EVENT"
+          fi
+
           # Convert issue title to kebab-case using sanitize_branch_component logic
           BRANCH_NAME=$(echo "$ISSUE_TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$//')
 
@@ -84,7 +111,7 @@ jobs:
       - name: Post error comment if branch exists
         if: steps.check_branch.outputs.branch_exists == 'true'
         env:
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_NUMBER: ${{ steps.set_issue.outputs.issue_number }}
           BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -105,11 +132,20 @@ jobs:
       - name: Create branch and .erp/ folder
         id: create_branch
         env:
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_NUMBER: ${{ steps.set_issue.outputs.issue_number }}
           BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
-          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_TITLE_FROM_EVENT: ${{ github.event.issue.title }}
+          EVENT_NAME: ${{ github.event_name }}
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Get issue title - from event or API
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            ISSUE_TITLE=$(gh issue view "$ISSUE_NUMBER" --json title -q .title)
+          else
+            ISSUE_TITLE="$ISSUE_TITLE_FROM_EVENT"
+          fi
+          export ISSUE_TITLE
+
           source $HOME/.cargo/env
 
           # Get trunk branch (main or master)
@@ -194,12 +230,22 @@ jobs:
 
       - name: Create draft PR
         env:
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-          ISSUE_TITLE: ${{ github.event.issue.title }}
-          ISSUE_URL: ${{ github.event.issue.html_url }}
+          ISSUE_NUMBER: ${{ steps.set_issue.outputs.issue_number }}
           BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+          ISSUE_TITLE_FROM_EVENT: ${{ github.event.issue.title }}
+          ISSUE_URL_FROM_EVENT: ${{ github.event.issue.html_url }}
+          EVENT_NAME: ${{ github.event_name }}
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Get issue data - from event or API
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            ISSUE_TITLE=$(gh issue view "$ISSUE_NUMBER" --json title -q .title)
+            ISSUE_URL=$(gh issue view "$ISSUE_NUMBER" --json url -q .url)
+          else
+            ISSUE_TITLE="$ISSUE_TITLE_FROM_EVENT"
+            ISSUE_URL="$ISSUE_URL_FROM_EVENT"
+          fi
+
           # Create PR body
           cat > pr_body.md <<EOF
           Implementation of plan from issue #$ISSUE_NUMBER
@@ -222,7 +268,7 @@ jobs:
 
   implement:
     needs: setup
-    if: contains(github.event.issue.labels.*.name, 'erk-queue') && needs.setup.outputs.setup_success == 'true'
+    if: needs.setup.outputs.setup_success == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -247,7 +293,7 @@ jobs:
 
       - name: Post workflow started comment
         env:
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_NUMBER: ${{ needs.setup.outputs.issue_number }}
           WORKFLOW_RUN_ID: ${{ github.run_id }}
           SERVER_URL: ${{ github.server_url }}
           REPOSITORY: ${{ github.repository }}
@@ -325,7 +371,7 @@ jobs:
       - name: Commit and push changes
         id: commit
         env:
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_NUMBER: ${{ needs.setup.outputs.issue_number }}
           BRANCH_NAME: ${{ needs.setup.outputs.branch_name }}
         run: |
           if [[ -n $(git status --porcelain) ]]; then

@@ -47,17 +47,29 @@ def select_display_pr(prs: list[PullRequestInfo]) -> PullRequestInfo | None:
     return None
 
 
-def format_pr_cell(pr: PullRequestInfo) -> str:
-    """Format PR cell with emoji: #123 👀 or #123 👀💥
+def format_pr_cell(pr: PullRequestInfo, *, use_graphite: bool, graphite_url: str | None) -> str:
+    """Format PR cell with clickable link and emoji: #123 👀 or #123 👀💥
 
     Args:
         pr: PR information
+        use_graphite: If True, use Graphite URL; if False, use GitHub URL
+        graphite_url: Graphite URL for the PR (None if unavailable)
 
     Returns:
-        Formatted string for table cell
+        Formatted string for table cell with OSC 8 hyperlink
     """
     emoji = get_pr_status_emoji(pr)
-    return f"#{pr.number} {emoji}"
+    pr_text = f"#{pr.number}"
+
+    # Determine which URL to use
+    url = graphite_url if use_graphite else pr.url
+
+    # Make PR number clickable if URL is available
+    # Rich supports OSC 8 via [link=...] markup
+    if url:
+        return f"[link={url}]{pr_text}[/link] {emoji}"
+    else:
+        return f"{pr_text} {emoji}"
 
 
 def format_checks_cell(pr: PullRequestInfo | None) -> str:
@@ -320,6 +332,9 @@ def _list_plans_impl(
                 if issue_ref.issue_number not in worktree_by_issue:
                     worktree_by_issue[issue_ref.issue_number] = worktree.path.name
 
+    # Determine use_graphite for URL selection
+    use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
+
     # Create Rich table with columns
     table = Table(show_header=True, header_style="bold")
     table.add_column("Plan", style="cyan", no_wrap=True)
@@ -390,7 +405,12 @@ def _list_plans_impl(
             prs = pr_linkages[issue_number]
             selected_pr = select_display_pr(prs)
             if selected_pr is not None:
-                pr_cell = format_pr_cell(selected_pr)
+                graphite_url = ctx.graphite.get_graphite_url(
+                    selected_pr.owner, selected_pr.repo, selected_pr.number
+                )
+                pr_cell = format_pr_cell(
+                    selected_pr, use_graphite=use_graphite, graphite_url=graphite_url
+                )
                 checks_cell = format_checks_cell(selected_pr)
 
         # Add row to table

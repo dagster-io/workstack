@@ -322,7 +322,7 @@ def test_renderer_with_pr_status() -> None:
     assert "OPEN" in output
     assert "Checks: passing" in output
     assert "✓ Ready to merge" in output
-    assert "https://github.com/owner/repo/pull/123" in output
+    # URL line was removed - PR number is now clickable with OSC 8
 
 
 def test_renderer_draft_pr() -> None:

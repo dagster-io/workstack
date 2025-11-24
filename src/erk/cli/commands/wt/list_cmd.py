@@ -108,6 +108,9 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
         if branch not in all_graphite_branches and branch not in branches_with_worktrees
     ]
 
+    # Determine use_graphite for URL selection
+    use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
+
     # Calculate maximum widths for alignment
     # First, collect all names, branches, and PR info to display
     # Start with root
@@ -125,7 +128,7 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
             pr = prs.get(root_branch)
             if pr:
                 graphite_url = ctx.graphite.get_graphite_url(pr.owner, pr.repo, pr.number)
-                root_pr_info = format_pr_info(pr, graphite_url)
+                root_pr_info = format_pr_info(pr, graphite_url, use_graphite=use_graphite)
                 all_pr_info.append(root_pr_info if root_pr_info else "[no PR]")
             else:
                 all_pr_info.append("[no PR]")
@@ -150,7 +153,7 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
                 pr = prs.get(branch_name)
                 if pr:
                     graphite_url = ctx.graphite.get_graphite_url(pr.owner, pr.repo, pr.number)
-                    wt_pr_info = format_pr_info(pr, graphite_url)
+                    wt_pr_info = format_pr_info(pr, graphite_url, use_graphite=use_graphite)
                     all_pr_info.append(wt_pr_info if wt_pr_info else "[no PR]")
                 else:
                     all_pr_info.append("[no PR]")
@@ -180,7 +183,7 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
         pr = prs.get(root_branch)
         if pr:
             graphite_url = ctx.graphite.get_graphite_url(pr.owner, pr.repo, pr.number)
-            root_pr_info = format_pr_info(pr, graphite_url)
+            root_pr_info = format_pr_info(pr, graphite_url, use_graphite=use_graphite)
             root_pr_title = pr.title
     root_plan_summary = _format_plan_summary(repo.root, ctx)
 
@@ -214,7 +217,7 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
             pr = prs.get(wt_branch)
             if pr:
                 graphite_url = ctx.graphite.get_graphite_url(pr.owner, pr.repo, pr.number)
-                wt_pr_info = format_pr_info(pr, graphite_url)
+                wt_pr_info = format_pr_info(pr, graphite_url, use_graphite=use_graphite)
                 wt_pr_title = pr.title
         wt_plan_summary = _format_plan_summary(wt_path, ctx)
 
@@ -248,7 +251,7 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
                 pr = prs.get(branch)
                 if pr:
                     graphite_url = ctx.graphite.get_graphite_url(pr.owner, pr.repo, pr.number)
-                    branch_pr_info = format_pr_info(pr, graphite_url)
+                    branch_pr_info = format_pr_info(pr, graphite_url, use_graphite=use_graphite)
 
             if branch_pr_info:
                 graphite_pr_info_list.append(branch_pr_info)

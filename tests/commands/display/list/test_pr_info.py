@@ -77,7 +77,7 @@ def test_list_with_stacks_pr_visibility(show_pr_info: bool, expected_visible: bo
         )
 
         # PR info now shown on main line, not just with --stacks
-        result = runner.invoke(cli, ["list"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "list"], obj=test_ctx)
         assert result.exit_code == 0, result.output
 
         assert ("#42" in result.output) is expected_visible
@@ -150,7 +150,7 @@ def test_list_pr_emoji_mapping(
         )
 
         # PR info now shown on main line, not just with --stacks
-        result = runner.invoke(cli, ["list"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "list"], obj=test_ctx)
         assert result.exit_code == 0, result.output
 
         # Verify emoji appears in output
@@ -214,7 +214,7 @@ def test_list_with_stacks_uses_graphite_url() -> None:
         )
 
         # PR info now shown on main line, not just with --stacks
-        result = runner.invoke(cli, ["list"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "list"], obj=test_ctx)
         assert result.exit_code == 0, result.output
 
         # Output should contain OSC 8 escape sequence with Graphite URL
@@ -276,7 +276,7 @@ def test_list_pr_with_merge_conflicts() -> None:
             use_graphite=True,
         )
 
-        result = runner.invoke(cli, ["list"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "list"], obj=test_ctx)
         assert result.exit_code == 0, result.output
 
         # Verify both the base emoji and conflict emoji appear
@@ -335,7 +335,7 @@ def test_list_displays_pr_title_when_available() -> None:
             use_graphite=True,
         )
 
-        result = runner.invoke(cli, ["list"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "list"], obj=test_ctx)
         assert result.exit_code == 0, result.output
 
         # Remove styling to check content
@@ -403,7 +403,7 @@ def test_list_prefers_pr_title_over_plan_summary() -> None:
             use_graphite=True,
         )
 
-        result = runner.invoke(cli, ["list"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "list"], obj=test_ctx)
         assert result.exit_code == 0, result.output
 
         unstyled = click.unstyle(result.output)
@@ -466,7 +466,7 @@ def test_list_falls_back_to_plan_summary_when_no_title() -> None:
             use_graphite=True,
         )
 
-        result = runner.invoke(cli, ["list"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "list"], obj=test_ctx)
         assert result.exit_code == 0, result.output
 
         unstyled = click.unstyle(result.output)
@@ -525,7 +525,7 @@ def test_list_shows_no_plan_when_no_title_and_no_summary() -> None:
             use_graphite=True,
         )
 
-        result = runner.invoke(cli, ["list"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "list"], obj=test_ctx)
         assert result.exit_code == 0, result.output
 
         unstyled = click.unstyle(result.output)
@@ -613,7 +613,7 @@ def test_list_displays_pr_title_for_multiple_worktrees() -> None:
             use_graphite=True,
         )
 
-        result = runner.invoke(cli, ["list"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "list"], obj=test_ctx)
         assert result.exit_code == 0, result.output
 
         unstyled = click.unstyle(result.output)
@@ -680,7 +680,7 @@ def test_list_fetches_titles_before_ci_enrichment() -> None:
             use_graphite=True,
         )
 
-        result = runner.invoke(cli, ["list"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "list"], obj=test_ctx)
         assert result.exit_code == 0, result.output
 
         unstyled = click.unstyle(result.output)

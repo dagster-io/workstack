@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 from click.testing import CliRunner
 
-from erk.cli.commands.plan import plan_group
+from erk.cli.cli import cli
 from erk.core.plan_store import FakePlanStore, Plan, PlanState
 from tests.test_utils.context_builders import build_workspace_test_context
 from tests.test_utils.env_helpers import erk_inmem_env
@@ -32,7 +32,7 @@ def test_close_plan_with_issue_number() -> None:
         ctx = build_workspace_test_context(env, plan_store=store)
 
         # Act
-        result = runner.invoke(plan_group, ["close", "42"], obj=ctx)
+        result = runner.invoke(cli, ["close", "42"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -52,7 +52,7 @@ def test_close_plan_not_found() -> None:
         ctx = build_workspace_test_context(env, plan_store=store)
 
         # Act
-        result = runner.invoke(plan_group, ["close", "999"], obj=ctx)
+        result = runner.invoke(cli, ["close", "999"], obj=ctx)
 
         # Assert
         assert result.exit_code == 1

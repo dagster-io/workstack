@@ -139,7 +139,7 @@ def test_dryrun_git_delete_branch_prints_message(tmp_path: Path) -> None:
         check=True,
     )
     assert "feature-branch" in result.stdout
-    from erk.core.git.real import RealGit
+    from erk_shared.git.real import RealGit
 
     real_ops = RealGit()
     git_dir = real_ops.get_git_common_dir(repo)
@@ -171,7 +171,7 @@ def test_dryrun_git_add_worktree_prints_message(tmp_path: Path) -> None:
 
     # Verify the worktree wasn't actually created
     assert not new_wt.exists()
-    from erk.core.git.real import RealGit
+    from erk_shared.git.real import RealGit
 
     real_ops = RealGit()
     worktrees = real_ops.list_worktrees(repo)
@@ -200,7 +200,7 @@ def test_dryrun_git_remove_worktree_prints_message(tmp_path: Path) -> None:
 
     # Verify the worktree still exists
     assert wt.exists()
-    from erk.core.git.real import RealGit
+    from erk_shared.git.real import RealGit
 
     real_ops = RealGit()
     worktrees = real_ops.list_worktrees(repo)
@@ -216,7 +216,7 @@ def test_dryrun_git_checkout_branch_is_blocked(tmp_path: Path) -> None:
 
     # Create a new branch
     subprocess.run(["git", "branch", "feature"], cwd=repo, check=True)
-    from erk.core.git.real import RealGit
+    from erk_shared.git.real import RealGit
 
     real_ops = RealGit()
     assert real_ops.get_current_branch(repo) == "main"
@@ -257,7 +257,7 @@ def test_dryrun_graphite_operations(tmp_path: Path) -> None:
     url = ctx.graphite.get_graphite_url("owner", "repo", 123)
     assert isinstance(url, str)
     assert "graphite.com" in url
-    from erk.core.git.real import RealGit
+    from erk_shared.git.real import RealGit
 
     git_ops = RealGit()
     prs = ctx.graphite.get_prs_from_graphite(git_ops, repo)

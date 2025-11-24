@@ -33,7 +33,7 @@ def test_list_outputs_names_not_paths() -> None:
             show_pr_info=False,  # Don't require PR info for this test
         )
 
-        result = runner.invoke(cli, ["list"], obj=test_ctx)
+        result = runner.invoke(cli, ["wt", "list"], obj=test_ctx)
         assert result.exit_code == 0, result.output
 
         # Strip ANSI codes for easier comparison

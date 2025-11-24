@@ -1,10 +1,10 @@
-"""Tests for plan-issue list command."""
+"""Tests for plan list command."""
 
 from datetime import UTC, datetime
 
 from click.testing import CliRunner
 
-from erk.cli.commands.plan import plan_group
+from erk.cli.cli import cli
 from erk.core.plan_store import FakePlanStore, Plan, PlanState
 from tests.test_utils.context_builders import build_workspace_test_context
 from tests.test_utils.env_helpers import erk_inmem_env, erk_isolated_fs_env
@@ -44,7 +44,7 @@ def test_list_plans_no_filters() -> None:
         ctx = build_workspace_test_context(env, plan_store=store)
 
         # Act
-        result = runner.invoke(plan_group, ["list"], obj=ctx)
+        result = runner.invoke(cli, ["list"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -89,7 +89,7 @@ def test_list_plans_filter_by_state() -> None:
         ctx = build_workspace_test_context(env, plan_store=store)
 
         # Act - Filter for open issues
-        result = runner.invoke(plan_group, ["list", "--state", "open"], obj=ctx)
+        result = runner.invoke(cli, ["list", "--state", "open"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -134,7 +134,7 @@ def test_list_plans_filter_by_labels() -> None:
 
         # Act - Filter for both labels (AND logic)
         result = runner.invoke(
-            plan_group,
+            cli,
             ["list", "--label", "erk-plan", "--label", "erk-queue"],
             obj=ctx,
         )
@@ -171,7 +171,7 @@ def test_list_plans_with_limit() -> None:
         ctx = build_workspace_test_context(env, plan_store=store)
 
         # Act
-        result = runner.invoke(plan_group, ["list", "--limit", "2"], obj=ctx)
+        result = runner.invoke(cli, ["list", "--limit", "2"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -225,7 +225,7 @@ def test_list_plans_combined_filters() -> None:
 
         # Act
         result = runner.invoke(
-            plan_group,
+            cli,
             [
                 "list",
                 "--state",
@@ -267,7 +267,7 @@ def test_list_plans_empty_results() -> None:
         ctx = build_workspace_test_context(env, plan_store=store)
 
         # Act
-        result = runner.invoke(plan_group, ["list", "--state", "closed"], obj=ctx)
+        result = runner.invoke(cli, ["list", "--state", "closed"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -296,7 +296,7 @@ def test_ls_alias_works() -> None:
         ctx = build_workspace_test_context(env, plan_store=store)
 
         # Act - Use ls alias instead of list
-        result = runner.invoke(plan_group, ["ls"], obj=ctx)
+        result = runner.invoke(cli, ["ls"], obj=ctx)
 
         # Assert - Should produce same output as list command
         assert result.exit_code == 0
@@ -366,7 +366,7 @@ issue_number: 867
         ctx = build_workspace_test_context(env, plan_store=store, issues=github)
 
         # Act
-        result = runner.invoke(plan_group, ["list"], obj=ctx)
+        result = runner.invoke(cli, ["list"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -440,7 +440,7 @@ issue_number: 900
         ctx = build_workspace_test_context(env, plan_store=store, issues=github)
 
         # Act
-        result = runner.invoke(plan_group, ["list"], obj=ctx)
+        result = runner.invoke(cli, ["list"], obj=ctx)
 
         # Assert - Should show most recent worktree
         assert result.exit_code == 0
@@ -506,7 +506,7 @@ def test_list_plans_shows_worktree_from_local_impl() -> None:
         ctx = build_workspace_test_context(env, plan_store=store, git=git, issues=github)
 
         # Act
-        result = runner.invoke(plan_group, ["list"], obj=ctx)
+        result = runner.invoke(cli, ["list"], obj=ctx)
 
         # Assert - Should show worktree name from local detection
         assert result.exit_code == 0
@@ -589,7 +589,7 @@ issue_number: 960
         ctx = build_workspace_test_context(env, plan_store=store, git=git, issues=github)
 
         # Act
-        result = runner.invoke(plan_group, ["list"], obj=ctx)
+        result = runner.invoke(cli, ["list"], obj=ctx)
 
         # Assert - Should show local worktree name, not GitHub one
         assert result.exit_code == 0
@@ -639,7 +639,7 @@ issue_number: 970
         ctx = build_workspace_test_context(env, plan_store=store, issues=github)
 
         # Act
-        result = runner.invoke(plan_group, ["list"], obj=ctx)
+        result = runner.invoke(cli, ["list"], obj=ctx)
 
         # Assert - Should show GitHub worktree name
         assert result.exit_code == 0
@@ -716,7 +716,7 @@ def test_list_plans_handles_multiple_local_worktrees() -> None:
         ctx = build_workspace_test_context(env, plan_store=store, git=git, issues=github)
 
         # Act
-        result = runner.invoke(plan_group, ["list"], obj=ctx)
+        result = runner.invoke(cli, ["list"], obj=ctx)
 
         # Assert - Should show first worktree found
         assert result.exit_code == 0
@@ -748,7 +748,7 @@ def test_list_plans_shows_action_state_with_no_queue_label() -> None:
         ctx = build_workspace_test_context(env, plan_store=store)
 
         # Act
-        result = runner.invoke(plan_group, ["list"], obj=ctx)
+        result = runner.invoke(cli, ["list"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -780,7 +780,7 @@ def test_list_plans_shows_pending_action_state() -> None:
         ctx = build_workspace_test_context(env, plan_store=store, issues=github)
 
         # Act
-        result = runner.invoke(plan_group, ["list"], obj=ctx)
+        result = runner.invoke(cli, ["list"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -829,7 +829,7 @@ issue_number: 1003
         ctx = build_workspace_test_context(env, plan_store=store, issues=github)
 
         # Act
-        result = runner.invoke(plan_group, ["list"], obj=ctx)
+        result = runner.invoke(cli, ["list"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -877,7 +877,7 @@ timestamp: "2024-11-23T12:00:00Z"
         ctx = build_workspace_test_context(env, plan_store=store, issues=github)
 
         # Act
-        result = runner.invoke(plan_group, ["list"], obj=ctx)
+        result = runner.invoke(cli, ["list"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -925,7 +925,7 @@ timestamp: "2024-11-23T12:00:00Z"
         ctx = build_workspace_test_context(env, plan_store=store, issues=github)
 
         # Act
-        result = runner.invoke(plan_group, ["list"], obj=ctx)
+        result = runner.invoke(cli, ["list"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -970,7 +970,7 @@ def test_list_plans_filter_by_action_state_pending() -> None:
         ctx = build_workspace_test_context(env, plan_store=store, issues=github)
 
         # Act
-        result = runner.invoke(plan_group, ["list", "--action-state", "pending"], obj=ctx)
+        result = runner.invoke(cli, ["list", "--action-state", "pending"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -1033,7 +1033,7 @@ timestamp: "2024-11-23T12:00:00Z"
         ctx = build_workspace_test_context(env, plan_store=store, issues=github)
 
         # Act
-        result = runner.invoke(plan_group, ["list", "--action-state", "complete"], obj=ctx)
+        result = runner.invoke(cli, ["list", "--action-state", "complete"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -1067,7 +1067,7 @@ def test_list_plans_action_filter_no_matches() -> None:
         ctx = build_workspace_test_context(env, plan_store=store, issues=github)
 
         # Act - Filter for "running" which won't match
-        result = runner.invoke(plan_group, ["list", "--action-state", "running"], obj=ctx)
+        result = runner.invoke(cli, ["list", "--action-state", "running"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -1112,7 +1112,7 @@ def test_list_plans_pr_column_open_pr() -> None:
         ctx = build_workspace_test_context(env, plan_store=store, github=github)
 
         # Act
-        result = runner.invoke(plan_group, ["list"], obj=ctx)
+        result = runner.invoke(cli, ["list"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -1158,7 +1158,7 @@ def test_list_plans_pr_column_draft_pr() -> None:
         ctx = build_workspace_test_context(env, plan_store=store, github=github)
 
         # Act
-        result = runner.invoke(plan_group, ["list"], obj=ctx)
+        result = runner.invoke(cli, ["list"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -1204,7 +1204,7 @@ def test_list_plans_pr_column_merged_pr() -> None:
         ctx = build_workspace_test_context(env, plan_store=store, github=github)
 
         # Act
-        result = runner.invoke(plan_group, ["list"], obj=ctx)
+        result = runner.invoke(cli, ["list"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -1250,7 +1250,7 @@ def test_list_plans_pr_column_closed_pr() -> None:
         ctx = build_workspace_test_context(env, plan_store=store, github=github)
 
         # Act
-        result = runner.invoke(plan_group, ["list"], obj=ctx)
+        result = runner.invoke(cli, ["list"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -1296,7 +1296,7 @@ def test_list_plans_pr_column_with_conflicts() -> None:
         ctx = build_workspace_test_context(env, plan_store=store, github=github)
 
         # Act
-        result = runner.invoke(plan_group, ["list"], obj=ctx)
+        result = runner.invoke(cli, ["list"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -1356,7 +1356,7 @@ def test_list_plans_pr_column_multiple_prs_prefers_open() -> None:
         ctx = build_workspace_test_context(env, plan_store=store, github=github)
 
         # Act
-        result = runner.invoke(plan_group, ["list"], obj=ctx)
+        result = runner.invoke(cli, ["list"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0
@@ -1386,7 +1386,7 @@ def test_list_plans_pr_column_no_pr_linked() -> None:
         ctx = build_workspace_test_context(env, plan_store=store)
 
         # Act
-        result = runner.invoke(plan_group, ["list"], obj=ctx)
+        result = runner.invoke(cli, ["list"], obj=ctx)
 
         # Assert
         assert result.exit_code == 0

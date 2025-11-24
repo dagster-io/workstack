@@ -57,7 +57,7 @@ def test_list_with_trunk_branch(trunk_branch: str) -> None:
             show_pr_info=False,
         )
 
-        result = runner.invoke(cli, ["list"], obj=ctx)
+        result = runner.invoke(cli, ["wt", "list"], obj=ctx)
 
         assert result.exit_code == 0
         output = strip_ansi(result.output)

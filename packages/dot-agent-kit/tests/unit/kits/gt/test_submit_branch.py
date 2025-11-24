@@ -1,6 +1,7 @@
 """Tests for submit_branch kit CLI command using fake ops."""
 
 import json
+from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -18,11 +19,27 @@ from erk.data.kits.gt.kit_cli_commands.gt.submit_branch import (
 )
 from tests.unit.kits.gt.fake_ops import FakeGtKitOps
 
+# Patch path for RealGitHub mock (patch where it's defined, not where it's imported)
+GITHUB_PATCH_PATH = "erk_shared.github.real.RealGitHub"
+
 
 @pytest.fixture
 def runner() -> CliRunner:
     """Create a Click CLI test runner."""
     return CliRunner()
+
+
+@pytest.fixture(autouse=True)
+def mock_github() -> Generator[Mock]:
+    """Mock RealGitHub to prevent NotImplementedError from erk-shared stub."""
+    with patch(GITHUB_PATCH_PATH) as mock_github_class:
+        mock_github = mock_github_class.return_value
+        # Default: return no PR (allows tests to proceed with normal flow)
+        mock_pr_info = Mock()
+        mock_pr_info.pr_number = None
+        mock_pr_info.url = None
+        mock_github.get_pr_status.return_value = mock_pr_info
+        yield mock_github
 
 
 class TestPreAnalysisExecution:
@@ -208,7 +225,7 @@ class TestPreAnalysisExecution:
         ops = FakeGtKitOps().with_branch("feature-branch", parent="master").with_commits(1)
 
         # Mock GitHub to return CONFLICTING status
-        with patch("erk.core.github.real.RealGitHub") as mock_github_class:
+        with patch(GITHUB_PATCH_PATH) as mock_github_class:
             mock_github = mock_github_class.return_value
             mock_pr_info = Mock()
             mock_pr_info.pr_number = 123
@@ -234,7 +251,7 @@ class TestPreAnalysisExecution:
         ops = FakeGtKitOps().with_branch("feature-branch", parent="master").with_commits(1)
 
         # Mock GitHub to return MERGEABLE status
-        with patch("erk.core.github.real.RealGitHub") as mock_github_class:
+        with patch(GITHUB_PATCH_PATH) as mock_github_class:
             mock_github = mock_github_class.return_value
             mock_pr_info = Mock()
             mock_pr_info.pr_number = 123
@@ -259,7 +276,7 @@ class TestPreAnalysisExecution:
         ops.git().simulate_conflict("master", "feature-branch")
 
         # Mock GitHub to return no PR
-        with patch("erk.core.github.real.RealGitHub") as mock_github_class:
+        with patch(GITHUB_PATCH_PATH) as mock_github_class:
             mock_github = mock_github_class.return_value
             mock_pr_info = Mock()
             mock_pr_info.pr_number = None
@@ -278,7 +295,7 @@ class TestPreAnalysisExecution:
         ops = FakeGtKitOps().with_branch("feature-branch", parent="master").with_commits(1)
 
         # Mock GitHub to return UNKNOWN status
-        with patch("erk.core.github.real.RealGitHub") as mock_github_class:
+        with patch(GITHUB_PATCH_PATH) as mock_github_class:
             mock_github = mock_github_class.return_value
             mock_pr_info = Mock()
             mock_pr_info.pr_number = 123

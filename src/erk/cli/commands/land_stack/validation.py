@@ -202,7 +202,7 @@ def _validate_branches_have_prs(
         elif (
             pr_info.state == "OPEN" and pr_info.pr_number is not None and pr_info.title is not None
         ):
-            valid_branches.append(BranchPR(branch, pr_info.pr_number, pr_info.title))
+            valid_branches.append(BranchPR(branch, pr_info.pr_number, pr_info.title, pr_info.url))
         else:
             errors.append(f"Unexpected PR state for '{branch}': {pr_info.state}")
 

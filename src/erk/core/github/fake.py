@@ -114,25 +114,25 @@ class FakeGitHub(GitHub):
     def get_pr_status(self, repo_root: Path, branch: str, *, debug: bool) -> PRInfo:
         """Get PR status from configured PRs.
 
-        Returns PRInfo("NONE", None, None) if branch not found.
+        Returns PRInfo("NONE", None, None, None) if branch not found.
         """
         # Support legacy pr_statuses format
         if self._pr_statuses is not None:
             result = self._pr_statuses.get(branch)
             if result is None:
-                return PRInfo("NONE", None, None)
+                return PRInfo("NONE", None, None, None)
             state, pr_number, title = result
             # Convert None state to "NONE" for consistency
             if state is None:
                 state = "NONE"
-            return PRInfo(cast(PRState, state), pr_number, title)
+            return PRInfo(cast(PRState, state), pr_number, title, None)
 
         pr = self._prs.get(branch)
         if pr is None:
-            return PRInfo("NONE", None, None)
+            return PRInfo("NONE", None, None, None)
         # PullRequestInfo has: number, state, url, is_draft, title, checks_passing
-        # Return state, number, and title as expected by PRInfo
-        return PRInfo(cast(PRState, pr.state), pr.number, pr.title)
+        # Return state, number, title, and url as expected by PRInfo
+        return PRInfo(cast(PRState, pr.state), pr.number, pr.title, pr.url)
 
     def get_pr_base_branch(self, repo_root: Path, pr_number: int) -> str | None:
         """Get current base branch of a PR from configured state.

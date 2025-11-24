@@ -82,7 +82,7 @@ class RealGitHub(GitHub):
                 "--state",
                 "all",
                 "--json",
-                "number,state,title",
+                "number,state,title,url",
                 "--limit",
                 "1",
             ]

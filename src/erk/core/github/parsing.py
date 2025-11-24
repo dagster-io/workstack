@@ -85,20 +85,21 @@ def parse_github_pr_status(json_str: str) -> PRInfo:
         json_str: JSON string from gh pr list command for a specific branch
 
     Returns:
-        PRInfo with state, pr_number, and title
+        PRInfo with state, pr_number, title, and url
         - state: "OPEN", "MERGED", "CLOSED", or "NONE" if no PR exists
         - pr_number: PR number or None if no PR exists
         - title: PR title or None if no PR exists
+        - url: PR URL or None if no PR exists
     """
     prs_data = json.loads(json_str)
 
     # If no PR exists for this branch
     if not prs_data:
-        return PRInfo("NONE", None, None)
+        return PRInfo("NONE", None, None, None)
 
     # Take the first (and should be only) PR
     pr = prs_data[0]
-    return PRInfo(pr["state"], pr["number"], pr["title"])
+    return PRInfo(pr["state"], pr["number"], pr["title"], pr.get("url"))
 
 
 def _determine_checks_status(check_rollup: list[dict]) -> bool | None:

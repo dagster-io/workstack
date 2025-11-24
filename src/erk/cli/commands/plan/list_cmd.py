@@ -15,6 +15,7 @@ from rich.table import Table
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
 from erk.core.context import ErkContext
+from erk.core.display_utils import format_clickable_issue_rich
 from erk.core.plan_store import Plan, PlanQuery, PlanState
 from erk.core.repo_discovery import ensure_erk_metadata_dir
 from erk.integrations.github.metadata_blocks import parse_metadata_blocks
@@ -332,8 +333,13 @@ def _list_plans_impl(
 
     # Populate table rows
     for plan in plans:
-        # Format issue number
-        issue_id = f"#{plan.plan_identifier}"
+        # Format issue number - use clickable link if URL is available
+        try:
+            issue_number = int(plan.plan_identifier)
+            issue_id = format_clickable_issue_rich(issue_number, plan.url)
+        except ValueError:
+            # Non-numeric identifier, fall back to plain text
+            issue_id = f"#{plan.plan_identifier}"
 
         # Format state with color
         state_color = "green" if plan.state == PlanState.OPEN else "red"

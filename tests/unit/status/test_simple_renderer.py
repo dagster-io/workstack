@@ -322,7 +322,9 @@ def test_renderer_with_pr_status() -> None:
     assert "OPEN" in output
     assert "Checks: passing" in output
     assert "✓ Ready to merge" in output
-    assert "https://github.com/owner/repo/pull/123" in output
+    # PR numbers are now clickable links (Graphite URLs), so no separate URL line
+    assert "https://github.com/owner/repo/pull/123" not in output
+    assert "https://app.graphite.com/github/pr/owner/repo/123" in output
 
 
 def test_renderer_draft_pr() -> None:

@@ -3,6 +3,7 @@
 import click
 
 from erk.cli.output import user_output
+from erk.core.display_utils import format_clickable_issue, format_clickable_pr
 from erk.status.models.status_data import StatusData
 
 
@@ -161,15 +162,8 @@ class SimpleRenderer:
 
             # Show GitHub issue link if available
             if status.plan.issue_number is not None and status.plan.issue_url:
-                issue_text = click.style(f"#{status.plan.issue_number}", fg="cyan")
+                issue_text = format_clickable_issue(status.plan.issue_number, status.plan.issue_url)
                 user_output(f"  Issue: {issue_text}")
-                user_output(
-                    click.style(
-                        f"  {status.plan.issue_url}",
-                        fg="white",
-                        dim=True,
-                    )
-                )
 
         user_output()
 
@@ -230,7 +224,7 @@ class SimpleRenderer:
         user_output(click.style("Pull Request:", fg="blue", bold=True))
 
         # PR number and state
-        pr_link = click.style(f"#{pr.number}", fg="cyan")
+        pr_link = format_clickable_pr(pr.number, pr.url, use_graphite=True)
         state_color = (
             "green" if pr.state == "OPEN" else "red" if pr.state == "CLOSED" else "magenta"
         )
@@ -251,9 +245,6 @@ class SimpleRenderer:
         # Ready to merge
         if pr.ready_to_merge:
             user_output(click.style("  ✓ Ready to merge", fg="green", bold=True))
-
-        # URL
-        user_output(click.style(f"  {pr.url}", fg="white", dim=True))
 
         user_output()
 

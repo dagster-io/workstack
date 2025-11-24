@@ -9,6 +9,7 @@ from erk_shared.github.metadata import create_submission_queued_block, render_er
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
 from erk.core.context import ErkContext
+from erk.core.display_utils import format_clickable_issue
 from erk.core.repo_discovery import RepoContext
 
 # Label used to queue issues for automated implementation
@@ -82,7 +83,7 @@ def submit_cmd(ctx: ErkContext, issue_number: int) -> None:
 
     # Display issue details
     user_output("Submitting issue for automated implementation:")
-    user_output(f"  Number: {click.style(f'#{issue_number}', fg='cyan')}")
+    user_output(f"  Number: {format_clickable_issue(issue_number, issue.url)}")
     user_output(f"  Title:  {click.style(issue.title, fg='yellow')}")
     user_output(f"  State:  {click.style(issue.state, fg='green')}")
     user_output("")

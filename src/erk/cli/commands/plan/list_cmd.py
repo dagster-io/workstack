@@ -332,8 +332,16 @@ def _list_plans_impl(
 
     # Populate table rows
     for plan in plans:
-        # Format issue number
-        issue_id = f"#{plan.plan_identifier}"
+        # Format issue number with clickable OSC 8 hyperlink
+        id_text = f"#{plan.plan_identifier}"
+        colored_id = f"[cyan]{id_text}[/cyan]"
+
+        # Make ID clickable using OSC 8 if URL is available
+        if plan.url:
+            # Rich library supports OSC 8 via markup syntax
+            issue_id = f"[link={plan.url}]{colored_id}[/link]"
+        else:
+            issue_id = colored_id
 
         # Format state with color
         state_color = "green" if plan.state == PlanState.OPEN else "red"

@@ -7,7 +7,7 @@ from click.testing import CliRunner
 from erk.cli.commands.plan import plan_group
 from erk.core.plan_store import FakePlanStore, Plan, PlanState
 from tests.test_utils.context_builders import build_workspace_test_context
-from tests.test_utils.env_helpers import erk_inmem_env
+from tests.test_utils.env_helpers import erk_inmem_env, erk_isolated_fs_env
 
 
 def test_list_plans_no_filters() -> None:
@@ -446,3 +446,281 @@ issue_number: 900
         assert result.exit_code == 0
         assert "second-attempt" in result.output
         assert "first-attempt" not in result.output
+
+
+def test_list_plans_shows_worktree_from_local_impl() -> None:
+    """Test that list command detects worktree from local .impl/issue.json file."""
+    import json
+    from pathlib import Path
+
+    from erk.core.git.abc import WorktreeInfo
+    from erk.core.git.fake import FakeGit
+    from erk_shared.github.issues import FakeGitHubIssues
+
+    # Arrange
+    issue1 = Plan(
+        plan_identifier="950",
+        title="Test Local Detection",
+        body="",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/950",
+        labels=["erk-plan"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 1, tzinfo=UTC),
+        metadata={"number": 950},
+    )
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        # Create a worktree with .impl/issue.json
+        worktree_path = env.cwd.parent / "feature-worktree"
+        worktree_path.mkdir(parents=True)
+        impl_folder = worktree_path / ".impl"
+        impl_folder.mkdir()
+
+        # Manually create issue.json file
+        issue_json_path = impl_folder / "issue.json"
+        issue_data = {
+            "issue_number": 950,
+            "issue_url": "https://github.com/owner/repo/issues/950",
+            "created_at": "2024-11-23T00:00:00+00:00",
+            "synced_at": "2024-11-23T00:00:00+00:00",
+        }
+        issue_json_path.write_text(json.dumps(issue_data, indent=2), encoding="utf-8")
+
+        # Configure FakeGit with worktree
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
+                    WorktreeInfo(path=worktree_path, branch="feature-branch", is_root=False),
+                ]
+            },
+        )
+
+        # Create context with empty GitHub (no comments)
+        github = FakeGitHubIssues(comments={})
+        store = FakePlanStore(plans={"950": issue1})
+        ctx = build_workspace_test_context(env, plan_store=store, git=git, issues=github)
+
+        # Act
+        result = runner.invoke(plan_group, ["list"], obj=ctx)
+
+        # Assert - Should show worktree name from local detection
+        assert result.exit_code == 0
+        assert "#950" in result.output
+        assert "Test Local Detection" in result.output
+        assert "feature-worktree" in result.output
+
+
+def test_list_plans_prefers_local_over_github() -> None:
+    """Test that local .impl/issue.json detection takes precedence over GitHub comments."""
+    import json
+    from pathlib import Path
+
+    from erk.core.git.abc import WorktreeInfo
+    from erk.core.git.fake import FakeGit
+    from erk_shared.github.issues import FakeGitHubIssues
+
+    # Arrange
+    issue1 = Plan(
+        plan_identifier="960",
+        title="Test Precedence",
+        body="",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/960",
+        labels=["erk-plan"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 1, tzinfo=UTC),
+        metadata={"number": 960},
+    )
+
+    # Create GitHub comment with different worktree name
+    github_comment = """
+<!-- erk:metadata-block:erk-worktree-creation -->
+<details>
+<summary><code>erk-worktree-creation</code></summary>
+
+```yaml
+worktree_name: old-github-worktree
+branch_name: old-github-worktree
+timestamp: "2024-11-20T10:00:00Z"
+issue_number: 960
+```
+</details>
+<!-- /erk:metadata-block -->
+"""
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        # Create a worktree with .impl/issue.json
+        worktree_path = env.cwd.parent / "local-worktree"
+        worktree_path.mkdir(parents=True)
+        impl_folder = worktree_path / ".impl"
+        impl_folder.mkdir()
+
+        # Manually create issue.json file
+        issue_json_path = impl_folder / "issue.json"
+        issue_data = {
+            "issue_number": 960,
+            "issue_url": "https://github.com/owner/repo/issues/960",
+            "created_at": "2024-11-23T00:00:00+00:00",
+            "synced_at": "2024-11-23T00:00:00+00:00",
+        }
+        issue_json_path.write_text(json.dumps(issue_data, indent=2), encoding="utf-8")
+
+        # Configure FakeGit with worktree
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
+                    WorktreeInfo(path=worktree_path, branch="feature", is_root=False),
+                ]
+            },
+        )
+
+        # Configure GitHub with comment
+        github = FakeGitHubIssues(comments={960: [github_comment]})
+        store = FakePlanStore(plans={"960": issue1})
+        ctx = build_workspace_test_context(env, plan_store=store, git=git, issues=github)
+
+        # Act
+        result = runner.invoke(plan_group, ["list"], obj=ctx)
+
+        # Assert - Should show local worktree name, not GitHub one
+        assert result.exit_code == 0
+        assert "local-worktree" in result.output
+        assert "old-github-worktree" not in result.output
+
+
+def test_list_plans_falls_back_to_github_when_no_local() -> None:
+    """Test that GitHub comment detection works when no local .impl/issue.json exists."""
+    from erk_shared.github.issues import FakeGitHubIssues
+
+    # Arrange
+    issue1 = Plan(
+        plan_identifier="970",
+        title="Test Fallback",
+        body="",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/970",
+        labels=["erk-plan"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 1, tzinfo=UTC),
+        metadata={"number": 970},
+    )
+
+    # Create GitHub comment
+    github_comment = """
+<!-- erk:metadata-block:erk-worktree-creation -->
+<details>
+<summary><code>erk-worktree-creation</code></summary>
+
+```yaml
+worktree_name: github-worktree
+branch_name: github-worktree
+timestamp: "2024-11-20T10:00:00Z"
+issue_number: 970
+```
+</details>
+<!-- /erk:metadata-block -->
+"""
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        # No local worktrees with .impl folders
+        github = FakeGitHubIssues(comments={970: [github_comment]})
+        store = FakePlanStore(plans={"970": issue1})
+        ctx = build_workspace_test_context(env, plan_store=store, issues=github)
+
+        # Act
+        result = runner.invoke(plan_group, ["list"], obj=ctx)
+
+        # Assert - Should show GitHub worktree name
+        assert result.exit_code == 0
+        assert "#970" in result.output
+        assert "github-worktree" in result.output
+
+
+def test_list_plans_handles_multiple_local_worktrees() -> None:
+    """Test that first-found worktree is shown when multiple local worktrees reference same issue."""
+    import json
+    from pathlib import Path
+
+    from erk.core.git.abc import WorktreeInfo
+    from erk.core.git.fake import FakeGit
+    from erk_shared.github.issues import FakeGitHubIssues
+
+    # Arrange
+    issue1 = Plan(
+        plan_identifier="980",
+        title="Test Multiple Local",
+        body="",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/980",
+        labels=["erk-plan"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 1, tzinfo=UTC),
+        metadata={"number": 980},
+    )
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        # Create two worktrees both referencing same issue
+        worktree1 = env.cwd.parent / "first-worktree"
+        worktree1.mkdir(parents=True)
+        impl1 = worktree1 / ".impl"
+        impl1.mkdir()
+        issue_json1 = impl1 / "issue.json"
+        issue_data1 = {
+            "issue_number": 980,
+            "issue_url": "https://github.com/owner/repo/issues/980",
+            "created_at": "2024-11-23T00:00:00+00:00",
+            "synced_at": "2024-11-23T00:00:00+00:00",
+        }
+        issue_json1.write_text(json.dumps(issue_data1, indent=2), encoding="utf-8")
+
+        worktree2 = env.cwd.parent / "second-worktree"
+        worktree2.mkdir(parents=True)
+        impl2 = worktree2 / ".impl"
+        impl2.mkdir()
+        issue_json2 = impl2 / "issue.json"
+        issue_data2 = {
+            "issue_number": 980,
+            "issue_url": "https://github.com/owner/repo/issues/980",
+            "created_at": "2024-11-23T00:00:00+00:00",
+            "synced_at": "2024-11-23T00:00:00+00:00",
+        }
+        issue_json2.write_text(json.dumps(issue_data2, indent=2), encoding="utf-8")
+
+        # Configure FakeGit with both worktrees
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
+                    WorktreeInfo(path=worktree1, branch="branch1", is_root=False),
+                    WorktreeInfo(path=worktree2, branch="branch2", is_root=False),
+                ]
+            },
+        )
+
+        github = FakeGitHubIssues(comments={})
+        store = FakePlanStore(plans={"980": issue1})
+        ctx = build_workspace_test_context(env, plan_store=store, git=git, issues=github)
+
+        # Act
+        result = runner.invoke(plan_group, ["list"], obj=ctx)
+
+        # Assert - Should show first worktree found
+        assert result.exit_code == 0
+        assert "#980" in result.output
+        # Should show exactly one of the worktrees (first-found behavior)
+        # The order depends on git.list_worktrees() order
+        assert "first-worktree" in result.output or "second-worktree" in result.output

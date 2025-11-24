@@ -269,12 +269,16 @@ def test_very_long_title_truncates_to_40_chars_total() -> None:
     """Regression test: 99-char title should truncate to max 40 chars total with date suffix.
 
     This tests the bug fix where `erk implement` created excessively long branch names.
-    Example: "refactor erk implement command to support interactive and non-interactive execution modes"
+    Example: "refactor erk implement command to support interactive and
+    non-interactive execution modes"
 
-    Note: The 31-char limit includes rstrip("-") after truncation, so actual length may be <= 31.
+    Note: The 31-char limit includes rstrip("-") after truncation,
+    so actual length may be <= 31.
     """
     # 89-character title that caused the original bug
-    long_title = "refactor erk implement command to support interactive and non-interactive execution modes"
+    long_title = (
+        "refactor erk implement command to support interactive and non-interactive execution modes"
+    )
 
     # Sanitize the worktree name (should be <= 31 chars max, trailing hyphens stripped)
     base_name = sanitize_worktree_name(long_title)

@@ -15,6 +15,9 @@ from pathlib import Path
 import click
 from erk_shared.github.issues import GitHubIssues
 
+from erk.core.git.abc import Git
+from erk.core.github.abc import GitHub
+
 
 def require_github_issues(ctx: click.Context) -> GitHubIssues:
     """Get GitHub Issues from context, exiting with error if not initialized.
@@ -72,3 +75,90 @@ def require_repo_root(ctx: click.Context) -> Path:
         raise SystemExit(1)
 
     return ctx.obj.repo_root
+
+
+def require_git(ctx: click.Context) -> Git:
+    """Get Git from context, exiting with error if not initialized.
+
+    Uses LBYL pattern to check context before accessing.
+
+    Args:
+        ctx: Click context (must have DotAgentContext in ctx.obj)
+
+    Returns:
+        Git instance from context
+
+    Raises:
+        SystemExit: If context not initialized (exits with code 1)
+
+    Example:
+        >>> @click.command()
+        >>> @click.pass_context
+        >>> def my_command(ctx: click.Context) -> None:
+        ...     git = require_git(ctx)
+        ...     cwd = require_cwd(ctx)
+        ...     branch = git.get_current_branch(cwd)
+    """
+    if ctx.obj is None:
+        click.echo("Error: Context not initialized", err=True)
+        raise SystemExit(1)
+
+    return ctx.obj.git
+
+
+def require_github(ctx: click.Context) -> GitHub:
+    """Get GitHub from context, exiting with error if not initialized.
+
+    Uses LBYL pattern to check context before accessing.
+
+    Args:
+        ctx: Click context (must have DotAgentContext in ctx.obj)
+
+    Returns:
+        GitHub instance from context
+
+    Raises:
+        SystemExit: If context not initialized (exits with code 1)
+
+    Example:
+        >>> @click.command()
+        >>> @click.pass_context
+        >>> def my_command(ctx: click.Context) -> None:
+        ...     github = require_github(ctx)
+        ...     repo_root = require_repo_root(ctx)
+        ...     pr_info = github.get_pr_status(repo_root, "main", debug=False)
+    """
+    if ctx.obj is None:
+        click.echo("Error: Context not initialized", err=True)
+        raise SystemExit(1)
+
+    return ctx.obj.github
+
+
+def require_cwd(ctx: click.Context) -> Path:
+    """Get current working directory from context, exiting with error if not initialized.
+
+    Uses LBYL pattern to check context before accessing.
+
+    Args:
+        ctx: Click context (must have DotAgentContext in ctx.obj)
+
+    Returns:
+        Path to current working directory (worktree path)
+
+    Raises:
+        SystemExit: If context not initialized (exits with code 1)
+
+    Example:
+        >>> @click.command()
+        >>> @click.pass_context
+        >>> def my_command(ctx: click.Context) -> None:
+        ...     cwd = require_cwd(ctx)
+        ...     git = require_git(ctx)
+        ...     branch = git.get_current_branch(cwd)
+    """
+    if ctx.obj is None:
+        click.echo("Error: Context not initialized", err=True)
+        raise SystemExit(1)
+
+    return ctx.obj.cwd

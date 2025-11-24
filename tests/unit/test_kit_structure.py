@@ -41,6 +41,7 @@ def test_erk_kit_cli_commands_are_symlinks() -> None:
     src_only_files = {
         "post_completion_comment.py",
         "post_progress_comment.py",
+        "post_workflow_started_comment.py",
     }
 
     for src_file in src_files:

@@ -70,11 +70,7 @@ def test_context_attributes_accessible() -> None:
 
 def test_context_has_repo_root_field() -> None:
     """Test that DotAgentContext has repo_root field."""
-    ctx = DotAgentContext(
-        github_issues=FakeGitHubIssues(),
-        debug=False,
-        repo_root=Path("/test/repo"),
-    )
+    ctx = DotAgentContext.for_test(repo_root=Path("/test/repo"))
 
     assert ctx.repo_root == Path("/test/repo")
 

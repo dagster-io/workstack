@@ -276,3 +276,59 @@ class FakeGitHub(GitHub):
             if issue_num in self._pr_issue_linkages:
                 result[issue_num] = self._pr_issue_linkages[issue_num]
         return result
+
+    def get_workflow_runs_by_branches(
+        self, repo_root: Path, workflow: str, branches: list[str]
+    ) -> dict[str, WorkflowRun | None]:
+        """Get most relevant workflow runs for branches (applies same filtering logic as real).
+
+        For each branch, returns the most relevant run based on priority:
+        1. In-progress or queued runs (highest priority)
+        2. Failed runs
+        3. Most recent completed run
+
+        Args:
+            repo_root: Repository root directory (ignored in fake)
+            workflow: Workflow filename (ignored in fake - uses pre-configured runs)
+            branches: List of branch names to query
+
+        Returns:
+            Mapping of branch name -> WorkflowRun (or None if no runs found).
+            Only includes branches that have workflow runs.
+        """
+        # Early exit for empty branches
+        if not branches:
+            return {}
+
+        # Group pre-configured runs by branch
+        runs_by_branch: dict[str, list[WorkflowRun]] = {}
+        for run in self._workflow_runs:
+            if run.branch in branches:
+                if run.branch not in runs_by_branch:
+                    runs_by_branch[run.branch] = []
+                runs_by_branch[run.branch].append(run)
+
+        # Select most relevant run for each branch (same logic as real)
+        result: dict[str, WorkflowRun | None] = {}
+        for branch in branches:
+            branch_runs = runs_by_branch.get(branch, [])
+            if not branch_runs:
+                continue
+
+            # Priority 1: In-progress or queued runs
+            active_runs = [r for r in branch_runs if r.status in ("in_progress", "queued")]
+            if active_runs:
+                result[branch] = active_runs[0]
+                continue
+
+            # Priority 2: Failed runs
+            failed_runs = [r for r in branch_runs if r.conclusion == "failure"]
+            if failed_runs:
+                result[branch] = failed_runs[0]
+                continue
+
+            # Priority 3: Most recent completed run
+            if branch_runs:
+                result[branch] = branch_runs[0]
+
+        return result

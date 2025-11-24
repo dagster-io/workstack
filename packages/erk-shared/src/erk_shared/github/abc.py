@@ -242,3 +242,25 @@ class GitHub(ABC):
             Returns empty dict if no PRs link to any of the issues.
         """
         ...
+
+    @abstractmethod
+    def get_workflow_runs_by_branches(
+        self, repo_root: Path, workflow: str, branches: list[str]
+    ) -> dict[str, WorkflowRun | None]:
+        """Get most relevant workflow runs for specific branches.
+
+        For each branch, returns the most relevant run based on priority:
+        1. In-progress or queued runs (highest priority)
+        2. Failed runs
+        3. Most recent completed run
+
+        Args:
+            repo_root: Repository root directory
+            workflow: Workflow filename (e.g., "dispatch-erk-queue.yml")
+            branches: List of branch names to query
+
+        Returns:
+            Mapping of branch name -> WorkflowRun (or None if no runs found).
+            Only includes branches that have workflow runs.
+        """
+        ...

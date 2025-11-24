@@ -895,3 +895,62 @@ query {{
             result[issue_number] = [pr for pr, _ in prs_with_timestamps]
 
         return result
+
+    def get_workflow_runs_by_branches(
+        self, repo_root: Path, workflow: str, branches: list[str]
+    ) -> dict[str, WorkflowRun | None]:
+        """Get most relevant workflow runs for specific branches.
+
+        For each branch, returns the most relevant run based on priority:
+        1. In-progress or queued runs (highest priority)
+        2. Failed runs
+        3. Most recent completed run
+
+        Args:
+            repo_root: Repository root directory
+            workflow: Workflow filename (e.g., "dispatch-erk-queue.yml")
+            branches: List of branch names to query
+
+        Returns:
+            Mapping of branch name -> WorkflowRun (or None if no runs found).
+            Only includes branches that have workflow runs.
+        """
+        # Early exit for empty branches
+        if not branches:
+            return {}
+
+        # Query workflow runs (limit=100 should handle most cases)
+        all_runs = self.list_workflow_runs(repo_root, workflow, limit=100)
+
+        # Group runs by branch
+        runs_by_branch: dict[str, list[WorkflowRun]] = {}
+        for run in all_runs:
+            if run.branch in branches:
+                if run.branch not in runs_by_branch:
+                    runs_by_branch[run.branch] = []
+                runs_by_branch[run.branch].append(run)
+
+        # Select most relevant run for each branch
+        result: dict[str, WorkflowRun | None] = {}
+        for branch in branches:
+            branch_runs = runs_by_branch.get(branch, [])
+            if not branch_runs:
+                continue
+
+            # Priority 1: In-progress or queued runs
+            active_runs = [r for r in branch_runs if r.status in ("in_progress", "queued")]
+            if active_runs:
+                result[branch] = active_runs[0]  # Most recent (runs already sorted)
+                continue
+
+            # Priority 2: Failed runs
+            failed_runs = [r for r in branch_runs if r.conclusion == "failure"]
+            if failed_runs:
+                result[branch] = failed_runs[0]  # Most recent
+                continue
+
+            # Priority 3: Most recent completed run
+            if branch_runs:
+                result[branch] = branch_runs[0]  # Most recent
+
+        return result

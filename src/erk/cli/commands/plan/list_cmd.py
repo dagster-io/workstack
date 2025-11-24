@@ -7,8 +7,7 @@ from pathlib import Path
 import click
 from erk_shared.github.emoji import get_checks_status_emoji, get_pr_status_emoji
 from erk_shared.github.issues import GitHubIssues
-from erk_shared.github.status_history import extract_workflow_run_id
-from erk_shared.github.types import PullRequestInfo
+from erk_shared.github.types import PullRequestInfo, WorkflowRun
 from erk_shared.impl_folder import read_issue_reference
 from rich.console import Console
 from rich.table import Table
@@ -323,7 +322,9 @@ def _list_plans_impl(
             return
 
     # Build local worktree mapping from .impl/issue.json files
+    # This also builds branch-to-issue mapping for workflow run queries
     worktree_by_issue: dict[int, str] = {}
+    branch_to_issue: dict[str, int] = {}
     worktrees = ctx.git.list_worktrees(repo_root)
     for worktree in worktrees:
         impl_folder = worktree.path / ".impl"
@@ -333,6 +334,27 @@ def _list_plans_impl(
                 # If multiple worktrees have same issue, keep first found
                 if issue_ref.issue_number not in worktree_by_issue:
                     worktree_by_issue[issue_ref.issue_number] = worktree.path.name
+                    # Extract branch name from worktree directory name
+                    branch_to_issue[worktree.path.name] = issue_ref.issue_number
+
+    # Batch query workflow runs for all branches with .impl/ folders
+    runs_by_branch = {}
+    if branch_to_issue:
+        branches = list(branch_to_issue.keys())
+        try:
+            runs_by_branch = ctx.github.get_workflow_runs_by_branches(
+                repo_root, "dispatch-erk-queue.yml", branches
+            )
+        except Exception:
+            # If API query fails, continue without run IDs
+            pass
+
+    # Build reverse mapping: issue_number -> workflow run
+    runs_by_issue: dict[int, WorkflowRun] = {}
+    for branch, run in runs_by_branch.items():
+        issue_num = branch_to_issue.get(branch)
+        if issue_num is not None and run is not None:
+            runs_by_issue[issue_num] = run
 
     # Determine use_graphite for URL selection
     use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
@@ -416,30 +438,25 @@ def _list_plans_impl(
                 )
                 checks_cell = format_checks_cell(selected_pr)
 
-        # Extract workflow run ID from comments
+        # Get workflow run from batch query results
         run_id_cell = "-"
-        if isinstance(issue_number, int) and issue_number in all_comments:
-            comments = all_comments[issue_number]
-            run_id = extract_workflow_run_id(comments)
-            if run_id is not None:
-                # Fetch workflow run details
-                workflow_run = ctx.github.get_workflow_run(repo_root, run_id)
-                if workflow_run is not None:
-                    # Build workflow URL
-                    workflow_url = None
-                    # Try to extract owner/repo from plan metadata
-                    plan_url = plan.metadata.get("url")
-                    if isinstance(plan_url, str):
-                        # Parse owner/repo from URL like https://github.com/owner/repo/issues/123
-                        parts = plan_url.split("/")
-                        if len(parts) >= 5:
-                            owner = parts[-4]
-                            repo_name = parts[-3]
-                            workflow_url = (
-                                f"https://github.com/{owner}/{repo_name}/actions/runs/{run_id}"
-                            )
-                    # Format the run ID with linkification
-                    run_id_cell = format_workflow_run_id(workflow_run, workflow_url)
+        if isinstance(issue_number, int) and issue_number in runs_by_issue:
+            workflow_run = runs_by_issue[issue_number]
+            # Build workflow URL
+            workflow_url = None
+            # Try to extract owner/repo from plan metadata
+            plan_url = plan.metadata.get("url")
+            if isinstance(plan_url, str):
+                # Parse owner/repo from URL like https://github.com/owner/repo/issues/123
+                parts = plan_url.split("/")
+                if len(parts) >= 5:
+                    owner = parts[-4]
+                    repo_name = parts[-3]
+                    workflow_url = (
+                        f"https://github.com/{owner}/{repo_name}/actions/runs/{workflow_run.run_id}"
+                    )
+            # Format the run ID with linkification
+            run_id_cell = format_workflow_run_id(workflow_run, workflow_url)
 
         # Add row to table
         table.add_row(

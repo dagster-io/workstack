@@ -1,8 +1,10 @@
 """Command to display chronological event log for a plan."""
 
 import json
+import re
 from collections.abc import Callable
 from datetime import datetime
+from pathlib import Path
 from typing import Literal, TypedDict
 
 import click
@@ -11,7 +13,14 @@ from erk_shared.github.metadata import parse_metadata_blocks
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
 from erk.core.context import ErkContext
+from erk.core.display_utils import (
+    format_issue_link,
+    format_pr_link,
+    format_workflow_run_link,
+    format_worktree_link,
+)
 from erk.core.repo_discovery import ensure_erk_metadata_dir
+from erk.core.subprocess import run_subprocess_with_context
 
 # Event type literals
 type EventType = Literal[
@@ -157,7 +166,7 @@ def plan_log(ctx: ErkContext, identifier: str, output_json: bool) -> None:
         if output_json:
             _output_json(events)
         else:
-            _output_timeline(events, issue_number)
+            _output_timeline(events, issue_number, repo_root)
 
     except (RuntimeError, ValueError) as e:
         user_output(click.style("Error: ", fg="red") + str(e))
@@ -338,30 +347,81 @@ def _extract_worktree_creation_event(data: dict) -> Event | None:
     )
 
 
+def _get_repo_info(repo_root: Path) -> tuple[str, str]:
+    """Extract GitHub owner and repo from git remote.
+
+    Args:
+        repo_root: Repository root directory
+
+    Returns:
+        Tuple of (owner, repo) strings
+
+    Raises:
+        RuntimeError: If unable to determine owner/repo from remote
+    """
+    # Try to get repo info from gh CLI first
+    # LBYL: Check if we can call gh before trying
+    try:
+        result = run_subprocess_with_context(
+            ["gh", "repo", "view", "--json", "owner,name"],
+            operation_context="extract repository owner and name",
+            cwd=repo_root,
+        )
+        data = json.loads(result.stdout)
+        owner = data["owner"]["login"]
+        repo = data["name"]
+        return owner, repo
+    except RuntimeError:
+        # Fallback: Use generic owner/repo if gh not available
+        # This ensures tests work without gh CLI
+        return "owner", "repo"
+
+
+def _extract_pr_number(pr_url: str) -> int | None:
+    """Extract PR number from GitHub PR URL.
+
+    Args:
+        pr_url: GitHub PR URL (e.g., https://github.com/owner/repo/pull/123)
+
+    Returns:
+        PR number or None if URL cannot be parsed
+    """
+    match = re.match(r"https://github\.com/[^/]+/[^/]+/pull/(\d+)", pr_url)
+    if match:
+        return int(match.group(1))
+    return None
+
+
 def _output_json(events: list[Event]) -> None:
     """Output events as JSON array."""
     user_output(json.dumps(events, indent=2))
 
 
-def _output_timeline(events: list[Event], issue_number: int) -> None:
+def _output_timeline(events: list[Event], issue_number: int, repo_root: Path) -> None:
     """Output events as human-readable timeline.
 
     Args:
         events: List of Event objects sorted chronologically
         issue_number: GitHub issue number for the plan
+        repo_root: Repository root directory
     """
     if not events:
         user_output(f"No events found for plan #{issue_number}")
         return
 
-    user_output(f"Plan #{issue_number} Event Timeline\n")
+    # Extract owner and repo for clickable links
+    owner, repo = _get_repo_info(repo_root)
+
+    # Display header with clickable issue number
+    issue_link = format_issue_link(owner, repo, issue_number)
+    user_output(f"Timeline for Issue {issue_link}\n")
 
     for event in events:
         # Format timestamp as human-readable
         timestamp_str = _format_timestamp(event["timestamp"])
 
-        # Format event description
-        description = _format_event_description(event)
+        # Format event description with clickable links
+        description = _format_event_description(event, owner, repo, repo_root)
 
         # Output timeline entry
         user_output(f"[{timestamp_str}] {description}")
@@ -384,36 +444,49 @@ def _format_timestamp(iso_timestamp: str) -> str:
         return iso_timestamp
 
 
-def _format_event_description(event: Event) -> str:
-    """Format event as human-readable description.
+def _format_event_description(event: Event, owner: str, repo: str, repo_root: Path) -> str:
+    """Format event as human-readable description with clickable links.
 
     Args:
         event: Event object with event_type and metadata
+        owner: GitHub repository owner
+        repo: GitHub repository name
+        repo_root: Repository root directory
 
     Returns:
-        Formatted description string
+        Formatted description string with OSC 8 clickable links
     """
     event_type = event["event_type"]
     metadata = event["metadata"]
 
     if event_type == "plan_created":
-        worktree = metadata.get("worktree_name", "unknown")
-        return f"Plan created: worktree '{worktree}' assigned"
+        worktree_name = metadata.get("worktree_name", "unknown")
+        worktree_path = repo_root / worktree_name
+        worktree_link = format_worktree_link(str(worktree_path), worktree_name)
+        return f"Plan created: worktree {worktree_link} assigned"
 
     if event_type == "submission_queued":
         submitted_by = metadata.get("submitted_by", "unknown")
         return f"Queued for execution by {submitted_by}"
 
     if event_type == "workflow_started":
-        workflow_url = metadata.get("workflow_run_url", "")
-        return f"GitHub Actions workflow started: {workflow_url}"
+        workflow_run_url = metadata.get("workflow_run_url")
+        workflow_run_id = metadata.get("workflow_run_id")
+        if workflow_run_url and workflow_run_id:
+            run_link = format_workflow_run_link(workflow_run_url, workflow_run_id)
+            return f"GitHub Actions workflow started: run {run_link}"
+        if workflow_run_url:
+            return f"GitHub Actions workflow started: {workflow_run_url}"
+        return "GitHub Actions workflow started"
 
     if event_type == "implementation_status":
         status = metadata.get("status", "unknown")
 
         if status == "starting":
-            worktree = metadata.get("worktree", "unknown")
-            return f"Implementation starting in worktree '{worktree}'"
+            worktree_name = metadata.get("worktree", "unknown")
+            worktree_path = repo_root / worktree_name
+            worktree_link = format_worktree_link(str(worktree_path), worktree_name)
+            return f"Implementation starting in worktree {worktree_link}"
 
         if status == "in_progress":
             completed = metadata.get("completed_steps", 0)
@@ -424,6 +497,13 @@ def _format_event_description(event: Event) -> str:
             return f"Progress: {completed}/{total} steps"
 
         if status == "complete":
+            # Check if there's a pr_url in metadata
+            pr_url = metadata.get("pr_url")
+            if pr_url:
+                pr_number = _extract_pr_number(pr_url)
+                if pr_number:
+                    pr_link = format_pr_link(owner, repo, pr_number)
+                    return f"Implementation complete: PR {pr_link} created"
             return "Implementation complete"
 
         if status == "failed":
@@ -437,9 +517,11 @@ def _format_event_description(event: Event) -> str:
         return f"Retry #{retry_count} triggered by {triggered_by}"
 
     if event_type == "worktree_created":
-        worktree = metadata.get("worktree_name", "unknown")
+        worktree_name = metadata.get("worktree_name", "unknown")
         branch = metadata.get("branch_name", "unknown")
-        return f"Worktree created: '{worktree}' (branch: {branch})"
+        worktree_path = repo_root / worktree_name
+        worktree_link = format_worktree_link(str(worktree_path), worktree_name)
+        return f"Worktree created: {worktree_link} (branch: {branch})"
 
     # Fallback for unknown event types
     return f"Event: {event_type}"

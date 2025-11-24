@@ -76,7 +76,8 @@ def test_log_displays_timeline_chronologically() -> None:
 
         # Assert
         assert result.exit_code == 0
-        assert "Plan #42 Event Timeline" in result.output
+        assert "Timeline for Issue" in result.output
+        assert "#42" in result.output
 
         # Verify chronological order (plan created → queued → workflow started)
         output_lines = result.output.split("\n")
@@ -388,3 +389,137 @@ def test_log_json_structure() -> None:
         assert metadata["status"] == "queued"
         assert metadata["submitted_by"] == "testuser"
         assert metadata["expected_workflow"] == "implement-plan"
+
+
+def test_log_displays_clickable_issue_number() -> None:
+    """Test that issue number in header is clickable with OSC 8."""
+    # Arrange
+    plan = Plan(
+        plan_identifier="42",
+        title="Test Plan",
+        body="Implementation plan",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/42",
+        labels=["erk-plan"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 2, tzinfo=UTC),
+        metadata={},
+    )
+
+    plan_block = create_plan_block(
+        issue_number=42,
+        worktree_name="test-plan",
+        timestamp="2024-01-15T12:30:00Z",
+    )
+
+    comment = render_metadata_block(plan_block)
+
+    issues = FakeGitHubIssues(
+        comments={42: [comment]},
+    )
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        store = FakePlanStore(plans={"42": plan})
+        ctx = build_workspace_test_context(env, plan_store=store, issues=issues)
+
+        # Act
+        result = runner.invoke(cli, ["log", "42"], obj=ctx)
+
+        # Assert
+        assert result.exit_code == 0
+        # Should contain OSC 8 escape sequence for issue link
+        assert "\033]8;;" in result.output
+        assert "Timeline for Issue" in result.output
+
+
+def test_log_workflow_started_shows_clickable_run_id() -> None:
+    """Test workflow started event shows clickable run ID."""
+    # Arrange
+    plan = Plan(
+        plan_identifier="42",
+        title="Test Plan",
+        body="Implementation plan",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/42",
+        labels=["erk-plan"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 2, tzinfo=UTC),
+        metadata={},
+    )
+
+    workflow_block = create_workflow_started_block(
+        started_at="2024-01-15T12:35:00Z",
+        workflow_run_id="123456",
+        workflow_run_url="https://github.com/owner/repo/actions/runs/123456",
+        issue_number=42,
+    )
+
+    comment = render_metadata_block(workflow_block)
+
+    issues = FakeGitHubIssues(
+        comments={42: [comment]},
+    )
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        store = FakePlanStore(plans={"42": plan})
+        ctx = build_workspace_test_context(env, plan_store=store, issues=issues)
+
+        # Act
+        result = runner.invoke(cli, ["log", "42"], obj=ctx)
+
+        # Assert
+        assert result.exit_code == 0
+        # Should contain OSC 8 escape sequence for workflow run link
+        assert "\033]8;;" in result.output
+        assert "#123456" in result.output
+        assert "run" in result.output
+
+
+def test_log_json_output_has_no_escape_sequences() -> None:
+    """Test JSON output contains no OSC 8 formatting."""
+    # Arrange
+    plan = Plan(
+        plan_identifier="42",
+        title="Test Plan",
+        body="Implementation plan",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/42",
+        labels=["erk-plan"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 2, tzinfo=UTC),
+        metadata={},
+    )
+
+    workflow_block = create_workflow_started_block(
+        started_at="2024-01-15T12:35:00Z",
+        workflow_run_id="123456",
+        workflow_run_url="https://github.com/owner/repo/actions/runs/123456",
+        issue_number=42,
+    )
+
+    comment = render_metadata_block(workflow_block)
+
+    issues = FakeGitHubIssues(
+        comments={42: [comment]},
+    )
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        store = FakePlanStore(plans={"42": plan})
+        ctx = build_workspace_test_context(env, plan_store=store, issues=issues)
+
+        # Act
+        result = runner.invoke(cli, ["log", "42", "--json"], obj=ctx)
+
+        # Assert
+        assert result.exit_code == 0
+        # Should NOT contain OSC 8 escape sequences in JSON output
+        assert "\033]8;;" not in result.output
+        # Parse and verify valid JSON
+        events = json.loads(result.output)
+        assert isinstance(events, list)

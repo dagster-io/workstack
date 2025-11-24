@@ -277,3 +277,64 @@ def format_plan_display(
         )
 
     return f"{clickable_id} ({state_str}){labels_str} {title}"
+
+
+def format_issue_link(owner: str, repo: str, issue_number: int) -> str:
+    """Format issue number as clickable OSC 8 link.
+
+    Args:
+        owner: GitHub repository owner
+        repo: GitHub repository name
+        issue_number: Issue number
+
+    Returns:
+        Formatted link with OSC 8 escape sequences
+    """
+    url = f"https://github.com/{owner}/{repo}/issues/{issue_number}"
+    text = click.style(f"#{issue_number}", fg="cyan")
+    return f"\033]8;;{url}\033\\{text}\033]8;;\033\\"
+
+
+def format_workflow_run_link(workflow_run_url: str, run_id: str) -> str:
+    """Format workflow run ID as clickable OSC 8 link.
+
+    Args:
+        workflow_run_url: Full URL to the workflow run
+        run_id: Workflow run ID
+
+    Returns:
+        Formatted link with OSC 8 escape sequences
+    """
+    text = click.style(f"#{run_id}", fg="cyan")
+    return f"\033]8;;{workflow_run_url}\033\\{text}\033]8;;\033\\"
+
+
+def format_pr_link(owner: str, repo: str, pr_number: int) -> str:
+    """Format PR number as clickable OSC 8 link.
+
+    Args:
+        owner: GitHub repository owner
+        repo: GitHub repository name
+        pr_number: Pull request number
+
+    Returns:
+        Formatted link with OSC 8 escape sequences
+    """
+    url = f"https://github.com/{owner}/{repo}/pull/{pr_number}"
+    text = click.style(f"#{pr_number}", fg="cyan")
+    return f"\033]8;;{url}\033\\{text}\033]8;;\033\\"
+
+
+def format_worktree_link(worktree_path: str, worktree_name: str) -> str:
+    """Format worktree name with file:// link.
+
+    Args:
+        worktree_path: Full path to the worktree
+        worktree_name: Name of the worktree
+
+    Returns:
+        Formatted link with OSC 8 escape sequences
+    """
+    url = f"file://{worktree_path}"
+    text = click.style(worktree_name, fg="yellow")
+    return f"\033]8;;{url}\033\\{text}\033]8;;\033\\"

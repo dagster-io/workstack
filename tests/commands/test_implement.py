@@ -1095,9 +1095,10 @@ def test_non_interactive_executes_single_command() -> None:
 
         # Verify one command execution
         assert len(executor.executed_commands) == 1
-        command, worktree_path, dangerous = executor.executed_commands[0]
+        command, worktree_path, dangerous, verbose = executor.executed_commands[0]
         assert command == "/erk:implement-plan"
         assert dangerous is False
+        assert verbose is False
 
 
 def test_non_interactive_with_submit_runs_all_commands() -> None:
@@ -1125,7 +1126,7 @@ def test_non_interactive_with_submit_runs_all_commands() -> None:
 
         # Verify three command executions
         assert len(executor.executed_commands) == 3
-        commands = [cmd for cmd, _, _ in executor.executed_commands]
+        commands = [cmd for cmd, _, _, _ in executor.executed_commands]
         assert commands[0] == "/erk:implement-plan"
         assert commands[1] == "/fast-ci"
         assert commands[2] == "/gt:simple-submit"
@@ -1239,13 +1240,13 @@ def test_yolo_flag_sets_all_flags() -> None:
 
         # Verify three command executions (submit mode)
         assert len(executor.executed_commands) == 3
-        commands = [cmd for cmd, _, dangerous in executor.executed_commands]
+        commands = [cmd for cmd, _, dangerous, _ in executor.executed_commands]
         assert commands[0] == "/erk:implement-plan"
         assert commands[1] == "/fast-ci"
         assert commands[2] == "/gt:simple-submit"
 
         # Verify dangerous flag was set for all commands
-        for _, _, dangerous in executor.executed_commands:
+        for _, _, dangerous, _ in executor.executed_commands:
             assert dangerous is True
 
 

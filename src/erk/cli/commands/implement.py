@@ -138,34 +138,74 @@ def _execute_interactive_mode(
 
 
 def _execute_non_interactive_mode(
-    worktree_path: Path, commands: list[str], dangerous: bool, executor: ClaudeExecutor
+    worktree_path: Path,
+    commands: list[str],
+    dangerous: bool,
+    verbose: bool,
+    executor: ClaudeExecutor,
 ) -> None:
-    """Execute commands via Claude CLI executor with streaming output.
+    """Execute commands via Claude CLI executor with rich output formatting.
 
     Args:
         worktree_path: Path to worktree directory
         commands: List of slash commands to execute
         dangerous: Whether to skip permission prompts
+        verbose: Whether to show raw output (True) or filtered output (False)
         executor: Claude CLI executor for command execution
 
     Raises:
         click.ClickException: If Claude CLI not found or command fails
     """
+    import time
+
+    from rich.console import Console
+
+    from erk.cli.output import format_implement_summary
+    from erk.core.claude_executor import CommandResult
+
     # Verify Claude is available
     if not executor.is_claude_available():
         raise click.ClickException(
             "Claude CLI not found\nInstall from: https://claude.com/download"
         )
 
-    for cmd in commands:
-        # Show progress
-        click.echo(f"Running {cmd}...", err=True)
+    console = Console()
+    total_start = time.time()
+    all_results: list[CommandResult] = []
 
-        # Execute command
-        try:
-            executor.execute_command(cmd, worktree_path, dangerous)
-        except RuntimeError as e:
-            raise click.ClickException(str(e)) from e
+    for cmd in commands:
+        if verbose:
+            # Verbose mode - simple output, no spinner
+            click.echo(f"Running {cmd}...", err=True)
+            result = executor.execute_command(cmd, worktree_path, dangerous, verbose=True)
+        else:
+            # Filtered mode - spinner and clean output
+            with console.status(f"Running {cmd}...", spinner="dots") as status:
+                result = executor.execute_command(cmd, worktree_path, dangerous, verbose=False)
+
+                # Show filtered messages during execution
+                for msg in result.filtered_messages:
+                    console.print(msg)
+
+                # Update spinner to final status
+                final_status = "✅ Complete" if result.success else "❌ Failed"
+                status.update(final_status)
+
+        all_results.append(result)
+
+        # Stop on first failure
+        if not result.success:
+            break
+
+    # Show final summary (unless verbose mode)
+    if not verbose:
+        total_duration = time.time() - total_start
+        summary = format_implement_summary(all_results, total_duration)
+        console.print(summary)
+
+    # Raise exception if any command failed
+    if not all(r.success for r in all_results):
+        raise click.ClickException("One or more commands failed")
 
 
 def _build_activation_script_with_commands(
@@ -556,6 +596,7 @@ def _implement_from_issue(
     dangerous: bool,
     script: bool,
     no_interactive: bool,
+    verbose: bool,
     executor: ClaudeExecutor,
 ) -> None:
     """Implement feature from GitHub issue.
@@ -569,6 +610,7 @@ def _implement_from_issue(
         dangerous: Whether to skip permission prompts
         script: Whether to output activation script
         no_interactive: Whether to execute non-interactively
+        verbose: Whether to show raw output or filtered output
         executor: Claude CLI executor for command execution
     """
     # Discover repo context for issue fetch
@@ -618,7 +660,7 @@ def _implement_from_issue(
     elif no_interactive:
         # Non-interactive mode - execute via subprocess
         commands = _build_command_sequence(submit)
-        _execute_non_interactive_mode(wt_path, commands, dangerous, executor)
+        _execute_non_interactive_mode(wt_path, commands, dangerous, verbose, executor)
     else:
         # Interactive mode - hand off to Claude (never returns)
         _execute_interactive_mode(wt_path, dangerous, executor)
@@ -634,6 +676,7 @@ def _implement_from_file(
     dangerous: bool,
     script: bool,
     no_interactive: bool,
+    verbose: bool,
     executor: ClaudeExecutor,
 ) -> None:
     """Implement feature from plan file.
@@ -647,6 +690,7 @@ def _implement_from_file(
         dangerous: Whether to skip permission prompts
         script: Whether to output activation script
         no_interactive: Whether to execute non-interactively
+        verbose: Whether to show raw output or filtered output
         executor: Claude CLI executor for command execution
     """
     # Prepare plan source from file
@@ -690,7 +734,7 @@ def _implement_from_file(
     elif no_interactive:
         # Non-interactive mode - execute via subprocess
         commands = _build_command_sequence(submit)
-        _execute_non_interactive_mode(wt_path, commands, dangerous, executor)
+        _execute_non_interactive_mode(wt_path, commands, dangerous, verbose, executor)
     else:
         # Interactive mode - hand off to Claude (never returns)
         _execute_interactive_mode(wt_path, dangerous, executor)
@@ -738,6 +782,12 @@ def _implement_from_file(
     default=False,
     help="Equivalent to --dangerous --submit --no-interactive (full automation)",
 )
+@click.option(
+    "--verbose",
+    is_flag=True,
+    default=False,
+    help="Show full Claude Code output (default: filtered)",
+)
 @click.pass_obj
 def implement(
     ctx: ErkContext,
@@ -749,6 +799,7 @@ def implement(
     no_interactive: bool,
     script: bool,
     yolo: bool,
+    verbose: bool,
 ) -> None:
     """Create worktree from GitHub issue or plan file and execute implementation.
 
@@ -830,6 +881,7 @@ def implement(
             dangerous=dangerous,
             script=script,
             no_interactive=no_interactive,
+            verbose=verbose,
             executor=ctx.claude_executor,
         )
     else:
@@ -844,5 +896,6 @@ def implement(
             dangerous=dangerous,
             script=script,
             no_interactive=no_interactive,
+            verbose=verbose,
             executor=ctx.claude_executor,
         )

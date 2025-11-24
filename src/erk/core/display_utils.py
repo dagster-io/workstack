@@ -156,31 +156,83 @@ def format_workflow_status(workflow_run: WorkflowRun | None, workflow_url: str |
 
 
 def format_workflow_run_id(workflow_run: WorkflowRun | None, workflow_url: str | None) -> str:
-    """Format workflow run ID with linkification.
+    """Format workflow run ID with linkification using Rich markup.
 
     Args:
         workflow_run: Workflow run information (None if no workflow run)
         workflow_url: GitHub Actions workflow run URL (None if unavailable)
 
     Returns:
-        Formatted workflow run ID string (e.g., "12345678") or empty string if no workflow
+        Formatted workflow run ID string with Rich markup, or empty string if no workflow
     """
     if workflow_run is None:
         return ""
 
-    # Format run ID text
     run_id_text = workflow_run.run_id
 
-    # If we have a URL, make it clickable using OSC 8 terminal escape sequence
+    # Use Rich markup for proper rendering in Rich tables
+    # Note: [cyan] must wrap [link], not vice versa, for Rich to render both correctly
     if workflow_url:
-        # Wrap the link text in cyan color
-        colored_run_id = click.style(run_id_text, fg="cyan")
-        clickable_link = f"\033]8;;{workflow_url}\033\\{colored_run_id}\033]8;;\033\\"
-        return clickable_link
+        return f"[cyan][link={workflow_url}]{run_id_text}[/link][/cyan]"
     else:
-        # No URL available - just show colored text without link
-        colored_run_id = click.style(run_id_text, fg="cyan")
-        return colored_run_id
+        return f"[cyan]{run_id_text}[/cyan]"
+
+
+def get_workflow_run_state(workflow_run: WorkflowRun) -> str:
+    """Get normalized state string for a workflow run.
+
+    Combines status and conclusion into a single state string suitable for
+    filtering and display.
+
+    Args:
+        workflow_run: Workflow run information
+
+    Returns:
+        One of: "queued", "in_progress", "success", "failure", "cancelled"
+    """
+    if workflow_run.status == "completed":
+        if workflow_run.conclusion == "success":
+            return "success"
+        if workflow_run.conclusion == "failure":
+            return "failure"
+        if workflow_run.conclusion == "cancelled":
+            return "cancelled"
+        # Other conclusions (skipped, timed_out, etc.) map to failure
+        return "failure"
+    if workflow_run.status == "in_progress":
+        return "in_progress"
+    # status == "queued" or unknown
+    return "queued"
+
+
+def format_workflow_outcome(workflow_run: WorkflowRun | None) -> str:
+    """Format workflow run outcome as emoji + text with Rich markup.
+
+    Args:
+        workflow_run: Workflow run information (None if no workflow run)
+
+    Returns:
+        Formatted outcome string with Rich markup (e.g., "[green]✅ Success[/green]")
+        or "[dim]-[/dim]" if no workflow run
+    """
+    if workflow_run is None:
+        return "[dim]-[/dim]"
+
+    state = get_workflow_run_state(workflow_run)
+
+    if state == "queued":
+        return "[yellow]⧗ Queued[/yellow]"
+    if state == "in_progress":
+        return "[blue]⟳ Running[/blue]"
+    if state == "success":
+        return "[green]✅ Success[/green]"
+    if state == "failure":
+        return "[red]❌ Failure[/red]"
+    if state == "cancelled":
+        return "[dim]⛔ Cancelled[/dim]"
+
+    # Fallback (shouldn't happen)
+    return "[dim]-[/dim]"
 
 
 def format_branch_without_worktree(

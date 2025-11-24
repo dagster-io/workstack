@@ -629,7 +629,7 @@ query {{
                 "--workflow",
                 workflow,
                 "--json",
-                "databaseId,status,conclusion,headBranch,headSha",
+                "databaseId,status,conclusion,headBranch,headSha,displayTitle",
                 "--limit",
                 str(limit),
             ]
@@ -652,6 +652,7 @@ query {{
                     conclusion=run.get("conclusion"),
                     branch=run["headBranch"],
                     head_sha=run["headSha"],
+                    display_title=run.get("displayTitle"),
                 )
                 runs.append(workflow_run)
 
@@ -675,7 +676,7 @@ query {{
                 "view",
                 run_id,
                 "--json",
-                "databaseId,status,conclusion,headBranch,headSha",
+                "databaseId,status,conclusion,headBranch,headSha,displayTitle",
             ]
 
             result = run_subprocess_with_context(
@@ -693,6 +694,7 @@ query {{
                 conclusion=data.get("conclusion"),
                 branch=data["headBranch"],
                 head_sha=data["headSha"],
+                display_title=data.get("displayTitle"),
             )
 
         except (RuntimeError, json.JSONDecodeError, KeyError, FileNotFoundError):
@@ -894,3 +896,231 @@ query {{
             result[issue_number] = [pr for pr, _ in prs_with_timestamps]
 
         return result
+
+    def get_workflow_runs_by_branches(
+        self, repo_root: Path, workflow: str, branches: list[str]
+    ) -> dict[str, WorkflowRun | None]:
+        """Get the most relevant workflow run for each branch.
+
+        Queries GitHub Actions for workflow runs and returns the most relevant
+        run for each requested branch. Priority order:
+        1. In-progress or queued runs (active runs take precedence)
+        2. Failed completed runs (failures are more actionable than successes)
+        3. Successful completed runs (most recent)
+
+        Note: Uses list_workflow_runs internally, which already handles gh CLI
+        errors gracefully.
+        """
+        if not branches:
+            return {}
+
+        # Get all workflow runs
+        all_runs = self.list_workflow_runs(repo_root, workflow, limit=100)
+
+        # Filter to requested branches
+        branch_set = set(branches)
+        runs_by_branch: dict[str, list[WorkflowRun]] = {}
+        for run in all_runs:
+            if run.branch in branch_set:
+                if run.branch not in runs_by_branch:
+                    runs_by_branch[run.branch] = []
+                runs_by_branch[run.branch].append(run)
+
+        # Select most relevant run for each branch using priority rules
+        result: dict[str, WorkflowRun | None] = {}
+        for branch in branches:
+            if branch not in runs_by_branch:
+                continue
+
+            branch_runs = runs_by_branch[branch]
+
+            # Priority 1: in_progress or queued (active runs)
+            active_runs = [r for r in branch_runs if r.status in ("in_progress", "queued")]
+            if active_runs:
+                result[branch] = active_runs[0]
+                continue
+
+            # Priority 2: failed completed runs
+            failed_runs = [
+                r for r in branch_runs if r.status == "completed" and r.conclusion == "failure"
+            ]
+            if failed_runs:
+                result[branch] = failed_runs[0]
+                continue
+
+            # Priority 3: successful completed runs (most recent = first in list)
+            completed_runs = [r for r in branch_runs if r.status == "completed"]
+            if completed_runs:
+                result[branch] = completed_runs[0]
+                continue
+
+            # Priority 4: any other runs (unknown status, etc.)
+            if branch_runs:
+                result[branch] = branch_runs[0]
+
+        return result
+
+    def get_workflow_runs_by_titles(
+        self, repo_root: Path, workflow: str, titles: list[str]
+    ) -> dict[str, WorkflowRun | None]:
+        """Get the most relevant workflow run for each display title.
+
+        Queries GitHub Actions for workflow runs and returns the most relevant
+        run for each requested display title. This is useful for workflows
+        triggered by issue events where the headBranch is always the default
+        branch but the display_title contains the issue title.
+
+        Priority order:
+        1. In-progress or queued runs (active runs take precedence)
+        2. Failed completed runs (failures are more actionable than successes)
+        3. Successful completed runs (most recent)
+
+        Note: Uses list_workflow_runs internally, which already handles gh CLI
+        errors gracefully.
+        """
+        if not titles:
+            return {}
+
+        # Get all workflow runs
+        all_runs = self.list_workflow_runs(repo_root, workflow, limit=100)
+
+        # Filter to requested titles, excluding skipped runs
+        # Skipped runs indicate conditions weren't met (path filters, conditionals)
+        # and shouldn't hide previous meaningful runs
+        title_set = set(titles)
+        runs_by_title: dict[str, list[WorkflowRun]] = {}
+        for run in all_runs:
+            # Skip runs with "skipped" conclusion - they're not meaningful for tracking
+            if run.status == "completed" and run.conclusion == "skipped":
+                continue
+            if run.display_title in title_set:
+                if run.display_title not in runs_by_title:
+                    runs_by_title[run.display_title] = []
+                runs_by_title[run.display_title].append(run)
+
+        # Select most relevant run for each title using priority rules
+        result: dict[str, WorkflowRun | None] = {}
+        for title in titles:
+            if title not in runs_by_title:
+                continue
+
+            title_runs = runs_by_title[title]
+
+            # Priority 1: in_progress or queued (active runs)
+            active_runs = [r for r in title_runs if r.status in ("in_progress", "queued")]
+            if active_runs:
+                result[title] = active_runs[0]
+                continue
+
+            # Priority 2: failed completed runs
+            failed_runs = [
+                r for r in title_runs if r.status == "completed" and r.conclusion == "failure"
+            ]
+            if failed_runs:
+                result[title] = failed_runs[0]
+                continue
+
+            # Priority 3: successful completed runs (most recent = first in list)
+            completed_runs = [r for r in title_runs if r.status == "completed"]
+            if completed_runs:
+                result[title] = completed_runs[0]
+                continue
+
+            # Priority 4: any other runs (unknown status, etc.)
+            if title_runs:
+                result[title] = title_runs[0]
+
+        return result
+
+    def poll_for_workflow_run(
+        self,
+        repo_root: Path,
+        workflow: str,
+        branch_name: str,
+        timeout: int = 30,
+        poll_interval: int = 2,
+    ) -> str | None:
+        """Poll for a workflow run matching branch name within timeout.
+
+        Uses multi-factor matching (creation time + event type + branch validation)
+        to reliably find the correct workflow run even under high throughput.
+
+        Args:
+            repo_root: Repository root directory
+            workflow: Workflow filename (e.g., "dispatch-erk-queue.yml")
+            branch_name: Expected branch name to match
+            timeout: Maximum seconds to poll (default: 30)
+            poll_interval: Seconds between poll attempts (default: 2)
+
+        Returns:
+            Run ID as string if found within timeout, None otherwise
+        """
+        start_time = datetime.now(UTC)
+        max_attempts = timeout // poll_interval
+
+        for attempt in range(max_attempts):
+            # Query for recent runs with branch info
+            runs_cmd = [
+                "gh",
+                "run",
+                "list",
+                "--workflow",
+                workflow,
+                "--json",
+                "databaseId,status,conclusion,createdAt,event,headBranch",
+                "--limit",
+                "20",
+            ]
+
+            try:
+                runs_result = run_subprocess_with_context(
+                    runs_cmd,
+                    operation_context=(
+                        f"poll for workflow run (workflow: {workflow}, branch: {branch_name})"
+                    ),
+                    cwd=repo_root,
+                )
+
+                # Parse JSON output
+                runs_data = json.loads(runs_result.stdout)
+                if not runs_data or not isinstance(runs_data, list):
+                    # No runs found, retry
+                    if attempt < max_attempts - 1:
+                        self._time.sleep(poll_interval)
+                        continue
+                    return None
+
+                # Find run matching our criteria
+                for run in runs_data:
+                    # Skip skipped/cancelled runs
+                    conclusion = run.get("conclusion")
+                    if conclusion in ("skipped", "cancelled"):
+                        continue
+
+                    # Match by branch name
+                    head_branch = run.get("headBranch")
+                    if head_branch != branch_name:
+                        continue
+
+                    # Verify run was created after we started polling (within tolerance)
+                    created_at_str = run.get("createdAt")
+                    if created_at_str:
+                        created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
+                        # Allow 5-second tolerance for runs created just before polling started
+                        if created_at >= start_time - timedelta(seconds=5):
+                            run_id = run["databaseId"]
+                            return str(run_id)
+
+                # No matching run found, retry if attempts remaining
+                if attempt < max_attempts - 1:
+                    self._time.sleep(poll_interval)
+
+            except (RuntimeError, FileNotFoundError, json.JSONDecodeError):
+                # Command failed, retry if attempts remaining
+                if attempt < max_attempts - 1:
+                    self._time.sleep(poll_interval)
+                    continue
+                return None
+
+        # Timeout reached without finding matching run
+        return None

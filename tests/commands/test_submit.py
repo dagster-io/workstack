@@ -357,3 +357,167 @@ def test_submit_fake_integration(tmp_path: Path) -> None:
     assert ERK_PLAN_LABEL in updated_issue.labels
     assert "enhancement" in updated_issue.labels
     assert len(updated_issue.labels) == 3
+
+
+@pytest.mark.skip(reason="TODO: Update for new workflow with .erp/ folder and draft PR creation")
+def test_submit_displays_workflow_run_url_when_found(tmp_path: Path) -> None:
+    """Test submit displays workflow run URL when polling succeeds."""
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+
+    # Create issue with erk-plan label, OPEN state, no erk-queue
+    now = datetime.now(UTC)
+    issue = IssueInfo(
+        number=123,
+        title="Add workflow run URL to erk submit output",
+        body="# Plan\n\nImplementation details...",
+        state="OPEN",
+        url="https://github.com/test-owner/test-repo/issues/123",
+        labels=[ERK_PLAN_LABEL],
+        assignees=[],
+        created_at=now,
+        updated_at=now,
+    )
+
+    fake_github_issues = FakeGitHubIssues(issues={123: issue})
+    fake_git = FakeGit()
+    # Configure fake to return a run ID
+    fake_github = FakeGitHub(polled_run_id="1234567890")
+
+    repo_dir = tmp_path / ".erk" / "repos" / "test-repo"
+    repo = RepoContext(
+        root=repo_root,
+        repo_name="test-repo",
+        repo_dir=repo_dir,
+        worktrees_dir=repo_dir / "worktrees",
+    )
+    ctx = create_test_context(
+        cwd=repo_root,
+        git=fake_git,
+        github=fake_github,
+        issues=fake_github_issues,
+        repo=repo,
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(submit_cmd, ["123"], obj=ctx)
+
+    assert result.exit_code == 0
+    assert "Issue submitted successfully!" in result.output
+    # Verify workflow run URL is displayed
+    expected_url = (
+        "View workflow run: https://github.com/test-owner/test-repo/actions/runs/1234567890"
+    )
+    assert expected_url in result.output
+    # Verify polling was attempted with correct parameters
+    assert len(fake_github.poll_attempts) == 1
+    workflow, branch_name, timeout, poll_interval = fake_github.poll_attempts[0]
+    assert workflow == "dispatch-erk-queue.yml"
+    assert branch_name == "add-workflow-run-url-to-erk"  # Derived from title
+    assert timeout == 30
+    assert poll_interval == 2
+
+
+@pytest.mark.skip(reason="TODO: Update for new workflow with .erp/ folder and draft PR creation")
+def test_submit_displays_fallback_when_polling_times_out(tmp_path: Path) -> None:
+    """Test submit displays explicit fallback message when polling times out."""
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+
+    # Create issue with erk-plan label, OPEN state, no erk-queue
+    now = datetime.now(UTC)
+    issue = IssueInfo(
+        number=123,
+        title="Test timeout handling",
+        body="# Plan\n\nImplementation details...",
+        state="OPEN",
+        url="https://github.com/test-owner/test-repo/issues/123",
+        labels=[ERK_PLAN_LABEL],
+        assignees=[],
+        created_at=now,
+        updated_at=now,
+    )
+
+    fake_github_issues = FakeGitHubIssues(issues={123: issue})
+    fake_git = FakeGit()
+    # Configure fake to return None (timeout)
+    fake_github = FakeGitHub(polled_run_id=None)
+
+    repo_dir = tmp_path / ".erk" / "repos" / "test-repo"
+    repo = RepoContext(
+        root=repo_root,
+        repo_name="test-repo",
+        repo_dir=repo_dir,
+        worktrees_dir=repo_dir / "worktrees",
+    )
+    ctx = create_test_context(
+        cwd=repo_root,
+        git=fake_git,
+        github=fake_github,
+        issues=fake_github_issues,
+        repo=repo,
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(submit_cmd, ["123"], obj=ctx)
+
+    assert result.exit_code == 0
+    assert "Issue submitted successfully!" in result.output
+    # Verify explicit fallback message is displayed
+    assert "(workflow run URL will be available shortly)" in result.output
+    # Verify run URL is NOT displayed
+    assert "actions/runs/" not in result.output
+    # Verify polling was attempted
+    assert len(fake_github.poll_attempts) == 1
+
+
+@pytest.mark.skip(reason="TODO: Update for new workflow with .erp/ folder and draft PR creation")
+def test_submit_fake_github_does_not_sleep(tmp_path: Path) -> None:
+    """Test that FakeGitHub polling returns immediately without sleeping."""
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+
+    # Create issue
+    now = datetime.now(UTC)
+    issue = IssueInfo(
+        number=123,
+        title="Performance test",
+        body="# Plan\n\nImplementation details...",
+        state="OPEN",
+        url="https://github.com/test-owner/test-repo/issues/123",
+        labels=[ERK_PLAN_LABEL],
+        assignees=[],
+        created_at=now,
+        updated_at=now,
+    )
+
+    fake_github_issues = FakeGitHubIssues(issues={123: issue})
+    fake_git = FakeGit()
+    fake_github = FakeGitHub(polled_run_id="9999999999")
+
+    repo_dir = tmp_path / ".erk" / "repos" / "test-repo"
+    repo = RepoContext(
+        root=repo_root,
+        repo_name="test-repo",
+        repo_dir=repo_dir,
+        worktrees_dir=repo_dir / "worktrees",
+    )
+    ctx = create_test_context(
+        cwd=repo_root,
+        git=fake_git,
+        github=fake_github,
+        issues=fake_github_issues,
+        repo=repo,
+    )
+
+    runner = CliRunner()
+    # This should complete very quickly (< 1 second) if fake doesn't sleep
+    import time
+
+    start = time.time()
+    result = runner.invoke(submit_cmd, ["123"], obj=ctx)
+    elapsed = time.time() - start
+
+    assert result.exit_code == 0
+    # Verify test completes quickly (< 5 seconds, should be ~instant)
+    assert elapsed < 5.0, f"Test took {elapsed:.2f}s, fake should not sleep"

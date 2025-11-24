@@ -47,3 +47,4 @@ class WorkflowRun:
     conclusion: str | None  # "success", "failure", "cancelled" (None if in progress)
     branch: str
     head_sha: str
+    display_title: str | None = None  # The display title (e.g., issue title for dispatch workflows)

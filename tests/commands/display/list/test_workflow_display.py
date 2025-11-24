@@ -342,3 +342,272 @@ issue_number: 999
         # Command should succeed and show worktree without workflow status
         output = strip_ansi(result.output)
         assert "feature-branch" in output
+
+
+def test_list_displays_queued_workflow_status() -> None:
+    """Workflow status should show hourglass emoji for queued workflows."""
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        # Create worktree directory with .impl/ folder
+        repo_name = env.cwd.name
+        repo_dir = env.erk_root / repo_name
+        feature_wt = repo_dir / "feature-branch"
+        feature_wt.mkdir(parents=True)
+
+        # Create .impl/issue.json
+        impl_dir = feature_wt / ".impl"
+        impl_dir.mkdir()
+        issue_json = impl_dir / "issue.json"
+        issue_json.write_text(
+            '{"issue_number": 500, "issue_url": "https://github.com/owner/repo/issues/500", '
+            '"created_at": "2025-01-20T10:00:00+00:00", "synced_at": "2025-01-20T10:00:00+00:00"}',
+            encoding="utf-8",
+        )
+
+        git_ops = FakeGit(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
+                    WorktreeInfo(path=feature_wt, branch="feature-branch", is_root=False),
+                ],
+            },
+            git_common_dirs={env.cwd: env.git_dir},
+        )
+
+        # Add workflow run with queued status
+        workflow_run = WorkflowRun(
+            run_id="55555555",
+            status="queued",
+            conclusion=None,
+            branch="feature-branch",
+            head_sha="abc555",
+        )
+        github = FakeGitHub(workflow_runs=[workflow_run])
+        github_issues = FakeGitHubIssues(comments={})
+
+        test_ctx = env.build_context(
+            git=git_ops,
+            github=github,
+            issues=github_issues,
+            graphite=FakeGraphite(pr_info={}),
+            show_pr_info=False,
+        )
+
+        result = runner.invoke(cli, ["wt", "list"], obj=test_ctx)
+        assert result.exit_code == 0, result.output
+
+        # Verify queued emoji (⧗) appears
+        assert "⧗" in result.output, "Expected hourglass emoji for queued workflow"
+
+
+def test_list_displays_cancelled_workflow_status() -> None:
+    """Workflow status should show stop sign emoji for cancelled workflows."""
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        # Create worktree directory with .impl/ folder
+        repo_name = env.cwd.name
+        repo_dir = env.erk_root / repo_name
+        feature_wt = repo_dir / "feature-branch"
+        feature_wt.mkdir(parents=True)
+
+        # Create .impl/issue.json
+        impl_dir = feature_wt / ".impl"
+        impl_dir.mkdir()
+        issue_json = impl_dir / "issue.json"
+        issue_json.write_text(
+            '{"issue_number": 600, "issue_url": "https://github.com/owner/repo/issues/600", '
+            '"created_at": "2025-01-20T10:00:00+00:00", "synced_at": "2025-01-20T10:00:00+00:00"}',
+            encoding="utf-8",
+        )
+
+        git_ops = FakeGit(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
+                    WorktreeInfo(path=feature_wt, branch="feature-branch", is_root=False),
+                ],
+            },
+            git_common_dirs={env.cwd: env.git_dir},
+        )
+
+        # Add workflow run with cancelled conclusion
+        workflow_run = WorkflowRun(
+            run_id="66666666",
+            status="completed",
+            conclusion="cancelled",
+            branch="feature-branch",
+            head_sha="abc666",
+        )
+        github = FakeGitHub(workflow_runs=[workflow_run])
+        github_issues = FakeGitHubIssues(comments={})
+
+        test_ctx = env.build_context(
+            git=git_ops,
+            github=github,
+            issues=github_issues,
+            graphite=FakeGraphite(pr_info={}),
+            show_pr_info=False,
+        )
+
+        result = runner.invoke(cli, ["wt", "list"], obj=test_ctx)
+        assert result.exit_code == 0, result.output
+
+        # Verify stop sign emoji (⛔) appears
+        assert "⛔" in result.output, "Expected stop sign emoji for cancelled workflow"
+
+
+def test_list_displays_unknown_workflow_status() -> None:
+    """Workflow status should show question mark emoji for unknown status."""
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        # Create worktree directory with .impl/ folder
+        repo_name = env.cwd.name
+        repo_dir = env.erk_root / repo_name
+        feature_wt = repo_dir / "feature-branch"
+        feature_wt.mkdir(parents=True)
+
+        # Create .impl/issue.json
+        impl_dir = feature_wt / ".impl"
+        impl_dir.mkdir()
+        issue_json = impl_dir / "issue.json"
+        issue_json.write_text(
+            '{"issue_number": 700, "issue_url": "https://github.com/owner/repo/issues/700", '
+            '"created_at": "2025-01-20T10:00:00+00:00", "synced_at": "2025-01-20T10:00:00+00:00"}',
+            encoding="utf-8",
+        )
+
+        git_ops = FakeGit(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
+                    WorktreeInfo(path=feature_wt, branch="feature-branch", is_root=False),
+                ],
+            },
+            git_common_dirs={env.cwd: env.git_dir},
+        )
+
+        # Add workflow run with unknown status
+        workflow_run = WorkflowRun(
+            run_id="77777777",
+            status="unknown_status",
+            conclusion=None,
+            branch="feature-branch",
+            head_sha="abc777",
+        )
+        github = FakeGitHub(workflow_runs=[workflow_run])
+        github_issues = FakeGitHubIssues(comments={})
+
+        test_ctx = env.build_context(
+            git=git_ops,
+            github=github,
+            issues=github_issues,
+            graphite=FakeGraphite(pr_info={}),
+            show_pr_info=False,
+        )
+
+        result = runner.invoke(cli, ["wt", "list"], obj=test_ctx)
+        assert result.exit_code == 0, result.output
+
+        # Verify question mark emoji (❓) appears
+        assert "❓" in result.output, "Expected question mark emoji for unknown status"
+
+
+def test_list_handles_batch_query_exception() -> None:
+    """Command should succeed even if batch workflow query raises exception."""
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        # Create worktree directory with .impl/ folder
+        repo_name = env.cwd.name
+        repo_dir = env.erk_root / repo_name
+        feature_wt = repo_dir / "feature-branch"
+        feature_wt.mkdir(parents=True)
+
+        # Create .impl/issue.json
+        impl_dir = feature_wt / ".impl"
+        impl_dir.mkdir()
+        issue_json = impl_dir / "issue.json"
+        issue_json.write_text(
+            '{"issue_number": 800, "issue_url": "https://github.com/owner/repo/issues/800", '
+            '"created_at": "2025-01-20T10:00:00+00:00", "synced_at": "2025-01-20T10:00:00+00:00"}',
+            encoding="utf-8",
+        )
+
+        git_ops = FakeGit(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
+                    WorktreeInfo(path=feature_wt, branch="feature-branch", is_root=False),
+                ],
+            },
+            git_common_dirs={env.cwd: env.git_dir},
+        )
+
+        # No workflow runs configured (simulates API failure or no runs found)
+        github = FakeGitHub(workflow_runs=[])
+        github_issues = FakeGitHubIssues(comments={})
+
+        test_ctx = env.build_context(
+            git=git_ops,
+            github=github,
+            issues=github_issues,
+            graphite=FakeGraphite(pr_info={}),
+            show_pr_info=False,
+        )
+
+        result = runner.invoke(cli, ["wt", "list"], obj=test_ctx)
+        # Command should succeed despite API failure
+        assert result.exit_code == 0, result.output
+
+        # Verify worktree still displays (without workflow status)
+        output = strip_ansi(result.output)
+        assert "feature-branch" in output
+
+
+def test_list_without_impl_folder_skips_workflow_query() -> None:
+    """Worktrees without .impl/ folder should not trigger workflow queries."""
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        # Create worktree WITHOUT .impl/ folder
+        repo_name = env.cwd.name
+        repo_dir = env.erk_root / repo_name
+        feature_wt = repo_dir / "feature-branch"
+        feature_wt.mkdir(parents=True)
+        # No .impl/ folder created
+
+        git_ops = FakeGit(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="main", is_root=True),
+                    WorktreeInfo(path=feature_wt, branch="feature-branch", is_root=False),
+                ],
+            },
+            git_common_dirs={env.cwd: env.git_dir},
+        )
+
+        # Add workflow run (should not be displayed for this worktree)
+        workflow_run = WorkflowRun(
+            run_id="99999999",
+            status="completed",
+            conclusion="success",
+            branch="feature-branch",
+            head_sha="abc999",
+        )
+        github = FakeGitHub(workflow_runs=[workflow_run])
+        github_issues = FakeGitHubIssues(comments={})
+
+        test_ctx = env.build_context(
+            git=git_ops,
+            github=github,
+            issues=github_issues,
+            graphite=FakeGraphite(pr_info={}),
+            show_pr_info=False,
+        )
+
+        result = runner.invoke(cli, ["wt", "list"], obj=test_ctx)
+        assert result.exit_code == 0, result.output
+
+        # Verify worktree displays without workflow status
+        output = strip_ansi(result.output)
+        assert "feature-branch" in output
+        # CI column should not appear or show no status for this worktree
+        # (The implementation only queries workflows for branches with .impl/ folders)

@@ -8,8 +8,7 @@ import click
 from erk_shared.github.emoji import get_checks_status_emoji, get_pr_status_emoji
 from erk_shared.github.issues import GitHubIssues
 from erk_shared.github.metadata_blocks import parse_metadata_blocks
-from erk_shared.github.status_history import extract_workflow_run_id
-from erk_shared.github.types import PullRequestInfo
+from erk_shared.github.types import PullRequestInfo, WorkflowRun
 from erk_shared.impl_folder import read_issue_reference
 from erk_shared.output.output import user_output
 from rich.console import Console
@@ -17,7 +16,11 @@ from rich.table import Table
 
 from erk.cli.core import discover_repo_context
 from erk.core.context import ErkContext
-from erk.core.display_utils import format_workflow_run_id
+from erk.core.display_utils import (
+    format_workflow_outcome,
+    format_workflow_run_id,
+    get_workflow_run_state,
+)
 from erk.core.plan_store.types import Plan, PlanQuery, PlanState
 from erk.core.repo_discovery import ensure_erk_metadata_dir
 
@@ -86,76 +89,6 @@ def format_checks_cell(pr: PullRequestInfo | None) -> str:
     return get_checks_status_emoji(pr)
 
 
-def determine_action_state(plan: Plan, all_comments: dict[int, list[str]]) -> str:
-    """Determine simplified action state from plan metadata.
-
-    Returns one of: "-", "Pending", "Running", "Complete", "Failed"
-
-    Args:
-        plan: The plan to determine state for
-        all_comments: Dict mapping issue numbers to list of comment bodies
-
-    Returns:
-        Action state string for display
-    """
-    # Check if plan has erk-queue label
-    if "erk-queue" not in plan.labels:
-        return "-"
-
-    # Get issue number from metadata
-    issue_number = plan.metadata.get("number")
-    if not isinstance(issue_number, int):
-        return "-"
-
-    # Get comments for this issue
-    if issue_number not in all_comments:
-        # Has label but no comments yet - pending
-        return "Pending"
-
-    comments = all_comments[issue_number]
-
-    # Parse all metadata blocks from all comments
-    # Track most recent by metadata key
-    latest_blocks: dict[str, tuple[datetime, dict[str, object]]] = {}
-
-    for comment_body in comments:
-        blocks = parse_metadata_blocks(comment_body)
-        for block in blocks:
-            # Extract timestamp if present
-            timestamp_str = block.data.get("timestamp")
-            if timestamp_str and isinstance(timestamp_str, str):
-                timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
-            else:
-                # Use fallback timestamp if not present
-                timestamp = datetime.min
-
-            # Update if this is the most recent block for this key
-            if block.key not in latest_blocks or timestamp > latest_blocks[block.key][0]:
-                latest_blocks[block.key] = (timestamp, block.data)
-
-    # Check for metadata in priority order
-    # 1. erk-implementation-status - check status field
-    if "erk-implementation-status" in latest_blocks:
-        status = latest_blocks["erk-implementation-status"][1].get("status")
-        if status == "complete":
-            return "Complete"
-        if status == "failed":
-            return "Failed"
-        if status in ("pending", "starting", "in_progress"):
-            return "Running"
-
-    # 2. workflow-started - means workflow is running
-    if "workflow-started" in latest_blocks:
-        return "Running"
-
-    # 3. submission-queued - means queued but not started
-    if "submission-queued" in latest_blocks:
-        return "Pending"
-
-    # Has erk-queue label but no metadata yet
-    return "Pending"
-
-
 def plan_list_options[**P, T](f: Callable[P, T]) -> Callable[P, T]:
     """Shared options for list/ls commands."""
     f = click.option(
@@ -169,9 +102,11 @@ def plan_list_options[**P, T](f: Callable[P, T]) -> Callable[P, T]:
         help="Filter by state",
     )(f)
     f = click.option(
-        "--action-state",
-        type=click.Choice(["-", "pending", "running", "complete", "failed"], case_sensitive=False),
-        help="Filter by action state",
+        "--run-state",
+        type=click.Choice(
+            ["queued", "in_progress", "success", "failure", "cancelled"], case_sensitive=False
+        ),
+        help="Filter by workflow run state",
     )(f)
     f = click.option(
         "--limit",
@@ -249,7 +184,7 @@ def _list_plans_impl(
     ctx: ErkContext,
     label: tuple[str, ...],
     state: str | None,
-    action_state: str | None,
+    run_state: str | None,
     limit: int | None,
 ) -> None:
     """Implementation logic for listing plans with optional filters."""
@@ -306,24 +241,10 @@ def _list_plans_impl(
             # If batch fetch fails, continue without PR info
             pass
 
-    # Apply action state filter if specified
-    if action_state:
-        # Normalize action_state for comparison (user input is lowercase from click.Choice)
-        normalized_filter = action_state.capitalize() if action_state != "-" else "-"
-        filtered_plans: list[Plan] = []
-        for plan in plans:
-            plan_action_state = determine_action_state(plan, all_comments)
-            if plan_action_state == normalized_filter:
-                filtered_plans.append(plan)
-        plans = filtered_plans
-
-        # Check if filtering resulted in no plans
-        if not plans:
-            user_output("No plans found matching the criteria.")
-            return
-
     # Build local worktree mapping from .impl/issue.json files
+    # This also builds branch-to-issue mapping for workflow run queries
     worktree_by_issue: dict[int, str] = {}
+    branch_to_issue: dict[str, int] = {}
     worktrees = ctx.git.list_worktrees(repo_root)
     for worktree in worktrees:
         impl_folder = worktree.path / ".impl"
@@ -333,20 +254,75 @@ def _list_plans_impl(
                 # If multiple worktrees have same issue, keep first found
                 if issue_ref.issue_number not in worktree_by_issue:
                     worktree_by_issue[issue_ref.issue_number] = worktree.path.name
+                    # Extract branch name from worktree directory name
+                    branch_to_issue[worktree.path.name] = issue_ref.issue_number
+
+    # Batch query workflow runs for all branches with .impl/ folders
+    runs_by_branch = {}
+    if branch_to_issue:
+        branches = list(branch_to_issue.keys())
+        try:
+            runs_by_branch = ctx.github.get_workflow_runs_by_branches(
+                repo_root, "dispatch-erk-queue.yml", branches
+            )
+        except Exception:
+            # If API query fails, continue without run IDs
+            pass
+
+    # Build reverse mapping: issue_number -> workflow run
+    runs_by_issue: dict[int, WorkflowRun] = {}
+    for branch, run in runs_by_branch.items():
+        issue_num = branch_to_issue.get(branch)
+        if issue_num is not None and run is not None:
+            runs_by_issue[issue_num] = run
+
+    # Build title-to-issue mapping for workflow run lookup
+    # dispatch-erk-queue.yml runs have headBranch=master but display_title=issue title
+    title_by_issue: dict[int, str] = {}
+    for plan in plans:
+        issue_number = plan.metadata.get("number")
+        if isinstance(issue_number, int):
+            title_by_issue[issue_number] = plan.title
+
+    # Query workflow runs by display title (issue title)
+    workflow_runs_by_title: dict[str, WorkflowRun | None] = {}
+    titles_to_query = list(title_by_issue.values())
+    if titles_to_query:
+        workflow_runs_by_title = ctx.github.get_workflow_runs_by_titles(
+            repo_root, "dispatch-erk-queue.yml", titles_to_query
+        )
+
+    # Apply run state filter if specified
+    if run_state:
+        filtered_plans: list[Plan] = []
+        for plan in plans:
+            workflow_run = workflow_runs_by_title.get(plan.title)
+            if workflow_run is None:
+                # No workflow run - skip this plan when filtering
+                continue
+            plan_run_state = get_workflow_run_state(workflow_run)
+            if plan_run_state == run_state:
+                filtered_plans.append(plan)
+        plans = filtered_plans
+
+        # Check if filtering resulted in no plans
+        if not plans:
+            user_output("No plans found matching the criteria.")
+            return
 
     # Determine use_graphite for URL selection
     use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
 
     # Create Rich table with columns
     table = Table(show_header=True, header_style="bold")
-    table.add_column("Plan", style="cyan", no_wrap=True)
-    table.add_column("PR", no_wrap=True)
-    table.add_column("Checks", no_wrap=True)
-    table.add_column("State", no_wrap=True)
-    table.add_column("Action", no_wrap=True, width=12)
-    table.add_column("Run ID", no_wrap=True)
-    table.add_column("Title", no_wrap=True)
-    table.add_column("Local Worktree", style="yellow", no_wrap=True)
+    table.add_column("plan", style="cyan", no_wrap=True)
+    table.add_column("pr", no_wrap=True)
+    table.add_column("title", no_wrap=True)
+    table.add_column("chks", no_wrap=True)
+    table.add_column("st", no_wrap=True)
+    table.add_column("last-queue-run", no_wrap=True, width=12)
+    table.add_column("run-id", no_wrap=True)
+    table.add_column("wt", style="yellow", no_wrap=True)
 
     # Populate table rows
     for plan in plans:
@@ -364,22 +340,6 @@ def _list_plans_impl(
         # Format state with color
         state_color = "green" if plan.state == PlanState.OPEN else "red"
         state_str = f"[{state_color}]{plan.state.value}[/{state_color}]"
-
-        # Determine action state with color coding
-        action_state = determine_action_state(plan, all_comments)
-        # Apply color styling based on state
-        if action_state == "-":
-            action_str = f"[dim]{action_state}[/dim]"
-        elif action_state == "Pending":
-            action_str = f"[yellow]{action_state}[/yellow]"
-        elif action_state == "Running":
-            action_str = f"[blue]{action_state}[/blue]"
-        elif action_state == "Complete":
-            action_str = f"[green]{action_state}[/green]"
-        elif action_state == "Failed":
-            action_str = f"[red]{action_state}[/red]"
-        else:
-            action_str = action_state
 
         # Truncate title to 50 characters with ellipsis
         title = plan.title
@@ -416,39 +376,43 @@ def _list_plans_impl(
                 )
                 checks_cell = format_checks_cell(selected_pr)
 
-        # Extract workflow run ID from comments
+        # Get workflow run for this plan by title (dispatch-erk-queue uses display_title)
         run_id_cell = "-"
-        if isinstance(issue_number, int) and issue_number in all_comments:
-            comments = all_comments[issue_number]
-            run_id = extract_workflow_run_id(comments)
-            if run_id is not None:
-                # Fetch workflow run details
-                workflow_run = ctx.github.get_workflow_run(repo_root, run_id)
-                if workflow_run is not None:
-                    # Build workflow URL
-                    workflow_url = None
-                    # Try to extract owner/repo from plan metadata
-                    plan_url = plan.metadata.get("url")
-                    if isinstance(plan_url, str):
-                        # Parse owner/repo from URL like https://github.com/owner/repo/issues/123
-                        parts = plan_url.split("/")
-                        if len(parts) >= 5:
-                            owner = parts[-4]
-                            repo_name = parts[-3]
-                            workflow_url = (
-                                f"https://github.com/{owner}/{repo_name}/actions/runs/{run_id}"
-                            )
-                    # Format the run ID with linkification
-                    run_id_cell = format_workflow_run_id(workflow_run, workflow_url)
+        workflow_run = workflow_runs_by_title.get(plan.title)
+        if workflow_run is not None:
+            # Build workflow URL from plan.url attribute
+            workflow_url = None
+            if plan.url:
+                # Parse owner/repo from URL like https://github.com/owner/repo/issues/123
+                parts = plan.url.split("/")
+                if len(parts) >= 5:
+                    owner = parts[-4]
+                    repo_name = parts[-3]
+                    workflow_url = (
+                        f"https://github.com/{owner}/{repo_name}/actions/runs/{workflow_run.run_id}"
+                    )
+            # Format the run ID with linkification
+            run_id_cell = format_workflow_run_id(workflow_run, workflow_url)
 
-        # Add row to table
+        # Format workflow run outcome
+        run_outcome_cell = format_workflow_outcome(workflow_run)
+
+        # Add row to table (columns: plan, pr, title, chks, st, run, run-id, wt)
         table.add_row(
-            issue_id, pr_cell, checks_cell, state_str, action_str, run_id_cell, title, worktree_name
+            issue_id,
+            pr_cell,
+            title,
+            checks_cell,
+            state_str,
+            run_outcome_cell,
+            run_id_cell,
+            worktree_name,
         )
 
     # Output table to stderr (consistent with user_output convention)
     # Use width=200 to ensure proper display without truncation
-    console = Console(stderr=True, width=200)
+    # force_terminal=True ensures hyperlinks render even when Rich doesn't detect a TTY
+    console = Console(stderr=True, width=200, force_terminal=True)
     console.print(table)
     console.print()  # Add blank line after table
 
@@ -460,7 +424,7 @@ def list_plans(
     ctx: ErkContext,
     label: tuple[str, ...],
     state: str | None,
-    action_state: str | None,
+    run_state: str | None,
     limit: int | None,
 ) -> None:
     """List plans with optional filters.
@@ -470,10 +434,10 @@ def list_plans(
         erk plan list --label erk-plan --state open
         erk plan list --label erk-plan --label erk-queue
         erk plan list --limit 10
-        erk plan list --action-state running
-        erk plan list --action-state complete --state open
+        erk plan list --run-state in_progress
+        erk plan list --run-state success --state open
     """
-    _list_plans_impl(ctx, label, state, action_state, limit)
+    _list_plans_impl(ctx, label, state, run_state, limit)
 
 
 # Register ls as a hidden alias (won't show in help)
@@ -484,8 +448,8 @@ def ls_plans(
     ctx: ErkContext,
     label: tuple[str, ...],
     state: str | None,
-    action_state: str | None,
+    run_state: str | None,
     limit: int | None,
 ) -> None:
     """List plans with optional filters (alias of 'list')."""
-    _list_plans_impl(ctx, label, state, action_state, limit)
+    _list_plans_impl(ctx, label, state, run_state, limit)

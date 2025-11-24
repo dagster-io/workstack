@@ -246,6 +246,77 @@ Ensure.invariant("/" not in name, f"Invalid name '{name}' - path separators not 
 
 **Exit Codes:** All Ensure methods use exit code 1 for validation failures. This is consistent across all CLI commands.
 
+## Table Rendering Standards
+
+When displaying tabular data, use Rich tables with these conventions.
+
+### Header Naming
+
+Use **lowercase, abbreviated headers** to minimize horizontal space:
+
+| Full Name    | Header   | Notes                       |
+| ------------ | -------- | --------------------------- |
+| Plan         | `plan`   | Issue/plan identifier       |
+| Pull Request | `pr`     | PR number with status emoji |
+| Title        | `title`  | Truncate to ~50 chars       |
+| Checks       | `chks`   | CI status emoji             |
+| State        | `st`     | OPEN/CLOSED                 |
+| Action       | `action` | Workflow action state       |
+| Run ID       | `run-id` | GitHub Actions run ID       |
+| Worktree     | `wt`     | Local worktree name         |
+| Branch       | `branch` | Git branch name             |
+
+### Column Order Convention
+
+Order columns by importance and logical grouping:
+
+1. **Identifier** (plan, pr, issue) - always first
+2. **Related links** (pr if separate from identifier)
+3. **Title/description** - human context
+4. **Status indicators** (chks, st, action) - current state
+5. **Technical IDs** (run-id) - for debugging/linking
+6. **Location** (wt, path) - always last
+
+### Color Scheme for Table Cells
+
+| Element          | Rich Markup                  | When to Use            |
+| ---------------- | ---------------------------- | ---------------------- |
+| Identifiers      | `[cyan]#123[/cyan]`          | Plan IDs, PR numbers   |
+| Clickable links  | `[link=URL][cyan]...[/link]` | IDs with URLs          |
+| State: OPEN      | `[green]OPEN[/green]`        | Open issues/PRs        |
+| State: CLOSED    | `[red]CLOSED[/red]`          | Closed issues/PRs      |
+| Action: Pending  | `[yellow]Pending[/yellow]`   | Queued but not started |
+| Action: Running  | `[blue]Running[/blue]`       | Currently executing    |
+| Action: Complete | `[green]Complete[/green]`    | Successfully finished  |
+| Action: Failed   | `[red]Failed[/red]`          | Execution failed       |
+| Action: None     | `[dim]-[/dim]`               | No action applicable   |
+| Worktree names   | `style="yellow"`             | Column-level style     |
+| Placeholder      | `-`                          | No data available      |
+
+### Table Setup Pattern
+
+```python
+from rich.console import Console
+from rich.table import Table
+
+table = Table(show_header=True, header_style="bold")
+table.add_column("plan", style="cyan", no_wrap=True)
+table.add_column("pr", no_wrap=True)
+table.add_column("title", no_wrap=True)
+table.add_column("chks", no_wrap=True)
+table.add_column("st", no_wrap=True)
+table.add_column("wt", style="yellow", no_wrap=True)
+
+# Output to stderr (consistent with user_output)
+console = Console(stderr=True, width=200)
+console.print(table)
+console.print()  # Blank line after table
+```
+
+### Reference Implementations
+
+- `src/erk/cli/commands/plan/list_cmd.py` - Plan list table with all conventions
+
 ## See Also
 
 - [cli-script-mode.md](cli-script-mode.md) - Script mode for shell integration (suppressing diagnostics)

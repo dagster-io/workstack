@@ -1,28 +1,28 @@
-"""Core types for provider-agnostic plan issue storage."""
+"""Core types for provider-agnostic plan storage."""
 
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 
 
-class PlanIssueState(Enum):
-    """State of a plan issue."""
+class PlanState(Enum):
+    """State of a plan."""
 
     OPEN = "OPEN"
     CLOSED = "CLOSED"
 
 
 @dataclass(frozen=True)
-class PlanIssue:
-    """Provider-agnostic representation of a plan issue.
+class Plan:
+    """Provider-agnostic representation of a plan.
 
     Fields:
-        plan_issue_identifier: Provider-specific ID as string
+        plan_identifier: Provider-specific ID as string
             (GitHub: "42", Jira: "PROJ-123", Linear: UUID)
-        title: Issue title
-        body: Issue body/description
-        state: Issue state (OPEN or CLOSED)
-        url: Web URL to view the issue
+        title: Plan title
+        body: Plan body/description
+        state: Plan state (OPEN or CLOSED)
+        url: Web URL to view the plan
         labels: List of label names
         assignees: List of assignee usernames
         created_at: Creation timestamp
@@ -30,10 +30,10 @@ class PlanIssue:
         metadata: Provider-specific fields (e.g., {"number": 42} for GitHub)
     """
 
-    plan_issue_identifier: str
+    plan_identifier: str
     title: str
     body: str
-    state: PlanIssueState
+    state: PlanState
     url: str
     labels: list[str]
     assignees: list[str]
@@ -43,8 +43,8 @@ class PlanIssue:
 
 
 @dataclass(frozen=True)
-class PlanIssueQuery:
-    """Query parameters for filtering plan issues.
+class PlanQuery:
+    """Query parameters for filtering plans.
 
     Fields:
         labels: Filter by labels (all must match - AND logic)
@@ -53,5 +53,5 @@ class PlanIssueQuery:
     """
 
     labels: list[str] | None = None
-    state: PlanIssueState | None = None
+    state: PlanState | None = None
     limit: int | None = None

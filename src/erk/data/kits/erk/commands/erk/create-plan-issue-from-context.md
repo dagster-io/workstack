@@ -59,7 +59,7 @@ This command provides a fast path for creating GitHub issues when you don't need
 
 1. Use `/erk:save-plan` or `/erk:save-context-enriched-plan` to save plan to disk
 2. Use `/erk:create-wt-from-plan-file` to create worktree
-3. Use `/erk:create-plan-issue-from-plan-file` to create issue
+3. Use `/erk:create-plan-from-file` to create issue
 
 ---
 
@@ -205,7 +205,7 @@ Use the new composite kit CLI command that handles the complete workflow:
 2. Call the composite kit command:
 
    ```bash
-   result=$(cat "$temp_plan" | dot-agent kit-command erk create-plan-issue-from-context)
+   result=$(dot-agent kit-command erk create-plan-from-context)
    rm "$temp_plan"
 
    # Parse JSON output

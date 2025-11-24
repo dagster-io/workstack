@@ -1,4 +1,4 @@
-"""Unit tests for create-enriched-plan-issue-from-context command."""
+"""Unit tests for create-enriched-plan-from-context command."""
 
 import json
 
@@ -6,7 +6,7 @@ from click.testing import CliRunner
 from erk_shared.github.issues import FakeGitHubIssues
 
 from dot_agent_kit.context import DotAgentContext
-from erk.data.kits.erk.kit_cli_commands.erk.create_enriched_plan_issue_from_context import (
+from erk.data.kits.erk.kit_cli_commands.erk.create_enriched_plan_from_context import (
     create_enriched_plan_issue_from_context,
 )
 

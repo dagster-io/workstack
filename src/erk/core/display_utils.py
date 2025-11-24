@@ -231,19 +231,19 @@ def format_worktree_line(
     return line
 
 
-def format_plan_issue_display(
-    plan_issue_identifier: str,
+def format_plan_display(
+    plan_identifier: str,
     state: str,
     title: str,
     labels: list[str],
     url: str | None = None,
 ) -> str:
-    """Format a plan issue for display in lists.
+    """Format a plan for display in lists.
 
     Args:
-        plan_issue_identifier: Issue identifier (e.g., "42", "PROJ-123")
-        state: Issue state ("OPEN" or "CLOSED")
-        title: Issue title
+        plan_identifier: Plan identifier (e.g., "42", "PROJ-123")
+        state: Plan state ("OPEN" or "CLOSED")
+        title: Plan title
         labels: List of label names
         url: Optional URL for clickable link
 
@@ -255,7 +255,7 @@ def format_plan_issue_display(
     state_str = click.style(state, fg=state_color)
 
     # Format identifier
-    id_text = f"#{plan_issue_identifier}"
+    id_text = f"#{plan_identifier}"
 
     # If we have a URL, make it clickable using OSC 8
     if url:

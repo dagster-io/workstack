@@ -15,7 +15,7 @@ from erk.cli.commands.init import init_cmd
 from erk.cli.commands.land_stack import land_stack
 from erk.cli.commands.list import list_cmd, ls_cmd
 from erk.cli.commands.move import move_cmd
-from erk.cli.commands.plan_issue import plan_issue_group
+from erk.cli.commands.plan import plan_group
 from erk.cli.commands.prepare_cwd_recovery import prepare_cwd_recovery_cmd
 from erk.cli.commands.rename import rename_cmd
 from erk.cli.commands.runs import runs_cmd
@@ -61,7 +61,7 @@ cli.add_command(delete_cmd)
 cli.add_command(del_cmd)
 cli.add_command(rename_cmd)
 cli.add_command(config_group)
-cli.add_command(plan_issue_group)
+cli.add_command(plan_group)
 cli.add_command(runs_cmd)
 cli.add_command(split_cmd)
 cli.add_command(submit_cmd)

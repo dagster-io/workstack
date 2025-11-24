@@ -1,4 +1,4 @@
-"""Command to list plan issues with filtering."""
+"""Command to list plans with filtering."""
 
 from collections.abc import Callable
 from datetime import datetime
@@ -10,12 +10,12 @@ from erk_shared.github.issues import GitHubIssues
 from erk.cli.core import discover_repo_context
 from erk.cli.output import user_output
 from erk.core.context import ErkContext
-from erk.core.plan_issue_store import PlanIssueQuery, PlanIssueState
+from erk.core.plan_store import PlanQuery, PlanState
 from erk.core.repo_discovery import ensure_erk_metadata_dir
 from erk.integrations.github.metadata_blocks import parse_metadata_blocks
 
 
-def plan_issue_list_options[**P, T](f: Callable[P, T]) -> Callable[P, T]:
+def plan_list_options[**P, T](f: Callable[P, T]) -> Callable[P, T]:
     """Shared options for list/ls commands."""
     f = click.option(
         "--label",
@@ -99,13 +99,13 @@ def get_worktree_status(
     return _parse_worktree_from_comments(comments)
 
 
-def _list_plan_issues_impl(
+def _list_plans_impl(
     ctx: ErkContext,
     label: tuple[str, ...],
     state: str | None,
     limit: int | None,
 ) -> None:
-    """Implementation logic for listing plan issues with optional filters."""
+    """Implementation logic for listing plans with optional filters."""
     repo = discover_repo_context(ctx, ctx.cwd)
     ensure_erk_metadata_dir(repo)  # Ensure erk metadata directories exist
     repo_root = repo.root  # Use git repository root for GitHub operations
@@ -114,31 +114,31 @@ def _list_plan_issues_impl(
     labels_list = list(label) if label else None
     state_enum = None
     if state:
-        state_enum = PlanIssueState.OPEN if state.lower() == "open" else PlanIssueState.CLOSED
+        state_enum = PlanState.OPEN if state.lower() == "open" else PlanState.CLOSED
 
-    query = PlanIssueQuery(
+    query = PlanQuery(
         labels=labels_list,
         state=state_enum,
         limit=limit,
     )
 
     try:
-        plan_issues = ctx.plan_issue_store.list_plan_issues(repo_root, query)
+        plans = ctx.plan_store.list_plans(repo_root, query)
     except RuntimeError as e:
         user_output(click.style("Error: ", fg="red") + str(e))
         raise SystemExit(1) from e
 
-    if not plan_issues:
-        user_output("No plan issues found matching the criteria.")
+    if not plans:
+        user_output("No plans found matching the criteria.")
         return
 
     # Display results
-    user_output(f"\nFound {len(plan_issues)} plan issue(s):\n")
+    user_output(f"\nFound {len(plans)} plan(s):\n")
 
     # Batch fetch all issue comments for worktree status
     issue_numbers: list[int] = []
-    for issue in plan_issues:
-        num = issue.metadata.get("number")
+    for plan in plans:
+        num = plan.metadata.get("number")
         if isinstance(num, int):
             issue_numbers.append(num)
 
@@ -150,24 +150,24 @@ def _list_plan_issues_impl(
             # If batch fetch fails, continue without worktree status
             pass
 
-    for issue in plan_issues:
+    for plan in plans:
         # Format state with color
-        state_color = "green" if issue.state == PlanIssueState.OPEN else "red"
-        state_str = click.style(issue.state.value, fg=state_color)
+        state_color = "green" if plan.state == PlanState.OPEN else "red"
+        state_str = click.style(plan.state.value, fg=state_color)
 
         # Format identifier
-        id_str = click.style(f"#{issue.plan_issue_identifier}", fg="cyan")
+        id_str = click.style(f"#{plan.plan_identifier}", fg="cyan")
 
         # Format labels
         labels_str = ""
-        if issue.labels:
+        if plan.labels:
             labels_str = " " + " ".join(
-                click.style(f"[{label}]", fg="bright_magenta") for label in issue.labels
+                click.style(f"[{label}]", fg="bright_magenta") for label in plan.labels
             )
 
         # Query worktree status from batch-fetched comments
         worktree_str = ""
-        issue_number = issue.metadata.get("number")
+        issue_number = plan.metadata.get("number")
         if isinstance(issue_number, int) and issue_number in all_comments:
             comments = all_comments[issue_number]
             # Parse worktree metadata from comments
@@ -176,41 +176,41 @@ def _list_plan_issues_impl(
                 worktree_str = f" {click.style(worktree_name, fg='yellow')}"
 
         # Build line
-        line = f"{id_str} ({state_str}){labels_str} {issue.title}{worktree_str}"
+        line = f"{id_str} ({state_str}){labels_str} {plan.title}{worktree_str}"
         user_output(line)
 
     user_output("")
 
 
 @click.command("list")
-@plan_issue_list_options
+@plan_list_options
 @click.pass_obj
-def list_plan_issues(
+def list_plans(
     ctx: ErkContext,
     label: tuple[str, ...],
     state: str | None,
     limit: int | None,
 ) -> None:
-    """List plan issues with optional filters.
+    """List plans with optional filters.
 
     Examples:
-        erk plan-issue list
-        erk plan-issue list --label erk-plan --state open
-        erk plan-issue list --label erk-plan --label erk-queue
-        erk plan-issue list --limit 10
+        erk plan list
+        erk plan list --label erk-plan --state open
+        erk plan list --label erk-plan --label erk-queue
+        erk plan list --limit 10
     """
-    _list_plan_issues_impl(ctx, label, state, limit)
+    _list_plans_impl(ctx, label, state, limit)
 
 
 # Register ls as a hidden alias (won't show in help)
 @click.command("ls", hidden=True)
-@plan_issue_list_options
+@plan_list_options
 @click.pass_obj
-def ls_plan_issues(
+def ls_plans(
     ctx: ErkContext,
     label: tuple[str, ...],
     state: str | None,
     limit: int | None,
 ) -> None:
-    """List plan issues with optional filters (alias of 'list')."""
-    _list_plan_issues_impl(ctx, label, state, limit)
+    """List plans with optional filters (alias of 'list')."""
+    _list_plans_impl(ctx, label, state, limit)

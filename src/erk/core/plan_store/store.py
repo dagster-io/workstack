@@ -1,45 +1,45 @@
-"""Abstract interface for plan issue storage providers."""
+"""Abstract interface for plan storage providers."""
 
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from erk.core.plan_issue_store.types import PlanIssue, PlanIssueQuery
+from erk.core.plan_store.types import Plan, PlanQuery
 
 
-class PlanIssueStore(ABC):
-    """Abstract interface for plan issue operations.
+class PlanStore(ABC):
+    """Abstract interface for plan operations.
 
     All implementations (real and fake) must implement this interface.
-    This interface provides READ-only operations for plan issues.
+    This interface provides READ-only operations for plans.
     Write operations (create, comment, label) will be added in future versions.
     """
 
     @abstractmethod
-    def get_plan_issue(self, repo_root: Path, plan_issue_identifier: str) -> PlanIssue:
-        """Fetch a plan issue by identifier.
+    def get_plan(self, repo_root: Path, plan_identifier: str) -> Plan:
+        """Fetch a plan by identifier.
 
         Args:
             repo_root: Repository root directory
-            plan_issue_identifier: Provider-specific identifier (e.g., "42", "PROJ-123")
+            plan_identifier: Provider-specific identifier (e.g., "42", "PROJ-123")
 
         Returns:
-            PlanIssue with all metadata
+            Plan with all metadata
 
         Raises:
-            RuntimeError: If provider fails or issue not found
+            RuntimeError: If provider fails or plan not found
         """
         ...
 
     @abstractmethod
-    def list_plan_issues(self, repo_root: Path, query: PlanIssueQuery) -> list[PlanIssue]:
-        """Query plan issues by criteria.
+    def list_plans(self, repo_root: Path, query: PlanQuery) -> list[Plan]:
+        """Query plans by criteria.
 
         Args:
             repo_root: Repository root directory
             query: Filter criteria (labels, state, assignee, limit)
 
         Returns:
-            List of PlanIssue matching the criteria
+            List of Plan matching the criteria
 
         Raises:
             RuntimeError: If provider fails

@@ -30,7 +30,7 @@ from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output
 from erk.core.claude_executor import ClaudeExecutor
 from erk.core.context import ErkContext
-from erk.core.plan_issue_store.types import PlanIssueState
+from erk.core.plan_store.types import PlanState
 from erk.core.repo_discovery import ensure_erk_metadata_dir
 
 
@@ -276,44 +276,44 @@ def _prepare_plan_source_from_issue(
     # Output fetching diagnostic
     ctx.feedback.info("Fetching issue from GitHub...")
 
-    # Fetch plan issue from GitHub
+    # Fetch plan from GitHub
     try:
-        plan_issue = ctx.plan_issue_store.get_plan_issue(repo_root, issue_number)
+        plan = ctx.plan_store.get_plan(repo_root, issue_number)
     except RuntimeError as e:
         ctx.feedback.error(f"Error: {e}")
         raise SystemExit(1) from e
 
     # Output issue title
-    ctx.feedback.info(f"Issue: {plan_issue.title}")
+    ctx.feedback.info(f"Issue: {plan.title}")
 
     # Validate issue has erk-plan label
-    if "erk-plan" not in plan_issue.labels:
+    if "erk-plan" not in plan.labels:
         user_output(
             click.style("Error: ", fg="red")
             + f"Issue #{issue_number} does not have the 'erk-plan' label.\n"
             + "Only issues tagged with 'erk-plan' can be used for implementation.\n\n"
-            + f"To add the label, visit: {plan_issue.url}"
+            + f"To add the label, visit: {plan.url}"
         )
         raise SystemExit(1)
 
     # Validate issue is open
-    if plan_issue.state != PlanIssueState.OPEN:
+    if plan.state != PlanState.OPEN:
         user_output(
             click.style("Warning: ", fg="yellow")
-            + f"Issue #{issue_number} is {plan_issue.state.value}. "
+            + f"Issue #{issue_number} is {plan.state.value}. "
             + "Proceeding anyway..."
         )
 
     # Generate base name from issue title
-    filename = generate_filename_from_title(plan_issue.title)
+    filename = generate_filename_from_title(plan.title)
     stem = filename.removesuffix(".md")
     cleaned_stem = strip_plan_from_filename(stem)
     base_name = sanitize_worktree_name(cleaned_stem)
 
-    dry_run_desc = f"Would create worktree from issue #{issue_number}\n  Title: {plan_issue.title}"
+    dry_run_desc = f"Would create worktree from issue #{issue_number}\n  Title: {plan.title}"
 
     return PlanSource(
-        plan_content=plan_issue.body,
+        plan_content=plan.body,
         base_name=base_name,
         dry_run_description=dry_run_desc,
     )
@@ -595,11 +595,11 @@ def _implement_from_issue(
 
     # Save issue reference for PR linking (issue-specific)
     ctx.feedback.info("Saving issue reference for PR linking...")
-    plan_issue = ctx.plan_issue_store.get_plan_issue(repo.root, issue_number)
+    plan = ctx.plan_store.get_plan(repo.root, issue_number)
     impl_dir = wt_path / ".impl"
-    save_issue_reference(impl_dir, int(issue_number), plan_issue.url)
+    save_issue_reference(impl_dir, int(issue_number), plan.url)
 
-    ctx.feedback.success(f"✓ Saved issue reference: {plan_issue.url}")
+    ctx.feedback.success(f"✓ Saved issue reference: {plan.url}")
 
     # Execute based on mode
     if script:

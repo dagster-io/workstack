@@ -4,8 +4,8 @@ description: Erk implementation workflow commands for creating worktrees from pl
 license: MIT
 artifacts:
   command:
-    - commands/erk/save-plan-issue.md
-    - commands/erk/save-raw-plan-issue.md
+    - commands/erk/save-plan.md
+    - commands/erk/save-raw-plan.md
     - commands/erk/create-wt-from-plan-file.md
     - commands/erk/implement-plan.md
     - commands/erk/fix-merge-conflicts.md
@@ -73,5 +73,5 @@ hooks:
     lifecycle: UserPromptSubmit
     matcher: "*"
     invocation: dot-agent kit-command erk session-id-injector-hook
-    description: Injects session ID into context when /erk:save-plan-issue is invoked
+    description: Injects session ID into context when /erk:save-plan is invoked
     timeout: 30

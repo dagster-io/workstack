@@ -25,7 +25,7 @@ from erk.core.github.real import RealGitHub
 from erk.core.graphite.abc import Graphite
 from erk.core.graphite.dry_run import DryRunGraphite
 from erk.core.graphite.real import RealGraphite
-from erk.core.plan_issue_store import GitHubPlanIssueStore, PlanIssueStore
+from erk.core.plan_store import GitHubPlanStore, PlanStore
 from erk.core.repo_discovery import (
     NoRepoSentinel,
     RepoContext,
@@ -53,7 +53,7 @@ class ErkContext:
     git: Git
     github: GitHub
     issues: GitHubIssues
-    plan_issue_store: PlanIssueStore
+    plan_store: PlanStore
     graphite: Graphite
     shell: Shell
     claude_executor: ClaudeExecutor
@@ -132,13 +132,13 @@ class ErkContext:
         from erk.core.config_store import FakeConfigStore
         from erk.core.github.fake import FakeGitHub
         from erk.core.graphite.fake import FakeGraphite
-        from erk.core.plan_issue_store import FakePlanIssueStore
+        from erk.core.plan_store import FakePlanStore
 
         return ErkContext(
             git=git,
             github=FakeGitHub(),
             issues=FakeGitHubIssues(),
-            plan_issue_store=FakePlanIssueStore(),
+            plan_store=FakePlanStore(),
             graphite=FakeGraphite(),
             shell=FakeShell(),
             claude_executor=FakeClaudeExecutor(),
@@ -159,7 +159,7 @@ class ErkContext:
         git: Git | None = None,
         github: GitHub | None = None,
         issues: GitHubIssues | None = None,
-        plan_issue_store: PlanIssueStore | None = None,
+        plan_store: PlanStore | None = None,
         graphite: Graphite | None = None,
         shell: Shell | None = None,
         claude_executor: ClaudeExecutor | None = None,
@@ -237,7 +237,7 @@ class ErkContext:
         from erk.core.git.fake import FakeGit
         from erk.core.github.fake import FakeGitHub
         from erk.core.graphite.fake import FakeGraphite
-        from erk.core.plan_issue_store import FakePlanIssueStore
+        from erk.core.plan_store import FakePlanStore
 
         if git is None:
             git = FakeGit()
@@ -248,8 +248,8 @@ class ErkContext:
         if issues is None:
             issues = FakeGitHubIssues()
 
-        if plan_issue_store is None:
-            plan_issue_store = FakePlanIssueStore()
+        if plan_store is None:
+            plan_store = FakePlanStore()
 
         if graphite is None:
             graphite = FakeGraphite()
@@ -300,7 +300,7 @@ class ErkContext:
             git=git,
             github=github,
             issues=issues,
-            plan_issue_store=plan_issue_store,
+            plan_store=plan_store,
             graphite=graphite,
             shell=shell,
             claude_executor=claude_executor,
@@ -432,7 +432,7 @@ def create_context(*, dry_run: bool, script: bool = False) -> ErkContext:
     graphite: Graphite = RealGraphite()
     github: GitHub = RealGitHub()
     issues: GitHubIssues = RealGitHubIssues()
-    plan_issue_store: PlanIssueStore = GitHubPlanIssueStore(issues)
+    plan_store: PlanStore = GitHubPlanStore(issues)
 
     # 5. Discover repo (only needs cwd, erk_root, git)
     # If global_config is None, use placeholder path for repo discovery
@@ -465,7 +465,7 @@ def create_context(*, dry_run: bool, script: bool = False) -> ErkContext:
         git=git,
         github=github,
         issues=issues,
-        plan_issue_store=plan_issue_store,
+        plan_store=plan_store,
         graphite=graphite,
         shell=RealShell(),
         claude_executor=RealClaudeExecutor(),

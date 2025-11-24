@@ -229,7 +229,7 @@ Use the composite kit CLI command that handles the complete workflow for enriche
 2. Call the composite kit command:
 
    ```bash
-   result=$(cat "$temp_plan" | dot-agent kit-command erk create-enriched-plan-issue-from-context)
+   result=$(dot-agent kit-command erk create-enriched-plan-from-context)
    rm "$temp_plan"
 
    # Parse JSON output

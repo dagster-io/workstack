@@ -252,7 +252,7 @@ After submission, provide a clear summary using the Graphite URL from the JSON o
 
 ### Automatic Issue Linking
 
-When a worktree was created from a GitHub issue via `/erk:create-wt-from-plan-issue`, the agent automatically:
+When a worktree was created from a GitHub issue via `erk implement <issue>`, the agent automatically:
 
 - Reads issue reference from `.impl/issue.json`
 - Prepends "Closes #<issue-number>" to PR body

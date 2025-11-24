@@ -1,26 +1,31 @@
 ---
-description: Create GitHub issue from persisted plan
+description: Create GitHub issue from persisted plan with auto-implementation queue label
 ---
 
-# /erk:create-plan-issue-from-plan-file
+# /erk:queue-plan
 
-⚠️ **DEPRECATED**: This command is deprecated. Use `/erk:save-context-enriched-plan` or `/erk:save-plan` instead, which create GitHub issues directly without requiring disk files.
+⚠️ **DEPRECATED**: This command is deprecated. The workflow has been simplified to create GitHub issues directly from conversation without requiring disk files.
 
-This command remains functional for backward compatibility with existing plan files on disk.
+**For automatic implementation via GitHub Actions**, consider updating your automation to:
+
+1. Use `/erk:enhance-and-save-plan` or `/erk:save-plan` to create the issue
+2. Add the `erk-queue` label to the created issue using `gh issue edit <number> --add-label erk-queue`
+
+This command remains functional for backward compatibility with existing plan files on disk and automation workflows.
 
 ## Goal
 
-**Create a GitHub issue from an existing plan file on disk.**
+**Create a GitHub issue from an existing plan file on disk with the `erk-queue` label for automatic implementation.**
 
-This command detects plan files at the repository root, selects the most recent one, creates a GitHub issue with the plan content, and optionally links it to an existing worktree's `.impl/` folder.
+This command detects plan files at the repository root, selects the most recent one, creates a GitHub issue with the plan content, adds the `erk-queue` label (which triggers automatic implementation), and optionally links it to an existing worktree's `.impl/` folder.
 
 **What this command does:**
 
 - ✅ Auto-detect most recent `*-plan.md` file at repo root
 - ✅ Extract title from plan front matter or first H1 heading
-- ✅ Ensure `erk-plan` label exists (create if needed)
+- ✅ Ensure `erk-queue` label exists (create if needed)
 - ✅ Create GitHub issue with plan body as content
-- ✅ Add label: `erk-plan`
+- ✅ Add label: `erk-queue` (triggers automatic implementation workflow)
 - ✅ Save issue reference to `.impl/issue.json` (if worktree exists)
 - ✅ Display issue URL
 
@@ -31,15 +36,16 @@ When you run this command, these steps occur:
 1. **Verify Scope** - Confirm we're in a git repository with gh CLI available
 2. **Detect Plan File** - Find and select most recent `*-plan.md` at repo root
 3. **Parse Plan** - Extract title and body from markdown
-4. **Ensure Label Exists** - Check for `erk-plan` label, create if missing
-5. **Create Issue** - Use gh CLI to create issue with `erk-plan` label
-6. **Link to Worktree** - If `.impl/` folder exists in current worktree, save issue reference
-7. **Display Result** - Show issue number and URL
+4. **Ensure Label Exists** - Check for `erk-queue` label, create if missing
+5. **Create Issue** - Use gh CLI to create issue with `erk-queue` label
+6. **Automatic Implementation** - GitHub Actions workflow automatically starts implementation
+7. **Link to Worktree** - If `.impl/` folder exists in current worktree, save issue reference
+8. **Display Result** - Show issue number and URL
 
 ## Usage
 
 ```bash
-/erk:create-planned-issue
+/erk:queue-plan
 ```
 
 **No arguments accepted** - This command automatically detects and uses the most recent plan file.
@@ -49,7 +55,7 @@ When you run this command, these steps occur:
 If you want to link an existing issue instead of creating a new one:
 
 ```bash
-/erk:create-planned-issue --link 123
+/erk:queue-plan --link 123
 ```
 
 This will save the issue reference without creating a new issue. Use this when:
@@ -57,13 +63,20 @@ This will save the issue reference without creating a new issue. Use this when:
 - Issue was created manually on GitHub
 - Want to associate an existing issue with a worktree
 
+## Key Difference from `/erk:create-plan-from-file`
+
+**`/erk:create-plan-from-file`**: Creates issue with `erk-plan` label (manual implementation)
+**`/erk:queue-plan`**: Creates issue with `erk-queue` label (automatic implementation via GitHub Actions)
+
+Use `/erk:queue-plan` when you want the implementation to happen automatically via CI. Use `/erk:create-plan-from-file` when you want to manually implement the plan.
+
 ## Prerequisites
 
 - At least one `*-plan.md` file must exist at repository root
 - Current working directory must be in a git repository
 - `gh` CLI must be installed and authenticated
 - Typically run after `/erk:save-context-enriched-plan`
-- Can run before or after `/erk:create-wt-from-plan-file`
+- Can run before or after `/erk:create-planned-wt`
 
 ## Success Criteria
 
@@ -75,12 +88,13 @@ This command succeeds when ALL of the following are true:
 ✅ Title extracted from front matter or H1 heading
 
 **Label Pre-flight:**
-✅ `erk-plan` label exists (created if missing)
+✅ `erk-queue` label exists (created if missing)
 
 **Issue Creation:**
 ✅ GitHub issue created with plan content
-✅ Label added: `erk-plan`
+✅ Label added: `erk-queue`
 ✅ Issue URL displayed
+✅ GitHub Actions workflow triggered automatically
 
 **Worktree Linking (if applicable):**
 ✅ If `.impl/` folder exists: issue reference saved to `.impl/issue.json`
@@ -128,31 +142,53 @@ This command succeeds when ALL of the following are true:
 **Solution:**
 
 - This is expected if you haven't created a worktree yet
-- Create worktree: `/erk:create-wt-from-plan-file`
+- Create worktree: `/erk:create-planned-wt`
 - Navigate to worktree: `erk checkout <branch>`
-- Re-run: `/erk:create-planned-issue --link <issue-number>`
+- Re-run: `/erk:queue-plan --link <issue-number>`
+
+### "Workflow not triggered"
+
+**Cause:** GitHub Actions workflow may not be enabled or `erk-queue` label not recognized
+**Solution:**
+
+- Verify workflow exists: `.github/workflows/dispatch-erk-queue.yml`
+- Check workflow runs: `gh run list`
+- Manually trigger if needed: Add `erk-queue` label to issue
+
+### "PR creation failed: not permitted to create pull requests"
+
+**Cause:** GitHub Actions token lacks permission to create PRs
+**Solution:**
+
+1. Navigate to **Settings > Actions > General**
+2. Enable "Allow GitHub Actions to create and approve pull requests"
+3. If in organization: Also check **Organization Settings > Actions**
+4. Re-run the workflow
 
 ## Integration with Workflow
 
-**Typical workflow:**
+**Typical workflow (automatic implementation):**
 
 1. Create plan: `/erk:save-context-enriched-plan`
-2. Create issue: `/erk:create-planned-issue` ← **YOU ARE HERE**
+2. Create queued issue: `/erk:queue-plan` ← **YOU ARE HERE**
+3. GitHub Actions automatically:
+   - Creates branch from issue title
+   - Creates `.impl/` folder structure
+   - Runs `/erk:implement-plan`
+   - Creates pull request
+
+**Alternative workflow (manual implementation):**
+
+1. Create plan: `/erk:save-context-enriched-plan`
+2. Create issue: `/erk:create-plan-from-file` (uses `erk-plan` label, no auto-implementation)
 3. Create worktree: `/erk:create-wt-from-plan-file`
 4. Navigate and implement: `erk checkout <branch> && claude --permission-mode acceptEdits "/erk:implement-plan"`
-
-**Alternative workflow (create issue from within worktree):**
-
-1. Create plan: `/erk:save-context-enriched-plan`
-2. Create worktree: `/erk:create-wt-from-plan-file`
-3. Navigate: `erk checkout <branch>`
-4. Create issue: `/erk:create-planned-issue` ← Issue automatically linked to `.impl/` folder
 
 ---
 
 ## Agent Instructions
 
-You are executing the `/erk:create-planned-issue` command. Follow these steps carefully:
+You are executing the `/erk:queue-plan` command. Follow these steps carefully:
 
 ### Step 1: Check for --link Flag
 
@@ -221,12 +257,12 @@ Find the most recent `*-plan.md` file at repository root using the kit CLI comma
 
 ### Step 4: Create GitHub Issue (Single Command)
 
-Use the composite kit CLI command that handles the complete workflow from plan file:
+Use the composite kit CLI command that handles the complete workflow for queued plans:
 
 - Reads plan file from disk
 - Extracts title from plan
-- Ensures erk-plan label exists
-- Creates GitHub issue with plan body
+- Ensures erk-queue label exists
+- Creates GitHub issue with plan body and erk-queue label
 - Returns structured JSON result
 
 **Algorithm:**
@@ -234,7 +270,7 @@ Use the composite kit CLI command that handles the complete workflow from plan f
 1. Call the composite kit command with the plan file path:
 
    ```bash
-   result=$(dot-agent kit-command erk create-plan-issue-from-plan-file "<path-to-plan-file>")
+   result=$(dot-agent kit-command erk create-queued-plan "<path-to-plan-file>")
 
    # Parse JSON output
    if ! echo "$result" | jq -e '.success' > /dev/null; then
@@ -264,9 +300,11 @@ Use the composite kit CLI command that handles the complete workflow from plan f
 
 - Reads plan file using Python (not shell cat)
 - Extracts title (H1 → H2 → first line fallback)
-- Ensures erk-plan label exists (creates if needed)
-- Creates issue with full plan as body
+- Ensures erk-queue label exists (creates if needed with orange color)
+- Creates issue with full plan as body and erk-queue label
 - Returns JSON: `{"success": true, "issue_number": 123, "issue_url": "..."}`
+
+**Note:** The erk-queue label indicates this issue is queued for automatic implementation by the erk system, as opposed to erk-plan which is for manual execution.
 
 ### Step 5: Display Issue URL
 
@@ -277,10 +315,18 @@ Show success message with issue information:
 
 Issue #<number>: <title>
 URL: <issue-url>
+Label: erk-queue (automatic implementation will begin)
 
-You can now:
+GitHub Actions will automatically:
+- Create branch from issue title
+- Set up .impl/ folder structure
+- Run implementation via Claude Code
+- Create pull request with results
+
+You can monitor progress:
 - View issue: gh issue view <number>
-- Create worktree: /erk:create-wt-from-plan-file
+- Watch workflow: gh run list
+- Check Actions tab: <repo-url>/actions
 ```
 
 ### Step 6: Link Issue to Worktree (if .impl/ exists)
@@ -290,7 +336,7 @@ Check if current directory has a `.impl/` folder:
 1. Check for `.impl/` directory:
 
    ```bash
-   test -d .plan && echo "exists" || echo "not found"
+   test -d .impl && echo "exists" || echo "not found"
    ```
 
 2. If `.impl/` exists:
@@ -304,11 +350,17 @@ Check if current directory has a `.impl/` folder:
 
      Issue reference saved to .impl/issue.json
 
-     The issue will be updated with progress during implementation.
+     The issue will be updated with progress during automatic implementation.
      ```
 
 3. If `.impl/` doesn't exist:
-   - Continue silently (no action needed)
+   - Display informational message:
+
+     ```
+     ℹ️  Issue created but not linked to a worktree
+
+     The GitHub Actions workflow will create a new branch and implement automatically.
+     ```
 
 ### Step 7: Handle --link Flag
 
@@ -359,7 +411,9 @@ If user provided `--link <issue-number>`:
 
 ### Important Notes
 
-- **NO auto-implementation**: This command ONLY creates the GitHub issue
+- **Automatic implementation**: This command triggers automatic implementation via GitHub Actions
+- **Label difference**: Uses `erk-queue` (auto) vs `erk-plan` (manual)
+- **Workflow monitoring**: User should monitor GitHub Actions for implementation progress
 - **Graceful degradation**: Creating issue without linking is valid (can link later)
 - **Idempotent linking**: Can run `--link` multiple times safely (overwrites `.impl/issue.json`)
 - **Context usage**: Use `ctx.issues.create_issue()` for issue creation (injected via ErkContext)

@@ -207,7 +207,7 @@ Use the composite kit CLI command that handles the complete workflow:
 2. Call the composite kit command:
 
    ```bash
-   result=$(cat "$temp_plan" | dot-agent kit-command erk create-plan-issue-from-context)
+   result=$(dot-agent kit-command erk create-plan-from-context)
    rm "$temp_plan"
 
    # Parse JSON output

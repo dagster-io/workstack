@@ -4,8 +4,8 @@ description: Erk implementation workflow commands for creating worktrees from pl
 license: MIT
 artifacts:
   command:
-    - commands/erk/save-plan-issue.md
-    - commands/erk/save-raw-plan-issue.md
+    - commands/erk/save-plan.md
+    - commands/erk/save-raw-plan.md
     - commands/erk/create-wt-from-plan-file.md
     - commands/erk/implement-plan.md
     - commands/erk/fix-merge-conflicts.md
@@ -47,14 +47,14 @@ kit_cli_commands:
   - name: create-wt-from-issue
     path: kit_cli_commands/erk/create_wt_from_issue.py
     description: Create worktree from GitHub issue with erk-plan label
-  - name: create-plan-issue-from-context
-    path: kit_cli_commands/erk/create_plan_issue_from_context.py
+  - name: create-plan-from-context
+    path: kit_cli_commands/erk/create_plan_from_context.py
     description: Create GitHub issue from plan content (stdin) with erk-plan label
-  - name: create-enriched-plan-issue-from-context
-    path: kit_cli_commands/erk/create_enriched_plan_issue_from_context.py
+  - name: create-enriched-plan-from-context
+    path: kit_cli_commands/erk/create_enriched_plan_from_context.py
     description: Create GitHub issue from enriched plan (--plan-content option) with erk-plan label
-  - name: create-plan-issue-from-plan-file
-    path: kit_cli_commands/erk/create_plan_issue_from_plan_file.py
+  - name: create-plan-from-file
+    path: kit_cli_commands/erk/create_plan_from_file.py
     description: Create GitHub issue from plan file on disk
   - name: create-queued-plan
     path: kit_cli_commands/erk/create_queued_plan.py
@@ -64,5 +64,5 @@ hooks:
     lifecycle: UserPromptSubmit
     matcher: "*"
     invocation: dot-agent kit-command erk session-id-injector-hook
-    description: Injects session ID into context when /erk:save-plan-issue is invoked
+    description: Injects session ID into context when /erk:save-plan is invoked
     timeout: 30

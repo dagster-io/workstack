@@ -6,20 +6,20 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from erk.cli.commands.implement import _detect_target_type, implement
-from erk.core.plan_issue_store import FakePlanIssueStore, PlanIssue, PlanIssueState
+from erk.core.plan_store import FakePlanStore, Plan, PlanState
 from tests.fakes.claude_executor import FakeClaudeExecutor
 from tests.fakes.git import FakeGit
 from tests.test_utils.context_builders import build_workspace_test_context
 from tests.test_utils.env_helpers import erk_isolated_fs_env
 
 
-def _create_sample_plan_issue(issue_number: str = "42") -> PlanIssue:
+def _create_sample_plan_issue(issue_number: str = "42") -> Plan:
     """Create a sample plan issue for testing."""
-    return PlanIssue(
-        plan_issue_identifier=issue_number,
+    return Plan(
+        plan_identifier=issue_number,
         title="Add Authentication Feature",
         body="# Implementation Plan\n\nAdd user authentication to the application.",
-        state=PlanIssueState.OPEN,
+        state=PlanState.OPEN,
         url=f"https://github.com/owner/repo/issues/{issue_number}",
         labels=["erk-plan", "enhancement"],
         assignees=["alice"],
@@ -105,8 +105,8 @@ def test_implement_from_plain_issue_number() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"123": plan_issue})
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+        store = FakePlanStore(plans={"123": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         # Test with plain number (no # prefix)
         result = runner.invoke(implement, ["123", "--script"], obj=ctx)
@@ -139,8 +139,8 @@ def test_implement_from_issue_number() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+        store = FakePlanStore(plans={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(implement, ["#42", "--script"], obj=ctx)
 
@@ -171,8 +171,8 @@ def test_implement_from_issue_url() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"123": plan_issue})
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+        store = FakePlanStore(plans={"123": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         url = "https://github.com/owner/repo/issues/123"
         result = runner.invoke(implement, [url, "--script"], obj=ctx)
@@ -199,8 +199,8 @@ def test_implement_from_issue_with_custom_name() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+        store = FakePlanStore(plans={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(
             implement, ["#42", "--worktree-name", "my-custom-feature", "--script"], obj=ctx
@@ -215,11 +215,11 @@ def test_implement_from_issue_with_custom_name() -> None:
 
 def test_implement_from_issue_fails_without_erk_plan_label() -> None:
     """Test that command fails when issue doesn't have erk-plan label."""
-    plan_issue = PlanIssue(
-        plan_issue_identifier="42",
+    plan_issue = Plan(
+        plan_identifier="42",
         title="Regular Issue",
         body="Not a plan issue",
-        state=PlanIssueState.OPEN,
+        state=PlanState.OPEN,
         url="https://github.com/owner/repo/issues/42",
         labels=["bug"],  # Missing "erk-plan" label
         assignees=[],
@@ -235,8 +235,8 @@ def test_implement_from_issue_fails_without_erk_plan_label() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+        store = FakePlanStore(plans={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(implement, ["#42", "--dry-run"], obj=ctx)
 
@@ -255,8 +255,8 @@ def test_implement_from_issue_fails_when_not_found() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={})
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+        store = FakePlanStore(plans={})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(implement, ["#999", "--dry-run"], obj=ctx)
 
@@ -276,8 +276,8 @@ def test_implement_from_issue_dry_run() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+        store = FakePlanStore(plans={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(implement, ["#42", "--dry-run"], obj=ctx)
 
@@ -437,8 +437,8 @@ def test_implement_fails_when_branch_exists_issue_mode() -> None:
             local_branches={env.cwd: ["main", "existing-branch"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+        store = FakePlanStore(plans={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(
             implement, ["#42", "--worktree-name", "existing-branch", "--dry-run"], obj=ctx
@@ -489,8 +489,8 @@ def test_implement_with_submit_flag_from_issue() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+        store = FakePlanStore(plans={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         # Use --script --submit to generate activation script with all commands
         result = runner.invoke(implement, ["#42", "--script", "--submit"], obj=ctx)
@@ -542,8 +542,8 @@ def test_implement_without_submit_uses_default_command() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+        store = FakePlanStore(plans={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(implement, ["#42", "--script"], obj=ctx)
 
@@ -566,8 +566,8 @@ def test_implement_submit_in_script_mode() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+        store = FakePlanStore(plans={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(implement, ["#42", "--submit", "--script"], obj=ctx)
 
@@ -601,8 +601,8 @@ def test_implement_submit_with_dry_run() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+        store = FakePlanStore(plans={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(
             implement, ["#42", "--no-interactive", "--submit", "--dry-run"], obj=ctx
@@ -642,9 +642,9 @@ def test_implement_uses_git_when_graphite_disabled() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan_issue})
         # Build context with use_graphite=False (default)
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store, use_graphite=False)
+        ctx = build_workspace_test_context(env, git=git, plan_store=store, use_graphite=False)
 
         result = runner.invoke(implement, ["#42", "--script"], obj=ctx)
 
@@ -696,8 +696,8 @@ def test_implement_with_dangerous_flag_in_script_mode() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+        store = FakePlanStore(plans={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(implement, ["#42", "--dangerous", "--script"], obj=ctx)
 
@@ -731,8 +731,8 @@ def test_implement_without_dangerous_flag_in_script_mode() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+        store = FakePlanStore(plans={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(implement, ["#42", "--script"], obj=ctx)
 
@@ -766,8 +766,8 @@ def test_implement_with_dangerous_and_submit_flags() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+        store = FakePlanStore(plans={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(implement, ["#42", "--dangerous", "--submit", "--script"], obj=ctx)
 
@@ -811,8 +811,8 @@ def test_implement_with_dangerous_flag_in_dry_run() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+        store = FakePlanStore(plans={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(implement, ["#42", "--dangerous", "--dry-run"], obj=ctx)
 
@@ -842,8 +842,8 @@ def test_implement_with_dangerous_and_submit_in_dry_run() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+        store = FakePlanStore(plans={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(
             implement,
@@ -907,8 +907,8 @@ def test_implement_with_dangerous_shows_in_manual_instructions() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+        store = FakePlanStore(plans={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         # Use --script flag to generate activation script with dangerous flag
         result = runner.invoke(implement, ["#42", "--dangerous", "--script"], obj=ctx)
@@ -938,11 +938,9 @@ def test_interactive_mode_calls_executor() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan_issue})
         executor = FakeClaudeExecutor(claude_available=True)
-        ctx = build_workspace_test_context(
-            env, git=git, plan_issue_store=store, claude_executor=executor
-        )
+        ctx = build_workspace_test_context(env, git=git, plan_store=store, claude_executor=executor)
 
         # Interactive mode is the default (no --no-interactive flag)
         result = runner.invoke(implement, ["#42"], obj=ctx)
@@ -969,11 +967,9 @@ def test_interactive_mode_with_dangerous_flag() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan_issue})
         executor = FakeClaudeExecutor(claude_available=True)
-        ctx = build_workspace_test_context(
-            env, git=git, plan_issue_store=store, claude_executor=executor
-        )
+        ctx = build_workspace_test_context(env, git=git, plan_store=store, claude_executor=executor)
 
         result = runner.invoke(implement, ["#42", "--dangerous"], obj=ctx)
 
@@ -1027,11 +1023,9 @@ def test_interactive_mode_fails_when_claude_not_available() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan_issue})
         executor = FakeClaudeExecutor(claude_available=False)
-        ctx = build_workspace_test_context(
-            env, git=git, plan_issue_store=store, claude_executor=executor
-        )
+        ctx = build_workspace_test_context(env, git=git, plan_store=store, claude_executor=executor)
 
         result = runner.invoke(implement, ["#42"], obj=ctx)
 
@@ -1051,8 +1045,8 @@ def test_submit_without_non_interactive_errors() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+        store = FakePlanStore(plans={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(implement, ["#42", "--submit"], obj=ctx)
 
@@ -1071,8 +1065,8 @@ def test_script_and_non_interactive_errors() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+        store = FakePlanStore(plans={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(implement, ["#42", "--no-interactive", "--script"], obj=ctx)
 
@@ -1091,11 +1085,9 @@ def test_non_interactive_executes_single_command() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan_issue})
         executor = FakeClaudeExecutor(claude_available=True)
-        ctx = build_workspace_test_context(
-            env, git=git, plan_issue_store=store, claude_executor=executor
-        )
+        ctx = build_workspace_test_context(env, git=git, plan_store=store, claude_executor=executor)
 
         result = runner.invoke(implement, ["#42", "--no-interactive"], obj=ctx)
 
@@ -1119,11 +1111,9 @@ def test_non_interactive_with_submit_runs_all_commands() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        store = FakePlanStore(plans={"42": plan_issue})
         executor = FakeClaudeExecutor(claude_available=True)
-        ctx = build_workspace_test_context(
-            env, git=git, plan_issue_store=store, claude_executor=executor
-        )
+        ctx = build_workspace_test_context(env, git=git, plan_store=store, claude_executor=executor)
 
         result = runner.invoke(
             implement,
@@ -1152,8 +1142,8 @@ def test_script_with_submit_includes_all_commands() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+        store = FakePlanStore(plans={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         result = runner.invoke(implement, ["#42", "--script", "--submit"], obj=ctx)
 
@@ -1175,8 +1165,8 @@ def test_dry_run_shows_execution_mode() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+        store = FakePlanStore(plans={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         # Test with interactive mode (default)
         result = runner.invoke(implement, ["#42", "--dry-run"], obj=ctx)
@@ -1202,8 +1192,8 @@ def test_dry_run_shows_command_sequence() -> None:
             local_branches={env.cwd: ["main"]},
             default_branches={env.cwd: "main"},
         )
-        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
-        ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+        store = FakePlanStore(plans={"42": plan_issue})
+        ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
         # Without --submit (single command)
         result = runner.invoke(implement, ["#42", "--dry-run", "--no-interactive"], obj=ctx)

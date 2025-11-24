@@ -392,7 +392,7 @@ Suggested action:
 **Create the issue using kit CLI command:**
 
 ```bash
-issue_url=$(dot-agent kit-command erk create-enriched-plan-issue-from-context --plan-content "$enhanced_plan_content")
+issue_url=$(dot-agent kit-command erk create-enriched-plan-from-context --plan-content "$enhanced_plan_content")
 if [ $? -ne 0 ]; then
     echo "❌ Error: Failed to create GitHub issue" >&2
     exit 1

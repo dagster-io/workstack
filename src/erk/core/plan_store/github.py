@@ -1,63 +1,63 @@
-"""GitHub implementation of plan issue storage."""
+"""GitHub implementation of plan storage."""
 
 from datetime import UTC
 from pathlib import Path
 
 from erk_shared.github.issues import GitHubIssues, IssueInfo
 
-from erk.core.plan_issue_store.store import PlanIssueStore
-from erk.core.plan_issue_store.types import PlanIssue, PlanIssueQuery, PlanIssueState
+from erk.core.plan_store.store import PlanStore
+from erk.core.plan_store.types import Plan, PlanQuery, PlanState
 
 
-class GitHubPlanIssueStore(PlanIssueStore):
+class GitHubPlanStore(PlanStore):
     """GitHub implementation using gh CLI.
 
-    Wraps GitHub issue operations and converts to provider-agnostic PlanIssue format.
+    Wraps GitHub issue operations and converts to provider-agnostic Plan format.
     """
 
     def __init__(self, github_issues: GitHubIssues):
-        """Initialize GitHubPlanIssueStore with GitHub issues interface.
+        """Initialize GitHubPlanStore with GitHub issues interface.
 
         Args:
             github_issues: GitHubIssues implementation to use for issue operations
         """
         self._github_issues = github_issues
 
-    def get_plan_issue(self, repo_root: Path, plan_issue_identifier: str) -> PlanIssue:
-        """Fetch plan issue from GitHub by identifier.
+    def get_plan(self, repo_root: Path, plan_identifier: str) -> Plan:
+        """Fetch plan from GitHub by identifier.
 
         Args:
             repo_root: Repository root directory
-            plan_issue_identifier: Issue number as string (e.g., "42")
+            plan_identifier: Issue number as string (e.g., "42")
 
         Returns:
-            PlanIssue with converted data
+            Plan with converted data
 
         Raises:
-            RuntimeError: If gh CLI fails or issue not found
+            RuntimeError: If gh CLI fails or plan not found
         """
-        issue_number = int(plan_issue_identifier)
+        issue_number = int(plan_identifier)
         issue_info = self._github_issues.get_issue(repo_root, issue_number)
-        return self._convert_to_plan_issue(issue_info)
+        return self._convert_to_plan(issue_info)
 
-    def list_plan_issues(self, repo_root: Path, query: PlanIssueQuery) -> list[PlanIssue]:
-        """Query plan issues from GitHub.
+    def list_plans(self, repo_root: Path, query: PlanQuery) -> list[Plan]:
+        """Query plans from GitHub.
 
         Args:
             repo_root: Repository root directory
             query: Filter criteria (labels, state, limit)
 
         Returns:
-            List of PlanIssue matching the criteria
+            List of Plan matching the criteria
 
         Raises:
             RuntimeError: If gh CLI fails
         """
-        # Map PlanIssueState to GitHub state string
+        # Map PlanState to GitHub state string
         state_str = None
-        if query.state == PlanIssueState.OPEN:
+        if query.state == PlanState.OPEN:
             state_str = "open"
-        elif query.state == PlanIssueState.CLOSED:
+        elif query.state == PlanState.CLOSED:
             state_str = "closed"
 
         # Use GitHubIssues native limit support for efficient querying
@@ -68,7 +68,7 @@ class GitHubPlanIssueStore(PlanIssueStore):
             limit=query.limit,
         )
 
-        return [self._convert_to_plan_issue(issue) for issue in issues]
+        return [self._convert_to_plan(issue) for issue in issues]
 
     def get_provider_name(self) -> str:
         """Get the provider name.
@@ -78,23 +78,23 @@ class GitHubPlanIssueStore(PlanIssueStore):
         """
         return "github"
 
-    def _convert_to_plan_issue(self, issue_info: IssueInfo) -> PlanIssue:
-        """Convert IssueInfo to PlanIssue.
+    def _convert_to_plan(self, issue_info: IssueInfo) -> Plan:
+        """Convert IssueInfo to Plan.
 
         Args:
             issue_info: IssueInfo from GitHubIssues interface
 
         Returns:
-            PlanIssue with normalized data
+            Plan with normalized data
         """
         # Normalize state
-        state = PlanIssueState.OPEN if issue_info.state == "OPEN" else PlanIssueState.CLOSED
+        state = PlanState.OPEN if issue_info.state == "OPEN" else PlanState.CLOSED
 
         # Store GitHub-specific number in metadata for future operations
         metadata: dict[str, object] = {"number": issue_info.number}
 
-        return PlanIssue(
-            plan_issue_identifier=str(issue_info.number),
+        return Plan(
+            plan_identifier=str(issue_info.number),
             title=issue_info.title,
             body=issue_info.body,
             state=state,

@@ -184,8 +184,8 @@ def test_implement_from_issue() -> None:
     """Test implementing from GitHub issue number."""
     # Arrange
     git = FakeGit(...)
-    store = FakePlanIssueStore(plan_issues={"42": plan_issue})
-    ctx = build_workspace_test_context(env, git=git, plan_issue_store=store)
+    store = FakePlanStore(plans={"42": plan})
+    ctx = build_workspace_test_context(env, git=git, plan_store=store)
 
     # Act
     result = runner.invoke(implement, ["#42"], obj=ctx)

@@ -32,7 +32,6 @@ from erk_shared.github.metadata import (
     render_erk_issue_event,
 )
 from erk_shared.impl_folder import (
-    extract_plan_steps,
     parse_progress_frontmatter,
     read_issue_reference,
 )
@@ -158,26 +157,6 @@ def post_start_comment(ctx: click.Context) -> None:
         click.echo(json.dumps(asdict(result), indent=2))
         raise SystemExit(0)
 
-    # Extract steps from plan.md
-    try:
-        steps = extract_plan_steps(impl_dir)
-    except FileNotFoundError as e:
-        result = StartError(
-            success=False,
-            error_type="no_plan_file",
-            message=str(e),
-        )
-        click.echo(json.dumps(asdict(result), indent=2))
-        raise SystemExit(0) from e
-    except ValueError as e:
-        result = StartError(
-            success=False,
-            error_type="no_steps_found",
-            message=str(e),
-        )
-        click.echo(json.dumps(asdict(result), indent=2))
-        raise SystemExit(0) from e
-
     # Read total steps from progress.md frontmatter
     progress_file = impl_dir / "progress.md"
     if not progress_file.exists():
@@ -209,16 +188,16 @@ def post_start_comment(ctx: click.Context) -> None:
         branch=branch_name,
     )
 
-    # Format steps list as numbered markdown
-    steps_markdown = "\n".join(f"{i + 1}. {step}" for i, step in enumerate(steps))
-
-    # Format description with worktree info and steps
+    # Format description with worktree info and copy-pastable commands
     description = f"""**Worktree:** `{worktree_name}`
 **Branch:** `{branch_name}`
 
-### Implementation Steps
-
-{steps_markdown}"""
+**Commands:**
+```bash
+gh issue view {issue_ref.issue_number} --web
+erk implement {issue_ref.issue_number}
+erk implement {issue_ref.issue_number} --submit --dangerous
+```"""
 
     # Create comment with consistent format
     comment_body = render_erk_issue_event(

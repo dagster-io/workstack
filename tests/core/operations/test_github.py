@@ -4,6 +4,7 @@ import pytest
 
 from erk.core.github.parsing import _parse_github_pr_url
 from erk.core.github.real import RealGitHub
+from tests.fakes.time import FakeTime
 
 
 def test_parse_github_pr_url_valid_urls() -> None:
@@ -102,7 +103,7 @@ def test_build_batch_pr_query_has_contexts_nodes_wrapper() -> None:
           }
         }
     """
-    ops = RealGitHub()
+    ops = RealGitHub(FakeTime())
 
     query = ops._build_batch_pr_query([123], "owner", "repo")
 
@@ -123,7 +124,7 @@ def test_build_batch_pr_query_has_contexts_nodes_wrapper() -> None:
 
 def test_build_batch_pr_query_structure() -> None:
     """Test that GraphQL query has correct overall structure with named fragments."""
-    ops = RealGitHub()
+    ops = RealGitHub(FakeTime())
 
     query = ops._build_batch_pr_query([123, 456], "test-owner", "test-repo")
 
@@ -158,7 +159,7 @@ def test_build_batch_pr_query_structure() -> None:
 
 def test_build_batch_pr_query_multiple_prs() -> None:
     """Test that query correctly handles multiple PRs with unique aliases and fragments."""
-    ops = RealGitHub()
+    ops = RealGitHub(FakeTime())
 
     pr_numbers = [100, 200, 300]
     query = ops._build_batch_pr_query(pr_numbers, "owner", "repo")
@@ -186,7 +187,7 @@ def test_parse_pr_ci_status_handles_missing_nodes() -> None:
     field is present but doesn't have a nodes wrapper (e.g., if the query
     structure is incorrect or the API response format changes).
     """
-    ops = RealGitHub()
+    ops = RealGitHub(FakeTime())
 
     # Simulate response with contexts but no nodes wrapper (old buggy structure)
     buggy_response = {
@@ -213,7 +214,7 @@ def test_parse_pr_ci_status_handles_missing_nodes() -> None:
 
 def test_parse_pr_ci_status_with_correct_structure() -> None:
     """Test that parser correctly handles the expected GraphQL response structure."""
-    ops = RealGitHub()
+    ops = RealGitHub(FakeTime())
 
     # Simulate correct response structure with contexts.nodes wrapper
     correct_response = {
@@ -242,7 +243,7 @@ def test_parse_pr_ci_status_with_correct_structure() -> None:
 
 def test_parse_pr_ci_status_with_failing_checks() -> None:
     """Test that parser correctly identifies failing checks."""
-    ops = RealGitHub()
+    ops = RealGitHub(FakeTime())
 
     response = {
         "commits": {
@@ -270,7 +271,7 @@ def test_parse_pr_ci_status_with_failing_checks() -> None:
 
 def test_parse_pr_ci_status_with_pending_checks() -> None:
     """Test that parser correctly identifies pending/in-progress checks."""
-    ops = RealGitHub()
+    ops = RealGitHub(FakeTime())
 
     response = {
         "commits": {
@@ -297,7 +298,7 @@ def test_parse_pr_ci_status_with_pending_checks() -> None:
 
 def test_build_title_batch_query_structure() -> None:
     """Test that title query has correct structure with only number and title fields."""
-    ops = RealGitHub()
+    ops = RealGitHub(FakeTime())
 
     query = ops._build_title_batch_query([123, 456], "test-owner", "test-repo")
 
@@ -323,7 +324,7 @@ def test_build_title_batch_query_structure() -> None:
 
 def test_fetch_pr_titles_batch_enriches_titles(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test fetch_pr_titles_batch enriches PRs with titles from GraphQL response."""
-    ops = RealGitHub()
+    ops = RealGitHub(FakeTime())
 
     # Create input PRs without titles
     from pathlib import Path
@@ -385,7 +386,7 @@ def test_fetch_pr_titles_batch_enriches_titles(monkeypatch: pytest.MonkeyPatch) 
 
 def test_fetch_pr_titles_batch_empty_input() -> None:
     """Test fetch_pr_titles_batch returns empty dict for empty input."""
-    ops = RealGitHub()
+    ops = RealGitHub(FakeTime())
 
     from pathlib import Path
 
@@ -398,7 +399,7 @@ def test_fetch_pr_titles_batch_empty_input() -> None:
 
 def test_fetch_pr_titles_batch_partial_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test fetch_pr_titles_batch handles partial failures gracefully."""
-    ops = RealGitHub()
+    ops = RealGitHub(FakeTime())
 
     from pathlib import Path
 
@@ -453,7 +454,7 @@ def test_fetch_pr_titles_batch_partial_failure(monkeypatch: pytest.MonkeyPatch) 
 
 def test_fetch_pr_titles_batch_missing_title_field(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test fetch_pr_titles_batch handles missing title field gracefully."""
-    ops = RealGitHub()
+    ops = RealGitHub(FakeTime())
 
     from pathlib import Path
 

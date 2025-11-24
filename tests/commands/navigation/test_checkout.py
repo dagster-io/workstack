@@ -579,3 +579,52 @@ def test_checkout_message_when_switching_worktrees() -> None:
 
         # Should not checkout (branch already checked out in target worktree)
         assert len(git_ops.checked_out_branches) == 0
+
+
+def test_checkout_trunk_with_dirty_root_errors() -> None:
+    """Test that checkout prevents creating worktree for trunk branch when root is dirty.
+
+    When the root worktree is dirty, try_switch_root_worktree() fails and the command
+    falls through to ensure_worktree_for_branch(). This test verifies that the trunk
+    validation in ensure_worktree_for_branch() catches this and errors appropriately.
+    """
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        work_dir = env.erk_root / env.cwd.name
+
+        # Setup: root worktree is on a feature branch, not trunk
+        # This way when user tries to checkout trunk, it won't already be checked out
+        git_ops = FakeGit(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="feature-1"),
+                ]
+            },
+            current_branches={env.cwd: "feature-1"},
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main", "feature-1"]},
+            default_branches={env.cwd: "main"},
+            # Simulate dirty root - uncommitted changes present
+            file_statuses={env.cwd: ([], ["modified_file.txt"], [])},
+        )
+
+        repo = RepoContext(
+            root=env.cwd,
+            repo_name=env.cwd.name,
+            repo_dir=work_dir,
+            worktrees_dir=work_dir / "worktrees",
+        )
+
+        test_ctx = env.build_context(git=git_ops, repo=repo)
+
+        # Try to checkout trunk branch (main) - should error
+        result = runner.invoke(cli, ["checkout", "main"], obj=test_ctx, catch_exceptions=False)
+
+        # Should fail with error
+        assert result.exit_code == 1
+
+        # Error message should indicate trunk branch cannot have worktree
+        assert "Cannot create worktree for trunk branch" in result.stderr
+        assert "main" in result.stderr
+        assert "erk checkout root" in result.stderr
+        assert "root worktree" in result.stderr

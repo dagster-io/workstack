@@ -53,7 +53,8 @@ def verify_pr_merged(ctx: ErkContext, repo_root: Path, branch: str) -> None:
     if pr_info.state == "NONE" or pr_info.pr_number is None:
         # Warn but continue when no PR exists
         user_output(
-            click.style("Warning: ", fg="yellow") + f"No pull request found for branch '{branch}'.\n"
+            click.style("Warning: ", fg="yellow")
+            + f"No pull request found for branch '{branch}'.\n"
             "Proceeding with deletion without PR verification."
         )
         return  # Allow deletion to proceed

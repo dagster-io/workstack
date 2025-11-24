@@ -94,11 +94,12 @@ class RealClaudeExecutor(ClaudeExecutor):
 
         Implementation details:
         - Uses subprocess.run() with stdin=DEVNULL for non-interactive execution
-        - Passes --permission-mode acceptEdits and optional --dangerously-skip-permissions
+        - Passes --permission-mode acceptEdits, --output-format stream-json
+        - Optionally passes --dangerously-skip-permissions when dangerous=True
         - Streams output to terminal (no capture)
         - Raises RuntimeError on non-zero exit code
         """
-        cmd_args = ["claude", "--permission-mode", "acceptEdits"]
+        cmd_args = ["claude", "--permission-mode", "acceptEdits", "--output-format", "stream-json"]
         if dangerous:
             cmd_args.append("--dangerously-skip-permissions")
         cmd_args.append(command)
@@ -106,7 +107,7 @@ class RealClaudeExecutor(ClaudeExecutor):
         result = subprocess.run(
             cmd_args,
             cwd=worktree_path,
-            stdin=subprocess.DEVNULL,  # Prevent interaction
+            # Let Claude Code access stdin for Ink UI initialization
             # Don't capture stdout/stderr - let output stream to terminal
         )
 

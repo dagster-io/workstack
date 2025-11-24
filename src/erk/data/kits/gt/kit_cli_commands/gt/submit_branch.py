@@ -246,10 +246,14 @@ def execute_pre_analysis(ops: GtKit | None = None) -> PreAnalysisResult | PreAna
 
     # Step 2.5: Check for merge conflicts EARLY
     # First try GitHub API if PR exists (most accurate)
-    from erk.core.github.real import RealGitHub
-    from erk.core.time.real import RealTime
+    # TODO: Move full GitHub implementations to erk-shared
+    # Currently using erk-shared stub which raises NotImplementedError at runtime.
+    # This is the correct architectural solution but requires refactoring to move
+    # the complete RealGitHub implementation from erk.core.github.real.
+    # Until then, PR status/mergeability checks will fail if actually invoked.
+    from erk_shared.github.real import RealGitHub
 
-    github = RealGitHub(RealTime())
+    github = RealGitHub()
     repo_root = Path(ops.git().get_repository_root())
     pr_info = github.get_pr_status(repo_root, branch_name, debug=False)
 

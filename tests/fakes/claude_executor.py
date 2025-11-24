@@ -37,6 +37,11 @@ class FakeClaudeExecutor(ClaudeExecutor):
         ...     executor.execute_command("/bad-command", Path("/repo"), False)
         ... except RuntimeError:
         ...     print("Command failed as expected")
+
+        # Test interactive execution
+        >>> executor = FakeClaudeExecutor(claude_available=True)
+        >>> executor.execute_interactive(Path("/repo"), dangerous=False)
+        >>> assert len(executor.interactive_calls) == 1
     """
 
     def __init__(
@@ -54,6 +59,7 @@ class FakeClaudeExecutor(ClaudeExecutor):
         self._claude_available = claude_available
         self._command_should_fail = command_should_fail
         self._executed_commands: list[tuple[str, Path, bool]] = []
+        self._interactive_calls: list[tuple[Path, bool]] = []
 
     def is_claude_available(self) -> bool:
         """Return the availability configured at construction time."""
@@ -73,6 +79,23 @@ class FakeClaudeExecutor(ClaudeExecutor):
         if self._command_should_fail:
             raise RuntimeError(f"Claude command {command} failed (simulated failure)")
 
+    def execute_interactive(self, worktree_path: Path, dangerous: bool) -> None:
+        """Track interactive execution without replacing process.
+
+        This method records the call parameters for test assertions.
+        Unlike RealClaudeExecutor, this does not use os.execvp and returns
+        normally to allow tests to continue.
+
+        Raises:
+            RuntimeError: If Claude CLI is not available
+        """
+        if not self._claude_available:
+            raise RuntimeError(
+                "Claude CLI not found\nInstall from: https://claude.com/download"
+            )
+
+        self._interactive_calls.append((worktree_path, dangerous))
+
     @property
     def executed_commands(self) -> list[tuple[str, Path, bool]]:
         """Get the list of execute_command() calls that were made.
@@ -82,3 +105,13 @@ class FakeClaudeExecutor(ClaudeExecutor):
         This property is for test assertions only.
         """
         return self._executed_commands.copy()
+
+    @property
+    def interactive_calls(self) -> list[tuple[Path, bool]]:
+        """Get the list of execute_interactive() calls that were made.
+
+        Returns list of (worktree_path, dangerous) tuples.
+
+        This property is for test assertions only.
+        """
+        return self._interactive_calls.copy()

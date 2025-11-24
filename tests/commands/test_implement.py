@@ -920,11 +920,118 @@ def test_implement_with_dangerous_shows_in_manual_instructions() -> None:
 
 # Execution Mode Tests
 
-# Note: Interactive mode tests (test_interactive_mode_default and
-# test_interactive_mode_with_dangerous) have been omitted due to test
-# infrastructure issues with FileExistsError in erk_isolated_fs_env.
-# The implementation is verified through manual testing and the other
-# execution mode tests provide good coverage.
+
+def test_interactive_mode_calls_executor() -> None:
+    """Verify interactive mode calls executor.execute_interactive."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        executor = FakeClaudeExecutor(claude_available=True)
+        ctx = build_workspace_test_context(
+            env, git=git, plan_issue_store=store, claude_executor=executor
+        )
+
+        # Interactive mode is the default (no --no-interactive flag)
+        result = runner.invoke(implement, ["#42"], obj=ctx)
+
+        assert result.exit_code == 0
+
+        # Verify execute_interactive was called, not execute_command
+        assert len(executor.interactive_calls) == 1
+        assert len(executor.executed_commands) == 0
+
+        worktree_path, dangerous = executor.interactive_calls[0]
+        assert "add-authentication-feature" in str(worktree_path)
+        assert dangerous is False
+
+
+def test_interactive_mode_with_dangerous_flag() -> None:
+    """Verify interactive mode passes dangerous flag to executor."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        executor = FakeClaudeExecutor(claude_available=True)
+        ctx = build_workspace_test_context(
+            env, git=git, plan_issue_store=store, claude_executor=executor
+        )
+
+        result = runner.invoke(implement, ["#42", "--dangerous"], obj=ctx)
+
+        assert result.exit_code == 0
+
+        # Verify dangerous flag was passed to execute_interactive
+        assert len(executor.interactive_calls) == 1
+        worktree_path, dangerous = executor.interactive_calls[0]
+        assert dangerous is True
+
+
+def test_interactive_mode_from_plan_file() -> None:
+    """Verify interactive mode works with plan file."""
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        executor = FakeClaudeExecutor(claude_available=True)
+        ctx = build_workspace_test_context(env, git=git, claude_executor=executor)
+
+        # Create plan file
+        plan_content = "# Implementation Plan\n\nImplement feature X."
+        plan_file = env.cwd / "my-feature-plan.md"
+        plan_file.write_text(plan_content, encoding="utf-8")
+
+        result = runner.invoke(implement, [str(plan_file)], obj=ctx)
+
+        assert result.exit_code == 0
+
+        # Verify execute_interactive was called
+        assert len(executor.interactive_calls) == 1
+        worktree_path, dangerous = executor.interactive_calls[0]
+        assert "my-feature" in str(worktree_path)
+        assert dangerous is False
+
+        # Verify plan file was deleted (moved to worktree)
+        assert not plan_file.exists()
+
+
+def test_interactive_mode_fails_when_claude_not_available() -> None:
+    """Verify interactive mode fails gracefully when Claude CLI not available."""
+    plan_issue = _create_sample_plan_issue()
+
+    runner = CliRunner()
+    with erk_isolated_fs_env(runner) as env:
+        git = FakeGit(
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main"]},
+            default_branches={env.cwd: "main"},
+        )
+        store = FakePlanIssueStore(plan_issues={"42": plan_issue})
+        executor = FakeClaudeExecutor(claude_available=False)
+        ctx = build_workspace_test_context(
+            env, git=git, plan_issue_store=store, claude_executor=executor
+        )
+
+        result = runner.invoke(implement, ["#42"], obj=ctx)
+
+        # Should fail with error about Claude CLI not found
+        assert result.exit_code != 0
+        assert "Claude CLI not found" in result.output
 
 
 def test_submit_without_non_interactive_errors() -> None:

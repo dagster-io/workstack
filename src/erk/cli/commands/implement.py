@@ -7,10 +7,8 @@ This unified command provides two modes:
 Both modes create a worktree and invoke Claude for implementation.
 """
 
-import os
 import re
 import shlex
-import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import NamedTuple
@@ -113,41 +111,28 @@ def _build_claude_args(slash_command: str, dangerous: bool) -> list[str]:
     return args
 
 
-def _execute_interactive_mode(worktree_path: Path, dangerous: bool) -> None:
-    """Execute implementation in interactive mode using os.execvp.
+def _execute_interactive_mode(worktree_path: Path, dangerous: bool, executor: ClaudeExecutor) -> None:
+    """Execute implementation in interactive mode using executor.
 
     Args:
         worktree_path: Path to worktree directory
         dangerous: Whether to skip permission prompts
+        executor: Claude CLI executor for process replacement
 
     Raises:
         click.ClickException: If Claude CLI not found
 
     Note:
-        This function never returns - the process is replaced by Claude
+        This function never returns in production - the process is replaced by Claude
     """
-    # Verify Claude is available
-    claude_path = shutil.which("claude")
-    if not claude_path:
-        raise click.ClickException(
-            "Claude CLI not found\nInstall from: https://claude.com/download"
-        )
-
-    # Change to worktree directory
-    os.chdir(worktree_path)
-
-    # Build command arguments
-    cmd_args = ["claude", "--permission-mode", "acceptEdits"]
-    if dangerous:
-        cmd_args.append("--dangerously-skip-permissions")
-    cmd_args.append("/erk:implement-plan")
-
-    # Show message before exec
+    # Show message before handing off to executor
     click.echo("Entering interactive implementation mode...", err=True)
 
-    # Replace current process with Claude
-    os.execvp("claude", cmd_args)
-    # Never returns - process is replaced
+    # Delegate to executor (never returns in production)
+    try:
+        executor.execute_interactive(worktree_path, dangerous)
+    except RuntimeError as e:
+        raise click.ClickException(str(e)) from e
 
 
 def _execute_non_interactive_mode(
@@ -633,7 +618,7 @@ def _implement_from_issue(
         _execute_non_interactive_mode(wt_path, commands, dangerous, executor)
     else:
         # Interactive mode - hand off to Claude (never returns)
-        _execute_interactive_mode(wt_path, dangerous)
+        _execute_interactive_mode(wt_path, dangerous, executor)
 
 
 def _implement_from_file(
@@ -705,7 +690,7 @@ def _implement_from_file(
         _execute_non_interactive_mode(wt_path, commands, dangerous, executor)
     else:
         # Interactive mode - hand off to Claude (never returns)
-        _execute_interactive_mode(wt_path, dangerous)
+        _execute_interactive_mode(wt_path, dangerous, executor)
 
 
 @click.command("implement")

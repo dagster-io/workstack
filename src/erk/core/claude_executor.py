@@ -4,6 +4,7 @@ This module provides abstraction over Claude CLI execution, enabling
 dependency injection for testing without mock.patch.
 """
 
+import os
 import shutil
 import subprocess
 from abc import ABC, abstractmethod
@@ -53,6 +54,33 @@ class ClaudeExecutor(ABC):
         """
         ...
 
+    @abstractmethod
+    def execute_interactive(self, worktree_path: Path, dangerous: bool) -> None:
+        """Execute Claude CLI in interactive mode by replacing current process.
+
+        Args:
+            worktree_path: Path to worktree directory to run in
+            dangerous: Whether to skip permission prompts
+
+        Raises:
+            RuntimeError: If Claude CLI is not available
+
+        Note:
+            In production (RealClaudeExecutor), this function never returns - the
+            process is replaced by Claude CLI via os.execvp. In testing
+            (FakeClaudeExecutor), this simulates the behavior without actually
+            replacing the process.
+
+        Example:
+            >>> executor = RealClaudeExecutor()
+            >>> executor.execute_interactive(
+            ...     Path("/repos/my-project"),
+            ...     dangerous=False
+            ... )
+            # Never returns in production - process is replaced
+        """
+        ...
+
 
 class RealClaudeExecutor(ClaudeExecutor):
     """Production implementation using subprocess and Claude CLI."""
@@ -86,3 +114,34 @@ class RealClaudeExecutor(ClaudeExecutor):
             raise RuntimeError(
                 f"Claude command {command} failed with exit code {result.returncode}"
             )
+
+    def execute_interactive(self, worktree_path: Path, dangerous: bool) -> None:
+        """Execute Claude CLI in interactive mode by replacing current process.
+
+        Implementation details:
+        - Verifies Claude CLI is available
+        - Changes to worktree directory
+        - Builds command arguments with /erk:implement-plan
+        - Replaces current process using os.execvp
+
+        Note:
+            This function never returns - the process is replaced by Claude CLI.
+        """
+        # Verify Claude is available
+        if not self.is_claude_available():
+            raise RuntimeError(
+                "Claude CLI not found\nInstall from: https://claude.com/download"
+            )
+
+        # Change to worktree directory
+        os.chdir(worktree_path)
+
+        # Build command arguments
+        cmd_args = ["claude", "--permission-mode", "acceptEdits"]
+        if dangerous:
+            cmd_args.append("--dangerously-skip-permissions")
+        cmd_args.append("/erk:implement-plan")
+
+        # Replace current process with Claude
+        os.execvp("claude", cmd_args)
+        # Never returns - process is replaced

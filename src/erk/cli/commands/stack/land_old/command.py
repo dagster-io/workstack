@@ -7,12 +7,12 @@ import subprocess
 
 import click
 
-from erk.cli.commands.land_stack.cleanup import _cleanup_and_navigate
-from erk.cli.commands.land_stack.discovery import _get_branches_to_land
-from erk.cli.commands.land_stack.display import _show_final_state, _show_landing_plan
-from erk.cli.commands.land_stack.execution import land_branch_sequence
-from erk.cli.commands.land_stack.output import _emit
-from erk.cli.commands.land_stack.validation import (
+from erk.cli.commands.stack.land_old.cleanup import _cleanup_and_navigate
+from erk.cli.commands.stack.land_old.discovery import _get_branches_to_land
+from erk.cli.commands.stack.land_old.display import _show_final_state, _show_landing_plan
+from erk.cli.commands.stack.land_old.execution import land_branch_sequence
+from erk.cli.commands.stack.land_old.output import _emit
+from erk.cli.commands.stack.land_old.validation import (
     _validate_branches_have_prs,
     _validate_landing_preconditions,
     _validate_pr_mergeability,

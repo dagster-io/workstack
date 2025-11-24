@@ -7,15 +7,15 @@ from typing import Final
 from click.testing import CliRunner
 
 from erk.cli.commands.checkout import checkout_cmd
-from erk.cli.commands.consolidate import consolidate_cmd
-from erk.cli.commands.create import create
 from erk.cli.commands.down import down_cmd
-from erk.cli.commands.goto import goto_cmd
 from erk.cli.commands.implement import implement
-from erk.cli.commands.land_stack import land_stack
 from erk.cli.commands.plan import plan_group
 from erk.cli.commands.prepare_cwd_recovery import generate_recovery_script
+from erk.cli.commands.stack.consolidate_cmd import consolidate_stack
+from erk.cli.commands.stack.land_cmd import land_stack_cmd
 from erk.cli.commands.up import up_cmd
+from erk.cli.commands.wt.create_cmd import create_wt
+from erk.cli.commands.wt.goto_cmd import goto_wt
 from erk.cli.debug import debug_log
 from erk.cli.output import user_output
 from erk.cli.shell_utils import (
@@ -52,13 +52,13 @@ def _invoke_hidden_command(command_name: str, args: tuple[str, ...]) -> ShellInt
     command_map = {
         "checkout": checkout_cmd,
         "co": checkout_cmd,  # Alias
-        "create": create,
+        "create": create_wt,
         "up": up_cmd,
         "down": down_cmd,
-        "goto": goto_cmd,
-        "consolidate": consolidate_cmd,
+        "goto": goto_wt,
+        "consolidate": consolidate_stack,
         "implement": implement,
-        "land-stack": land_stack,
+        "land-stack": land_stack_cmd,
         "plan": plan_group,
     }
 

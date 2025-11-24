@@ -23,8 +23,8 @@ from erk_shared.naming import (
 )
 
 from erk.cli.activation import render_activation_script
-from erk.cli.commands.create import add_worktree, run_post_worktree_setup
-from erk.cli.commands.navigation_helpers import complete_plan_files
+from erk.cli.commands.completions import complete_plan_files
+from erk.cli.commands.wt.create_cmd import add_worktree, run_post_worktree_setup
 from erk.cli.config import LoadedConfig
 from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output

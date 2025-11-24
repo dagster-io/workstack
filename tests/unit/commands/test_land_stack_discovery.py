@@ -6,7 +6,7 @@ the down_only flag.
 
 from pathlib import Path
 
-from erk.cli.commands.land_stack.discovery import _get_branches_to_land
+from erk.cli.commands.stack.land_old.discovery import _get_branches_to_land
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
 from erk.core.git.fake import FakeGit

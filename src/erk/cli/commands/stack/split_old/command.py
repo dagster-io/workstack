@@ -5,13 +5,13 @@ from pathlib import Path
 import click
 from erk_shared.naming import sanitize_worktree_name
 
-from erk.cli.commands.split.display import (
+from erk.cli.commands.stack.split_old.display import (
     confirm_split,
     display_creation_preview,
     display_results,
     display_stack_preview,
 )
-from erk.cli.commands.split.plan import (
+from erk.cli.commands.stack.split_old.plan import (
     create_split_plan,
     execute_split_plan,
     get_stack_branches,

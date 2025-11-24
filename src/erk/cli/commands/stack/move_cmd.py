@@ -4,7 +4,7 @@ from pathlib import Path
 
 import click
 
-from erk.cli.commands.navigation_helpers import complete_worktree_names
+from erk.cli.commands.completions import complete_worktree_names
 from erk.cli.core import discover_repo_context, worktree_path_for
 from erk.cli.output import user_output
 from erk.core.context import ErkContext
@@ -227,7 +227,7 @@ def execute_swap(
 @click.option("-f", "--force", is_flag=True, help="Skip confirmation prompts")
 @click.argument("target", required=True, shell_complete=complete_worktree_names)
 @click.pass_obj
-def move_cmd(
+def move_stack(
     ctx: ErkContext,
     current: bool,
     branch: str | None,

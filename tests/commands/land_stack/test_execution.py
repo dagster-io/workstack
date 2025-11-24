@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from erk_shared.github.types import PRMergeability
 
-from erk.cli.commands.land_stack.execution import (
+from erk.cli.commands.stack.land_old.execution import (
     MergeabilityUnknownError,
     _check_pr_mergeable_with_retry,
 )

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import click
 
-from erk.cli.commands.split.plan import SplitPlan
+from erk.cli.commands.stack.split_old.plan import SplitPlan
 from erk.cli.output import user_output
 
 

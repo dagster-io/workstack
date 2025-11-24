@@ -498,7 +498,7 @@ def _create_json_response(
     help="Skip checking if branch exists on remote (for offline work)",
 )
 @click.pass_obj
-def create(
+def create_wt(
     ctx: ErkContext,
     name: str | None,
     branch: str | None,

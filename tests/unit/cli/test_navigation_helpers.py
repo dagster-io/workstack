@@ -5,7 +5,7 @@ from unittest.mock import Mock
 
 import click
 
-from erk.cli.commands.navigation_helpers import complete_branch_names, complete_plan_files
+from erk.cli.commands.completions import complete_branch_names, complete_plan_files
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
 from erk.core.git.fake import FakeGit

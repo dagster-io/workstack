@@ -293,7 +293,7 @@ def _list_worktrees(ctx: ErkContext, ci: bool) -> None:
 @click.command("list")
 @click.option("--ci", is_flag=True, help="Fetch CI check status from GitHub (slower)")
 @click.pass_obj
-def list_cmd(ctx: ErkContext, ci: bool) -> None:
+def list_wt(ctx: ErkContext, ci: bool) -> None:
     """List worktrees with comprehensive branch and PR information.
 
     Shows three sections:
@@ -308,6 +308,6 @@ def list_cmd(ctx: ErkContext, ci: bool) -> None:
 @click.command("ls", hidden=True)
 @click.option("--ci", is_flag=True, help="Fetch CI check status from GitHub (slower)")
 @click.pass_obj
-def ls_cmd(ctx: ErkContext, ci: bool) -> None:
+def ls_wt(ctx: ErkContext, ci: bool) -> None:
     """List worktrees with comprehensive branch and PR information (alias of 'list')."""
     _list_worktrees(ctx, ci=ci)

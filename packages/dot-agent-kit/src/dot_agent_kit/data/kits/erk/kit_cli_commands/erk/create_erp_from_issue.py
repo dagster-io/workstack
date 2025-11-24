@@ -25,8 +25,9 @@ import json
 from pathlib import Path
 
 import click
-from erk.core.context import create_context
 from erk_shared.erp_folder import create_erp_folder
+
+from erk.core.context import create_context
 
 
 @click.command(name="create-erp-from-issue")

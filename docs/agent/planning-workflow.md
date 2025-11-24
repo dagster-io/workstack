@@ -91,9 +91,37 @@ The front matter enables progress indicators in `erk status` output.
 - **Safe to delete after implementation** - Once the work is committed, `.impl/` can be removed
 - **One plan per worktree** - Each worktree has its own `.impl/` folder
 
-## .worker-impl/ Folders (Future)
+## Remote Implementation via GitHub Actions
 
-`.worker-impl/` folders are purposely meant to be checked into git (not covered in this guide).
+For automated implementation via GitHub Actions, use `erk submit`:
+
+```bash
+erk submit <issue-number>
+```
+
+This command:
+
+- Validates the issue has the `erk-plan` label
+- Verifies the issue is OPEN (not closed)
+- Adds the `erk-queue` label to trigger the `dispatch-erk-queue.yml` GitHub Actions workflow
+- Displays workflow monitoring instructions
+
+The GitHub Actions workflow will:
+
+1. Create a dedicated branch and worktree
+2. Set up the `.impl/` folder with the plan from the issue
+3. Run `/erk:implement-plan` to execute the implementation
+4. Commit changes and create a pull request
+
+**Monitor workflow progress:**
+
+```bash
+# List workflow runs
+gh run list --workflow=dispatch-erk-queue.yml
+
+# Watch latest run
+gh run watch
+```
 
 ## Commands Reference
 

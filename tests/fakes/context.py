@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+from erk_shared.github.issues import GitHubIssues
+
 from erk.cli.config import LoadedConfig
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
@@ -17,6 +19,7 @@ from tests.fakes.shell import FakeShell
 def create_test_context(
     git: FakeGit | None = None,
     github: FakeGitHub | None = None,
+    issues: GitHubIssues | None = None,
     graphite: FakeGraphite | None = None,
     shell: FakeShell | None = None,
     completion: FakeCompletion | None = None,
@@ -37,6 +40,8 @@ def create_test_context(
                 If None, creates empty FakeGit.
         github: Optional FakeGitHub with test configuration.
                    If None, creates empty FakeGitHub.
+        issues: Optional GitHubIssues implementation (Real/Fake/DryRun).
+                   If None, creates empty FakeGitHubIssues.
         graphite: Optional FakeGraphite with test configuration.
                      If None, creates empty FakeGraphite.
         shell: Optional FakeShell with test configuration.
@@ -81,6 +86,7 @@ def create_test_context(
     return ErkContext.for_test(
         git=git,
         github=github,
+        issues=issues,
         graphite=graphite,
         shell=shell,
         completion=completion,

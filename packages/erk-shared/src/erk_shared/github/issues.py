@@ -176,6 +176,20 @@ class GitHubIssues(ABC):
         """
         ...
 
+    @abstractmethod
+    def add_label_to_issue(self, repo_root: Path, issue_number: int, label: str) -> None:
+        """Add a label to an existing issue.
+
+        Args:
+            repo_root: Repository root directory
+            issue_number: Issue number to add label to
+            label: Label name to add
+
+        Raises:
+            RuntimeError: If gh CLI fails or issue not found
+        """
+        ...
+
 
 class RealGitHubIssues(GitHubIssues):
     """Production implementation using gh CLI.
@@ -393,6 +407,15 @@ class RealGitHubIssues(GitHubIssues):
             ]
             execute_gh_command(create_cmd, repo_root)
 
+    def add_label_to_issue(self, repo_root: Path, issue_number: int, label: str) -> None:
+        """Add label to issue using gh CLI.
+
+        Note: Uses gh's native error handling - gh CLI raises RuntimeError
+        on failures (not installed, not authenticated, issue not found).
+        """
+        cmd = ["gh", "issue", "edit", str(issue_number), "--add-label", label]
+        execute_gh_command(cmd, repo_root)
+
 
 class FakeGitHubIssues(GitHubIssues):
     """In-memory fake implementation for testing.
@@ -562,6 +585,32 @@ class FakeGitHubIssues(GitHubIssues):
             self._labels.add(label)
             self._created_labels.append((label, description, color))
 
+    def add_label_to_issue(self, repo_root: Path, issue_number: int, label: str) -> None:
+        """Add label to issue in fake storage.
+
+        Raises:
+            RuntimeError: If issue number not found (simulates gh CLI error)
+        """
+        if issue_number not in self._issues:
+            msg = f"Issue #{issue_number} not found"
+            raise RuntimeError(msg)
+
+        # Get current issue and create updated version with new label
+        current_issue = self._issues[issue_number]
+        if label not in current_issue.labels:
+            updated_labels = current_issue.labels + [label]
+            self._issues[issue_number] = IssueInfo(
+                number=current_issue.number,
+                title=current_issue.title,
+                body=current_issue.body,
+                state=current_issue.state,
+                url=current_issue.url,
+                labels=updated_labels,
+                assignees=current_issue.assignees,
+                created_at=current_issue.created_at,
+                updated_at=current_issue.updated_at,
+            )
+
 
 class DryRunGitHubIssues(GitHubIssues):
     """No-op wrapper for GitHub issue operations.
@@ -626,4 +675,8 @@ class DryRunGitHubIssues(GitHubIssues):
         color: str,
     ) -> None:
         """No-op for ensuring label exists in dry-run mode."""
+        pass
+
+    def add_label_to_issue(self, repo_root: Path, issue_number: int, label: str) -> None:
+        """No-op for adding label in dry-run mode."""
         pass

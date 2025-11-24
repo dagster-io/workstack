@@ -237,6 +237,29 @@ def _submit_pr(ops: GtKit, logger: DebugLogger) -> dict | None:
     return None
 
 
+def _get_pr_info(ops: GtKit, logger: DebugLogger) -> tuple[int, str] | None:
+    """Get PR info from GitHub.
+
+    Since gt submit completes synchronously, PR info is immediately available.
+
+    Args:
+        ops: GtKit operations instance
+        logger: Debug logger
+
+    Returns:
+        Tuple of (pr_number, pr_url) if found, None otherwise
+    """
+    logger.log("Getting PR info...")
+    pr_info = ops.github().get_pr_info()
+
+    if pr_info is not None:
+        logger.log("Found PR info")
+    else:
+        logger.log("PR info not available")
+
+    return pr_info
+
+
 def _finalize_pr_metadata(
     ops: GtKit,
     logger: DebugLogger,
@@ -322,10 +345,9 @@ def complete_submission(
     if error is not None:
         return error
 
-    # Get PR info
-    logger.log("Getting PR info...")
-    pr_info = ops.github().get_pr_info()
-    if not pr_info:
+    # Get PR info (available immediately after gt submit completes)
+    pr_info = _get_pr_info(ops, logger)
+    if pr_info is None:
         return {
             "success": True,
             "pr_number": None,

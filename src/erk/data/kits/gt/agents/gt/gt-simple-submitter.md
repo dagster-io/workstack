@@ -73,4 +73,4 @@ On any error: display the error message and stop immediately. No recovery attemp
 
 - Execution time: <30 seconds
 - Token usage: Minimal
-- No retries or verbose explanations
+- Fail-fast error handling (no retries)

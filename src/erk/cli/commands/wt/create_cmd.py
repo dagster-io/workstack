@@ -93,6 +93,19 @@ def ensure_worktree_for_branch(
     if existing_path is not None:
         return existing_path, False
 
+    # Get trunk branch for validation
+    trunk_branch = ctx.git.get_trunk_branch(repo.root)
+
+    # Validate that we're not trying to create worktree for trunk branch
+    if branch == trunk_branch:
+        user_output(
+            f'Error: Cannot create worktree for trunk branch "{trunk_branch}".\n'
+            f"The trunk branch should be checked out in the root worktree.\n"
+            f"To switch to {trunk_branch}, use:\n"
+            f"  erk checkout root"
+        )
+        raise SystemExit(1)
+
     # Branch not checked out - need to create worktree
     # First check if branch exists locally
     local_branches = ctx.git.list_local_branches(repo.root)
@@ -801,6 +814,16 @@ def create_wt(
             skip_remote_check=skip_remote_check,
         )
     elif from_branch:
+        # Validate that we're not trying to create worktree for trunk branch
+        if branch == trunk_branch:
+            user_output(
+                f'Error: Cannot create worktree for trunk branch "{trunk_branch}".\n'
+                f"The trunk branch should be checked out in the root worktree.\n"
+                f"To switch to {trunk_branch}, use:\n"
+                f"  erk checkout root"
+            )
+            raise SystemExit(1)
+
         # Create worktree with existing branch
         add_worktree(
             ctx,

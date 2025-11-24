@@ -395,3 +395,46 @@ def test_create_from_issue_readonly_operation() -> None:
         assert len(fake_issues.created_issues) == 0
         # Assert: No comments added
         assert len(fake_issues.added_comments) == 0
+
+
+def test_create_with_from_branch_trunk_errors() -> None:
+    """Test that create --from-branch prevents creating worktree for trunk branch.
+
+    This test verifies that ensure_worktree_for_branch() validation catches
+    attempts to create a worktree for the trunk branch via --from-branch flag.
+    The error should match the one from checkout command for consistency.
+    """
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        # Setup: root worktree on a feature branch (NOT trunk)
+        # This way we can test creating a worktree for trunk without "already checked out" error
+        git_ops = FakeGit(
+            worktrees={
+                env.cwd: [
+                    WorktreeInfo(path=env.cwd, branch="feature-1"),
+                ]
+            },
+            current_branches={env.cwd: "feature-1"},
+            git_common_dirs={env.cwd: env.git_dir},
+            local_branches={env.cwd: ["main", "feature-1"]},
+            default_branches={env.cwd: "main"},
+        )
+
+        test_ctx = env.build_context(git=git_ops)
+
+        # Try to create worktree from trunk branch - should error
+        result = runner.invoke(
+            cli, ["create", "foo", "--from-branch", "main"], obj=test_ctx, catch_exceptions=False
+        )
+
+        # Should fail with error
+        assert result.exit_code == 1
+
+        # Error message should match checkout command for consistency
+        assert "Cannot create worktree for trunk branch" in result.stderr
+        assert "main" in result.stderr
+        assert "erk checkout root" in result.stderr
+        assert "root worktree" in result.stderr
+
+        # Verify no worktree was created
+        assert len(git_ops.added_worktrees) == 0

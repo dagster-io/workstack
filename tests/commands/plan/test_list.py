@@ -1072,3 +1072,328 @@ def test_list_plans_action_filter_no_matches() -> None:
         # Assert
         assert result.exit_code == 0
         assert "No plans found matching the criteria" in result.output
+
+
+def test_list_plans_pr_column_open_pr() -> None:
+    """Test PR column displays open PR with 👀 emoji."""
+    from erk_shared.github.types import PullRequestInfo
+    from src.erk.core.github.fake import FakeGitHub
+
+    # Arrange
+    plan = Plan(
+        plan_identifier="100",
+        title="Plan with Open PR",
+        body="",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/100",
+        labels=["erk-plan"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 1, tzinfo=UTC),
+        metadata={"number": 100},
+    )
+
+    pr = PullRequestInfo(
+        number=200,
+        state="OPEN",
+        url="https://github.com/owner/repo/pull/200",
+        is_draft=False,
+        title="PR for issue 100",
+        checks_passing=True,
+        owner="owner",
+        repo="repo",
+        has_conflicts=False,
+    )
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        store = FakePlanStore(plans={"100": plan})
+        github = FakeGitHub(pr_issue_linkages={100: [pr]})
+        ctx = build_workspace_test_context(env, plan_store=store, github=github)
+
+        # Act
+        result = runner.invoke(plan_group, ["list"], obj=ctx)
+
+        # Assert
+        assert result.exit_code == 0
+        assert "#200 👀" in result.output
+        assert "✅" in result.output  # Checks passing
+
+
+def test_list_plans_pr_column_draft_pr() -> None:
+    """Test PR column displays draft PR with 🚧 emoji."""
+    from erk_shared.github.types import PullRequestInfo
+    from src.erk.core.github.fake import FakeGitHub
+
+    # Arrange
+    plan = Plan(
+        plan_identifier="101",
+        title="Plan with Draft PR",
+        body="",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/101",
+        labels=["erk-plan"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 1, tzinfo=UTC),
+        metadata={"number": 101},
+    )
+
+    pr = PullRequestInfo(
+        number=201,
+        state="DRAFT",
+        url="https://github.com/owner/repo/pull/201",
+        is_draft=True,
+        title="Draft PR for issue 101",
+        checks_passing=None,
+        owner="owner",
+        repo="repo",
+        has_conflicts=False,
+    )
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        store = FakePlanStore(plans={"101": plan})
+        github = FakeGitHub(pr_issue_linkages={101: [pr]})
+        ctx = build_workspace_test_context(env, plan_store=store, github=github)
+
+        # Act
+        result = runner.invoke(plan_group, ["list"], obj=ctx)
+
+        # Assert
+        assert result.exit_code == 0
+        assert "#201 🚧" in result.output
+        assert "🔄" in result.output  # Checks pending
+
+
+def test_list_plans_pr_column_merged_pr() -> None:
+    """Test PR column displays merged PR with 🎉 emoji."""
+    from erk_shared.github.types import PullRequestInfo
+    from src.erk.core.github.fake import FakeGitHub
+
+    # Arrange
+    plan = Plan(
+        plan_identifier="102",
+        title="Plan with Merged PR",
+        body="",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/102",
+        labels=["erk-plan"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 1, tzinfo=UTC),
+        metadata={"number": 102},
+    )
+
+    pr = PullRequestInfo(
+        number=202,
+        state="MERGED",
+        url="https://github.com/owner/repo/pull/202",
+        is_draft=False,
+        title="Merged PR for issue 102",
+        checks_passing=True,
+        owner="owner",
+        repo="repo",
+        has_conflicts=False,
+    )
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        store = FakePlanStore(plans={"102": plan})
+        github = FakeGitHub(pr_issue_linkages={102: [pr]})
+        ctx = build_workspace_test_context(env, plan_store=store, github=github)
+
+        # Act
+        result = runner.invoke(plan_group, ["list"], obj=ctx)
+
+        # Assert
+        assert result.exit_code == 0
+        assert "#202 🎉" in result.output
+        assert "✅" in result.output  # Checks passing
+
+
+def test_list_plans_pr_column_closed_pr() -> None:
+    """Test PR column displays closed PR with ⛔ emoji."""
+    from erk_shared.github.types import PullRequestInfo
+    from src.erk.core.github.fake import FakeGitHub
+
+    # Arrange
+    plan = Plan(
+        plan_identifier="103",
+        title="Plan with Closed PR",
+        body="",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/103",
+        labels=["erk-plan"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 1, tzinfo=UTC),
+        metadata={"number": 103},
+    )
+
+    pr = PullRequestInfo(
+        number=203,
+        state="CLOSED",
+        url="https://github.com/owner/repo/pull/203",
+        is_draft=False,
+        title="Closed PR for issue 103",
+        checks_passing=False,
+        owner="owner",
+        repo="repo",
+        has_conflicts=None,
+    )
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        store = FakePlanStore(plans={"103": plan})
+        github = FakeGitHub(pr_issue_linkages={103: [pr]})
+        ctx = build_workspace_test_context(env, plan_store=store, github=github)
+
+        # Act
+        result = runner.invoke(plan_group, ["list"], obj=ctx)
+
+        # Assert
+        assert result.exit_code == 0
+        assert "#203 ⛔" in result.output
+        assert "🚫" in result.output  # Checks failing
+
+
+def test_list_plans_pr_column_with_conflicts() -> None:
+    """Test PR column shows conflict indicator 💥 for open/draft PRs with conflicts."""
+    from erk_shared.github.types import PullRequestInfo
+    from src.erk.core.github.fake import FakeGitHub
+
+    # Arrange
+    plan = Plan(
+        plan_identifier="104",
+        title="Plan with Conflicted PR",
+        body="",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/104",
+        labels=["erk-plan"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 1, tzinfo=UTC),
+        metadata={"number": 104},
+    )
+
+    pr = PullRequestInfo(
+        number=204,
+        state="OPEN",
+        url="https://github.com/owner/repo/pull/204",
+        is_draft=False,
+        title="Conflicted PR for issue 104",
+        checks_passing=True,
+        owner="owner",
+        repo="repo",
+        has_conflicts=True,
+    )
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        store = FakePlanStore(plans={"104": plan})
+        github = FakeGitHub(pr_issue_linkages={104: [pr]})
+        ctx = build_workspace_test_context(env, plan_store=store, github=github)
+
+        # Act
+        result = runner.invoke(plan_group, ["list"], obj=ctx)
+
+        # Assert
+        assert result.exit_code == 0
+        assert "#204 👀💥" in result.output  # Open with conflicts
+
+
+def test_list_plans_pr_column_multiple_prs_prefers_open() -> None:
+    """Test PR column shows most recent open PR when multiple PRs exist."""
+    from erk_shared.github.types import PullRequestInfo
+    from src.erk.core.github.fake import FakeGitHub
+
+    # Arrange
+    plan = Plan(
+        plan_identifier="105",
+        title="Plan with Multiple PRs",
+        body="",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/105",
+        labels=["erk-plan"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 1, tzinfo=UTC),
+        metadata={"number": 105},
+    )
+
+    # Older closed PR
+    closed_pr = PullRequestInfo(
+        number=205,
+        state="CLOSED",
+        url="https://github.com/owner/repo/pull/205",
+        is_draft=False,
+        title="Old closed PR",
+        checks_passing=None,
+        owner="owner",
+        repo="repo",
+        has_conflicts=None,
+    )
+
+    # Recent open PR (should be selected)
+    open_pr = PullRequestInfo(
+        number=206,
+        state="OPEN",
+        url="https://github.com/owner/repo/pull/206",
+        is_draft=False,
+        title="Recent open PR",
+        checks_passing=True,
+        owner="owner",
+        repo="repo",
+        has_conflicts=False,
+    )
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        store = FakePlanStore(plans={"105": plan})
+        # PRs already sorted by created_at descending
+        github = FakeGitHub(pr_issue_linkages={105: [open_pr, closed_pr]})
+        ctx = build_workspace_test_context(env, plan_store=store, github=github)
+
+        # Act
+        result = runner.invoke(plan_group, ["list"], obj=ctx)
+
+        # Assert
+        assert result.exit_code == 0
+        assert "#206 👀" in result.output  # Shows open PR, not closed
+
+
+def test_list_plans_pr_column_no_pr_linked() -> None:
+    """Test PR column shows '-' when no PR is linked to issue."""
+    # Arrange
+    plan = Plan(
+        plan_identifier="106",
+        title="Plan without PR",
+        body="",
+        state=PlanState.OPEN,
+        url="https://github.com/owner/repo/issues/106",
+        labels=["erk-plan"],
+        assignees=[],
+        created_at=datetime(2024, 1, 1, tzinfo=UTC),
+        updated_at=datetime(2024, 1, 1, tzinfo=UTC),
+        metadata={"number": 106},
+    )
+
+    runner = CliRunner()
+    with erk_inmem_env(runner) as env:
+        store = FakePlanStore(plans={"106": plan})
+        # No PR linkages configured
+        ctx = build_workspace_test_context(env, plan_store=store)
+
+        # Act
+        result = runner.invoke(plan_group, ["list"], obj=ctx)
+
+        # Assert
+        assert result.exit_code == 0
+        assert "#106" in result.output
+        # PR and Checks columns should both show "-"
+        # Can't easily assert the exact column position, but verifying no emojis appear
+        assert "👀" not in result.output
+        assert "🚧" not in result.output
+        assert "🎉" not in result.output
+        assert "⛔" not in result.output

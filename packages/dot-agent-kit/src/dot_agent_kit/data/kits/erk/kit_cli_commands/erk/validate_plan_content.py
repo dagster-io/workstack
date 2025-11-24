@@ -14,10 +14,12 @@ Exit Codes:
 
 Examples:
     $ echo "# My Plan\n\n- Step 1\n- Step 2" | dot-agent kit-command erk validate-plan-content
-    {"valid": true, "error": null, "details": {"length": 29, "has_headers": true, "has_lists": true}}
+    {"valid": true, "error": null, "details": {"length": 29, "has_headers": true,
+    "has_lists": true}}
 
     $ echo "too short" | dot-agent kit-command erk validate-plan-content
-    {"valid": false, "error": "Plan too short (9 characters, minimum 100)", "details": {"length": 9, "has_headers": false, "has_lists": false}}
+    {"valid": false, "error": "Plan too short (9 characters, minimum 100)",
+    "details": {"length": 9, "has_headers": false, "has_lists": false}}
 """
 
 import json

@@ -27,6 +27,7 @@ class FakeGitHub(GitHub):
         pr_mergeability: dict[int, PRMergeability | None] | None = None,
         workflow_runs: list[WorkflowRun] | None = None,
         run_logs: dict[str, str] | None = None,
+        pr_issue_linkages: dict[int, list[PullRequestInfo]] | None = None,
     ) -> None:
         """Create FakeGitHub with pre-configured state.
 
@@ -38,6 +39,7 @@ class FakeGitHub(GitHub):
             pr_mergeability: Mapping of pr_number -> PRMergeability (None for API errors)
             workflow_runs: List of WorkflowRun objects to return from list_workflow_runs
             run_logs: Mapping of run_id -> log string
+            pr_issue_linkages: Mapping of issue_number -> list[PullRequestInfo]
         """
         if prs is not None and pr_statuses is not None:
             msg = "Cannot specify both prs and pr_statuses"
@@ -70,6 +72,7 @@ class FakeGitHub(GitHub):
         self._pr_mergeability = pr_mergeability or {}
         self._workflow_runs = workflow_runs or []
         self._run_logs = run_logs or {}
+        self._pr_issue_linkages = pr_issue_linkages or {}
         self._updated_pr_bases: list[tuple[int, str]] = []
         self._merged_prs: list[int] = []
         self._get_prs_for_repo_calls: list[tuple[Path, bool]] = []
@@ -244,3 +247,17 @@ class FakeGitHub(GitHub):
             msg = f"Run {run_id} not found"
             raise RuntimeError(msg)
         return self._run_logs[run_id]
+
+    def get_prs_linked_to_issues(
+        self, repo_root: Path, issue_numbers: list[int]
+    ) -> dict[int, list[PullRequestInfo]]:
+        """Get PRs linked to issues via closing keywords (returns pre-configured data).
+
+        Returns only the mappings for issues in issue_numbers that have
+        pre-configured PR linkages. Issues without linkages are omitted.
+        """
+        result = {}
+        for issue_num in issue_numbers:
+            if issue_num in self._pr_issue_linkages:
+                result[issue_num] = self._pr_issue_linkages[issue_num]
+        return result

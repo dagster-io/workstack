@@ -743,6 +743,7 @@ query {{
         isDraft
         title
         createdAt
+        headRefName
         statusCheckRollup {{
           state
         }}
@@ -794,9 +795,10 @@ query {{
             is_draft = pr_node.get("isDraft")
             title = pr_node.get("title")
             created_at = pr_node.get("createdAt")
+            head_ref_name = pr_node.get("headRefName")
 
             # Skip if essential fields are missing
-            if pr_number is None or state is None or url is None:
+            if pr_number is None or state is None or url is None or head_ref_name is None:
                 continue
 
             # Parse checks status
@@ -827,6 +829,7 @@ query {{
                 checks_passing=checks_passing,
                 owner=owner,
                 repo=repo,
+                head_ref_name=head_ref_name,
                 has_conflicts=has_conflicts,
             )
 

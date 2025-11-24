@@ -81,6 +81,7 @@ def test_land_stack_ignores_root_worktree_changes_on_unrelated_branch() -> None:
                     checks_passing=True,
                     owner="owner",
                     repo="repo",
+                    head_ref_name="feature",
                 ),
             },
         )

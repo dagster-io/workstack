@@ -73,6 +73,7 @@ def parse_graphite_pr_info(json_str: str) -> dict[str, PullRequestInfo]:
             checks_passing=None,  # CI status not available from Graphite cache
             owner=owner,
             repo=repo,
+            head_ref_name=branch,
         )
 
     return prs

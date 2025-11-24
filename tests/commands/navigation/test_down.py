@@ -389,6 +389,7 @@ def test_down_delete_current_success() -> None:
                     checks_passing=None,
                     owner="owner",
                     repo="repo",
+                    head_ref_name="feature",
                     has_conflicts=None,
                 ),
             }
@@ -516,6 +517,7 @@ def test_down_delete_current_pr_not_merged() -> None:
                     checks_passing=None,
                     owner="owner",
                     repo="repo",
+                    head_ref_name="feature",
                     has_conflicts=None,
                 ),
             }
@@ -641,6 +643,7 @@ def test_down_delete_current_trunk_in_root() -> None:
                     checks_passing=None,
                     owner="owner",
                     repo="repo",
+                    head_ref_name="feature",
                     has_conflicts=None,
                 ),
             }

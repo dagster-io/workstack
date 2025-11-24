@@ -7,7 +7,7 @@ from pathlib import Path
 import click
 from erk_shared.github.emoji import get_checks_status_emoji, get_pr_status_emoji
 from erk_shared.github.issues import GitHubIssues
-from erk_shared.github.types import PullRequestInfo
+from erk_shared.github.types import PullRequestInfo, WorkflowRun
 from erk_shared.impl_folder import read_issue_reference
 from rich.console import Console
 from rich.table import Table
@@ -82,6 +82,60 @@ def format_checks_cell(pr: PullRequestInfo | None) -> str:
         Formatted string for table cell
     """
     return get_checks_status_emoji(pr)
+
+
+def get_run_for_pr(pr: PullRequestInfo, all_runs: list[WorkflowRun]) -> WorkflowRun | None:
+    """Find most recent workflow run for a PR by matching branch names.
+
+    Args:
+        pr: PR information with head_ref_name
+        all_runs: List of workflow runs from list_workflow_runs()
+
+    Returns:
+        Most recent run for this PR's branch, or None if no match
+    """
+    # Filter runs matching PR branch
+    matching_runs = [run for run in all_runs if run.branch == pr.head_ref_name]
+
+    if not matching_runs:
+        return None
+
+    # Return first match (list_workflow_runs returns newest first)
+    return matching_runs[0]
+
+
+def format_workflow_run(run: WorkflowRun | None, owner: str, repo: str) -> str:
+    """Format workflow run cell with icon and clickable run ID.
+
+    Args:
+        run: Workflow run information, or None if no run
+        owner: Repository owner
+        repo: Repository name
+
+    Returns:
+        Formatted string with OSC 8 hyperlink: "⏳ #12345" or "-"
+    """
+    if run is None:
+        return "[dim]-[/dim]"
+
+    # Map status/conclusion to emoji
+    if run.status == "completed":
+        if run.conclusion == "success":
+            icon = "✓"
+        elif run.conclusion == "failure":
+            icon = "✗"
+        elif run.conclusion == "cancelled":
+            icon = "⏸"
+        else:
+            icon = "?"
+    elif run.status in ("queued", "in_progress"):
+        icon = "⏳"
+    else:
+        icon = "?"
+
+    # Format as clickable link
+    url = f"https://github.com/{owner}/{repo}/actions/runs/{run.run_id}"
+    return f"[link={url}]{icon} #{run.run_id}[/link]"
 
 
 def determine_action_state(plan: Plan, all_comments: dict[int, list[str]]) -> str:
@@ -304,6 +358,14 @@ def _list_plans_impl(
             # If batch fetch fails, continue without PR info
             pass
 
+    # Fetch workflow runs for implement-plan workflow
+    all_runs: list[WorkflowRun] = []
+    try:
+        all_runs = ctx.github.list_workflow_runs(repo_root, "implement-plan.yml", limit=50)
+    except Exception:
+        # If workflow run fetch fails, continue without run info
+        pass
+
     # Apply action state filter if specified
     if action_state:
         # Normalize action_state for comparison (user input is lowercase from click.Choice)
@@ -336,11 +398,12 @@ def _list_plans_impl(
     use_graphite = ctx.global_config.use_graphite if ctx.global_config else False
 
     # Create Rich table with columns
+    # Column order: Plan | State | PR | Checks | Action | Title | Local Worktree
     table = Table(show_header=True, header_style="bold")
     table.add_column("Plan", style="cyan", no_wrap=True)
+    table.add_column("State", no_wrap=True)
     table.add_column("PR", no_wrap=True)
     table.add_column("Checks", no_wrap=True)
-    table.add_column("State", no_wrap=True)
     table.add_column("Action", no_wrap=True, width=12)
     table.add_column("Title", no_wrap=True)
     table.add_column("Local Worktree", style="yellow", no_wrap=True)
@@ -361,22 +424,6 @@ def _list_plans_impl(
         # Format state with color
         state_color = "green" if plan.state == PlanState.OPEN else "red"
         state_str = f"[{state_color}]{plan.state.value}[/{state_color}]"
-
-        # Determine action state with color coding
-        action_state = determine_action_state(plan, all_comments)
-        # Apply color styling based on state
-        if action_state == "-":
-            action_str = f"[dim]{action_state}[/dim]"
-        elif action_state == "Pending":
-            action_str = f"[yellow]{action_state}[/yellow]"
-        elif action_state == "Running":
-            action_str = f"[blue]{action_state}[/blue]"
-        elif action_state == "Complete":
-            action_str = f"[green]{action_state}[/green]"
-        elif action_state == "Failed":
-            action_str = f"[red]{action_state}[/red]"
-        else:
-            action_str = action_state
 
         # Truncate title to 50 characters with ellipsis
         title = plan.title
@@ -401,6 +448,8 @@ def _list_plans_impl(
         # Get PR info for this issue
         pr_cell = "-"
         checks_cell = "-"
+        action_cell = "[dim]-[/dim]"
+
         if isinstance(issue_number, int) and issue_number in pr_linkages:
             prs = pr_linkages[issue_number]
             selected_pr = select_display_pr(prs)
@@ -413,8 +462,13 @@ def _list_plans_impl(
                 )
                 checks_cell = format_checks_cell(selected_pr)
 
+                # Find workflow run for this PR
+                run = get_run_for_pr(selected_pr, all_runs)
+                action_cell = format_workflow_run(run, selected_pr.owner, selected_pr.repo)
+
         # Add row to table
-        table.add_row(issue_id, pr_cell, checks_cell, state_str, action_str, title, worktree_name)
+        # Column order: Plan | State | PR | Checks | Action | Title | Local Worktree
+        table.add_row(issue_id, state_str, pr_cell, checks_cell, action_cell, title, worktree_name)
 
     # Output table to stderr (consistent with user_output convention)
     # Use width=200 to ensure proper display without truncation

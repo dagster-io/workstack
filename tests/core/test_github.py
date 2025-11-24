@@ -24,6 +24,7 @@ def sample_prs():
             checks_passing=None,
             owner="owner",
             repo="repo",
+            head_ref_name="feature",
             has_conflicts=None,
         ),
         "feature-2": PullRequestInfo(
@@ -35,6 +36,7 @@ def sample_prs():
             checks_passing=None,
             owner="owner",
             repo="repo",
+            head_ref_name="feature",
             has_conflicts=None,
         ),
     }

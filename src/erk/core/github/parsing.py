@@ -73,6 +73,7 @@ def parse_github_pr_list(json_str: str, include_checks: bool) -> dict[str, PullR
             checks_passing=checks_passing,
             owner=owner,
             repo=repo,
+            head_ref_name=branch,
         )
 
     return prs

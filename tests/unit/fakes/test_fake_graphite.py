@@ -188,6 +188,7 @@ def test_fake_graphite_ops_get_prs_from_graphite() -> None:
             checks_passing=True,
             owner="owner",
             repo="repo",
+            head_ref_name="feature",
         ),
     }
     ops = FakeGraphite(pr_info=pr_info)

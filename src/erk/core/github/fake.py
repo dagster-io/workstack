@@ -61,6 +61,7 @@ class FakeGitHub(GitHub):
                         checks_passing=None,
                         owner="owner",
                         repo="repo",
+                        head_ref_name=branch,
                         has_conflicts=None,
                     )
             self._pr_statuses = pr_statuses

@@ -43,6 +43,7 @@ def test_get_pr_status_emoji_open() -> None:
         checks_passing=True,
         owner="owner",
         repo="repo",
+        head_ref_name="feature",
         has_conflicts=False,
     )
 
@@ -61,6 +62,7 @@ def test_get_pr_status_emoji_draft() -> None:
         checks_passing=None,
         owner="owner",
         repo="repo",
+        head_ref_name="feature",
         has_conflicts=False,
     )
 
@@ -79,6 +81,7 @@ def test_get_pr_status_emoji_merged() -> None:
         checks_passing=True,
         owner="owner",
         repo="repo",
+        head_ref_name="feature",
         has_conflicts=False,
     )
 
@@ -97,6 +100,7 @@ def test_get_pr_status_emoji_closed() -> None:
         checks_passing=False,
         owner="owner",
         repo="repo",
+        head_ref_name="feature",
         has_conflicts=None,
     )
 
@@ -115,6 +119,7 @@ def test_get_pr_status_emoji_open_with_conflicts() -> None:
         checks_passing=True,
         owner="owner",
         repo="repo",
+        head_ref_name="feature",
         has_conflicts=True,
     )
 
@@ -133,6 +138,7 @@ def test_get_pr_status_emoji_draft_with_conflicts() -> None:
         checks_passing=None,
         owner="owner",
         repo="repo",
+        head_ref_name="feature",
         has_conflicts=True,
     )
 
@@ -151,6 +157,7 @@ def test_get_pr_status_emoji_merged_ignores_conflicts() -> None:
         checks_passing=True,
         owner="owner",
         repo="repo",
+        head_ref_name="feature",
         has_conflicts=True,  # Shouldn't happen but test defensive behavior
     )
 
@@ -169,6 +176,7 @@ def test_get_pr_status_emoji_closed_ignores_conflicts() -> None:
         checks_passing=False,
         owner="owner",
         repo="repo",
+        head_ref_name="feature",
         has_conflicts=True,  # Shouldn't happen but test defensive behavior
     )
 
@@ -187,6 +195,7 @@ def test_get_pr_status_emoji_unknown_state() -> None:
         checks_passing=None,
         owner="owner",
         repo="repo",
+        head_ref_name="feature",
         has_conflicts=False,
     )
 
@@ -211,6 +220,7 @@ def test_get_checks_status_emoji_pending() -> None:
         checks_passing=None,  # Pending or no checks
         owner="owner",
         repo="repo",
+        head_ref_name="feature",
         has_conflicts=False,
     )
 
@@ -229,6 +239,7 @@ def test_get_checks_status_emoji_passing() -> None:
         checks_passing=True,
         owner="owner",
         repo="repo",
+        head_ref_name="feature",
         has_conflicts=False,
     )
 
@@ -247,6 +258,7 @@ def test_get_checks_status_emoji_failing() -> None:
         checks_passing=False,
         owner="owner",
         repo="repo",
+        head_ref_name="feature",
         has_conflicts=False,
     )
 
@@ -265,6 +277,7 @@ def test_get_checks_status_emoji_merged_pr_with_passing_checks() -> None:
         checks_passing=True,
         owner="owner",
         repo="repo",
+        head_ref_name="feature",
         has_conflicts=False,
     )
 
@@ -283,6 +296,7 @@ def test_get_checks_status_emoji_draft_pr_with_pending_checks() -> None:
         checks_passing=None,
         owner="owner",
         repo="repo",
+        head_ref_name="feature",
         has_conflicts=False,
     )
 

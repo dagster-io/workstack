@@ -33,6 +33,7 @@ def test_fake_github_ops_get_prs_for_repo() -> None:
             checks_passing=True,
             owner="testowner",
             repo="testrepo",
+            head_ref_name="feature",
         ),
         "feature-2": PullRequestInfo(
             number=456,
@@ -43,6 +44,7 @@ def test_fake_github_ops_get_prs_for_repo() -> None:
             checks_passing=None,
             owner="testowner",
             repo="testrepo",
+            head_ref_name="feature",
         ),
     }
     ops = FakeGitHub(prs=prs)
@@ -68,6 +70,7 @@ def test_fake_github_ops_get_prs_for_repo_with_checks() -> None:
             checks_passing=True,
             owner="testowner",
             repo="testrepo",
+            head_ref_name="feature",
         ),
     }
     ops = FakeGitHub(prs=prs)
@@ -92,6 +95,7 @@ def test_fake_github_ops_get_pr_status_existing_branch() -> None:
             checks_passing=True,
             owner="testowner",
             repo="testrepo",
+            head_ref_name="feature",
         ),
     }
     ops = FakeGitHub(prs=prs)
@@ -159,6 +163,7 @@ def test_fake_github_ops_pull_request_info_fields() -> None:
             checks_passing=True,
             owner="testowner",
             repo="testrepo",
+            head_ref_name="feature",
         ),
     }
     ops = FakeGitHub(prs=prs)
@@ -194,6 +199,7 @@ def test_fake_github_ops_both_formats_raises() -> None:
             checks_passing=True,
             owner="testowner",
             repo="testrepo",
+            head_ref_name="feature",
         )
     }
     pr_statuses = {"feature": ("OPEN", 1, "Title")}
@@ -316,6 +322,7 @@ def test_fake_github_ops_full_workflow() -> None:
             checks_passing=True,
             owner="testowner",
             repo="testrepo",
+            head_ref_name="feature",
         ),
         "feature-2": PullRequestInfo(
             number=456,
@@ -326,6 +333,7 @@ def test_fake_github_ops_full_workflow() -> None:
             checks_passing=True,
             owner="testowner",
             repo="testrepo",
+            head_ref_name="feature",
         ),
     }
     pr_bases = {
@@ -525,6 +533,7 @@ def test_fake_github_fetch_pr_titles_batch_returns_unchanged() -> None:
             checks_passing=True,
             owner="testowner",
             repo="testrepo",
+            head_ref_name="feature",
         ),
         "feature-2": PullRequestInfo(
             number=456,
@@ -535,6 +544,7 @@ def test_fake_github_fetch_pr_titles_batch_returns_unchanged() -> None:
             checks_passing=True,
             owner="testowner",
             repo="testrepo",
+            head_ref_name="feature",
         ),
     }
     ops = FakeGitHub(prs=prs)
@@ -560,6 +570,7 @@ def test_fake_github_fetch_pr_titles_batch_preserves_title() -> None:
             checks_passing=True,
             owner="testowner",
             repo="testrepo",
+            head_ref_name="feature",
         ),
     }
     ops = FakeGitHub(prs=prs)

@@ -24,6 +24,7 @@ def make_pr(
     repo: str = "repo",
     url: str | None = None,
     title: str | None = None,
+    head_ref_name: str = "feature",
 ) -> PullRequestInfo:
     """Create a PullRequestInfo with sensible defaults tailored for tests."""
     pr_url = url or f"https://github.com/{owner}/{repo}/pull/{number}"
@@ -37,6 +38,7 @@ def make_pr(
         checks_passing=checks_passing,
         owner=owner,
         repo=repo,
+        head_ref_name=head_ref_name,
     )
 
 

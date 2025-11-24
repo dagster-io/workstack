@@ -1102,6 +1102,7 @@ def test_list_plans_pr_column_open_pr() -> None:
         checks_passing=True,
         owner="owner",
         repo="repo",
+        head_ref_name="feature",
         has_conflicts=False,
     )
 
@@ -1148,6 +1149,7 @@ def test_list_plans_pr_column_draft_pr() -> None:
         checks_passing=None,
         owner="owner",
         repo="repo",
+        head_ref_name="feature",
         has_conflicts=False,
     )
 
@@ -1194,6 +1196,7 @@ def test_list_plans_pr_column_merged_pr() -> None:
         checks_passing=True,
         owner="owner",
         repo="repo",
+        head_ref_name="feature",
         has_conflicts=False,
     )
 
@@ -1240,6 +1243,7 @@ def test_list_plans_pr_column_closed_pr() -> None:
         checks_passing=False,
         owner="owner",
         repo="repo",
+        head_ref_name="feature",
         has_conflicts=None,
     )
 
@@ -1286,6 +1290,7 @@ def test_list_plans_pr_column_with_conflicts() -> None:
         checks_passing=True,
         owner="owner",
         repo="repo",
+        head_ref_name="feature",
         has_conflicts=True,
     )
 
@@ -1332,6 +1337,7 @@ def test_list_plans_pr_column_multiple_prs_prefers_open() -> None:
         checks_passing=None,
         owner="owner",
         repo="repo",
+        head_ref_name="feature",
         has_conflicts=None,
     )
 
@@ -1345,6 +1351,7 @@ def test_list_plans_pr_column_multiple_prs_prefers_open() -> None:
         checks_passing=True,
         owner="owner",
         repo="repo",
+        head_ref_name="feature",
         has_conflicts=False,
     )
 

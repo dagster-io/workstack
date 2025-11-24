@@ -243,6 +243,7 @@ class PullRequestInfoBuilder:
             checks_passing=self.checks_passing,
             owner=self.owner,
             repo=self.repo,
+            head_ref_name=self.branch,
             has_conflicts=self.has_conflicts,
         )
 

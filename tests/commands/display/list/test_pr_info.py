@@ -43,6 +43,7 @@ def test_list_with_stacks_pr_visibility(show_pr_info: bool, expected_visible: bo
             checks_passing=True,
             owner="owner",
             repo="repo",
+            head_ref_name="feature",
         )
 
         # Create branch metadata with a simple stack
@@ -181,6 +182,7 @@ def test_list_with_stacks_uses_graphite_url() -> None:
             checks_passing=True,
             owner="testowner",
             repo="testrepo",
+            head_ref_name="feature",
         )
 
         # Create branch metadata with a simple stack
@@ -244,6 +246,7 @@ def test_list_pr_with_merge_conflicts() -> None:
             checks_passing=True,
             owner="testowner",
             repo="testrepo",
+            head_ref_name="feature",
             has_conflicts=True,  # This PR has merge conflicts
         )
 
@@ -307,6 +310,7 @@ def test_list_displays_pr_title_when_available() -> None:
             checks_passing=True,
             owner="owner",
             repo="repo",
+            head_ref_name="feature",
         )
 
         branches = {
@@ -367,6 +371,7 @@ def test_list_prefers_pr_title_over_plan_summary() -> None:
             checks_passing=True,
             owner="owner",
             repo="repo",
+            head_ref_name="feature",
         )
 
         branches = {
@@ -438,6 +443,7 @@ def test_list_falls_back_to_plan_summary_when_no_title() -> None:
             checks_passing=True,
             owner="owner",
             repo="repo",
+            head_ref_name="feature",
         )
 
         branches = {
@@ -494,6 +500,7 @@ def test_list_shows_no_plan_when_no_title_and_no_summary() -> None:
             checks_passing=True,
             owner="owner",
             repo="repo",
+            head_ref_name="feature",
         )
 
         branches = {
@@ -556,6 +563,7 @@ def test_list_displays_pr_title_for_multiple_worktrees() -> None:
             checks_passing=True,
             owner="owner",
             repo="repo",
+            head_ref_name="feature",
         )
 
         pr2 = PullRequestInfo(
@@ -567,6 +575,7 @@ def test_list_displays_pr_title_for_multiple_worktrees() -> None:
             checks_passing=True,
             owner="owner",
             repo="repo",
+            head_ref_name="feature",
         )
 
         branches = {
@@ -649,6 +658,7 @@ def test_list_fetches_titles_before_ci_enrichment() -> None:
             checks_passing=True,  # CI status is part of PR info
             owner="owner",
             repo="repo",
+            head_ref_name="feature",
         )
 
         branches = {

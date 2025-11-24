@@ -341,6 +341,7 @@ def test_fetch_pr_titles_batch_enriches_titles(monkeypatch: pytest.MonkeyPatch) 
             checks_passing=None,
             owner="test-owner",
             repo="test-repo",
+            head_ref_name="feature",
         ),
         "feature-2": PullRequestInfo(
             number=456,
@@ -351,6 +352,7 @@ def test_fetch_pr_titles_batch_enriches_titles(monkeypatch: pytest.MonkeyPatch) 
             checks_passing=None,
             owner="test-owner",
             repo="test-repo",
+            head_ref_name="feature",
         ),
     }
 
@@ -416,6 +418,7 @@ def test_fetch_pr_titles_batch_partial_failure(monkeypatch: pytest.MonkeyPatch) 
             checks_passing=None,
             owner="test-owner",
             repo="test-repo",
+            head_ref_name="feature",
         ),
         "feature-2": PullRequestInfo(
             number=456,
@@ -426,6 +429,7 @@ def test_fetch_pr_titles_batch_partial_failure(monkeypatch: pytest.MonkeyPatch) 
             checks_passing=None,
             owner="test-owner",
             repo="test-repo",
+            head_ref_name="feature",
         ),
     }
 
@@ -471,6 +475,7 @@ def test_fetch_pr_titles_batch_missing_title_field(monkeypatch: pytest.MonkeyPat
             checks_passing=None,
             owner="test-owner",
             repo="test-repo",
+            head_ref_name="feature",
         ),
     }
 
@@ -518,6 +523,7 @@ def test_build_issue_pr_linkage_query_structure() -> None:
     assert "isDraft" in query
     assert "title" in query
     assert "createdAt" in query
+    assert "headRefName" in query
     assert "statusCheckRollup" in query
     assert "mergeable" in query
 
@@ -543,6 +549,7 @@ def test_parse_issue_pr_linkages_with_single_pr() -> None:
                             "isDraft": False,
                             "title": "Fix bug",
                             "createdAt": "2024-01-01T00:00:00Z",
+                            "headRefName": "feature-branch",
                             "statusCheckRollup": {"state": "SUCCESS"},
                             "mergeable": "MERGEABLE",
                             "closingIssuesReferences": {"nodes": [{"number": 100}]},
@@ -586,6 +593,7 @@ def test_parse_issue_pr_linkages_with_multiple_prs() -> None:
                             "isDraft": False,
                             "title": "Recent PR",
                             "createdAt": "2024-01-02T00:00:00Z",
+                            "headRefName": "feature-recent",
                             "statusCheckRollup": None,
                             "mergeable": "UNKNOWN",
                             "closingIssuesReferences": {"nodes": [{"number": 100}]},
@@ -597,6 +605,7 @@ def test_parse_issue_pr_linkages_with_multiple_prs() -> None:
                             "isDraft": False,
                             "title": "Older PR",
                             "createdAt": "2024-01-01T00:00:00Z",
+                            "headRefName": "feature-older",
                             "statusCheckRollup": {"state": "FAILURE"},
                             "mergeable": "MERGEABLE",
                             "closingIssuesReferences": {"nodes": [{"number": 100}]},
@@ -639,6 +648,7 @@ def test_parse_issue_pr_linkages_with_pr_linking_multiple_issues() -> None:
                             "isDraft": False,
                             "title": "Fix multiple bugs",
                             "createdAt": "2024-01-01T00:00:00Z",
+                            "headRefName": "feature-multi-fix",
                             "statusCheckRollup": {"state": "SUCCESS"},
                             "mergeable": "MERGEABLE",
                             "closingIssuesReferences": {
@@ -720,6 +730,7 @@ def test_parse_issue_pr_linkages_handles_null_nodes() -> None:
                             "isDraft": False,
                             "title": "Valid PR",
                             "createdAt": "2024-01-01T00:00:00Z",
+                            "headRefName": "feature-valid",
                             "statusCheckRollup": None,
                             "mergeable": "MERGEABLE",
                             "closingIssuesReferences": {
@@ -760,6 +771,7 @@ def test_parse_issue_pr_linkages_handles_missing_optional_fields() -> None:
                             "isDraft": None,  # Missing
                             "title": None,  # Missing
                             "createdAt": "2024-01-01T00:00:00Z",
+                            "headRefName": "feature-minimal",
                             "statusCheckRollup": None,  # No checks
                             "mergeable": None,  # Unknown
                             "closingIssuesReferences": {"nodes": [{"number": 100}]},

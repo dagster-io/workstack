@@ -15,10 +15,10 @@ import json
 import sys
 
 import click
+from erk_shared.github.metadata import format_plan_issue_body
 
 from dot_agent_kit.context_helpers import require_github_issues, require_repo_root
 from erk.data.kits.erk.plan_utils import extract_title_from_plan
-from erk_shared.github.metadata import format_plan_issue_body
 
 
 @click.command(name="create-plan-from-context")

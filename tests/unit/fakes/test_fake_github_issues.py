@@ -192,7 +192,9 @@ def test_fake_github_issues_update_issue_body_updates_timestamp() -> None:
     """Test update_issue_body updates the updated_at timestamp."""
     creation_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
     pre_configured = {
-        42: create_test_issue(42, "Test", "Original body", created_at=creation_time, updated_at=creation_time)
+        42: create_test_issue(
+            42, "Test", "Original body", created_at=creation_time, updated_at=creation_time
+        )
     }
     issues = FakeGitHubIssues(issues=pre_configured)
 

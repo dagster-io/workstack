@@ -16,8 +16,212 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  implement:
+  setup:
     if: contains(github.event.issue.labels.*.name, 'erk-queue')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    outputs:
+      branch_name: ${{ steps.create_branch.outputs.branch_name }}
+      setup_success: ${{ steps.create_branch.outputs.setup_success }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+
+      - name: Setup environment
+        run: |
+          # Install uv
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          source $HOME/.cargo/env
+
+          # Install erk (for plan fetching)
+          cd $GITHUB_WORKSPACE
+          uv tool install --from . erk
+
+          # Install dot-agent from local package with erk in its environment
+          uv tool install --from ./packages/dot-agent-kit --with . dot-agent-kit
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Derive branch name from issue title
+        id: branch_name
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+        run: |
+          # Convert issue title to kebab-case using sanitize_branch_component logic
+          BRANCH_NAME=$(echo "$ISSUE_TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$//')
+
+          # Truncate to 30 characters for git worktree compatibility
+          BRANCH_NAME="${BRANCH_NAME:0:30}"
+
+          # Ensure no trailing hyphens after truncation
+          BRANCH_NAME=$(echo "$BRANCH_NAME" | sed 's/-$//')
+
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "Derived branch name: $BRANCH_NAME"
+
+      - name: Check if branch exists
+        id: check_branch
+        env:
+          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Check if branch exists on remote
+          if git ls-remote --heads origin "$BRANCH_NAME" | grep -q "$BRANCH_NAME"; then
+            echo "branch_exists=true" >> $GITHUB_OUTPUT
+            echo "❌ Branch $BRANCH_NAME already exists"
+          else
+            echo "branch_exists=false" >> $GITHUB_OUTPUT
+            echo "✅ Branch $BRANCH_NAME does not exist"
+          fi
+
+      - name: Post error comment if branch exists
+        if: steps.check_branch.outputs.branch_exists == 'true'
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "❌ **Branch Setup Failed**
+
+          Branch \`$BRANCH_NAME\` already exists. Please delete the existing branch first or choose a different issue.
+
+          To delete the branch:
+          \`\`\`bash
+          git push origin --delete $BRANCH_NAME
+          \`\`\`"
+
+          # Remove erk-queue label to stop workflow
+          gh issue edit "$ISSUE_NUMBER" --remove-label "erk-queue"
+
+          exit 1
+
+      - name: Create branch and .erp/ folder
+        id: create_branch
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source $HOME/.cargo/env
+
+          # Get trunk branch (main or master)
+          if git ls-remote --heads origin main | grep -q main; then
+            TRUNK_BRANCH="main"
+          elif git ls-remote --heads origin master | grep -q master; then
+            TRUNK_BRANCH="master"
+          else
+            echo "❌ Could not detect trunk branch (main or master)"
+            gh issue comment "$ISSUE_NUMBER" --body "❌ **Branch Setup Failed**
+
+          Could not detect trunk branch (expected 'main' or 'master')."
+            exit 1
+          fi
+
+          echo "Using trunk branch: $TRUNK_BRANCH"
+
+          # Create and checkout branch from trunk
+          git fetch origin "$TRUNK_BRANCH"
+          git checkout -b "$BRANCH_NAME" "origin/$TRUNK_BRANCH"
+
+          # Fetch plan content using erk
+          echo "Fetching plan content for issue #$ISSUE_NUMBER..."
+
+          # Use erk's Python API to fetch plan and create .erp/ folder
+          python3 << 'PYTHON_SCRIPT'
+          import sys
+          import json
+          from pathlib import Path
+          from erk.core.context import ErkContext
+          from erk_shared.erp_folder import create_erp_folder
+
+          # Get environment variables
+          issue_number = int("$ISSUE_NUMBER")
+          issue_title = """$ISSUE_TITLE"""
+          repo_root = Path.cwd()
+
+          # Create context to access plan store
+          ctx = ErkContext(cwd=repo_root)
+
+          try:
+              # Fetch plan
+              plan = ctx.plan_store.get_plan(repo_root, str(issue_number))
+
+              # Create .erp/ folder
+              create_erp_folder(
+                  plan_content=plan.body,
+                  issue_number=issue_number,
+                  issue_url=plan.url,
+                  issue_title=issue_title,
+                  repo_root=repo_root,
+              )
+
+              print(f"✅ Created .erp/ folder with plan content")
+              sys.exit(0)
+          except Exception as e:
+              print(f"❌ Error: {e}")
+              sys.exit(1)
+          PYTHON_SCRIPT
+
+          if [ $? -ne 0 ]; then
+            gh issue comment "$ISSUE_NUMBER" --body "❌ **Branch Setup Failed**
+
+          Could not fetch plan content for issue #$ISSUE_NUMBER or create .erp/ folder.
+
+          Please ensure:
+          - Issue has a plan saved (run \`erk plan save\`)
+          - Issue has \`erk-plan\` label"
+            exit 1
+          fi
+
+          # Commit .erp/ folder
+          git add .erp
+          git commit -m "Add plan for issue #$ISSUE_NUMBER"
+
+          # Push branch to origin
+          git push -u origin "$BRANCH_NAME"
+
+          echo "✅ Branch created and pushed: $BRANCH_NAME"
+          echo "setup_success=true" >> $GITHUB_OUTPUT
+
+      - name: Create draft PR
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Create PR body
+          cat > pr_body.md <<EOF
+          Implementation of plan from issue #$ISSUE_NUMBER
+
+          $ISSUE_URL
+
+          **Status:** Queued for implementation
+
+          This PR will be marked ready for review after implementation completes.
+          EOF
+
+          # Create draft PR
+          gh pr create \
+            --draft \
+            --title "$ISSUE_TITLE" \
+            --body-file pr_body.md \
+            --head "$BRANCH_NAME"
+
+          echo "✅ Draft PR created"
+
+  implement:
+    needs: setup
+    if: contains(github.event.issue.labels.*.name, 'erk-queue') && needs.setup.outputs.setup_success == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -27,6 +231,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ github.token }}
+          ref: ${{ needs.setup.outputs.branch_name }}
 
       - name: Setup environment for workflow started comment
         run: |
@@ -55,51 +260,6 @@ jobs:
             --workflow-run-id "$WORKFLOW_RUN_ID" \
             --workflow-run-url "$WORKFLOW_RUN_URL" \
             2>/dev/null || true
-
-      - name: Check for .erp folder
-        id: check_erp
-        run: |
-          if [ -d ".erp" ]; then
-            echo "erp_exists=true" >> $GITHUB_OUTPUT
-            echo "✅ Found .erp/ folder with plan (new workflow)"
-          else
-            echo "erp_exists=false" >> $GITHUB_OUTPUT
-            echo "⚠️ No .erp/ folder found, using legacy workflow"
-          fi
-
-      - name: Derive branch name from issue title
-        id: branch_name
-        if: steps.check_erp.outputs.erp_exists == 'false'
-        # SECURITY: Use env block to prevent code injection attacks
-        # Issue titles are user-controlled and could contain malicious code like `curl attacker.com`
-        # Direct interpolation (${{ github.event.issue.title }}) in shell would execute as code
-        # Environment variables treat the input as data, not code
-        # See: https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#understanding-the-risk-of-script-injections
-        env:
-          ISSUE_TITLE: ${{ github.event.issue.title }}
-        run: |
-          # Convert issue title to kebab-case
-          # ISSUE_TITLE is now safely in environment, not interpolated in shell
-          BRANCH_NAME=$(echo "$ISSUE_TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$//')
-
-          # Truncate to 30 characters for git worktree compatibility
-          BRANCH_NAME="${BRANCH_NAME:0:30}"
-
-          # Ensure no trailing hyphens after truncation
-          BRANCH_NAME=$(echo "$BRANCH_NAME" | sed 's/-$//')
-
-          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
-          echo "Derived branch name: $BRANCH_NAME"
-
-      - name: Create and switch to branch
-        if: steps.check_erp.outputs.erp_exists == 'false'
-        # SECURITY: Use env block for consistency
-        # BRANCH_NAME is derived from sanitized user input (see branch derivation step)
-        # Using env block maintains security best practices throughout workflow
-        env:
-          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
-        run: |
-          git checkout -b "$BRANCH_NAME"
 
       - name: Setup environment
         run: |
@@ -130,64 +290,11 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Set up implementation folder
-        # SECURITY: Use env block to prevent code injection attacks
-        # Issue bodies are user-controlled and could contain:
-        #   1. Heredoc terminators (EOF) to break out of cat command
-        #   2. Command substitution syntax ($() or ``)
-        #   3. Script injection payloads
-        # Using printf with environment variable prevents interpretation as code
-        # See: https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#understanding-the-risk-of-script-injections
-        env:
-          ISSUE_BODY: ${{ github.event.issue.body }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-          ISSUE_URL: ${{ github.event.issue.html_url }}
-          ERP_EXISTS: ${{ steps.check_erp.outputs.erp_exists }}
         run: |
-          if [ "$ERP_EXISTS" = "true" ]; then
-            # Use existing .erp/ folder (new workflow)
-            echo "Using .erp/ folder from branch"
-            echo "Plan content already committed in .erp/"
-
-            # Copy .erp/ to .impl/ for implementation
-            cp -r .erp .impl
-            echo "✓ Copied .erp/ to .impl/ for implementation"
-          else
-            # Create .impl/ folder (legacy workflow)
-            mkdir -p .impl
-
-            # Save issue body as plan.md using printf for safety
-            # This prevents heredoc injection attacks
-            printf '%s\n' "$ISSUE_BODY" > .impl/plan.md
-
-            # Create issue.json reference using environment variables
-            cat > .impl/issue.json <<EOF
-          {
-            "issue_number": $ISSUE_NUMBER,
-            "issue_url": "$ISSUE_URL",
-            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "synced_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          }
-          EOF
-
-            # Extract steps from plan.md and create progress.md with frontmatter
-            # This uses a simple regex to find numbered steps
-            STEP_COUNT=$(grep -E '^\s*[0-9]+\.' .impl/plan.md | wc -l | tr -d ' ')
-
-            cat > .impl/progress.md <<EOF
-          ---
-          completed_steps: 0
-          total_steps: $STEP_COUNT
-          ---
-
-          # Progress Tracking
-
-          EOF
-
-            # Extract steps and create checkboxes
-            grep -E '^\s*[0-9]+\.' .impl/plan.md | sed 's/^\s*//' | sed 's/^/- [ ] /' >> .impl/progress.md
-
-            echo "Created .impl/ folder structure"
-          fi
+          # Copy .erp/ to .impl/ for implementation
+          # .erp/ folder is created in the setup job and contains all necessary files
+          cp -r .erp .impl
+          echo "✓ Copied .erp/ to .impl/ for implementation"
 
       - name: Run implementation
         id: implement
@@ -216,38 +323,25 @@ jobs:
 
       - name: Commit and push changes
         id: commit
-        # SECURITY: Use env block for consistency and safety
-        # While ISSUE_NUMBER is not user-controlled, using env block maintains consistent pattern
-        # and prevents accidental introduction of vulnerabilities in future edits
         env:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
-          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
-          ERP_EXISTS: ${{ steps.check_erp.outputs.erp_exists }}
+          BRANCH_NAME: ${{ needs.setup.outputs.branch_name }}
         run: |
-          # Get current branch name (for new workflow where branch already exists)
-          if [ "$ERP_EXISTS" = "true" ]; then
-            CURRENT_BRANCH=$(git branch --show-current)
-          else
-            CURRENT_BRANCH="$BRANCH_NAME"
-          fi
-
           if [[ -n $(git status --porcelain) ]]; then
             git add .
             git commit -m "Implement plan from issue #$ISSUE_NUMBER"
-            git push origin "$CURRENT_BRANCH"
+            git push origin "$BRANCH_NAME"
             echo "✓ Changes committed and pushed"
             echo "changes_pushed=true" >> $GITHUB_OUTPUT
-            echo "branch_name=$CURRENT_BRANCH" >> $GITHUB_OUTPUT
           else
             echo "No changes to commit"
             echo "changes_pushed=false" >> $GITHUB_OUTPUT
-            echo "branch_name=$CURRENT_BRANCH" >> $GITHUB_OUTPUT
           fi
 
       - name: Clean up .erp folder
-        if: steps.check_erp.outputs.erp_exists == 'true' && steps.commit.outputs.changes_pushed == 'true'
+        if: steps.commit.outputs.changes_pushed == 'true'
         env:
-          BRANCH_NAME: ${{ steps.commit.outputs.branch_name }}
+          BRANCH_NAME: ${{ needs.setup.outputs.branch_name }}
         run: |
           # Remove .erp/ folder now that implementation is complete
           git rm -rf .erp/
@@ -256,9 +350,9 @@ jobs:
           echo "✓ Removed .erp/ folder"
 
       - name: Mark PR as ready for review
-        if: steps.check_erp.outputs.erp_exists == 'true' && steps.commit.outputs.changes_pushed == 'true'
+        if: steps.commit.outputs.changes_pushed == 'true'
         env:
-          BRANCH_NAME: ${{ steps.commit.outputs.branch_name }}
+          BRANCH_NAME: ${{ needs.setup.outputs.branch_name }}
           GH_TOKEN: ${{ github.token }}
         run: |
           # Get PR number for current branch
@@ -270,86 +364,10 @@ jobs:
             echo "⚠️ Could not find PR for branch $BRANCH_NAME"
           fi
 
-      # Token Permissions:
-      # Uses github.token (not secrets.GITHUB_TOKEN) to match the working pattern in implement-plan.yml
-      # Requires repository setting: Settings > Actions > General > "Allow GitHub Actions to create and approve pull requests"
-      # If this step fails with "not permitted" error, check:
-      # 1. Repository settings (above)
-      # 2. Organization settings (if in an org)
-      # 3. Enterprise settings (if applicable)
-      - name: Create pull request
-        if: steps.commit.outputs.changes_pushed == 'true' && steps.check_erp.outputs.erp_exists == 'false'
-        # SECURITY: Use env block to prevent code injection attacks
-        # User-controlled inputs (issue title, issue body) must not be directly interpolated
-        # Direct interpolation like PR_TITLE="${{ github.event.issue.title }}" would allow:
-        #   - Command injection via backticks or $()
-        #   - Quote escaping to run arbitrary commands
-        #   - Token exfiltration via curl/wget
-        # Environment variables ensure untrusted input is treated as data, not executable code
-        # See: https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#understanding-the-risk-of-script-injections
-        env:
-          ISSUE_TITLE: ${{ github.event.issue.title }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-          BRANCH_NAME: ${{ steps.commit.outputs.branch_name }}
-          IMPLEMENTATION_SUCCESS: ${{ steps.implement.outputs.implementation_success }}
-          SERVER_URL: ${{ github.server_url }}
-          REPOSITORY: ${{ github.repository }}
-          RUN_ID: ${{ github.run_id }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # Check if PR already exists (legacy workflow only)
-          if gh pr view "$BRANCH_NAME" --json number &> /dev/null; then
-            echo "✓ PR already exists for branch $BRANCH_NAME"
-            exit 0
-          fi
-
-          # Create PR body based on implementation success using environment variables
-          if [ "$IMPLEMENTATION_SUCCESS" = "true" ]; then
-            cat > pr_body.md <<EOF
-          ## Implementation Complete
-
-          This PR implements the plan from issue #$ISSUE_NUMBER.
-
-          **Implementation Details:**
-          - Plan source: #$ISSUE_NUMBER
-          - GitHub Actions run: $SERVER_URL/$REPOSITORY/actions/runs/$RUN_ID
-
-          ### Testing Checklist
-          - [ ] Review AI-generated code changes
-          - [ ] Run unit tests locally
-          - [ ] Run integration tests
-          - [ ] Verify type checking
-          - [ ] Test command functionality manually
-
-          🤖 Generated with [Claude Code](https://claude.com/claude-code)
-          EOF
-          else
-            cat > pr_body.md <<EOF
-          ## Implementation Failed
-
-          This PR contains partial implementation from issue #$ISSUE_NUMBER.
-
-          **⚠️ Implementation encountered errors** - Review the [workflow run]($SERVER_URL/$REPOSITORY/actions/runs/$RUN_ID) for details.
-
-          ### Next Steps
-          - Review implementation errors
-          - Fix issues manually or re-trigger workflow
-          - Run tests and type checking
-
-          🤖 Generated with [Claude Code](https://claude.com/claude-code)
-          EOF
-          fi
-
-          gh pr create --head "$BRANCH_NAME" --title "$ISSUE_TITLE" --body-file pr_body.md
-          echo "✓ Created PR: $ISSUE_TITLE"
-
       - name: Trigger CI workflows
         if: steps.commit.outputs.changes_pushed == 'true'
-        # SECURITY: Use env block for consistency
-        # BRANCH_NAME is derived from sanitized user input (see branch derivation step)
-        # Using env block maintains security best practices throughout workflow
         env:
-          BRANCH_NAME: ${{ steps.branch_name.outputs.branch_name }}
+          BRANCH_NAME: ${{ needs.setup.outputs.branch_name }}
           GH_TOKEN: ${{ github.token }}
         run: |
           echo "Triggering CI workflows for branch: $BRANCH_NAME"

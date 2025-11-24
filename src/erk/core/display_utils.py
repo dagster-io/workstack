@@ -8,7 +8,6 @@ filesystem access.
 import re
 
 import click
-
 from erk_shared.github.types import PullRequestInfo
 
 

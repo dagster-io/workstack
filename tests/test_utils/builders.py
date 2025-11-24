@@ -31,13 +31,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from erk_shared.git.abc import WorktreeInfo
+from erk_shared.github.types import PullRequestInfo
+
 from erk.core.branch_metadata import BranchMetadata
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk_shared.git.abc import WorktreeInfo
 from erk.core.git.fake import FakeGit
 from erk.core.github.fake import FakeGitHub
-from erk_shared.github.types import PullRequestInfo
 from erk.core.graphite.fake import FakeGraphite
 from tests.fakes.shell import FakeShell
 

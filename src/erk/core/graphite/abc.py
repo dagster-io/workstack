@@ -3,9 +3,10 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from erk.core.branch_metadata import BranchMetadata
 from erk_shared.git.abc import Git
 from erk_shared.github.types import PullRequestInfo
+
+from erk.core.branch_metadata import BranchMetadata
 
 
 class Graphite(ABC):

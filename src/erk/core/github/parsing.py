@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 
 from erk_shared.github.types import PRInfo, PullRequestInfo
+
 from erk.core.subprocess import run_subprocess_with_context
 
 

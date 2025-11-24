@@ -12,10 +12,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import click
-from erk_shared.github.issues import GitHubIssues, RealGitHubIssues
-
 from erk_shared.git.abc import Git
 from erk_shared.github.abc import GitHub
+from erk_shared.github.issues import GitHubIssues, RealGitHubIssues
 
 
 @dataclass(frozen=True)

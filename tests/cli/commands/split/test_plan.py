@@ -6,13 +6,14 @@ All tests are fast and don't require filesystem I/O.
 
 from pathlib import Path
 
+from erk_shared.git.abc import WorktreeInfo
+
 from erk.cli.commands.split.plan import (
     SplitPlan,
     create_split_plan,
     execute_split_plan,
     identify_splittable_branches,
 )
-from erk_shared.git.abc import WorktreeInfo
 
 # Tests for identify_splittable_branches function
 

@@ -9,12 +9,12 @@ from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
+from erk_shared.git.abc import WorktreeInfo
 from erk_shared.github.issues import DryRunGitHubIssues, FakeGitHubIssues
 
 from erk.cli.cli import cli
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext, create_context
-from erk_shared.git.abc import WorktreeInfo
 from erk.core.git.dry_run import DryRunGit
 from erk.core.git.fake import FakeGit
 from erk.core.github.dry_run import DryRunGitHub

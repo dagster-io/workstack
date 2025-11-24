@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from erk_shared.git.abc import Git
+
 from erk.core.git.real import RealGit
 
 

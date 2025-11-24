@@ -1,9 +1,9 @@
 """Tests for erk create --copy-plan flag."""
 
 from click.testing import CliRunner
+from erk_shared.git.abc import WorktreeInfo
 
 from erk.cli.cli import cli
-from erk_shared.git.abc import WorktreeInfo
 from erk.core.git.fake import FakeGit
 from tests.test_utils.env_helpers import erk_isolated_fs_env
 

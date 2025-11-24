@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import click
+from erk_shared.github.types import PullRequestInfo
 from erk_shared.impl_folder import get_impl_path
 
 from erk.cli.core import discover_repo_context
@@ -13,7 +14,6 @@ from erk.core.display_utils import (
     get_visible_length,
 )
 from erk.core.file_utils import extract_plan_title
-from erk_shared.github.types import PullRequestInfo
 from erk.core.repo_discovery import RepoContext
 from erk.core.worktree_utils import find_current_worktree
 

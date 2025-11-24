@@ -3,6 +3,7 @@ import subprocess
 from pathlib import Path
 
 import click
+from erk_shared.git.abc import Git
 
 from erk.cli.commands.navigation_helpers import complete_worktree_names
 from erk.cli.core import (
@@ -12,7 +13,6 @@ from erk.cli.core import (
 )
 from erk.cli.output import user_output
 from erk.core.context import ErkContext, create_context, regenerate_context
-from erk_shared.git.abc import Git
 from erk.core.repo_discovery import ensure_erk_metadata_dir
 from erk.core.worktree_utils import (
     filter_non_trunk_branches,

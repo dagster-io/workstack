@@ -20,11 +20,11 @@ import os
 from pathlib import Path
 
 from click.testing import CliRunner
+from erk_shared.git.abc import WorktreeInfo
 
 from erk.cli.commands.status import status_cmd
 from erk.core.config_store import GlobalConfig
 from erk.core.context import ErkContext
-from erk_shared.git.abc import WorktreeInfo
 from erk.core.git.fake import FakeGit
 from tests.fakes.context import create_test_context
 from tests.test_utils.builders import WorktreeScenario

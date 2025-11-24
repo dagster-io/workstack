@@ -3,9 +3,9 @@
 from pathlib import Path
 
 from click.testing import CliRunner
+from erk_shared.git.abc import WorktreeInfo
 
 from erk.cli.cli import cli
-from erk_shared.git.abc import WorktreeInfo
 from erk.core.git.fake import FakeGit
 from erk.core.repo_discovery import RepoContext
 from tests.test_utils.env_helpers import erk_inmem_env, erk_isolated_fs_env

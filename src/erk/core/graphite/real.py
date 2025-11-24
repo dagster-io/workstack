@@ -6,10 +6,11 @@ import sys
 from pathlib import Path
 from subprocess import DEVNULL
 
-from erk.cli.output import user_output
-from erk.core.branch_metadata import BranchMetadata
 from erk_shared.git.abc import Git
 from erk_shared.github.types import PullRequestInfo
+
+from erk.cli.output import user_output
+from erk.core.branch_metadata import BranchMetadata
 from erk.core.graphite.abc import Graphite
 from erk.core.graphite.parsing import (
     parse_graphite_cache,

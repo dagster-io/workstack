@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import pytest
+from erk_shared.github.types import PRMergeability
 
 from erk.cli.commands.land_stack.execution import (
     MergeabilityUnknownError,
@@ -10,7 +11,6 @@ from erk.cli.commands.land_stack.execution import (
 )
 from erk.core.context import ErkContext
 from erk.core.github.fake import FakeGitHub
-from erk_shared.github.types import PRMergeability
 
 
 def test_check_pr_mergeable_unknown_triggers_retry() -> None:

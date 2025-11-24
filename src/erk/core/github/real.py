@@ -5,15 +5,16 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from erk.cli.output import user_output
 from erk_shared.github.abc import GitHub
+from erk_shared.github.types import PRInfo, PRMergeability, PullRequestInfo, WorkflowRun
+
+from erk.cli.output import user_output
 from erk.core.github.parsing import (
     _determine_checks_status,
     execute_gh_command,
     parse_github_pr_list,
     parse_github_pr_status,
 )
-from erk_shared.github.types import PRInfo, PRMergeability, PullRequestInfo, WorkflowRun
 from erk.core.subprocess import run_subprocess_with_context
 
 
